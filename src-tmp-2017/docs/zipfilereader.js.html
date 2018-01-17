@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: zipfilereader.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: zipfilereader.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/** Zip File Reader class
+ * wraps FileReader class
+ * ctor
+ * @constructor 
+ * @param {} feature_id the id 
+ * @field _file_id the html element's id where files are dropped
+ * @field _submit_id the html element's id that receives submit events
+ * @field _warning_id the html element's id where warnings are displayed
+ * @field _mapobject the {Map} mapobject passed in through the init function
+ * @field _reader a {FileReader} instance
+ * @field _filename the zip file's file name
+ */
+function ZipFileReader(feature_id)
+{
+    this._file_id = feature_id + '_file';
+    this._submit_id = feature_id + '_submit';
+    this._warning_id = feature_id + '_warning';
+}
+
+/** initialization
+ * adds a click listener to the submit element
+ * @param {Map} mapobject 
+ */
+ZipFileReader.prototype.init = function(mapobject)
+{
+    this._mapobject = mapobject;
+    $('#'+this._submit_id).on('click', this._on_submit_handler.bind(this));
+};
+
+/** reads a File object into a buffer
+ * @private 
+ * @param {Map} mapobject
+ * @param {File} file a filename
+ * @param {String} description TODO
+ */
+ZipFileReader.prototype._handle_zipfile = function(mapobject, file, description)
+{
+    this._reader = new FileReader();
+    this._reader.onload = this._filereader_handler.bind(this);
+    this._reader.readAsArrayBuffer(file);
+};
+
+/** converts an array buffer into a Leaflet vector layer and adds it to the map &amp; layer control
+ * @private 
+ * @param {Map} mapobject
+ * @param {ArrayBuffer} buffer the result property of a FileReader object
+ * @param {String} description
+ */
+ZipFileReader.prototype._convert2layer = function(mapobject, buffer, description)
+{
+    shp(buffer).then(function(geojson){
+        var layer = L.shapefile(geojson).addTo(mapobject.map());//More info: https://github.com/calvinmetcalf/leaflet.shapefile
+        mapobject.layercontrol().addOverlay(layer, description);
+    });
+};
+
+/** handler fn to be invoked when file reader load event is fired
+ * it then converts the fetched ressources into a Leaflet layer
+ * @see _convert2layer fn
+ * @private 
+ * @throws {} TODO
+ */
+ZipFileReader.prototype._filereader_handler = function()
+{
+    if (this._reader.readyState != 2 || this._reader.error){
+        // TODO throw console.log('reader error');
+        return;
+    } else {
+        //console.log('handling zip file', reader.result);                 
+        this._convert2layer(this._mapobject, this._reader.result, this._filename);
+    }
+};
+
+/** submit html element click event handler
+ * prints out an error, a warning or reads the submitted file into a buffer
+ * @see _handle_zipfile fn
+ * @param {Object} e Event object, TODO - is this needed?
+ */
+ZipFileReader.prototype._on_submit_handler = function(e)
+{
+    var files = $('#'+this._file_id).prop('files'); // prop() returns http://api.jquery.com/Types/#Anything, but we probably expect a String here
+    if (files.length === 0) {
+        console.log('error - no file');
+        return; //do nothing if no file given yet
+    }
+    var file = files[0]; // Blob or File - to be passed to readAsArrayBuffer
+    if (file.name.slice(-3) != 'zip') { 
+        $('#'+this._warning_id).html('Select .zip file');
+        return;
+    } else {
+        $('#'+this._warning_id).html(''); //clear warning message.
+        this._filename = file.name.substring(0, file.name.lastIndexOf(".")); // String
+        this._handle_zipfile(this._mapobject, file, this._filename);
+    }
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="BaseLayer.html">BaseLayer</a></li><li><a href="JsonLayer.html">JsonLayer</a></li><li><a href="Layer.html">Layer</a></li><li><a href="LayerStyle.html">LayerStyle</a></li><li><a href="Legend.html">Legend</a></li><li><a href="Map.html">Map</a></li><li><a href="ShpJsonLayer.html">ShpJsonLayer</a></li><li><a href="Style.html">Style</a></li><li><a href="ZipFileReader.html">ZipFileReader</a></li></ul><h3>Mixins</h3><ul><li><a href="%257BJsonLayer%257D%2520multi%2520inherits%2520from%2520%257BLayer%257D%2520and%2520%257BLayerStyle%257D%2520%250Aso%2520it%2520copies%2520over%2520%257BLayerStyle%257D_s%2520protoype%2520members.html">{JsonLayer} multi inherits from {Layer} and {LayerStyle} 
+so it copies over {LayerStyle}'s protoype members</a></li></ul><h3>Global</h3><ul><li><a href="global.html#Data">Data</a></li><li><a href="global.html#DataDisplay">DataDisplay</a></li><li><a href="global.html#Gmpe">Gmpe</a></li><li><a href="global.html#Ids">Ids</a></li><li><a href="global.html#Instancestate">Instancestate</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Mon May 29 2017 11:29:11 GMT+0200 (CEST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

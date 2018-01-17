@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: oop/layerstyle.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: oop/layerstyle.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/** class to handle vector layer style definitions 
+ * @constructor 
+ * @param {Style} styleobj the style object to be used for this layerstyle
+ */
+function LayerStyle(styleobj)
+{
+    /* style object */
+    this._style = styleobj;
+    //console.log('layerstyle style', styleobj);
+}
+
+
+/*** --- Getter &amp; Setter --- **/
+
+/** gets or sets this class' @class Style object
+ * @param {Style} newvalue
+ * @returns {Boolean} True if @param newvalue is set or the currently set {@link Style} object if no parameter is passed in
+ */
+LayerStyle.prototype.style = function(newvalue)
+{
+    if (typeof newvalue === 'undefined') {
+        return this._style;
+    } else {
+        this._style = newvalue;
+        return true;
+    }
+};
+
+
+/** --- Private --- */
+
+/** a default style definition
+ * @private 
+ * @returns {Object} a default styling object in the form {style:aStyle, onEachFeature:aCbFunction}
+ */
+LayerStyle.prototype._default_params_object = function()
+{
+    var ret = { style: this._style_default.bind(this), onEachFeature: this._on_each_feature.bind(this) };
+    return ret;
+};
+
+/** vector layer mouse interaction definition
+ * highlight layer on mouseover, reset highlight on mouseout, @function _feature_on_click callback on layer mouseclick
+ * @private 
+ * @param {Object} feature a Leaflet feature type object that was interacted with
+ * @param {Object} layer a Leaflet layer object
+ */
+LayerStyle.prototype._on_each_feature = function(feature, layer)
+{
+    layer.on({
+        mouseover: this._feature_highlight,
+        mouseout: this._feature_reset_highlight.bind(null, this),
+        click: this._feature_on_click.bind(this)
+    });
+};
+
+
+/** sets layer highlight style definition to a highlighted appearance
+ * @private
+ */
+LayerStyle.prototype._feature_highlight = function()
+{
+    /* TODO - still hardwired */
+    this.setStyle({
+        // weight: weight,
+        color: '#226',
+        dashArray: '',
+        opacity: 0.8
+    });
+};
+
+/** resets a layer's feature styling
+ * @private 
+ * @param {Layer} c a layer object, the Leaflet layer that received a callback (mouseover, mouseout, ...)
+ * @param {Object} e an Event object that e.g. contains the feature it has been fired on
+ */
+LayerStyle.prototype._feature_reset_highlight = function(c, e)
+{
+    e.target.setStyle(c._style_default(e.target.feature));
+};
+
+/** passes an event {Object} to the callback function of this layerstyle's style object
+ * @private 
+ * @param {Object} e an event object
+ * @throws {} TODO exception handling
+ */
+LayerStyle.prototype._feature_on_click = function(e)
+{
+    this._style.callback(e);
+};
+
+/** returns a default style for the vector layer
+ * @private
+ * @description {color:aColor,dashArray:aNumber,fillColor:aColor,fillOpacity:aNumber[0..1],opacity:aNumber[0..1],weight:aNumber}
+ * @param {Object} feature a Leaflet vector layer feature object
+ * @returns {Object} a default style for the vector layer 
+ */
+LayerStyle.prototype._style_default = function(feature)
+{
+    /* pre-set a styling value for the fill color based on the passed in feature parameter */
+    var ret = { fillColor: this._feature_color(feature.properties[ this._style.feature_property_name() ]) };
+    /* get reference to feature styling object */
+    var styledef = this._style.layer_style_definition();
+    Object.keys(this._style.layer_style_definition()).forEach(function (key) {
+        ret[key] = styledef[key];
+    });
+    return ret;
+};
+
+/** feature styling color fetch fn 
+ * @private 
+ * @param {String} feature_property a feature property by which the styling of the layer's features is determined
+ * @returns {String} a color String
+ */
+LayerStyle.prototype._feature_color = function(feature_property)
+{
+    /* set a default feature styling value */
+    var ret = '#0000ff';
+    /* get reference to feature styling object */
+    var styledef = this._style.feature_style_definition();
+    /* return feature style based on feature property @param feature_property */
+    Object.keys(styledef).forEach(function (key) {
+        if (key === feature_property) {ret = styledef[key];}
+    });
+    return ret;
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="BaseLayer.html">BaseLayer</a></li><li><a href="Data.html">Data</a></li><li><a href="DataDisplay.html">DataDisplay</a></li><li><a href="Gmpe.html">Gmpe</a></li><li><a href="Ids.html">Ids</a></li><li><a href="JsonLayer.html">JsonLayer</a></li><li><a href="Layer.html">Layer</a></li><li><a href="LayerStyle.html">LayerStyle</a></li><li><a href="Legend.html">Legend</a></li><li><a href="Map.html">Map</a></li><li><a href="ShpJsonLayer.html">ShpJsonLayer</a></li><li><a href="Style.html">Style</a></li><li><a href="ZipFileReader.html">ZipFileReader</a></li></ul><h3>Mixins</h3><ul><li><a href="%257B@link%2520JsonLayer%257D%2520multi%2520inherits%2520from%2520%257B@link%2520Layer%257D%2520and%2520%257B@link%2520LayerStyle%257D%2520%250Aso%2520it%2520copies%2520over%2520%257B@link%2520LayerStyle%257D_s%2520protoype%2520members.html">{@link JsonLayer} multi inherits from {@link Layer} and {@link LayerStyle} 
+so it copies over {@link LayerStyle}'s protoype members</a></li></ul><h3>Global</h3><ul><li><a href="global.html#bottom_entries">bottom_entries</a></li><li><a href="global.html#cb_data_ready">cb_data_ready</a></li><li><a href="global.html#feature_style_def">feature_style_def</a></li><li><a href="global.html#gmpe_table_add_row_clicklistener">gmpe_table_add_row_clicklistener</a></li><li><a href="global.html#gmpe_table_init">gmpe_table_init</a></li><li><a href="global.html#highlight_current_zone">highlight_current_zone</a></li><li><a href="global.html#ID_PREFIX">ID_PREFIX</a></li><li><a href="global.html#infoview_create">infoview_create</a></li><li><a href="global.html#init_variables">init_variables</a></li><li><a href="global.html#Instancestate">Instancestate</a></li><li><a href="global.html#MAP_ID">MAP_ID</a></li><li><a href="global.html#map_init">map_init</a></li><li><a href="global.html#map_modal_init">map_modal_init</a></li><li><a href="global.html#mydata_def">mydata_def</a></li><li><a href="global.html#mydatadisplay">mydatadisplay</a></li><li><a href="global.html#osm_attrib">osm_attrib</a></li><li><a href="global.html#SIDEBAR_ID">SIDEBAR_ID</a></li><li><a href="global.html#top_entries">top_entries</a></li><li><a href="global.html#topo_attrib">topo_attrib</a></li><li><a href="global.html#vector_shp_styling">vector_shp_styling</a></li><li><a href="global.html#zipfilereader">zipfilereader</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Tue May 30 2017 15:38:35 GMT+0200 (CEST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
