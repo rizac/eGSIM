@@ -1,4 +1,4 @@
-/** base Map class
+/** base Map classeturn
  * initializes a new Map object
  * this class takes care of all Leaflet Map related functionality
  * @constructor

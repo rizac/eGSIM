@@ -60,7 +60,7 @@ function cb_data_ready(data)
  *
  * @param {String} [suffix=""] we add a suffix to map's html id, thus we can differentiate between big and modal map 
  * as well as apply unique css rules. default value for modal should be suffix='_modal' */
-function map_init(suffix = "")
+function map_init(suffix = "", shziplayer_path_prefix='')
 {
     /* when switching between big and modal map display, we need to remove the current map object */
     if (typeof mymap !== 'undefined') {
@@ -75,10 +75,30 @@ function map_init(suffix = "")
     mymap.add_base_layer('Mapnik', 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', osm_attrib);
     mymap.add_base_layer('B&W', 'http://{s}.tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png', osm_attrib);
     mymap.add_base_layer('Topo', 'http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', topo_attrib);
+    
+    /* Add ESRI layers. This has to be done this way to conform to our OOP, whihc might be removed in the future */
+    /* https://esri.github.io/esri-leaflet/api-reference/layers/basemap-layer.html */
+    /*mymap.add_base_layer('Streets', "http://{s}.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}.png", '');
+    mymap.add_base_layer('Topographic', "http://{s}.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", '');
+	mymap.add_base_layer('NationalGeographic', "http://{s}.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}", '');
+	mymap.add_base_layer('Oceans', "http://{s}.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", '');
+	mymap.add_base_layer('Gray', "http://{s}.arcgisonline.com/ArcGIS/rest/services/C…/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", '');
+	mymap.add_base_layer('DarkGray', "http://{s}.arcgisonline.com/ArcGIS/rest/services/C…s/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", '');
+	mymap.add_base_layer('Imagery', "http://{s}.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", '');
+	mymap.add_base_layer('ShadedRelief', "http://{s}.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}", '');
+	mymap.add_base_layer('Terrain', "http://{s}.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}", '');
+	mymap.add_base_layer('USATopo', "http://{s}.arcgisonline.com/ArcGIS/rest/services/USA_Topo_Maps/MapServer/tile/{z}/{y}/{x}", '');
+    
+	b = L.esri.basemapLayer("Topographic");
+    */
+  
     /* vector layer */
-    shpfile_area = mymap.add_shpzip_layer('Area Source Model', 'data/asmodal/ASModelVer6.1.zip', mystyle),
-    shpfile_subd = mymap.add_shpzip_layer('Subduction', 'data/asmodal/Subduction.zip', mystyle),
-    shpfile_vran = mymap.add_shpzip_layer('Vrancea', 'data/asmodal/VRANCEAv6.1.zip', mystyle);
+    if (shziplayer_path_prefix && !shziplayer_path_prefix.endsWith("/")){  //append slash if not provided
+    		shziplayer_path_prefix = shziplayer_path_prefix + "/";
+    }
+    shpfile_area = mymap.add_shpzip_layer('Area Source Model', shziplayer_path_prefix+'data/asmodal/ASModelVer6.1.zip', mystyle),
+    shpfile_subd = mymap.add_shpzip_layer('Subduction', shziplayer_path_prefix+'data/asmodal/Subduction.zip', mystyle),
+    shpfile_vran = mymap.add_shpzip_layer('Vrancea', shziplayer_path_prefix+'data/asmodal/VRANCEAv6.1.zip', mystyle);
 
     /** invoke init to set up the leaflet map and add it to the site */
     var bb = $.cookie('map_boundingbox')? $.cookie('map_boundingbox').split(','): [-13.37, 33.37, 36.66, 64.42],
@@ -86,7 +106,9 @@ function map_init(suffix = "")
         ne = L.latLng( parseFloat(bb[3]), parseFloat(bb[2]) ),
         bounds = new L.LatLngBounds( sw, ne ),
         zoom = $.cookie('map_zoom')? $.cookie('map_zoom'): 4;
-    console.log('map init with', bb, bounds);
+    
+    //console.log('map init with', bb, bounds);
+    
     /* add the map to the standard big view html anchor when there's no suffix, 
      * else add it to the modal anchor if the suffix says so, 
      * else throw an error */
@@ -147,9 +169,9 @@ function map_init(suffix = "")
     instancestate = new Instancestate();
     
     /** add some esri overlays. they look nice, so why not */
-    esri = L.esri.basemapLayer("Topographic");
-    esri.addTo(mymap.map());
-    mymap.layercontrol().addOverlay(esri, 'esri map');
+    //esri = L.esri.basemapLayer("Topographic");
+    //esri.addTo(mymap.map());
+    //mymap.layercontrol().addOverlay(esri, 'esri map');
 }
 
 /** inits the modal that contains the map when scrolled down 
@@ -157,7 +179,7 @@ function map_init(suffix = "")
  * we therefor transfer the map object into a modal that keeps hovering at the right side of the window
  * the map is transfered back when the big map view container becomes visible within the pane 
  * <pre>see: {@link https://www.w3schools.com/bootstrap/bootstrap_modal.asp} */
-function map_modal_init()
+function map_modal_init(shziplayer_path_prefix='')
 {
     /*  */
     $('body').scrollspy({ target: '#gfz_gmpe_scrollspy', offset: 150 });
@@ -186,7 +208,7 @@ function map_modal_init()
      * or when the "data" navigation item in the top bar is clicked */
     $("#myModal").on('show.bs.modal', function() {
         /* transfer the map from the big view into the modal */
-        map_init('_modal');
+        map_init('_modal', shziplayer_path_prefix);
         /* adad some css to fit it quite right on the screen */
         $(this).find('.modal-body').css({
             'max-height':'75%'
@@ -222,7 +244,7 @@ function map_modal_init()
      * so we transfer the map from the modal to the big view
      * */
     $("#myModal").on('hidden.bs.modal', function() {
-        map_init();
+        map_init('', shziplayer_path_prefix);
         mymap.map().invalidateSize();
         //$('#myModal').css( "zIndex", 1050 );
     });
@@ -458,5 +480,5 @@ function init_variables()
     /** @global */
     zipfilereader = new ZipFileReader('feature_dropfield_layer');
     /* FIXME - invoke mock script to get some data. remove when we have actual data! */
-    $.getScript( "scripts/test/mock.js", function( data, textStatus, jqxhr ) { /*...*/ } );
+    //$.getScript( "scripts/test/mock.js", function( data, textStatus, jqxhr ) { /*...*/ } );
 }

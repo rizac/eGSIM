@@ -3,14 +3,15 @@
 	<head>
 		{% load static %}
 		<meta charset="UTF-8">
-
+		<title>{{ project_name }}</title>
+		
 		<!-- jQuery plugin (https://code.jquery.com/) -->
 		<script src="https://code.jquery.com/jquery-3.2.1.min.js"
   			integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
   			crossorigin="anonymous"></script>
 
-	    <!-- jQuery cookie (http://plugins.jquery.com/cookie/) -->
-	    <!-- <script type="text/javascript" src="plugins/cookies/jquery.cookie.js"></script> -->
+	    <!-- jQuery cookie (https://github.com/js-cookie/js-cookie) -->
+	    <script type="text/javascript" src="https://cdn.rawgit.com/carhartl/jquery-cookie/d72bb07e/src/jquery.cookie.js"></script>
 
 	    <!-- LOCALIZATION -->
 	    <!-- language localisation file -->
@@ -19,7 +20,7 @@
 	    <!-- <script type="text/javascript" src="scripts/lang_funcs.js"></script> -->
 
 	    <!-- SITE SETUP FUNCS -->
-	    <script type="text/javascript" src="{% static js/site_funcs.js %}"></script><!-- site setup helper file -->
+	    <script type="text/javascript" src="{% static 'js/site_funcs.js' %}"></script><!-- site setup helper file -->
 
 	    <!-- LEAFLET (http://leafletjs.com/download.html) -->
 	    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.0/dist/leaflet.css"
@@ -29,25 +30,25 @@
   			integrity="sha512-C7BBF9irt5R7hqbUm2uxtODlUVs+IsNu2UULGuZN7gM+k/mmeG4xvIEac01BtQa4YIkUpp23zZC4wIwuXaPMQA=="
   			crossorigin=""></script>
 	    
-	    <link rel="stylesheet" type="text/css" href="{% static css/gmpe_mapstyle.css %}"><!-- own leaflet style def -->
+	    <link rel="stylesheet" type="text/css" href="{% static 'css/gmpe_mapstyle.css' %}"><!-- own leaflet style def -->
 	    
-	    <!--  A Leaflet plugin to view mouse coordinates -->	    
-	    <link rel="stylesheet" type="text/css" href="https://github.com/MrMufflon/Leaflet.Coordinates/blob/master/src/Control.Coordinates.css">
-		<!-- [if lte IE 8]><link rel="stylesheet" href="https://github.com/MrMufflon/Leaflet.Coordinates/blob/master/src/Control.Coordinates.ie.css" /><![endif] -->
-	    <script type="text/javascript" src="https://github.com/MrMufflon/Leaflet.Coordinates/blob/master/src/Control.Coordinates.js"></script>
+	    <!--  A Leaflet plugin to view mouse coordinates (see also https://rawgit.com/) -->	    
+	    <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/MrMufflon/Leaflet.Coordinates/09ffcfdf/src/Control.Coordinates.css">
+		<!-- [if lte IE 8]><link rel="stylesheet" href="https://cdn.rawgit.com/MrMufflon/Leaflet.Coordinates/09ffcfdf/src/Control.Coordinates.ie.css" /><![endif] -->
+	    <script type="text/javascript" src="https://cdn.rawgit.com/MrMufflon/Leaflet.Coordinates/09ffcfdf/src/Control.Coordinates.js"></script>
 
 		<!-- ESRI PLUGINS http://esri.github.io/esri-leaflet/examples/ -->
 	    <script type="text/javascript" src="https://unpkg.com/esri-leaflet@2.1.2/dist/esri-leaflet.js"></script>
 
-		<!--  FIXME: thwere is NO SUCH a FILE, remove -->	    
+		<!--  FIXME: there is NO SUCH a FILE, remove -->	    
 	    <!-- <script type="text/javascript" src="plugins/coordinates/src/util/NumberFormatter.js"></script>-->
 	    
 	    <!-- font awesome (e.g. required by easybutton & sidebar) FIXME: CHECK LICENSE (MIT) -->
 	    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
 	    <!-- SIDEBAR -->
-	    <link rel="stylesheet" type="text/css" href="https://github.com/Turbo87/sidebar-v2/blob/master/css/leaflet-sidebar.min.css">
-	    <script type="text/javascript" src="https://github.com/Turbo87/sidebar-v2/blob/master/js/leaflet-sidebar.min.js"></script>
+	    <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/Turbo87/sidebar-v2/04d88fe8/css/leaflet-sidebar.min.css">
+	    <script type="text/javascript" src="https://cdn.rawgit.com/Turbo87/sidebar-v2/04d88fe8/js/leaflet-sidebar.min.js"></script>
 	
 	    <!-- BOOTSTRAP (3.3.7) -->
 	    <!-- must be loaded below / after autocomplete! FIXME: what does this mean?? -->
@@ -84,42 +85,42 @@
 	    <!-- <link rel="stylesheet" type="text/css" href="https://code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css"> -->
 	    
 	    <!-- Leaflet shapefile plugin - see: https://github.com/calvinmetcalf/leaflet.shapefile FIXME: what does it do? -->
-	    <script type="text/javascript" src="https://github.com/calvinmetcalf/leaflet.shapefile/blob/gh-pages/leaflet.shpfile.js"></script>
-	    <script type="text/javascript" src="https://github.com/calvinmetcalf/leaflet.shapefile/blob/gh-pages/shp.js"></script>
+	    <script type="text/javascript" src="https://cdn.rawgit.com/calvinmetcalf/leaflet.shapefile/gh-pages/leaflet.shpfile.js"></script>
+	    <script type="text/javascript" src="https://cdn.rawgit.com/calvinmetcalf/leaflet.shapefile/gh-pages/shp.js"></script>
 
         <!-- jQuery finger plugin - see: https://github.com/ngryman/jquery.finger -->
-	    <script type="text/javascript" src="https://github.com/ngryman/jquery.finger/blob/master/dist/jquery.finger.min.js"></script>
+	    <!-- <script type="text/javascript" src="https://cdn.rawgit.com/ngryman/jquery.finger/b4722ae3/dist/jquery.finger.min.js"></script> -->
 	    
 	    <!-- MAP FRAMEWORK SCRIPTS FIXME: these should be Object-oriented manipulations and extensions of already imported classes-->
 	    <!-- FIXME: DO WE NEED THESE? -->
 	    <!-- site class -->
-	    <script type="text/javascript" src="{% static js/oop/site.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/site.js' %}"></script>
 	    <!-- base framework map class -->
-	    <script type="text/javascript" src="{% static js/oop/map.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/map.js' %}"></script> 
 	    <!-- data class -->
-	    <script type="text/javascript" src="{% static js/oop/data/data.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/data/data.js' %}"></script>
 	    <!-- gmpe class -->
-	    <script type="text/javascript" src="{% static js/oop/data/gmpe.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/data/gmpe.js' %}"></script>
 	    <!-- table class -->
-	    <script type="text/javascript" src="{% static js/oop/data/data_display.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/data/data_display.js' %}"></script>
 	    <!-- framework layer style definition wrapper class -->
-	    <script type="text/javascript" src="{% static js/oop/style.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/style.js' %}"></script>
 	    <!-- framework layer styling class -->
-	    <script type="text/javascript" src="{% static js/oop/layerstyle.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/layerstyle.js' %}"></script>
 	    <!-- framework layer legend class -->
-	    <script type="text/javascript" src="{% static js/oop/legend.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/legend.js' %}"></script>
 	    <!-- framework vector overlay parent class -->
-	    <script type="text/javascript" src="{% static js/oop/layer.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/layer.js' %}"></script>
 	    <!-- framework tile baselayer class -->
-	    <script type="text/javascript" src="{% static js/oop/baselayer.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/baselayer.js' %}"></script>
 	    <!-- framework json overlay class -->
-	    <script type="text/javascript" src="{% static js/oop/jsonlayer.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/jsonlayer.js' %}"></script>
 	    <!-- framework shp overlay class -->
-	    <script type="text/javascript" src="{% static js/oop/shpjsonlayer.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/shpjsonlayer.js' %}"></script>
 	    <!-- framework zip filereader class -->
-	    <script type="text/javascript" src="{% static js/oop/zipfilereader.js %}"></script>
+	    <script type="text/javascript" src="{% static 'js/oop/zipfilereader.js' %}"></script>
 	    <!-- framework zip instacestate class -->
-		<script type="text/javascript" src="{% static js/oop/instancestate.js %}"></script>
+		<script type="text/javascript" src="{% static 'js/oop/instancestate.js' %}"></script>
 	</head>
   
   <body>
@@ -137,7 +138,7 @@
               <span class="icon-bar"></span>
               <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="javascript:void(0)">GMPE Service</a>
+            <a class="navbar-brand" href="javascript:void(0)">{{ project_name }}</a>
           </div>
           <!-- navbar entries -->
           <div class="collapse navbar-collapse" id="gfz_gmpe_navbar_collapse">
@@ -399,7 +400,7 @@
      mystyle = vector_shp_styling( feature_style_def );
      
      /** init the map */
-     map_init();
+     map_init('', "{% static '' %}");
      /** zip filereader */
      zipfilereader.init(mymap);
 
@@ -410,10 +411,10 @@
      // populize_sidebar();
      /* run the localization script over the site 
       * FIXME - this doesn't do anything right now, does it? as we don't localize. */
-     localize_document();
+     // localize_document();
      
      /* adds behavior to the site that transfers the map into a modal when scrolling down */
-     map_modal_init();
+     map_modal_init("{% static '' %}");
      
      /** site event hooks */
      $(window).on('resize', function (e) {

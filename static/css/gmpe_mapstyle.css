@@ -182,3 +182,16 @@ body { position:relative; padding-right: 0 !important }
 .gfz_gmpe_tablerow, .gfz_gmpe_tableheader  {
     cursor: pointer;
 }
+
+/*eGSIM added functionalities */
+
+/* tessellations border color */
+path.leaflet-interactive{
+	stroke: gray;
+	stroke-dasharray: 0;
+    stroke-width: 1;
+}
+
+.glyphicon{
+	margin-right: 5px;
+}
