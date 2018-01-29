@@ -17,19 +17,54 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http',
 		var _inputSelStr = "Input Selection";
 		var _outStr = "Result";
 		var _homeStr = 'Home';
+		
+		$scope.SERVICE_HOME = _homeStr;
+		$scope.SERVICE_TRELLIS_PLOTS = 'Trellis Plots';
+		$scope.SERVICE_DATA_ANALYSIS = 'Data Analysis';
+		
 		// services here is the eGSIM service, a SUBMENU of the main app.
 		// NOT TO BE CONFUSED WITH ANGULAR SERVICE! (directory services) whereby we implement inputSelection
     		$scope.services = new SelMap([
-    									[_homeStr, new SelSet()],
-    									["Trellis Plots", new SelSet([_inputSelStr, "Config. Scenario", _outStr]).select(_inputSelStr)],
-    									["Data Analysis", new SelSet([_inputSelStr, _outStr]).select(_inputSelStr)]
+    									[_homeStr, new SelArray()],
+    									[$scope.SERVICE_TRELLIS_PLOTS, new SelArray(_inputSelStr, "Config. Scenario", _outStr).select(_inputSelStr)],
+    									[$scope.SERVICE_DATA_ANALYSIS, new SelArray(_inputSelStr, _outStr).select(_inputSelStr)]
     								 ]).select(_homeStr);
     		
-    		$scope.INPUTSEL_MENUNAME = _inputSelStr;  // make it visible from outside
-    		$scope.serviceNames = Array.from($scope.services.keys()); // angular complains when ng-repeat not iterated over Array
-    		$scope.selectedServiceSubmenus = function(){
-    			return Array.from($scope.services.get($scope.services.selKey));
-    		}; // angular complains when ng-repeat not iterated over Array
+    		// helper functions:
+    		$scope.services.names = Array.from($scope.services.keys());
+    		
+    		$scope.isServiceName = function(name){
+    			return $scope.services.selKey === name;
+    		};
+    		$scope.isSubmenuIndex = function(index){
+    			return $scope.services.get($scope.services.selKey).selIndex === index;
+    		};
+
+    		// expose the property we need 
+    		// with clearer names and provide angular with arrays instead of Sets/ Maps
+    		// all these are function for avoiding typos
+    		
+    		// services.names array
+    		// services.selected = name  //select new service
+    		// services.selected.name string
+    		// services.selected.subMenus.names array
+    		// services.selected.subMenus.selected = name  // select new service
+    		// services.selected.subMenus.selected.name string
+    		// services.selected.subMenus.selected.hasNext bool
+    		// services.selected.subMenus.selected.hasPrev bool
+    		// services.selected.subMenus.selected.selNext() func
+    		// services.selected.subMenus.selected.selPrev() func
+    		
+    		
+    		
+    		// serviceNames
+    		// serviceName
+    		// serviceSubmenus
+    		// serviceSubmenu
+    		
+//    		$scope.selectedServiceSubmenus = function(){
+//    			return Array.from($scope.services.get($scope.services.selKey));
+//    		}; // angular complains when ng-repeat not iterated over Array
     		
     		
     		$http.post("get_init_params", {}, {headers: {'Content-Type': 'application/json'}}).then(function(response) {
@@ -58,13 +93,13 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http',
     		$scope.filterRegexp = undefined;
     		$scope.filterTypeName = 'Name';
     		function filterByName(gsim){
-    			return $scope.inputSelection().matchesByName(gsim, $scope.filterRegexp);
+    			return $scope.inputSelection.matchesByName(gsim, $scope.filterRegexp);
     		}
     		function filterByImt(gsim){
-    			return $scope.inputSelection().matchesByImt(gsim, $scope.filterRegexp);
+    			return $scope.inputSelection.matchesByImt(gsim, $scope.filterRegexp);
     		}
     		function filterByTrt(gsim){
-    			return $scope.inputSelection().matchesByTrt(gsim, $scope.filterRegexp);
+    			return $scope.inputSelection.matchesByTrt(gsim, $scope.filterRegexp);
     		}
     		$scope.filterTypes = new Map([
     										[$scope.filterTypeName, filterByName],

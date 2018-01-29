@@ -4,47 +4,73 @@
 
 // define some classes (FIXME: move to utilities or something similar?)
 
-//class SelArray extends Array {
-//	/**
-//	 * JS Array subclass implementing a selectedItem (and selectedIndex).
-//	 * Currently the selected index is not updating when the Array is modified,
-//	 * the user has to care about that
-//	 * 
-//	 * Examples:
-//	 * 
-//	 * var a = new SelArray(1,2,True,'4') // new SelArray() for empty Array
-//	 * a.selIndex()  // -1 means: no selection
-//	 * a.setSelIndex('4')
-//	 * a.selIndex()  // returns 3
-//	 * //usual operations on Arrays:
-//	 * a.slice
-//	 * ...
-//	 */
-//    constructor(...args) { 
-//        super(...args); 
-//        this.clearSelection();
-//    }
-//    clear(){
-//    		super.clear();
-//    		this.clearSel();
-//    }
-//    clearSelection(){
-//		this._selIndex = -1;
-//    }
-//    select(index){
-//    		this.selIndex = index;
-//    		return this;
-//    }
-//    get selIndex() {
-//    		return this._selIndex;
-//    }
-//    set selIndex(index) {
-//    		this._selIndex = index < 0 || index >= this.length ? -1 : 0;
-//    }
-//    get selItem() {
-//		return this._selIndex >= 0 && this._selIndex < this.length ? this[this._selIndex] : undefined;
-//    }
-//}
+class SelArray extends Array {
+	/**
+	 * JS Array subclass implementing a selectedItem (and selectedIndex).
+	 * Currently the selected index is not updating when the Array is modified,
+	 * the user has to care about that
+	 * 
+	 * Examples:
+	 * 
+	 * var a = new SelArray(1,2,True,'4') // new SelArray() for empty Array
+	 * a.selIndex()  // -1 means: no selection
+	 * a.setSelIndex('4')
+	 * a.selIndex()  // returns 3
+	 * //usual operations on Arrays:
+	 * a.slice
+	 * ...
+	 */
+    constructor(...args) { 
+        super(...args); 
+        this.clearSelection();
+    }
+    clear(){
+    		super.clear();
+    		this.clearSelection();
+    }
+    clearSelection(){
+		this._selIndex = -1;
+    }
+    select(item){
+    		this.selItem = item;
+    		return this;
+    }
+    get selIndex() {
+    		return this._selIndex;
+    }
+    set selIndex(index) {
+    		this._selIndex = index < 0 || index >= this.length ? -1 : 0;
+    }
+    get selItem() {
+		return this[this._selIndex] || undefined;
+    }
+    set selItem(item) {
+    		var i =0;
+    		for (let item_ of this) {
+    			if (item_ === item){
+    				this._selIndex = i;
+    				break;
+    			}
+    			i += 1;
+    		}
+    }
+    get selHasNext(){
+    		return this._selIndex >=0 && this._selIndex < this.length -1;
+    }
+    get selHasPrev(){
+		return this._selIndex > 0 && this._selIndex < this.length;
+    }
+    selNext(){
+    		if (this.selHasNext){
+    			this._selIndex += 1;
+    		} 
+    }
+    selPrev(){
+    		if (this.selHasPrev){
+    			this._selIndex -= 1; 
+    		}
+    	}
+}
 
 
 class SelSet extends Set {
@@ -126,43 +152,6 @@ class SelMap extends Map {
 	}
 }
 
-class MultiselMap extends SelMap {
-	/**
-	 * JS (ES6) Map subclass implementing selected key(s).
-	 * Currently the selected key is not updating when the Map is modified,
-	 * the user has to care about that
-	 * 
-	 * Examples:
-	 * 
-	 * var a = new SelMap([['key1', 5], ['key2', 'a'])  // SelMap() for empty Map
-	 * a.selKey()  // return undefined (no selection)
-	 * a.setSelKey('key1')
-	 * a.selKey() // returns 'key1'
-	 * // usual operations on map:
-	 * a.get('key1')
-	 * ...
-	 */
-    clearSelection(){
-		this._selection = new Set([]);
-    }
-    select(...keys){
-		this.selKeys = keys;
-		return this;
-    }
-    get selKeys(){ 
-		return this._selection;
-	}
-	set selKeys(keys){
-		this.clearSelection();
-		for (let key of keys) {
-			this._selection.add(key);
-		}
-	}
-	get selCount(){ 
-		return this._selection.size;
-	}
-}
-
 // difference between factory and .service: https://blog.thoughtram.io/angular/2015/07/07/service-vs-factory-once-and-for-all.html
 ngApp.service('inputSelection', function () {
 	
@@ -200,7 +189,7 @@ ngApp.service('inputSelection', function () {
 		},
 		
 		get isValid(){
-			return this.gsimsCount && this.imt && this.isImtSelectable(imt); // ._selKey is a Set, its name overrides super-class (SelMap)
+			return this.gsimsCount > 0 && this.imt && this.isImtSelectable(imt); // ._selKey is a Set, its name overrides super-class (SelMap)
 		},
 		
 		get gsims() {

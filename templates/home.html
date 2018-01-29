@@ -151,6 +151,7 @@
 	                    <span class="icon-bar"></span>
 	                </button>
 	            </div>
+	            
 		      	<!-- navbar entries: a dropdownmenu with program services (e.g., calculate trellis plots) -->
 			    <div class="collapse navbar-collapse" id="gfz_gmpe_navbar_collapse">
 				    <ul class="nav navbar-nav">
@@ -159,9 +160,9 @@
 							    {% verbatim %} {{ services.selKey != 'Home' ? " / " + services.selKey : "" }} {% endverbatim %}
 						    		<span class="caret"></span></a>
 						    <ul class="dropdown-menu">
-							    	<li ng-repeat="serviceName in serviceNames" > 
-							    		<a href="#" ng-click="services.selKey = serviceName" onClick="return false;">
-							    			{% verbatim %} {{ serviceName }} {% endverbatim %}
+							    	<li ng-repeat="sName in services.names" > 
+							    		<a href="#" ng-click="services.selKey = sName" onClick="return false;">
+							    			{% verbatim %} {{ sName }} {% endverbatim %}
 							    		</a>
 							    	</li>
 						    </ul>
@@ -169,11 +170,13 @@
 				    </ul>
 				    
 				    <!-- current selected services submenus (anchor tags horizontally aligned., e.g. "Inpiut Selection", "Result",...) -->
-				    <ul ng-repeat="serviceName in serviceNames"
-				    		ng-show="services.selKey == {% verbatim %} '{{ serviceName }}' {% endverbatim %}"
+				    <ul ng-repeat="sName in services.names"
+				    		ng-show="services.selKey == sName"
 				    		class="nav navbar-nav">
-				    		<li ng-repeat="subMenu in selectedServiceSubmenus()" ng-class="{'active': subMenu == services.get(serviceName).selItem}">
-				    			<a href="#" onClick="return false;" ng-click="services.get(serviceName).selItem = subMenu">
+				    		<li ng-repeat="subMenu in services.get(sName) track by $index"
+				    			ng-class="{'active': subMenu == services.get(sName).selItem}">
+				    			<a href="#" onClick="return false;" ng-click="services.get(sName).selItem = subMenu"
+					    			ng-disabled="$index>0 && !inputSelection.isValid">
 				    				<span class="glyphicon glyphicon-chevron-right" aria-hidden="true">
 				    				</span>{% verbatim %} {{ subMenu }} {% endverbatim %}
 				    			</a>
@@ -182,40 +185,56 @@
 			    </div>
 		    </div>
 	    </nav> <!-- /navbar -->
-	    <div class='center flex-container-row-direction'
-	    		ng-show="services.get(services.selKey).selItem === INPUTSEL_MENUNAME">
-	    		<div class="flex-container-col-direction center">
-	    			<div class="form-group center flex-container-col-direction">
-					<label class='top' for="selectable_gsims">Ground-shaking intensity model (GSIM):</label>
-				  	<!-- <select multiple class="form-control center" id="aval_gsims"
-				  		ng-model='getsetGsim'  ng-options="key for key in inputSelection.avalGsims | filter:gsimsFilter"
-				  		ng-model-options="{getterSetter: true }">
-				    	</select> -->
-					<select multiple class="form-control center" id="selectable_gsims" ng-model="temporarySelectedGsims">
-				    		<option ng-repeat="gsim in inputSelection.avalGsims | filter:gsimsFilter" ng-value="gsim">
-				    			{% verbatim %} {{ gsim }} {% endverbatim %}
-				    		</option>
-					</select>
-					<div class='bottom'>{% verbatim %}
-						{{ visibleGsimsCount }} of {{ inputSelection.avalGsimsCount }} visible 
-						({{ inputSelection.avalGsimsCount - visibleGsimsCount }} filtered out),
-						{{ temporarySelectedGsims.length }} selected
-						{% endverbatim %}
-					</div>
-				</div>
-				<div class="form-inline bottom">
-					Filter By <select ng-model="filterTypeName" ng-options="key as key for key in filterTypeNames" class="form-control"></select>
-					matching: <input ng-model="filterText" type="text" class="form-control"
-								placeholder="Input Text (*=matches any character zero or more times, ?=matches any character exactly one time)"
-								autofocus>
-				</div>
-	    		</div>
-			<div class='flex-container-col-direction' style='justify-content:space-evenly; padding:10px'>
-				<button ng-click="setSelectedGsims()" class='btn btn-primary'>
-					<span class="glyphicon glyphicon-chevron-right" aria-hidden="true">
-				</button>
+
+	    <div class='center flex-container-row-direction'>
+	    		
+			<!-- ARROW LEFT (move to previous submenu -->
+	    		<div ng-show="!isServiceName(SERVICE_HOME) && services.get(services.selKey).selHasPrev"
+	    			class='flex-container-col-direction'
+	    			style='justify-content:space-evenly; padding:10px'>
+				<a href='#' click='return false;' ng-click="services.get(services.selKey).selPrev()">
+					<span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+				</a>
 			</div>
-			<div class="flex-container-col-direction center">
+	    		
+	    		<!-- DIV HOUSING THE AVAILABLE GSIMS panel -->
+	    		<div class='flex-container-row-direction center'
+	    			ng-show="!isServiceName(SERVICE_HOME) && isSubmenuIndex(0)">
+
+		    		<div class="flex-container-col-direction center">
+		    			<div class="form-group center flex-container-col-direction">
+						<label class='top' for="selectable_gsims">Ground-shaking intensity model (GSIM):</label>
+						<select multiple class="form-control center" id="selectable_gsims" ng-model="temporarySelectedGsims">
+					    		<option ng-repeat="gsim in inputSelection.avalGsims | filter:gsimsFilter" ng-value="gsim">
+					    			{% verbatim %} {{ gsim }} {% endverbatim %}
+					    		</option>
+						</select>
+						<div class='bottom'>{% verbatim %}
+							{{ visibleGsimsCount }} of {{ inputSelection.avalGsimsCount }} visible 
+							({{ inputSelection.avalGsimsCount - visibleGsimsCount }} filtered out),
+							{{ temporarySelectedGsims.length }} selected
+							{% endverbatim %}
+						</div>
+					</div>
+
+					<div class="form-inline bottom">
+						Filter By <select ng-model="filterTypeName" ng-options="key as key for key in filterTypeNames" class="form-control"></select>
+						matching: <input ng-model="filterText" type="text" class="form-control"
+									placeholder="Input Text (*=matches any character zero or more times, ?=matches any character exactly one time)"
+									autofocus>
+					</div>
+		    		</div>
+		    		
+				<div class='flex-container-col-direction' style='justify-content:space-evenly; padding:10px'>
+					<button ng-click="setSelectedGsims()" class='btn btn-primary'>
+						<span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+					</button>
+				</div>
+			</div>
+			
+			<!-- div HOUSING THE SELECTED GSIMS -->
+			<div ng-show="!isServiceName(SERVICE_HOME) && (isSubmenuIndex(0) || isSubmenuIndex(1))"
+				class="flex-container-col-direction center">
 				<div class="form-group center flex-container-col-direction">
 					<label class='top' for="selectable_gsims">Selected GSIMs:</label>
 					<div class='center form-control' style='overflow:auto'>
@@ -238,6 +257,50 @@
 					here the imts
 				</div>
 			</div>
+			
+			<!-- div HOUSING THE CONFIG. SCENARIO -->
+			<div ng-show="isServiceName(SERVICE_TRELLIS_PLOTS) && isSubmenuIndex(1)" 
+				class="flex-container-col-direction center">
+				<div class="form-group center flex-container-col-direction">
+					here the config scenario
+				</div>
+				<div class="form-inline bottom">
+					
+				</div>
+			</div>
+			
+			<!-- div HOUSING THE TRELLIS PLOTS RESULTS -->
+			<div ng-show="isServiceName(SERVICE_TRELLIS_PLOTS) && isSubmenuIndex(2)"
+				class="flex-container-col-direction center">
+				<div class="form-group center flex-container-col-direction">
+					here the results
+				</div>
+				<div class="form-inline bottom">
+					
+				</div>
+			</div>
+			
+			<!-- div HOUSING THE DATA ANALYSIS STEP 2 (TBD) -->
+			<!-- For each next div (if any), just replace isSubmenuIndex(1) with isSubmenuIndex(2), isSubmenuIndex(3),... -->
+			<div ng-show="isServiceName(SERVICE_DATA_ANALYSIS) && isSubmenuIndex(1)"  
+				class="flex-container-col-direction center">
+				<div class="form-group center flex-container-col-direction">
+					data analysis
+				</div>
+				<div class="form-inline bottom">
+					
+				</div>
+			</div>
+			
+			<!-- ARROW RIGHT (move to next submenu) -->
+			<div ng-show="!isServiceName(SERVICE_HOME) && services.get(services.selKey).selHasNext"
+				class='flex-container-col-direction' style='justify-content:space-evenly; padding:10px'>
+				<a href='#' click='return false;' ng-click="services.get(services.selKey).selNext()"
+					ng-disabled="!inputSelection.isValid">
+					<span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+				</a>
+			</div>
+
 	    </div>
 
       <!-- modal -->

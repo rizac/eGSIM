@@ -216,3 +216,9 @@ path.leaflet-interactive{
 .flex-container-row-direction > .left, .flex-container-row-direction > .right{
 	flex: 0 1 auto;
 }
+
+
+.transparent {
+	background-color: transparent;
+	border: none;
+}
