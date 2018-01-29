@@ -1,3 +1,8 @@
+{% extends home.html %}
+
+{% ectrahead %}
+{% end %}
+
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" style="height:100%" lang="en">
 	<head>
@@ -121,27 +126,12 @@
 	    <script type="text/javascript" src="{% static 'js/oop/zipfilereader.js' %}"></script>
 	    <!-- framework zip instacestate class -->
 		<script type="text/javascript" src="{% static 'js/oop/instancestate.js' %}"></script>
-
-		<!-- angular -->
-		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.7/angular.min.js"></script>
-		
-		<script type="text/javascript">
-			// init app:
-			var ngApp = angular.module("{{ project_name }}", []); 
-		</script>
-		
-		<script type="text/javascript" src="{% static 'js/ng/services/inputSelection.js' %}"></script>
-		<script type="text/javascript" src="{% static 'js/ng/controllers/main.js' %}"></script>
-		<script type="text/javascript" src="{% static 'js/ng/controllers/trellisPlots.js' %}"></script>
-		<script type="text/javascript" src="{% static 'js/ng/controllers/dataAnalysis.js' %}"></script>
-
-		{% block extrahead %}{% endblock %}
 	</head>
   
 <body>
-	<div id="gfz_gmpe_site_wrapper" ng-app="{{ project_name }}" ng-controller="mainController" class="flex-container-col-direction">
+	<div id="gfz_gmpe_site_wrapper" class="">
 	    <!-- navbar -->
-	    <nav id="gfz_gmpe_scrollspy" class="navbar navbar-inverse top">
+	    <nav id="gfz_gmpe_scrollspy" class="navbar navbar-inverse navbar-fixed-top" >
 			<div class="container-fluid">
 		    		<!-- collapse button -->
 	            <div class="navbar-header">
@@ -151,97 +141,37 @@
 	                    <span class="icon-bar"></span>
 	                </button>
 	            </div>
-		      	<!-- navbar entries: a dropdownmenu with program services (e.g., calculate trellis plots) -->
+		      	<!-- navbar entries -->
 			    <div class="collapse navbar-collapse" id="gfz_gmpe_navbar_collapse">
 				    <ul class="nav navbar-nav">
 				    		<li class="dropdown">
-						    <a class="dropdown-toggle" data-toggle="dropdown" href="#" onClick="return false;"><b>{{ project_name }}</b>
-							    {% verbatim %} {{ services.selKey != 'Home' ? " / " + services.selKey : "" }} {% endverbatim %}
+						    <a class="dropdown-toggle" data-toggle="dropdown" href="#" title="Projects">{{ project_name }}
 						    		<span class="caret"></span></a>
 						    <ul class="dropdown-menu">
-							    	<li ng-repeat="serviceName in serviceNames" > 
-							    		<a href="#" ng-click="services.selKey = serviceName" onClick="return false;">
-							    			{% verbatim %} {{ serviceName }} {% endverbatim %}
-							    		</a>
-							    	</li>
+							    <li><a href="#">Trellis Plots</a></li>
+							    <li><a href="#">Data Analysis</a></li>
 						    </ul>
 					    </li>
+					    <!-- <li><a href="#map" title="Map">Map</a></li>
+					    <li><a href="#data" title="Data">Data</a></li> -->
 				    </ul>
-				    
-				    <!-- current selected services submenus (anchor tags horizontally aligned., e.g. "Inpiut Selection", "Result",...) -->
-				    <ul ng-repeat="serviceName in serviceNames"
-				    		ng-show="services.selKey == {% verbatim %} '{{ serviceName }}' {% endverbatim %}"
-				    		class="nav navbar-nav">
-				    		<li ng-repeat="subMenu in selectedServiceSubmenus()" ng-class="{'active': subMenu == services.get(serviceName).selItem}">
-				    			<a href="#" onClick="return false;" ng-click="services.get(serviceName).selItem = subMenu">
-				    				<span class="glyphicon glyphicon-chevron-right" aria-hidden="true">
-				    				</span>{% verbatim %} {{ subMenu }} {% endverbatim %}
-				    			</a>
-						</li>
+				    <ul class="nav navbar-nav">
+				    		<li><a href="#" onClick="return false;"> / Trellis Plots</a>
+				    		<li class='active'><a href="#"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>GMPEs</a>
+						<li><a href="#"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>IMT</a>
+						<li><a href="#"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>Config. Scenario</a>
+						<li><a href="#"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>Trellis Plots</a>
 					</ul>
+				    <!-- <ul class="nav navbar-nav navbar-right">
+						<li><a href="#"><span class="glyphicon glyphicon-user"></span>User</a></li>
+						<li><a href="#"><span class="glyphicon glyphicon-log-in"></span>Login</a></li>
+				    </ul>  -->
 			    </div>
 		    </div>
 	    </nav> <!-- /navbar -->
-	    <div class='center flex-container-row-direction'
-	    		ng-show="services.get(services.selKey).selItem === INPUTSEL_MENUNAME">
-	    		<div class="flex-container-col-direction center">
-	    			<div class="form-group center flex-container-col-direction">
-					<label class='top' for="selectable_gsims">Ground-shaking intensity model (GSIM):</label>
-				  	<!-- <select multiple class="form-control center" id="aval_gsims"
-				  		ng-model='getsetGsim'  ng-options="key for key in inputSelection.avalGsims | filter:gsimsFilter"
-				  		ng-model-options="{getterSetter: true }">
-				    	</select> -->
-					<select multiple class="form-control center" id="selectable_gsims" ng-model="temporarySelectedGsims">
-				    		<option ng-repeat="gsim in inputSelection.avalGsims | filter:gsimsFilter" ng-value="gsim">
-				    			{% verbatim %} {{ gsim }} {% endverbatim %}
-				    		</option>
-					</select>
-					<div class='bottom'>{% verbatim %}
-						{{ visibleGsimsCount }} of {{ inputSelection.avalGsimsCount }} visible 
-						({{ inputSelection.avalGsimsCount - visibleGsimsCount }} filtered out),
-						{{ temporarySelectedGsims.length }} selected
-						{% endverbatim %}
-					</div>
-				</div>
-				<div class="form-inline bottom">
-					Filter By <select ng-model="filterTypeName" ng-options="key as key for key in filterTypeNames" class="form-control"></select>
-					matching: <input ng-model="filterText" type="text" class="form-control"
-								placeholder="Input Text (*=matches any character zero or more times, ?=matches any character exactly one time)"
-								autofocus>
-				</div>
-	    		</div>
-			<div class='flex-container-col-direction' style='justify-content:space-evenly; padding:10px'>
-				<button ng-click="setSelectedGsims()" class='btn btn-primary'>
-					<span class="glyphicon glyphicon-chevron-right" aria-hidden="true">
-				</button>
-			</div>
-			<div class="flex-container-col-direction center">
-				<div class="form-group center flex-container-col-direction">
-					<label class='top' for="selectable_gsims">Selected GSIMs:</label>
-					<div class='center form-control' style='overflow:auto'>
-						<div ng-repeat="gsim in inputSelection.gsims" class="alert alert-success alert-dismissable">
-	  						<a href="#" ng-click="inputSelection.deleteGsims([gsim])"
-	  							class="close" data-dismiss="alert" aria-label="close">&times;</a>
-	  						<strong>{% verbatim %} {{ gsim }} {% endverbatim %}</strong>
-						</div>
-					</div>
-					<div class='bottom form-control'>
-					<button class='btn btn-default' ng-repeat='imt in inputSelection.avalImts'
-						ng-disabled="!inputSelection.isImtSelectable(imt)"
-						ng-class="{'btn-success': inputSelection.imt == imt}"
-						ng-click="inputSelection.imt = imt">
-						{% verbatim %} {{ imt }} {% endverbatim %}
-					</button>
-					</div>
-				</div>
-				<div class="form-inline bottom">
-					here the imts
-				</div>
-			</div>
-	    </div>
 
       <!-- modal -->
-      <div id="myModal" style='display:none' class="modal" >
+      <div id="myModal" class="modal" >
         <div id="myModal" class="modal-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header modal-frame-element">
@@ -262,7 +192,7 @@
         </div> <!-- /.modal-dialog -->
       </div> <!-- /.modal -->
       
-      <div id="map" style='display:none' class="container-fluid">
+      <div id="map" class="container-fluid">
         <!-- map wrapper -->
         <div id="gfz_gmpe_map_wrapper" class="map_wrapper col-xs-12 col-sm-12 col-md-12 col-lg-12">
           <!-- sidebar top div -->
@@ -290,7 +220,150 @@
       
       
       
-   
+      <!-- TODO echo_lower_wrapper() -->
+      <div id="data" class="container-fluid">
+        <div class="row"> <!-- nav tabs row -->
+          <!--  -->
+          <nav id="gfz_gmpe_navbar_scrollspy" class="navbar"> <!-- NAV -->
+            <!-- START tablist -->
+            <div id="gfz_gmpe_navlist_wrapper" class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+              <ul class="nav nav-tabs nav-justified" role="tablist" id="gfz_gmpe_tabs">
+                
+                <!-- tab 1 -->
+                <li role="presentation">
+                  <a class="gfz_gmpe_tablink" href="#gfz_gmpe_tab1" aria-controls="gfz_gmpe_tab1" role="tab" data-toggle="tab">
+                    Tab 1 (Input View)
+                  </a>
+                </li>
+                
+                <!-- tab 2 -->
+                <li role="presentation">
+                  <a class="gfz_gmpe_tablink" href="#gfz_gmpe_tab2" aria-controls="gfz_gmpe_tab2" role="tab" data-toggle="tab">
+                    Tab 2 (Data View)
+                  </a>
+                </li>
+                
+                <!-- tab 3 -->
+                <li role="presentation">
+                  <a class="gfz_gmpe_tablink" href="#gfz_gmpe_tab3" aria-controls="gfz_gmpe_tab3" role="tab" data-toggle="tab">
+                    Tab 3
+                    <span class="gfz_gmpe_localisation" value-local="HELP"></span>
+                  </a>
+                </li>
+              </ul> <!-- nav tabs list -->
+            </div> <!-- nav tab col -->
+            <!-- //END tablist -->
+
+          </nav> <!-- / NAV #gfz_gmpe_navbar_scrollspy -->
+        </div> <!-- nav tab row -->
+
+      </div>
+
+      <div id="gfz_gmpe_tabpanes" class="tab-content row" >
+        
+        <!-- TODO other tabs contents -->
+        <!-- tab 1 -->
+        <div id="gfz_gmpe_tab1" role="tabpanel" class="tab-pane active tabpanel_content_wrapper container-fluid">
+          
+          <div id="gfz_gmpe_data_input_wrapper" class="container" style="float:left; max-width: 700px">
+
+            <!-- Tab panes -->
+            <div id="gfz_gmpe_tab1panes" class="tab-content row" >
+              <!-- full width tab content container (-fluid) -->
+              <div id="gfz_gmpe_input_tab" name="gfz_gmpe_input_tab" role="tabpanel"
+                   class="tab-pane active tabpanel_content_wrapper container-fluid" area-labelledby="maptab">
+                <div id="gfz_gmpe_tab1panes_row" class="row panel panel-default">
+                  <div id="gfz_gmpe_map_controls_wrapper" class="panel-heading map_controls_wrapper col-xs-12 col-sm-12 col-md-12 col-lg-12">
+
+                    <!-- ... accordion href link -->
+                    <div class="panel-heading" role="tab" id="gfz_gmpe_heading_accordion">
+                      <h4 class="panel-title">
+                        <a data-toggle="collapse" data-parent="#gfz_gmpe_input_tab" href="#gfz_gmpe_btngroup_wrapper_generalpurpose"
+                           aria-expanded="true" aria-controls="gfz_gmpe_btngroup_generalpurpose">
+                          <div class="gfz_gmpe_seperator"></div>
+                          <div class="gfz_gmpe_ui_heading">
+                            <span><strong class="gfz_gmpe_localisation" value-local="FIXME_NO_TERM"></strong></span>
+                          </div>
+                        </a>
+                      </h4>
+                    </div>
+
+                    <!-- ... button group -->
+                    <div class="panel-collapse collapse out" id="gfz_gmpe_btngroup_wrapper_generalpurpose" role="tabpanel"
+                         aria-labelledby="gfz_gmpe_heading_accordion">
+                      <div class="btn-group">
+                        
+                        <div class="dropdown">
+                          <button class="btn btn-default btn-block dropdown-toggle gfz_gmpe_ui_element"
+                                  type="button" id="fractile_dropdown_button" data-toggle="dropdown"
+                                  aria-haspopup="true" aria-expanded="false">
+                            <span class="gfz_gmpe_localisation" value-local="FIXME_NO_TERM"></span>:
+                            
+                            <span class="caret"></span>
+                          </button>
+                          <!-- TODO - dropdown values gmpe?  -->
+                          <ul id="fractile_dropdown_list" class="dropdown-menu mapctrl-dropdown-menu gfz_gmpe_dropdown-menu"
+                              aria-labelledby="fractile_dropdown_button" role="menu">
+                            <li><a href="javascript:void(0)" data-value="FIXME_SOMETHING">
+                              <span class="gfz_gmpe_localisation" value-local="FIXME_NO_TERM"></span>
+                            </a></li>
+                            <li><a href="javascript:void(0)" data-value="FIXME_SOMETHING">
+                              <span class="gfz_gmpe_localisation" value-local="FIXME_NO_TERM"></span>
+                            </a></li>
+                            <li><a href="javascript:void(0)" data-value="FIXME_SOMETHING">
+                              <span class="gfz_gmpe_localisation" value-local="FIXME_NO_TERM"></span>
+                            </a></li>
+                          </ul>
+                        </div>
+
+                      </div>
+                    </div>
+                    
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        <!-- tab 2 -->
+        <div id="gfz_gmpe_tab2" role="tabpanel" class="tab-pane tabpanel_content_wrapper container-fluid">
+          <div class="container" style="float:left; max-width: 700px">
+            <div class="row">
+
+              <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                <!-- dropdown -->
+                <div class="dropdown">
+                  <button class="btn btn-primary btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                    Sort by&nbsp;<span class="caret"></span>
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a id="gfz_gmpe_sort_by_zone" href="javascript:void(0)">Zone</a></li>
+                    <li><a id="gfz_gmpe_sort_by_gmpe" href="javascript:void(0)">GMPE</a></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                <!-- plot button -->
+                <button id="gfz_gmpe_button_plot" type="button" class="btn btn-primary btn-block">Plot</button>
+              </div>
+            </div> 
+            <div class="row">
+              <!-- table container -->
+              <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                <div id="gfz_gmpe_data_table_wrapper">
+                  <!--<p>Contextual classes: .active, .success, .info, .warning, and .danger.</p>-->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- tab 3 -->
+        <div id="gfz_gmpe_tab3" role="tabpanel" class="tab-pane tabpanel_content_wrapper container-fluid">
+          TODO
+        </div>
+      </div> <!-- /End tab panes -->
  	</div><!-- /#gfz_gmgpe_site_wrapper -->
  </body> <!-- /body -->
   

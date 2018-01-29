@@ -69,7 +69,7 @@ function map_init(suffix = "", shziplayer_path_prefix='')
         mymap.map().remove();
     }
     /** set up a new leaflet map wrapper object and add layers to it */
-    mymap = new Map( MAP_ID, SIDEBAR_ID, ID_PREFIX );
+    mymap = new LMap( MAP_ID, SIDEBAR_ID, ID_PREFIX );
     /* base layer */
     mymap.add_base_layer('OSM DE', 'http://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', osm_attrib);
     mymap.add_base_layer('Mapnik', 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', osm_attrib);

@@ -8,7 +8,7 @@ body { position:relative; padding-right: 0 !important }
 
 /* --- site --- */
 /* site layout */
-#gfz_gmpe_site_wrapper {width:100%; height: 95%; overflow:hidden; padding-top: 45px;}
+#gfz_gmpe_site_wrapper {width: 100vw; height: 100vh; overflow: hidden; padding: 1ex;}
 #gfz_gmpe_upper_elements_wrapper {width:100%; height:5%}
 .gfz_gmpe_lower_elements_wrapper {width:100%; height:100%}
 #gfz_gmpe_map_controls_wrapper { height:100%; float:left; padding:5px; margin-top: 5px}
@@ -194,4 +194,25 @@ path.leaflet-interactive{
 
 .glyphicon{
 	margin-right: 5px;
+}
+
+.flex-container-row-direction{
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+
+.flex-container-col-direction{
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.flex-container-row-direction > .center, .flex-container-col-direction > .center{
+	flex: 1 1 auto;
+}
+
+.flex-container-col-direction > .top, .flex-container-col-direction > .bottom,
+.flex-container-row-direction > .left, .flex-container-row-direction > .right{
+	flex: 0 1 auto;
 }

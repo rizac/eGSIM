@@ -1,4 +1,4 @@
-/** base Map classeturn
+/** base LMap classeturn
  * initializes a new Map object
  * this class takes care of all Leaflet Map related functionality
  * @constructor
@@ -9,7 +9,7 @@
  * @param {String} sidebar_id the id of the map attached sidebar element
  * @param {String} id_prefix a project specific prefix for id elements
  */
-function Map( map_id, sidebar_id, id_prefix )
+function LMap( map_id, sidebar_id, id_prefix )
 {
     this._globals = { map: { MIN_ZOOM_WORLD:1, MAX_ZOOM_WORLD:19 } };
     this._layers = { base: [], overlay: [] };
@@ -35,7 +35,7 @@ function Map( map_id, sidebar_id, id_prefix )
  * @param {Object} [params] a Leaflet parameter object, e.g. { center: [51.3, 13.37], zoom: 6} 
  * @param {String} [suffix=""] TODO - not used
  */
-Map.prototype.init = function(params, suffix="")
+LMap.prototype.init = function(params, suffix="")
 {
     if (typeof params === 'undefined') { params = { center: [51.3, 13.37], zoom: 4 }; }
     this.base_maps = {};
@@ -71,7 +71,7 @@ Map.prototype.init = function(params, suffix="")
 /** *** ***
  * @returns this Leaflet map object
  */
-Map.prototype.map = function()
+LMap.prototype.map = function()
 {
     return this._map;
 };
@@ -79,7 +79,7 @@ Map.prototype.map = function()
 /** *** ***
  * @returns this Leaflet ids object
  */
-Map.prototype.ids = function()
+LMap.prototype.ids = function()
 {
     return this._ids;
 };
@@ -87,7 +87,7 @@ Map.prototype.ids = function()
 /** *** ***
  * @returns this Leaflet layercontrol object
  */
-Map.prototype.layercontrol = function()
+LMap.prototype.layercontrol = function()
 {
     return this._layerControl;
 };
@@ -98,7 +98,7 @@ Map.prototype.layercontrol = function()
  * @param url the URL string of this layer
  * @param attribution the attribution string, e.g. layer reference
  */
-Map.prototype.add_base_layer = function(description, url, attribution)
+LMap.prototype.add_base_layer = function(description, url, attribution)
 {
     this._layers.base.push( new BaseLayer(description, url, attribution) );
 };
@@ -108,7 +108,7 @@ Map.prototype.add_base_layer = function(description, url, attribution)
  * @param url the URL where json file is to be found
  * @param [params] a style parameter object
  */
-Map.prototype.add_json_layer = function(description, url, params)
+LMap.prototype.add_json_layer = function(description, url, params)
 {
     var l = new JsonLayer(description, url, this._json_callback_fn.bind(this), params );
     //this._layers.overlay.push(l);
@@ -122,7 +122,7 @@ Map.prototype.add_json_layer = function(description, url, params)
  * @param [params] a style parameter object
  */
 
-Map.prototype.add_shpzip_layer = function(description, url, params)
+LMap.prototype.add_shpzip_layer = function(description, url, params)
 {
     var l = new ShpJsonLayer(description, url, this._json_callback_fn.bind(this), params );
     //this._layers.overlay.push(l);
@@ -134,7 +134,7 @@ Map.prototype.add_shpzip_layer = function(description, url, params)
 /** *** returns the map object's overlay array ***
  * @return this map object's array of added vector overlays
  */
-Map.prototype.overlays = function()
+LMap.prototype.overlays = function()
 {
     return this._layers.overlay;
 };
@@ -143,7 +143,7 @@ Map.prototype.overlays = function()
  * requires the @https://github.com/Turbo87/sidebar-v2 Leaflet sidebar plugin
  * @param id the HTML id of the sidebar 
  */
-Map.prototype.sidebar = function()
+LMap.prototype.sidebar = function()
 {
     this.sidebar = L.control.sidebar(this._ids.sidebar);
     /* make sure the sidebar isn'n covered by other html objects */
@@ -159,7 +159,7 @@ Map.prototype.sidebar = function()
  * the response wrapped geojson object is added to the leaflet map from here
  * @param response a @class JsonLayer object 
  */
-Map.prototype._json_callback_fn = function(response)
+LMap.prototype._json_callback_fn = function(response)
 {
     console.log('callback', response, 'this', this);
     this._layers.overlay.push(response);
@@ -172,7 +172,7 @@ Map.prototype._json_callback_fn = function(response)
  * property layer the layer to add to the map and the layer control 
  * property description the layer's description in the layer control
  */
-Map.prototype._map_add_layer = function(layerobj)
+LMap.prototype._map_add_layer = function(layerobj)
 {
     /* test if this layer already has been added */
     if (!layerobj.added()) {
@@ -192,12 +192,12 @@ Map.prototype._map_add_layer = function(layerobj)
 
 
 
-Map.prototype._add_id4js = function(key, value)
+LMap.prototype._add_id4js = function(key, value)
 {
     this._ids4js[key] = value;
 };
 
-Map.prototype._create_id = function(id_prefix, id_postfix)
+LMap.prototype._create_id = function(id_prefix, id_postfix)
 {
     return (id_prefix.length === 0)? id_postfix : id_prefix + '_' + id_postfix;
 };
