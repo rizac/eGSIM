@@ -218,7 +218,10 @@ path.leaflet-interactive{
 }
 
 
-.transparent {
-	background-color: transparent;
-	border: none;
+a.disabled, a[disabled]{  /* make disabled anchors appear disabled. Copied from bootstrap .btn */
+    cursor: not-allowed;
+    filter: alpha(opacity=65);
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    opacity: .65;
 }

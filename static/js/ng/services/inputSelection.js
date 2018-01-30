@@ -189,7 +189,7 @@ ngApp.service('inputSelection', function () {
 		},
 		
 		get isValid(){
-			return this.gsimsCount > 0 && this.imt && this.isImtSelectable(imt); // ._selKey is a Set, its name overrides super-class (SelMap)
+			return this.gsimsCount > 0 && this.imt && this.isImtSelectable(this.imt); // ._selKey is a Set, its name overrides super-class (SelMap)
 		},
 		
 		get gsims() {

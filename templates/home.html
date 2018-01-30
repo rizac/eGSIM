@@ -139,7 +139,8 @@
 	</head>
   
 <body>
-	<div id="gfz_gmpe_site_wrapper" ng-app="{{ project_name }}" ng-controller="mainController" class="flex-container-col-direction">
+	<div id="gfz_gmpe_site_wrapper" ng-app="{{ project_name }}" ng-controller="mainController"
+		class="flex-container-col-direction">
 	    <!-- navbar -->
 	    <nav id="gfz_gmpe_scrollspy" class="navbar navbar-inverse top">
 			<div class="container-fluid">
@@ -175,7 +176,7 @@
 				    		class="nav navbar-nav">
 				    		<li ng-repeat="subMenu in services.get(sName) track by $index"
 				    			ng-class="{'active': subMenu == services.get(sName).selItem}">
-				    			<a href="#" onClick="return false;" ng-click="services.get(sName).selItem = subMenu"
+				    			<a href="#" onclick="return false;" ng-click="services.get(sName).selItem = subMenu"
 					    			ng-disabled="$index>0 && !inputSelection.isValid">
 				    				<span class="glyphicon glyphicon-chevron-right" aria-hidden="true">
 				    				</span>{% verbatim %} {{ subMenu }} {% endverbatim %}
@@ -192,7 +193,7 @@
 	    		<div ng-show="!isServiceName(SERVICE_HOME) && services.get(services.selKey).selHasPrev"
 	    			class='flex-container-col-direction'
 	    			style='justify-content:space-evenly; padding:10px'>
-				<a href='#' click='return false;' ng-click="services.get(services.selKey).selPrev()">
+				<a href='#' onclick='return false;' ng-click="services.get(services.selKey).selPrev()">
 					<span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
 				</a>
 			</div>
@@ -259,10 +260,11 @@
 			</div>
 			
 			<!-- div HOUSING THE CONFIG. SCENARIO -->
-			<div ng-show="isServiceName(SERVICE_TRELLIS_PLOTS) && isSubmenuIndex(1)" 
+			<div ng-controller="trellisPlotsController" 
+				ng-show="isServiceName(SERVICE_TRELLIS_PLOTS) && isSubmenuIndex(1)" 
 				class="flex-container-col-direction center">
 				<div class="form-group center flex-container-col-direction">
-					here the config scenario
+    					{{ form }}
 				</div>
 				<div class="form-inline bottom">
 					
@@ -276,6 +278,7 @@
 					here the results
 				</div>
 				<div class="form-inline bottom">
+								
 					
 				</div>
 			</div>
@@ -293,10 +296,9 @@
 			</div>
 			
 			<!-- ARROW RIGHT (move to next submenu) -->
-			<div ng-show="!isServiceName(SERVICE_HOME) && services.get(services.selKey).selHasNext"
+			<div ng-show="!isServiceName(SERVICE_HOME) && services.get(services.selKey).selHasNext && inputSelection.isValid"
 				class='flex-container-col-direction' style='justify-content:space-evenly; padding:10px'>
-				<a href='#' click='return false;' ng-click="services.get(services.selKey).selNext()"
-					ng-disabled="!inputSelection.isValid">
+				<a href='#' onclick='return false;' ng-click="services.get(services.selKey).selNext()">
 					<span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
 				</a>
 			</div>

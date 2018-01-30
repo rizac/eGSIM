@@ -11,9 +11,10 @@ from django.views.decorators.csrf import csrf_exempt
 
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
+from eGSIM.eGSIM.forms import RuptureConfigForm
 
 def index(request):
-    return render(request, 'home.html', {'project_name':'eGSIM'})
+    return render(request, 'home.html', {'project_name':'eGSIM', 'form': RuptureConfigForm()})
 #     return HttpResponse('Hello World!')
 
 # @api_view(['GET', 'POST'])
