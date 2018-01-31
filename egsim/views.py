@@ -11,7 +11,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
-from eGSIM.eGSIM.forms import RuptureConfigForm
+
+from .forms import RuptureConfigForm
 
 def index(request):
     return render(request, 'home.html', {'project_name':'eGSIM', 'form': RuptureConfigForm()})
@@ -27,4 +28,5 @@ def get_init_params(request):
                   [imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES],
                   gsim.DEFINED_FOR_TECTONIC_REGION_TYPE)
                  for key, gsim in get_available_gsims().items()]
+    print([a[-1] for a in aval_gsims])
     return JsonResponse({'avalGsims': aval_gsims}) 

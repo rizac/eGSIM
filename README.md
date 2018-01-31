@@ -1,5 +1,7 @@
 # eGSIM
-A web service for selecting and testing  ground shaking models in Europe (eGSIM), developed in the framework of the  Thematic Core Services for Seismology of EPOS-IP (European Plate Observing  System-Implementation Phase)
+A web service for selecting and testing  ground shaking models in Europe (eGSIM), developed
+in the framework of the  Thematic Core Services for Seismology of EPOS-IP
+(European Plate Observing  System-Implementation Phase)
 
 ## Installation
 
@@ -13,12 +15,12 @@ brew install gcc
 ```
 
 ### Activate virtualenv (links TBD).
-[Pedning: doc TBD] Three options:
+[Pending: doc TBD] Three options:
   1. python-venv (for python>=3.5)
   2. python-virtualenv
   3. virtualenvwrapper (our choice)
 
-*FROM NOW ON virtualenv is activated! EVERYTHIJNG WILL BE INSTALLED ON YOUR "copy" of pyhton WITH no mess-up with the OS python distribution*
+*FROM NOW ON virtualenv is activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton WITH no mess-up with the OS python distribution*
 
 ### Upgrade pip and setuptools:
 pip install -U pip setuptools
@@ -60,6 +62,12 @@ git clone https://github.com/GEMScienceTools/gmpe-smtk.git .
 install as editable (this should make git-pull in the repository enough to have the newest version):
 ```bash
 pip install -e .
+```
+
+### Install django-widget-tweaks
+
+```bash
+pip install django-widget-tweaks
 ```
 
 ## Run locally:

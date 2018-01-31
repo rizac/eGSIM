@@ -9,6 +9,7 @@ import re
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from django.core.exceptions import ValidationError
 from django import forms
+from django.utils.safestring import mark_safe
 
 
 class validation(object):
@@ -75,32 +76,41 @@ class validation(object):
 
 
 class RuptureConfigForm(forms.Form):
+    # Note: booleanfields need to be set with required=False, otherwise
+    # form validation expects them to be checked. More on this here:
+    # https://groups.google.com/forum/#!topic/django-developers/cZ-FPUyM_cM
     magnitude = forms.FloatField(label='Magnitude')
     dip = forms.FloatField(label='Dip', min_value=0., max_value=90.)
-    aspect = forms.FloatField(label='Rupture Length / Width', min_value=0)
-    tectonic_region = forms.CharField(label='Tectonic Region Type', initial='Active Shallow Crust')
-    rake = forms.FloatField(label='Rake', min_value=-180., max_value=180., initial=0)
-    ztor = forms.FloatField(label='Top of Rupture Depth (km)', min_value=0., initial=0)
-    strike = forms.FloatField(label='Strike', min_value=0., max_value=360., initial=0)
+    aspect = forms.FloatField(label='Rupture Length / Width', min_value=0.)
+    # tectonic_region = forms.CharField(label='Tectonic Region Type', initial='Active Shallow Crust')
+    rake = forms.FloatField(label='Rake', min_value=-180., max_value=180., initial=0.)
+    ztor = forms.FloatField(label='Top of Rupture Depth (km)', min_value=0., initial=0.)
+    strike = forms.FloatField(label='Strike', min_value=0., max_value=360., initial=0.)
     msr = forms.ChoiceField(label='Magnitude Scaling Relation',
                             choices=zip(get_available_magnitude_scalerel().keys(),
                                         get_available_magnitude_scalerel().keys()),
-                            initial='WC1994')
-    initial_point = forms.CharField(label="Location on Earth (Lon Lat)",
+                            initial="WC1994")
+    initial_point = forms.CharField(label="Location on Earth",
                                     validators=[validation.validate_lonlat],
-                                    initial="0 0")
-    hypocentre_location = forms.CharField(label=("Location of Hypocentre "
-                                                 "(along-strike fraction, down-dip fraction)"),
-                                    validators=[validation.validate_hyploc],
-                                    initial="0.5 0.5")
-    vs30 = forms.FloatField(label='V<sub>S30</sub>(m/s)', min_value=0., initial=760.0)
-    vs30_measured = forms.BooleanField(label='V<sub>S30</sub> measured (uncheck if inferred)',
-                                       initial=True)
+                                    initial="0 0",
+                                    help_text='Longitude Latitude')
+    hypocentre_location = forms.CharField(label=("Location of Hypocentre"),
+                                          validators=[validation.validate_hyploc],
+                                          initial="0.5 0.5",
+                                          help_text='Along-strike fraction, Down-dip fraction')
+    vs30 = forms.FloatField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., initial=760.0)
+    vs30_measured = forms.BooleanField(label=mark_safe('V<sub>S30</sub> measured '),
+                                       help_text='Uncheck if inferred)',
+                                       initial=True, required=False)
     line_azimuth = forms.FloatField(label='Azimuth of Comparison Line',
                                     min_value=0., max_value=360., initial=0.)
-    z1pt0 = forms.FloatField(label='Depth to 1 km/s V<sub>S</sub> layer (m)', min_value=0.,
-                             required=False)
-    z2pt5 = forms.FloatField(label='Depth to 2.5 km/s V<sub>S</sub> layer (km)', min_value=0.,
-                             required=False)
-    backarc = forms.BooleanField(label='Backarc Path', initial=False)
+    z1pt0 = forms.FloatField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
+                             min_value=0., required=False,
+                             help_text=mark_safe("If empty, a default value will be calculated "
+                                                 "from the V<sub>S30</sub>"))
+    z2pt5 = forms.FloatField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
+                             min_value=0., required=False,
+                             help_text=mark_safe("If empty, a default value will be calculated "
+                                                 "from the V<sub>S30</sub>"))
+    backarc = forms.BooleanField(label='Backarc Path', initial=False, required=False)
     
