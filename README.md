@@ -64,7 +64,7 @@ install as editable (this should make git-pull in the repository enough to have 
 pip install -e .
 ```
 
-### Install django-widget-tweaks
+### ~~~Install django-widget-tweaks (PENDING: REMOVE, not used anymore!)
 
 ```bash
 pip install django-widget-tweaks

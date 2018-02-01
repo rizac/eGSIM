@@ -203,7 +203,7 @@
 					<span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
 				</button>
 			</div>
-	    		
+				     		
 	    		<!-- ##################################### -->
 			<!-- DIV HOUSING THE AVAILABLE GSIMS panel -->
 	    		<!-- ##################################### -->
@@ -232,11 +232,14 @@
 									autofocus>
 					</div>
 		    		</div>
-				<div class='page-scroller'>
+		    		
+		    		{% include "navarrow.html" with ngclick="setSelectedGsims()" class="btn btn-primary" %}
+	
+				<!-- <div class='page-scroller'>
 					<button ng-click="setSelectedGsims()" class='btn btn-primary'>
 						<span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
 					</button>
-				</div>
+				</div> -->
 
 			</div>
 			
@@ -264,12 +267,15 @@
 						</button>
 					</div>
 				</div>
-				<div ng-show="!isServiceName(SERVICE_HOME) && isSubmenuIndex(0) && inputSelection.isValid"
+				
+				{% include "navarrow.html" with ngshow="!isServiceName(SERVICE_HOME) && isSubmenuIndex(0) && inputSelection.isValid" ngclick="services.get(services.selKey).selNext()" %}
+				
+				<!-- <div ng-show="!isServiceName(SERVICE_HOME) && isSubmenuIndex(0) && inputSelection.isValid"
 					class='page-scroller'>
 					<button ng-click="services.get(services.selKey).selNext()">
 						<span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
 					</button>
-				</div>
+				</div> -->
 
 			</div>
 			
@@ -303,12 +309,15 @@
 							</form>
 						</div>
 					</div>
-					
-				<div ng-show="inputSelection.isValid" class='page-scroller'>
-					<button onclick="document.getElementById('abcd').click()"> <!-- onclick="document.getElementById('c_r_form').submit()"> -->
+				
+				
+				{% include "navarrow.html" with ngshow="inputSelection.isValid" onclick="document.getElementById('abcd').click()" %}
+				
+				<!-- <div ng-show="inputSelection.isValid" class='page-scroller'>
+					<button onclick="document.getElementById('abcd').click()">
 						<span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
 					</button>
-				</div>
+				</div> -->
 				
 				
 			</div>
