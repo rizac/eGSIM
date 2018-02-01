@@ -5,11 +5,18 @@ Created on 29 Jan 2018
 '''
 
 import re
+import json
 
-from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from django.core.exceptions import ValidationError
+from django.utils.translation import ugettext as _
 from django import forms
 from django.utils.safestring import mark_safe
+from django.forms.widgets import Select
+from django.forms.fields import BooleanField
+
+from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
+from openquake.hazardlib.gsim import get_available_gsims
+from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
 
 
 class validation(object):
@@ -75,10 +82,80 @@ class validation(object):
             raise ValidationError(str(err))
 
 
+class InputSelection(object):
+    '''Just a wrapper housing input selection stuff'''
+    available_gsims = get_available_gsims()
+    
+    available_gsims_names = available_gsims.keys()
+
+    available_imts_names = list(available_imts)
+    
+    gsims2imts = {key: set([imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES])
+                  for key, gsim in available_gsims.items()}
+    
+    gsim2trts = {key: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
+                 for key, gsim in available_gsims.items()}
+    
+    @classmethod
+    def get_available_gsims_json(cls):
+        return [(g_name, list(cls.gsims2imts.get(g_name, [])), cls.gsim2trts.get(g_name, ''))
+                for g_name in cls.available_gsims_names]
+    
+    @classmethod
+    def isimtdefinedfor(cls, imt_name, gsim_name):
+        return imt_name in cls.gsims2imts.get(gsim_name, [])
+
+
+def customize_widget_atts(form, func):
+    '''Customizes widget attributes. Although there are plenty of libraries out there
+    (including integration with angularjs) most of which are a better approach
+    (as they force to write view code in templates rather than here),
+    this is the best solution found when comparing benefits over costs)
+    
+    :param func: a custom function returning a dict of keys mapped to their values, representing
+        the attributes to be added to the current form widget.
+        The function accepts three arguments:
+        ```(field_name, field_object, fields_dict)```
+        where field name is the field name (string)
+        field_object is the field object whose ``field.widget`` returns the used django widget
+        fields_dict is the parent dict of field names -> field objects this function is
+            iterating over
+        ```
+    '''
+    for name, field in form.fields.items():
+        atts = func(name, field, form.fields)
+        if not atts:
+            continue
+        field.widget.attrs.update(atts)
+        
+        
 class RuptureConfigForm(forms.Form):
-    # Note: booleanfields need to be set with required=False, otherwise
-    # form validation expects them to be checked. More on this here:
-    # https://groups.google.com/forum/#!topic/django-developers/cZ-FPUyM_cM
+    
+    
+    def __init__(self, *args, **kwargs):
+        '''Overides init to set custom attributes on field widgets'''
+        # Ok here is the deal: we want for the moment to delegat angularjs for most
+        # of the work. We therefore need to set custom attrs to form fields in order
+        # to make angular work properly. This might be REALLY NICELY ACHIEVED via
+        # template rendering, so that the modifications are in the view.
+        # We found widget_tweaks, but it doesn't allow detailed customization such as writing own expressions
+        # it fails with select statements ngValue etcetera. Moreover, it seems about not to be
+        # maintained anymore. We therefore tries to look at django-angular: too big learning curve,
+        # unclear installation procedure involving npm and angular (how their js packages are downloaded
+        # then?). So, after all we just need to overwrite few attributes on a form:
+        super(RuptureConfigForm, self).__init__(*args, **kwargs)
+        # customize our form fields to make it angular-compliant:
+        def ngfunc(name, field, fields):
+            atts = {}
+            atts['ng-model'] = "form.%s" % name
+            atts['ng-init'] = "form.%s=%s" % (name, json.dumps(field.initial))
+            if not isinstance(field.widget, BooleanField):
+                atts['class'] = 'form-control'
+            return atts 
+        customize_widget_atts(self, ngfunc)
+        
+        #self.fields['my_checkbox'].widget.attrs.update({'onclick': 'return false;'})
+
     magnitude = forms.FloatField(label='Magnitude')
     dip = forms.FloatField(label='Dip', min_value=0., max_value=90.)
     aspect = forms.FloatField(label='Rupture Length / Width', min_value=0.)
@@ -114,3 +191,38 @@ class RuptureConfigForm(forms.Form):
                                                  "from the V<sub>S30</sub>"))
     backarc = forms.BooleanField(label='Backarc Path', initial=False, required=False)
     
+
+class InputSelectionForm(forms.Form):
+    
+    # fields (not used for rendering, just for validation):
+    gsims = forms.MultipleChoiceField(label='gsims',
+                                      choices=zip(InputSelection.available_gsims_names,
+                                                  InputSelection.available_gsims_names),
+                                      initial=[])
+    
+    imt = forms.ChoiceField(label='imt',
+                            choices=zip(InputSelection.available_imts_names,
+                                        InputSelection.available_imts_names),
+                            )
+    
+    def clean(self):
+        '''runs validation where we must validate selected gsim(s) based on selected intensity
+        measure type. For info see:
+        https://docs.djangoproject.com/en/1.11/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+        '''
+        cleaned_data = super().clean()
+        gsims = cleaned_data.get("gsims")
+        imt = cleaned_data.get("imt")
+        
+        if not gsims:
+            raise forms.ValidationError("No Gsim selected")
+        
+        if not imt:
+            raise forms.ValidationError("No Imt selected")
+        
+
+        for gsim_name in gsims:
+            if not InputSelection.isimtdefinedfor(imt, gsim_name):
+                raise forms.ValidationError(
+                    _("%(imt) not defined for %(gsim)"), params={'imt': imt, 'gsim':gsim_name}
+                )

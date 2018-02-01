@@ -1,5 +1,3 @@
-{% load widget_tweaks %}
-
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" style="height:100%" lang="en">
 	<head>
@@ -133,7 +131,7 @@
 		</script>
 		
 		<script type="text/javascript" src="{% static 'js/ng/services/inputSelection.js' %}"></script>
-		<script type="text/javascript" src="{% static 'js/ng/controllers/main.js' %}"></script>
+		<script type="text/javascript" src="{% static 'js/ng/controllers/mainCtrl.js' %}"></script>
 		<script type="text/javascript" src="{% static 'js/ng/controllers/confRupture.js' %}"></script>
 		<script type="text/javascript" src="{% static 'js/ng/controllers/dataAnalysis.js' %}"></script>
 
@@ -252,7 +250,7 @@
 					<label class='top' for="selectable_gsims">Selected GSIMs:</label>
 					<div class='center' style='overflow:auto'>
 						<div ng-repeat="gsim in inputSelection.gsims" class="alert alert-success alert-dismissable">
-	  						<a href="#" ng-click="inputSelection.deleteGsims([gsim])"
+	  						<a ng-click="inputSelection.deleteGsims([gsim])" href="#" click='return false;' 
 	  							class="close" data-dismiss="alert" aria-label="close">&times;</a>
 	  						<strong>{% verbatim %} {{ gsim }} {% endverbatim %}</strong>
 						</div>
@@ -281,29 +279,31 @@
 			<div ng-show="isServiceName(SERVICE_TRELLIS_PLOTS) && isSubmenuIndex(1)" 
 				class="flex-container-row-direction center"
 				ng-controller="confRuptureController">
-				<form  name="c_r_form"  id='c_r_form' ng-submit="submitForm(c_r_form)">
+				
 					<div class="flex-container-col-direction center">
 						<label class='top'>Configure Scenario:</label>
-						<!-- https://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs -->
-						<table class="form-control-container center">
-						{% for field in form.visible_fields %}
-							<tr>
-								<td>{{ field.label_tag }}</td>
-								<!-- ng-value=field.initial ng-model=field.name below do not work properly with select and string defaults -->
-								<td>{% render_field field class+="form-control" %}
-									{% if field.help_text %}
-	                           			<p class="help-inline"><small>{{ field.help_text }}</small></p>
-	                       			{% endif %}
-	                       		</td>
-							</tr>
-						{% endfor %}
-						</table>
+						<div class=center>
+							<form  name="c_r_form"  id='c_r_form' ng-submit="submitForm(c_r_form)">
+							<!-- For info: https://stackoverflow.com/questions/8474409/django-forms-and-bootstrap-css-classes-and-divs -->
+							{% for field in form.visible_fields %}
+							<div class="row">
+	  							<div class="col-md-4">{{ field.label_tag }}</div>
+	  							<div class="col-md-8">{{ field }}  <!--{perc render_field field class+="form-control" %} -->
+										{% if field.help_text %}
+		                           			<p class="help-inline"><small>{{ field.help_text }}</small></p>
+		                       			{% endif %}
+		                       	</div>
+							</div>
+							{% endfor %}
+							<!-- that's really, really horrible. To make form validation work (at least for required fields) from the browser,
+							and then call the angular function, we ended up writing an hidden submit button which is called by the 'arrow'
+							button below. After googling, the proposed solutions where all complex or clumsy
+							FIXME: isn't really a better way?-->
+							<input id='abcd' type=submit value="Ok" style='display:none'>
+							</form>
+						</div>
 					</div>
-					<!-- that's really, really horrible. To make form validation work (at least for required fields) from the browser,
-					and then call the angular function, we ended up writing an hidden submit button which is called by the 'arrow'
-					button below. FIXME: isn't really a better way?-->
-					<input id='abcd' type=submit value="Ok">
-				</form>
+					
 				<div ng-show="inputSelection.isValid" class='page-scroller'>
 					<button onclick="document.getElementById('abcd').click()"> <!-- onclick="document.getElementById('c_r_form').submit()"> -->
 						<span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
@@ -339,6 +339,14 @@
 
 	    </div>
 
+		<!-- div housing errors. Set debug=false in django for less verbosity
+		For info see: https://stackoverflow.com/questions/10418644/creating-an-iframe-with-given-html-dynamically/10433550#10433550
+		 -->
+		 <div ng-show='hasError' class="bottom alert alert-danger alert-dismissable"> <!--  -->
+	  		<a href="#" click='return false' ng-click="hasError=false" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+	  		<iframe id='errFrame'></iframe>
+		</div>
+		
       <!-- modal -->
       <div id="myModal" style='display:none' class="modal" >
         <div id="myModal" class="modal-dialog" role="document">

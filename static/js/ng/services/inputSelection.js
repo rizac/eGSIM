@@ -287,6 +287,10 @@ ngApp.service('inputSelection', function () {
 		matchesByTrt(gsimName, regexp){
 			var trt = _avalGsims.get(gsimName)[1];
 			return trt.search(regexp) > -1;
+		},
+		
+		get asObj(){
+			return {gsims: this.gsims, imt: this.imt}
 		}
 	}
 });

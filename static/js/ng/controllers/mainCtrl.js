@@ -66,6 +66,21 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http',
 //    			return Array.from($scope.services.get($scope.services.selKey));
 //    		}; // angular complains when ng-repeat not iterated over Array
     		
+    		$scope.post = function(...args){
+    			$scope.hasError = false;
+    			this._args = args;
+    			return {
+	    			then(callback){
+	    				$http.post(...args).then(function(response) {
+	            			callback(response);
+	            			// set loading flags to false
+	            	    }, function(response) {  // error function, print message
+	            	    		$scope.handleError(response);
+	            	    });
+	    				this._callback = callback;
+	    			}
+    			}
+    		};
     		
     		$http.post("get_init_params", {}, {headers: {'Content-Type': 'application/json'}}).then(function(response) {
     			inputSelection.init(response.data.avalGsims);
@@ -81,7 +96,15 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http',
     			$scope.temporarySelectedGsims = [];
     		}
 
+    		$scope.hasError = false;
     		$scope.handleError = function(response){
+    			$scope.hasError = true;
+    			var iframe = document.getElementById('errFrame');
+    			iframe.contentWindow.document.open();
+    			iframe.contentWindow.document.write(response.data);
+    			iframe.contentWindow.document.close();
+
+    			
     			// no-op (for the moment)
     			var status = response.status; //the code
     			var statusText = response.statusText; //the message

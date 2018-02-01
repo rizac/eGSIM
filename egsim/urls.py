@@ -21,5 +21,6 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),  # added by default by django
     url(r'^$', views.index, name = 'index'), # main page entry point
     url(r'get_init_params', views.get_init_params),  #, name = 'index'), # main page entry point
+    url(r'calculate_trellisp', views.calculate_trellisp),  #, name = 'index'), # main page entry point
     
 ]

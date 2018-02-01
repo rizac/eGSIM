@@ -246,6 +246,11 @@ table.form-control-container td:first-child {
 	text-align: right;
 }
 
+#errFrame{
+	max-height:15em;
+	border: none;
+	width: 100%;
+}
 
 /* .form-control-container input:not([type=checkbox]):not([type=radio]), .form-control-container textarea,
 .form-control-container select{
