@@ -12,11 +12,48 @@ from django.utils.translation import ugettext as _
 from django import forms
 from django.utils.safestring import mark_safe
 from django.forms.widgets import Select
-from django.forms.fields import BooleanField
+from django.forms.fields import BooleanField, CharField
 
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
+
+
+# class ArrayField(CharField):
+#     def __init__(self, *, max_length=None, min_length=None, strip=True, empty_value='', **kwargs):
+#         
+#         # Parameters after “*” or “*identifier” are keyword-only parameters
+#         # and may only be passed used keyword arguments.
+#         self.max_length = max_length
+#         self.min_length = min_length
+#         self.strip = strip
+#         self.empty_value = empty_value
+#         super().__init__(**kwargs)
+#         if min_length is not None:
+#             self.validators.append(validators.MinLengthValidator(int(min_length)))
+#         if max_length is not None:
+#             self.validators.append(validators.MaxLengthValidator(int(max_length)))
+#         self.validators.append(validators.ProhibitNullCharactersValidator())
+# 
+#     def to_python(self, value):
+#         """Return a string."""
+#         if value not in self.empty_values:
+#             value = str(value)
+#             if self.strip:
+#                 value = value.strip()
+#         if value in self.empty_values:
+#             return self.empty_value
+#         return value
+# 
+#     def widget_attrs(self, widget):
+#         attrs = super().widget_attrs(widget)
+#         if self.max_length is not None and not widget.is_hidden:
+#             # The HTML attribute is maxlength, not max_length.
+#             attrs['maxlength'] = str(self.max_length)
+#         if self.min_length is not None and not widget.is_hidden:
+#             # The HTML attribute is minlength, not min_length.
+#             attrs['minlength'] = str(self.min_length)
+#         return attrs
 
 
 class validation(object):
@@ -82,6 +119,29 @@ class validation(object):
             raise ValidationError(str(err))
 
 
+def customize_widget_atts(form, func):
+    '''Customizes widget attributes. Although there are plenty of libraries out there
+    (including integration with angularjs) most of which are a better approach
+    (as they force to write view code in templates rather than here),
+    this is the best solution found when comparing benefits over costs)
+    
+    :param func: a custom function returning a dict of keys mapped to their values, representing
+        the attributes to be added to the current form widget.
+        The function accepts three arguments:
+        ```(field_name, field_object, fields_dict)```
+        where field name is the field name (string)
+        field_object is the field object whose ``field.widget`` returns the used django widget
+        fields_dict is the parent dict of field names -> field objects this function is
+            iterating over
+        ```
+    '''
+    for name, field in form.fields.items():
+        atts = func(name, field, form.fields)
+        if not atts:
+            continue
+        field.widget.attrs.update(atts)
+
+
 class InputSelection(object):
     '''Just a wrapper housing input selection stuff'''
     available_gsims = get_available_gsims()
@@ -106,29 +166,6 @@ class InputSelection(object):
         return imt_name in cls.gsims2imts.get(gsim_name, [])
 
 
-def customize_widget_atts(form, func):
-    '''Customizes widget attributes. Although there are plenty of libraries out there
-    (including integration with angularjs) most of which are a better approach
-    (as they force to write view code in templates rather than here),
-    this is the best solution found when comparing benefits over costs)
-    
-    :param func: a custom function returning a dict of keys mapped to their values, representing
-        the attributes to be added to the current form widget.
-        The function accepts three arguments:
-        ```(field_name, field_object, fields_dict)```
-        where field name is the field name (string)
-        field_object is the field object whose ``field.widget`` returns the used django widget
-        fields_dict is the parent dict of field names -> field objects this function is
-            iterating over
-        ```
-    '''
-    for name, field in form.fields.items():
-        atts = func(name, field, form.fields)
-        if not atts:
-            continue
-        field.widget.attrs.update(atts)
-        
-        
 class RuptureConfigForm(forms.Form):
     
     
@@ -226,3 +263,4 @@ class InputSelectionForm(forms.Form):
                 raise forms.ValidationError(
                     _("%(imt) not defined for %(gsim)"), params={'imt': imt, 'gsim':gsim_name}
                 )
+                

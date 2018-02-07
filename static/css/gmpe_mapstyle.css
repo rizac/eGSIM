@@ -192,36 +192,51 @@ path.leaflet-interactive{
     stroke-width: 1;
 }
 
-.glyphicon{
-	margin-right: 5px;
+.glyphicon + *{
+	margin-left: 5px;
 }
 
-.flex-container-row-direction{
+.flex-direction-row{
 	display: flex;
 	flex-direction: row;
-	justify-content: space-between;
+	justify-content: space-evenly;
 }
 
-.flex-container-col-direction, .page-scroller{
+.flex-direction-col, .page-scroller{
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
+	justify-content: space-evenly;
 }
 
-.flex-container-row-direction > .center, .flex-container-col-direction > .center{
+.flex-direction-row > .flexible, .flex-direction-col > .flexible,
+.flex-direction-row > .flexible-half, .flex-direction-col > .flexible-half{
 	flex: 1 1 auto;
-	overflow: scroll;
+	overflow: auto;
 }
 
-.flex-container-col-direction > .top, .flex-container-col-direction > .bottom,
+/* flexible-half has the property of setting its base width/height to 50% of the container,
+used for twin panels aligned left and right (or top and bottom) which might take 100% space if alone,
+or same space of the other twin, if present: */
+.flex-direction-row > .flexible-half, .flex-direction-col > .flexible-half{
+	flex-basis: 50% !important;
+}
+
+.flex-direction-row > *:not(:first-child){
+	margin-left: 10px;
+}
+
+.flex-direction-col > *:not(:first-child){
+	margin-top: 10px;
+}
+
+/* .flex-container-col-direction > .top, .flex-container-col-direction > .bottom,
 .flex-container-row-direction > .left, .flex-container-row-direction > .right{
 	flex: 0 1 auto;
-}
+} */
 
 
 .page-scroller{
 	justify-content:space-evenly;
-	padding:10px;
 }
 
 .page-scroller > button:not([class]), .page-scroller > input[type=submit]:not([class]), .transparent{
@@ -238,14 +253,14 @@ path.leaflet-interactive{
     opacity: .65;
 } */
 
-table.form-control-container td{
+/* table.form-control-container td{
 	padding-bottom: 5px;
 }
 
 table.form-control-container td:first-child {
 	padding-right: 10px;
 	text-align: right;
-}
+} */
 
 #errFrame{
 	max-height:15em;

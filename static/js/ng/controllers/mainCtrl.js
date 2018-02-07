@@ -10,8 +10,8 @@
 // We comment for the moment keeping in mind that we should use it once understood that it's important
 // var ngApp = angular.module('eGSIM', []);
 
-ngApp.controller("mainController", ['$scope', 'inputSelection', '$http',
-	function($scope, inputSelection, $http) {
+ngApp.controller("mainController", ['$scope', 'inputSelection', '$http', '$timeout',
+	function($scope, inputSelection, $http, $timeout) {
 	
 		// temp variables
 		var _inputSelStr = "Input Selection";
@@ -104,17 +104,29 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http',
     			iframe.contentWindow.document.write(response.data);
     			iframe.contentWindow.document.close();
 
-    			
     			// no-op (for the moment)
     			var status = response.status; //the code
     			var statusText = response.statusText; //the message
     			var data = response.data;  // whatever else, sometimes a detailed page with the message or what we decided to write here server-side
     		};
     		
+    		$scope._trMapID = 'trMap';
+    		$scope.mapManager = new MapManager($scope._trMapID);
+    		$scope.filterSelected = function(){
+    			// delay the map setup so that the div is correctly laid out.
+    			// FIXME: this is horrible, better change it later
+    			if ($scope.filterTypeName == $scope.filterTypeNames[2] && !$scope.mapManager.ready){
+    				$timeout(function(){
+    					$scope.mapManager.init($scope._trMapID);
+    				}, 1000);
+    			};
+    		};
+    		
     		$scope.visibleGsimsCount = 0;
     		$scope.filterText = '';
     		$scope.filterRegexp = undefined;
-    		$scope.filterTypeName = 'Name';
+    		$scope.filterTypeNames = ['Name', 'Intensity Measure Type', 'Tectonic Region Type'];
+    		$scope.filterTypeName = $scope.filterTypeNames[0];
     		function filterByName(gsim){
     			return $scope.inputSelection.matchesByName(gsim, $scope.filterRegexp);
     		}
@@ -125,9 +137,9 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http',
     			return $scope.inputSelection.matchesByTrt(gsim, $scope.filterRegexp);
     		}
     		$scope.filterTypes = new Map([
-    										[$scope.filterTypeName, filterByName],
-    										['Intensity Measure Type', filterByImt],
-    										['Tectonic Region Type', filterByTrt]
+    										[$scope.filterTypeNames[0], filterByName],
+    										[$scope.filterTypeNames[1], filterByImt],
+    										[$scope.filterTypeNames[2], filterByTrt]
     									]
     								);
     		$scope.filterTypeNames = Array.from($scope.filterTypes.keys());
