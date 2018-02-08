@@ -263,4 +263,6 @@ class InputSelectionForm(forms.Form):
                 raise forms.ValidationError(
                     _("%(imt) not defined for %(gsim)"), params={'imt': imt, 'gsim':gsim_name}
                 )
+
+        return cleaned_data
                 

@@ -10,8 +10,8 @@
 // We comment for the moment keeping in mind that we should use it once understood that it's important
 // var ngApp = angular.module('eGSIM', []);
 
-ngApp.controller("mainController", ['$scope', 'inputSelection', '$http', '$timeout',
-	function($scope, inputSelection, $http, $timeout) {
+ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
+	function($scope, gsimsInput, $http, $timeout) {
 	
 		// temp variables
 		var _inputSelStr = "Input Selection";
@@ -23,11 +23,11 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http', '$timeo
 		$scope.SERVICE_DATA_ANALYSIS = 'Data Analysis';
 		
 		// services here is the eGSIM service, a SUBMENU of the main app.
-		// NOT TO BE CONFUSED WITH ANGULAR SERVICE! (directory services) whereby we implement inputSelection
+		// NOT TO BE CONFUSED WITH ANGULAR SERVICE! (directory services) whereby we implement gsimsInput
     		$scope.services = new SelMap([
     									[_homeStr, new SelArray()],
-    									[$scope.SERVICE_TRELLIS_PLOTS, new SelArray(_inputSelStr, "Config. Scenario", _outStr).select(_inputSelStr)],
-    									[$scope.SERVICE_DATA_ANALYSIS, new SelArray(_inputSelStr, _outStr).select(_inputSelStr)]
+    									[$scope.SERVICE_TRELLIS_PLOTS, new SelArray(_inputSelStr, "Config. Scenario", _outStr).select(0)],
+    									[$scope.SERVICE_DATA_ANALYSIS, new SelArray(_inputSelStr, _outStr).select(0)]
     								 ]).select(_homeStr);
     		
     		// helper functions:
@@ -39,7 +39,18 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http', '$timeo
     		$scope.isSubmenuIndex = function(index){
     			return $scope.services.get($scope.services.selKey).selIndex === index;
     		};
-
+    		
+    		$scope.selectNext = function(){
+    			if ($scope.services.get($scope.services.selKey)){
+    				$scope.services.get($scope.services.selKey).selNext();
+    			}
+    		};
+    		
+    		$scope.selectPrev = function(){
+    			if ($scope.services.get($scope.services.selKey)){
+    				$scope.services.get($scope.services.selKey).selPrev();
+    			}
+    		};
     		// expose the property we need 
     		// with clearer names and provide angular with arrays instead of Sets/ Maps
     		// all these are function for avoiding typos
@@ -83,16 +94,16 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http', '$timeo
     		};
     		
     		$http.post("get_init_params", {}, {headers: {'Content-Type': 'application/json'}}).then(function(response) {
-    			inputSelection.init(response.data.avalGsims);
+    			gsimsInput.init(response.data.avalGsims);
     			// set loading flags to false
     	    }, function(response) {  // error function, print message
     	    		$scope.handleError(response);
     	    });
     		
-    		$scope.inputSelection = inputSelection;
+    		$scope.gsimsInput = gsimsInput;
     		$scope.temporarySelectedGsims = [];
     		$scope.setSelectedGsims = function(){
-    			$scope.inputSelection.addGsims($scope.temporarySelectedGsims);
+    			$scope.gsimsInput.addGsims($scope.temporarySelectedGsims);
     			$scope.temporarySelectedGsims = [];
     		}
 
@@ -128,13 +139,13 @@ ngApp.controller("mainController", ['$scope', 'inputSelection', '$http', '$timeo
     		$scope.filterTypeNames = ['Name', 'Intensity Measure Type', 'Tectonic Region Type'];
     		$scope.filterTypeName = $scope.filterTypeNames[0];
     		function filterByName(gsim){
-    			return $scope.inputSelection.matchesByName(gsim, $scope.filterRegexp);
+    			return $scope.gsimsInput.matchesByName(gsim, $scope.filterRegexp);
     		}
     		function filterByImt(gsim){
-    			return $scope.inputSelection.matchesByImt(gsim, $scope.filterRegexp);
+    			return $scope.gsimsInput.matchesByImt(gsim, $scope.filterRegexp);
     		}
     		function filterByTrt(gsim){
-    			return $scope.inputSelection.matchesByTrt(gsim, $scope.filterRegexp);
+    			return $scope.gsimsInput.matchesByTrt(gsim, $scope.filterRegexp);
     		}
     		$scope.filterTypes = new Map([
     										[$scope.filterTypeNames[0], filterByName],

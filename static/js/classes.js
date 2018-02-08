@@ -18,54 +18,61 @@ class SelArray extends Array {
 	 * ...
 	 */
     constructor(...args) { 
-        super(...args); 
+        super(...args);
+        var _selIndex = -1;
+        this.selection = function(index){
+	    		/**
+	    		 * Root function to get/set selection. Compatible with angularjs ngmodel and getter/setter, e.g.:
+	    		 * <select ng-model="selarray.selection" ng-model-options="{ getterSetter: true }"
+	    		 *    ng-options="index as selarray[index] for index in selarray">
+	    		 * 
+	    		 * Without arguments, returns the currently selected index. With an argument (integer)
+	    		 * sets the selected index
+	    		 * For info see: https://docs.angularjs.org/api/ng/directive/ngModel
+	    		 */
+	    		if (arguments.length){
+	    			_selIndex = index;
+	    			return this;
+	    		}else{
+	    			if (_selIndex < 0 || _selIndex >= this.length){
+	    				return -1;
+	    			}
+	    			return _selIndex;
+	    		}
+	    	}
         this.clearSelection();
     }
-    clear(){
+    clear(){ //overrides Array.clear. Calls super and clear selection
     		super.clear();
-    		this.clearSelection();
+    		return this.clearSelection();
     }
-    clearSelection(){
-		this._selIndex = -1;
+    clearSelection(){ //clears selection (sets selected index = -1)
+		return this.selection(-1);
     }
-    select(item){
-    		this.selItem = item;
-    		return this;
+    select(index){ //aka selection(index), more explanatory than the latter
+    		return this.selection(index);
     }
-    get selIndex() {
-    		return this._selIndex;
+    get selIndex() {  // getter for the selected index: var index = selArray.selIndex (-1 if no selection, or a value < this.length)
+    		return this.selection();
     }
-    set selIndex(index) {
-    		this._selIndex = index < 0 || index >= this.length ? -1 : 0;
-    }
-    get selItem() {
-		return this[this._selIndex] || undefined;
-    }
-    set selItem(item) {
-    		this.clearSelection();
-    		var i =0;
-    		for (let item_ of this) { // not efficient, but the only possible way ...
-    			if (item_ === item){
-    				this._selIndex = i;
-    				break;
-    			}
-    			i += 1;
-    		}
+    set selIndex(index) {  // setter for the selected index: selArray.selIndex = index. Same as this.select(index)
+    		this.selection(index);
     }
     get selHasNext(){
-    		return this._selIndex >=0 && this._selIndex < this.length -1;
+    		var sindex = this.selIndex;
+    		return sindex >=0 && sindex < this.length -1;
     }
     get selHasPrev(){
-		return this._selIndex > 0 && this._selIndex < this.length;
+    		return this.selIndex > 0;
     }
     selNext(){
     		if (this.selHasNext){
-    			this._selIndex += 1;
+    			this.selIndex += 1;
     		} 
     }
     selPrev(){
     		if (this.selHasPrev){
-    			this._selIndex -= 1; 
+    			this.selIndex -= 1; 
     		}
     	}
 }
@@ -88,7 +95,25 @@ class SelSet extends Set {
 	 * ...
 	 */
     constructor(...args) { 
-        super(...args); 
+        super(...args);
+        var _selItem = undefined;
+        this.selection = function(item){
+	    		/**
+	    		 * Root function to get/set selection. Compatible with angularjs ngmodel and getter/setter, e.g.:
+	    		 * <select ng-model="selarray.selection" ng-model-options="{ getterSetter: true }"
+	    		 *    ng-options="value as selarray[index] for index in selarray">
+	    		 * 
+	    		 * Without arguments, returns the currently selected index. With an argument (integer)
+	    		 * sets the selected index
+	    		 * For info see: https://docs.angularjs.org/api/ng/directive/ngModel
+	    		 */
+	    		if (arguments.length){
+	    			_selItem = item;
+	    			return this;
+	    		}else{
+	    			return this.has(_selItem) ? _selItem : undefined;
+	    		}
+	    	}
         this.clearSelection();
 	}
     clear(){
@@ -96,17 +121,16 @@ class SelSet extends Set {
 		this.clearSelection();
 	}
 	clearSelection(){
-		this._selection = undefined;
+		this.selection(undefined);
 	}
     select(item){
-		this.selItem = item;
-		return this;
+		return this.selection(item);
     }
     get selItem(){  // returns an Array instead of an iterator for angular compatibility
-		return this._selection;
+		return this.selection();
     }
     set selItem(item){
-    		this._selection = this.has(item) ? item : undefined;
+    		this.selection(item);
     }
 }
 
@@ -129,6 +153,24 @@ class SelMap extends Map {
 	 */
     constructor(...args) { 
         super(...args); 
+        var _selKey = undefined;
+        this.selection = function(key){
+	    		/**
+	    		 * Root function to get/set selection. Compatible with angularjs ngmodel and getter/setter, e.g.:
+	    		 * <select ng-model="selarray.selection" ng-model-options="{ getterSetter: true }"
+	    		 *    ng-options="value as selarray[index] for index in selarray">
+	    		 * 
+	    		 * Without arguments, returns the currently selected index. With an argument (integer)
+	    		 * sets the selected index
+	    		 * For info see: https://docs.angularjs.org/api/ng/directive/ngModel
+	    		 */
+	    		if (arguments.length){
+	    			_selKey = key;
+	    			return this;
+	    		}else{
+	    			return this.has(_selKey) ? _selKey : undefined;
+	    		}
+	    	}
         this.clearSelection();
     }
     clear(){
@@ -136,17 +178,16 @@ class SelMap extends Map {
     		this.clearSelection();
     }
     clearSelection(){
-    		this._selection = undefined;
+    		this.selection(undefined);
     }
     select(key){
-		this.selKey = key;
-		return this;
+		return this.selection(key);
     }
     get selKey(){ 
-		return this._selection;
+		return this.selection();
 	}
 	set selKey(key){
-		this._selection = this.has(key) ? key : undefined;
+		this.selection(key);
 	}
 }
 

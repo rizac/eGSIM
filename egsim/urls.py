@@ -22,5 +22,6 @@ urlpatterns = [
     url(r'^$', views.index, name = 'index'), # main page entry point
     url(r'get_init_params', views.get_init_params),  #, name = 'index'), # main page entry point
     url(r'validate_trellis_input', views.validate_trellis_input),  #, name = 'index'), # main page entry point
+    url(r'get_trellis_plots', views.get_trellis_plots),  #, name = 'index'), # main page entry point
     
 ]

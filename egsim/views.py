@@ -9,6 +9,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http.response import HttpResponseRedirect
+from django.conf import settings
 # from rest_framework.decorators import api_view
 # from rest_framework.response import Response
 
@@ -19,6 +20,8 @@ from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't th
 # import smtk.trellis.configure as rcfg
 
 from .forms import RuptureConfigForm, InputSelectionForm
+import os
+
 
 def index(request):
     return render(request, 'home.html', {'project_name':'eGSIM', 'form': RuptureConfigForm()})
@@ -52,15 +55,31 @@ def validate_trellis_input(request):
     form_cr = RuptureConfigForm(data[CR])
     # check whether it's valid:
     if not form_cr.is_valid():
-        return HttpResponse(form_cr.errors.as_json(), status = 400, content_type='application/json')
+        # return HttpResponse(form_cr.errors.as_json(), status = 400, content_type='application/json')
+        return JsonResponse(form_cr.errors.as_json())
 
     form_is = InputSelectionForm(data[IS])
     # check whether it's valid:
     if not form_is.is_valid():
-        return HttpResponse(form_is.errors.as_json(), status = 400, content_type='application/json')
-    
+        # return HttpResponse(form_is.errors.as_json(), status = 400, content_type='application/json')
+        return JsonResponse(form_is.errors.as_json())
 
-    return HttpResponse({CR: form_cr.clean(),
-                         IS: form_is.clean()}, status = 200, content_type='application/json')
+    return JsonResponse({CR: form_cr.clean(),
+                         IS: form_is.clean()})
     
     # print([a[-1] for a in aval_gsims])
+@csrf_exempt
+def get_trellis_plots(request):
+    data = _trellis_response_test()
+    return JsonResponse(data)
+
+def _trellis_response_test():
+    dir_ = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                        '..', 'static', 'data', 'test', 'trellis'))
+    data = {}
+    for file in os.listdir(dir_):
+        absfile = os.path.join(dir_, file)
+        if os.path.isfile(absfile):
+            with open(absfile) as opn:
+                data[file] = json.load(opn)
+    return data
