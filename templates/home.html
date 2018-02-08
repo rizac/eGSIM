@@ -4,23 +4,6 @@
 		{% load static %}
 		<meta charset="UTF-8">
 		<title>{{ project_name }}</title>
-		
-		<!-- jQuery plugin (https://code.jquery.com/) -->
-		<script src="https://code.jquery.com/jquery-3.2.1.min.js"
-  			integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
-  			crossorigin="anonymous"></script>
-
-	    <!-- jQuery cookie (https://github.com/js-cookie/js-cookie) -->
-	    <script type="text/javascript" src="https://cdn.rawgit.com/carhartl/jquery-cookie/d72bb07e/src/jquery.cookie.js"></script>
-
-	    <!-- LOCALIZATION -->
-	    <!-- language localisation file -->
-	    <!-- <script type="text/javascript" src="lang/lang.en.js"></script> -->
-	    <!-- language helper file -->
-	    <!-- <script type="text/javascript" src="scripts/lang_funcs.js"></script> -->
-
-	    <!-- SITE SETUP FUNCS -->
-	    <script type="text/javascript" src="{% static 'js/site_funcs.js' %}"></script><!-- site setup helper file -->
 
 	    <!-- LEAFLET (http://leafletjs.com/download.html) -->
 	    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.0/dist/leaflet.css"
@@ -30,113 +13,48 @@
   			integrity="sha512-C7BBF9irt5R7hqbUm2uxtODlUVs+IsNu2UULGuZN7gM+k/mmeG4xvIEac01BtQa4YIkUpp23zZC4wIwuXaPMQA=="
   			crossorigin=""></script>
 	    
-	    <link rel="stylesheet" type="text/css" href="{% static 'css/gmpe_mapstyle.css' %}"><!-- own leaflet style def -->
-	    
-	    <!--  A Leaflet plugin to view mouse coordinates (see also https://rawgit.com/) -->	    
-	    <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/MrMufflon/Leaflet.Coordinates/09ffcfdf/src/Control.Coordinates.css">
-		<!-- [if lte IE 8]><link rel="stylesheet" href="https://cdn.rawgit.com/MrMufflon/Leaflet.Coordinates/09ffcfdf/src/Control.Coordinates.ie.css" /><![endif] -->
-	    <script type="text/javascript" src="https://cdn.rawgit.com/MrMufflon/Leaflet.Coordinates/09ffcfdf/src/Control.Coordinates.js"></script>
-
+	  
 		<!-- ESRI PLUGINS http://esri.github.io/esri-leaflet/examples/ -->
 	    <script type="text/javascript" src="https://unpkg.com/esri-leaflet@2.1.2/dist/esri-leaflet.js"></script>
 
-		<!--  FIXME: there is NO SUCH a FILE, remove -->	    
-	    <!-- <script type="text/javascript" src="plugins/coordinates/src/util/NumberFormatter.js"></script>-->
-	    
 	    <!-- font awesome (e.g. required by easybutton & sidebar) FIXME: CHECK LICENSE (MIT) -->
 	    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-
-	    <!-- SIDEBAR -->
-	    <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/Turbo87/sidebar-v2/04d88fe8/css/leaflet-sidebar.min.css">
-	    <script type="text/javascript" src="https://cdn.rawgit.com/Turbo87/sidebar-v2/04d88fe8/js/leaflet-sidebar.min.js"></script>
 	
 	    <!-- BOOTSTRAP (3.3.7) -->
 	    <!-- must be loaded below / after autocomplete! FIXME: what does this mean?? -->
 	    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"
 	    		integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	    		
+	    	<!-- bootstrap js temporarily added. It requires jQuery. Maybe in the future remove both -->
+	    	<script src="https://code.jquery.com/jquery-3.2.1.min.js"
+  			integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  			crossorigin="anonymous"></script>
 	    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
 	    		integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 	    
-	    <!--  Bootstrap plugin that switches bootstrap tabs component to collapse component for small screens? https://github.com/flatlogic/bootstrap-tabcollapse COMMENT OUT FIXME: remove? -->
-	    <!-- <script type="text/javascript" src="plugins/bootstrap/tabscollapse/bootstrap-tabcollapse.js"></script> -->
-
-	    <!-- bootstrap auto hiding navbar plugin - see: http://www.virtuosoft.eu/code/bootstrap-autohidingnavbar/ -->
-	    <!-- <script type="text/javascript" src="https://github.com/istvan-ujjmeszaros/bootstrap-autohidingnavbar/blob/master/dist/jquery.bootstrap-autohidingnavbar.min.js"></script> -->
-
-		<!-- bootstrap slider plugin - see: https://github.com/seiyria/bootstrap-slider -->
-		<!--
-		<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.0/bootstrap-slider.min.js">
-	    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.0.0/css/bootstrap-slider.min.css">
-	     -->
-
-		<!-- bootstrap toogle plugin - makes toggle buttons more attractive. See: http://www.bootstraptoggle.com/ -->
-	    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
-		<script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
-
-	    <!-- MATHJAX -->
-	    <!-- MathJax Online Editor: http://www.codecogs.com/latex/eqneditor.php -->
-	    
-	    <!-- JQUERY UI https://jqueryui.com/ -->
-	    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
-  			integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU="
-  			crossorigin="anonymous"></script>
-
-	    <!-- jquery theme. Comment out for the moment https://jqueryui.com/ -->
-	    <!-- <link rel="stylesheet" type="text/css" href="https://code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css"> -->
-	    
-	    <!-- Leaflet shapefile plugin - see: https://github.com/calvinmetcalf/leaflet.shapefile FIXME: what does it do? -->
-	    <script type="text/javascript" src="https://cdn.rawgit.com/calvinmetcalf/leaflet.shapefile/gh-pages/leaflet.shpfile.js"></script>
+	    <!-- Leaflet shapefile plugin - see: https://github.com/calvinmetcalf/leaflet.shapefile -->
 	    <script type="text/javascript" src="https://cdn.rawgit.com/calvinmetcalf/leaflet.shapefile/gh-pages/shp.js"></script>
-
-        <!-- jQuery finger plugin - see: https://github.com/ngryman/jquery.finger -->
-	    <!-- <script type="text/javascript" src="https://cdn.rawgit.com/ngryman/jquery.finger/b4722ae3/dist/jquery.finger.min.js"></script> -->
-	    
-	    <!-- MAP FRAMEWORK SCRIPTS FIXME: these should be Object-oriented manipulations and extensions of already imported classes-->
-	    <!-- FIXME: DO WE NEED THESE? -->
-	    <!-- site class -->
-	    <script type="text/javascript" src="{% static 'js/oop/site.js' %}"></script>
-	    <!-- base framework map class -->
-	    <script type="text/javascript" src="{% static 'js/oop/map.js' %}"></script> 
-	    <!-- data class -->
-	    <script type="text/javascript" src="{% static 'js/oop/data/data.js' %}"></script>
-	    <!-- gmpe class -->
-	    <script type="text/javascript" src="{% static 'js/oop/data/gmpe.js' %}"></script>
-	    <!-- table class -->
-	    <script type="text/javascript" src="{% static 'js/oop/data/data_display.js' %}"></script>
-	    <!-- framework layer style definition wrapper class -->
-	    <script type="text/javascript" src="{% static 'js/oop/style.js' %}"></script>
-	    <!-- framework layer styling class -->
-	    <script type="text/javascript" src="{% static 'js/oop/layerstyle.js' %}"></script>
-	    <!-- framework layer legend class -->
-	    <script type="text/javascript" src="{% static 'js/oop/legend.js' %}"></script>
-	    <!-- framework vector overlay parent class -->
-	    <script type="text/javascript" src="{% static 'js/oop/layer.js' %}"></script>
-	    <!-- framework tile baselayer class -->
-	    <script type="text/javascript" src="{% static 'js/oop/baselayer.js' %}"></script>
-	    <!-- framework json overlay class -->
-	    <script type="text/javascript" src="{% static 'js/oop/jsonlayer.js' %}"></script>
-	    <!-- framework shp overlay class -->
-	    <script type="text/javascript" src="{% static 'js/oop/shpjsonlayer.js' %}"></script>
-	    <!-- framework zip filereader class -->
-	    <script type="text/javascript" src="{% static 'js/oop/zipfilereader.js' %}"></script>
-	    <!-- framework zip instacestate class -->
-		<script type="text/javascript" src="{% static 'js/oop/instancestate.js' %}"></script>
 
 		<!-- angular -->
 		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.7/angular.min.js"></script>
 		
-		<script type="text/javascript">
-			// init app:
+		<!-- my stuff  -->
+		<link rel="stylesheet" type="text/css" href="{% static 'css/gmpe_mapstyle.css' %}"><!-- own leaflet style def -->
+		
+		
+		<script type="text/javascript">  // init angular app:
 			var ngApp = angular.module("{{ project_name }}", []); 
 		</script>
+		
+		<!--  our stuff  -->  
+		<script type="text/javascript" src="{% static 'js/classes.js' %}"></script>
+		<script type="text/javascript" src="{% static 'js/trMap.js' %}"></script>
 		
 		<script type="text/javascript" src="{% static 'js/ng/services/inputSelection.js' %}"></script>
 		<script type="text/javascript" src="{% static 'js/ng/controllers/mainCtrl.js' %}"></script>
 		<script type="text/javascript" src="{% static 'js/ng/controllers/confRupture.js' %}"></script>
 		<script type="text/javascript" src="{% static 'js/ng/controllers/dataAnalysis.js' %}"></script>
-		
-		<script type="text/javascript" src="{% static 'js/trMap.js' %}"></script>
-		
+
 		{% block extrahead %}{% endblock %}
 	</head>
   
@@ -344,176 +262,9 @@
 	  		<a href="#" click='return false' ng-click="hasError=false" class="close" data-dismiss="alert" aria-label="close">&times;</a>
 	  		<iframe id='errFrame'></iframe>
 		</div>
-		
-      <!-- modal -->
-      <div id="myModal" style='display:none' class="modal" >
-        <div id="myModal" class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header modal-frame-element">
-              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-              <h4 class="modal-title">Map</h4>
-            </div>
-            <div class="modal-body container-fluid">
-              <div id="gfz_gmpe_map_wrapper" class="map_wrapper col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                <!-- here be the map  -->
-                <div id="gfz_gmpe_leafletmap_modal" class="sidebar-map"></div>
-              </div>
-            </div>
-            <div class="modal-footer modal-frame-element">
-              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-              <button type="button" class="btn btn-primary">Okay</button>
-            </div>
-          </div> <!-- /.modal-content -->
-        </div> <!-- /.modal-dialog -->
-      </div> <!-- /.modal -->
-      
-      <div id="map" style='display:none' class="container-fluid">
-        <!-- map wrapper -->
-        <div id="gfz_gmpe_map_wrapper" class="map_wrapper col-xs-12 col-sm-12 col-md-12 col-lg-12">
-          <!-- sidebar top div -->
-          <div id="gfz_gmpe_sidebar" class="sidebar collapsed">
-            <!--echo the registered sidebar menu tabs -->
-            <div class="sidebar-tabs">
-              <ul id="gfz_gmpe_sidebar_topentries" role="tablist">
-                <!-- here be dynamically filled sidebar items -->
-                <li><a href="#home" role="tab"><i class="fa fa-bars"></i></a></li>
-              </ul>
-              <ul id="gfz_gmpe_sidebar_bottomentries" role="tablist">
-                <!-- here be dynamically filled sidebar items -->
-                <li><a href="#settings" role="tab"><i class="fa fa-gear"></i></a></li>
-              </ul>
-            </div><!-- /.sidebar-tabs -->
-            
-            <div id="gfz_gmpe_sidebar_content" class="sidebar-content">
-              <!-- echo all entries here -->
-            </div><!-- /.sidebar-content -->
-          </div><!-- /.sidebar /#sidebar -->
-          <!-- here be the map  -->
-          <div id="gfz_gmpe_leafletmap" class="sidebar-map"></div>
-        </div><!-- /#fz_gmpe_map_wrapper  -->
-      </div>
-      
-      
-      
    
- 	</div><!-- /#gfz_gmgpe_site_wrapper -->
- </body> <!-- /body -->
+ 	</div>
+ </body>
   
-  <!-- --- add scripts last --- -->
-  <script>
-  
-  	/* var trMapLayers = {
-  			'SHARE': ["{% static 'data/asmodal/ASModelVer6.1.zip' %}",
-  					  "{% static 'data/asmodal/Subduction.zip' %}",
-  					  "{% static 'data/asmodal/VRANCEAv6.1.zip' %}"]
-  		
-  	}; */
-  	
-  	
-  	
-   /*** fields **/
-   /** map */
-   var mymap, instancestate, info, mystyle, mylegend, esri,
-       /** some html ids */
-       SIDEBAR_ID, ID_PREFIX, MAP_ID,
-       /** data objects */
-       //var zones = JSON.parse( '<?php //echo json_encode($zones_tables); ?>' ).map( function(x){ return x.replace(/`/g,'') } );
-       /** a definition onto how each feature is to be colorized */
-       feature_style_def;
-   /** sidebar entries */
-   var top_entries, bottom_entries;
-   /** data objects */
-   var mydata,
-       /* a https://api.jquery.com/category/deferred-object/ to be called when data is available, see @fn {cb_data_ready} */
-       mydata_def,
-       /* an @class {DataDisplay} object. we use this to create certain representations of the data (tables, ...) */
-       mydatadisplay;
-   /** attribution for raster tile layer. this is displayed at the bottom right corner as per leaflet behavior */
-   var osm_attrib, topo_attrib;
-   var shpfile_area
-     , shpfile_subd, shpfile_vran;
-   /** zip filereader shp 
-    * this handels zip compressed shp layers that are added to the application */
-   var zipfilereader;
-   /*** /fields **/
-   
-   /*** doc done loading - let's add some stuff **/
-   $( document ).ready(function() {
-     /** we have JS, so hide no js warning and show the site */
-     $("#noJS").hide();
-     $("#gfz_gmpe_site_wrapper").show();
-     /** init variables with values */
-     init_variables();
-     /** define a style for the shp vector layer */
-     mystyle = vector_shp_styling( feature_style_def );
-     
-     /** init the map */
-     map_init('', "{% static '' %}");
-     /** zip filereader */
-     zipfilereader.init(mymap);
-
-     /** rest */
-     /* bootstrap dropdown plugin init */
-     $('.dropdown-toggle').dropdown();
-     /* FIXME - what does this do now? */
-     // populize_sidebar();
-     /* run the localization script over the site 
-      * FIXME - this doesn't do anything right now, does it? as we don't localize. */
-     // localize_document();
-     
-     /* adds behavior to the site that transfers the map into a modal when scrolling down */
-     map_modal_init("{% static '' %}");
-     
-     /** site event hooks */
-     $(window).on('resize', function (e) {
-       /* dynamically adjust modal content element dimension */
-       $(e.target).find('.modal-body').css({
-         'max-width':'100%',
-         'max-height': ($(e.target).height() - 120) + 'px'
-       });
-       $(e.target).find('#gfz_gmpe_leafletmap_modal').css({
-         'max-width':'100%',
-         'height': ($(e.target).height() - 160) + 'px'
-       });
-       /* re-calc map extends on window resize */
-       mymap.map().invalidateSize();
-     });
-
-     /** add click listener to the "sort by" dropdown button entries 
-      * this will re-build the table */
-     $('#gfz_gmpe_sort_by_zone').click(function() {
-       /* a table with sub-headers grouped by zone name */
-       gmpe_table_init('zone'); gmpe_table_add_row_clicklistener();
-       if ($.cookie('map_selected_zone')) { highlight_current_zone($.cookie('map_selected_zone')); }
-       return false;
-     });
-     $('#gfz_gmpe_sort_by_gmpe').click(function() {
-       /* a table with sub-headers grouped by gmpe name */
-       gmpe_table_init('gmpe'); gmpe_table_add_row_clicklistener();
-       if ($.cookie('map_selected_zone')) { highlight_current_zone($.cookie('map_selected_zone')); }
-       return false;
-     });
-     /** a plot button 
-      * FIXME - currently does nothing, just a stub */
-     $('#gfz_gmpe_button_plot').click(function() {
-       console.log('plot button clicked');
-       return false;
-     });
-
-     /* FIXME - fill sidebar top and bottom entries */
-     $.each(top_entries, function() {
-       //gfz_gmpe_sidebar_topentries
-       $('#gfz_gmpe_sidebar_topentries').html( '<li><a href="#' + '$entry->id()->get()' + '" role="tab"><i class="' + '$entry->icon()' + '"></i></a></li>' );
-     });
-     $.each(bottom_entries, function() {
-       //gfz_gmpe_sidebar_bottomentries
-       // echo '<li><a href="#' . $entry->id()->get() . '" role="tab"><i class="' . $entry->icon() . '"></i></a></li>';
-       $('#gfz_gmpe_sidebar_bottomentries').html( '<li><a href="#' + '$entry->id()->get()' + '" role="tab"><i class="' + '$entry->icon()' + '"></i></a></li>' );
-     });
-     
-   }());
-
-   
-  </script>
 
 </html>
