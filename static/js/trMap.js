@@ -32,7 +32,8 @@ class MapManager {
 					    'geothermal': 'Geothermal',
 					    'induced': 'Induced',
 					    	"subduction inslab": "Subduction IntraSlab",  // FIXME: is this true?
-					    	"stable continental crust": 'Stable Shallow Crust'  // FIXME: is this true?
+					    	"stable continental crust": 'Stable Shallow Crust',  // FIXME: is this true?
+					    	"Inslab": "Subduction IntraSlab"
 					   };
 		// the tectonic region types, as str2trt values (use a Set to avoid duplicates):
 		this.trt = new Set(Object.values(this.str2trt));

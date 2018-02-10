@@ -254,13 +254,27 @@
 			<!-- div HOUSING THE TRELLIS PLOTS RESULTS -->
 			<div ng-show="isServiceName(SERVICE_TRELLIS_PLOTS) && isSubmenuIndex(2)"
 				class="flex-direction-row flexible-half" ng-controller="trellisPlots">
-				<div class="flex-direction-col flexible" style='background-color:yellow'>
-					<select ng-model="trellisData.selection" ng-model-options="{ getterSetter: true }"
-						ng-options="key as key for key in trellisData.fileNames()" class="form-control"></select>
-				</div>
 				<div class="flex-direction-col flexible">
-								
-					
+					<div>
+						<select ng-model="trellisData.selName" ng-model-options="{ getterSetter: true }"
+							ng-options="key as key for key in trellisData.names" class="form-control"></select>
+					</div>
+					<div id='trellisContainer' class="flex-direction-col flexible"
+						style='flex-basis:100%'> <!-- <-- really important to correctly display plot grid, as it forces
+														  the container to have all aval. height -->
+						<div class="flex-direction-row flexible" ng-repeat="r in rowsArray"
+							ng-attr-style="flex: {% verbatim %}{{ '0 0 ' + plotsH() + '%' }}{% endverbatim %}">
+							<div class="flexible plot-container"
+								ng-repeat="c in colsArray"
+								ng-attr-style="flex: {% verbatim %}{{ '0 0 ' + plotsW() + '%' }}{% endverbatim %}"
+								ng-attr-id="{% verbatim %}{{ 'trellisplot-' + r + '-' + c }}{% endverbatim %}">
+							</div>
+						</div>
+					</div>
+					<div>
+						<select ng-model="trellisData.selType" ng-model-options="{ getterSetter: true }"
+							ng-options="key as key for key in trellisData.types" class="form-control"></select>
+					</div>
 				</div>
 			</div>
 			

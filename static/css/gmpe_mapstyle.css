@@ -60,6 +60,15 @@ or same space of the other twin, if present: */
 	width: 100%;
 }
 
+#trellisContainer, #trellisContainer > div{
+	/* These div's flex-basis is calculated dynamically, browsers might round up, scrollbars might appear. So: */
+	overflow: hidden; 
+}
+
+.plot-container{
+	/* background-color: green; */
+}
+
 /* .form-control-container input:not([type=checkbox]):not([type=radio]), .form-control-container textarea,
 .form-control-container select{
 	display: block;

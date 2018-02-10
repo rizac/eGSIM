@@ -76,10 +76,13 @@ def get_trellis_plots(request):
 def _trellis_response_test():
     dir_ = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                         '..', 'static', 'data', 'test', 'trellis'))
-    data = {}
+    data = {'names': ['MagnitudeIMTs', 'DistanceIMTs', 'MagnitudeDistanceSpectra'],
+            'data': {'sigma': {}, 'mean': {}}}
     for file in os.listdir(dir_):
         absfile = os.path.join(dir_, file)
         if os.path.isfile(absfile):
+            name = data['names'][2 if 'spectra' in file else 1 if 'distance' in file else 0]
+            data_ = data['data']['sigma'] if 'sigma' in file else data['data']['mean']
             with open(absfile) as opn:
-                data[file] = json.load(opn)
+                data_[name] = json.load(opn)
     return data
