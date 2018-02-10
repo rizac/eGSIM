@@ -98,7 +98,7 @@ ngApp.service('trellisData', function () {
 		    			margin: {
 		    				l: 70,  // default: 80
 		    				r: 25,  // default: 80
-		    				b: 45,  // default: 80 
+		    				b: 50,  // default: 80 
 		    				t: 20,  // default: 100. If provising titles, increase...
 		    				pad: 1
 		    			},
