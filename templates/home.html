@@ -24,13 +24,18 @@
 	<!-- must be loaded below / after autocomplete! FIXME: what does this mean?? -->
 	<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"
 			integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	<!-- material design for bootsrap (css only) COMMENT IF NOT NEEDED -->
+	<!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
+	<link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css" integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous"> -->
 			
-		<!-- bootstrap js temporarily added. It requires jQuery. Maybe in the future remove both -->
-		<script src="https://code.jquery.com/jquery-3.2.1.min.js"
+	<!-- bootstrap js temporarily added. It requires jQuery. Maybe in the future remove both -->
+	<!-- <script src="https://code.jquery.com/jquery-3.2.1.min.js"
 		integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
 		crossorigin="anonymous"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
 			integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+	 -->
+	
 	
 	<!-- Leaflet shapefile plugin - see: https://github.com/calvinmetcalf/leaflet.shapefile -->
 	<script type="text/javascript" src="https://cdn.rawgit.com/calvinmetcalf/leaflet.shapefile/gh-pages/shp.js"></script>
@@ -84,30 +89,23 @@
 	<div id="gfz_gmpe_site_wrapper" ng-app="{{ project_name }}" ng-controller="mainController"
 		class="flex-direction-col">
 		
-		<!-- ##### -->
-		<!-- NAVBAR -->
-		<!-- ##### -->
-		<nav id="gfz_gmpe_scrollspy" class="navbar navbar-inverse">
+		<!-- ººººº NAVBAR ººººº -->
+		<nav class="navbar navbar-inverse">
 			<div class="container-fluid">
-				<!-- collapse button -->
-				<div class="navbar-header">
-					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#gfz_gmpe_navbar_collapse">
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-					</button>
-			</div>
 
 				<!-- navbar entries: a dropdownmenu with program services (e.g., calculate trellis plots) -->
-				<div class="collapse navbar-collapse" id="gfz_gmpe_navbar_collapse">
+				<div class="collapse navbar-collapse">
+					
 					<ul class="nav navbar-nav">
-							<li class="dropdown">
-							<a class="dropdown-toggle" data-toggle="dropdown" href="#" onClick="return false;"><b>{{ project_name }}</b>
-								{% verbatim %} {{ services.selKey != 'Home' ? " / " + services.selKey : "" }} {% endverbatim %}
-								<span class="caret"></span></a>
+						<li class="dropdown" ng-init='dropdown=false' ng-class="{'open': dropdown}">
+							<a ng-click="dropdown=!dropdown" class="dropdown-toggle" href="#" onClick="return false;">
+								<b>{{ project_name }}</b>
+								{% verbatim %} {{ service.name != 'Home' ? " / " + service.name : "" }} {% endverbatim %}
+								<span class="caret"></span>
+							</a>
 							<ul class="dropdown-menu">
-								<li ng-repeat="sName in services.names" > 
-									<a href="#" ng-click="services.selKey = sName" onClick="return false;">
+								<li ng-repeat="sName in serviceNames" > 
+									<a href="#" ng-click="service.name = sName" onClick="return false;">
 										{% verbatim %} {{ sName }} {% endverbatim %}
 									</a>
 								</li>
@@ -116,13 +114,12 @@
 					</ul>
 
 					<!-- current selected services submenus (anchor tags horizontally aligned., e.g. "Inpiut Selection", "Result",...) -->
-					<ul ng-repeat="sName in services.names"
-						ng-show="services.selKey == sName"
+					<ul ng-repeat="sName in serviceNames"
+						ng-show="service.name == sName"
 						class="nav navbar-nav">
-						<li ng-repeat="subMenu in services.get(sName) track by $index"
-							ng-class="{'active': $index == services.get(sName).selIndex}">
-							<a href="#" onclick="return false;" ng-click="services.get(sName).selIndex = $index"
-								ng-disabled="$index>0 && !gsimsInput.isValid">
+						<li ng-repeat="subMenu in subMenuNames(sName) track by $index"
+							ng-class="{'active': service.subMenu.index == $index}">
+							<a href="#" onclick="return false;" ng-click="service.subMenu.index = $index">
 								<span class="glyphicon glyphicon-chevron-right" aria-hidden="true">
 								</span>{% verbatim %} {{ subMenu }} {% endverbatim %}
 							</a>
@@ -134,43 +131,46 @@
 
 		<div class='flex-direction-row flexible'>
 			
-			<!-- #################################### -->
-			<!-- ARROW LEFT (move to previous submenu -->
-			<!-- #################################### -->
-			
-			<div ng-show="!isServiceName(SERVICE_HOME) && services.get(services.selKey).selHasPrev"
+			<!-- ººººº  NAV-DIV (GO TO PREVIOUS)  ººººº -->
+			<div ng-show="(service.name !== SERVICE_HOME) && service.subMenu.canMoveBack"
 				class='page-scroller'>
-				<button ng-click="selectPrev()">
+				<button ng-click="service.subMenu.moveBack()">
 					<span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
 				</button>
 			</div>
 				     		
-			<!-- ##################################### -->
-			<!-- DIV HOUSING THE AVAILABLE GSIMS panel -->
-			<!-- ##################################### -->
-			<div ng-show="!isServiceName(SERVICE_HOME) && isSubmenuIndex(0)"
+			<!-- ººººº GSIM SELECTION ººººº -->
+			<div ng-show="(service.name !== SERVICE_HOME) && (service.subMenu.index == 0)"
 				class='flex-direction-row flexible-half'>
 
 				<div class="flex-direction-col flexible">
+				
 					<legend>Ground-shaking intensity model (GSIM):</legend>
+				
 					<div class="flex-direction-col flexible">
-						<select multiple class="form-control flexible" id="selectable_gsims" ng-model="temporarySelectedGsims">
+						<select multiple class="form-control flexible" id="selectable_gsims"
+							ng-model="temporarySelectedGsims">
 							<option ng-repeat="gsim in gsimsInput.avalGsims | filter:gsimsFilter" ng-value="gsim">
 								{% verbatim %} {{ gsim }} {% endverbatim %}
 							</option>
 						</select>
-						<div>{% verbatim %}
+						<div>
+							{% verbatim %}
 							{{ visibleGsimsCount }} of {{ gsimsInput.avalGsimsCount }} visible 
 							({{ gsimsInput.avalGsimsCount - visibleGsimsCount }} filtered out),
 							{{ temporarySelectedGsims.length }} selected
 							{% endverbatim %}
 						</div>
 					</div>
+				
 					<div>
-						Filter By <select ng-change='filterSelected()' ng-model="filterTypeName" ng-options="key as key for key in filterTypeNames" class="form-control"></select>
-						matching: <input ng-model="filterText" type="text" class="form-control"
-									placeholder="Input Text (*=matches any character zero or more times, ?=matches any character exactly one time)"
-									autofocus>
+						Filter By
+						<select ng-change='filterSelected()' ng-model="filterTypeName"
+							ng-options="key as key for key in filterTypeNames" class="form-control"></select>
+						matching:
+						<input ng-model="filterText" type="text" class="form-control"
+							placeholder="Input Text (*=matches any character zero or more times, ?=matches any character exactly one time)"
+							autofocus>
 					</div>
 				</div>
 
@@ -178,20 +178,26 @@
 
 			</div>
 			
- 			<div ng-show="!isServiceName(SERVICE_HOME) && (isSubmenuIndex(0) || isSubmenuIndex(1)) && filterTypeName==filterTypeNames[2]"
+ 			<!-- ººººº TRT MAP ººººº -->
+ 			<div ng-show="(service.name !== SERVICE_HOME) && (service.subMenu.index <= 1) && filterTypeName==filterTypeNames[2]"
 				class="flex-direction-col flexible-half" style='z-index: 1000;'> 
-				<div class='flexible' id='{% verbatim %}{{ _trMapID }}{% endverbatim %}'>
 				
+				<div class='flexible' id='{% verbatim %}{{ _trMapID }}{% endverbatim %}'></div>
+				
+				<div>Project:
+					<select ng-show='mapManager.ready' ng-model="mapManager.projectName"
+						ng-model-options="{ getterSetter: true }"
+						ng-options="key as key for key in mapManager.projectNames"
+						class="form-control"></select>
 				</div>
-				<div>Project: <select ng-show='mapManager.ready' ng-model="mapManager.projectName" ng-model-options="{ getterSetter: true }" ng-options="key as key for key in mapManager.projectNames" class="form-control"></select></div>
 			</div>
-			<!-- ############################## -->
-			<!-- div HOUSING THE SELECTED GSIMS -->
-			<!-- ############################## -->
-			<div ng-show="!isServiceName(SERVICE_HOME) && (isSubmenuIndex(0) || isSubmenuIndex(1)) && filterTypeName!=filterTypeNames[2]"
+
+			<!-- ººººº SELECTED GSIMS ººººº -->
+			<div ng-show="(service.name !== SERVICE_HOME) && (service.subMenu.index <= 1) && filterTypeName!=filterTypeNames[2]"
 				class="flex-direction-row flexible-half">
 
 				<div class="flex-direction-col flexible">
+					
 					<legend>Selected GSIMs:</legend>
 					<div class='flexible' style='overflow:auto'>
 						<div ng-repeat="gsim in gsimsInput.gsims" class="alert alert-success alert-dismissable">
@@ -200,6 +206,7 @@
 							<strong>{% verbatim %} {{ gsim }} {% endverbatim %}</strong>
 						</div>
 					</div>
+					
 					<legend>Intensity Measure Types (IMTs):</legend>
 					<div>
 						<button class='btn btn-default' ng-repeat='imt in gsimsInput.avalImts'
@@ -211,14 +218,12 @@
 					</div>
 				</div>
 				
-				{% include "navarrow.html" with ngshow="!isServiceName(SERVICE_HOME) && isSubmenuIndex(0) && gsimsInput.isValid" ngclick="selectNext()" %}
+				{% include "navarrow.html" with ngshow="(service.name !== SERVICE_HOME) && (service.subMenu.index == 0) && gsimsInput.isValid" ngclick="service.subMenu.moveNext()" %}
 
 			</div>
 			
-			<!-- ################################ -->
-			<!-- div HOUSING THE CONFIG. SCENARIO -->
-			<!-- ################################ -->
-			<div ng-show="isServiceName(SERVICE_TRELLIS_PLOTS) && isSubmenuIndex(1)" 
+			<!-- ººººº TRELLIS / CONFIG. SCENARIO ººººº -->
+			<div ng-show="(service.name === SERVICE_TRELLIS_PLOTS) && (service.subMenu.index == 1)" 
 				class="flex-direction-row flexible-half"
 				ng-controller="confRuptureController">
 				
@@ -251,8 +256,8 @@
 				
 			</div>
 			
-			<!-- div HOUSING THE TRELLIS PLOTS RESULTS -->
-			<div ng-show="isServiceName(SERVICE_TRELLIS_PLOTS) && isSubmenuIndex(2)"
+			<!-- ººººº TRELLIS / PLOTS ººººº -->
+			<div ng-show="(service.name === SERVICE_TRELLIS_PLOTS) && (service.subMenu.index == 2)"
 				class="flex-direction-row flexible-half" ng-controller="trellisPlots">
 				<div class="flex-direction-col flexible">
 					<div class="flex-direction-row">
@@ -276,9 +281,9 @@
 				</div>
 			</div>
 			
-			<!-- div HOUSING THE DATA ANALYSIS STEP 2 (TBD) -->
-			<!-- For each next div (if any), just replace isSubmenuIndex(1) with isSubmenuIndex(2), isSubmenuIndex(3),... -->
-			<div ng-show="isServiceName(SERVICE_DATA_ANALYSIS) && isSubmenuIndex(1)"  
+			<!-- ººººº DATAANALYSIS / TO BE DONE ººººº -->
+			<!-- For each next div (if any), just replace service.subMenu.index == 1 with service.subMenu.index == 2,... -->
+			<div ng-show="(service.name === SERVICE_DATA_ANALYSIS) && (service.subMenu.index == 1)"  
 				class="flex-direction-row flexible-half">
 				<div class="flex-direction-col flexible">
 					data analysis
@@ -293,6 +298,7 @@
 		<!-- div housing errors. Set debug=false in django for less verbosity
 		For info see: https://stackoverflow.com/questions/10418644/creating-an-iframe-with-given-html-dynamically/10433550#10433550
 		 -->
+		 <!-- ººººº ERRORS ººººº -->
 		 <div ng-show='hasError' class="alert alert-danger alert-dismissable"> <!--  -->
 			<a href="#" click='return false' ng-click="hasError=false" class="close" data-dismiss="alert" aria-label="close">&times;</a>
 			<iframe id='errFrame'></iframe>

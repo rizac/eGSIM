@@ -29,27 +29,63 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
             [$scope.SERVICE_TRELLIS_PLOTS, new SelArray(_inputSelStr, "Config. Scenario", _outStr).select(0)],
             [$scope.SERVICE_DATA_ANALYSIS, new SelArray(_inputSelStr, _outStr).select(0)]
         ]).select(_homeStr);
+        
 
         // helper functions:
-        $scope.services.names = Array.from($scope.services.keys());
-
-        $scope.isServiceName = function(name){
-            return $scope.services.selKey === name;
+        $scope.serviceNames = Array.from($scope.services.keys());
+        $scope.subMenuNames = function(serviceName){return $scope.services.get(serviceName);}
+        // $scope.service exposes SelMap's and SelArray's methods in a more friendly way for
+        // a html view's reader:
+        $scope.service = {
+                get name(){
+                    return $scope.services.selKey;
+                },
+                set name(name){
+                    $scope.services.selKey = name;
+                    $scope.dropdown = false;  // hide dropdown menu
+                },
+                subMenu: { // returns an object which is basically the SelArray associated 
+                    // to the selected service, with more explicative names (
+                    get $(){
+                        return $scope.services.get($scope.services.selKey);
+                    },
+                    get index(){
+                        return this.$.selIndex;
+                    },
+                    set index(index){ this.$.selIndex = index; },
+                    moveNext: function(){ this.$.selNext(); },
+                    moveBack: function(){ this.$.selPrev(); },
+                    get canMoveBack(){ return this.$.selHasPrev; },
+                    get canMoveNext(){ return this.$.selHasNext; }
+                }
         };
-        $scope.isSubmenuIndex = function(index){
-            return $scope.services.get($scope.services.selKey).selIndex === index;
-        };
-
-        $scope.selectNext = function(){
-            if ($scope.services.get($scope.services.selKey)){
-                $scope.services.get($scope.services.selKey).selNext();
-            }
-        };
-
-        $scope.selectPrev = function(){
-            if ($scope.services.get($scope.services.selKey)){
-                $scope.services.get($scope.services.selKey).selPrev();
-            }
+        
+        $scope.service = {
+                get name(){
+                    return $scope.services.selKey;
+                },
+                set name(name){
+                    $scope.services.selKey = name;
+                    $scope.dropdown = false;  // hide dropdown menu
+                },
+                get subMenuIndex(){
+                    return $scope.services.get($scope.services.selKey).selIndex;
+                },
+                set subMenuIndex(index){
+                    $scope.services.get($scope.services.selKey).selIndex = index;
+                },
+                moveNext: function(){
+                    $scope.services.get(this.name).selNext();
+                },
+                moveBack: function(){
+                    $scope.services.get(this.name).selPrev();
+                },
+                get canMoveBack(){
+                    return $scope.services.get(this.name).selHasPrev;
+                },
+                get canMoveNext(){
+                    return $scope.services.get(this.name).selHasNext;
+                }
         };
 
         $scope.post = function(...args){
