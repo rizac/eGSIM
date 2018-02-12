@@ -128,11 +128,14 @@
 				</div>
 			</div>
 		</nav>
+		
+		<div class='flex-direction-row flexible' ng-show="service.name === SERVICE_HOME">
+		
+		</div>
 
-		<div class='flex-direction-row flexible'>
-			
+		<div class='flex-direction-row flexible' ng-show="service.name !== SERVICE_HOME">
 			<!-- ººººº  NAV-DIV (GO TO PREVIOUS)  ººººº -->
-			<div ng-show="(service.name !== SERVICE_HOME) && service.subMenu.canMoveBack"
+			<div ng-show="service.subMenu.canMoveBack"
 				class='page-scroller'>
 				<button ng-click="service.subMenu.moveBack()">
 					<span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
@@ -140,7 +143,7 @@
 			</div>
 				     		
 			<!-- ººººº GSIM SELECTION ººººº -->
-			<div ng-show="(service.name !== SERVICE_HOME) && (service.subMenu.index == 0)"
+			<div ng-show="service.subMenu.index == 0"
 				class='flex-direction-row flexible-half'>
 
 				<div class="flex-direction-col flexible">
@@ -179,7 +182,7 @@
 			</div>
 			
  			<!-- ººººº TRT MAP ººººº -->
- 			<div ng-show="(service.name !== SERVICE_HOME) && (service.subMenu.index <= 1) && filterTypeName==filterTypeNames[2]"
+ 			<div ng-show="(service.subMenu.index <= 1) && filterTypeName==filterTypeNames[2]"
 				class="flex-direction-col flexible-half" style='z-index: 1000;'> 
 				
 				<div class='flexible' id='{% verbatim %}{{ _trMapID }}{% endverbatim %}'></div>
@@ -193,7 +196,7 @@
 			</div>
 
 			<!-- ººººº SELECTED GSIMS ººººº -->
-			<div ng-show="(service.name !== SERVICE_HOME) && (service.subMenu.index <= 1) && filterTypeName!=filterTypeNames[2]"
+			<div ng-show="(service.subMenu.index <= 1) && filterTypeName!=filterTypeNames[2]"
 				class="flex-direction-row flexible-half">
 
 				<div class="flex-direction-col flexible">
@@ -218,7 +221,7 @@
 					</div>
 				</div>
 				
-				{% include "navarrow.html" with ngshow="(service.name !== SERVICE_HOME) && (service.subMenu.index == 0) && gsimsInput.isValid" ngclick="service.subMenu.moveNext()" %}
+				{% include "navarrow.html" with ngshow="(service.subMenu.index == 0) && gsimsInput.isValid" ngclick="service.subMenu.moveNext()" %}
 
 			</div>
 			

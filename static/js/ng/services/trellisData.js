@@ -102,10 +102,11 @@ ngApp.service('trellisData', function () {
                         hovermode: 'closest',  // defaults 'y' ?
                         showlegend: false,
                         xaxis: {
-                            title: xlabel
+                            title: xlabel,
                         },
                         yaxis: {
-                            title: element.ylabel
+                            title: element.ylabel,
+                            type: 'log'
                         }
                 };
                 return [traces, layout];

@@ -22,7 +22,7 @@ ngApp.controller("confRuptureController", ['$scope', 'gsimsInput', 'trellisData'
         $scope.post("validate_trellis_input", data, {headers: {'Content-Type': 'application/json'}}).then(function(response) {
             $scope.post("get_trellis_plots", response.data, {headers: {'Content-Type': 'application/json'}}).then(function(response) {
                 $scope.trellisData.init(response.data);
-                $scope.service.moveNext();
+                $scope.service.subMenu.moveNext();
             });
         });
     }

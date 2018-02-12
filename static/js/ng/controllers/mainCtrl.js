@@ -44,47 +44,28 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
                     $scope.services.selKey = name;
                     $scope.dropdown = false;  // hide dropdown menu
                 },
-                subMenu: { // returns an object which is basically the SelArray associated 
-                    // to the selected service, with more explicative names (
-                    get $(){
-                        return $scope.services.get($scope.services.selKey);
+                subMenu: {
+                    get _(){
+                        return $scope.subMenuNames($scope.services.selKey);
                     },
                     get index(){
-                        return this.$.selIndex;
+                        return this._.selIndex;
                     },
-                    set index(index){ this.$.selIndex = index; },
-                    moveNext: function(){ this.$.selNext(); },
-                    moveBack: function(){ this.$.selPrev(); },
-                    get canMoveBack(){ return this.$.selHasPrev; },
-                    get canMoveNext(){ return this.$.selHasNext; }
-                }
-        };
-        
-        $scope.service = {
-                get name(){
-                    return $scope.services.selKey;
-                },
-                set name(name){
-                    $scope.services.selKey = name;
-                    $scope.dropdown = false;  // hide dropdown menu
-                },
-                get subMenuIndex(){
-                    return $scope.services.get($scope.services.selKey).selIndex;
-                },
-                set subMenuIndex(index){
-                    $scope.services.get($scope.services.selKey).selIndex = index;
-                },
-                moveNext: function(){
-                    $scope.services.get(this.name).selNext();
-                },
-                moveBack: function(){
-                    $scope.services.get(this.name).selPrev();
-                },
-                get canMoveBack(){
-                    return $scope.services.get(this.name).selHasPrev;
-                },
-                get canMoveNext(){
-                    return $scope.services.get(this.name).selHasNext;
+                    set index(index){
+                        this._.selIndex = index;
+                    },
+                    moveNext: function(){
+                        this._.selNext();
+                    },
+                    moveBack: function(){
+                        this._.selPrev();
+                    },
+                    get canMoveBack(){
+                        return this._.selHasPrev;
+                    },
+                    get canMoveNext(){
+                        return this._.selHasNext;
+                    }
                 }
         };
 

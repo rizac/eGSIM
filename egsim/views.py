@@ -46,7 +46,7 @@ def validate_trellis_input(request):
     """
     Returns input parameters for input selection. Called when app initializes
     """
-    data = json.loads(request.body)
+    data = json.loads(request.body).decode('utf-8')  # python 3.5 complains otherwise...
     
     # instantiate caption strings:
     CR, IS = 'confRupture', 'gsimsInputSel'
