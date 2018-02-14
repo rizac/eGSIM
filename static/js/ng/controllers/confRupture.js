@@ -13,7 +13,14 @@ ngApp.controller("confRuptureController", ['$scope', 'gsimsInput', 'trellisData'
         // $submitted The form is submitted
         return $scope.gsimsInput.isValid && $scope.c_r_form.$valid;
     };
-
+    
+//    $scope.showField = function(name){
+//        return name in gsimsInput.ruptureParams;
+//    }
+//
+//    /* DEBUG FUNCTION ! REMOVE!! */
+//    $scope._rp = function(){ return Array.from(gsimsInput.ruptureParams); };
+    
     $scope.trellisData = trellisData;
 
     $scope.submitForm=function(){

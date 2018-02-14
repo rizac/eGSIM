@@ -13,13 +13,13 @@ from django.conf import settings
 # from rest_framework.decorators import api_view
 # from rest_framework.response import Response
 
-from openquake.hazardlib.gsim import get_available_gsims
-from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
+# from openquake.hazardlib.gsim import get_available_gsims
+# from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
 
 # import smtk.trellis.trellis_plots as trpl
 # import smtk.trellis.configure as rcfg
 
-from .forms import RuptureConfigForm, InputSelectionForm
+from .forms import RuptureConfigForm, InputSelectionForm, InputSelection
 import os
 
 
@@ -35,9 +35,13 @@ def get_init_params(request):
     """
     aval_gsims = [(key,
                   [imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES],
-                  gsim.DEFINED_FOR_TECTONIC_REGION_TYPE)
-                 for key, gsim in get_available_gsims().items()]
-    # print([a[-1] for a in aval_gsims])
+                  gsim.DEFINED_FOR_TECTONIC_REGION_TYPE,
+                  [n for n in gsim.REQUIRES_RUPTURE_PARAMETERS])
+                 for key, gsim in InputSelection.available_gsims.items()]
+    
+    for key, gsim in InputSelection.available_gsims.items():
+        print(key + " " + str([n for n in gsim.REQUIRES_RUPTURE_PARAMETERS]))
+
     return JsonResponse({'avalGsims': aval_gsims}) 
 
 
@@ -47,7 +51,7 @@ def validate_trellis_input(request):
     Returns input parameters for input selection. Called when app initializes
     """
     data = json.loads(request.body.decode('utf-8'))  # python 3.5 complains otherwise...
-    
+
     # instantiate caption strings:
     CR, IS = 'confRupture', 'gsimsInputSel'
     

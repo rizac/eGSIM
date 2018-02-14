@@ -11,15 +11,14 @@ class MapManager {
         // defined an object of project(s) mapped to the relative zip files (add new here, if any in the future):
         // maybe not elegant, in any case defining everything here makes life easier when debugging and maintaining
         var p = '/static/data/asmodal/';
-        this._projects = {
-            'SHARE': {
+        this._projects = new SelMap([
+            ['SHARE', {
                 'Area Source Model': p+'ASModelVer6.1.zip',
                 'Subduction': p+'Subduction.zip',
                 'Vrancea': p+'VRANCEAv6.1.zip'
-            }
-        };
-        // default project name on startup:
-        this._projectName = 'SHARE';
+                }
+            ]
+            ]).select('SHARE'); // default project name on startup:
         // this is used to check which geoJson features belong to which tectonic region (see this._setOverlay)
         // map any lower case name to a valid openquacke name defined in the object below's values
         // For info: https://docs.openquake.org/oq-hazardlib/0.12/_modules/openquake/hazardlib/const.html#TRT
@@ -69,10 +68,10 @@ class MapManager {
         var layerLabels = L.esri.basemapLayer(layerName + 'Labels');
         this._map.addLayer(layerLabels);
         // instanitate a layer control (the button on the top-right corner for showing/hiding overlays
-        // overlays will be added below in this.projectName(this._projectName);
+        // overlays will be added below in this.projectName(this._projects.selKey);
         this._layersControl = L.control.layers({}, {}).addTo(this._map);
         // set the project name and its layers loaded from files:
-        this.projectName(this._projectName);
+        this.projectName(this._projects.selKey);
         return this;
     }
 
@@ -87,10 +86,10 @@ class MapManager {
         // 2. Because the property should actually be set to undefined. This happens e.g. if the
         //    input is invalid
         if (arguments.length){
-            this._projectName = newName;
+            this._projects.selKey = newName;
             this._setOverlay(newName);
         }else{
-            return this._projectName;
+            return this._projects.selKey;
         }
     }
 
@@ -109,7 +108,7 @@ class MapManager {
         // restore internal method:
         this._overlays = [];
 
-        var newOverlays = this._projects[key];
+        var newOverlays = this._projects.get(key);
         if (!newOverlays){
             return;
         }

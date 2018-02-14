@@ -5,18 +5,19 @@ in the framework of the  Thematic Core Services for Seismology of EPOS-IP
 
 ## Installation
 
-Disclaimer: this is a temporary tutorial tested with MacOS (El Capitan) only. 
+Disclaimer: this is a temporary tutorial tested with MacOS (El Capitan) and Ubuntu 16.04. 
 
-### Install fortran compiler (included in gcc):
+### Requirements (Ubuntu specific, in Mac should not be an issue, otherwise `brew isntall` instead of `apt-get install`):
 ```bash
 brew doctor  # pre-requisite
 brew update # pre-requisite
 brew install gcc
+sudo apt-get install git python3-venv python3-pip python3-dev
 ```
 
 ### Activate virtualenv (links TBD).
 [Pending: doc TBD] Three options:
-  1. python-venv (for python>=3.5)
+  1. python-venv (for python>=3.5): suggested as it does not issues the 'matplotlib installed as a framework ...' problem
   2. python-virtualenv
   3. virtualenvwrapper (our choice)
 
@@ -25,7 +26,13 @@ brew install gcc
 ### Upgrade pip and setuptools:
 pip install -U pip setuptools
 
-### First install numpy
+### Install
+pip install -r ./requirements.txt
+
+
+## Old stuff (ignore, will be removed soon):
+
+### ~~First install numpy~~
 
 *Note: this is maybe not necessary as it turned out we needed gcc first (see above). However it's harmless to do it now*
 
@@ -34,7 +41,7 @@ pip install numpy
 pip install scipy
 ```
 
-### Install oq-engine:
+### ~~Install oq-engine~~:
 
 Full ref here: https://github.com/gem/oq-engine/blob/master/doc/installing/development.md
 
@@ -49,7 +56,7 @@ install as editable (this should make git-pull in the repository enough to have 
 pip install -e .
 ```
 
-### Install gmpe-smtk:
+### ~~Install gmpe-smtk~~:
 
 Full ref here: https://github.com/GEMScienceTools/gmpe-smtk
 
@@ -64,11 +71,6 @@ install as editable (this should make git-pull in the repository enough to have 
 pip install -e .
 ```
 
-### ~~~Install django-widget-tweaks (PENDING: REMOVE, not used anymore!)
-
-```bash
-pip install django-widget-tweaks
-```
 
 ## Run locally:
 

@@ -48,11 +48,11 @@
 	
 	
 	<!--  THESE ARE FALLBACKS, COMMENT OUT IF NOT NEEDED -->
-	<!-- <script type='text/javascript'>
+	<script type='text/javascript'>
 	if (!navigator.onLine){
-		document.write("<script type='text/javascript' src='/static/fallbacks/jquery.3.2.1.js'><\/script>");
+		//document.write("<script type='text/javascript' src='/static/fallbacks/jquery.3.2.1.js'><\/script>");
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/bootstrap.3.3.7.css'/>");
-		document.write("<script type='text/javascript' src='/static/fallbacks/bootstrap.3.3.7.js'><\/script>");
+		//document.write("<script type='text/javascript' src='/static/fallbacks/bootstrap.3.3.7.js'><\/script>");
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/font-awesome.4.7.0.css'/>");
 		document.write("<script type='text/javascript' src='/static/fallbacks/leaflet.1.3.0.js'><\/script>");
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/leaflet.1.3.0.css'/>");
@@ -61,7 +61,7 @@
 		document.write("<script type='text/javascript' src='/static/fallbacks/angular.1.6.7.js'><\/script>");
 		document.write("<script type='text/javascript' src='/static/fallbacks/plotly.1.33.1.js'><\/script>");
 	}
-	</script> -->
+	</script>
 	
 	<!-- my stuff  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/gmpe_mapstyle.css' %}"><!-- own leaflet style def -->
@@ -251,6 +251,9 @@
 							FIXME: isn't really a better way?-->
 							<input id='abcd' type=submit value="Ok" style='display:none'>
 							</form>
+						</div>
+						<div>
+						{% verbatim %} {{ _rp() }} {% endverbatim %}
 						</div>
 					</div>
 				

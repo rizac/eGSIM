@@ -10,6 +10,7 @@ ngApp.service('gsimsInput', function () {
     var _gsims = new Set();
     var _avalImts = new SelSet();  // will be used as single selection set
     var _selectableImts = new Set();
+    var _ruptureParams = null;
 
     return {
 
@@ -33,7 +34,8 @@ ngApp.service('gsimsInput', function () {
                 var imts = new Set(gsim[1]);
                 imts.forEach(function(elm){_avalImts.add(elm);});
                 var trt = gsim[2];
-                _avalGsims.set(gsimName, [imts, trt]);
+                var ruptureParams = gsim[3];
+                _avalGsims.set(gsimName, [imts, trt, ruptureParams]);
             }
             return this;
         },
@@ -45,7 +47,7 @@ ngApp.service('gsimsInput', function () {
         },
         clearGsims(){
             _gsims.clear();
-            _selectableImts.clear();
+            this.updateSelection();
         },
         deleteGsims(gsims){
             for (let gsim of gsims){
@@ -63,6 +65,7 @@ ngApp.service('gsimsInput', function () {
             this.updateSelection();
         },
         updateSelection(){
+            _ruptureParams = null;
             _selectableImts.clear();
             for (let gsim of _gsims){
                 var gsimSelectableImts = _avalGsims.get(gsim)[0];
@@ -121,6 +124,18 @@ ngApp.service('gsimsInput', function () {
         },
         get asObj(){
             return {gsims: this.gsims, imt: this.imt}
+        },
+        get ruptureParams(){
+            if (_ruptureParams === null){
+                _ruptureParams = new Set();
+                for (let gsimName of _gsims){
+                    var rParams = _avalGsims.get(gsimName)[2];
+                    for (let rParam of rParams){
+                        _ruptureParams.add(rParam);  //safe to delete within for of loop
+                    }
+                }
+            }
+            return _ruptureParams;
         }
     }
 });
