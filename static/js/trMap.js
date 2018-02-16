@@ -44,7 +44,7 @@ class MapManager {
         /**
          * returns the available project names, as array
          */
-        return Array.from(Object.keys(this._projects)); // as array so that angularjs does not complain
+        return Array.from(this._projects.keys()); // as array so that angularjs does not complain
     }
 
     get ready(){
