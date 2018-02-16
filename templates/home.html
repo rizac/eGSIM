@@ -135,21 +135,26 @@
 		
 		<div class='flex-direction-col flexible' ng-show="service.name === SERVICE_HOME">
 			
-			<div class='flexible jumbotron' style='text-align:center'>
-				<h1>eGSIM</h1>
-				<p></p>
+			<div class='flexible jumbotron' style='text-align:center; background-color:initial'>
+				<div>
+					<h1 style="text-shadow: 2px 8px 6px rgba(0,0,0,0.2), 0px -5px 35px rgba(255,255,255,0.3);">eGSIM</h1>
+					<p>&nbsp;</p>
+					<p>European Ground Shaking Intensity Model:</p>
+					<p>a web service for selecting and testing ground shaking models in Europe</p>
+				</div>
+				<img class="logo" style='height:45vh' src="{% static 'img/logos/efehr_flyer.jpg' %}" />
 			</div>
 			<div class="logos">
-				<a href='http://www.efehr.org/en/home/'>
+				<a target="_blank" href='http://www.efehr.org/en/home/'>
 					<img class="logo" src="{% static 'img/logos/efehr_fin@3x.png' %}" />
 				</a>
-				<a href='https://www.globalquakemodel.org/oq-getting-started'>
+				<a target="_blank" href='https://www.globalquakemodel.org/oq-getting-started'>
 					<img class="logo" src="{% static 'img/logos/OQ-Logo-Standard-CS3-01.png' %}" />
 				</a>
-				<a href='http://www.sera-eu.org/en/home/'>
+				<a target="_blank" href='http://www.sera-eu.org/en/home/'>
 					<img class="logo" src="{% static 'img/logos/SERA_logo.png' %}" />
 				</a>
-				<a href='https://www.gfz-potsdam.de/en/home/'>
+				<a target="_blank" href='https://www.gfz-potsdam.de/en/home/'>
 					<img class="logo" src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.jpg' %}" />
 				</a>
 			
