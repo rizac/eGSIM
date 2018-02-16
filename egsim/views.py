@@ -39,8 +39,8 @@ def get_init_params(request):
                   [n for n in gsim.REQUIRES_RUPTURE_PARAMETERS])
                  for key, gsim in InputSelection.available_gsims.items()]
     
-    for key, gsim in InputSelection.available_gsims.items():
-        print(key + " " + str([n for n in gsim.REQUIRES_RUPTURE_PARAMETERS]))
+#     for key, gsim in InputSelection.available_gsims.items():
+#         print(key + " " + str([n for n in gsim.REQUIRES_RUPTURE_PARAMETERS]))
 
     return JsonResponse({'avalGsims': aval_gsims}) 
 
@@ -60,13 +60,13 @@ def validate_trellis_input(request):
     # check whether it's valid:
     if not form_cr.is_valid():
         # return HttpResponse(form_cr.errors.as_json(), status = 400, content_type='application/json')
-        return JsonResponse(form_cr.errors.as_json())
+        return JsonResponse(form_cr.errors.as_json(), safe=False)
 
     form_is = InputSelectionForm(data[IS])
     # check whether it's valid:
     if not form_is.is_valid():
         # return HttpResponse(form_is.errors.as_json(), status = 400, content_type='application/json')
-        return JsonResponse(form_is.errors.as_json())
+        return JsonResponse(form_is.errors.as_json(), safe=False)
 
     return JsonResponse({CR: form_cr.clean(),
                          IS: form_is.clean()})

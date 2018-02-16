@@ -24,6 +24,10 @@
 	<!-- must be loaded below / after autocomplete! FIXME: what does this mean?? -->
 	<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"
 			integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+			
+	<!-- <link href="https://bootswatch.com/4/yeti/bootstrap.min.css" rel="stylesheet"> -->
+			
+			
 	<!-- material design for bootsrap (css only) COMMENT IF NOT NEEDED -->
 	<!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
 	<link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css" integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous"> -->
@@ -48,7 +52,7 @@
 	
 	
 	<!--  THESE ARE FALLBACKS, COMMENT OUT IF NOT NEEDED -->
-	<script type='text/javascript'>
+	<!-- <script type='text/javascript'>
 	if (!navigator.onLine){
 		//document.write("<script type='text/javascript' src='/static/fallbacks/jquery.3.2.1.js'><\/script>");
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/bootstrap.3.3.7.css'/>");
@@ -61,7 +65,7 @@
 		document.write("<script type='text/javascript' src='/static/fallbacks/angular.1.6.7.js'><\/script>");
 		document.write("<script type='text/javascript' src='/static/fallbacks/plotly.1.33.1.js'><\/script>");
 	}
-	</script>
+	</script> -->
 	
 	<!-- my stuff  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/gmpe_mapstyle.css' %}"><!-- own leaflet style def -->
@@ -129,8 +133,27 @@
 			</div>
 		</nav>
 		
-		<div class='flex-direction-row flexible' ng-show="service.name === SERVICE_HOME">
-		
+		<div class='flex-direction-col flexible' ng-show="service.name === SERVICE_HOME">
+			
+			<div class='flexible jumbotron' style='text-align:center'>
+				<h1>eGSIM</h1>
+				<p></p>
+			</div>
+			<div class="logos">
+				<a href='http://www.efehr.org/en/home/'>
+					<img class="logo" src="{% static 'img/logos/efehr_fin@3x.png' %}" />
+				</a>
+				<a href='https://www.globalquakemodel.org/oq-getting-started'>
+					<img class="logo" src="{% static 'img/logos/OQ-Logo-Standard-CS3-01.png' %}" />
+				</a>
+				<a href='http://www.sera-eu.org/en/home/'>
+					<img class="logo" src="{% static 'img/logos/SERA_logo.png' %}" />
+				</a>
+				<a href='https://www.gfz-potsdam.de/en/home/'>
+					<img class="logo" src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.jpg' %}" />
+				</a>
+			
+			</div>
 		</div>
 
 		<div class='flex-direction-row flexible' ng-show="service.name !== SERVICE_HOME">
@@ -153,14 +176,14 @@
 					<div class="flex-direction-col flexible">
 						<select multiple class="form-control flexible" id="selectable_gsims"
 							ng-model="temporarySelectedGsims">
-							<option ng-repeat="gsim in gsimsInput.avalGsims | filter:gsimsFilter" ng-value="gsim">
+							<option ng-repeat="gsim in gsimsInput.gsims.asArray | filter:gsimsFilter" ng-value="gsim">
 								{% verbatim %} {{ gsim }} {% endverbatim %}
 							</option>
 						</select>
 						<div>
 							{% verbatim %}
-							{{ visibleGsimsCount }} of {{ gsimsInput.avalGsimsCount }} visible 
-							({{ gsimsInput.avalGsimsCount - visibleGsimsCount }} filtered out),
+							{{ visibleGsimsCount }} of {{ gsimsInput.gsims.size }} visible 
+							({{ gsimsInput.gsims.size - visibleGsimsCount }} filtered out),
 							{{ temporarySelectedGsims.length }} selected
 							{% endverbatim %}
 						</div>
@@ -203,19 +226,19 @@
 					
 					<legend>Selected GSIMs:</legend>
 					<div class='flexible' style='overflow:auto'>
-						<div ng-repeat="gsim in gsimsInput.gsims" class="alert alert-success alert-dismissable">
-							<a ng-click="gsimsInput.deleteGsims([gsim])" href="#" click='return false;' 
-								class="close" data-dismiss="alert" aria-label="close">&times;</a>
+						<div ng-repeat="gsim in gsimsInput.gsims.selection.asArray" class="alert alert-success alert-dismissable">
+							<a ng-click="gsimsInput.gsims.selection.delete(gsim)" href="#" click='return false;' 
+								class="close" aria-label="close">&times;</a>
 							<strong>{% verbatim %} {{ gsim }} {% endverbatim %}</strong>
 						</div>
 					</div>
 					
 					<legend>Intensity Measure Types (IMTs):</legend>
-					<div>
-						<button class='btn btn-default' ng-repeat='imt in gsimsInput.avalImts'
+					<div class="flex-direction-col">
+						<button class='btn btn-default' ng-repeat='imt in gsimsInput.imts.asArray'
 							ng-disabled="!gsimsInput.isImtSelectable(imt)"
-							ng-class="{'btn-success': gsimsInput.imt == imt}"
-							ng-click="gsimsInput.imt = imt">
+							ng-class="{'btn-success': gsimsInput.imts.selection.has(imt)}"
+							ng-click="gsimsInput.imts.selection.toggle(imt)">
 							{% verbatim %} {{ imt }} {% endverbatim %}
 						</button>
 					</div>
@@ -268,9 +291,11 @@
 				<div class="flex-direction-col flexible">
 					<div class="flex-direction-row">
 						<select ng-model="trellisData.selName" ng-model-options="{ getterSetter: true }"
-							ng-options="key as key for key in trellisData.names" class="form-control flexible"></select>
+							ng-options="key as key for key in trellisData.names.asArray" class="form-control flexible">
+						</select>
 						<select ng-model="trellisData.selType" ng-model-options="{ getterSetter: true }"
-							ng-options="key as key for key in trellisData.types" class="form-control"></select>
+							ng-options="key as key for key in trellisData.types.asArray" class="form-control">
+						</select>
 					</div>
 					<div id='trellisContainer' class="flex-direction-col flexible"
 						style='flex-basis:100%'> <!-- <-- really important to correctly display plot grid, as it forces

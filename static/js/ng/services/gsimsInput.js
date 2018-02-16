@@ -5,15 +5,9 @@
 // difference between factory and .service: https://blog.thoughtram.io/angular/2015/07/07/service-vs-factory-once-and-for-all.html
 ngApp.service('gsimsInput', function () {
 
-    // sort of private variables:
-    var _avalGsims = new Map();
-    var _gsims = new Set();
-    var _avalImts = new SelSet();  // will be used as single selection set
-    var _selectableImts = new Set();
-    var _ruptureParams = null;
-
     return {
-
+        gsims: new MultiselMap(),
+        imts: new MultiselSet(),
         init(avalGsims) {
             /**
              * Initializes a new InputSelection
@@ -24,93 +18,48 @@ ngApp.service('gsimsInput', function () {
              *  gsimName (string),
              *  intensity measure types defined for the gsim (Array of String),
              *  tectonic region type defined for the gsim (String)
+             *  ruptureParams (array of strings? FIXME: check)
              * ]
              */
-            _avalGsims.clear();
-            _avalImts.clear();
-            this.clearGsims();
+            this.gsims.clear();
+            this.imts.clear();
             for (let gsim of avalGsims) {
                 var gsimName = gsim[0];
-                var imts = new Set(gsim[1]);
-                imts.forEach(function(elm){_avalImts.add(elm);});
+                var gImts = new Set(gsim[1]);
+                for (let gImt of gImts){
+                    this.imts.add(gImt);
+                }
                 var trt = gsim[2];
                 var ruptureParams = gsim[3];
-                _avalGsims.set(gsimName, [imts, trt, ruptureParams]);
+                this.gsims.set(gsimName, [gImts, trt, ruptureParams]);
             }
             return this;
         },
         get isValid(){
-            return this.gsimsCount > 0 && this.imt && this.isImtSelectable(this.imt); // ._selKey is a Set, its name overrides super-class (SelMap)
-        },
-        get gsims() {
-            return Array.from(_gsims);
-        },
-        clearGsims(){
-            _gsims.clear();
-            this.updateSelection();
-        },
-        deleteGsims(gsims){
-            for (let gsim of gsims){
-                _gsims.delete(gsim);  //safe to delete within for of loop
-            }
-            this.updateSelection();
-        },
-        addGsims(gsims) {
-            // update selectableImts
-            for (let gsim of gsims){
-                if (_avalGsims.has(gsim)){
-                    _gsims.add(gsim);
-                }
-            }
-            this.updateSelection();
-        },
-        updateSelection(){
-            _ruptureParams = null;
-            _selectableImts.clear();
-            for (let gsim of _gsims){
-                var gsimSelectableImts = _avalGsims.get(gsim)[0];
-                if (_selectableImts.size == 0){  // first item added
-                    for (let imt of gsimSelectableImts){
-                        _selectableImts.add(imt);
-                    }
-                    continue;
-                }
-                for (let imt of _selectableImts){
-                    if (!gsimSelectableImts.has(imt)){
-                        _selectableImts.delete(imt);  // safe to delete within let of loop
+            var val = !!(this.gsims.selection.size && this.imts.selection.size);
+            if (val){
+                for (let imt of this.imts.selection){
+                    if (!this.isImtSelectable(imt)){
+                        return false;
                     }
                 }
-                if (_selectableImts.size == 0){
-                    break;
-                }
             }
-        },
-        get gsimsCount() {
-            return _gsims.size;
-        },
-        get imt() {
-            return _avalImts.selItem;
-        },
-        set imt(imt) {
-            _avalImts.selItem = imt;
+            return val;
         },
         isImtSelectable(imt) {
-            return _selectableImts.has(imt);
-        },
-        get avalGsims() {
-            return Array.from(_avalGsims.keys());
-        },
-        get avalGsimsCount(){
-            return _avalGsims.size;
-        },
-        get avalImts() {
-            return Array.from(_avalImts);
+            for (let gsim of this.gsims.selection){
+                var selectableImts = this.gsims.get(gsim)[0];
+                if (!selectableImts.has(imt)){
+                    return false;
+                }
+            }
+            return true;
         },
         matchesByName(gsimName, regexp){
             return gsimName.search(regexp) > -1;
         },
         matchesByImt(gsimName, regexp){
-            var imts = _avalGsims.get(gsimName)[0];
+            var imts = this.gsims.get(gsimName)[0];
             for (let imt of imts){
                 if (imt.search(regexp) > -1){
                     return true;
@@ -119,23 +68,18 @@ ngApp.service('gsimsInput', function () {
             return false;
         },
         matchesByTrt(gsimName, regexp){
-            var trt = _avalGsims.get(gsimName)[1];
+            var trt = this.gsims.get(gsimName)[1];
             return trt.search(regexp) > -1;
         },
-        get asObj(){
-            return {gsims: this.gsims, imt: this.imt}
-        },
-        get ruptureParams(){
-            if (_ruptureParams === null){
-                _ruptureParams = new Set();
-                for (let gsimName of _gsims){
-                    var rParams = _avalGsims.get(gsimName)[2];
-                    for (let rParam of rParams){
-                        _ruptureParams.add(rParam);  //safe to delete within for of loop
-                    }
-                }
-            }
-            return _ruptureParams;
-        }
+//        get ruptureParams(){
+//            var _ruptureParams = new Set();
+//            for (let gsimName of _gsims){
+//                var rParams = this.gsims.get(gsimName)[2];
+//                for (let rParam of rParams){
+//                    _ruptureParams.add(rParam);  //PS: safe to delete within for of loop
+//                }
+//            }
+//            return _ruptureParams;
+//        }
     }
 });

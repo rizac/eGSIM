@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext as _
 from django import forms
 from django.utils.safestring import mark_safe
-from django.forms.widgets import Select
+from django.forms.widgets import Select, RadioSelect, CheckboxSelectMultiple, CheckboxInput
 from django.forms.fields import BooleanField, CharField
 
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -24,36 +24,34 @@ from itertools import chain, repeat
 #https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 
 class NArrayField(CharField):
-    def __init__(self, *, maxlen=None, minlen=None, bounds=None, **kwargs):
+    def __init__(self, *, min_arr_len=None, max_arr_len=None, bounds=None, **kwargs):
         '''
         Implements a numeric array field. Input is a string given as python list/tuple or js array.
         NOTE THAT brakets and commas are optional (if commas are missing, spaces will be used as
          separators, e.g. ".5 ,6.2 77" will result in [0.5, 6.2, 77] )
          
-         :param minlen: numeric (defaults to None) the minimum required length of the resulting
+         :param min_arr_len: numeric (defaults to None) the minimum required length of the resulting
          numeric array. None means: no minlen required
-         :param maxlen: numeric (defaults to None) the maximum required length of the resulting
+         :param max_arr_len: numeric (defaults to None) the maximum required length of the resulting
          numeric array. None means: no maxlen required
          :param bounds: numeric list/tuple/ndarray of two values denoting the minimum and maximum
          values for the corresponding parsed element. If an elements of ``bounds`` is None or
          ``[None, None]``, the corresponding element is not checked. If ``bounds`` is None, no
          element will be checked. If ``bounds`` length is lower than the parsed
          array length, ``bounds`` will be padded with None's.
-         
+         :param kwargs: keyword arguments forwarded to the super-class.         
         '''
         # Parameters after “*” or “*identifier” are keyword-only parameters
         # and may only be passed used keyword arguments.
-        super(NArrayField, self).__init__(min_length=None,
-                                         max_length=None,
-                                         **kwargs)
-        self.na_minlen = minlen
-        self.na_maxlen = maxlen
+        super(NArrayField, self).__init__(**kwargs)
+        self.na_minlen = min_arr_len
+        self.na_maxlen = max_arr_len
         self.na_bounds = bounds or []
         
     def clean(self, value):
         """Return a string."""
-        value = super.clean(value)
-        return validation.parsenarray(value, self.na_minlen, self.na_maxlen, self.na_bounds)
+        value = super(NArrayField, self).clean(value)
+        return validation.parsenarray(value, self.na_minlen, self.na_maxlen, *self.na_bounds)
 
 
 class validation(object):
@@ -154,8 +152,8 @@ class InputSelection(object):
                 for g_name in cls.available_gsims_names]
     
     @classmethod
-    def isimtdefinedfor(cls, imt_name, gsim_name):
-        return imt_name in cls.gsims2imts.get(gsim_name, [])
+    def imtdefinedfor(cls, gsim_name, *imt_names):
+        return all(imt_name in cls.gsims2imts.get(gsim_name, []) for imt_name in imt_names)
 
 
 class RuptureConfigForm(forms.Form):
@@ -179,7 +177,7 @@ class RuptureConfigForm(forms.Form):
             atts['ng-model'] = "form.%s" % name
             atts['ng-init'] = "form.%s=%s" % (name, json.dumps(field.initial))
             # atts['ng-show'] = "showField('%s')" % name
-            if not isinstance(field.widget, BooleanField):
+            if not isinstance(field.widget, (CheckboxInput, CheckboxSelectMultiple, RadioSelect)):
                 atts['class'] = 'form-control'
             return atts 
         customize_widget_atts(self, ngfunc)
@@ -187,11 +185,11 @@ class RuptureConfigForm(forms.Form):
         #self.fields['my_checkbox'].widget.attrs.update({'onclick': 'return false;'})
 
     # GSIM RUPTURE PARAMS:
-    magnitude = NArrayField(label='Magnitude', minlen=1) 
-    distances = NArrayField(label='Distances', minlen=1)
+    magnitudes = NArrayField(label='Magnitudes', min_arr_len=1) 
+    distances = NArrayField(label='Distances', min_arr_len=1)
     dip = forms.FloatField(label='Dip', min_value=0., max_value=90.)
     aspect = forms.FloatField(label='Rupture Length / Width', min_value=0.)
-    tectonic_region = forms.CharField(label='Tectonic Region Type', initial='Active Shallow Crust')
+    # tectonic_region = forms.CharField(label='Tectonic Region Type', initial='Active Shallow Crust')
     rake = forms.FloatField(label='Rake', min_value=-180., max_value=180., initial=0.)
     ztor = forms.FloatField(label='Top of Rupture Depth (km)', min_value=0., initial=0.)
     strike = forms.FloatField(label='Strike', min_value=0., max_value=360., initial=0.)
@@ -201,10 +199,10 @@ class RuptureConfigForm(forms.Form):
                             initial="WC1994")
     initial_point = NArrayField(label="Location on Earth", initial="0 0",
                                 help_text='Longitude Latitude',
-                                minlen=2, maxlen=2, bounds=[[-180, 180], [-90, 90]])
+                                min_arr_len=2, max_arr_len=2, bounds=[[-180, 180], [-90, 90]])
     hypocentre_location = NArrayField(label="Location of Hypocentre", initial="0.5 0.5",
                                       help_text='Along-strike fraction, Down-dip fraction',
-                                      minlen=2, maxlen=2, bounds=[[0, 1], [0, 1]])
+                                      min_arr_len=2, max_arr_len=2, bounds=[[0, 1], [0, 1]])
     # END OF RUPTURE PARAMS
     vs30 = forms.FloatField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., initial=760.0)
     vs30_measured = forms.BooleanField(label=mark_safe('V<sub>S30</sub> measured '),
@@ -243,19 +241,19 @@ class InputSelectionForm(forms.Form):
         '''
         cleaned_data = super().clean()
         gsims = cleaned_data.get("gsims")
-        imt = cleaned_data.get("imt")
+        imts = cleaned_data.get("imts")
         
         if not gsims:
             raise forms.ValidationError("No Gsim selected")
         
-        if not imt:
+        if not imts:
             raise forms.ValidationError("No Imt selected")
         
 
         for gsim_name in gsims:
-            if not InputSelection.isimtdefinedfor(imt, gsim_name):
+            if not InputSelection.imtdefinedfor(gsim_name, *imts):
                 raise forms.ValidationError(
-                    _("%(imt) not defined for %(gsim)"), params={'imt': imt, 'gsim':gsim_name}
+                    _("%(imt) not all defined for %(gsim)"), params={'imts': imts, 'gsim':gsim_name}
                 )
 
         return cleaned_data

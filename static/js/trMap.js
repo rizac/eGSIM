@@ -18,7 +18,8 @@ class MapManager {
                 'Vrancea': p+'VRANCEAv6.1.zip'
                 }
             ]
-            ]).select('SHARE'); // default project name on startup:
+            ]);
+        this._projects.selection = 'SHARE'; // default project name on startup:
         // this is used to check which geoJson features belong to which tectonic region (see this._setOverlay)
         // map any lower case name to a valid openquacke name defined in the object below's values
         // For info: https://docs.openquake.org/oq-hazardlib/0.12/_modules/openquake/hazardlib/const.html#TRT
@@ -71,7 +72,7 @@ class MapManager {
         // overlays will be added below in this.projectName(this._projects.selKey);
         this._layersControl = L.control.layers({}, {}).addTo(this._map);
         // set the project name and its layers loaded from files:
-        this.projectName(this._projects.selKey);
+        this.projectName(this._projects.selection);
         return this;
     }
 
@@ -86,10 +87,10 @@ class MapManager {
         // 2. Because the property should actually be set to undefined. This happens e.g. if the
         //    input is invalid
         if (arguments.length){
-            this._projects.selKey = newName;
+            this._projects.selection = newName;
             this._setOverlay(newName);
         }else{
-            return this._projects.selKey;
+            return this._projects.selection;
         }
     }
 

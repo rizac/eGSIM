@@ -5,51 +5,37 @@
 // difference between factory and .service: https://blog.thoughtram.io/angular/2015/07/07/service-vs-factory-once-and-for-all.html
 ngApp.service('trellisData', function () {
 
-    // sort of private variables:
-    var _data = {};
-    var _names = new SelSet();
-    var _types = new SelSet(['mean', 'sigma']).select('mean')
-    var _changed = false;
-
     return {
+        names: new SelSet(),
+        types: new SelSet(),
+        changed: false,
         // data = {'names': ['MagnitudeIMTs', 'DistanceIMTs', 'MagnitudeDistanceSpectra'],
         // 'data': {'sigma': 3*[{}], 'mean': 3*[{}]}}
         init(data) { // data needs to be a list of two-element arrays ['name', data], ['name', data]
-            _data = data.data;
-            var selName = _names.selItem;
-            _names = new SelSet(data.names).select(selName);
-            if(_names.selItem === undefined){
-                _names.selItem = Array.from(data.names)[0];
-            }
+            this._data = data.data;
+            var selRemainder = this.types.selection;
+            this.types = new SelSet(['mean', 'sigma'])
+            this.types.selection = selRemainder !== undefined ? selRemainder : 'mean';
+            selRemainder = this.names.selection;
+            this.names = new SelSet(data.names);
+            this.names.selection = selRemainder !== undefined ? selRemainder : this.names.asArray[0];
             this.changed=true;
-        },
-        get changed(){
-            return _changed;
-        },
-        set changed(value){
-            _changed = value;
         },
         selName: function(name){
             if (arguments.length){
-                _names.selItem = name;
+                this.names.selection = name;
                 this.changed=true;
             }else{
-                return _names.selItem;
+                return this.names.selection;
             }
         },
         selType: function(type){
             if (arguments.length){
-                _types.selItem = type;
+                this.types.selection = type;
                 this.changed=true;
             }else{
-                return _types.selItem;
+                return this.types.selection;
             }
-        },
-        get names(){
-            return Array.from(_names);  // preverves ordering
-        },
-        get types(){
-            return Array.from(_types);  // preverves ordering
         },
         get selPlotsRowsCols(){
             let rows = 0;
@@ -67,10 +53,13 @@ ngApp.service('trellisData', function () {
             return [rows+1, cols+1];
         },
         get selData(){
-            return _data[this.selType()][this.selName()];
+            return this._data ? this._data[this.selType()][this.selName()] : undefined;
         },
         get selPlotsData() {
             var data = this.selData;
+            if (!data){
+                return [];
+            }
             var xvalues = data['xvalues'];
             var xlabel = data['xlabel'];
             var layout = {};

@@ -1,5 +1,9 @@
 #gfz_gmpe_site_wrapper {width: 100vw; height: 100vh; overflow: hidden; padding: 1ex; padding-top:0;}
 
+body{
+	font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+}
+
 /* tessellations border color */
 path.leaflet-interactive{
 	stroke: gray;
@@ -68,6 +72,18 @@ or same space of the other twin, if present: */
 .plot-container{
 	/* background-color: green; */
 }
+
+.logos{
+	text-align: center;
+    padding-bottom: 1em;
+}
+
+.logos img{
+	height: 3em;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    margin-left: 2em;
+}
+
 
 /* .form-control-container input:not([type=checkbox]):not([type=radio]), .form-control-container textarea,
 .form-control-container select{

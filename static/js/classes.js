@@ -1,193 +1,132 @@
 /**
- * classes definitions (ES6 OOP)
+ * classes definitions (ES6 OOP) mapping view iterables (Array, Set, Map) with a selection attribute
  */
-class SelArray extends Array {
-    /**
-     * JS Array subclass implementing a selected item (and selected index), assignable via
-     * getter setter. This class is useful when implementing menus/lists in angularjs where we want to
-     * store the 'active' or 'selected' item.
-     * 
-     * Examples:
-     * 
-     * var a = new SelArray(1,2,True,'4') // new SelArray() for empty Array
-     * a.selIndex()  // -1 means: no selection
-     * a.setSelIndex('4')
-     * a.selIndex()  // returns 3
-     * //usual operations on Arrays:
-     * a.slice
-     * ...
-     */
-    constructor(...args) { 
-        super(...args);
-        var _selIndex = -1;
-        this.selection = function(index){
-           /**
-            * Root function to get/set selection. Compatible with angularjs ngmodel and getter/setter, e.g.:
-            * <select ng-model="selarray.selection" ng-model-options="{ getterSetter: true }"
-            *    ng-options="index as selarray[index] for index in selarray">
-            * 
-            * Without arguments, returns the currently selected index. With an argument (integer)
-            * sets the selected index
-            * For info see: https://docs.angularjs.org/api/ng/directive/ngModel
-            */
-           if (arguments.length){
-               _selIndex = index;
-               return this;
-           }else{
-               if (_selIndex < 0 || _selIndex >= this.length){
-                   return -1;
-               }
-               return _selIndex;
-           }
+
+class ArraySet extends Set{
+    /** Set subclass implementing the asArray and toggle methods **/
+    get asArray(){ /* convert me as array */
+        return Array.from(this);
+    }
+    toggle(item){ /* add item if not in this Set, remove it otherwise */
+        if (this.has(item)){
+            return this.delete(item);
         }
-        this.clearSelection();
-    }
-    clear(){ //overrides Array.clear. Calls super and clear selection
-        super.clear();
-        return this.clearSelection();
-    }
-    clearSelection(){ //clears selection (sets selected index = -1)
-        return this.selection(-1);
-    }
-    select(index){ //aka selection(index), more explanatory than the latter
-        return this.selection(index);
-    }
-    get selIndex() {  // getter for the selected index: var index = selArray.selIndex (-1 if no selection, or a value < this.length)
-        return this.selection();
-    }
-    set selIndex(index) {  // setter for the selected index: selArray.selIndex = index. Same as this.select(index)
-        this.selection(index);
-    }
-    get selHasNext(){
-        var sindex = this.selIndex;
-        return sindex >=0 && sindex < this.length -1;
-    }
-    get selHasPrev(){
-        return this.selIndex > 0;
-    }
-    selNext(){
-        if (this.selHasNext){
-            this.selIndex += 1;
-        } 
-    }
-    selPrev(){
-        if (this.selHasPrev){
-            this.selIndex -= 1; 
-        }
+        return this.add(item);
     }
 }
 
 
-class SelSet extends Set {
+class SelArray extends Array {
     /**
-     * JS Set subclass implementing a selectedItem (and selectedIndex).
-     * Currently the selected index is not updating when the Array is modified,
-     * the user has to care about that
-     * 
-     * Examples:
-     * 
-     * var a = new MultiselSet([1,2,True,'4'])  // empty: new MultiselSet()
-     * a.selItems()  // -1 means: no selection
-     * a.setSelItems('4')
-     * a.selItems()  // returns [4]
-     * //usual operations on Arrays:
-     * a.values()
-     * ...
+     * JS Array with an optional selected index  accessible/settable via `this.selection`.
+     * `this.selection` is an integer lower than this Array length which, when -1 (the default) indicates no index selected
+     * This Array is intended to be immutable: adding removing elements
+     * to this object does not update the selected index. Such  a functionality is not needed by the program
+     * and there would be too many methods to override in any case.
      */
     constructor(...args) { 
         super(...args);
-        var _selItem = undefined;
-        this.selection = function(item){
-           /**
-            * Root function to get/set selection. Compatible with angularjs ngmodel and getter/setter, e.g.:
-            * <select ng-model="selarray.selection" ng-model-options="{ getterSetter: true }"
-            *    ng-options="value as selarray[index] for index in selarray">
-            * 
-            * Without arguments, returns the currently selected index. With an argument (integer)
-            * sets the selected index
-            * For info see: https://docs.angularjs.org/api/ng/directive/ngModel
-            */
-           if (arguments.length){
-               _selItem = item;
-               return this;
-           }else{
-               return this.has(_selItem) ? _selItem : undefined;
-           }
-        }
-        this.clearSelection();
+        this.selection = this.defaultSelection;
+    }
+    clear(){ //overrides Array.clear. Calls super and clear selection
+        super.clear();
+        this.selection = this.defaultSelection;
+    }
+    get defaultSelection(){
+        return -1;
+    }
+}
+
+
+class SelSet extends ArraySet {
+    /**
+     * JS Set with an optional selected element accessible/settable via `this.selection`.
+     * `this.selection` is an element of this set which, when undefined (the default) indicates no element selected.
+     * For applications requiring arrays (e.g. angular 1x) use `this.asArray`
+     */
+    constructor(...args) { 
+        super(...args);
+        this.selection = this.defaultSelection;
     }
     clear(){
         super.clear();
-        this.clearSelection();
+        this.selection = this.defaultSelection;
     }
-    clearSelection(){
-        this.selection(undefined);
+    delete(item){
+        var ret = super.delete(item);
+        if(ret && (item === this.selection)){
+            this.selection = this.defaultSelection;
+        }
+        return ret;
     }
-    select(item){
-        return this.selection(item);
+    get defaultSelection(){
+        return undefined;
     }
-    get selItem(){  // returns an Array instead of an iterator for angular compatibility
-        return this.selection();
+}
+
+class MultiselSet extends SelSet {
+    /**
+     * JS Set with optional selected elements accessible/settable via `this.selection`.
+     * `this.selection` is a Set which, when empty (the default) indicates no element selected.
+     * For applications requiring arrays (e.g. angular 1x) use `this.asArray` or `this.selection.asArray`
+     */
+    delete(item){
+        var ret = super.delete(item);
+        if (ret && this.selection.has(item)){
+            this.selection.delete(item);
+        }
+        return ret;
     }
-    set selItem(item){
-        this.selection(item);
+    get defaultSelection(){
+        return new ArraySet();
     }
 }
 
 
 class SelMap extends Map {
     /**
-     * JS (ES6) Map subclass implementing a selected key.
-     * Currently the selected key is not updating when the Map is modified,
-     * the user has to care about that
-     * 
-     * Examples:
-     * 
-     * var a = new SelMap([['key1', 5], ['key2', 'a'])  // SelMap() for empty Map
-     * a.selKey()  // return undefined (no selection)
-     * a.setSelKey('key1')
-     * a.selKey() // returns 'key1'
-     * // usual operations on map:
-     * a.get('key1')
-     * ...
+     * JS Map with an optional selected key accessible/settable via `this.selection`.
+     * `this.selection` is an key of this map which, when undefined (the default) indicates no key selected.
+     * For applications requiring arrays (e.g. angular 1x) use `this.asArray` which returns this.keys() converted to Array.
      */
     constructor(...args) { 
         super(...args); 
-        var _selKey = undefined;
-        this.selection = function(key){
-            /**
-             * Root function to get/set selection. Compatible with angularjs ngmodel and getter/setter, e.g.:
-             * <select ng-model="selarray.selection" ng-model-options="{ getterSetter: true }"
-             *    ng-options="value as selarray[index] for index in selarray">
-             * 
-             * Without arguments, returns the currently selected index. With an argument (integer)
-             * sets the selected index
-             * For info see: https://docs.angularjs.org/api/ng/directive/ngModel
-             */
-            if (arguments.length){
-                _selKey = key;
-                return this;
-            }else{
-                return this.has(_selKey) ? _selKey : undefined;
-            }
-        }
-        this.clearSelection();
+        this.selection = this.defaultSelection;
     }
     clear(){
         super.clear();
-        this.clearSelection();
+        this.selection = this.defaultSelection;
     }
-    clearSelection(){
-        this.selection(undefined);
+    delete(key){
+        var ret = super.delete(key);
+        if(ret && (key === this.selection)){
+            this.selection = this.defaultSelection;
+        }
+        return ret;
     }
-    select(key){
-        return this.selection(key);
+    get asArray(){
+        return Array.from(this.keys());
     }
-    get selKey(){ 
-        return this.selection();
-    }
-    set selKey(key){
-        this.selection(key);
+    get defaultSelection(){
+        return undefined;
     }
 }
 
+class MultiselMap extends SelMap {
+    /**
+     * JS Map with optional selected keys accessible/settable via `this.selection`.
+     * `this.selection` is a Set which, when empty (the default) indicates no key selected.
+     * For applications requiring arrays (e.g. angular 1x) use `this.asArray` which returns this.keys() converted to Array,
+     * or `this.selection.asArray`
+     */
+    delete(key){
+        var ret = super.delete(key);
+        if (ret && this.selection.has(key)){
+            this.selection.delete(key);
+        }
+        return ret;
+    }
+    get defaultSelection(){
+        return new ArraySet();
+    }
+}

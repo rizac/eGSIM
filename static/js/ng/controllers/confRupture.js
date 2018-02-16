@@ -24,7 +24,7 @@ ngApp.controller("confRuptureController", ['$scope', 'gsimsInput', 'trellisData'
     $scope.trellisData = trellisData;
 
     $scope.submitForm=function(){
-        data = {confRupture:$scope.form, gsimsInputSel: gsimsInput.asObj};
+        data = {confRupture:$scope.form, gsimsInputSel: {gsims: gsimsInput.gsims, imts: gsimsInput.imts} };
 
         $scope.post("validate_trellis_input", data, {headers: {'Content-Type': 'application/json'}}).then(function(response) {
             $scope.post("get_trellis_plots", response.data, {headers: {'Content-Type': 'application/json'}}).then(function(response) {

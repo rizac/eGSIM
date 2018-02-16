@@ -26,10 +26,13 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
         // NOT TO BE CONFUSED WITH ANGULAR SERVICE! (directory services) whereby we implement gsimsInput
         $scope.services = new SelMap([
             [_homeStr, new SelArray()],
-            [$scope.SERVICE_TRELLIS_PLOTS, new SelArray(_inputSelStr, "Config. Scenario", _outStr).select(0)],
-            [$scope.SERVICE_DATA_ANALYSIS, new SelArray(_inputSelStr, _outStr).select(0)]
-        ]).select(_homeStr);
-        
+            [$scope.SERVICE_TRELLIS_PLOTS, new SelArray(_inputSelStr, "Config. Scenario", _outStr)],
+            [$scope.SERVICE_DATA_ANALYSIS, new SelArray(_inputSelStr, _outStr)]
+        ]);
+        $scope.services.selection = _homeStr;
+        for(let entry of $scope.services){
+            entry[1].selection = 0;
+        }
 
         // helper functions:
         $scope.serviceNames = Array.from($scope.services.keys());
@@ -37,34 +40,34 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
         // $scope.service exposes SelMap's and SelArray's methods in a more friendly way for
         // a html view's reader:
         $scope.service = {
-                get name(){
-                    return $scope.services.selKey;
+                get name(){  // reutrns the current service name
+                    return $scope.services.selection;
                 },
-                set name(name){
-                    $scope.services.selKey = name;
+                set name(name){  // sets current service name
+                    $scope.services.selection = name;
                     $scope.dropdown = false;  // hide dropdown menu
                 },
                 subMenu: {
                     get _(){
-                        return $scope.subMenuNames($scope.services.selKey);
+                        return $scope.subMenuNames($scope.services.selection);
                     },
                     get index(){
-                        return this._.selIndex;
+                        return this._.selection;
                     },
                     set index(index){
-                        this._.selIndex = index;
+                        this._.selection = index;
                     },
                     moveNext: function(){
-                        this._.selNext();
+                        if (this.canMoveNext){this.index += 1;}
                     },
                     moveBack: function(){
-                        this._.selPrev();
+                        if (this.canMoveBack){this.index -= 1;}
                     },
                     get canMoveBack(){
-                        return this._.selHasPrev;
+                        return this.index > 0;
                     },
                     get canMoveNext(){
-                        return this._.selHasNext;
+                        return this.index < this._.length -1;
                     }
                 }
         };
@@ -94,7 +97,7 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
         $scope.gsimsInput = gsimsInput;
         $scope.temporarySelectedGsims = [];
         $scope.setSelectedGsims = function(){
-            $scope.gsimsInput.addGsims($scope.temporarySelectedGsims);
+            $scope.temporarySelectedGsims.forEach(function(gsim){$scope.gsimsInput.gsims.selection.add(gsim)});
             $scope.temporarySelectedGsims = [];
         }
 
