@@ -234,7 +234,7 @@
 					</div>
 					
 					<legend>Intensity Measure Types (IMTs):</legend>
-					<div class="flex-direction-col">
+					<div class="flex-direction-row">
 						<button class='btn btn-default' ng-repeat='imt in gsimsInput.imts.asArray'
 							ng-disabled="!gsimsInput.isImtSelectable(imt)"
 							ng-class="{'btn-success': gsimsInput.imts.selection.has(imt)}"
