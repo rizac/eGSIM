@@ -7,6 +7,8 @@ Created on 29 Jan 2018
 import re
 import json
 
+import numpy as np
+
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext as _
 from django import forms
@@ -26,9 +28,11 @@ from itertools import chain, repeat
 class NArrayField(CharField):
     def __init__(self, *, min_arr_len=None, max_arr_len=None, bounds=None, **kwargs):
         '''
-        Implements a numeric array field. Input is a string given as python list/tuple or js array.
-        NOTE THAT brakets and commas are optional (if commas are missing, spaces will be used as
-         separators, e.g. ".5 ,6.2 77" will result in [0.5, 6.2, 77] )
+        Implements a numeric array field. Input is a string given as python list/tuple or js array,
+        with optional brackets and optional commas if at least one space separates each element.
+        Supported also is matlab vectors notation with colons (sort of numpy arange).
+        
+        Example: ".5 ,6.2 77 0:2:3" will result in [0.5, 6.2, 77 0 2] )
          
          :param min_arr_len: numeric (defaults to None) the minimum required length of the resulting
          numeric array. None means: no minlen required
@@ -51,11 +55,16 @@ class NArrayField(CharField):
     def clean(self, value):
         """Return a string."""
         value = super(NArrayField, self).clean(value)
-        return validation.parsenarray(value, self.na_minlen, self.na_maxlen, *self.na_bounds)
-
+        try:
+            return validation.parsenarray(value, self.na_minlen, self.na_maxlen, *self.na_bounds)
+        except Exception as exc:
+            raise forms.ValidationError(str(exc))
 
 class validation(object):
     
+    RTOL = 1e-15
+    ATOL = 0
+
     @classmethod
     def isinragne(self, value, minval=None, maxval=None):
         return (minval is None or value >= minval) and (maxval is None or value <= maxval)
@@ -78,35 +87,54 @@ class validation(object):
         :raises: TypeError if the string is malformed
         '''
         string = string.strip()
+        
+        if not string:
+            return []
 
         if string[0] in ('[', '('):
             if not string[-1] == {'[' :']', '(': ')'}[string[0]]:
                 raise TypeError('unbalanced brackets')
-            string = string.strip()
+            string = string[1:-1].strip()
 
-        values = re.split("(?:\\s*,\\s*|\\s+)", string)
-
+        values = []
+        for v in re.split("(?:\\s*,\\s*|(?<!:)\\s+(?!:))", string):
+            try:
+                msg = 'nan'
+                if ':' not in v:
+                    values.append(float(v))
+                    continue
+                msg = "invalid range"
+                # parse semicolon as in matlab: 1:3 = [1,2,3],  1:2:3 = [1,3]
+                spl = [_.strip() for _ in v.split(':')]
+                if len(spl) < 2 or len(spl) > 3:
+                    raise TypeError()
+                start, step, stop = \
+                    float(spl[0]), 1 if len(spl)==2 else float(spl[1]), float(spl[-1])
+                # check if we should include the end:
+                ratio = (stop-start)/step
+                # the relative tolerance below (tested) makes e.g. stop=10 and stop=9.9999999 NOT close,
+                # 10 and 9.99999999 close, as well as , e.g. 45 and 4.450000000000002
+                if np.isclose(int(0.5+ratio), ratio, rtol=cls.RTOL, atol=cls.ATOL):
+                    stop += step
+                array = np.arange(start, stop, step, dtype=float).tolist()
+                values += array
+            except (TypeError, ValueError):
+                raise TypeError("%s: '%s'" % (msg, v))
+            
+            
         if minlen is not None and len(values) < minlen:
             if minlen == maxlen:
                 raise TypeError('%d numbers required' % minlen)
             raise TypeError('at least %d numbers required' % minlen)
         if maxlen is not None and len(values) > maxlen:
-            raise TypeError('not more than %d numbers required' % maxlen)
+            raise TypeError('at most %d numbers required' % maxlen)
         
-        ret = []
-        
-        for val, bound in zip(values, chain(bounds, repeat(None))):
-            try:
-                numval = float(val.strip())
-            except ValueError:
-                raise TypeError("nan: '%s'" % val)
+        for numval, bound in zip(values, chain(bounds, repeat(None))):
             
             if bound is not None and not cls.isinragne(numval, bound[0], bound[1]):
                 raise ValueError("%s not in %s" % (values[0].strip(), list(bound)))
-            
-            ret.append(numval)
         
-        return ret
+        return values
 
 
 def customize_widget_atts(form, func):

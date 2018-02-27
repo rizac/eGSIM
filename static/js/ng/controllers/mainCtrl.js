@@ -4,52 +4,47 @@
  * hide them if set on the child
  */
 
-// Create a new module.
-// Iterestingly, if we remove this line everything works fine. We should understand why.
-//Is a global module ngApp created, and the line below retrieves it? Then why the need of such  a line?
-// We comment for the moment keeping in mind that we should use it once understood that it's important
-// var ngApp = angular.module('eGSIM', []);
+ngApp.controller("mainController", ['gsimsInput', '$http', '$timeout',
+    function(gsimsInput, $http, $timeout) {
 
-ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
-    function($scope, gsimsInput, $http, $timeout) {
-
+        var me = this;
         // temp variables
         var _inputSelStr = "Input Selection";
         var _outStr = "Result";
         var _homeStr = 'Home';
  
-        $scope.SERVICE_HOME = _homeStr;
-        $scope.SERVICE_TRELLIS_PLOTS = 'Trellis Plots';
-        $scope.SERVICE_DATA_ANALYSIS = 'Data Analysis';
+        me.SERVICE_HOME = _homeStr;
+        me.SERVICE_TRELLIS_PLOTS = 'Trellis Plots';
+        me.SERVICE_DATA_ANALYSIS = 'Data Analysis';
 
         // services here is the eGSIM service, a SUBMENU of the main app.
         // NOT TO BE CONFUSED WITH ANGULAR SERVICE! (directory services) whereby we implement gsimsInput
-        $scope.services = new SelMap([
+        me.services = new SelMap([
             [_homeStr, new SelArray()],
-            [$scope.SERVICE_TRELLIS_PLOTS, new SelArray(_inputSelStr, "Config. Scenario", _outStr)],
-            [$scope.SERVICE_DATA_ANALYSIS, new SelArray(_inputSelStr, _outStr)]
+            [me.SERVICE_TRELLIS_PLOTS, new SelArray(_inputSelStr, "Config. Scenario", _outStr)],
+            [me.SERVICE_DATA_ANALYSIS, new SelArray(_inputSelStr, _outStr)]
         ]);
-        $scope.services.selection = _homeStr;
-        for(let entry of $scope.services){
+        me.services.selection = _homeStr;
+        for(let entry of me.services){
             entry[1].selection = 0;
         }
 
         // helper functions:
-        $scope.serviceNames = Array.from($scope.services.keys());
-        $scope.subMenuNames = function(serviceName){return $scope.services.get(serviceName);}
-        // $scope.service exposes SelMap's and SelArray's methods in a more friendly way for
+        me.serviceNames = Array.from(me.services.keys());
+        me.subMenuNames = function(serviceName){return me.services.get(serviceName);}
+        // me.service exposes SelMap's and SelArray's methods in a more friendly way for
         // a html view's reader:
-        $scope.service = {
+        me.service = {
                 get name(){  // reutrns the current service name
-                    return $scope.services.selection;
+                    return me.services.selection;
                 },
                 set name(name){  // sets current service name
-                    $scope.services.selection = name;
-                    $scope.dropdown = false;  // hide dropdown menu
+                    me.services.selection = name;
+                    me.dropdown = false;  // hide dropdown menu
                 },
                 subMenu: {
                     get _(){
-                        return $scope.subMenuNames($scope.services.selection);
+                        return me.subMenuNames(me.services.selection);
                     },
                     get index(){
                         return this._.selection;
@@ -72,8 +67,8 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
                 }
         };
 
-        $scope.post = function(...args){
-            $scope.hasError = false;
+        me.post = function(...args){
+            me.hasError = false;
             this._args = args;
             return {
                 then(callback){
@@ -81,7 +76,7 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
                         callback(response);
                         // set loading flags to false
                     }, function(response) {  // error function, print message
-                        $scope.handleError(response);
+                        me.handleError(response);
                     });
                 }
             }
@@ -91,20 +86,20 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
             gsimsInput.init(response.data.avalGsims);
             // set loading flags to false
         }, function(response) {  // error function, print message
-            $scope.handleError(response);
+            me.handleError(response);
         });
 
-        $scope.gsimsInput = gsimsInput;
-        $scope.temporarySelectedGsims = [];
-        $scope.setSelectedGsims = function(){
-            $scope.temporarySelectedGsims.forEach(function(gsim){$scope.gsimsInput.gsims.selection.add(gsim)});
-            $scope.temporarySelectedGsims = [];
+        me.gsimsInput = gsimsInput;
+        me.temporarySelectedGsims = [];
+        me.setSelectedGsims = function(){
+            me.temporarySelectedGsims.forEach(function(gsim){me.gsimsInput.gsims.selection.add(gsim)});
+            me.temporarySelectedGsims = [];
         }
 
-        $scope.hasError = false;
-        $scope.handleError = function(response){
+        me.hasError = false;
+        me.handleError = function(response){
 
-            $scope.hasError = true;
+            me.hasError = true;
             var iframe = document.getElementById('errFrame');
             iframe.contentWindow.document.open();
             iframe.contentWindow.document.write(response.data);
@@ -115,50 +110,50 @@ ngApp.controller("mainController", ['$scope', 'gsimsInput', '$http', '$timeout',
             var data = response.data;  // whatever else, sometimes a detailed page with the message or what we decided to write here server-side
         };
 
-        $scope._trMapID = 'trMap';
-        $scope.mapManager = new MapManager($scope._trMapID);
-        $scope.filterSelected = function(){
+        me._trMapID = 'trMap';
+        me.mapManager = new MapManager(me._trMapID);
+        me.filterSelected = function(){
             // delay the map setup so that the div is correctly laid out.
             // FIXME: this is horrible, better change it later
-            if ($scope.filterTypeName == $scope.filterTypeNames[2] && !$scope.mapManager.ready){
+            if (me.filterTypeName == me.filterTypeNames[2] && !me.mapManager.ready){
                 $timeout(function(){
-                    $scope.mapManager.init($scope._trMapID);
+                    me.mapManager.init(me._trMapID);
                 }, 1000);
             };
         };
 
-        $scope.visibleGsimsCount = 0;
-        $scope.filterText = '';
-        $scope.filterRegexp = undefined;
-        $scope.filterTypeNames = ['Name', 'Intensity Measure Type', 'Tectonic Region Type'];
-        $scope.filterTypeName = $scope.filterTypeNames[0];
+        me.visibleGsimsCount = 0;
+        me.filterText = '';
+        me.filterRegexp = undefined;
+        me.filterTypeNames = ['Name', 'Intensity Measure Type', 'Tectonic Region Type'];
+        me.filterTypeName = me.filterTypeNames[0];
         function filterByName(gsim){
-            return $scope.gsimsInput.matchesByName(gsim, $scope.filterRegexp);
+            return me.gsimsInput.matchesByName(gsim, me.filterRegexp);
         }
         function filterByImt(gsim){
-            return $scope.gsimsInput.matchesByImt(gsim, $scope.filterRegexp);
+            return me.gsimsInput.matchesByImt(gsim, me.filterRegexp);
         }
         function filterByTrt(gsim){
-            return $scope.gsimsInput.matchesByTrt(gsim, $scope.filterRegexp);
+            return me.gsimsInput.matchesByTrt(gsim, me.filterRegexp);
         }
-        $scope.filterTypes = new Map([
-            [$scope.filterTypeNames[0], filterByName],
-            [$scope.filterTypeNames[1], filterByImt],
-            [$scope.filterTypeNames[2], filterByTrt]
+        me.filterTypes = new Map([
+            [me.filterTypeNames[0], filterByName],
+            [me.filterTypeNames[1], filterByImt],
+            [me.filterTypeNames[2], filterByTrt]
         ]);
-        $scope.filterTypeNames = Array.from($scope.filterTypes.keys());
-        $scope.gsimsFilter = function(gsim, index, gsims) {
+        me.filterTypeNames = Array.from(me.filterTypes.keys());
+        me.gsimsFilter = function(gsim, index, gsims) {
             var ret = true;
             if(index == 0){
-                $scope.visibleGsimsCount = 0;
+                me.visibleGsimsCount = 0;
             }
-            if ($scope.filterText){
+            if (me.filterText){
                 if(index == 0){
-                    $scope.filterRegexp = new RegExp($scope.filterText.replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
+                    me.filterRegexp = new RegExp(me.filterText.replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
                 }
-                ret = $scope.filterTypes.get($scope.filterTypeName)(gsim);
+                ret = me.filterTypes.get(me.filterTypeName)(gsim);
             }
-            $scope.visibleGsimsCount += ret;
+            me.visibleGsimsCount += ret;
             return ret;
         };
     }
