@@ -19,9 +19,12 @@ from . import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),  # added by default by django
-    url(r'^$', views.index, name = 'index'), # main page entry point
-    url(r'get_init_params', views.get_init_params),  #, name = 'index'), # main page entry point
-    url(r'validate_trellis_input', views.validate_trellis_input),  #, name = 'index'), # main page entry point
-    url(r'get_trellis_plots', views.get_trellis_plots),  #, name = 'index'), # main page entry point
-    
+    url(r'^$', views.index, name='index'),  # main page entry point
+    url(r'^home$', views.home, name='home'),
+    url(r'^trellis$', views.trellis, name='trellis'),
+    url(r'^residuals$', views.residuals, name='residuals'),
+    url(r'^loglikelihood$', views.loglikelihood, name='loglikelihood$'),
+    url(r'get_init_params', views.get_init_params),
+    url(r'validate_trellis_input', views.validate_trellis_input),
+    url(r'get_trellis_plots', views.get_trellis_plots),
 ]

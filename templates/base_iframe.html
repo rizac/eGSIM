@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block extra-head %}
+	{{ block.super }}
+	<script type='text/javascript'>
+		function setActiveTab(){};
+		
+	</script>
+{% endblock %}
+
+{% block body %}
+	<div class='flexible flex-direction-row'>
+			
+		<div class='flexible flexible-half flex-direction-col p-3'>
+			<form class='flexible flex-direction-col'>
+			
+			<ul class="nav nav-tabs">
+ 				<li class="nav-item">
+					<a class="nav-link active" href="#" onlick='setActiveTab("inputSelection")'>Input selection</a>
+  				</li>
+  				{% if extra_tabs %}
+					{% for key, value in extra_tabs.items %}
+						<li class="nav-item">
+							<a class="nav-link active" href="#" onlick='setActiveTab("{{ key }}")'>{{ value }}</a>
+  						</li>
+					{% endfor %}
+				{% endif %}
+			</ul>
+			
+			<div class="flexible flex-direction-col">
+				
+					<legend>Ground-shaking intensity model (GSIM):</legend>
+				
+					<div id='gsims-dropdown' class="flex-direction-col flexible border shadow bg-white rounded">
+						<select multiple class="form-control flexible" id="selectable_gsims"
+							ng-model="temporarySelectedGsims">
+							<option ng-repeat="gsim in main.gsimsInput.gsims.asArray | filter:main.gsimsFilter" ng-value="gsim">
+								{% verbatim %} {{ gsim }} {% endverbatim %}
+							</option>
+						</select>
+						<div>
+							{% verbatim %}
+							{{ main.visibleGsimsCount }} of {{ main.gsimsInput.gsims.size }} visible 
+							({{ main.gsimsInput.gsims.size - main.visibleGsimsCount }} filtered out),
+							{{ main.temporarySelectedGsims.length }} selected
+							{% endverbatim %}
+						</div>
+					</div>
+				
+					<div>
+						Filter By
+						<select ng-change='main.filterSelected()' ng-model="main.filterTypeName"
+							ng-options="key as key for key in main.filterTypeNames" class="form-control"></select>
+						matching:
+						<input ng-model="main.filterText" type="text" class="form-control"
+							placeholder="Input Text (*=matches any character zero or more times, ?=matches any character exactly one time)"
+							autofocus>
+					</div>
+				</div>
+			{% block extra-left-panel %}{% endblock %}
+			</form>
+		</div>
+		<div class='flexible flexible-half p-3'>
+			{% block right-panel %}{% endblock %}	
+		</div>
+	</div>
+{% endblock %}

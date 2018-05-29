@@ -3,6 +3,7 @@ Created on 17 Jan 2018
 
 @author: riccardo
 '''
+import os
 import json
 
 from django.http import HttpResponse, JsonResponse
@@ -20,16 +21,44 @@ from django.conf import settings
 # import smtk.trellis.configure as rcfg
 
 from .forms import RuptureConfigForm, InputSelectionForm, InputSelection
-import os
+from egsim.utils import get_menus
+from django.views.decorators.http import require_http_methods
 
 
 def index(request):
-    return render(request, 'home.html', {'project_name':'eGSIM', 'form': RuptureConfigForm()})
-#     return HttpResponse('Hello World!')
+    return render(request, 'index.html', {'project_name': 'eGSIM',
+                                          'form': RuptureConfigForm(),
+                                          'menus': get_menus()})
+
+
+# @require_http_methods(["GET", "POST"])
+def home(request):
+    return render(request, 'home.html', {'project_name': 'eGSIM',
+                                         'form': RuptureConfigForm(),
+                                         'menus': get_menus()})
+
+
+def trellis(request):
+    return render(request, 'trellis.html', {'project_name': 'eGSIM',
+                                            'form': RuptureConfigForm(),
+                                            'menus': get_menus()})
+
+
+def residuals(request):
+    return render(request, 'residuals.html', {'project_name': 'eGSIM',
+                                              'form': RuptureConfigForm(),
+                                              'menus': get_menus()})
+
+
+def loglikelihood(request):
+    return render(request, 'loglikelihood.html', {'project_name': 'eGSIM',
+                                                  'form': RuptureConfigForm(),
+                                                  'menus': get_menus()})
+
 
 # @api_view(['GET', 'POST'])
 @csrf_exempt
-def get_init_params(request):
+def get_init_params(request):  # @UnusedVariable
     """
     Returns input parameters for input selection. Called when app initializes
     """
@@ -37,12 +66,9 @@ def get_init_params(request):
                   [imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES],
                   gsim.DEFINED_FOR_TECTONIC_REGION_TYPE,
                   [n for n in gsim.REQUIRES_RUPTURE_PARAMETERS])
-                 for key, gsim in InputSelection.available_gsims.items()]
-    
-#     for key, gsim in InputSelection.available_gsims.items():
-#         print(key + " " + str([n for n in gsim.REQUIRES_RUPTURE_PARAMETERS]))
+                  for key, gsim in InputSelection.available_gsims.items()]
 
-    return JsonResponse({'avalGsims': aval_gsims}) 
+    return JsonResponse({'avalGsims': aval_gsims})
 
 
 @csrf_exempt
@@ -53,29 +79,30 @@ def validate_trellis_input(request):
     data = json.loads(request.body.decode('utf-8'))  # python 3.5 complains otherwise...
 
     # instantiate caption strings:
-    CR, IS = 'confRupture', 'gsimsInputSel'
-    
+    rupture_key, inputsel_key = 'confRupture', 'gsimsInputSel'
+
     # create a form instance and populate it with data from the request:
-    form_cr = RuptureConfigForm(data[CR])
+    form_cr = RuptureConfigForm(data[rupture_key])
     # check whether it's valid:
     if not form_cr.is_valid():
-        # return HttpResponse(form_cr.errors.as_json(), status = 400, content_type='application/json')
-        return JsonResponse(form_cr.errors.as_json(), safe=False)
+        # HttpResponse(form_cr.errors.as_json(), status = 400, content_type='application/json')
+        return JsonResponse(form_cr.errors.as_json(), safe=False, status=400)
 
-    form_is = InputSelectionForm(data[IS])
+    form_is = InputSelectionForm(data[inputsel_key])
     # check whether it's valid:
     if not form_is.is_valid():
-        # return HttpResponse(form_is.errors.as_json(), status = 400, content_type='application/json')
-        return JsonResponse(form_is.errors.as_json(), safe=False)
+        # HttpResponse(form_is.errors.as_json(), status = 400, content_type='application/json')
+        return JsonResponse(form_is.errors.as_json(), safe=False, status=400)
 
-    return JsonResponse({CR: form_cr.clean(),
-                         IS: form_is.clean()})
-    
-    # print([a[-1] for a in aval_gsims])
+    return JsonResponse({rupture_key: form_cr.clean(),
+                         inputsel_key: form_is.clean()})
+
+
 @csrf_exempt
-def get_trellis_plots(request):
+def get_trellis_plots(request):  # @UnusedVariable
     data = _trellis_response_test()
     return JsonResponse(data)
+
 
 def _trellis_response_test():
     dir_ = os.path.abspath(os.path.join(os.path.dirname(__file__),

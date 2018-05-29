@@ -65,6 +65,10 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            # https://stackoverflow.com/a/35837135:
+            'builtins': [
+                'django.contrib.staticfiles.templatetags.staticfiles',
+            ],
         },
     },
 ]

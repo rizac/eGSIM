@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	{% with fontawesome=True leaflet=False shapefile=False plotly=False %}
+		{{ block.super }}
+	{% endwith %}
+{% endblock %}
+
+{% block extra-head %}
+<script type='text/javascript'>
+	function setActiveMenu(menu){
+		var ids = [
+		{% for key, value in menus.items %}
+			["{{ key }}", "{{ value }}"]{%if not forloop.last%},{%endif%}
+		{% endfor %}
+		];
+		var doc = document;
+		ids.forEach(function(item){
+			[key, value] = item;
+			var styleDisplay = key == menu ? 'initial' : 'none';
+			doc.getElementById("iframe-" + key).style.display = styleDisplay;
+			var aElement = doc.getElementById("a-" + key);
+			aElement.classList.remove("active");
+			aElement.innerHTML = value;
+			if (key == menu){
+				aElement.classList.add("active");
+				// https://stackoverflow.com/a/19758620:
+				aElement.innerHTML = value + `<span class="sr-only">(current)</span>`;
+			}
+		});
+	}
+</script>
+{% endblock %}
+
+{% block body %}
+	<div class="flex-direction-col height100">
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark" id='navbarNavAltMarkup'>
+		<!-- <a class="navbar-brand" href="#">{{ project_name }}</a> -->
+			<button class="navbar-toggler" type="button" data-toggle="collapse"
+				data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup"
+				aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbar">
+				<div class="navbar-nav">
+					{% for key, value in menus.items %}
+						<a class="nav-item nav-link" id='a-{{ key }}'
+							href="#" onclick='setActiveMenu("{{ key }}"); return false;'></a>
+							<!--anchor  text will be set thorugh setActiveMenu -->
+					{% endfor %}
+				</div>
+			</div>
+		</nav>
+		{% for key in menus.keys %}
+		<iframe id='iframe-{{ key }}' class='flexible' src='{{ key }}' ></iframe>
+		{% endfor %}
+	</div>
+{% endblock %}	
+
+{% block after-body %}
+<script type='text/javascript'>
+	{% if menu %}
+		setActiveMenu("{{ menu }}");
+	{% else %}
+		{% for key in menus.keys %}
+			{% if forloop.first %}
+				setActiveMenu("{{ key }}");
+			{% endif %}
+		{% endfor %}
+	{% endif %}
+</script>
+{% endblock %}
+	
