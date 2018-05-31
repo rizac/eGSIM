@@ -45,3 +45,22 @@ iframe{
 .shadow-lg { /* large */
     box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
 }
+/* transitions for hding showing */
+.tab-activated{
+	position: initial;
+	z-index: initial;
+	-webkit-transition: opacity 0.5s ease-in;
+    -moz-transition: opacity 0.5s ease-in;
+    -o-transition: opacity 0.5s ease-in;
+    transition: opacity 0.5s ease-in;
+	opacity: initial;
+}
+.tab-deactivated{
+	position: absolute;
+	z-index: -1000;
+	/* -webkit-transition: opacity 1s ease-out;
+    -moz-transition: opacity 1s ease-out;
+    -o-transition: opacity 1s ease-out;
+    transition: opacity 1s ease-out; */
+    opacity: 0;
+}

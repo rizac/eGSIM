@@ -7,6 +7,7 @@
 {% endblock %}
 
 {% block extra-head %}
+{{ block.super }}
 <script type='text/javascript'>
 	function setActiveMenu(menu){
 		var ids = [
@@ -45,8 +46,7 @@
 				<div class="navbar-nav">
 					{% for key, value in menus.items %}
 						<a class="nav-item nav-link" id='a-{{ key }}'
-							href="#" onclick='setActiveMenu("{{ key }}"); return false;'></a>
-							<!--anchor  text will be set thorugh setActiveMenu -->
+							href="#" onclick='setActiveMenu("{{ key }}"); return false;'>{{ value }}</a>
 					{% endfor %}
 				</div>
 			</div>
@@ -59,14 +59,21 @@
 
 {% block after-body %}
 <script type='text/javascript'>
-	{% if menu %}
-		setActiveMenu("{{ menu }}");
+	// configTabs defined in base.html
+	{% if menu %} //place the passed menu as first arg (selected by default)
+		configTabs(["{{ menu }}"] + [
+			{% for key in menus.keys %}
+				{% if key != menu %}
+				["a-{{ key }}", "iframe-{{ key }}"]{%if not forloop.last%},{%endif%}
+				{% endif %}
+			{% endfor %}
+			]);
 	{% else %}
+		configTabs([
 		{% for key in menus.keys %}
-			{% if forloop.first %}
-				setActiveMenu("{{ key }}");
-			{% endif %}
+			["a-{{ key }}", "iframe-{{ key }}"]{%if not forloop.last%},{%endif%}
 		{% endfor %}
+		]);
 	{% endif %}
 </script>
 {% endblock %}

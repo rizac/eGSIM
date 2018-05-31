@@ -6,7 +6,8 @@
 
 	{% block head %}
 	
-	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/vue-resource@1.5.1"></script>
 
 	<!--  -->
 	<!-- BOOTSTRAP for safety, it must be loaded before all posibble plugins -->
@@ -63,7 +64,9 @@
 	<script type='text/javascript'>
 	if (!navigator.onLine){
 		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.min.js'><\/script>");
+		document.write("<script type='text/javascript' src='/static/fallbacks/vue-resource.1.5.1.js'><\/script>");
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/bootstrap.4.0.0.min.css'/>");
+
 		{% if fontawesome %}
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/font-awesome.4.7.0.css'/>");
 		{% endif %}
@@ -101,7 +104,47 @@
 	<script type="text/javascript" src="{% static 'js/ng/controllers/trellisPlots.js' %}"></script>
 	<script type="text/javascript" src="{% static 'js/ng/controllers/dataAnalysis.js' %}"></script> -->
 
-	{% block extra-head %}{% endblock %}
+	{% block extra-head %}
+	<script type='text/javascript'>
+	function configTabs(data){
+	    // configs tabs to be clicked and visualize their content.
+	    // data is an Array of 2-element tuples (tab-id, div-id), where tab is the id of the
+	    // tab element (usually anchor)
+	    // which, when clicked, sets visible the element whose id is div-id (usually div)
+	    // and hides the others
+	    // this method sets also the first tuple passed in data as the default visible/selected element
+		var doc = document;
+	    // define function when a tab is clicked
+	    function tabClicked(tabId){
+	        data.forEach(function(item){
+	            [_tabId, _divId] = item;
+		        var tabElm = doc.getElementById(_tabId);
+		        var divElm = doc.getElementById(_divId);
+		        var visible = tabId === _tabId;
+		        if (visible){
+		            tabElm.classList.add("active");
+		            divElm.classList.remove("tab-deactivated");
+			        divElm.classList.add("tab-activated");
+		        }else{
+		            tabElm.classList.remove("active");
+		            divElm.classList.add("tab-deactivated");
+			        divElm.classList.remove("tab-activated");
+		        }
+	    	});
+	    }
+	    // set onlick on each tab:
+	    data.forEach(function(item){
+			[tabId, divId] = item;
+			doc.getElementById(tabId).onclick = function(mouseEvent) { 
+			    tabClicked(mouseEvent.target.id);
+			    return false;
+	        };
+		});
+	    // select the first tab:
+	    tabClicked(data[0][0]);   
+	}
+	</script>
+	{% endblock %}
 </head>
 
 <body class='height100 flex-direction-col'>

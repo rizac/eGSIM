@@ -2,10 +2,6 @@
 
 {% block extra-head %}
 	{{ block.super }}
-	<script type='text/javascript'>
-		function setActiveTab(){};
-		
-	</script>
 {% endblock %}
 
 {% block body %}
@@ -15,53 +11,72 @@
 			<form class='flexible flex-direction-col'>
 			
 			<ul class="nav nav-tabs">
- 				<li class="nav-item">
-					<a class="nav-link active" href="#" onlick='setActiveTab("inputSelection")'>Input selection</a>
-  				</li>
-  				{% if extra_tabs %}
-					{% for key, value in extra_tabs.items %}
-						<li class="nav-item">
-							<a class="nav-link active" href="#" onlick='setActiveTab("{{ key }}")'>{{ value }}</a>
-  						</li>
-					{% endfor %}
-				{% endif %}
+				{% block nav-tabs %}
+				{% endblock %}
 			</ul>
 			
-			<div class="flexible flex-direction-col">
-				
-					<legend>Ground-shaking intensity model (GSIM):</legend>
-				
-					<div id='gsims-dropdown' class="flex-direction-col flexible border shadow bg-white rounded">
-						<select multiple class="form-control flexible" id="selectable_gsims"
-							ng-model="temporarySelectedGsims">
-							<option ng-repeat="gsim in main.gsimsInput.gsims.asArray | filter:main.gsimsFilter" ng-value="gsim">
-								{% verbatim %} {{ gsim }} {% endverbatim %}
-							</option>
-						</select>
-						<div>
-							{% verbatim %}
-							{{ main.visibleGsimsCount }} of {{ main.gsimsInput.gsims.size }} visible 
-							({{ main.gsimsInput.gsims.size - main.visibleGsimsCount }} filtered out),
-							{{ main.temporarySelectedGsims.length }} selected
-							{% endverbatim %}
-						</div>
-					</div>
-				
-					<div>
-						Filter By
-						<select ng-change='main.filterSelected()' ng-model="main.filterTypeName"
-							ng-options="key as key for key in main.filterTypeNames" class="form-control"></select>
-						matching:
-						<input ng-model="main.filterText" type="text" class="form-control"
-							placeholder="Input Text (*=matches any character zero or more times, ?=matches any character exactly one time)"
-							autofocus>
+			<div id='inputsel' class="flexible flex-direction-col">
+				<div>Select Ground Shaking Intensoty Models (GSIMs):</div>
+				<div class="input-group mb-3">
+					<div class="input-group-prepend">
+    					<button v-on:click="showTypeDropdown" class="btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown"
+    						aria-haspopup="true" aria-expanded="false">Filter by &#123;&#123; filterType &#125;&#125; </button>
+    					<div v-show="typeDropdownVisible" class="dropdown-menu shadow" 
+    						style='display:initial'>  <!-- need to set display:initial to work with Vue -->
+      						<a v-for="item in filterTypes" v-on:click="filterType=item"
+      							class="dropdown-item" href="#">
+    							&#123;&#123; item &#125;&#125;
+							</a>
+    					</div>
+    					<div class="dropdown-menu shadow" v-show="gsimsDropdownVisible"
+    						style='width:100%;display:initial'> <!-- need to set display:initial to work with Vue -->
+    						<select multiple class="form-control flexible" v-model="temporarySelectedGsims">
+								<option v-for="gsim in gsims">
+									&#123;&#123; gsim &#125;&#125;
+								</option>
+							</select>
+							<div role="separator" class="dropdown-divider"></div>
+							<div>
+							<button class='btn btn-default' type="button" 
+								v-bind:disabled="!temporarySelectedGsims.length"
+								v-on:click="selectGsims(false)">Add to sel.</button>
+							<button class='btn btn-default' type="button" 
+								v-bind:disabled="!temporarySelectedGsims.length"
+								v-on:click="selectGsims(true)">Set sel.</button>
+							</div>
+  						</div>
+  					</div>
+  					<input v-on:focus="showGsimsDropdown" v-model="filterText" type="text" class="form-control"
+  						aria-label="Text input with dropdown button">
+				</div>
+
+				<div>GSIMs:</div>
+				<div class='flexible' style='overflow:auto'>
+					<div v-for="gsim in selectedGsims" class="alert alert-success alert-dismissable">
+						<a v-on:click="unselectGsim(gsim)" href="#" click='return false;' 
+							class="close" aria-label="close">&times;</a>
+						<strong>&#123;&#123; gsim &#125;&#125;</strong>
 					</div>
 				</div>
-			{% block extra-left-panel %}{% endblock %}
+	
+				<div>Intensity Measure Types (IMTs):</div>
+				<select multiple class="form-control" id="selectable_imts">
+					<option v-bind:disabled="!isImtSelectable(imt)" v-for='imt in imts'>
+						&#123;&#123; imt &#125;&#125;
+					</option>
+				</select>
+
+			</div>
+			{% block form-extra-divs %}{% endblock %}
 			</form>
 		</div>
 		<div class='flexible flexible-half p-3'>
 			{% block right-panel %}{% endblock %}	
 		</div>
 	</div>
+{% endblock %}
+
+{% block after-body %}
+	{{ block.super }}
+	<script type='text/javascript' src = "{% static 'js/inputsel.js' %}"></script>
 {% endblock %}

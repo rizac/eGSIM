@@ -20,8 +20,8 @@ from django.conf import settings
 # import smtk.trellis.trellis_plots as trpl
 # import smtk.trellis.configure as rcfg
 
-from .forms import RuptureConfigForm, InputSelectionForm, InputSelection
-from egsim.utils import get_menus
+from .forms import RuptureConfigForm, InputSelectionForm
+from egsim.utils import get_menus, InitData
 from django.views.decorators.http import require_http_methods
 
 
@@ -62,13 +62,13 @@ def get_init_params(request):  # @UnusedVariable
     """
     Returns input parameters for input selection. Called when app initializes
     """
-    aval_gsims = [(key,
+    init_data = [(key,
                   [imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES],
                   gsim.DEFINED_FOR_TECTONIC_REGION_TYPE,
                   [n for n in gsim.REQUIRES_RUPTURE_PARAMETERS])
-                  for key, gsim in InputSelection.available_gsims.items()]
+                 for key, gsim in InitData.available_gsims.items()]
 
-    return JsonResponse({'avalGsims': aval_gsims})
+    return JsonResponse({'init_data': init_data})
 
 
 @csrf_exempt

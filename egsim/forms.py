@@ -8,6 +8,7 @@ import re
 import json
 
 import numpy as np
+from itertools import chain, repeat
 
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext as _
@@ -17,10 +18,9 @@ from django.forms.widgets import Select, RadioSelect, CheckboxSelectMultiple, Ch
 from django.forms.fields import BooleanField, CharField
 
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
-from openquake.hazardlib.gsim import get_available_gsims
-from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
 from django.core import validators
-from itertools import chain, repeat
+
+from egsim.utils import InitData
 
 
 #https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
@@ -160,30 +160,6 @@ def customize_widget_atts(form, func):
         field.widget.attrs.update(atts)
 
 
-class InputSelection(object):
-    '''Just a wrapper housing input selection stuff'''
-    available_gsims = get_available_gsims()
-
-    available_gsims_names = available_gsims.keys()
-
-    available_imts_names = list(available_imts)
-
-    gsims2imts = {key: set([imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES])
-                  for key, gsim in available_gsims.items()}
-
-    gsim2trts = {key: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
-                 for key, gsim in available_gsims.items()}
-
-    @classmethod
-    def get_available_gsims_json(cls):
-        return [(g_name, list(cls.gsims2imts.get(g_name, [])), cls.gsim2trts.get(g_name, ''))
-                for g_name in cls.available_gsims_names]
-
-    @classmethod
-    def imtdefinedfor(cls, gsim_name, *imt_names):
-        return all(imt_name in cls.gsims2imts.get(gsim_name, []) for imt_name in imt_names)
-
-
 class RuptureConfigForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
@@ -249,13 +225,13 @@ class InputSelectionForm(forms.Form):
 
     # fields (not used for rendering, just for validation):
     gsims = forms.MultipleChoiceField(label='gsims',
-                                      choices=zip(InputSelection.available_gsims_names,
-                                                  InputSelection.available_gsims_names),
+                                      choices=zip(InitData.available_gsims_names,
+                                                  InitData.available_gsims_names),
                                       initial=[])
 
     imt = forms.ChoiceField(label='imt',
-                            choices=zip(InputSelection.available_imts_names,
-                                        InputSelection.available_imts_names),
+                            choices=zip(InitData.available_imts_names,
+                                        InitData.available_imts_names),
                             )
 
     def clean(self):
@@ -274,7 +250,7 @@ class InputSelectionForm(forms.Form):
             raise forms.ValidationError("No Imt selected")
 
         for gsim_name in gsims:
-            if not InputSelection.imtdefinedfor(gsim_name, *imts):
+            if not InitData.imtdefinedfor(gsim_name, *imts):
                 raise forms.ValidationError(
                     _("%(imt) not all defined for %(gsim)"), params={'imts': imts,
                                                                      'gsim': gsim_name}
