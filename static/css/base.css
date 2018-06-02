@@ -45,6 +45,17 @@ iframe{
 .shadow-lg { /* large */
     box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
 }
+/* change disabled text color to makei it lighter */
+*[disabled]{ /*input[type="text"][disabled] {*/
+   color: lightgray;
+}
+/* change option selection color. NOTE: we can only set a background image on them:*/
+select[multiple]:focus option:checked:not(:disabled) {
+	background-image: linear-gradient(0deg, #a2cd7e 0%, #a2cd7e 100%);
+}
+select[multiple] option:checked:not(:disabled) {
+	background-image: linear-gradient(0deg, #d6e9c6 0%, #d6e9c6	 100%);
+}
 /* transitions for hding showing */
 .tab-activated{
 	position: initial;

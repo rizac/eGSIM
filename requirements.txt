@@ -1,28 +1,29 @@
-certifi==2018.1.18
+certifi==2018.4.16
 chardet==3.0.4
 cycler==0.10.0
-decorator==4.2.1
-Django==2.0.2
+decorator==4.3.0
+Django==2.0.5
+django-oscar-paypal==0.7
 docutils==0.14
 h5py==2.7.1
 idna==2.6
 matplotlib==2.1.2
-mock==1.3.0
+mock==2.0.0
 nose==1.3.7
-numpy==1.11.3
-# -e git+https://github.com/gem/oq-engine.git@dfa85b27651a0d711e49a309b9d4c370da8834ee#egg=openquake.engine
-pbr==3.1.1
-# pkg-resources==0.0.0
-psutil==5.4.3
+numpy==1.14.3
+-e git+https://github.com/gem/oq-engine.git@967c8ceaa84516e09902a892be7abd2326232354#egg=openquake.engine
+pbr==4.0.3
+psutil==5.4.5
+purl==1.4
 pyparsing==2.2.0
-pyshp==1.2.10
-python-dateutil==2.6.1
-pytz==2018.3
+pyshp==1.2.3
+python-dateutil==2.7.3
+pytz==2018.4
 PyYAML==3.12
-pyzmq==16.0.4
+pyzmq==17.0.0
 requests==2.18.4
-scipy==0.17.1
+scipy==1.0.1
 Shapely==1.6.4.post1
 six==1.11.0
-# -e git+https://github.com/g-weatherill/gmpe-smtk.git@f22a88156b14a65e3a60eda3ac3ae7329c6d07f0#egg=smtk
+-e git+https://github.com/GEMScienceTools/gmpe-smtk.git@324403e0d5392fe9dce00b5ebe26bffa091f39b4#egg=smtk
 urllib3==1.22

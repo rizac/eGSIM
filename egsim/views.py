@@ -20,45 +20,48 @@ from django.conf import settings
 # import smtk.trellis.trellis_plots as trpl
 # import smtk.trellis.configure as rcfg
 
-from .forms import RuptureConfigForm, InputSelectionForm
+from .forms import TrellisForm, BaseForm
 from egsim.utils import get_menus, InitData
 from django.views.decorators.http import require_http_methods
 
+# FIXME: very hacky to parse the form for defaults, is it there a better choice?
+_COMMON_PARAMS = {
+    'project_name': 'eGSIM',
+    'menus': get_menus(),
+    'gsimFormField': {'name': list(BaseForm.declared_fields.keys())[0],
+                      'label': list(BaseForm.declared_fields.values())[0].label},
+    'imtFormField': {'name': list(BaseForm.declared_fields.keys())[1],
+                     'label': list(BaseForm.declared_fields.values())[1].label}
+    }
 
 def index(request):
-    return render(request, 'index.html', {'project_name': 'eGSIM',
-                                          'form': RuptureConfigForm(),
-                                          'menus': get_menus()})
+    return render(request, 'index.html', _COMMON_PARAMS)
 
 
 # @require_http_methods(["GET", "POST"])
 def home(request):
-    return render(request, 'home.html', {'project_name': 'eGSIM',
-                                         'form': RuptureConfigForm(),
-                                         'menus': get_menus()})
+    return render(request, 'home.html', _COMMON_PARAMS)
 
 
 def trellis(request):
-    return render(request, 'trellis.html', {'project_name': 'eGSIM',
-                                            'form': RuptureConfigForm(),
-                                            'menus': get_menus()})
+    return render(request, 'trellis.html', dict(_COMMON_PARAMS, form=TrellisForm()))
 
 
 def residuals(request):
     return render(request, 'residuals.html', {'project_name': 'eGSIM',
-                                              'form': RuptureConfigForm(),
+                                              'form': TrellisForm(),
                                               'menus': get_menus()})
 
 
 def loglikelihood(request):
     return render(request, 'loglikelihood.html', {'project_name': 'eGSIM',
-                                                  'form': RuptureConfigForm(),
+                                                  'form': TrellisForm(),
                                                   'menus': get_menus()})
 
 
 # @api_view(['GET', 'POST'])
 @csrf_exempt
-def get_init_params(request):  # @UnusedVariable
+def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     """
     Returns input parameters for input selection. Called when app initializes
     """
@@ -78,28 +81,18 @@ def validate_trellis_input(request):
     """
     data = json.loads(request.body.decode('utf-8'))  # python 3.5 complains otherwise...
 
-    # instantiate caption strings:
-    rupture_key, inputsel_key = 'confRupture', 'gsimsInputSel'
-
     # create a form instance and populate it with data from the request:
-    form_cr = RuptureConfigForm(data[rupture_key])
+    form = TrellisForm(data)
     # check whether it's valid:
-    if not form_cr.is_valid():
-        # HttpResponse(form_cr.errors.as_json(), status = 400, content_type='application/json')
-        return JsonResponse(form_cr.errors.as_json(), safe=False, status=400)
+    if not form.is_valid():
+        # HttpResponse(form.errors.as_json(), status = 400, content_type='application/json')
+        return JsonResponse(form.errors.as_json(), safe=False, status=400)
 
-    form_is = InputSelectionForm(data[inputsel_key])
-    # check whether it's valid:
-    if not form_is.is_valid():
-        # HttpResponse(form_is.errors.as_json(), status = 400, content_type='application/json')
-        return JsonResponse(form_is.errors.as_json(), safe=False, status=400)
-
-    return JsonResponse({rupture_key: form_cr.clean(),
-                         inputsel_key: form_is.clean()})
+    return JsonResponse(form.clean())
 
 
 @csrf_exempt
-def get_trellis_plots(request):  # @UnusedVariable
+def get_trellis_plots(request):  # @UnusedVariable pylint: disable=unused-argument
     data = _trellis_response_test()
     return JsonResponse(data)
 

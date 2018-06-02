@@ -7,11 +7,21 @@ from collections import OrderedDict
 
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
+import warnings
 
 
 def get_menus():
     return OrderedDict([('home', 'Home'), ('trellis', 'Trellis plots'),
                         ('residuals', 'Residuals'), ('loglikelihood', 'Log-likelihood analysis')])
+
+
+def vectorize(value):
+    '''Returns value if it is an iterable, otherwise [value]. This method is primarily called from
+    request/responses parameters where strings are considered scalars, i.e. not iterables
+    (although they are in Python). Thus `vectorize('abc') = ['abc']` '''
+    if hasattr(value, '__iter__') and not isinstance(value, str):
+        return value
+    return [value]
 
 
 class InitData(object):
@@ -22,8 +32,19 @@ class InitData(object):
 
     available_imts_names = list(available_imts)
 
-    gsims2imts = {key: set([imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES])
-                  for key, gsim in available_gsims.items()}
+    gsims2imts = {}
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore')
+        for key, gsim in available_gsims.items():
+            try:
+                gsim_inst = gsim()
+            except Exception as exc:
+                gsim_inst = gsim
+            gsims2imts[key] = set([imt.__name__
+                                   for imt in gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES])
+
+#     gsims2imts = {key: set([imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES])
+#                   for key, gsim in available_gsims.items()}
 
     gsim2trts = {key: gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
                  for key, gsim in available_gsims.items()}
@@ -36,4 +57,3 @@ class InitData(object):
     @classmethod
     def imtdefinedfor(cls, gsim_name, *imt_names):
         return all(imt_name in cls.gsims2imts.get(gsim_name, []) for imt_name in imt_names)
-

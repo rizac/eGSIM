@@ -4,14 +4,14 @@ new Vue({
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
         avalGsims: new Map(),  // map of available gsims name -> array of gsim attributes
         avalImts: new Set(),  // set of available imts names
-        temporarySelectedGsims: [],
-        selGsims: new Set(),
-        selImts: new Set(),
+        selectedGsims: [],
+        selectedImts: [],
         typeDropdownVisible: false,
-        gsimsDropdownVisible: true,
+        gsimsDropdownVisible: false,
         filterText: '',
+        filterType: 'GSIM name',
         filterTypes: ['GSIM name', 'IMT', 'Tectonic Region Type'],
-        filterType: 'GSIM name'
+        filterFunc: elm => true
     },
     methods: {
         showTypeDropdown: function (event) {
@@ -28,7 +28,7 @@ new Vue({
             this.gsimsDropdownVisible = true;
         },
         isImtSelectable(imt) {
-            if (!this.selGsims.size){
+            if (!this.selectedGsims.length){
                 return false;
             }
             for (let gsim of this.selectedGsims){
@@ -39,37 +39,36 @@ new Vue({
             }
             return true;    
         },
-        unselectGsim(gsim){
-            // this.selGsims must be a new Set at the end of this method.
-            // This way the property will be updated in the view
-            var _tmpSel = new Set();    
-            for (let gsim_ of this.selGsims){
-                if (gsim_ != gsim){
-                    _tmpSel.add(gsim_);
+        isGsimVisible(gsim){
+            return this.filterFunc(gsim);
+        },
+        updateFilter(){
+            var regexp = this.filterText ? new RegExp(this.filterText.replace(/\*/g, '.*').replace(/\?/g, '.'), 'i') : undefined;
+            var filterFunc = elm => true;
+            if (this.filterType == this.filterTypes[0]){
+                var filterFunc = function(gsimName){
+                    return gsimName.search(regexp) > -1;
+                }
+            }else if (this.filterType == this.filterTypes[1]){
+                var filterFunc = function(gsimName){
+                    if (gsimName.startsWith('AlNomanC')){
+                        var fg = 9;
+                    }
+                    var imts = this.avalGsims.get(gsimName)[0];
+                    for (let imt of imts){
+                        if (imt.search(regexp) > -1){
+                            return true;
+                        }
+                    };
+                    return false;
+                }
+            }else if (this.filterType == this.filterTypes[2]){
+                var filterFunc = function(gsimName){
+                    var trt = this.avalGsims.get(gsimName)[1];
+                    return trt.search(regexp) > -1;
                 }
             }
-            this._setGsimSelection(_tmpSel);
-        },
-        selectGsims(clearSelectionFirst){
-            // this.selGsims must be a new Set at the end of this method.
-            // This way the property will be updated in the view
-            var _tmpSel = new Set(this.temporarySelectedGsims);
-            if (!clearSelectionFirst){
-                for (let gsim of this.selGsims){
-                    _tmpSel.add(gsim);
-                }
-            }
-            this._setGsimSelection(_tmpSel);
-            this.$set(this, 'temporarySelectedGsims', []);
-            this.gsimsDropdownVisible = false;
-        },
-        unselectAllGsims(){
-            // this.selGsims must be a new Set at the end of this method.
-            // This way the property will be updated in the view
-            this._setGsimSelection(new Set());
-        },
-        _setGsimSelection(gsimsSet){
-            this.$set(this, 'selGsims', gsimsSet);
+            this.$set(this, 'filterFunc', filterFunc);
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
@@ -87,56 +86,24 @@ new Vue({
             if (oldValue !== value){
                 this.gsimsDropdownVisible = true;
                 this.typeDropdownVisible = false;
+                this.updateFilter();
             }
         },
         filterType: function(value, oldValue) {
             if (oldValue !== value){
                 this.gsimsDropdownVisible = true;
                 this.typeDropdownVisible = false;
+                this.updateFilter();
             }
         }
     },
     computed: {
         // https://stackoverflow.com/a/47044150
         gsims() {
-            
-            var filterReg = this.filterText ? new RegExp(this.filterText.replace(/\*/g, '.*').replace(/\?/g, '.'), 'i') : undefined;
-            var filterFunc = undefined;
-            if (this.filterType == this.filterTypes[0]){
-                var filterFunc = function(gsimName, regexp){
-                    return gsimName.search(regexp) > -1;
-                }
-            }else if (this.filterType == this.filterTypes[1]){
-                var filterFunc = function(gsimName, regexp){
-                    var imts = this.avalGsims.get(gsimName)[0];
-                    for (let imt of imts){
-                        if (imt.search(regexp) > -1){
-                            return true;
-                        }
-                    };
-                    return false;
-                }
-            }else if (this.filterType == this.filterTypes[2]){
-                var filterFunc = function(gsimName, regexp){
-                    var trt = this.avalGsims.get(gsimName)[1];
-                    return trt.search(regexp) > -1;
-                }
-            }
-            
-            var gsimNames = Array.from(this.avalGsims.keys());
-            if (filterFunc && filterReg){
-                return gsimNames.filter(el => filterFunc(el, filterReg))
-            }
-            return gsimNames;
+            return Array.from(this.avalGsims.keys());
         },
         imts(){
             return Array.from(this.avalImts);
-        },
-        selectedImts(){
-            return Array.from(this.selImts);
-        },
-        selectedGsims(){
-            return Array.from(this.selGsims);
         }
     }
 })

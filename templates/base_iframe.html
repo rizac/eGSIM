@@ -9,17 +9,29 @@
 			
 		<div class='flexible flexible-half flex-direction-col p-3'>
 			<form class='flexible flex-direction-col'>
-			
+			<div>
 			<ul class="nav nav-tabs">
 				{% block nav-tabs %}
 				{% endblock %}
 			</ul>
-			
+			</div>
 			<div id='inputsel' class="flexible flex-direction-col">
-				<div>Select Ground Shaking Intensoty Models (GSIMs):</div>
+
+				<div>{{ gsimFormField.label }}</div>
+				<div class='flexible flex-direction-col' style='overflow:auto'>
+					<!-- GSIM FORM CONTROL: -->
+					<select v-model="selectedGsims" multiple class="form-control flexible"
+						name="{{ gsimFormField.name }}">
+						<option v-for="gsim in gsims" v-show="isGsimVisible(gsim)">
+							&#123;&#123; gsim &#125;&#125;
+						</option>
+					</select>
+				</div>
+
 				<div class="input-group mb-3">
 					<div class="input-group-prepend">
-    					<button v-on:click="showTypeDropdown" class="btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown"
+    					<button v-on:click="showTypeDropdown" class="btn btn-outline-secondary dropdown-toggle" type="button"
+    						data-toggle="dropdown"
     						aria-haspopup="true" aria-expanded="false">Filter by &#123;&#123; filterType &#125;&#125; </button>
     					<div v-show="typeDropdownVisible" class="dropdown-menu shadow" 
     						style='display:initial'>  <!-- need to set display:initial to work with Vue -->
@@ -28,39 +40,15 @@
     							&#123;&#123; item &#125;&#125;
 							</a>
     					</div>
-    					<div class="dropdown-menu shadow" v-show="gsimsDropdownVisible"
-    						style='width:100%;display:initial'> <!-- need to set display:initial to work with Vue -->
-    						<select multiple class="form-control flexible" v-model="temporarySelectedGsims">
-								<option v-for="gsim in gsims">
-									&#123;&#123; gsim &#125;&#125;
-								</option>
-							</select>
-							<div role="separator" class="dropdown-divider"></div>
-							<div>
-							<button class='btn btn-default' type="button" 
-								v-bind:disabled="!temporarySelectedGsims.length"
-								v-on:click="selectGsims(false)">Add to sel.</button>
-							<button class='btn btn-default' type="button" 
-								v-bind:disabled="!temporarySelectedGsims.length"
-								v-on:click="selectGsims(true)">Set sel.</button>
-							</div>
-  						</div>
   					</div>
   					<input v-on:focus="showGsimsDropdown" v-model="filterText" type="text" class="form-control"
   						aria-label="Text input with dropdown button">
 				</div>
-
-				<div>GSIMs:</div>
-				<div class='flexible' style='overflow:auto'>
-					<div v-for="gsim in selectedGsims" class="alert alert-success alert-dismissable">
-						<a v-on:click="unselectGsim(gsim)" href="#" click='return false;' 
-							class="close" aria-label="close">&times;</a>
-						<strong>&#123;&#123; gsim &#125;&#125;</strong>
-					</div>
-				</div>
 	
-				<div>Intensity Measure Types (IMTs):</div>
-				<select multiple class="form-control" id="selectable_imts">
+				<div>{{ imtFormField.label }}</div>
+				<!-- IMT FORM CONTROL: -->
+				<select v-model="selectedImts" multiple size=8 class="form-control" id="selectable_imts"
+					name="{{ imtFormField.name }}">
 					<option v-bind:disabled="!isImtSelectable(imt)" v-for='imt in imts'>
 						&#123;&#123; imt &#125;&#125;
 					</option>
