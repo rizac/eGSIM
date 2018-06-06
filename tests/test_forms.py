@@ -4,11 +4,14 @@ Created on 2 Jun 2018
 @author: riccardo
 '''
 import unittest
-from egsim.forms import BaseForm, TrellisForm
+
 import django
+from django.test import TestCase
+
+from egsim.forms import BaseForm, TrellisForm
 
 
-class Test(unittest.TestCase):
+class Test(TestCase):
 
     GSIM, IMT = 'gsim', 'imt'
 

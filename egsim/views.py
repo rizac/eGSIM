@@ -5,34 +5,36 @@ Created on 17 Jan 2018
 '''
 import os
 import json
+from collections import OrderedDict
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-from django.http.response import HttpResponseRedirect
-from django.conf import settings
+# from django.http.response import HttpResponseRedirect
+# from django.conf import settings
+# from django.views.decorators.http import require_http_methods
 # from rest_framework.decorators import api_view
 # from rest_framework.response import Response
 
 # from openquake.hazardlib.gsim import get_available_gsims
-# from openquake.hazardlib.imt import __all__ as available_imts  # FIXME: isn't there a nicer way?
 
 # import smtk.trellis.trellis_plots as trpl
 # import smtk.trellis.configure as rcfg
 
-from .forms import TrellisForm, BaseForm
-from egsim.utils import get_menus, InitData
-from django.views.decorators.http import require_http_methods
+from egsim.forms import TrellisForm, BaseForm
+from egsim.utils import get_menus
+
 
 # FIXME: very hacky to parse the form for defaults, is it there a better choice?
 _COMMON_PARAMS = {
     'project_name': 'eGSIM',
-    'menus': get_menus(),
-    'gsimFormField': {'name': list(BaseForm.declared_fields.keys())[0],
-                      'label': list(BaseForm.declared_fields.values())[0].label},
-    'imtFormField': {'name': list(BaseForm.declared_fields.keys())[1],
-                     'label': list(BaseForm.declared_fields.values())[1].label}
+    'menus': OrderedDict([('home', 'Home'), ('trellis', 'Trellis plots'),
+                          ('residuals', 'Residuals'),
+                          ('loglikelihood', 'Log-likelihood analysis')]),
+    'gsimFormField': {'name': 'gsim', 'label': 'Selected Ground Shaking Intensity Model/s (GSIM):'},
+    'imtFormField': {'name': 'imt', 'label': 'Selected Intensity Measure Type/s (IMT):'}
     }
+
 
 def index(request):
     return render(request, 'index.html', _COMMON_PARAMS)
@@ -48,15 +50,11 @@ def trellis(request):
 
 
 def residuals(request):
-    return render(request, 'residuals.html', {'project_name': 'eGSIM',
-                                              'form': TrellisForm(),
-                                              'menus': get_menus()})
+    return render(request, 'residuals.html', _COMMON_PARAMS)
 
 
 def loglikelihood(request):
-    return render(request, 'loglikelihood.html', {'project_name': 'eGSIM',
-                                                  'form': TrellisForm(),
-                                                  'menus': get_menus()})
+    return render(request, 'loglikelihood.html', _COMMON_PARAMS)
 
 
 # @api_view(['GET', 'POST'])
@@ -65,13 +63,12 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     """
     Returns input parameters for input selection. Called when app initializes
     """
-    init_data = [(key,
-                  [imt.__name__ for imt in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES],
-                  gsim.DEFINED_FOR_TECTONIC_REGION_TYPE,
-                  [n for n in gsim.REQUIRES_RUPTURE_PARAMETERS])
-                 for key, gsim in InitData.available_gsims.items()]
-
-    return JsonResponse({'init_data': init_data})
+    # FIXME: Referncing _gsims from BaseForm is quite hacky: it prevents re-calculating the gsims
+    # list but there might be better soultions. NOTE: sessions need to much configuration
+    # Cahce session are discouraged.:
+    # https://docs.djangoproject.com/en/2.0/topics/http/sessions/#using-cached-sessions
+    # so for the moment let's keep this hack
+    return JsonResponse({'init_data': BaseForm._gsims.jsonlist()})
 
 
 @csrf_exempt
