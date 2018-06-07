@@ -20,16 +20,18 @@ from django.utils.safestring import mark_safe
 from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput,\
     HiddenInput
 from django.forms.fields import BooleanField, CharField, MultipleChoiceField, FloatField, \
-    ChoiceField, TypedChoiceField
+    ChoiceField, TypedChoiceField, MultiValueField
 # from django.core import validators
 
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
+from openquake.hazardlib.geo import Point
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrellis, \
     MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, MagnitudeDistanceSpectraTrellis, \
     MagnitudeDistanceSpectraSigmaTrellis
 
 from egsim.utils import vectorize, Gsims, isscalar
+from openquake.hazardlib import imt
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
@@ -108,7 +110,7 @@ class NArrayField(CharField):
         values = []
         for val in iterable:
             if not isstr or ':' not in val:
-                values.append(float(val))
+                values.append(cls.float(val))
             else:
                 values += cls.str2nprange(val)
 
@@ -117,7 +119,7 @@ class NArrayField(CharField):
             cls.checkragne(len(values), minlen, maxlen)
         except ValueError as verr:  # just re-format exception string and raise:
             suffix = str(verr)[str(verr).find(' '):]
-            raise ValueError('numbers count (%d)' % len(values) + suffix)
+            raise ValueError('number of elements (%d)' % len(values) + suffix)
 
         # check bounds:
         minval = [] if minval is None else vectorize(minval)
@@ -138,10 +140,10 @@ class NArrayField(CharField):
         except ValueError:
             raise ValueError("Not a number: '%s'" % val)
         except TypeError:
-            raise TypeError("values must be strings or numbers, not '%s'" % str(val))
+            raise TypeError("input must be string(s) or number(s), not '%s'" % str(val))
 
     @staticmethod
-    def split(string):
+    def split(string, ignore_colon=False):
         '''parses strings and splits it, returning the resulting list of strings.
         Recognizes as separators commas and spaces not preceded or followed by semicolons.
         Leading and trailing square brackets are optional'''
@@ -155,7 +157,8 @@ class NArrayField(CharField):
                 raise TypeError('unbalanced brackets')
             string = string[1:-1].strip()
 
-        return re.split("(?:\\s*,\\s*|(?<!:)\\s+(?!:))", string)
+        reg_str = "(?:\\s*,\\s*|\\s+)" if ignore_colon else "(?:\\s*,\\s*|(?<!:)\\s+(?!:))"
+        return re.split(reg_str, string)
 
     @classmethod
     def str2nprange(cls, string):
@@ -204,6 +207,20 @@ class NArrayField(CharField):
             raise ValueError('%s < %s' % (str(value), str(minval)))
         elif toohigh:
             raise ValueError('%s > %s' % (str(value), str(maxval)))
+
+
+class IMTField(MultipleChoiceField):
+
+    def valid_value(self, value):
+        '''overwrite valid_value to account for SA(...) values'''
+        valid = MultipleChoiceField.valid_value(self, value)
+        if not valid:
+            try:
+                imt.from_string(value)
+                valid = True
+            except Exception as exc:
+                pass
+        return valid
 
 
 class BaseForm(Form):
@@ -256,10 +273,10 @@ class BaseForm(Form):
                                # make field.is_hidden = True in the templates:
                                widget=HiddenInput)
 
-    imt = MultipleChoiceField(label='Selected Intensity Measure Type/s (IMT):',
-                              choices=zip(_gsims.aval_imts(), _gsims.aval_imts()),
-                              # make field.is_hidden = True in the templates:
-                              widget=HiddenInput)
+    imt = IMTField(label='Selected Intensity Measure Type/s (IMT):',
+                   choices=zip(_gsims.aval_imts(), _gsims.aval_imts()),
+                   # make field.is_hidden = True in the templates:
+                   widget=HiddenInput)
 
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on selected intensity
@@ -269,7 +286,11 @@ class BaseForm(Form):
         cleaned_data = super().clean()
 
         gsims = cleaned_data.get("gsim", [])
-        imts = set(cleaned_data.get("imt", []))
+        # We need to reduce all IMT strings in cleaned_data['imt'] to a set
+        # where all 'SA(#)' strings are counted as 'SA' once..
+        # Use imt.from_string and get the class name: quite cumbersome, but it works
+        imts = set(imt.from_string(imtname).__class__.__name__
+                   for imtname in cleaned_data.get("imt", []))
 
         if gsims and imts:
             imts2 = self._gsims.shared_imts(*gsims)
@@ -301,8 +322,8 @@ class TrellisplottypeField(ChoiceField):
     _aval_types = \
         OrderedDict([('d', ('IMT vs. distance', DistanceIMTTrellis, DistanceSigmaIMTTrellis)),
                      ('m', ('IMT vs. Magnitude', MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)),
-                     ('s', ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis,
-                            MagnitudeDistanceSpectraSigmaTrellis))])
+                     ('mds', ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis,
+                              MagnitudeDistanceSpectraSigmaTrellis))])
 
     base_choices = tuple(zip(_aval_types.keys(), [v[0] for v in _aval_types.values()]))
 
@@ -313,6 +334,19 @@ class TrellisplottypeField(ChoiceField):
         value = ChoiceField.to_python(self, value)
         try:
             return self._aval_types[value][1:]
+        except Exception as exc:
+            raise ValidationError(_(str(exc)))
+
+
+# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
+class PointField(NArrayField):
+    def __init__(self, **kwargs):
+        super(PointField, self).__init__(min_arr_len=2, max_arr_len=3, **kwargs)
+
+    def clean(self, value):
+        value = NArrayField.clean(self, value)
+        try:
+            return Point(*value)
         except Exception as exc:
             raise ValidationError(_(str(exc)))
 
@@ -330,15 +364,14 @@ class TrellisForm(BaseForm):
     distance = NArrayField(label='Distance(s)', min_arr_len=1)
     dip = FloatField(label='Dip', min_value=0., max_value=90.)
     aspect = FloatField(label='Rupture Length / Width', min_value=0.)
-    # tectonic_region = forms.CharField(label='Tectonic Region Type',
-    #                                   initial='Active Shallow Crust')
+    tectonic_region = CharField(label='Tectonic Region Type',
+                                initial='Active Shallow Crust', widget=HiddenInput)
     rake = FloatField(label='Rake', min_value=-180., max_value=180., initial=0.)
     ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0., initial=0.)
     strike = FloatField(label='Strike', min_value=0., max_value=360., initial=0.)
     msr = MsrField(label='Magnitude Scaling Relation', initial="WC1994")
-    initial_point = NArrayField(label="Location on Earth", initial="0 0",
-                                help_text='Longitude Latitude', min_arr_len=2, max_arr_len=2,
-                                min_value=[-180, -90], max_value=[180, 90])
+    initial_point = PointField(label="Location on Earth", help_text='Longitude Latitude',
+                               min_value=[-180, -90], max_value=[180, 90], initial="0 0")
     hypocentre_location = NArrayField(label="Location of Hypocentre", initial="0.5 0.5",
                                       help_text='Along-strike fraction, Down-dip fraction',
                                       min_arr_len=2, max_arr_len=2,

@@ -27,4 +27,5 @@ urlpatterns = [
     url(r'get_init_params', views.get_init_params),
     url(r'validate_trellis_input', views.validate_trellis_input),
     url(r'get_trellis_plots', views.get_trellis_plots),
+    url(r'test_err', views.test_err),
 ]

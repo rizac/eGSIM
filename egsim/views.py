@@ -94,6 +94,10 @@ def get_trellis_plots(request):  # @UnusedVariable pylint: disable=unused-argume
     return JsonResponse(data)
 
 
+def test_err(request):
+    return JsonResponse({'message': 'bla'}, safe=False, status=400)
+
+
 def _trellis_response_test():
     dir_ = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                         '..', 'static', 'data', 'test', 'trellis'))

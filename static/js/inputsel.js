@@ -6,6 +6,7 @@ new Vue({
         avalImts: new Set(),  // set of available imts names
         selectedGsims: [],
         selectedImts: [],
+        saPeriods: '',
         typeDropdownVisible: false,
         gsimsDropdownVisible: false,
         filterText: '',

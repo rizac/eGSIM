@@ -116,8 +116,8 @@ def compute(params):
             params[Z2PT5] = z2pt5
             for mag_ in magiter:
                 for dist_ in distiter:
-                    data = class_.from_rupture_model(params, mag_ or magnitudes,
-                                                     dist_ or distances, gsim,
+                    data = class_.from_rupture_model(params, magnitudes if mag_ is None else mag_,
+                                                     distances if dist_ is None else dist_, gsim,
                                                      imt).to_dict()
                     if ret is None:
                         ret = {k: v for k, v in data.items() if k != fig_key}
@@ -125,11 +125,11 @@ def compute(params):
                     dst_figures = ret[fig_key]
                     src_figures = data[fig_key]
                     for fig in src_figures:
-                        fig.pop('column', None)
-                        fig.pop('row', None)
-                        fig['distance'] = dist_
-                        fig['vs30'] = vs30
-                        fig['magnitude'] = mag_
+                        fig.pop(col_key, None)
+                        fig.pop(row_key, None)
+                        fig[DIST] = dist_
+                        fig[VS30] = vs30
+                        fig[MAG] = mag_
                         dst_figures.append(fig)
     return ret
 
