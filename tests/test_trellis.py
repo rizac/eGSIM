@@ -38,7 +38,7 @@ class Test(TestCase):
             data = compute(os.path.join(DATA_DIR, 'trellis_malformed.yaml'))
         with self.assertRaises(YAMLError) as context:
             data = compute(os.path.join(DATA_DIR, 'trellis_filenot_found.yaml'))
-        
+
 
     def test_compute_validation_errors(self):
         data = compute(os.path.join(DATA_DIR, 'trellis_dist.yaml'))

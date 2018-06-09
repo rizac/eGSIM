@@ -23,6 +23,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from egsim.forms import TrellisForm, BaseForm
 from egsim.utils import get_menus
+import time
 
 
 # FIXME: very hacky to parse the form for defaults, is it there a better choice?
@@ -88,9 +89,11 @@ def validate_trellis_input(request):
     return JsonResponse(form.clean())
 
 
+
 @csrf_exempt
 def get_trellis_plots(request):  # @UnusedVariable pylint: disable=unused-argument
     data = _trellis_response_test()
+    time.sleep(5)
     return JsonResponse(data)
 
 

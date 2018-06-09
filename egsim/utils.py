@@ -34,63 +34,86 @@ def isscalar(value):
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
 
 
-class Gsims(object):
+def get_gsims():
+    '''Returns all openquake-available gsim data in an Ordered dict keyed with the gsim
+    names mapped to a tuples of the form: (imts, trt, rupt_param)
+    where imts is a set of strings denoting the IMTs defined for the given gsim,
+    trt is a string denoting the tectonic region type, and
+    rupt_params (not used in the current implementation) is a tuple of parameter names
+        required for calculating a the rupture with the given gsim (FIXME: check)
+    '''
+    ret = OrderedDict()
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore')
+        for key, gsim in get_available_gsims().items():
+            try:
+                gsim_inst = gsim()
+            except (TypeError, OSError, NotImplementedError) as exc:
+                gsim_inst = gsim
+            ret[key] = (set(imt.__name__
+                            for imt in gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES),
+                        gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE,
+                        tuple(n for n in gsim_inst.REQUIRES_RUPTURE_PARAMETERS))
+    return ret
 
-    def __init__(self):
-        ret = OrderedDict()
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore')
-            for key, gsim in get_available_gsims().items():
-                try:
-                    gsim_inst = gsim()
-                except (TypeError, OSError, NotImplementedError) as exc:
-                    gsim_inst = gsim
-                ret[key] = (set(imt.__name__
-                                for imt in gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES),
-                            gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE,
-                            tuple(n for n in gsim_inst.REQUIRES_RUPTURE_PARAMETERS))
-        self._data = ret
 
-    def aval_gsims(self):
-        return list(self._data.keys())
+def _create_gsims(name, types, attrs):
+    cls = type(name, types, attrs)
+    cls._data = get_gsims()  # pylint: disable=protected-access
+    return cls
 
-    def aval_imts(self):
+
+class EGSIM(metaclass=_create_gsims):
+    '''This class is basically a namespace container which does not need to be instantiated
+    but can be referenced as a global variable and holds global data fetched from openquake
+    primarily'''
+    _data = {}  # will be populated when creating the class (note: the class, not the object)
+
+    @classmethod
+    def aval_gsims(cls):
+        '''Returns a list of all available GSIM names (string)'''
+        return list(cls._data.keys())
+
+    @staticmethod
+    def aval_imts():
+        '''Returns a list of all available IMT names (string)'''
         return list(AVAL_IMTS)
 
-    def imtsof(self, gsim):
+    @classmethod
+    def imtsof(cls, gsim):
         '''Returns a set of the imts defined for the given gsim. If the gsim is not defined,
         returns an empty set. Otherwise, manipulation ot the returned set will modify the internal
         object and subsequent calls to this method
         :param gsim: string denoting the gsim name
         '''
-        return self._data.get(gsim, [set()])[0]
+        return cls._data.get(gsim, [set()])[0]
 
-    def shared_imts(self, *gsims):
+    @classmethod
+    def shared_imts(cls, *gsims):
         '''returns the shared imt(s) of the given gsims, ie. the intersection of all imt(s)
         defined for the given gsims
         :param gsims: (string) variable length argument of the gsim names whose shared imt(s)
             have to be returned
         '''
-        ret = None
+        ret = set()
         for gsim in gsims:
-            if ret is None:
-                ret = self.imtsof(gsim)
+            if not ret:
+                ret = cls.imtsof(gsim)
             else:
-                ret &= self.imtsof(gsim)
+                ret &= cls.imtsof(gsim)
             if not ret:
                 break
         return ret
 
-    def jsonlist(self):
-        '''Returns a json serialized version of this object, as a list of tuples of the form:
-        [
-        ...
-        (gsim, imts, trt)
-        ...
-        ]
+    @classmethod
+    def jsonlist(cls):
+        '''Returns a json-serialized version of this object, as a list of tuples of the form:
+        ```
+        [ ... , (gsim, imts, trt) , ... ]
+        ```
         where:
-         - gsim: (string) the gsim name
-         - imts (list of strings) the imt(s) defined for the given gsim
-         - trt (string): the tectonic region type defined for the given gsim
+         - gsim: (string) is the gsim name
+         - imts (list of strings) are the imt(s) defined for the given gsim
+         - trt (string) is the tectonic region type defined for the given gsim
         '''
-        return [(gsim, list(self._data[gsim][0]), self._data[gsim][1]) for gsim in self._data]
+        return [(gsim, list(cls._data[gsim][0]), cls._data[gsim][1]) for gsim in cls._data]
