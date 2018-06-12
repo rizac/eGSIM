@@ -30,104 +30,9 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrell
     MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, MagnitudeDistanceSpectraTrellis, \
     MagnitudeDistanceSpectraSigmaTrellis
 
-from egsim.utils import vectorize, EGSIM, isscalar
+from egsim.utils import vectorize, EGSIM, isscalar, unique
 from openquake.hazardlib import imt
-
-
-# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
-class IMTField(MultipleChoiceField):
-    '''Extends ChoiceField for IMT selection overriding valid_value in order not to raise
-    validation errors if the selected imt is in the form 'SA(period)'
-    '''
-    def valid_value(self, value):
-        '''overwrite valid_value to return True also for 'SA(period)' values'''
-        valid = MultipleChoiceField.valid_value(self, value)
-        if not valid:
-            try:
-                imt.from_string(value)
-                valid = True
-            except Exception as exc:
-                pass
-        return valid
-
-
-class BaseForm(Form):
-    '''Base eGSIM form'''
-
-    _gsims = EGSIM
-
-    def __init__(self, *args, **kwargs):
-        '''Overrides init to set custom attributes on field widgets and to set the initial
-        value for fields of this class with no match in the keys of self.data'''
-        # How do we implement custom attributes for js libraries (e.,g. bootstrap, angular...)?
-        # All solutions (widget_tweaks, django-angular) are, as always, for big projects and they
-        # are huge overheads for the goal we want to achieve.
-        # So, after all we just need to overwrite few attributes on a form:
-        super(BaseForm, self).__init__(*args, **kwargs)
-        # now we want to re-name potential parameter names (e.g., 'mag' into 'magnitude')
-        # To do this, define a __additional_fieldnames__ as class attribute, where
-        # is a dict of name (string) mapped to its possible
-        repl_dict = getattr(self, '__additional_fieldnames__', None)
-        if repl_dict:
-            for key in list(self.data.keys()):
-                repl_key = repl_dict.get(key, None)
-                if repl_key is not None:
-                    self.data[repl_key] = self.data.pop(key)
-
-        # https://stackoverflow.com/a/20309754:
-        # Defaults are set accoridng to the initial value in the field
-        # This must be set here cause in clean() required fields are processed before and their
-        # error set in the error form
-        for name in self.fields:
-            if not self[name].html_name in self.data and self.fields[name].initial is not None:
-                self.data[name] = self.fields[name].initial
-
-        self.customize_widget_attrs()
-
-    def customize_widget_attrs(self):
-        '''customizes the widget attributes (currently sets a bootstrap class on almost all
-        of them'''
-        atts = {'class': 'form-control'}  # for bootstrap
-        for name, field in self.fields.items():
-            # add class only for specific html elements, some other might have weird layout
-            # if class 'form-control' is added on them:
-            if not isinstance(field.widget, (CheckboxInput, CheckboxSelectMultiple, RadioSelect))\
-                    and not field.widget.is_hidden:
-                field.widget.attrs.update(atts)
-
-    # fields (not used for rendering, just for validation): required is True by default
-    gsim = MultipleChoiceField(label='Selected Ground Shaking Intensity Model/s (GSIM):',
-                               choices=zip(_gsims.aval_gsims(), _gsims.aval_gsims()),
-                               # make field.is_hidden = True in the templates:
-                               widget=HiddenInput)
-
-    imt = IMTField(label='Selected Intensity Measure Type/s (IMT):',
-                   choices=zip(_gsims.aval_imts(), _gsims.aval_imts()),
-                   # make field.is_hidden = True in the templates:
-                   widget=HiddenInput)
-
-    def clean(self):
-        '''runs validation where we must validate selected gsim(s) based on selected intensity
-        measure type. For info see:
-        https://docs.djangoproject.com/en/1.11/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-        '''
-        cleaned_data = super().clean()
-
-        gsims = cleaned_data.get("gsim", [])
-        # We need to reduce all IMT strings in cleaned_data['imt'] to a set
-        # where all 'SA(#)' strings are counted as 'SA' once..
-        # Use imt.from_string and get the class name: quite cumbersome, but it works
-        imts = set(imt.from_string(imtname).__class__.__name__
-                   for imtname in cleaned_data.get("imt", []))
-
-        if gsims and imts:
-            imts2 = self._gsims.shared_imts(*gsims)
-            not_allowed = imts - imts2
-            if not_allowed:
-                raise ValidationError(_("'%(imt)s' not defined for all supplied gsim(s)"),
-                                      params={'imt': str(not_allowed)})
-
-        return cleaned_data
+import math
 
 
 class NArrayField(CharField):
@@ -176,9 +81,6 @@ class NArrayField(CharField):
                                     self.max_value)
         except (ValueError, TypeError) as exc:
             raise ValidationError(str(exc))
-
-    RTOL = 1e-15
-    ATOL = 0
 
     @classmethod
     def parsenarray(cls, obj, minlen=None, maxlen=None,  # pylint: disable=too-many-arguments
@@ -273,13 +175,38 @@ class NArrayField(CharField):
                              "'<start>:<step>:<end>', found: '%s'" % string)
         start, step, stop = \
             cls.float(spl[0]), 1 if len(spl) == 2 else cls.float(spl[1]), cls.float(spl[-1])
-        # check if we should include the end:
-        ratio = (stop-start)/step
-        # the relative tolerance below (tested) makes e.g. stop=10 and stop=9.9999999
-        # NOT close, 10 and 9.99999999 close, as well as , e.g. 45 and 4.450000000000002
-        if np.isclose(int(0.5+ratio), ratio, rtol=cls.RTOL, atol=cls.ATOL):
-            stop += step
-        return np.arange(start, stop, step, dtype=float).tolist()
+        decimals = cls.get_decimals(*spl)
+
+        arange = np.arange(start, stop, step, dtype=float)
+        if decimals is not None:
+            if round(arange[-1].item()+step, decimals) == round(stop, decimals):
+                arange = np.append(arange, stop)
+
+            arange = np.round(arange, decimals=decimals)
+            if decimals == 0:
+                arange = arange.astype(int)
+        return arange.tolist()
+
+    @classmethod
+    def get_decimals(cls, *strings):
+        '''parses each string and returns the maximum number of decimals
+        :param strings: a sequence of strings. Note that they do not need to be parsable
+        as floats, this method searches for the dot and the letter 'E' (ignoring case)
+        '''
+        decimals = 0
+        try:
+            for string in strings:
+                idx_dec = string.find('.')
+                idx_exp = string.lower().find('e')
+                if idx_dec > -1 and idx_exp > -1 and idx_exp < idx_dec:
+                    raise ValueError()  # stop parsing
+                dec1 = 0 if idx_dec < 0 else \
+                    len(string[idx_dec+1: None if idx_exp < 0 else idx_exp])
+                dec2 = 0 if idx_exp < 0 else -int(string[idx_exp+1:])
+                decimals = max([decimals, dec1, dec2])
+            return decimals  # 0 as we do not care for big numbers (they are int anyway)
+        except ValueError:
+            return None
 
     @staticmethod
     def isinragne(value, minval=None, maxval=None):
@@ -305,6 +232,147 @@ class NArrayField(CharField):
             raise ValueError('%s < %s' % (str(value), str(minval)))
         elif toohigh:
             raise ValueError('%s > %s' % (str(value), str(maxval)))
+
+
+# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
+class IMTField(MultipleChoiceField):
+    '''Field for IMT selection.
+    This class overrides `to_python`, which first calls the super-method (which for
+    `MultipleChoiceField`s parses the input into a list of strings), then it adds to the parsed
+    list the `SA`s based on `self.sa_periods` (if truthy), which
+    is a string or a list of numeric parsable strings.
+    Finally, `valid_value` is overridden to ignore `self.choices` (if provided) and to
+    validate each string on whether it's a valid imt or not via openquake utilities
+    '''
+    SA = 'SA'
+    default_error_messages = {
+        'sa_without_period': _("intensity measure type '%s' must "
+                               "be specified with period(s), e.g. 'SA(0.1)'" % SA),
+    }
+
+    def __init__(self, *args, **kwargs):
+        super(IMTField, self).__init__(*args, **kwargs)
+        self.sa_periods = []  # can be string or iterable of strings
+        # strings must be numeric parsable (see NArrayField)
+
+    # this method is called first in the validation pipeline:
+    def to_python(self, value):
+        # call super: returns an list of strings. Excpets value to be a list or tuple:
+        # if not value:
+        #     return []
+        # elif not isinstance(value, (list, tuple)):
+        #     raise ValidationError(self.error_messages['invalid_list'], code='invalid_list')
+        # return [str(val) for val in value]
+        all_values = super().to_python(value)
+        sastr = self.SA
+        values = [v for v in all_values if v != sastr]
+        if self.sa_periods:
+            sa_periods = vectorize(NArrayField(required=False).clean(self.sa_periods))
+            values += ['%s(%f)' % (sastr, f) for f in sa_periods]
+        elif len(all_values) > len(values):
+            raise ValidationError(
+                self.error_messages['sa_without_period'],
+                code='sa_without_period',
+            )
+        return values
+
+    def valid_value(self, value):
+        """
+        Validate the given value, ignoring the super method which compares to the choices
+        attribute
+        """
+        try:
+            imt.from_string(value)
+            return True
+        except Exception as exc:
+            return False
+
+
+class BaseForm(Form):
+    '''Base eGSIM form'''
+
+    _gsims = EGSIM
+
+    def __init__(self, *args, **kwargs):
+        '''Overrides init to set custom attributes on field widgets and to set the initial
+        value for fields of this class with no match in the keys of self.data'''
+        # How do we implement custom attributes for js libraries (e.,g. bootstrap, angular...)?
+        # All solutions (widget_tweaks, django-angular) are, as always, for big projects and they
+        # are huge overheads for the goal we want to achieve.
+        # So, after all we just need to overwrite few attributes on a form:
+        super(BaseForm, self).__init__(*args, **kwargs)
+        # now we want to re-name potential parameter names (e.g., 'mag' into 'magnitude')
+        # To do this, define a __additional_fieldnames__ as class attribute, where
+        # is a dict of name (string) mapped to its possible
+        repl_dict = getattr(self, '__additional_fieldnames__', None)
+        if repl_dict:
+            for key in list(self.data.keys()):
+                repl_key = repl_dict.get(key, None)
+                if repl_key is not None:
+                    self.data[repl_key] = self.data.pop(key)
+
+        # https://stackoverflow.com/a/20309754:
+        # Defaults are set accoridng to the initial value in the field
+        # This must be set here cause in clean() required fields are processed before and their
+        # error set in the error form
+        for name in self.fields:
+            if not self[name].html_name in self.data and self.fields[name].initial is not None:
+                self.data[name] = self.fields[name].initial
+
+        # put 'sa_periods in the IMTField:
+        self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
+
+        self.customize_widget_attrs()
+
+    def customize_widget_attrs(self):
+        '''customizes the widget attributes (currently sets a bootstrap class on almost all
+        of them'''
+        atts = {'class': 'form-control'}  # for bootstrap
+        for name, field in self.fields.items():
+            # add class only for specific html elements, some other might have weird layout
+            # if class 'form-control' is added on them:
+            if not isinstance(field.widget, (CheckboxInput, CheckboxSelectMultiple, RadioSelect))\
+                    and not field.widget.is_hidden:
+                field.widget.attrs.update(atts)
+
+    # fields (not used for rendering, just for validation): required is True by default
+    gsim = MultipleChoiceField(label='Ground Shaking Intensity Model/s (gsim):',
+                               choices=zip(_gsims.aval_gsims(), _gsims.aval_gsims()),
+                               # make field.is_hidden = True in the templates:
+                               widget=HiddenInput)
+
+    imt = IMTField(label='Intensity Measure Type/s (imt):',
+                   required=True,  # required jandled in clean()
+                   # make field.is_hidden = True in the templates:
+                   widget=HiddenInput)
+
+#     sa_period = NArrayField(label='SA (period/s):',
+#                             required=False,  # required jandled in clean()
+#                             # make field.is_hidden = True in the templates:
+#                             widget=HiddenInput)
+
+    def clean(self):
+        '''runs validation where we must validate selected gsim(s) based on selected intensity
+        measure type. For info see:
+        https://docs.djangoproject.com/en/1.11/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+        '''
+        cleaned_data = super().clean()
+
+        gsims = cleaned_data.get("gsim", [])
+        # We need to reduce all IMT strings in cleaned_data['imt'] to a set
+        # where all 'SA(#)' strings are counted as 'SA' once..
+        # Use imt.from_string and get the class name: quite cumbersome, but it works
+        imt_classnames = set(imt.from_string(imtname).__class__.__name__
+                             for imtname in cleaned_data.get("imt", []))
+
+        if gsims and imt_classnames:
+            imts2 = self._gsims.shared_imts(*gsims)
+            not_allowed = imt_classnames - imts2
+            if not_allowed:
+                raise ValidationError(_("'%(imt)s' not defined for all supplied gsim(s)"),
+                                      params={'imt': str(not_allowed)})
+
+        return cleaned_data
 
 
 class MsrField(ChoiceField):

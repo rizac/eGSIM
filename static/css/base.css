@@ -25,6 +25,13 @@ body{
 	flex: 1 1 auto;
 	overflow: auto;
 }
+
+.flex-center{
+	flex-direction: column;  /* make main axis vertical */
+    justify-content: center; /* center items vertically, in this case */
+    align-items: center;     /* center items horizontally, in this case */
+}
+
 /* flexible-half has the property of setting its base width/height to 50% of the container,
 used for twin panels aligned left and right (or top and bottom) which might take 100% space if alone,
 or same space of the other twin, if present: */

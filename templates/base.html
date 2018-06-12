@@ -7,7 +7,7 @@
 	{% block head %}
 	
 	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/vue-resource@1.5.1"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
 
 	<!--  -->
 	<!-- BOOTSTRAP for safety, it must be loaded before all posibble plugins -->
@@ -65,7 +65,7 @@
 	<script type='text/javascript'>
 	if (!navigator.onLine){
 		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.min.js'><\/script>");
-		document.write("<script type='text/javascript' src='/static/fallbacks/vue-resource.1.5.1.js'><\/script>");
+		document.write("<script type='text/javascript' src='/static/fallbacks/axios.0.18.0.min.js'><\/script>");
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/bootstrap.4.0.0.min.css'/>");
 
 		{% if fontawesome %}

@@ -11,6 +11,7 @@ from openquake.hazardlib.imt import __all__ as AVAL_IMTS  # FIXME: isn't there a
 from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrellis, MagnitudeIMTTrellis,\
     MagnitudeSigmaIMTTrellis, MagnitudeDistanceSpectraTrellis, MagnitudeDistanceSpectraSigmaTrellis
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
+from itertools import chain
 
 
 def get_menus():
@@ -34,6 +35,15 @@ def isscalar(value):
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
 
 
+def unique(*iterables):
+    '''returns a list of unique values in any iterable, whilst preserving the order
+    of each element of iterables'''
+    odict = OrderedDict()
+    for val in chain(*iterables):
+        odict[val] = None
+    return list(odict.keys())
+
+
 def get_gsims():
     '''Returns all openquake-available gsim data in an Ordered dict keyed with the gsim
     names mapped to a tuples of the form: (imts, trt, rupt_param)
@@ -50,10 +60,11 @@ def get_gsims():
                 gsim_inst = gsim()
             except (TypeError, OSError, NotImplementedError) as exc:
                 gsim_inst = gsim
-            ret[key] = (set(imt.__name__
-                            for imt in gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES),
-                        gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE,
-                        tuple(n for n in gsim_inst.REQUIRES_RUPTURE_PARAMETERS))
+            if gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+                ret[key] = (set(imt.__name__
+                                for imt in gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES),
+                            gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE,
+                            tuple(n for n in gsim_inst.REQUIRES_RUPTURE_PARAMETERS))
     return ret
 
 

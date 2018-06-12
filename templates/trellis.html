@@ -1,4 +1,4 @@
-{% extends 'base_iframe.html' %}
+{% extends 'base_with_form.html' %}
 
 {% block head %}
 	{% with fontawesome=False leaflet=True shapefile=True plotly=True %}
@@ -10,19 +10,15 @@
 	{{ block.super }}
 {% endblock %}
 
-{% block nav-tabs %}
-<li class="nav-item">
-	<a class="nav-link active" id='a-inputsel' href="#">Base selection</a>
-</li>
-<li class="nav-item">
-	<a class="nav-link active" id='a-rupture' href="#">Config. Scenario (Rupture)</a>
-</li>
+{% block form-top %}
+	{{ block.super }} <!-- no-op -->
 {% endblock %}
 				
 
 {% block form-extra-divs %}
 <div id='rupture' class='flexible'>
 	{% for field in form.visible_fields %}
+	{% if field.html_name != form.plot_type.html_name %}
 	<div class="row">
 		<div class="col-md-4">{{ field.label_tag }}</div>
 		<div class="col-md-8">{{ field }}  <!--{perc render_field field class+="form-control" %} -->
@@ -31,15 +27,50 @@
 				{% endif %}
 		</div>
 	</div>
+	{% endif %}
 	{% endfor %}
 </div>
+{% endblock %}
 
+{% block form-submit-div %}
+	{{ form.plot_type }}
 {% endblock %}
 
 {% block after-body %}
 {{ block.super }}
+<!-- script for configuring vue instance: -->
+<script type='text/javascript' src = "{% static 'js/form-configs/trellis.js' %}"></script>
+<!-- script for setting up our plot_type field: add first <option> as non-selectable 'label' option,
+and make the <select> submit the form onChange: -->
 <script type='text/javascript'>
+(function setupSubmit(){
+    // get our plot_type select element just rendered
+    var submitSelect = document.getElementById("id_{{ form.plot_type.html_name }}"); // https://docs.djangoproject.com/en/1.9/topics/forms/#form-rendering-options
+    // create a first option acting as "label", use the django label for that:
+    var option = document.createElement("option");
+    option.text = "{{ form.plot_type.label }}:";
+    var no_value = '';
+    option.value = no_value;
+    option.disabled = true;
+    submitSelect.add(option, 0);
+    // set the selected index to the just added option:
+    submitSelect.value = option.value;
+    // add event listener:
+    submitSelect.onchange = function(event){
+        var selectElement = event.target;
+        if(selectElement.value == no_value){  // first item selected (label-like), return
+            return;
+        }
+        EGSIM.submitForm(); // submit form to vuejs
+        if(!EGSIM.formIsValid() || EGSIM.hasError){
+            //if vue has errors or form is not valid, reset selected option to the 'label' option:
+            selectElement.value = no_value;
+        }
+    };
+})()
+
 //configTabs defined in base.html. 'inputsel' is the shared div with the gsims and imts
-configTabs([['a-inputsel', 'inputsel'], ['a-rupture', 'rupture']]);
+//configTabs([['a-inputsel', 'inputsel'], ['a-rupture', 'rupture']]);
+
 </script>
 {% endblock %}

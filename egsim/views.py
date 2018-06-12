@@ -21,9 +21,10 @@ from django.views.decorators.csrf import csrf_exempt
 # import smtk.trellis.trellis_plots as trpl
 # import smtk.trellis.configure as rcfg
 
-from egsim.forms import TrellisForm, BaseForm
+from egsim.forms import TrellisForm, BaseForm, IMTField
 from egsim.utils import get_menus
 import time
+from egsim.core.trellis import compute
 
 
 # FIXME: very hacky to parse the form for defaults, is it there a better choice?
@@ -32,8 +33,8 @@ _COMMON_PARAMS = {
     'menus': OrderedDict([('home', 'Home'), ('trellis', 'Trellis plots'),
                           ('residuals', 'Residuals'),
                           ('loglikelihood', 'Log-likelihood analysis')]),
-    'gsimFormField': {'name': 'gsim', 'label': 'Selected Ground Shaking Intensity Model/s (GSIM):'},
-    'imtFormField': {'name': 'imt', 'label': 'Selected Intensity Measure Type/s (IMT):'}
+#     'gsimFormField': {'name': 'gsim', 'label': 'Selected Ground Shaking Intensity Model/s (GSIM):'},
+#     'imtFormField': {'name': 'imt', 'label': 'Selected Intensity Measure Type/s (IMT):'}
     }
 
 
@@ -69,31 +70,17 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     # Cahce session are discouraged.:
     # https://docs.djangoproject.com/en/2.0/topics/http/sessions/#using-cached-sessions
     # so for the moment let's keep this hack
-    return JsonResponse({'init_data': BaseForm._gsims.jsonlist()})
+    return JsonResponse({'initData': BaseForm._gsims.jsonlist()})
 
 
 @csrf_exempt
-def validate_trellis_input(request):
-    """
-    Returns input parameters for input selection. Called when app initializes
-    """
-    data = json.loads(request.body.decode('utf-8'))  # python 3.5 complains otherwise...
+def get_trellis_plots(request):
 
-    # create a form instance and populate it with data from the request:
-    form = TrellisForm(data)
-    # check whether it's valid:
-    if not form.is_valid():
-        # HttpResponse(form.errors.as_json(), status = 400, content_type='application/json')
+    params = json.loads(request.body.decode('utf-8'))  # python 3.5 complains otherwise...
+    form, data = compute(params)
+
+    if data is None:
         return JsonResponse(form.errors.as_json(), safe=False, status=400)
-
-    return JsonResponse(form.clean())
-
-
-
-@csrf_exempt
-def get_trellis_plots(request):  # @UnusedVariable pylint: disable=unused-argument
-    data = _trellis_response_test()
-    time.sleep(5)
     return JsonResponse(data)
 
 
