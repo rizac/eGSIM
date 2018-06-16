@@ -395,10 +395,15 @@ class TrellisplottypeField(ChoiceField):
     '''Choice field which returns a tuple of Trelliplot classes from its clean()
     method (overridden'''
     _aval_types = \
-        OrderedDict([('d', ('IMT vs. distance', DistanceIMTTrellis, DistanceSigmaIMTTrellis)),
-                     ('m', ('IMT vs. Magnitude', MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)),
-                     ('mds', ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis,
-                              MagnitudeDistanceSpectraSigmaTrellis))])
+        OrderedDict([
+            ('d', ('IMT vs. Distance', DistanceIMTTrellis)),
+            ('m', ('IMT vs. Magnitude', MagnitudeIMTTrellis)),
+            ('s', ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis)),
+            ('ds', ('IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis)),
+            ('ms', ('IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis)),
+            ('ss', ('Magnitude-Distance Spectra  (st.dev)',
+                    MagnitudeDistanceSpectraSigmaTrellis))
+            ])
 
     base_choices = tuple(zip(_aval_types.keys(), [v[0] for v in _aval_types.values()]))
 
@@ -408,7 +413,7 @@ class TrellisplottypeField(ChoiceField):
     def clean(self, value):
         value = ChoiceField.to_python(self, ChoiceField.clean(self, value))
         try:
-            return self._aval_types[value][1:]
+            return self._aval_types[value][1]
         except Exception as exc:
             raise ValidationError(_(str(exc)))
 

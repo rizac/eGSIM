@@ -1,0 +1,21 @@
+.trellis-container {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: 1fr auto;
+  grid-gap: 5px;
+}
+
+.trellis-right-panel{
+	grid-column: 3;
+    grid-row: 1/3;
+}
+
+.trellis-container .plot-container{
+	position: absolute;
+	margin:0;
+	padding:0;
+	top:0;
+	left:0;
+	width:100%;
+	height:100%;
+}

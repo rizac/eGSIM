@@ -12,17 +12,17 @@ body{
 
 .flex-direction-row, .flex-direction-col{
 	display: flex;
-	justify-content: space-evenly;
+	/* justify-content: space-evenly; */
 }
 .flex-direction-row{
 	flex-direction: row;
 }
-.flex-direction-col, .page-scroller{
+.flex-direction-col{
 	flex-direction: column;
 }
 .flex-direction-row > .flexible, .flex-direction-col > .flexible,
 .flex-direction-row > .flexible-half, .flex-direction-col > .flexible-half{
-	flex: 1 1 auto;
+	flex: 1 1 0; /* remember that for letting this work with grid layout the last element (flex-basis) must be zero: https://stackoverflow.com/a/48454476 */
 	overflow: auto;
 }
 

@@ -1,5 +1,5 @@
 var EGSIM = new Vue({
-    el: '#egsim',
+    el: '#egsim-input',
     data: {
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
         avalGsims: new Map(),  // map of available gsims name -> array of gsim attributes
@@ -16,8 +16,6 @@ var EGSIM = new Vue({
         filterFunc: elm => true,
         loading: false,
         errors: {},  // dict of keys (fields) mapped to their message
-        formResponseCallback: null,
-        formSubmitUrl: null,
         form: undefined //will be set in mounted()
     },
     methods: {
@@ -87,10 +85,6 @@ var EGSIM = new Vue({
             }
             this.$set(this, 'filterFunc', filterFunc);
         },
-        configureForm(submitUrl, responseCallback){
-            this.$set(this, 'formSubmitUrl', submitUrl);
-            this.$set(this, 'formResponseCallback', responseCallback);
-        },
         setError(errors){
             this.$set(this, 'loading', false);
             this.$set(this, 'errors', errors);
@@ -98,17 +92,15 @@ var EGSIM = new Vue({
         formIsValid(){
             return isValid(this.form);
         },
-        submitForm(){
-            var callback = this.formResponseCallback;
-            var url = this.formSubmitUrl;
-            if(!callback || !url){
-                console.log('DEV. ERROR: configureSubmit not called on vue instance');
-                return
+        submitForm(url, onSuccess, onError=undefined){
+            if (!onError){
+                onError = function(arg){};
             }
             // build form data inot a dict:
             var [data, errors] = parseForm(this.form);
             if(errors){
                 this.setError(errors);
+                onError(errors);
             }else{
                 this.$set(this, 'loading', true);
                 this.$set(this, 'errors', {});
@@ -116,14 +108,17 @@ var EGSIM = new Vue({
                 axios.post(url, data).
                     then(function (response) {
                         me.$set(me, 'loading', false);
-                        try{
-                            callback(response);
-                        }catch(err){
-                            console.log(`DEV. ERROR in formResponseCallback: ${err.message}`);
+                        if (onSuccess){
+                            try{
+                                onSuccess(response);
+                            }catch(err){
+                                console.log(`DEV. ERROR in "onSuccess" function: ${err.message}`);
+                            }
                         }
                     }).catch(function (error) {
                         me.$set(me, 'loading', false);
                         me.setError.apply(me, [error]);
+                        onError(errors);
                     });
             }
         }

@@ -15,16 +15,25 @@ Including another URLconf
 """
 from django.conf.urls import url  # added by default by django
 from django.contrib import admin  # added by default by django
+# from django.views.generic.base import RedirectView
+
 from . import views
+
+# for infor with trailing slashes:
+# https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),  # added by default by django
-    url(r'^$', views.index, name='index'),  # main page entry point
-    url(r'^home$', views.home, name='home'),
-    url(r'^trellis$', views.trellis, name='trellis'),
-    url(r'^residuals$', views.residuals, name='residuals'),
-    url(r'^loglikelihood$', views.loglikelihood, name='loglikelihood$'),
+    url(r'^$', views.index, name='index'),  # same as /home (see views.py)
+    url(r'^(?P<menu>[a-zA-Z]+)/?$', views.main, name='main'),  # main page entry point
+    url(r'^service/home/?$', views.home, name='home'),
+    url(r'^service/trellis/?$', views.trellis, name='trellis'),
+    url(r'^service/residuals/?$', views.residuals, name='residuals'),
+    url(r'^service/loglikelihood/?$', views.loglikelihood, name='loglikelihood'),
     url(r'get_init_params', views.get_init_params),
     url(r'get_trellis_plots', views.get_trellis_plots),
     url(r'test_err', views.test_err),
+
+    # test views, DELETE:
+    url(r'^test_trellis/?$', views.test_trellis, name='main'),
 ]

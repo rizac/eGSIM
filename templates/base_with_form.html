@@ -8,9 +8,9 @@
 {% endblock %}
 
 {% block body %}
-	<div class='flexible flex-direction-row' id='egsim'>
+	<div class='flexible flex-direction-row'>
 			
-		<div class='flexible flexible-half flex-direction-col p-3' id='input-container'> <!-- p-3: padding=1rem -->
+		<div class='flexible flexible-half flex-direction-col p-3' id='egsim-input'> <!-- p-3: padding=1rem -->
 			<form id='egsim-form' name='egsim-form' novalidate v-on:submit.prevent='submitForm' class='flexible flex-direction-col'>
 			<div>
 				{% block form-top %}
@@ -23,7 +23,7 @@
 					<div class='flexible flex-direction-col' style='overflow:auto'>
 						<!-- GSIM FORM CONTROL: -->
 						<select v-model="selectedGsims" multiple required class="form-control flexible"
-							name="{{ form.gsim.html_name }}">
+							name="{{ form.gsim.html_name }}" id="{{ form.gsim.auto_id }}">
 							<option v-for="gsim in gsims" v-show="isGsimVisible(gsim)">
 								&#123;&#123; gsim &#125;&#125;
 							</option>
@@ -52,7 +52,8 @@
 					<div>
 						<div v-for='imt in imts'>
 							<label>
-								<input type='checkbox' v-on:change="toggleImtSelection(imt)"> <span v-bind:disabled="!isImtSelectable(imt)">&#123;&#123; imt &#125;&#125;</span> 
+								<input type='checkbox' v-on:change="toggleImtSelection(imt)">
+								<span v-bind:disabled="!isImtSelectable(imt)">&#123;&#123; imt &#125;&#125;</span> 
 							</label>
 							<input type='text' v-model="saPeriods" name='sa_periods' v-bind:disabled="!isImtSelectable(imt)"
 								v-bind:placeholder="isImtSelectable(imt) ? 'period/s' : ''"
@@ -60,7 +61,7 @@
 						</div>
 					</div>
 					<!-- this select is just for form submission, its content is built from the checkbox above: -->
-					<select multiple size=8 class="form-control" id="selectable_imts"
+					<select multiple size=8 class="form-control" id="{{ form.imt.auto_id }}"
 						name="{{ form.imt.html_name }}" required>
 						<option v-for='imt in selectedImts' selected>
 							&#123;&#123; imt &#125;&#125;
@@ -76,8 +77,6 @@
 			</div>
 			
 			</form>
-		</div>
-		<div class='flexible flexible-half p-3' id='result-container'>
 			<div id='waitbar' v-show='loading' class='flexible flex-center'>
 				Loading, please wait ...
 				<div class="loader"></div>
@@ -87,9 +86,9 @@
 					&#123;&#123; fieldName &#125;&#125; : &#123;&#123; errMsg &#125;&#125; 
 				</div>
 			</div>
-			<div class='flexible' v-show='!hasError && !loading' id='result'>
-			{% block result-content %}{% endblock %}
-			</div>	
+		</div>
+		<div class='flex-direction-col flexible-half p-3' id='egsim-output'>
+			{% block output %}{% endblock %}	
 		</div>
 	</div>
 {% endblock %}

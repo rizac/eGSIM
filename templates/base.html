@@ -88,22 +88,7 @@
 		
 	}
 	</script>
-
 	{% endblock %}
-	<!-- <script type="text/javascript">  // init angular app:
-		var ngApp = angular.module("{{ project_name }}", []); 
-	</script>
-	
-	 our stuff   
-	<script type="text/javascript" src="{% static 'js/classes.js' %}"></script>
-	<script type="text/javascript" src="{% static 'js/trMap.js' %}"></script>
-	
-	<script type="text/javascript" src="{% static 'js/ng/services/gsimsInput.js' %}"></script>
-	<script type="text/javascript" src="{% static 'js/ng/services/trellisData.js' %}"></script>
-	<script type="text/javascript" src="{% static 'js/ng/controllers/mainCtrl.js' %}"></script>
-	<script type="text/javascript" src="{% static 'js/ng/controllers/confRupture.js' %}"></script>
-	<script type="text/javascript" src="{% static 'js/ng/controllers/trellisPlots.js' %}"></script>
-	<script type="text/javascript" src="{% static 'js/ng/controllers/dataAnalysis.js' %}"></script> -->
 
 	{% block extra-head %}
 	<script type='text/javascript'>
@@ -136,10 +121,10 @@
 	    // set onlick on each tab:
 	    data.forEach(function(item){
 			[tabId, divId] = item;
-			doc.getElementById(tabId).onclick = function(mouseEvent) { 
+			doc.getElementById(tabId).addEventListener('click', function(mouseEvent) { 
 			    tabClicked(mouseEvent.target.id);
-			    return false;
-	        };
+			    return false;  // prevent # appearing in browser's url tab
+	        });
 		});
 	    // select the first tab:
 	    tabClicked(data[0][0]);   

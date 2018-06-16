@@ -7,30 +7,7 @@
 {% endblock %}
 
 {% block extra-head %}
-{{ block.super }}
-<script type='text/javascript'>
-	function setActiveMenu(menu){
-		var ids = [
-		{% for key, value in menus.items %}
-			["{{ key }}", "{{ value }}"]{%if not forloop.last%},{%endif%}
-		{% endfor %}
-		];
-		var doc = document;
-		ids.forEach(function(item){
-			[key, value] = item;
-			var styleDisplay = key == menu ? 'initial' : 'none';
-			doc.getElementById("iframe-" + key).style.display = styleDisplay;
-			var aElement = doc.getElementById("a-" + key);
-			aElement.classList.remove("active");
-			aElement.innerHTML = value;
-			if (key == menu){
-				aElement.classList.add("active");
-				// https://stackoverflow.com/a/19758620:
-				aElement.innerHTML = value + `<span class="sr-only">(current)</span>`;
-			}
-		});
-	}
-</script>
+	{{ block.super }}
 {% endblock %}
 
 {% block body %}
@@ -45,14 +22,14 @@
 			<div class="collapse navbar-collapse" id="navbar">
 				<div class="navbar-nav">
 					{% for key, value in menus.items %}
-						<a class="nav-item nav-link" id='a-{{ key }}'
-							href="#" onclick='setActiveMenu("{{ key }}"); return false;'>{{ value }}</a>
+						<a class="nav-item nav-link" id='a-{{ key }}' href="#"
+						onclick='return setUrlInTab("{{ key }}")'>{{ value }}</a>
 					{% endfor %}
 				</div>
 			</div>
 		</nav>
 		{% for key in menus.keys %}
-		<iframe id='iframe-{{ key }}' class='flexible' src='{{ key }}' ></iframe>
+		<iframe id='iframe-{{ key }}' class='flexible' src='{% url key %}' ></iframe>
 		{% endfor %}
 	</div>
 {% endblock %}	
@@ -60,21 +37,19 @@
 {% block after-body %}
 <script type='text/javascript'>
 	// configTabs defined in base.html
-	{% if menu %} //place the passed menu as first arg (selected by default)
-		configTabs(["{{ menu }}"] + [
-			{% for key in menus.keys %}
-				{% if key != menu %}
-				["a-{{ key }}", "iframe-{{ key }}"]{%if not forloop.last%},{%endif%}
-				{% endif %}
-			{% endfor %}
-			]);
-	{% else %}
-		configTabs([
+	configTabs([["a-{{ menu }}", "iframe-{{ menu }}"]].concat([
 		{% for key in menus.keys %}
+			{% if key != menu %}
 			["a-{{ key }}", "iframe-{{ key }}"]{%if not forloop.last%},{%endif%}
+			{% endif %}
 		{% endfor %}
-		]);
-	{% endif %}
+		]));
+	function setUrlInTab(menu){
+	    var location = window.location;
+	    var newHref = location.href.replace(/\/\w+$/, "/" + menu);
+	    window.history.replaceState({}, document.title, newHref);
+	    return false;
+	}
 </script>
 {% endblock %}
 	
