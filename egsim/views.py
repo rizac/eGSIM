@@ -31,6 +31,7 @@ from egsim.core.trellis import compute
 # FIXME: very hacky to parse the form for defaults, is it there a better choice?
 _COMMON_PARAMS = {
     'project_name': 'eGSIM',
+    'debug': 'true',
     'menus': OrderedDict([('home', 'Home'), ('trellis', 'Trellis plots'),
                           ('residuals', 'Residuals'),
                           ('loglikelihood', 'Log-likelihood analysis')]),

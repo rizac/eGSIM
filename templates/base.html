@@ -57,8 +57,11 @@
 	{% endif %}
 
 	{% if plotly %}
-	<!-- plotly -->
-	<script type="text/javascript" src="https://cdn.plot.ly/plotly-1.33.1.min.js"></script>
+	
+	<!-- <script type="text/javascript" src="https://cdn.plot.ly/plotly-1.33.1.min.js"></script> -->
+	
+	<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.38.3.min.js"></script> <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
+	
 	{% endif %}
 
 	<!--  THESE ARE FALLBACKS, COMMENT OUT IF YOU WORK OFFLINE -->
@@ -83,7 +86,8 @@
 		{% endif %}
 		
 		{% if plotly %}
-		document.write("<script type='text/javascript' src='/static/fallbacks/plotly.1.33.1.js'><\/script>");
+		document.write("<script type='text/javascript' src='/static/fallbacks/plotly-cartesian-1.38.3.js'><\/script>");
+		//document.write("<script type='text/javascript' src='/static/fallbacks/plotly.1.33.1.js'><\/script>");
 		{% endif %}
 		
 	}

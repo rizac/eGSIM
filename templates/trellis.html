@@ -41,21 +41,24 @@
 <div class='flexible trellis-container' id='trellis'>
 
 	<div class='flex-direction-col'>  <!-- TRELLIS Y AXIS -->
-		<div v-for='value in params[gridyparam]' v-bind:style="styleForAxis('y')">
+		<div v-for='value in params[gridyparam]' v-bind:style="styleForAxis('y')" style='width:10px;border:1px solid green'>
 			<!-- <span v-if='gridyparam != "ylabel"'>&#123;&#123; value &#125;&#125;</span> -->
 		</div>
 	</div>
 
-	<div class='flex-direction-col'>  <!-- PLOTS GRID -->
+	<!-- <div class='flex-direction-col'>  PLOTS GRID
 		<div v-for="(plots, rowindex) in grid" v-bind:style="styleForAxis('y')" class='flex-direction-row'>
 			<div v-for="(plots, colindex) in grid[rowindex]" v-bind:style="styleForAxis('x')" style='position:relative'>
 				<div v-bind:id="'plot_' + rowindex +  '_' + colindex" class='plot-container'>
 				</div>
 			</div>
 		</div>
+	</div> -->
+	<div class='flex-direction-col' style='position:relative'> <!--  PLOTS GRID -->
+		<div class='trellis-plots-container' id='trellis-plots-container' style='border:1px solid red'></div>
 	</div>
-
-	<div class='flex-direction-col trellis-right-panel' v-if='grid.length'>  <!-- TRELLIS OPTIONS PANEL -->
+	
+	<div class='flex-direction-col trellis-right-panel'>  <!-- TRELLIS OPTIONS PANEL -->
 		<div>  <!-- TRACES LEGEND / COLORS -->
 			<div v-for="(value, key) in traceColors">
 				<div v-bind:style="{backgroundColor: value}"> &#123;&#123; key &#125;&#125;</div>
@@ -75,16 +78,16 @@
 		<div>
 			<div>Group vertically by:</div>
 			<select v-model='gridyparam'>
-				<option v-for='(values, key) in params'>
-					&#123;&#123; key &#125;&#125;
+				<option v-for='key in groupableParams' v-bind:value="key">
+					&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
 				</option>
 			</select>
 		</div>
 		<div>
 			<div>Group horizontally by:</div>
 			<select v-model='gridxparam'>
-				<option v-for='(values, key) in params'>
-					&#123;&#123; key &#125;&#125;
+				<option v-for='key in groupableParams' v-bind:value="key">
+					&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
 				</option>
 			</select>
 		</div>
@@ -94,7 +97,7 @@
   	<div class="item4"></div>  <!-- this div stays "hidden" in the bottom-left corner -->
  
 	<div class='flex-direction-row'>  <!-- TRELLIS X AXIS -->
-		<div v-for='value in params[gridxparam]' v-bind:style="styleForAxis('x')">
+		<div v-for='value in params[gridxparam]' v-bind:style="styleForAxis('x')" style='height:10px;border:1px solid green'>
 			<!-- <span v-if='gridxparam != "xlabel"'>&#123;&#123; value &#125;&#125;</span> -->
 		</div>
 	</div>
