@@ -23,6 +23,7 @@ from django.forms.fields import BooleanField, CharField, MultipleChoiceField, Fl
     ChoiceField, TypedChoiceField, MultiValueField
 # from django.core import validators
 
+from openquake.hazardlib import imt
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.geo import Point
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
@@ -31,8 +32,9 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrell
     MagnitudeDistanceSpectraSigmaTrellis
 
 from egsim.utils import vectorize, EGSIM, isscalar, unique
-from openquake.hazardlib import imt
-import math
+from _io import StringIO
+import yaml
+
 
 
 class NArrayField(CharField):
@@ -73,14 +75,46 @@ class NArrayField(CharField):
         self.min_value = min_value
         self.max_value = max_value
 
-    def clean(self, value):
-        """Return a number or a list of numbers depending on `value`"""
-        value = super(NArrayField, self).clean(value)
-        try:
-            return self.parsenarray(value, self.na_minlen, self.na_maxlen, self.min_value,
+    def serialize(self, value, parsecolon=False):
+        '''Serialises 'value' into a json- or YAML- compatible value. By default,
+        it calls self.parsenarray(value, self.na_minlen, self.na_maxlen, self.min_value,
                                     self.max_value)
+        This method allows to return a json or yaml compatible type which is basically
+        the same as `self.clean()`. But it's safe when the latter is overridden in order to
+        return more complex and non-serializable objects.
+        Moreover, note that if value (or any of its values) contains the colon, ':',
+        then value is returned as it is
+
+        :param parsecolon: when False (the default) if `value` is a string or an iterable of
+        strings, and any string contains the colon ':', then value is not processed and returned
+        as it is. This avoids floating point errors and potentially long numeric arrays to be
+        written to json or yaml files. When called by `self.clean`, this argument is True, as
+        we do want to parse colons into range numeric arrays
+
+        raises: ValidationError
+        '''
+        has_semicolon = False
+        if not parsecolon:
+            values = vectorize(value)
+            has_semicolon = any(isinstance(v, str) and ':' in v for v in values)
+        # run in any case the validation process in order to raise if an error is encountered:
+        parsed_value = super(NArrayField, self).clean(value)
+        try:
+            parsed_value = self.parsenarray(parsed_value, self.na_minlen, self.na_maxlen,
+                                            self.min_value, self.max_value)
+            return value if has_semicolon else parsed_value
         except (ValueError, TypeError) as exc:
             raise ValidationError(str(exc))
+
+    def clean(self, value):
+        """Return a number or a list of numbers depending on `value`"""
+        return self.serialize(value, parsecolon=True)
+#         value = super(NArrayField, self).clean(value)
+#         try:
+#             return self.parsenarray(value, self.na_minlen, self.na_maxlen, self.min_value,
+#                                     self.max_value)
+#         except (ValueError, TypeError) as exc:
+#             raise ValidationError(str(exc))
 
     @classmethod
     def parsenarray(cls, obj, minlen=None, maxlen=None,  # pylint: disable=too-many-arguments
@@ -247,7 +281,7 @@ class IMTField(MultipleChoiceField):
     SA = 'SA'
     default_error_messages = {
         'sa_without_period': _("intensity measure type '%s' must "
-                               "be specified with period(s), e.g. 'SA(0.1)'" % SA),
+                               "be specified with period(s)" % SA),
     }
 
     def __init__(self, *args, **kwargs):
@@ -293,6 +327,22 @@ class BaseForm(Form):
 
     _gsims = EGSIM
 
+    # fields (not used for rendering, just for validation): required is True by default
+    gsim = MultipleChoiceField(label='Ground Shaking Intensity Model/s (gsim):',
+                               choices=zip(_gsims.aval_gsims(), _gsims.aval_gsims()),
+                               # make field.is_hidden = True in the templates:
+                               widget=HiddenInput)
+
+    imt = IMTField(label='Intensity Measure Type/s (imt)',
+                   required=True,  # required jandled in clean()
+                   # make field.is_hidden = True in the templates:
+                   widget=HiddenInput)
+
+#     sa_period = NArrayField(label='SA (period/s):',
+#                             required=False,  # required jandled in clean()
+#                             # make field.is_hidden = True in the templates:
+#                             widget=HiddenInput)
+
     def __init__(self, *args, **kwargs):
         '''Overrides init to set custom attributes on field widgets and to set the initial
         value for fields of this class with no match in the keys of self.data'''
@@ -324,32 +374,75 @@ class BaseForm(Form):
 
         self.customize_widget_attrs()
 
+    def to_dict(self):
+        '''Converts this form to python dict. Each value is the `to_python` method of the
+        corresponding django Field, or the serialize method of the NArrayFields. the latter
+        converts the input to numeric array except the case when the input is given
+        as range '<start>:<stop>:<end>': in this case, the string is returned as it is.
+
+        raises ValidationError if the form is not valid
+        '''
+        if not self.is_valid():
+            raise ValidationError(self.errors)
+
+        return {name:
+                self.fields[name].serialize(val) if isinstance(self.fields[name], NArrayField)
+                else self.fields[name].to_python(val) for name, val in self.data.items()}
+
+    def serialize(self, stream=None, syntax='yaml'):
+        """Serialize this Form instance into a YAML stream.
+           If stream is None, return the produced string instead.
+
+           :param stream: A stream like a file-like object (in general any
+               object with a write method) or None
+            :param syntax: string, either 'json' or 'yaml'. If not either string, this
+                method raises ValueError
+        """
+        syntax = syntax.lower()
+        if syntax not in ('json', 'yaml'):
+            raise ValueError("Form serialization syntax must be 'json' or 'yaml'")
+
+        obj = self.to_dict()
+        if syntax == 'json':  # JSON
+            if stream is None:
+                return json.dumps(obj, indent=2, separators=(',', ': '), sort_keys=True)
+            else:
+                json.dump(obj, stream, indent=2, separators=(',', ': '), sort_keys=True)
+        else:  # YAML
+
+            class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
+                '''forces indentation of lists. See https://stackoverflow.com/a/39681672'''
+                def increase_indent(self, flow=False, indentless=False):
+                    return super(MyDumper, self).increase_indent(flow, False)
+
+            # inject comments in yaml by using the field label and the label help:
+            stringio = StringIO() if stream is None else stream
+            for name, value in obj.items():
+                field = self.fields[name]
+                label = field.label + ('' if not field.help_text else ' (%s)' % field.help_text)
+                if label:
+                    label = '# %s\n' % (label.replace('\n', ' ').replace('\r', ' '))
+                    stringio.write(label)
+                yaml.dump({name: value}, stream=stringio, Dumper=MyDumper,
+                          default_flow_style=False)
+                stringio.write('\n')
+            # compatibility with yaml dump if stream is None:
+            if stream is None:
+                ret = stringio.getvalue()
+                stringio.close()
+                return ret
+        return None
+
     def customize_widget_attrs(self):
         '''customizes the widget attributes (currently sets a bootstrap class on almost all
         of them'''
         atts = {'class': 'form-control'}  # for bootstrap
-        for name, field in self.fields.items():
+        for name, field in self.fields.items():  # @UnusedVariable
             # add class only for specific html elements, some other might have weird layout
             # if class 'form-control' is added on them:
             if not isinstance(field.widget, (CheckboxInput, CheckboxSelectMultiple, RadioSelect))\
                     and not field.widget.is_hidden:
                 field.widget.attrs.update(atts)
-
-    # fields (not used for rendering, just for validation): required is True by default
-    gsim = MultipleChoiceField(label='Ground Shaking Intensity Model/s (gsim):',
-                               choices=zip(_gsims.aval_gsims(), _gsims.aval_gsims()),
-                               # make field.is_hidden = True in the templates:
-                               widget=HiddenInput)
-
-    imt = IMTField(label='Intensity Measure Type/s (imt):',
-                   required=True,  # required jandled in clean()
-                   # make field.is_hidden = True in the templates:
-                   widget=HiddenInput)
-
-#     sa_period = NArrayField(label='SA (period/s):',
-#                             required=False,  # required jandled in clean()
-#                             # make field.is_hidden = True in the templates:
-#                             widget=HiddenInput)
 
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on selected intensity
@@ -438,10 +531,14 @@ class TrellisForm(BaseForm):
                                  'magnitude_scaling_relatio': 'msr', ',lineazi': 'line_azimuth',
                                  'vs30m': 'vs30_measured', 'hyploc': 'hypocentre_location'}
 
+    __scalar_or_vector_help__ = 'Scalar, vector or range'
+
     plot_type = TrellisplottypeField(label='Plot type', initial="d")
     # GSIM RUPTURE PARAMS:
-    magnitude = NArrayField(label='Magnitude(s)', min_arr_len=1)
-    distance = NArrayField(label='Distance(s)', min_arr_len=1)
+    magnitude = NArrayField(label='Magnitude(s)', min_arr_len=1,
+                            help_text=__scalar_or_vector_help__)
+    distance = NArrayField(label='Distance(s)', min_arr_len=1,
+                           help_text=__scalar_or_vector_help__)
     dip = FloatField(label='Dip', min_value=0., max_value=90.)
     aspect = FloatField(label='Rupture Length / Width', min_value=0.)
     tectonic_region = CharField(label='Tectonic Region Type',
@@ -452,15 +549,15 @@ class TrellisForm(BaseForm):
     msr = MsrField(label='Magnitude Scaling Relation', initial="WC1994")
     initial_point = PointField(label="Location on Earth", help_text='Longitude Latitude',
                                min_value=[-180, -90], max_value=[180, 90], initial="0 0")
-    hypocentre_location = NArrayField(label="Location of Hypocentre", initial="0.5 0.5",
+    hypocentre_location = NArrayField(label="Location of Hypocentre", initial='0.5 0.5',
                                       help_text='Along-strike fraction, Down-dip fraction',
                                       min_arr_len=2, max_arr_len=2,
                                       min_value=[0, 0], max_value=[1, 1])
     # END OF RUPTURE PARAMS
-    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub>(s) (m/s)'), min_value=0., min_arr_len=1,
-                       initial='760.0')
-    vs30_measured = BooleanField(label=mark_safe('V<sub>S30</sub> measured '),
-                                 help_text='Uncheck if inferred)', initial=True, required=False)
+    vs30 = NArrayField(label=mark_safe('VS30 (m/s)'), min_value=0., min_arr_len=1,
+                       initial=760.0, help_text=__scalar_or_vector_help__)
+    vs30_measured = BooleanField(label=mark_safe('Is VS30 measured'),
+                                 help_text='Otherwise is inferred', initial=True, required=False)
     line_azimuth = FloatField(label='Azimuth of Comparison Line',
                               min_value=0., max_value=360., initial=0.)
     z1pt0 = NArrayField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),

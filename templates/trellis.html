@@ -40,66 +40,47 @@
 {% block output %}
 <div class='flexible trellis-container' id='trellis'>
 
-	<div class='flex-direction-col'>  <!-- TRELLIS Y AXIS -->
-		<div v-for='value in params[gridyparam]' v-bind:style="styleForAxis('y')" style='width:10px;border:1px solid green'>
-			<!-- <span v-if='gridyparam != "ylabel"'>&#123;&#123; value &#125;&#125;</span> -->
-		</div>
+	<div class='flex-direction-col'>  <!-- TRELLIS Y AXIS (hidden, uncomment content below to sho it) -->
+		<!-- <div v-for='value in params[gridyparam]' v-bind:style="styleForAxis('y')" style='width:10px;border:1px solid green'></div> -->
 	</div>
 
-	<!-- <div class='flex-direction-col'>  PLOTS GRID
-		<div v-for="(plots, rowindex) in grid" v-bind:style="styleForAxis('y')" class='flex-direction-row'>
-			<div v-for="(plots, colindex) in grid[rowindex]" v-bind:style="styleForAxis('x')" style='position:relative'>
-				<div v-bind:id="'plot_' + rowindex +  '_' + colindex" class='plot-container'>
+	<div class='flex-direction-col' style='position:relative'> <!--  PLOTS GRID -->
+		<div class='trellis-plots-container' id='trellis-plots-container'></div>
+		
+		<div class='flex-direction-col trellis-right-panel'>  <!-- TRELLIS OPTIONS PANEL -->
+			<div>
+				<div v-for='(values, key) in selectableParams'>
+					<div>&#123;&#123; key &#125;&#125;:</div>
+					<select v-model="selectedParams[key]">
+						<option v-for='value in params[key]'>
+							&#123;&#123; value &#125;&#125;
+						</option>
+					</select>
 				</div>
 			</div>
-		</div>
-	</div> -->
-	<div class='flex-direction-col' style='position:relative'> <!--  PLOTS GRID -->
-		<div class='trellis-plots-container' id='trellis-plots-container' style='border:1px solid red'></div>
-	</div>
-	
-	<div class='flex-direction-col trellis-right-panel'>  <!-- TRELLIS OPTIONS PANEL -->
-		<div>  <!-- TRACES LEGEND / COLORS -->
-			<div v-for="(value, key) in traceColors">
-				<div v-bind:style="{backgroundColor: value}"> &#123;&#123; key &#125;&#125;</div>
+			<div>
+				<div>Group vertically by:</div>
+				<select v-model='gridyparam'>
+					<option v-for='key in groupableParams' v-bind:value="key">
+						&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
+					</option>
+				</select>
 			</div>
-		
-		</div>
-		<div>
-			<div v-for='(values, key) in selectableParams'>
-				<div>&#123;&#123; key &#125;&#125;:</div>
-				<select v-model="selectedParams[key]">
-					<option v-for='value in params[key]'>
-						&#123;&#123; value &#125;&#125;
+			<div>
+				<div>Group horizontally by:</div>
+				<select v-model='gridxparam'>
+					<option v-for='key in groupableParams' v-bind:value="key">
+						&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
 					</option>
 				</select>
 			</div>
 		</div>
-		<div>
-			<div>Group vertically by:</div>
-			<select v-model='gridyparam'>
-				<option v-for='key in groupableParams' v-bind:value="key">
-					&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
-				</option>
-			</select>
-		</div>
-		<div>
-			<div>Group horizontally by:</div>
-			<select v-model='gridxparam'>
-				<option v-for='key in groupableParams' v-bind:value="key">
-					&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
-				</option>
-			</select>
-		</div>
-		
 	</div>
-	
-  	<div class="item4"></div>  <!-- this div stays "hidden" in the bottom-left corner -->
+
+  	<div class="item4"></div>  <!-- this div stays "hidden" in the bottom-left corner of the grid layout -->
  
-	<div class='flex-direction-row'>  <!-- TRELLIS X AXIS -->
-		<div v-for='value in params[gridxparam]' v-bind:style="styleForAxis('x')" style='height:10px;border:1px solid green'>
-			<!-- <span v-if='gridxparam != "xlabel"'>&#123;&#123; value &#125;&#125;</span> -->
-		</div>
+	<div class='flex-direction-row'>  <!-- TRELLIS X AXIS  (hidden, uncomment content below to sho it) -->
+		<!-- <div v-for='value in params[gridxparam]' v-bind:style="styleForAxis('x')" style='height:10px;border:1px solid green'></div> -->
 	</div>
  
 </div>

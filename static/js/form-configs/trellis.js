@@ -3,20 +3,6 @@ var TRELLIS = new Vue({
     data: {
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
         plots: [], //array of [{data, params}], where data is an array of dicts (one dict per trace) and params is a dict
-        // https://stackoverflow.com/a/44727682:
-        defColors: Object.freeze(['#1f77b4',  // muted blue
-                                  '#ff7f0e',  // safety orange
-                                  '#2ca02c',  // cooked asparagus green
-                                  '#d62728',  // brick red
-                                  '#9467bd',  // muted purple
-                                  '#8c564b',  // chestnut brown
-                                  '#e377c2',  // raspberry yogurt pink
-                                  '#7f7f7f',  // middle gray
-                                  '#bcbd22',  // curry yellow-green
-                                  '#17becf']),   // blue-teal
-        //defAxisProps: {mirror: true, linewidth: 1},  //, titlefont: {size: 12}},
-        traceColorIndex: 0,
-        traceColors: {},  // map of trellis trace (name) to its color
         paramNames: Object.freeze(['xlabel', 'ylabel', 'vs30', 'magnitude', 'distance']), // a list of default parameter names
         params: {},  // a dict of property names mapped to an array of possible (string) values
         selectedParams: {}, //a dict of property names mapped to a string (scalar) denoting the selected value
@@ -25,7 +11,21 @@ var TRELLIS = new Vue({
         gridyparam: 'ylabel',  // a key in params denoting the ygrid labels
         plotlyplots: [],
         plotDivId: 'trellis-plots-container',
-        plotFontSize: 11
+        plotFontSize: 12,
+        plotTraceColors: {},
+        plotColors: {index:0,
+            // https://stackoverflow.com/a/44727682:
+            defColors: Object.freeze(['#1f77b4',  // muted blue
+                '#ff7f0e',  // safety orange
+                '#2ca02c',  // cooked asparagus green
+                '#d62728',  // brick red
+                '#9467bd',  // muted purple
+                '#8c564b',  // chestnut brown
+                '#e377c2',  // raspberry yogurt pink
+                '#7f7f7f',  // middle gray
+                '#bcbd22',  // curry yellow-green
+                '#17becf'])   // blue-teal
+        }
     },
     created: function() { // https://vuejs.org/v2/api/#created
         // no-op (for the moment)
@@ -33,8 +33,8 @@ var TRELLIS = new Vue({
     methods: {
         init: function(response){
             // reset colors:
-            this.$set(this, 'traceColorIndex', 0);
-            this.$set(this, 'traceColors', {});
+            this.plotColors.index = 0;
+            this.$set(this, 'plotTraceColors', {});
             // convert data:
             var [plots, params] = this.getTrellisData(response);
             this.$set(this, 'plots', plots);
@@ -50,8 +50,7 @@ var TRELLIS = new Vue({
             for (var label of this.paramNames){
                 params[label] = new Set();
             }
-            var data = response.data; //FIXME: how to get data??
-            var traceColor = this.traceColor; //instantiate tracecolor once
+            var data = response.data;
             var plots = [];
             for (var fig of data['figures']){
                 var plotParams = {};
@@ -68,9 +67,12 @@ var TRELLIS = new Vue({
                 params.vs30.add(plotParams.vs30);
                 
                 var plotData = Object.keys(fig.yvalues).map(function(name){
-                    return {x: data.xvalues, y: fig.yvalues[name], mode: (data.xvalues.length == 1 ? 'scatter' : 'lines'),
-                        name: name, line: {color: traceColor.apply(this, [name])}};
-                });
+                    var [x, y] = [data.xvalues, fig.yvalues[name]];
+                    // to test that plots are correctly placed, uncomment this:
+                    // var name = `${name}_${plotParams.magnitude}_${plotParams.distance}_${plotParams.vs30}`;
+                    return {x: x, y: y, mode: (data.xvalues.length == 1 ? 'scatter' : 'lines'),
+                        legendgroup: name, name: name, line: {color: this.getTraceColor(name)}};
+                }, this);
                 plots.push({'data': plotData, 'params': plotParams});
             }
             // replace sets with sorted Arrays, remove proeprties that are 'empty'
@@ -90,10 +92,10 @@ var TRELLIS = new Vue({
             var gridxlabels = [];
             var gridylabels = [];
             // set default grid for x and y if not found in the new params:
-            if (!(this.grixparam in params)){
+            if (!(this.gridxparam in params)){
                 this.$set(this, 'gridxparam', 'xlabel'); // xlabel surely in params
             }
-            if (!(this.griyparam in params)){
+            if (!(this.gridyparam in params)){
                 this.$set(this, 'gridyparam', 'ylabel');  // ylabel surely in params
             }
             var selectedParams = {};
@@ -124,6 +126,7 @@ var TRELLIS = new Vue({
             this.$nextTick(this.displayPlots);
         },
         displayPlots: function(){
+            Plotly.purge(this.plotDivId);
             // diplsays subplot in the main plot. This method does some calculation that plotly
             // does not, such as font-size dependent margins, and moreover fixes a bug whereby the xaxis.title
             // annotation texts are misplaced (thus let's place them manually here)
@@ -139,6 +142,7 @@ var TRELLIS = new Vue({
             var ydomains = new Array(gridyvalues.length);
             var annotation = this.getAnnotation;
             var layout = this.getLayout();
+            var legendgroups = new Set();
             for (var plot of this.plotlyplots){
                 var gridxvalue = plot.params[gridxparam];
                 var gridxindex = gridxindices.get(gridxvalue); // plot horizontal index on the grid 
@@ -152,9 +156,18 @@ var TRELLIS = new Vue({
                 yaxis.type = 'log';
                 layout[`xaxis${axisIndex}`] = xaxis;
                 layout[`yaxis${axisIndex}`] = yaxis;
+                // Now edit the traces in plot.data. Each trace is basically an Object of the
+                // form T = {x: ..., y: ...}. The trace properties below need to be modified EACH TIME:
+                // 1. T.xaxis and T.yaxis (i.e., basically on which subplot the trace has to be displayed), and
+                // 2. T.showlegend. The latter is set to true for the FIRST trace found for a given legendgroup
+                // in order to avoid duplicated legend names. (T.legendgroup = T.name is the GSIM name, and it allows
+                // toggling visibility simultaneously on all subplots for every trace with the same legendgroup, when 
+                // clicking on the legend's GSIM name)
                 plot.data.forEach(function(element){
                     element.xaxis = `x${axisIndex}`;
                     element.yaxis = `y${axisIndex}`;
+                    element.showlegend = !legendgroups.has(element.legendgroup);
+                    legendgroups.add(element.legendgroup);
                     data.push(element);
                 });
                 // write xlabel:
@@ -175,35 +188,43 @@ var TRELLIS = new Vue({
                     text: plot.params.ylabel
                 }));
           }
-          // write xgridparams and ygridparams
+          // Grid X labels: (horizontally on top)
           var [gridxparam, gridyparam] = this.getDisplayGridParams();
           if (gridxparam){
-              for (var domain of xdomains){
+              // determine the maximum y of all plot frames:
+              // var y = Math.max(...ydomains.map(elm => elm[1]));
+              // create the x labels of the vertical grid:
+              for (var [domain, gridvalue] of xdomains.map((elm, index) => [elm, gridxvalues[index]])){
                   layout.annotations.push(annotation({
                       x: (domain[1] + domain[0])/2,
                       y: 1,
-                      xanchor: 'center',
-                      yanchor: 'top',
-                      text: `${gridxparam}: ${gridxvalues[index]}`
+                      xanchor: 'center', /* DO NOT CHANGE THIS */
+                      yanchor: 'middle',
+                      text: `${gridxparam}: ${gridvalue}`
                 }));
               }
           }
+          // Grid Y labels: (vertically on the right)
           if (gridyparam){
-              for (var domain of ydomains){
+              // determine the maximum x of all plot frames:
+              // var x = Math.max(...xdomains.map(elm => elm[1]));
+              // create the y labels of the vertical grid:
+              for (var [domain, gridvalue] of ydomains.map((elm, index) => [elm, gridyvalues[index]])){
                   layout.annotations.push(annotation({
                       x: 1,
                       y: (domain[1] + domain[0])/2,
-                      xanchor: 'right',
-                      yanchor: 'middle',
-                      text: `${gridyparam}: ${gridyvalues[index]}`,
+                      xanchor: 'center',
+                      yanchor: 'middle', /* DO NOT CHANGE THIS */
+                      text: `${gridyparam}: ${gridvalue}`,
                       textangle: '-270'
                 }));
               }
           }
-            Plotly.newPlot(this.plotDivId, data, layout);
+          Plotly.newPlot(this.plotDivId, data, layout);
         },
         getLayout: function(){
-            return {autosize: true, font: {size: this.plotFontSize}, titlefont: {size: 11}, showlegend: false,
+            return {autosize: true, font: {family: "Encode Sans Condensed, sans-serif", size: this.plotFontSize},
+                showlegend: true,
                 margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []};
         },
         getAxis: function(row, col, rows, cols){
@@ -211,16 +232,16 @@ var TRELLIS = new Vue({
             // returns the array [axisIndex, xaxis, yaxis, xdomain, ydomain]
             // where xaxis and yaxis are the Objects to be passed to plotly's layout, xdomain = [x1, x2] and
             // ydomain = [y1, y2] are the two-element arrays denoting the enclosing area of the sub-plot
-            var fontsize = this.plotFontSize;
-            var [width, height] = this.getPlotDivSize();
-            var [uwidth, uheight] = [fontsize/width, fontsize/height];
+            var [uwidth, uheight] = this.getEmUnits();
             var b = 3 * uheight;
-            var t = 1.5 * uheight;
-            var l = 5 * uwidth;
-            var r = 1.5*uwidth;
+            var t = 1 * uheight;
+            var l = 8 * uwidth;
+            var r = 1 * uwidth;
             var [gridxparam, gridyparam] = this.getDisplayGridParams();
-            var tt = gridxparam ? 2 * uheight : 0;
-            var rr = gridyparam ? 2 * uwidth : 0;
+            var tt = gridxparam ? 1.5 * uheight : 0;
+            var rr = gridyparam ? 3 * uwidth : 0;
+            // the legend, if present, is not included in the plot area, so we can safely ignore it. Comment this line:
+            // rr += 0. * uwidth * Math.max(...Object.keys(this.plotTraceColors).map(elm => elm.length)) ;
             var axisIndex = 1 + row * cols + col;
             var colwidth = (1-rr) / cols;
             var rowheight = (1-tt) / rows;
@@ -228,13 +249,23 @@ var TRELLIS = new Vue({
             var ydomain = [(rows-1-row)*rowheight, (rows-row)*rowheight];
             var xaxis = {mirror: true, linewidth: 1, domain: [xdomain[0]+l, xdomain[1]-r], anchor: `y${axisIndex}`};
             var yaxis = {mirror: true, linewidth: 1, domain: [ydomain[0]+b, ydomain[1]-t], anchor: `x${axisIndex}`};
+            console.log('xdomain:' + xdomain);
+            console.log('ydomain:' + ydomain);
             return [axisIndex, xaxis, yaxis, xdomain, ydomain];
+        },
+        getEmUnits: function(){
+            // returns [uwidth, uheight], the units of a 1em in percentage of the plot div, which must be shown on the browser
+            // Both returned units should be < 1 in principle
+            var fontsize = this.plotFontSize;
+            var [width, height] = this.getPlotDivSize();
+            return [fontsize/width, fontsize/height];
         },
         getAnnotation(props){
             return Object.assign({
                 xref: 'paper',
                 yref: 'paper',
-                showarrow: false
+                showarrow: false,
+                font: {size: this.plotFontSize}
           }, props || {});
         },
         getPlotDivSize: function(){
@@ -250,12 +281,11 @@ var TRELLIS = new Vue({
             var gridyparam = this.gridyparam == 'xlabel' || this.gridyparam == 'ylabel' ? '' : this.gridyparam;
             return [gridxparam, gridyparam];
         },
-        traceColor: function(traceName){
-            var color = this.traceColors[traceName];
+        getTraceColor: function(traceName){
+            var color = this.plotTraceColors[traceName];
             if (!color){
-                this.traceColorIndex = (this.traceColorIndex+1) % this.defColors.length;
-                color = this.defColors[this.traceColorIndex];
-                this.traceColors[traceName] = color;
+                color = this.plotTraceColors[traceName] = this.plotColors.defColors[this.plotColors.index];
+                this.plotColors.index = (this.plotColors.index+1) % this.plotColors.defColors.length;
             }
             return color;
         }
@@ -301,27 +331,3 @@ var TRELLIS = new Vue({
         }
     }
 });
-
-class Colors {
-    constructor() {
-        // https://stackoverflow.com/a/44727682:
-        this.$colors = Object.freeze(['#1f77b4',  // muted blue
-                '#ff7f0e',  // safety orange
-                '#2ca02c',  // cooked asparagus green
-                '#d62728',  // brick red
-                '#9467bd',  // muted purple
-                '#8c564b',  // chestnut brown
-                '#e377c2',  // raspberry yogurt pink
-                '#7f7f7f',  // middle gray
-                '#bcbd22',  // curry yellow-green
-                '#17becf']);   // blue-teal
-        this.$index = 0;
-    }
-    color(name) {
-        if (!(name in this)){
-            this.$index = (this.$index+1) % this.$colors.length;
-            this[name] = this.$colors[this.$index];
-        }
-        return this[name];
-    }
-}

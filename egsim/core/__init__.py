@@ -25,7 +25,7 @@ def validate(formclass):
         def wrapper(params, *args, **kwargs):
             form = formclass(data=yaml_load(params))
             return (form, None) if not form.is_valid() else \
-                (form, function(form.clean(), *args, **kwargs))
+                (form, function(dict(form.clean()), *args, **kwargs))
         return wrapper
     return real_decorator
 

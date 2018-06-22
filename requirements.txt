@@ -19,6 +19,7 @@ pyparsing==2.2.0
 pyshp==1.2.3
 python-dateutil==2.7.3
 pytz==2018.4
+pytest-django==3.3.0
 PyYAML==3.12
 pyzmq==17.0.0
 requests==2.18.4

@@ -6,6 +6,10 @@
 
 	{% block head %}
 	
+	<!--  ubuntu mono (replace with other font, monospace should be better) -->
+	<!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu Mono"> -->
+	<link href="https://fonts.googleapis.com/css?family=Encode+Sans+Condensed" rel="stylesheet">
+
 	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
 
@@ -58,16 +62,18 @@
 
 	{% if plotly %}
 	
-	<!-- <script type="text/javascript" src="https://cdn.plot.ly/plotly-1.33.1.min.js"></script> -->
-	
+	 <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
+		{% if debug %}
+	<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.38.3.js"></script>
+		{% else %}
 	<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.38.3.min.js"></script> <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
-	
+		{% endif %}
 	{% endif %}
 
 	<!--  THESE ARE FALLBACKS, COMMENT OUT IF YOU WORK OFFLINE -->
 	<script type='text/javascript'>
 	if (!navigator.onLine){
-		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.min.js'><\/script>");
+		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.js'><\/script>");
 		document.write("<script type='text/javascript' src='/static/fallbacks/axios.0.18.0.min.js'><\/script>");
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/bootstrap.4.0.0.min.css'/>");
 
