@@ -1,46 +1,40 @@
-from yaml import safe_load, YAMLError
+'''
+Core functionalities acting as interface between openquake / smtk and the web
+API
+'''
 import os
 from io import StringIO
+from yaml import safe_load, YAMLError
 from django.core.exceptions import ValidationError
-
-
-def validate(formclass):
-    '''creates a validator for a function processing a dict resulting e,g, from a web request
-    The validator must be a django form that will be called with the dict. The validated
-    dict will then be passed to the decorated function. The dict must be the function's first
-    argumeent.
-
-    wraps the decorated function and returns the tuple
-    (form, output)
-
-    where output is the output of the decorated function, ior None if the form is not valid
-
-    Example:
-
-    @validate(MyForm)
-    def process_params(params, *args, **kwargs):
-        # here params is assured to be validated with 'MyForm' and can be safely processed
-    '''
-    def real_decorator(function):
-        def wrapper(params, *args, **kwargs):
-            form = formclass(data=yaml_load(params))
-            return (form, None) if not form.is_valid() else \
-                (form, function(dict(form.clean()), *args, **kwargs))
-        return wrapper
-    return real_decorator
+from django.http.response import JsonResponse
 
 
 def yaml_load(obj):
+    '''Safely loads the YAML-formatted object `obj` into a dict.
+
+    :param obj: (dict, stream or string denoting an existing file path): If stream (i.e.,
+        an object with the `read` attribute), uses it for reading and parsing its
+        content into dict. If dict, this method is no-op and the dict is returned, if string
+        denoting an existing file, a stream is opened from the file and processed as
+        explained above (the stream will be closed in this case). If string, the string
+        is treated as YAML content and parsed: in this case, the output must be a dict
+        otherwise a YAMLError is thrown
+
+    :raises: YAMLError
+    '''
     if isinstance(obj, dict):
         return obj
+
+    close_stream = False
     if isinstance(obj, str):
-        if os.path.isfile(obj):
+        close_stream = True
+        if os.path.isfile(obj):  # file input
             stream = open(obj, 'r')
         else:
-            stream = StringIO(obj)
-    elif not hasattr(obj, 'read') or not hasattr(obj, 'close'):
-        raise TypeError('Invalid input, expected data in YAML syntax (POST request) '
-                        'or path pointing to an existing YAML file on server, '
+            stream = StringIO(obj)  # YAML content input
+    elif not hasattr(obj, 'read'):
+        # raise a general message meaningful for a Rest framework and a web app:
+        raise YAMLError('Invalid input, expected POST data as string in YAML syntax, '
                         'found %s' % str(obj.__class__.__name__))
     else:
         stream = obj
@@ -50,10 +44,11 @@ def yaml_load(obj):
         # for some weird reason, in case of a string ret is the string itself, and no error
         # is raised. Let's do it here:
         if not isinstance(ret, dict):
-            raise YAMLError('Invalid input %s: parsed output is %s, expected %s'
-                            % (str(obj), ret.__class__.__name__, {}.__class__.__name__))
+            raise YAMLError('Malformed input: parsed output is %s, expected %s'
+                            % (ret.__class__.__name__, {}.__class__.__name__))
         return ret
     except YAMLError as exc:
-        raise YAMLError('malformed YAML syntax in input data: %s' % str(exc)) from None
+        raise YAMLError('Malformed input: YAML syntax error: %s' % str(exc)) from None
     finally:
-        stream.close()
+        if close_stream:
+            stream.close()

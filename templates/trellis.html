@@ -17,18 +17,21 @@
 				
 
 {% block form-extra-divs %}
-<div id='rupture' class='flexible'>
+<div id='rupture' class='flexible p-2'>
 	{% for field in form.visible_fields %}
-	{% if field.html_name != form.plot_type.html_name %}
-	<div class="row">
-		<div class="col-md-4">{{ field.label_tag }}</div>
-		<div class="col-md-8">{{ field }}  <!--{perc render_field field class+="form-control" %} -->
-				{% if field.help_text %}
-				<p class="help-inline"><small>{{ field.help_text }}</small></p>
-				{% endif %}
+		{% if field.html_name != form.plot_type.html_name %}
+		<div class="mr-2">{{ field.html_name }}
+			<span class='text-danger text-nowrap small' v-show="fielderrors['{{ field.html_name }}']">
+				&#123;&#123; fielderrors['{{ field.html_name }}'] &#125;&#125; 
+			</span>
+		</div> <div>{{ field }}</div>
+		<div class="text-muted small text-nowrap mb-2 field-help">
+		{% if field.html_name|lower != field.label|lower %}
+			{{ field.label }}{% if field.help_text %}: {% endif %}
+		{% endif %}
+		{{ field.help_text }}
 		</div>
-	</div>
-	{% endif %}
+		{% endif %}
 	{% endfor %}
 </div>
 {% endblock %}
@@ -38,49 +41,46 @@
 {% endblock %}
 
 {% block output %}
-<div class='flexible trellis-container' id='trellis'>
+<div class='flexible flex-direction-row trellis-container' id='trellis'>
 
-	<div class='flex-direction-col'>  <!-- TRELLIS Y AXIS (hidden, uncomment content below to sho it) -->
-		<!-- <div v-for='value in params[gridyparam]' v-bind:style="styleForAxis('y')" style='width:10px;border:1px solid green'></div> -->
+	<div class='flexible' style='position:relative'>
+		<div class='trellis-plots-container' id='trellis-plots-container'></div>
 	</div>
 
-	<div class='flex-direction-col' style='position:relative'> <!--  PLOTS GRID -->
-		<div class='trellis-plots-container' id='trellis-plots-container'></div>
-		
-		<div class='flex-direction-col trellis-right-panel'>  <!-- TRELLIS OPTIONS PANEL -->
-			<div>
-				<div v-for='(values, key) in selectableParams'>
-					<div>&#123;&#123; key &#125;&#125;:</div>
-					<select v-model="selectedParams[key]">
-						<option v-for='value in params[key]'>
-							&#123;&#123; value &#125;&#125;
-						</option>
-					</select>
-				</div>
+	<div class='trellis-right-panel flex-direction-col'>  <!-- TRELLIS OPTIONS PANEL -->
+		<div class='flexible'>
+			<div v-for="(value, key) in plotTraceColors">
+				<label v-bind:style="{color: value}">
+				<input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
+				&#123;&#123; key &#125;&#125;</label>
 			</div>
-			<div>
-				<div>Group vertically by:</div>
-				<select v-model='gridyparam'>
-					<option v-for='key in groupableParams' v-bind:value="key">
-						&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
-					</option>
-				</select>
-			</div>
-			<div>
-				<div>Group horizontally by:</div>
-				<select v-model='gridxparam'>
-					<option v-for='key in groupableParams' v-bind:value="key">
-						&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
+		</div>
+		<div>
+			<div v-for='(values, key) in selectableParams'>
+				<div>&#123;&#123; key &#125;&#125;:</div>
+				<select v-model="selectedParams[key]">
+					<option v-for='value in params[key]'>
+						&#123;&#123; value &#125;&#125;
 					</option>
 				</select>
 			</div>
 		</div>
-	</div>
-
-  	<div class="item4"></div>  <!-- this div stays "hidden" in the bottom-left corner of the grid layout -->
- 
-	<div class='flex-direction-row'>  <!-- TRELLIS X AXIS  (hidden, uncomment content below to sho it) -->
-		<!-- <div v-for='value in params[gridxparam]' v-bind:style="styleForAxis('x')" style='height:10px;border:1px solid green'></div> -->
+		<div>
+			<div>Group vertically by:</div>
+			<select v-model='gridyparam'>
+				<option v-for='key in groupableParams' v-bind:value="key">
+					&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
+				</option>
+			</select>
+		</div>
+		<div>
+			<div>Group horizontally by:</div>
+			<select v-model='gridxparam'>
+				<option v-for='key in groupableParams' v-bind:value="key">
+					&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
+				</option>
+			</select>
+		</div>
 	</div>
  
 </div>

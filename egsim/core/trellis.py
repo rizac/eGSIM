@@ -12,8 +12,6 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, MagnitudeIMTTrellis, 
     DistanceSigmaIMTTrellis, MagnitudeSigmaIMTTrellis
 
 from egsim.utils import vectorize
-from egsim.core import validate
-from egsim.forms import TrellisForm
 
 
 MAG = 'magnitude'
@@ -36,6 +34,7 @@ BAC = 'backarc'
 GSIM = 'gsim'
 IMT = 'imt'
 
+
 def default_periods_for_spectra():
     '''returns an array for the default periods for the magnitude distance spectra trellis
     The returned numeric list will define the xvalues of each plot'''
@@ -46,8 +45,7 @@ def default_periods_for_spectra():
             1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]
 
 
-@validate(TrellisForm)
-def compute(params):
+def compute_trellis(params):
 
     # dip, aspect will be used below, we oparse them here because they are mandatory (FIXME:
     # are they?)

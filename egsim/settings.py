@@ -23,7 +23,7 @@ print(BASE_DIR)
 SECRET_KEY = ')d#k&x(n_t_*3sgpe^e%ftw%2+xb8l3f%i^j77=ga-!9f)n$5m'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -48,6 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'egsim.middlewares.ExceptionHandlerMiddleware'
 ]
 
 ROOT_URLCONF = 'egsim.urls'
@@ -131,3 +132,5 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 # https://docs.djangoproject.com/en/2.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+CSRF_USE_SESSIONS = True

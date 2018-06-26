@@ -22,10 +22,11 @@ from django.views.decorators.csrf import csrf_exempt
 # import smtk.trellis.trellis_plots as trpl
 # import smtk.trellis.configure as rcfg
 
-from egsim.forms import TrellisForm, BaseForm, IMTField
-from egsim.utils import get_menus
-import time
-from egsim.core.trellis import compute
+from egsim.forms import TrellisForm, BaseForm
+from egsim.core.trellis import compute_trellis
+from django.forms.utils import ErrorDict
+from django.views.generic.base import View
+from egsim.core import yaml_load
 
 
 # FIXME: very hacky to parse the form for defaults, is it there a better choice?
@@ -76,7 +77,6 @@ def loglikelihood(request):
 
 
 # @api_view(['GET', 'POST'])
-@csrf_exempt
 def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     """
     Returns input parameters for input selection. Called when app initializes
@@ -89,19 +89,72 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     return JsonResponse({'initData': BaseForm._gsims.jsonlist()})
 
 
-@csrf_exempt
+class EgsimQueryView(View):
+    '''base view for every EGSIM view handling data request and returning data in response
+    this is usually accomplished via a form in the web page or a POST reqeust from
+    the a normal query in the standard API'''
+
+    formclass = None
+
+    def get(self, request):
+        '''processes a get request'''
+        return self.process(dict(request.GET))
+
+    def post(self, request):
+        '''processes a post request'''
+        return self.process(json.loads(request.body.decode('utf-8')))
+
+    def process(self, params):
+        '''processes input params, calls self.process_valid_input if the input is valid
+        otherwise returns an appropriate json response with validation error messages'''
+        form = self.get_form(params)
+
+        if not form.is_valid():
+            jsonerror = self.format_validation_error(form.errors)
+            return JsonResponse(jsonerror, safe=False, status=jsonerror['code'])
+        return JsonResponse(self.process_valid_input(form.clean()))
+
+    def get_form(self, params):
+        ''' returns the form whereby the validation of input occurs'''
+        return self.formclass(data=yaml_load(params))  # pylint: disable=not-callable
+
+    def process_valid_input(self, params):
+        ''' core (abstract) method to be implemented in subclasses'''
+        raise NotImplementedError()
+
+    @staticmethod
+    def format_validation_error(errors):
+        '''format the validation error into a google json api format
+        https://google.github.io/styleguide/jsoncstyleguide.xml'''
+        dic = json.loads(errors.as_json())
+        error = {'code': 400, 'message': 'input validation error', 'errors': []}
+        for key, values in dic.items():
+            for value in values:
+                error['errors'].append({'domain': key, 'message': value.get('message', ''),
+                                        'reason': value.get('code', '')})
+        return error
+
+
+class TrellisPlots(EgsimQueryView):
+
+    formclass = TrellisForm
+
+    def process_valid_input(self, params):
+        return compute_trellis(params)
+
+
 def get_trellis_plots(request):
 
     params = json.loads(request.body.decode('utf-8'))  # python 3.5 complains otherwise...
-    form, data = compute(params)
+    data = compute_trellis(params)
 
-    if data is None:
-        return JsonResponse(form.errors.as_json(), safe=False, status=400)
+    if isinstance(data, ErrorDict):
+        return JsonResponse(data.as_json(), safe=False, status=400)
     return JsonResponse(data)
 
 
 def test_err(request):
-    return JsonResponse({'message': 'bla'}, safe=False, status=400)
+    raise ValueError('this is a test error!')
 
 
 def _trellis_response_test():

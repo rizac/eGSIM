@@ -15,7 +15,7 @@ import pytest
 from egsim.utils import EGSIM
 
 from egsim.forms import BaseForm, TrellisForm
-from egsim.core.trellis import compute, default_periods_for_spectra
+from egsim.core.trellis import compute_trellis, default_periods_for_spectra
 from egsim.core import yaml_load as original_yaml_load
 from more_itertools.more import side_effect
 
@@ -32,11 +32,11 @@ with open(os.path.join(DATA_DIR, 'trellis_dist.yaml')) as fpt:
 # @mock.patch('egsim.core import yaml_load', side_effect=yaml_load)
 def test_compute_raises():
     with pytest.raises(YAMLError) as context:  # https://stackoverflow.com/a/3166985
-        compute(os.path.join(DATA_DIR, 'trellis1'))
+        compute_trellis(os.path.join(DATA_DIR, 'trellis1'))
     with pytest.raises(YAMLError) as context:
-        data = compute(os.path.join(DATA_DIR, 'trellis_malformed.yaml'))
+        data = compute_trellis(os.path.join(DATA_DIR, 'trellis_malformed.yaml'))
     with pytest.raises(YAMLError) as context:
-        data = compute(os.path.join(DATA_DIR, 'trellis_filenot_found.yaml'))
+        data = compute_trellis(os.path.join(DATA_DIR, 'trellis_filenot_found.yaml'))
 
 
 @mock.patch('egsim.core.yaml_load')
@@ -44,7 +44,7 @@ def test_compute_raises():
 def test_trellis_dist(mock_yaml_load, trellis_type):
     '''test trellis distance and distance stdev'''
     mock_yaml_load.return_value = dict(yamldict, plot_type=trellis_type)
-    data = compute(os.path.join(DATA_DIR, 'trellis_dist.yaml'))
+    data = compute_trellis(os.path.join(DATA_DIR, 'trellis_dist.yaml'))
     form = data[0]
     assert not form.errors and form.is_valid()
     # check output:
@@ -66,7 +66,7 @@ def test_trellis_dist(mock_yaml_load, trellis_type):
 def test_trellis_mag(mock_yaml_load, trellis_type):
     '''test trellis magnitude and magnitude stdev'''
     mock_yaml_load.return_value = dict(yamldict, plot_type=trellis_type)
-    data = compute(os.path.join(DATA_DIR, 'trellis_dist.yaml'))
+    data = compute_trellis(os.path.join(DATA_DIR, 'trellis_dist.yaml'))
     form = data[0]
     assert not form.errors and form.is_valid()
     # check output:
@@ -88,7 +88,7 @@ def test_trellis_mag(mock_yaml_load, trellis_type):
 def test_trellis_spec(mock_yaml_load, trellis_type):
     '''test trellis magnitude-distance spectra and magnitude-distance stdev'''
     mock_yaml_load.return_value = dict(yamldict, plot_type=trellis_type)
-    data = compute(os.path.join(DATA_DIR, 'trellis_dist.yaml'))
+    data = compute_trellis(os.path.join(DATA_DIR, 'trellis_dist.yaml'))
     form = data[0]
     assert not form.errors and form.is_valid()
     # check output:
@@ -116,6 +116,6 @@ def test_error():
               "aspect": "1.5", "rake": "0.0", "ztor": "0.0", "strike": "0.0", "msr": "WC1994",
               "initial_point": "0 0", "hypocentre_location": "0.5 0.5", "vs30": "760.0",
               "vs30_measured": True, "line_azimuth": "0.0", "plot_type": "ds"}
-    form, result = compute(params)
+    form, result = compute_trellis(params)
     figures = result['figures']
     assert figures[1]['yvalues']['AkkarBommer2010SWISS01'] == []

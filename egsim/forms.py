@@ -328,12 +328,12 @@ class BaseForm(Form):
     _gsims = EGSIM
 
     # fields (not used for rendering, just for validation): required is True by default
-    gsim = MultipleChoiceField(label='Ground Shaking Intensity Model/s (gsim):',
+    gsim = MultipleChoiceField(label='Ground Shaking Intensity Model(s) (gsim)',
                                choices=zip(_gsims.aval_gsims(), _gsims.aval_gsims()),
                                # make field.is_hidden = True in the templates:
                                widget=HiddenInput)
 
-    imt = IMTField(label='Intensity Measure Type/s (imt)',
+    imt = IMTField(label='Intensity Measure Type(s) (imt)',
                    required=True,  # required jandled in clean()
                    # make field.is_hidden = True in the templates:
                    widget=HiddenInput)
@@ -346,6 +346,7 @@ class BaseForm(Form):
     def __init__(self, *args, **kwargs):
         '''Overrides init to set custom attributes on field widgets and to set the initial
         value for fields of this class with no match in the keys of self.data'''
+        kwargs.setdefault('label_suffix', '')  # remove colon in labels by default in templates
         # How do we implement custom attributes for js libraries (e.,g. bootstrap, angular...)?
         # All solutions (widget_tweaks, django-angular) are, as always, for big projects and they
         # are huge overheads for the goal we want to achieve.
@@ -415,12 +416,21 @@ class BaseForm(Form):
                 def increase_indent(self, flow=False, indentless=False):
                     return super(MyDumper, self).increase_indent(flow, False)
 
+            # regexp to replace html entities with their content, i.e.:
+            # <a href='#'>bla</a> -> bla
+            # V<sub>s30</sub> -> Vs30
+            # ... and so on ...
+            html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)<\\/\\1>')
+
             # inject comments in yaml by using the field label and the label help:
             stringio = StringIO() if stream is None else stream
             for name, value in obj.items():
                 field = self.fields[name]
                 label = field.label + ('' if not field.help_text else ' (%s)' % field.help_text)
                 if label:
+                    # replace html characters with their content (or empty str if no content):
+                    label = html_tags_re.sub(r'\2', label)
+                    # replace newlines for safety:
                     label = '# %s\n' % (label.replace('\n', ' ').replace('\r', ' '))
                     stringio.write(label)
                 yaml.dump({name: value}, stream=stringio, Dumper=MyDumper,
@@ -554,9 +564,9 @@ class TrellisForm(BaseForm):
                                       min_arr_len=2, max_arr_len=2,
                                       min_value=[0, 0], max_value=[1, 1])
     # END OF RUPTURE PARAMS
-    vs30 = NArrayField(label=mark_safe('VS30 (m/s)'), min_value=0., min_arr_len=1,
+    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., min_arr_len=1,
                        initial=760.0, help_text=__scalar_or_vector_help__)
-    vs30_measured = BooleanField(label=mark_safe('Is VS30 measured'),
+    vs30_measured = BooleanField(label=mark_safe('whether V<sub>S30</sub> is measured'),
                                  help_text='Otherwise is inferred', initial=True, required=False)
     line_azimuth = FloatField(label='Azimuth of Comparison Line',
                               min_value=0., max_value=360., initial=0.)

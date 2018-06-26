@@ -9,6 +9,7 @@
 	<!--  ubuntu mono (replace with other font, monospace should be better) -->
 	<!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu Mono"> -->
 	<link href="https://fonts.googleapis.com/css?family=Encode+Sans+Condensed" rel="stylesheet">
+	<!-- <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet"> -->
 
 	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
@@ -145,6 +146,8 @@
 
 <body class='height100 flex-direction-col'>
 {% block body %}{% endblock %}
+<!-- https://docs.djangoproject.com/en/2.0/ref/csrf/#acquiring-the-token-if-csrf-use-sessions-is-true -->
+{% csrf_token %}
 </body>
 {% block after-body %}{% endblock %}
 </html>

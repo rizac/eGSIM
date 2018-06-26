@@ -16,8 +16,10 @@ Including another URLconf
 from django.conf.urls import url  # added by default by django
 from django.contrib import admin  # added by default by django
 # from django.views.generic.base import RedirectView
-
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from . import views
+
 
 # for infor with trailing slashes:
 # https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
@@ -31,9 +33,12 @@ urlpatterns = [
     url(r'^service/residuals/?$', views.residuals, name='residuals'),
     url(r'^service/loglikelihood/?$', views.loglikelihood, name='loglikelihood'),
     url(r'get_init_params', views.get_init_params),
-    url(r'get_trellis_plots', views.get_trellis_plots),
+    url(r'get_trellis_plots', views.TrellisPlots.as_view()),
     url(r'test_err', views.test_err),
 
-    # test views, DELETE:
+    # REST (or alike) views:
+    url(r'^query/trellis/?$', csrf_exempt(views.TrellisPlots.as_view()), name='trellis_api'),
+
+    # test views, TEMPORARY:
     url(r'^test_trellis/?$', views.test_trellis, name='main'),
 ]

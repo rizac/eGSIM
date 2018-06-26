@@ -1,18 +1,16 @@
-.trellis-container {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: 1fr auto;
-  grid-gap: 5px;
+#rupture{
+	display:grid;
+    /* grid-template-rows: repeat(auto-fill, 1fr) ; */
+    align-items: center;
+    grid-template-columns: auto 1fr;
 }
 
-.trellis-right-panel{
-	position: absolute;
-    right: 0;
-    bottom: 0;
-    z-index: 10;
+#rupture > .field-help{
+	grid-column-start: span 2;
 }
 
-.trellis-container .trellis-plots-container{
+
+#trellis-plots-container{
 	position: absolute;
 	margin:0;
 	padding:0;

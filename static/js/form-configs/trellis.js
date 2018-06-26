@@ -9,7 +9,8 @@ var TRELLIS = new Vue({
                             // that the parameter has to be shown along the 'X' or 'y' axis of the grid
         gridxparam: 'xlabel',  // a key in params denoting the xgrid labels
         gridyparam: 'ylabel',  // a key in params denoting the ygrid labels
-        plotlyplots: [],
+        plotlyplots: [],  // subset of plots, with only the currently displayed plots
+        plotlydata: [],  // the `data` argument passed to Plotly.newPlot(data, ...) holding the traces
         plotDivId: 'trellis-plots-container',
         plotFontSize: 12,
         plotTraceColors: {},
@@ -71,6 +72,7 @@ var TRELLIS = new Vue({
                     // to test that plots are correctly placed, uncomment this:
                     // var name = `${name}_${plotParams.magnitude}_${plotParams.distance}_${plotParams.vs30}`;
                     return {x: x, y: y, mode: (data.xvalues.length == 1 ? 'scatter' : 'lines'),
+                        visible: true,
                         legendgroup: name, name: name, line: {color: this.getTraceColor(name)}};
                 }, this);
                 plots.push({'data': plotData, 'params': plotParams});
@@ -125,8 +127,13 @@ var TRELLIS = new Vue({
             this.$set(this, 'plotlyplots', plots);
             this.$nextTick(this.displayPlots);
         },
-        displayPlots: function(){
-            Plotly.purge(this.plotDivId);
+        displayPlots: function(divId){  //divId optional, it defaults to this.plotDivId if missing
+            var layout = this.getLayout();  // instantiate first cause we will change its showlegend value below:
+            if(divId === undefined){
+                divId = this.plotDivId;
+                layout.showlegend = false;
+            }
+            Plotly.purge(divId);  // do we need this?
             // diplsays subplot in the main plot. This method does some calculation that plotly
             // does not, such as font-size dependent margins, and moreover fixes a bug whereby the xaxis.title
             // annotation texts are misplaced (thus let's place them manually here)
@@ -137,11 +144,9 @@ var TRELLIS = new Vue({
             var gridxindices = new Map(gridxvalues.map((elm, idx) => [elm, idx]));
             var gridyindices = new Map(gridyvalues.map((elm, idx) => [elm, idx]));
             var data = [];
-            var getAxis = this.getAxis;
             var xdomains = new Array(gridxvalues.length);
             var ydomains = new Array(gridyvalues.length);
             var annotation = this.getAnnotation;
-            var layout = this.getLayout();
             var legendgroups = new Set();
             for (var plot of this.plotlyplots){
                 var gridxvalue = plot.params[gridxparam];
@@ -150,7 +155,7 @@ var TRELLIS = new Vue({
                 var gridyvalue = plot.params[gridyparam];
                 var gridyindex = gridyindices.get(gridyvalue);  //plot vertical index on the grid
                 if(gridyindex === undefined){continue;}
-                var [axisIndex, xaxis, yaxis, xdomain, ydomain] = getAxis(gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
+                var [axisIndex, xaxis, yaxis, xdomain, ydomain] = this.getAxis(divId, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
                 xdomains[gridxindex] = xaxis.domain;
                 ydomains[gridyindex] = yaxis.domain;
                 yaxis.type = 'log';
@@ -199,7 +204,7 @@ var TRELLIS = new Vue({
                       x: (domain[1] + domain[0])/2,
                       y: 1,
                       xanchor: 'center', /* DO NOT CHANGE THIS */
-                      yanchor: 'middle',
+                      yanchor: 'top',
                       text: `${gridxparam}: ${gridvalue}`
                 }));
               }
@@ -213,51 +218,69 @@ var TRELLIS = new Vue({
                   layout.annotations.push(annotation({
                       x: 1,
                       y: (domain[1] + domain[0])/2,
-                      xanchor: 'center',
+                      xanchor: 'right',
                       yanchor: 'middle', /* DO NOT CHANGE THIS */
                       text: `${gridyparam}: ${gridvalue}`,
                       textangle: '-270'
                 }));
               }
           }
-          Plotly.newPlot(this.plotDivId, data, layout);
+          this.$set(this, 'plotlydata', data);
+          Plotly.newPlot(divId, data, layout);
         },
         getLayout: function(){
             return {autosize: true, font: {family: "Encode Sans Condensed, sans-serif", size: this.plotFontSize},
                 showlegend: true,
                 margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []};
         },
-        getAxis: function(row, col, rows, cols){
+        getAxis: function(divId, row, col, rows, cols){
             // computes the sub-plot area according to the row and col index
             // returns the array [axisIndex, xaxis, yaxis, xdomain, ydomain]
             // where xaxis and yaxis are the Objects to be passed to plotly's layout, xdomain = [x1, x2] and
             // ydomain = [y1, y2] are the two-element arrays denoting the enclosing area of the sub-plot
-            var [uwidth, uheight] = this.getEmUnits();
-            var b = 3 * uheight;
-            var t = 1 * uheight;
-            var l = 8 * uwidth;
-            var r = 1 * uwidth;
+            var [uwidth, uheight] = this.getEmUnits(divId, this.plotFontSize);
             var [gridxparam, gridyparam] = this.getDisplayGridParams();
             var tt = gridxparam ? 1.5 * uheight : 0;
             var rr = gridyparam ? 3 * uwidth : 0;
             // the legend, if present, is not included in the plot area, so we can safely ignore it. Comment this line:
             // rr += 0. * uwidth * Math.max(...Object.keys(this.plotTraceColors).map(elm => elm.length)) ;
             var axisIndex = 1 + row * cols + col;
-            var colwidth = (1-rr) / cols;
-            var rowheight = (1-tt) / rows;
+            // assure the width is at least a font unit assuming 10px as minimum):
+            var [minuwidth, minuheight] = this.getEmUnits(divId, 10);
+            // calculate plot width and height:
+            var colwidth = Math.max(minuwidth, (1-rr) / cols);
+            var rowheight = Math.max(minuheight, (1-tt) / rows);
+            // determine the xdomain [x0, x1] defining the enclosing plot frame width (including ylabel):
             var xdomain = [col*colwidth, (1+col)*colwidth];
-            var ydomain = [(rows-1-row)*rowheight, (rows-row)*rowheight];
-            var xaxis = {mirror: true, linewidth: 1, domain: [xdomain[0]+l, xdomain[1]-r], anchor: `y${axisIndex}`};
-            var yaxis = {mirror: true, linewidth: 1, domain: [ydomain[0]+b, ydomain[1]-t], anchor: `x${axisIndex}`};
+            // determine the ydomain [y0, y1] defining the enclosing plot frame height (including xlabel):
+            var ydomain = [(rows-row-1)*rowheight, (rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
+            // define now the plotly x and y domains, which do NOT include x and y labels. Define paddings:
+            var b = 3 * uheight;
+            var t = 1 * uheight;
+            var l = 4.5 * uwidth;
+            var r = 1 * uwidth;
+            // now define domains:
+            var xaxisdomain = [xdomain[0]+l, xdomain[1]-r];
+            var yaxisdomain = [ydomain[0]+b, ydomain[1]-t];
+            // check that the domains are greater than a font unit:
+            if (xaxisdomain[1] - xaxisdomain[0] < minuwidth){
+                xaxisdomain = xdomain;
+            }
+            // check that the domains are greater than a font unit:
+            if (yaxisdomain[1] - yaxisdomain[0] < minuheight){
+                yaxisdomain = ydomain;
+            }
+            var xaxis = {mirror: true, linewidth: 1, domain: xaxisdomain, anchor: `y${axisIndex}`};
+            var yaxis = {mirror: true, linewidth: 1, domain: yaxisdomain, anchor: `x${axisIndex}`};
             console.log('xdomain:' + xdomain);
             console.log('ydomain:' + ydomain);
             return [axisIndex, xaxis, yaxis, xdomain, ydomain];
         },
-        getEmUnits: function(){
+        getEmUnits: function(divId, fontsize){
             // returns [uwidth, uheight], the units of a 1em in percentage of the plot div, which must be shown on the browser
             // Both returned units should be < 1 in principle
             var fontsize = this.plotFontSize;
-            var [width, height] = this.getPlotDivSize();
+            var [width, height] = this.getPlotDivSize(divId);
             return [fontsize/width, fontsize/height];
         },
         getAnnotation(props){
@@ -268,8 +291,8 @@ var TRELLIS = new Vue({
                 font: {size: this.plotFontSize}
           }, props || {});
         },
-        getPlotDivSize: function(){
-            var elm = document.getElementById(this.plotDivId);
+        getPlotDivSize: function(divId){
+            var elm = document.getElementById(divId);
             return [elm.offsetWidth, elm.offsetHeight];
         },
         styleForAxis: function(axis='x'){
@@ -288,6 +311,33 @@ var TRELLIS = new Vue({
                 this.plotColors.index = (this.plotColors.index+1) % this.plotColors.defColors.length;
             }
             return color;
+        },
+        toggleTraceVisibility: function(traceName){
+            var indices = [];
+            var visible = undefined;
+            for(var i=0; i< this.plotlydata.length; i++){
+                var data = this.plotlydata[i];
+                if(data.legendgroup != traceName){
+                    continue;
+                }
+                indices.push(i);
+                if(visible === undefined){
+                    visible = data.visible;  // only first time
+                }
+            }
+            if(indices.length){
+                Plotly.restyle(this.plotDivId, {visible: !visible}, indices);
+            }
+        },
+        isTraceVisible: function(traceName){  // could be optimized avoiding for loop...
+            for(var i=0; i< this.plotlydata; i++){
+                var data = this.plotlydata[i];
+                if(data.legendgroup != traceName){
+                    continue;
+                }
+                return data.visible;
+            }
+            return true;
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load

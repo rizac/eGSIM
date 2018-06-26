@@ -2,36 +2,24 @@ var EGSIM = new Vue({
     el: '#egsim-input',
     data: {
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
+        // csrf token stored in an <input> in the base.html. Get it here and use it for each post request:
+        csrftoken: Object.freeze(document.querySelector("[name=csrfmiddlewaretoken]").value),
         avalGsims: new Map(),  // map of available gsims name -> array of gsim attributes
         avalImts: new Set(),  // set of available imts names
         selectedGsims: [],
         selectedImtsChanged: false, //for computed property (see below)
         selectedImtsSet: new Set(),
         saPeriods: '',
-        typeDropdownVisible: false,
-        gsimsDropdownVisible: false,
         filterText: '',
         filterType: 'GSIM name',
         filterTypes: ['GSIM name', 'IMT', 'Tectonic Region Type'],
         filterFunc: elm => true,
         loading: false,
-        errors: {},  // dict of keys (fields) mapped to their message
+        errormsg: '',
+        fielderrors: {},
         form: undefined //will be set in mounted()
     },
     methods: {
-        showTypeDropdown: function (event) {
-            this.typeDropdownVisible = true;
-            this.gsimsDropdownVisible = false;
-        },
-        showGsimsDropdown: function (event) {
-            this.typeDropdownVisible = false;
-            this.gsimsDropdownVisible = true;
-        },
-        setFilterType: function(type){
-            this.filterType = type;
-            this.typeDropdownVisible = false;
-            this.gsimsDropdownVisible = true;
-        },
         isImtSelectable(imt) {
             if (!this.selectedGsims.length){
                 return false;
@@ -85,9 +73,17 @@ var EGSIM = new Vue({
             }
             this.$set(this, 'filterFunc', filterFunc);
         },
-        setError(errors){
+        setError(error){
             this.$set(this, 'loading', false);
-            this.$set(this, 'errors', errors);
+            this.$set(this, 'errormsg', error.message || 'Unknown error');
+            var errors = error.errors || [];
+            var fielderrors = {};
+            for (var err of errors){
+                if (err.domain){
+                    fielderrors[err.domain] = err.message || 'invalid value';
+                }
+            }
+            this.$set(this, 'fielderrors', fielderrors);
         },
         formIsValid(){
             return isValid(this.form);
@@ -97,37 +93,51 @@ var EGSIM = new Vue({
                 onError = function(arg){};
             }
             // build form data inot a dict:
-            var [data, errors] = parseForm(this.form);
-            if(errors){
-                this.setError(errors);
-                onError(errors);
+            var [data, error] = parseForm(this.form);
+            if(error){
+                this.setError(error);
+                onError(error);
             }else{
                 this.$set(this, 'loading', true);
-                this.$set(this, 'errors', {});
+                this.$set(this, 'errormsg', '');
+                this.$set(this, 'fielderrors', {});
                 var me = this;
-                axios.post(url, data).
+                axios.post(url, data, {headers: {"X-CSRFToken": this.csrftoken}}).
                     then(function (response) {
                         me.$set(me, 'loading', false);
                         if (onSuccess){
                             try{
                                 onSuccess(response);
                             }catch(err){
-                                console.log(`DEV. ERROR in "onSuccess" function: ${err.message}`);
+                                me.setError(err);
                             }
                         }
                     }).catch(function (error) {
                         me.$set(me, 'loading', false);
-                        me.setError.apply(me, [error]);
-                        onError(errors);
+                        me.setError.apply(me, [error.response.error]);
+                        onError(error);
                     });
             }
-        }
+        },
+//        fielderror: function(fieldname){
+//            var errors = this.error && this.error.errors ? this.error.errors : undefined;
+//            if(!errors){
+//                return false;
+//            }
+//            for (var err of errors){
+//                // no need of hasOwnProperty anymore: https://stackoverflow.com/a/45014721
+//                if(err.domain && err.domain == name){
+//                    return err.message || 'unknown error'; // assure we have a non-falsy value
+//                }
+//            }
+//            return false;
+//        }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         // assign the form element to this class:
         this.$set(this,'form', document.forms["egsim-form"]);
         // fetch gsim and imts data:
-        axios.post('/get_init_params', {}).then((response) => {
+        axios.post('/get_init_params', {}, {headers: {"X-CSRFToken": this.csrftoken}}).then((response) => {
             //success: if using this.$http (vue ruouting):
             // [avalGsims, avalImts] = getInitData(response.body.init_data);
             // if using axios:
@@ -135,34 +145,29 @@ var EGSIM = new Vue({
             this.$set(this, 'avalGsims', avalGsims);
             this.$set(this, 'avalImts', avalImts);
         }).catch((error) => {
-            this.errors = error
-            //error
+            this.setError(error.response.error);
         })
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
         filterText: function(value, oldValue) {
             if (oldValue !== value){
-                this.gsimsDropdownVisible = true;
-                this.typeDropdownVisible = false;
                 this.updateFilter();
             }
         },
         filterType: function(value, oldValue) {
             if (oldValue !== value){
-                this.gsimsDropdownVisible = true;
-                this.typeDropdownVisible = false;
                 this.updateFilter();
             }
         }
     },
     computed: {
-        hasError(){
-            for(var err in this.errors){
-                // no need of hasOwnProperty anymore: https://stackoverflow.com/a/45014721
-                return true;
-            }
-            return false;
-        },
+//        hasError(){
+//            for(var err in this.errors){
+//                // no need of hasOwnProperty anymore: https://stackoverflow.com/a/45014721
+//                return true;
+//            }
+//            return false;
+//        },
         // https://stackoverflow.com/a/47044150
         gsims() {
             return Array.from(this.avalGsims.keys());
@@ -243,10 +248,11 @@ function isValid(form){
 
 function parseForm(form){
     /**
-    * Parses a given form and returns an array of two objects: [data, errors]
-    * where `data` maps form element names to their *parsed* values, and `errors` maps
+    * Parses a given form and returns an array of two objects: [data, error]
+    * where `data` maps form element names to their *parsed* values, and `error` is a google
+    * json error object (https://stackoverflow.com/a/23708903) which maps
     * invalid form element names to their error messages (string). If the form is valid, then
-    * `errors` is not an object but falsy (false/undefined/null).
+    * `error` is anot an object but falsy (false/undefined/null).
     * Form elements are those returned by the `form.elements` method:
     * <input> elements of type 'button', 'submit' and 'reset' will be ignored, as well as elements
     * without a valid (truthy) name, or elements with no value set and no required attribute.
@@ -261,7 +267,7 @@ function parseForm(form){
     *   https://www.w3schools.com/Html/html_form_input_types.asp
     */
     var data = {};
-    var errors = false;
+    var error = false;
     var toNumber = parseFloat;
     var toInt = parseInt;
     var toDate = function(value){return new Date(value);}
@@ -273,8 +279,8 @@ function parseForm(form){
         var required = elm.required;
         // run browser form field validation:
         if(!elm.checkValidity()){
-            errors = errors || {};
-            errors[name] = elm.validationMessage;
+            error = error || {code: 400, message: 'Validation error', errors: []};
+            error.errors.push({domain: name, message: elm.validationMessage});
             continue;
         }
         // specific cases, parsing and ignoring (if no required):
@@ -328,5 +334,5 @@ function parseForm(form){
         } */
         data[name] = value;
     }
-    return [data, errors];
+    return [data, error];
 }

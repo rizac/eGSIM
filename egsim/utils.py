@@ -3,22 +3,12 @@ Created on 29 Jan 2018
 
 @author: riccardo
 '''
+from itertools import chain
 import warnings
 from collections import OrderedDict
 
 from openquake.hazardlib.gsim import get_available_gsims
-from openquake.hazardlib.imt import __all__ as AVAL_IMTS  # FIXME: isn't there a nicer way?
-from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrellis, MagnitudeIMTTrellis,\
-    MagnitudeSigmaIMTTrellis, MagnitudeDistanceSpectraTrellis, MagnitudeDistanceSpectraSigmaTrellis
-from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
-from itertools import chain
-
-
-def get_menus():
-    '''returns an OrderedDict of (menu_key, menuname) tuples. Each tuple represents a menu
-    in the home web page'''
-    return OrderedDict([('home', 'Home'), ('trellis', 'Trellis plots'),
-                        ('residuals', 'Residuals'), ('loglikelihood', 'Log-likelihood analysis')])
+from openquake.hazardlib.imt import __all__ as AVAL_IMTS
 
 
 def vectorize(value):

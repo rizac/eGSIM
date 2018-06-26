@@ -1,22 +1,26 @@
-/* progressbar/waitbar: usage:
-
-<div class="loader"></div>
-
-Or, with text provided and custom width:
-
-<div style='width:45em;text-align:center'>
-	Loading, please wait ...
-	<div class="loader"></div>
-</div>
-
-For info see: https://www.pexels.com/blog/css-only-loaders/
-*/
-
-/* set here the height of the progressbar */
-.loader, .loader:before {
-	height: 4px;
+#error{
+	max-width:95vw;
+	text-overflow: ellipsis;
 }
 
+.imt-container{
+	max-height: 8em;
+	overflow: auto;
+}
+
+/* set here the height of the progressbar/waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
+#waitbar{
+	position: absolute;
+    margin: 0;
+    padding: 0;
+    z-index: 100;
+    top: 0;
+    right: 0;
+    left: 0;
+}
+.loader, .loader:before {
+	height: 8px;
+}
 .loader {
 	width: 100%;
 	position: relative;
@@ -29,7 +33,7 @@ For info see: https://www.pexels.com/blog/css-only-loaders/
 	content: "";
 	left: -200px;
 	width: 200px;
-	background-color: #2980b9;
+	background-color: #a2cd7e; /*#2980b9;*/
 	animation: loading 2s linear infinite;
 }
 @keyframes loading {
