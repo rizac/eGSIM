@@ -23,9 +23,9 @@ print(BASE_DIR)
 SECRET_KEY = ')d#k&x(n_t_*3sgpe^e%ftw%2+xb8l3f%i^j77=ga-!9f)n$5m'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = []  # ['localhost', '127.0.0.1', 'egsim.org']
 
 
 # Application definition
