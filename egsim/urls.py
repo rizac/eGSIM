@@ -33,11 +33,11 @@ urlpatterns = [
     url(r'^service/residuals/?$', views.residuals, name='residuals'),
     url(r'^service/loglikelihood/?$', views.loglikelihood, name='loglikelihood'),
     url(r'get_init_params', views.get_init_params),
-    url(r'get_trellis_plots', views.TrellisPlots.as_view()),
+    url(r'get_trellis_plots', views.TrellisPlotsView.as_view()),
     url(r'test_err', views.test_err),
 
     # REST (or alike) views:
-    url(r'^query/trellis/?$', csrf_exempt(views.TrellisPlots.as_view()), name='trellis_api'),
+    url(r'^query/trellis/?$', csrf_exempt(views.TrellisPlotsView.as_view()), name='trellis_api'),
 
     # test views, TEMPORARY:
     url(r'^trellis_test/?$', views.test_trellis, name='main'),

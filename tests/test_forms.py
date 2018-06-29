@@ -10,8 +10,6 @@ from django.test import TestCase
 
 from egsim.forms import BaseForm, TrellisForm
 from openquake.hazardlib import imt
-import yaml
-from egsim.core import validate
 
 
 GSIM, IMT = 'gsim', 'imt'
@@ -132,22 +130,25 @@ def test_trellisform_invalid():
     4.0,
     5.0
   ]""")])
-def test_trellisform_serialize(data, expected_yaml, expected_json):
+def test_trellisform_load_dump(data, expected_yaml, expected_json):
     '''test that form serialization works for ndarray given as range and arrays (in the
     first case preserves the string with colons, and that a Form taking the serialized
     yaml has the same clean() method as the original form's clean method'''
     form = TrellisForm(data)
-    yaml_ = form.serialize(syntax='yaml')
-    json_ = form.serialize(syntax='json')
+    yaml_ = form.dump(syntax='yaml')
+    json_ = form.dump(syntax='json')
 
     # pass the yaml and json to validate and see that we obtain the same dict(s):
-    form2, form2cleaneddata = validate(TrellisForm)(lambda dic: dic)(yaml_)
-    assert form.clean() == form2cleaneddata
-    form2, form2cleaneddata = validate(TrellisForm)(lambda dic: dic)(json_)
-    assert form.clean() == form2cleaneddata
+    form_from_yaml = TrellisForm.load(yaml_)
+    assert form_from_yaml.is_valid()
+    assert form.clean() == form_from_yaml.clean()
+
+    form_from_json = TrellisForm.load(json_)
+    assert form_from_json.is_valid()
+    assert form.clean() == form_from_json.clean()
 
     with pytest.raises(ValueError):
-        TrellisForm(data).serialize(syntax='whatever')
+        TrellisForm(data).dump(syntax='whatever')
 
     assert json_ == """{
   "aspect": 1.2,
@@ -190,12 +191,12 @@ def test_trellisform_serialize(data, expected_yaml, expected_json):
   "ztor": 0.0
 }""" % expected_json
 
-    assert yaml_ == """# Ground Shaking Intensity Model/s (gsim):
+    assert yaml_ == """# Ground Shaking Intensity Model(s) (gsim)
 gsim:
   - BindiEtAl2011
   - BindiEtAl2014Rjb
 
-# Intensity Measure Type/s (imt)
+# Intensity Measure Type(s) (imt)
 imt:
   - SA(0.1)
   - SA(0.2)
@@ -250,7 +251,7 @@ hypocentre_location:
 # VS30 (m/s) (Scalar, vector or range)
 vs30: 760.0
 
-# Is VS30 measured (Otherwise is inferred)
+# Is VS30 measured? (Otherwise is inferred)
 vs30_measured: true
 
 # Azimuth of Comparison Line

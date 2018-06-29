@@ -7,37 +7,24 @@ import os
 import json
 from collections import OrderedDict
 
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, redirect
-from django.views.decorators.csrf import csrf_exempt
-# from django.urls import reverse
-# from django.http.response import HttpResponseRedirect
-# from django.conf import settings
-# from django.views.decorators.http import require_http_methods
-# from rest_framework.decorators import api_view
-# from rest_framework.response import Response
+from yaml.error import YAMLError
 
-# from openquake.hazardlib.gsim import get_available_gsims
+from django.http import JsonResponse
+from django.shortcuts import render
+# from django.views.decorators.csrf import csrf_exempt
+from django.views.generic.base import View
 
-# import smtk.trellis.trellis_plots as trpl
-# import smtk.trellis.configure as rcfg
-
+from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms import TrellisForm, BaseForm
 from egsim.core.trellis import compute_trellis
-from django.forms.utils import ErrorDict
-from django.views.generic.base import View
-from egsim.core import yaml_load
 
 
-# FIXME: very hacky to parse the form for defaults, is it there a better choice?
 _COMMON_PARAMS = {
     'project_name': 'eGSIM',
     'debug': True,
     'menus': OrderedDict([('home', 'Home'), ('trellis', 'Trellis plots'),
                           ('residuals', 'Residuals'),
                           ('loglikelihood', 'Log-likelihood analysis')]),
-#     'gsimFormField': {'name': 'gsim', 'label': 'Selected Ground Shaking Intensity Model/s (GSIM):'},
-#     'imtFormField': {'name': 'imt', 'label': 'Selected Intensity Measure Type/s (IMT):'}
     }
 
 
@@ -51,7 +38,6 @@ def main(request, menu):
     return render(request, 'index.html', dict(_COMMON_PARAMS, menu=menu))
 
 
-# @require_http_methods(["GET", "POST"])
 def home(request):
     '''view for the home page (iframe in browser)'''
     return render(request, 'home.html', _COMMON_PARAMS)
@@ -60,6 +46,7 @@ def home(request):
 def trellis(request):
     '''view for the trellis page (iframe in browser)'''
     return render(request, 'trellis.html', dict(_COMMON_PARAMS, form=TrellisForm()))
+
 
 def test_trellis(request):
     '''view for the trellis (test) page (iframe in browser)'''
@@ -95,78 +82,76 @@ class EgsimQueryView(View):
     the a normal query in the standard API'''
 
     formclass = None
+    EXCEPTION_CODE = 400
+    VALIDATION_ERR_MSG = 'input validation error'
 
     def get(self, request):
         '''processes a get request'''
-        return self.process(dict(request.GET))
+        return self.response(dict(request.GET))
 
     def post(self, request):
         '''processes a post request'''
-        return self.process(json.loads(request.body.decode('utf-8')))
+        return self.response(request.body.decode('utf-8'))
 
-    def process(self, params):
-        '''processes input params, calls self.process_valid_input if the input is valid
-        otherwise returns an appropriate json response with validation error messages'''
-        form = self.get_form(params)
+    @classmethod
+    def response(cls, obj):
+        '''processes an input object `obj`, returning a response object.
+        Calls `self.process` if the input is valid according to the Form's class `formclass`
+        otherwise returns an appropriate json response with validation-error messages,
+        or a json response with a gene'''
+        try:
+            form = cls.formclass.load(obj)
+        except YAMLError as yerr:
+            return ExceptionHandlerMiddleware.jsonerr_response(yerr, code=cls.EXCEPTION_CODE)
 
         if not form.is_valid():
-            jsonerror = self.format_validation_error(form.errors)
-            return JsonResponse({'error': jsonerror}, safe=False, status=jsonerror['code'])
-        return JsonResponse({'data': self.process_valid_input(form.clean())})
+            errors = cls.format_validation_errors(form.errors)
+            return ExceptionHandlerMiddleware.jsonerr_response(cls.VALIDATION_ERR_MSG,
+                                                               code=cls.EXCEPTION_CODE,
+                                                               errors=errors)
 
-    def get_form(self, params):
-        ''' returns the form whereby the validation of input occurs'''
-        return self.formclass(data=yaml_load(params))  # pylint: disable=not-callable
+        return JsonResponse({'data': cls.process(form.clean())})
 
-    def process_valid_input(self, params):
-        ''' core (abstract) method to be implemented in subclasses'''
+    @classmethod
+    def process(cls, params):
+        ''' core (abstract) method to be implemented in subclasses
+
+        :param params: a dict of key-value paris which is assumed to be **well-formatted**:
+            no check will be done on the dict: if the latter has to be validated (e.g., via
+            a Django Form), **the validation should be run before this method and `params`
+            should be the validated dict (e.g., as returned from `form.clean()`)**
+
+        :return: a json-serializable object to be sent as successful response
+        '''
         raise NotImplementedError()
 
-    @staticmethod
-    def format_validation_error(errors):
-        '''format the validation error into a google json api format
-        https://google.github.io/styleguide/jsoncstyleguide.xml'''
+    @classmethod
+    def format_validation_errors(cls, errors):
+        '''format the validation error returning the list of errors. Each item is a dict with
+        keys:
+             ```
+             {'domain': <str>, 'message': <str>, 'code': <str>}
+            ```
+            :param errors: a django ErrorDict returned by the `Form.errors` property
+        '''
         dic = json.loads(errors.as_json())
-        error = {'code': 400, 'message': 'input validation error', 'errors': []}
+        errors = []
         for key, values in dic.items():
             for value in values:
-                error['errors'].append({'domain': key, 'message': value.get('message', ''),
-                                        'reason': value.get('code', '')})
-        return error
+                errors.append({'domain': key, 'message': value.get('message', ''),
+                               'reason': value.get('code', '')})
+        return errors
 
 
-class TrellisPlots(EgsimQueryView):
+class TrellisPlotsView(EgsimQueryView):
+    '''EgsimQueryView subclass for generating Trelli plots responses'''
 
     formclass = TrellisForm
 
-    def process_valid_input(self, params):
+    @classmethod
+    def process(cls, params):
         return compute_trellis(params)
-
-
-def get_trellis_plots(request):
-
-    params = json.loads(request.body.decode('utf-8'))  # python 3.5 complains otherwise...
-    data = compute_trellis(params)
-
-    if isinstance(data, ErrorDict):
-        return JsonResponse(data.as_json(), safe=False, status=400)
-    return JsonResponse(data)
 
 
 def test_err(request):
     raise ValueError('this is a test error!')
-
-
-def _trellis_response_test():
-    dir_ = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                        '..', 'static', 'data', 'test', 'trellis'))
-    data = {'names': ['MagnitudeIMTs', 'DistanceIMTs', 'MagnitudeDistanceSpectra'],
-            'data': {'sigma': {}, 'mean': {}}}
-    for file in os.listdir(dir_):
-        absfile = os.path.join(dir_, file)
-        if os.path.isfile(absfile):
-            name = data['names'][2 if 'spectra' in file else 1 if 'distance' in file else 0]
-            data_ = data['data']['sigma'] if 'sigma' in file else data['data']['mean']
-            with open(absfile) as opn:
-                data_[name] = json.load(opn)
-    return data

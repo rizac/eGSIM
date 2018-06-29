@@ -10,7 +10,9 @@ import re
 import json
 from itertools import chain, repeat
 from collections import OrderedDict
+from io import StringIO
 
+import yaml
 import numpy as np
 
 from django.core.exceptions import ValidationError
@@ -20,7 +22,7 @@ from django.utils.safestring import mark_safe
 from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput,\
     HiddenInput
 from django.forms.fields import BooleanField, CharField, MultipleChoiceField, FloatField, \
-    ChoiceField, TypedChoiceField, MultiValueField
+    ChoiceField
 # from django.core import validators
 
 from openquake.hazardlib import imt
@@ -31,10 +33,8 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrell
     MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, MagnitudeDistanceSpectraTrellis, \
     MagnitudeDistanceSpectraSigmaTrellis
 
-from egsim.utils import vectorize, EGSIM, isscalar, unique
-from _io import StringIO
-import yaml
-
+from egsim.utils import vectorize, EGSIM, isscalar
+from egsim.core import yaml_load
 
 
 class NArrayField(CharField):
@@ -80,10 +80,10 @@ class NArrayField(CharField):
         it calls self.parsenarray(value, self.na_minlen, self.na_maxlen, self.min_value,
                                     self.max_value)
         This method allows to return a json or yaml compatible type which is basically
-        the same as `self.clean()`. But it's safe when the latter is overridden in order to
-        return more complex and non-serializable objects.
-        Moreover, note that if value (or any of its values) contains the colon, ':',
-        then value is returned as it is
+        the same as `self.clean()`, unless the latter is overridden in order to
+        return more complex and non-dumpable objects.
+        Moreover, note that by default if `value` or any of its elements (if `value`
+        is iterable) contain the colon, ':', then value is returned as it is
 
         :param parsecolon: when False (the default) if `value` is a string or an iterable of
         strings, and any string contains the colon ':', then value is not processed and returned
@@ -109,12 +109,6 @@ class NArrayField(CharField):
     def clean(self, value):
         """Return a number or a list of numbers depending on `value`"""
         return self.serialize(value, parsecolon=True)
-#         value = super(NArrayField, self).clean(value)
-#         try:
-#             return self.parsenarray(value, self.na_minlen, self.na_maxlen, self.min_value,
-#                                     self.max_value)
-#         except (ValueError, TypeError) as exc:
-#             raise ValidationError(str(exc))
 
     @classmethod
     def parsenarray(cls, obj, minlen=None, maxlen=None,  # pylint: disable=too-many-arguments
@@ -375,28 +369,29 @@ class BaseForm(Form):
 
         self.customize_widget_attrs()
 
-    def to_dict(self):
-        '''Converts this form to python dict. Each value is the `to_python` method of the
-        corresponding django Field, or the serialize method of the NArrayFields. the latter
-        converts the input to numeric array except the case when the input is given
-        as range '<start>:<stop>:<end>': in this case, the string is returned as it is.
+    def customize_widget_attrs(self):
+        '''customizes the widget attributes (currently sets a bootstrap class on almost all
+        of them'''
+        atts = {'class': 'form-control'}  # for bootstrap
+        for name, field in self.fields.items():  # @UnusedVariable
+            # add class only for specific html elements, some other might have weird layout
+            # if class 'form-control' is added on them:
+            if not isinstance(field.widget, (CheckboxInput, CheckboxSelectMultiple, RadioSelect))\
+                    and not field.widget.is_hidden:
+                field.widget.attrs.update(atts)
 
-        raises ValidationError if the form is not valid
-        '''
-        if not self.is_valid():
-            raise ValidationError(self.errors)
+    @classmethod
+    def load(cls, obj):
+        '''Safely loads the YAML-formatted object `obj` into a Form instance'''
+        return cls(data=yaml_load(obj))
 
-        return {name:
-                self.fields[name].serialize(val) if isinstance(self.fields[name], NArrayField)
-                else self.fields[name].to_python(val) for name, val in self.data.items()}
-
-    def serialize(self, stream=None, syntax='yaml'):
-        """Serialize this Form instance into a YAML stream.
+    def dump(self, stream=None, syntax='yaml'):
+        """Serialize this Form instance into a YAML or JSON stream.
            If stream is None, return the produced string instead.
 
            :param stream: A stream like a file-like object (in general any
                object with a write method) or None
-            :param syntax: string, either 'json' or 'yaml'. If not either string, this
+           :param syntax: string, either 'json' or 'yaml'. If not either string, this
                 method raises ValueError
         """
         syntax = syntax.lower()
@@ -443,16 +438,20 @@ class BaseForm(Form):
                 return ret
         return None
 
-    def customize_widget_attrs(self):
-        '''customizes the widget attributes (currently sets a bootstrap class on almost all
-        of them'''
-        atts = {'class': 'form-control'}  # for bootstrap
-        for name, field in self.fields.items():  # @UnusedVariable
-            # add class only for specific html elements, some other might have weird layout
-            # if class 'form-control' is added on them:
-            if not isinstance(field.widget, (CheckboxInput, CheckboxSelectMultiple, RadioSelect))\
-                    and not field.widget.is_hidden:
-                field.widget.attrs.update(atts)
+    def to_dict(self):
+        '''Converts this form to python dict. Each value is the `to_python` method of the
+        corresponding django Field, or the serialize method of the NArrayFields. the latter
+        converts the input to numeric array except the case when the input is given
+        as range '<start>:<stop>:<end>': in this case, the string is returned as it is.
+
+        raises ValidationError if the form is not valid
+        '''
+        if not self.is_valid():
+            raise ValidationError(self.errors)
+
+        return {name:
+                self.fields[name].serialize(val) if isinstance(self.fields[name], NArrayField)
+                else self.fields[name].to_python(val) for name, val in self.data.items()}
 
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on selected intensity
@@ -566,7 +565,7 @@ class TrellisForm(BaseForm):
     # END OF RUPTURE PARAMS
     vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., min_arr_len=1,
                        initial=760.0, help_text=__scalar_or_vector_help__)
-    vs30_measured = BooleanField(label=mark_safe('whether V<sub>S30</sub> is measured'),
+    vs30_measured = BooleanField(label=mark_safe('Is V<sub>S30</sub> measured?'),
                                  help_text='Otherwise is inferred', initial=True, required=False)
     line_azimuth = FloatField(label='Azimuth of Comparison Line',
                               min_value=0., max_value=360., initial=0.)

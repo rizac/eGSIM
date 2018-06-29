@@ -12,13 +12,13 @@ from django.http.response import JsonResponse
 def yaml_load(obj):
     '''Safely loads the YAML-formatted object `obj` into a dict.
 
-    :param obj: (dict, stream or string denoting an existing file path): If stream (i.e.,
-        an object with the `read` attribute), uses it for reading and parsing its
-        content into dict. If dict, this method is no-op and the dict is returned, if string
-        denoting an existing file, a stream is opened from the file and processed as
-        explained above (the stream will be closed in this case). If string, the string
-        is treated as YAML content and parsed: in this case, the output must be a dict
-        otherwise a YAMLError is thrown
+    :param obj: (dict, stream, string denoting an existing file path, or string denoting
+        the file content in YAML syntax): If stream (i.e., an object with the `read` attribute),
+        uses it for reading and parsing its content into dict. If dict, this method is no-op
+        and the dict is returned, if string denoting an existing file, a stream is opened
+        from the file and processed as explained above (the stream will be closed in this case).
+        If string, the string is treated as YAML content and parsed: in this case, the output
+        must be a dict otherwise a YAMLError is thrown
 
     :raises: YAMLError
     '''
@@ -48,7 +48,7 @@ def yaml_load(obj):
                             % (ret.__class__.__name__, {}.__class__.__name__))
         return ret
     except YAMLError as exc:
-        raise YAMLError('Malformed input: YAML syntax error: %s' % str(exc)) from None
+        raise YAMLError('Malformed input (syntax error): %s' % str(exc)) from None
     finally:
         if close_stream:
             stream.close()
