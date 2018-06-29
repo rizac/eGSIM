@@ -40,5 +40,5 @@ urlpatterns = [
     url(r'^query/trellis/?$', csrf_exempt(views.TrellisPlots.as_view()), name='trellis_api'),
 
     # test views, TEMPORARY:
-    url(r'^test_trellis/?$', views.test_trellis, name='main'),
+    url(r'^trellis_test/?$', views.test_trellis, name='main'),
 ]

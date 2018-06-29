@@ -41,13 +41,16 @@
 {% endblock %}
 
 {% block output %}
-<div class='flexible flex-direction-row trellis-container' id='trellis'>
+<div id='trellis' v-show='initialized' class='flexible flex-direction-row trellis-container pl-2'>
 
 	<div class='flexible' style='position:relative'>
 		<div class='trellis-plots-container' id='trellis-plots-container'></div>
 	</div>
 
-	<div class='trellis-right-panel flex-direction-col'>  <!-- TRELLIS OPTIONS PANEL -->
+	<div class='trellis-right-panel flex-direction-col pl-3 pr-2'>  <!-- TRELLIS OPTIONS PANEL -->
+		<div>
+			<button onclick='EGSIM.toggleFormVisibility()'>params</button>
+		</div>
 		<div class='flexible'>
 			<div v-for="(value, key) in plotTraceColors">
 				<label v-bind:style="{color: value}">
@@ -117,11 +120,11 @@ and make the <select> submit the form onChange: -->
         // create arguments for submitForm:
 		var url = 'get_trellis_plots';
 		var onSuccess = TRELLIS.init; //defined in trellis.js
-		var onError = function(error){
+		var onEnd = function(isError){
 		    selectElement.value = no_value;
 		};
 		// submit form to vuejs:
-        EGSIM.submitForm(url, onSuccess, onError);
+        EGSIM.submitForm(url, onSuccess, onEnd);
     };
 })()
 

@@ -111,8 +111,8 @@ class EgsimQueryView(View):
 
         if not form.is_valid():
             jsonerror = self.format_validation_error(form.errors)
-            return JsonResponse(jsonerror, safe=False, status=jsonerror['code'])
-        return JsonResponse(self.process_valid_input(form.clean()))
+            return JsonResponse({'error': jsonerror}, safe=False, status=jsonerror['code'])
+        return JsonResponse({'data': self.process_valid_input(form.clean())})
 
     def get_form(self, params):
         ''' returns the form whereby the validation of input occurs'''

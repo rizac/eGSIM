@@ -4,6 +4,8 @@ var EGSIM = new Vue({
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
         // csrf token stored in an <input> in the base.html. Get it here and use it for each post request:
         csrftoken: Object.freeze(document.querySelector("[name=csrfmiddlewaretoken]").value),
+        formsubmitted: false,  // controls the visibility and css style of divs
+        formvisible: true,  // controls the visibility and css style of divs
         avalGsims: new Map(),  // map of available gsims name -> array of gsim attributes
         avalImts: new Set(),  // set of available imts names
         selectedGsims: [],
@@ -73,7 +75,7 @@ var EGSIM = new Vue({
             }
             this.$set(this, 'filterFunc', filterFunc);
         },
-        setError(error){
+        setError(error){ // error must be a google-json dict-like {message: '', code: '', errors: []}
             this.$set(this, 'loading', false);
             this.$set(this, 'errormsg', error.message || 'Unknown error');
             var errors = error.errors || [];
@@ -88,56 +90,64 @@ var EGSIM = new Vue({
         formIsValid(){
             return isValid(this.form);
         },
-        submitForm(url, onSuccess, onError=undefined){
-            if (!onError){
-                onError = function(arg){};
+        submitForm(url, onSuccess, onEnd=undefined){
+            //submits a form to the given url, calling `onSuccess(jsonResponseData)` on success
+            // (jsonResponseData is the dict of the response data). If onEnd is provided,
+            // calls onEnd(isError) at the end of the call, where isError is a boolean denoting
+            // if an error (url error, code error, validation error) occurred. This callback is
+            // usually used to make some cleanup in the DOM
+            if (!onEnd){
+                onEnd = arg => {};
             }
             // build form data inot a dict:
             var [data, error] = parseForm(this.form);
             if(error){
                 this.setError(error);
-                onError(error);
+                onEnd(true);
             }else{
                 this.$set(this, 'loading', true);
                 this.$set(this, 'errormsg', '');
                 this.$set(this, 'fielderrors', {});
-                var me = this;
                 axios.post(url, data, {headers: {"X-CSRFToken": this.csrftoken}}).
-                    then(function (response) {
-                        me.$set(me, 'loading', false);
-                        if (onSuccess){
-                            try{
-                                onSuccess(response);
-                            }catch(err){
-                                me.setError(err);
-                            }
-                        }
-                    }).catch(function (error) {
-                        me.$set(me, 'loading', false);
-                        me.setError.apply(me, [error.response.error]);
-                        onError(error);
+                    then(response => {
+                        var jsondata = response.data.data;
+                        // Note: arrow function don't have a proper this, so this refers to this vue instance:
+                        this.$set(this, 'formsubmitted', true);
+                        this.$set(this, 'formvisible', false);
+                        // execute the function when the the Vue instance has finished rendering the DOM:
+                        this.$nextTick(this.getFormSubmittedCallback(onSuccess, jsondata));
+                        onEnd(false);
+                    }).catch(error => {
+                        var jsondata = error.response.data.error;
+                        this.$set(this, 'loading', false);
+                        this.setError(jsondata);
+                        onEnd(true);
                     });
             }
         },
-//        fielderror: function(fieldname){
-//            var errors = this.error && this.error.errors ? this.error.errors : undefined;
-//            if(!errors){
-//                return false;
-//            }
-//            for (var err of errors){
-//                // no need of hasOwnProperty anymore: https://stackoverflow.com/a/45014721
-//                if(err.domain && err.domain == name){
-//                    return err.message || 'unknown error'; // assure we have a non-falsy value
-//                }
-//            }
-//            return false;
-//        }
+        getFormSubmittedCallback(callback, response){
+            return () => {
+                this.$set(this, 'loading', false);
+                if (typeof callback === 'function'){
+                    try{
+                        callback(response);
+                    }catch(err){
+                        this.$set(this, 'formsubmitted', false);
+                        this.$set(this, 'formvisible', true);
+                        this.setError({message: err.message, code:500});
+                    }
+                }
+            }
+        },
+        toggleFormVisibility(){
+            this.$set(this, 'formvisible', !this.formvisible);
+        }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         // assign the form element to this class:
         this.$set(this,'form', document.forms["egsim-form"]);
         // fetch gsim and imts data:
-        axios.post('/get_init_params', {}, {headers: {"X-CSRFToken": this.csrftoken}}).then((response) => {
+        axios.post('/get_init_params', {}, {headers: {"X-CSRFToken": this.csrftoken}}).then(response => {
             //success: if using this.$http (vue ruouting):
             // [avalGsims, avalImts] = getInitData(response.body.init_data);
             // if using axios:
@@ -145,7 +155,8 @@ var EGSIM = new Vue({
             this.$set(this, 'avalGsims', avalGsims);
             this.$set(this, 'avalImts', avalImts);
         }).catch((error) => {
-            this.setError(error.response.error);
+            var jsondata = error.response.data.error;
+            this.setError(jsondata);
         })
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/

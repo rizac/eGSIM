@@ -2,6 +2,7 @@ var TRELLIS = new Vue({
     el: '#trellis',
     data: {
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
+        initialized: false,
         plots: [], //array of [{data, params}], where data is an array of dicts (one dict per trace) and params is a dict
         paramNames: Object.freeze(['xlabel', 'ylabel', 'vs30', 'magnitude', 'distance']), // a list of default parameter names
         params: {},  // a dict of property names mapped to an array of possible (string) values
@@ -32,18 +33,19 @@ var TRELLIS = new Vue({
         // no-op (for the moment)
     },
     methods: {
-        init: function(response){
+        init: function(jsondict){
+            this.$set(this, 'initialized', true);
             // reset colors:
             this.plotColors.index = 0;
             this.$set(this, 'plotTraceColors', {});
             // convert data:
-            var [plots, params] = this.getTrellisData(response);
+            var [plots, params] = this.getTrellisData(jsondict);
             this.$set(this, 'plots', plots);
             this.$set(this, 'params', params);
             // update selection, taking into account previously selected stuff:
             this.updateSelection();
         },
-        getTrellisData: function(response){
+        getTrellisData: function(data){
             // we use strings only in params value. Function converting undefined or null to '':
             var str = val => (val === null || val === undefined) ? '' : val+'';
             // setup  label texts:
@@ -51,7 +53,6 @@ var TRELLIS = new Vue({
             for (var label of this.paramNames){
                 params[label] = new Set();
             }
-            var data = response.data;
             var plots = [];
             for (var fig of data['figures']){
                 var plotParams = {};

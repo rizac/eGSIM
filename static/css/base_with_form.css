@@ -8,15 +8,20 @@
 	overflow: auto;
 }
 
+#egsim-input.to-front{
+	z-index: 100;
+	visibility: visible;
+}
+
+#egsim-input.to-back{
+	z-index: -100;
+	visibility: hidden;
+}
+
+
 /* set here the height of the progressbar/waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
-#waitbar{
-	position: absolute;
-    margin: 0;
-    padding: 0;
-    z-index: 100;
-    top: 0;
-    right: 0;
-    left: 0;
+#waitdiv{
+	z-index: 200;  /* to sit on top of everything, in case */
 }
 .loader, .loader:before {
 	height: 8px;
@@ -44,5 +49,5 @@
     95% {left: 120%;}
     to {left: 100%;}
 }
-
 /* end custom progressbar/waitbar */
+

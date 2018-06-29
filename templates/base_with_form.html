@@ -7,10 +7,18 @@
 {% endblock %}
 
 {% block body %}
-	<div class='flexible flex-direction-row' style="justify-content: space-evenly">
+	<div class='flexible position-relative'>
 			
-		<div class='flex-direction-col p-2' id='egsim-input'> <!-- p-3: padding=1rem -->
-			<form id='egsim-form' name='egsim-form' novalidate v-on:submit.prevent='submitForm' class='flexible flex-direction-col'>
+		<div id='egsim-input' v-bind:class="[formvisible ? 'to-front' : 'to-back', formsubmitted ? 'submitted' : '']"
+			class='position-absolute pos-0  m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
+			<form id='egsim-form' name='egsim-form' novalidate v-on:submit.prevent='submitForm'
+				v-bind:class="{'shadow bg-light border': formsubmitted, 'mt-5': errormsg}"
+				class='flex-direction-col m-3 p-2'>
+			<div v-show='formsubmitted' class='text-right'>
+				<button type="button" v-on:click='toggleFormVisibility' class="close" aria-label="Close">
+  					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
 			<div>
 				{% block form-top %}
 				{% endblock %}
@@ -45,8 +53,8 @@
 					</div>
 		
 					<div>{{ form.imt.label }}  <!-- IMT FORM CONTROLS: -->
-					<span class='text-danger text-nowrap small' v-show="fielderrors['{{ form.gsim.html_name }}']">
-						&#123;&#123; fielderrors['{{ form.gsim.html_name }}'] &#125;&#125; 
+					<span class='text-danger text-nowrap small' v-show="fielderrors['{{ form.imt.html_name }}']">
+						&#123;&#123; fielderrors['{{ form.imt.html_name }}'] &#125;&#125; 
 					</span>
 					</div>
 					<div class='imt-container form-control'>
@@ -77,15 +85,15 @@
 			</div>
 			
 			</form>
-			<div id='waitbar' v-show='!loading' class='flexible flex-center'>
+			<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0">
 				<!-- Loading, please wait ... -->
 				<div class="loader"></div>
 			</div>
-			<div id='error' v-show='errormsg' class='bg-danger rounded text-sm-center text-white'>
+			<div id='errordiv' v-show='errormsg' class='position-absolute pos-t-0 pos-x-0 bg-danger text-sm-center text-white'>
 				&#123;&#123; errormsg &#125;&#125;
 			</div>
 		</div>
-		<div style='display:none' class='flex-direction-col p-3' id='egsim-output'>
+		<div id='egsim-output' class='position-absolute pos-0 m-0 bg-light flex-direction-col p-2'>
 			{% block output %}{% endblock %}	
 		</div>
 	</div>
