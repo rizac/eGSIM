@@ -25,6 +25,7 @@ from django.forms.fields import BooleanField, CharField, MultipleChoiceField, Fl
     ChoiceField
 # from django.core import validators
 
+from smtk.parsers import esm_flatfile_parser
 from openquake.hazardlib import imt
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.geo import Point
@@ -104,7 +105,7 @@ class NArrayField(CharField):
                                             self.min_value, self.max_value)
             return value if has_semicolon else parsed_value
         except (ValueError, TypeError) as exc:
-            raise ValidationError(str(exc))
+            raise ValidationError(_(str(exc)), code='invalid')
 
     def clean(self, value):
         """Return a number or a list of numbers depending on `value`"""
@@ -447,7 +448,7 @@ class BaseForm(Form):
         raises ValidationError if the form is not valid
         '''
         if not self.is_valid():
-            raise ValidationError(self.errors)
+            raise ValidationError(self.errors, code='invalid')
 
         return {name:
                 self.fields[name].serialize(val) if isinstance(self.fields[name], NArrayField)
@@ -458,6 +459,16 @@ class BaseForm(Form):
         measure type. For info see:
         https://docs.djangoproject.com/en/1.11/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
         '''
+        # UNCOMMENT THE BLOCK BELOW IF YOU WHISH TO BE STRICT with unkwnown params
+        # # check that we did not provide unknown parameters. This might not be necessary
+        # # but it might help warning the user for typos in case
+        # unknown_params = set(self.data) - set(self.fields)
+        # if unknown_params:
+        #     raise ValidationError([
+        #         ValidationError(_("unknown parameter '%(param)s'"),
+        #                         params={'param': p}, code='unknown')
+        #         for p in unknown_params])
+
         cleaned_data = super().clean()
 
         gsims = cleaned_data.get("gsim", [])
@@ -468,16 +479,26 @@ class BaseForm(Form):
                              for imtname in cleaned_data.get("imt", []))
 
         if gsims and imt_classnames:
-            imts2 = self._gsims.shared_imts(*gsims)
-            not_allowed = imt_classnames - imts2
-            if not_allowed:
-                raise ValidationError(_("'%(imt)s' not defined for all supplied gsim(s)"),
-                                      params={'imt': str(not_allowed)})
+            invalid_imts = self._gsims.invalid_imts(gsims, imt_classnames)
+            if invalid_imts:
+                # instead of raising ValidationError, which is keyed with '__all__'
+                # we add the error keyed to the given field name `name` via `self.add_error`:
+                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+                invalid_gims = self._gsims.invalid_gsims(gsims, imt_classnames)
+                err_gsim = ValidationError(_("%(num)d gsim(s) not defined for all supplied "
+                                             "imt(s)"),
+                                           params={'num': len(invalid_gims)}, code='invalid')
+                err_imt = ValidationError(_("%(num)d imt(s) not defined for all supplied "
+                                            "gsim(s)"),
+                                          params={'num': len(invalid_imts)}, code='invalid')
+                self.add_error('gsim', err_gsim)
+                self.add_error('imt', err_imt)
 
         return cleaned_data
 
 
 class MsrField(ChoiceField):
+    '''A ChoiceField handling the Magnitude Scaling Relation parameter'''
     _aval_msr = get_available_magnitude_scalerel()
 
     base_choices = tuple(zip(_aval_msr.keys(), _aval_msr.keys()))
@@ -490,7 +511,7 @@ class MsrField(ChoiceField):
         try:
             return self._aval_msr[value]()
         except Exception as exc:
-            raise ValidationError(_(str(exc)))
+            raise ValidationError(_(str(exc)), code='invalid')
 
 
 class TrellisplottypeField(ChoiceField):
@@ -517,7 +538,7 @@ class TrellisplottypeField(ChoiceField):
         try:
             return self._aval_types[value][1]
         except Exception as exc:
-            raise ValidationError(_(str(exc)))
+            raise ValidationError(_(str(exc)), code='invalid')
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
@@ -530,7 +551,7 @@ class PointField(NArrayField):
         try:
             return Point(*value)
         except Exception as exc:
-            raise ValidationError(_(str(exc)))
+            raise ValidationError(_(str(exc)), code='invalid')
 
 
 class TrellisForm(BaseForm):
@@ -591,7 +612,11 @@ class TrellisForm(BaseForm):
                 cleaned_data[name] = float(values[0]) if vs30scalar else values.tolist()
             elif not isscalar(cleaned_data[name]) and not isscalar(vs30) \
                     and len(vs30) != len(cleaned_data[name]):
-                raise ValidationError(_("'%(name)s' value must be scalar, empty or "
-                                        "a %(num)d-elements vector"),
-                                      params={'name': name, 'num': len(vs30)})
+                # instead of raising ValidationError, which is keyed with '__all__'
+                # we add the error keyed to the given field name `name` via `self.add_error`:
+                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+                error = ValidationError(_("value must be scalar, empty or a %(num)d-elements "
+                                          "vector"), params={'num': len(vs30)}, code='invalid')
+                self.add_error(name, error)
+
         return cleaned_data

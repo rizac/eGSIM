@@ -13,6 +13,7 @@ from egsim.forms import NArrayField
 
 def test_str2nprange():
     '''tests the method str2nprange of the NAarrayfield Field object'''
+
     val = NArrayField.str2nprange('1:1:10')
     assert val == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 

@@ -8,7 +8,7 @@ import warnings
 from collections import OrderedDict
 
 from openquake.hazardlib.gsim import get_available_gsims
-from openquake.hazardlib.imt import __all__ as AVAL_IMTS
+from openquake.hazardlib.imt import __all__ as hazardlib_imts
 
 
 def vectorize(value):
@@ -61,6 +61,7 @@ def get_gsims():
 def _create_gsims(name, types, attrs):
     cls = type(name, types, attrs)
     cls._data = get_gsims()  # pylint: disable=protected-access
+    cls._aval_imts = set(hazardlib_imts)  # pylint: disable=protected-access
     return cls
 
 
@@ -69,16 +70,17 @@ class EGSIM(metaclass=_create_gsims):
     but can be referenced as a global variable and holds global data fetched from openquake
     primarily'''
     _data = {}  # will be populated when creating the class (note: the class, not the object)
+    _aval_imts = set()
 
     @classmethod
     def aval_gsims(cls):
         '''Returns a list of all available GSIM names (string)'''
         return list(cls._data.keys())
 
-    @staticmethod
-    def aval_imts():
+    @classmethod
+    def aval_imts(cls):
         '''Returns a list of all available IMT names (string)'''
-        return list(AVAL_IMTS)
+        return list(cls._aval_imts)
 
     @classmethod
     def imtsof(cls, gsim):
@@ -90,21 +92,56 @@ class EGSIM(metaclass=_create_gsims):
         return cls._data.get(gsim, [set()])[0]
 
     @classmethod
-    def shared_imts(cls, *gsims):
-        '''returns the shared imt(s) of the given gsims, ie. the intersection of all imt(s)
-        defined for the given gsims
-        :param gsims: (string) variable length argument of the gsim names whose shared imt(s)
-            have to be returned
+    def invalid_imts(cls, gsims, imts):
+        '''returns a *set* of all invalid imt(s) from the given selected gsims and imts
+
+        :param gsims: iterable of strings denoting the selected gsims
+        :param gsims: iterable of strings denoting the selected imts
+        :return: a set of invalid imts
         '''
-        ret = set()
+        if not isinstance(imts, set):
+            imts = set(imts)
+        imts_count = len(cls._aval_imts)
+        invalid_imts = set()
         for gsim in gsims:
-            if not ret:
-                ret = cls.imtsof(gsim)
-            else:
-                ret &= cls.imtsof(gsim)
-            if not ret:
+            invalid_ = imts - cls.imtsof(gsim)
+            if not invalid_:
+                continue
+            invalid_imts |= invalid_
+            if len(invalid_imts) == imts_count:
                 break
-        return ret
+        return invalid_imts
+
+    @classmethod
+    def invalid_gsims(cls, gsims, imts):
+        '''returns a *list* of all invalid gsim(s) from the given selected gsims and imts
+
+        :param gsims: iterable of strings denoting the selected gsims
+        :param gsims: iterable of strings denoting the selected imts
+        :return: a list of invalid gsims
+        '''
+        if not isinstance(imts, set):
+            imts = set(imts)
+#         if imts == cls._aval_imts:  # as no gsim is defined for all imts, thus return the list
+#             return list(gsims)
+        return [gsim for gsim in gsims if imts - cls.imtsof(gsim)]
+
+#     @classmethod
+#     def shared_imts(cls, *gsims):
+#         '''returns the shared imt(s) of the given gsims, ie. the intersection of all imt(s)
+#         defined for the given gsims
+#         :param gsims: list of strings denoting the selected gsims
+#         :param gsims: list of strings denoting the selected imts
+#         '''
+#         ret = set()
+#         for gsim in gsims:
+#             if not ret:
+#                 ret = cls.imtsof(gsim)
+#             else:
+#                 ret &= cls.imtsof(gsim)
+#             if not ret:
+#                 break
+#         return ret
 
     @classmethod
     def jsonlist(cls):

@@ -51,6 +51,14 @@ def test_baseForm_invalid():
     assert not form.is_valid()
     err = form.errors.as_json()
 
+    # ----------------------------------------------------------------------------
+    # UNCOMMENT IF PROVIDING UNKNOWN PARAMETER RAISES (FOR THE MOMENT IT DOE NOT):
+    # ----------------------------------------------------------------------------
+#     form = BaseForm({'unknown_param': 5, GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+#                      IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']})
+#     assert not form.is_valid()
+#     err = form.errors.as_json()
+
     data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'], IMT: ['SA', 'PGA', 'PGV']}
     form = BaseForm(data)
     assert not form.is_valid()
