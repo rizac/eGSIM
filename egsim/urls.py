@@ -29,6 +29,7 @@ urlpatterns = [
     url(r'^$', views.index, name='index'),  # same as /home (see views.py)
     url(r'^(?P<menu>[a-zA-Z]+)/?$', views.main, name='main'),  # main page entry point
     url(r'^service/home/?$', views.home, name='home'),
+    url(r'^service/trsel/?$', views.trsel, name='trsel'),
     url(r'^service/trellis/?$', views.trellis, name='trellis'),
     url(r'^service/residuals/?$', views.residuals, name='residuals'),
     url(r'^service/loglikelihood/?$', views.loglikelihood, name='loglikelihood'),
@@ -40,5 +41,5 @@ urlpatterns = [
     url(r'^query/trellis/?$', csrf_exempt(views.TrellisPlotsView.as_view()), name='trellis_api'),
 
     # test views, TEMPORARY:
-    url(r'^trellis_test/?$', views.test_trellis, name='main'),
+    url(r'^trellis_test/?$', views.trellis_test, name='main'),
 ]

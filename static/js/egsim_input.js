@@ -1,11 +1,10 @@
-var EGSIM = new Vue({
+var EGSIM_INPUT = new Vue({
     el: '#egsim-input',
     data: {
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
         // csrf token stored in an <input> in the base.html. Get it here and use it for each post request:
         csrftoken: Object.freeze(document.querySelector("[name=csrfmiddlewaretoken]").value),
-        formsubmitted: false,  // controls the visibility and css style of divs
-        formvisible: true,  // controls the visibility and css style of divs
+        dom: {formclasses: {}, visible:true, modal:false}, //a vuejs dict of classes to be set to the main form
         avalGsims: new Map(),  // map of available gsims name -> array of gsim attributes
         avalImts: new Set(),  // set of available imts names
         selectedGsims: [],
@@ -68,7 +67,7 @@ var EGSIM = new Vue({
                     return false;
                 }
             }else if (this.filterType == this.filterTypes[2]){
-                var filterFunc = function(gsimName){
+                var filterFunc = function(gsimName){f
                     var trt = this.avalGsims.get(gsimName)[1];
                     return trt.search(regexp) > -1;
                 }
@@ -103,25 +102,23 @@ var EGSIM = new Vue({
             var [data, error] = parseForm(this.form);
             if(error){
                 this.setError(error);
-                onEnd(true);
+                onEnd.call(this, true);
             }else{
                 this.$set(this, 'loading', true);
                 this.$set(this, 'errormsg', '');
                 this.$set(this, 'fielderrors', {});
                 axios.post(url, data, {headers: {"X-CSRFToken": this.csrftoken}}).
                     then(response => {
+                     // Note: arrow function don't have a proper this, so this refers to this vue instance:
                         var jsondata = response.data.data;
-                        // Note: arrow function don't have a proper this, so this refers to this vue instance:
-                        this.$set(this, 'formsubmitted', true);
-                        this.$set(this, 'formvisible', false);
                         // execute the function when the the Vue instance has finished rendering the DOM:
                         this.$nextTick(this.getFormSubmittedCallback(onSuccess, jsondata));
-                        onEnd(false);
+                        onEnd.call(this, false);
                     }).catch(error => {
                         var jsondata = error.response.data.error;
                         this.$set(this, 'loading', false);
                         this.setError(jsondata);
-                        onEnd(true);
+                        onEnd.call(this, true);
                     });
             }
         },
@@ -132,8 +129,6 @@ var EGSIM = new Vue({
                     try{
                         callback(response);
                     }catch(err){
-                        this.$set(this, 'formsubmitted', false);
-                        this.$set(this, 'formvisible', true);
                         this.setError({message: err.message, code:500});
                     }
                 }

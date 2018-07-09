@@ -10,11 +10,7 @@
 {% block extra-head %}
 	{{ block.super }}
 {% endblock %}
-
-{% block form-top %}
-	{{ block.super }} <!-- no-op -->
-{% endblock %}
-				
+	
 
 {% block form-extra-divs %}
 <div id='rupture' class='flexible p-2'>
@@ -49,7 +45,7 @@
 
 	<div class='trellis-right-panel flex-direction-col pl-3 pr-2'>  <!-- TRELLIS OPTIONS PANEL -->
 		<div>
-			<button onclick='EGSIM.toggleFormVisibility()'>params</button>
+			<button onclick='EGSIM_INPUT.dom.visible=!EGSIM_INPUT.dom.visible'>params</button>
 		</div>
 		<div class='flexible'>
 			<div v-for="(value, key) in plotTraceColors">
@@ -122,9 +118,16 @@ and make the <select> submit the form onChange: -->
 		var onSuccess = TRELLIS.init; //defined in trellis.js
 		var onEnd = function(isError){
 		    selectElement.value = no_value;
+		    // set classes styling the egsim-input vue elements appearence:
+		    // (`this` refers to the vue instance)
+		    this.dom.visible = isError;  // this sets classes on the main div
+		    if (!this.dom.modal && !isError){
+			    this.dom.modal = true; // show upper div with close button
+		    }
+			this.dom.formclasses = isError ? ['mt-5'] : ['shadow', 'bg-light', 'border'];
 		};
 		// submit form to vuejs:
-        EGSIM.submitForm(url, onSuccess, onEnd);
+        EGSIM_INPUT.submitForm(url, onSuccess, onEnd);
     };
 })()
 

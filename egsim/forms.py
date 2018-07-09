@@ -25,17 +25,17 @@ from django.forms.fields import BooleanField, CharField, MultipleChoiceField, Fl
     ChoiceField
 # from django.core import validators
 
-from smtk.parsers import esm_flatfile_parser
 from openquake.hazardlib import imt
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.geo import Point
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+from smtk.parsers import esm_flatfile_parser
 from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrellis, \
     MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, MagnitudeDistanceSpectraTrellis, \
     MagnitudeDistanceSpectraSigmaTrellis
 
-from egsim.utils import vectorize, EGSIM, isscalar
 from egsim.core import yaml_load
+from egsim.core.utils import vectorize, EGSIM, isscalar
 
 
 class NArrayField(CharField):
@@ -320,11 +320,9 @@ class IMTField(MultipleChoiceField):
 class BaseForm(Form):
     '''Base eGSIM form'''
 
-    _gsims = EGSIM
-
     # fields (not used for rendering, just for validation): required is True by default
     gsim = MultipleChoiceField(label='Ground Shaking Intensity Model(s) (gsim)',
-                               choices=zip(_gsims.aval_gsims(), _gsims.aval_gsims()),
+                               choices=zip(EGSIM.aval_gsims(), EGSIM.aval_gsims()),
                                # make field.is_hidden = True in the templates:
                                widget=HiddenInput)
 
@@ -479,12 +477,12 @@ class BaseForm(Form):
                              for imtname in cleaned_data.get("imt", []))
 
         if gsims and imt_classnames:
-            invalid_imts = self._gsims.invalid_imts(gsims, imt_classnames)
+            invalid_imts = EGSIM.invalid_imts(gsims, imt_classnames)
             if invalid_imts:
                 # instead of raising ValidationError, which is keyed with '__all__'
                 # we add the error keyed to the given field name `name` via `self.add_error`:
                 # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-                invalid_gims = self._gsims.invalid_gsims(gsims, imt_classnames)
+                invalid_gims = EGSIM.invalid_gsims(gsims, imt_classnames)
                 err_gsim = ValidationError(_("%(num)d gsim(s) not defined for all supplied "
                                              "imt(s)"),
                                            params={'num': len(invalid_gims)}, code='invalid')

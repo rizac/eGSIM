@@ -17,12 +17,15 @@ from django.views.generic.base import View
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms import TrellisForm, BaseForm
 from egsim.core.trellis import compute_trellis
+from egsim.core.utils import EGSIM
+from egsim.core.shapes import load_share
 
 
 _COMMON_PARAMS = {
     'project_name': 'eGSIM',
     'debug': True,
-    'menus': OrderedDict([('home', 'Home'), ('trellis', 'Trellis plots'),
+    'menus': OrderedDict([('home', 'Home'), ('trsel', 'Tectonic region Selection'),
+                          ('trellis', 'Trellis plots'),
                           ('residuals', 'Residuals'),
                           ('loglikelihood', 'Log-likelihood analysis')]),
     }
@@ -43,14 +46,16 @@ def home(request):
     return render(request, 'home.html', _COMMON_PARAMS)
 
 
+def trsel(request):
+    '''view for the trellis page (iframe in browser)'''
+    return render(request, 'trsel.html', dict(_COMMON_PARAMS, form=BaseForm(),
+                                              trprojects={'SHARE': load_share()},
+                                              selproject='SHARE'))
+
+
 def trellis(request):
     '''view for the trellis page (iframe in browser)'''
     return render(request, 'trellis.html', dict(_COMMON_PARAMS, form=TrellisForm()))
-
-
-def test_trellis(request):
-    '''view for the trellis (test) page (iframe in browser)'''
-    return render(request, 'test_trellis.html', dict(_COMMON_PARAMS, form=TrellisForm()))
 
 
 def residuals(request):
@@ -73,11 +78,11 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     # Cahce session are discouraged.:
     # https://docs.djangoproject.com/en/2.0/topics/http/sessions/#using-cached-sessions
     # so for the moment let's keep this hack
-    return JsonResponse({'initData': BaseForm._gsims.jsonlist()})
+    return JsonResponse({'initData': EGSIM.jsonlist()})
 
 
 class EgsimQueryView(View):
-    '''base view for every EGSIM view handling data request and returning data in response
+    '''base view for every eGSIM view handling data request and returning data in response
     this is usually accomplished via a form in the web page or a POST reqeust from
     the a normal query in the standard API'''
 
@@ -153,5 +158,12 @@ class TrellisPlotsView(EgsimQueryView):
         return compute_trellis(params)
 
 
+# TESTS (FIXME: REMOVE?)
+
 def test_err(request):
     raise ValueError('this is a test error!')
+
+
+def trellis_test(request):
+    '''view for the trellis (test) page (iframe in browser)'''
+    return render(request, 'trellis_test.html', dict(_COMMON_PARAMS, form=TrellisForm()))

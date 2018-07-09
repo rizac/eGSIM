@@ -11,7 +11,7 @@ import numpy as np
 from smtk.trellis.trellis_plots import DistanceIMTTrellis, MagnitudeIMTTrellis, \
     DistanceSigmaIMTTrellis, MagnitudeSigmaIMTTrellis
 
-from egsim.utils import vectorize
+from egsim.core.utils import vectorize
 
 
 MAG = 'magnitude'

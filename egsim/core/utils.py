@@ -34,7 +34,7 @@ def unique(*iterables):
     return list(odict.keys())
 
 
-def get_gsims():
+def _get_gsims():
     '''Returns all openquake-available gsim data in an Ordered dict keyed with the gsim
     names mapped to a tuples of the form: (imts, trt, rupt_param)
     where imts is a set of strings denoting the IMTs defined for the given gsim,
@@ -58,19 +58,23 @@ def get_gsims():
     return ret
 
 
-def _create_gsims(name, types, attrs):
-    cls = type(name, types, attrs)
-    cls._data = get_gsims()  # pylint: disable=protected-access
-    cls._aval_imts = set(hazardlib_imts)  # pylint: disable=protected-access
-    return cls
+# def _create_gsims(name, types, attrs):  # https://stackoverflow.com/a/6798042
+#     cls = type(name, types, attrs)
+#     cls._data = _get_gsims()  # pylint: disable=protected-access
+#     cls._aval_imts = set(hazardlib_imts)  # pylint: disable=protected-access
+#     # populate the tectonic region types
+#     for data in cls._data:
+#         cls._aval_trt.add(data[1])
+#     return cls
 
 
-class EGSIM(metaclass=_create_gsims):
+class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/6798042
     '''This class is basically a namespace container which does not need to be instantiated
     but can be referenced as a global variable and holds global data fetched from openquake
     primarily'''
-    _data = {}  # will be populated when creating the class (note: the class, not the object)
-    _aval_imts = set()
+    _data = _get_gsims()
+    _aval_imts = set(hazardlib_imts)
+    _aval_trts = None  # set (will lazily populated on demand)
 
     @classmethod
     def aval_gsims(cls):
@@ -83,13 +87,33 @@ class EGSIM(metaclass=_create_gsims):
         return list(cls._aval_imts)
 
     @classmethod
+    def aval_trts(cls):
+        '''Returns a list of all available tectonic region types (strings)'''
+        # lazy load:
+        if cls._aval_trts is None:
+            ret = cls._aval_trts = set()
+            for data in cls._data.values():
+                ret.add(data[1])
+        return cls._aval_trts
+
+    @classmethod
     def imtsof(cls, gsim):
         '''Returns a set of the imts defined for the given gsim. If the gsim is not defined,
-        returns an empty set. Otherwise, manipulation ot the returned set will modify the internal
-        object and subsequent calls to this method
+        returns an empty set. NOTE: if the `gsim` is defined,  **manipulating the returned set
+        will modify the internal object and subsequent calls to this method**
+
         :param gsim: string denoting the gsim name
         '''
         return cls._data.get(gsim, [set()])[0]
+
+    @classmethod
+    def trtof(cls, gsim):
+        '''Returns a string defining the tectonic region type of the given gsim. If the gsim is
+        not defined, returns an empty string
+
+        :param gsim: string denoting the gsim name
+        '''
+        return cls._data.get(gsim, [''])[1]
 
     @classmethod
     def invalid_imts(cls, gsims, imts):
@@ -145,7 +169,7 @@ class EGSIM(metaclass=_create_gsims):
 
     @classmethod
     def jsonlist(cls):
-        '''Returns a json-serialized version of this object, as a list of tuples of the form:
+        '''Returns a json-serializable version of this object, as a list of tuples of the form:
         ```
         [ ... , (gsim, imts, trt) , ... ]
         ```

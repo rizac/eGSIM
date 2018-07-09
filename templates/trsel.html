@@ -1,0 +1,44 @@
+{% extends 'base_with_form.html' %}
+
+{% block head %}
+	{% with fontawesome=False leaflet=True shapefile=False plotly=False %}
+		{{ block.super }}
+	{% endwith %}
+	<!-- <link rel="stylesheet" type="text/css" href="{% static 'css/trellis.css' %}"> -->
+{% endblock %}
+
+{% block extra-head %}
+	{{ block.super }}
+{% endblock %}
+	
+
+{% block pre-form %}
+<div class='flexible p-2 flex-direction-col'>
+	<!-- <select v-model='selectedproject'>
+		<option v-for='project in projects' v-bind:value="project">
+			&#123;&#123; project &#125;&#125;
+		</option>
+	</select> -->
+	<div id='trselmap' class='flexible'></div>
+</div>
+{% endblock %}
+
+{% block form-submit-div %}
+	{{ form.plot_type }}
+{% endblock %}
+
+{% block output %}
+{% endblock %}
+
+
+{% block after-body %}
+<!-- script for configuring the map (no vue instance for the moment too much overhead for such a simple task): -->
+<script type='text/javascript' src = "{% static 'js/form-configs/trsel.js' %}"></script>
+{{ block.super }}
+
+<script type='text/javascript'>
+// instanitate the map manager and the corresponding map
+var TRSELMANAGER = new TRSelMap('trselmap', {{ trprojects|safe }}, '{{ selproject }}');
+</script>
+
+{% endblock %}

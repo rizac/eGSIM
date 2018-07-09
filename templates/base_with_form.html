@@ -9,86 +9,89 @@
 {% block body %}
 	<div class='flexible position-relative'>
 			
-		<div id='egsim-input' v-bind:class="[formvisible ? 'to-front' : 'to-back', formsubmitted ? 'submitted' : '']"
-			class='position-absolute pos-0  m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
+		<div id='egsim-input'
+			v-bind:class="[dom.visible ? 'to-front' : 'to-back']" 
+			class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
+
+			{% block pre-form %}{% endblock %}
 			<form id='egsim-form' name='egsim-form' novalidate v-on:submit.prevent='submitForm'
-				v-bind:class="{'shadow bg-light border': formsubmitted, 'mt-5': errormsg}"
+				v-bind:class="dom.formclasses"
 				class='flex-direction-col m-3 p-2'>
-			<div v-show='formsubmitted' class='text-right'>
-				<button type="button" v-on:click='toggleFormVisibility' class="close" aria-label="Close">
-  					<span aria-hidden="true">&times;</span>
-				</button>
-			</div>
-			<div>
-				{% block form-top %}
-				{% endblock %}
-			</div>
-			<div class='flexible flex-direction-row'>			
-				<div id='inputsel' class="flexible flex-direction-col p-2">
-	
-					<div>{{ form.gsim.label }}
-						<span class='text-danger text-nowrap small' v-show="fielderrors['{{ form.gsim.html_name }}']">
-							&#123;&#123; fielderrors['{{ form.gsim.html_name }}'] &#125;&#125; 
-						</span>
-					</div>  <!-- GSIM FORM CONTROLS: -->
-					<div class='text-muted small'>
-						&#123;&#123; selectedGsims.length &#125;&#125; of &#123;&#123; gsims.length &#125;&#125; gsim(s) selected 
-					</div>
-					<div class='mb-1 flexible flex-direction-col' style='overflow:auto'>
-						<select v-model="selectedGsims" multiple required class="form-control flexible"
-							name="{{ form.gsim.html_name }}" id="{{ form.gsim.auto_id }}">
-							<option v-for="gsim in gsims" v-show="isGsimVisible(gsim)">
-								&#123;&#123; gsim &#125;&#125;
-							</option>
-						</select>
-					</div>
-	
-					<div class="input-group mb-3">  <!-- GSIM FILTER CONTROLS -->
-						<select v-model="filterType" class="form-control">
-							<option v-for="item in filterTypes" v-bind:value="item">
-	    							Filter by &#123;&#123; item &#125;&#125;:
-							</option>
-						</select>
-						<input v-model="filterText" type="text" class="form-control">
-					</div>
-		
-					<div>{{ form.imt.label }}  <!-- IMT FORM CONTROLS: -->
-					<span class='text-danger text-nowrap small' v-show="fielderrors['{{ form.imt.html_name }}']">
-						&#123;&#123; fielderrors['{{ form.imt.html_name }}'] &#125;&#125; 
-					</span>
-					</div>
-					<div class='imt-container form-control'>
-						<div v-for='imt in imts' class='mb-1 flex-direction-row align-items-baseline'>
-							<label class='text-nowrap mr-2'>
-								<input type='checkbox' v-on:change="toggleImtSelection(imt)">
-								<span v-bind:disabled="!isImtSelectable(imt)">&#123;&#123; imt &#125;&#125;</span> 
-							</label>
-							<input type='text' v-model="saPeriods" name='sa_periods' v-bind:disabled="!isImtSelectable(imt)"
-								v-bind:placeholder="isImtSelectable(imt) ? 'period/s' : ''"
-								v-if='imt=="SA"'class="form-control" >
-						</div>
-					</div>
-					<!-- this select is just for form submission (in fact has a d-none class, i.e. is hidden,
-						It's a hack (FIXME: improve/ replace?): its content is built from the checkbox above: -->
-					<select class='d-none' multiple size=8 class="form-control" id="{{ form.imt.auto_id }}"
-						name="{{ form.imt.html_name }}" required>
-						<option v-for='imt in selectedImts' selected>
-							&#123;&#123; imt &#125;&#125;
-						</option>
-					</select>
-	
+
+				<div v-show='dom.modal' class='text-right'>
+					<button type="button" v-on:click='dom.visible=!dom.visible' class="close" aria-label="Close">
+	  					<span aria-hidden="true">&times;</span>
+					</button>
 				</div>
-				{% block form-extra-divs %}{% endblock %}
-			</div>
-			<div class='p-2'>
-			{% block form-submit-div %}{% endblock %}
-			</div>
+
+				<div class='flexible flex-direction-row'>			
+					<div id='inputsel' class="flexible flex-direction-col p-2">
+		
+						<div>{{ form.gsim.label }}
+							<span class='text-danger text-nowrap small' v-show="fielderrors['{{ form.gsim.html_name }}']">
+								&#123;&#123; fielderrors['{{ form.gsim.html_name }}'] &#125;&#125; 
+							</span>
+						</div>  <!-- GSIM FORM CONTROLS: -->
+						<div class='text-muted small'>
+							&#123;&#123; selectedGsims.length &#125;&#125; of &#123;&#123; gsims.length &#125;&#125; gsim(s) selected 
+						</div>
+						<div class='mb-1 flexible flex-direction-col' style='overflow:auto'>
+							<select v-model="selectedGsims" multiple required class="form-control flexible"
+								name="{{ form.gsim.html_name }}" id="{{ form.gsim.auto_id }}">
+								<option v-for="gsim in gsims" v-show="isGsimVisible(gsim)">
+									&#123;&#123; gsim &#125;&#125;
+								</option>
+							</select>
+						</div>
+		
+						<div class="input-group mb-3">  <!-- GSIM FILTER CONTROLS -->
+							<select v-model="filterType" class="form-control">
+								<option v-for="item in filterTypes" v-bind:value="item">
+		    							Filter by &#123;&#123; item &#125;&#125;:
+								</option>
+							</select>
+							<input v-model="filterText" type="text" class="form-control">
+						</div>
 			
+						<div>{{ form.imt.label }}  <!-- IMT FORM CONTROLS: -->
+						<span class='text-danger text-nowrap small' v-show="fielderrors['{{ form.imt.html_name }}']">
+							&#123;&#123; fielderrors['{{ form.imt.html_name }}'] &#125;&#125; 
+						</span>
+						</div>
+						<div class='imt-container form-control'>
+							<div v-for='imt in imts' class='mb-1 flex-direction-row align-items-baseline'>
+								<label class='text-nowrap mr-2'>
+									<input type='checkbox' v-on:change="toggleImtSelection(imt)">
+									<span v-bind:disabled="!isImtSelectable(imt)">&#123;&#123; imt &#125;&#125;</span> 
+								</label>
+								<input type='text' v-model="saPeriods" name='sa_periods' v-bind:disabled="!isImtSelectable(imt)"
+									v-bind:placeholder="isImtSelectable(imt) ? 'period/s' : ''"
+									v-if='imt=="SA"'class="form-control" >
+							</div>
+						</div>
+						<!-- this select is just for form submission (in fact has a d-none class, i.e. is hidden,
+							It's a hack (FIXME: improve/ replace?): its content is built from the checkbox above: -->
+						<select class='d-none' multiple size=8 class="form-control" id="{{ form.imt.auto_id }}"
+							name="{{ form.imt.html_name }}" required>
+							<option v-for='imt in selectedImts' selected>
+								&#123;&#123; imt &#125;&#125;
+							</option>
+						</select>
+		
+					</div>
+					{% block form-extra-divs %}{% endblock %}
+				</div>
+
+				<div class='p-2'>
+				{% block form-submit-div %}{% endblock %}
+				</div>
 			</form>
+			{% block post-form %}{% endblock %}
 			<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0">
 				<!-- Loading, please wait ... --> <!-- (<- text removed) -->
 				<div class="loader"></div>
 			</div>
+
 			<div id='errordiv' v-show='errormsg' class='position-absolute pos-t-0 pos-x-0 bg-danger text-sm-center text-white'>
 				&#123;&#123; errormsg &#125;&#125;
 			</div>
@@ -101,5 +104,5 @@
 
 {% block after-body %}
 	{{ block.super }}
-	<script type='text/javascript' src = "{% static 'js/egsim_main.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/egsim_input.js' %}"></script>
 {% endblock %}
