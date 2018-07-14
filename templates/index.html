@@ -1,19 +1,13 @@
 {% extends 'base.html' %}
 
 {% block head %}
-	{% with fontawesome=True leaflet=False shapefile=False plotly=False %}
-		{{ block.super }}
-	{% endwith %}
-{% endblock %}
-
-{% block extra-head %}
 	{{ block.super }}
 {% endblock %}
 
 {% block body %}
 	<div class="flex-direction-col height100">
 		<nav class="navbar navbar-expand-lg navbar-dark bg-dark" id='navbarNavAltMarkup'>
-		<!-- <a class="navbar-brand" href="#">{{ project_name }}</a> -->
+			<!-- <a class="navbar-brand" href="#">{{ project_name }}</a> -->
 			<button class="navbar-toggler" type="button" data-toggle="collapse"
 				data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup"
 				aria-expanded="false" aria-label="Toggle navigation">
@@ -36,7 +30,44 @@
 
 {% block after-body %}
 <script type='text/javascript'>
-	// configTabs defined in base.html
+	function configTabs(data){
+	    // configs tabs to be clicked and visualize their content.
+	    // data is an Array of 2-element tuples (tab-id, div-id), where tab is the id of the
+	    // tab element (usually anchor)
+	    // which, when clicked, sets visible the element whose id is div-id (usually div)
+	    // and hides the others
+	    // this method sets also the first tuple passed in data as the default visible/selected element
+		var doc = document;
+	    // define function when a tab is clicked
+	    function tabClicked(tabId){
+	        data.forEach(function(item){
+	            [_tabId, _divId] = item;
+		        var tabElm = doc.getElementById(_tabId);
+		        var divElm = doc.getElementById(_divId);
+		        var visible = tabId === _tabId;
+		        if (visible){
+		            tabElm.classList.add("active");
+		            divElm.classList.remove("tab-deactivated");
+			        divElm.classList.add("tab-activated");
+		        }else{
+		            tabElm.classList.remove("active");
+		            divElm.classList.add("tab-deactivated");
+			        divElm.classList.remove("tab-activated");
+		        }
+	    	});
+	    }
+	    // set onlick on each tab:
+	    data.forEach(function(item){
+			[tabId, divId] = item;
+			doc.getElementById(tabId).addEventListener('click', function(mouseEvent) { 
+			    tabClicked(mouseEvent.target.id);
+			    return false;  // prevent # appearing in browser's url tab
+	        });
+		});
+	    // select the first tab:
+	    tabClicked(data[0][0]);   
+	}
+
 	configTabs([["a-{{ menu }}", "iframe-{{ menu }}"]].concat([
 		{% for key in menus.keys %}
 			{% if key != menu %}

@@ -1,5 +1,7 @@
 {% extends 'trellis.html' %}
 
+{% block output %}{% endblock %}
+
 {% block after-body %}
 {{ block.super }}
 <script type='text/javascript'>
@@ -12,8 +14,8 @@ document.getElementById('__PGA').checked = true;
 document.getElementById('__PGV').checked = true; */
 
 
-EGSIM_INPUT.toggleImtSelection('PGA');
-EGSIM_INPUT.toggleImtSelection('PGV');
+/* EGSIM_INPUT.toggleImtSelection('PGA');
+EGSIM_INPUT.toggleImtSelection('PGV'); */
 EGSIM_INPUT.$set(EGSIM_INPUT, 'selectedGsims', ["AbrahamsonEtAl2014", "AbrahamsonEtAl2014NSHMPLower",
     "AbrahamsonEtAl2014NSHMPMean", "AbrahamsonEtAl2014NSHMPUpper",
     "AbrahamsonEtAl2014RegCHN", "AbrahamsonEtAl2014RegJPN",

@@ -561,7 +561,7 @@ class TrellisForm(BaseForm):
 
     __scalar_or_vector_help__ = 'Scalar, vector or range'
 
-    plot_type = TrellisplottypeField(label='Plot type', initial="d")
+    plot_type = TrellisplottypeField(label='Plot type')
     # GSIM RUPTURE PARAMS:
     magnitude = NArrayField(label='Magnitude(s)', min_arr_len=1,
                             help_text=__scalar_or_vector_help__)

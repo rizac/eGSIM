@@ -3,10 +3,10 @@
 	text-overflow: ellipsis;
 }
 
-.imt-container{
+/* .imt-container{
 	max-height: 8em;
 	overflow: auto;
-}
+} */
 
 #egsim-input.to-front{
 	z-index: 100;

@@ -10,10 +10,15 @@
 	<!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu Mono"> -->
 	<link href="https://fonts.googleapis.com/css?family=Encode+Sans+Condensed" rel="stylesheet">
 	<!-- <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet"> -->
-
+	
+	{% if vue %}
 	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+	{% endif %}
+	
+	{% if axios %}
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
-
+	{% endif %}
+	
 	<!--  -->
 	<!-- BOOTSTRAP for safety, it must be loaded before all posibble plugins -->
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
@@ -22,7 +27,7 @@
 	<!-- egsim base css:  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
 
-	{% if leaflet or shapefile %}
+	{% if leaflet %}
 	<!-- LEAFLET (http://leafletjs.com/download.html) -->
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.0/dist/leaflet.css"
 		integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
@@ -58,7 +63,7 @@
 
 	{% if shapefile %}
 	<!-- Leaflet shapefile plugin - see: https://github.com/calvinmetcalf/leaflet.shapefile -->
-	<script type="text/javascript" src="https://cdn.rawgit.com/calvinmetcalf/leaflet.shapefile/gh-pages/shp.js"></script>
+	<!-- <script type="text/javascript" src="https://cdn.rawgit.com/calvinmetcalf/leaflet.shapefile/gh-pages/shp.js"></script> -->
 	{% endif %}
 
 	{% if plotly %}
@@ -74,8 +79,14 @@
 	<!--  THESE ARE FALLBACKS, COMMENT OUT IF YOU WORK OFFLINE -->
 	<script type='text/javascript'>
 	if (!navigator.onLine){
+	    {% if vue %}
 		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.js'><\/script>");
+		{% endif %}
+
+		{% if axios %}
 		document.write("<script type='text/javascript' src='/static/fallbacks/axios.0.18.0.min.js'><\/script>");
+		{% endif %}
+
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/bootstrap.4.0.0.min.css'/>");
 
 		{% if fontawesome %}
@@ -89,7 +100,7 @@
 		{% endif %}
 		
 		{% if shapefile %}
-		document.write("<script type='text/javascript' src='/static/fallbacks/shp.js'><\/script>");
+		/* document.write("<script type='text/javascript' src='/static/fallbacks/shp.js'><\/script>"); */
 		{% endif %}
 		
 		{% if plotly %}
@@ -102,45 +113,6 @@
 	{% endblock %}
 
 	{% block extra-head %}
-	<script type='text/javascript'>
-	function configTabs(data){
-	    // configs tabs to be clicked and visualize their content.
-	    // data is an Array of 2-element tuples (tab-id, div-id), where tab is the id of the
-	    // tab element (usually anchor)
-	    // which, when clicked, sets visible the element whose id is div-id (usually div)
-	    // and hides the others
-	    // this method sets also the first tuple passed in data as the default visible/selected element
-		var doc = document;
-	    // define function when a tab is clicked
-	    function tabClicked(tabId){
-	        data.forEach(function(item){
-	            [_tabId, _divId] = item;
-		        var tabElm = doc.getElementById(_tabId);
-		        var divElm = doc.getElementById(_divId);
-		        var visible = tabId === _tabId;
-		        if (visible){
-		            tabElm.classList.add("active");
-		            divElm.classList.remove("tab-deactivated");
-			        divElm.classList.add("tab-activated");
-		        }else{
-		            tabElm.classList.remove("active");
-		            divElm.classList.add("tab-deactivated");
-			        divElm.classList.remove("tab-activated");
-		        }
-	    	});
-	    }
-	    // set onlick on each tab:
-	    data.forEach(function(item){
-			[tabId, divId] = item;
-			doc.getElementById(tabId).addEventListener('click', function(mouseEvent) { 
-			    tabClicked(mouseEvent.target.id);
-			    return false;  // prevent # appearing in browser's url tab
-	        });
-		});
-	    // select the first tab:
-	    tabClicked(data[0][0]);   
-	}
-	</script>
 	{% endblock %}
 </head>
 

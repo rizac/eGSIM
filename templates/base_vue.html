@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	{% with vue=True %}
+		{{ block.super }}
+	{% endwith %}
+	<!-- includes css for form-related stuff (e.g. waitbar)  -->
+	<link rel="stylesheet" type="text/css" href="{% static 'css/base_vue.css' %}">
+{% endblock %}
+
+{% block body %}
+	<div class='flexible flex-direction-col position-relative' id='egsim-vue'>
+		<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0">
+			<!-- Loading, please wait ... --> <!-- (<- text removed) -->
+			<div class="loader"></div>
+		</div>
+
+		<div id='errordiv' v-show='errormsg' class='bg-danger text-sm-center text-white'>
+			&#123;&#123; errormsg &#125;&#125;
+		</div>
+
+		<div class='flexible position-relative'>
+			{% block main %}{% endblock %}
+		</div>
+
+		
+		<!-- <div id='egsim-output' class='position-absolute pos-0 m-0 bg-light flex-direction-col p-2 d-none'>
+			{% block output %}{% endblock %}	
+		</div> -->
+	</div>
+{% endblock %}
+
+{% block after-body %}
+	{{ block.super }}
+	<script type='text/javascript' src = "{% static 'js/egsim.js' %}"></script>
+	{% if errormsg %}
+		EGSIM.setError('{{ errormsg }}');
+	{% endif %}
+{% endblock %}
