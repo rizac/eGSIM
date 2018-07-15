@@ -24,7 +24,7 @@
 
 					<div id='inputsel' class="flexible flex-direction-col p-2">
 						
-						<gsims class='flexible'
+						<gsimselect class='flexible'
 							name="{{ form.gsim.html_name }}"
 							id="{{ form.gsim.auto_id }}"
 							label="{{ form.gsim.label }}"
@@ -33,9 +33,9 @@
 							v-bind:avalgsims="avalGsims"
 							v-bind:selectedgsims="selectedGsims"
 							v-bind:selectedgsims.sync="selectedGsims">
-						</gsims>
+						</gsimselect>
 						
-						<imts
+						<imtselect
 							name="{{ form.imt.html_name }}"
 							id="{{ form.imt.auto_id }}"
 							label="{{ form.imt.label }}"
@@ -45,22 +45,27 @@
 							v-bind:avalimts="avalImts"
 							v-bind:selectedimts="selectedImts"
 							v-bind:selectedimts.sync="selectedImts">
-						</imts>
+						</imtselect>
 
 					</div>
 					
 					<div id='rupture' class='flexible p-2'>
 						{% for field in form.visible_fields %}
 							{% if field.html_name != form.plot_type.html_name %}
-							<div class="mr-2">{{ field.html_name }}
-								<errorspan v-bind:errormsg="fielderrors['{{ field.html_name }}']"></errorspan>
-							</div> <div>{{ field }}</div>
+
+							<div class="mr-2">
+								{{ field.html_name }}<errorspan v-bind:text="fielderrors['{{ field.html_name }}']"></errorspan>
+							</div>
+
+							<div>{{ field }}</div>
+
 							<div class="text-muted small text-nowrap mb-2 field-help">
 							{% if field.html_name|lower != field.label|lower %}
 								{{ field.label }}{% if field.help_text %}: {% endif %}
 							{% endif %}
 							{{ field.help_text }}
 							</div>
+
 							{% endif %}
 						{% endfor %}
 
@@ -137,54 +142,11 @@
 {% block after-body %}
 
 <script type='text/javascript' src = "{% static 'js/components/errorspan.js' %}"></script>
-<script type='text/javascript' src = "{% static 'js/components/gsims.js' %}"></script>
-<script type='text/javascript' src = "{% static 'js/components/imts.js' %}"></script>
+<script type='text/javascript' src = "{% static 'js/components/gsimselect.js' %}"></script>
+<script type='text/javascript' src = "{% static 'js/components/imtselect.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/egsimform.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/trellisform.js' %}"></script>
 
 {{ block.super }}
-<!-- script for configuring vue instance:
-<script type='text/javascript' src = "{% static 'js/form-configs/trellis.js' %}"></script>
---> 
-
-<!-- script for setting up our plot_type field: add first <option> as non-selectable 'label' option,
-and make the <select> submit the form onChange: -->
-<script type='text/javascript'>
-(function setupSubmit(){
-    return;
-    // get our plot_type select element just rendered
-    var submitSelect = document.getElementById("id_{{ form.plot_type.html_name }}"); // https://docs.djangoproject.com/en/1.9/topics/forms/#form-rendering-options
-    // create a first option acting as "label", use the django label for that:
-    var option = document.createElement("option");
-    option.text = "{{ form.plot_type.label }}:";
-    var no_value = '';
-    option.value = no_value;
-    option.disabled = true;
-    submitSelect.add(option, 0);
-    // set the selected index to the just added option:
-    submitSelect.value = option.value;
-    // add event listener:
-    submitSelect.onchange = function(event){
-        var selectElement = event.target;
-        if(selectElement.value == no_value){  // first item selected (label-like), return
-            return;
-        }
-        // create arguments for submitForm:
-		var url = 'get_trellis_plots';
-		var onSuccess = TRELLIS.init; //defined in trellis.js
-		var onEnd = function(isError){
-		    selectElement.value = no_value;
-		    // set classes styling the egsim-input vue elements appearence:
-		    // (`this` refers to the vue instance)
-		    this.dom.visible = isError;  // this sets classes on the main div
-		    if (!this.dom.modal && !isError){
-			    this.dom.modal = true; // show upper div with close button
-		    }
-			this.dom.formclasses = isError ? [] : ['shadow', 'bg-light', 'border'];
-		};
-		// submit form to vuejs:
-        EGSIM_INPUT.submitForm(url, onSuccess, onEnd);
-    };
-})()
-</script>
+ 
 {% endblock %}

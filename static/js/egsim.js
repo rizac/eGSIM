@@ -4,7 +4,7 @@ var EGSIM = new Vue({
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
         // csrf token stored in an <input> in the base.html. Get it here and use it for each post request:
         csrftoken: Object.freeze(document.querySelector("[name=csrfmiddlewaretoken]").value),
-        form: {classes: {}, visible:true, modal:false}, //a vuejs dict of props to be set to the main form
+        // form: {classes: {}, visible:true, modal:false}, //a vuejs dict of props to be set to the main form
         avalGsims: new Map(),  // map of available gsims name -> array of gsim attributes
         avalImts: new Set(),  // set of available imts names
         selectedGsims: [],

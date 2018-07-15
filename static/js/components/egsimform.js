@@ -46,9 +46,10 @@ var EGSIMFORM = Vue.component('egsimform', {
           if(error){
               this.$emit('error', error);
           }else{
-              this.$emit('submit', url, data, {});
+              this.$emit('submit', url, data, {}, this.formSubmitted);
           }
-      }
+      },
+      formSubmitted(isError){} // no-op, can be overridden
   }
 })
 

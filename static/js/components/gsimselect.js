@@ -1,4 +1,4 @@
-Vue.component('gsims', {
+Vue.component('gsimselect', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
       'id': String,
@@ -19,9 +19,7 @@ Vue.component('gsims', {
   },
   template: `<div class='flex-direction-col'>
     <div>{{ label }}
-        <span class='text-danger text-nowrap small' v-show="errormsg">
-            {{ errormsg }}
-        </span>
+      <errorspan v-bind:text="errormsg"></errorspan>
     </div>  
     <div class='text-muted small'>
         {{ selection.length }} of {{ gsims.length }} gsim(s) selected 

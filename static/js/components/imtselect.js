@@ -1,4 +1,4 @@
-Vue.component('imts', {
+Vue.component('imtselect', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
       'id': String,
@@ -17,9 +17,7 @@ Vue.component('imts', {
   },
   template: `<div class='flex-direction-col'>
       <div>{{ label }}
-          <span class='text-danger text-nowrap small' v-show="errormsg">
-              {{ errormsg }}
-          </span>
+          <errorspan v-bind:text="errormsg"></errorspan>
       </div>  
       <div class='text-muted small'>
           {{ selection.length }} of {{ imts.length }} imt(s) selected 
