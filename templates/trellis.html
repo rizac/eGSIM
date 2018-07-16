@@ -14,8 +14,7 @@
 	
 		<trellisform id='egsim-form' name='egsim-form' url='get_trellis_plots'
 			submit_element_id='{{ form.plot_type.auto_id }}'
-			v-on:submit="post"
-            v-on:error="setError"
+			v-bind:eventbus="eventbus"
 			class='flex-direction-col m-3 p-2'>
 
 			<div class='flexible flex-direction-col'>
@@ -26,25 +25,21 @@
 						
 						<gsimselect class='flexible'
 							name="{{ form.gsim.html_name }}"
-							id="{{ form.gsim.auto_id }}"
-							label="{{ form.gsim.label }}"
 							showfilter
 							v-bind:errormsg="fielderrors['{{ form.gsim.html_name }}']"
 							v-bind:avalgsims="avalGsims"
-							v-bind:selectedgsims="selectedGsims"
 							v-bind:selectedgsims.sync="selectedGsims">
+							{{ form.gsim.label }}
 						</gsimselect>
 						
 						<imtselect
 							name="{{ form.imt.html_name }}"
-							id="{{ form.imt.auto_id }}"
-							label="{{ form.imt.label }}"
 							v-bind:errormsg="fielderrors['{{ form.imt.html_name }}']"
 							v-bind:avalgsims="avalGsims"
 							v-bind:selectedgsims="selectedGsims"
 							v-bind:avalimts="avalImts"
-							v-bind:selectedimts="selectedImts"
 							v-bind:selectedimts.sync="selectedImts">
+							{{ form.imt.label }}
 						</imtselect>
 
 					</div>
@@ -89,53 +84,11 @@
 		</trellisform>
 
 	</div>
-
-<!-- 	<div id='trellis' v-show='initialized' class='flexible flex-direction-row trellis-container pl-2'>
 	
-		<div class='flexible' style='position:relative'>
-			<div class='trellis-plots-container' id='trellis-plots-container'></div>
-		</div>
-	
-		<div class='trellis-right-panel flex-direction-col pl-3 pr-2'>
-			<div>
-				<button onclick='EGSIM_INPUT.dom.visible=!EGSIM_INPUT.dom.visible'>params</button>
-			</div>
-			<div class='flexible'>
-				<div v-for="(value, key) in plotTraceColors">
-					<label v-bind:style="{color: value}">
-					<input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
-					&#123;&#123; key &#125;&#125;</label>
-				</div>
-			</div>
-			<div>
-				<div v-for='(values, key) in selectableParams'>
-					<div>&#123;&#123; key &#125;&#125;:</div>
-					<select v-model="selectedParams[key]">
-						<option v-for='value in params[key]'>
-							&#123;&#123; value &#125;&#125;
-						</option>
-					</select>
-				</div>
-			</div>
-			<div>
-				<div>Group vertically by:</div>
-				<select v-model='gridyparam'>
-					<option v-for='key in groupableParams' v-bind:value="key">
-						&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
-					</option>
-				</select>
-			</div>
-			<div>
-				<div>Group horizontally by:</div>
-				<select v-model='gridxparam'>
-					<option v-for='key in groupableParams' v-bind:value="key">
-						&#123;&#123; key == 'ylabel' ? 'imt' : key &#125;&#125;
-					</option>
-				</select>
-			</div>
-		</div>
-	 
-	</div> -->
+	<trellisdiv v-bind:eventbus="eventbus" url='get_trellis_plots' 
+		class='position-absolute pos-0 m-0 flexible flex-direction-row pl-2'>
+	</trellisdiv>
+<!-- 	 -->
 {% endblock %}
 
 
@@ -146,6 +99,7 @@
 <script type='text/javascript' src = "{% static 'js/components/imtselect.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/egsimform.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/trellisform.js' %}"></script>
+<script type='text/javascript' src = "{% static 'js/components/trellisdiv.js' %}"></script>
 
 {{ block.super }}
  

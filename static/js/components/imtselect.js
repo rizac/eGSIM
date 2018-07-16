@@ -1,9 +1,7 @@
 Vue.component('imtselect', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
-      'id': String,
       'name': String,
-      'label': String,
       'errormsg': String,
       'selectedimts': Array,
       'avalimts': Set,
@@ -16,14 +14,14 @@ Vue.component('imtselect', {
       }
   },
   template: `<div class='flex-direction-col'>
-      <div>{{ label }}
+      <div><slot>{{ name }}</slot>
           <errorspan v-bind:text="errormsg"></errorspan>
       </div>  
       <div class='text-muted small'>
           {{ selection.length }} of {{ imts.length }} imt(s) selected 
       </div>
       <div class='mb-1 flexible flex-direction-col'>
-        <select v-model="selection" :name="name" :id="id" multiple class="form-control" required>
+        <select v-model="selection" :name="name" :id="'id_' + name" multiple class="form-control" required>
             <option v-for='imt in imts' :key='imt'
                 v-bind:style="!isImtSelectable(imt) ? {'text-decoration': 'line-through'} : ''"
                 v-bind:class="!isImtSelectable(imt) ? ['text-muted'] : ''">
@@ -34,30 +32,27 @@ Vue.component('imtselect', {
       <div>  
           <input type='text' v-model="saPeriods" name='sa_periods'
               v-bind:disabled="!isImtSelectable('SA') || !isSelected('SA')"
-              v-bind:placeholder="isImtSelectable('SA') ? 'SA period/s' : ''"
+              v-bind:placeholder="'SA period(s)'"
               class="form-control" >
       </div>
   </div>`,
   methods: {
       isImtSelectable(imt) {
-          if (!this.selectedgsims.length){
-              return false;
-          }
-          for (let gsim of this.selectedgsims){
-              var selectableImts = this.avalgsims.get(gsim)[0];
-              if (!selectableImts.has(imt)){
-                  return false;
-              }
-          }
-          return true;    
+//          if (!this.selectedgsims.length){
+//              return false;
+//          }
+//          for (let gsim of this.selectedgsims){
+//              var selectableImts = this.avalgsims.get(gsim)[0];
+//              if (!selectableImts.has(imt)){
+//                  return false;
+//              }
+//          }
+//          return true;
+          var avalgsims = this.avalgsims;
+          return !this.selectedgsims.some(gsim => !avalgsims.get(gsim)[0].has(imt));
       },
       isSelected(imt){
-          for(var imt of this.selection){
-              if (imt == 'SA'){
-                  return true;
-              }
-          }
-          return false;
+          return this.selection.some(elm => elm === imt);
       }
   },
   computed: {

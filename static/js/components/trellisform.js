@@ -3,9 +3,6 @@ Vue.component('trellisform', {
   props: {
       'submit_element_id': String
   },
-  data: {
-      formsubmitted
-  },
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   mounted: function(args){
       var submitSelect = this.form().querySelector('#' + this.submit_element_id);
@@ -26,6 +23,14 @@ Vue.component('trellisform', {
           this.submitForm();
           selectElement.selectedIndex = -1;
           submitSelect.value = noValue;
+      }
+  },
+  methods: {
+      formSubmitted(response, isError){  // called by super-class when form is submitted
+          if (!isError){
+              this.$set(this, 'visible', false);  //hide the form
+              this.$set(this, 'modal', true);  //show close button
+          }
       }
   }
 })

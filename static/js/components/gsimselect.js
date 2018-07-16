@@ -1,9 +1,7 @@
 Vue.component('gsimselect', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
-      'id': String,
       'name': String,
-      'label': String,
       'errormsg': String,
       'showfilter': Boolean,
       'selectedgsims': Array,
@@ -18,7 +16,7 @@ Vue.component('gsimselect', {
       }
   },
   template: `<div class='flex-direction-col'>
-    <div>{{ label }}
+    <div><slot>{{ name }}</slot>
       <errorspan v-bind:text="errormsg"></errorspan>
     </div>  
     <div class='text-muted small'>
@@ -26,7 +24,7 @@ Vue.component('gsimselect', {
     </div>
     <div class='mb-1 flexible flex-direction-col'>
         <select v-model="selection" multiple required class="form-control flexible"
-            :name="name" :id="id">
+            :name="name" :id="'id_' + name">
             <option v-for="gsim in gsims" :key="gsim" v-show="isGsimVisible(gsim)">
                 {{ gsim }}
             </option>

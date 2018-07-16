@@ -115,7 +115,7 @@ class EgsimQueryView(View):
                                                                code=cls.EXCEPTION_CODE,
                                                                errors=errors)
 
-        return JsonResponse({'data': cls.process(form.clean())})
+        return JsonResponse(cls.process(form.clean()))
 
     @classmethod
     def process(cls, params):

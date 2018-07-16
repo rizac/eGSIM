@@ -3,11 +3,8 @@ var EGSIMFORM = Vue.component('egsimform', {
   props: {
       'id': String,
       'name': String,
-      'url': String
-//      '_fielderrors': {
-//          type: Object,
-//          default: () => {return {'gsim': 'bla'}}
-//      }
+      'url': String,
+      'eventbus': {default: null},
   },
   data: function () {
       return {
@@ -18,6 +15,7 @@ var EGSIMFORM = Vue.component('egsimform', {
       }
   },
   template: `<form :id='id' :name='name' novalidate v-on:submit.prevent='submitForm'
+                v-show="visible"
                 v-bind:class="formclasses">
 
                 <div v-show='modal' class='text-right'>
@@ -27,61 +25,35 @@ var EGSIMFORM = Vue.component('egsimform', {
                 </div>
                 <slot></slot>
             </form>`,
-//  watch: {  // https://stackoverflow.com/a/42134176
-//      fielderrors: {
-//         handler(value){
-//           // do stuff
-//         },
-//         deep: true
-//      }
-//  },
   methods: {
       form: function(){
           return this.$el;
       },
       submitForm(){
+          if(!this.eventbus){
+              return;
+          }
           var url = this.url;
           // build form data inot a dict:
           var [data, error] = parseForm(this.form());
           if(error){
-              this.$emit('error', error);
+              this.eventbus.$emit('error', error);
           }else{
-              this.$emit('submit', url, data, {}, this.formSubmitted);
+              this.eventbus.$emit('postrequest', url, data, {});
           }
       },
-      formSubmitted(isError){} // no-op, can be overridden
+      formSubmitted(response, isError){return;} // no-op, can be overridden (see below)
+  },
+  created: function(){
+      if (this.eventbus){
+          this.eventbus.$on('postresponse', (response, isError) => {
+              if (response.config.url == this.url){
+                  this.formSubmitted.call(this, response, isError);
+              }
+          });
+      }
   }
-})
-
-
-function* formElements(form) {
-    // returns a generator over all elements of the given form.
-    // Does not yield <input> elements of type ('submit', 'button', 'reset')
-    // <button> elements
-    // any element with falsy 'name' property (not set or empty)
-    for (var elm of form.elements){
-        var tagName = elm.tagName.toLowerCase();
-        var typeName = elm.type.toLowerCase();
-        var type = tagName == 'select' || tagName == 'button' ? tagName : typeName;
-        var name = elm.name;
-        // skip stuff we do not need to include:
-        if(!name || type == 'submit' || type=='button' || type=='reset'){
-            continue;
-        }
-        yield elm;
-    }
-}
-
-
-function isValid(form){
-    for (var elm of formElements(form)){
-        // run browser form field validation:
-        if(!elm.checkValidity()){
-            return false;
-        }
-    }
-    return true;
-}
+});
 
 
 function parseForm(form){
@@ -173,4 +145,22 @@ function parseForm(form){
         data[name] = value;
     }
     return [data, error];
+}
+
+function* formElements(form) {
+    // returns a generator over all elements of the given form.
+    // Does not yield <input> elements of type ('submit', 'button', 'reset')
+    // <button> elements
+    // any element with falsy 'name' property (not set or empty)
+    for (var elm of form.elements){
+        var tagName = elm.tagName.toLowerCase();
+        var typeName = elm.type.toLowerCase();
+        var type = tagName == 'select' || tagName == 'button' ? tagName : typeName;
+        var name = elm.name;
+        // skip stuff we do not need to include:
+        if(!name || type == 'submit' || type=='button' || type=='reset'){
+            continue;
+        }
+        yield elm;
+    }
 }
