@@ -12,7 +12,7 @@ var EGSIM = new Vue({
         data: {},
         loading: false,
         errormsg: '',
-        fielderrors: {},
+        //fielderrors: {},
         initURL: '/get_init_params', //url for requesting the initialization data. For info:
         // 
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
@@ -37,7 +37,7 @@ var EGSIM = new Vue({
         this.eventbus.$on('postrequest', (url, data, config) => {
             this.post(url, data, config);
         });
-        this.eventbus.$on('error', (error) => {
+        this.eventbus.$on('error', error => {
             this.setError(error);
         });
     },
@@ -54,7 +54,7 @@ var EGSIM = new Vue({
             return axios.post(url, data || {}, config).then(response => {
                 this.eventbus.$emit('postresponse', response, false);
             }).catch((error) => {
-                this.eventbus.$emit('postresponse', response, true);
+                this.eventbus.$emit('postresponse', error, true);
             }).finally(()=>{
                 this.setLoading(false);
             });
@@ -64,14 +64,14 @@ var EGSIM = new Vue({
                 error = {message: error};
             }
             this.$set(this, 'errormsg', error.message);
-            var errors = error.errors || [];
-            var fielderrors = {};
-            for (var err of errors){
-                if (err.domain){
-                    fielderrors[err.domain] = err.message || 'unknown error';
-                }
-            } 
-            this.$set(this, 'fielderrors', fielderrors);
+//            var errors = error.errors || [];
+//            var fielderrors = {};
+//            for (var err of errors){
+//                if (err.domain){
+//                    fielderrors[err.domain] = err.message || 'unknown error';
+//                }
+//            } 
+//            this.$set(this, 'fielderrors', fielderrors);
         },
         setLoading(value){
             this.$set(this, 'loading', value);

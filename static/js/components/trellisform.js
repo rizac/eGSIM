@@ -4,7 +4,8 @@ Vue.component('trellisform', {
       'submit_element_id': String
   },
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
-  mounted: function(args){
+  mounted: function(){
+      // configure trellis plot <select> and make it the submit element:
       var submitSelect = this.form().querySelector('#' + this.submit_element_id);
       // create a first option acting as "label", use the django label for that:
       var noValue = '';
@@ -26,11 +27,26 @@ Vue.component('trellisform', {
       }
   },
   methods: {
-      formSubmitted(response, isError){  // called by super-class when form is submitted
-          if (!isError){
-              this.$set(this, 'visible', false);  //hide the form
-              this.$set(this, 'modal', true);  //show close button
+      created: function(){
+          // Note1: this function is called from within created (https://vuejs.org/v2/api/#created)
+          // it's purpose is to add custom stuff on creation without overriding the 'super' call
+          // Note2: seems that adding events in mounted causes infinite loops
+          // Given the above, add event listener for the form visibility:
+          if (this.eventbus){
+              this.eventbus.$on('toggletrellisformvisibility', () => {
+                  this.setVisible(!this.visible);
+              });
           }
+          // catch component specific events:
+          this.$on('formsubmitted', (response, isError) => {  // called by super-class when form is submitted
+              if (!isError){
+                  this.setVisible(false);  //hide the form
+                  this.setModal(true);  //show close button
+              }
+          });
+          this.$on('modal', value => {  // called by super-class when form is submitted
+              this.formclasses = value ? ['shadow', 'bg-light', 'border'] : [];
+          });
       }
   }
 })

@@ -4,7 +4,7 @@
 	{% with plotly=True axios=True %}
 		{{ block.super }}
 	{% endwith %}
-	<link rel="stylesheet" type="text/css" href="{% static 'css/trellis.css' %}">
+	<!-- <link rel="stylesheet" type="text/css" href="{% static 'css/trellis.css' %}"> -->
 {% endblock %}
 	
 {% block main %}
@@ -17,7 +17,7 @@
 			v-bind:eventbus="eventbus"
 			class='flex-direction-col m-3 p-2'>
 
-			<div class='flexible flex-direction-col'>
+			<div class='flexible flex-direction-col' slot-scope='formscope'>
 
 				<div class='flexible flex-direction-row'>
 
@@ -26,7 +26,7 @@
 						<gsimselect class='flexible'
 							name="{{ form.gsim.html_name }}"
 							showfilter
-							v-bind:errormsg="fielderrors['{{ form.gsim.html_name }}']"
+							v-bind:errormsg="formscope.fielderrors['{{ form.gsim.html_name }}']"
 							v-bind:avalgsims="avalGsims"
 							v-bind:selectedgsims.sync="selectedGsims">
 							{{ form.gsim.label }}
@@ -34,7 +34,7 @@
 						
 						<imtselect
 							name="{{ form.imt.html_name }}"
-							v-bind:errormsg="fielderrors['{{ form.imt.html_name }}']"
+							v-bind:errormsg="formscope.fielderrors['{{ form.imt.html_name }}']"
 							v-bind:avalgsims="avalGsims"
 							v-bind:selectedgsims="selectedGsims"
 							v-bind:avalimts="avalImts"
@@ -44,12 +44,12 @@
 
 					</div>
 					
-					<div id='rupture' class='flexible p-2'>
+					<div id='rupture' class='flexible p-2' >
 						{% for field in form.visible_fields %}
 							{% if field.html_name != form.plot_type.html_name %}
 
 							<div class="mr-2">
-								{{ field.html_name }}<errorspan v-bind:text="fielderrors['{{ field.html_name }}']"></errorspan>
+								{{ field.html_name }}<errorspan v-bind:text="formscope.fielderrors['{{ field.html_name }}']"></errorspan>
 							</div>
 
 							<div>{{ field }}</div>
@@ -85,8 +85,8 @@
 
 	</div>
 	
-	<trellisdiv v-bind:eventbus="eventbus" url='get_trellis_plots' 
-		class='position-absolute pos-0 m-0 flexible flex-direction-row pl-2'>
+	<trellisdiv v-bind:eventbus="eventbus" url='get_trellis_plots'
+		class='position-absolute pos-0 m-0 flexible flex-direction-row pl-2 to-back'>
 	</trellisdiv>
 <!-- 	 -->
 {% endblock %}

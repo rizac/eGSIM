@@ -4,14 +4,14 @@ var EGSIMFORM = Vue.component('egsimform', {
       'id': String,
       'name': String,
       'url': String,
-      'eventbus': {default: null},
+      'eventbus': {default: null}
   },
   data: function () {
       return {
           formclasses: [],
           modal: false,
           visible: true,
-          // fielderrors: Vue.util.extend({}, this._fielderrors) // https://stackoverflow.com/a/34633769
+          fielderrors: {}
       }
   },
   template: `<form :id='id' :name='name' novalidate v-on:submit.prevent='submitForm'
@@ -19,15 +19,23 @@ var EGSIMFORM = Vue.component('egsimform', {
                 v-bind:class="formclasses">
 
                 <div v-show='modal' class='text-right'>
-                    <button type="button" v-on:click='visible=!visible' class="close" aria-label="Close">
+                    <button type="button" v-on:click='setVisible(false)' class="close" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <slot></slot>
+                <slot :fielderrors="fielderrors"></slot>
             </form>`,
   methods: {
       form: function(){
           return this.$el;
+      },
+      setModal: function(value){
+          this.$set(this, 'modal', value);
+          this.$emit('modal', value);
+      },
+      setVisible: function(value){
+          this.$set(this, 'visible', value);
+          this.$emit('visible', value);
       },
       submitForm(){
           if(!this.eventbus){
@@ -42,16 +50,29 @@ var EGSIMFORM = Vue.component('egsimform', {
               this.eventbus.$emit('postrequest', url, data, {});
           }
       },
-      formSubmitted(response, isError){return;} // no-op, can be overridden (see below)
+      //formSubmitted(response, isError){return;}, // no-op, can be overridden (see below)
+      created(){return;} // no-op, can be overriden for custom code when this instance is created
   },
   created: function(){
       if (this.eventbus){
           this.eventbus.$on('postresponse', (response, isError) => {
               if (response.config.url == this.url){
-                  this.formSubmitted.call(this, response, isError);
+                  this.$emit('formsubmitted', response, isError);
+                  //this.formSubmitted.call(this, response, isError);
               }
           });
+          this.eventbus.$on('error', error => {
+              var errors = error.errors || [];
+              var fielderrors = {};
+              for (var err of errors){
+                  if (err.domain){
+                      fielderrors[err.domain] = err.message || 'unknown error';
+                  }
+              } 
+              this.$set(this, 'fielderrors', fielderrors);
+          });
       }
+      this.created();
   }
 });
 

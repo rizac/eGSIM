@@ -34,18 +34,19 @@ Vue.component('trellisdiv', {
             }
         }
     },
-    template: `<div id='trellisdiv' v-show='initialized'
-        v-bind:class="{'to-front': initialized, 'to-back': !initialized}">
+    template: `<div id='trellisdiv' v-show='initialized'>
+        <!--  v-bind:class="{'to-front': initialized, 'to-back': !initialized}" -->
     
         <div class='flexible position-relative'>
             <div class='trellis-plots-container' id='trellis-plots-container'></div>
         </div>
     
-        <div class='trellis-right-panel flex-direction-col pl-3 pr-2'>
+        <div class='trellis-right-panel flex-direction-col p-2 pl-3'>
             <div>
-                <button onclick='EGSIM_INPUT.dom.visible=!EGSIM_INPUT.dom.visible'>params</button>
+                <button @click="eventbus.$emit('toggletrellisformvisibility')">params</button>
             </div>
-            <div class='flexible'>
+            <div class='flexible pt-3'>
+                <h3>Legend</h3>
                 <div v-for="(value, key) in plotTraceColors">
                     <label v-bind:style="{color: value}">
                         <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
@@ -53,10 +54,11 @@ Vue.component('trellisdiv', {
                     </label>
                 </div>
             </div>
+            <div class='pt-3'>Display</div>
             <div>
                 <div v-for='(values, key) in selectableParams'>
                     <div>{{ key }}:</div>
-                    <select v-model="selectedParams[key]">
+                    <select class='form-control' v-model="selectedParams[key]">
                         <option v-for='value in params[key]'>
                             {{ value }}
                         </option>
@@ -65,7 +67,7 @@ Vue.component('trellisdiv', {
             </div>
             <div>
                 <div>Group vertically by:</div>
-                <select v-model='gridyparam'>
+                <select class='form-control' v-model='gridyparam'>
                     <option v-for='key in groupableParams' v-bind:value="key">
                         {{ key == 'ylabel' ? 'imt' : key }}
                     </option>
@@ -73,7 +75,7 @@ Vue.component('trellisdiv', {
             </div>
             <div>
                 <div>Group horizontally by:</div>
-                <select v-model='gridxparam'>
+                <select class='form-control' v-model='gridxparam'>
                     <option v-for='key in groupableParams' v-bind:value="key">
                        {{ key == 'ylabel' ? 'imt' : key }}
                     </option>
