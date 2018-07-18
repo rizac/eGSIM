@@ -3,22 +3,6 @@
 	text-overflow: ellipsis;
 }
 
-/* .imt-container{
-	max-height: 8em;
-	overflow: auto;
-} */
-
-#egsim-input.to-front{
-	z-index: 100;
-	visibility: visible;
-}
-
-#egsim-input.to-back{
-	z-index: -100;
-	visibility: hidden;
-}
-
-
 /* set here the height of the progressbar/waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
 #waitdiv{
 	z-index: 200;  /* to sit on top of everything, in case */

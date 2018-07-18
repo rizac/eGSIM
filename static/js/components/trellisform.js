@@ -47,6 +47,10 @@ Vue.component('trellisform', {
           this.$on('modal', value => {  // called by super-class when form is submitted
               this.formclasses = value ? ['shadow', 'bg-light', 'border'] : [];
           });
+          this.$on('visible', value => {  // called by super-class when form is submitted
+              this.$set(this, 'styleobject', {zIndex: value ? 100 : -100});
+          });
+          this.$emit('visible', true);  // force calling method above
       }
   }
 })

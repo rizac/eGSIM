@@ -9,6 +9,7 @@ var EGSIMFORM = Vue.component('egsimform', {
   data: function () {
       return {
           formclasses: [],
+          styleobject: {},
           modal: false,
           visible: true,
           fielderrors: {}
@@ -16,7 +17,8 @@ var EGSIMFORM = Vue.component('egsimform', {
   },
   template: `<form :id='id' :name='name' novalidate v-on:submit.prevent='submitForm'
                 v-show="visible"
-                v-bind:class="formclasses">
+                v-bind:class="formclasses"
+                v-bind:style="styleobject">
 
                 <div v-show='modal' class='text-right'>
                     <button type="button" v-on:click='setVisible(false)' class="close" aria-label="Close">

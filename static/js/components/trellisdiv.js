@@ -18,43 +18,29 @@ Vue.component('trellisdiv', {
             plotlydata: [],  // the `data` argument passed to Plotly.newPlot(data, ...) holding the traces
             plotDivId: 'trellis-plots-container',
             plotFontSize: 12,
-            plotTraceColors: {},
-            plotColors: {index:0,
-                // https://stackoverflow.com/a/44727682:
-                defColors: Object.freeze(['#1f77b4',  // muted blue
-                    '#ff7f0e',  // safety orange
-                    '#2ca02c',  // cooked asparagus green
-                    '#d62728',  // brick red
-                    '#9467bd',  // muted purple
-                    '#8c564b',  // chestnut brown
-                    '#e377c2',  // raspberry yogurt pink
-                    '#7f7f7f',  // middle gray
-                    '#bcbd22',  // curry yellow-green
-                    '#17becf'])   // blue-teal
-            }
+            colorMap: Vue.colorMap(),  // defined in vueutil.js
         }
     },
     template: `<div id='trellisdiv' v-show='initialized'>
-        <!--  v-bind:class="{'to-front': initialized, 'to-back': !initialized}" -->
-    
+        
         <div class='flexible position-relative'>
-            <div class='trellis-plots-container' id='trellis-plots-container'></div>
+            <div class='position-absolute pos-0' id='trellis-plots-container'></div>
         </div>
     
         <div class='trellis-right-panel flex-direction-col p-2 pl-3'>
             <div>
-                <button @click="eventbus.$emit('toggletrellisformvisibility')">params</button>
+                <button @click="toggleShowInputForm">params</button>
             </div>
+            <h5 class='pt-3'>Legend</h5>
             <div class='flexible pt-3'>
-                <h3>Legend</h3>
-                <div v-for="(value, key) in plotTraceColors">
+                <div v-for="(value, key) in colorMap.asObject">
                     <label v-bind:style="{color: value}">
                         <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
                         {{ key }}
                     </label>
                 </div>
             </div>
-            <div class='pt-3'>Display</div>
+            <h5 class='pt-3'>Display</h5>
             <div>
                 <div v-for='(values, key) in selectableParams'>
                     <div>{{ key }}:</div>
@@ -96,9 +82,6 @@ Vue.component('trellisdiv', {
     methods: {
         init: function(jsondict){
             this.$set(this, 'initialized', true);
-            // reset colors:
-            this.plotColors.index = 0;
-            this.$set(this, 'plotTraceColors', {});
             // convert data:
             var [plots, params] = this.getTrellisData(jsondict);
             this.$set(this, 'plots', plots);
@@ -135,7 +118,7 @@ Vue.component('trellisdiv', {
                     // var name = `${name}_${plotParams.magnitude}_${plotParams.distance}_${plotParams.vs30}`;
                     return {x: x, y: y, mode: (data.xvalues.length == 1 ? 'scatter' : 'lines'),
                         visible: true,
-                        legendgroup: name, name: name, line: {color: this.getTraceColor(name)}};
+                        legendgroup: name, name: name, line: {color: this.colorMap.get(name)}};
                 }, this);
                 plots.push({'data': plotData, 'params': plotParams});
             }
@@ -366,14 +349,6 @@ Vue.component('trellisdiv', {
             var gridyparam = this.gridyparam == 'xlabel' || this.gridyparam == 'ylabel' ? '' : this.gridyparam;
             return [gridxparam, gridyparam];
         },
-        getTraceColor: function(traceName){
-            var color = this.plotTraceColors[traceName];
-            if (!color){
-                color = this.plotTraceColors[traceName] = this.plotColors.defColors[this.plotColors.index];
-                this.plotColors.index = (this.plotColors.index+1) % this.plotColors.defColors.length;
-            }
-            return color;
-        },
         toggleTraceVisibility: function(traceName){
             var indices = [];
             var visible = undefined;
@@ -400,6 +375,11 @@ Vue.component('trellisdiv', {
                 return data.visible;
             }
             return true;
+        },
+        toggleShowInputForm: function(){
+            if(this.eventbus){
+                this.eventbus.$emit('toggletrellisformvisibility');
+            }
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load

@@ -4,13 +4,16 @@
 	{% with plotly=True axios=True %}
 		{{ block.super }}
 	{% endwith %}
-	<!-- <link rel="stylesheet" type="text/css" href="{% static 'css/trellis.css' %}"> -->
 {% endblock %}
 	
 {% block main %}
 
-	<div id='egsim-input'
-		class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
+	<div class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
+	
+		<!-- trellisfiv first, as it has automatically a greater z-index -->
+		<trellisdiv v-bind:eventbus="eventbus" url='get_trellis_plots'
+			class='position-absolute pos-0 m-0 flex-direction-row pl-2'>
+		</trellisdiv>
 	
 		<trellisform id='egsim-form' name='egsim-form' url='get_trellis_plots'
 			submit_element_id='{{ form.plot_type.auto_id }}'
@@ -84,11 +87,6 @@
 		</trellisform>
 
 	</div>
-	
-	<trellisdiv v-bind:eventbus="eventbus" url='get_trellis_plots'
-		class='position-absolute pos-0 m-0 flexible flex-direction-row pl-2 to-back'>
-	</trellisdiv>
-<!-- 	 -->
 {% endblock %}
 
 
