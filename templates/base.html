@@ -12,7 +12,11 @@
 	<!-- <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet"> -->
 	
 	{% if vue %}
+	{% if debug %}
 	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+	{% else %}
+	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.min.js"></script>
+	{% endif %}
 	<script type='text/javascript' src = "{% static 'js/vueutil.js' %}"></script>
 	{% endif %}
 	
@@ -98,10 +102,6 @@
 		document.write("<script type='text/javascript' src='/static/fallbacks/leaflet.1.3.0.js'><\/script>");
 		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/leaflet.1.3.0.css'/>");
 		document.write("<script type='text/javascript' src='/static/fallbacks/esri-leaflet.2.1.2.js'><\/script>");
-		{% endif %}
-		
-		{% if shapefile %}
-		/* document.write("<script type='text/javascript' src='/static/fallbacks/shp.js'><\/script>"); */
 		{% endif %}
 		
 		{% if plotly %}

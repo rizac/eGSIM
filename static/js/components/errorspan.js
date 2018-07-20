@@ -4,7 +4,7 @@
  * You can bind the text to a variable:
  * <errorspan v-bind:text="variable"></errorspan>
  * Or provide custom text:
- * <errorspan>my error text</errorspan>
+ * <errorspan>{{ variable }}</errorspan>
  */
 Vue.component('errorspan', {
   // https://vuejs.org/v2/guide/components-props.html#Prop-Types:

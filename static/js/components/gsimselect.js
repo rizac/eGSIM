@@ -1,8 +1,8 @@
 Vue.component('gsimselect', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
-      'name': String,
-      'errormsg': String,
+      'name': {type: String, default: 'gsim'},
+      'errormsg': {type: String, default: ''},
       'showfilter': Boolean,
       'selectedgsims': Array,
       'avalgsims': Map

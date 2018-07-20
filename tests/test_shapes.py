@@ -8,9 +8,10 @@ Created on 2 Jul 2018
 from openquake.hazardlib.const import TRT
 
 
-from egsim.utils import EGSIM
+from egsim.core.utils import EGSIM
+
 from egsim.core.shapes import get_features_containing, find_shp, to_geojson,\
-    get_features_intersecting
+    get_features_intersecting, get_feature_properties
 
 
 def test_share_geojson():
@@ -54,4 +55,8 @@ def test_share_geojson():
     wrong_coords = (berlin_coordinates[1], berlin_coordinates[0])
     fts = get_features_containing(geojson, *wrong_coords)
     assert not fts
+
+    props1 = get_feature_properties(geojson, *berlin_coordinates)
+    props2 = get_feature_properties(geojson, *berlin_coordinates_rect)
+    assert props1 == props2 == {'Stable Shallow Crust'}
 

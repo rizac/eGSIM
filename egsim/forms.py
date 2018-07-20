@@ -263,73 +263,8 @@ class NArrayField(CharField):
             raise ValueError('%s > %s' % (str(value), str(maxval)))
 
 
-# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
-class IMTField(MultipleChoiceField):
-    '''Field for IMT selection.
-    This class overrides `to_python`, which first calls the super-method (which for
-    `MultipleChoiceField`s parses the input into a list of strings), then it adds to the parsed
-    list the `SA`s based on `self.sa_periods` (if truthy), which
-    is a string or a list of numeric parsable strings.
-    Finally, `valid_value` is overridden to ignore `self.choices` (if provided) and to
-    validate each string on whether it's a valid imt or not via openquake utilities
-    '''
-    SA = 'SA'
-    default_error_messages = {
-        'sa_without_period': _("intensity measure type '%s' must "
-                               "be specified with period(s)" % SA),
-    }
-
-    def __init__(self, *args, **kwargs):
-        super(IMTField, self).__init__(*args, **kwargs)
-        self.sa_periods = []  # can be string or iterable of strings
-        # strings must be numeric parsable (see NArrayField)
-
-    # this method is called first in the validation pipeline:
-    def to_python(self, value):
-        # call super: returns an list of strings. Excpets value to be a list or tuple:
-        # if not value:
-        #     return []
-        # elif not isinstance(value, (list, tuple)):
-        #     raise ValidationError(self.error_messages['invalid_list'], code='invalid_list')
-        # return [str(val) for val in value]
-        all_values = super().to_python(value)
-        sastr = self.SA
-        values = [v for v in all_values if v != sastr]
-        if self.sa_periods:
-            sa_periods = vectorize(NArrayField(required=False).clean(self.sa_periods))
-            values += ['%s(%f)' % (sastr, f) for f in sa_periods]
-        elif len(all_values) > len(values):
-            raise ValidationError(
-                self.error_messages['sa_without_period'],
-                code='sa_without_period',
-            )
-        return values
-
-    def valid_value(self, value):
-        """
-        Validate the given value, ignoring the super method which compares to the choices
-        attribute
-        """
-        try:
-            imt.from_string(value)
-            return True
-        except Exception as exc:
-            return False
-
-
 class BaseForm(Form):
     '''Base eGSIM form'''
-
-    # fields (not used for rendering, just for validation): required is True by default
-    gsim = MultipleChoiceField(label='Ground Shaking Intensity Model(s) (gsim)',
-                               choices=zip(EGSIM.aval_gsims(), EGSIM.aval_gsims()),
-                               # make field.is_hidden = True in the templates:
-                               widget=HiddenInput)
-
-    imt = IMTField(label='Intensity Measure Type(s) (imt)',
-                   required=True,  # required jandled in clean()
-                   # make field.is_hidden = True in the templates:
-                   widget=HiddenInput)
 
 #     sa_period = NArrayField(label='SA (period/s):',
 #                             required=False,  # required jandled in clean()
@@ -362,9 +297,6 @@ class BaseForm(Form):
         for name in self.fields:
             if not self[name].html_name in self.data and self.fields[name].initial is not None:
                 self.data[name] = self.fields[name].initial
-
-        # put 'sa_periods in the IMTField:
-        self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
 
         self.customize_widget_attrs()
 
@@ -495,6 +427,78 @@ class BaseForm(Form):
         return cleaned_data
 
 
+# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
+class IMTField(MultipleChoiceField):
+    '''Field for IMT selection.
+    This class overrides `to_python`, which first calls the super-method (which for
+    `MultipleChoiceField`s parses the input into a list of strings), then it adds to the parsed
+    list the `SA`s based on `self.sa_periods` (if truthy), which
+    is a string or a list of numeric parsable strings.
+    Finally, `valid_value` is overridden to ignore `self.choices` (if provided) and to
+    validate each string on whether it's a valid imt or not via openquake utilities
+    '''
+    SA = 'SA'
+    default_error_messages = {
+        'sa_without_period': _("intensity measure type '%s' must "
+                               "be specified with period(s)" % SA),
+    }
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('label', 'Intensity Measure Type(s) (imt)')
+        kwargs.setdefault('widget', HiddenInput)
+        # FIXME: do we provide choices, as actually we are rendering the component with an
+        # ajax request in vue.js?
+        kwargs.setdefault('choices', zip(EGSIM.aval_imts(), EGSIM.aval_imts()))
+        kwargs.setdefault('required', True)
+        super(IMTField, self).__init__(**kwargs)
+        self.sa_periods = []  # can be string or iterable of strings
+        # strings must be numeric parsable (see NArrayField)
+
+    # this method is called first in the validation pipeline:
+    def to_python(self, value):
+        # call super: returns an list of strings. Excpets value to be a list or tuple:
+        # if not value:
+        #     return []
+        # elif not isinstance(value, (list, tuple)):
+        #     raise ValidationError(self.error_messages['invalid_list'], code='invalid_list')
+        # return [str(val) for val in value]
+        all_values = super().to_python(value)
+        sastr = self.SA
+        values = [v for v in all_values if v != sastr]
+        if self.sa_periods:
+            sa_periods = vectorize(NArrayField(required=False).clean(self.sa_periods))
+            values += ['%s(%f)' % (sastr, f) for f in sa_periods]
+        elif len(all_values) > len(values):
+            raise ValidationError(
+                self.error_messages['sa_without_period'],
+                code='sa_without_period',
+            )
+        return values
+
+    def valid_value(self, value):
+        """
+        Validate the given value, ignoring the super method which compares to the choices
+        attribute
+        """
+        try:
+            imt.from_string(value)
+            return True
+        except Exception as exc:
+            return False
+
+
+class GsimField(MultipleChoiceField):
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('label', 'Ground Shaking Intensity Model(s) (gsim)')
+        kwargs.setdefault('widget', HiddenInput)
+        # FIXME: do we provide choices, as actually we are rendering the component with an
+        # ajax request in vue.js?
+        kwargs.setdefault('choices', zip(EGSIM.aval_gsims(), EGSIM.aval_gsims()))
+        kwargs.setdefault('required', True)
+        super().__init__(**kwargs)
+
+
 class MsrField(ChoiceField):
     '''A ChoiceField handling the Magnitude Scaling Relation parameter'''
     _aval_msr = get_available_magnitude_scalerel()
@@ -531,6 +535,7 @@ class TrellisplottypeField(ChoiceField):
     def __init__(self, **kwargs):  # * -> force the caller to use named arguments
         super(TrellisplottypeField, self).__init__(choices=self.base_choices, **kwargs)
 
+
     def clean(self, value):
         value = ChoiceField.to_python(self, ChoiceField.clean(self, value))
         try:
@@ -561,6 +566,9 @@ class TrellisForm(BaseForm):
 
     __scalar_or_vector_help__ = 'Scalar, vector or range'
 
+    # fields (not used for rendering, just for validation): required is True by default
+    gsim = GsimField()
+    imt = IMTField()
     plot_type = TrellisplottypeField(label='Plot type')
     # GSIM RUPTURE PARAMS:
     magnitude = NArrayField(label='Magnitude(s)', min_arr_len=1,
@@ -598,6 +606,11 @@ class TrellisForm(BaseForm):
                                             "from the V<sub>S30</sub>"))
     backarc = BooleanField(label='Backarc Path', initial=False, required=False)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # put 'sa_periods in the IMTField:
+        self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
+
     def clean(self):
         cleaned_data = super(TrellisForm, self).clean()
         vs30 = cleaned_data['vs30']  # surely a list with st least one element
@@ -616,5 +629,39 @@ class TrellisForm(BaseForm):
                 error = ValidationError(_("value must be scalar, empty or a %(num)d-elements "
                                           "vector"), params={'num': len(vs30)}, code='invalid')
                 self.add_error(name, error)
+
+        return cleaned_data
+
+
+class TrSelectionForm(BaseForm):
+    '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle'''
+
+    __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
+                                 'lon2': 'longitude2'}
+
+    __scalar_or_vector_help__ = 'Scalar, vector or range'
+
+    project = ChoiceField(label='Project', choices=list(zip(EGSIM.tr_projects().keys(),
+                                                            EGSIM.tr_projects().keys())))
+    # GSIM RUPTURE PARAMS:
+    longitude = FloatField(label='Longitude', min_value=-180, max_value=180)
+    latitude = FloatField(label='Latiitude', min_value=-90, max_value=90)
+    longitude2 = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
+    latitude2 = FloatField(label='Latiitude', min_value=-90, max_value=90, required=False)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        _lon2, _lat2 = 'longitude2', 'latitude2'
+        lon2 = cleaned_data.get(_lon2, None)
+        lat2 = cleaned_data.get(_lat2, None)
+        if lon2 is None and lat2 is not None:
+            # instead of raising ValidationError, which is keyed with '__all__'
+            # we add the error keyed to the given field name `name` via `self.add_error`:
+            # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+            error = ValidationError(_("missing value"), code='missing')
+            self.add_error(_lon2, error)
+        elif lon2 is not None and lat2 is None:
+            error = ValidationError(_("missing value"), code='missing')
+            self.add_error(_lat2, error)
 
         return cleaned_data

@@ -3,7 +3,7 @@ Created on 16 Feb 2018
 
 @author: riccardo
 '''
-from egsim.utils import vectorize
+from egsim.core.utils import vectorize
 
 def test_vectorize():
     '''tests the vectorize function'''

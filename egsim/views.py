@@ -13,17 +13,18 @@ from django.http import JsonResponse
 from django.shortcuts import render
 # from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.base import View
+from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
-from egsim.forms import TrellisForm, BaseForm
+from egsim.forms import TrellisForm, BaseForm, TrSelectionForm
 from egsim.core.trellis import compute_trellis
 from egsim.core.utils import EGSIM
-from egsim.core.shapes import load_share
+from egsim.core.shapes import get_feature_properties
 
 
 _COMMON_PARAMS = {
     'project_name': 'eGSIM',
-    'debug': True,
+    'debug': settings.DEBUG,
     'menus': OrderedDict([('home', 'Home'), ('trsel', 'Tectonic region Selection'),
                           ('trellis', 'Trellis plots'),
                           ('residuals', 'Residuals'),
@@ -46,16 +47,22 @@ def home(request):
     return render(request, 'home.html', _COMMON_PARAMS)
 
 
+def trprojects(request):
+    '''returns a JSON response with all tr(tectonic region) projects for gsim selection'''
+    return JsonResponse({'projects': EGSIM.tr_projects(),
+                         'selected_project': next(iter(EGSIM.tr_projects().keys()))},
+                        safe=False)
+
 def trsel(request):
-    '''view for the trellis page (iframe in browser)'''
-    return render(request, 'trsel.html', dict(_COMMON_PARAMS, form=BaseForm(),
-                                              trprojects={'SHARE': load_share()},
-                                              selproject='SHARE'))
+    '''view returing the page forfor the gsim tectonic region
+    selection'''
+    return render(request, 'trsel.html', dict(_COMMON_PARAMS, post_url='../query/gsims'))
 
 
 def trellis(request):
     '''view for the trellis page (iframe in browser)'''
-    return render(request, 'trellis.html', dict(_COMMON_PARAMS, form=TrellisForm()))
+    return render(request, 'trellis.html', dict(_COMMON_PARAMS, form=TrellisForm(),
+                                                post_url='../query/trellis'))
 
 
 def residuals(request):
@@ -78,7 +85,7 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     # Cahce session are discouraged.:
     # https://docs.djangoproject.com/en/2.0/topics/http/sessions/#using-cached-sessions
     # so for the moment let's keep this hack
-    return JsonResponse({'initData': EGSIM.jsonlist()})
+    return JsonResponse(EGSIM.jsonlist(), safe=False)
 
 
 class EgsimQueryView(View):
@@ -86,7 +93,7 @@ class EgsimQueryView(View):
     this is usually accomplished via a form in the web page or a POST reqeust from
     the a normal query in the standard API'''
 
-    formclass = None
+    formclass = None  # if None
     EXCEPTION_CODE = 400
     VALIDATION_ERR_MSG = 'input validation error'
 
@@ -115,7 +122,7 @@ class EgsimQueryView(View):
                                                                code=cls.EXCEPTION_CODE,
                                                                errors=errors)
 
-        return JsonResponse(cls.process(form.clean()))
+        return JsonResponse(cls.process(form.clean()), safe=False)
 
     @classmethod
     def process(cls, params):
@@ -156,6 +163,21 @@ class TrellisPlotsView(EgsimQueryView):
     @classmethod
     def process(cls, params):
         return compute_trellis(params)
+
+
+class TrSelectionView(EgsimQueryView):
+
+    formclass = TrSelectionForm
+
+    @classmethod
+    def process(cls, params):
+        # FIXME: load_share() should be improved:
+        trts = get_feature_properties(EGSIM.tr_projects()[params['project']],
+                                      lon0=params['longitude'],
+                                      lat0=params['latitude'],
+                                      lon1=params.get('longitude1', None),
+                                      lat1=params.get('latitude', None), key='OQ_TRT')
+        return [gsim for gsim in EGSIM.aval_gsims() if EGSIM.trtof(gsim) in trts]
 
 
 # TESTS (FIXME: REMOVE?)

@@ -11,7 +11,7 @@ var EGSIM = new Vue({
         selectedImts: [],
         data: {},
         loading: false,
-        errormsg: '',
+        errormsg: window._SERVER_ERROR_MESSAGE || '',  // _SERVER_ERROR defined globally and passed by django. Maybe not elegant but it does its job
         //fielderrors: {},
         initURL: '/get_init_params', //url for requesting the initialization data. For info:
         // 
@@ -27,9 +27,10 @@ var EGSIM = new Vue({
         });
         this.eventbus.$on('postresponse', (response, isError) => {
             if (isError){
+                var msg = (((response.response || {}).data || {}).error || response.message) || 'Unknown error';
                 this.eventbus.$emit('error', response.response.data.error);
             }else if (response.config.url == this.initURL){
-                [avalGsims, avalImts] = getInitData(response.data.initData);
+                [avalGsims, avalImts] = getInitData(response.data);
                 this.$set(this, 'avalGsims', avalGsims);
                 this.$set(this, 'avalImts', avalImts);
             }
@@ -42,7 +43,9 @@ var EGSIM = new Vue({
         });
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
-        this.post(this.initURL, {}, {});
+        if (!this.errormsg){
+            this.post(this.initURL, {}, {});
+        }
     },
     methods: {
         post(url, data, config) { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load

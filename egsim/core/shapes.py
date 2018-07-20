@@ -6,20 +6,12 @@ shapes and geojson utilities
 @author: riccardo
 '''
 from os import walk
-from os.path import join, splitext, isfile, dirname
+from os.path import join, splitext, dirname
 import json
 from collections import OrderedDict
 
 from shapefile import Reader
 from shapely.geometry import Point, shape, Polygon, mapping
-
-
-def load_share():
-    '''Load the share project tectonics as geojson dict'''
-    filepath = join(dirname(dirname(__file__)), 'data', 'share.geojson')  # FIXME NOT harcoded
-    with open(filepath) as fpt:  # https://stackoverflow.com/a/14870531
-        # filepath.seek(0)
-        return json.load(fpt)
 
 
 def find_shp(root):
@@ -62,6 +54,41 @@ def to_geojson_feature(shapefilepath):
     return [{"type": "Feature",
              'geometry': mapping(shape(s)),  # https://stackoverflow.com/a/40631091
              'properties': OrderedDict(zip(fields, r))} for s, r in zip(shapes, records)]
+
+
+def featuresiter(geojson):
+    try:
+        geojson = geojson['features']
+    except TypeError:
+        pass
+    for feat in geojson:
+        yield feat
+
+
+def get_feature_properties(geojson, lon0, lat0, lon1=None, lat1=None, key='OQ_TRT'):
+    trts = set()
+
+    ispoint = True
+    if lon1 is None or lat1 is None:
+        point = Point([lon0, lat0])
+    else:
+        ispoint = False
+        rect = Polygon([(lon0, lat0), (lon0, lat1), (lon1, lat1), (lon1, lat0)])
+
+    for feat in featuresiter(geojson):
+        trt = feat.get('properties', {}).get('OQ_TRT', '')
+        if not trt or trt in trts:
+            continue
+        if (ispoint and shape(feat['geometry']).contains(point)) or \
+                (not ispoint and shape(feat['geometry']).intersects(rect)):
+            trts.add(trt)
+
+    return trts
+
+
+# def get_gsims(geojson, lon0, lat0, lon1, lat1, key='OQ_TRT'):
+#     trts = get_feature_properties(geojson, lon0, lat0, lon1, lat1, key)
+#     return [gsim for gsim in EGSIM.aval_gsims() if EGSIM.trtof(gsim) in trts]
 
 
 def get_features_containing(geojson, lon, lat):

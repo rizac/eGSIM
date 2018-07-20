@@ -1,9 +1,16 @@
 {% extends 'base.html' %}
 
 {% block head %}
-	{% with vue=True %}
+	{% with vue=True axios=True %}
 		{{ block.super }}
 	{% endwith %}
+	
+	{% if server_error_message %}
+	<script type='text/javascript'>
+		var _SERVER_ERROR_MESSAGE = "{{ server_error_message }}";
+	</script>
+	{% endif %}
+
 	<!-- includes css for form-related stuff (e.g. waitbar)  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/base_vue.css' %}">
 {% endblock %}
@@ -15,7 +22,7 @@
 			<div class="loader"></div>
 		</div>
 
-		<div id='errordiv' v-show='errormsg' class='bg-danger text-sm-center text-white'>
+		<div v-show='errormsg' class='bg-danger text-sm-center text-white text-truncate'>
 			&#123;&#123; errormsg &#125;&#125;
 		</div>
 
@@ -23,17 +30,10 @@
 			{% block main %}{% endblock %}
 		</div>
 
-		
-		<!-- <div id='egsim-output' class='position-absolute pos-0 m-0 bg-light flex-direction-col p-2 d-none'>
-			{% block output %}{% endblock %}	
-		</div> -->
 	</div>
 {% endblock %}
 
 {% block after-body %}
 	{{ block.super }}
 	<script type='text/javascript' src = "{% static 'js/egsim.js' %}"></script>
-	{% if errormsg %}
-		EGSIM.setError('{{ errormsg }}');
-	{% endif %}
 {% endblock %}

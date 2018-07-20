@@ -21,7 +21,7 @@ class ExceptionHandlerMiddleware(MiddlewareMixin):  # https://stackoverflow.com/
         errormsg = ('%s (%s). Please try again or contact the '
                     'software maintainers') % (msg, exc)
         if isinstance(exception, (TemplateDoesNotExist, TemplateSyntaxError)):
-            return render(request, 'template_error.html', {'errormsg': errormsg})
+            return render(request, 'base_vue.html', {'server_error_message': errormsg})
 
         return self.jsonerr_response(errormsg, code=500)
 

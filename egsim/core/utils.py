@@ -3,9 +3,12 @@ Created on 29 Jan 2018
 
 @author: riccardo
 '''
+from os.path import join, dirname
 from itertools import chain
 import warnings
 from collections import OrderedDict
+
+import json
 
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import __all__ as hazardlib_imts
@@ -58,14 +61,16 @@ def _get_gsims():
     return ret
 
 
-# def _create_gsims(name, types, attrs):  # https://stackoverflow.com/a/6798042
-#     cls = type(name, types, attrs)
-#     cls._data = _get_gsims()  # pylint: disable=protected-access
-#     cls._aval_imts = set(hazardlib_imts)  # pylint: disable=protected-access
-#     # populate the tectonic region types
-#     for data in cls._data:
-#         cls._aval_trt.add(data[1])
-#     return cls
+def _get_tr_projects():  # https://stackoverflow.com/a/6798042
+    '''Load all tectonic region projects as a dict of project name (string) mapped to its
+    geojson dict'''
+    ret = {}
+    for project in ['share']:  # FIXME: better handling
+        filepath = join(dirname(dirname(__file__)), 'data', '%s.geojson' % project)
+        with open(filepath) as fpt:  # https://stackoverflow.com/a/14870531
+            # filepath.seek(0)
+            ret[project] = json.load(fpt)
+    return ret
 
 
 class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/6798042
@@ -75,6 +80,14 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
     _data = _get_gsims()
     _aval_imts = set(hazardlib_imts)
     _aval_trts = None  # set (will lazily populated on demand)
+    _tr_projects = None  # dict (will be lazily created)
+
+    @classmethod
+    def tr_projects(cls):
+        '''Returns a list of all available GSIM names (string)'''
+        if cls._tr_projects is None:
+            cls._tr_projects = _get_tr_projects()
+        return cls._tr_projects
 
     @classmethod
     def aval_gsims(cls):

@@ -10,7 +10,9 @@ from django.http.response import JsonResponse
 
 
 def yaml_load(obj):
-    '''Safely loads the YAML-formatted object `obj` into a dict.
+    '''Safely loads the YAML-formatted object `obj` into a dict. Note that being YAML a superset
+    of json, all properly json-formatted strings are also correctly loaded and the quote
+    character ' is also allowed (in pure json, only " is allowed).
 
     :param obj: (dict, stream, string denoting an existing file path, or string denoting
         the file content in YAML syntax): If stream (i.e., an object with the `read` attribute),
@@ -34,7 +36,7 @@ def yaml_load(obj):
             stream = StringIO(obj)  # YAML content input
     elif not hasattr(obj, 'read'):
         # raise a general message meaningful for a Rest framework and a web app:
-        raise YAMLError('Invalid input, expected POST data as string in YAML syntax, '
+        raise YAMLError('Invalid input, expected data as string in YAML or JSON syntax, '
                         'found %s' % str(obj.__class__.__name__))
     else:
         stream = obj

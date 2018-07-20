@@ -1,7 +1,7 @@
 {% extends 'base_vue.html' %}
 
 {% block head %}
-	{% with plotly=True axios=True %}
+	{% with plotly=True %}
 		{{ block.super }}
 	{% endwith %}
 {% endblock %}
@@ -11,11 +11,11 @@
 	<div class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
 	
 		<!-- trellisfiv first, as it has automatically a greater z-index -->
-		<trellisdiv v-bind:eventbus="eventbus" url='get_trellis_plots'
+		<trellisdiv v-bind:eventbus="eventbus" url='{{ post_url }}'
 			class='position-absolute pos-0 m-0 flex-direction-row pl-2'>
 		</trellisdiv>
 	
-		<trellisform id='egsim-form' name='egsim-form' url='get_trellis_plots'
+		<trellisform id='egsim-form' name='egsim-form' url='{{ post_url }}'
 			submit_element_id='{{ form.plot_type.auto_id }}'
 			v-bind:eventbus="eventbus"
 			class='flex-direction-col m-3 p-2'>
@@ -47,7 +47,7 @@
 
 					</div>
 					
-					<div id='rupture' class='flexible p-2' >
+					<div class='flexible p-2' >
 						{% for field in form.visible_fields %}
 							{% if field.html_name != form.plot_type.html_name %}
 
