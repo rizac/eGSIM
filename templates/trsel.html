@@ -12,7 +12,8 @@
 	
 
 {% block main %}
-<trmap initurl='get_tr_projects' url="{{ post_url}}" :eventbus='eventbus' v-bind:avalgsims="avalGsims" v-bind:selectedgsims.sync="selectedGsims"
+<trmap initurl='get_tr_projects' url="{{ post_url}}" :eventbus='eventbus' v-bind:avalgsims="avalGsims"
+	v-bind:selectedgsims.sync="selectedGsims"
 	class='position-absolute pos-0 m-0 p-2'></trmap>
 {% endblock %}
 

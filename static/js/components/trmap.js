@@ -108,8 +108,12 @@ Vue.component('trmap', {
                 avalgsims.set(gsim, null);
             }
             var instance = new ComponentClass({
-                propsData: { avalgsims: avalgsims, selectedgsims: []}
+                propsData: { avalgsims: avalgsims, selectedgsims: this.selectedgsims}
             })
+            // set event:
+            instance.$on('update:selectedgsims', newValue => {
+                this.$emit('update:selectedgsims', newValue);
+            });
             // Set the value of the label, wich is implemented as a (single) slot in the gsimselect
             // (unfortunately, only plain text allowed for the moment):
             instance.$slots.default = ['Gsims defined for the selected Tectnotic Region(s):'];
@@ -119,15 +123,6 @@ Vue.component('trmap', {
             instance.$el.style.maxWidth = '50vw';
             instance.$el.style.maxHeight = '50vh';
             this.map.openPopup(instance.$el, event.latlng, {
-                offset: L.point(0, -5)
-            });
-            return;
-
-            this.$set(this, 'clicked', true);
-            var html = document.getElementById('gsim_popup');
-            html.style.display = 'initial';
-            // var html = "Trts features: " + trts.size + "<br/>" + Array.from(trts).join('<br/>');
-            map.openPopup(html, e.latlng, {
                 offset: L.point(0, -5)
             });
         },
@@ -163,12 +158,9 @@ Vue.component('trmap', {
     
             // update the map:
             Object.keys(featureCollections).forEach(key => {
-                // create layer(s) from the geojson FeatureCollections we created.
-                // Add a class for css styling. The class is the tectonic region type name
-                // (one of the values of the Object `trt`, defined in the class constructor) where spaces are replaced with "_"
-                // and the whole string is converted to lower case.
-                // For adding future features, the line below is what we need. For info see:
-                // http://leafletjs.com/examples/geojson/ and
+                // create layer(s) from the geojson FeatureCollections.
+                // For info see:
+                // http://leafletjs.com/examples/geojson/ and (add css class, not used but if needed):
                 // https://stackoverflow.com/questions/17086195/leaflet-path-how-can-i-set-a-css-class (2nd post)
                 var style = this.getStyle(key);
                 var layer = L.geoJson(featureCollections[key],
@@ -184,23 +176,8 @@ Vue.component('trmap', {
              };
          },
          onEachFeature: function(feature, layer) {
-//             layer.bindPopup("Loading...");
-//             layer.on({
-//                 click: this.featureClicked
-//             });
-         },
-//         featureClicked: function(event){
-//             var trt = '';
-//             if(event.target && event.target.feature && event.target.feature.properties){
-//                 trt = event.target.feature.properties.OQ_TRT;
-//             }
-//             if (!trt){
-//                 return;
-//             }
-//             var popup = event.target.getPopup();
-//             popup.setContent(trt);
-//             popup.update();
-//         }
+             return; // no-op (for the moment)
+         }
     },
     computed:{
         projectNames: function(){
