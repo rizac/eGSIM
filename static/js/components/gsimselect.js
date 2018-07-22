@@ -4,7 +4,7 @@ Vue.component('gsimselect', {
       'name': {type: String, default: 'gsim'},
       'errormsg': {type: String, default: ''},
       'showfilter': Boolean,
-      'selectedgsims': Array,
+      'selectedgsims': {type: Array, default:[]},
       'avalgsims': Map
   },
   data: function () {
@@ -12,7 +12,8 @@ Vue.component('gsimselect', {
           filterText: '',
           filterType: 'GSIM name',
           filterTypes: ['GSIM name', 'IMT', 'Tectonic Region Type'],
-          filterFunc: elm => true
+          filterFunc: elm => true,
+          selection: Array.from(this.selectedgsims)
       }
   },
   template: `<div class='flex-direction-col'>
@@ -81,22 +82,16 @@ Vue.component('gsimselect', {
           if (oldValue !== value){
               this.updateFilter();
           }
+      },
+      selection: function(value, oldValue){
+          // watch this.selection (which is initialized from the 'selectedgsims' prop).
+          // if 'selectedgsims' is synced with some other component's (or instance's) property,
+          // emit the event notifying the change
+          // (https://vuejs.org/v2/guide/components-custom-events.html#sync-Modifier):
+          this.$emit('update:selectedgsims', value);  // (value is an array)
       }
   },
   computed: {
-    selection:{
-        // selection is the v-model of the <select multiple> used as html component for selecting the gsims
-        // (see template above). We need a getter bound to this.selectedgsims (which is in turn a props
-        // bound to the parent Vue instance's selectedGsims) and a setter that notifies the selection change
-        // In the html, the <gsim> component bounds the changed property to the Vue instance's selectedGsims
-        // to achieve a two way binding
-        get: function () {
-            return this.selectedgsims && this.selectedgsims.length ? this.selectedgsims : [];
-        },
-        set: function (newValue) {
-            this.$emit('update:selectedgsims', newValue);
-        }
-    },
     // https://stackoverflow.com/a/47044150
     gsims() {
         return Array.from(this.avalgsims.keys());

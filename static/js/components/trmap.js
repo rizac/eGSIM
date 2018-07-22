@@ -110,7 +110,7 @@ Vue.component('trmap', {
             var instance = new ComponentClass({
                 propsData: { avalgsims: avalgsims, selectedgsims: this.selectedgsims}
             })
-            // set event:
+            // forward the gsim selection fired by the <gsimselect> to the listeners of this component (if provided):
             instance.$on('update:selectedgsims', newValue => {
                 this.$emit('update:selectedgsims', newValue);
             });
