@@ -12,12 +12,11 @@
 	<!-- <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet"> -->
 	
 	{% if vue %}
-	{% if debug %}
-	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
-	{% else %}
-	<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.min.js"></script>
-	{% endif %}
-	<script type='text/javascript' src = "{% static 'js/vueutil.js' %}"></script>
+		{% if debug %}
+		<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+		{% else %}
+		<script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.min.js"></script>
+		{% endif %}
 	{% endif %}
 	
 	{% if axios %}
@@ -72,12 +71,11 @@
 	{% endif %}
 
 	{% if plotly %}
-	
 	 <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
 		{% if debug %}
-	<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.38.3.js"></script>
+			<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.38.3.js"></script>
 		{% else %}
-	<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.38.3.min.js"></script> <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
+			<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.38.3.min.js"></script> <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
 		{% endif %}
 	{% endif %}
 
@@ -111,6 +109,13 @@
 		
 	}
 	</script>
+	
+	<!-- load our vue.util file (at the real end, caise we want to be sure we loaded vue, either from a cdn
+	or from file, if there is no connection-->
+	{% if vue %}
+	<script type='text/javascript' src = "{% static 'js/vueutil.js' %}"></script>
+	{% endif %}
+	
 	{% endblock %}
 
 	{% block extra-head %}

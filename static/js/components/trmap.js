@@ -13,13 +13,6 @@ Vue.component('trmap', {
         }
     },
     template:`<div class='flex-direction-col'>
-        <!-- <div id='gsim_popup' :class="{'d-none': !clicked}">
-            <gsimselect class='flexible'
-                name="gsim"
-                v-bind:avalgsims="getGsims"
-                v-bind:selectedgsims.sync="selectedgsims">
-            </gsimselect>
-        </div> -->
         <select v-model='selectedProject' class='form-control mb-2'>
             <option v-for='project in projectNames' :key='project' v-bind:value="project">
                 {{ project }}
@@ -108,7 +101,7 @@ Vue.component('trmap', {
                 avalgsims.set(gsim, null);
             }
             var instance = new ComponentClass({
-                propsData: { avalgsims: avalgsims, selectedgsims: this.selectedgsims}
+                propsData: {avalgsims: avalgsims, selectedgsims: this.selectedgsims}
             })
             // forward the gsim selection fired by the <gsimselect> to the listeners of this component (if provided):
             instance.$on('update:selectedgsims', newValue => {
@@ -122,6 +115,7 @@ Vue.component('trmap', {
             // add custom classes (must be done after mount):
             instance.$el.style.maxWidth = '50vw';
             instance.$el.style.maxHeight = '50vh';
+            instance.$el.style.height = `${avalgsims.size}em`;
             this.map.openPopup(instance.$el, event.latlng, {
                 offset: L.point(0, -5)
             });

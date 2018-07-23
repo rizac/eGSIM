@@ -317,8 +317,7 @@ Vue.component('trellisdiv', {
             }
             var xaxis = {mirror: true, linewidth: 1, domain: xaxisdomain, anchor: `y${axisIndex}`};
             var yaxis = {mirror: true, linewidth: 1, domain: yaxisdomain, anchor: `x${axisIndex}`};
-            console.log('xdomain:' + xdomain);
-            console.log('ydomain:' + ydomain);
+            //console.log('xdomain:' + xdomain); console.log('ydomain:' + ydomain);
             return [axisIndex, xaxis, yaxis, xdomain, ydomain];
         },
         getEmUnits: function(divId, fontsize){
