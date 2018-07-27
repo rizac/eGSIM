@@ -7,6 +7,7 @@ Created on 29 Jan 2018
 '''
 
 import re
+import os
 import json
 from itertools import chain, repeat
 from collections import OrderedDict
@@ -36,6 +37,7 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrell
 
 from egsim.core import yaml_load
 from egsim.core.utils import vectorize, EGSIM, isscalar
+from smtk.database_visualiser import DISTANCES
 
 
 class NArrayField(CharField):
@@ -550,6 +552,9 @@ class PointField(NArrayField):
         super(PointField, self).__init__(min_arr_len=2, max_arr_len=3, **kwargs)
 
     def clean(self, value):
+        '''Converts the given value to a :class:` openquake.hazardlib.geo.point.Point` object.
+        It is usually better to perform these types of conversions subclassing `clean`, as the
+        latter is called at the end of the validation workflow'''
         value = NArrayField.clean(self, value)
         try:
             return Point(*value)
@@ -665,3 +670,124 @@ class TrSelectionForm(BaseForm):
             self.add_error(_lat2, error)
 
         return cleaned_data
+
+
+class GmdbField(ChoiceField):
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices', zip(EGSIM.gmdb_names(), EGSIM.gmdb_names()))
+        kwargs.setdefault('label', 'Ground Motion database')
+        kwargs.setdefault('required', True)
+        super().__init__(**kwargs)
+
+    def clean(self, value):
+        '''Converts the given value to a :class:`GroundMotionDatabase` object.
+        It is usually better to perform these types of conversions subclassing `clean`, as the
+        latter is called at the end of the validation workflow'''
+        # super() alone fails here. See
+        # https://stackoverflow.com/a/39313448
+        value = super(GmdbField, self).to_python(value)
+        gmdb = EGSIM.gmdb(value)
+        if gmdb is None:
+            raise ValidationError(_("invalid value"), code='invalid')
+        return gmdb
+
+
+class GmdbSelectionField(ChoiceField):
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices', zip(EGSIM.gmdb_selections(), EGSIM.gmdb_selections()))
+        kwargs.setdefault('label', 'Filter by')
+        kwargs.setdefault('required', True)
+        super().__init__(**kwargs)
+
+#     def clean(self, value):
+#         '''Converts the given value to the matching :class:`SMRecordSelector`'s method.
+#         It is usually better to perform these types of conversions subclassing `clean`, as the
+#         latter is called at the end of the validation workflow'''
+#         # super() alone fails here. See
+#         # https://stackoverflow.com/a/39313448
+#         value = super(GmdbSelectionField, self).to_python(value)
+#         conversion_func = EGSIM.gmdb_selections().get(value, None)
+#         if conversion_func is None:
+#             raise ValidationError(_("invalid value"), code='invalid')
+#         return conversion_func
+
+class GmdbForm(BaseForm):
+    '''Abstract-like class for handling gmdb (GroundMotionDatabase)'''
+
+#     __additional_fieldnames__ = {'sel': 'selection', 'min': 'selection_min',
+#                                  'max': 'selection_max', 'dist': 'distance_type'}
+
+    # __scalar_or_vector_help__ = 'Scalar, vector or range'
+
+    gmdb = GmdbField()
+    selection = GmdbSelectionField()
+    selection_min = CharField(label='Min', required=False)
+    selection_max = CharField(label='Max', required=False)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        min_, max_, sel_ = 'selection_min', 'selection_max', 'selection'
+        conversion_func = EGSIM.gmdb_selections()[cleaned_data[sel_]]
+        try:
+            cleaned_data[min_] = conversion_func(cleaned_data[min_])
+        except Exception as exc:
+            error = ValidationError(_(str(exc)), code='invalid')
+            self.add_error(min_, error)
+        try:
+            cleaned_data[max_] = conversion_func(cleaned_data[max_])
+        except Exception as exc:
+            error = ValidationError(_(str(exc)), code='invalid')
+            self.add_error(max_, error)
+
+        return cleaned_data
+
+
+class GmdbSelectionForm(GmdbForm):
+    '''Abstract-like class for handling gmdb (GroundMotionDatabase)'''
+
+    __additional_fieldnames__ = {'sel': 'selection', 'min': 'selection_min',
+                                 'max': 'selection_max', 'dist': 'distance_type'}
+
+    # __scalar_or_vector_help__ = 'Scalar, vector or range'
+
+#     gmdb = GmdbField()
+#     selection = GmdbSelectionField()
+#     selection_min = CharField(label='Min', required=False)
+#     selection_max = CharField(label='Max', required=False)
+    distance_type = ChoiceField(label='Distance type', choices=zip(DISTANCES.keys(),
+                                                                   DISTANCES.keys()))
+
+#     def clean(self):
+#         cleaned_data = super().clean()
+#         min_, max_, sel_ = 'selection_min', 'selection_max', 'selection'
+#         conversion_func = EGSIM.gmdb_selections()[cleaned_data[sel_]]
+#         try:
+#             cleaned_data[min_] = conversion_func(cleaned_data[min_])
+#         except Exception as exc:
+#             error = ValidationError(_(str(exc)), code='invalid')
+#             self.add_error(min_, error)
+#         try:
+#             cleaned_data[max_] = conversion_func(cleaned_data[max_])
+#         except Exception as exc:
+#             error = ValidationError(_(str(exc)), code='invalid')
+#             self.add_error(max_, error)
+# 
+#         return cleaned_data
+
+
+class ResidualsForm(GmdbForm):
+    '''Form for residual analysis'''
+
+    # __additional_fieldnames__ = {'gmdb': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
+    #                             'lon2': 'longitude2'}
+
+    # __scalar_or_vector_help__ = 'Scalar, vector or range'
+
+    gsim = GsimField()
+    imt = IMTField()
+#     gmdb = GmdbField()
+#     selection = GmdbSelectionField()
+#     selection_min = CharField(label='Min', required=False)
+#     selection_max = CharField(label='Max', required=False)

@@ -66,6 +66,32 @@ select.form-control:not([multiple]) {
 	right: 0px;
 }
 
+/* grid-box layout classes (bootstrap implements its own, not based on gridbox layout, which is available in all
+browsers but opera and IE11 */
+.grid-2-columns{
+	display:grid;
+	grid-template-columns:auto 1fr;
+	align-items:baseline;
+}
+/* following bootstrap mb-1, pt-3, ... logic: */
+.grid-row-gap-0{grid-row-gap: 0px;}
+.grid-row-gap-1{grid-row-gap: 0.25rem;}
+.grid-row-gap-2{grid-row-gap: 0.5rem;}
+.grid-row-gap-3{grid-row-gap: 1rem;}
+.grid-row-gap-4{grid-row-gap: 1.5rem;}
+.grid-row-gap-4{grid-row-gap: 3rem;}
+.grid-col-gap-0{grid-column-gap: 0px;}
+.grid-col-gap-1{grid-column-gap: 0.25rem;}
+.grid-col-gap-2{grid-column-gap: 0.5rem;}
+.grid-col-gap-3{grid-column-gap: 1rem;}
+.grid-col-gap-4{grid-column-gap: 1.5rem;}
+.grid-col-gap-4{grid-column-gap: 3rem;}
+/* spans:*/
+.grid-col-span{grid-column: 1 / -1;}
+.grid-row-span{grid-row: 1 / -1;}
+
+
+
 .bg-light{ /* override bootstrap */
 	background-color: #fafafa !important;
 }

@@ -14,16 +14,16 @@ from django.template.exceptions import TemplateDoesNotExist, TemplateSyntaxError
 class ExceptionHandlerMiddleware(MiddlewareMixin):  # https://stackoverflow.com/a/42233213
     '''Middleware which captures exceptions and converts them to Json responses'''
 
-    def process_exception(self, request, exception):
-        """ Wraps any exception to a JsonResponse with code=500 and an
-        (hopefully) meaningful error message"""
-        msg, exc = str(exception), exception.__class__.__name__
-        errormsg = ('%s (%s). Please try again or contact the '
-                    'software maintainers') % (msg, exc)
-        if isinstance(exception, (TemplateDoesNotExist, TemplateSyntaxError)):
-            return render(request, 'base_vue.html', {'server_error_message': errormsg})
-
-        return self.jsonerr_response(errormsg, code=500)
+#     def process_exception(self, request, exception):
+#         """ Wraps any exception to a JsonResponse with code=500 and an
+#         (hopefully) meaningful error message"""
+#         msg, exc = str(exception), exception.__class__.__name__
+#         errormsg = ('%s (%s). Please try again or contact the '
+#                     'software maintainers') % (msg, exc)
+#         if isinstance(exception, (TemplateDoesNotExist, TemplateSyntaxError)):
+#             return render(request, 'base_vue.html', {'server_error_message': errormsg})
+# 
+#         return self.jsonerr_response(errormsg, code=500)
 
     @staticmethod
     def jsonerr_response(exception, code=400, **kwargs):

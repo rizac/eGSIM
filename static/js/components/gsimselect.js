@@ -64,7 +64,7 @@ Vue.component('gsimselect', {
                   return false;
               }
           }else if (this.filterType == this.filterTypes[2]){
-              var filterFunc = function(gsimName){f
+              var filterFunc = function(gsimName){
                   var trt = this.avalgsims.get(gsimName)[1];
                   return trt.search(regexp) > -1;
               }

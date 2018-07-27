@@ -1,6 +1,8 @@
 Vue.component('trellisform', {
   extends: EGSIMFORM,  //defined in egsimform.js
-  props: {
+  props: {  // properties are merged with the parent:  https://medium.com/js-dojo/extending-vuejs-components-42fefefc688b
+      'id': {type: String, default: 'trellis_form_id'},  // overwrite parent prop
+      'name': {type: String, default: 'trellis_form'},  // same as above
       'submit_element_id': String
   },
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:

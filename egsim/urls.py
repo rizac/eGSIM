@@ -31,16 +31,19 @@ urlpatterns = [
     url(r'^service/home/?$', views.home, name='home'),
     url(r'^service/trsel/?$', views.trsel, name='trsel'),
     url(r'^service/trellis/?$', views.trellis, name='trellis'),
+    url(r'^service/gmdb/?$', views.gmdb, name='gmdb'),
     url(r'^service/residuals/?$', views.residuals, name='residuals'),
-    url(r'^service/loglikelihood/?$', views.loglikelihood, name='loglikelihood'),
     url(r'get_init_params', views.get_init_params),
-    url(r'get_tr_projects', views.trprojects),
+    url(r'get_tr_projects', views.get_tr_projects),
+    url(r'get_gmdbs', views.get_gmdbs),
     # url(r'get_trellis_plots', views.TrellisPlotsView.as_view()),
     url(r'test_err', views.test_err),
 
     # REST (or alike) views:
-    url(r'^query/trellis/?$', csrf_exempt(views.TrellisPlotsView.as_view()), name='trellis_api'),
-    url(r'^query/gsims/?$', csrf_exempt(views.TrSelectionView.as_view()), name='trsel_api'),
+    url(r'^query/trellis/?$', views.TrellisPlotsView.as_view(), name='trellis_api'),
+    url(r'^query/gsims/?$', views.TrSelectionView.as_view(), name='trsel_api'),
+    url(r'^query/magdistdata/?$', views.GmdbSelectionView.as_view(), name='magdistdata_api'),
+    url(r'^query/residuals/?$', views.ResidualsView.as_view(), name='residuals_api'),
 
     # test views, TEMPORARY:
     url(r'^trellis_test/?$', views.trellis_test, name='main'),

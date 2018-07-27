@@ -16,10 +16,12 @@ from django.views.generic.base import View
 from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
-from egsim.forms import TrellisForm, BaseForm, TrSelectionForm
+from egsim.forms import TrellisForm, BaseForm, TrSelectionForm, GmdbSelectionForm, ResidualsForm
 from egsim.core.trellis import compute_trellis
 from egsim.core.utils import EGSIM
 from egsim.core.shapes import get_feature_properties
+from egsim.core.gmdbselection import magdistdata
+from egsim.core.residuals import compute_residuals
 
 
 _COMMON_PARAMS = {
@@ -27,8 +29,8 @@ _COMMON_PARAMS = {
     'debug': settings.DEBUG,
     'menus': OrderedDict([('home', 'Home'), ('trsel', 'Tectonic region Selection'),
                           ('trellis', 'Trellis plots'),
-                          ('residuals', 'Residuals'),
-                          ('loglikelihood', 'Log-likelihood analysis')]),
+                          ('gmdb', 'Ground Motion database'),
+                          ('residuals', 'Residuals'),]),
     }
 
 
@@ -47,7 +49,7 @@ def home(request):
     return render(request, 'home.html', _COMMON_PARAMS)
 
 
-def trprojects(request):
+def get_tr_projects(request):
     '''returns a JSON response with all tr(tectonic region) projects for gsim selection'''
     return JsonResponse({'projects': EGSIM.tr_projects(),
                          'selected_project': next(iter(EGSIM.tr_projects().keys()))},
@@ -65,9 +67,23 @@ def trellis(request):
                                                 post_url='../query/trellis'))
 
 
+def get_gmdbs(request):
+    '''view for the residuals page (iframe in browser)'''
+    return JsonResponse({'avalgmdbs': EGSIM.gmdb_names(),
+                         'selectedgmdb': next(iter(EGSIM.gmdb_names()))},
+                        safe=False)
+
+
+def gmdb(request):
+    '''view for the residuals page (iframe in browser)'''
+    return render(request, 'gmdb.html', dict(_COMMON_PARAMS, form=GmdbSelectionForm(),
+                                             post_url='../query/magdistdata'))
+
+
 def residuals(request):
     '''view for the residuals page (iframe in browser)'''
-    return render(request, 'residuals.html', _COMMON_PARAMS)
+    return render(request, 'residuals.html', dict(_COMMON_PARAMS, form=ResidualsForm(),
+                                                  post_url='../query/residuals'))
 
 
 def loglikelihood(request):
@@ -179,6 +195,25 @@ class TrSelectionView(EgsimQueryView):
                                       lat1=params.get('latitude', None), key='OQ_TRT')
         return [gsim for gsim in EGSIM.aval_gsims() if EGSIM.trtof(gsim) in trts]
 
+
+class GmdbSelectionView(EgsimQueryView):
+
+    formclass = GmdbSelectionForm
+
+    @classmethod
+    def process(cls, params):
+        # FIXME: load_share() should be improved:
+        return magdistdata(params)
+
+
+class ResidualsView(EgsimQueryView):
+
+    formclass = ResidualsForm
+
+    @classmethod
+    def process(cls, params):
+        # FIXME: load_share() should be improved:
+        return compute_residuals(params)
 
 # TESTS (FIXME: REMOVE?)
 

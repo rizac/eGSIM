@@ -1,8 +1,8 @@
 var EGSIMFORM = Vue.component('egsimform', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
-      'id': String,
-      'name': String,
+      'id': {type: String, default: 'egsim_form_id'},
+      'name': {type: String, default: 'egsim_form'},
       'url': String,
       'eventbus': {default: null}
   },
@@ -43,6 +43,7 @@ var EGSIMFORM = Vue.component('egsimform', {
           if(!this.eventbus){
               return;
           }
+          this.$set(this, 'fielderrors', {});  // clear field errors
           var url = this.url;
           // build form data inot a dict:
           var [data, error] = parseForm(this.form());

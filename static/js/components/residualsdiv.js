@@ -1,4 +1,4 @@
-Vue.component('trellisdiv', {
+Vue.component('residualsdiv', {
     props: {
         'url': String,
         'eventbus': {default: null}
@@ -8,12 +8,12 @@ Vue.component('trellisdiv', {
             // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
             initialized: false,
             plots: [], //array of [{data, params}], where data is an array of dicts (one dict per trace) and params is a dict
-            paramNames: Object.freeze(['xlabel', 'ylabel', 'vs30', 'magnitude', 'distance']), // a list of default parameter names
+            paramNames: Object.freeze(['gsim', 'imt', 'histogram type']), // a list of default parameter names
             params: {},  // a dict of property names mapped to an array of possible (string) values
             selectedParams: {}, //a dict of property names mapped to a string (scalar) denoting the selected value
                                 // that the parameter has to be shown along the 'X' or 'y' axis of the grid
-            gridxparam: 'xlabel',  // a key in params denoting the xgrid labels
-            gridyparam: 'ylabel',  // a key in params denoting the ygrid labels
+            gridxparam: 'histogram type',  // a key in params denoting the xgrid labels
+            gridyparam: 'imt',  // a key in params denoting the ygrid labels
             plotlyplots: [],  // subset of plots, with only the currently displayed plots
             plotlydata: [],  // the `data` argument passed to Plotly.newPlot(data, ...) holding the traces
             plotDivId: 'trellis-plots-container',
@@ -83,44 +83,35 @@ Vue.component('trellisdiv', {
         init: function(jsondict){
             this.$set(this, 'initialized', true);
             // convert data:
-            var [plots, params] = this.getTrellisData(jsondict);
+            var [plots, params] = this.getResidualsData(jsondict);
             this.$set(this, 'plots', plots);
             this.$set(this, 'params', params);
             // update selection, taking into account previously selected stuff:
             this.updateSelection();
         },
-        getTrellisData: function(data){
+        getResidualsData: function(data){
             // we use strings only in params value. Function converting undefined or null to '':
-            var str = val => (val === null || val === undefined) ? '' : val+'';
+            // var str = val => (val === null || val === undefined) ? '' : val+'';
             // setup  label texts:
             var params = {};
             for (var label of this.paramNames){
                 params[label] = new Set();
             }
             var plots = [];
-            for (var fig of data['figures']){
-                var plotParams = {};
-                plotParams.xlabel = data['xlabel'];
-                plotParams.ylabel= fig.ylabel;
-                plotParams.magnitude = fig.magnitude;
-                plotParams.distance = fig.distance;
-                plotParams.vs30 = fig.vs30;
-
-                params.xlabel.add(plotParams.xlabel);
-                params.ylabel.add(plotParams.ylabel);
-                params.magnitude.add(plotParams.magnitude);
-                params.distance.add(plotParams.distance);
-                params.vs30.add(plotParams.vs30);
-                
-                var plotData = Object.keys(fig.yvalues).map(function(name){
-                    var [x, y] = [data.xvalues, fig.yvalues[name]];
-                    // to test that plots are correctly placed, uncomment this:
-                    // var name = `${name}_${plotParams.magnitude}_${plotParams.distance}_${plotParams.vs30}`;
-                    return {x: x, y: y, mode: (data.xvalues.length == 1 ? 'scatter' : 'lines'),
-                        visible: true,
-                        legendgroup: name, name: name, line: {color: this.colorMap.get(name)}};
-                }, this);
-                plots.push({'data': plotData, 'params': plotParams});
+            for (var gsim of Object.keys(data)){
+                params.gsim.add(gsim);
+                for (var imt of Object.keys(data[gsim])){
+                    params.imt.add(imt);
+                    for (var type of Object.keys(data[gsim][imt])){
+                        params['histogram type'].add(type);
+                        var histdata = data[gsim][imt][type];
+                        var plotData = {x: histdata.x, y: histdata.y, type: 'bar'};
+                        var plotParams = {gsim:gsim, imt:imt, 'histogram type': type};
+                        plots.push({'data': [plotData], 'params': plotParams});
+//                                visible: true,
+//                                legendgroup: name, name: name, line: {color: this.colorMap.get(name)}};
+                    }
+                }
             }
             // replace sets with sorted Arrays, remove proeprties that are 'empty'
             // (either empty array or ['']):
@@ -140,10 +131,10 @@ Vue.component('trellisdiv', {
             var gridylabels = [];
             // set default grid for x and y if not found in the new params:
             if (!(this.gridxparam in params)){
-                this.$set(this, 'gridxparam', 'xlabel'); // xlabel surely in params
+                this.$set(this, 'gridxparam', 'histogram type'); // xlabel surely in params
             }
             if (!(this.gridyparam in params)){
-                this.$set(this, 'gridyparam', 'ylabel');  // ylabel surely in params
+                this.$set(this, 'gridyparam', 'imt');  // ylabel surely in params
             }
             var selectedParams = {};
             for (var key of Object.keys(params)){

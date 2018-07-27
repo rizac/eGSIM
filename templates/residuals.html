@@ -11,12 +11,11 @@
 	<div class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
 	
 		<!-- trellisfiv first, as it has automatically a greater z-index -->
-		<trellisdiv v-bind:eventbus="eventbus" url='{{ post_url }}'
+		<residualsdiv v-bind:eventbus="eventbus" url='{{ post_url }}'
 			class='position-absolute pos-0 m-0 flex-direction-row pl-2'>
-		</trellisdiv>
+		</residualsdiv>
 	
-		<trellisform url='{{ post_url }}'
-			submit_element_id='{{ form.plot_type.auto_id }}'
+		<egsimform url='{{ post_url }}'
 			v-bind:eventbus="eventbus"
 			class='flex-direction-col m-3 p-2'>
 
@@ -46,38 +45,35 @@
 						</imtselect>
 
 					</div>
-					
-					<div class='flexible p-2 grid-2-columns grid-col-gap-2'>
-						{% for field in form.visible_fields %}
-							{% if field.html_name != form.plot_type.html_name %}
-							
-							<div>{{ field.label_tag }} <errorspan :text="formscope.fielderrors['{{ field.html_name }}']"></errorspan></div> {{ field }} 
-							
-							<div class="text-muted small text-nowrap mb-2 field-help grid-col-span">
-							{{ field.help_text }}
-							</div>
-
-							{% endif %}
-						{% endfor %}
-
-					</div>
-
 				</div>
+			
+  				<div>{{ form.gmdb.label_tag }}</div> 
+				<div class="grid-2-columns grid-col-gap-2 grid-row-gap-2">
+	
+					<div class="grid-col-span">{{ form.gmdb }}</div>
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.gmdb.html_name }}']"></errorspan>
 
-				<div class='p-2 flex-direction-row'>
-					<!-- the submit button is the plot_type field. See Vuw component where we attach the submit
-					functionality -->
-					<div>
-						{{ form.plot_type.label }}
-					</div>
-					<div class=flexible>
-						{{ form.plot_type }}
-					</div>
+					{{ form.selection.label_tag }} {{ form.selection }}
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.selection.html_name }}']"></errorspan>
+	
+					{{ form.selection_min.label_tag }} {{ form.selection_min }}
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.selection_min.html_name }}']"></errorspan>
+	
+					{{ form.selection_max.label_tag }} {{ form.selection_max }}
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.selection_max.html_name }}']"></errorspan>
+	
 				</div>
-
+				
+				<button type="submit" class='btn btn-primary mt-3 mb-2'>
+		            Calculate residuals
+		        </button>
 			</div>
 
-		</trellisform>
+		</egsimform>
 
 	</div>
 {% endblock %}
@@ -89,8 +85,7 @@
 <script type='text/javascript' src = "{% static 'js/components/gsimselect.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/imtselect.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/egsimform.js' %}"></script>
-<script type='text/javascript' src = "{% static 'js/components/trellisform.js' %}"></script>
-<script type='text/javascript' src = "{% static 'js/components/trellisdiv.js' %}"></script>
+<script type='text/javascript' src = "{% static 'js/components/residualsdiv.js' %}"></script>
 
 {{ block.super }}
  

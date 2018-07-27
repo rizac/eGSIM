@@ -27,8 +27,10 @@ var EGSIM = new Vue({
         });
         this.eventbus.$on('postresponse', (response, isError) => {
             if (isError){
-                var msg = (((response.response || {}).data || {}).error || response.message) || 'Unknown error';
-                this.eventbus.$emit('error', response.response.data.error);
+                // handle the case when we have a form validation error (response.response.data.error is a dict with error.message as prop)
+                // or a general error (e.g., template not found, in which case use response.message):
+                var err = (((response.response || {}).data || {}).error || response.message) || 'Unknown error';
+                this.eventbus.$emit('error', err);
             }else if (response.config.url == this.initURL){
                 [avalGsims, avalImts] = getInitData(response.data);
                 this.$set(this, 'avalGsims', avalGsims);
@@ -67,14 +69,6 @@ var EGSIM = new Vue({
                 error = {message: error};
             }
             this.$set(this, 'errormsg', error.message);
-//            var errors = error.errors || [];
-//            var fielderrors = {};
-//            for (var err of errors){
-//                if (err.domain){
-//                    fielderrors[err.domain] = err.message || 'unknown error';
-//                }
-//            } 
-//            this.$set(this, 'fielderrors', fielderrors);
         },
         setLoading(value){
             this.$set(this, 'loading', value);
