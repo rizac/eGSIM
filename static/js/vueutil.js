@@ -30,13 +30,13 @@ Vue.use({
                 }
                 return color;
             }
-            get asObject() {
-                var ret = {};
-                for (var key of this.keys()){
-                    ret[key] = this.get(key);
-                }
-                return ret;
-            }
+//            get asObject() {
+//                var ret = {};
+//                for (var key of this.keys()){
+//                    ret[key] = this.get(key);
+//                }
+//                return ret;
+//            }
         };
         Vue.colorMap = function () {
             return new ColorMap();

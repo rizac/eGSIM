@@ -223,4 +223,5 @@ def test_err(request):
 
 def trellis_test(request):
     '''view for the trellis (test) page (iframe in browser)'''
-    return render(request, 'trellis_test.html', dict(_COMMON_PARAMS, form=TrellisForm()))
+    return render(request, 'trellis_test.html', dict(_COMMON_PARAMS, form=TrellisForm(),
+                                                     post_url='../query/trellis'))
