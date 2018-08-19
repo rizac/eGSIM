@@ -28,7 +28,8 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                 margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []},
             defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
-            colorMap: Vue.colorMap(),  // defined in vueutil.js
+            colorMap: Vue.colorMap(),  // defined in vueutil.js,
+            freezewatchers: true
         }
     },
     template: `<div v-show='initialized'>
@@ -38,9 +39,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
         </div>
     
         <div class='flex-direction-col p-2 pl-3'>
-            <div>
-                <button @click="toggleShowInputForm">params</button>
-            </div>
+            <slot :eventbus="eventbus" :url="url"></slot>
             <div v-show='Object.keys(legend).length' class='flexible pt-3'>
                 <h5 class='pt-3'>Legend</h5>
                 <div v-for="(value, key) in legend">
@@ -50,7 +49,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                     </label>
                 </div>
             </div>
-            <div v-show="Object.keys(selectableParams).length">
+            <div v-if="Object.keys(selectableParams).length">
                 <h5 class='pt-3'>Display</h5>
                 <div v-for='(values, key) in selectableParams'>
                     <div>{{ key }}:</div>
@@ -61,18 +60,18 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                     </select>
                 </div>
             </div>
-            <div v-show="gridxparam && gridyparam">
+            <div v-if="gridxparam && gridyparam">
                 <div>Group vertically by:</div>
                 <select class='form-control' v-model='gridyparam'>
-                    <option v-for='key in groupableParamNamesY' v-bind:value="key">
+                    <option v-for='key in Object.keys(params)' v-bind:value="key">
                         {{ key }}
                     </option>
                 </select>
             </div>
-            <div v-show="gridxparam && gridyparam">
+            <div v-if="gridxparam && gridyparam">
                 <div>Group horizontally by:</div>
                 <select class='form-control' v-model='gridxparam'>
-                    <option v-for='key in groupableParamNamesX' v-bind:value="key">
+                    <option v-for='key in Object.keys(params)' v-bind:value="key">
                        {{ key }}
                     </option>
                 </select>
@@ -138,6 +137,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
         },
         init: function(jsondict){
             this.$set(this, 'initialized', true);
+            this.$set(this, 'freezewatchers', true);
             this.$set(this, 'legend', {});
             // convert data:
             var plots = this.getData(jsondict);
@@ -203,16 +203,19 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             }
             // now set gridxparam and gridyparam, i.e. the parameter names whereby we group
             // plots on the x and y axus, respectively:
-            var gridxparam = '';
-            var gridyparam = '';
-            if (paramNamesWithManyValues.length && paramNames.length > 1){
-                gridxparam = this.xgroupby in params ? this.xgroupby : paramNames[0];
-                gridyparam = this.ygroupby in params ? this.ygroupby : paramNames[1];
-                // change gridxparam if neither gridxparam nor gridyparam have more than 1 value:
-                if (!paramNamesWithManyValues.includes(gridxparam) && !paramNamesWithManyValues.includes(gridyparam)){
-                    gridxparam = paramNamesWithManyValues[0];
-                }
-            }
+//            var gridxparam = '';
+//            var gridyparam = '';
+//            if (paramNamesWithManyValues.length && paramNames.length > 1){
+//                gridxparam = this.xgroupby in params ? this.xgroupby : paramNames[0];
+//                gridyparam = this.ygroupby in params ? this.ygroupby : paramNames[1];
+//                // change gridxparam if neither gridxparam nor gridyparam have more than 1 value:
+//                if (!paramNamesWithManyValues.includes(gridxparam) && !paramNamesWithManyValues.includes(gridyparam)){
+//                    gridxparam = paramNamesWithManyValues[0];
+//                }
+//            }
+            var gridxparam = this.xgroupby in params ? this.xgroupby : paramNames[0];
+            var gridyparam = this.ygroupby in params ? this.ygroupby : paramNames[1];
+ 
             this.$set(this, 'gridxparam', gridxparam);
             this.$set(this, 'gridyparam', gridyparam);
             this.$set(this, 'selectedParams', selectedParams);
@@ -343,6 +346,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
           }
           this.$set(this, 'plotlydata', data);
           Plotly.newPlot(divId, data, layout);
+          this.$set(this, 'freezewatchers', false);
         },
         getLayout: function(){
             return {autosize: true, font: {family: "Encode Sans Condensed, sans-serif", size: this.plotfontsize},
@@ -441,11 +445,6 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                 return data.visible;
             }
             return true;
-        },
-        toggleShowInputForm: function(){
-            if(this.eventbus){
-                this.eventbus.$emit('toggletrellisformvisibility');
-            }
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
@@ -454,17 +453,25 @@ var PLOTSDIV = Vue.component('plotsdiv', {
     watch: {
         selectedParams: {
             handler: function (newval, oldval) {
-                this.relayout();
+                if (!this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
+                    this.relayout();
+                }
             },
             deep: true  // https://vuejs.org/v2/api/#vm-watch
         },
         gridxparam: function(newval, oldval){
+            if (this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
+                return;
+            }
             if (newval == this.gridyparam){  // swap selection:
                 this.$set(this, 'gridyparam', oldval);
             }
             this.relayout();
         },
         gridyparam: function(newval, oldval){
+            if (this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
+                return;
+            }
             if (newval == this.gridxparam){  // swap selection:
                 this.$set(this, 'gridxparam', oldval);
             }
@@ -482,35 +489,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             return ret;
         },
 //        groupableParamNames: function(){
-//            // returns an array of params which can define groups along x or y axis
-//            // basically all keys of this.params which have at least two elements
-//            return Object.keys(this.selectedParams).filter(key => {
-//                return key == 'xlabel' || key == 'ylabel' || this.params[key].length > 1;
-//            });
-//        },
-        groupableParamNamesX: function(){
-            if (!this.gridxparam || !this.gridyparam){
-                return [];
-            }
-            var params = Object.keys(this.params);
-            if(this.params[this.gridyparam].length <= 1){
-                // if the other parameter has only one value, return all parameter names mapped
-                // to more than one value, cause only them are choosable:
-                params = params.filter(param => param == this.gridyparam || this.params[param].length > 1);
-            }
-            return params;
-        },
-        groupableParamNamesY: function(){
-            if (!this.gridxparam || !this.gridyparam){
-                return [];
-            }
-            var params = Object.keys(this.params);
-            if(this.params[this.gridxparam].length <= 1){
-                // if the other parameter has only one value, return all parameter names mapped
-                // to more than one value, cause only them are choosable:
-                params = params.filter(param => param == this.gridxparam || this.params[param].length > 1);
-            }
-            return params;
-        }
+//            return Object.keys(this.params).filter(param => param == this.gridxparam || param == this.gridyparam || this.params[param].length > 1);
+//        }
     }
 });

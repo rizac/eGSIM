@@ -9,15 +9,17 @@
 {% block main %}
 
 	<div class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
-	
-		<!-- trellisfiv first, as it has automatically a greater z-index -->
+
 		<residualsdiv v-bind:eventbus="eventbus" url='{{ post_url }}'
-			class='position-absolute pos-0 m-0 flex-direction-row pl-2'>
+			class='position-absolute pos-0 m-0 flex-direction-row pl-2' style='z-index:1'>
+			<div slot-scope='divscope'>
+                <button @click="divscope.eventbus.$emit(divscope.url + ':form:show')">params</button> <!-- show form below -->
+            </div>
 		</residualsdiv>
 	
-		<egsimform url='{{ post_url }}'
+		<modalform url='{{ post_url }}'
 			v-bind:eventbus="eventbus"
-			class='flex-direction-col m-3 p-2'>
+			class='flex-direction-col m-3 p-2' style='z-index:10'>
 
 			<div class='flexible flex-direction-col' slot-scope='formscope'>
 
@@ -69,11 +71,11 @@
 				</div>
 				
 				<button type="submit" class='btn btn-primary mt-3 mb-2'>
-		            Calculate residuals
+		            Display residuals
 		        </button>
 			</div>
 
-		</egsimform>
+		</modalform>
 
 	</div>
 {% endblock %}
@@ -85,6 +87,7 @@
 <script type='text/javascript' src = "{% static 'js/components/gsimselect.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/imtselect.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/egsimform.js' %}"></script>
+<script type='text/javascript' src = "{% static 'js/components/modalform.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/plotsdiv.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/residualsdiv.js' %}"></script>
 

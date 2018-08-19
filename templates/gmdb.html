@@ -12,7 +12,7 @@
 	
 
 {% block main %}
-<div class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'>
+<div class='position-absolute pos-0 m-0 flex-direction-col justify-content-center'>
 
 	<egsimform url='{{ post_url }}' :eventbus="eventbus"
 		class='flex-direction-col m-3 p-2'>
@@ -58,6 +58,7 @@
 <script for configuring the map (no vue instance for the moment too much overhead for such a simple task): -->
 <script type='text/javascript' src = "{% static 'js/components/errorspan.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/egsimform.js' %}"></script>
+<script type='text/javascript' src = "{% static 'js/components/plotsdiv.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/gmdbmagdistdiv.js' %}"></script>
 {{ block.super }}
 {% endblock %}

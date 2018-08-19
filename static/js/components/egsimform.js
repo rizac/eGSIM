@@ -9,7 +9,6 @@ var EGSIMFORM = Vue.component('egsimform', {
   data: function () {
       return {
           formclasses: [],
-          styleobject: {},
           modal: false,
           visible: true,
           fielderrors: {}
@@ -17,8 +16,7 @@ var EGSIMFORM = Vue.component('egsimform', {
   },
   template: `<form :id='id' :name='name' novalidate v-on:submit.prevent='submitForm'
                 v-show="visible"
-                v-bind:class="formclasses"
-                v-bind:style="styleobject">
+                v-bind:class="formclasses">
 
                 <div v-show='modal' class='text-right'>
                     <button type="button" v-on:click='setVisible(false)' class="close" aria-label="Close">
@@ -33,11 +31,9 @@ var EGSIMFORM = Vue.component('egsimform', {
       },
       setModal: function(value){
           this.$set(this, 'modal', value);
-          this.$emit('modal', value);
       },
       setVisible: function(value){
           this.$set(this, 'visible', value);
-          this.$emit('visible', value);
       },
       submitForm(){
           if(!this.eventbus){
@@ -61,7 +57,6 @@ var EGSIMFORM = Vue.component('egsimform', {
           this.eventbus.$on('postresponse', (response, isError) => {
               if (response.config.url == this.url){
                   this.$emit('formsubmitted', response, isError);
-                  //this.formSubmitted.call(this, response, isError);
               }
           });
           this.eventbus.$on('error', error => {

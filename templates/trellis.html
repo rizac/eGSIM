@@ -9,16 +9,18 @@
 {% block main %}
 
 	<div class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
-	
-		<!-- trellisfiv first, as it has automatically a greater z-index -->
+
 		<trellisdiv v-bind:eventbus="eventbus" url='{{ post_url }}'
-			class='position-absolute pos-0 m-0 flex-direction-row pl-2'>
+			class='position-absolute pos-0 m-0 flex-direction-row pl-2' style='z-index:1'>
+			<div slot-scope='divscope'>
+                <button @click="divscope.eventbus.$emit(divscope.url + ':form:show')">params</button> <!-- show form below -->
+            </div>
 		</trellisdiv>
 	
-		<trellisform url='{{ post_url }}'
+		<modalform url='{{ post_url }}'
 			submit_element_id='{{ form.plot_type.auto_id }}'
 			v-bind:eventbus="eventbus"
-			class='flex-direction-col m-3 p-2'>
+			class='flex-direction-col m-3 p-2' style='z-index:10'>
 
 			<div class='flexible flex-direction-col' slot-scope='formscope'>
 
@@ -65,19 +67,21 @@
 				</div>
 
 				<div class='p-2 flex-direction-row'>
-					<!-- the submit button is the plot_type field. See Vuw component where we attach the submit
-					functionality -->
-					<div>
-						{{ form.plot_type.label }}
-					</div>
-					<div class=flexible>
-						{{ form.plot_type }}
-					</div>
+					<!-- the submit button is the plot_type field. Render manually -->
+					{{ form.plot_type.label_tag }}
+					<select class='form-control flexible mr-3 ml-1' size="3" name="{{ form.plot_type.html_name }}">
+    					{% for choice in form.plot_type.field.choices %}
+        				<option value="{{ choice.0 }}">{{ choice.1 }}</option>
+    					{% endfor %}
+					</select>
+					<button type="submit" class='btn btn-primary mt-3 mb-2'>
+		            	Display plots
+		        	</button>
 				</div>
 
 			</div>
 
-		</trellisform>
+		</modalform>
 
 	</div>
 {% endblock %}
@@ -89,7 +93,7 @@
 <script type='text/javascript' src = "{% static 'js/components/gsimselect.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/imtselect.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/egsimform.js' %}"></script>
-<script type='text/javascript' src = "{% static 'js/components/trellisform.js' %}"></script>
+<script type='text/javascript' src = "{% static 'js/components/modalform.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/plotsdiv.js' %}"></script>
 <script type='text/javascript' src = "{% static 'js/components/trellisdiv.js' %}"></script>
 
