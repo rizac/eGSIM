@@ -52,11 +52,11 @@ Vue.component('gmdbmagdistdiv', {
         },
         displayGridX: function(label){
             // this method can be overridden to hide particular grid labels IN THE PLOT along the x axis. By default it returns true
-            return true; // this method should not be called any value is irrelevant
+            return false; // this method should not be called any value is irrelevant
         },
         displayGridY: function(label){
             // this method can be overridden to hide particular grid labels IN THE PLOT along the y axis. By default it returns true
-            return true; // this method should not be called any value is irrelevant
+            return false; // this method should not be called any value is irrelevant
         },
         configureLayout: function(layout){
             // remove or add properties to the plotly layout Object, which is passed here as argument as a shallow copy of

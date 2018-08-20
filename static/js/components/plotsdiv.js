@@ -32,7 +32,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             freezewatchers: true
         }
     },
-    template: `<div v-show='initialized'>
+    template: `<div v-show='initialized' class='flex-direction-row'>
         
         <div class='flexible position-relative'>
             <div class='position-absolute pos-0' :id="plotdivid"></div>
