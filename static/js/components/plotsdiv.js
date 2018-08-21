@@ -2,13 +2,13 @@ var PLOTSDIV = Vue.component('plotsdiv', {
     props: {
         'url': String,
         'eventbus': {default: null},
-        'xgroupby': {type: String, default:''},  // hint for gridxparam (see setupSelection)
-        'ygroupby': {type: String, default:''},  // hint for gridyparam (see setupSelection)
-        'plotdivid': {type:String, default: 'plotsdiv-plots-container-div'},
         'plotfontsize': {type: Number, default: 12}  // this is used to calculate plot areas and set it in the default layout
     },
     data: function(){
+        // unique id based on the component name (note that if this is called by a subclass, then this.$options.name is the subclass name)
+        var id = this.$options.name + new Date().getTime().toString();
         return {
+            plotdivid: id,
             // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
             initialized: false,
             legend: {}, // an Object of names -> html color (string) values
@@ -29,7 +29,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             colorMap: Vue.colorMap(),  // defined in vueutil.js,
-            freezewatchers: true
+            freezewatchers: true  // does what it says: it freezes watchers. Used when initializing to avoid fire Vue's re-layout
         }
     },
     template: `<div v-show='initialized' class='flex-direction-row'>
@@ -60,7 +60,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                     </select>
                 </div>
             </div>
-            <div v-if="gridxparam && gridyparam">
+            <div v-if="showGridControls">
                 <div>Group vertically by:</div>
                 <select class='form-control' v-model='gridyparam'>
                     <option v-for='key in Object.keys(params)' v-bind:value="key">
@@ -68,7 +68,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                     </option>
                 </select>
             </div>
-            <div v-if="gridxparam && gridyparam">
+            <div v-if="showGridControls">
                 <div>Group horizontally by:</div>
                 <select class='form-control' v-model='gridxparam'>
                     <option v-for='key in Object.keys(params)' v-bind:value="key">
@@ -91,48 +91,83 @@ var PLOTSDIV = Vue.component('plotsdiv', {
     methods: {
         // methods to be overridden:
         getData: function(responseObject){
-            // initializes the response object into an Array of [[traces, params, xaxis, yaxis], ... ] element, and returns the Array.
-            // each element [traces, params, xaxis, yaxis] represents a (sub)Plot and must be:
-            // traces: an Array of valid representable plotly objects, each Object might be e.g.:
-            //         {x: Array, y: Array, name: string}.
-            //     plus any other attribute necessary to display the trace.
-            //     NOTE: To add a unique color mapped to a trace id (e.g. the trace name), setup the legendgroup and
-            //     automatically map the trace to a legend item toggling the trace visibility, use color = this.addLegend(name), e.g.:
-            //         var trace = {x: Array, y: Array, name: 'mytrace'}
-            //         var color = this.addLegend(trace.name)  // this sets also trace.legendgroup=traceName
-            //         trace.line = {color: color}  // set the trace color to the legend assigned color
-            // params: an Object of selectable params (string) mapped to the plot specific values (e.g. {magnitude: 5, 'xlabel: 'PGA'})
-            //     each element's params Object should have the same keys
-            // xaxis: a dict of x axis properties. Example: {title: 'plottitle', type: 'log'}
-            //     The properties 'domain' and 'anchor' will be overridden. 
-            //     The Object returned here will be merged with the properties defined this.defaultxaxis (in case of conflicts,
-            //     the properties of this.defaultxaxis will be overridden)
-            // yaxis: a dict of y axis properties. Example: {title: 'plottitle', type: 'log'}
-            //     The properties 'domain' and 'anchor' will be overridden. 
-            //     The Object returned here will be merged with the properties defined this.defaultyaxis (in case of conflicts,
-            //     the properties of this.defaultyaxis will be overridden)
+            // this method needs to be implemented in order to initialize the response object into
+            // an Array of sub-plots, and return that Array: each Array element (or "sub-plot")
+            // need to be a js Object of the form:
+            // {traces: Array, params: Object, xaxis: Object, yaxis: Object} where:
+            //
+            // traces:
+            // an Array of valid representable plotly objects e.g. {x: Array, y: Array, name: string}
+            // (providing a `name` key makes the name showing when hovering over the trace with
+            // the mouse. For other keys, refer to plotly doc for details). The object keys
+            // `xaxis`, 'yaxis', 'showlegend' needs not to be specified as they will be overridden.
+            // NOTE: To add a unique color mapped to a trace id (e.g. the trace name) and
+            // setup the legendgroup and automatically map the trace to a legend item toggling
+            // the trace visibility, use `this.addLegend(trace, key)`, e.g.:
+            //
+            //   var trace = {x: Array, y: Array, name: 'mytrace'}
+            //   var color = this.addLegend(trace, trace.name)
+            //   trace.line = {color: color}  // set the trace color to the legend assigned color
+            //
+            // `addLegend(trace, K)` maps the returned color to the key K provided;
+            // subsequent calls to this.addLegend(..., K) return the same color.
+            // The returned color is a color assigned to K by cycling through an internal color
+            // array (copied from plotly). If you want to specify a default
+            // color for non-mapped keys avoiding the default assignement, call:
+            // `addLegend(trace, key, color)` with an optional color string in the form '#XXXXXX'.
+            // `addLegend` also sets trace.legendgroup=K.
+            //
+            // params:
+            // an Object of selectable params (string) mapped to the plot specific values
+            // (e.g. {magnitude: 5, 'xlabel: 'PGA'}). This object should have always the same keys
+            // and at least two keys in order to map them to the x and y grid (see `defaultGridParams`)
+            //
+            // xaxis:
+            // a dict of x axis properties. Example: {title: 'plottitle', type: 'log'}
+            // The properties 'domain' and 'anchor' needs not to be specified as they will be overridden. 
+            // The Object returned here will be merged with the properties defined this.defaultxaxis
+            // (in case of conflicts, the properties of this.defaultxaxis will be overridden)
+            //
+            // yaxis:
+            // a dict of y axis properties. Example: {title: 'plottitle', type: 'log'}
+            // The properties 'domain' and 'anchor' needs not to be specified as they will be overridden. 
+            // The Object returned here will be merged with the properties defined this.defaultyaxis
+            // (in case of conflicts, the properties of this.defaultyaxis will be overridden)
         },
-        displayGridX: function(label){
-            // this method can be overridden to hide particular grid labels IN THE PLOT along the x axis. By default it returns true
-            return true;
+        defaultGridParams: function(params){
+            // this optional method can be implemented to return an array [xKey, yKey] representing
+            // the default param names of the grid along the x and y axis, respectively.
+            // xKey and yKey should be keys of the params argument (js Object).
+            // If not implemented, by default this method returns the first 2 values of `Object.keys(params)`
+            var keys = Object.keys(params);
+            return [keys[0], keys[1]];
         },
-        displayGridY: function(label){
-            // this method can be overridden to hide particular grid labels IN THE PLOT along the y axis. By default it returns true
+        displayGrid: function(paramName, axis){
+            // this optional method can be implemented to hide particular grid labels IN THE PLOT along the
+            // specified axis ('x' or 'y'). If not implemented, by default this method returns true
             return true;
         },
         configureLayout: function(layout){
-            // remove or add properties to the plotly layout Object, which is passed here as argument as a shallow copy of
-            // this.defaultlayout.
-            // Note that the layout font size and family will be set according to this.plotfontsize and the <body> font
-            // family, because the font size
-            // is used to calculate plots area and cannot be changed. By default, this function does nothing and returns
+            // this optional method can be implemented to remove or add properties to the plotly `layout`
+            // Object, which is passed as shallow copy of `this.defaultlayout` (defined in `plotsdiv`).
+            // If not implemented, this method by default does nothing and returns.
+            // Note that the layout font size and family will be set according to `this.plotfontsize`
+            // and the <body> font family, because the font size is used to calculate plots area
+            // and cannot be changed. 
             return
         },
         // END OF OVERRIDABLE METHODS
-        addLegend: function(name, traceObject){
-            var color = this.colorMap.get(name);
-            this.legend[name] = color;
-            traceObject.legendgroup = name;
+        addLegend: function(trace, key, defaultColor){  //defaultColor is optional. If given, it is in the form '#XXXXXX'
+            var color;
+            var colorMap = this.colorMap;
+            if (defaultColor !== undefined && !colorMap.has(key)){
+                colorMap.set(key, defaultColor);
+                color = defaultColor;
+            }else{
+                color = colorMap.get(key);  // sets also the key if not existing
+            }
+            this.legend[key] = color;
+            trace.legendgroup = key;
             return color;
         },
         init: function(jsondict){
@@ -184,38 +219,26 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             var paramNames = Object.keys(params);
             // selected params is basically params where each key will be mapped to their first value:
             var selectedParams = {};
-            // groupable params need at least one dimension (x or y) with more than 1 value
-            // store temporarily here the names of params with more than 1 value:
-            var paramNamesWithManyValues = [];
             // replace sets with sorted Arrays (vuejs wants Arrays, not Sets), and remove proeprties that are 'empty'
             // (either empty array or have a single falsy element (empty string, null)):
             for(var key of paramNames){
-                var val = Array.from(params[key]).sort();
+                var val = Array.from(params[key]);
                 if(!val.length || (val.length==1 && !val[0] && val[0]!==0)){
                     delete params[key];
                     continue;
                 }
-                if(val.length > 1){
-                    paramNamesWithManyValues.push(key);
+                // now sort values. Note that javascript array sort converts to string first (WTF!!!??), so
+                // use a particular sort function for numbers only (see https://stackoverflow.com/a/1063027):
+                if (typeof val[0] === 'number'){
+                    val.sort((a, b) => a - b);
+                }else{
+                    val.sort();
                 }
                 params[key] = val;
                 selectedParams[key] = val[0];
             }
-            // now set gridxparam and gridyparam, i.e. the parameter names whereby we group
-            // plots on the x and y axus, respectively:
-//            var gridxparam = '';
-//            var gridyparam = '';
-//            if (paramNamesWithManyValues.length && paramNames.length > 1){
-//                gridxparam = this.xgroupby in params ? this.xgroupby : paramNames[0];
-//                gridyparam = this.ygroupby in params ? this.ygroupby : paramNames[1];
-//                // change gridxparam if neither gridxparam nor gridyparam have more than 1 value:
-//                if (!paramNamesWithManyValues.includes(gridxparam) && !paramNamesWithManyValues.includes(gridyparam)){
-//                    gridxparam = paramNamesWithManyValues[0];
-//                }
-//            }
-            var gridxparam = this.xgroupby in params ? this.xgroupby : paramNames[0];
-            var gridyparam = this.ygroupby in params ? this.ygroupby : paramNames[1];
- 
+            var [gridxparam, gridyparam] = this.defaultGridParams(params);
+            // set defaults:
             this.$set(this, 'gridxparam', gridxparam);
             this.$set(this, 'gridyparam', gridyparam);
             this.$set(this, 'selectedParams', selectedParams);
@@ -265,14 +288,14 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                 // merge plot yaxis defined in getData with this.defaultyaxis, and then with yaxis.
                 // Priority in case of conflicts goes from right (yaxis) to left (this.defaultyaxis)
                 layout[`yaxis${axisIndex}`] = yaxis = Object.assign({}, this.defaultyaxis, plot.yaxis, yaxis);
-                // Now edit the traces in plot.data. Each trace is basically an Object of the
+                // Now edit the traces in plot.traces. Each trace is basically an Object of the
                 // form T = {x: ..., y: ...}. These trace properties need to be modified EACH TIME:
                 // 1. T.xaxis and T.yaxis (i.e., basically on which subplot the trace has to be displayed), and
                 // 2. T.showlegend. The latter is set to true for the FIRST trace found for a given legendgroup
                 // in order to avoid duplicated legend names. (T.legendgroup = T.name is the GSIM name, and it allows
                 // toggling visibility simultaneously on all subplots for every trace with the same legendgroup, when 
                 // clicking on the legend's GSIM name)
-                plot.data.forEach(function(element){
+                plot.traces.forEach(function(element){
                     element.xaxis = `x${axisIndex}`;
                     element.yaxis = `y${axisIndex}`;
                     if ('legendgroup' in element){
@@ -314,7 +337,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                 }
           }
           // Grid X labels: (horizontally on top)
-          if (this.displayGridX(gridxparam)){
+          if (this.displayGrid(gridxparam, 'x')){
               // determine the maximum y of all plot frames:
               // var y = Math.max(...ydomains.map(elm => elm[1]));
               // create the x labels of the vertical grid:
@@ -329,7 +352,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
               }
           }
           // Grid Y labels: (vertically on the right)
-          if (this.displayGridY(gridyparam)){
+          if (this.displayGrid(gridyparam, 'y')){
               // determine the maximum x of all plot frames:
               // var x = Math.max(...xdomains.map(elm => elm[1]));
               // create the y labels of the vertical grid:
@@ -359,8 +382,8 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             // where xaxis and yaxis are the Objects to be passed to plotly's layout, xdomain = [x1, x2] and
             // ydomain = [y1, y2] are the two-element arrays denoting the enclosing area of the sub-plot
             var [uwidth, uheight] = this.getEmUnits(divId, this.plotfontsize);
-            var gridxparam = this.displayGridX(this.gridxparam) ? this.gridxparam : '';
-            var gridyparam = this.displayGridY(this.gridyparam) ? this.gridyparam : '';
+            var gridxparam = this.displayGrid(this.gridxparam, 'x') ? this.gridxparam : '';
+            var gridyparam = this.displayGrid(this.gridyparam, 'y') ? this.gridyparam : '';
             var tt = gridxparam ? 1.5 * uheight : 0;
             var rr = gridyparam ? 3 * uwidth : 0;
             // the legend, if present, is not included in the plot area, so we can safely ignore it. Comment this line:
@@ -465,6 +488,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             }
             if (newval == this.gridyparam){  // swap selection:
                 this.$set(this, 'gridyparam', oldval);
+                return;
             }
             this.relayout();
         },
@@ -474,6 +498,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             }
             if (newval == this.gridxparam){  // swap selection:
                 this.$set(this, 'gridxparam', oldval);
+                return;
             }
             this.relayout();
         }
@@ -488,8 +513,10 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             }
             return ret;
         },
-//        groupableParamNames: function(){
-//            return Object.keys(this.params).filter(param => param == this.gridxparam || param == this.gridyparam || this.params[param].length > 1);
-//        }
+        showGridControls: function(){
+            // returns if grid controls to select the grid x and y should be visible. Basically, controls are shown if there
+            // is somthing to be grouped along the x and y axis (plots.length > 1)
+            return this.plots.length && this.plots.length > 1;
+        }
     }
 });

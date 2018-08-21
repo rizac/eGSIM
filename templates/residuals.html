@@ -25,9 +25,9 @@
 
 				<div class='flexible flex-direction-row'>
 
-					<div id='inputsel' class="flexible flex-direction-col p-2">
+					<div id='inputsel' class="flexible flex-direction-col">
 						
-						<gsimselect class='flexible p-2'
+						<gsimselect class='flexible p-1 pb-3'
 							name="{{ form.gsim.html_name }}"
 							showfilter
 							v-bind:errormsg="formscope.fielderrors['{{ form.gsim.html_name }}']"
@@ -36,7 +36,7 @@
 							{{ form.gsim.label }}
 						</gsimselect>
 						
-						<imtselect
+						<imtselect class='p-1 pb-3'
 							name="{{ form.imt.html_name }}"
 							v-bind:errormsg="formscope.fielderrors['{{ form.imt.html_name }}']"
 							v-bind:avalgsims="avalGsims"
@@ -49,27 +49,29 @@
 					</div>
 				</div>
 			
-  				<div>{{ form.gmdb.label_tag }}</div> 
-				<div class="grid-2-columns grid-col-gap-2 grid-row-gap-2">
+				<div class='p-1 pb-3'>
+	  				<div>{{ form.gmdb.label }}</div> 
+					<div class="grid-2-columns grid-col-gap-2 grid-row-gap-1">
+		
+						<div class="grid-col-span">{{ form.gmdb }}</div>
+						<errorspan class="grid-col-span"
+							:text="formscope.fielderrors['{{ form.gmdb.html_name }}']"></errorspan>
 	
-					<div class="grid-col-span">{{ form.gmdb }}</div>
-					<errorspan class="grid-col-span"
-						:text="formscope.fielderrors['{{ form.gmdb.html_name }}']"></errorspan>
+						{{ form.selection.label_tag }} {{ form.selection }}
+						<errorspan class="grid-col-span"
+							:text="formscope.fielderrors['{{ form.selection.html_name }}']"></errorspan>
+		
+						{{ form.selection_min.label_tag }} {{ form.selection_min }}
+						<errorspan class="grid-col-span"
+							:text="formscope.fielderrors['{{ form.selection_min.html_name }}']"></errorspan>
+		
+						{{ form.selection_max.label_tag }} {{ form.selection_max }}
+						<errorspan class="grid-col-span"
+							:text="formscope.fielderrors['{{ form.selection_max.html_name }}']"></errorspan>
+		
+					</div>
+				</div> 
 
-					{{ form.selection.label_tag }} {{ form.selection }}
-					<errorspan class="grid-col-span"
-						:text="formscope.fielderrors['{{ form.selection.html_name }}']"></errorspan>
-	
-					{{ form.selection_min.label_tag }} {{ form.selection_min }}
-					<errorspan class="grid-col-span"
-						:text="formscope.fielderrors['{{ form.selection_min.html_name }}']"></errorspan>
-	
-					{{ form.selection_max.label_tag }} {{ form.selection_max }}
-					<errorspan class="grid-col-span"
-						:text="formscope.fielderrors['{{ form.selection_max.html_name }}']"></errorspan>
-	
-				</div>
-				
 				<button type="submit" class='btn btn-primary mt-3 mb-2'>
 		            Display residuals
 		        </button>
