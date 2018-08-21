@@ -26,9 +26,9 @@
 
 				<div class='flexible flex-direction-row'>
 
-					<div id='inputsel' class="flexible flex-direction-col p-2">
+					<div id='inputsel' class="flexible flex-direction-col">
 						
-						<gsimselect class='flexible p-2'
+						<gsimselect class='flexible p-1 pb-3'
 							name="{{ form.gsim.html_name }}"
 							showfilter
 							v-bind:errormsg="formscope.fielderrors['{{ form.gsim.html_name }}']"
@@ -37,7 +37,7 @@
 							{{ form.gsim.label }}
 						</gsimselect>
 						
-						<imtselect
+						<imtselect class='p-1 pb-3'
 							name="{{ form.imt.html_name }}"
 							v-bind:errormsg="formscope.fielderrors['{{ form.imt.html_name }}']"
 							v-bind:avalgsims="avalGsims"
@@ -49,7 +49,7 @@
 
 					</div>
 					
-					<div class='flexible p-2 grid-2-columns grid-col-gap-2'>
+					<div class='flexible p-2 grid-2-columns grid-col-gap-2 grid-row-gap-1'>
 						{% for field in form.visible_fields %}
 							{% if field.html_name != form.plot_type.html_name %}
 							
@@ -74,7 +74,7 @@
         				<option value="{{ choice.0 }}">{{ choice.1 }}</option>
     					{% endfor %}
 					</select>
-					<button type="submit" class='btn btn-primary mt-3 mb-2'>
+					<button type="submit" class='btn btn-primary'>
 		            	Display plots
 		        	</button>
 				</div>

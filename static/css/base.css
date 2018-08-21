@@ -20,9 +20,13 @@ body{
 .flex-direction-row > .flexible, .flex-direction-col > .flexible,
 .flex-direction-row > .flexible-half, .flex-direction-col > .flexible-half{
 	flex: 1 1 auto; /* for letting this work with grid layout the last element (flex-basis) should be zero: https://stackoverflow.com/a/48454476 */
-	overflow: auto;
 }
-
+.flex-direction-row > .flexible, .flex-direction-row > .flexible-half{
+	overflow-x: auto;
+}
+.flex-direction-col > .flexible, .flex-direction-col > .flexible-half{
+	overflow-y: auto;
+}
 .flex-center{
 	flex-direction: column;  /* make main axis vertical */
     justify-content: center; /* center items vertically, in this case */
