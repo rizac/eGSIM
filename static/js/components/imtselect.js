@@ -14,11 +14,12 @@ Vue.component('imtselect', {
       }
   },
   template: `<div class='flex-direction-col'>
-      <div><slot>{{ name }}</slot>
+      <div>
+          <h5><slot>{{ name }}</slot></h5>
           <errorspan v-bind:text="errormsg"></errorspan>
       </div>  
       <div class='text-muted small'>
-          {{ selection.length }} of {{ imts.length }} imt(s) selected 
+          {{ selection.length }} of {{ imts.length }} selected 
       </div>
       <div class='mb-1 flexible flex-direction-col'>
         <select v-model="selection" :name="name" :id="'id_' + name" multiple class="form-control" required>

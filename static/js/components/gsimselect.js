@@ -17,11 +17,12 @@ Vue.component('gsimselect', {
       }
   },
   template: `<div class='flex-direction-col'>
-    <div><slot>{{ name }}</slot>
+    <div>
+      <h5><slot>{{ name }}</slot></h5>
       <errorspan v-bind:text="errormsg"></errorspan>
     </div>  
     <div class='text-muted small'>
-        {{ selection.length }} of {{ gsims.length }} gsim(s) selected 
+        {{ selection.length }} of {{ gsims.length }} selected 
     </div>
     <div class='mb-1 flexible flex-direction-col'>
         <select v-model="selection" multiple required class="form-control flexible"

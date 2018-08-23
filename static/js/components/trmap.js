@@ -68,7 +68,9 @@ Vue.component('trmap', {
 
         // instanitate a layer control (the button on the top-right corner for showing/hiding overlays
         // overlays will be added when setting the project
-        this.$set(this, 'layersControl', L.control.layers({}, {}, {collapsed:false}).addTo(map));
+        this.$set(this, 'layersControl', L.control.layers({}, {}, {collapsed:false}).addTo(map));  // https://gis.stackexchange.com/a/68243
+        // note above: collapsed:false makes the legend control visible. This does not work though in 100% of the cases,
+        // so see in updateDom a hack for solving this problem (remove control height, if set)
         this.$set(this, 'map', map);
         map.on("click", this.clickHandler);
     },
@@ -162,6 +164,13 @@ Vue.component('trmap', {
                 layersControl.addOverlay(layer, `<span style='color:${style.color}'>${key}</span>`);
                 overlays.push(layer);
             });
+            // hack for removing the height attribute on the control. Seems that {collapsed:false}} does not
+            // work only if we are loading the page and the latter is visible (activated):
+            var form = document.querySelector('form.leaflet-control-layers-list');
+            if (form){
+                form.style.height = "";
+            }
+            
          },
          getStyle: function(trName){
              return {

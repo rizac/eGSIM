@@ -19,6 +19,7 @@ from django.contrib import admin  # added by default by django
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from . import views
+from django.views.generic.base import RedirectView
 
 
 # for infor with trailing slashes:
@@ -26,7 +27,8 @@ from . import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),  # added by default by django
-    url(r'^$', views.index, name='index'),  # same as /home (see views.py)
+    url(r'^$', RedirectView.as_view(pattern_name='main', url='home', permanent=False)),
+    # url(r'^$', views.index, name='index'),  # same as /home (see views.py)
     url(r'^(?P<menu>[a-zA-Z]+)/?$', views.main, name='main'),  # main page entry point
     url(r'^service/home/?$', views.home, name='home'),
     url(r'^service/trsel/?$', views.trsel, name='trsel'),

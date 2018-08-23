@@ -446,7 +446,7 @@ class IMTField(MultipleChoiceField):
     }
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('label', 'Intensity Measure Type(s) (imt)')
+        kwargs.setdefault('label', 'Intensity Measure Types (imt)')
         kwargs.setdefault('widget', HiddenInput)
         # FIXME: do we provide choices, as actually we are rendering the component with an
         # ajax request in vue.js?
@@ -492,7 +492,7 @@ class IMTField(MultipleChoiceField):
 class GsimField(MultipleChoiceField):
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('label', 'Ground Shaking Intensity Model(s) (gsim)')
+        kwargs.setdefault('label', 'Ground Shaking Intensity Models (gsim)')
         kwargs.setdefault('widget', HiddenInput)
         # FIXME: do we provide choices, as actually we are rendering the component with an
         # ajax request in vue.js?

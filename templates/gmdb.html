@@ -12,39 +12,41 @@
 	
 
 {% block main %}
-<div class='position-absolute pos-0 m-0 flex-direction-col justify-content-center'>
+<div class='position-absolute pos-0 m-0 flex-direction-col justify-content-flex-start'>
 
-	<egsimform url='{{ post_url }}' :eventbus="eventbus"
-		class='flex-direction-col m-3 p-2'>
-
-			<div class="grid-2-columns grid-row-gap-2 grid-col-gap-2" slot-scope='formscope'>
-
-				{{ form.gmdb.label_tag }} {{ form.gmdb }}
-				<errorspan class="grid-col-span"
-					:text="formscope.fielderrors['{{ form.gmdb.html_name }}']"></errorspan>
-
-				{{ form.selection.label_tag }} {{ form.selection }}
-				<errorspan class="grid-col-span"
-					:text="formscope.fielderrors['{{ form.selection.html_name }}']"></errorspan>
-
-				{{ form.selection_min.label_tag }} {{ form.selection_min }}
-				<errorspan class="grid-col-span"
-					:text="formscope.fielderrors['{{ form.selection_min.html_name }}']"></errorspan>
-
-				{{ form.selection_max.label_tag }} {{ form.selection_max }}
-				<errorspan class="grid-col-span"
-					:text="formscope.fielderrors['{{ form.selection_max.html_name }}']"></errorspan>
-				
-				{{ form.distance_type.label_tag }} {{ form.distance_type }}
-				<errorspan class="grid-col-span"
-					:text="formscope.fielderrors['{{ form.distance_type.html_name }}']"></errorspan>
-
-				<button type="submit" class='btn btn-primary mt-3 mb-2 grid-col-span'>
-		            Show magnitude distance plot
-		        </button>
-	    </div>
-	</egsimform>
+	<div class="flex-direction-row justify-content-center">
+		<egsimform url='{{ post_url }}' :eventbus="eventbus"
+			class='flex-direction-col m-3 p-2'>
 	
+				<div class="grid-2-columns grid-row-gap-2 grid-col-gap-2" slot-scope='formscope'>
+	
+					{{ form.gmdb.label_tag }} {{ form.gmdb }}
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.gmdb.html_name }}']"></errorspan>
+	
+					{{ form.selection.label_tag }} {{ form.selection }}
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.selection.html_name }}']"></errorspan>
+	
+					{{ form.selection_min.label_tag }} {{ form.selection_min }}
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.selection_min.html_name }}']"></errorspan>
+	
+					{{ form.selection_max.label_tag }} {{ form.selection_max }}
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.selection_max.html_name }}']"></errorspan>
+					
+					{{ form.distance_type.label_tag }} {{ form.distance_type }}
+					<errorspan class="grid-col-span"
+						:text="formscope.fielderrors['{{ form.distance_type.html_name }}']"></errorspan>
+	
+					<button type="submit" class='btn btn-outline-primary mt-3 mb-2 grid-col-span'>
+			            Show magnitude distance plot
+			        </button>
+		    </div>
+		</egsimform>
+	</div>
+
 	<gmdbmagdistdiv url='{{ post_url }}' :eventbus="eventbus" class='flexible'>
 	</gmdbmagdistdiv>
 

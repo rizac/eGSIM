@@ -38,19 +38,10 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             <div class='position-absolute pos-0' :id="plotdivid"></div>
         </div>
     
-        <div class='flex-direction-col p-2 pl-3'>
-            <slot :eventbus="eventbus" :url="url"></slot>
-            <div v-show='Object.keys(legend).length' class='flexible pt-3'>
-                <h5 class='pt-3'>Legend</h5>
-                <div v-for="(value, key) in legend">
-                    <label v-bind:style="{color: value}">
-                        <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
-                        {{ key }}
-                    </label>
-                </div>
-            </div>
+        <div class='flex-direction-col p-2 pl-3'
+            v-if="Object.keys(legend).length || Object.keys(selectableParams).length || showGridControls">
             <div v-if="Object.keys(selectableParams).length">
-                <h5 class='pt-3'>Display</h5>
+                <h5 class='mt-2 border-top'>Display</h5>
                 <div v-for='(values, key) in selectableParams'>
                     <div>{{ key }}:</div>
                     <select class='form-control' v-model="selectedParams[key]">
@@ -61,7 +52,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                 </div>
             </div>
             <div v-if="showGridControls">
-                <div>Group vertically by:</div>
+                <div class='mt-2 border-top'>Group vertically by:</div>
                 <select class='form-control' v-model='gridyparam'>
                     <option v-for='key in Object.keys(params)' v-bind:value="key">
                         {{ key }}
@@ -69,13 +60,23 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                 </select>
             </div>
             <div v-if="showGridControls">
-                <div>Group horizontally by:</div>
+                <div class='mt-1' >Group horizontally by:</div>
                 <select class='form-control' v-model='gridxparam'>
                     <option v-for='key in Object.keys(params)' v-bind:value="key">
                        {{ key }}
                     </option>
                 </select>
             </div>
+            <div v-if='Object.keys(legend).length' class='flexible'>
+                <h5 class='mt-2 border-top'>Legend</h5>
+                <div v-for="(value, key) in legend">
+                    <label v-bind:style="{color: value}">
+                        <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
+                        {{ key }}
+                    </label>
+                </div>
+            </div>
+            <slot :eventbus="eventbus" :url="url"></slot>
         </div>
      
     </div>`,

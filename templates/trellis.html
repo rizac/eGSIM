@@ -13,22 +13,23 @@
 		<trellisdiv v-bind:eventbus="eventbus" url='{{ post_url }}'
 			class='position-absolute pos-0 m-0 flex-direction-row pl-2' style='z-index:1'>
 			<div slot-scope='divscope'>
-                <button @click="divscope.eventbus.$emit(divscope.url + ':form:show')">params</button> <!-- show form below -->
+                <button @click="divscope.eventbus.$emit(divscope.url + ':form:show')"
+                	class='btn btn-outline-dark'>params</button> <!-- show form below -->
             </div>
 		</trellisdiv>
 	
 		<modalform url='{{ post_url }}'
 			submit_element_id='{{ form.plot_type.auto_id }}'
 			v-bind:eventbus="eventbus"
-			class='flex-direction-col m-3 p-2' style='z-index:10'>
+			class='flex-direction-col m-2 p-4' style='z-index:10'>
 
 			<div class='flexible flex-direction-col' slot-scope='formscope'>
 
 				<div class='flexible flex-direction-row'>
 
-					<div id='inputsel' class="flexible flex-direction-col">
-						
-						<gsimselect class='flexible p-1 pb-3'
+					<div class="flexible flex-direction-col">
+
+						<gsimselect class='flexible p-1 mb-4'
 							name="{{ form.gsim.html_name }}"
 							showfilter
 							v-bind:errormsg="formscope.fielderrors['{{ form.gsim.html_name }}']"
@@ -36,8 +37,8 @@
 							v-bind:selectedgsims.sync="selectedGsims">
 							{{ form.gsim.label }}
 						</gsimselect>
-						
-						<imtselect class='p-1 pb-3'
+
+						<imtselect class='p-1'
 							name="{{ form.imt.html_name }}"
 							v-bind:errormsg="formscope.fielderrors['{{ form.imt.html_name }}']"
 							v-bind:avalgsims="avalGsims"
@@ -49,32 +50,38 @@
 
 					</div>
 					
-					<div class='flexible p-2 grid-2-columns grid-col-gap-2 grid-row-gap-1'>
-						{% for field in form.visible_fields %}
-							{% if field.html_name != form.plot_type.html_name %}
-							
-							<div>{{ field.label_tag }} <errorspan :text="formscope.fielderrors['{{ field.html_name }}']"></errorspan></div> {{ field }} 
-							
-							<div class="text-muted small text-nowrap mb-2 field-help grid-col-span">
-							{{ field.help_text }}
+					<div class="flex-direction-col flexible ml-4">
+						<h5>Scenario configuration</h5>
+						<div class="flexible form-control" style='overflow:auto; background-color:transparent'>
+							<div class='flexible p-1 grid-2-columns grid-col-gap-2 grid-row-gap-0'>
+								{% for field in form.visible_fields %}
+									{% if field.html_name != form.plot_type.html_name %}
+									
+									<div>{{ field.label_tag }} <errorspan :text="formscope.fielderrors['{{ field.html_name }}']"></errorspan></div> {{ field }} 
+									
+									<div class="text-muted small text-nowrap mb-2 field-help grid-col-span">
+									{{ field.help_text }}
+									</div>
+		
+									{% endif %}
+								{% endfor %}
+		
 							</div>
-
-							{% endif %}
-						{% endfor %}
-
+						</div>
 					</div>
 
 				</div>
 
-				<div class='p-2 flex-direction-row'>
+				<div class='flex-direction-row mt-3'>
 					<!-- the submit button is the plot_type field. Render manually -->
 					{{ form.plot_type.label_tag }}
-					<select class='form-control flexible mr-3 ml-1' size="3" name="{{ form.plot_type.html_name }}">
+					<select class='form-control flexible mr-3 ml-1' size="4" name="{{ form.plot_type.html_name }}"
+						id="{{ form.plot_type.auto_id }}">
     					{% for choice in form.plot_type.field.choices %}
         				<option value="{{ choice.0 }}">{{ choice.1 }}</option>
     					{% endfor %}
 					</select>
-					<button type="submit" class='btn btn-primary'>
+					<button type="submit" class='btn btn-outline-primary'>
 		            	Display plots
 		        	</button>
 				</div>

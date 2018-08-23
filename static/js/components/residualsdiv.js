@@ -108,7 +108,7 @@ Vue.component('residualsdiv', {
                                 x: x,
                                 y: normdist(x, 0, 1),
                                 type: 'line',
-                                name: 'Normal distribution (mean=0, stddev=1)'
+                                name: 'Normal distribution (μ=0, σ=1)'
                         };
                         var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
                         refnormdistline.line = {color: color};

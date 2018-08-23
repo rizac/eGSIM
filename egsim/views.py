@@ -34,9 +34,9 @@ _COMMON_PARAMS = {
     }
 
 
-def index(request):
-    '''view for the index page. Defaults to the main view with menu="home"'''
-    return render(request, 'index.html', dict(_COMMON_PARAMS, menu='home'))
+# def index(request):
+#     '''view for the index page. Defaults to the main view with menu="home"'''
+#     return render(request, 'index.html', dict(_COMMON_PARAMS, menu='home'))
 
 
 def main(request, menu):
