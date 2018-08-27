@@ -34,41 +34,29 @@ var PLOTSDIV = Vue.component('plotsdiv', {
     },
     template: `<div v-show='initialized' class='flex-direction-row'>
         
-        <div class='flexible position-relative'>
-            <div class='position-absolute pos-0' :id="plotdivid"></div>
-        </div>
-    
-        <div class='flex-direction-col p-2 pl-3'
-            v-if="Object.keys(legend).length || Object.keys(selectableParams).length || showGridControls">
-            <div v-if="Object.keys(selectableParams).length">
-                <h5 class='mt-2 border-top'>Display</h5>
-                <div v-for='(values, key) in selectableParams'>
-                    <div>{{ key }}:</div>
-                    <select class='form-control' v-model="selectedParams[key]">
+        <div class='flexible flex-direction-col'>
+            <div v-if="Object.keys(selectableParams).length" class='flex-direction-row justify-content-around mt-1 mb-1'>
+                <div v-for='(values, key) in selectableParams' class='flex-direction-row flexible align-items-baseline'>
+                    <span class='text-nowrap mr-1'>{{ key }}</span>
+                    <select class='flexible form-control' v-model="selectedParams[key]">
                         <option v-for='value in params[key]'>
                             {{ value }}
                         </option>
                     </select>
                 </div>
             </div>
-            <div v-if="showGridControls">
-                <div class='mt-2 border-top'>Group vertically by:</div>
-                <select class='form-control' v-model='gridyparam'>
-                    <option v-for='key in Object.keys(params)' v-bind:value="key">
-                        {{ key }}
-                    </option>
-                </select>
+            <div class='flexible position-relative'>
+                <div class='position-absolute pos-0' :id="plotdivid"></div>
             </div>
-            <div v-if="showGridControls">
-                <div class='mt-1' >Group horizontally by:</div>
-                <select class='form-control' v-model='gridxparam'>
-                    <option v-for='key in Object.keys(params)' v-bind:value="key">
-                       {{ key }}
-                    </option>
-                </select>
-            </div>
-            <div v-if='Object.keys(legend).length' class='flexible'>
-                <h5 class='mt-2 border-top'>Legend</h5>
+        </div>
+    
+        <div class='flex-direction-col p-2 pl-3'
+            v-if="Object.keys(legend).length || Object.keys(selectableParams).length || showGridControls">
+
+            <slot :eventbus="eventbus" :url="url"></slot>
+            
+            <div v-if='Object.keys(legend).length' class='flexible mt-3 border-top'>
+                <h5 class='mt-2 mb-2'>Legend</h5>
                 <div v-for="(value, key) in legend">
                     <label v-bind:style="{color: value}">
                         <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
@@ -76,7 +64,25 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                     </label>
                 </div>
             </div>
-            <slot :eventbus="eventbus" :url="url"></slot>
+
+            <div v-if="showGridControls" class='mt-3 border-top'>
+                <h5 class='mt-2 mb-2'>Subplots layout</h5>
+
+                <div>Group vertically by:</div>
+                <select class='form-control' v-model='gridyparam'>
+                    <option v-for='key in Object.keys(params)' v-bind:value="key">
+                        {{ key }}
+                    </option>
+                </select>
+
+                <div class='mt-1' >Group horizontally by:</div>
+                <select class='form-control' v-model='gridxparam'>
+                    <option v-for='key in Object.keys(params)' v-bind:value="key">
+                       {{ key }}
+                    </option>
+                </select>
+            </div>
+ 
         </div>
      
     </div>`,

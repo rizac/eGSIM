@@ -501,6 +501,19 @@ class GsimField(MultipleChoiceField):
         super().__init__(**kwargs)
 
 
+class GsimImtForm(BaseForm):
+    '''Base form for Gsim+Imt selections'''
+
+    # fields (not used for rendering, just for validation): required is True by default
+    gsim = GsimField()
+    imt = IMTField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # put 'sa_periods in the IMTField:
+        self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
+
+
 class MsrField(ChoiceField):
     '''A ChoiceField handling the Magnitude Scaling Relation parameter'''
     _aval_msr = get_available_magnitude_scalerel()
@@ -562,18 +575,18 @@ class PointField(NArrayField):
             raise ValidationError(_(str(exc)), code='invalid')
 
 
-class TrellisForm(BaseForm):
+class TrellisForm(GsimImtForm):
     '''Form for Trellis plot generation'''
 
     __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distances', 'tr': 'tectonic_region',
                                  'magnitude_scaling_relatio': 'msr', ',lineazi': 'line_azimuth',
                                  'vs30m': 'vs30_measured', 'hyploc': 'hypocentre_location'}
 
-    __scalar_or_vector_help__ = 'Scalar, vector or range'
+    __scalar_or_vector_help__ = 'Scalar, vector or range'  # define once here, use it below ...
 
     # fields (not used for rendering, just for validation): required is True by default
-    gsim = GsimField()
-    imt = IMTField()
+#     gsim = GsimField()
+#     imt = IMTField()
     plot_type = TrellisplottypeField(label='Plot type')
     # GSIM RUPTURE PARAMS:
     magnitude = NArrayField(label='Magnitude(s)', min_arr_len=1,
@@ -611,10 +624,10 @@ class TrellisForm(BaseForm):
                                             "from the V<sub>S30</sub>"))
     backarc = BooleanField(label='Backarc Path', initial=False, required=False)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
         # put 'sa_periods in the IMTField:
-        self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
+        # self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
 
     def clean(self):
         cleaned_data = super(TrellisForm, self).clean()
@@ -622,6 +635,7 @@ class TrellisForm(BaseForm):
         vs30scalar = isscalar(vs30)
         vs30s = np.array(vectorize(vs30), dtype=float)
 
+        # check vs30-dependent values:
         for name, func in (['z1pt0', vs30_to_z1pt0_cy14], ['z2pt5', vs30_to_z2pt5_cb14]):
             if name not in cleaned_data or cleaned_data[name] == []:
                 values = func(vs30s)  # numpy-function
@@ -777,16 +791,17 @@ class GmdbSelectionForm(GmdbForm):
 #         return cleaned_data
 
 
-class ResidualsForm(GmdbForm):
+class ResidualsForm(GsimImtForm, GmdbForm):
     '''Form for residual analysis'''
+    pass
 
     # __additional_fieldnames__ = {'gmdb': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
     #                             'lon2': 'longitude2'}
 
     # __scalar_or_vector_help__ = 'Scalar, vector or range'
 
-    gsim = GsimField()
-    imt = IMTField()
+#     gsim = GsimField()
+#     imt = IMTField()
 #     gmdb = GmdbField()
 #     selection = GmdbSelectionField()
 #     selection_min = CharField(label='Min', required=False)
