@@ -708,6 +708,8 @@ class GmdbField(ChoiceField):
 
 
 class GmdbSelectionField(ChoiceField):
+    '''Implements the ***FILTER*** (legacy code calls it 'selection') field on a Ground motion
+    database'''
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices', zip(EGSIM.gmdb_selections(), EGSIM.gmdb_selections()))
@@ -736,13 +738,17 @@ class GmdbForm(BaseForm):
     # __scalar_or_vector_help__ = 'Scalar, vector or range'
 
     gmdb = GmdbField()
-    selection = GmdbSelectionField()
+    selection = GmdbSelectionField(required=False)
     selection_min = CharField(label='Min', required=False)
     selection_max = CharField(label='Max', required=False)
 
     def clean(self):
+        '''Cleans this field performing the necessary gmdb selection (filtering),
+        if filter/selection parameters are provided'''
         cleaned_data = super().clean()
         min_, max_, sel_ = 'selection_min', 'selection_max', 'selection'
+        if sel_ not in cleaned_data or not cleaned_data[sel_]:
+            return cleaned_data
         conversion_func = EGSIM.gmdb_selections()[cleaned_data[sel_]]
         try:
             cleaned_data[min_] = conversion_func(cleaned_data[min_])

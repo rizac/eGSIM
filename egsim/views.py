@@ -115,7 +115,8 @@ class EgsimQueryView(View):
 
     def get(self, request):
         '''processes a get request'''
-        return self.response(dict(request.GET))
+        ret = {key: val.split(',') if ',' in val else val for key, val in request.GET.items()}
+        return self.response(ret)
 
     def post(self, request):
         '''processes a post request'''
@@ -202,7 +203,6 @@ class GmdbSelectionView(EgsimQueryView):
 
     @classmethod
     def process(cls, params):
-        # FIXME: load_share() should be improved:
         return magdistdata(params)
 
 
@@ -212,7 +212,6 @@ class ResidualsView(EgsimQueryView):
 
     @classmethod
     def process(cls, params):
-        # FIXME: load_share() should be improved:
         return compute_residuals(params)
 
 # TESTS (FIXME: REMOVE?)
