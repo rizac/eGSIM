@@ -71,7 +71,7 @@ Vue.component('gmdbmagdistdiv', {
             // Note that the 'y' key can be mapped to any string value because it will not be displayed.
             // (however, the value cannot be the empty string otherwise the key will be removed
             // and this causes a problem because we need at least two params for the grid)
-            var params = {'Magnitude Distance plot': `${trace.x.length} records in database`, 'y': 'y'};
+            var params = {'Magnitude Distance plot': `${trace.x.length} records`, 'y': 'y'};
             return [{traces: [trace], params: params, xaxis: xaxis, yaxis: yaxis}];
         },
         defaultGridParams: function(params){

@@ -17,15 +17,15 @@ Vue.component('imtselect', {
       <div>
           <h5><slot>{{ name }}</slot></h5>
           <errorspan v-bind:text="errormsg"></errorspan>
-      </div>  
+      </div>
       <div class='text-muted small'>
           {{ selection.length }} of {{ imts.length }} selected 
       </div>
       <div class='mb-1 flexible flex-direction-col'>
-        <select v-model="selection" :name="name" :id="'id_' + name" multiple class="form-control" required>
+        <select v-model="selection" :name="name" :id="'id_' + name" multiple class="flexible form-control" required>
             <option v-for='imt in imts' :key='imt'
                 v-bind:style="!isImtSelectable(imt) ? {'text-decoration': 'line-through'} : ''"
-                v-bind:class="!isImtSelectable(imt) ? ['text-muted'] : ''">
+                v-bind:class="!isImtSelectable(imt) ? ['disabled'] : ''">
                 {{ imt }}
             </option>
         </select>

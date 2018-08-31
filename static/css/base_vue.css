@@ -3,13 +3,13 @@
 	z-index: 200;  /* to sit on top of everything, in case */
 }
 .loader, .loader:before {
-	height: 8px;
+	height: 4px;
 }
 .loader {
 	width: 100%;
 	position: relative;
 	overflow: hidden;
-	background-color: #ddd;
+	background-color: #999;
 }
 .loader:before{
 	display: block;
@@ -17,7 +17,7 @@
 	content: "";
 	left: -200px;
 	width: 200px;
-	background-color: #a2cd7e; /*#2980b9;*/
+	background-color: #ffc107; /*#a2cd7e;*/
 	animation: loading 2s linear infinite;
 }
 @keyframes loading {

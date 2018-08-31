@@ -27,7 +27,7 @@ from egsim.core.residuals import compute_residuals
 _COMMON_PARAMS = {
     'project_name': 'eGSIM',
     'debug': settings.DEBUG,
-    'menus': OrderedDict([('home', 'Home'), ('trsel', 'Tectonic region Selection'),
+    'menus': OrderedDict([('home', 'Home'), ('trsel', 'Gsim selection'),
                           ('trellis', 'Trellis plots'),
                           ('gmdb', 'Ground Motion database'),
                           ('residuals', 'Residuals'),]),
