@@ -52,7 +52,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             </div>
         </div>
     
-        <div class='flex-direction-col p-2 pl-3'
+        <div class='flex-direction-col p-2 pl-3 ml-1 border-left'
             v-if="Object.keys(legend).length || Object.keys(selectableParams).length || showGridControls">
 
             <slot :eventbus="eventbus" :url="url"></slot>
