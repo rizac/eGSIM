@@ -2,7 +2,8 @@ var PLOTSDIV = Vue.component('plotsdiv', {
     props: {
         'url': String,
         'eventbus': {default: null},
-        'plotfontsize': {type: Number, default: 12}  // this is used to calculate plot areas and set it in the default layout
+        // this is used to calculate plot areas and set it in the default layout (use computed body font-size. Note that parseInt('16px')=16):
+        'plotfontsize': {type: Number, default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))}
     },
     data: function(){
         // unique id based on the component name (note that if this is called by a subclass, then this.$options.name is the subclass name)
@@ -23,6 +24,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             // for each sub-plot, the former only once per plot). The values can anyway be overridden, provide here only
             // common defaults:
             defaultlayout: {autosize: true,
+                paper_bgcolor: window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('background-color'),
                 // font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
                 showlegend: false,
                 margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []},
@@ -377,11 +379,6 @@ var PLOTSDIV = Vue.component('plotsdiv', {
           this.$set(this, 'plotlydata', data);
           Plotly.newPlot(divId, data, layout);
           this.$set(this, 'freezewatchers', false);
-        },
-        getLayout: function(){
-            return {autosize: true, font: {family: "Encode Sans Condensed, sans-serif", size: this.plotfontsize},
-                showlegend: true,
-                margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []};
         },
         getAxis: function(divId, row, col, rows, cols){
             // computes the sub-plot area according to the row and col index
