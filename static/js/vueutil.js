@@ -31,6 +31,11 @@ Vue.use({
                 return color;
             }
             transparentize(hexcolor, alpha) {
+                // Returns the corresponding 'rgba' string of `hexcolor` with the given alpha channel ( in [0, 1], 1:opaque)
+                // If `hexcolor` is an integer, it indicates the index of the default color to be converted
+                if (typeof hexcolor == 'number'){
+                    hexcolor = this._defaults.colors[parseInt(hexcolor) % this._defaults.colors.length];
+                }
                 if (hexcolor.length == 4){
                     var [r, g, b] = [hexcolor.substring(1, 2), hexcolor.substring(2, 3), hexcolor.substring(3, 4)];
                     var [r, g, b] = [r+r, g+g, b+b];

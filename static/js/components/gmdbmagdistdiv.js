@@ -55,7 +55,7 @@ Vue.component('gmdbmagdistdiv', {
                     mode: 'markers',
                     type: 'scatter',
                     text: jsondict['labels'] || [],
-                    marker: { size: 10 }
+                    marker: { size: 10, color: this.colorMap.transparentize(0, .5) }
                   };
             // modify here the defaut layout:
             // this.defaultlayout.title = `Magnitude Distance plot (${trace.x.length} records in database)`;

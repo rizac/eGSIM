@@ -115,7 +115,8 @@ Vue.component('residualsdiv', {
                             var linregtrace = {
                                     x: [min, max],
                                     y: [min*slope+intercept, max*slope+intercept],
-                                    type: 'line',
+                                    type: 'scatter',
+                                    mode: 'lines',
                                     name: 'Linear regression'
                             }
                             var color = this.addLegend(linregtrace, linregtrace.name, '#331100');
@@ -132,7 +133,8 @@ Vue.component('residualsdiv', {
                             var normdistline = {
                                     x: x,
                                     y: normdist(x, plotdata.mean, plotdata.stddev),
-                                    type: 'line',
+                                    type: 'scatter',
+                                    mode: 'lines',
                                     name: 'Normal distribution'
                             };
                             var color = this.addLegend(normdistline, normdistline.name, '#331100');
@@ -141,7 +143,8 @@ Vue.component('residualsdiv', {
                             var refnormdistline = {
                                     x: x,
                                     y: normdist(x, 0, 1),
-                                    type: 'line',
+                                    type: 'scatter',
+                                    mode: 'lines',
                                     name: 'Normal distribution (μ=0, σ=1)'
                             };
                             var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');

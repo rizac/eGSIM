@@ -64,7 +64,8 @@ Vue.component('trellisdiv', {
                     var trace = {
                             x: data.xvalues,
                             y: fig.yvalues[name],
-                            mode: (data.xvalues.length == 1 ? 'scatter' : 'lines'),
+                            type: 'scatter',
+                            mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
                             name: name
                     };
                     var color = this.addLegend(trace, name);  // Sets also trace.legendgroup = name
