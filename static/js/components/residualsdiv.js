@@ -104,7 +104,7 @@ Vue.component('residualsdiv', {
                         };
                         var color = this.addLegend(mainTrace, mainTrace.name); //sets also mainTrace.legendgroup
                         // set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
-                        mainTrace.marker = {color: color};
+                        mainTrace.marker = {color: this.colorMap.transparentize(color, .5)};
                         // add other stuff (normal distributions, regression lines, ...):
                         if (scatterPlot){
                             mainTrace.mode = 'markers';  // hide connecting lines

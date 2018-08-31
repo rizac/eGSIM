@@ -30,13 +30,18 @@ Vue.use({
                 }
                 return color;
             }
-//            get asObject() {
-//                var ret = {};
-//                for (var key of this.keys()){
-//                    ret[key] = this.get(key);
-//                }
-//                return ret;
-//            }
+            transparentize(hexcolor, alpha) {
+                if (hexcolor.length == 4){
+                    var [r, g, b] = [hexcolor.substring(1, 2), hexcolor.substring(2, 3), hexcolor.substring(3, 4)];
+                    var [r, g, b] = [r+r, g+g, b+b];
+                }else if(hexcolor.length == 7){
+                    var [r, g, b] = [hexcolor.substring(1, 3), hexcolor.substring(3, 5), hexcolor.substring(5, 7)];
+                }else{
+                    return hexcolor;
+                }
+                var [r, g, b] = [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16)];
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
         };
         Vue.colorMap = function () {
             return new ColorMap();
