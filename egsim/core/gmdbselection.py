@@ -8,7 +8,6 @@ Created on 25 Jul 2018
 from datetime import datetime
 
 from smtk.strong_motion_selector import SMRecordSelector
-from egsim.forms import GmdbSelectionForm
 from smtk.database_visualiser import db_magnitude_distance, DISTANCE_LABEL, get_magnitude_distances
 from egsim.core.utils import EGSIM, strptime
 

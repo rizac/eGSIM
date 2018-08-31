@@ -17,11 +17,18 @@ from smtk.residuals.gmpe_residuals import (Residuals, Likelihood,
 # import smtk.residuals.residual_plotter as rspl
 
 from egsim.core.gmdbselection import compute_selection
-from smtk.residuals.residual_plotter import ResidualPlot
+from smtk.residuals.residual_plotter import ResidualPlot, ResidualWithDistance, ResidualWithMagnitude,\
+    ResidualWithVs30
 
 
 GSIM = 'gsim'
 IMT = 'imt'
+DTYPE = 'distance_type'
+MAG = 'magnitude'
+DIST = 'distance'
+VS30 = 'vs30'
+PLOTTYPE = 'plot_type'
+
 
 def compute_residuals(params):
     gmdb = compute_selection(params)
@@ -29,30 +36,73 @@ def compute_residuals(params):
     residuals.get_residuals(gmdb)
     statistics = residuals.get_residual_statistics()
     ret = defaultdict(lambda: defaultdict(lambda: {}))
-    binwidth = 0.5
+    dtype = params[DTYPE]
+    plot_type = params[PLOTTYPE]
     # linestep = binwidth/10
     for gsim in residuals.residuals:
         for imt in residuals.residuals[gsim]:
             data = residuals.residuals[gsim][imt]
             for res_type in data.keys():
-                vals, bins = get_histogram_data(data[res_type], bin_width=0.5)
-                # step = binwidth/5
-                # xdata = np.arange(bins[0], bins[-1] + linestep, linestep)
-                mean = statistics[gsim][imt][res_type]["Mean"]
-                stddev = statistics[gsim][imt][res_type]["Std Dev"]
-                # norm_dist = norm.pdf(xdata, mean, stddev)
-                # ref_dist = norm.pdf(xdata, 0.0, 1.0)
-                ret[gsim][imt][res_type] = {'x': bins[:-1].tolist(), 'y': vals.tolist(),
-                                            'mean': mean,
-                                            'stddev': stddev}
+                if plot_type == MAG:
+                    res_obj = ResMag(residuals, gsim, imt, distance_type=dtype)
+                    magnitudes = res_obj._get_magnitudes(gsim, imt, res_type)
+                    slope, intercept, _, pval, _ = linregress(magnitudes, data[res_type])
+                    jsondata = {'x': magnitudes.tolist(), 'y': data[res_type].tolist(),
+                                'slope': slope, 'intercept': intercept, 'pvalue': pval,
+                                'xlabel': "Magnitude", 'ylabel': "Z (%s)" % imt}
+                elif plot_type == DIST:
+                    res_obj = ResDist(residuals, gsim, imt, distance_type=dtype)
+                    distances = res_obj._get_distances(gsim, imt, res_type)
+                    slope, intercept, _, pval, _ = linregress(distances, data[res_type])
+                    jsondata = {'x': distances.tolist(), 'y': data[res_type].tolist(),
+                                'slope': slope, 'intercept': intercept, 'pvalue': pval,
+                                'xlabel': "%s Distance (km)" % res_obj.distance_type,
+                                'ylabel': "Z (%s)" % imt}
+                elif plot_type == VS30:
+                    res_obj = ResVs30(residuals, gsim, imt, distance_type=dtype)
+                    vs30 = res_obj._get_vs30(gsim, imt, res_type)
+                    slope, intercept, _, pval, _ = linregress(vs30, data[res_type])
+                    jsondata = {'x': vs30.tolist(), 'y': data[res_type].tolist(),
+                                'slope': slope, 'intercept': intercept, 'pvalue': pval,
+                                'xlabel': "Vs30 (m/s)", 'ylabel': "Z (%s)" % imt}
+                else:
+                    binwidth = 0.5
+                    res_obj = ResPlot(residuals, gsim, imt, distance_type=dtype)
+                    vals, bins = res_obj.get_histogram_data(data[res_type], bin_width=binwidth)
+                    # step = binwidth/5
+                    # xdata = np.arange(bins[0], bins[-1] + linestep, linestep)
+                    mean = statistics[gsim][imt][res_type]["Mean"]
+                    stddev = statistics[gsim][imt][res_type]["Std Dev"]
+                    # norm_dist = norm.pdf(xdata, mean, stddev)
+                    # ref_dist = norm.pdf(xdata, 0.0, 1.0)
+                    jsondata = {'x': bins[:-1].tolist(), 'y': vals.tolist(),
+                                'mean': mean, 'stddev': stddev, 'xlabel': "Z (%s)" % imt,
+                                'ylabel': "Frequency"}
+                ret[gsim][imt][res_type] = jsondata
     return ret
 
-def get_histogram_data(data, bin_width=0.5):
-    """
-    Retreives the histogram of the residuals
-    """
-    bins = np.arange(np.floor(np.min(data)),
-                     np.ceil(np.max(data)) + bin_width,
-                     bin_width)
-    vals = np.histogram(data, bins, density=True)[0]
-    return vals.astype(float), bins
+# these classes prevent plotting. HACK: will be fixed in near future by providing dedicated
+# function or classes
+class ResPlot(ResidualPlot):
+
+    def create_plot(self, *args, **kwargs):
+        pass
+
+
+class ResMag(ResidualWithMagnitude):
+
+    def create_plot(self, *args, **kwargs):
+        pass
+
+
+class ResDist(ResidualWithDistance):
+
+    def create_plot(self, *args, **kwargs):
+        pass
+
+
+class ResVs30(ResidualWithVs30):
+
+    def create_plot(self, *args, **kwargs):
+        pass
+

@@ -16,7 +16,7 @@ from django.views.generic.base import View
 from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
-from egsim.forms import TrellisForm, BaseForm, TrSelectionForm, GmdbSelectionForm, ResidualsForm
+from egsim.forms import TrellisForm, TrSelectionForm, GmdbForm, ResidualsForm
 from egsim.core.trellis import compute_trellis
 from egsim.core.utils import EGSIM
 from egsim.core.shapes import get_feature_properties
@@ -76,7 +76,7 @@ def get_gmdbs(request):
 
 def gmdb(request):
     '''view for the residuals page (iframe in browser)'''
-    return render(request, 'gmdb.html', dict(_COMMON_PARAMS, form=GmdbSelectionForm(),
+    return render(request, 'gmdb.html', dict(_COMMON_PARAMS, form=GmdbForm(),
                                              post_url='../query/magdistdata'))
 
 
@@ -139,7 +139,7 @@ class EgsimQueryView(View):
                                                                code=cls.EXCEPTION_CODE,
                                                                errors=errors)
 
-        return JsonResponse(cls.process(form.clean()), safe=False)
+        return JsonResponse(cls.process(form.cleaned_data), safe=False)
 
     @classmethod
     def process(cls, params):
@@ -192,6 +192,7 @@ class TrSelectionView(EgsimQueryView):
         trts = get_feature_properties(EGSIM.tr_projects()[params['project']],
                                       lon0=params['longitude'],
                                       lat0=params['latitude'],
+                                      trts=params['trt'],
                                       lon1=params.get('longitude1', None),
                                       lat1=params.get('latitude', None), key='OQ_TRT')
         return [gsim for gsim in EGSIM.aval_gsims() if EGSIM.trtof(gsim) in trts]
@@ -199,7 +200,7 @@ class TrSelectionView(EgsimQueryView):
 
 class GmdbSelectionView(EgsimQueryView):
 
-    formclass = GmdbSelectionForm
+    formclass = GmdbForm
 
     @classmethod
     def process(cls, params):

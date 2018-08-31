@@ -73,49 +73,84 @@ Vue.component('residualsdiv', {
                 }
                 return newarray;
             };
-            // setup  label texts:
+            var endpoints = function(array){
+                var [min, max] = [undefined, undefined];
+                if (array.length > 0){
+                    min = max = array[0];
+                }
+                for(var i=1; i < array.length; i++){
+                    var val = array[i];
+                    if (val < min){
+                        min = val;
+                    }else if (val > max){
+                        max = val;
+                    }
+                }
+                return [min, max];
+            };
+            // setup  plots:
             var data = responseObject;
             var plots = [];
             for (var gsim of Object.keys(data)){
                 for (var imt of Object.keys(data[gsim])){
                     for (var type of Object.keys(data[gsim][imt])){
-                        var histdata = data[gsim][imt][type];
-                        var hist = {
-                                x: histdata.x,
-                                y: histdata.y,
-                                type: 'bar',
+                        var plotdata = data[gsim][imt][type];
+                        var scatterPlot = 'intercept' in plotdata && 'slope' in plotdata;
+                        var mainTrace = {
+                                x: plotdata.x,
+                                y: plotdata.y,
+                                type: scatterPlot ? 'scatter' : 'bar',
                                 name: type
                         };
-                        var color = this.addLegend(hist, hist.name); //sets also hist.legendgroup
-                        hist.marker = {
-                                color: color,  // FIXME: we might add alpha channel, it's nicer
-                                line: {
-                                    color: color,
-                                    width: 2
-                                }
-                        };
-                        var x = resample(histdata.x);
-                        var normdistline = {
-                                x: x,
-                                y: normdist(x, histdata.mean, histdata.stddev),
-                                type: 'line',
-                                name: 'Normal distribution'
-                        };
-                        var color = this.addLegend(normdistline, normdistline.name, '#000000');
-                        normdistline.line = {color: color};
-                        
-                        var refnormdistline = {
-                                x: x,
-                                y: normdist(x, 0, 1),
-                                type: 'line',
-                                name: 'Normal distribution (μ=0, σ=1)'
-                        };
-                        var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
-                        refnormdistline.line = {color: color};
-
-                        var plotdata = [hist, normdistline, refnormdistline];
-                        var plotparams = {gsim: gsim, imt: imt, 'histogram type': type};
-                        plots.push({'traces': plotdata, 'params': plotparams, xaxis:{title: `Z (${imt})`}, yaxis:{title:'Frequency'}});
+                        var color = this.addLegend(mainTrace, mainTrace.name); //sets also mainTrace.legendgroup
+                        // set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
+                        mainTrace.marker = {color: color};
+                        // add other stuff (normal distributions, regression lines, ...):
+                        if (scatterPlot){
+                            mainTrace.mode = 'markers';  // hide connecting lines
+                            mainTrace.marker.size = 10;
+                            // show linear regression according to slope and intercept:
+                            var [min, max] = endpoints(plotdata.x);
+                            var [slope, intercept] = [plotdata.slope, plotdata.intercept];
+                            var linregtrace = {
+                                    x: [min, max],
+                                    y: [min*slope+intercept, max*slope+intercept],
+                                    type: 'line',
+                                    name: 'Linear regression'
+                            }
+                            var color = this.addLegend(linregtrace, linregtrace.name, '#331100');
+                            linregtrace.line = {color: color};
+                            var traces = [mainTrace, linregtrace];
+                        }else{
+                            // customize more the marker (which are bars in this case):
+                            mainTrace.marker.line = {
+                                color: color,
+                                width: 2
+                            };
+                            // show normal distribution and reference normal dist. (mean=0 sigma=1)
+                            var x = resample(plotdata.x);
+                            var normdistline = {
+                                    x: x,
+                                    y: normdist(x, plotdata.mean, plotdata.stddev),
+                                    type: 'line',
+                                    name: 'Normal distribution'
+                            };
+                            var color = this.addLegend(normdistline, normdistline.name, '#331100');
+                            normdistline.line = {color: color};
+                            
+                            var refnormdistline = {
+                                    x: x,
+                                    y: normdist(x, 0, 1),
+                                    type: 'line',
+                                    name: 'Normal distribution (μ=0, σ=1)'
+                            };
+                            var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
+                            refnormdistline.line = {color: color};
+    
+                            var traces = [mainTrace, normdistline, refnormdistline];
+                        }
+                        var plotparams = {gsim: gsim, imt: imt, 'residual type': type};
+                        plots.push({'traces': traces, 'params': plotparams, xaxis:{title: plotdata.xlabel}, yaxis:{title: plotdata.ylabel}});
                     }
                 }
             }
@@ -128,7 +163,7 @@ Vue.component('residualsdiv', {
             // If not implemented, by default this method returns the first 2 values of `Object.keys(params)`
             
             // provide different defaults (see `getData` above):
-            return ['gsim', 'histogram type'];
+            return ['gsim', 'residual type'];
         },
         displayGrid: function(paramName, axis){
             // this optional method can be implemented to hide particular grid labels IN THE PLOT along the

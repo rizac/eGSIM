@@ -65,25 +65,28 @@ def featuresiter(geojson):
         yield feat
 
 
-def get_feature_properties(geojson, lon0, lat0, lon1=None, lat1=None, key='OQ_TRT'):
-    trts = set()
+def get_feature_properties(geojson, lon0, lat0, trts=None, lon1=None, lat1=None, key='OQ_TRT'):
+    matching_trts = set()
+    trts = set(trts) if trts else None
 
     ispoint = True
-    if lon1 is None or lat1 is None:
-        point = Point([lon0, lat0])
-    else:
-        ispoint = False
-        rect = Polygon([(lon0, lat0), (lon0, lat1), (lon1, lat1), (lon1, lat0)])
+    nopoint = lon0 is None and lat0 is None
+    if not nopoint:
+        if lon1 is None or lat1 is None:
+            point = Point([lon0, lat0])
+        else:
+            ispoint = False
+            rect = Polygon([(lon0, lat0), (lon0, lat1), (lon1, lat1), (lon1, lat0)])
 
     for feat in featuresiter(geojson):
         trt = feat.get('properties', {}).get('OQ_TRT', '')
-        if not trt or trt in trts:
+        if not trt or trt in matching_trts or (trts is not None and trt not in trts):
             continue
-        if (ispoint and shape(feat['geometry']).contains(point)) or \
+        if nopoint or (ispoint and shape(feat['geometry']).contains(point)) or \
                 (not ispoint and shape(feat['geometry']).intersects(rect)):
-            trts.add(trt)
+            matching_trts.add(trt)
 
-    return trts
+    return matching_trts
 
 
 # def get_gsims(geojson, lon0, lat0, lon1, lat1, key='OQ_TRT'):

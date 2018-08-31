@@ -652,6 +652,29 @@ class TrellisForm(GsimImtForm):
         return cleaned_data
 
 
+class TrtField(MultipleChoiceField):
+    '''Choice field which returns a tuple of Trelliplot classes from its clean()
+    method (overridden'''
+
+    # remember! _choices is a super-class reserved attribute!!!
+    _base_choices = {i.replace(' ', '').lower(): i for i in EGSIM.aval_trts()}
+
+    def __init__(self, **kwargs):
+        # the available choices are the OpenQuake tectnotic regions stripped with spaces
+        # and with no uppercase,
+        # mapped to the OpenQuake tectonic region for visualization purposes (not used for the
+        # moment as this field is not rendered in django)
+        choices = zip(self._base_choices.keys(), self._base_choices.values())
+        super(TrtField, self).__init__(choices=choices, **kwargs)
+
+    def clean(self, value):
+        '''validates the value (list) allowing for standard OQ tectonic region names (with
+        spaces as well as their corresponding -space-removed, lowercased versions'''
+        keys = [v if v in self._base_choices else v.replace(' ', '').lower() for v in value]
+        super().clean(keys)
+        return [self._base_choices[k] for k in keys]  # return in any case a list of OQ tr's
+
+
 class TrSelectionForm(BaseForm):
     '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle'''
 
@@ -663,25 +686,30 @@ class TrSelectionForm(BaseForm):
     project = ChoiceField(label='Project', choices=list(zip(EGSIM.tr_projects().keys(),
                                                             EGSIM.tr_projects().keys())))
     # GSIM RUPTURE PARAMS:
-    longitude = FloatField(label='Longitude', min_value=-180, max_value=180)
-    latitude = FloatField(label='Latiitude', min_value=-90, max_value=90)
-    longitude2 = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
-    latitude2 = FloatField(label='Latiitude', min_value=-90, max_value=90, required=False)
+    longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
+    latitude = FloatField(label='Latitude', min_value=-90, max_value=90, required=False)
+    longitude2 = FloatField(label='Longitude 2nd point', min_value=-180, max_value=180,
+                            required=False)
+    latitude2 = FloatField(label='Latitude 2nd point', min_value=-90, max_value=90,
+                           required=False)
+    trt = TrtField(label='Tectonic region type(s)', required=False)
 
     def clean(self):
+        '''Checks that if longitude is provided, also latitude is provided, and vice versa
+            (the same for longitude2 and latitude2)'''
         cleaned_data = super().clean()
-        _lon2, _lat2 = 'longitude2', 'latitude2'
-        lon2 = cleaned_data.get(_lon2, None)
-        lat2 = cleaned_data.get(_lat2, None)
-        if lon2 is None and lat2 is not None:
-            # instead of raising ValidationError, which is keyed with '__all__'
-            # we add the error keyed to the given field name `name` via `self.add_error`:
-            # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-            error = ValidationError(_("missing value"), code='missing')
-            self.add_error(_lon2, error)
-        elif lon2 is not None and lat2 is None:
-            error = ValidationError(_("missing value"), code='missing')
-            self.add_error(_lat2, error)
+        couplings = (('latitude', 'longitude'), ('longitude2', 'latitude2'))
+        for (key1, key2) in couplings:
+            val1, val2 = cleaned_data.get(key1, None), cleaned_data.get(key2, None)
+            if val1 is None and val2 is not None:
+                # instead of raising ValidationError, which is keyed with '__all__'
+                # we add the error keyed to the given field name `name` via `self.add_error`:
+                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+                error = ValidationError(_("missing value"), code='missing')
+                self.add_error(key1, error)
+            elif val1 is not None and val2 is None:
+                error = ValidationError(_("missing value"), code='missing')
+                self.add_error(key2, error)
 
         return cleaned_data
 
@@ -717,30 +745,20 @@ class GmdbSelectionField(ChoiceField):
         kwargs.setdefault('required', True)
         super().__init__(**kwargs)
 
-#     def clean(self, value):
-#         '''Converts the given value to the matching :class:`SMRecordSelector`'s method.
-#         It is usually better to perform these types of conversions subclassing `clean`, as the
-#         latter is called at the end of the validation workflow'''
-#         # super() alone fails here. See
-#         # https://stackoverflow.com/a/39313448
-#         value = super(GmdbSelectionField, self).to_python(value)
-#         conversion_func = EGSIM.gmdb_selections().get(value, None)
-#         if conversion_func is None:
-#             raise ValidationError(_("invalid value"), code='invalid')
-#         return conversion_func
 
 class GmdbForm(BaseForm):
     '''Abstract-like class for handling gmdb (GroundMotionDatabase)'''
 
-#     __additional_fieldnames__ = {'sel': 'selection', 'min': 'selection_min',
-#                                  'max': 'selection_max', 'dist': 'distance_type'}
-
-    # __scalar_or_vector_help__ = 'Scalar, vector or range'
+    __additional_fieldnames__ = {'sel': 'selection', 'min': 'selection_min',
+                                 'max': 'selection_max', 'dist': 'distance_type'}
 
     gmdb = GmdbField()
     selection = GmdbSelectionField(required=False)
     selection_min = CharField(label='Min', required=False)
     selection_max = CharField(label='Max', required=False)
+    distance_type = ChoiceField(label='Distance type', choices=zip(DISTANCES.keys(),
+                                                                   DISTANCES.keys()),
+                                initial='rrup')
 
     def clean(self):
         '''Cleans this field performing the necessary gmdb selection (filtering),
@@ -764,43 +782,17 @@ class GmdbForm(BaseForm):
         return cleaned_data
 
 
-class GmdbSelectionForm(GmdbForm):
-    '''Abstract-like class for handling gmdb (GroundMotionDatabase)'''
-
-    __additional_fieldnames__ = {'sel': 'selection', 'min': 'selection_min',
-                                 'max': 'selection_max', 'dist': 'distance_type'}
-
-    # __scalar_or_vector_help__ = 'Scalar, vector or range'
-
-#     gmdb = GmdbField()
-#     selection = GmdbSelectionField()
-#     selection_min = CharField(label='Min', required=False)
-#     selection_max = CharField(label='Max', required=False)
-    distance_type = ChoiceField(label='Distance type', choices=zip(DISTANCES.keys(),
-                                                                   DISTANCES.keys()))
-
-#     def clean(self):
-#         cleaned_data = super().clean()
-#         min_, max_, sel_ = 'selection_min', 'selection_max', 'selection'
-#         conversion_func = EGSIM.gmdb_selections()[cleaned_data[sel_]]
-#         try:
-#             cleaned_data[min_] = conversion_func(cleaned_data[min_])
-#         except Exception as exc:
-#             error = ValidationError(_(str(exc)), code='invalid')
-#             self.add_error(min_, error)
-#         try:
-#             cleaned_data[max_] = conversion_func(cleaned_data[max_])
-#         except Exception as exc:
-#             error = ValidationError(_(str(exc)), code='invalid')
-#             self.add_error(max_, error)
-# 
-#         return cleaned_data
-
-
 class ResidualsForm(GsimImtForm, GmdbForm):
     '''Form for residual analysis'''
-    pass
 
+    plot_type = ChoiceField(choices=[('densitydist', 'Residuals density distribution'),
+                                     ('magnitude', 'Residuals vs. Magnitude'),
+                                     ('distance', 'Residuals vs. Distance'),
+                                     ('vs30', 'Residuals vs. Vs30'),
+                                     ])
+
+    def clean(self):
+        return GmdbForm.clean(self)
     # __additional_fieldnames__ = {'gmdb': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
     #                             'lon2': 'longitude2'}
 

@@ -70,9 +70,23 @@
 						<errorspan class="grid-col-span"
 							:text="formscope.fielderrors['{{ form.selection_max.html_name }}']"></errorspan>
 		
+						{{ form.distance_type.label_tag }} {{ form.distance_type }}
+						<errorspan class="grid-col-span"
+							:text="formscope.fielderrors['{{ form.distance_type.html_name }}']"></errorspan>
+						
 					</div>
 				</div> 
 
+				<div class="flex-direction-row mb-4">
+					{{ form.plot_type.label_tag }}
+					<select class='form-control flexible ml-1' size="4" name="{{ form.plot_type.html_name }}"
+						id="{{ form.plot_type.auto_id }}">
+						{% for choice in form.plot_type.field.choices %}
+	    				<option value="{{ choice.0 }}">{{ choice.1 }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				
 				<button type="submit" class='btn btn-outline-primary'>
 		            Display residuals
 		        </button>

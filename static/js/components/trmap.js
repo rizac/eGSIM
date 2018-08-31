@@ -7,7 +7,7 @@ Vue.component('trmap', {
             'projects': {},  //object of project name mapped to geojson data
             'map': undefined,
             'layersControl': undefined,
-            'overlays': [],
+            'overlays': {},  // object of layer name (tectonic region) => leaflet layer
             'clicked': false,
             'colorMap': Vue.colorMap() // defined in vueutil.js
         }
@@ -79,14 +79,18 @@ Vue.component('trmap', {
             if(!this.eventbus){
                 return;
             }
-            
             this.eventbus.$once('postresponse', (response, isError) => {
                 if ((response.config.url == this.url) && !isError){
                     this.openPopup(event, response.data);
                 }
             });
             var data = {'project': this.selectedProject, 'latitude': event.latlng.lat,
-                    'longitude': event.latlng.lng}
+                    'longitude': event.latlng.lng};
+            // get visible layers:
+            var overlays = this.overlays;
+            data['trt'] = Object.keys(overlays).filter(layerName => {
+               return overlays[layerName]._map ? true : false;
+            });
             this.eventbus.$emit('postrequest', this.url, data);
         },
         openPopup: function(event, responseData){
@@ -111,7 +115,7 @@ Vue.component('trmap', {
             });
             // Set the value of the label, wich is implemented as a (single) slot in the gsimselect
             // (unfortunately, only plain text allowed for the moment):
-            instance.$slots.default = ['Gsims defined for the selected Tectnotic Region(s):'];
+            instance.$slots.default = ['Gsims defined for the selected Tectonic Region(s):'];
             // mount the instance:
             instance.$mount() // pass nothing
             // add custom classes (must be done after mount):
@@ -131,12 +135,13 @@ Vue.component('trmap', {
             var layersControl = this.layersControl;
             var overlays = this.overlays;
     
-            overlays.forEach(layer => {
+            Object.keys(overlays).forEach(layerName => {
+                var layer = overlays[layerName];
                 map.removeLayer(layer);
                 layersControl.removeLayer(layer);
             });
     
-            overlays = this.overlays = [];
+            overlays = this.overlays = {};
             var geojson = this.projects[this.selectedProject] || {};
             var features = ((geojson.features || geojson) || []);
             // group features by their feature.property.OQ_TRT (openquake tectonic region type),
@@ -162,7 +167,7 @@ Vue.component('trmap', {
                 var layer = L.geoJson(featureCollections[key],
                         {style: style, onEachFeature: this.onEachFeature}).addTo(map); //, style: style, onEachFeature: eachFeature })
                 layersControl.addOverlay(layer, `<span style='color:${style.color}'>${key}</span>`);
-                overlays.push(layer);
+                overlays[key] = layer;
             });
             // hack for removing the height attribute on the control. Seems that {collapsed:false}} does not
             // work only if we are loading the page and the latter is visible (activated):
