@@ -14,7 +14,6 @@ var EGSIM = new Vue({
         errormsg: window._SERVER_ERROR_MESSAGE || '',  // _SERVER_ERROR defined globally and passed by django. Maybe not elegant but it does its job
         //fielderrors: {},
         initURL: '/get_init_params', //url for requesting the initialization data. For info:
-        // 
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
         eventbus: new Vue({})  // This empty Vue model will serve as our event bus.
     },
@@ -32,7 +31,7 @@ var EGSIM = new Vue({
                 var err = (((response.response || {}).data || {}).error || response.message) || 'Unknown error';
                 this.eventbus.$emit('error', err);
             }else if (response.config.url == this.initURL){
-                [avalGsims, avalImts] = getInitData(response.data);
+                [avalGsims, avalImts] = this.getInitData(response);
                 this.$set(this, 'avalGsims', avalGsims);
                 this.$set(this, 'avalImts', avalImts);
             }
@@ -50,6 +49,24 @@ var EGSIM = new Vue({
         }
     },
     methods: {
+        getInitData(response) {
+            // initializes the base Vue instance returning the array [gsims, imts] where:
+            // gsims is a Map of gsim name -> [imts (Set), trt (string), ruptureParams (Array? - not used)]
+            // imts is a set of all available imts
+            var gsims = new Map();
+            var imts = new Set();
+            var data = response.data;
+            for (let gsim of data) {
+                var gsimName = gsim[0];
+                var gImts = new Set(gsim[1]);
+                for (let gImt of gImts){
+                    imts.add(gImt);
+                }
+                var trt = gsim[2];
+                gsims.set(gsimName, [gImts, trt]);
+            }
+            return [gsims, imts];
+        },
         post(url, data, config) { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
             // assign the form element to this class:
             this.setError('');
@@ -58,9 +75,9 @@ var EGSIM = new Vue({
             // fetch gsim and imts data:
             return axios.post(url, data || {}, config).then(response => {
                 this.eventbus.$emit('postresponse', response, false);
-            }).catch((error) => {
+            }).catch(error => {
                 this.eventbus.$emit('postresponse', error, true);
-            }).finally(()=>{
+            }).finally(() => {
                 this.setLoading(false);
             });
         },
@@ -84,33 +101,3 @@ var EGSIM = new Vue({
         },
     }
 });
-
-
-function getInitData(data) {
-    gsims = new Map();
-    imts = new Set();
-    
-    /**
-     * Initializes a new InputSelection
-     * 
-     * :param avalGsims: an iterable (Array, Set,...) of objects. Each object is na Array
-     *  is an Array of the form:
-     * [
-     *  gsimName (string),
-     *  intensity measure types defined for the gsim (Array of String),
-     *  tectonic region type defined for the gsim (String)
-     *  ruptureParams (array of strings? FIXME: check)
-     * ]
-     */
-    for (let gsim of data) {
-        var gsimName = gsim[0];
-        var gImts = new Set(gsim[1]);
-        for (let gImt of gImts){
-            imts.add(gImt);
-        }
-        var trt = gsim[2];
-        var ruptureParams = gsim[3];
-        gsims.set(gsimName, [gImts, trt, ruptureParams]);
-    }
-    return [gsims, imts];
-}

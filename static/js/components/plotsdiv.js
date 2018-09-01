@@ -36,9 +36,9 @@ var PLOTSDIV = Vue.component('plotsdiv', {
     },
     template: `<div v-show='initialized' class='flex-direction-row'>
         
-        <div class='flexible flex-direction-col'>
-            <div v-if="Object.keys(selectableParams).length" class='flex-direction-row justify-content-around mt-1 mb-1'>
-                <div v-for='(values, key) in selectableParams' class='flex-direction-row flexible align-items-baseline'>
+        <div class='flexible flex-direction-col my-2 mr-2'>
+            <div v-if="Object.keys(selectableParams).length" class='flex-direction-row justify-content-around mb-1'>
+                <div v-for='(values, key) in selectableParams' class='flex-direction-row flexible align-items-baseline ml-2'>
                     <span class='text-nowrap mr-1'>{{ key }}</span>
                     <select class='flexible form-control' v-model="selectedParams[key]">
                         <option v-for='value in params[key]'>
@@ -52,7 +52,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             </div>
         </div>
     
-        <div class='flex-direction-col p-2 pl-3 ml-1 border-left'
+        <div class='flex-direction-col my-2 mr-2 pl-2 border-left'
             v-if="Object.keys(legend).length || Object.keys(selectableParams).length || showGridControls">
 
             <slot :eventbus="eventbus" :url="url"></slot>
