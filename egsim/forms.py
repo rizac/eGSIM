@@ -670,6 +670,8 @@ class TrtField(MultipleChoiceField):
     def clean(self, value):
         '''validates the value (list) allowing for standard OQ tectonic region names (with
         spaces as well as their corresponding -space-removed, lowercased versions'''
+        if value is None:
+            return value
         keys = [v if v in self._base_choices else v.replace(' ', '').lower() for v in value]
         super().clean(keys)
         return [self._base_choices[k] for k in keys]  # return in any case a list of OQ tr's
