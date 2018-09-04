@@ -32,7 +32,7 @@ pip install -r ./requirements.txt
 
 ## Old stuff (ignore, will be removed soon):
 
-### ~~First install numpy~~
+### (Optional) First install numpy
 
 *Note: this is maybe not necessary as it turned out we needed gcc first (see above). However it's harmless to do it now*
 
@@ -41,14 +41,14 @@ pip install numpy
 pip install scipy
 ```
 
-### ~~Install oq-engine~~:
+### Install oq-engine:
 
 Full ref here: https://github.com/gem/oq-engine/blob/master/doc/installing/development.md
 
-clone repository:
+clone repository. Given a directory with full path `$DIR` (whatever you want):
 ```bash
-mkdir ../oq-engine # or whatever you want
-cd ../oq-engine/  # or whatever you specified above
+mkdir $DIR
+cd $DIR
 git clone https://github.com/gem/oq-engine.git .
 ```
 install as editable (this should make git-pull in the repository enough to have the newest version):
@@ -60,10 +60,10 @@ pip install -e .
 
 Full ref here: https://github.com/GEMScienceTools/gmpe-smtk
 
-clone repository:
+clone repository. Given a directory with full path `$DIR` (whatever you want):
 ```bash
-mkdir ../gmpe-smtk # or whatever you want
-cd ../gmpe-smtk/  # or whatever you specified above
+mkdir $DIR
+cd $DIR
 git clone https://github.com/GEMScienceTools/gmpe-smtk.git .
 ```
 install as editable (this should make git-pull in the repository enough to have the newest version):
@@ -71,8 +71,14 @@ install as editable (this should make git-pull in the repository enough to have 
 pip install -e .
 ```
 
+## Creating flat-files:
+Pending: we will need to provide a (migration script?) to create flat-files once
 
 ## Run locally:
+```
+python manage.py runserver
+```
 
-Pending: update doc
+## Install on a server
+Pending: update doc. This will require a full django documentation
 
