@@ -15,9 +15,10 @@ from dateutil.tz import tzutc
 import json
 
 from openquake.hazardlib.gsim import get_available_gsims
-from openquake.hazardlib.imt import __all__ as hazardlib_imts
+from openquake.hazardlib.imt import registry as hazardlib_imts_dict
 from smtk import load_database
 from smtk.strong_motion_selector import SMRecordSelector
+from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 
 
 def vectorize(value):
@@ -59,9 +60,12 @@ def _get_gsims():
                 gsim_inst = gsim()
             except (TypeError, OSError, NotImplementedError) as exc:
                 gsim_inst = gsim
+            gsim_imts = gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+            if not hasattr(gsim_imts, '__iter__'):
+                continue
             if gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
                 ret[key] = (set(imt.__name__
-                                for imt in gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES),
+                                for imt in gsim_imts),
                             gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE,
                             tuple(n for n in gsim_inst.REQUIRES_RUPTURE_PARAMETERS))
     return ret
@@ -96,11 +100,12 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
     but can be referenced as a global variable and holds global data fetched from Openquake
     primarily'''
     _data = _get_gsims()
-    _aval_imts = set(hazardlib_imts)
+    _aval_imts = set(hazardlib_imts_dict.keys())
     _aval_trts = None  # set (will lazily populated on demand)
     _tr_projects = None  # dict (will be lazily created)
     _gmdbs = {}  # ground motion databases: name (str) -> [file_path, ground motion db obj
     _gmdbs_selections = {}
+    _aval_msr = None  # An OrderedDict with the available Magnitude ScaleRel (lazily created)
 
     @classmethod
     def gmdb_selections(cls):
@@ -147,6 +152,13 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
     def aval_imts(cls):
         '''Returns a list of all available IMT names (string)'''
         return list(cls._aval_imts)
+
+    @classmethod
+    def aval_msr(cls):
+        '''Returns an Ordered dict of the available Magnitude ScaleRel'''
+        if cls._aval_msr is None:
+            cls._aval_msr = get_available_magnitude_scalerel()
+        return cls._aval_msr
 
     @classmethod
     def aval_trts(cls):

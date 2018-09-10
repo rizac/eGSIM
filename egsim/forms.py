@@ -38,6 +38,8 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrell
 from egsim.core import yaml_load
 from egsim.core.utils import vectorize, EGSIM, isscalar
 from smtk.database_visualiser import DISTANCES
+from smtk.residuals.residual_plots import residuals_density_distribution, residuals_with_depth,\
+    residuals_with_distance, residuals_with_magnitude, residuals_with_vs30, likelihood
 
 
 class NArrayField(CharField):
@@ -263,6 +265,34 @@ class NArrayField(CharField):
             raise ValueError('%s < %s' % (str(value), str(minval)))
         elif toohigh:
             raise ValueError('%s > %s' % (str(value), str(maxval)))
+
+
+class EgsimChoiceField(ChoiceField):
+    '''Choice field which returns a user defined object mapped to the selected item
+
+    Subclasses should implement a _base_choices CLASS attribute as list/tuple of
+    3-element iterables: [(A, B, C), ... (A, B, C)], where
+    the 1st element (A) is the actual value to be set on the model, the 2nd element (B) is the
+    human-readable name (this is django ChoiceField default behavior) **and** the 3rd element
+    is the object to be returned after validation. If a `choices` argument is passed in the
+    constructor, it must have the format above (3-elements iterable) and will override the
+    default `_base_choices` class attribute.
+    '''
+    _base_choices = []
+
+    def __init__(self, **kwargs):  # * -> force the caller to use named arguments
+        choices = kwargs.pop('choices', None)
+        if choices is None:
+            choices = self._base_choices
+        self._mappings = {item[0]: item[2] for item in choices}
+        _choices = ([item[0], item[1]] for item in choices)
+        super(EgsimChoiceField, self).__init__(choices=_choices, **kwargs)
+
+    def clean(self, value):
+        # super() alone fails here. See
+        # https://stackoverflow.com/a/39313448
+        value = super(EgsimChoiceField, self).clean(value)  # already parsed
+        return self._mappings[value]
 
 
 class BaseForm(Form):
@@ -514,49 +544,73 @@ class GsimImtForm(BaseForm):
         self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
 
 
-class MsrField(ChoiceField):
-    '''A ChoiceField handling the Magnitude Scaling Relation parameter'''
-    _aval_msr = get_available_magnitude_scalerel()
-
-    base_choices = tuple(zip(_aval_msr.keys(), _aval_msr.keys()))
-
-    def __init__(self, **kwargs):  # * -> force the caller to use named arguments
-        super(MsrField, self).__init__(choices=self.base_choices, **kwargs)
-
-    def clean(self, value):
-        value = ChoiceField.to_python(self, ChoiceField.clean(self, value))
-        try:
-            return self._aval_msr[value]()
-        except Exception as exc:
-            raise ValidationError(_(str(exc)), code='invalid')
-
-
-class TrellisplottypeField(ChoiceField):
-    '''Choice field which returns a tuple of Trelliplot classes from its clean()
-    method (overridden'''
-    _aval_types = \
-        OrderedDict([
-            ('d', ('IMT vs. Distance', DistanceIMTTrellis)),
-            ('m', ('IMT vs. Magnitude', MagnitudeIMTTrellis)),
-            ('s', ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis)),
-            ('ds', ('IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis)),
-            ('ms', ('IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis)),
-            ('ss', ('Magnitude-Distance Spectra  (st.dev)',
-                    MagnitudeDistanceSpectraSigmaTrellis))
-            ])
-
-    base_choices = tuple(zip(_aval_types.keys(), [v[0] for v in _aval_types.values()]))
+class MsrField(EgsimChoiceField):
+    '''A EgsimChoiceField handling the selected Magnitude Scaling Relation object'''
+    _base_choices = tuple(zip(EGSIM.aval_msr().keys(), EGSIM.aval_msr().keys(),
+                              EGSIM.aval_msr().values()))
 
     def __init__(self, **kwargs):  # * -> force the caller to use named arguments
-        super(TrellisplottypeField, self).__init__(choices=self.base_choices, **kwargs)
+        '''Initializes a MsrField. The choices argument should NOT be provided.
+        All other arguments are allowed'''
+        super(MsrField, self).__init__(choices=self._base_choices, **kwargs)
 
 
-    def clean(self, value):
-        value = ChoiceField.to_python(self, ChoiceField.clean(self, value))
-        try:
-            return self._aval_types[value][1]
-        except Exception as exc:
-            raise ValidationError(_(str(exc)), code='invalid')
+# class MsrField(ChoiceField):
+#     '''A ChoiceField handling the Magnitude Scaling Relation parameter'''
+#     _aval_msr = get_available_magnitude_scalerel()
+# 
+#     base_choices = tuple(zip(_aval_msr.keys(), _aval_msr.keys()))
+# 
+#     def __init__(self, **kwargs):  # * -> force the caller to use named arguments
+#         super(MsrField, self).__init__(choices=self.base_choices, **kwargs)
+# 
+#     def clean(self, value):
+#         value = ChoiceField.to_python(self, ChoiceField.clean(self, value))
+#         try:
+#             return self._aval_msr[value]()
+#         except Exception as exc:
+#             raise ValidationError(_(str(exc)), code='invalid')
+
+
+class TrellisplottypeField(EgsimChoiceField):
+    '''A EgsimChoiceField returning the selected `BaseTrellis` class for computing the
+        Trellis plots'''
+    _base_choices = (
+        ('d', 'IMT vs. Distance', DistanceIMTTrellis),
+        ('m', 'IMT vs. Magnitude', MagnitudeIMTTrellis),
+        ('s', 'Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis),
+        ('ds', 'IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
+        ('ms', 'IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
+        ('ss', 'Magnitude-Distance Spectra  (st.dev)', MagnitudeDistanceSpectraSigmaTrellis)
+    )
+
+
+# class TrellisplottypeField(ChoiceField):
+#     '''Choice field which returns a tuple of Trelliplot classes from its clean()
+#     method (overridden'''
+#     _aval_types = \
+#         OrderedDict([
+#             ('d', ('IMT vs. Distance', DistanceIMTTrellis)),
+#             ('m', ('IMT vs. Magnitude', MagnitudeIMTTrellis)),
+#             ('s', ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis)),
+#             ('ds', ('IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis)),
+#             ('ms', ('IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis)),
+#             ('ss', ('Magnitude-Distance Spectra  (st.dev)',
+#                     MagnitudeDistanceSpectraSigmaTrellis))
+#             ])
+# 
+#     base_choices = tuple(zip(_aval_types.keys(), [v[0] for v in _aval_types.values()]))
+# 
+#     def __init__(self, **kwargs):  # * -> force the caller to use named arguments
+#         super(TrellisplottypeField, self).__init__(choices=self.base_choices, **kwargs)
+# 
+# 
+#     def clean(self, value):
+#         value = ChoiceField.to_python(self, ChoiceField.clean(self, value))
+#         try:
+#             return self._aval_types[value][1]
+#         except Exception as exc:
+#             raise ValidationError(_(str(exc)), code='invalid')
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
@@ -784,14 +838,22 @@ class GmdbForm(BaseForm):
         return cleaned_data
 
 
+class ResidualplottypeField(EgsimChoiceField):
+    '''An EgsimChoiceField which returns the selected function to compute residual plots'''
+    _base_choices = (
+        ('ddist', 'Residuals density distribution', residuals_density_distribution),
+        ('mag', 'Residuals vs. Magnitude', residuals_with_magnitude),
+        ('dist', 'Residuals vs. Distance', residuals_with_distance),
+        ('vs30', 'Residuals vs. Vs30', residuals_with_vs30),
+        ('depth', 'Residuals vs. Depth', residuals_with_depth),
+        ('lh', 'Likelihood', likelihood)
+    )
+
+
 class ResidualsForm(GsimImtForm, GmdbForm):
     '''Form for residual analysis'''
 
-    plot_type = ChoiceField(choices=[('densitydist', 'Residuals density distribution'),
-                                     ('magnitude', 'Residuals vs. Magnitude'),
-                                     ('distance', 'Residuals vs. Distance'),
-                                     ('vs30', 'Residuals vs. Vs30'),
-                                     ])
+    plot_type = ResidualplottypeField()
 
     def clean(self):
         return GmdbForm.clean(self)

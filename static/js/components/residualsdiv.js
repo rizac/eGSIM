@@ -128,29 +128,48 @@ Vue.component('residualsdiv', {
                                 color: color,
                                 width: 2
                             };
-                            // show normal distribution and reference normal dist. (mean=0 sigma=1)
-                            var x = resample(plotdata.x);
-                            var normdistline = {
-                                    x: x,
-                                    y: normdist(x, plotdata.mean, plotdata.stddev),
-                                    type: 'scatter',
-                                    mode: 'lines',
-                                    name: 'Normal distribution'
-                            };
-                            var color = this.addLegend(normdistline, normdistline.name, '#331100');
-                            normdistline.line = {color: color};
                             
-                            var refnormdistline = {
-                                    x: x,
-                                    y: normdist(x, 0, 1),
-                                    type: 'scatter',
-                                    mode: 'lines',
-                                    name: 'Normal distribution (μ=0, σ=1)'
-                            };
-                            var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
-                            refnormdistline.line = {color: color};
-    
-                            var traces = [mainTrace, normdistline, refnormdistline];
+                            if ('mean' in plotdata && 'stddev' in plotdata){
+                            
+                                // show normal distribution and reference normal dist. (mean=0 sigma=1)
+                                var x = resample(plotdata.x);
+                                var normdistline = {
+                                        x: x,
+                                        y: normdist(x, plotdata.mean, plotdata.stddev),
+                                        type: 'scatter',
+                                        mode: 'lines',
+                                        name: 'Normal distribution'
+                                };
+                                var color = this.addLegend(normdistline, normdistline.name, '#331100');
+                                normdistline.line = {color: color};
+                                
+                                var refnormdistline = {
+                                        x: x,
+                                        y: normdist(x, 0, 1),
+                                        type: 'scatter',
+                                        mode: 'lines',
+                                        name: 'Normal distribution (μ=0, σ=1)'
+                                };
+                                var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
+                                refnormdistline.line = {color: color};
+        
+                                var traces = [mainTrace, normdistline, refnormdistline];
+
+                            }else if('median' in plotdata){
+
+                                var [min, max] = endpoints(plotdata.y);
+                                var medianline = {
+                                        x: [plotdata.median, plotdata.median],
+                                        y: [0, max],
+                                        type: 'scatter',
+                                        mode: 'lines',
+                                        name: 'Median LH'
+                                };
+                                var color = this.addLegend(medianline, medianline.name, '#331100');
+                                medianline.line = {color: color};
+                                
+                                var traces = [mainTrace, medianline];
+                            }
                         }
                         var plotparams = {gsim: gsim, imt: imt, 'residual type': type};
                         plots.push({'traces': traces, 'params': plotparams, xaxis:{title: plotdata.xlabel}, yaxis:{title: plotdata.ylabel}});
