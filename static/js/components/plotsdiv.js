@@ -59,8 +59,8 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             
             <div v-if='Object.keys(legend).length' class='flexible mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Legend</h5>
-                <div v-for="(value, key) in legend">
-                    <label v-bind:style="{color: value}">
+                <div v-for="key in legendNames">
+                    <label v-bind:style="{color: legend[key]}">
                         <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
                         {{ key }}
                     </label>
@@ -166,7 +166,8 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             return
         },
         // END OF OVERRIDABLE METHODS
-        addLegend: function(trace, key, defaultColor){  //defaultColor is optional. If given, it is in the form '#XXXXXX'
+        addLegend: function(trace, key, defaultColor){
+            // defaultColor is optional. If given (not undefined), it is in the form '#XXXXXX'
             var color;
             var colorMap = this.colorMap;
             if (defaultColor !== undefined && !colorMap.has(key)){
@@ -444,34 +445,25 @@ var PLOTSDIV = Vue.component('plotsdiv', {
         },
         toggleTraceVisibility: function(traceName){
             var indices = [];
-            var visible = undefined;
-            for(var i=0; i< this.plotlydata.length; i++){
-                var data = this.plotlydata[i];
-                if(data.legendgroup != traceName){
-                    continue;
+            var visible = true;
+            this.plotlydata.forEach(function(data, i){
+                if(data.legendgroup === traceName){
+                    indices.push(i);
+                    if (data.visible === false){
+                        visible = false;
+                    }
                 }
-                indices.push(i);
-                if(visible === undefined){
-                    visible = data.visible;  // only first time
-                }
-            }
+            });
             if(indices.length){
-                if (visible === undefined){
-                    // if undefined, visible was not defined on any plotly data Object => it's visible
-                    visible = true;
-                }
                 Plotly.restyle(this.plotdivid, {visible: !visible}, indices);
             }
         },
-        isTraceVisible: function(traceName){  // could be optimized avoiding for loop...
-            for(var i=0; i< this.plotlydata; i++){
-                var data = this.plotlydata[i];
-                if(data.legendgroup != traceName){
-                    continue;
-                }
-                return data.visible;
-            }
-            return true;
+        isTraceVisible: function(traceName){
+            // get the first plotly trace with the legendgroup matching `traceName`
+            // and check its 'visible' property. Note that missing property defaults to true,
+            // so check for properties explicitly set as false: 
+            var hidden = this.plotlydata.some(data => {return data.legendgroup === traceName && data.visible === false});
+            return !hidden;
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
@@ -508,6 +500,9 @@ var PLOTSDIV = Vue.component('plotsdiv', {
         }
     },
     computed: {  // https://stackoverflow.com/a/47044150
+        legendNames: function(){
+            return Object.keys(this.legend);
+        },
         selectableParams: function(){
             var ret = {};
             for (var key of Object.keys(this.selectedParams)){

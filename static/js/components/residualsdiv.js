@@ -59,7 +59,7 @@ Vue.component('residualsdiv', {
                    return multiplier * exp(-pow((x-mean), 2)/twoSigmaSquare); 
                 });
             };
-            var resample = function(array, granularity=5){
+            var resample = function(array, granularity=10){
                 var newarray = array;
                 if (granularity > 1 && array.length > 1){
                     newarray = [];
@@ -166,7 +166,7 @@ Vue.component('residualsdiv', {
                                         name: 'Median LH'
                                 };
                                 var color = this.addLegend(medianline, medianline.name, '#331100');
-                                medianline.line = {color: color};
+                                medianline.line = {color: color, dash: 'dot'};
                                 
                                 var traces = [mainTrace, medianline];
                             }
@@ -205,5 +205,17 @@ Vue.component('residualsdiv', {
             return
         },
         // END OF OVERRIDABLE METHODS
+    },
+    computed: {  // https://stackoverflow.com/a/47044150
+        legendNames: function(){
+            // override legendNames property by ordering legend names so that statistics labels
+            // are placed at the bottom:
+            var names = Object.keys(this.legend);
+            var statKeys = new Set(['Median LH', 'Normal distribution', 'Normal distribution (μ=0, σ=1)',
+                'Linear regression' ]);
+            var resTypes = names.filter(element => !statKeys.has(element));
+            var statTypes = names.filter(element => statKeys.has(element));
+            return resTypes.concat(statTypes);
+        }
     }
 });
