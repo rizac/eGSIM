@@ -3,7 +3,8 @@ Created on 16 Sep 2018
 
 @author: riccardo
 '''
-import re
+import json
+import shlex
 from itertools import chain, repeat
 
 import numpy as np
@@ -23,170 +24,157 @@ from smtk.residuals.residual_plots import residuals_density_distribution, residu
 from egsim.core.utils import vectorize, EGSIM, isscalar
 
 
-class NArrayField(CharField):
-    '''CharField for sequences of numbers. It allwos sequences typed with optional brakets,
-    commas or spaces as number separators, and the semicolon notation (as in matlab) to
-    indicate a range'''
-    def __init__(self, *, min_arr_len=None, max_arr_len=None, min_value=None, max_value=None,
+class ArrayField(CharField):
+    '''
+        Implements a django CharField which parses and validates the input expecting a
+        string-formatted element (or an array of elements) in JSON or Unix shell
+        (space separated variables) formats. Note that in both syntaxes leading and trailing
+        square brackets are optional.
+        The type of the parsed elements depends on the method `self.parse(token)`
+        which by default returns `token` but might be overridden by subclasses
+        (see. :class:`NArrayField`).
+        As Form fields act also as validators, an object of this class can deal also with
+        already parsed arrays (e.g., after inputing Yaml POST data in yaml format which would
+        return an array of python objects and not their string representation).
+    '''
+    def __init__(self, *, min_count=None, max_count=None, min_value=None, max_value=None,
                  **kwargs):
-        '''
-        Implements a numeric array django Form field.
-        The `clean()` method converts input values into a numeric scalar or list, and returns it.
-        The input can be a numeric scalar, an iterable of numbers, or a numeric parsable string.
-        Input strings representing arrays can be given in json/python notation, with spaces also
-        recognized as element separator, optional square brackets, and the matlab notation with
-        semicolon to indicate a numeric range (`start:stop` or `start:step:stop`) which will be
-        converted to the corresponding numeric array
-
-        Example: ".5 ,6.2 77 0:2:3" will result in [0.5, 6.2, 77 0 2] )
-
-         :param min_arr_len: numeric or None. The minimum required length of the parsed array.
-             If None (the default), skips this check
-         :param max_arr_len: numeric or None. The maximum required length of the parsed array.
-             If None (the default), skips this check
-         :param min_value: numeric, None or numeric array. If None (the default) skips this check.
-             If numeric, it sets the minimum required value for all elements of the parsed array.
-             If numeric array, sets the minimum required value for each parsed element: if the
-             length is lower than the parsed elements length, it will be padded with None
-             (skip check on remaining elements)
-         :param max_value: numeric, None or numeric array. Same as `min_value`, but it controls
-             the maximum possible value of the parsed elements
-         :param kwargs: keyword arguments forwarded to the super-class.
+        '''Initializes a new ArrayField
+         :param min_count: numeric or None. The minimum required count of the elements
+             of the parsed array. Note that `min_length` is already defined in the super-class.
+             If None (the default), parsed array can have any minimum length >=0.
+         :param max_count: numeric or None. The maximum required count of the elements
+             of the parsed array. Note that `max_length` is already defined in the super-class.
+             If None (the default), parsed array can have any maximum length >=0.
+         :param min_value: object. The minimum possible value for the
+             elements of the parsed array. If None (the default) do not impose any minimum
+             value. If iterable, sets the minimum required value element-wise (padding with
+             None or slicing in case of lengths mismatch)
+         :param max_value: object. Self-explanatory. Behaves the same as `min_value`
+         :param kwargs: keyword arguments forwarded to the Django super-class.
         '''
         # Parameters after “*” or “*identifier” are keyword-only parameters
         # and may only be passed used keyword arguments.
-        super(NArrayField, self).__init__(**kwargs)
-        self.na_minlen = min_arr_len
-        self.na_maxlen = max_arr_len
+        super(ArrayField, self).__init__(**kwargs)
+        self.min_count = min_count
+        self.max_count = max_count
         self.min_value = min_value
         self.max_value = max_value
 
-    def serialize(self, value, parsecolon=False):
-        '''Serialises 'value' into a json- or YAML- compatible value. By default,
-        it calls self.parsenarray(value, self.na_minlen, self.na_maxlen, self.min_value,
-                                    self.max_value)
-        This method allows to return a json or yaml compatible type which is basically
-        the same as `self.clean()`, unless the latter is overridden in order to
-        return more complex and non-dumpable objects.
-        Moreover, note that by default if `value` or any of its elements (if `value`
-        is iterable) contain the colon, ':', then value is returned as it is
-
-        :param parsecolon: when False (the default) if `value` is a string or an iterable of
-        strings, and any string contains the colon ':', then value is not processed and returned
-        as it is. This avoids floating point errors and potentially long numeric arrays to be
-        written to json or yaml files. When called by `self.clean`, this argument is True, as
-        we do want to parse colons into range numeric arrays
-
-        raises: ValidationError
-        '''
-        has_semicolon = False
-        if not parsecolon:
-            values = vectorize(value)
-            has_semicolon = any(isinstance(v, str) and ':' in v for v in values)
-        # run in any case the validation process in order to raise if an error is encountered:
-        parsed_value = super(NArrayField, self).clean(value)
-        try:
-            parsed_value = self.parsenarray(parsed_value, self.na_minlen, self.na_maxlen,
-                                            self.min_value, self.max_value)
-            return value if has_semicolon else parsed_value
-        except (ValueError, TypeError) as exc:
-            raise ValidationError(_(str(exc)), code='invalid')
-
-    def clean(self, value):
-        """Return a number or a list of numbers depending on `value`"""
-        return self.serialize(value, parsecolon=True)
-
-    @classmethod
-    def parsenarray(cls, obj, minlen=None, maxlen=None,  # pylint: disable=too-many-arguments
-                    minval=None, maxval=None):
-        '''parses ``obj`` into a N-element list of floats, returning that
-            list.
-
-        :pram obj: a number, a string, or an iterable of numbers or strings. By strings we intend
-        any string parsable to float. Examples: 1.1, '1.1', [1,2,3], numpyarray([1,2,3]), "[1,2,3]",
-        "[1 , 2 , 3]" (spaces around commas ignored) "[1 2 3]" (spaces allowed as number separator).
-        All leading and trailing brakets in strings are optional (e.g. "1 2 3" eauals "[1,2,3]")
-
-        See :ref:class:`NArrayField` init method for details
-        :raises: ValueError or TypeError
-        '''
-
-        isstr = isinstance(obj, str)
-        iterable = None if isscalar(obj) else obj
-
-        if iterable is None:
+    def to_python(self, value):  # pylint: disable=too-many-branches, too-many-locals
+        # three scenarios: iterable: take iterable
+        # non iterable: parse [value]
+        # string: split value into iterable
+        is_vector = not isscalar(value)
+        if not is_vector and isinstance(value, str):
+            value = value.strip()
+            is_vector = value[:1] == '['
+            if is_vector != (value[-1:] == ']'):
+                raise ValidationError('unbalanced brackets')
             try:
-                return cls.float(obj)
-            except ValueError:
-                pass
-            iterable = cls.split(obj)
+                value = json.loads(value if is_vector else "[%s]" % value)
+            except Exception:  # pylint: disable=broad-except
+                try:
+                    value = shlex.split(value[1:-1].strip() if is_vector else value)
+                except Exception:
+                    raise ValidationError('Input syntax error')
 
         values = []
-        for val in iterable:
-            if not isstr or ':' not in val:
-                values.append(cls.float(val))
+        for val in vectorize(value):
+            try:
+                vls = self.parse(val)
+            except ValidationError:
+                raise
+            except Exception as exc:
+                raise ValidationError("%s: %s" % (str(val), str(exc)))
+
+            if isscalar(vls):
+                values.append(vls)
             else:
-                values += cls.str2nprange(val)
+                is_vector = True  # force the return value to be list even if we have 1 element
+                values.extend(vls)
 
         # check lengths:
         try:
-            cls.checkragne(len(values), minlen, maxlen)
-        except ValueError as verr:  # just re-format exception string and raise:
-            raise ValueError('number of elements (%d)' %
-                             (len(values) + str(verr)[str(verr).find(' '):]))
+            self.checkragne(len(values), self.min_count, self.max_count)
+        except ValidationError as verr:  # just re-format exception string and raise:
+            # msg should be in the form '% not in ...', remove first '%s'
+            msg = verr.message[verr.message.find(' '):]
+            raise ValidationError('number of elements (%d) %s' % (len(values), msg))
 
         # check bounds:
-        minval = [] if minval is None else vectorize(minval)
-        maxval = [] if maxval is None else vectorize(maxval)
-        for numval, mnval, mxval in zip(values, chain(minval or [], repeat(None)),
-                                        chain(maxval or [], repeat(None))):
+        minval, maxval = self.min_value, self.max_value
+        minval = [minval] * len(values) if isscalar(minval) else minval
+        maxval = [maxval] * len(values) if isscalar(maxval) else maxval
+        for numval, mnval, mxval in zip(values, chain(minval, repeat(None)),
+                                        chain(maxval, repeat(None))):
+            self.checkragne(numval, mnval, mxval)
 
-            cls.checkragne(numval, mnval, mxval)
+        return values[0] if (len(values) == 1 and not is_vector) else values
 
-        return values
+    @classmethod
+    def parse(cls, token):  # pylint: disable=no-self-use
+        '''Parses token and returns either an object or an iterable of objects.
+        This method can safely raise any exception, if not ValidationError
+        it will be wrapped into a suitable ValidationError'''
+        return token
+
+    @staticmethod
+    def isinragne(value, minval=None, maxval=None):
+        '''Returns True if the given value is in the range defined by minval and maxval
+            (endpoints are included). None's in minval and maxval mean: do not check'''
+        try:
+            NArrayField.checkragne(value, minval, maxval)
+            return True
+        except ValidationError:
+            return False
+
+    @staticmethod
+    def checkragne(value, minval=None, maxval=None):
+        '''checks that the given value is in the range defined by minval and maxval
+            (endpoints are included). None's in minval and maxval mean: do not check.
+            This method does not return any value but raises ValueError if value is not in the
+            given range'''
+        toolow = (minval is not None and value < minval)
+        toohigh = (maxval is not None and value > maxval)
+        if toolow and toohigh:
+            raise ValidationError('%s not in [%s, %s]' % (str(value), str(minval), str(maxval)))
+        elif toolow:
+            raise ValidationError('%s < %s' % (str(value), str(minval)))
+        elif toohigh:
+            raise ValidationError('%s > %s' % (str(value), str(maxval)))
+
+
+class NArrayField(ArrayField):
+    '''ArrayField for sequences of numbers'''
 
     @staticmethod
     def float(val):
-        '''wrapper around the built-in `float` function: if TypeError is raised,
-        provides a meaningful message in the exception'''
+        '''wrapper around the built-in `float` function. Raises ValidationError in case of errors'''
         try:
             return float(val)
         except ValueError:
-            raise ValueError("Not a number: '%s'" % val)
+            raise ValidationError("Not a number: '%s'" % val)
         except TypeError:
-            raise TypeError("input must be string(s) or number(s), not '%s'" % str(val))
-
-    @staticmethod
-    def split(string, ignore_colon=False):
-        '''parses strings and splits it, returning the resulting list of strings.
-        Recognizes as separators commas and spaces not preceded or followed by semicolons.
-        Leading and trailing square brackets are optional'''
-        string = string.strip()
-
-        if not string:
-            return []
-
-        if string[0] in ('[', '('):
-            if not string[-1] == {'[': ']', '(': ')'}[string[0]]:
-                raise TypeError('unbalanced brackets')
-            string = string[1:-1].strip()
-
-        reg_str = "(?:\\s*,\\s*|\\s+)" if ignore_colon else "(?:\\s*,\\s*|(?<!:)\\s+(?!:))"
-        return re.split(reg_str, string)
+            raise ValidationError("input must be string(s) or number(s), not '%s'" % str(val))
 
     @classmethod
-    def str2nprange(cls, string):
-        '''Converts the given string to a numpy range and returns the resulting list.
-        A range is a sequence of equally distant numbers.
-        Semicolons are treated as element separators. The given string must be in the format:
-        `<start>:<stop>`
-        `<start>:<step>:<stop>`
+    def parse(cls, token):
+        '''Parses `token` into float.
+        :param token: A python object denoting a token to be pared
         '''
+        try:
+            return cls.float(token)
+        except ValidationError:
+            if not isinstance(token, str):
+                raise
+            pass
+
         # parse semicolon as in matlab: 1:3 = [1,2,3],  1:2:3 = [1,3]
-        spl = [_.strip() for _ in string.split(':')]
+        spl = [_.strip() for _ in token.split(':')]
         if len(spl) < 2 or len(spl) > 3:
             raise ValueError("Expected format '<start>:<end>' or "
-                             "'<start>:<step>:<end>', found: '%s'" % string)
+                             "'<start>:<step>:<end>', found: '%s'" % token)
         start, step, stop = \
             cls.float(spl[0]), 1 if len(spl) == 2 else cls.float(spl[1]), cls.float(spl[-1])
         decimals = cls.get_decimals(*spl)
@@ -221,31 +209,6 @@ class NArrayField(CharField):
             return decimals  # 0 as we do not care for big numbers (they are int anyway)
         except ValueError:
             return None
-
-    @staticmethod
-    def isinragne(value, minval=None, maxval=None):
-        '''Returns True if the given value is in the range defined by minval and maxval
-            (endpoints are included). None's in minval and maxval mean: do not check'''
-        try:
-            NArrayField.checkragne(value, minval, maxval)
-            return True
-        except ValueError:
-            return False
-
-    @staticmethod
-    def checkragne(value, minval=None, maxval=None):
-        '''checks that the given value is in the range defined by minval and maxval
-            (endpoints are included). None's in minval and maxval mean: do not check.
-            This method does not return any value but raises ValueError if value is not in the
-            given range'''
-        toolow = (minval is not None and value < minval)
-        toohigh = (maxval is not None and value > maxval)
-        if toolow and toohigh:
-            raise ValueError('%s not in [%s, %s]' % (str(value), str(minval), str(maxval)))
-        elif toolow:
-            raise ValueError('%s < %s' % (str(value), str(minval)))
-        elif toohigh:
-            raise ValueError('%s > %s' % (str(value), str(maxval)))
 
 
 class EgsimChoiceField(ChoiceField):

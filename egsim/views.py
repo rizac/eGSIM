@@ -16,7 +16,7 @@ from django.views.generic.base import View
 from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
-from egsim.forms import TrellisForm, TrSelectionForm, GmdbForm, ResidualsForm
+from egsim.forms.forms import TrellisForm, GsimSelectionForm, GmdbForm, ResidualsForm
 from egsim.core.trellis import compute_trellis
 from egsim.core.utils import EGSIM
 from egsim.core.shapes import get_feature_properties
@@ -184,12 +184,12 @@ class TrellisPlotsView(EgsimQueryView):
 
 class TrSelectionView(EgsimQueryView):
 
-    formclass = TrSelectionForm
+    formclass = GsimSelectionForm
 
     @classmethod
     def process(cls, params):
         # FIXME: load_share() should be improved:
-        trts = get_feature_properties(EGSIM.tr_projects()[params['project']],
+        trts = get_feature_properties(EGSIM.tr_projects()[params['model']],
                                       lon0=params['longitude'],
                                       lat0=params['latitude'],
                                       trts=params['trt'],

@@ -43,7 +43,7 @@ urlpatterns = [
 
     # REST (or alike) views:
     url(r'^query/trellis/?$', views.TrellisPlotsView.as_view(), name='trellis_api'),
-    url(r'^query/gsims/?$', views.TrSelectionView.as_view(), name='trsel_api'),
+    url(r'^query/gsims/?$', views.TrSelectionView.as_view(), name='gsimsel_api'),
     url(r'^query/magdistdata/?$', views.GmdbSelectionView.as_view(), name='magdistdata_api'),
     url(r'^query/residuals/?$', views.ResidualsView.as_view(), name='residuals_api'),
 

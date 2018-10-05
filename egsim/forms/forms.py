@@ -38,11 +38,6 @@ from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrF
 class BaseForm(Form):
     '''Base eGSIM form'''
 
-#     sa_period = NArrayField(label='SA (period/s):',
-#                             required=False,  # required jandled in clean()
-#                             # make field.is_hidden = True in the templates:
-#                             widget=HiddenInput)
-
     def __init__(self, *args, **kwargs):
         '''Overrides init to set custom attributes on field widgets and to set the initial
         value for fields of this class with no match in the keys of self.data'''
@@ -143,18 +138,19 @@ class BaseForm(Form):
 
     def to_dict(self):
         '''Converts this form to python dict. Each value is the `to_python` method of the
-        corresponding django Field, or the serialize method of the NArrayFields. the latter
-        converts the input to numeric array except the case when the input is given
-        as range '<start>:<stop>:<end>': in this case, the string is returned as it is.
+        corresponding django Field. Note that for :class:`NArrayField`s, the resulting array
+        might be extremely long (in case of semicolon notation, e.g. '1:1:10000')..
 
         raises ValidationError if the form is not valid
         '''
         if not self.is_valid():
             raise ValidationError(self.errors, code='invalid')
 
-        return {name:
-                self.fields[name].serialize(val) if isinstance(self.fields[name], NArrayField)
-                else self.fields[name].to_python(val) for name, val in self.data.items()}
+        # we might keep the value as-it-is for NArrayFields, but we might have non-JSON/YAML
+        # parsable elements, if the dict has to be serialized in any of those syntaxes.
+        # Moreover, remember that '1:1:30' is interpreted by pyyaml as hour, which results
+        # in an int (number of seconds?)
+        return {name: self.fields[name].to_python(val) for name, val in self.data.items()}
 
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on selected intensity
@@ -269,11 +265,6 @@ class TrellisForm(GsimImtForm):
                                             "from the V<sub>S30</sub>"))
     backarc = BooleanField(label='Backarc Path', initial=False, required=False)
 
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-        # put 'sa_periods in the IMTField:
-        # self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
-
     def clean(self):
         cleaned_data = super(TrellisForm, self).clean()
         vs30 = cleaned_data['vs30']  # surely a list with st least one element
@@ -297,7 +288,7 @@ class TrellisForm(GsimImtForm):
         return cleaned_data
 
 
-class TrSelectionForm(BaseForm):
+class GsimSelectionForm(BaseForm):
     '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle'''
 
     __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
@@ -305,8 +296,8 @@ class TrSelectionForm(BaseForm):
 
     __scalar_or_vector_help__ = 'Scalar, vector or range'
 
-    project = ChoiceField(label='Project', choices=list(zip(EGSIM.tr_projects().keys(),
-                                                            EGSIM.tr_projects().keys())))
+    model = ChoiceField(label='Model', choices=list(zip(EGSIM.tr_projects().keys(),
+                                                        EGSIM.tr_projects().keys())))
     # GSIM RUPTURE PARAMS:
     longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
     latitude = FloatField(label='Latitude', min_value=-90, max_value=90, required=False)
@@ -379,14 +370,3 @@ class ResidualsForm(GsimImtForm, GmdbForm):
 
     def clean(self):
         return GmdbForm.clean(self)
-    # __additional_fieldnames__ = {'gmdb': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
-    #                             'lon2': 'longitude2'}
-
-    # __scalar_or_vector_help__ = 'Scalar, vector or range'
-
-#     gsim = GsimField()
-#     imt = IMTField()
-#     gmdb = GmdbField()
-#     selection = GmdbSelectionField()
-#     selection_min = CharField(label='Min', required=False)
-#     selection_max = CharField(label='Max', required=False)
