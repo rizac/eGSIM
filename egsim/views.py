@@ -17,11 +17,8 @@ from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import TrellisForm, GsimSelectionForm, GmdbForm, ResidualsForm
-from egsim.core.trellis import compute_trellis
 from egsim.core.utils import EGSIM
-from egsim.core.shapes import get_feature_properties
-from egsim.core.gmdbselection import magdistdata
-from egsim.core.residuals import compute_residuals
+from egsim.core import smtk as egsim_smtk
 
 
 _COMMON_PARAMS = {
@@ -49,10 +46,10 @@ def home(request):
     return render(request, 'home.html', _COMMON_PARAMS)
 
 
-def get_tr_projects(request):
+def get_tr_models(request):
     '''returns a JSON response with all tr(tectonic region) projects for gsim selection'''
-    return JsonResponse({'projects': EGSIM.tr_projects(),
-                         'selected_project': next(iter(EGSIM.tr_projects().keys()))},
+    return JsonResponse({'projects': EGSIM.tr_models(),
+                         'selected_project': next(iter(EGSIM.tr_models().keys()))},
                         safe=False)
 
 
@@ -78,7 +75,7 @@ def get_gmdbs(request):
 def gmdb(request):
     '''view for the residuals page (iframe in browser)'''
     return render(request, 'gmdb.html', dict(_COMMON_PARAMS, form=GmdbForm(),
-                                             post_url='../query/magdistdata'))
+                                             post_url='../query/gmdbplot'))
 
 
 def residuals(request):
@@ -173,39 +170,32 @@ class EgsimQueryView(View):
         return errors
 
 
-class TrellisPlotsView(EgsimQueryView):
+class TrellisView(EgsimQueryView):
     '''EgsimQueryView subclass for generating Trelli plots responses'''
 
     formclass = TrellisForm
 
     @classmethod
     def process(cls, params):
-        return compute_trellis(params)
+        return egsim_smtk.get_trellis(params)
 
 
-class TrSelectionView(EgsimQueryView):
+class GsimsView(EgsimQueryView):
 
     formclass = GsimSelectionForm
 
     @classmethod
     def process(cls, params):
-        # FIXME: load_share() should be improved:
-        trts = get_feature_properties(EGSIM.tr_projects()[params['model']],
-                                      lon0=params['longitude'],
-                                      lat0=params['latitude'],
-                                      trts=params['trt'],
-                                      lon1=params.get('longitude1', None),
-                                      lat1=params.get('latitude', None), key='OQ_TRT')
-        return [gsim for gsim in EGSIM.aval_gsims() if EGSIM.trtof(gsim) in trts]
+        return egsim_smtk.get_gsims(params)
 
 
-class GmdbSelectionView(EgsimQueryView):
+class GmdbPlotView(EgsimQueryView):
 
     formclass = GmdbForm
 
     @classmethod
     def process(cls, params):
-        return magdistdata(params)
+        return egsim_smtk.get_gmdbplot(params)
 
 
 class ResidualsView(EgsimQueryView):
@@ -214,9 +204,10 @@ class ResidualsView(EgsimQueryView):
 
     @classmethod
     def process(cls, params):
-        return compute_residuals(params)
+        return egsim_smtk.get_residuals(params)
 
-# TESTS (FIXME: REMOVE?)
+
+# TESTS (FIXME: REMOVE?) #####################################################################
 
 def test_err(request):
     raise ValueError('this is a test error!')

@@ -35,13 +35,13 @@ def isscalar(value):
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
 
 
-def unique(*iterables):
-    '''returns a list of unique values in any iterable, whilst preserving the order
-    of each element of iterables'''
-    odict = OrderedDict()
-    for val in chain(*iterables):
-        odict[val] = None
-    return list(odict.keys())
+# def unique(*iterables):
+#     '''returns a list of unique values in any iterable, whilst preserving the order
+#     of each element of iterables'''
+#     odict = OrderedDict()
+#     for val in chain(*iterables):
+#         odict[val] = None
+#     return list(odict.keys())
 
 
 def _get_gsims():
@@ -64,15 +64,14 @@ def _get_gsims():
             if not hasattr(gsim_imts, '__iter__'):
                 continue
             if gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-                ret[key] = (set(imt.__name__
-                                for imt in gsim_imts),
+                ret[key] = (set(imt.__name__ for imt in gsim_imts),
                             gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE,
                             tuple(n for n in gsim_inst.REQUIRES_RUPTURE_PARAMETERS))
     return ret
 
 
-def _get_tr_projects():  # https://stackoverflow.com/a/6798042
-    '''Load all tectonic region projects as a dict of project name (string) mapped to its
+def _get_tr_models():  # https://stackoverflow.com/a/6798042
+    '''Load all tectonic region models as a dict of project name (string) mapped to its
     geojson dict'''
     ret = {}
     for project in ['share']:  # FIXME: better handling
@@ -137,10 +136,10 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
         return entry[1]
 
     @classmethod
-    def tr_projects(cls):
+    def tr_models(cls):
         '''Returns a list of all available GSIM names (string)'''
         if cls._tr_projects is None:
-            cls._tr_projects = _get_tr_projects()
+            cls._tr_projects = _get_tr_models()
         return cls._tr_projects
 
     @classmethod

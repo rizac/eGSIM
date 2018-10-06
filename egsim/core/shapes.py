@@ -1,7 +1,7 @@
 '''
-Created on 4 Jul 2018
+Shapes and geojson utilities
 
-shapes and geojson utilities
+Created on 4 Jul 2018
 
 @author: riccardo
 '''

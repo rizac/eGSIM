@@ -304,8 +304,8 @@ class GsimSelectionForm(BaseForm):
     imt = IMTField(required=False)  # other keyword attrs unused as we do not display this in
     # a standard html form
 
-    model = ChoiceField(label='Model', choices=list(zip(EGSIM.tr_projects().keys(),
-                                                        EGSIM.tr_projects().keys())),
+    model = ChoiceField(label='Model', choices=list(zip(EGSIM.tr_models().keys(),
+                                                        EGSIM.tr_models().keys())),
                         required=False)
     longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
     latitude = FloatField(label='Latitude', min_value=-90, max_value=90, required=False)
