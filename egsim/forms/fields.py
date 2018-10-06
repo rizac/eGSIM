@@ -3,6 +3,8 @@ Created on 16 Sep 2018
 
 @author: riccardo
 '''
+import re
+from fnmatch import translate
 import json
 import shlex
 from itertools import chain, repeat
@@ -22,6 +24,7 @@ from smtk.residuals.residual_plots import residuals_density_distribution, residu
     residuals_with_distance, residuals_with_magnitude, residuals_with_vs30, likelihood
 
 from egsim.core.utils import vectorize, EGSIM, isscalar
+
 
 
 class ArrayField(CharField):
@@ -168,13 +171,16 @@ class NArrayField(ArrayField):
         except ValidationError:
             if not isinstance(token, str):
                 raise
-            pass
 
         # parse semicolon as in matlab: 1:3 = [1,2,3],  1:2:3 = [1,3]
         spl = [_.strip() for _ in token.split(':')]
         if len(spl) < 2 or len(spl) > 3:
-            raise ValueError("Expected format '<start>:<end>' or "
-                             "'<start>:<step>:<end>', found: '%s'" % token)
+            if ':' in token:
+                raise ValidationError("Expected format '<start>:<end>' or "
+                                      "'<start>:<step>:<end>', found: '%s'" % token)
+            else:
+                raise ValidationError("Unparsable string '%s'" % token)
+
         start, step, stop = \
             cls.float(spl[0]), 1 if len(spl) == 2 else cls.float(spl[1]), cls.float(spl[-1])
         decimals = cls.get_decimals(*spl)
@@ -211,6 +217,23 @@ class NArrayField(ArrayField):
             return None
 
 
+# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
+class PointField(NArrayField):
+    '''NArrayField which validates a 2-element iterable and returns an openquake Point'''
+    def __init__(self, **kwargs):
+        super(PointField, self).__init__(min_count=2, max_count=3, **kwargs)
+
+    def clean(self, value):
+        '''Converts the given value to a :class:` openquake.hazardlib.geo.point.Point` object.
+        It is usually better to perform these types of conversions subclassing `clean`, as the
+        latter is called at the end of the validation workflow'''
+        value = NArrayField.clean(self, value)
+        try:
+            return Point(*value)
+        except Exception as exc:
+            raise ValidationError(_(str(exc)), code='invalid')
+
+
 class EgsimChoiceField(ChoiceField):
     '''Choice field which returns a user defined object mapped to the selected item
 
@@ -242,8 +265,86 @@ class EgsimChoiceField(ChoiceField):
         return self.map(value)
 
 
+class MsrField(EgsimChoiceField):
+    '''A EgsimChoiceField handling the selected Magnitude Scaling Relation object'''
+    _base_choices = tuple(zip(EGSIM.aval_msr().keys(), EGSIM.aval_msr().keys(),
+                              EGSIM.aval_msr().values()))
+
+
+class TrellisplottypeField(EgsimChoiceField):
+    '''A EgsimChoiceField returning the selected `BaseTrellis` class for computing the
+        Trellis plots'''
+    _base_choices = (
+        ('d', 'IMT vs. Distance', DistanceIMTTrellis),
+        ('m', 'IMT vs. Magnitude', MagnitudeIMTTrellis),
+        ('s', 'Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis),
+        ('ds', 'IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
+        ('ms', 'IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
+        ('ss', 'Magnitude-Distance Spectra  (st.dev)', MagnitudeDistanceSpectraSigmaTrellis)
+    )
+
+
+class GmdbField(EgsimChoiceField):
+    '''EgsimChoiceField for Ground motion databases'''
+    # last argument is unused
+    _base_choices = zip(EGSIM.gmdb_names(), EGSIM.gmdb_names(), repeat(''))
+
+    def map(self, value):
+        '''overrides super.map in that it does not return the third argument of _base_choices
+        above but the Ground motion database lazily created only on demand because
+        time-consuming'''
+        return EGSIM.gmdb(value)
+
+
+class GmdbSelectionField(EgsimChoiceField):
+    '''Implements the ***FILTER*** (smtk code calls it 'selection') field on a Ground motion
+    database'''
+    _base_choices = zip(EGSIM.gmdb_selections(), EGSIM.gmdb_selections(),
+                        EGSIM.gmdb_selections())
+
+
+class ResidualplottypeField(EgsimChoiceField):
+    '''An EgsimChoiceField which returns the selected function to compute residual plots'''
+    _base_choices = (
+        ('ddist', 'Residuals density distribution', residuals_density_distribution),
+        ('mag', 'Residuals vs. Magnitude', residuals_with_magnitude),
+        ('dist', 'Residuals vs. Distance', residuals_with_distance),
+        ('vs30', 'Residuals vs. Vs30', residuals_with_vs30),
+        ('depth', 'Residuals vs. Depth', residuals_with_depth),
+        ('lh', 'Likelihood', likelihood)
+    )
+
+
+class MultipleChoiceWildcardField(MultipleChoiceField):
+    '''MultipleChoiceField which accepts lists of values (the default) but also a single string,
+    in which case the string will be converted
+    to regex and all matching elements will be returned'''
+
+    def to_python(self, value):
+        if isinstance(value, str):
+            reg = MultipleChoiceWildcardField.to_regex(value)
+            value = [k for k, _ in self.choices if reg.match(str(k))]
+        return super(MultipleChoiceWildcardField, self).to_python(value)
+
+    @staticmethod
+    def to_regex(value):
+        '''converts string (a unix shell string, see
+        https://docs.python.org/3/library/fnmatch.html) to regexp
+        '''
+        if not value:
+            return re.compile(".*")
+        return re.compile(translate(value))
+
+
+class GsimField(MultipleChoiceWildcardField):
+    '''MultipleChoiceWildcardField with default `choices` argument, if not provided'''
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices', zip(EGSIM.aval_gsims(), EGSIM.aval_gsims()))
+        super(GsimField, self).__init__(**kwargs)
+
+
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
-class IMTField(MultipleChoiceField):
+class IMTField(MultipleChoiceWildcardField):
     '''Field for IMT selection.
     This class overrides `to_python`, which first calls the super-method (which for
     `MultipleChoiceField`s parses the input into a list of strings), then it adds to the parsed
@@ -259,6 +360,7 @@ class IMTField(MultipleChoiceField):
     }
 
     def __init__(self, **kwargs):
+        kwargs.setdefault('choices', zip(EGSIM.aval_imts(), EGSIM.aval_imts()))
         super(IMTField, self).__init__(**kwargs)
         self.sa_periods = []  # can be string or iterable of strings
         # strings must be numeric parsable (see NArrayField)
@@ -292,47 +394,14 @@ class IMTField(MultipleChoiceField):
         try:
             imt.from_string(value)
             return True
-        except Exception as exc:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
-class MsrField(EgsimChoiceField):
-    '''A EgsimChoiceField handling the selected Magnitude Scaling Relation object'''
-    _base_choices = tuple(zip(EGSIM.aval_msr().keys(), EGSIM.aval_msr().keys(),
-                              EGSIM.aval_msr().values()))
-
-
-class TrellisplottypeField(EgsimChoiceField):
-    '''A EgsimChoiceField returning the selected `BaseTrellis` class for computing the
-        Trellis plots'''
-    _base_choices = (
-        ('d', 'IMT vs. Distance', DistanceIMTTrellis),
-        ('m', 'IMT vs. Magnitude', MagnitudeIMTTrellis),
-        ('s', 'Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis),
-        ('ds', 'IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
-        ('ms', 'IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
-        ('ss', 'Magnitude-Distance Spectra  (st.dev)', MagnitudeDistanceSpectraSigmaTrellis)
-    )
-
-
-# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
-class PointField(NArrayField):
-    def __init__(self, **kwargs):
-        super(PointField, self).__init__(min_arr_len=2, max_arr_len=3, **kwargs)
-
-    def clean(self, value):
-        '''Converts the given value to a :class:` openquake.hazardlib.geo.point.Point` object.
-        It is usually better to perform these types of conversions subclassing `clean`, as the
-        latter is called at the end of the validation workflow'''
-        value = NArrayField.clean(self, value)
-        try:
-            return Point(*value)
-        except Exception as exc:
-            raise ValidationError(_(str(exc)), code='invalid')
-
-class TrtField(MultipleChoiceField):
-    '''Choice field which returns a tuple of Trelliplot classes from its clean()
-    method (overridden'''
+class TrtField(MultipleChoiceWildcardField):
+    '''MultipleChoiceWildcardField field which returns a tuple of Trelliplot classes
+    from its clean() method (overridden)
+    '''
 
     # remember! _choices is a super-class reserved attribute!!!
     _base_choices = {i.replace(' ', '').lower(): i for i in EGSIM.aval_trts()}
@@ -342,8 +411,8 @@ class TrtField(MultipleChoiceField):
         # and with no uppercase,
         # mapped to the OpenQuake tectonic region for visualization purposes (not used for the
         # moment as this field is not rendered in django)
-        choices = zip(self._base_choices.keys(), self._base_choices.values())
-        super(TrtField, self).__init__(choices=choices, **kwargs)
+        kwargs.setdefault('choices', self._base_choices.items())
+        super(TrtField, self).__init__(**kwargs)
 
     def clean(self, value):
         '''validates the value (list) allowing for standard OQ tectonic region names (with
@@ -353,35 +422,3 @@ class TrtField(MultipleChoiceField):
         keys = [v if v in self._base_choices else v.replace(' ', '').lower() for v in value]
         super().clean(keys)
         return [self._base_choices[k] for k in keys]  # return in any case a list of OQ tr's
-
-
-class GmdbField(EgsimChoiceField):
-    # last argument is unused
-    _base_choices = zip(EGSIM.gmdb_names(), EGSIM.gmdb_names(), repeat(''))
-
-    def map(self, value):
-        '''overrides super.map in that it does not return the third argument of _base_choices
-        above but the Ground motion database corresponding to the key 'value' (first arg of
-        any argument of _base_choices above). this is doen because a Ground motion database
-        is lazily created otherwise initializing this class would take forever'''
-        return EGSIM.gmdb(value)
-
-
-
-class GmdbSelectionField(EgsimChoiceField):
-    '''Implements the ***FILTER*** (smtk code calls it 'selection') field on a Ground motion
-    database'''
-    _base_choices = zip(EGSIM.gmdb_selections(), EGSIM.gmdb_selections(),
-                        EGSIM.gmdb_selections())
-
-
-class ResidualplottypeField(EgsimChoiceField):
-    '''An EgsimChoiceField which returns the selected function to compute residual plots'''
-    _base_choices = (
-        ('ddist', 'Residuals density distribution', residuals_density_distribution),
-        ('mag', 'Residuals vs. Magnitude', residuals_with_magnitude),
-        ('dist', 'Residuals vs. Distance', residuals_with_distance),
-        ('vs30', 'Residuals vs. Vs30', residuals_with_vs30),
-        ('depth', 'Residuals vs. Depth', residuals_with_depth),
-        ('lh', 'Likelihood', likelihood)
-    )

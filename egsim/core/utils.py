@@ -162,7 +162,7 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
 
     @classmethod
     def aval_trts(cls):
-        '''Returns a list of all available tectonic region types (strings)'''
+        '''Returns a set of all available tectonic region types (strings)'''
         # lazy load:
         if cls._aval_trts is None:
             ret = cls._aval_trts = set()
@@ -187,7 +187,7 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
 
         :param gsim: string denoting the gsim name
         '''
-        return cls._data.get(gsim, [''])[1]
+        return cls._data.get(gsim, ['', ''])[1]
 
     @classmethod
     def invalid_imts(cls, gsims, imts):

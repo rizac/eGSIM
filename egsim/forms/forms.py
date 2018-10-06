@@ -32,7 +32,7 @@ from smtk.database_visualiser import DISTANCES
 from egsim.core import yaml_load
 from egsim.core.utils import vectorize, EGSIM, isscalar
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrField, \
-    PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField
+    PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField
 
 
 class BaseForm(Form):
@@ -74,7 +74,8 @@ class BaseForm(Form):
         for name, field in self.fields.items():  # @UnusedVariable
             # add class only for specific html elements, some other might have weird layout
             # if class 'form-control' is added on them:
-            if not isinstance(field.widget, (CheckboxInput, CheckboxSelectMultiple, RadioSelect))\
+            if not isinstance(field.widget,
+                              (CheckboxInput, CheckboxSelectMultiple, RadioSelect))\
                     and not field.widget.is_hidden:
                 field.widget.attrs.update(atts)
 
@@ -152,6 +153,27 @@ class BaseForm(Form):
         # in an int (number of seconds?)
         return {name: self.fields[name].to_python(val) for name, val in self.data.items()}
 
+
+class GsimImtForm(BaseForm):
+    '''Base form for any form needing (At least) Gsim+Imt selections'''
+
+    __additional_fieldnames__ = {'gmpe': 'gsim'}
+
+    # fields (not used for rendering, just for validation): required is True by default
+    # FIXME: do we provide choices, as actually we are rendering the component with an
+    # ajax request in vue.js?
+    gsim = GsimField(label='Ground Shaking Intensity Models (gsim)',
+                     widget=HiddenInput,
+                     required=True)
+    imt = IMTField(label='Intensity Measure Types (imt)',
+                   widget=HiddenInput,
+                   required=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # put 'sa_periods in the IMTField:
+        self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
+
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on selected intensity
         measure type. For info see:
@@ -195,33 +217,15 @@ class BaseForm(Form):
         return cleaned_data
 
 
-class GsimImtForm(BaseForm):
-    '''Base form for any form needing (At least) Gsim+Imt selections'''
-
-    # fields (not used for rendering, just for validation): required is True by default
-    # FIXME: do we provide choices, as actually we are rendering the component with an
-    # ajax request in vue.js?
-    gsim = MultipleChoiceField(label='Ground Shaking Intensity Models (gsim)',
-                               widget=HiddenInput,
-                               choices=zip(EGSIM.aval_gsims(), EGSIM.aval_gsims()),
-                               required=True)
-    imt = IMTField(label='Intensity Measure Types (imt)',
-                   widget=HiddenInput,
-                   choices=zip(EGSIM.aval_imts(), EGSIM.aval_imts()),
-                   required=True)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # put 'sa_periods in the IMTField:
-        self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
-
-
 class TrellisForm(GsimImtForm):
     '''Form for Trellis plot generation'''
 
-    __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distances', 'tr': 'tectonic_region',
+    # merge additional fieldnames (see https://stackoverflow.com/a/26853961/3526777):
+    __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distances',
+                                 'tr': 'tectonic_region',
                                  'magnitude_scaling_relatio': 'msr', ',lineazi': 'line_azimuth',
-                                 'vs30m': 'vs30_measured', 'hyploc': 'hypocentre_location'}
+                                 'vs30m': 'vs30_measured', 'hyploc': 'hypocentre_location',
+                                 **GsimImtForm.__additional_fieldnames__}
 
     __scalar_or_vector_help__ = 'Scalar, vector or range'  # define once here, use it below ...
 
@@ -230,9 +234,9 @@ class TrellisForm(GsimImtForm):
 #     imt = IMTField()
     plot_type = TrellisplottypeField(label='Plot type')
     # GSIM RUPTURE PARAMS:
-    magnitude = NArrayField(label='Magnitude(s)', min_arr_len=1,
+    magnitude = NArrayField(label='Magnitude(s)', min_count=1,
                             help_text=__scalar_or_vector_help__)
-    distance = NArrayField(label='Distance(s)', min_arr_len=1,
+    distance = NArrayField(label='Distance(s)', min_count=1,
                            help_text=__scalar_or_vector_help__)
     dip = FloatField(label='Dip', min_value=0., max_value=90.)
     aspect = FloatField(label='Rupture Length / Width', min_value=0.)
@@ -246,10 +250,10 @@ class TrellisForm(GsimImtForm):
                                min_value=[-180, -90], max_value=[180, 90], initial="0 0")
     hypocentre_location = NArrayField(label="Location of Hypocentre", initial='0.5 0.5',
                                       help_text='Along-strike fraction, Down-dip fraction',
-                                      min_arr_len=2, max_arr_len=2,
+                                      min_count=2, max_count=2,
                                       min_value=[0, 0], max_value=[1, 1])
     # END OF RUPTURE PARAMS
-    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., min_arr_len=1,
+    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., min_count=1,
                        initial=760.0, help_text=__scalar_or_vector_help__)
     vs30_measured = BooleanField(label=mark_safe('Is V<sub>S30</sub> measured?'),
                                  help_text='Otherwise is inferred', initial=True, required=False)
@@ -292,13 +296,17 @@ class GsimSelectionForm(BaseForm):
     '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle'''
 
     __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
-                                 'lon2': 'longitude2'}
+                                 'lon2': 'longitude2', 'gmpe': 'gsim'}
 
     __scalar_or_vector_help__ = 'Scalar, vector or range'
 
+    gsim = GsimField(required=True)  # see comment below
+    imt = IMTField(required=False)  # other keyword attrs unused as we do not display this in
+    # a standard html form
+
     model = ChoiceField(label='Model', choices=list(zip(EGSIM.tr_projects().keys(),
-                                                        EGSIM.tr_projects().keys())))
-    # GSIM RUPTURE PARAMS:
+                                                        EGSIM.tr_projects().keys())),
+                        required=False)
     longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
     latitude = FloatField(label='Latitude', min_value=-90, max_value=90, required=False)
     longitude2 = FloatField(label='Longitude 2nd point', min_value=-180, max_value=180,
@@ -366,7 +374,11 @@ class GmdbForm(BaseForm):
 class ResidualsForm(GsimImtForm, GmdbForm):
     '''Form for residual analysis'''
 
-    plot_type = ResidualplottypeField()
+    # merge additional fieldnames (see https://stackoverflow.com/a/26853961/3526777):
+    __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
+                                 **GmdbForm.__additional_fieldnames__}
+
+    plot_type = ResidualplottypeField(required=True)
 
     def clean(self):
         return GmdbForm.clean(self)

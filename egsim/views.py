@@ -55,6 +55,7 @@ def get_tr_projects(request):
                          'selected_project': next(iter(EGSIM.tr_projects().keys()))},
                         safe=False)
 
+
 def trsel(request):
     '''view returing the page forfor the gsim tectonic region
     selection'''
@@ -109,7 +110,7 @@ class EgsimQueryView(View):
     this is usually accomplished via a form in the web page or a POST reqeust from
     the a normal query in the standard API'''
 
-    formclass = None  # if None
+    formclass = None
     EXCEPTION_CODE = 400
     VALIDATION_ERR_MSG = 'input validation error'
 
