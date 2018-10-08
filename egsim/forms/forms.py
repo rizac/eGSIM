@@ -293,16 +293,17 @@ class TrellisForm(GsimImtForm):
 
 
 class GsimSelectionForm(BaseForm):
-    '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle'''
+    '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle.
+    This form is currently only used as validator as the HTML page renderes a map.
+    '''
 
     __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
                                  'lon2': 'longitude2', 'gmpe': 'gsim'}
 
     __scalar_or_vector_help__ = 'Scalar, vector or range'
 
-    gsim = GsimField(required=True)  # see comment below
-    imt = IMTField(required=False)  # other keyword attrs unused as we do not display this in
-    # a standard html form
+    gsim = GsimField(widget=HiddenInput, required=False, initial=EGSIM.aval_gsims())
+    imt = IMTField(widget=HiddenInput, required=False, initial=EGSIM.aval_imts())
 
     model = ChoiceField(label='Model', choices=list(zip(EGSIM.tr_models().keys(),
                                                         EGSIM.tr_models().keys())),
@@ -319,6 +320,8 @@ class GsimSelectionForm(BaseForm):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa
             (the same for longitude2 and latitude2)'''
         cleaned_data = super().clean()
+        # check that params combinations are ok:
+        
         couplings = (('latitude', 'longitude'), ('longitude2', 'latitude2'))
         for (key1, key2) in couplings:
             val1, val2 = cleaned_data.get(key1, None), cleaned_data.get(key2, None)
@@ -350,8 +353,8 @@ class GmdbForm(BaseForm):
                                 initial='rrup')
 
     def clean(self):
-        '''Cleans this field performing the necessary gmdb selection (filtering),
-        if filter/selection parameters are provided'''
+        '''Cleans this Form checking that selection_min and selection_max parameter
+        values, if provided, conform to the expected type of selection (e.g., float, datetime)'''
         cleaned_data = super().clean()
         min_, max_, sel_ = 'selection_min', 'selection_max', 'selection'
         if sel_ not in cleaned_data or not cleaned_data[sel_]:

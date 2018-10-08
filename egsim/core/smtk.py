@@ -27,6 +27,8 @@ def get_gsims(params):
     '''Computes the selection from the given already validated params and returns a filtered
     list of gsim names'''
     # params:
+    GSIM = 'gsim'  # pylint: disable=invalid-name
+    IMT = 'imt'  # pylint: disable=invalid-name
     MODEL = 'model'  # pylint: disable=invalid-name
     LAT = 'latitude'  # pylint: disable=invalid-name
     LON = 'longitude'  # pylint: disable=invalid-name
@@ -35,18 +37,25 @@ def get_gsims(params):
     TRT = 'trt'  # pylint: disable=invalid-name
 
     # FIXME: load_share() should be improved:
+    gsims = params[GSIM]
+    if gsims and params.get(IMT, None):
+        chosen_imts = set(params[IMT])
+        gsims = [gsim for gsim in gsims if chosen_imts & EGSIM.imtsof(gsim)]
 
-    trts = EGSIM.aval_trts() if TRT not in params else set(params[TRT])
-    model_name = params.get(MODEL, None)
-    if model_name is not None:
-        # Instantiate the selection object with a database as argument:
-        trts = get_feature_properties(EGSIM.tr_models()[model_name],
-                                      lon0=params[LON],
-                                      lat0=params[LAT],
-                                      trts=params[TRT],
-                                      lon1=params.get(LON2, None),
-                                      lat1=params.get(LAT2, None), key='OQ_TRT')
-    return [gsim for gsim in EGSIM.aval_gsims() if EGSIM.trtof(gsim) in trts]
+    if gsims:
+        trts = set(params.get(TRT, [])) or EGSIM.aval_trts()
+        model_name = params.get(MODEL, None)
+        if model_name is not None:
+            # Instantiate the selection object with a database as argument:
+            trts = get_feature_properties(EGSIM.tr_models()[model_name],
+                                          lon0=params[LON],
+                                          lat0=params[LAT],
+                                          trts=params[TRT],
+                                          lon1=params.get(LON2, None),
+                                          lat1=params.get(LAT2, None), key='OQ_TRT')
+        gsims = [gsim for gsim in gsims if EGSIM.trtof(gsim) in trts]
+
+    return gsims
 
 
 def get_trellis(params):

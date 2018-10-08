@@ -3,8 +3,8 @@ Vue.component('trmap', {
     data: function(){
         return {
             'id': 'tr_map_id',
-            'selectedProject': undefined, //name of selected project
-            'projects': {},  //object of project name mapped to geojson data
+            'selectedModel': undefined, //name of selected tecttonic region model (e.g. SHARE)
+            'models': {},  //object of model names name mapped to geojson data
             'map': undefined,
             'layersControl': undefined,
             'overlays': {},  // object of layer name (tectonic region) => leaflet layer
@@ -13,9 +13,9 @@ Vue.component('trmap', {
         }
     },
     template:`<div class='flex-direction-col'>
-        <select v-model='selectedProject' class='form-control mb-2'>
-            <option v-for='project in projectNames' :key='project' v-bind:value="project">
-                {{ project }}
+        <select v-model='selectedModel' class='form-control mb-2'>
+            <option v-for='mod in modelNames' :key='mod'>
+                {{ mod }}
             </option>
         </select>
         <div :id='id' class='flexible'></div>
@@ -24,22 +24,22 @@ Vue.component('trmap', {
          if(this.eventbus){
              this.eventbus.$on('postresponse', (response, isError) => {
                  if ((response.config.url == this.initurl) && !isError){
-                     this.$set(this, 'projects', response.data.projects);
-                     this.$set(this, 'selectedProject', response.data.selected_project || Object.keys(response.data.projects)[0]);
+                     this.$set(this, 'models', response.data.models);
+                     this.$set(this, 'selectedModel', response.data.selected_model || Object.keys(response.data.models)[0]);
                  }
              });
              this.eventbus.$emit('postrequest', this.initurl);
          }
     },
     watch:{
-        selectedProject: function(oldVal, newVal){
+        selectedModel: function(oldVal, newVal){
             if(newVal != oldVal){
                 this.$nextTick(this.updateDOM);  // executed after every part of the DOM has rendered, inlcuding mounted() below
             }
         }
     },
     mounted: function(){
-        // projects: object of names (string) mapped to the geojson featurecollection object:
+        // models: object of names (string) mapped to the geojson featurecollection object:
         // { "type": 'FeatureCollection',
         //   "features": [
         //        {
@@ -66,8 +66,8 @@ Vue.component('trmap', {
 //        var layerLabels = L.esri.basemapLayer(layerName + 'Labels');
 //        map.addLayer(layerLabels);
 
-        // instanitate a layer control (the button on the top-right corner for showing/hiding overlays
-        // overlays will be added when setting the project
+        // instantiate a layer control (the button on the top-right corner for showing/hiding overlays
+        // overlays will be added when setting the tr model
         this.$set(this, 'layersControl', L.control.layers({}, {}, {collapsed:false}).addTo(map));  // https://gis.stackexchange.com/a/68243
         // note above: collapsed:false makes the legend control visible. This does not work though in 100% of the cases,
         // so see in updateDom a hack for solving this problem (remove control height, if set)
@@ -84,8 +84,8 @@ Vue.component('trmap', {
                     this.openPopup(event, response.data);
                 }
             });
-            var data = {'project': this.selectedProject, 'latitude': event.latlng.lat,
-                    'longitude': event.latlng.lng};
+            var data = {'model': this.selectedModel, 'latitude': event.latlng.lat,
+                        'longitude': event.latlng.lng};
             // get visible layers:
             var overlays = this.overlays;
             data['trt'] = Object.keys(overlays).filter(layerName => {
@@ -128,8 +128,8 @@ Vue.component('trmap', {
         },
         updateDOM: function() {
             /**
-             * Sets the overlays mapped to the given key which is a string denoting a project name
-             * key must be stored in this class projects (with relative associated shape files. See class constructor)
+             * Sets the overlays mapped to the given key which is a string denoting a model name
+             * key must be stored in this class models (with relative associated shape files. See class constructor)
              */
             var map = this.map;
             var layersControl = this.layersControl;
@@ -142,7 +142,7 @@ Vue.component('trmap', {
             });
     
             overlays = this.overlays = {};
-            var geojson = this.projects[this.selectedProject] || {};
+            var geojson = this.models[this.selectedModel] || {};
             var features = ((geojson.features || geojson) || []);
             // group features by their feature.property.OQ_TRT (openquake tectonic region type),
             // the Object featureCollections maps a OQ_TRT to a geojson featureCollection: 
@@ -188,8 +188,8 @@ Vue.component('trmap', {
          }
     },
     computed:{
-        projectNames: function(){
-            return Object.keys(this.projects);
+        modelNames: function(){
+            return Object.keys(this.models);
         }
     }
 });

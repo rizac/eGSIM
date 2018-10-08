@@ -47,9 +47,9 @@ def home(request):
 
 
 def get_tr_models(request):
-    '''returns a JSON response with all tr(tectonic region) projects for gsim selection'''
-    return JsonResponse({'projects': EGSIM.tr_models(),
-                         'selected_project': next(iter(EGSIM.tr_models().keys()))},
+    '''returns a JSON response with all tr(tectonic region) models for gsim selection'''
+    return JsonResponse({'models': EGSIM.tr_models(),
+                         'selected_model': next(iter(EGSIM.tr_models().keys()))},
                         safe=False)
 
 
