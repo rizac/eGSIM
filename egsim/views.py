@@ -48,8 +48,8 @@ def home(request):
 
 def get_tr_models(request):
     '''returns a JSON response with all tr(tectonic region) models for gsim selection'''
-    return JsonResponse({'models': EGSIM.tr_models(),
-                         'selected_model': next(iter(EGSIM.tr_models().keys()))},
+    return JsonResponse({'models': EGSIM.trmodels(),
+                         'selected_model': list(EGSIM.trmodels().keys())[0]},
                         safe=False)
 
 
@@ -99,7 +99,7 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     # Cahce session are discouraged.:
     # https://docs.djangoproject.com/en/2.0/topics/http/sessions/#using-cached-sessions
     # so for the moment let's keep this hack
-    return JsonResponse(EGSIM.jsonlist(), safe=False)
+    return JsonResponse([gsim.asjson() for gsim in EGSIM.aval_gsims().values()], safe=False)
 
 
 class EgsimQueryView(View):

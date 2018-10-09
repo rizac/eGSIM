@@ -17,6 +17,7 @@ from django.forms.fields import CharField, MultipleChoiceField, ChoiceField
 
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
+from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrellis, \
     MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, MagnitudeDistanceSpectraTrellis, \
     MagnitudeDistanceSpectraSigmaTrellis
@@ -24,6 +25,7 @@ from smtk.residuals.residual_plots import residuals_density_distribution, residu
     residuals_with_distance, residuals_with_magnitude, residuals_with_vs30, likelihood
 
 from egsim.core.utils import vectorize, EGSIM, isscalar
+from _collections import OrderedDict
 
 
 
@@ -68,50 +70,52 @@ class ArrayField(CharField):
         # three scenarios: iterable: take iterable
         # non iterable: parse [value]
         # string: split value into iterable
-        is_vector = not isscalar(value)
-        if not is_vector and isinstance(value, str):
-            value = value.strip()
-            is_vector = value[:1] == '['
-            if is_vector != (value[-1:] == ']'):
-                raise ValidationError('unbalanced brackets')
-            try:
-                value = json.loads(value if is_vector else "[%s]" % value)
-            except Exception:  # pylint: disable=broad-except
-                try:
-                    value = shlex.split(value[1:-1].strip() if is_vector else value)
-                except Exception:
-                    raise ValidationError('Input syntax error')
-
         values = []
-        for val in vectorize(value):
+        is_vector = not isscalar(value)
+
+        if value is not None:
+            if not is_vector and isinstance(value, str):
+                value = value.strip()
+                is_vector = value[:1] == '['
+                if is_vector != (value[-1:] == ']'):
+                    raise ValidationError('unbalanced brackets')
+                try:
+                    value = json.loads(value if is_vector else "[%s]" % value)
+                except Exception:  # pylint: disable=broad-except
+                    try:
+                        value = shlex.split(value[1:-1].strip() if is_vector else value)
+                    except Exception:
+                        raise ValidationError('Input syntax error')
+
+            for val in vectorize(value):
+                try:
+                    vls = self.parse(val)
+                except ValidationError:
+                    raise
+                except Exception as exc:
+                    raise ValidationError("%s: %s" % (str(val), str(exc)))
+
+                if isscalar(vls):
+                    values.append(vls)
+                else:
+                    is_vector = True  # force the return value to be list even if we have 1 elm.
+                    values.extend(vls)
+
+            # check lengths:
             try:
-                vls = self.parse(val)
-            except ValidationError:
-                raise
-            except Exception as exc:
-                raise ValidationError("%s: %s" % (str(val), str(exc)))
+                self.checkragne(len(values), self.min_count, self.max_count)
+            except ValidationError as verr:  # just re-format exception string and raise:
+                # msg should be in the form '% not in ...', remove first '%s'
+                msg = verr.message[verr.message.find(' '):]
+                raise ValidationError('number of elements (%d) %s' % (len(values), msg))
 
-            if isscalar(vls):
-                values.append(vls)
-            else:
-                is_vector = True  # force the return value to be list even if we have 1 element
-                values.extend(vls)
-
-        # check lengths:
-        try:
-            self.checkragne(len(values), self.min_count, self.max_count)
-        except ValidationError as verr:  # just re-format exception string and raise:
-            # msg should be in the form '% not in ...', remove first '%s'
-            msg = verr.message[verr.message.find(' '):]
-            raise ValidationError('number of elements (%d) %s' % (len(values), msg))
-
-        # check bounds:
-        minval, maxval = self.min_value, self.max_value
-        minval = [minval] * len(values) if isscalar(minval) else minval
-        maxval = [maxval] * len(values) if isscalar(maxval) else maxval
-        for numval, mnval, mxval in zip(values, chain(minval, repeat(None)),
-                                        chain(maxval, repeat(None))):
-            self.checkragne(numval, mnval, mxval)
+            # check bounds:
+            minval, maxval = self.min_value, self.max_value
+            minval = [minval] * len(values) if isscalar(minval) else minval
+            maxval = [maxval] * len(values) if isscalar(maxval) else maxval
+            for numval, mnval, mxval in zip(values, chain(minval, repeat(None)),
+                                            chain(maxval, repeat(None))):
+                self.checkragne(numval, mnval, mxval)
 
         return values[0] if (len(values) == 1 and not is_vector) else values
 
@@ -234,41 +238,81 @@ class PointField(NArrayField):
             raise ValidationError(_(str(exc)), code='invalid')
 
 
-class EgsimChoiceField(ChoiceField):
+
+class EgsimChoiceFieldMeta(type):
+    '''metaclass for EgsimChoiceField subclasses. Takes the class attribute _base_choices
+    and modifies it into a valid `choices` argument, and creates the dict `cls._mappings`
+    See :class:`EgsimChoiceField` documentation for details'''
+    def __init__(cls, name, bases, nmspc):
+        super(EgsimChoiceFieldMeta, cls).__init__(name, bases, nmspc)
+        base_choices, mappings = [], {}
+        if isinstance(cls._base_choices, dict):
+            mappings = cls._base_choices
+            base_choices = [(k, k) for k in cls._base_choices]
+        else:
+            two_elements = None
+            for item in cls._base_choices:
+                if two_elements is None:
+                    two_elements = len(item) == 2
+                if two_elements:
+                    base_choices.append((item[0], item[0]))
+                    mappings[item[0]] = item[1]
+                else:
+                    base_choices.append((item[0], item[1]))
+                    mappings[item[0]] = item[2]
+        cls._base_choices = base_choices
+        cls._mappings = mappings
+
+
+class EgsimChoiceField(ChoiceField, metaclass=EgsimChoiceFieldMeta):
     '''Choice field which returns a user defined object mapped to the selected item
 
-    Subclasses should implement a _base_choices CLASS attribute as list/tuple of
-    3-element iterables: [(A, B, C), ... (A, B, C)], where
-    the 1st element (A) is the actual value to be set on the model, the 2nd element (B) is the
-    human-readable name (this is django ChoiceField default behavior) **and** the 3rd element
-    is the object to be returned after validation. If a `choices` argument is passed in the
-    constructor, it must have the format above (3-elements iterable) and will override the
-    default `_base_choices` class attribute.
+    Subclasses should implement a _base_choices CLASS attribute as either:
+        1) a list/tuple of 3-element iterables:
+            [(A, B, C), ... ]
+        where the 1st element (A) is the actual value to be set on the model,
+        the 2nd element (B) is the human-readable name (this is django ChoiceField default
+        behavior) **and** the 3rd element is the object to be returned after validation.
+
+        2) A dict of where dict keys will be the field names *and* field values and the
+        dict values will be the objectw to be returned after validation. In other words,
+        a dictw of the form:
+            {A:B, ....}
+        will be treated as a list/tuple of the form (see above):
+            [(A, A, B), ... ]
+
+    *Note*: the _base_choices attribute will be modified at *class creation* (thus only once)
+    reulting into a modified _base_choices attribute and a newly creates _mappings dict.
+    See :class:`EgsimChoiceFieldMeta` above for details
     '''
     _base_choices = []
 
-    def __init__(self, **kwargs):  # * -> force the caller to use named arguments
-        choices = kwargs.pop('choices', None)
-        if choices is None:
-            choices = self._base_choices
-        self._mappings = {item[0]: item[2] for item in choices}
-        _choices = ([item[0], item[1]] for item in choices)
-        super(EgsimChoiceField, self).__init__(choices=_choices, **kwargs)
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices', self._base_choices)
+        super(EgsimChoiceField, self).__init__(**kwargs)
 
-    def map(self, value):
-        return self._mappings[value]
+    def map(self, field_value, mapped_obj):
+        '''returns the mapping for the specific value. By default, returns the third element
+        of self._base_choices[i], where i is the index such as self._base_choices[i] == value
+
+        :param value: a (usually string) value belonging to one of this field choices
+        '''
+        return mapped_obj
 
     def clean(self, value):
         # super() alone fails here. See
         # https://stackoverflow.com/a/39313448
         value = super(EgsimChoiceField, self).clean(value)  # already parsed
-        return self.map(value)
+        return self.map(value, self._mappings[value])  # pylint: disable=no-member
 
 
 class MsrField(EgsimChoiceField):
     '''A EgsimChoiceField handling the selected Magnitude Scaling Relation object'''
-    _base_choices = tuple(zip(EGSIM.aval_msr().keys(), EGSIM.aval_msr().keys(),
-                              EGSIM.aval_msr().values()))
+    _base_choices = get_available_magnitude_scalerel()
+
+    def map(self, field_value, mapped_obj):
+        '''overrides super.map in that it returns an instance from a given class'''
+        return mapped_obj()
 
 
 class TrellisplottypeField(EgsimChoiceField):
@@ -289,18 +333,29 @@ class GmdbField(EgsimChoiceField):
     # last argument is unused
     _base_choices = zip(EGSIM.gmdb_names(), EGSIM.gmdb_names(), repeat(''))
 
-    def map(self, value):
+    def map(self, field_value, mapped_obj):
         '''overrides super.map in that it does not return the third argument of _base_choices
         above but the Ground motion database lazily created only on demand because
         time-consuming'''
-        return EGSIM.gmdb(value)
+        return EGSIM.gmdb(field_value)
+
+
+class TrModelField(EgsimChoiceField):
+    '''EgsimChoiceField for Ground motion databases'''
+    # last argument is unused
+    _base_choices = EGSIM.trmodels()  # zip(EGSIM.trmodel_names(), EGSIM.trmodel_names(), repeat(''))
+
+#     def map(self, field_value, mapped_obj):
+#         '''overrides super.map in that it does not return the third argument of _base_choices
+#         above but the Tectonic region model lazily created only on demand because
+#         time-consuming'''
+#         return EGSIM.trmodel(field_value)
 
 
 class GmdbSelectionField(EgsimChoiceField):
     '''Implements the ***FILTER*** (smtk code calls it 'selection') field on a Ground motion
     database'''
-    _base_choices = zip(EGSIM.gmdb_selections(), EGSIM.gmdb_selections(),
-                        EGSIM.gmdb_selections())
+    _base_choices = zip(EGSIM.gmdb_selections().keys(), EGSIM.gmdb_selections().keys())
 
 
 class ResidualplottypeField(EgsimChoiceField):
@@ -339,8 +394,12 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
 class GsimField(MultipleChoiceWildcardField):
     '''MultipleChoiceWildcardField with default `choices` argument, if not provided'''
     def __init__(self, **kwargs):
-        kwargs.setdefault('choices', zip(EGSIM.aval_gsims(), EGSIM.aval_gsims()))
+        kwargs.setdefault('choices', zip(EGSIM.aval_gsims().keys(), EGSIM.aval_gsims().keys()))
         super(GsimField, self).__init__(**kwargs)
+
+    def to_python(self, value):
+        '''Converts each string into the mapped Egsim class'''
+        return [EGSIM.aval_gsims()[gsim] for gsim in super(GsimField, self).to_python(value)]
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
@@ -359,9 +418,10 @@ class IMTField(MultipleChoiceWildcardField):
                                "be specified with period(s)" % SA),
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, sa_periods_required=True, **kwargs):
         kwargs.setdefault('choices', zip(EGSIM.aval_imts(), EGSIM.aval_imts()))
         super(IMTField, self).__init__(**kwargs)
+        self.sa_periods_required = sa_periods_required
         self.sa_periods = []  # can be string or iterable of strings
         # strings must be numeric parsable (see NArrayField)
 
@@ -374,6 +434,8 @@ class IMTField(MultipleChoiceWildcardField):
         #     raise ValidationError(self.error_messages['invalid_list'], code='invalid_list')
         # return [str(val) for val in value]
         all_values = super().to_python(value)
+        if not self.sa_periods_required:
+            return all_values
         sastr = self.SA
         values = [v for v in all_values if v != sastr]
         if self.sa_periods:
@@ -389,8 +451,10 @@ class IMTField(MultipleChoiceWildcardField):
     def valid_value(self, value):
         """
         Validate the given value, ignoring the super method which compares to the choices
-        attribute
+        attribute if self.sa_periods_required is True
         """
+        if not self.sa_periods_required:
+            return super(IMTField, self).valid_value(value)
         try:
             imt.from_string(value)
             return True

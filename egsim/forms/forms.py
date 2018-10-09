@@ -32,7 +32,8 @@ from smtk.database_visualiser import DISTANCES
 from egsim.core import yaml_load
 from egsim.core.utils import vectorize, EGSIM, isscalar
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrField, \
-    PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField
+    PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField, \
+    TrModelField
 
 
 class BaseForm(Form):
@@ -164,7 +165,7 @@ class GsimImtForm(BaseForm):
     # ajax request in vue.js?
     gsim = GsimField(label='Ground Shaking Intensity Models (gsim)',
                      widget=HiddenInput,
-                     required=True)
+                     required=True)   #  returns a list of Egsim objects
     imt = IMTField(label='Intensity Measure Types (imt)',
                    widget=HiddenInput,
                    required=True)
@@ -198,23 +199,59 @@ class GsimImtForm(BaseForm):
         imt_classnames = set(imt.from_string(imtname).__class__.__name__
                              for imtname in cleaned_data.get("imt", []))
 
-        if gsims and imt_classnames:
-            invalid_imts = EGSIM.invalid_imts(gsims, imt_classnames)
-            if invalid_imts:
-                # instead of raising ValidationError, which is keyed with '__all__'
-                # we add the error keyed to the given field name `name` via `self.add_error`:
-                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-                invalid_gims = EGSIM.invalid_gsims(gsims, imt_classnames)
-                err_gsim = ValidationError(_("%(num)d gsim(s) not defined for all supplied "
-                                             "imt(s)"),
-                                           params={'num': len(invalid_gims)}, code='invalid')
-                err_imt = ValidationError(_("%(num)d imt(s) not defined for all supplied "
-                                            "gsim(s)"),
-                                          params={'num': len(invalid_imts)}, code='invalid')
-                self.add_error('gsim', err_gsim)
-                self.add_error('imt', err_imt)
+        invalid_gsims = self.invalid_gsims(gsims, imt_classnames)
+
+        if invalid_gsims:
+            # instead of raising ValidationError, which is keyed with '__all__'
+            # we add the error keyed to the given field name `name` via `self.add_error`:
+            # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+            # note: pass only invalid_gsims as the result would be equal than passing all gsims
+            # but the loop is faster:
+            invalid_imts = self.invalid_imts(invalid_gsims, imt_classnames)
+            err_gsim = ValidationError(_("%(num)d gsim(s) not defined for all supplied "
+                                         "imt(s)"),
+                                       params={'num': len(invalid_gsims)}, code='invalid')
+            err_imt = ValidationError(_("%(num)d imt(s) not defined for all supplied "
+                                        "gsim(s)"),
+                                      params={'num': len(invalid_imts)}, code='invalid')
+            self.add_error('gsim', err_gsim)
+            self.add_error('imt', err_imt)
+        else:
+            # replace Egsims objects with strings, as methods using this form/validator
+            # want strings (e.g. trellis, residuals):
+            cleaned_data["gsim"] = [_.name for _ in gsims]
 
         return cleaned_data
+
+    @classmethod
+    def invalid_imts(cls, gsims, imts):
+        '''returns a *set* of all invalid imt(s) from the given selected gsims and imts
+
+        :param gsims: iterable of Egsim objects denoting the selected gsims
+        :param gsims: iterable of strings denoting the selected imts. Strings should represent
+            the imt class name only, so e.g. 'SA', not 'SA(2.0)'
+        :return: a set of invalid imts
+        '''
+        imts = set(imts)
+        invalid_imts = set()
+        for gsim in gsims:
+            invalid_imts |= imts - gsim.imts
+
+        return invalid_imts
+
+    @classmethod
+    def invalid_gsims(cls, gsims, imts):
+        '''returns a *list* of all invalid gsim(s) from the given selected gsims and imts
+
+        :param gsims: iterable of Egsim objects denoting the selected gsims
+        :param gsims: iterable of strings denoting the selected imts
+        :return: a list of invalid gsims
+        '''
+        if not isinstance(imts, set):
+            imts = set(imts)
+#         if imts == cls._aval_imts:  # as no gsim is defined for all imts, thus return the list
+#             return list(gsims)
+        return [gsim for gsim in gsims if imts - gsim.imts]
 
 
 class TrellisForm(GsimImtForm):
@@ -300,28 +337,25 @@ class GsimSelectionForm(BaseForm):
     __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
                                  'lon2': 'longitude2', 'gmpe': 'gsim'}
 
-    __scalar_or_vector_help__ = 'Scalar, vector or range'
+    gsim = GsimField(required=False, initial=list(EGSIM.aval_gsims().keys()))
+    imt = IMTField(required=False, initial=EGSIM.aval_imts(),
+                   sa_periods_required=False)
 
-    gsim = GsimField(widget=HiddenInput, required=False, initial=EGSIM.aval_gsims())
-    imt = IMTField(widget=HiddenInput, required=False, initial=EGSIM.aval_imts())
-
-    model = ChoiceField(label='Model', choices=list(zip(EGSIM.tr_models().keys(),
-                                                        EGSIM.tr_models().keys())),
-                        required=False)
+    model = TrModelField(label='Model', required=False)
     longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
     latitude = FloatField(label='Latitude', min_value=-90, max_value=90, required=False)
     longitude2 = FloatField(label='Longitude 2nd point', min_value=-180, max_value=180,
                             required=False)
     latitude2 = FloatField(label='Latitude 2nd point', min_value=-90, max_value=90,
                            required=False)
-    trt = TrtField(label='Tectonic region type(s)', required=False)
+    trt = TrtField(label='Tectonic region type(s)', required=False, initial=EGSIM.aval_trts())
 
     def clean(self):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa
             (the same for longitude2 and latitude2)'''
         cleaned_data = super().clean()
+
         # check that params combinations are ok:
-        
         couplings = (('latitude', 'longitude'), ('longitude2', 'latitude2'))
         for (key1, key2) in couplings:
             val1, val2 = cleaned_data.get(key1, None), cleaned_data.get(key2, None)

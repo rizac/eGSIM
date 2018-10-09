@@ -19,7 +19,7 @@ from smtk.residuals.residual_plots import residuals_with_distance, likelihood
 from smtk.strong_motion_selector import SMRecordSelector
 from smtk.database_visualiser import DISTANCE_LABEL, get_magnitude_distances
 
-from egsim.core.utils import vectorize, EGSIM
+from egsim.core.utils import vectorize
 from egsim.core.shapes import get_feature_properties
 
 
@@ -36,26 +36,25 @@ def get_gsims(params):
     LON2 = 'longitude2'  # pylint: disable=invalid-name
     TRT = 'trt'  # pylint: disable=invalid-name
 
-    # FIXME: load_share() should be improved:
     gsims = params[GSIM]
     if gsims and params.get(IMT, None):
         chosen_imts = set(params[IMT])
-        gsims = [gsim for gsim in gsims if chosen_imts & EGSIM.imtsof(gsim)]
+        gsims = [gsim for gsim in gsims if chosen_imts & gsim.imts]
 
     if gsims:
-        trts = set(params.get(TRT, [])) or EGSIM.aval_trts()
-        model_name = params.get(MODEL, None)
-        if model_name is not None:
+        trts = set(params[TRT])
+        tr_model = params.get(MODEL, None)
+        if tr_model:
             # Instantiate the selection object with a database as argument:
-            trts = get_feature_properties(EGSIM.tr_models()[model_name],
+            trts = get_feature_properties(tr_model,
                                           lon0=params[LON],
                                           lat0=params[LAT],
                                           trts=params[TRT],
                                           lon1=params.get(LON2, None),
                                           lat1=params.get(LAT2, None), key='OQ_TRT')
-        gsims = [gsim for gsim in gsims if EGSIM.trtof(gsim) in trts]
+        gsims = [gsim for gsim in gsims if gsim.trt in trts]
 
-    return gsims
+    return [str(gsims) for gsim in gsims]
 
 
 def get_trellis(params):
