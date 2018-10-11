@@ -27,7 +27,8 @@ _COMMON_PARAMS = {
     'menus': OrderedDict([('home', 'Home'), ('trsel', 'Gsim selection'),
                           ('trellis', 'Trellis plots'),
                           ('gmdb', 'Ground Motion database'),
-                          ('residuals', 'Residuals'),]),
+                          ('residuals', 'Residuals'),
+                          ('apidoc', 'API documentation'),]),
     }
 
 
@@ -52,6 +53,13 @@ def get_tr_models(request):
                          'selected_model': list(EGSIM.trmodels().keys())[0]},
                         safe=False)
 
+def apidoc(request):
+    '''view for the home page (iframe in browser)'''
+    return render(request, 'apidoc.html', dict(_COMMON_PARAMS,
+                                               baseurl=request.META['HTTP_HOST']+"/query",
+                                               trellis='trellis', residuals='residuals',
+                                               gsimsel='gsims', test='testing',
+                                               form_trellis=TrellisForm))
 
 def trsel(request):
     '''view returing the page forfor the gsim tectonic region
@@ -99,7 +107,7 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     # Cahce session are discouraged.:
     # https://docs.djangoproject.com/en/2.0/topics/http/sessions/#using-cached-sessions
     # so for the moment let's keep this hack
-    return JsonResponse([gsim.asjson() for gsim in EGSIM.aval_gsims().values()], safe=False)
+    return JsonResponse([gsim.asjson() for gsim in EGSIM.aval_gsims.values()], safe=False)
 
 
 class EgsimQueryView(View):

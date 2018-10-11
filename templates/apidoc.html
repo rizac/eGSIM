@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	{% with fontawesome=False leaflet=False plotly=False %}
+		{{ block.super }}
+	{% endwith %}
+{% endblock %}
+
+{% block extra-head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/themes/prism.min.css">
+<style>
+@media print {
+    body {
+        height: initial !important;
+    }
+}
+.h1, h1 {font-size: 3rem;}
+.h2, h2 {font-size: 2.5rem;}
+.h3, h3 {font-size: 2rem;}
+.h4, h4 {font-size: 1.5rem;}
+.h5, h5 {font-size: 1.25rem;}
+.h6, h6 {font-size: 1rem;}
+pre{overflow: initial;}
+code{color: initial!important;}
+pre[class*=language-] {overflow: initial!important;} /*override prism/chrome bug hiding making pre height 28em if the code inside overflows*/
+table.paramexamples td{padding: .5rem; border:1px solid gray;}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class='flexible flex-direction-col' style='align-items:center'>
+<div class='flexible flex-direction-col text-justify px-5 py-3' style="width: 50em;max-width: 100%;overflow:visible">
+
+<h1>eGSIM API</h1>	
+
+<p>
+eGSIM is a web service for selecting and testing Ground
+Shaking Intensity Models (GSIM) in Europe on top of  
+<a target="_blank" href="https://github.com/GEMScienceTools/gmpe-smtk#gmpe-smtk">gmpe-smtk</a>,
+a Python and
+<a target="_blank" href="https://github.com/gem/oq-engine/#openquake-engine">OpenQuake</a>-based
+toolkit for analysis of strong Motions and interpretation of Ground Motion Perdiciton Equations (GMPE).
+As server-side web application programming interface (API), the goal
+of eGSIM is to provide most of the toolkit functionalities via 
+several publicly exposed endpoints (URLs) to a defined and easy to use request–response message
+system.
+</p>
+
+
+<h2 id="generalfeatures">1. General features</h2>
+<p>
+eGSIM is implemented along the lines of typical web services (see e.g. the
+<a target="_blank" href="https://www.fdsn.org/webservices/FDSN-WS-Specifications-1.1.pdf">FDSN protocol</a>):
+<i>requests</i> can be issued by a client (eGSIM user) in several ways such as e.g. command line
+applications like <code>wget</code> or inside client code with dedicated libraries
+(e.g. Python's <code>urllib.request</code>). Requests require an endpoint, i.e. an URL denoting
+a specific service, a method (GET vs POST) and usually parameters for tuning the functionality.
+The web server processes the request and returns a <i>response</i> to the client in specific
+formats described in the remainder of this document.
+</p>
+
+
+<h3 id="requestendpoints">1.1 Requests endpoints</h3> 
+<p>
+The following base URI pattern is to be used for each request:
+</p>
+<pre><code>{{ baseurl }}/&lt;service&gt;</code></pre>
+<p>
+where <code>&lt;service&gt;</code> is one of the following:
+</p>
+<ul>
+	<li><code>{{ gsimsel }}</code> for <a href="#gsimselection"> Gsim selection</a> </li>
+	<li><code>{{ trellis }}</code> for generating <a href="#trellisplots"> Trellis plots data</a> </li>
+	<li><code>{{ residuals }}</code> for <a href="#residualanalysis"> Residual analysis</a> </li>
+	<li><code>{{ test }}</code> for <a href="#testing">Testing</a> </li>
+</ul>
+
+
+<h3 id="requestmethods">1.2 Requests methods</h3>
+<p>
+eGSIM services will be invoked using a subset of REST and HTTP methods. In particular all services
+will be invoked using the HTTP GET method whenever possible. As for FDSN web services,
+the HTTP POST method might be invoked for the 
+cases where the selection parameters are potentially large in size (typically, POST request
+are used to send data to create/update a resource on the server. Unless otherwise stated,
+this is generally not the case here).
+</p>
+
+<h4>GET method</h4>
+<p>
+Requests issued with the GET method simply concatenate the parameters names and
+values directly in the URL:
+</p>
+<pre>{{ baseurl }}/&lt;service&gt;?<span class="token key atrule">name1</span>=<span class="token number">value1</span>&<span class="token key atrule">name2</span>=<span class="token number">value2</span></pre>
+
+<h4>POST method</h4>
+<p>
+Requests issued with the POST should use the usual URI pattern:
+<code>{{ baseurl }}/&lt;service&gt;</code>
+and provide the parameters set by means of additional data as text in
+<a target="_blank" href="https://en.wikipedia.org/wiki/JSON#Data_types.2C_syntax_and_example">JSON</a> or
+<a target="_blank" href="https://en.wikipedia.org/wiki/YAML#Example">YAML</a> format.
+The way the POST request has to be built with its data is responsibility of the user
+as it depends on the client software. Python for instance has libraries to convert
+<code>dict</code>s into JSON or YAML strings, or load external text files formatted in those
+languages (the libraries <code>json</code> is built-in
+and <code>PyYAML</code> can be easily installed) and the built-in <code>urllib</code> library
+for sending HTTP request whose usage is documented
+<a href='https://docs.python.org/3/howto/urllib2.html' target="_blank">here</a>. 
+</p>
+
+<h3 id="requestparameters">1.3 Request parameters</h3>
+<!-- <p>
+eGSIM supports the following parameter types:
+numeric, string, boolean, date-time, arrays (vectors) of the previous types, and numeric ranges (i.e.,
+equally spaced numeric arrays).
+
+In all parameters <b>spaces, commas (,) and colons (:) are treated as special characters</b>:
+spaces and commas act as element separators in arrays (but only the comma is valid in GET requests URLs).
+The colon acts as separator for numeric ranges 
+(e.g. "0:0.1:0.3" denotes start, step and end, resulting in the sequence of values 0, 0.1, 0.2, 0.3).
+Date-times should be input in ISO format without timezone (assuming all date times in UTC), e.g.:
+<code>2016-01-31T23:15:11</code>, <code>2016-01-31</code>.
+In GET request URLs and
+from within an &lt;input&gt; of the Web Graphical User Interface (GUI), arrays can be input with
+or without leading and trailing square brackets.
+In YAML and JSON text files, date-times and numeric ranges must always be quoted, 
+e.g.: "2016-01-31T23:15:11", "1:0.1:2".
+</p>
+<p>
+Request parameters can be input in three ways: in the URL of a GET request, in a YAML- or
+json-formatted text file in case of POST request, or via and &lt;input&gt; tag of the
+web GUI thorugh a web browser. For instance, assuming a general <code>example</code> service requiring
+three numeric parameters (dip, scalar, Vs<sub>30</sub>, array and ranges of
+magnitudes) the user input, depending on the request's method, should look like:
+</p> -->
+<p>
+Request parameters can be input in three ways: in the URL of a GET request, in a YAML- or
+JSON-formatted text file in case of POST request, or via input components of the
+web Graphical User Interface (GUI) thorugh a web browser.
+
+eGSIM supports the following parameter types:
+</p>
+<ul>
+<li>numeric
+<li>string
+<li>boolean
+<li>UTC date-time (in ISO format without timezone, e.g.:
+<code>2016-01-30T23:15:11</code> or <code>2016-01-31</code>)
+<li>arrays (vectors) of the previous types
+<li>numeric ranges (i.e., equally spaced numeric arrays) in the Matlab(c) format <code>start:step:end</code>
+(e.g. <code>0:0.1:0.3</code> results in the sequence of values 0, 0.1, 0.2, 0.3)
+</ul>
+
+<p>
+For POST requests, most types are supported in YAML and JSON <i>except</i> numeric ranges, which must be
+input as strings with quotes (e.g. <code>"0:0.1:0.3"</code>).
+JSON does <b>not</b> support also date-times, which thus need 
+to be input in the same way, e.g.: <code>"2016-01-31T23:15:00"</code> (in YAML, date-times as quoted strings are permitted
+but not mandatory).
+</p>
+<p>
+For GET request URLs, and
+from within an input component of the Web GUI,
+in all parameters <b>spaces, commas (,) and colons (:) are treated as special characters</b>:
+As already described, the colon acts as separator for numeric ranges, whereas 
+spaces and commas act as element separators in arrays (but only the comma is valid in GET requests URLs, being
+spaces not allowed by definition).
+Arrays can be input with or without leading and trailing square brackets, and no parameter value needs to be quoted.
+</p>
+<p>
+ For instance, assuming a general <code>example</code> service requiring
+three numeric parameters (dip, scalar, Vs<sub>30</sub>, array and ranges of
+magnitudes) the user input, depending on the request's method, should look like:
+</p>
+
+<table class='paramexamples shadow-sm mb-3'>
+<tr>
+	<td>GET</td>
+	<td colspan="2"><pre>{{ baseurl }}/example?dip=45&vs30=560,760&magnitude=3:0.5:5</pre></td>
+</tr>
+<tr>
+	<td rowspan="3">POST</td>
+	<td colspan="2">
+		<pre>{{ baseurl }}/example</pre>
+	</td>
+</tr>
+<tr>
+	<td>data (YAML file)</td><td>data (JSON file)</td>
+</tr>
+<tr>
+	<td><pre><code class="language-yaml">dip: 45
+vs30:
+ - 560
+ - 760
+magnitude: "3:0.5:5"
+</code></pre></td>
+	<td><pre><code class="language-json">{
+  dip: 45, 
+  vs30: [560, 760],
+  magnitude: "3:0.5:5"
+}</code></pre></td>
+</tr>
+<tr>
+	<td>Web GUI components</td>
+	<td colspan="2">
+		<div><span style='display:inline-block;width:8rem'>Dip</span> <input type="number" value="45"/></div>
+		<div><span style='display:inline-block;width:8rem'>Vs<sub>30</sub></span> <input type="text" value="560 760"/></div>
+		<div><span style='display:inline-block;width:8rem'>Magnitude</span> <input type="text" value="3:0.5:5"/></div>
+	</td>
+</table>
+
+<p>
+The full description of the parameters and their constraints will be given in each service specific
+section below.
+</p>
+
+<h3 id="responseerrors">1.4 Response errors</h3>
+<p>
+The response data type of a successfully fullfilled request depends on the service used and
+the parameter issued in the request, and will be dealt in details in the next service specific sections.
+On the other hand, unsuccessful requests might fail for several reasons. In case of client
+or server errors, such as e.g. bad or missing parameters,
+the response is always returned in JSON formatted bytes following the <a href="https://google.github.io/styleguide/jsoncstyleguide.xml#Reserved_Property_Names_in_the_error_object" target="_blank">
+google API specification</a>. Example:
+</p>
+
+<pre class="shadow-sm mb-3"><code class="language-python">
+{
+  # integer &ge;400 denoting HTTP error code:
+  code: 400,
+  # string denoting the error message associated with the code above:
+  message: "input validation error",
+  # optional array of parameter specific errors:
+  errors: [ 
+    {
+      # string denoting the parameter name:
+      domain: "magnitude",
+      # string denoting the parameter specific error message:
+      message: "This field is required.",
+      # string denoting the parameter specific error reason:
+      reason: "required"
+    },
+    ...
+  ]
+}
+</code>
+</pre>
+
+<p>
+For instance, this is code snippet modified from the
+<a href="https://docs.python.org/3/howto/urllib2.html" target="_blank">standard Python how-to reference</a>
+shows how to issue a request to a eGSIM service and catch potential errors in both Python2 and 3
+(tested with Python 2.7 and 3.6):
+</p>
+
+<pre class="shadow-sm mb-3">
+<code class="language-python">
+# imports for Python3  (comment/remove in Python2):
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
+# imports for Python2 (comment/remove in Python3):
+from urllib2 import Request, urlopen, URLError, HTTPError
+
+req = Request(URL)
+try:
+    data = urlopen(req)
+except HTTPError as e2:
+    # handle HTTP errors because of a server or client error, e.g.:
+    print("Http error %d" % e2.code)
+    # If you want to dig into details:
+    errordict = json.loads(e2.read())
+    # now you can access fields such as
+    # errordict.errors, errordict.message, ...
+except URLError as e1:
+    # handle general url errors like network errors. e.g.:
+    print("Url error. Reason: %s" % e1.reason)
+    raise
+</code>
+</pre>
+
+
+<h2 id="services">2. Services</h2>
+
+<h3 id="gsimselection">2.1 Gsim selection</h3>
+This service returns list of GSIM implemented in the OpenQuake library according to
+the query parameters defined below:
+<table></table>
+
+
+<p></p>
+<h3 id="trellisplots">2.2 Trellis plots</h3>
+<p>
+{{ form_trellis }}
+</p>
+
+<h3 id="residualanalysis">2.3 Residual analysis</h3>
+<p>
+
+</p>
+
+<h3 id="testing">2.4 Testing</h3>
+<p>
+
+</p>
+
+
+	
+</div>
+</div>
+{% endblock %}
+
+{% block after-body %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/plugins/data-uri-highlight/prism-data-uri-highlight.min.js"></script>
+{% endblock %}

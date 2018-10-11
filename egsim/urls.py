@@ -35,6 +35,7 @@ urlpatterns = [
     url(r'^service/trellis/?$', views.trellis, name='trellis'),
     url(r'^service/gmdb/?$', views.gmdb, name='gmdb'),
     url(r'^service/residuals/?$', views.residuals, name='residuals'),
+    url(r'^service/apidoc/?$', views.apidoc, name='apidoc'),
     url(r'get_init_params', views.get_init_params),
     url(r'get_tr_models', views.get_tr_models),
     url(r'get_gmdbs', views.get_gmdbs),

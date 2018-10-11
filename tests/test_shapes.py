@@ -21,7 +21,7 @@ def test_share_geojson():
     assert len(files) == 3
     geojson = to_geojson(*files)
     assert len(geojson['features']) == 432
-    trts2 = EGSIM.aval_trts()
+    trts2 = EGSIM.aval_trts
     # define the mappings between share trt and openquake trt
     mappings = {
                 'active shallow crust':  TRT.ACTIVE_SHALLOW_CRUST,  # 'Active Shallow Crust',

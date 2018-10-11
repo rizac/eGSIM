@@ -1,4 +1,6 @@
 '''
+Django form fields for eGSIM
+
 Created on 16 Sep 2018
 
 @author: riccardo
@@ -238,7 +240,6 @@ class PointField(NArrayField):
             raise ValidationError(_(str(exc)), code='invalid')
 
 
-
 class EgsimChoiceFieldMeta(type):
     '''metaclass for EgsimChoiceField subclasses. Takes the class attribute _base_choices
     and modifies it into a valid `choices` argument, and creates the dict `cls._mappings`
@@ -285,10 +286,10 @@ class EgsimChoiceField(ChoiceField, metaclass=EgsimChoiceFieldMeta):
     reulting into a modified _base_choices attribute and a newly creates _mappings dict.
     See :class:`EgsimChoiceFieldMeta` above for details
     '''
-    _base_choices = []
+    _base_choices = []  # modified at class creation, you should override it but not access it
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('choices', self._base_choices)
+        kwargs['choices'] = self._base_choices   # override if provided
         super(EgsimChoiceField, self).__init__(**kwargs)
 
     def map(self, field_value, mapped_obj):
@@ -343,19 +344,14 @@ class GmdbField(EgsimChoiceField):
 class TrModelField(EgsimChoiceField):
     '''EgsimChoiceField for Ground motion databases'''
     # last argument is unused
-    _base_choices = EGSIM.trmodels()  # zip(EGSIM.trmodel_names(), EGSIM.trmodel_names(), repeat(''))
-
-#     def map(self, field_value, mapped_obj):
-#         '''overrides super.map in that it does not return the third argument of _base_choices
-#         above but the Tectonic region model lazily created only on demand because
-#         time-consuming'''
-#         return EGSIM.trmodel(field_value)
+    _base_choices = EGSIM.trmodels()
 
 
 class GmdbSelectionField(EgsimChoiceField):
     '''Implements the ***FILTER*** (smtk code calls it 'selection') field on a Ground motion
-    database'''
-    _base_choices = zip(EGSIM.gmdb_selections().keys(), EGSIM.gmdb_selections().keys())
+    database. Returns a function which can convert (according to the given selection,
+    e.g., 'vs30', 'time') the values provided with other fields'''
+    _base_choices = EGSIM.gmdb_selection_parsers
 
 
 class ResidualplottypeField(EgsimChoiceField):
@@ -394,12 +390,12 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
 class GsimField(MultipleChoiceWildcardField):
     '''MultipleChoiceWildcardField with default `choices` argument, if not provided'''
     def __init__(self, **kwargs):
-        kwargs.setdefault('choices', zip(EGSIM.aval_gsims().keys(), EGSIM.aval_gsims().keys()))
+        kwargs.setdefault('choices', zip(EGSIM.aval_gsims.keys(), EGSIM.aval_gsims.keys()))
         super(GsimField, self).__init__(**kwargs)
 
     def to_python(self, value):
         '''Converts each string into the mapped Egsim class'''
-        return [EGSIM.aval_gsims()[gsim] for gsim in super(GsimField, self).to_python(value)]
+        return [EGSIM.aval_gsims[gsim] for gsim in super(GsimField, self).to_python(value)]
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
@@ -419,7 +415,7 @@ class IMTField(MultipleChoiceWildcardField):
     }
 
     def __init__(self, sa_periods_required=True, **kwargs):
-        kwargs.setdefault('choices', zip(EGSIM.aval_imts(), EGSIM.aval_imts()))
+        kwargs.setdefault('choices', zip(EGSIM.aval_imts, EGSIM.aval_imts))
         super(IMTField, self).__init__(**kwargs)
         self.sa_periods_required = sa_periods_required
         self.sa_periods = []  # can be string or iterable of strings
@@ -468,7 +464,7 @@ class TrtField(MultipleChoiceWildcardField):
     '''
 
     # remember! _choices is a super-class reserved attribute!!!
-    _base_choices = {i.replace(' ', '').lower(): i for i in EGSIM.aval_trts()}
+    _base_choices = {i.replace(' ', '').lower(): i for i in EGSIM.aval_trts}
 
     def __init__(self, **kwargs):
         # the available choices are the OpenQuake tectnotic regions stripped with spaces

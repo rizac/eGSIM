@@ -1,5 +1,5 @@
 '''
-Django Forms stuff for eGSIM
+Django Forms for eGSIM
 
 Created on 29 Jan 2018
 
@@ -20,12 +20,11 @@ from django.forms import Form
 from django.utils.safestring import mark_safe
 from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput,\
     HiddenInput
-from django.forms.fields import BooleanField, CharField, MultipleChoiceField, FloatField, \
+from django.forms.fields import BooleanField, CharField, FloatField, \
     ChoiceField
 # from django.core import validators
 
 from openquake.hazardlib import imt
-from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 from smtk.database_visualiser import DISTANCES
 
@@ -337,8 +336,8 @@ class GsimSelectionForm(BaseForm):
     __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
                                  'lon2': 'longitude2', 'gmpe': 'gsim'}
 
-    gsim = GsimField(required=False, initial=list(EGSIM.aval_gsims().keys()))
-    imt = IMTField(required=False, initial=EGSIM.aval_imts(),
+    gsim = GsimField(required=False, initial=list(EGSIM.aval_gsims.keys()))
+    imt = IMTField(required=False, initial=EGSIM.aval_imts,
                    sa_periods_required=False)
 
     model = TrModelField(label='Model', required=False)
@@ -348,7 +347,7 @@ class GsimSelectionForm(BaseForm):
                             required=False)
     latitude2 = FloatField(label='Latitude 2nd point', min_value=-90, max_value=90,
                            required=False)
-    trt = TrtField(label='Tectonic region type(s)', required=False, initial=EGSIM.aval_trts())
+    trt = TrtField(label='Tectonic region type(s)', required=False, initial=EGSIM.aval_trts)
 
     def clean(self):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa
@@ -393,15 +392,15 @@ class GmdbForm(BaseForm):
         min_, max_, sel_ = 'selection_min', 'selection_max', 'selection'
         if sel_ not in cleaned_data or not cleaned_data[sel_]:
             return cleaned_data
-        conversion_func = EGSIM.gmdb_selections()[cleaned_data[sel_]]
+        conversion_func = cleaned_data[sel_]
         try:
-            cleaned_data[min_] = conversion_func(cleaned_data[min_])
-        except Exception as exc:
+            cleaned_data[min_] = conversion_func(cleaned_data.get(min_, None))
+        except Exception as exc:  # pylint: disable=broad-except
             error = ValidationError(_(str(exc)), code='invalid')
             self.add_error(min_, error)
         try:
-            cleaned_data[max_] = conversion_func(cleaned_data[max_])
-        except Exception as exc:
+            cleaned_data[max_] = conversion_func(cleaned_data.get(max_, None))
+        except Exception as exc:  # pylint: disable=broad-except
             error = ValidationError(_(str(exc)), code='invalid')
             self.add_error(max_, error)
 
