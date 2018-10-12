@@ -9,6 +9,7 @@ Created on 29 Jan 2018
 import re
 import os
 import json
+from collections import OrderedDict
 from io import StringIO
 
 import yaml
@@ -21,7 +22,7 @@ from django.utils.safestring import mark_safe
 from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput,\
     HiddenInput
 from django.forms.fields import BooleanField, CharField, FloatField, \
-    ChoiceField
+    ChoiceField, MultipleChoiceField
 # from django.core import validators
 
 from openquake.hazardlib import imt
@@ -32,7 +33,10 @@ from egsim.core import yaml_load
 from egsim.core.utils import vectorize, EGSIM, isscalar
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrField, \
     PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField, \
-    TrModelField
+    TrModelField, MultipleChoiceWildcardField
+import time
+import uuid
+
 
 
 class BaseForm(Form):
@@ -153,21 +157,173 @@ class BaseForm(Form):
         # in an int (number of seconds?)
         return {name: self.fields[name].to_python(val) for name, val in self.data.items()}
 
+    @classmethod
+    def toHTML(cls):
+        def small(text):
+            return "<span style='color:gray;font-size=smaller'>%s</span>" % text
+
+        thead = ["Name<br>%s" % small('Alternative name'), "Description", "Min", "Max",
+                 "Optional"]
+        tbody = []
+        # reverse key value paris in additional fieldnames and use the reversed dict afn:
+        afn = {val: key for key, val in getattr(cls, '__additional_fieldnames__', {}).items()}
+
+        notes = []
+
+        def addnote(text):
+            '''Adds a note and returns the anchor to it'''
+            for note in notes:
+                if note['text'] == text:
+                    return note['anchor']
+            id_ = cls.__name__ + "note" + str(uuid.uuid4())
+            num = len(notes) + 1
+            note = {'text': text,
+                    'html': '<tr><td colspan="%d" id="%s"><small>note %d: %s</small></td></tr>' %
+                    (len(thead), id_, num, text),
+                    'anchor': '<a href="#%s">see note %d</a>' % (id_, num)}
+            notes.append(note)
+            return notes[-1]['anchor']
+
+        for name, field in cls.declared_fields.items():  # pylint: disable=no-member
+
+            line = []
+            optname = afn.get(name, '')
+            line.append("%s%s" % (name, "" if not optname else '<br>%s' % small(optname)))
+
+            typ, defval, minval, maxval = '', field.initial, \
+                getattr(field, 'min_value', ''), \
+                getattr(field, 'max_value', '')
+
+            desc = "%s%s" % (field.label or '',
+                             "" if not field.help_text else " (%s)" % field.help_text)
+
+            if isinstance(field, ChoiceField):
+                multi = isinstance(field, MultipleChoiceField)
+                choices = OrderedDict(field.choices)
+                if multi:  # if multi, asn default is 'a;;', do not print all choices
+                    # in the default column:
+                    if not isscalar(defval) and sorted(defval) == sorted(choices.keys()):
+                        defval = 'All choosable values'
+
+                typ = '%s choosable from' % ('One or more values' if multi else 'A value')
+
+                if len(choices) > 30:
+                    typ += ' a list of %d possible values (too long to show)' % len(choices)
+                else:
+                    typ += ':<br>'
+                    # choices is a list of django ChoiceField values and in brackets
+                    # the label used, but if the label is the same avoid printing twice the same
+                    # value. Actually, relax the conditions, the equality is if the two strings
+                    # are the same by replacing spaces with undeerscores and the case,
+                    # so that 'A b' == 'a_b'
+                    def equals(a, b):
+                        return a.lower().replace(' ', '_') == b.lower().replace(' ', '_')
+
+                    printedchoices = ['%s%s' % (k, '' if equals(v, k) else " (%s)" % v)
+                                      for k, v in choices.items()]
+
+                    if len(printedchoices) == 1:
+                        typ = 'Currently, only one choice is implemented: %s' % printedchoices[0]
+                    else:
+                        # this might raise if printedchoices has no element, which is what we
+                        # want as a ChoiceField needs choices
+                        typ += ", ".join(printedchoices[:-1]) + ' or %s' % printedchoices[-1]
+
+                desc = typ if not desc else "%s. %s" % (desc, typ)
+
+                if isinstance(field, MultipleChoiceWildcardField):
+                    desc += "<br>" + \
+                        addnote('In URLs (GET request) or YAML/JSON data (POST requests), '
+                                'the value can be supplied as string with special '
+                                'characters e.g.:'
+                                '* (meaning: zero or more characters) or '
+                                '? (meaning: any single character). See '
+                                '<a href="https://docs.python.org/3/library/fnmatch.html" '
+                                'target="_blank">here</a> for details')
+
+            optional = ''
+            if defval is not None or not field.required:
+                # &#10004; is the checkmark. Works in FF and Chrome.
+                # In case of problems, type: 'Yes':
+                optional = '&#10004;'
+                if defval is not None:
+                    optional += "<br>Default: %s" % str(defval)
+
+            line.extend([desc,
+                         '' if minval is None else str(minval),
+                         '' if maxval is None else str(maxval),
+                         optional])
+
+            tbody.append("<td>%s</td>" % "</td><td>".join(line))
+
+        return ("<table class='form-%s'><thead><tr><td>%s</td></tr></thead>"
+                "<tbody><tr>%s</tr></tbody><tfoot>%s</tfoot></table>") % \
+            (cls.__name__,
+             "</td><td>".join(thead),
+             "</tr><tr>".join(tbody),
+             "".join(note['html'] for note in notes))
+
+
+class GsimSelectionForm(BaseForm):
+    '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle.
+    This form is currently only used as validator as the HTML page renderes a map.
+    '''
+
+    __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
+                                 'lon2': 'longitude2', 'gmpe': 'gsim'}
+
+    gsim = GsimField(required=False, initial=list(EGSIM.aval_gsims.keys()))
+    imt = IMTField(required=False, initial=EGSIM.aval_imts,
+                   sa_periods_required=False)
+
+    model = TrModelField(label='Tectonic region model', required=False)
+    longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
+    latitude = FloatField(label='Latitude', min_value=-90, max_value=90, required=False)
+    longitude2 = FloatField(label='Longitude 2nd point', min_value=-180, max_value=180,
+                            required=False)
+    latitude2 = FloatField(label='Latitude 2nd point', min_value=-90, max_value=90,
+                           required=False)
+    trt = TrtField(label='Tectonic region type(s)', required=False, initial=EGSIM.aval_trts)
+
+    def clean(self):
+        '''Checks that if longitude is provided, also latitude is provided, and vice versa
+            (the same for longitude2 and latitude2)'''
+        cleaned_data = super().clean()
+
+        # check that params combinations are ok:
+        couplings = (('latitude', 'longitude'), ('longitude2', 'latitude2'))
+        for (key1, key2) in couplings:
+            val1, val2 = cleaned_data.get(key1, None), cleaned_data.get(key2, None)
+            if val1 is None and val2 is not None:
+                # instead of raising ValidationError, which is keyed with '__all__'
+                # we add the error keyed to the given field name `name` via `self.add_error`:
+                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+                error = ValidationError(_("missing value"), code='missing')
+                self.add_error(key1, error)
+            elif val1 is not None and val2 is None:
+                error = ValidationError(_("missing value"), code='missing')
+                self.add_error(key2, error)
+
+        return cleaned_data
+
 
 class GsimImtForm(BaseForm):
     '''Base form for any form needing (At least) Gsim+Imt selections'''
 
-    __additional_fieldnames__ = {'gmpe': 'gsim'}
+    __additional_fieldnames__ = {'gmpe': 'gsim', 'sap': 'sa_periods'}
 
     # fields (not used for rendering, just for validation): required is True by default
     # FIXME: do we provide choices, as actually we are rendering the component with an
     # ajax request in vue.js?
-    gsim = GsimField(label='Ground Shaking Intensity Models (gsim)',
-                     widget=HiddenInput,
-                     required=True)   #  returns a list of Egsim objects
-    imt = IMTField(label='Intensity Measure Types (imt)',
-                   widget=HiddenInput,
-                   required=True)
+    gsim = GsimField(widget=HiddenInput, required=True)
+    imt = IMTField(widget=HiddenInput, required=True)
+    sa_periods = NArrayField(label="The Spectral Acceleration (SA) period(s)",
+                             required=False, widget=HiddenInput,
+                             help_text=("Required only if SA is a selected "
+                                        "Intensity Measure Type. Alternatively, you can "
+                                        "ignore this parameter but each SA must be supplied "
+                                        "with its period in parentheses, "
+                                        "e.g: SA(0.1) SA(0.2)"))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -257,23 +413,19 @@ class TrellisForm(GsimImtForm):
     '''Form for Trellis plot generation'''
 
     # merge additional fieldnames (see https://stackoverflow.com/a/26853961/3526777):
-    __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distances',
+    __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distance',
                                  'tr': 'tectonic_region',
-                                 'magnitude_scaling_relatio': 'msr', ',lineazi': 'line_azimuth',
+                                 'msr': 'magnitude_scalerel', 'lineazi': 'line_azimuth',
                                  'vs30m': 'vs30_measured', 'hyploc': 'hypocentre_location',
                                  **GsimImtForm.__additional_fieldnames__}
-
-    __scalar_or_vector_help__ = 'Scalar, vector or range'  # define once here, use it below ...
 
     # fields (not used for rendering, just for validation): required is True by default
 #     gsim = GsimField()
 #     imt = IMTField()
     plot_type = TrellisplottypeField(label='Plot type')
     # GSIM RUPTURE PARAMS:
-    magnitude = NArrayField(label='Magnitude(s)', min_count=1,
-                            help_text=__scalar_or_vector_help__)
-    distance = NArrayField(label='Distance(s)', min_count=1,
-                           help_text=__scalar_or_vector_help__)
+    magnitude = NArrayField(label='Magnitude(s)', min_count=1)
+    distance = NArrayField(label='Distance(s)', min_count=1)
     dip = FloatField(label='Dip', min_value=0., max_value=90.)
     aspect = FloatField(label='Rupture Length / Width', min_value=0.)
     tectonic_region = CharField(label='Tectonic Region Type',
@@ -281,7 +433,7 @@ class TrellisForm(GsimImtForm):
     rake = FloatField(label='Rake', min_value=-180., max_value=180., initial=0.)
     ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0., initial=0.)
     strike = FloatField(label='Strike', min_value=0., max_value=360., initial=0.)
-    msr = MsrField(label='Magnitude Scaling Relation', initial="WC1994")
+    magnitude_scalerel = MsrField(label='Magnitude Scaling Relation', initial="WC1994")
     initial_point = PointField(label="Location on Earth", help_text='Longitude Latitude',
                                min_value=[-180, -90], max_value=[180, 90], initial="0 0")
     hypocentre_location = NArrayField(label="Location of Hypocentre", initial='0.5 0.5',
@@ -290,7 +442,7 @@ class TrellisForm(GsimImtForm):
                                       min_value=[0, 0], max_value=[1, 1])
     # END OF RUPTURE PARAMS
     vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., min_count=1,
-                       initial=760.0, help_text=__scalar_or_vector_help__)
+                       initial=760.0)
     vs30_measured = BooleanField(label=mark_safe('Is V<sub>S30</sub> measured?'),
                                  help_text='Otherwise is inferred', initial=True, required=False)
     line_azimuth = FloatField(label='Azimuth of Comparison Line',
@@ -324,49 +476,6 @@ class TrellisForm(GsimImtForm):
                 error = ValidationError(_("value must be scalar, empty or a %(num)d-elements "
                                           "vector"), params={'num': len(vs30)}, code='invalid')
                 self.add_error(name, error)
-
-        return cleaned_data
-
-
-class GsimSelectionForm(BaseForm):
-    '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle.
-    This form is currently only used as validator as the HTML page renderes a map.
-    '''
-
-    __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
-                                 'lon2': 'longitude2', 'gmpe': 'gsim'}
-
-    gsim = GsimField(required=False, initial=list(EGSIM.aval_gsims.keys()))
-    imt = IMTField(required=False, initial=EGSIM.aval_imts,
-                   sa_periods_required=False)
-
-    model = TrModelField(label='Model', required=False)
-    longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
-    latitude = FloatField(label='Latitude', min_value=-90, max_value=90, required=False)
-    longitude2 = FloatField(label='Longitude 2nd point', min_value=-180, max_value=180,
-                            required=False)
-    latitude2 = FloatField(label='Latitude 2nd point', min_value=-90, max_value=90,
-                           required=False)
-    trt = TrtField(label='Tectonic region type(s)', required=False, initial=EGSIM.aval_trts)
-
-    def clean(self):
-        '''Checks that if longitude is provided, also latitude is provided, and vice versa
-            (the same for longitude2 and latitude2)'''
-        cleaned_data = super().clean()
-
-        # check that params combinations are ok:
-        couplings = (('latitude', 'longitude'), ('longitude2', 'latitude2'))
-        for (key1, key2) in couplings:
-            val1, val2 = cleaned_data.get(key1, None), cleaned_data.get(key2, None)
-            if val1 is None and val2 is not None:
-                # instead of raising ValidationError, which is keyed with '__all__'
-                # we add the error keyed to the given field name `name` via `self.add_error`:
-                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-                error = ValidationError(_("missing value"), code='missing')
-                self.add_error(key1, error)
-            elif val1 is not None and val2 is None:
-                error = ValidationError(_("missing value"), code='missing')
-                self.add_error(key2, error)
 
         return cleaned_data
 

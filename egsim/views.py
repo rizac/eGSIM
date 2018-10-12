@@ -59,7 +59,9 @@ def apidoc(request):
                                                baseurl=request.META['HTTP_HOST']+"/query",
                                                trellis='trellis', residuals='residuals',
                                                gsimsel='gsims', test='testing',
-                                               form_trellis=TrellisForm))
+                                               form_trellis=TrellisForm.toHTML(),
+                                               form_residuals=ResidualsForm.toHTML(),
+                                               form_gsims=GsimSelectionForm.toHTML()))
 
 def trsel(request):
     '''view returing the page forfor the gsim tectonic region

@@ -226,8 +226,8 @@ class NArrayField(ArrayField):
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 class PointField(NArrayField):
     '''NArrayField which validates a 2-element iterable and returns an openquake Point'''
-    def __init__(self, **kwargs):
-        super(PointField, self).__init__(min_count=2, max_count=3, **kwargs)
+    def __init__(self, **kwargs):  # FIXME: implement depth? should be >0 in case ?
+        super(PointField, self).__init__(min_count=2, max_count=2, **kwargs)
 
     def clean(self, value):
         '''Converts the given value to a :class:` openquake.hazardlib.geo.point.Point` object.
@@ -391,6 +391,7 @@ class GsimField(MultipleChoiceWildcardField):
     '''MultipleChoiceWildcardField with default `choices` argument, if not provided'''
     def __init__(self, **kwargs):
         kwargs.setdefault('choices', zip(EGSIM.aval_gsims.keys(), EGSIM.aval_gsims.keys()))
+        kwargs.setdefault('label', 'Ground Shaking Intensity Model(s)')
         super(GsimField, self).__init__(**kwargs)
 
     def to_python(self, value):
@@ -416,6 +417,7 @@ class IMTField(MultipleChoiceWildcardField):
 
     def __init__(self, sa_periods_required=True, **kwargs):
         kwargs.setdefault('choices', zip(EGSIM.aval_imts, EGSIM.aval_imts))
+        kwargs.setdefault('label', 'Intensity Measure Type(s)')
         super(IMTField, self).__init__(**kwargs)
         self.sa_periods_required = sa_periods_required
         self.sa_periods = []  # can be string or iterable of strings
@@ -458,27 +460,28 @@ class IMTField(MultipleChoiceWildcardField):
             return False
 
 
-class TrtField(MultipleChoiceWildcardField):
-    '''MultipleChoiceWildcardField field which returns a tuple of Trelliplot classes
-    from its clean() method (overridden)
+class TrtField(MultipleChoiceWildcardField, metaclass=EgsimChoiceFieldMeta):
+    '''MultipleChoiceWildcardField field which also bahaves as kind of EgsimChoiceField
     '''
 
-    # remember! _choices is a super-class reserved attribute!!!
-    _base_choices = {i.replace(' ', '').lower(): i for i in EGSIM.aval_trts}
+    # remember: first item is the Django value, second is the Django label, third is
+    # the Egsim value that will be returned from clean. Basically, use internally the tectonic
+    # region names without spaces, and return a OpenQuake tectonic region name (with spaces)
+    # Note that this class could have overridden both MultipleChoiceWildcardField and
+    # EgsimChoiceField but I suspect we should have needed even more time to adjust which
+    # superclass to call
+    _base_choices = zip(EGSIM.aval_trts.keys(), EGSIM.aval_trts.values(),
+                        EGSIM.aval_trts.values())
 
     def __init__(self, **kwargs):
-        # the available choices are the OpenQuake tectnotic regions stripped with spaces
-        # and with no uppercase,
-        # mapped to the OpenQuake tectonic region for visualization purposes (not used for the
-        # moment as this field is not rendered in django)
-        kwargs.setdefault('choices', self._base_choices.items())
+        # __init__ is NEEDED to replicate what we do in EgsimChoiceField as we do not inheit it
+        kwargs['choices'] = self._base_choices
         super(TrtField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''validates the value (list) allowing for standard OQ tectonic region names (with
-        spaces as well as their corresponding -space-removed, lowercased versions'''
+        '''Replaces any internal selected tectonic region name (in `EGSIM.val_trts.keys()`) with
+        their standard Openquake tectonic region name (basically the same as the selected name,
+        with spacing replacing the underscores and no lower case)'''
         if value is None:
             return value
-        keys = [v if v in self._base_choices else v.replace(' ', '').lower() for v in value]
-        super().clean(keys)
-        return [self._base_choices[k] for k in keys]  # return in any case a list of OQ tr's
+        return [self._mappings[v] for v in value]  # pylint: disable=no-member

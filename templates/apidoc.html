@@ -9,11 +9,18 @@
 {% block extra-head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/themes/prism.min.css">
 <style>
-@media print {
+@media print {  /* https://stackoverflow.com/a/28441659 */
+	div { float: none !important; position: static !important; display: block !important; 
+          box-sizing: content-box !important; width: initial !important; max-width: initial !important;
+    }
     body {
         height: initial !important;
+        font-size: 1.2rem !important;
     }
+    /* h2 {page-break-before: always !important;} */
+    pre, blockquote {page-break-inside: avoid !important;}
 }
+p, ul, table{font-family: Helvetica, Arial, Tahoma;}
 .h1, h1 {font-size: 3rem;}
 .h2, h2 {font-size: 2.5rem;}
 .h3, h3 {font-size: 2rem;}
@@ -23,13 +30,13 @@
 pre{overflow: initial;}
 code{color: initial!important;}
 pre[class*=language-] {overflow: initial!important;} /*override prism/chrome bug hiding making pre height 28em if the code inside overflows*/
-table.paramexamples td{padding: .5rem; border:1px solid gray;}
+table td{padding: .5rem; border:1px solid gray;text-align:initial}
 </style>
 {% endblock %}
 
 {% block body %}
 <div class='flexible flex-direction-col' style='align-items:center'>
-<div class='flexible flex-direction-col text-justify px-5 py-3' style="width: 50em;max-width: 100%;overflow:visible">
+<div class='flexible flex-direction-col text-justify px-5 py-3' style="width: 50rem;max-width: 100%;overflow:visible">
 
 <h1>eGSIM API</h1>	
 
@@ -248,7 +255,7 @@ google API specification</a>. Example:
 </pre>
 
 <p>
-For instance, this is code snippet modified from the
+For instance, this code snippet modified from the
 <a href="https://docs.python.org/3/howto/urllib2.html" target="_blank">standard Python how-to reference</a>
 shows how to issue a request to a eGSIM service and catch potential errors in both Python2 and 3
 (tested with Python 2.7 and 3.6):
@@ -259,10 +266,11 @@ shows how to issue a request to a eGSIM service and catch potential errors in bo
 # imports for Python3  (comment/remove in Python2):
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
+
 # imports for Python2 (comment/remove in Python3):
 from urllib2 import Request, urlopen, URLError, HTTPError
 
-req = Request(URL)
+req = Request("write here your eGSIM endpoint URL")
 try:
     data = urlopen(req)
 except HTTPError as e2:
@@ -283,20 +291,18 @@ except URLError as e1:
 <h2 id="services">2. Services</h2>
 
 <h3 id="gsimselection">2.1 Gsim selection</h3>
-This service returns list of GSIM implemented in the OpenQuake library according to
-the query parameters defined below:
-<table></table>
+<p>
+{{ form_gsims | safe }}
+</p>
 
-
-<p></p>
 <h3 id="trellisplots">2.2 Trellis plots</h3>
 <p>
-{{ form_trellis }}
+{{ form_trellis | safe }}
 </p>
 
 <h3 id="residualanalysis">2.3 Residual analysis</h3>
 <p>
-
+{{ form_residuals | safe }}
 </p>
 
 <h3 id="testing">2.4 Testing</h3>

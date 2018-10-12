@@ -75,7 +75,9 @@ def _get_data():
         names mapped to a Egsim object
     2) all openquake available imts used by the gsims, with no repetitions (list of strings)
     3) all openquake available tectonic region types used by the gsims,
-        with no repetitions (list of strings)
+        with no repetitions (dictionary of the openquake class attributes, lower case, mapped
+        to their string value. Basically, each key is the same as each value but lowercase and
+        with spaces replaced by the underscore)
     '''
 
     _aval_imts = OrderedDict()  # this should be a set of strings, but we want it ordered ...
@@ -103,8 +105,8 @@ def _get_data():
 
     # get all TRTs: use the TRT class of openquake and get all attributes without a leading
     # underscore and mapped to a string:
-    _aval_trts = set(getattr(TRT, a) for a in dir(TRT) if a[:1] != '_'
-                     and isinstance(getattr(TRT, a), str))
+    _aval_trts = {a.lower(): getattr(TRT, a) for a in dir(TRT) if a[:1] != '_'
+                  and isinstance(getattr(TRT, a), str)}
 
     # get all gsims:
     _aval_gsims = OrderedDict()
@@ -120,7 +122,7 @@ def _get_data():
                 _aval_gsims[key] = Egsim(key, (_ for _ in sanitycheck(gsim_imts)),
                                          gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE)
 
-    return _aval_gsims, tuple(_aval_imts.keys()), tuple(_aval_trts)
+    return _aval_gsims, tuple(_aval_imts.keys()), _aval_trts
 
 
 def _convert(func):
