@@ -36,6 +36,7 @@ from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrF
     TrModelField, MultipleChoiceWildcardField
 import time
 import uuid
+import sys
 
 
 
@@ -160,47 +161,20 @@ class BaseForm(Form):
     @classmethod
     def toHTML(cls):
         '''Converts this form to an HTML table with all necessary documentation on each field'''
-        def small(text):
-            return "<span style='color:gray;font-size=smaller'>%s</span>" % text
-
-        thead = ["Name<br>%s" % small('Alternative name'), "Description", "Optional"]
+        thead = ["Name<br><span style='%s'>%s</span>" % (cls._fnotecss(), 'Alternative name'),
+                 "Description", "Optional"]
         tbody = []
         # reverse key value paris in additional fieldnames and use the reversed dict afn:
         afn = {val: key for key, val in getattr(cls, '__additional_fieldnames__', {}).items()}
 
         notes = []
 
-        def addnote(text):
-            '''Adds a note and returns the anchor to it'''
-            for note in notes:
-                if note['text'] == text:
-                    return note['anchor']
-            id_ = cls.__name__ + "note" + str(uuid.uuid4())
-            num = len(notes) + 1
-            note = {'text': text,
-                    'html': '<tr><td colspan="%d" id="%s"><small>note %d: %s</small></td></tr>' %
-                    (len(thead), id_, num, text),
-                    'anchor': '<a href="#%s">see note %d</a>' % (id_, num)}
-            notes.append(note)
-            return notes[-1]['anchor']
-
-        def ranges2html(field):
-            ret = ''
-            minval, maxval = getattr(field, 'min_value', None), getattr(field, 'max_value', None)
-            if minval is not None:
-                ret += '%s: ' % ('Min' if isscalar(minval) else 'Minima')
-                ret += str(minval)
-            if maxval is not None:
-                ret += '%s%s: ' % ('' if minval is None else '. ',
-                                   'Max' if isscalar(maxval) else 'Maxima')
-                ret += str(maxval)
-            return ret
-
         for name, field in cls.declared_fields.items():  # pylint: disable=no-member
 
             line = []
             optname = afn.get(name, '')
-            line.append("%s%s" % (name, "" if not optname else '<br>%s' % small(optname)))
+            line.append("%s%s" % (name, "" if not optname else
+                                  '<br><span style="%s">%s</span>' % (cls._fnotecss(), optname)))
 
             defval = field.initial
 
@@ -208,69 +182,26 @@ class BaseForm(Form):
                              "" if not field.help_text else " (%s)" % field.help_text)
 
             if isinstance(field, FloatField):
-                desc += "<br>Type: number. " + ranges2html(field)
+                desc += "<br>Type: number. " + cls._bounds2html(field)
             elif isinstance(field, BooleanField):
                 desc += "<br>Type: boolean (true or false)"
             elif isinstance(field, NArrayField):
-                min_count, max_count = getattr(field, 'min_count', None),\
-                    getattr(field, 'max_count', None)
-                if min_count == max_count == 1:
-                    numtype = 'number'
-                elif min_count is not None and min_count == max_count:
-                    numtype = 'numeric array of %d values' % min_count
-                elif min_count is not None and max_count is not None:
-                    numtype = 'numeric array of %d to %d values' % (min_count, max_count)
-                else:
-                    numtype = 'number, numeric array or range'
-                desc += ("<br>Type: %s. " % numtype) + ranges2html(field)
+                desc += ("<br>Type: %s. " % cls._numtype2str(field)) + cls._bounds2html(field)
 #             elif not isinstance(field, ChoiceField):
 #                 desc += '<br>ARGHHH!'
             elif isinstance(field, ChoiceField):
-                multi = isinstance(field, MultipleChoiceField)
-                choices = OrderedDict(field.choices)
-                if multi:  # if multi, asn default is 'a;;', do not print all choices
-                    # in the default column:
-                    if not isscalar(defval) and sorted(defval) == sorted(choices.keys()):
-                        defval = 'All choosable values'
-
-                choicesdoc = '%s choosable from' % ('One or more values' if multi else 'A value')
-
-                if len(choices) > 30:
-                    choicesdoc += ' a list of %d possible values (too long to show)' % \
-                        len(choices)
-                else:
-                    choicesdoc += ': '
-                    # choices is a list of django ChoiceField values and in brackets
-                    # the label used, but if the label is the same avoid printing twice the same
-                    # value. Actually, relax the conditions, the equality is if the two strings
-                    # are the same by replacing spaces with undeerscores and the case,
-                    # so that 'A b' == 'a_b'
-                    def equals(a, b):
-                        return a.lower().replace(' ', '_') == b.lower().replace(' ', '_')
-
-                    printedchoices = ['%s%s' % (k, '' if equals(v, k) else " (%s)" % v)
-                                      for k, v in choices.items()]
-
-                    if len(printedchoices) == 1:
-                        choicesdoc = 'Currently, only one choice is implemented: %s' % \
-                            printedchoices[0]
-                    else:
-                        # this might raise if printedchoices has no element, which is what we
-                        # want as a ChoiceField needs choices
-                        choicesdoc += ", ".join(printedchoices[:-1]) + \
-                            ' or %s' % printedchoices[-1]
-
+                choicesdoc, defaults2all = cls._choices2str(field)
+                if defaults2all:
+                    defval = 'All choosable values'
                 desc = choicesdoc if not desc else "%s. %s" % (desc, choicesdoc)
-
                 if isinstance(field, MultipleChoiceWildcardField):
                     desc += "<br>" + \
-                        addnote('In URLs (GET request) or YAML/JSON data (POST requests), '
-                                'the value can be supplied as string with special '
-                                'characters e.g.:'
-                                '* (meaning: zero or more characters) or '
-                                '? (meaning: any single character). See '
-                                '<a href="https://docs.python.org/3/library/fnmatch.html" '
-                                'target="_blank">here</a> for details')
+                        cls._addnote('The value can be supplied (not from the GUI) '
+                                     'as string with special characters e.g.:'
+                                     '* (matches zero or more characters) or '
+                                     '? (metches any single character). See '
+                                     '<a href="https://docs.python.org/3/library/fnmatch.html" '
+                                     'target="_blank">here</a> for details', notes)
 
             optional = ''
             if defval is not None or not field.required:
@@ -290,7 +221,114 @@ class BaseForm(Form):
             (cls.__name__,
              "</td><td>".join(thead),
              "</tr><tr>".join(tbody),
-             "".join(note['html'] for note in notes))
+             "".join('<tr><td colspan="%d">%s</td></tr>' % (len(thead), note['html'])
+                     for note in notes))
+
+    @classmethod
+    def parnames(cls):
+        '''returns an object where attributes are ALL parameters found on any Form of this
+        module'''
+        ret = OrderedDict()
+        me = sys.modules[__name__]
+        for name in dir(me):
+            obj = me.__dict__[name]
+            try:
+                if issubclass(obj, cls):
+                    for key in obj.declared_fields.keys():
+                        ret[key] = key
+            except:  # obj not a class, pass: @IgnorePep8
+                pass
+        return ret
+    ################################################################################
+    # Below private methods used in tohtml above to break it into multiple functions
+    ################################################################################
+
+    @staticmethod
+    def _bounds2html(field):
+        '''returns a field bounds to html text'''
+        ret = ''
+        minval, maxval = getattr(field, 'min_value', None), getattr(field, 'max_value', None)
+        if minval is not None:
+            ret += '%s: ' % ('Min' if isscalar(minval) else 'Minima')
+            ret += str(minval)
+        if maxval is not None:
+            ret += '%s%s: ' % ('' if minval is None else '. ',
+                               'Max' if isscalar(maxval) else 'Maxima')
+            ret += str(maxval)
+        return ret
+
+    @classmethod
+    def _addnote(cls, text, notes):
+        '''Adds a note and returns the anchor to it. `notes` is an array populated with added
+        notes'''
+        for note in notes:
+            if note['text'] == text:
+                return note['anchor']
+        id_ = cls.__name__ + "note" + str(uuid.uuid4())
+        num = len(notes) + 1
+        note = {'text': text,
+                'html': '<div id="%s" style="%s">note %d: %s</div>' %
+                (id_, cls._fnotecss(), num, text),
+                'anchor': '<a href="#%s">see note %d</a>' % (id_, num)}
+        notes.append(note)
+        return notes[-1]['anchor']
+
+    @staticmethod
+    def _fnotecss():
+        return "color:gray;font-size=.9rem"
+
+    @staticmethod
+    def _numtype2str(narrayfield):
+        '''NArrayField type to string'''
+        min_count, max_count = getattr(narrayfield, 'min_count', None),\
+            getattr(narrayfield, 'max_count', None)
+        if min_count == max_count == 1:
+            numtype = 'number'
+        elif min_count is not None and min_count == max_count:
+            numtype = 'numeric array of %d values' % min_count
+        elif min_count is not None and max_count is not None:
+            numtype = 'numeric array of %d to %d values' % (min_count, max_count)
+        else:
+            numtype = 'number, numeric array or range'
+        return numtype
+
+    @classmethod
+    def _choices2str(cls, choicefield):
+        '''Returns a choicefield description of all choices, and a boolean indicating if its
+        default value is: take possible choices'''
+        multi = isinstance(choicefield, MultipleChoiceField)
+        choices = OrderedDict(choicefield.choices)
+        choicesdoc = '%s choosable from' % ('One or more values' if multi else 'A value')
+
+        if len(choices) > 30:
+            choicesdoc += ' a list of %d possible values (too long to show)' % \
+                len(choices)
+        else:
+            choicesdoc += ': '
+            # choices is a list of django ChoiceField values and in brackets
+            # the label used, but if the label is the same avoid printing twice the same
+            # value. Actually, relax the conditions, the equality is if the two strings
+            # are the same by replacing spaces with undeerscores and the case,
+            # so that 'A b' == 'a_b'. So call cls._equals which does this:
+            printedchoices = ['%s%s' % (k, '' if cls._equals(v, k) else " (%s)" % v)
+                              for k, v in choices.items()]
+
+            if len(printedchoices) == 1:
+                choicesdoc = 'Currently, only one choice is implemented: %s' % \
+                    printedchoices[0]
+            else:
+                # this might raise if printedchoices has no element, which is what we
+                # want as a ChoiceField needs choices
+                choicesdoc += ", ".join(printedchoices[:-1]) + \
+                    ' or %s' % printedchoices[-1]
+
+        defval = choicefield.initial
+        return choicesdoc, \
+            multi and not isscalar(defval) and sorted(defval) == sorted(choices.keys())
+
+    @staticmethod
+    def _equals(str1, str2):
+        return str1.lower().replace(' ', '_') == str2.lower().replace(' ', '_')
 
 
 class GsimSelectionForm(BaseForm):

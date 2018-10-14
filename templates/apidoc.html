@@ -7,6 +7,7 @@
 {% endblock %}
 
 {% block extra-head %}
+<link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/themes/prism.min.css">
 <style>
 @media print {  /* https://stackoverflow.com/a/28441659 */
@@ -15,12 +16,12 @@
     }
     body {
         height: initial !important;
-        font-size: 1.2rem !important;
+        font-size: 1.5rem !important;
     }
     /* h2 {page-break-before: always !important;} */
     pre, blockquote {page-break-inside: avoid !important;}
 }
-p, ul, table{font-family: Helvetica, Arial, Tahoma;}
+p, ul, table{font-family: Lato, Helvetica, Arial, Tahoma, sans-serif;}
 .h1, h1 {font-size: 3rem;}
 .h2, h2 {font-size: 2.5rem;}
 .h3, h3 {font-size: 2rem;}
@@ -36,7 +37,7 @@ table td{padding: .5rem; border:1px solid gray;text-align:initial}
 
 {% block body %}
 <div class='flexible flex-direction-col' style='align-items:center'>
-<div class='flexible flex-direction-col text-justify px-5 py-3' style="width: 50rem;max-width: 100%;overflow:visible">
+<div class='flexible flex-direction-col text-justify px-5 py-3' style="width: 48rem;max-width: 100%;overflow:visible">
 
 <h1>eGSIM API</h1>	
 
@@ -54,7 +55,7 @@ system.
 </p>
 
 
-<h2 id="generalfeatures">1. General features</h2>
+<h2 id="generalfeatures">General features</h2>
 <p>
 eGSIM is implemented along the lines of typical web services (see e.g. the
 <a target="_blank" href="https://www.fdsn.org/webservices/FDSN-WS-Specifications-1.1.pdf">FDSN protocol</a>):
@@ -67,7 +68,7 @@ formats described in the remainder of this document.
 </p>
 
 
-<h3 id="requestendpoints">1.1 Requests endpoints</h3> 
+<h3 id="requestendpoints">Requests endpoints</h3> 
 <p>
 The following base URI pattern is to be used for each request:
 </p>
@@ -83,7 +84,7 @@ where <code>&lt;service&gt;</code> is one of the following:
 </ul>
 
 
-<h3 id="requestmethods">1.2 Requests methods</h3>
+<h3 id="requestmethods">Requests methods</h3>
 <p>
 eGSIM services will be invoked using a subset of REST and HTTP methods. In particular all services
 will be invoked using the HTTP GET method whenever possible. As for FDSN web services,
@@ -116,31 +117,7 @@ for sending HTTP request whose usage is documented
 <a href='https://docs.python.org/3/howto/urllib2.html' target="_blank">here</a>. 
 </p>
 
-<h3 id="requestparameters">1.3 Request parameters</h3>
-<!-- <p>
-eGSIM supports the following parameter types:
-numeric, string, boolean, date-time, arrays (vectors) of the previous types, and numeric ranges (i.e.,
-equally spaced numeric arrays).
-
-In all parameters <b>spaces, commas (,) and colons (:) are treated as special characters</b>:
-spaces and commas act as element separators in arrays (but only the comma is valid in GET requests URLs).
-The colon acts as separator for numeric ranges 
-(e.g. "0:0.1:0.3" denotes start, step and end, resulting in the sequence of values 0, 0.1, 0.2, 0.3).
-Date-times should be input in ISO format without timezone (assuming all date times in UTC), e.g.:
-<code>2016-01-31T23:15:11</code>, <code>2016-01-31</code>.
-In GET request URLs and
-from within an &lt;input&gt; of the Web Graphical User Interface (GUI), arrays can be input with
-or without leading and trailing square brackets.
-In YAML and JSON text files, date-times and numeric ranges must always be quoted, 
-e.g.: "2016-01-31T23:15:11", "1:0.1:2".
-</p>
-<p>
-Request parameters can be input in three ways: in the URL of a GET request, in a YAML- or
-json-formatted text file in case of POST request, or via and &lt;input&gt; tag of the
-web GUI thorugh a web browser. For instance, assuming a general <code>example</code> service requiring
-three numeric parameters (dip, scalar, Vs<sub>30</sub>, array and ranges of
-magnitudes) the user input, depending on the request's method, should look like:
-</p> -->
+<h3 id="requestparameters">Request parameters</h3>
 <p>
 Request parameters can be input in three ways: in the URL of a GET request, in a YAML- or
 JSON-formatted text file in case of POST request, or via input components of the
@@ -222,13 +199,13 @@ The full description of the parameters and their constraints will be given in ea
 section below.
 </p>
 
-<h3 id="responseerrors">1.4 Response errors</h3>
+<h3 id="responseerrors">Response errors</h3>
 <p>
 The response data type of a successfully fullfilled request depends on the service used and
 the parameter issued in the request, and will be dealt in details in the next service specific sections.
 On the other hand, unsuccessful requests might fail for several reasons. In case of client
-or server errors, such as e.g. bad or missing parameters,
-the response is always returned in JSON formatted bytes following the <a href="https://google.github.io/styleguide/jsoncstyleguide.xml#Reserved_Property_Names_in_the_error_object" target="_blank">
+or server errors, such as e.g. bad or missing parameters, eGSIM always returns responses
+in JSON formatted byte strings following the <a href="https://google.github.io/styleguide/jsoncstyleguide.xml#Reserved_Property_Names_in_the_error_object" target="_blank">
 google API specification</a>. Example:
 </p>
 
@@ -263,6 +240,8 @@ shows how to issue a request to a eGSIM service and catch potential errors in bo
 
 <pre class="shadow-sm mb-3">
 <code class="language-python">
+import json
+
 # imports for Python3  (comment/remove in Python2):
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -276,7 +255,8 @@ try:
 except HTTPError as e2:
     # handle HTTP errors because of a server or client error, e.g.:
     print("Http error %d" % e2.code)
-    # If you want to dig into details:
+    # If you want to dig into details,
+    # load the JSON formatted response into a Python dict:
     errordict = json.loads(e2.read())
     # now you can access fields such as
     # errordict.errors, errordict.message, ...
@@ -288,29 +268,163 @@ except URLError as e1:
 </pre>
 
 
-<h2 id="services">2. Services</h2>
+<h2 id="services">Services</h2>
+<p>
+We call service an API module which returns a specific kind of data from a specific
+endpoint URL and given parameters.
+All services return a response whose data can be in various formats, generally
+text (CSV format) and JSON are supported for all services.
+The latter is usually supported in most programming languages and
+can be converted very easily in client's code to an Object to work with. Example are
+the Matlab <a href="https://www.mathworks.com/help/matlab/ref/jsondecode.html" target="_blank">jsonencode</a> function
+or the Python builtin json library:   
+</p>
+<pre class="shadow-sm mb-3"><code class="language-python">
+import json
+# Given an request as url string ot Request object:
+data = json.loads(urlopen(request))
+# data is now a Python dictionary representing the request's JSON data
+</code>
+</pre>
 
-<h3 id="gsimselection">2.1 Gsim selection</h3>
+
+<h3 id="gsimselection">Gsim selection</h3>
 <p>
 {{ form_gsims | safe }}
 </p>
 
-<h3 id="trellisplots">2.2 Trellis plots</h3>
+<h3 id="trellisplots">Trellis plots</h3>
+<p>Endpoint:</p>
+<pre>{{ baseurl }}/{{ trellis }}</pre>
 <p>
+<!-- The selection of GMPEs for use in probabilistic seismic hazard analysis should require an
+understanding of the manner in which each GMPE characterises the ground motion scaling with
+respect to the properties of the seismic source, and the attenuation of the motion with respect
+to distance. This information can help in the interpretation of the seismic hazard results,
+particularly those related to disaggregation, in order to best understand how the ground motion
+prediction equation can influence the seismic hazard at a site. -->
+The selection of GMPEs for use in probabilistic seismic hazard analysis should require an
+understanding of the manner in which each GMPE characterises the ground motion scaling with
+respect to the properties of the seismic source, and the attenuation of the motion with respect
+to distance. In this framewrok, eGSIM can generate (by means of the underlying smtk library)
+Trellis plot data of three types:
+<ul>
+<li> IMT vs Magnitude plots show how the ground motion intensity value scales with
+respect to the magnitude of the rupture.
+<li> IMT vs Distance plots allow to compare how the GMPEs describe the attenuation of strong
+motion with distance for a given magnitude. 
+<li> Magnitude-Distance spectra let the user understand how a
+GMPE will scale the response spectrum with magnitude and distance.
+</ul>
+<p>
+In addition to viewing the scaling of the expected ground motion from the GMPE,
+it is also possible to view the scaling of the standard deviation, for a total of six
+chosable plot types.
+</p>
+
+<h4>Request (input data)</h4>
+<p>
+A request to the Trellis plot service requires a list of GMPEs and IMTs,
+the desired plot type and few other parameters configuring the scenario (rupture), most of which are
+optional. As discussed, parameters can be given in the endpoint URL (GET method) or as
+separate text data in JSON or YAML format (POST method) and are:
+</p>
+
 {{ form_trellis | safe }}
+
+<h4>Request (output data)</h4>
+<p>
+A successful response will return the data relative to all generated Trellis plots. 
+A feature of eGSIM is the ability to generate, for each given {{ param.imt }},
+all combinations of Trellis plot for the following parameters, which can be input as 
+numeric scalar or array: 
+{{ param.magnitude }}, {{ param.distance }} and {{ param.vs30 }}:
 </p>
 
-<h3 id="residualanalysis">2.3 Residual analysis</h3>
+<table>
+<thead>
+<tr>
+	<td>Plot type</td>
+	<td>Parameter setting the x values (should be numeric array):</td>
+	<td>The number of generated plots is the prooduct of all values supplied for:</td></tr>
+</thead>
+<tbody>
+<tr><td>IMT vs. distance</td><td>{{ param.distance }}</td><td>{{ param.imt }}, {{ param.magnitude }}, {{ param.vs30 }}</td></tr>
+<tr><td>IMT vs. magnitude</td><td>{{ param.magnitude }}</td><td>{{ param.imt }}, {{ param.distance }}, {{ param.vs30 }}</td></tr>
+<tr><td>Magnitude-distance spectra</td><td>None: a set of pre-defined periods will be used</td><td>{{ param.imt }}, {{ param.magnitude }}, {{ param.distance }}, {{ param.vs30 }}</td></tr>
+</tbody>
+</table>
+
+<h5>JSON</h5>
 <p>
+Data returned in JSON format will have the following structure:
+</p>
+<pre class="shadow-sm mb-3"><code class="language-python">
+{
+  # list of x axis values, common to all Trellis plots:
+  xvalues: [2.905, 3.771, ... ],
+  # the x label, common to all x axis plot (string):
+  xlabel: "Rupture Dist. (km)",
+  # List of generated of Trellis plots:
+  figures: [ 
+    {
+      # The plot y label:
+      ylabel: "Median PGA (g)",
+      # the magnitude set for this plot, numeric
+      # (None if magnitudes are the x values):
+      magnitude: 5,
+      # the distance set for this plot, numeric
+      # (None if distances are the x values):
+      distance: None,
+      # the vs30 set for this plot, numeric:
+      vs30: 760,
+      # object of plot's GMPE names (string),
+      # mapped to their y values (numeric list):
+      yvalues:{
+      	"AkkarBommer2010": [0.3811, 0.3811, ...],
+      	"CauzziFaccioli2008": [0.283, 0.283, ...],
+      	...
+      }
+    },
+    ...
+  ]
+}
+</code>
+</pre>
+
+<!-- In IMT vs. distance plots, {{ param.distance }} needs to be input as numeric array, being
+displayed as x axis. The number of generated plots will then result from all combinations
+of {{ param.imt }}, {{ param.magnitude }}, {{ param.vs30 }}.
+In IMT vs. magnitude plots, {{ param.magnitude }} needs to be input as numeric array, being
+displayed as x axis. The number of generated plots will then result from all combinations
+of {{ param.imt }}, {{ param.distance }}, {{ param.vs30 }}.
+In Magnitude-distance plots, a set of pre-defined periods will be used as x axis values.
+The number of generated plots will then result from all combinations
+of {{ param.imt }}, {{ param.magnitude }}, {{ param.distance }} {{ param.vs30 }}.
+</p> -->
+
+<h3 id="residualanalysis">Residual analysis</h3>
+<p>
+</p>
 {{ form_residuals | safe }}
-</p>
 
-<h3 id="testing">2.4 Testing</h3>
+<h3 id="testing">Testing</h3>
 <p>
 
 </p>
 
-
+<h1>h1</h1>
+<p>paragraph</p>
+<h1>h2</h1>
+<p>paragraph</p>
+<h1>h3</h1>
+<p>paragraph</p>
+<h1>h4</h1>
+<p>paragraph</p>
+<h1>h5</h1>
+<p>paragraph</p>
+<h1>h6</h1>
+<p>paragraph</p>
 	
 </div>
 </div>
@@ -322,4 +436,43 @@ except URLError as e1:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-json.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-yaml.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/plugins/data-uri-highlight/prism-data-uri-highlight.min.js"></script>
+
+<script type='text/javascript'>
+function setupH(h, secIndex, subsecIndex){
+    var id = h.getAttribute('id');
+    if (!id){
+        id = h.innerText.replace(/ /g, '').toLowerCase();
+        h.setAttribute('id', id);
+    }
+    var strNumber = `${secIndex}`;
+    if (subsecIndex){
+    	strNumber += `.${subsecIndex}`;
+    }
+    var text = h.innerHTML;
+	var newText = `${secIndex}.${subsecIndex ? subsecIndex : ''} ${text} <a style='display:none' class="headerlink" href="#${id}" title="Permalink to this headline">&#182;</a>`;
+	h.innerHTML = newText;
+	// add mouseenter mouseleave. Note mouseout! see here:
+	// https://javascript.info/mousemove-mouseover-mouseout-mouseenter-mouseleave#extra-mouseout-when-leaving-for-a-child
+	h.onmouseenter = mouseevent => {
+	    var target = mouseevent.target;
+	    target.children[target.childElementCount-1].style.display = '';
+	};
+	h.onmouseleave = mouseevent => {
+	    var target = mouseevent.target;
+	    target.children[target.childElementCount-1].style.display = 'none';
+	};
+}
+var [secIndex, subsecIndex] = [0, 0];
+document.querySelectorAll('h2, h3').forEach((elm, index) => {
+    var tag = elm.tagName.toLowerCase();
+    if (tag == 'h2'){
+        secIndex ++;
+        subsecIndex = 0;
+    }else{
+        subsecIndex ++;
+    }
+    setupH(elm, secIndex, subsecIndex);
+});
+</script>
+
 {% endblock %}

@@ -16,7 +16,7 @@ from django.views.generic.base import View
 from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
-from egsim.forms.forms import TrellisForm, GsimSelectionForm, GmdbForm, ResidualsForm
+from egsim.forms.forms import TrellisForm, GsimSelectionForm, GmdbForm, ResidualsForm, BaseForm
 from egsim.core.utils import EGSIM
 from egsim.core import smtk as egsim_smtk
 
@@ -59,6 +59,7 @@ def apidoc(request):
                                                baseurl=request.META['HTTP_HOST']+"/query",
                                                trellis='trellis', residuals='residuals',
                                                gsimsel='gsims', test='testing',
+                                               param=BaseForm.parnames(),
                                                form_trellis=TrellisForm.toHTML(),
                                                form_residuals=ResidualsForm.toHTML(),
                                                form_gsims=GsimSelectionForm.toHTML()))
