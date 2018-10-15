@@ -1,0 +1,35 @@
+@media print {  /* https://stackoverflow.com/a/28441659 */
+	div { float: none !important; position: static !important; display: block !important; 
+          box-sizing: content-box !important; width: initial !important; max-width: initial !important;
+    }
+    body {
+        height: initial !important;
+        font-size: 30px !important;
+    }
+    /* h2 {page-break-before: always !important;} */
+    pre {page-break-inside: avoid !important;}
+    div.content{max-width: initial !important;}
+    code{border: none !important;}
+}
+p, ul, table{font-family: Lato, Helvetica, Arial, Tahoma, sans-serif;}
+ul:not(:last-child), table:not(:last-child), pre:not(:last-child) {
+	margin-bottom: 1rem; /*same margin bottom as <p> */
+}
+div.content{max-width: 48em;}
+.h1, h1 {font-size: 3rem; margin:2rem 0px 1rem} /* instead of 2.5rem, margin-bottom: .5rem */
+.h2, h2 {font-size: 2.5rem; margin:2rem 0px .75rem} /* instead of 2rem, margin-bottom: .5rem */
+.h3, h3 {font-size: 2rem; margin:1.75rem 0px .75rem} /* instead of 1.75rem, margin-bottom: .5rem */
+.h4, h4 {font-size: 1.75rem; margin:1.5rem 0px .5rem} /* instead of 1.5rem, margin-bottom: .5rem */
+.h5, h5 {font-size: 1.5rem; margin:1.25rem 0px .5rem} /* instead of 1.25rem, margin-bottom: .5rem */
+.h6, h6 {font-size: 1.25rem; margin:1rem 0px .5rem} /* instead of 1rem, margin-bottom: .5rem */
+code{color: initial!important;}
+/*pre[class*=language-] {overflow: initial!important;}*/ /*override prism/chrome bug hiding making pre height 28em if the code inside overflows*/
+table td{padding: .3rem; vertical-align:top;text-align:initial; font-size:90%}
+/* table borders: */
+table{border: 1px solid lightgray; min-width:100%;}
+table td{border-top: 1px solid #ddd;border-bottom: 1px solid #ddd;}  /* lightgray is #ccc */
+table.csv td{border-left: 1px solid #ddd; border-right: 1px solid #ddd;}
+/*add shadows to tables and pre (copied from shadow-sm of base.css:*/
+table, pre {
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+}

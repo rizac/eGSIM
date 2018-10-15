@@ -15,9 +15,9 @@
 
 {% block body %}
 <div class='flexible flex-direction-row'>
-<div id='toc' class='mx-3 mt-3'>
+<div id='toc' class='px-4 pt-3' style='overflow:auto'>
 </div>
-<div class='flexible text-justify px-3 pt-3'>
+<div class='flexible text-justify px-4 pt-3'>
 <div class='content'>
 
 <h1>eGSIM API</h1>	
@@ -94,7 +94,7 @@ as it depends on the client software. For instance, this code snippet shows how 
 <a href='https://docs.python.org/3/howto/urllib2.html' target="_blank">HOWTO Fetch Internet Resources Using The urllib Package</a> for details):
 </p>
 
-<pre class="shadow-sm"><code class="language-python">import json
+<pre><code class="language-python">import json
 import yaml  # needs PyYAML installed
 
 # imports for Python3  (comment/remove in Python2):
@@ -158,7 +158,7 @@ three numeric parameters (dip, scalar, Vs<sub>30</sub>, array and ranges of
 magnitudes) the user input, depending on the request's method, should look like:
 </p>
 
-<table class='paramexamples shadow-sm'>
+<table>
 <tr>
 	<td>GET</td>
 	<td colspan="2"><pre>{{ baseurl }}/example?dip=45&vs30=560,760&magnitude=3:0.5:5</pre></td>
@@ -218,7 +218,7 @@ in JSON formatted byte strings following the <a href="https://google.github.io/s
 google API specification</a>. Example:
 </p>
 
-<pre class="shadow-sm"><code class="language-python">{
+<pre><code class="language-python">{
   # integer &ge;400 denoting HTTP error code:
   code: 400,
   # string denoting the error message associated with the code above:
@@ -244,7 +244,7 @@ shows how to issue a request to a eGSIM service and catch potential errors in bo
 (tested with Python 2.7 and 3.6):
 </p>
 
-<pre class="shadow-sm"><code class="language-python">import json
+<pre><code class="language-python">import json
 
 # imports for Python3  (comment/remove in Python2):
 from urllib.request import Request, urlopen
@@ -329,7 +329,7 @@ The number of generated Trellis plots depends on the requested Intensity measure
 <p>
 Trellis plot data returned in JSON format will have the following structure:
 </p>
-<pre class="shadow-sm"><code class="language-python">{
+<pre><code class="language-python">{
   # list of x axis values, common to all Trellis plots:
   xvalues: [2.905, 3.771, ... ],
   # the x label, common to all x axis plot (string):
@@ -457,7 +457,7 @@ the selected plot type:
 <p>
 Trellis plot data returned in JSON format will have the following structure:
 </p>
-<pre class="shadow-sm"><code class="language-python">{
+<pre><code class="language-python">{
   # list of x axis values, common to all Trellis plots:
   xvalues: [2.905, 3.771, ... ],
   # the x label, common to all x axis plot (string):
@@ -501,9 +501,9 @@ csv table. Note blank cells, when opening csv files with client software)
 <tr>
 	<td>&nbsp;</td>
 	<td>AkkarBommer2010</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>AkkarBommer2010</td>
+	<td>AkkarBommer2010</td>
+	<td>AkkarBommer2010</td>
 	<td>&hellip;</td>
 	<td>&nbsp;</td>
 	<td>CauzziFaccioli2008</td>
@@ -512,8 +512,8 @@ csv table. Note blank cells, when opening csv files with client software)
 <tr>
 	<td>&nbsp;</td>
 	<td>PGA</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>PGA</td>
+	<td>PGA</td>
 	<td>PGV</td>
 	<td>&hellip;</td>
 	<td>&nbsp;</td>
@@ -651,8 +651,8 @@ csv table. Note blank cells, when opening csv files with client software)
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>AkkarBommer2010</td>
+	<td>PGA</td>
 	<td>Inter Event</td>
 	<td>slope:0.103</td>
 	<td>intercept:-1.281</td>
@@ -664,8 +664,8 @@ csv table. Note blank cells, when opening csv files with client software)
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>AkkarBommer2010</td>
+	<td>PGA</td>
 	<td>Total</td>
 	<td>slope:0.19</td>
 	<td>intercept:-2.209</td>
@@ -677,7 +677,7 @@ csv table. Note blank cells, when opening csv files with client software)
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
+	<td>AkkarBommer2010</td>
 	<td>PGV</td>
 	<td>Intra Event</td>
 	<td>slope:0.171</td>
@@ -786,7 +786,11 @@ csv table. Note blank cells, when opening csv files with client software)
 function setupH(h, secIndex, subsecIndex){
     var id = h.getAttribute('id');
     if (!id){
-        id = h.innerText.replace(/ /g, '').toLowerCase();
+        var id_ = id = h.innerText.replace(/ /g, '').toLowerCase();
+  		var counter = 2;
+        while (document.getElementById(id)){
+            id = id_ + counter;
+        }
         h.setAttribute('id', id);
     }
     h.setAttribute('name', id);
