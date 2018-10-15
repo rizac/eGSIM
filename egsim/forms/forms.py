@@ -195,7 +195,7 @@ class BaseForm(Form):
                     defval = 'All choosable values'
                 desc = choicesdoc if not desc else "%s. %s" % (desc, choicesdoc)
                 if isinstance(field, MultipleChoiceWildcardField):
-                    desc += "<br>" + \
+                    desc += " " + \
                         cls._addnote('The value can be supplied (not from the GUI) '
                                      'as string with special characters e.g.:'
                                      '* (matches zero or more characters) or '
@@ -209,7 +209,7 @@ class BaseForm(Form):
                 # In case of problems, type: 'Yes':
                 optional = '&#10004;'
                 if defval is not None:
-                    optional += "<br>Default: %s" % \
+                    optional += "<br><span style='white-space:nowrap'>Default: %s</span>" % \
                         (str(defval).lower() if isinstance(defval, bool) else str(defval))
 
             line.extend([desc, optional])
@@ -229,9 +229,9 @@ class BaseForm(Form):
         '''returns an object where attributes are ALL parameters found on any Form of this
         module'''
         ret = OrderedDict()
-        me = sys.modules[__name__]
-        for name in dir(me):
-            obj = me.__dict__[name]
+        thismodule = sys.modules[__name__]
+        for name in dir(thismodule):
+            obj = thismodule.__dict__[name]
             try:
                 if issubclass(obj, cls):
                     for key in obj.declared_fields.keys():
@@ -264,12 +264,11 @@ class BaseForm(Form):
         for note in notes:
             if note['text'] == text:
                 return note['anchor']
-        id_ = cls.__name__ + "note" + str(uuid.uuid4())
         num = len(notes) + 1
         note = {'text': text,
-                'html': '<div id="%s" style="%s">note %d: %s</div>' %
-                (id_, cls._fnotecss(), num, text),
-                'anchor': '<a href="#%s">see note %d</a>' % (id_, num)}
+                'html': '<div style="%s">note %d: %s</div>' %
+                (cls._fnotecss(), num, text),
+                'anchor': '<sup style="%s">see note %d</sup>' % (cls._fnotecss(), num)}
         notes.append(note)
         return notes[-1]['anchor']
 

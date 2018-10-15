@@ -8,36 +8,17 @@
 
 {% block extra-head %}
 <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
+<!-- includes css for form-related stuff (e.g. waitbar)  -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/themes/prism.min.css">
-<style>
-@media print {  /* https://stackoverflow.com/a/28441659 */
-	div { float: none !important; position: static !important; display: block !important; 
-          box-sizing: content-box !important; width: initial !important; max-width: initial !important;
-    }
-    body {
-        height: initial !important;
-        font-size: 1.5rem !important;
-    }
-    /* h2 {page-break-before: always !important;} */
-    pre, blockquote {page-break-inside: avoid !important;}
-}
-p, ul, table{font-family: Lato, Helvetica, Arial, Tahoma, sans-serif;}
-.h1, h1 {font-size: 3rem;}
-.h2, h2 {font-size: 2.5rem;}
-.h3, h3 {font-size: 2rem;}
-.h4, h4 {font-size: 1.5rem;}
-.h5, h5 {font-size: 1.25rem;}
-.h6, h6 {font-size: 1rem;}
-pre{overflow: initial;}
-code{color: initial!important;}
-pre[class*=language-] {overflow: initial!important;} /*override prism/chrome bug hiding making pre height 28em if the code inside overflows*/
-table td{padding: .5rem; border:1px solid gray;text-align:initial}
-</style>
+<link rel="stylesheet" type="text/css" href="{% static 'css/apidoc.css' %}">
 {% endblock %}
 
 {% block body %}
-<div class='flexible flex-direction-col' style='align-items:center'>
-<div class='flexible flex-direction-col text-justify px-5 py-3' style="width: 48rem;max-width: 100%;overflow:visible">
+<div class='flexible flex-direction-row'>
+<div id='toc' class='mx-3 mt-3'>
+</div>
+<div class='flexible text-justify px-3 pt-3'>
+<div class='content'>
 
 <h1>eGSIM API</h1>	
 
@@ -109,13 +90,33 @@ and provide the parameters set by means of additional data as text in
 <a target="_blank" href="https://en.wikipedia.org/wiki/JSON#Data_types.2C_syntax_and_example">JSON</a> or
 <a target="_blank" href="https://en.wikipedia.org/wiki/YAML#Example">YAML</a> format.
 The way the POST request has to be built with its data is responsibility of the user
-as it depends on the client software. Python for instance has libraries to convert
-<code>dict</code>s into JSON or YAML strings, or load external text files formatted in those
-languages (the libraries <code>json</code> is built-in
-and <code>PyYAML</code> can be easily installed) and the built-in <code>urllib</code> library
-for sending HTTP request whose usage is documented
-<a href='https://docs.python.org/3/howto/urllib2.html' target="_blank">here</a>. 
+as it depends on the client software. For instance, this code snippet shows how to build a request using Python (see 
+<a href='https://docs.python.org/3/howto/urllib2.html' target="_blank">HOWTO Fetch Internet Resources Using The urllib Package</a> for details):
 </p>
+
+<pre class="shadow-sm mb-3"><code class="language-python">import json
+import yaml  # needs PyYAML installed
+
+# imports for Python3  (comment/remove in Python2):
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
+
+# imports for Python2 (comment/remove in Python3):
+from urllib2 import Request, urlopen, URLError, HTTPError
+
+# 1) Request using the GET method:
+req = Request("write here your eGSIM endpoint URL with encoded parameters")
+
+# 2a) Request using the POST method, assuming JSON formatted file:
+with open('/path/to/my/file.json', 'r') as stream:
+    jsondata = json.load(f)
+req = Request("write here your eGSIM endpoint URL", data=jsondata)
+
+# 2b) Request using the POST method, assuming YAML or JSON formatted file
+#     (yaml is a superset of JSON and thus parses correctly also JSON files):
+with open('/path/to/my/file.yaml', 'r') as stream:
+    yamldata = yaml.safe_load(stream))
+req = Request("write here your eGSIM endpoint URL", data=yamldata)</code></pre>
 
 <h3 id="requestparameters">Request parameters</h3>
 <p>
@@ -145,9 +146,8 @@ but not mandatory).
 </p>
 <p>
 For GET request URLs, and
-from within an input component of the Web GUI,
-in all parameters <b>spaces, commas (,) and colons (:) are treated as special characters</b>:
-As already described, the colon acts as separator for numeric ranges, whereas 
+from within an input component of the Web GUI, <b>spaces, commas (,) and colons (:) might be treated as special characters</b>: 
+as already described, the colon acts as separator for numeric ranges, whereas 
 spaces and commas act as element separators in arrays (but only the comma is valid in GET requests URLs, being
 spaces not allowed by definition).
 Arrays can be input with or without leading and trailing square brackets, and no parameter value needs to be quoted.
@@ -170,7 +170,7 @@ magnitudes) the user input, depending on the request's method, should look like:
 	</td>
 </tr>
 <tr>
-	<td>data (YAML file)</td><td>data (JSON file)</td>
+	<td style='border-color:transparent'>data (YAML file)</td><td style='border-color:transparent'>data (JSON file)</td>
 </tr>
 <tr>
 	<td><pre><code class="language-yaml">dip: 45
@@ -199,18 +199,26 @@ The full description of the parameters and their constraints will be given in ea
 section below.
 </p>
 
-<h3 id="responseerrors">Response errors</h3>
+<h3 id="responsedata">Response data</h3>
 <p>
-The response data type of a successfully fullfilled request depends on the service used and
-the parameter issued in the request, and will be dealt in details in the next service specific sections.
-On the other hand, unsuccessful requests might fail for several reasons. In case of client
+The response data type of a successfully fullfilled request might depend on the service used and
+the parameter issued in the request, but all eGSIM services can return data at the least in CSV
+and JSON formatted text (bytes sequences): for client code processing response data, both formats
+are widely supported in most programming languages. For JSON, example are
+the Matlab <a href="https://www.mathworks.com/help/matlab/ref/jsondecode.html" target="_blank">jsonencode</a> function or the Python builtin <code>json</code> library. 
+Csv format has the advantage to be easily visualizable in widely used spreadsheet softwares (like e.g.
+LibreOffice). JSON is usually preferable in web applications: the eGSIM web GUI for instances
+requests data in this format. 
+</p>
+
+<p>
+Unsuccessful requests might fail for several reasons. In case of client
 or server errors, such as e.g. bad or missing parameters, eGSIM always returns responses
 in JSON formatted byte strings following the <a href="https://google.github.io/styleguide/jsoncstyleguide.xml#Reserved_Property_Names_in_the_error_object" target="_blank">
 google API specification</a>. Example:
 </p>
 
-<pre class="shadow-sm mb-3"><code class="language-python">
-{
+<pre class="shadow-sm mb-3"><code class="language-python">{
   # integer &ge;400 denoting HTTP error code:
   code: 400,
   # string denoting the error message associated with the code above:
@@ -227,9 +235,7 @@ google API specification</a>. Example:
     },
     ...
   ]
-}
-</code>
-</pre>
+}</code></pre>
 
 <p>
 For instance, this code snippet modified from the
@@ -238,9 +244,7 @@ shows how to issue a request to a eGSIM service and catch potential errors in bo
 (tested with Python 2.7 and 3.6):
 </p>
 
-<pre class="shadow-sm mb-3">
-<code class="language-python">
-import json
+<pre class="shadow-sm mb-3"><code class="language-python">import json
 
 # imports for Python3  (comment/remove in Python2):
 from urllib.request import Request, urlopen
@@ -251,7 +255,7 @@ from urllib2 import Request, urlopen, URLError, HTTPError
 
 req = Request("write here your eGSIM endpoint URL")
 try:
-    data = urlopen(req)
+    data = json.loads(urlopen(req))
 except HTTPError as e2:
     # handle HTTP errors because of a server or client error, e.g.:
     print("Http error %d" % e2.code)
@@ -263,30 +267,13 @@ except HTTPError as e2:
 except URLError as e1:
     # handle general url errors like network errors. e.g.:
     print("Url error. Reason: %s" % e1.reason)
-    raise
-</code>
-</pre>
+    raise</code></pre>
 
 
 <h2 id="services">Services</h2>
 <p>
-We call service an API module which returns a specific kind of data from a specific
-endpoint URL and given parameters.
-All services return a response whose data can be in various formats, generally
-text (CSV format) and JSON are supported for all services.
-The latter is usually supported in most programming languages and
-can be converted very easily in client's code to an Object to work with. Example are
-the Matlab <a href="https://www.mathworks.com/help/matlab/ref/jsondecode.html" target="_blank">jsonencode</a> function
-or the Python builtin json library:   
+eGSIM implements several interfaces, each providing a specific service identified by an endpoint URL.
 </p>
-<pre class="shadow-sm mb-3"><code class="language-python">
-import json
-# Given an request as url string ot Request object:
-data = json.loads(urlopen(request))
-# data is now a Python dictionary representing the request's JSON data
-</code>
-</pre>
-
 
 <h3 id="gsimselection">Gsim selection</h3>
 <p>
@@ -294,20 +281,12 @@ data = json.loads(urlopen(request))
 </p>
 
 <h3 id="trellisplots">Trellis plots</h3>
-<p>Endpoint:</p>
-<pre>{{ baseurl }}/{{ trellis }}</pre>
+<p><b>Endpoint: <code>{{ baseurl }}/{{ trellis }}</code></b></p>
 <p>
-<!-- The selection of GMPEs for use in probabilistic seismic hazard analysis should require an
-understanding of the manner in which each GMPE characterises the ground motion scaling with
-respect to the properties of the seismic source, and the attenuation of the motion with respect
-to distance. This information can help in the interpretation of the seismic hazard results,
-particularly those related to disaggregation, in order to best understand how the ground motion
-prediction equation can influence the seismic hazard at a site. -->
-The selection of GMPEs for use in probabilistic seismic hazard analysis should require an
-understanding of the manner in which each GMPE characterises the ground motion scaling with
-respect to the properties of the seismic source, and the attenuation of the motion with respect
-to distance. In this framewrok, eGSIM can generate (by means of the underlying smtk library)
-Trellis plot data of three types:
+Trellis plots provide an understanding of the manner in which each GMPE characterises the ground
+motion scaling with respect to the properties of the seismic source, and the attenuation of the
+motion with respect to distance. By means of the
+underlying gmpe-smtk library, eGSIM can generate different plot types:
 <ul>
 <li> IMT vs Magnitude plots show how the ground motion intensity value scales with
 respect to the magnitude of the rupture.
@@ -319,26 +298,22 @@ GMPE will scale the response spectrum with magnitude and distance.
 <p>
 In addition to viewing the scaling of the expected ground motion from the GMPE,
 it is also possible to view the scaling of the standard deviation, for a total of six
-chosable plot types.
+choosable plot types.
 </p>
 
 <h4>Request (input data)</h4>
 <p>
 A request to the Trellis plot service requires a list of GMPEs and IMTs,
-the desired plot type and few other parameters configuring the scenario (rupture), most of which are
+the desired plot type and the parameters configuring the scenario (rupture), most of which are
 optional. As discussed, parameters can be given in the endpoint URL (GET method) or as
 separate text data in JSON or YAML format (POST method) and are:
 </p>
 
 {{ form_trellis | safe }}
 
-<h4>Request (output data)</h4>
+<h4>Response (output data)</h4>
 <p>
-A successful response will return the data relative to all generated Trellis plots. 
-A feature of eGSIM is the ability to generate, for each given {{ param.imt }},
-all combinations of Trellis plot for the following parameters, which can be input as 
-numeric scalar or array: 
-{{ param.magnitude }}, {{ param.distance }} and {{ param.vs30 }}:
+The number of generated Trellis plots depends on the requested Intensity measure types (parameter {{ param.imt }}) <i>and</i> the parameters {{ param.magnitude }}, {{ param.distance }} and {{ param.vs30 }} (which can be given as numeric scalr or array):
 </p>
 
 <table>
@@ -346,7 +321,7 @@ numeric scalar or array:
 <tr>
 	<td>Plot type</td>
 	<td>Parameter setting the x values (should be numeric array):</td>
-	<td>The number of generated plots is the prooduct of all values supplied for:</td></tr>
+	<td>The number of generated plots is the product of all supplied values of:</td></tr>
 </thead>
 <tbody>
 <tr><td>IMT vs. distance</td><td>{{ param.distance }}</td><td>{{ param.imt }}, {{ param.magnitude }}, {{ param.vs30 }}</td></tr>
@@ -357,15 +332,14 @@ numeric scalar or array:
 
 <h5>JSON</h5>
 <p>
-Data returned in JSON format will have the following structure:
+Trellis plot data returned in JSON format will have the following structure:
 </p>
-<pre class="shadow-sm mb-3"><code class="language-python">
-{
+<pre class="shadow-sm mb-3"><code class="language-python">{
   # list of x axis values, common to all Trellis plots:
   xvalues: [2.905, 3.771, ... ],
   # the x label, common to all x axis plot (string):
   xlabel: "Rupture Dist. (km)",
-  # List of generated of Trellis plots:
+  # List of generated Trellis plots:
   figures: [ 
     {
       # The plot y label:
@@ -388,9 +362,7 @@ Data returned in JSON format will have the following structure:
     },
     ...
   ]
-}
-</code>
-</pre>
+}</code></pre>
 
 <!-- In IMT vs. distance plots, {{ param.distance }} needs to be input as numeric array, being
 displayed as x axis. The number of generated plots will then result from all combinations
@@ -413,19 +385,22 @@ of {{ param.imt }}, {{ param.magnitude }}, {{ param.distance }} {{ param.vs30 }}
 
 </p>
 
-<h1>h1</h1>
-<p>paragraph</p>
-<h1>h2</h1>
-<p>paragraph</p>
-<h1>h3</h1>
-<p>paragraph</p>
-<h1>h4</h1>
-<p>paragraph</p>
-<h1>h5</h1>
-<p>paragraph</p>
-<h1>h6</h1>
-<p>paragraph</p>
-	
+<!-- <div class='border'>
+<h1 class='border my-5'>h1</h1>
+<p  class='border my-5'>paragraph</p>
+<h2 class='border my-5'>h2</h2>
+<p  class='border my-5'>paragraph</p>
+<h3 class='border my-5'>h3</h3>
+<p  class='border my-5'>paragraph</p>
+<h4 class='border my-5'>h4</h4>
+<p  class='border my-5'>paragraph</p>
+<h5 class='border my-5'>h5</h5>
+<p  class='border my-5'>paragraph</p>
+<h6 class='border my-5'>h6</h6>
+<p  class='border my-5'>paragraph</p>
+</div> -->
+
+</div>	
 </div>
 </div>
 {% endblock %}
@@ -438,12 +413,17 @@ of {{ param.imt }}, {{ param.magnitude }}, {{ param.distance }} {{ param.vs30 }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/plugins/data-uri-highlight/prism-data-uri-highlight.min.js"></script>
 
 <script type='text/javascript'>
+/**
+ * Sets up headings (h2 and h3) numbering and the corresponding
+ * items in the div#toc
+ */
 function setupH(h, secIndex, subsecIndex){
     var id = h.getAttribute('id');
     if (!id){
         id = h.innerText.replace(/ /g, '').toLowerCase();
         h.setAttribute('id', id);
     }
+    h.setAttribute('name', id);
     var strNumber = `${secIndex}`;
     if (subsecIndex){
     	strNumber += `.${subsecIndex}`;
@@ -461,8 +441,10 @@ function setupH(h, secIndex, subsecIndex){
 	    var target = mouseevent.target;
 	    target.children[target.childElementCount-1].style.display = 'none';
 	};
+	return `${secIndex}.${subsecIndex ? subsecIndex : ''} ${text}`;
 }
 var [secIndex, subsecIndex] = [0, 0];
+var tocItemsHTML = [];
 document.querySelectorAll('h2, h3').forEach((elm, index) => {
     var tag = elm.tagName.toLowerCase();
     if (tag == 'h2'){
@@ -471,8 +453,11 @@ document.querySelectorAll('h2, h3').forEach((elm, index) => {
     }else{
         subsecIndex ++;
     }
-    setupH(elm, secIndex, subsecIndex);
+    var text = setupH(elm, secIndex, subsecIndex);
+    tocItemsHTML.push(`${subsecIndex ? '&nbsp;'.repeat(4) : ''} <a href="#${elm.getAttribute('id')}">${text}</a>`); 
 });
+document.querySelector('#toc').innerHTML = `<div>${tocItemsHTML.join('</div><div>')}</div>`;
+
 </script>
 
 {% endblock %}

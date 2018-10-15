@@ -93,11 +93,11 @@ browsers but opera and IE11 */
 .grid-col-span{grid-column: 1 / -1;}
 .grid-row-span{grid-row: 1 / -1;}
 
-h5{ /* override bootstrap */
+/* h5{ 
 	font-size: 1.2rem !important;
 	margin-bottom: .5rem !important;
 	font-weight: bold !important;
-}
+} */
 
 .bg-light{ /* override bootstrap */
 	background-color: #fafafa !important;
