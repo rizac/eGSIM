@@ -197,9 +197,6 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
     aval_gsims, aval_imts, aval_trts = _get_data()
     _trmodels = None  # dict of names mapped to a geojson colleciton (will be lazily created)
     _gmdbs = {}  # ground motion databases: name (str) -> [file_path, ground motion db obj
-    gmdb_selection_parsers = {'distance': _convert(float), 'vs30': _convert(float),
-                              'magnitude': _convert(float), 'time': _convert(strptime),
-                              'depth': _convert(float)}
 
     @classmethod
     def gmdb_names(cls):

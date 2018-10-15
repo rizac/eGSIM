@@ -205,7 +205,6 @@ def get_residuals(params):
         residuals = Likelihood(params[GSIM], params[IMT])
     else:
         residuals = Residuals(params[GSIM], params[IMT])
-
     # Compute residuals.
     residuals.get_residuals(gmdb)  # FIXME: add 'component' argument?
     # statistics = residuals.get_residual_statistics()
@@ -221,4 +220,9 @@ def get_residuals(params):
             if func == residuals_with_distance:
                 kwargs['distance_type'] = distance_type
             ret[gsim][imt] = func(**kwargs)
+
+#     import json
+#     with open('/Users/riccardo/work/gfz/projects/sources/python/egsim/tmp/data/residuals.json', 'w') as fp:
+#         json.dump(ret, fp)
+
     return ret

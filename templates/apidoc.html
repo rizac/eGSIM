@@ -94,7 +94,7 @@ as it depends on the client software. For instance, this code snippet shows how 
 <a href='https://docs.python.org/3/howto/urllib2.html' target="_blank">HOWTO Fetch Internet Resources Using The urllib Package</a> for details):
 </p>
 
-<pre class="shadow-sm mb-3"><code class="language-python">import json
+<pre class="shadow-sm"><code class="language-python">import json
 import yaml  # needs PyYAML installed
 
 # imports for Python3  (comment/remove in Python2):
@@ -158,7 +158,7 @@ three numeric parameters (dip, scalar, Vs<sub>30</sub>, array and ranges of
 magnitudes) the user input, depending on the request's method, should look like:
 </p>
 
-<table class='paramexamples shadow-sm mb-3'>
+<table class='paramexamples shadow-sm'>
 <tr>
 	<td>GET</td>
 	<td colspan="2"><pre>{{ baseurl }}/example?dip=45&vs30=560,760&magnitude=3:0.5:5</pre></td>
@@ -218,7 +218,7 @@ in JSON formatted byte strings following the <a href="https://google.github.io/s
 google API specification</a>. Example:
 </p>
 
-<pre class="shadow-sm mb-3"><code class="language-python">{
+<pre class="shadow-sm"><code class="language-python">{
   # integer &ge;400 denoting HTTP error code:
   code: 400,
   # string denoting the error message associated with the code above:
@@ -244,7 +244,7 @@ shows how to issue a request to a eGSIM service and catch potential errors in bo
 (tested with Python 2.7 and 3.6):
 </p>
 
-<pre class="shadow-sm mb-3"><code class="language-python">import json
+<pre class="shadow-sm"><code class="language-python">import json
 
 # imports for Python3  (comment/remove in Python2):
 from urllib.request import Request, urlopen
@@ -270,17 +270,12 @@ except URLError as e1:
     raise</code></pre>
 
 
-<h2 id="services">Services</h2>
-<p>
-eGSIM implements several interfaces, each providing a specific service identified by an endpoint URL.
-</p>
-
-<h3 id="gsimselection">Gsim selection</h3>
+<h2 id="gsimselection">Gsim selection</h2>
 <p>
 {{ form_gsims | safe }}
 </p>
 
-<h3 id="trellisplots">Trellis plots</h3>
+<h2 id="trellisplots">Trellis plots</h2>
 <p><b>Endpoint: <code>{{ baseurl }}/{{ trellis }}</code></b></p>
 <p>
 Trellis plots provide an understanding of the manner in which each GMPE characterises the ground
@@ -301,7 +296,7 @@ it is also possible to view the scaling of the standard deviation, for a total o
 choosable plot types.
 </p>
 
-<h4>Request (input data)</h4>
+<h3>Request (input data)</h3>
 <p>
 A request to the Trellis plot service requires a list of GMPEs and IMTs,
 the desired plot type and the parameters configuring the scenario (rupture), most of which are
@@ -311,7 +306,7 @@ separate text data in JSON or YAML format (POST method) and are:
 
 {{ form_trellis | safe }}
 
-<h4>Response (output data)</h4>
+<h3>Response (output data)</h3>
 <p>
 The number of generated Trellis plots depends on the requested Intensity measure types (parameter {{ param.imt }}) <i>and</i> the parameters {{ param.magnitude }}, {{ param.distance }} and {{ param.vs30 }} (which can be given as numeric scalr or array):
 </p>
@@ -330,11 +325,11 @@ The number of generated Trellis plots depends on the requested Intensity measure
 </tbody>
 </table>
 
-<h5>JSON</h5>
+<h4>JSON</h4>
 <p>
 Trellis plot data returned in JSON format will have the following structure:
 </p>
-<pre class="shadow-sm mb-3"><code class="language-python">{
+<pre class="shadow-sm"><code class="language-python">{
   # list of x axis values, common to all Trellis plots:
   xvalues: [2.905, 3.771, ... ],
   # the x label, common to all x axis plot (string):
@@ -355,7 +350,7 @@ Trellis plot data returned in JSON format will have the following structure:
       # object of plot's GMPE names (string),
       # mapped to their y values (numeric list):
       yvalues:{
-      	"AkkarBommer2010": [0.3811, 0.3811, ...],
+      	"AkkarBommer2010": [0.3811, 0.3812, ...],
       	"CauzziFaccioli2008": [0.283, 0.283, ...],
       	...
       }
@@ -364,23 +359,394 @@ Trellis plot data returned in JSON format will have the following structure:
   ]
 }</code></pre>
 
-<!-- In IMT vs. distance plots, {{ param.distance }} needs to be input as numeric array, being
-displayed as x axis. The number of generated plots will then result from all combinations
-of {{ param.imt }}, {{ param.magnitude }}, {{ param.vs30 }}.
-In IMT vs. magnitude plots, {{ param.magnitude }} needs to be input as numeric array, being
-displayed as x axis. The number of generated plots will then result from all combinations
-of {{ param.imt }}, {{ param.distance }}, {{ param.vs30 }}.
-In Magnitude-distance plots, a set of pre-defined periods will be used as x axis values.
-The number of generated plots will then result from all combinations
-of {{ param.imt }}, {{ param.magnitude }}, {{ param.distance }} {{ param.vs30 }}.
-</p> -->
 
-<h3 id="residualanalysis">Residual analysis</h3>
+<h4>CSV</h4>
+<p>
+Trellis plot data returned in CSV format will have the following structure (represented as
+csv table. Note blank cells, when opening csv files with client software)
+</p>
+
+<p>Vertical display (one plot per column, xvalues on the first column from fifth cell on ):</p>
+
+
+<table class='csv'>
+<tr>
+	<td>&nbsp;</td><td>AkkarBommer2010</td><td>CauzziFaccioli2008</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td><td>mag:5</td><td>mag:5.5</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td><td>dist:</td><td>dist:</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td><td>vs30:760</td><td>vs30:760</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>Rupture Dist. (km)</td><td>Median PGA (g)</td><td>Median PGA (g)</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>2.905</td><td>0.3811</td><td>0.283</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>3.771</td><td>0.3812</td><td>0.283</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td>
+</tr>
+</table>
+
+<p>Horizontal display (one plot per row):</p>
+
+<table class='csv'>
+<tr>
+	<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>Rupture Dist. (km)</td><td>2.905</td><td>3.771</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>AkkarBommer2010</td><td>mag:5</td><td>dist:</td><td>vs30:760</td><td>Median PGA (g)</td><td>0.3811</td><td>0.3811</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>CauzziFaccioli2008</td><td>mag:5.5</td><td>dist:</td><td>vs30:760</td><td>Median PGA (g)</td><td>0.283</td><td>0.283</td><td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td>
+</tr>
+</table>
+
+
+<h2 id="residualanalysis">Residual analysis</h2>
 <p>
 </p>
+
+
+
+<h3>Request (input data)</h3>
+<p>
+A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
+database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
+URL (GET method) or as separate text data in JSON or YAML format (POST method) and are:
+</p>
+
 {{ form_residuals | safe }}
 
-<h3 id="testing">Testing</h3>
+<h3>Response (output data)</h3>
+<p>
+The number of generated Residuals plots will be the product of the requested Intensity measure
+types (parameter {{ param.imt }}), the requested GMPEs (parameter {{ param.gsim }} and 
+the selected plot type:
+</p>
+
+<table>
+<thead>
+<tr>
+	<td>Plot type</td>
+	<td>x values (generated from the GMDB):</td>
+	<td>Number of generated plots <i>per</i> IMT and <i>per</i> Gsim:</td>
+</thead>
+<tbody>
+<tr><td>Residuals density distribution</td><td>equally spaced bins</td><td>three: 'Intra event', 'Inter event', 'Total'</td></tr>
+<tr><td>Residuals vs. Magnitude</td><td>magnitudes</td><td>see above</td></tr>
+<tr><td>Residuals vs. Distance</td><td>distances</td><td>see above</td></tr>
+<tr><td>Residuals vs. Vs<sub>30</sub></td><td>Vs<sub>30</sub></td><td>see above</td></tr>
+<tr><td>Residuals vs. Depth</td><td>depth</td><td>see above</td></tr>
+<tr><td>Likelihood</td><td>likelihood of currently selected IMT</td><td>see above</td></tr>
+</tbody>
+</table>
+
+<h4>JSON</h4>
+<p>
+Trellis plot data returned in JSON format will have the following structure:
+</p>
+<pre class="shadow-sm"><code class="language-python">{
+  # list of x axis values, common to all Trellis plots:
+  xvalues: [2.905, 3.771, ... ],
+  # the x label, common to all x axis plot (string):
+  xlabel: "Rupture Dist. (km)",
+  # List of generated Trellis plots:
+  figures: [ 
+    {
+      # The plot y label:
+      ylabel: "Median PGA (g)",
+      # the magnitude set for this plot, numeric
+      # (None if magnitudes are the x values):
+      magnitude: 5,
+      # the distance set for this plot, numeric
+      # (None if distances are the x values):
+      distance: None,
+      # the vs30 set for this plot, numeric:
+      vs30: 760,
+      # object of plot's GMPE names (string),
+      # mapped to their y values (numeric list):
+      yvalues:{
+      	"AkkarBommer2010": [0.3811, 0.3812, ...],
+      	"CauzziFaccioli2008": [0.283, 0.283, ...],
+      	...
+      }
+    },
+    ...
+  ]
+}</code></pre>
+
+
+<h4>CSV</h4>
+<p>
+Trellis plot data returned in CSV format will have the following structure (represented as
+csv table. Note blank cells, when opening csv files with client software)
+</p>
+
+<p>Vertical display (one plot per column, xvalues on the first column from fifth cell on ):</p>
+
+
+<table class='csv' style='font-size:70%'>
+<tr>
+	<td>&nbsp;</td>
+	<td>AkkarBommer2010</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>CauzziFaccioli2008</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>
+	<td>PGA</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>PGV</td>
+	<td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>PGA</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>
+	<td>Intra Event</td>
+	<td>Inter Event</td>
+	<td>Total</td>
+	<td>Intra Event</td>
+	<td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>Intra Event</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>
+	<td>slope:0.2678</td>
+	<td>slope:0.103</td>
+	<td>slope:0.19</td>
+	<td>slope:0.171</td>
+	<td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>slope:0.28</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>
+	<td>intercept:-1.998</td>
+	<td>intercept:-1.281</td>
+	<td>intercept:-2.209</td>
+	<td>intercept:-2.12</td>
+	<td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>intercept:-2.281</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>	
+	<td>pvalue:6.56e-8</td>
+	<td>pvalue:0.163</td>
+	<td>pvalue:0.0002</td>
+	<td>pvalue:0.0002</td>
+	<td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>pvalue:1.21e-8</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>Magnitude</td>
+	<td>Z (PGA)</td>	
+	<td>Z (PGA)</td>	
+	<td>Z (PGA)</td>	
+	<td>Z (PGA)</td>	
+	<td>&hellip;</td>
+	<td>Magnitude</td>
+	<td>Z (PGA)</td>	
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>4</td>
+	<td>-2.11</td>	
+	<td>-1.832</td>	
+	<td>-2.31</td>	
+	<td>-0.17</td>	
+	<td>&hellip;</td>
+	<td>4</td>
+	<td>-1.116</td>	
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>4</td>
+	<td>-2.27</td>	
+	<td>-1.913</td>	
+	<td>-0.83</td>	
+	<td>-1.11</td>	
+	<td>&hellip;</td>
+	<td>4</td>
+	<td>-2.815</td>	
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>3.9</td>
+	<td>-2.08</td>	
+	<td>-1.85</td>	
+	<td>-2.31</td>	
+	<td>-0.871</td>	
+	<td>&hellip;</td>
+	<td>3.9</td>
+	<td>Z (PGA)</td>	
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+</table>
+
+<p>Horizontal display (one plot per row):</p>
+
+<table class='csv' style='font-size:70%'>
+<tr>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>Magnitude</td>
+	<td>4</td>
+	<td>4</td>
+	<td>3.9</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>AkkarBommer2010</td>
+	<td>PGA</td>
+	<td>Intra Event</td>
+	<td>slope:0.2678</td>
+	<td>intercept:-1.998</td>
+	<td>pvalue:6.56e-8</td>
+	<td>Z (PGA)</td>
+	<td>-2.11</td>
+	<td>-2.27</td>
+	<td>-2.08</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>Inter Event</td>
+	<td>slope:0.103</td>
+	<td>intercept:-1.281</td>
+	<td>pvalue:0.163</td>
+	<td>Z (PGA)</td>
+	<td>-1.832</td>
+	<td>-1.913</td>
+	<td>-1.85</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>Total</td>
+	<td>slope:0.19</td>
+	<td>intercept:-2.209</td>
+	<td>pvalue:0.0002</td>
+	<td>Z (PGA)</td>
+	<td>-2.31</td>
+	<td>-0.83</td>
+	<td>-2.31</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>
+	<td>PGV</td>
+	<td>Intra Event</td>
+	<td>slope:0.171</td>
+	<td>intercept:-2.12</td>
+	<td>pvalue:0.0002</td>
+	<td>Z (PGA)</td>
+	<td>-0.17</td>
+	<td>-1.11</td>
+	<td>-0.871</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>Magnitude</td>
+	<td>4</td>
+	<td>4</td>
+	<td>3.9</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>CauzziFaccioli2008</td>
+	<td>PGA</td>
+	<td>Intra Event</td>
+	<td>slope:0.28</td>
+	<td>intercept:-2.281</td>
+	<td>pvalue:1.21e-8</td>
+	<td>Z (PGA)</td>
+	<td>-1.116</td>
+	<td>-2.815</td>
+	<td>Z (PGA)</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+</table>
+
+
+
+
+<h2 id="testing">Testing</h2>
 <p>
 
 </p>

@@ -569,18 +569,20 @@ class GmdbForm(BaseForm):
         min_, max_, sel_ = 'selection_min', 'selection_max', 'selection'
         if sel_ not in cleaned_data or not cleaned_data[sel_]:
             return cleaned_data
-        conversion_func = cleaned_data[sel_]
+        seldomain, conversion_func = cleaned_data[sel_]
         try:
             cleaned_data[min_] = conversion_func(cleaned_data.get(min_, None))
         except Exception as exc:  # pylint: disable=broad-except
             error = ValidationError(_(str(exc)), code='invalid')
             self.add_error(min_, error)
         try:
-            cleaned_data[max_] = conversion_func(cleaned_data.get(max_, None))
+            cleaned_data[  max_] = conversion_func(cleaned_data.get(max_, None))
         except Exception as exc:  # pylint: disable=broad-except
             error = ValidationError(_(str(exc)), code='invalid')
             self.add_error(max_, error)
 
+        cleaned_data[sel_] = seldomain  # replace the conversion function with the selection
+        # domain, we will need only that one
         return cleaned_data
 
 
@@ -594,4 +596,4 @@ class ResidualsForm(GsimImtForm, GmdbForm):
     plot_type = ResidualplottypeField(required=True)
 
     def clean(self):
-        return GmdbForm.clean(self)
+        GsimImtForm.clean(self)  # <- this calls super WHICH CALLS: GmdbForm.clean(self) CHECK!!

@@ -26,8 +26,7 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrell
 from smtk.residuals.residual_plots import residuals_density_distribution, residuals_with_depth,\
     residuals_with_distance, residuals_with_magnitude, residuals_with_vs30, likelihood
 
-from egsim.core.utils import vectorize, EGSIM, isscalar
-from _collections import OrderedDict
+from egsim.core.utils import vectorize, EGSIM, isscalar, _convert, strptime
 
 
 
@@ -349,9 +348,16 @@ class TrModelField(EgsimChoiceField):
 
 class GmdbSelectionField(EgsimChoiceField):
     '''Implements the ***FILTER*** (smtk code calls it 'selection') field on a Ground motion
-    database. Returns a function which can convert (according to the given selection,
-    e.g., 'vs30', 'time') the values provided with other fields'''
-    _base_choices = EGSIM.gmdb_selection_parsers
+    database (e.g., distance, magnitude, vs30), i.e., the domain on which a gmdb has to be
+    filtered.
+    Returns a tuple of two functions: the domain string and the casting function for validating
+    the min and max parameters of the selection domain
+    '''
+    _base_choices = {'distance': ['distance', _convert(float)],
+                     'vs30': ['vs30', _convert(float)],
+                     'magnitude': ['magnitude', _convert(float)],
+                     'time': ['time', _convert(strptime)],
+                     'depth': ['depth', _convert(float)]}
 
 
 class ResidualplottypeField(EgsimChoiceField):
