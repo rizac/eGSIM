@@ -33,3 +33,18 @@ table.csv td{border-left: 1px solid #ddd; border-right: 1px solid #ddd;}
 table, pre {
     box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
 }
+/* backgrounds for  x and y labels */
+td.xvalues, span.xvalues{
+	background-color:#f1f3d4;
+}
+td.yvalues, span.yvalues{
+	background-color:#e6f0f8;
+}
+span.xvalues, span.yvalues{
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	border: 1px solid lightgray;
+	vertical-align:text-bottom;
+}
+

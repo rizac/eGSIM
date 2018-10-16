@@ -330,86 +330,196 @@ The number of generated Trellis plots depends on the requested Intensity measure
 Trellis plot data returned in JSON format will have the following structure:
 </p>
 <pre><code class="language-python">{
-  # list of x axis values, common to all Trellis plots:
-  xvalues: [2.905, 3.771, ... ],
-  # the x label, common to all x axis plot (string):
-  xlabel: "Rupture Dist. (km)",
-  # List of generated Trellis plots:
-  figures: [ 
-    {
-      # The plot y label:
-      ylabel: "Median PGA (g)",
-      # the magnitude set for this plot, numeric
-      # (None if magnitudes are the x values):
-      magnitude: 5,
-      # the distance set for this plot, numeric
-      # (None if distances are the x values):
-      distance: None,
-      # the vs30 set for this plot, numeric:
-      vs30: 760,
-      # object of plot's GMPE names (string),
-      # mapped to their y values (numeric list):
-      yvalues:{
-      	"AkkarBommer2010": [0.3811, 0.3812, ...],
-      	"CauzziFaccioli2008": [0.283, 0.283, ...],
-      	...
-      }
-    },
-    ...
-  ]
+	# list of x axis values, common to all Trellis plots:
+	xvalues: [2.905, 3.771, ... ],
+	# the x label, common to all x axis plot (string):
+	xlabel: "Rupture Dist. (km)",
+	# List of generated Trellis plots:
+	figures: [ 
+		{
+			# The intensity measure type used for this plot:
+			imt: 'PGA',
+			# object of plot's GMPE names (string),
+			# mapped to their y values (numeric list):
+			yvalues:{
+				"AkkarBommer2010": [0.3811, 0.3812, ...],
+				"CauzziFaccioli2008": [0.283, 0.283, ...],
+				...
+			},
+			# The plot y label (unit is either 'Median' or 'StdDev' of this plot's IMT):
+			ylabel: "Median PGA (g)",
+			# the magnitude set for this plot, numeric
+			# (None if magnitudes are the x values):
+			magnitude: 5,
+			# the distance set for this plot, numeric
+			# (None if distances are the x values):
+			distance: None,
+			# the vs30 set for this plot, numeric:
+			vs30: 760
+		},
+		...
+	]
 }</code></pre>
 
 
 <h4>CSV</h4>
 <p>
-Trellis plot data returned in CSV format will have the following structure (represented as
-csv table. Note blank cells, when opening csv files with client software)
+Trellis plot data returned in CSV format will have the following structure.
+<br>
+<span class='xvalues'></span> = x values (first cell is the x label), 
+<span class='yvalues'></span> = y values (first cell is the y label)
 </p>
 
-<p>Vertical display (one plot per column, xvalues on the first column from fifth cell on ):</p>
+<h5>Vertical display &varr; :</h5>
 
 
 <table class='csv'>
 <tr>
-	<td>&nbsp;</td><td>AkkarBommer2010</td><td>CauzziFaccioli2008</td><td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>AkkarBommer2010</td>
+	<td>AkkarBommer2010</td>
+	<td>&hellip;</td>
+	<td>CauzziFaccioli2008</td>
+	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td><td>mag:5</td><td>mag:5.5</td><td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>PGA</td>
+	<td>PGA</td>
+	<td>&hellip;</td>
+	<td>PGA</td>
+	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td><td>dist:</td><td>dist:</td><td>&hellip;</td>
+	<td>magnitude:</td>
+	<td>5</td>
+	<td>5.5</td>
+	<td>&hellip;</td>
+	<td>5</td>
+	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td><td>vs30:760</td><td>vs30:760</td><td>&hellip;</td>
+	<td>distance:</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>Rupture Dist. (km)</td><td>Median PGA (g)</td><td>Median PGA (g)</td><td>&hellip;</td>
+	<td>vs30:</td>
+	<td>760</td>
+	<td>760</td>
+	<td>&hellip;</td>
+	<td>760</td>
+	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>2.905</td><td>0.3811</td><td>0.283</td><td>&hellip;</td>
+	<td class='xvalues'>Rupture Dist. (km)</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>3.771</td><td>0.3812</td><td>0.283</td><td>&hellip;</td>
+	<td class='xvalues'>2.905</td>
+	<td class='yvalues'>0.3811</td>
+	<td class='yvalues'>0.283</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>0.21</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td>
+	<td class='xvalues'>3.771</td>
+	<td class='yvalues'>0.3812</td>
+	<td class='yvalues'>0.283</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>0.291</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td class='xvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 </table>
 
-<p>Horizontal display (one plot per row):</p>
+<h5>Horizontal display &harr; :</h5>
 
 <table class='csv'>
 <tr>
-	<td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>Rupture Dist. (km)</td><td>2.905</td><td>3.771</td><td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td class='xvalues'>Rupture Dist. (km)</td>
+	<td class='xvalues'>2.905</td>
+	<td class='xvalues'>3.771</td>
+	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarBommer2010</td><td>mag:5</td><td>dist:</td><td>vs30:760</td><td>Median PGA (g)</td><td>0.3811</td><td>0.3811</td><td>&hellip;</td>
+	<td>AkkarBommer2010</td>
+	<td>PGA</td>
+	<td>magnitude:</td>
+	<td>5</td>
+	<td>distance:</td>
+	<td></td>
+	<td>vs30:</td>
+	<td>760</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>0.3811</td>
+	<td class='yvalues'>0.3812</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>CauzziFaccioli2008</td><td>mag:5.5</td><td>dist:</td><td>vs30:760</td><td>Median PGA (g)</td><td>0.283</td><td>0.283</td><td>&hellip;</td>
+	<td>AkkarBommer2010</td>
+	<td>PGA</td>
+	<td>magnitude:</td>
+	<td>5.5</td>
+	<td>distance:</td>
+	<td></td>
+	<td>vs30:</td>
+	<td>760</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>0.283</td>
+	<td class='yvalues'>0.283</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td><td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&nbsp;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>CauzziFaccioli2008</td>
+	<td>PGA</td>
+	<td>magnitude:</td>
+	<td>5</td>
+	<td>distance:</td>
+	<td></td>
+	<td>vs30:</td>
+	<td>760</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>0.21</td>
+	<td class='yvalues'>0.291</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 </table>
 
@@ -455,291 +565,381 @@ the selected plot type:
 
 <h4>JSON</h4>
 <p>
-Trellis plot data returned in JSON format will have the following structure:
+Residuals plot data returned in JSON format will have the following structure:
 </p>
 <pre><code class="language-python">{
-  # list of x axis values, common to all Trellis plots:
-  xvalues: [2.905, 3.771, ... ],
-  # the x label, common to all x axis plot (string):
-  xlabel: "Rupture Dist. (km)",
-  # List of generated Trellis plots:
-  figures: [ 
-    {
-      # The plot y label:
-      ylabel: "Median PGA (g)",
-      # the magnitude set for this plot, numeric
-      # (None if magnitudes are the x values):
-      magnitude: 5,
-      # the distance set for this plot, numeric
-      # (None if distances are the x values):
-      distance: None,
-      # the vs30 set for this plot, numeric:
-      vs30: 760,
-      # object of plot's GMPE names (string),
-      # mapped to their y values (numeric list):
-      yvalues:{
-      	"AkkarBommer2010": [0.3811, 0.3812, ...],
-      	"CauzziFaccioli2008": [0.283, 0.283, ...],
-      	...
-      }
-    },
-    ...
-  ]
+	# Object of GMPEs mapped to lists of associated residual plots:
+	"AkkarBommer2010": [
+		{
+			# The intensity measure type used for this plot:
+			imt: 'PGA',
+			# The residual type is one of "InterEvent", "IntraEvent" and "Total"
+			restype: "IntraEvent",
+			# the list of x values:
+			xvalues: [4, 4, 3.9, ...],
+			# the plot x label, note that the plot's IMT can be on the x axis
+			# (e.g. Likelihood plot type) or y axis (e.g., ResidualsVsMagnitude)
+			xlabel: "Magnitude",
+			# the y values:
+			yvalues: [-2.11, -2.27, -2.08, ...],
+			# the plot y label:
+			ylabel: "Z (PGA)",
+			# End of mandatory fields. Below plot type specific attributes:
+			slope: 0.2678,
+			intercept: -1.998,
+			pvalue: 6.56e-8: 
+		},
+		...
+	],
+	"CauzziFaccioli2008": [
+		...
+	],
+	...
 }</code></pre>
 
 
 <h4>CSV</h4>
 <p>
-Trellis plot data returned in CSV format will have the following structure (represented as
-csv table. Note blank cells, when opening csv files with client software)
+Residuals plot data returned in CSV format will have the following structure (represented as
+csv table).
+<br>
+<span class='xvalues'></span> = x values (first cell is the x label), 
+<span class='yvalues'></span> = y values (first cell is the y label)
 </p>
 
-<p>Vertical display (one plot per column, xvalues on the first column from fifth cell on ):</p>
-
+<h5>Vertical display &varr; :</h5>
 
 <table class='csv' style='font-size:70%'>
 <tr>
+	<td>AkkarBommer2010</td>
 	<td>&nbsp;</td>
 	<td>AkkarBommer2010</td>
+	<td>&nbsp;</td>
 	<td>AkkarBommer2010</td>
+	<td>&nbsp;</td>
 	<td>AkkarBommer2010</td>
-	<td>AkkarBommer2010</td>
+	<td>&nbsp;</td>
 	<td>&hellip;</td>
-	<td>&nbsp;</td>
 	<td>CauzziFaccioli2008</td>
+	<td>&nbsp;</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td>PGA</td>
 	<td>&nbsp;</td>
 	<td>PGA</td>
+	<td>&nbsp;</td>
 	<td>PGA</td>
+	<td>&nbsp;</td>
 	<td>PGA</td>
-	<td>PGV</td>
+	<td>&nbsp;</td>
 	<td>&hellip;</td>
-	<td>&nbsp;</td>
 	<td>PGA</td>
+	<td>&nbsp;</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
+	<td>slope:</td>
+	<td>0.2678</td>
+	<td>slope:</td>
+	<td>0.103</td>
+	<td>slope:</td>
+	<td>0.19</td>
+	<td>slope:</td>
+	<td>0.171</td>
+	<td>&hellip;</td>
+	<td>slope:</td>
+	<td>0.28</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>intercept:</td>
+	<td>-1.998</td>
+	<td>intercept:</td>
+	<td>-1.281</td>
+	<td>intercept:</td>
+	<td>-2.209</td>
+	<td>intercept:</td>
+	<td>-2.12</td>
+	<td>&hellip;</td>
+	<td>intercept:</td>
+	<td>-2.281</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>pvalue:</td>	
+	<td>6.56e-8</td>
+	<td>pvalue:</td>	
+	<td>0.163</td>
+	<td>pvalue:</td>	
+	<td>0.0002</td>
+	<td>pvalue:</td>	
+	<td>0.0002</td>
+	<td>&hellip;</td>
+	<td>pvalue:</td>	
+	<td>1.21e-8</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
 	<td>Intra Event</td>
+	<td>&nbsp;</td>
 	<td>Inter Event</td>
+	<td>&nbsp;</td>
 	<td>Total</td>
-	<td>Intra Event</td>
-	<td>&hellip;</td>
 	<td>&nbsp;</td>
 	<td>Intra Event</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
 	<td>&nbsp;</td>
-	<td>slope:0.2678</td>
-	<td>slope:0.103</td>
-	<td>slope:0.19</td>
-	<td>slope:0.171</td>
 	<td>&hellip;</td>
+	<td>Intra Event</td>
 	<td>&nbsp;</td>
-	<td>slope:0.28</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
-	<td>intercept:-1.998</td>
-	<td>intercept:-1.281</td>
-	<td>intercept:-2.209</td>
-	<td>intercept:-2.12</td>
+	<td class='xvalues'>Magnitude</td>
+	<td class='yvalues'>Z (PGA)</td>	
+	<td class='xvalues'>Magnitude</td>
+	<td class='yvalues'>Z (PGA)</td>	
+	<td class='xvalues'>Magnitude</td>
+	<td class='yvalues'>Z (PGA)</td>	
+	<td class='xvalues'>Magnitude</td>
+	<td class='yvalues'>Z (PGV)</td>	
 	<td>&hellip;</td>
-	<td>&nbsp;</td>
-	<td>intercept:-2.281</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>&nbsp;</td>	
-	<td>pvalue:6.56e-8</td>
-	<td>pvalue:0.163</td>
-	<td>pvalue:0.0002</td>
-	<td>pvalue:0.0002</td>
-	<td>&hellip;</td>
-	<td>&nbsp;</td>
-	<td>pvalue:1.21e-8</td>
+	<td class='xvalues'>Magnitude</td>
+	<td class='yvalues'>Z (PGA)</td>	
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>Magnitude</td>
-	<td>Z (PGA)</td>	
-	<td>Z (PGA)</td>	
-	<td>Z (PGA)</td>	
-	<td>Z (PGA)</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-2.11</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-1.832</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-2.31</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-0.17</td>	
 	<td>&hellip;</td>
-	<td>Magnitude</td>
-	<td>Z (PGA)</td>	
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>4</td>
-	<td>-2.11</td>	
-	<td>-1.832</td>	
-	<td>-2.31</td>	
-	<td>-0.17</td>	
-	<td>&hellip;</td>
-	<td>4</td>
-	<td>-1.116</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-1.116</td>	
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>4</td>
-	<td>-2.27</td>	
-	<td>-1.913</td>	
-	<td>-0.83</td>	
-	<td>-1.11</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-2.27</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-1.913</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-0.83</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-1.11</td>	
 	<td>&hellip;</td>
-	<td>4</td>
-	<td>-2.815</td>	
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>3.9</td>
-	<td>-2.08</td>	
-	<td>-1.85</td>	
-	<td>-2.31</td>	
-	<td>-0.871</td>	
-	<td>&hellip;</td>
-	<td>3.9</td>
-	<td>Z (PGA)</td>	
+	<td class='xvalues'>4</td>
+	<td class='yvalues'>-2.815</td>	
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td class='xvalues'>3.9</td>
+	<td class='yvalues'>-2.08</td>	
+	<td class='xvalues'>3.9</td>
+	<td class='yvalues'>-1.85</td>	
+	<td class='xvalues'>3.9</td>
+	<td class='yvalues'>-2.31</td>	
+	<td class='xvalues'>3.9</td>
+	<td class='yvalues'>-0.871</td>	
 	<td>&hellip;</td>
+	<td class='xvalues'>3.9</td>
+	<td class='yvalues'>-2.11</td>	
 	<td>&hellip;</td>
+</tr>
+<tr>
+	<td class='xvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
 	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
 	<td>&hellip;</td>
 </tr>
 </table>
 
-<p>Horizontal display (one plot per row):</p>
+<h5>Horizontal display &harr; :</h5>
 
 <table class='csv' style='font-size:70%'>
 <tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>Magnitude</td>
-	<td>4</td>
-	<td>4</td>
-	<td>3.9</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
 	<td>AkkarBommer2010</td>
 	<td>PGA</td>
+	<td>slope:</td>
+	<td>0.2678</td>
+	<td>intercept:</td>
+	<td>-1.998</td>
+	<td>pvalue:</td>
+	<td>6.56e-8</td>
 	<td>Intra Event</td>
-	<td>slope:0.2678</td>
-	<td>intercept:-1.998</td>
-	<td>pvalue:6.56e-8</td>
-	<td>Z (PGA)</td>
-	<td>-2.11</td>
-	<td>-2.27</td>
-	<td>-2.08</td>
-	<td>&hellip;</td>
+	<td>&nbsp;</td>
+</tr>
+<tr><td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+<tr>
+</tr>
+	<td class='yvalues'>Z (PGA)</td>
+	<td class='yvalues'>-2.11</td>
+	<td class='yvalues'>-2.27</td>
+	<td class='yvalues'>-2.08</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
 	<td>AkkarBommer2010</td>
-	<td>PGA</td>
-	<td>Inter Event</td>
-	<td>slope:0.103</td>
-	<td>intercept:-1.281</td>
-	<td>pvalue:0.163</td>
-	<td>Z (PGA)</td>
-	<td>-1.832</td>
-	<td>-1.913</td>
-	<td>-1.85</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>AkkarBommer2010</td>
-	<td>PGA</td>
-	<td>Total</td>
-	<td>slope:0.19</td>
-	<td>intercept:-2.209</td>
-	<td>pvalue:0.0002</td>
-	<td>Z (PGA)</td>
-	<td>-2.31</td>
-	<td>-0.83</td>
-	<td>-2.31</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>AkkarBommer2010</td>
-	<td>PGV</td>
 	<td>Intra Event</td>
-	<td>slope:0.171</td>
-	<td>intercept:-2.12</td>
-	<td>pvalue:0.0002</td>
-	<td>Z (PGA)</td>
-	<td>-0.17</td>
-	<td>-1.11</td>
-	<td>-0.871</td>
-	<td>&hellip;</td>
+	<td>slope:</td>
+	<td>0.103</td>
+	<td>intercept:</td>
+	<td>-1.281</td>
+	<td>pvalue:</td>
+	<td>0.163</td>
+	<td>&nbsp;</td>
+</tr>
+<tr><td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+<tr>
+</tr>
+	<td class='yvalues'>Z (PGA)</td>
+	<td class='yvalues'>-1.832</td>
+	<td class='yvalues'>-1.913</td>
+	<td class='yvalues'>-1.85</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
+	<td>AkkarBommer2010</td>
+	<td>Intra Event</td>
+	<td>slope:</td>
+	<td>0.19</td>
+	<td>intercept:</td>
+	<td>-2.209</td>
+	<td>pvalue:</td>
+	<td>0.0002</td>
+	<td>&nbsp;</td>
+</tr>
+<tr><td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+<tr>
+</tr>
+	<td class='yvalues'>Z (PGA)</td>
+	<td class='yvalues'>-2.31</td>
+	<td class='yvalues'>-0.83</td>
+	<td class='yvalues'>-2.31</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
+	<td>AkkarBommer2010</td>
+	<td>Intra Event</td>
+	<td>slope:</td>
+	<td>0.171</td>
+	<td>intercept:</td>
+	<td>-2.12</td>
+	<td>pvalue:</td>
+	<td>0.0002</td>
 	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>Magnitude</td>
-	<td>4</td>
-	<td>4</td>
-	<td>3.9</td>
+</tr>
+<tr><td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+<tr>
+</tr>
+	<td class='yvalues'>Z (PGV)</td>
+	<td class='yvalues'>-0.17</td>
+	<td class='yvalues'>-1.11</td>
+	<td class='yvalues'>-0.871</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+</tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
 	<td>CauzziFaccioli2008</td>
-	<td>PGA</td>
 	<td>Intra Event</td>
-	<td>slope:0.28</td>
-	<td>intercept:-2.281</td>
-	<td>pvalue:1.21e-8</td>
-	<td>Z (PGA)</td>
-	<td>-1.116</td>
-	<td>-2.815</td>
-	<td>Z (PGA)</td>
-	<td>&hellip;</td>
+	<td>slope:</td>
+	<td>0.28</td>
+	<td>intercept:</td>
+	<td>-2.281</td>
+	<td>pvalue:</td>
+	<td>1.21e-8</td>
+	<td>&nbsp;</td>
 </tr>
+<tr><td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
+	<td class='xvalues'>&hellip;</td>
 <tr>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
+</tr>
+	<td class='yvalues'>Z (PGV)</td>
+	<td class='yvalues'>-1.116</td>
+	<td class='yvalues'>-2.815</td>
+	<td class='yvalues'>-2.11</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
 </tr>
 </table>
 
