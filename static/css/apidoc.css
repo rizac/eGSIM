@@ -1,8 +1,5 @@
 @page{
-	margin: 25mm 25mm 25mm 25mm;
-	@bottom-right {
-    	content: counter(page) " of " counter(pages);
-  	}
+	margin: 15mm 25mm 15mm 25mm; /*top right bottom left*/
 }
 
 @media print {  /* https://stackoverflow.com/a/28441659 */
@@ -12,7 +9,7 @@
     }
     body {
     	height: initial !important;
-        font-size: 26px !important;
+        font-size: 24px !important;
     }
     body, pre {background-color: unset !important;}
     table.csv{font-size:65% !important;}

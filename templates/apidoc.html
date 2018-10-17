@@ -20,7 +20,10 @@
 <div class='flexible text-justify px-4 pt-3'>
 <div class='content'>
 
-<h1>eGSIM API</h1>	
+<h1>eGSIM API</h1>
+{% if last_modified %}
+<p style='font-size:50%;text-align:right;'>Last modified: {{ last_modified }}</p>
+{% endif %}
 
 <p>
 eGSIM is a web service for selecting and testing Ground
@@ -110,13 +113,13 @@ from urllib2 import Request, urlopen, URLError, HTTPError
 # 1) Request using the GET method:
 req = Request("write here your eGSIM endpoint URL with encoded parameters")
 
-# 2a) Request using the POST method, assuming JSON formatted file:
+# 2a) Request using the POST method, assuming JSON text file:
 with open('/path/to/my/file.json', 'r') as stream:
     jsondata = json.load(f)
 req = Request("write here your eGSIM endpoint URL", data=jsondata)
 
-# 2b) Request using the POST method, assuming YAML or JSON formatted file
-#     (yaml is a superset of JSON and thus parses correctly also JSON files):
+# 2b) Request using the POST method, assuming YAML or JSON text file
+#     (YAML is a superset of JSON and thus this works also with JSON files):
 with open('/path/to/my/file.yaml', 'r') as stream:
     yamldata = yaml.safe_load(stream))
 req = Request("write here your eGSIM endpoint URL", data=yamldata)</code></pre>
@@ -183,9 +186,9 @@ vs30:
 magnitude: "3:0.5:5"
 </code></pre></td>
 	<td><pre><code class="language-json">{
-  dip: 45, 
-  vs30: [560, 760],
-  magnitude: "3:0.5:5"
+  "dip": 45, 
+  "vs30": [560, 760],
+  "magnitude": "3:0.5:5"
 }</code></pre></td>
 </tr>
 <tr>
@@ -222,22 +225,18 @@ google API specification</a>. Example:
 </p>
 
 <pre><code class="language-python">{
-  # integer &ge;400 denoting HTTP error code:
-  code: 400,
-  # string denoting the error message associated with the code above:
-  message: "input validation error",
-  # optional array of parameter specific errors:
-  errors: [ 
-    {
-      # string denoting the parameter name:
-      domain: "magnitude",
-      # string denoting the parameter specific error message:
-      message: "This field is required.",
-      # string denoting the parameter specific error reason:
-      reason: "required"
-    },
-    ...
-  ]
+	"code": 400,  # the HTTP error numeric code &ge;400
+	"message": "input validation error",  # the HTTP error message
+	"errors": [  # optional array of parameter specific errors:
+		{
+	    	"domain": "magnitude",  # the parameter name
+	    	"message": "This field is required.",  # the parameter-specific
+	    										   # error message
+	    	"reason": "required"  # the parameter-specific
+	    						  # error reason
+	  	},
+	  ...
+	]
 }</code></pre>
 
 <p>
@@ -270,7 +269,7 @@ except HTTPError as e2:
 except URLError as e1:
     # handle general url errors like network errors. e.g.:
     print("Url error. Reason: %s" % e1.reason)
-    raise</code></pre>
+</code></pre>
 
 
 <h2 id="gsimselection">Gsim selection</h2>
@@ -330,35 +329,29 @@ The number of generated Trellis plots depends on the requested Intensity measure
 
 <h4>JSON</h4>
 <p>
-Trellis plot data returned in JSON format will have the following structure:
+Trellis plot data returned in JSON format will have the following structure (the text after the
+character <code>#</code> denotes comments which are meant to be explanatory for the reader: as
+JSON does not support comments they are not part of the response's text file):
 </p>
 <pre><code class="language-python">{
-	# list of x axis values, common to all Trellis plots:
-	xvalues: [2.905, 3.771, ... ],
-	# the x label, common to all x axis plot (string):
-	xlabel: "Rupture Dist. (km)",
-	# List of generated Trellis plots:
-	figures: [ 
+	"xvalues": [2.905, 3.771, ... ],  # All trellis plots share the same x 
+	"xlabel": "Rupture Dist. (km)",   # see above
+	"figures": [  # List of generated Trellis plots
 		{
-			# The intensity measure type used for this plot:
-			imt: 'PGA',
-			# object of plot's GMPE names (string),
-			# mapped to their y values (numeric list):
-			yvalues:{
+			"imt": "PGA",  # this plot's Intensity measure type
+			"yvalues":{  # the y data, per selected GMPe
 				"AkkarBommer2010": [0.3811, 0.3812, ...],
 				"CauzziFaccioli2008": [0.283, 0.283, ...],
 				...
 			},
-			# The plot y label (unit is either 'Median' or 'StdDev' of this plot's IMT):
-			ylabel: "Median PGA (g)",
-			# the magnitude set for this plot, numeric
-			# (None if magnitudes are the x values):
-			magnitude: 5,
-			# the distance set for this plot, numeric
-			# (None if distances are the x values):
-			distance: None,
-			# the vs30 set for this plot, numeric:
-			vs30: 760
+			"ylabel": "Median PGA (g)",  # If the scaling of standard
+									     # deviation has been asked, it will
+									     # be with 'StdDev PGA (g)'
+			"magnitude": 5,  # the magnitude set for this plot, or null if
+						     # the magnitudes are used as x values
+			"distance": null,  # the magnitude set for this plot, or null if
+						       # the magnitudes are used as x values
+			"vs30": 760  # the vs30 set for this plot
 		},
 		...
 	]
@@ -529,7 +522,29 @@ Trellis plot data returned in CSV format will have the following structure.
 
 <h2 id="residualanalysis">Residual analysis</h2>
 <p>
+eGSIM, through the GMPE-SMTK library, offers the ability to compare observed ground motions with
+the GMPE model predictions using the GMPE implementations found inside OpenQuake.
+This is a particularly powerful tool as it permits, possibly for the first time, a
+hazard modeller to undertake the GMPE comparison using the exact same GMPE implementation
+found inside the seismic hazard software. There are several types of Residual plots:
 </p>
+
+<table class='nopagebreak'>
+<thead>
+<tr>
+	<td>Plot type</td>
+	<td>x values (generated from the GMDB):</td>
+	<td>Number of generated plots <i>per</i> IMT and <i>per</i> Gsim:</td>
+</thead>
+<tbody>
+<tr><td>Residuals density distribution</td><td>Frequency of residuals vs equally spaced IMT bins</td></tr>
+<tr><td>Residuals vs. Magnitude</td><td>Scatter plot of magnitudes residuals vs </td><td>see above</td></tr>
+<tr><td>Residuals vs. Distance</td><td>distances</td><td>see above</td></tr>
+<tr><td>Residuals vs. Vs<sub>30</sub></td><td>Vs<sub>30</sub></td><td>see above</td></tr>
+<tr><td>Residuals vs. Depth</td><td>depth</td><td>see above</td></tr>
+<tr><td>Likelihood</td><td>likelihood of currently selected IMT</td><td>see above</td></tr>
+</tbody>
+</table>
 
 
 
@@ -544,53 +559,38 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 
 <h3>Response</h3>
 <p>
-The number of generated Residuals plots will be the product of the requested Intensity measure
-types (parameter {{ param.imt }}), the requested GMPEs (parameter {{ param.gsim }} and 
-the selected plot type:
+The number of generated Residuals plots will be three times the product of the requested Intensity
+measure types (parameter {{ param.imt }}) and the requested GMPEs (parameter {{ param.gsim }}, where
+three is the number of residual types per plot, which are "Intra Event", "Inter Event" and "Total". For
+decomposition of Intra-event residuals, the plots are still three but all labelled as 'IntraEvent'
+(what changes will be the y label and the data).
 </p>
-
-<table class='nopagebreak'>
-<thead>
-<tr>
-	<td>Plot type</td>
-	<td>x values (generated from the GMDB):</td>
-	<td>Number of generated plots <i>per</i> IMT and <i>per</i> Gsim:</td>
-</thead>
-<tbody>
-<tr><td>Residuals density distribution</td><td>equally spaced bins</td><td>three: 'Intra event', 'Inter event', 'Total'</td></tr>
-<tr><td>Residuals vs. Magnitude</td><td>magnitudes</td><td>see above</td></tr>
-<tr><td>Residuals vs. Distance</td><td>distances</td><td>see above</td></tr>
-<tr><td>Residuals vs. Vs<sub>30</sub></td><td>Vs<sub>30</sub></td><td>see above</td></tr>
-<tr><td>Residuals vs. Depth</td><td>depth</td><td>see above</td></tr>
-<tr><td>Likelihood</td><td>likelihood of currently selected IMT</td><td>see above</td></tr>
-</tbody>
-</table>
 
 <h4>JSON</h4>
 <p>
-Residuals plot data returned in JSON format will have the following structure:
+Residuals plot data returned in JSON format will have the following structure (the text after the
+character <code>#</code> denotes comments which are meant to be explanatory for the reader: as
+JSON does not support comments they are not part of the response's text file):
 </p>
 <pre><code class="language-python">{
-	# Object of GMPEs mapped to lists of associated residual plots:
-	"AkkarBommer2010": [
+	"AkkarBommer2010": [  # list of GMPE residual plots
 		{
-			# The intensity measure type used for this plot:
-			imt: 'PGA',
-			# The residual type is one of "InterEvent", "IntraEvent" and "Total"
-			restype: "IntraEvent",
-			# the list of x values:
-			xvalues: [4, 4, 3.9, ...],
-			# the plot x label, note that the plot's IMT can be on the x axis
-			# (e.g. Likelihood plot type) or y axis (e.g., ResidualsVsMagnitude)
-			xlabel: "Magnitude",
-			# the y values:
-			yvalues: [-2.11, -2.27, -2.08, ...],
-			# the plot y label:
-			ylabel: "Z (PGA)",
-			# End of mandatory fields. Below plot type specific attributes:
-			slope: 0.269,
-			intercept: -1.998,
-			pvalue: 6.6e-8
+			"imt": "PGA",  # this plot's Intensity measure type. Note that
+						 # the IMT can be displayed on the x axis
+						 # (e.g. Likelihood plot type) or y axis
+						 # (e.g., ResidualsVsMagnitude)
+			"restype": "IntraEvent",  # it is one of "InterEvent",
+									  # "IntraEvent" and "Total".
+									  # For Decomposition of Intra-event
+									  # residuals, this value is always
+									  # 'IntraEvent'
+			"xvalues": [4, 4, 3.9, ...],
+			"xlabel": "Magnitude",
+			"yvalues": [-2.11, -2.27, -2.08, ...],
+			"ylabel": "Z (PGA)",
+			"slope": 0.269,       # These are optional properties which
+			"intercept": -1.998,  # will depend on the plot type. See
+			"pvalue": 6.6e-8      # document for details
 		},
 		...
 	],
@@ -825,38 +825,6 @@ csv table).
 	<td class='yvalues'>-1.85</td>
 	<td class='yvalues'>&hellip;</td>
 </tr>
-<!-- <tr>
-	<td>AkkarBommer2010</td>
-	<td>PGA</td>
-	<td>slope:</td>
-	<td>0.19</td>
-	<td>intercept:</td>
-	<td>-2.209</td>
-	<td>pvalue:</td>
-	<td>0.002</td>
-	<td>Total</td>
-	<td class='xvalues'>Magnitude</td>
-	<td class='xvalues'>4</td>
-	<td class='xvalues'>4</td>
-	<td class='xvalues'>3.9</td>
-	<td class='xvalues'>&hellip;</td>
-</tr>
-<tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td class='yvalues'>Z (PGA)</td>
-	<td class='yvalues'>-2.31</td>
-	<td class='yvalues'>-0.83</td>
-	<td class='yvalues'>-2.31</td>
-	<td class='yvalues'>&hellip;</td>
-</tr> -->
 <tr>
 	<td>&hellip;</td>
 	<td>&hellip;</td>

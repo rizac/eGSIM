@@ -6,6 +6,7 @@ Created on 17 Jan 2018
 import os
 import json
 from collections import OrderedDict
+from datetime import date
 
 from yaml.error import YAMLError
 
@@ -55,7 +56,21 @@ def get_tr_models(request):
 
 def apidoc(request):
     '''view for the home page (iframe in browser)'''
-    return render(request, 'apidoc.html', dict(_COMMON_PARAMS,
+    filename = 'apidoc.html'
+    # get the last modified attribute to print in the document
+    last_modified = None
+    for tmp_ in settings.TEMPLATES:
+        for dir_ in tmp_.get('DIRS', []):
+            if isinstance(dir_, str) and os.path.isdir(dir_):
+                path = os.path.join(dir_, filename)
+                if os.path.isfile(path):
+                    try:
+                        last_modified = date.fromtimestamp(os.path.getmtime(path))
+                        break
+                    except:  # @IgnorePep8
+                        pass
+    return render(request, filename, dict(_COMMON_PARAMS,
+                                               last_modified=last_modified,
                                                baseurl=request.META['HTTP_HOST']+"/query",
                                                trellis='trellis', residuals='residuals',
                                                gsimsel='gsims', test='testing',
