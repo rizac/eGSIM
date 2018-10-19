@@ -1,5 +1,5 @@
 @page{
-	margin: 15mm 25mm 15mm 25mm; /*top right bottom left*/
+	margin: 25mm 25mm 25mm 25mm; /*top right bottom left*/
 }
 
 @media print {  /* https://stackoverflow.com/a/28441659 */
@@ -11,13 +11,21 @@
     	height: initial !important;
         font-size: 24px !important;
     }
-    body, pre {background-color: unset !important;}
-    table.csv{font-size:65% !important;}
-    pre, table.csv, .nopagebreak {page-break-inside: avoid !important;}
-    pre > code{white-space: pre-wrap !important;}
-    div#toc{
-    	display: none !important;
+    /* set no background on body: */
+    body, body.bg-light, pre[class*=language-]{  /* body.bg-light works here, adding body in case we
+    	remove the class in the future. Also note that pre equal signs are rendered
+    	with white background in the page. In HTML it's hardly visible but in the pdf better
+    	no background */
+    	background-color: initial !important;
     }
+    table.csv{font-size:65% !important;}
+    pre[class*=language-], table.csv, .nopagebreak, ul {page-break-inside: avoid !important;}
+    pre[class*=language-] > code{white-space: pre-wrap !important;}
+    div#toc{display: none !important;}
+    /* these must be repeated here with important to work:*/
+    a, a:hover{text-decoration:none !important;}
+    table, pre{box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;}
+    
 }
 
 p, ul, table{font-family: Lato, Helvetica, Arial, Tahoma, sans-serif;}
@@ -34,27 +42,33 @@ div.content{max-width: 48em;}
 .h4, h4 {font-size: 1.75rem; margin:1.5rem 0px .5rem} /* instead of 1.5rem, margin-bottom: .5rem */
 .h5, h5 {font-size: 1.5rem; margin:1.25rem 0px .5rem} /* instead of 1.25rem, margin-bottom: .5rem */
 .h6, h6 {font-size: 1.25rem; margin:1rem 0px .5rem} /* instead of 1rem, margin-bottom: .5rem */
-code{color: initial!important;}
-/*pre[class*=language-] {overflow: initial!important;}*/ /*override prism/chrome bug hiding making pre height 28em if the code inside overflows*/
-table td{padding: .3rem; vertical-align:top;text-align:initial;}
+code{color: initial;}
+
+table, pre{
+	box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); /*(copied from shadow-sm of base.css) */
+}
+table td{padding: .3rem; vertical-align:middle;text-align:initial;}
+table > thead{font-weight: bold;}
+
 /* table borders: */
-table{border: 1px solid lightgray; min-width:100%;}
+table{min-width:100%;font-size:90%;}
 table td{border-top: 1px solid #ddd;border-bottom: 1px solid #ddd;}  /* lightgray is #ccc */
-table.csv td{border-left: 1px solid #ddd; border-right: 1px solid #ddd;white-space: nowrap;}
+table.csv td{white-space: nowrap;}
+
+table.csv td, table.grid td, thead.grid td,
+tbody.grid td, tfoot.grid.td,
+table, pre{
+	border: 1px solid #ddd;
+}
 
 table.csv{font-size:75%;}
-table, pre > code{font-size:90%;}
-table pre > code{font-size:100%;} /*code inside a table that has already a font reduced, it's not reduced anymore */
+/*table.egsim-form-parameters{font-size:90%;}*/
 
-/*add shadows to tables and pre (copied from shadow-sm of base.css):*/
-table, pre {
-    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
-}
 /* backgrounds for  x and y labels */
-td.xvalues, span.xvalues{
+table.csv td.xvalues, span.xvalues{
 	background-color:#f1f3d4;
 }
-td.yvalues, span.yvalues{
+table.csv td.yvalues, span.yvalues{
 	background-color:#e6f0f8;
 }
 span.xvalues, span.yvalues{
@@ -66,5 +80,12 @@ span.xvalues, span.yvalues{
 }
 
 a, a:hover{
-	text-decoration:none !important;
+	text-decoration:none;
+}
+
+table.egsim-form-parameters .param-notes,
+table.egsim-form-parameters .param-alternative-name,
+.footnote{
+	color: gray;
+	font-size: 87%;
 }

@@ -28,7 +28,7 @@
 <p>
 eGSIM is a web service for selecting and testing Ground
 Shaking Intensity Models (GSIM) in Europe on top of  
-<a target="_blank" href="https://github.com/GEMScienceTools/gmpe-smtk#gmpe-smtk">gmpe-smtk</a>,
+<a target="_blank" href="https://github.com/GEMScienceTools/gmpe-smtk#gmpe-smtk">GMPE-SMTK</a>,
 a Python and
 <a target="_blank" href="https://github.com/gem/oq-engine/#openquake-engine">OpenQuake</a>-based
 toolkit for analysis of strong Motions and interpretation of Ground Motion Perdiciton Equations (GMPE).
@@ -38,10 +38,12 @@ several publicly exposed endpoints (URLs) to a defined and easy to use requestâ€
 system.
 </p>
 
+<p class='footnote'>Throughout this document, for simplicity
+the terms GSIM and GMPE are used interchangeably</p>
 
 <h2 id="generalfeatures">General features</h2>
 <p>
-eGSIM is implemented along the lines of typical web services (see e.g. the
+eGSIM is implemented along the lines of typical seismological web services (see e.g. the
 <a target="_blank" href="https://www.fdsn.org/webservices/FDSN-WS-Specifications-1.1.pdf">FDSN protocol</a>):
 <i>requests</i> can be issued by a client (eGSIM user) in several ways such as e.g. command line
 applications like <code>wget</code> or inside client code with dedicated libraries
@@ -73,8 +75,7 @@ where <code>&lt;service&gt;</code> is one of the following:
 <h3 id="requestmethods">Requests methods</h3>
 <p>
 eGSIM services will be invoked using a subset of REST and HTTP methods. In particular all services
-will be invoked using the HTTP GET method whenever possible. As for FDSN web services,
-the HTTP POST method might be invoked for the 
+can be invoked using the HTTP GET or POST methods, the latter being more suitable for the 
 cases where the selection parameters are potentially large in size (typically, POST request
 are used to send data to create/update a resource on the server. Unless otherwise stated,
 this is generally not the case here).
@@ -86,7 +87,7 @@ Requests issued with the GET method simply concatenate the parameters names and
 values directly in the URL:
 </p>
 
-<code>{{ baseurl }}/&lt;service&gt;?<span class="token key atrule">name1</span>=<span class="token number">value1</span>&<span class="token key atrule">name2</span>=<span class="token number">value2</span></code>
+<code>{{ baseurl }}/&lt;service&gt;?<span class="token key atrule">name1</span>=<span class="token number">value1</span>&amp;<span class="token key atrule">name2</span>=<span class="token number">value2</span></code>
 
 <h4>POST method</h4>
 <p>
@@ -225,19 +226,23 @@ google API specification</a>. Example:
 </p>
 
 <pre><code class="language-python">{
-	"code": 400,  # the HTTP error numeric code &ge;400
+	"code": 400,  # the HTTP error numeric code &ge;400 and &le; 500
 	"message": "input validation error",  # the HTTP error message
 	"errors": [  # optional array of parameter specific errors:
 		{
 	    	"domain": "magnitude",  # the parameter name
-	    	"message": "This field is required.",  # the parameter-specific
+	    	"message": "This field is required.",  # the parameter
 	    										   # error message
-	    	"reason": "required"  # the parameter-specific
+	    	"reason": "required"  # the parameter
 	    						  # error reason
 	  	},
 	  ...
 	]
 }</code></pre>
+<p class='footnote'>
+Note: The JSON format does <b>not</b> support comments:
+the text after the character <code>#</code> is only meant to be explanatory for the reader
+</p>
 
 <p>
 For instance, this code snippet modified from the
@@ -265,7 +270,7 @@ except HTTPError as e2:
     # load the JSON formatted response into a Python dict:
     errordict = json.loads(e2.read())
     # now you can access fields such as
-    # errordict.errors, errordict.message, ...
+    # errordict['message'], errordict.get('errors', [])
 except URLError as e1:
     # handle general url errors like network errors. e.g.:
     print("Url error. Reason: %s" % e1.reason)
@@ -273,9 +278,43 @@ except URLError as e1:
 
 
 <h2 id="gsimselection">Gsim selection</h2>
+<p><b>Endpoint: <code>{{ baseurl }}/{{ gsimsel }}</code></b></p>
 <p>
-{{ form_gsims | safe }}
+This simple service pefrorms a GMPE selection based on several filtering parameter,
+including matching tectonic regions defined in specified Area source (or Tectonic region) models.
 </p>
+
+<h3>Request</h3>
+<p>
+A request to the GSIM selection service does not require any mandatory parameter: in case, all
+OpenQuake's available GMPEs will be returned. This rather trivial search is usually refined
+by specifying the desired GMPE names, IMTs or tectonic
+region types (TRT): all parameter values (strings) may include specific wildcard characters 
+with special meanings (see <a href="https://docs.python.org/3/library/fnmatch.html" target='_blank'>here</a>
+for details). In case of IMTs and TRTs, the GMPEs defined for any of the selected
+intensity measure types and tectonic regions will be returned.
+The search can be refined by specifying a tectonic region model (currently implemented
+is only <a href="http://www.efehr.org/en/Documentation/specific-hazard-models/europe/seismogenic-sources/"
+target='_blank'>SHARE</a>) and a location on earth (or a rectangular region): in this case,
+the TRTs will be further filtered based on the model's tectonic regions including that point
+(or intersecting the rectangle).
+eGSIM currently does not exploit any model-defined mapping between TRTs and GMPEs, but simply
+utilizes the tectonic regions defined on each GMPE in OpenQuake.
+
+As discussed, parameters can be given in the endpoint URL (GET method) or as
+separate text data in JSON or YAML format (POST method) and are:
+</p>
+
+{{ form_gsims | safe }}
+
+<h3>Response</h3>
+<p>
+The list of selected GMPEs will be returned as JSON-formatted array of strings or as CSV. In the
+latter case, the user can choose the orientation (vertical vs. horizontal) for e.g.,
+better visualization.
+</p>
+
+
 
 <h2 id="trellisplots">Trellis plots</h2>
 <p><b>Endpoint: <code>{{ baseurl }}/{{ trellis }}</code></b></p>
@@ -283,7 +322,7 @@ except URLError as e1:
 Trellis plots provide an understanding of the manner in which each GMPE characterises the ground
 motion scaling with respect to the properties of the seismic source, and the attenuation of the
 motion with respect to distance. By means of the
-underlying gmpe-smtk library, eGSIM can generate different plot types:
+underlying GMPE-SMTK library, eGSIM can generate different plot types:
 <ul>
 <li> IMT vs Magnitude plots show how the ground motion intensity value scales with
 respect to the magnitude of the rupture.
@@ -310,7 +349,9 @@ separate text data in JSON or YAML format (POST method) and are:
 
 <h3>Response</h3>
 <p>
-The number of generated Trellis plots depends on the requested Intensity measure types (parameter {{ param.imt }}) <i>and</i> the parameters {{ param.magnitude }}, {{ param.distance }} and {{ param.vs30 }} (which can be given as numeric scalr or array):
+The number of generated Trellis plots depends on the requested Intensity measure types (parameter
+{{ param.imt }}) <i>and</i> the parameters {{ param.magnitude }}, {{ param.distance }} and
+{{ param.vs30 }} (which can be given as numeric scalr or array):
 </p>
 
 <table class='nopagebreak'>
@@ -329,34 +370,35 @@ The number of generated Trellis plots depends on the requested Intensity measure
 
 <h4>JSON</h4>
 <p>
-Trellis plot data returned in JSON format will have the following structure (the text after the
-character <code>#</code> denotes comments which are meant to be explanatory for the reader: as
-JSON does not support comments they are not part of the response's text file):
+Trellis plot data returned in JSON format will have the following structure:
 </p>
 <pre><code class="language-python">{
-	"xvalues": [2.905, 3.771, ... ],  # All trellis plots share the same x 
-	"xlabel": "Rupture Dist. (km)",   # see above
-	"figures": [  # List of generated Trellis plots
+	"xvalues": [2.905, 3.771, ... ],  # note: all trellis plots 
+	"xlabel": "Rupture Dist. (km)",   # share the same x axis
+	"figures": [  # list of generated Trellis plots
 		{
-			"imt": "PGA",  # this plot's Intensity measure type
-			"yvalues":{  # the y data, per selected GMPe
+			"imt": "PGA",  # the plot's IMT
+			"yvalues":{  # the GMPEs mapped to their y data
 				"AkkarBommer2010": [0.3811, 0.3812, ...],
 				"CauzziFaccioli2008": [0.283, 0.283, ...],
 				...
 			},
-			"ylabel": "Median PGA (g)",  # If the scaling of standard
-									     # deviation has been asked, it will
-									     # be with 'StdDev PGA (g)'
-			"magnitude": 5,  # the magnitude set for this plot, or null if
-						     # the magnitudes are used as x values
-			"distance": null,  # the magnitude set for this plot, or null if
-						       # the magnitudes are used as x values
+			"ylabel": "Median PGA (g)",  # it will be 'StdDev PGA (g)'
+										 # for plots representing the
+										 # scaling of standard deviation 
+			"magnitude": 5,  # the plot's magnitude, or null if
+						     # magnitudes are used as x values
+			"distance": null,  # the plot's distance, or null if
+						       # distances are used as x values
 			"vs30": 760  # the vs30 set for this plot
 		},
 		...
 	]
 }</code></pre>
-
+<p class='footnote'>
+Note: The JSON format does <b>not</b> support comments:
+the text after the character <code>#</code> is only meant to be explanatory for the reader
+</p>
 
 <h4>CSV</h4>
 <p>
@@ -521,10 +563,11 @@ Trellis plot data returned in CSV format will have the following structure.
 
 
 <h2 id="residualanalysis">Residual analysis</h2>
+<p><b>Endpoint: <code>{{ baseurl }}/{{ residuals }}</code></b></p>
 <p>
 eGSIM, through the GMPE-SMTK library, offers the ability to compare observed ground motions with
 the GMPE model predictions using the GMPE implementations found inside OpenQuake.
-This is a particularly powerful tool as it permits, possibly for the first time, a
+This is a particularly powerful tool as it permits a
 hazard modeller to undertake the GMPE comparison using the exact same GMPE implementation
 found inside the seismic hazard software. There are several types of Residual plots:
 </p>
@@ -533,19 +576,53 @@ found inside the seismic hazard software. There are several types of Residual pl
 <thead>
 <tr>
 	<td>Plot type</td>
-	<td>x values (generated from the GMDB):</td>
-	<td>Number of generated plots <i>per</i> IMT and <i>per</i> Gsim:</td>
+	<td>Residual plots per (GMPE, IMT) tuple</td>
+	<td>Plot description</td>
+	<td>Additional plot attributes</td>
 </thead>
-<tbody>
-<tr><td>Residuals density distribution</td><td>Frequency of residuals vs equally spaced IMT bins</td></tr>
-<tr><td>Residuals vs. Magnitude</td><td>Scatter plot of magnitudes residuals vs </td><td>see above</td></tr>
-<tr><td>Residuals vs. Distance</td><td>distances</td><td>see above</td></tr>
-<tr><td>Residuals vs. Vs<sub>30</sub></td><td>Vs<sub>30</sub></td><td>see above</td></tr>
-<tr><td>Residuals vs. Depth</td><td>depth</td><td>see above</td></tr>
-<tr><td>Likelihood</td><td>likelihood of currently selected IMT</td><td>see above</td></tr>
+<tbody class='grid'>
+<tr>
+	<td>Residuals density distribution</td>
+	<td rowspan="7">'Intra Event', 'Inter Event' and 'Total'</td>
+	<td>Histogram of frequencies (y axis) vs residuals bins (x)</td>
+	<td>Mean, standard deviation of the distribution</td>
+</tr>
+<tr>
+	<td>Likelihood</td>
+	<td>Histogram of the frequencies (y) vs residuals likelihood bins (x)</td>
+	<td>Median of the distribution</td>
+</tr>
+<tr>
+	<td>Residuals vs. Magnitude</td>
+	<td>Scatter plot of residuals (y) vs. magnitude (x)</td>
+	<td rowspan="5">p-value and linear regression (slope, intercept)</td>
+</tr>
+<tr>
+	<td>Residuals vs. Distance</td>
+	<td>Same as above with distance as point's x</td>
+</tr>
+<tr>
+	<td>Residuals vs. Vs<sub>30</sub></td>
+	<td>Same as above with Vs<sub>30</sub> as point's x</td>
+</tr>
+<tr>
+	<td>Residuals vs. Depth</td>
+	<td>Same as above with depth as point's x</td>
+</tr>
+<tr>
+	<td>Residuals vs. Site</td>
+	<td>Same as above with stations as point's x</td>
+</tr>
+<tr>
+	<td>Intra event decomposition</td>
+	<td style='width:18em'>'Intra Event' (not normalised by the intra-event standard deviation),
+	'Average within-event' (Average within-event residual for each station),
+	'Variabilities distribution' (the distribution residual variabilities for each station)</td>
+	<td>Scatter plots of the plot residuals (y axis) vs. each station (x)</td>
+	<td>mean and standard deviation</td>
+</tr>
 </tbody>
 </table>
-
 
 
 <h3>Request</h3>
@@ -568,19 +645,14 @@ decomposition of Intra-event residuals, the plots are still three but all labell
 
 <h4>JSON</h4>
 <p>
-Residuals plot data returned in JSON format will have the following structure (the text after the
-character <code>#</code> denotes comments which are meant to be explanatory for the reader: as
-JSON does not support comments they are not part of the response's text file):
+Residuals plot data returned in JSON format will have the following structure:
 </p>
 <pre><code class="language-python">{
 	"AkkarBommer2010": [  # list of GMPE residual plots
 		{
-			"imt": "PGA",  # this plot's Intensity measure type. Note that
-						 # the IMT can be displayed on the x axis
-						 # (e.g. Likelihood plot type) or y axis
-						 # (e.g., ResidualsVsMagnitude)
-			"restype": "IntraEvent",  # it is one of "InterEvent",
-									  # "IntraEvent" and "Total".
+			"imt": "PGA",  # the plot's IMT
+			"restype": "IntraEvent",  # residual plot type: "InterEvent",
+									  # "IntraEvent" or "Total".
 									  # For Decomposition of Intra-event
 									  # residuals, this value is always
 									  # 'IntraEvent'
@@ -588,6 +660,7 @@ JSON does not support comments they are not part of the response's text file):
 			"xlabel": "Magnitude",
 			"yvalues": [-2.11, -2.27, -2.08, ...],
 			"ylabel": "Z (PGA)",
+
 			"slope": 0.269,       # These are optional properties which
 			"intercept": -1.998,  # will depend on the plot type. See
 			"pvalue": 6.6e-8      # document for details
@@ -599,7 +672,10 @@ JSON does not support comments they are not part of the response's text file):
 	],
 	...
 }</code></pre>
-
+<p class='footnote'>
+Note: The JSON format does <b>not</b> support comments:
+the text after the character <code>#</code> is only meant to be explanatory for the reader
+</p>
 
 <h4>CSV</h4>
 <p>
@@ -927,6 +1003,7 @@ csv table).
 
 
 <h2 id="testing">Testing</h2>
+<p><b>Endpoint: <code>{{ baseurl }}/{{ test }}</code></b></p>
 <p>
 
 </p>
@@ -944,6 +1021,7 @@ csv table).
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/plugins/data-uri-highlight/prism-data-uri-highlight.min.js"></script>
 
 <script type='text/javascript'>
+
 /**
  * Sets up headings (h2 and h3) numbering and the corresponding
  * items in the div#toc
@@ -955,6 +1033,7 @@ function setupH(h, secIndex, subsecIndex){
   		var counter = 2;
         while (document.getElementById(id)){
             id = id_ + counter;
+            counter++;
         }
         h.setAttribute('id', id);
     }
@@ -980,6 +1059,7 @@ function setupH(h, secIndex, subsecIndex){
 }
 var [secIndex, subsecIndex] = [0, 0];
 var tocItemsHTML = [];
+
 document.querySelectorAll('h2, h3').forEach((elm, index) => {
     var tag = elm.tagName.toLowerCase();
     if (tag == 'h2'){

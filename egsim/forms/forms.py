@@ -160,8 +160,12 @@ class BaseForm(Form):
 
     @classmethod
     def toHTML(cls):
-        '''Converts this form to an HTML table with all necessary documentation on each field'''
-        thead = ["Name<br><span style='%s'>%s</span>" % (cls._fnotecss(), 'Alternative name'),
+        '''Converts this form to an HTML table with all necessary documentation on each field.
+        The table will have a css class set to "egsim-form-parameters. Notes will have
+        class 'param-notes', and alternative names the css class 'param-alternative-name'"
+        '''
+        altnameclass = 'param-alternative-name'
+        thead = ["Name<br><span class='%s'>%s</span>" % (altnameclass, 'Alternative name'),
                  "Description", "Optional"]
         tbody = []
         # reverse key value paris in additional fieldnames and use the reversed dict afn:
@@ -174,7 +178,7 @@ class BaseForm(Form):
             line = []
             optname = afn.get(name, '')
             line.append("%s%s" % (name, "" if not optname else
-                                  '<br><span style="%s">%s</span>' % (cls._fnotecss(), optname)))
+                                  '<br><span class="%s">%s</span>' % (altnameclass, optname)))
 
             defval = field.initial
 
@@ -216,8 +220,8 @@ class BaseForm(Form):
 
             tbody.append("<td>%s</td>" % "</td><td>".join(line))
 
-        return ("<table class='form-%s'><thead><tr><td>%s</td></tr></thead>"
-                "<tbody><tr>%s</tr></tbody><tfoot>%s</tfoot></table>") % \
+        return ("<table class='egsim-form-parameters egsim-form-%s'><thead><tr><td>%s</td></tr>"
+                "</thead><tbody><tr>%s</tr></tbody><tfoot>%s</tfoot></table>") % \
             (cls.__name__,
              "</td><td>".join(thead),
              "</tr><tr>".join(tbody),
@@ -265,16 +269,13 @@ class BaseForm(Form):
             if note['text'] == text:
                 return note['anchor']
         num = len(notes) + 1
+        notesclass = 'param-notes'
         note = {'text': text,
-                'html': '<div style="%s">note %d: %s</div>' %
-                (cls._fnotecss(), num, text),
-                'anchor': '<sup style="%s">see note %d</sup>' % (cls._fnotecss(), num)}
+                'html': '<div class="%s">note %d: %s</div>' %
+                (notesclass, num, text),
+                'anchor': '<sup class="%s">see note %d</sup>' % (notesclass, num)}
         notes.append(note)
         return notes[-1]['anchor']
-
-    @staticmethod
-    def _fnotecss():
-        return "color:gray;font-size=.9rem"
 
     @staticmethod
     def _numtype2str(narrayfield):
