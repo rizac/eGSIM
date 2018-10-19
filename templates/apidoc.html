@@ -140,7 +140,9 @@ eGSIM supports the following parameter types:
 <li>UTC date-time (in ISO format without timezone, e.g.:
 <code>2016-01-30T23:15:11</code> or <code>2016-01-31</code>)
 <li>arrays (vectors) of the previous types
-<li>numeric ranges (i.e., equally spaced numeric arrays) in the Matlab(c) format <code>start:step:end</code>
+<li>numeric ranges (i.e., equally spaced numeric arrays) in the
+<a href="https://www.mathworks.com/help/matlab/ref/colon.html#bvhfyce" target="_blank">MATLAB<sup>&reg;</sup> format</a>
+<code>start:step:end</code>
 (e.g. <code>0:0.1:0.3</code> results in the sequence of values 0, 0.1, 0.2, 0.3)
 </ul>
 
@@ -350,8 +352,9 @@ separate text data in JSON or YAML format (POST method) and are:
 <h3>Response</h3>
 <p>
 The number of generated Trellis plots depends on the requested Intensity measure types (parameter
-{{ param.imt }}) <i>and</i> the parameters {{ param.magnitude }}, {{ param.distance }} and
-{{ param.vs30 }} (which can be given as numeric scalr or array):
+{{ param.trellisform.imt.name }}) <i>and</i> the parameters {{ param.trellisform.magnitude.name }},
+{{ param.trellisform.distance.name }} and
+{{ param.trellisform.vs30.name }} (which can be given as numeric scalr or array):
 </p>
 
 <table class='nopagebreak'>
@@ -362,9 +365,20 @@ The number of generated Trellis plots depends on the requested Intensity measure
 	<td>The number of generated plots is the product of all supplied values of:</td></tr>
 </thead>
 <tbody>
-<tr><td>IMT vs. distance</td><td>{{ param.distance }}</td><td>{{ param.imt }}, {{ param.magnitude }}, {{ param.vs30 }}</td></tr>
-<tr><td>IMT vs. magnitude</td><td>{{ param.magnitude }}</td><td>{{ param.imt }}, {{ param.distance }}, {{ param.vs30 }}</td></tr>
-<tr><td>Magnitude-distance spectra</td><td>None: a set of pre-defined periods will be used</td><td>{{ param.imt }}, {{ param.magnitude }}, {{ param.distance }}, {{ param.vs30 }}</td></tr>
+<tr>
+	<td>{{ param.trellisform.plot_type.choices.0.label }}</td>
+	<td>{{ param.trellisform.distance.name }}</td>
+	<td>{{ param.trellisform.imt.name }}, {{ param.trellisform.magnitude.name }}, {{ param.trellisform.vs30.name }}</td>
+</tr>
+<tr>
+	<td>{{ param.trellisform.plot_type.choices.1.label }}</td>
+	<td>{{ param.trellisform.magnitude.name }}</td>
+	<td>{{ param.trellisform.imt.name }}, {{ param.trellisform.distance.name }}, {{ param.trellisform.vs30.name }}</td>
+</tr>
+<tr>
+	<td>{{ param.trellisform.plot_type.choices.2.label }}</td>
+	<td>None: a set of pre-defined periods will be used</td>
+	<td>{{ param.trellisform.imt.name }}, {{ param.trellisform.magnitude.name }}, {{ param.trellisform.distance.name }}, {{ param.trellisform.vs30.name }}</td>
 </tbody>
 </table>
 
@@ -569,61 +583,10 @@ eGSIM, through the GMPE-SMTK library, offers the ability to compare observed gro
 the GMPE model predictions using the GMPE implementations found inside OpenQuake.
 This is a particularly powerful tool as it permits a
 hazard modeller to undertake the GMPE comparison using the exact same GMPE implementation
-found inside the seismic hazard software. There are several types of Residual plots:
+found inside the seismic hazard software. All analyses undertaken will, by default,
+analyse the total residual, the inter-event residual and the intra-event residual, exposed to the
+user via Residuals plots.
 </p>
-
-<table class='nopagebreak'>
-<thead>
-<tr>
-	<td>Plot type</td>
-	<td>Residual plots per (GMPE, IMT) tuple</td>
-	<td>Plot description</td>
-	<td>Additional plot attributes</td>
-</thead>
-<tbody class='grid'>
-<tr>
-	<td>Residuals density distribution</td>
-	<td rowspan="7">'Intra Event', 'Inter Event' and 'Total'</td>
-	<td>Histogram of frequencies (y axis) vs residuals bins (x)</td>
-	<td>Mean, standard deviation of the distribution</td>
-</tr>
-<tr>
-	<td>Likelihood</td>
-	<td>Histogram of the frequencies (y) vs residuals likelihood bins (x)</td>
-	<td>Median of the distribution</td>
-</tr>
-<tr>
-	<td>Residuals vs. Magnitude</td>
-	<td>Scatter plot of residuals (y) vs. magnitude (x)</td>
-	<td rowspan="5">p-value and linear regression (slope, intercept)</td>
-</tr>
-<tr>
-	<td>Residuals vs. Distance</td>
-	<td>Same as above with distance as point's x</td>
-</tr>
-<tr>
-	<td>Residuals vs. Vs<sub>30</sub></td>
-	<td>Same as above with Vs<sub>30</sub> as point's x</td>
-</tr>
-<tr>
-	<td>Residuals vs. Depth</td>
-	<td>Same as above with depth as point's x</td>
-</tr>
-<tr>
-	<td>Residuals vs. Site</td>
-	<td>Same as above with stations as point's x</td>
-</tr>
-<tr>
-	<td>Intra event decomposition</td>
-	<td style='width:18em'>'Intra Event' (not normalised by the intra-event standard deviation),
-	'Average within-event' (Average within-event residual for each station),
-	'Variabilities distribution' (the distribution residual variabilities for each station)</td>
-	<td>Scatter plots of the plot residuals (y axis) vs. each station (x)</td>
-	<td>mean and standard deviation</td>
-</tr>
-</tbody>
-</table>
-
 
 <h3>Request</h3>
 <p>
@@ -636,12 +599,64 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 
 <h3>Response</h3>
 <p>
-The number of generated Residuals plots will be three times the product of the requested Intensity
-measure types (parameter {{ param.imt }}) and the requested GMPEs (parameter {{ param.gsim }}, where
-three is the number of residual types per plot, which are "Intra Event", "Inter Event" and "Total". For
-decomposition of Intra-event residuals, the plots are still three but all labelled as 'IntraEvent'
-(what changes will be the y label and the data).
+The number of generated Residuals plots will be the product of the requested Intensity
+measure types (parameter {{ param.residualsform.imt.name }}) and the requested GMPEs
+(parameter {{ param.residualsform.gsim.name }}. Each Residual plot is futher subdivided
+into three subplots:
 </p>
+
+<table class='nopagebreak'>
+<thead>
+<tr>
+	<td>Plot type</td>
+	<td>Residual plots per (GMPE, IMT) tuple</td>
+	<td>Plot description</td>
+	<td>Additional plot attributes</td>
+</thead>
+<tbody class='grid'>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.0.label }}</td>
+	<td rowspan="7">'Intra Event', 'Inter Event' and 'Total'</td>
+	<td>Histogram of frequencies (y axis) vs residuals bins (x)</td>
+	<td>Mean, standard deviation of the distribution</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.1.label}}</td>
+	<td>Histogram of the frequencies (y) vs residuals likelihood bins (x)</td>
+	<td>Median of the distribution</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.2.label}}</td>
+	<td>Scatter plot of residuals (y) vs. magnitude (x)</td>
+	<td rowspan="5">p-value and linear regression (slope, intercept)</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.3.label}}</td>
+	<td>Same as above with distance as point's x</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.4.label}}</td>
+	<td>Same as above with Vs<sub>30</sub> as point's x</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.5.label}}</td>
+	<td>Same as above with depth as point's x</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.6.label}}</td>
+	<td>Same as above with stations as point's x</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.7.label}}</td>
+	<td style='width:18em'>'Intra Event' (not normalised by the intra-event standard deviation),
+	'Average within-event' (Average within-event residual for each station),
+	'Variabilities distribution' (the distribution residual variabilities for each station)</td>
+	<td>Scatter plots of the plot residuals (y axis) vs. each station (x)</td>
+	<td>mean and standard deviation</td>
+</tr>
+</tbody>
+</table>
+
 
 <h4>JSON</h4>
 <p>

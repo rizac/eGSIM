@@ -29,7 +29,6 @@ from smtk.residuals.residual_plots import residuals_density_distribution, residu
 from egsim.core.utils import vectorize, EGSIM, isscalar, _convert, strptime
 
 
-
 class ArrayField(CharField):
     '''
         Implements a django CharField which parses and validates the input expecting a
@@ -363,12 +362,14 @@ class GmdbSelectionField(EgsimChoiceField):
 class ResidualplottypeField(EgsimChoiceField):
     '''An EgsimChoiceField which returns the selected function to compute residual plots'''
     _base_choices = (
-        ('ddist', 'Residuals density distribution', residuals_density_distribution),
+        ('res', 'Residuals density distribution', residuals_density_distribution),
+        ('lh', 'Likelihood', likelihood),
         ('mag', 'Residuals vs. Magnitude', residuals_with_magnitude),
         ('dist', 'Residuals vs. Distance', residuals_with_distance),
         ('vs30', 'Residuals vs. Vs30', residuals_with_vs30),
         ('depth', 'Residuals vs. Depth', residuals_with_depth),
-        ('lh', 'Likelihood', likelihood)
+        ('site', 'Residuals vs. Site', None),
+        ('intra', 'Intra Event Residuals vs. Site', None),
     )
 
 

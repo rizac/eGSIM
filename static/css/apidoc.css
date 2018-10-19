@@ -9,7 +9,7 @@
     }
     body {
     	height: initial !important;
-        font-size: 24px !important;
+        font-size: 26px !important;
     }
     /* set no background on body: */
     body, body.bg-light, pre[class*=language-]{  /* body.bg-light works here, adding body in case we
@@ -18,6 +18,7 @@
     	no background */
     	background-color: initial !important;
     }
+    table, pre[class*=language-]{font-size:80% !important;}	
     table.csv{font-size:65% !important;}
     pre[class*=language-], table.csv, .nopagebreak, ul {page-break-inside: avoid !important;}
     pre[class*=language-] > code{white-space: pre-wrap !important;}
@@ -44,21 +45,23 @@ div.content{max-width: 48em;}
 .h6, h6 {font-size: 1.25rem; margin:1rem 0px .5rem} /* instead of 1rem, margin-bottom: .5rem */
 code{color: initial;}
 
-table, pre{
+table, pre[class*=language-]{
 	box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); /*(copied from shadow-sm of base.css) */
 }
 table td{padding: .3rem; vertical-align:middle;text-align:initial;}
 table > thead{font-weight: bold;}
 
 /* table borders: */
-table{min-width:100%;font-size:90%;}
+table{min-width:100%;}
 table td{border-top: 1px solid #ddd;border-bottom: 1px solid #ddd;}  /* lightgray is #ccc */
 table.csv td{white-space: nowrap;}
 
 table.csv td, table.grid td, thead.grid td,
 tbody.grid td, tfoot.grid.td,
-table, pre{
+
+table, pre[class*=language-]{
 	border: 1px solid #ddd;
+	font-size:90%;
 }
 
 table.csv{font-size:75%;}

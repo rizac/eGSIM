@@ -220,11 +220,14 @@ class BaseForm(Form):
 
             tbody.append("<td>%s</td>" % "</td><td>".join(line))
 
-        return ("<table class='egsim-form-parameters egsim-form-%s'><thead><tr><td>%s</td></tr>"
-                "</thead><tbody><tr>%s</tr></tbody><tfoot>%s</tfoot></table>") % \
+        return ("<table class='egsim-form-parameters egsim-form-%s'>"
+                "\n\t<thead>\n\t\t<tr>\n\t\t\t<td>%s</td>\n\t\t</tr>\n\t</thead>"
+                "\n\t<tbody>\n\t\t<tr>%s</tr>\n\t</tbody>"
+                "\n\t<tfoot>%s</tfoot>"
+                "\n</table>\n") % \
             (cls.__name__,
-             "</td><td>".join(thead),
-             "</tr><tr>".join(tbody),
+             "</td>\n\t\t\t<td>".join(thead),
+             "</tr>\n\t\t<tr>".join(tbody),
              "".join('<tr><td colspan="%d">%s</td></tr>' % (len(thead), note['html'])
                      for note in notes))
 
@@ -238,9 +241,12 @@ class BaseForm(Form):
             obj = thismodule.__dict__[name]
             try:
                 if issubclass(obj, cls):
-                    for key in obj.declared_fields.keys():
-                        ret[key] = key
-            except:  # obj not a class, pass: @IgnorePep8
+                    ret[obj.__name__.lower()] = \
+                        {key: {"name": key, "label": field.label, "help": field.help_text,
+                               'choices': [{'name': n, 'label': l}
+                                           for n, l in getattr(field, 'choices', [])]}
+                         for key, field in obj.declared_fields.items()}
+            except:
                 pass
         return ret
     ################################################################################
