@@ -12,13 +12,11 @@ import mock
 
 import pytest
 
-from egsim.utils import EGSIM
+from egsim.core.utils import EGSIM, yaml_load as original_yaml_load
 
-from egsim.views import TrellisPlotsView
-from egsim.forms import BaseForm, TrellisForm
-from egsim.core.trellis import compute_trellis, default_periods_for_spectra
-from egsim.core import yaml_load as original_yaml_load
-from more_itertools.more import side_effect
+from egsim.views import TrellisView
+from egsim.forms.forms import BaseForm, TrellisForm
+from egsim.core.smtk import get_trellis, _default_periods_for_spectra
 
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -50,8 +48,8 @@ def get_form(**overrides):
 def test_trellis_dist(trellis_type):
     '''test trellis distance and distance stdev'''
     form = get_form(plot_type=trellis_type)
-    input_ = form.clean()
-    result = compute_trellis(dict(input_))  # copy dict: some keys might be popped in the func.
+    input_ = form.cleaned_data
+    result = get_trellis(dict(input_))  # copy dict: some keys might be popped in the func.
     assert sorted(result.keys()) == ['figures', 'xlabel', 'xvalues']
     xvalues = result['xvalues']
     assert len(xvalues) == len(input_['distance']) + 1  # FIXME: should be len(distance)!!!
@@ -67,8 +65,8 @@ def test_trellis_dist(trellis_type):
 def test_trellis_mag(trellis_type):
     '''test trellis magnitude and magnitude stdev'''
     form = get_form(plot_type=trellis_type)
-    input_ = form.clean()
-    result = compute_trellis(dict(input_))  # copy dict: some keys might be popped in the func.
+    input_ = form.cleaned_data
+    result = get_trellis(dict(input_))  # copy dict: some keys might be popped in the func.
     assert sorted(result.keys()) == ['figures', 'xlabel', 'xvalues']
     xvalues = result['xvalues']
     assert len(xvalues) == len(input_['magnitude'])
@@ -84,11 +82,11 @@ def test_trellis_mag(trellis_type):
 def test_trellis_spec(trellis_type):
     '''test trellis magnitude-distance spectra and magnitude-distance stdev'''
     form = get_form(plot_type=trellis_type)
-    input_ = form.clean()
-    result = compute_trellis(dict(input_))  # copy dict: some keys might be popped in the func.
+    input_ = form.cleaned_data
+    result = get_trellis(dict(input_))  # copy dict: some keys might be popped in the func.
     assert sorted(result.keys()) == ['figures', 'xlabel', 'xvalues']
     xvalues = result['xvalues']
-    assert len(xvalues) == len(default_periods_for_spectra())
+    assert len(xvalues) == len(_default_periods_for_spectra())
     figures = result['figures']
     assert len(figures) == len(input_['distance']) * len(input_['magnitude'])
     for fig in figures:
@@ -112,6 +110,6 @@ def test_error():
               "vs30_measured": True, "line_azimuth": "0.0", "plot_type": "ds"}
     form = TrellisForm(params)
     assert form.is_valid()
-    result = compute_trellis(form.clean())
+    result = get_trellis(form.cleaned_data)
     figures = result['figures']
     assert figures[1]['yvalues']['AkkarBommer2010SWISS01'] == []

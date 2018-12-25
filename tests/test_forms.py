@@ -3,20 +3,20 @@ Created on 2 Jun 2018
 
 @author: riccardo
 '''
-import unittest
+import numpy as np
 
 import pytest
-from django.test import TestCase
 
-from egsim.forms import BaseForm, TrellisForm
+from egsim.forms.forms import TrellisForm, GsimImtForm
 from openquake.hazardlib import imt
+import json
 
 
 GSIM, IMT = 'gsim', 'imt'
 
 
-def test_baseForm_invalid():
-    form = BaseForm()
+def test_gsimimtForm_invalid():
+    form = GsimImtForm()
     assert not form.is_valid()
     # https://docs.djangoproject.com/en/2.0/ref/forms/api/#django.forms.Form.is_bound:
     assert not form.is_bound
@@ -27,12 +27,12 @@ def test_baseForm_invalid():
     err = form.errors.as_json()
     assert err == '{}'
 
-    form = BaseForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
+    form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
     assert not form.is_valid()
     err = form.errors.as_json()
     assert err == '{"imt": [{"message": "This field is required.", "code": "required"}]}'
 
-    form = BaseForm({GSIM: ['abcde', 'BindiEtAl2014Rjb']})
+    form = GsimImtForm({GSIM: ['abcde', 'BindiEtAl2014Rjb']})
     assert not form.is_valid()
     err = form.errors.as_json()
     assert err == ('{"gsim": [{"message": "Select a valid choice. abcde is not one of '
@@ -40,27 +40,27 @@ def test_baseForm_invalid():
                    '"code": "invalid_choice"}], "imt": [{"message": "This field is required.",'
                    ' "code": "required"}]}')
 
-    form = BaseForm({IMT: ['abcde', 'BindiEtAl2014Rjb']})
+    form = GsimImtForm({IMT: ['abcde', 'BindiEtAl2014Rjb']})
     assert not form.is_valid()
     err = form.errors.as_json()
     assert err == ('{"gsim": [{"message": "This field is required.", "code": "required"}], '
                    '"imt": [{"message": "Select a valid choice. abcde is not one of the '
                    'available choices.", "code": "invalid_choice"}]}')
 
-    form = BaseForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'], IMT: ['SA', 'MMI']})
+    form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'], IMT: ['SA', 'MMI']})
     assert not form.is_valid()
     err = form.errors.as_json()
 
     # ----------------------------------------------------------------------------
-    # UNCOMMENT IF PROVIDING UNKNOWN PARAMETER RAISES (FOR THE MOMENT IT DOE NOT):
+    # UNCOMMENT IF PROVIDING UNKNOWN PARAMETER RAISES (FOR THE MOMENT IT DOES NOT):
     # ----------------------------------------------------------------------------
-#     form = BaseForm({'unknown_param': 5, GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+#     form = GsimImtForm({'unknown_param': 5, GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
 #                      IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']})
 #     assert not form.is_valid()
 #     err = form.errors.as_json()
 
     data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'], IMT: ['SA', 'PGA', 'PGV']}
-    form = BaseForm(data)
+    form = GsimImtForm(data)
     assert not form.is_valid()
     err = form.errors.as_json()
     expected_json = \
@@ -75,10 +75,10 @@ def test_baseForm_invalid():
                                   ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                                     IMT: ['SA', 'PGA', 'PGV'],
                                     'sa_periods': '0.1:0.1:0.2'})])
-def test_baseform_valid(data):
-    form = BaseForm(data)
+def test_gsimimtForm_valid(data):
+    form = GsimImtForm(data)
     assert form.is_valid()
-    dic = form.clean()
+    dic = form.cleaned_data
     # This does not work:
     # assert dic == data
     # because we processed the imts
@@ -95,7 +95,12 @@ def test_baseform_valid(data):
     assert imts[1].period == 0.2
 
 
-def test_trellisform_invalid():
+def test_trellisform_invalid(comparator):
+    '''Tests trellis form invalid.
+    :param comparator: pytest fixture defined in conftest.py, it is used to compare
+    objects with optional error tolerance for numeric array, and other utilities (e.g.
+    two lists with same items in different orders are equal)
+    '''
     data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'], IMT: ['SA', 'PGA', 'PGV']}
 
     form = TrellisForm(data)
@@ -104,18 +109,24 @@ def test_trellisform_invalid():
     expected_json = \
         ('{"imt": [{"message": "intensity measure type \'SA\' must be '
          'specified with period(s)", "code": "sa_without_period"}], '
+         '"plot_type": [{"message": "This field is required.", "code": "required"}], '
          '"magnitude": [{"message": "This field is required.", "code": "required"}], '
          '"distance": [{"message": "This field is required.", "code": "required"}], '
          '"dip": [{"message": "This field is required.", "code": "required"}], '
          '"aspect": [{"message": "This field is required.", "code": "required"}]}')
-    assert err == expected_json
+    assert comparator.equal(json.loads(err), json.loads(expected_json))
 
+    # test invalid by supplying some parameters:
     data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'], IMT: ['SA(0.1)', 'PGA', 'PGV']}
     form = TrellisForm(dict(data, magnitude='0:1:5', distance=6, dip=56, aspect='ert'))
     assert not form.is_valid()
-    # form.clean()
+
     err = form.errors.as_json()
-    assert err == '{"aspect": [{"message": "Enter a number.", "code": "invalid"}]}'
+    assert comparator.equal(json.loads(err),
+                            json.loads('{"aspect": [{"message": "Enter a number.", '
+                                       '"code": "invalid"}], '
+                                       '"plot_type": [{"message": "This field is required.", '
+                                       '"code": "required"}]}'))
 
 
 @pytest.mark.parametrize('data, expected_yaml, expected_json',
@@ -143,17 +154,19 @@ def test_trellisform_load_dump(data, expected_yaml, expected_json):
     first case preserves the string with colons, and that a Form taking the serialized
     yaml has the same clean() method as the original form's clean method'''
     form = TrellisForm(data)
+    assert form.is_valid()
+    cleaned_data = form.cleaned_data
     yaml_ = form.dump(syntax='yaml')
     json_ = form.dump(syntax='json')
 
     # pass the yaml and json to validate and see that we obtain the same dict(s):
     form_from_yaml = TrellisForm.load(yaml_)
     assert form_from_yaml.is_valid()
-    assert form.clean() == form_from_yaml.clean()
+    assert cleaned_data == form_from_yaml.cleaned_data
 
     form_from_json = TrellisForm.load(json_)
     assert form_from_json.is_valid()
-    assert form.clean() == form_from_json.clean()
+    assert cleaned_data == form_from_json.cleaned_data
 
     with pytest.raises(ValueError):
         TrellisForm(data).dump(syntax='whatever')
@@ -189,22 +202,21 @@ def test_trellisform_load_dump(data, expected_yaml, expected_json):
   ],
   "line_azimuth": 0.0,
   "magnitude": %s,
-  "msr": "WC1994",
+  "magnitude_scalerel": "WC1994",
   "plot_type": "m",
   "rake": 0.0,
   "strike": 0.0,
-  "tectonic_region": "Active Shallow Crust",
   "vs30": 760.0,
   "vs30_measured": true,
   "ztor": 0.0
 }""" % expected_json
 
-    assert yaml_ == """# Ground Shaking Intensity Model(s) (gsim)
+    assert yaml_ == """# Ground Shaking Intensity Model(s)
 gsim:
   - BindiEtAl2011
   - BindiEtAl2014Rjb
 
-# Intensity Measure Type(s) (imt)
+# Intensity Measure Type(s)
 imt:
   - SA(0.1)
   - SA(0.2)
@@ -217,10 +229,10 @@ aspect: 1.2
 # Dip
 dip: 5.0
 
-# Magnitude(s) (Scalar, vector or range)
+# Magnitude(s)
 magnitude:%s
 
-# Distance(s) (Scalar, vector or range)
+# Distance(s)
 distance:
   - 1.0
   - 2.0
@@ -230,9 +242,6 @@ distance:
 
 # Plot type
 plot_type: m
-
-# Tectonic Region Type
-tectonic_region: Active Shallow Crust
 
 # Rake
 rake: 0.0
@@ -244,7 +253,7 @@ ztor: 0.0
 strike: 0.0
 
 # Magnitude Scaling Relation
-msr: WC1994
+magnitude_scalerel: WC1994
 
 # Location on Earth (Longitude Latitude)
 initial_point:
@@ -256,7 +265,7 @@ hypocentre_location:
   - 0.5
   - 0.5
 
-# VS30 (m/s) (Scalar, vector or range)
+# VS30 (m/s)
 vs30: 760.0
 
 # Is VS30 measured? (Otherwise is inferred)

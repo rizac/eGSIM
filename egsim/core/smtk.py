@@ -54,7 +54,7 @@ def get_gsims(params):
                                           lat1=params.get(LAT2, None), key='OQ_TRT')
         gsims = [gsim for gsim in gsims if gsim.trt in trts]
 
-    return [str(gsims) for gsim in gsims]
+    return [str(gsim) for gsim in gsims]
 
 
 def get_trellis(params):

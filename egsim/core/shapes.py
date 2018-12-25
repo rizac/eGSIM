@@ -67,7 +67,8 @@ def featuresiter(geojson):
 
 def get_feature_properties(geojson, lon0, lat0, trts=None, lon1=None, lat1=None, key='OQ_TRT'):
     matching_trts = set()
-    trts = set(trts) if trts else None
+    if trts is not None:
+        trts = set(trts)
 
     ispoint = True
     nopoint = lon0 is None and lat0 is None

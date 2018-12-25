@@ -18,8 +18,9 @@ from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import TrellisForm, GsimSelectionForm, GmdbForm, ResidualsForm, BaseForm
-from egsim.core.utils import EGSIM
+from egsim.core.utils import EGSIM, QUERY_PARAMS_SAFE_CHARS
 from egsim.core import smtk as egsim_smtk
+from egsim.forms.fields import ArrayField
 
 
 _COMMON_PARAMS = {
@@ -70,14 +71,15 @@ def apidoc(request):
                     except:  # @IgnorePep8
                         pass
     return render(request, filename, dict(_COMMON_PARAMS,
-                                               last_modified=last_modified,
-                                               baseurl=request.META['HTTP_HOST']+"/query",
-                                               trellis='trellis', residuals='residuals',
-                                               gsimsel='gsims', test='testing',
-                                               param=BaseForm.parnames(),
-                                               form_trellis=TrellisForm.toHTML(),
-                                               form_residuals=ResidualsForm.toHTML(),
-                                               form_gsims=GsimSelectionForm.toHTML()))
+                                          query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
+                                          last_modified=last_modified,
+                                          baseurl=request.META['HTTP_HOST']+"/query",
+                                          trellis='trellis', residuals='residuals',
+                                          gsimsel='gsims', test='testing',
+                                          param=BaseForm.parnames(),
+                                          form_trellis=TrellisForm.toHTML(),
+                                          form_residuals=ResidualsForm.toHTML(),
+                                          form_gsims=GsimSelectionForm.toHTML()))
 
 def trsel(request):
     '''view returing the page forfor the gsim tectonic region
@@ -128,7 +130,17 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     return JsonResponse([gsim.asjson() for gsim in EGSIM.aval_gsims.values()], safe=False)
 
 
-class EgsimQueryView(View):
+class EgsimQueryViewMeta(type):
+    '''metaclass for EgsimChoiceField subclasses. Takes the class attribute _base_choices
+    and modifies it into a valid `choices` argument, and creates the dict `cls._mappings`
+    See :class:`EgsimChoiceField` documentation for details'''
+    def __init__(cls, name, bases, nmspc):
+        super(EgsimQueryViewMeta, cls).__init__(name, bases, nmspc)
+        cls.arrayfields = set() if cls.formclass is None else\
+            set(_ for _, f in cls.formclass.declared_fields.items() if isinstance(f, ArrayField))
+
+
+class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
     '''base view for every eGSIM view handling data request and returning data in response
     this is usually accomplished via a form in the web page or a POST reqeust from
     the a normal query in the standard API'''
@@ -139,7 +151,18 @@ class EgsimQueryView(View):
 
     def get(self, request):
         '''processes a get request'''
-        ret = {key: val.split(',') if ',' in val else val for key, val in request.GET.items()}
+        #  get to dict:
+        #  Note that percent-encoded characters are decoded automatiically
+        ret = {}
+        for key, values in request.GET.lists():
+            newlist = []
+            for val in values:
+                if key in self.arrayfields and isinstance(val, str) and ',' in val:
+                    newlist.extend(val.split(','))
+                else:
+                    newlist.append(val)
+            ret[key] = newlist[0] if len(newlist) == 1 else newlist
+
         return self.response(ret)
 
     def post(self, request):

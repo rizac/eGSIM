@@ -7,8 +7,10 @@ Created on 29 Jan 2018
 '''
 
 import re
+import sys
 import os
 import json
+from datetime import datetime
 from collections import OrderedDict
 from io import StringIO
 
@@ -23,21 +25,15 @@ from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxIn
     HiddenInput
 from django.forms.fields import BooleanField, CharField, FloatField, \
     ChoiceField, MultipleChoiceField
-# from django.core import validators
 
 from openquake.hazardlib import imt
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 from smtk.database_visualiser import DISTANCES
 
-from egsim.core import yaml_load
-from egsim.core.utils import vectorize, EGSIM, isscalar
+from egsim.core.utils import vectorize, EGSIM, isscalar, yaml_load, querystring, tostr
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrField, \
     PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField, \
     TrModelField, MultipleChoiceWildcardField
-import time
-import uuid
-import sys
-
 
 
 class BaseForm(Form):
@@ -90,12 +86,12 @@ class BaseForm(Form):
         return cls(data=yaml_load(obj))
 
     def dump(self, stream=None, syntax='yaml'):
-        """Serialize this Form instance into a YAML or JSON stream.
+        """Serialize this Form instance into a YAML, JSON or URL query stream.
            If stream is None, return the produced string instead.
 
-           :param stream: A stream like a file-like object (in general any
-               object with a write method) or None
-           :param syntax: string, either 'json' or 'yaml'. If not either string, this
+           :param stream: A stream **for text I/O** like a file-like object (in general any
+               object with a write method, e.g. StringIO) or None.
+           :param syntax: string, either 'json', 'yaml' or 'GET'. If not either string, this
                 method raises ValueError
         """
         syntax = syntax.lower()
@@ -103,7 +99,14 @@ class BaseForm(Form):
             raise ValueError("Form serialization syntax must be 'json' or 'yaml'")
 
         obj = self.to_dict()
-        if syntax == 'json':  # JSON
+
+        if syntax == 'GET':  # GET
+            querystr = querystring(obj)
+            if stream is None:
+                return querystr
+            else:
+                stream.write(querystr)
+        elif syntax == 'json':  # JSON
             if stream is None:
                 return json.dumps(obj, indent=2, separators=(',', ': '), sort_keys=True)
             else:
@@ -144,19 +147,26 @@ class BaseForm(Form):
 
     def to_dict(self):
         '''Converts this form to python dict. Each value is the `to_python` method of the
-        corresponding django Field. Note that for :class:`NArrayField`s, the resulting array
-        might be extremely long (in case of semicolon notation, e.g. '1:1:10000')..
+        corresponding django Field. Note that for lists, the original value is checked and,
+        if string and contains the colon ':', it indicates a range and thus is returned
+        as it was. Also, datetimes are quoted in ISO format as json might not support them.
 
-        raises ValidationError if the form is not valid
+        raise: ValidationError if the form is not valid
         '''
         if not self.is_valid():
             raise ValidationError(self.errors, code='invalid')
 
-        # we might keep the value as-it-is for NArrayFields, but we might have non-JSON/YAML
-        # parsable elements, if the dict has to be serialized in any of those syntaxes.
-        # Moreover, remember that '1:1:30' is interpreted by pyyaml as hour, which results
-        # in an int (number of seconds?)
-        return {name: self.fields[name].to_python(val) for name, val in self.data.items()}
+        ret = {}
+        for name, val in self.data.items():
+            parsedval = self.fields[name].to_python(val)
+            is_scalar = isscalar(parsedval)
+            if is_scalar and isinstance(parsedval, datetime):
+                parsedval = tostr(parsedval)
+            elif not is_scalar and isinstance(val, str) and ':' in val:
+                parsedval = val
+            ret[name] = parsedval
+
+        return ret
 
     @classmethod
     def toHTML(cls):
@@ -191,8 +201,6 @@ class BaseForm(Form):
                 desc += "<br>Type: boolean (true or false)"
             elif isinstance(field, NArrayField):
                 desc += ("<br>Type: %s. " % cls._numtype2str(field)) + cls._bounds2html(field)
-#             elif not isinstance(field, ChoiceField):
-#                 desc += '<br>ARGHHH!'
             elif isinstance(field, ChoiceField):
                 choicesdoc, defaults2all = cls._choices2str(field)
                 if defaults2all:

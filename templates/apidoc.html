@@ -20,6 +20,12 @@
 <div class='flexible text-justify px-4 pt-3'>
 <div class='content'>
 
+
+<!--  NOTE FOR GENERATING THE PAGE WITH wkhtml...:
+wkhtmltopdf --no-stop-slow-scripts --print-media-type -B 25 -T 25 -L 25 -R 25 --title "eGSIM API Documentation" http://127.0.0.1:8000/service/apidoc ~/Desktop/egsim.pdf
+ISSUES: no javascript executed
+ -->
+
 <h1>eGSIM API</h1>
 {% if last_modified %}
 <p style='font-size:50%;text-align:right;'>Last modified: {{ last_modified }}</p>
@@ -38,7 +44,7 @@ several publicly exposed endpoints (URLs) to a defined and easy to use requestâ€
 system.
 </p>
 
-<p class='footnote'>Throughout this document, for simplicity
+<p class='footnote'>Note: throughout this document, for simplicity
 the terms GSIM and GMPE are used interchangeably</p>
 
 <h2 id="generalfeatures">General features</h2>
@@ -59,7 +65,9 @@ formats described in the remainder of this document.
 The following base URI pattern is to be used for each request:
 </p>
 
-<code>{{ baseurl }}/&lt;service&gt;</code>
+<p>
+<code class='pre'>{{ baseurl }}/&lt;service&gt;</code>
+</p>
 
 <p>
 where <code>&lt;service&gt;</code> is one of the following:
@@ -87,11 +95,29 @@ Requests issued with the GET method simply concatenate the parameters names and
 values directly in the URL:
 </p>
 
+<p>
 <code>{{ baseurl }}/&lt;service&gt;?<span class="token key atrule">name1</span>=<span class="token number">value1</span>&amp;<span class="token key atrule">name2</span>=<span class="token number">value2</span></code>
+</p>
+
+<p>
+Where the portion of string after the question mark ? is called <i>query string</i>.
+Parameter names can be provided multiple times in the query string. In case, the result
+will be obtained by merging all matching values. Alternatively, the user can supply
+comma-separated list of values to obtain the same effect.
+Each parameter value might contain any alpha numeric character (a to z, A to Z, 0 to 9)
+and the following characters (some of which might have
+<a href='#requestparameters'>special meanings</a>): <code>{{ query_params_safe_chars }}</code>
+
+<p class='footnote'>Note: The set of characters above currently covers most of the needs of
+eGSIM users. Other characters should be 
+<a href="https://en.wikipedia.org/wiki/Percent-encoding" target='_blank'>percent encoded</a>.
+For Python users, see the function <a href='https://docs.python.org/3/library/urllib.parse.html#url-quoting'>quote</a>
+and similar.
+</p>
 
 <h4>POST method</h4>
 <p>
-Requests issued with the POST should use the usual URI pattern:
+Requests issued with the POST method should use the usual URI pattern:
 <code>{{ baseurl }}/&lt;service&gt;</code>
 and provide the parameters set by means of additional data as text in
 <a target="_blank" href="https://en.wikipedia.org/wiki/JSON#Data_types.2C_syntax_and_example">JSON</a> or
@@ -103,16 +129,14 @@ as it depends on the client software. For instance, this code snippet shows how 
 
 <pre><code class="language-python">import json
 import yaml  # needs PyYAML installed
-
 # imports for Python3  (comment/remove in Python2):
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
-
 # imports for Python2 (comment/remove in Python3):
 from urllib2 import Request, urlopen, URLError, HTTPError
 
 # 1) Request using the GET method:
-req = Request("write here your eGSIM endpoint URL with encoded parameters")
+req = Request("eGSIM endpoint URL with encoded special characters, if any")
 
 # 2a) Request using the POST method, assuming JSON text file:
 with open('/path/to/my/file.json', 'r') as stream:
@@ -125,14 +149,18 @@ with open('/path/to/my/file.yaml', 'r') as stream:
     yamldata = yaml.safe_load(stream))
 req = Request("write here your eGSIM endpoint URL", data=yamldata)</code></pre>
 
+
+
 <h3 id="requestparameters">Request parameters</h3>
+
 <p>
 Request parameters can be input in three ways: in the URL of a GET request, in a YAML- or
 JSON-formatted text file in case of POST request, or via input components of the
 web Graphical User Interface (GUI) thorugh a web browser.
-
 eGSIM supports the following parameter types:
 </p>
+
+
 <ul>
 <li>numeric
 <li>string
@@ -150,17 +178,26 @@ eGSIM supports the following parameter types:
 For POST requests, most types are supported in YAML and JSON <i>except</i> numeric ranges, which must be
 input as strings with quotes (e.g. <code>"0:0.1:0.3"</code>).
 JSON does <b>not</b> support also date-times, which thus need 
-to be input in the same way, e.g.: <code>"2016-01-31T23:15:00"</code> (in YAML, date-times as quoted strings are permitted
-but not mandatory).
+to be input in the same way, e.g.: <code>"2016-01-31T23:15:00"</code> (in YAML, date-times as quoted
+strings are permitted but not mandatory).
 </p>
+
 <p>
-For GET request URLs, and
-from within an input component of the Web GUI, <b>spaces, commas (,) and colons (:) might be treated as special characters</b>: 
-as already described, the colon acts as separator for numeric ranges, whereas 
-spaces and commas act as element separators in arrays (but only the comma is valid in GET requests URLs, being
-spaces not allowed by definition).
-Arrays can be input with or without leading and trailing square brackets, and no parameter value needs to be quoted.
+For GET request URLs, aside colons (:) for numeric ranges,
+<b>commas (,)</b> act as element separators in array strings. The user can also supply the same
+parameter name multiple times with different values. Besides alpha-numeric characters,
+always safe, remember to percent-encode all characters 
+non  not in <code>{{ query_params_safe_chars }}</code>. 
+In any case, no parameter value needs to be quoted.
 </p>
+
+<p>
+From within an input component of the Web GUI, aside colons (:) for numeric ranges,
+<b>commas (,) or spaces</b> act as element separators in array string. Arrays can be input 
+with or without leading and trailing square brackets '[' ']'.
+In both cases, no parameter value needs to be quoted.
+</p>
+
 <p>
  For instance, assuming a general <code>example</code> service requiring
 three numeric parameters (dip, scalar, Vs<sub>30</sub>, array and ranges of
@@ -197,9 +234,14 @@ magnitude: "3:0.5:5"
 <tr>
 	<td>Web GUI components</td>
 	<td colspan="2">
-		<div><span style='display:inline-block;width:8rem'>Dip</span> <input type="number" value="45"/></div>
-		<div><span style='display:inline-block;width:8rem'>Vs<sub>30</sub></span> <input type="text" value="560 760"/></div>
-		<div><span style='display:inline-block;width:8rem'>Magnitude</span> <input type="text" value="3:0.5:5"/></div>
+		<div style='white-space: nowrap'>
+			<span class='mr-1'>Dip</span>
+			<input type="number" value="45"/>
+			<span class='ml-2 mr-1'>Vs<sub>30</sub></span>
+			<input type="text" value="560 760"/>
+			<span class='ml-2 mr-1'>Magnitude</span>
+			<input type="text" value="3:0.5:5"/>
+		</div>
 	</td>
 </table>
 
@@ -208,17 +250,25 @@ The full description of the parameters and their constraints will be given in ea
 section below.
 </p>
 
+
 <h3 id="responsedata">Response data</h3>
 <p>
 The response data type of a successfully fullfilled request might depend on the service used and
 the parameter issued in the request, but all eGSIM services can return data at the least in CSV
-and JSON formatted text (bytes sequences): for client code processing response data, both formats
-are widely supported in most programming languages. For JSON, example are
-the Matlab <a href="https://www.mathworks.com/help/matlab/ref/jsondecode.html" target="_blank">jsonencode</a> function or the Python builtin <code>json</code> library. 
-Csv format has the advantage to be easily visualizable in widely used spreadsheet softwares (like e.g.
-LibreOffice). JSON is usually preferable in web applications: the eGSIM web GUI for instances
-requests data in this format. 
+and JSON formatted text (bytes sequences). 
+JSON is by far preferable in web applications
+(the eGSIM web GUI for instances requests and processes data in this format), and CSV files have
+the advantage to be easily visualizable in widely used spreadsheet softwares.
+However, for client code processing response data, both formats
+are widely supported in most languages (see e.g., the MATLAB<sup>&reg;</sup>
+<a href="https://www.mathworks.com/help/matlab/ref/jsondecode.html" target="_blank">jsonencode</a> and 
+<a href="https://www.mathworks.com/help/matlab/ref/csvread.html" target="_blank">csvread</a>
+functions, or Python 
+<a href="https://docs.python.org/3/library/json.html" target="_blank">json</a> and 
+<a href="https://docs.python.org/3/library/csv.html" target="_blank">csv</a>
+standard libraries)
 </p>
+
 
 <p>
 Unsuccessful requests might fail for several reasons. In case of client
@@ -227,23 +277,27 @@ in JSON formatted byte strings following the <a href="https://google.github.io/s
 google API specification</a>. Example:
 </p>
 
-<pre><code class="language-python">{
-	"code": 400,  # the HTTP error numeric code &ge;400 and &le; 500
-	"message": "input validation error",  # the HTTP error message
-	"errors": [  # optional array of parameter specific errors:
-		{
-	    	"domain": "magnitude",  # the parameter name
-	    	"message": "This field is required.",  # the parameter
-	    										   # error message
-	    	"reason": "required"  # the parameter
-	    						  # error reason
-	  	},
-	  ...
-	]
+<pre><code class="language-json">{
+	"error": {
+		"code": 400,
+		"message": "input validation error",
+		"errors": [
+			{
+		    	"domain": "magnitude",
+		    	"message": "This field is required.",
+		    	"reason": "required"
+		  	},
+		  ...
+		]
+	}
 }</code></pre>
+
 <p class='footnote'>
-Note: The JSON format does <b>not</b> support comments:
-the text after the character <code>#</code> is only meant to be explanatory for the reader
+Notes: the code and the message are standard HTTP numeric status codes &ge;400 and &le; 500 and
+text. For invalid parameters, the code is 400. In this case the the parameter 'errors' might
+be provided (in all other cases it's missing), and it is a list of objects with these
+properties: domain (indicating the parameter name raising the error), message
+(indicating the error message) and reason (indicatin th error reason).
 </p>
 
 <p>
@@ -270,7 +324,7 @@ except HTTPError as e2:
     print("Http error %d" % e2.code)
     # If you want to dig into details,
     # load the JSON formatted response into a Python dict:
-    errordict = json.loads(e2.read())
+    errordict = json.loads(e2.read())['error']
     # now you can access fields such as
     # errordict['message'], errordict.get('errors', [])
 except URLError as e1:
@@ -386,35 +440,38 @@ The number of generated Trellis plots depends on the requested Intensity measure
 <p>
 Trellis plot data returned in JSON format will have the following structure:
 </p>
-<pre><code class="language-python">{
-	"xvalues": [2.905, 3.771, ... ],  # note: all trellis plots 
-	"xlabel": "Rupture Dist. (km)",   # share the same x axis
-	"figures": [  # list of generated Trellis plots
-		{
-			"imt": "PGA",  # the plot's IMT
-			"yvalues":{  # the GMPEs mapped to their y data
-				"AkkarBommer2010": [0.3811, 0.3812, ...],
-				"CauzziFaccioli2008": [0.283, 0.283, ...],
+<pre><code class="language-json">{
+	"xvalues": [2.905, 3.771, ... ],
+	"xlabel": "Rupture Dist. (km)",
+	"figures": {
+			"PGA": {
+				"yvalues":{
+					"AkkarEtAl2013": [0.3811, 0.3812, ...],
+					"CauzziEtAl2014": [0.283, 0.283, ...],
+					...
+				},
+				"ylabel": "Median PGA (g)",
+				"magnitude": 5,
+				"distance": null,
+				"vs30": 760
+			},
+			"PGV": {
 				...
 			},
-			"ylabel": "Median PGA (g)",  # it will be 'StdDev PGA (g)'
-										 # for plots representing the
-										 # scaling of standard deviation 
-			"magnitude": 5,  # the plot's magnitude, or null if
-						     # magnitudes are used as x values
-			"distance": null,  # the plot's distance, or null if
-						       # distances are used as x values
-			"vs30": 760  # the vs30 set for this plot
+			...
 		},
 		...
-	]
+	}
 }</code></pre>
 <p class='footnote'>
-Note: The JSON format does <b>not</b> support comments:
-the text after the character <code>#</code> is only meant to be explanatory for the reader
+Notes: All plots share the same x axis and x values, thus for performance reasons
+those veriables are not repeated inside each nested object. Magnitude and distance
+attributes of each nested object are null for those plot type using them as x axis values
+and not as iteration parameter to generate several plots. 
 </p>
 
-<h4>CSV</h4>
+
+<h4 style='page-break-before: always !important;'>CSV</h4>
 <p>
 Trellis plot data returned in CSV format will have the following structure.
 <br>
@@ -422,16 +479,16 @@ Trellis plot data returned in CSV format will have the following structure.
 <span class='yvalues'></span> = y values (first cell is the y label)
 </p>
 
-<h5>Vertical display &varr; :</h5>
 
+<h5>Vertical display (&varr;)</h5>
 
 <table class='csv'>
 <tr>
 	<td>&nbsp;</td>
-	<td>AkkarBommer2010</td>
-	<td>AkkarBommer2010</td>
+	<td>AkkarEtAl2013</td>
+	<td>AkkarEtAl2013</td>
 	<td>&hellip;</td>
-	<td>CauzziFaccioli2008</td>
+	<td>CauzziEtAl2014</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
@@ -500,7 +557,8 @@ Trellis plot data returned in CSV format will have the following structure.
 </tr>
 </table>
 
-<h5>Horizontal display &harr; :</h5>
+
+<h5>Horizontal display (&harr;)</h5>
 
 <table class='csv'>
 <tr>
@@ -518,7 +576,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarBommer2010</td>
+	<td>AkkarEtAl2013</td>
 	<td>PGA</td>
 	<td>magnitude:</td>
 	<td>5</td>
@@ -532,7 +590,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarBommer2010</td>
+	<td>AkkarEtAl2013</td>
 	<td>PGA</td>
 	<td>magnitude:</td>
 	<td>5.5</td>
@@ -560,7 +618,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>CauzziFaccioli2008</td>
+	<td>CauzziEtAl2014</td>
 	<td>PGA</td>
 	<td>magnitude:</td>
 	<td>5</td>
@@ -662,34 +720,35 @@ into three subplots:
 <p>
 Residuals plot data returned in JSON format will have the following structure:
 </p>
-<pre><code class="language-python">{
-	"AkkarBommer2010": [  # list of GMPE residual plots
-		{
-			"imt": "PGA",  # the plot's IMT
-			"restype": "IntraEvent",  # residual plot type: "InterEvent",
-									  # "IntraEvent" or "Total".
-									  # For Decomposition of Intra-event
-									  # residuals, this value is always
-									  # 'IntraEvent'
-			"xvalues": [4, 4, 3.9, ...],
-			"xlabel": "Magnitude",
-			"yvalues": [-2.11, -2.27, -2.08, ...],
-			"ylabel": "Z (PGA)",
-
-			"slope": 0.269,       # These are optional properties which
-			"intercept": -1.998,  # will depend on the plot type. See
-			"pvalue": 6.6e-8      # document for details
+<pre><code class="language-json">{
+	"AkkarEtAl2013": {
+		"PGA": {
+			"Intra Event": {
+				"xvalues": [4, 4, 3.9, ...],
+				"xlabel": "Magnitude",
+				"yvalues": [-2.11, -2.27, -2.08, ...],
+				"ylabel": "Z (PGA)",
+				"slope": 0.269,
+				"intercept": -1.998,
+				"pvalue": 6.6e-8,
+				"median": null,
+				"mean": null,
+				"stdev": null
+			}
+		},
+		"PGV": {
+			...
 		},
 		...
-	],
-	"CauzziFaccioli2008": [
+	},
+	"CauzziEtAl2014": {
 		...
-	],
+	},
 	...
 }</code></pre>
 <p class='footnote'>
-Note: The JSON format does <b>not</b> support comments:
-the text after the character <code>#</code> is only meant to be explanatory for the reader
+Notes: the parameters from slope, intercept, pvalue, median, stdev are null for specific
+plot types
 </p>
 
 <h4>CSV</h4>
@@ -701,19 +760,19 @@ csv table).
 <span class='yvalues'></span> = y values (first cell is the y label)
 </p>
 
-<h5>Vertical display &varr; :</h5>
+<h5>Vertical display (&varr;)</h5>
 
 <table class='csv'>
 <tr>
-	<td>AkkarBommer2010</td>
+	<td>AkkarEtAl2013</td>
 	<td>&nbsp;</td>
-	<td>AkkarBommer2010</td>
-	<td>&nbsp;</td>
-	<td>&hellip;</td>
-	<td>AkkarBommer2010</td>
+	<td>AkkarEtAl2013</td>
 	<td>&nbsp;</td>
 	<td>&hellip;</td>
-	<td>CauzziFaccioli2008</td>
+	<td>AkkarEtAl2013</td>
+	<td>&nbsp;</td>
+	<td>&hellip;</td>
+	<td>CauzziEtAl2014</td>
 	<td>&nbsp;</td>
 	<td>&hellip;</td>
 </tr>
@@ -849,11 +908,12 @@ csv table).
 </tr>
 </table>
 
-<h5>Horizontal display &harr; :</h5>
+
+<h5>Horizontal display (&harr;)</h5>
 
 <table class='csv'>
 <tr>
-	<td>AkkarBommer2010</td>
+	<td>AkkarEtAl2013</td>
 	<td>PGA</td>
 	<td>slope:</td>
 	<td>0.269</td>
@@ -885,7 +945,7 @@ csv table).
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarBommer2010</td>
+	<td>AkkarEtAl2013</td>
 	<td>PGA</td>
 	<td>slope:</td>
 	<td>0.103</td>
@@ -933,7 +993,7 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarBommer2010</td>
+	<td>AkkarEtAl2013</td>
 	<td>PGV</td>
 	<td>slope:</td>
 	<td>0.171</td>
@@ -981,7 +1041,7 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>CauzziFaccioli2008</td>
+	<td>CauzziEtAl2014</td>
 	<td>PGA</td>
 	<td>slope:</td>
 	<td>0.28</td>
@@ -1013,7 +1073,6 @@ csv table).
 	<td class='yvalues'>&hellip;</td>
 </tr>
 </table>
-
 
 
 

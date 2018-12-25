@@ -7,7 +7,7 @@ from io import StringIO
 
 import pytest
 
-from egsim.core import yaml_load
+from egsim.core.utils import yaml_load
 
 @pytest.mark.parametrize('input', ["{'a':9}", '{"a":9}', {'a': 9}, "{a: 9}", "a: 9", "'a': 9",
                                    '"a": 9'])

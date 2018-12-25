@@ -380,17 +380,29 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
 
     def to_python(self, value):
         if isinstance(value, str):
-            reg = MultipleChoiceWildcardField.to_regex(value)
-            value = [k for k, _ in self.choices if reg.match(str(k))]
-        return super(MultipleChoiceWildcardField, self).to_python(value)
+            value = [value]
+        values = set()
+        for val in value:
+            if not val:
+                continue
+            if not isinstance(val, str) or \
+                    ('*' not in val and '?' not in val and not ('[' in val and ']' in val)):
+                # no special characters, avoid unnecessary overhead, add string:
+                values.add(val)
+            else:
+                reg = MultipleChoiceWildcardField.to_regex(val)
+                for k, _ in self.choices:
+                    if reg.match(str(k)):
+                        values.add(k)
+            if len(values) == len(self.choices):
+                break
+        return super(MultipleChoiceWildcardField, self).to_python(list(values))
 
     @staticmethod
     def to_regex(value):
         '''converts string (a unix shell string, see
         https://docs.python.org/3/library/fnmatch.html) to regexp
         '''
-        if not value:
-            return re.compile(".*")
         return re.compile(translate(value))
 
 
@@ -401,9 +413,15 @@ class GsimField(MultipleChoiceWildcardField):
         kwargs.setdefault('label', 'Ground Shaking Intensity Model(s)')
         super(GsimField, self).__init__(**kwargs)
 
-    def to_python(self, value):
+    def clean(self, value):
         '''Converts each string into the mapped Egsim class'''
-        return [EGSIM.aval_gsims[gsim] for gsim in super(GsimField, self).to_python(value)]
+        # We need to first check that the provided values (string)
+        # are in the list of available Gsims, and then convert thtem to Gsim objects.
+        # The check is done in self.validate, which is run AFTER self.to_python.
+        # Thus, we cannot perform the conversion in self.to_python but we need to do it here,
+        # after self.validate has been called
+        # Also note that super() alone fails here. See https://stackoverflow.com/a/39313448
+        return [EGSIM.aval_gsims[gsim] for gsim in super(GsimField, self).clean(value)]
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
@@ -477,18 +495,18 @@ class TrtField(MultipleChoiceWildcardField, metaclass=EgsimChoiceFieldMeta):
     # Note that this class could have overridden both MultipleChoiceWildcardField and
     # EgsimChoiceField but I suspect we should have needed even more time to adjust which
     # superclass to call
-    _base_choices = zip(EGSIM.aval_trts.keys(), EGSIM.aval_trts.values(),
-                        EGSIM.aval_trts.values())
+    _base_choices = EGSIM.aval_trts  #zip(EGSIM.aval_trts.keys(), EGSIM.aval_trts.values(),
+                        # EGSIM.aval_trts.values())
 
     def __init__(self, **kwargs):
         # __init__ is NEEDED to replicate what we do in EgsimChoiceField as we do not inheit it
         kwargs['choices'] = self._base_choices
         super(TrtField, self).__init__(**kwargs)
 
-    def clean(self, value):
-        '''Replaces any internal selected tectonic region name (in `EGSIM.val_trts.keys()`) with
-        their standard Openquake tectonic region name (basically the same as the selected name,
-        with spacing replacing the underscores and no lower case)'''
-        if value is None:
-            return value
-        return [self._mappings[v] for v in value]  # pylint: disable=no-member
+#     def clean(self, value):
+#         '''Replaces any internal selected tectonic region name (in `EGSIM.val_trts.keys()`) with
+#         their standard Openquake tectonic region name (basically the same as the selected name,
+#         with spacing replacing the underscores and no lower case)'''
+#         if value is None:
+#             return value
+#         return [self._mappings[v] for v in value]  # pylint: disable=no-member

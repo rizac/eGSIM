@@ -4,14 +4,17 @@ Created on 29 Jan 2018
 @author: riccardo
 '''
 from os import listdir
-from os.path import join, dirname, isdir, splitext
+from os.path import join, dirname, isdir, splitext, isfile
 import warnings
 import json
-
+from io import StringIO
+from urllib.parse import quote
 from collections import OrderedDict
 from datetime import datetime
 from dateutil import parser as dateparser
 from dateutil.tz import tzutc
+
+from yaml import safe_load, YAMLError
 
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
@@ -19,6 +22,101 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib import imt
 
 from smtk import load_database
+
+
+def tostr(object, none='null'):
+    '''Returns str(object) with these exceptions:
+    - if object is a datetime, returns its ISO format representation, either
+    '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S' or '%Y-%m-%dT%H:%M:%S.%f'
+    - if object is boolean returns 'true' or 'false' (to lower case)
+    - if object is None, returns the `none` argument (defaults to 'null')
+    '''
+    if object is None:
+        return none
+    elif object is True or object is False:
+        return str(object).lower()
+    elif isinstance(object, datetime):
+        if object.microsecond == 0:
+            if object.hour == object.minute == object.second == 0:
+                return object.strftime('%Y-%m-%d')
+            return object.strftime('%Y-%m-%dT%H:%M:%S')
+        return object.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    else:
+        return str(object)
+
+
+# From https://en.wikipedia.org/wiki/Query_string#URL_encoding:
+# Letters (A–Z and a–z), numbers (0–9) and the characters '*','-','.' and '_' are left as-is
+# Moreover, for query parameter other set of characters are permitted
+# (see https://stackoverflow.com/a/2375597). Among those, '*' and '?' (which EGSIM might
+# interpret as wildcards), ',' (interpreted as array separator) and ':' (numeric range separator
+# and time separator). If other characters have to be added in the future, first check
+# the latter link (and in case the RFC 3896 spec). For the moment, the safe characters for a
+# query string in eGSIM are:
+QUERY_PARAMS_SAFE_CHARS = "*-.?,:_"
+
+
+def querystring(dic, baseurl=None):
+    '''Converts dic to a query string to be used in URLs'''
+
+    def escape(value):
+        '''escapes a scalar or array'''
+        return quote(tostr(value), safe=QUERY_PARAMS_SAFE_CHARS) if isscalar(value) else \
+            ','.join(quote(tostr(_), safe=QUERY_PARAMS_SAFE_CHARS) for _ in value)
+
+    baseurl = baseurl or ''
+    if baseurl and baseurl[-1:] != '?':
+        baseurl += '?'
+
+    return "%s%s" % (baseurl,
+                     "&".join("%s=%s" % (key, escape(val)) for key, val in dic.items()))
+
+
+def yaml_load(obj):
+    '''Safely loads the YAML-formatted object `obj` into a dict. Note that being YAML a superset
+    of json, all properly json-formatted strings are also correctly loaded and the quote
+    character ' is also allowed (in pure json, only " is allowed).
+
+    :param obj: (dict, stream, string denoting an existing file path, or string denoting
+        the file content in YAML syntax): If stream (i.e., an object with the `read` attribute),
+        uses it for reading and parsing its content into dict. If dict, this method is no-op
+        and the dict is returned, if string denoting an existing file, a stream is opened
+        from the file and processed as explained above (the stream will be closed in this case).
+        If string, the string is treated as YAML content and parsed: in this case, the output
+        must be a dict otherwise a YAMLError is thrown
+
+    :raises: YAMLError
+    '''
+    if isinstance(obj, dict):
+        return obj
+
+    close_stream = False
+    if isinstance(obj, str):
+        close_stream = True
+        if isfile(obj):  # file input
+            stream = open(obj, 'r')
+        else:
+            stream = StringIO(obj)  # YAML content input
+    elif not hasattr(obj, 'read'):
+        # raise a general message meaningful for a Rest framework and a web app:
+        raise YAMLError('Invalid input, expected data as string in YAML or JSON syntax, '
+                        'found %s' % str(obj.__class__.__name__))
+    else:
+        stream = obj
+
+    try:
+        ret = safe_load(stream)
+        # for some weird reason, in case of a string ret is the string itself, and no error
+        # is raised. Let's do it here:
+        if not isinstance(ret, dict):
+            raise YAMLError('Output should be dict, got %s (input: %s)'
+                            % (ret.__class__.__name__, obj.__class__.__name__))
+        return ret
+    except YAMLError as _:
+        raise
+    finally:
+        if close_stream:
+            stream.close()
 
 
 def vectorize(value):
@@ -105,8 +203,12 @@ def _get_data():
 
     # get all TRTs: use the TRT class of openquake and get all attributes without a leading
     # underscore and mapped to a string:
-    _aval_trts = {a.lower(): getattr(TRT, a) for a in dir(TRT) if a[:1] != '_'
-                  and isinstance(getattr(TRT, a), str)}
+    _aval_trts = {getattr(TRT, a).replace(' ', '_').lower(): getattr(TRT, a)
+                  for a in dir(TRT) if a[:1] != '_' and isinstance(getattr(TRT, a), str)}
+
+    # inverse the _aval_trts above, and set for each Egsim the TRT rtripped with spaces
+    # and lower case:
+    _trt_i = {v: k for k, v in _aval_trts.items()}
 
     # get all gsims:
     _aval_gsims = OrderedDict()
@@ -119,8 +221,8 @@ def _get_data():
                 gsim_inst = gsim
             gsim_imts = gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if gsim_imts and hasattr(gsim_imts, '__iter__'):
-                _aval_gsims[key] = Egsim(key, (_ for _ in sanitycheck(gsim_imts)),
-                                         gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE)
+                trt = _trt_i.get(gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE, '')
+                _aval_gsims[key] = Egsim(key, (_ for _ in sanitycheck(gsim_imts)), trt)
 
     return _aval_gsims, tuple(_aval_imts.keys()), _aval_trts
 
@@ -150,7 +252,11 @@ def strptime(obj):
         (e.g. integers or strings such as  '5-7' are succesfully parsed into date-time).
         We choose `dateutil` as the code is shorter, cleaner, and a single hack is needed:
         we simply check, after a string `obj` is succesfully parsed into `dtime`, that `obj`
-        contains at least the string `dtime.strftime(format='%Y-%m-%d')` (such as e,g, '2006-01-31')
+        contains at least the string `dtime.strftime(format='%Y-%m-%d')` (such as e,g,
+        '2006-01-31')
+
+        The opposite can be obtained with :function:`tostr`
+
         :param obj: `datetime` object or string in ISO format (see examples below)
         :return: a datetime object in UTC, with the tzinfo removed
         :raise: TypeError or ValueError
@@ -229,5 +335,5 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
             # FIXME: hardcoded, change it!
             root = join(dirname(dirname(__file__)), 'data')
             cls._trmodels = {splitext(f)[0]: loadjson(join(root, f)) for f in listdir(root)
-                             if splitext(f)[1].lower() == '.geojson'}
+                             if splitext(f)[1].lower() == '.json'}
         return cls._trmodels

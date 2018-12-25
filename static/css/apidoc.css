@@ -5,12 +5,14 @@
 @media print {  /* https://stackoverflow.com/a/28441659 */
 	div { float: initial !important; position: initial !important; display: initial !important; 
           box-sizing: initial !important; width: initial !important; max-width: initial !important;
-          padding: initial !important; margin: initial !important; background-color: unset !important;
+          /*padding: initial !important; margin: initial !important;*/ background-color: unset !important;
     }
     body {
     	height: initial !important;
         font-size: 26px !important;
     }
+    h2:not(:first-of-type) {page-break-before: always !important;}
+
     /* set no background on body: */
     body, body.bg-light, pre[class*=language-]{  /* body.bg-light works here, adding body in case we
     	remove the class in the future. Also note that pre equal signs are rendered
@@ -18,19 +20,18 @@
     	no background */
     	background-color: initial !important;
     }
-    table, pre[class*=language-]{font-size:80% !important;}	
+    table, pre[class*=language-]{font-size:80% !important;}
     table.csv{font-size:65% !important;}
     pre[class*=language-], table.csv, .nopagebreak, ul {page-break-inside: avoid !important;}
     pre[class*=language-] > code{white-space: pre-wrap !important;}
     div#toc{display: none !important;}
     /* these must be repeated here with important to work:*/
     a, a:hover{text-decoration:none !important;}
-    table, pre{box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;}
-    
+    table, pre[class*=language-]{box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;}
 }
 
 p, ul, table{font-family: Lato, Helvetica, Arial, Tahoma, sans-serif;}
-ul:not(:last-child), table:not(:last-child), pre:not(:last-child) {
+ul:not(:last-child), table:not(:last-child), pre:not(:last-child){
 	margin-bottom: 1rem; /*same margin bottom as <p> */
 }
 div.content{max-width: 48em;}
@@ -52,20 +53,20 @@ table td{padding: .3rem; vertical-align:middle;text-align:initial;}
 table > thead{font-weight: bold;}
 
 /* table borders: */
-table{min-width:100%;}
+table{width:100%;}
 table td{border-top: 1px solid #ddd;border-bottom: 1px solid #ddd;}  /* lightgray is #ccc */
 table.csv td{white-space: nowrap;}
 
 table.csv td, table.grid td, thead.grid td,
 tbody.grid td, tfoot.grid.td,
-
 table, pre[class*=language-]{
 	border: 1px solid #ddd;
-	font-size:90%;
 }
 
+table, pre[class*=language-]{font-size:90%;}
+/*make pre inside table as we expect and not too small: */
+table pre[class*=language-]{font-size:100% !important;}
 table.csv{font-size:75%;}
-/*table.egsim-form-parameters{font-size:90%;}*/
 
 /* backgrounds for  x and y labels */
 table.csv td.xvalues, span.xvalues{
@@ -91,4 +92,13 @@ table.egsim-form-parameters .param-alternative-name,
 .footnote{
 	color: gray;
 	font-size: 87%;
+}
+
+/* override string key colors in JSON objects: */
+.language-json .token.property {
+    color: #690; /*same as strings */
+}
+/* colon in dicts with no background: */
+.language-css .token.string, .style .token.string, .token.entity, .token.operator, .token.url {
+    background: initial; /*hsla(0,0%,100%,.5);*/
 }
