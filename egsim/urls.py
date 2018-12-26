@@ -49,5 +49,5 @@ urlpatterns = [
     url(r'^query/residuals/?$', views.ResidualsView.as_view(), name='residuals_api'),
 
     # test views, TEMPORARY:
-    url(r'^trellis_test/?$', views.trellis_test, name='main'),
+    url(r'^_test/?$', views.test, name='test'),
 ]

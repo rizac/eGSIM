@@ -262,7 +262,10 @@ def test_err(request):
     raise ValueError('this is a test error!')
 
 
-def trellis_test(request):
+def test(request):
     '''view for the trellis (test) page (iframe in browser)'''
-    return render(request, 'trellis_test.html', dict(_COMMON_PARAMS, form=TrellisForm(),
-                                                     post_url='../query/trellis'))
+
+    data = [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]
+    err = ""
+    return render(request, 'base_vue.html', {'gsims': json.dumps(data),
+                                             'server_error_message': err})

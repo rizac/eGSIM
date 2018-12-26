@@ -1,6 +1,6 @@
-var EGSIM = new Vue({
-    el: '#egsim-vue',
-    data: {
+/** base skeleton implementation for the base Vue instance */
+var EGSIM_BASE = {
+    data: function(){ return {
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
         // csrf token stored in an <input> in the base.html. Get it here and use it for each post request:
         csrftoken: Object.freeze(document.querySelector("[name=csrfmiddlewaretoken]").value),
@@ -11,12 +11,13 @@ var EGSIM = new Vue({
         selectedImts: [],
         data: {},
         loading: false,
-        errormsg: window._SERVER_ERROR_MESSAGE || '',  // _SERVER_ERROR defined globally and passed by django. Maybe not elegant but it does its job
+        initdata: [],
+        errormsg: '',
         //fielderrors: {},
         initURL: '/get_init_params', //url for requesting the initialization data. For info:
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
         eventbus: new Vue({})  // This empty Vue model will serve as our event bus.
-    },
+    }},
     created: function(){
         this.eventbus.$on('selectedimts', iterable => {  // currently not used
             this.$set(this, selectedImts, new Set(iterable));
@@ -45,17 +46,18 @@ var EGSIM = new Vue({
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         if (!this.errormsg){
-            this.post(this.initURL, {}, {});
+            [avalGsims, avalImts] = this.getInitData(this.initdata);
+            this.$set(this, 'avalGsims', avalGsims);
+            this.$set(this, 'avalImts', avalImts);
         }
     },
     methods: {
-        getInitData(response) {
+        getInitData(data) {
             // initializes the base Vue instance returning the array [gsims, imts] where:
             // gsims is a Map of gsim name -> [imts (Set), trt (string), ruptureParams (Array? - not used)]
             // imts is a set of all available imts
             var gsims = new Map();
             var imts = new Set();
-            var data = response.data;
             for (let gsim of data) {
                 var gsimName = gsim[0];
                 var gImts = new Set(gsim[1]);
@@ -100,4 +102,4 @@ var EGSIM = new Vue({
             return Array.from(this.avalImts);
         },
     }
-});
+};
