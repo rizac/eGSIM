@@ -33,7 +33,6 @@ _COMMON_PARAMS = {
                           ('apidoc', 'API documentation'),]),
     }
 
-
 # def index(request):
 #     '''view for the index page. Defaults to the main view with menu="home"'''
 #     return render(request, 'index.html', dict(_COMMON_PARAMS, menu='home'))
@@ -264,8 +263,36 @@ def test_err(request):
 
 def test(request):
     '''view for the trellis (test) page (iframe in browser)'''
-
     data = [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]
     err = ""
-    return render(request, 'base_vue.html', {'gsims': json.dumps(data),
-                                             'server_error_message': err})
+    return render(request, 'egsim.html', {'sel_component': MENUS[1][0],
+                                          'components': [m[0:2] for m in MENUS],
+                                          'gsims': json.dumps(data),
+                                          'server_error_message': err})
+
+
+from django.conf.urls import url
+
+APIS = [
+    url(r'^query/gsims/?$', GsimsView.as_view(), name='gsims'),
+    url(r'^query/trellis/?$', TrellisView.as_view(), name='trellis'),
+    url(r'^query/gmdbplot/?$', GmdbPlotView.as_view(), name='gmdbplot'),
+    url(r'^query/residuals/?$', ResidualsView.as_view(), name='residuals'),
+    url(r'^query/testing/?$', ResidualsView.as_view(), name='testing'),
+]
+
+# menus is an array of menus in the top panel of the main page
+# the elements have [url of the page, Name of the menu, url of the form submission]
+# where the last element might be empty (in that case the page us static
+# and the url of the first element will be shown in an iframe)
+MENUS = [
+    ('home', 'Home', ''),
+    ('gsims', 'Gsim selection', 'query/gsims'),
+    ('trellis', 'Trellis Plots', 'query/trellis'),
+    ('gmdbplot', 'Ground Motion database', 'query/gmdbplot'),
+    ('residuals', 'Residuals', 'query/residuals'),
+    ('testing', 'Testing', 'query/testing'),
+    ('apidoc', 'API Documentation', '')
+    ]
+
+

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	{% with vue=True axios=True %}
+		{{ block.super }}
+	{% endwith %}
+	<!-- includes css for form-related stuff (e.g. waitbar)  -->
+	<link rel="stylesheet" type="text/css" href="{% static 'css/base_vue.css' %}">
+{% endblock %}
+
+{% block body %}
+	<div class="flex-direction-col height100" id='egsim-vue'>
+
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark" id='navbarNavAltMarkup'>
+
+			<!-- <a class="navbar-brand" href="#">{{ project_name }}</a> -->
+			<button class="navbar-toggler" type="button" data-toggle="collapse"
+				data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup"
+				aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+
+			<div class="collapse navbar-collapse" id="navbar">
+				<div class="navbar-nav">
+				{% for component in components %}
+					<a class="nav-item nav-link" :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
+					 @click="selComponent = '{{ component.0 }}'">{{ component.1 }}</a>
+				{% endfor %}
+				</div>
+			</div>
+		</nav>
+
+		<div class='flexible flex-direction-col position-relative'>
+
+			<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0">
+				<!-- Loading, please wait ... --> <!-- (<- text removed) -->
+				<div class="loader"></div>
+			</div>
+	
+			<div v-show='errormsg' class='bg-danger text-sm-center text-white text-truncate'>
+				&#123;&#123; errormsg &#125;&#125;
+			</div>
+
+			<div class='flexible flex-direction-col position-relative'>
+				<keep-alive>
+					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
+					<component class='flexible' v-bind:is="selComponent"></component>
+				</keep-alive>
+				{% block main %}{% endblock %}
+			</div>
+
+		</div>
+	</div>
+
+	
+{% endblock %}
+
+{% block after-body %}
+	{{ block.super }}
+	
+	{% for component in components %}
+	<script type='text/javascript' src = "{% static 'js/comps/' %}{{ component.0 }}.js"></script>
+	{% endfor %}
+
+	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
+	<script>
+	var EGSIM = new Vue({
+	    el: '#egsim-vue',
+	    mixins: [EGSIM_BASE],  /* defined in script above */
+	    data: function(){ /* FIXME: check what's the difference between returning function and dict */
+	        return {selComponent: "{{sel_component}}",
+	        		errormsg: "{{ server_error_message }}",
+	        		initdata: {{ gsims|safe }}
+	        		};  
+	    }
+	});
+	</script>
+{% endblock %}
