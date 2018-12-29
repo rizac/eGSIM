@@ -25,14 +25,14 @@ var EGSIM_BASE = {
         this.$on('postrequest', (url, data, config) => {
             this.post(url, data, config);
         });
+        [avalGsims, avalImts] = this.getInitData(this.initdata.gsims);
+        this.$set(this, 'avalGsims', avalGsims);
+        this.$set(this, 'avalImts', avalImts);
+        this.$set(this, 'componentProps', this.initdata.component_props);
     },
-    mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
-        if (!this.errormsg){
-            [avalGsims, avalImts] = this.getInitData(this.initdata.gsims);
-            this.$set(this, 'avalGsims', avalGsims);
-            this.$set(this, 'avalImts', avalImts);
-            this.$set(this, 'componentProps', this.initdata.component_props)
-        }
+    mounted: function() {
+        // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
+        // no -op for the moment
     },
     methods: {
         setComponent(name){

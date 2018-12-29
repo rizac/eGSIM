@@ -206,7 +206,7 @@ def _get_data():
     _aval_trts = {getattr(TRT, a).replace(' ', '_').lower(): getattr(TRT, a)
                   for a in dir(TRT) if a[:1] != '_' and isinstance(getattr(TRT, a), str)}
 
-    # inverse the _aval_trts above, and set for each Egsim the TRT rtripped with spaces
+    # inverse the _aval_trts above, and set for each Egsim the TRT stripped with spaces
     # and lower case:
     _trt_i = {v: k for k, v in _aval_trts.items()}
 
