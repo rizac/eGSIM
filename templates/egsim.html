@@ -24,7 +24,7 @@
 				<div class="navbar-nav">
 				{% for component in components %}
 					<a class="nav-item nav-link" :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
-					 @click="selComponent = '{{ component.0 }}'">{{ component.1 }}</a>
+					 @click="setComponent('{{ component.0 }}')">{{ component.1 }}</a>
 				{% endfor %}
 				</div>
 			</div>
@@ -44,7 +44,7 @@
 			<div class='flexible flex-direction-col position-relative'>
 				<keep-alive>
 					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
-					<component class='flexible' v-bind:is="selComponent"></component>
+					<component class='flexible' v-bind:is="selComponent" v-bind="selComponentProps"></component>
 				</keep-alive>
 				{% block main %}{% endblock %}
 			</div>
@@ -62,6 +62,7 @@
 	<script type='text/javascript' src = "{% static 'js/comps/' %}{{ component.0 }}.js"></script>
 	{% endfor %}
 
+	<script type='text/javascript' src = "{% static 'js/comps/base/egsimform.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 	<script>
 	var EGSIM = new Vue({
@@ -70,7 +71,7 @@
 	    data: function(){ /* FIXME: check what's the difference between returning function and dict */
 	        return {selComponent: "{{sel_component}}",
 	        		errormsg: "{{ server_error_message }}",
-	        		initdata: {{ gsims|safe }}
+	        		initdata: {{ initdata|safe }}
 	        		};  
 	    }
 	});

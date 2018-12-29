@@ -169,6 +169,10 @@ class BaseForm(Form):
         return ret
 
     @classmethod
+    def fieldsitems(cls):
+        return cls.declared_fields.items()  # pylint: disable=no-member
+
+    @classmethod
     def toHTML(cls):
         '''Converts this form to an HTML table with all necessary documentation on each field.
         The table will have a css class set to "egsim-form-parameters. Notes will have
@@ -178,7 +182,7 @@ class BaseForm(Form):
         thead = ["Name<br><span class='%s'>%s</span>" % (altnameclass, 'Alternative name'),
                  "Description", "Optional"]
         tbody = []
-        # reverse key value paris in additional fieldnames and use the reversed dict afn:
+        # reverse key value pairs in additional fieldnames and use the reversed dict afn:
         afn = {val: key for key, val in getattr(cls, '__additional_fieldnames__', {}).items()}
 
         notes = []
@@ -364,7 +368,8 @@ class GsimSelectionForm(BaseForm):
                             required=False)
     latitude2 = FloatField(label='Latitude 2nd point', min_value=-90, max_value=90,
                            required=False)
-    trt = TrtField(label='Tectonic region type(s)', required=False, initial=EGSIM.aval_trts)
+    trt = TrtField(label='Tectonic region type(s)', required=False,
+                   initial=list(EGSIM.aval_trts.keys()))
 
     def clean(self):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa

@@ -7,6 +7,7 @@ import os
 import json
 from collections import OrderedDict
 from datetime import date
+import inspect
 
 from yaml.error import YAMLError
 
@@ -263,12 +264,28 @@ def test_err(request):
 
 def test(request):
     '''view for the trellis (test) page (iframe in browser)'''
-    data = [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]
     err = ""
-    return render(request, 'egsim.html', {'sel_component': MENUS[1][0],
-                                          'components': [m[0:2] for m in MENUS],
-                                          'gsims': json.dumps(data),
-                                          'server_error_message': err})
+    comps = MENUS
+    components_props = {}
+    initials = {'gsim': [], 'imt': []}
+    for comp in comps:
+        name, data = comp[0], dict(comp[2])
+        form = data.get('form', None)
+        if inspect.isclass(form) and issubclass(form, BaseForm):
+            data['form'] = {n: {'val': initials.get(n, v.initial),
+                                'req': v.required,
+                                'help': v.help_text}
+                            for n, v in form.fieldsitems()}
+        components_props[name] = data
+
+    initdata = {'component_props': components_props,
+                'gsims': [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]}
+
+    return render(request, 'egsim.html', {'sel_component': comps[2][0],
+                                          'components': [_[:2] for _ in comps],
+                                          'initdata': json.dumps(initdata),
+                                          'server_error_message': err,
+                                          'debug': settings.DEBUG})
 
 
 from django.conf.urls import url
@@ -286,13 +303,18 @@ APIS = [
 # where the last element might be empty (in that case the page us static
 # and the url of the first element will be shown in an iframe)
 MENUS = [
-    ('home', 'Home', ''),
-    ('gsims', 'Gsim selection', 'query/gsims'),
-    ('trellis', 'Trellis Plots', 'query/trellis'),
-    ('gmdbplot', 'Ground Motion database', 'query/gmdbplot'),
-    ('residuals', 'Residuals', 'query/residuals'),
-    ('testing', 'Testing', 'query/testing'),
-    ('apidoc', 'API Documentation', '')
+    ('home', 'Home', {'src': 'service/home'}),
+    ('gsims', 'Gsim selection', {'url': 'query/gsims',
+                                 'form': GsimSelectionForm}),
+    ('trellis', 'Trellis Plots', {'url': 'query/trellis',
+                                  'form': TrellisForm}),
+    ('gmdbplot', 'Ground Motion database', {'url': 'query/gmdbplot',
+                                            'form': GmdbForm}),
+    ('residuals', 'Residuals', {'url': 'query/residuals',
+                                'form': ResidualsForm}),
+    ('testing', 'Testing', {'url': 'query/testing',
+                            'form': {}}),
+    ('apidoc', 'API Documentation', {'src': 'service/apidoc'})
     ]
 
 

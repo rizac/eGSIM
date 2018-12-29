@@ -4,5 +4,6 @@
  * (without extension)
  */
 Vue.component('home', {
-    template: `<iframe class='flexible' src='service/home'>`
+    props: {src: String},
+    template: `<iframe class='flexible' :src='src'>`
 })

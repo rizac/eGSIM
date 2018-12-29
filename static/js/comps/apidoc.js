@@ -4,5 +4,6 @@
  * (without extension)
  */
 Vue.component('apidoc', {
-  template: `<iframe class='flexible' src='service/apidoc'>`
+  props: {src: String},
+  template: `<iframe class='flexible' :src='src'>`
 })
