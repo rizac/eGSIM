@@ -278,6 +278,20 @@ def test(request):
                             for n, v in form.fieldsitems()}
         components_props[name] = data
 
+    _ = TrellisForm()['gsim']
+    _1 = _.build_widget_attrs({}, _.field.widget)
+    __1 = _.field.widget.get_context('gsim', _.value(), _1)
+    
+    _ = TrellisForm()['dip']
+    _2 = _.build_widget_attrs({}, _.field.widget)
+    
+    str(_)
+    
+    _ = TrellisForm()['backarc']
+    _3 = _.build_widget_attrs({}, _.field.widget)
+    
+    str(_)
+
     initdata = {'component_props': components_props,
                 'gsims': [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]}
 

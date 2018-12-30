@@ -24,6 +24,15 @@ _TEMPLATE_TRELLIS = `
             <div class="flexible form-control" style="overflow:auto; background-color:transparent">
                 <div class="flexible p-1 grid-2-columns grid-col-gap-2 grid-row-gap-0">
                 
+                <!--<div v-for="(value, key) in self.form" v-if="!['gsim', 'imt', 'plot_type'].includes(key)">
+                    {{ key }}: {{ value }}
+                    <label for="'id_' + key">{{ key }}</label>
+                    <span class="text-danger small text-nowrap">{{ value.err }}</span>
+                    <input type="text" :name="key" v-model="value.val" class="form-control" required="" :id="'id_' + key">
+                    <div class="text-muted small text-nowrap mb-2 field-help grid-col-span">{{ value.help }}</div>
+                </div>-->
+                
+                
                 <div>
                     <label for="id_magnitude">Magnitude(s)</label>
                     <span class="text-danger small text-nowrap">{{ self.form.magnitude.err }}</span>

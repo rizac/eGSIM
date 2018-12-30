@@ -5,5 +5,5 @@
  */
 Vue.component('home', {
     props: {src: String},
-    template: `<iframe class='flexible' :src='src'>`
+    template: `<iframe class='flexible' :src='src'></iframe>`
 })
