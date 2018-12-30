@@ -168,9 +168,46 @@ class BaseForm(Form):
 
         return ret
 
-    @classmethod
-    def fieldsitems(cls):
-        return cls.declared_fields.items()  # pylint: disable=no-member
+    def to_rendering_dict(self):
+        '''Converts this form to a python dict for rendering the field as input
+        in the frontend, free from django limiitation and allowing it to use wuth custom
+        frontend libraries such as Vuejs or AngularJS: each Field name is mapped to
+        a dict of keys such as 'val' (the value), 'help' (the help text),
+        'label' (the label text), 'err': (the error text), 'attrs' (a dict
+        of attributes), 'choices' (empty list if not ChoiceField, otherwise
+        the list of available choices). 'gsim' and 'imt' will have choices set
+        to the empty list as these will be injected only once in the template
+        for performance reasons: it is the client library responsible to
+        set the vailable choices (See Javascript code)
+        '''
+        formdata = {}
+        for name, _ in self.declared_fields.items():  # pylint: disable=no-member
+            boundfield = self[name]
+            val = boundfield.value()
+            widget = boundfield.field.widget
+            attrs = boundfield.build_widget_attrs({}, widget)
+            fielddata = widget.get_context(name, val, attrs)
+            widgetdata = fielddata['widget']
+            attrs = dict(widgetdata.pop('attrs', {}))
+            attrs['required'] = widgetdata.pop('required', False)
+            if 'id' not in attrs:
+                attrs['id'] = boundfield.auto_id
+            attrs['name'] = widgetdata.pop('name')
+            fielddata = {'help': boundfield.help_text,
+                         'label': boundfield.label,
+                         'attrs': attrs,
+                         'err': '',
+                         'is_hidden': widgetdata.pop('is_hidden', False),
+                         'val': val}
+            choices = getattr(_, 'choices', [])
+            if choices and hasattr(fielddata['val'], '__len__') and \
+                    len(fielddata['val']) == len(choices):
+                fielddata['val'] = '__all__'
+            if name in ('gsim', 'imt'):
+                choices = []
+            fielddata['choices'] = choices
+            formdata[name] = fielddata
+        return formdata
 
     @classmethod
     def toHTML(cls):

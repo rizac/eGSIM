@@ -4,6 +4,9 @@
  * (without extension)
  */
 
+// template for the trellis form
+// Note the slot-scope 'self' which refers to the egsimform component
+// (see related .js file for info)
 _TEMPLATE_TRELLIS = `
 <div class="flexible flex-direction-col" slot-scope="self">
     <div class="flexible flex-direction-row">

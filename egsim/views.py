@@ -271,26 +271,10 @@ def test(request):
     for comp in comps:
         name, data = comp[0], dict(comp[2])
         form = data.get('form', None)
-        if inspect.isclass(form) and issubclass(form, BaseForm):
-            data['form'] = {n: {'val': initials.get(n, v.initial),
-                                'req': v.required,
-                                'help': v.help_text}
-                            for n, v in form.fieldsitems()}
+        if isinstance(form, BaseForm):
+            formdata = form.to_rendering_dict()
+            data['form'] = formdata
         components_props[name] = data
-
-    _ = TrellisForm()['gsim']
-    _1 = _.build_widget_attrs({}, _.field.widget)
-    __1 = _.field.widget.get_context('gsim', _.value(), _1)
-    
-    _ = TrellisForm()['dip']
-    _2 = _.build_widget_attrs({}, _.field.widget)
-    
-    str(_)
-    
-    _ = TrellisForm()['backarc']
-    _3 = _.build_widget_attrs({}, _.field.widget)
-    
-    str(_)
 
     initdata = {'component_props': components_props,
                 'gsims': [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]}
@@ -319,13 +303,13 @@ APIS = [
 MENUS = [
     ('home', 'Home', {'src': 'service/home'}),
     ('gsims', 'Gsim selection', {'url': 'query/gsims',
-                                 'form': GsimSelectionForm}),
+                                 'form': GsimSelectionForm()}),
     ('trellis', 'Trellis Plots', {'url': 'query/trellis',
-                                  'form': TrellisForm}),
+                                  'form': TrellisForm()}),
     ('gmdbplot', 'Ground Motion database', {'url': 'query/gmdbplot',
-                                            'form': GmdbForm}),
+                                            'form': GmdbForm()}),
     ('residuals', 'Residuals', {'url': 'query/residuals',
-                                'form': ResidualsForm}),
+                                'form': ResidualsForm()}),
     ('testing', 'Testing', {'url': 'query/testing',
                             'form': {}}),
     ('apidoc', 'API Documentation', {'src': 'service/apidoc'})
