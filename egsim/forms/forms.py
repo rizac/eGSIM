@@ -189,7 +189,10 @@ class BaseForm(Form):
             fielddata = widget.get_context(name, val, attrs)
             widgetdata = fielddata['widget']
             attrs = dict(widgetdata.pop('attrs', {}))
-            attrs['required'] = widgetdata.pop('required', False)
+            if 'type' in widgetdata:
+                attrs['type'] = widgetdata.pop('type')
+            if 'required' in widgetdata:
+                attrs['required'] = widgetdata.pop('required')
             if 'id' not in attrs:
                 attrs['id'] = boundfield.auto_id
             attrs['name'] = widgetdata.pop('name')
