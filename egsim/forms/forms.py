@@ -549,14 +549,16 @@ class TrellisForm(GsimImtForm):
     # GSIM RUPTURE PARAMS:
     magnitude = NArrayField(label='Magnitude(s)', min_count=1)
     distance = NArrayField(label='Distance(s)', min_count=1)
-    dip = FloatField(label='Dip', min_value=0., max_value=90.)
+    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., min_count=1,
+                       initial=760.0)
     aspect = FloatField(label='Rupture Length / Width', min_value=0.)
+    dip = FloatField(label='Dip', min_value=0., max_value=90.)
     # FIXME: removed field below, it is not used. Should we add it in clean (see below)?
 #     tectonic_region = CharField(label='Tectonic Region Type',
 #                                 initial='Active Shallow Crust', widget=HiddenInput)
     rake = FloatField(label='Rake', min_value=-180., max_value=180., initial=0.)
-    ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0., initial=0.)
     strike = FloatField(label='Strike', min_value=0., max_value=360., initial=0.)
+    ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0., initial=0.)
     magnitude_scalerel = MsrField(label='Magnitude Scaling Relation', initial="WC1994")
     initial_point = PointField(label="Location on Earth", help_text='Longitude Latitude',
                                min_value=[-180, -90], max_value=[180, 90], initial="0 0")
@@ -565,8 +567,6 @@ class TrellisForm(GsimImtForm):
                                       min_count=2, max_count=2,
                                       min_value=[0, 0], max_value=[1, 1])
     # END OF RUPTURE PARAMS
-    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., min_count=1,
-                       initial=760.0)
     vs30_measured = BooleanField(label=mark_safe('Is V<sub>S30</sub> measured?'),
                                  help_text='Otherwise is inferred', initial=True, required=False)
     line_azimuth = FloatField(label='Azimuth of Comparison Line',

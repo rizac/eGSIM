@@ -25,22 +25,26 @@ _TEMPLATE_TRELLIS = `
         <div class="flex-direction-col flexible ml-4">
             <h5>Scenario configuration</h5>
             <div class="flexible form-control" style="overflow:auto; background-color:transparent">
-                <div class="flexible p-1 grid-3-columns grid-col-gap-2 grid-row-gap-0">
+                <div class="flexible p-1">
                 
                     <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
-                        <div>
-                            <label :for="data.attrs.id">{{ name }}</label>
-                            <span class="text-danger small text-nowrap">{{ data.err }}</span>
+                        <div class="flex-direction-row mb-0 mt-2 align-items-baseline">
+                            <label :for="data.attrs.id" class='mb-0 mr-3'>
+                                <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='grid-col-span'>
+                                {{ name }}
+                            </label>
+                            <div class="text-muted small text-nowrap flexible">
+                                <span v-if="data.err" class="text-danger">{{ data.err }}</span>
+                                <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && data.help" v-html="data.label + ' (' + data.help + ')'"></span>
+                                <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && !data.help" v-html="data.label"></span>
+                                <span v-if="!data.err && data.label.toLowerCase() == name.toLowerCase() && data.help" v-html="data.help"></span>
+                            </div>
                         </div>
-                        <input v-if="!data.choices.length" v-model="data.val" v-bind="data.attrs">
-                        <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs">
+                        <input v-if="!data.choices.length && !['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class=''>
+                        <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs" class=''>
                             <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
                         </select>
-                        <div class="text-muted small text-nowrap mb-2 field-help">
-                           <span v-if="data.label.toLowerCase() != name.toLowerCase() && data.help" v-html="data.label + ' (' + data.help + ')'"></span>
-                           <span v-if="data.label.toLowerCase() != name.toLowerCase() && !data.help" v-html="data.label"></span>
-                           <span v-if="data.label.toLowerCase() == name.toLowerCase() && data.help" v-html="data.help"></span>
-                        </div>
+
                     </template>
 
                 </div>
