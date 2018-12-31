@@ -27,35 +27,18 @@ _TEMPLATE_TRELLIS = `
             <div class="flexible form-control" style="overflow:auto; background-color:transparent">
                 <div class="flexible p-1 grid-2-columns grid-col-gap-2 grid-row-gap-0">
                 
-                    <template v-for="name in ['magnitude', 'distance', 'dip', 'aspect', 'vs30', 'vs30_measured', 'z1pt0', 'z2pt5', 'rake', 'ztor' ,'strike']">
+                    <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
                         <div>
-                            <label for="self.form[name].attrs.id">{{ name }}</label>
-                            <span class="text-danger small text-nowrap">{{ self.form[name].err }}</span>
+                            <label for="data.attrs.id">{{ name }}</label>
+                            <span class="text-danger small text-nowrap">{{ data.err }}</span>
                         </div>
-                        <input v-model="self.form[name].val" v-bind="self.form[name].attrs">
-                        <div class="text-muted small text-nowrap mb-2 field-help grid-col-span">{{ self.form[name].label }} ({{  self.form[name].help }})</div>
-                    </template>
-                    
-                    <template v-for="name in ['magnitude_scalerel']">
-                        <div>
-                            <label for="self.form[name].attrs.id">{{ name }}</label>
-                            <span class="text-danger small text-nowrap">{{ self.form[name].err }}</span>
-                        </div>
-                        <select v-model="self.form[name].val" v-bind="self.form[name].attrs">
-                            <option v-for='opt in self.form[name].choices' :value='opt[0]'>{{ opt[1] }}</option>
+                        <input v-if="!data.choices.length" v-model="data.val" v-bind="data.attrs">
+                        <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs">
+                            <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
                         </select>
-                        <div class="text-muted small text-nowrap mb-2 field-help grid-col-span">{{ self.form[name].label }} ({{  self.form[name].help }})</div>
+                        <div class="text-muted small text-nowrap mb-2 field-help grid-col-span">{{ data.label }} ({{ data.help }})</div>
                     </template>
-                    
-                    <template v-for="name in ['initial_point', 'hypocentre_location', 'line_azimuth',  'backarc']">
-                        <div>
-                            <label for="self.form[name].attrs.id">{{ name }}</label>
-                            <span class="text-danger small text-nowrap">{{ self.form[name].err }}</span>
-                        </div>
-                        <input v-model="self.form[name].val" v-bind="self.form[name].attrs">
-                        <div class="text-muted small text-nowrap mb-2 field-help grid-col-span">{{ self.form[name].label }} ({{  self.form[name].help }})</div>
-                    </template>
-            
+
                 </div>
             </div>
         </div>
@@ -76,16 +59,7 @@ _TEMPLATE_TRELLIS = `
             </div>
             
         </template>
-    
-        <!--<label for="id_plot_type">Plot type</label>
-        <select v-model="self.form.plot_type.val" class="form-control flexible mr-3 ml-1" size="4" name="plot_type" id="id_plot_type">
-            <option value="d">IMT vs. Distance</option>
-            <option value="m">IMT vs. Magnitude</option>
-            <option value="s">Magnitude-Distance Spectra</option>
-            <option value="ds">IMT vs. Distance (st.dev)</option>
-            <option value="ms">IMT vs. Magnitude  (st.dev)</option>
-            <option value="ss">Magnitude-Distance Spectra  (st.dev)</option>
-        </select>-->
+
         <button type="submit" class="btn btn-outline-primary">
             Display plots
         </button>
