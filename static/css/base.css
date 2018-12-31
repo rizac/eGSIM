@@ -76,6 +76,11 @@ browsers but opera and IE11 */
 	grid-template-columns:auto 1fr;
 	align-items:baseline;
 }
+.grid-3-columns{
+	display:grid;
+	grid-template-columns:auto 1fr auto;
+	align-items:baseline;
+}
 /* following bootstrap mb-1, pt-3, ... logic: */
 .grid-row-gap-0{grid-row-gap: 0px;}
 .grid-row-gap-1{grid-row-gap: 0.25rem;}

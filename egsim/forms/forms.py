@@ -573,12 +573,12 @@ class TrellisForm(GsimImtForm):
                               min_value=0., max_value=360., initial=0.)
     z1pt0 = NArrayField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
                         min_value=0., required=False,
-                        help_text=mark_safe("If not given, it will be calculated "
-                                            "from the V<sub>S30</sub>"))
+                        help_text=mark_safe("Calculated from the "
+                                            "V<sub>S30</sub> if not given"))
     z2pt5 = NArrayField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
                         min_value=0., required=False,
-                        help_text=mark_safe("If not given, it will be calculated "
-                                            "from the V<sub>S30</sub>"))
+                        help_text=mark_safe("Calculated from the  "
+                                            "V<sub>S30</sub> if not given"))
     backarc = BooleanField(label='Backarc Path', initial=False, required=False)
 
     def clean(self):

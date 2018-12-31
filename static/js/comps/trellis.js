@@ -25,7 +25,7 @@ _TEMPLATE_TRELLIS = `
         <div class="flex-direction-col flexible ml-4">
             <h5>Scenario configuration</h5>
             <div class="flexible form-control" style="overflow:auto; background-color:transparent">
-                <div class="flexible p-1 grid-2-columns grid-col-gap-2 grid-row-gap-0">
+                <div class="flexible p-1 grid-3-columns grid-col-gap-2 grid-row-gap-0">
                 
                     <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
                         <div>
@@ -36,7 +36,7 @@ _TEMPLATE_TRELLIS = `
                         <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs">
                             <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
                         </select>
-                        <div class="text-muted small text-nowrap mb-2 field-help grid-col-span">
+                        <div class="text-muted small text-nowrap mb-2 field-help">
                            <span v-if="data.label.toLowerCase() != name.toLowerCase() && data.help" v-html="data.label + ' (' + data.help + ')'"></span>
                            <span v-if="data.label.toLowerCase() != name.toLowerCase() && !data.help" v-html="data.label"></span>
                            <span v-if="data.label.toLowerCase() == name.toLowerCase() && data.help" v-html="data.help"></span>
