@@ -37,9 +37,9 @@ _TEMPLATE_TRELLIS = `
                             <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
                         </select>
                         <div class="text-muted small text-nowrap mb-2 field-help grid-col-span">
-                        {{ data.label.toLowerCase() != name.toLowerCase() && data.help ? data.label + '(' + data.help + ')' : '' }}
-                        {{ data.label.toLowerCase() != name.toLowerCase() && !data.help ? data.label : '' }}
-                        {{ data.label.toLowerCase() == name.toLowerCase() && data.help ? data.help : '' }}
+                           <span v-html="data.label.toLowerCase() != name.toLowerCase() && data.help ? data.label + ' (' + data.help + ')' : ''"></span>
+                           <span v-html="data.label.toLowerCase() != name.toLowerCase() && !data.help ? data.label : ''"></span>
+                           <span v-html="data.label.toLowerCase() == name.toLowerCase() && data.help ? data.help : ''"></span>
                         </div>
                     </template>
 
