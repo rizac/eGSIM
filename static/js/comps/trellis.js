@@ -29,7 +29,7 @@ _TEMPLATE_TRELLIS = `
                 
                     <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
                         <div>
-                            <label for="data.attrs.id">{{ name }}</label>
+                            <label :for="data.attrs.id">{{ name }}</label>
                             <span class="text-danger small text-nowrap">{{ data.err }}</span>
                         </div>
                         <input v-if="!data.choices.length" v-model="data.val" v-bind="data.attrs">
@@ -37,9 +37,9 @@ _TEMPLATE_TRELLIS = `
                             <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
                         </select>
                         <div class="text-muted small text-nowrap mb-2 field-help grid-col-span">
-                           <span v-html="data.label.toLowerCase() != name.toLowerCase() && data.help ? data.label + ' (' + data.help + ')' : ''"></span>
-                           <span v-html="data.label.toLowerCase() != name.toLowerCase() && !data.help ? data.label : ''"></span>
-                           <span v-html="data.label.toLowerCase() == name.toLowerCase() && data.help ? data.help : ''"></span>
+                           <span v-if="data.label.toLowerCase() != name.toLowerCase() && data.help" v-html="data.label + ' (' + data.help + ')'"></span>
+                           <span v-if="data.label.toLowerCase() != name.toLowerCase() && !data.help" v-html="data.label"></span>
+                           <span v-if="data.label.toLowerCase() == name.toLowerCase() && data.help" v-html="data.help"></span>
                         </div>
                     </template>
 
