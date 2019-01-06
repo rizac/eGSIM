@@ -2,7 +2,8 @@ Vue.component('gsimselect', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
       'name': {type: String, default: 'gsim'},
-      'showfilter': Boolean,
+      'imtName': {type: String, default: 'imt'},
+      'showfilter': {type: Boolean, default: false},
       'form': Object
   },
   data: function () {
@@ -14,15 +15,17 @@ Vue.component('gsimselect', {
       }
   },
   template: `<div class='flex-direction-col'>
-    <div>
+    <div class='flex-direction-row align-items-baseline'>
       <h5>{{ name }}</h5>
-      <span class='small text-danger'>{{ form[name].err }}</span>
+      <div class='small flexible text-right ml-3'>
+          <span class='text-danger'>{{ form[name].err }}</span>
+          <span v-if='!form[name].err' class='text-muted'>
+              {{ form[name].label }} ({{ form[name].val.length }} of {{ form[name].choices.length }} selected)
+          </span>
+      </div>
     </div>  
-    <div class='text-muted small'>
-        {{ form[name].val.length }} of {{ form[name].choices.length }} selected 
-    </div>
     <div class='mb-1 flexible flex-direction-col'>
-        <select v-model="form[name].val" v-bind="form[name].attrs" multiple class="form-control flexible">
+        <select v-model="form[name].val" v-bind="form[name].attrs" class="form-control flexible">
             <option v-for="gsim in form[name].choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)">
                 {{ gsim }}
             </option>
@@ -90,6 +93,26 @@ Vue.component('gsimselect', {
 //      }
   },
   computed: {
-      // no-op for the moment
+      // computed properties are cached, i.e. they are re-evaluated only each time
+      // the watched variable used therein are changed.
+      // https://vuejs.org/v2/guide/computed.html
+      // https://forum.vuejs.org/t/how-do-computed-properties-know-how-to-change/24140/2
+      selectableGsimsSet: function(){
+          var avalgsims = this.form[this.name].GSIMS_MANAGER;
+          var selectedimts = new Set(this.form[this.imtName].val);
+          var selectableGsims = Array.from(avalgsims.keys());
+          if (selectedimts.size){
+              selectableGsims = selectableGsims.filter(gsim => {
+                  var gsimImts = avalgsims.get(gsim)[0]; // it's a Set
+                  for (var imt of selectedimts){
+                      if (!gsimImts.has(imt)){
+                          return false;
+                      }
+                  }
+                  return true;
+              });
+          }
+          return new Set(selectableGsims);
+      }
   }
 })

@@ -1,3 +1,8 @@
+// base "class" for EGSIM forms. The user has jyst to override the template
+// with a slot for custom <input>s and <select> tags.
+// Using the slot scope, e.g. <div slot-scope="self"> on the root template element,
+// then 'self.form' can be used in the template to access all passed form fields and customize
+// the inputs and select tags.
 var EGSIMFORM = Vue.component('egsimform', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {

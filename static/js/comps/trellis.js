@@ -24,11 +24,11 @@ _TEMPLATE_TRELLIS = `
                 
                     <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
                         <div class="flex-direction-row mb-0 mt-2 pt-1 align-items-baseline">
-                            <label :for="data.attrs.id" class='mb-0 mr-2'>
+                            <label :for="data.attrs.id" class='mb-0'>
                                 <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='mr-1'>
                                 {{ name }}
                             </label>
-                            <div class="text-muted small text-nowrap flexible">
+                            <div class="text-muted small text-nowrap flexible ml-3 text-right">
                                 <span v-if="data.err" class="text-danger">{{ data.err }}</span>
                                 <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && data.help" v-html="data.label + ' (' + data.help + ')'"></span>
                                 <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && !data.help" v-html="data.label"></span>

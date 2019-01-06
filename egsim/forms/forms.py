@@ -21,8 +21,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext as _
 from django.forms import Form
 from django.utils.safestring import mark_safe
-from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput,\
-    HiddenInput
+from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxInput
 from django.forms.fields import BooleanField, CharField, FloatField, \
     ChoiceField, MultipleChoiceField
 
@@ -444,10 +443,10 @@ class GsimImtForm(BaseForm):
     # fields (not used for rendering, just for validation): required is True by default
     # FIXME: do we provide choices, as actually we are rendering the component with an
     # ajax request in vue.js?
-    gsim = GsimField(widget=HiddenInput, required=True)
-    imt = IMTField(widget=HiddenInput, required=True)
+    gsim = GsimField(required=True)
+    imt = IMTField(required=True)
     sa_periods = NArrayField(label="The Spectral Acceleration (SA) period(s)",
-                             required=False, widget=HiddenInput,
+                             required=False,
                              help_text=("Required only if SA is a selected "
                                         "Intensity Measure Type. Alternatively, you can "
                                         "ignore this parameter but each SA must be supplied "
