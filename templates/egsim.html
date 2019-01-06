@@ -62,8 +62,11 @@
 	<script type='text/javascript' src = "{% static 'js/comps/' %}{{ component.0 }}.js"></script>
 	{% endfor %}
 
+	<script type='text/javascript' src = "{% static 'js/comps/base/gsimselect.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/comps/base/imtselect.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/comps/base/egsimform.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
+
 	<script>
 	var EGSIM = new Vue({
 	    el: '#egsim-vue',

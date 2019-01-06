@@ -69,8 +69,11 @@ class BaseForm(Form):
         self.customize_widget_attrs()
 
     def customize_widget_attrs(self):
-        '''customizes the widget attributes (currently sets a bootstrap class on almost all
-        of them'''
+        '''customizes the widget attributes'''
+        # this method is no-op, as we delegate the view (frontend)
+        # to set the custom attributes
+        return
+        # Old colde:
         atts = {'class': 'form-control'}  # for bootstrap
         for name, field in self.fields.items():  # @UnusedVariable
             # add class only for specific html elements, some other might have weird layout

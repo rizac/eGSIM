@@ -12,13 +12,8 @@ _TEMPLATE_TRELLIS = `
     <div class="flexible flex-direction-row">
         <div class="flexible flex-direction-col">
             
-            <!--<gsimselect class="flexible p-1 mb-4" name="gsim" showfilter="" v-bind:errormsg="formscope.fielderrors['gsim']" v-bind:avalgsims="avalGsims" v-bind:selectedgsims.sync="selectedGsims">
-                Ground Shaking Intensity Model(s)
-            </gsimselect>
-            
-            <imtselect class="p-1" name="imt" v-bind:errormsg="formscope.fielderrors['imt']" v-bind:avalgsims="avalGsims" v-bind:selectedgsims="selectedGsims" v-bind:avalimts="avalImts" v-bind:selectedimts.sync="selectedImts">
-                Intensity Measure Type(s)
-            </imtselect>-->
+            <gsimselect :form="form" showfilter class="flexible p-1 mb-4"></gsimselect>
+            <imtselect :form="form" class="p-1"></imtselect>
         
         </div>
         
@@ -28,9 +23,9 @@ _TEMPLATE_TRELLIS = `
                 <div class="flexible p-1">
                 
                     <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
-                        <div class="flex-direction-row mb-0 mt-2 align-items-baseline">
-                            <label :for="data.attrs.id" class='mb-0 mr-3'>
-                                <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='grid-col-span'>
+                        <div class="flex-direction-row mb-0 mt-2 pt-1 align-items-baseline">
+                            <label :for="data.attrs.id" class='mb-0 mr-2'>
+                                <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='mr-1'>
                                 {{ name }}
                             </label>
                             <div class="text-muted small text-nowrap flexible">
@@ -40,11 +35,10 @@ _TEMPLATE_TRELLIS = `
                                 <span v-if="!data.err && data.label.toLowerCase() == name.toLowerCase() && data.help" v-html="data.help"></span>
                             </div>
                         </div>
-                        <input v-if="!data.choices.length && !['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class=''>
-                        <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs" class=''>
+                        <input v-if="!data.choices.length && !['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='form-control'>
+                        <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs" class='form-control'>
                             <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
                         </select>
-
                     </template>
 
                 </div>
