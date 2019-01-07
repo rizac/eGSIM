@@ -21,7 +21,7 @@ Vue.component('testing', {
           selection: Array.from(this.selectedgsims)
       }
   },
-  template: `<div class='flex-direction-col'>
+  template: `<div class='d-flex flex-column'>
     this is Testing
   </div>`
 })

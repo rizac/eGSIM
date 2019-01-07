@@ -8,10 +8,10 @@
 	
 {% block main %}
 
-	<div class='position-absolute pos-0 m-0 flex-direction-row justify-content-center'> <!-- p-3: padding=1rem -->
+	<div class='position-absolute pos-0 m-0 d-flex flex-row justify-content-center'> <!-- p-3: padding=1rem -->
 
 		<residualsdiv v-bind:eventbus="eventbus" url='{{ post_url }}'
-			class='position-absolute pos-0 m-0 flex-direction-row' style='z-index:1'>
+			class='position-absolute pos-0 m-0 d-flex flex-row' style='z-index:1'>
 			<div slot-scope='divscope'>
                 <button @click="divscope.eventbus.$emit(divscope.url + ':form:show')"
                 	class='btn btn-outline-dark'>params</button> <!-- show form below -->
@@ -20,11 +20,11 @@
 	
 		<modalform url='{{ post_url }}'
 			v-bind:eventbus="eventbus"
-			class='flex-direction-col m-2 p-4' style='z-index:10'>
+			class='d-flex flex-column m-2 p-4' style='z-index:10'>
 
-			<div class='flexible flex-direction-col' slot-scope='formscope'>
+			<div class='flexible d-flex flex-column' slot-scope='formscope'>
 
-				<div class='flexible flex-direction-row'>
+				<div class='flexible d-flex flex-row'>
 
 					<gsimselect class='flexible p-1'
 								name="{{ form.gsim.html_name }}"
@@ -35,7 +35,7 @@
 								{{ form.gsim.label }}
 					</gsimselect>
 							
-					<div class='flexible flex-direction-col ml-4'>
+					<div class='flexible d-flex flex-column ml-4'>
 
 							<imtselect class='flexible p-1 mb-4'
 								name="{{ form.imt.html_name }}"
@@ -80,7 +80,7 @@
 
 				</div>
 
-				<div class='flex-direction-row mt-3'>
+				<div class='d-flex flex-row mt-3'>
 					<!-- the submit button is the plot_type field. Render manually -->
 					{{ form.plot_type.label_tag }}
 					<select class='form-control flexible mr-3 ml-1' size="4" name="{{ form.plot_type.html_name }}"
@@ -94,7 +94,7 @@
 		        	</button>
 				</div>
 
-				<!-- <div class="flex-direction-row mb-4">
+				<!-- <div class="d-flex flex-row mb-4">
 					{{ form.plot_type.label_tag }}
 					<select class='form-control flexible ml-1' size="4" name="{{ form.plot_type.html_name }}"
 						id="{{ form.plot_type.auto_id }}">

@@ -8,22 +8,22 @@
 // Note the slot-scope 'self' which refers to the egsimform component
 // (see related .js file for info)
 _TEMPLATE_TRELLIS = `
-<div class="flexible flex-direction-col" slot-scope="self">
-    <div class="flexible flex-direction-row">
-        <div class="flexible flex-direction-col">
+<div class="flexible d-flex flex-column" slot-scope="self">
+    <div class="flexible d-flex flex-row">
+        <div class="flexible d-flex flex-column">
             
             <gsimselect :form="form" showfilter class="flexible p-1 mb-4"></gsimselect>
             <imtselect :form="form" class="p-1"></imtselect>
         
         </div>
         
-        <div class="flex-direction-col flexible ml-4">
+        <div class="d-flex flex-column flexible ml-4">
             <h5>Scenario configuration</h5>
             <div class="flexible form-control" style="overflow:auto; background-color:transparent">
                 <div class="flexible p-1">
                 
                     <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
-                        <div class="flex-direction-row mb-0 mt-2 pt-1 align-items-baseline">
+                        <div class="d-flex flex-row mb-0 mt-2 pt-1 align-items-baseline">
                             <label :for="data.attrs.id" class='mb-0'>
                                 <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='mr-1'>
                                 {{ name }}
@@ -46,7 +46,7 @@ _TEMPLATE_TRELLIS = `
         </div>
     </div>
 
-    <div class="flex-direction-row mt-3">
+    <div class="d-flex flex-row mt-3">
         
         <template v-for="name in ['plot_type']">
             <label for="self.form[name].attrs.id">{{ name }}</label>
@@ -80,7 +80,7 @@ Vue.component('trellis', {
       return {
       }
   },
-  template: `<egsimform class='flex-direction-col' :form='form' :url='url'>
+  template: `<egsimform class='d-flex flex-column' :form='form' :url='url'>
       ${_TEMPLATE_TRELLIS}
   </egsimform>`
 })

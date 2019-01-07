@@ -16,7 +16,7 @@ Vue.component('gsimselect', {
           selection: Array.from(this.selectedgsims)
       }
   },
-  template: `<div class='flex-direction-col'>
+  template: `<div class='d-flex flex-column'>
     <div>
       <h5><slot>{{ name }}</slot></h5>
       <errorspan v-bind:text="errormsg"></errorspan>
@@ -24,7 +24,7 @@ Vue.component('gsimselect', {
     <div class='text-muted small'>
         {{ selection.length }} of {{ gsims.length }} selected 
     </div>
-    <div class='mb-1 flexible flex-direction-col'>
+    <div class='mb-1 flexible d-flex flex-column'>
         <select v-model="selection" multiple required class="form-control flexible"
             :name="name" :id="'id_' + name">
             <option v-for="gsim in gsims" :key="gsim" v-show="isGsimVisible(gsim)">

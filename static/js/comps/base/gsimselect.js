@@ -14,8 +14,8 @@ Vue.component('gsimselect', {
           filterFunc: elm => true
       }
   },
-  template: `<div class='flex-direction-col'>
-    <div class='flex-direction-row align-items-baseline'>
+  template: `<div class='d-flex flex-column'>
+    <div class='d-flex flex-row align-items-baseline'>
       <h5>{{ name }}</h5>
       <div class='small flexible text-right ml-3'>
           <span class='text-danger'>{{ form[name].err }}</span>
@@ -24,7 +24,7 @@ Vue.component('gsimselect', {
           </span>
       </div>
     </div>  
-    <div class='mb-1 flexible flex-direction-col'>
+    <div class='mb-1 flexible d-flex flex-column'>
         <select v-model="form[name].val" v-bind="form[name].attrs" class="form-control flexible">
             <option v-for="gsim in form[name].choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)"
              v-bind:style="!isGsimSelectable(gsim) ? {'text-decoration': 'line-through'} : ''"

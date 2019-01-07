@@ -12,11 +12,11 @@
 	
 
 {% block main %}
-<div class='position-absolute pos-0 m-0 flex-direction-col justify-content-flex-start'>
+<div class='position-absolute pos-0 m-0 d-flex flex-column justify-content-flex-start'>
 
-	<div class="flex-direction-row justify-content-center">
+	<div class="d-flex flex-row justify-content-center">
 		<egsimform url='{{ post_url }}' :eventbus="eventbus"
-			class='flex-direction-col m-3 p-2'>
+			class='d-flex flex-column m-3 p-2'>
 	
 				<div class="grid-2-columns grid-row-gap-2 grid-col-gap-2" slot-scope='formscope'>
 	

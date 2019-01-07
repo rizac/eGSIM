@@ -12,7 +12,7 @@ Vue.component('trmap', {
             'colorMap': Vue.colorMap() // defined in vueutil.js
         }
     },
-    template:`<div class='flex-direction-col'>
+    template:`<div class='d-flex flex-column'>
         <select v-model='selectedModel' class='form-control mb-2'>
             <option v-for='mod in modelNames' :key='mod'>
                 {{ mod }}

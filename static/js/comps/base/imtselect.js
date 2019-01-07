@@ -13,8 +13,8 @@ Vue.component('imtselect', {
   },
   // note on imts <option>s in template below: do not disable unselectable imts, as the user might not
   // be able to deselect them if gsims are changed. Just style them gray and use strike-through
-  template: `<div class='flex-direction-col'>
-      <div class='flex-direction-row align-items-baseline'>
+  template: `<div class='d-flex flex-column'>
+      <div class='d-flex flex-row align-items-baseline'>
           <h5>{{ name }}</h5>
           <div class='small flexible text-right ml-3'>
               <span class='text-danger'>{{ form[name].err }}</span>
@@ -23,7 +23,7 @@ Vue.component('imtselect', {
               </span> 
           </div>
       </div>
-      <div class='mb-1 flexible flex-direction-col'>
+      <div class='mb-1 flexible d-flex flex-column'>
         <select v-model="form[name].val" v-bind="form[name].attrs" class="form-control flexible">
             <option v-for='imt in form[name].choices' :key='imt'
                 v-bind:style="!isImtSelectable(imt) ? {'text-decoration': 'line-through'} : ''"

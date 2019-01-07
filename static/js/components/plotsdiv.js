@@ -34,11 +34,11 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             freezewatchers: true  // does what it says: it freezes watchers. Used when initializing to avoid fire Vue's re-layout
         }
     },
-    template: `<div v-show='initialized' class='flex-direction-row'>
+    template: `<div v-show='initialized' class='d-flex flex-row'>
         
-        <div class='flexible flex-direction-col m-2'>
-            <div v-if="Object.keys(selectableParams).length" class='flex-direction-row justify-content-around mb-1'>
-                <div v-for='(values, key) in selectableParams' class='flex-direction-row flexible align-items-baseline ml-2'>
+        <div class='flexible d-flex flex-column m-2'>
+            <div v-if="Object.keys(selectableParams).length" class='d-flex flex-row justify-content-around mb-1'>
+                <div v-for='(values, key) in selectableParams' class='d-flex flex-row flexible align-items-baseline ml-2'>
                     <span class='text-nowrap mr-1'>{{ key }}</span>
                     <select class='flexible form-control' v-model="selectedParams[key]">
                         <option v-for='value in params[key]'>
@@ -52,7 +52,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             </div>
         </div>
     
-        <div class='flex-direction-col my-2 mr-2 pl-2 border-left'
+        <div class='d-flex flex-column my-2 mr-2 pl-2 border-left'
             v-if="Object.keys(legend).length || Object.keys(selectableParams).length || showGridControls">
 
             <slot :eventbus="eventbus" :url="url"></slot>

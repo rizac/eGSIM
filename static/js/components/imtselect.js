@@ -13,7 +13,7 @@ Vue.component('imtselect', {
           saPeriods: ""
       }
   },
-  template: `<div class='flex-direction-col'>
+  template: `<div class='d-flex flex-column'>
       <div>
           <h5><slot>{{ name }}</slot></h5>
           <errorspan v-bind:text="errormsg"></errorspan>
@@ -21,7 +21,7 @@ Vue.component('imtselect', {
       <div class='text-muted small'>
           {{ selection.length }} of {{ imts.length }} selected 
       </div>
-      <div class='mb-1 flexible flex-direction-col'>
+      <div class='mb-1 flexible d-flex flex-column'>
         <select v-model="selection" :name="name" :id="'id_' + name" multiple class="flexible form-control" required>
             <option v-for='imt in imts' :key='imt'
                 v-bind:style="!isImtSelectable(imt) ? {'text-decoration': 'line-through'} : ''"
