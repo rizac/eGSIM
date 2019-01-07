@@ -26,7 +26,9 @@ Vue.component('gsimselect', {
     </div>  
     <div class='mb-1 flexible flex-direction-col'>
         <select v-model="form[name].val" v-bind="form[name].attrs" class="form-control flexible">
-            <option v-for="gsim in form[name].choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)">
+            <option v-for="gsim in form[name].choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)"
+             v-bind:style="!isGsimSelectable(gsim) ? {'text-decoration': 'line-through'} : ''"
+             v-bind:class="!isGsimSelectable(gsim) ? ['disabled'] : ''">
                 {{ gsim }}
             </option>
         </select>
@@ -46,8 +48,13 @@ Vue.component('gsimselect', {
       isGsimVisible(gsim){
           return this.filterFunc(gsim);
       },
+      isGsimSelectable(gsim){
+          return this.selectableGsimsSet.has(gsim);
+      },
       updateFilter(){
-          var regexp = this.filterText ? new RegExp(this.filterText.replace(/\*/g, '.*').replace(/\?/g, '.'), 'i') : undefined;
+          var regexp = this.filterText ? 
+              new RegExp(this.filterText.replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i') : 
+                  undefined;
           var filterFunc = elm => true;
           var avalGsims = this.form[this.name].GSIMS_MANAGER;
           if (this.filterType == this.filterTypes[0]){
@@ -83,14 +90,7 @@ Vue.component('gsimselect', {
           if (oldValue !== value){
               this.updateFilter();
           }
-      },
-//      selection: function(value, oldValue){
-//          // watch this.selection (which is initialized from the 'selectedgsims' prop).
-//          // if 'selectedgsims' is synced with some other component's (or instance's) property,
-//          // emit the event notifying the change
-//          // (https://vuejs.org/v2/guide/components-custom-events.html#sync-Modifier):
-//          this.$emit('update:selectedgsims', value);  // (value is an array)
-//      }
+      }
   },
   computed: {
       // computed properties are cached, i.e. they are re-evaluated only each time
@@ -115,4 +115,4 @@ Vue.component('gsimselect', {
           return new Set(selectableGsims);
       }
   }
-})
+});
