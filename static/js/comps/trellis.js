@@ -74,13 +74,13 @@ Vue.component('trellis', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
       form: Object,
-      url: String
+      url: String,
   },
   data: function () {
       return {
       }
   },
-  template: `<egsimform class='d-flex flex-column' :form='form' :url='url'>
+  template: `<egsimform class='d-flex flex-column m-4' :form='form' :url='url'>
       ${_TEMPLATE_TRELLIS}
   </egsimform>`
 })
