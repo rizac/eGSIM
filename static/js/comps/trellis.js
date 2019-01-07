@@ -8,7 +8,7 @@
 // Note the slot-scope 'self' which refers to the egsimform component
 // (see related .js file for info)
 _TEMPLATE_TRELLIS = `
-<div class="d-flex flex-column" slot-scope="self">
+<div class="d-flex flex-column flexible" slot-scope="self">
     <div class="flexible d-flex flex-row">
         <div class="flexible d-flex flex-column">
             
