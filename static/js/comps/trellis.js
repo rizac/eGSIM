@@ -52,7 +52,7 @@ _TEMPLATE_TRELLIS = `
             <div class="flexible d-flex flex-column">
                 <div class='d-flex flex-row align-items-baseline'>
                     <h5>{{ name }}</h5>
-                    <span class="text-danger small text-nowrap flexible ml-3 text-right">abc {{ self.form[name].err }}</span>
+                    <span class="text-danger small text-nowrap flexible ml-3 text-right">{{ self.form[name].err }}</span>
                 </div>
                 <select v-model="self.form[name].val" v-bind="self.form[name].attrs" class="form-control" size="4">
                     <!-- if size is not provided, add the following (see note here: https://vuejs.org/v2/guide/forms.html#Select)
