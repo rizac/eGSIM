@@ -8,12 +8,12 @@
 // Note the slot-scope 'self' which refers to the egsimform component
 // (see related .js file for info)
 _TEMPLATE_TRELLIS = `
-<div class="flexible d-flex flex-column" slot-scope="self">
+<div class="d-flex flex-column" slot-scope="self">
     <div class="flexible d-flex flex-row">
         <div class="flexible d-flex flex-column">
             
-            <gsimselect :form="form" showfilter class="flexible p-1 mb-4"></gsimselect>
-            <imtselect :form="form" class="p-1"></imtselect>
+            <gsimselect :form="form" showfilter class="flexible mb-4"></gsimselect>
+            <imtselect :form="form"></imtselect>
         
         </div>
         
@@ -75,12 +75,14 @@ Vue.component('trellis', {
   props: {
       form: Object,
       url: String,
+      response: {default: true }
   },
   data: function () {
       return {
       }
   },
-  template: `<egsimform class='d-flex flex-column m-4' :form='form' :url='url'>
+  template: `<egsimform class='d-flex flex-row align-self-center m-4' :form='form' :url='url'
+              :class="response ? ['shadow', 'border'] : ''"  >
       ${_TEMPLATE_TRELLIS}
   </egsimform>`
 })
