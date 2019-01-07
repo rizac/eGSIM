@@ -75,14 +75,14 @@ Vue.component('trellis', {
   props: {
       form: Object,
       url: String,
-      response: {default: true }
+      response: {type:Object, default: () => { return {} } }
   },
   data: function () {
       return {
       }
   },
-  template: `<egsimform class='d-flex flex-row align-self-center m-4' :form='form' :url='url'
-              :class="response ? ['shadow', 'border'] : ''"  >
+  template: `<egsimform class='align-self-center m-4' :form='form' :url='url'
+              :class="!!response ? ['shadow', 'border'] : ''" :modal='!!response' >
       ${_TEMPLATE_TRELLIS}
   </egsimform>`
 })

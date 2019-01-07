@@ -20,7 +20,7 @@ Vue.component('gsimselect', {
       <div class='small flexible text-right ml-3'>
           <span class='text-danger'>{{ form[name].err }}</span>
           <span v-if='!form[name].err' class='text-muted'>
-              {{ form[name].label }} ({{ form[name].val.length }} of {{ form[name].choices.length }} selected)
+              {{ form[name].label }}: {{ form[name].val.length }} of {{ form[name].choices.length }} selected
           </span>
       </div>
     </div>  

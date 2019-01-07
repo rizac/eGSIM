@@ -15,7 +15,7 @@ var EGSIMFORM = Vue.component('egsimform', {
       return {};
   },
   template: `<form novalidate v-on:submit.prevent='submitForm'
-                v-show="!hidden" class='p-4'>
+                v-show="!hidden" class='d-flex flex-column p-4'>
 
                 <div v-show='modal' class='text-right'>
                     <button type="button" v-on:click='setVisible(false)' class="close" aria-label="Close">
