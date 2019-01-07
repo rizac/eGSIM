@@ -46,23 +46,25 @@ _TEMPLATE_TRELLIS = `
         </div>
     </div>
 
-    <div class="d-flex flex-row mt-3">
+    <div class="d-flex flex-row mt-4">
         
         <template v-for="name in ['plot_type']">
-            <label for="self.form[name].attrs.id">{{ name }}</label>
-            <div class="flexible mr-3 ml-1">
+            <div class="flexible d-flex flex-column">
+                <div class='d-flex flex-row align-items-baseline'>
+                    <h5>{{ name }}</h5>
+                    <span class="text-danger small text-nowrap flexible ml-3 text-right">abc {{ self.form[name].err }}</span>
+                </div>
                 <select v-model="self.form[name].val" v-bind="self.form[name].attrs" class="form-control" size="4">
                     <!-- if size is not provided, add the following (see note here: https://vuejs.org/v2/guide/forms.html#Select)
                     <option disabled value="">{{ self.form[name].label }}</option>
                      -->
                     <option v-for='opt in self.form[name].choices' :value='opt[0]'>{{ opt[1] }}</option>
                 </select>
-                <span class="text-danger small text-nowrap">{{ self.form[name].err }}</span>
             </div>
             
         </template>
 
-        <button type="submit" class="btn btn-outline-primary">
+        <button type="submit" class="btn btn-outline-primary ml-4">
             Display plots
         </button>
     </div>
