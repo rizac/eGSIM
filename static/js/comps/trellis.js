@@ -7,6 +7,7 @@
 // template for the trellis form
 // Note the slot-scope 'self' which refers to the egsimform component
 // (see related .js file for info)
+// the main <div> is the body of the <form>
 _TEMPLATE_TRELLIS = `
 <div class="d-flex flex-column flexible" slot-scope="self">
     <div class="flexible d-flex flex-row">
@@ -54,14 +55,13 @@ _TEMPLATE_TRELLIS = `
                     <h5>{{ name }}</h5>
                     <span class="text-danger small text-nowrap flexible ml-3 text-right">{{ self.form[name].err }}</span>
                 </div>
-                <select v-model="self.form[name].val" v-bind="self.form[name].attrs" class="form-control" size="4">
-                    <!-- if size is not provided, add the following (see note here: https://vuejs.org/v2/guide/forms.html#Select)
-                    <option disabled value="">{{ self.form[name].label }}</option>
-                     -->
-                    <option v-for='opt in self.form[name].choices' :value='opt[0]'>{{ opt[1] }}</option>
-                </select>
+                
+                <div class="d-flex flex-row flexible form-control" style="overflow:auto; background-color:transparent">
+                    <label v-for='opt in self.form[name].choices' :for="'id_' + opt[0]" class='mr-3 text-nowrap'> 
+                        <input type='radio' v-model="self.form[name].val" :value="opt[0]" :id="'id_' + opt[0]"> {{ opt[1] }}
+                    </label> 
+                </div>
             </div>
-            
         </template>
 
         <button type="submit" class="btn btn-outline-primary ml-4">
@@ -77,14 +77,28 @@ Vue.component('trellis', {
   props: {
       form: Object,
       url: String,
-      response: {type:Object, default: () => { return {} } }
+      response: {type: Object, default: () => {return {}}},
+      post: Function
   },
   data: function () {
       return {
+          modal: !!(this.response && Object.keys(this.response).length),
+          trellisData: this.response,
+          hidden: !!(this.response && Object.keys(this.response).length)
       }
   },
-  template: `<egsimform class='align-self-center m-4' :form='form' :url='url'
-              :class="!!response ? ['shadow', 'border'] : ''" :modal='!!response' >
+  methods: {
+      request: function(form){
+          this.post(this.url, form).then(response => {
+              if (response){
+                  this.trellisData = response;
+              } 
+          });
+      }
+  },
+  template: `<egsimform style='max-width:70vw' :form='form' :url='url'
+              v-on:submit="request"
+              :class="modal ? ['shadow', 'border'] : ''" :modal='modal' :hidden="hidden" class='align-self-center m-4'>
       ${_TEMPLATE_TRELLIS}
   </egsimform>`
 })

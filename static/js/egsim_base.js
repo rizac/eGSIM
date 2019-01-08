@@ -7,7 +7,6 @@ var EGSIM_BASE = {
         // form: {classes: {}, visible:true, modal:false}, //a vuejs dict of props to be set to the main form
         // selectedGsims: [],
         // selectedImts: [],
-        forms: {},  // a dict of urls mapped to an Object of field names -> {val: Object, err:''}
         loading: false,
         initdata: {},
         errormsg: '',
@@ -17,14 +16,6 @@ var EGSIM_BASE = {
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
     created: function(){
-        // configure listeners:
-        this.$on('error', error => {
-            this.setError(error);
-        });
-        this.$on('postrequest', (url, data, config) => {
-            this.post(url, data, config);
-        });
-        
         // process input data (injected in the template with the minimum
         // amount possible for performance reasons):
         var [avalGsims, avalImts] = this.getInitData(this.initdata.gsims);
@@ -33,34 +24,32 @@ var EGSIM_BASE = {
         
         // set processed data:
         this.$set(this, 'componentProps', this.initdata.component_props);
-        var forms = {};
         Object.keys(this.componentProps).forEach(name => {
-           var element = this.componentProps[name];
-           if (element.form){
-               if (element.url){
-                   forms[element.url] = element.form;
-               }
-               if (element.form.gsim){
-                   element.form.gsim.choices = gsims;
-                   element.form.gsim.GSIMS_MANAGER = avalGsims;
-                   if (!element.form.gsim.val){
-                       element.form.gsim.val = [];
-                   }else if (element.form.gsim.val === '__all__'){
-                       element.form.gsim.val = gsims;  // need to copy?
+           var compProps = this.componentProps[name];
+           if (typeof compProps === 'object'){
+               Object.keys(compProps).forEach(pname => {
+                   var element = compProps[pname];
+                   if (this.isFormObject(element)){
+                       if (element.gsim){
+                           element.gsim.choices = gsims;
+                           element.gsim.GSIMS_MANAGER = avalGsims;
+                           if (!element.gsim.val){
+                               // convert null to empty list in case:
+                               element.gsim.val = [];
+                           }
+                       }
+                       if (element.imt){
+                           element.imt.choices = imts;
+                           element.gsim.GSIMS_MANAGER = avalGsims;
+                           if (!element.imt.val){
+                               // convert null to empty list in case:
+                               element.imt.val = [];
+                           }
+                       }
                    }
-               }
-               if (element.form.imt){
-                   element.form.imt.choices = imts;
-                   element.form.gsim.GSIMS_MANAGER = avalGsims;
-                   if (!element.form.imt.val){
-                       element.form.imt.val = [];
-                   }else if (element.form.gsim.val === '__all__'){
-                       element.form.imt.val = imts;  // need to copy?
-                   }
-               }
-           } 
+               });
+           }
         });
-        this.$set(this, 'forms', forms);
     },
     mounted: function() {
         // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
@@ -94,32 +83,54 @@ var EGSIM_BASE = {
             }
             return [gsims, imts];
         },
+        // this function returns a promise and is passed to each sub-component:
         post(url, data, config) { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
             // assign the form element to this class:
             this.setError('');
             this.setLoading(true);
             var config = Object.assign(config || {}, {headers: {"X-CSRFToken": this.csrftoken}});
-            // fetch gsim and imts data:
-            return axios.post(url, data || {}, config).then(response => {
-                this.$emit('postresponse', response, false);
+            var data_ = data || {}
+            var isFormObj = this.isFormObject(data);
+            if (isFormObj){ // convert data_  to dict of scalars:
+                data_ = {};
+                for (var key of Object.keys(data)){
+                    data_[key] = data[key].val;
+                }
+            }
+            return axios.post(url, data_, config).then(response => {
+                if (isFormObj){
+                    for (var name of Object.keys(data)){
+                        data[name].err = '';
+                    }
+                }
+                // allow chaining this promise from sub-components:
+                return response;  // https://github.com/axios/axios/issues/1057#issuecomment-324433430
             }).catch(response => {
+                var error = (((response.response || {}).data || {}).error || response.message) || 'Unknown error';
                 // set the data field errors:
-                var url = response.config.url;
-                if (url in this.forms){
-                    var form = this.forms[url];
+                if (isFormObj){
                     var errors = error.errors || [];
-                    var fielderrors = {};
                     for (var err of errors){
-                        if (err.domain){
-                            form[err.domain].err = err.message || 'unknown error';
+                        if (err.domain && (err.domain in data)){
+                            data[err.domain].err = err.message || 'invalid: unknown error';
                         }
                     }
                 }
                 // set the global error message:
-                var err = (((response.response || {}).data || {}).error || response.message) || 'Unknown error';
-                this.setError(err);
+                this.setError(error);
+                // allow chaining this promise from sub-components:
+                return response;   // https://github.com/axios/axios/issues/1057#issuecomment-324433430
             }).finally(() => {
                 this.setLoading(false);
+            });
+        },
+        isFormObject(obj){
+            if (typeof obj !== 'object'){
+                return false;
+            }
+            return Object.keys(obj).every(key => {
+                var elm = obj[key];
+                return (typeof elm === 'object') && ('val' in elm) && ('err' in elm);
             });
         },
         setError(error){ // error must be a google-json dict-like {message: String, code: String, errors: Array}

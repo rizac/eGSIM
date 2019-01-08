@@ -44,7 +44,8 @@
 			<div class='flexible d-flex flex-column position-relative'>
 				<keep-alive>
 					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
-					<component class='flexible' v-bind:is="selComponent" v-bind="selComponentProps"></component>
+					<component class='flexible' v-bind:is="selComponent"
+						v-bind="selComponentProps" v-bind:post='post'></component>
 				</keep-alive>
 				{% block main %}{% endblock %}
 			</div>

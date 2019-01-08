@@ -267,13 +267,18 @@ def test(request):
     err = ""
     comps = MENUS
     components_props = {}
-    initials = {'gsim': [], 'imt': []}
+    clear_choices = ['gsim', 'imt']
     for comp in comps:
         name, data = comp[0], dict(comp[2])
         form = data.get('form', None)
         if isinstance(form, BaseForm):
             formdata = form.to_rendering_dict()
+            # for perf reasons, remove the choices from the field 'clear_choices':
+            for field in clear_choices:
+                if field in formdata:
+                    formdata[field]['choices'] = []
             data['form'] = formdata
+
         components_props[name] = data
 
     initdata = {'component_props': components_props,

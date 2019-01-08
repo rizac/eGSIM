@@ -25,7 +25,7 @@ from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, CheckboxIn
 from django.forms.fields import BooleanField, CharField, FloatField, \
     ChoiceField, MultipleChoiceField
 
-from openquake.hazardlib import imt
+from openquake.hazardlib.imt import from_string as imt_from_string
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 from smtk.database_visualiser import DISTANCES
 
@@ -204,13 +204,7 @@ class BaseForm(Form):
                          'err': '',
                          'is_hidden': widgetdata.pop('is_hidden', False),
                          'val': val}
-            choices = getattr(_, 'choices', [])
-            if choices and hasattr(fielddata['val'], '__len__') and \
-                    len(fielddata['val']) == len(choices):
-                fielddata['val'] = '__all__'
-            if name in ('gsim', 'imt'):
-                choices = []
-            fielddata['choices'] = choices
+            fielddata['choices'] = getattr(_, 'choices', [])
             formdata[name] = fielddata
         return formdata
 
@@ -399,8 +393,9 @@ class GsimSelectionForm(BaseForm):
     __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
                                  'lon2': 'longitude2', 'gmpe': 'gsim'}
 
-    gsim = GsimField(required=False, initial=list(EGSIM.aval_gsims.keys()))
-    imt = IMTField(required=False, initial=EGSIM.aval_imts,
+    # NOTE: DO NOT set initial
+    gsim = GsimField(required=False)  # , initial=list(EGSIM.aval_gsims.keys()))
+    imt = IMTField(required=False,  # , initial=EGSIM.aval_imts,
                    sa_periods_required=False)
 
     model = TrModelField(label='Tectonic region model', required=False)
@@ -417,6 +412,11 @@ class GsimSelectionForm(BaseForm):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa
             (the same for longitude2 and latitude2)'''
         cleaned_data = super().clean()
+
+        if not cleaned_data.get('gsim', []):
+            cleaned_data['gsim'] = list(EGSIM.aval_gsims.keys())
+        if not cleaned_data.get('imt', []):
+            cleaned_data['imt'] = list(EGSIM.aval_imts)
 
         # check that params combinations are ok:
         couplings = (('latitude', 'longitude'), ('longitude2', 'latitude2'))
@@ -479,7 +479,7 @@ class GsimImtForm(BaseForm):
         # We need to reduce all IMT strings in cleaned_data['imt'] to a set
         # where all 'SA(#)' strings are counted as 'SA' once..
         # Use imt.from_string and get the class name: quite cumbersome, but it works
-        imt_classnames = set(imt.from_string(imtname).__class__.__name__
+        imt_classnames = set(imt_from_string(imtname).__class__.__name__
                              for imtname in cleaned_data.get("imt", []))
 
         invalid_gsims = self.invalid_gsims(gsims, imt_classnames)

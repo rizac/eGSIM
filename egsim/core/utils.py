@@ -219,7 +219,10 @@ def _get_data():
                 gsim_inst = gsim()
             except (TypeError, OSError, NotImplementedError) as exc:
                 gsim_inst = gsim
-            gsim_imts = gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+            try:
+                gsim_imts = gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES
+            except AttributeError:
+                continue
             if gsim_imts and hasattr(gsim_imts, '__iter__'):
                 trt = _trt_i.get(gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE, '')
                 _aval_gsims[key] = Egsim(key, (_ for _ in sanitycheck(gsim_imts)), trt)
