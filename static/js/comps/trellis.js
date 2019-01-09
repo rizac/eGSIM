@@ -21,28 +21,26 @@ _TEMPLATE_TRELLIS = `
         <div class="d-flex flex-column flexible ml-4">
             <h5>Scenario configuration</h5>
             <div class="flexible form-control" style="background-color:transparent">
-                <div class="flexible p-1">
-                
-                    <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
-                        <div class="d-flex flex-row mb-0 mt-2 pt-1 align-items-baseline">
-                            <label :for="data.attrs.id" class='mb-0 text-nowrap'>
-                                <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='mr-1'>
-                                {{ name }}
-                            </label>
-                            <div class="text-muted small flexible ml-3 text-right">
-                                <span v-if="data.err" class="text-danger">{{ data.err }}</span>
-                                <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && data.help" v-html="data.label + ' (' + data.help + ')'"></span>
-                                <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && !data.help" v-html="data.label"></span>
-                                <span v-if="!data.err && data.label.toLowerCase() == name.toLowerCase() && data.help" v-html="data.help"></span>
-                            </div>
-                        </div>
-                        <input v-if="!data.choices.length && !['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='form-control'>
-                        <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs" class='form-control'>
-                            <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
-                        </select>
-                    </template>
 
-                </div>
+                <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
+                    <div class="d-flex flex-row mb-0 mt-2 pt-1 align-items-baseline">
+                        <label :for="data.attrs.id" class='mb-0 text-nowrap'>
+                            <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='mr-1'>
+                            {{ name }}
+                        </label>
+                        <div class="text-muted small flexible ml-3 text-right">
+                            <span v-if="data.err" class="text-danger">{{ data.err }}</span>
+                            <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && data.help" v-html="data.label + ' (' + data.help + ')'"></span>
+                            <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && !data.help" v-html="data.label"></span>
+                            <span v-if="!data.err && data.label.toLowerCase() == name.toLowerCase() && data.help" v-html="data.help"></span>
+                        </div>
+                    </div>
+                    <input v-if="!data.choices.length && !['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='form-control'>
+                    <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs" class='form-control'>
+                        <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
+                    </select>
+                </template>
+                
             </div>
         </div>
     </div>
