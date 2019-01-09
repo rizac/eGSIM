@@ -85,6 +85,17 @@ var EGSIM_BASE = {
         },
         // this function returns a promise and is passed to each sub-component:
         post(url, data, config) { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
+            /** 
+             * Perform a POST request. Returns a promise which can be chained with .then(response) and .catch(response)
+             * where response is the axios response object
+             * 
+             * @param url: string of the url
+             * @param data: any data (usually Object) to be sent as POST body. This might include the "form" objects
+             *      in the form {field1: {err: '', val: V1, ... }, ..., fieldn: {err: '', val: Vn, ... }}
+             *      In this case, 1. the Object sent will be of the form {field1: V1, ... fieldn: Vn} and
+             *                    2. the fields errors ('err') will be set in case of form validation errors returned from the server
+             * @param config: any data (Object) for configuring the POST request
+             */ 
             // assign the form element to this class:
             this.setError('');
             this.setLoading(true);
