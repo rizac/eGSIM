@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block head %}
-	{% with vue=True axios=True %}
+	{% with vue=True axios=True fontawesome=True %}
 		{{ block.super }}
 	{% endwith %}
 	<!-- includes css for form-related stuff (e.g. waitbar)  -->
@@ -24,7 +24,7 @@
 				<div class="navbar-nav">
 				{% for component in components %}
 					<a class="nav-item nav-link" :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
-					 @click="setComponent('{{ component.0 }}')">{{ component.1 }}</a>
+					 @click="setComponent('{{ component.0 }}')"><i class="fa {{ component.2 }}"></i> {{ component.1 }}</a>
 				{% endfor %}
 				</div>
 			</div>

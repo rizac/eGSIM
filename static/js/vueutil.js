@@ -50,6 +50,9 @@ Vue.use({
         };
         Vue.colorMap = function () {
             return new ColorMap();
+        };
+        Vue.isEmpty = function(obj){
+        	return (obj === null) || (obj === undefined) || ((typeof obj === 'object') && Object.keys(obj).length === 0);
         }
     }
 });

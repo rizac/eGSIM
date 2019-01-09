@@ -147,7 +147,7 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
 
     formclass = None
     EXCEPTION_CODE = 400
-    VALIDATION_ERR_MSG = 'input validation error'
+    VALIDATION_ERR_MSG = 'Input validation error'
 
     def get(self, request):
         '''processes a get request'''
@@ -182,7 +182,10 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
 
         if not form.is_valid():
             errors = cls.format_validation_errors(form.errors)
-            return ExceptionHandlerMiddleware.jsonerr_response(cls.VALIDATION_ERR_MSG,
+            msg = "%s in %s" % \
+                (cls.VALIDATION_ERR_MSG,
+                 ', '.join(_['domain'] for _ in errors if _.get('domain', '')))
+            return ExceptionHandlerMiddleware.jsonerr_response(msg,
                                                                code=cls.EXCEPTION_CODE,
                                                                errors=errors)
 
@@ -269,7 +272,7 @@ def test(request):
     components_props = {}
     clear_choices = ['gsim', 'imt']
     for comp in comps:
-        name, data = comp[0], dict(comp[2])
+        name, data = comp[0], dict(comp[-1])
         form = data.get('form', None)
         if isinstance(form, BaseForm):
             formdata = form.to_rendering_dict()
@@ -285,7 +288,7 @@ def test(request):
                 'gsims': [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]}
 
     return render(request, 'egsim.html', {'sel_component': comps[2][0],
-                                          'components': [_[:2] for _ in comps],
+                                          'components': [_[:3] for _ in comps],
                                           'initdata': json.dumps(initdata),
                                           'server_error_message': err,
                                           'debug': settings.DEBUG})
@@ -306,18 +309,18 @@ APIS = [
 # where the last element might be empty (in that case the page us static
 # and the url of the first element will be shown in an iframe)
 MENUS = [
-    ('home', 'Home', {'src': 'service/home'}),
-    ('gsims', 'Gsim selection', {'url': 'query/gsims',
-                                 'form': GsimSelectionForm()}),
-    ('trellis', 'Trellis Plots', {'url': 'query/trellis',
-                                  'form': TrellisForm()}),
-    ('gmdbplot', 'Ground Motion database', {'url': 'query/gmdbplot',
-                                            'form': GmdbForm()}),
-    ('residuals', 'Residuals', {'url': 'query/residuals',
-                                'form': ResidualsForm()}),
-    ('testing', 'Testing', {'url': 'query/testing',
-                            'form': {}}),
-    ('apidoc', 'API Documentation', {'src': 'service/apidoc'})
+    ('home', 'Home', 'fa-home', {'src': 'service/home'}),
+    ('gsims', 'Gsim selection', 'fa-map-marker', {'url': 'query/gsims',
+                                                  'form': GsimSelectionForm()}),
+    ('trellis', 'Trellis Plots', 'fa-area-chart', {'url': 'query/trellis',
+                                                   'form': TrellisForm()}),
+    ('gmdbplot', 'Ground Motion database', 'fa-database', {'url': 'query/gmdbplot',
+                                                           'form': GmdbForm()}),
+    ('residuals', 'Residuals', 'fa-bar-chart', {'url': 'query/residuals',
+                                                'form': ResidualsForm()}),
+    ('testing', 'Testing', 'fa-list', {'url': 'query/testing',
+                                       'form': {}}),
+    ('apidoc', 'API Documentation', 'fa-info-circle', {'src': 'service/apidoc'})
     ]
 
 

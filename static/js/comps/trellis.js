@@ -82,16 +82,16 @@ Vue.component('trellis', {
   },
   data: function () {
       return {
-          modal: !!(this.response && Object.keys(this.response).length),
-          trellisData: this.response,
-          hidden: !!(this.response && Object.keys(this.response).length)
+          modal: !Vue.isEmpty(this.response), // defined in vueutil.js
+          responseData: this.response,
+          hidden: !Vue.isEmpty(this.response)
       }
   },
   methods: {
       request: function(form){
           this.post(this.url, form).then(response => {
-              if (response){
-                  this.trellisData = response;
+              if (response && response.data){
+                  this.responseData = response.data;
               } 
           });
       }

@@ -89,20 +89,16 @@ var EGSIM_BASE = {
             this.setError('');
             this.setLoading(true);
             var config = Object.assign(config || {}, {headers: {"X-CSRFToken": this.csrftoken}});
-            var data_ = data || {}
+            var jsonData = data || {}
             var isFormObj = this.isFormObject(data);
-            if (isFormObj){ // convert data_  to dict of scalars:
-                data_ = {};
+            if (isFormObj){ // data is a Form Object, convert jsonData  to dict of scalars:
+                jsonData = {};
                 for (var key of Object.keys(data)){
-                    data_[key] = data[key].val;
+                    data[key].err = '';  // initialize error
+                    jsonData[key] = data[key].val;  // assign value to object up to be sent
                 }
             }
-            return axios.post(url, data_, config).then(response => {
-                if (isFormObj){
-                    for (var name of Object.keys(data)){
-                        data[name].err = '';
-                    }
-                }
+            return axios.post(url, jsonData, config).then(response => {
                 // allow chaining this promise from sub-components:
                 return response;  // https://github.com/axios/axios/issues/1057#issuecomment-324433430
             }).catch(response => {
