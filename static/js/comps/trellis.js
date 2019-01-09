@@ -25,11 +25,11 @@ _TEMPLATE_TRELLIS = `
                 
                     <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
                         <div class="d-flex flex-row mb-0 mt-2 pt-1 align-items-baseline">
-                            <label :for="data.attrs.id" class='mb-0'>
+                            <label :for="data.attrs.id" class='mb-0 text-nowrap'>
                                 <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='mr-1'>
                                 {{ name }}
                             </label>
-                            <div class="text-muted small text-nowrap flexible ml-3 text-right">
+                            <div class="text-muted small flexible ml-3 text-right">
                                 <span v-if="data.err" class="text-danger">{{ data.err }}</span>
                                 <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && data.help" v-html="data.label + ' (' + data.help + ')'"></span>
                                 <span v-if="!data.err && data.label.toLowerCase() != name.toLowerCase() && !data.help" v-html="data.label"></span>
@@ -53,7 +53,7 @@ _TEMPLATE_TRELLIS = `
             <div class="flexible d-flex flex-column">
                 <div class='d-flex flex-row align-items-baseline'>
                     <h5>{{ name }}</h5>
-                    <span class="text-danger small text-nowrap flexible ml-3 text-right">{{ self.form[name].err }}</span>
+                    <span class="text-danger small flexible ml-3 text-right">{{ self.form[name].err }}</span>
                 </div>
                 
                 <div class="d-flex flex-row flexible form-control" style="background-color:transparent">
