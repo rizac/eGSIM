@@ -20,7 +20,7 @@ _TEMPLATE_TRELLIS = `
         
         <div class="d-flex flex-column flexible ml-4">
             <h5>Scenario configuration</h5>
-            <div class="flexible form-control" style="overflow:auto; background-color:transparent">
+            <div class="flexible form-control" style="background-color:transparent">
                 <div class="flexible p-1">
                 
                     <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
@@ -56,7 +56,7 @@ _TEMPLATE_TRELLIS = `
                     <span class="text-danger small text-nowrap flexible ml-3 text-right">{{ self.form[name].err }}</span>
                 </div>
                 
-                <div class="d-flex flex-row flexible form-control" style="overflow:auto; background-color:transparent">
+                <div class="d-flex flex-row flexible form-control" style="background-color:transparent">
                     <label v-for='opt in self.form[name].choices' :for="'id_' + opt[0]" class='mr-3 text-nowrap'> 
                         <input type='radio' v-model="self.form[name].val" :value="opt[0]" :id="'id_' + opt[0]"> {{ opt[1] }}
                     </label> 
