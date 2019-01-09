@@ -24,7 +24,7 @@ Vue.component('gsimselect', {
           </span>
       </div>
     </div>  
-    <div class='mb-1 flexible d-flex flex-column'>
+    <div class='flexible d-flex flex-column'>
         <select v-model="form[name].val" v-bind="form[name].attrs" class="form-control flexible">
             <option v-for="gsim in form[name].choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)"
              v-bind:style="!isGsimSelectable(gsim) ? {'text-decoration': 'line-through'} : ''"
@@ -35,13 +35,13 @@ Vue.component('gsimselect', {
     </div>
 
     <!-- GSIM FILTER CONTROLS: -->
-    <div class="input-group" v-if='showfilter'>  
-        <select v-model="filterType" class="form-control">
+    <div class="d-flex flex-row mt-1" v-if='showfilter'>  
+        <select v-model="filterType" class="form-control" style='border:0px; background-color:transparent'>
             <option v-for="item in filterTypes" :key="item" v-bind:value="item">
                     Filter by {{ item }}:
             </option>
         </select>
-        <input v-model="filterText" type="text" class="form-control">
+        <input v-model="filterText" type="text" class="form-control" style='width:initial'>
     </div>
   </div>`,
   methods: {
