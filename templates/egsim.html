@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block head %}
-	{% with vue=True axios=True fontawesome=True %}
+	{% with vue=True plotly=True leaflet=True axios=True fontawesome=True %}
 		{{ block.super }}
 	{% endwith %}
 	<!-- includes css for form-related stuff (e.g. waitbar)  -->
@@ -32,19 +32,21 @@
 
 		<div class='flexible d-flex flex-column position-relative'>
 
-			<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0">
+			<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0" style='z-index:100'>
 				<!-- Loading, please wait ... --> <!-- (<- text removed) -->
 				<div class="loader"></div>
 			</div>
 	
-			<div v-show='errormsg' class='bg-danger text-sm-center text-white text-truncate'>
+			<div v-show='errormsg'
+				class='bg-danger text-sm-center text-white text-truncate position-absolute pos-t-0 pos-x-0'
+				style='z-index:10'>
 				&#123;&#123; errormsg &#125;&#125;
 			</div>
 
-			<div class='flexible d-flex flex-column position-relative'>
+			<div class='d-flex flexible position-relative mx-1 mb-2' style='margin-top: 2rem !important;'>
 				<keep-alive>
 					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
-					<component class='flexible' v-bind:is="selComponent"
+					<component v-bind:is="selComponent"
 						v-bind="selComponentProps" v-bind:post='post'></component>
 				</keep-alive>
 				{% block main %}{% endblock %}
@@ -66,6 +68,8 @@
 	<script type='text/javascript' src = "{% static 'js/comps/base/gsimselect.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/comps/base/imtselect.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/comps/base/egsimform.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/comps/base/plotdiv.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/comps/base/plotdivs/trellisplotdiv.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 
 	<script>

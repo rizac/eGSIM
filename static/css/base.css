@@ -7,8 +7,7 @@ body{
 	font-family: Encode Sans Condensed, sans-serif, "Ubuntu Mono", "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
 }
 
-.d-flex.flex-row > .flexible, .d-flex.flex-column > .flexible,
-.d-flex.flex-row > .flexible-half, .d-flex.flex-column > .flexible-half{
+.d-flex > .flexible, .d-flex > .flexible-half{
 	flex: 1 1 auto; /* for letting this work with grid layout the last element (flex-basis) should be zero: https://stackoverflow.com/a/48454476 */
 }
 .d-flex.flex-row > .flexible, .d-flex.flex-row > .flexible-half{

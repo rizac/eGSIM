@@ -75,9 +75,9 @@ Vue.component('trellis', {
   },
   data: function () {
       return {
-          modal: !Vue.isEmpty(this.response), // defined in vueutil.js
+          formModal: false,
           responseData: this.response,
-          hidden: !Vue.isEmpty(this.response)
+          formHidden: false
       }
   },
   methods: {
@@ -89,9 +89,28 @@ Vue.component('trellis', {
           });
       }
   },
-  template: `<egsimform :form='form' :url='url'
-              v-on:submit="request"
-              :class="modal ? ['shadow', 'border'] : ''" :modal='modal' :hidden="hidden" class='align-self-center m-4'>
-      ${_TEMPLATE_TRELLIS}
-  </egsimform>`
+  watch: {
+      responseData: {
+          immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
+          handler: function(newval, oldval){
+              var empty = Vue.isEmpty(newval); // defined in vueutil.js
+              this.formModal = !empty;
+              this.formHidden = !empty;
+          }
+      }
+  },
+  template: `<div class='flexible d-flex flex-column'>
+      <egsimform :form='form' v-on:submit="request"
+              :modalwindow='formModal' :hidden.sync="formHidden"
+              class='flexible align-self-center position-relative' style='z-index:10'>
+          ${_TEMPLATE_TRELLIS}
+      </egsimform>
+
+      <trellisplotdiv :data="responseData"
+          class='position-absolute pos-0 m-0' style='z-index:1'>
+          <slot>
+              <button @click='formHidden=false' class='btn btn-sm btn-outline-primary'>params</button>
+          </slot>
+      </trellisplotdiv>
+  </div>`
 })

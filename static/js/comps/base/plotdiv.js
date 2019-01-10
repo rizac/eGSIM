@@ -1,7 +1,9 @@
-var PLOTSDIV = Vue.component('plotsdiv', {
+/**
+ * Base "class" for any component showing plots as a result of a response Object sent from the server
+ */
+var _PLOT_DIV = Vue.component('plotdiv', {
     props: {
-        'url': String,
-        'eventbus': {default: null},
+        'data': {type: Object, default: () => { return{} }},
         // this is used to calculate plot areas and set it in the default layout (use computed body font-size. Note that parseInt('16px')=16):
         'plotfontsize': {type: Number, default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))}
     },
@@ -9,9 +11,9 @@ var PLOTSDIV = Vue.component('plotsdiv', {
         // unique id based on the component name (note that if this is called by a subclass, then this.$options.name is the subclass name)
         var id = this.$options.name + new Date().getTime().toString();
         return {
+            visible: !Vue.isEmpty(this.data),
             plotdivid: id,
             // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
-            initialized: false,
             legend: {}, // an Object of names -> html color (string) values
             plots: [], //array of [{traces, params}], where traces is an Array of Objects representing the plot traces, and params is an Object
             params: {},  // a dict of property names mapped to an array of possible (string) values
@@ -34,7 +36,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             freezewatchers: true  // does what it says: it freezes watchers. Used when initializing to avoid fire Vue's re-layout
         }
     },
-    template: `<div v-show='initialized' class='d-flex flex-row'>
+    template: `<div v-show='visible' class='d-flex flex-row'>
         
         <div class='flexible d-flex flex-column m-2'>
             <div v-if="Object.keys(selectableParams).length" class='d-flex flex-row justify-content-around mb-1'>
@@ -55,7 +57,7 @@ var PLOTSDIV = Vue.component('plotsdiv', {
         <div class='d-flex flex-column my-2 mr-2 pl-2 border-left'
             v-if="Object.keys(legend).length || Object.keys(selectableParams).length || showGridControls">
 
-            <slot :eventbus="eventbus" :url="url"></slot>
+            <slot></slot>
             
             <div v-if='Object.keys(legend).length' class='flexible mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Legend</h5>
@@ -89,12 +91,8 @@ var PLOTSDIV = Vue.component('plotsdiv', {
      
     </div>`,
     created: function() { // https://vuejs.org/v2/api/#created
-        if (this.eventbus){
-            this.eventbus.$on('postresponse', (response, isError) => {
-                if (response.config.url == this.url && !isError){
-                    this.init.call(this, response.data);
-                }
-            });
+        if (this.visible){
+            this.init.call(this, this.data);
         }
     },
     methods: {
@@ -181,7 +179,6 @@ var PLOTSDIV = Vue.component('plotsdiv', {
             return color;
         },
         init: function(jsondict){
-            this.$set(this, 'initialized', true);
             this.$set(this, 'freezewatchers', true);
             this.$set(this, 'legend', {});
             // convert data:
@@ -497,6 +494,12 @@ var PLOTSDIV = Vue.component('plotsdiv', {
                 return;
             }
             this.relayout();
+        },
+        data: function(newval, oldval){
+            this.visible = !Vue.isEmpty(this.data);
+            if (this.visible){ // see prop below
+                this.init.call(this, this.data);
+            }
         }
     },
     computed: {  // https://stackoverflow.com/a/47044150

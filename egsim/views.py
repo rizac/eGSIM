@@ -284,6 +284,15 @@ def test(request):
 
         components_props[name] = data
 
+    # REMOVE THESE LINES!!!
+    components_props['trellis']['form']['gsim']['val'] = ['AbrahamsonEtAl2014']
+    components_props['trellis']['form']['imt']['val'] = ['PGA']
+    components_props['trellis']['form']['magnitude']['val'] = "3:4"
+    components_props['trellis']['form']['distance']['val'] = "0:1:100"
+    components_props['trellis']['form']['aspect']['val'] = 1
+    components_props['trellis']['form']['dip']['val'] = 60
+
+
     initdata = {'component_props': components_props,
                 'gsims': [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]}
 
