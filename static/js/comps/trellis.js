@@ -109,7 +109,7 @@ Vue.component('trellis', {
       <trellisplotdiv :data="responseData"
           class='position-absolute pos-0 m-0' style='z-index:1'>
           <slot>
-              <button @click='formHidden=false' class='btn btn-sm btn-outline-primary'>params</button>
+              <button @click='formHidden=false' class='btn btn-sm btn-outline-primary'><i class='fa fa-wpforms'></i>params</button>
           </slot>
       </trellisplotdiv>
   </div>`

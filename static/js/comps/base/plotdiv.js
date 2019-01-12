@@ -12,15 +12,17 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         var id = this.$options.name + new Date().getTime().toString();
         return {
             visible: !Vue.isEmpty(this.data),
-            plotdivid: id,
+            paramnames2showongrid: new Set(),  // parameter names to show on the grid
+            plotdivid: Date.now().toString(),
             // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
             legend: {}, // an Object of names -> html color (string) values
             plots: [], //array of [{traces, params}], where traces is an Array of Objects representing the plot traces, and params is an Object
             params: {},  // a dict of property names mapped to an array of possible (string) values
-            selectedParams: {}, //a dict of property names mapped to a string (scalar) denoting the selected value
-                                // that the parameter has to be shown along the 'X' or 'y' axis of the grid
-            gridxparam: '',  // a key in params denoting the xgrid labels. 
-            gridyparam: '',  // a key in params denoting the ygrid labels
+            gridlayouts: {}, // dict of subplots layout (string) mapped to a two element array (xgrid param name, y grid param name)
+            selectedgridlayout: '',  // string denoting the selected key of gridLayouts 
+            selectedParams: {}, //a dict of property names mapped to a scalar denoting the selected value
+            // it is the keys of this.params without the values of this.gridlayouts[this.selectedgridlayout]
+            // and each param will be displayed on one single-value-choosable combobox
             plotlydata: [],  // the `data` argument passed to Plotly.newPlot(data, ...) holding the traces
             // this default objects will be copied into the layout, xaxis, and yaxis objects (the latter two are instantiated
             // for each sub-plot, the former only once per plot). The values can anyway be overridden, provide here only
@@ -30,6 +32,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 // font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
                 showlegend: false,
                 margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []},
+            // the plotly config for plots. See
+            // https://community.plot.ly/t/remove-options-from-the-hover-toolbar/130/14
+            defaultplotlyconfig: {responsive: true, modeBarButtonsToRemove: ['sendDataToCloud', 'toImage'], displaylogo: false},
             defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             colorMap: Vue.colorMap(),  // defined in vueutil.js,
@@ -39,8 +44,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
     template: `<div v-show='visible' class='d-flex flex-row'>
         
         <div class='flexible d-flex flex-column m-2'>
-            <div v-if="Object.keys(selectableParams).length" class='d-flex flex-row justify-content-around mb-1'>
-                <div v-for='(values, key) in selectableParams' class='d-flex flex-row flexible align-items-baseline ml-2'>
+            <div v-if="Object.keys(selectedParams).length" class='d-flex flex-row justify-content-around mb-1'>
+                <div v-for='(values, key) in selectedParams' class='d-flex flex-row flexible align-items-baseline ml-2'>
                     <span class='text-nowrap mr-1'>{{ key }}</span>
                     <select class='flexible form-control' v-model="selectedParams[key]">
                         <option v-for='value in params[key]'>
@@ -55,9 +60,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         </div>
     
         <div class='d-flex flex-column my-2 mr-2 pl-2 border-left'
-            v-if="Object.keys(legend).length || Object.keys(selectableParams).length || showGridControls">
+            v-if="Object.keys(legend).length || Object.keys(gridlayouts).length>1">
 
-            <slot></slot>
+            <slot></slot> <!-- slot for custom buttons -->
             
             <div v-if='Object.keys(legend).length' class='flexible mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Legend</h5>
@@ -69,30 +74,57 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 </div>
             </div>
 
-            <div v-if="showGridControls" class='mt-3 border-top'>
+            <div v-if="Object.keys(gridlayouts).length>1" class='mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Subplots layout</h5>
 
-                <div>Group vertically by:</div>
-                <select class='form-control' v-model='gridyparam'>
-                    <option v-for='key in Object.keys(params)' v-bind:value="key">
-                        {{ key }}
+                <select class='form-control' v-model='selectedgridlayout'>
+                    <option v-for='key in Object.keys(gridlayouts)' v-bind:value="key" v-html="key">
                     </option>
                 </select>
 
-                <div class='mt-1' >Group horizontally by:</div>
-                <select class='form-control' v-model='gridxparam'>
-                    <option v-for='key in Object.keys(params)' v-bind:value="key">
-                       {{ key }}
-                    </option>
-                </select>
             </div>
  
         </div>
      
     </div>`,
     created: function() { // https://vuejs.org/v2/api/#created
-        if (this.visible){
-            this.init.call(this, this.data);
+        // no-op
+    },
+    watch: {
+        selectedParams: {
+            handler: function (newval, oldval) {
+                if (!this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
+                    this.relayout();
+                }
+            },
+            deep: true  // https://vuejs.org/v2/api/#vm-watch
+        },
+        selectedgridlayout: function(newval, oldval){
+            if (!this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
+                this.gridLayoutChanged();
+                this.relayout();
+            }
+        },
+        data: {
+            immediate: true,
+            handler(newval, oldval){
+               this.visible = !Vue.isEmpty(this.data);
+               if (this.visible){ // see prop below
+                   if (Vue.isEmpty(oldval)){
+                       // add window event listener only once:
+                       var divId = this.plotdivid;
+                       window.onresize = () => {
+                           Plotly.Plots.resize(divId);
+                       };
+                   }
+                   this.init.call(this, this.data);
+               }
+            }
+        }
+    },
+    computed: {  // https://stackoverflow.com/a/47044150
+        legendNames: function(){
+            return Object.keys(this.legend);
         }
     },
     methods: {
@@ -126,8 +158,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             //
             // params:
             // an Object of selectable params (string) mapped to the plot specific values
-            // (e.g. {magnitude: 5, 'xlabel: 'PGA'}). This object should have always the same keys
-            // and at least two keys in order to map them to the x and y grid (see `defaultGridParams`)
+            // (e.g. {magnitude: 5, 'xlabel: 'PGA'}).
             //
             // xaxis:
             // a dict of x axis properties. Example: {title: 'plottitle', type: 'log'}
@@ -141,18 +172,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // The Object returned here will be merged with the properties defined this.defaultyaxis
             // (in case of conflicts, the properties of this.defaultyaxis will be overridden)
         },
-        defaultGridParams: function(params){
-            // this optional method can be implemented to return an array [xKey, yKey] representing
-            // the default param names of the grid along the x and y axis, respectively.
-            // xKey and yKey should be keys of the params argument (js Object).
-            // If not implemented, by default this method returns the first 2 values of `Object.keys(params)`
-            var keys = Object.keys(params);
-            return [keys[0], keys[1]];
-        },
-        displayGrid: function(paramName, axis){
-            // this optional method can be implemented to hide particular grid labels IN THE PLOT along the
-            // specified axis ('x' or 'y'). If not implemented, by default this method returns true
-            return true;
+        displayGridLabels: function(axis, paramName, paramValues){
+            // this optional method can be implemented to hide the labels of 'paramName' when it is set as grid parameter
+            // along the specified axis ('x' or 'y'). If not implemented, by default this method returns true. Note
+            // that some plot parameters (specifically those for which all plots are mapped to the same value)
+            // are not shown by defult because it would be redundant and space consuming
+            return paramValues.length > 1;
         },
         configureLayout: function(layout){
             // this optional method can be implemented to remove or add properties to the plotly `layout`
@@ -187,71 +212,171 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // this.$set(this, 'params', params);
             // update selection, taking into account previously selected stuff:
             this.setupSelection();
+            this.gridLayoutChanged();
             this.relayout();
-        },
-        relayout: function(divId){ // In most cases call relayout(), i.e. with divId=undefined which will use the default div Id
-            if (divId === undefined){
-                divId = this.plotdivid;
-            }
-            var plotlyplots = this.getPlotsToDisplay();
-            this.$nextTick(() => {this.displayPlots(divId, plotlyplots);});
-        },
-        getPlotsToDisplay: function(){
-            var plots = this.plots;
-            var [gridxparam, gridyparam] = [this.gridxparam, this.gridyparam];
-            // filter plots (excluding values of param whose names are set for xgrid and ygrid):
-            for (var key of Object.keys(this.params)){
-                if (key != gridxparam && key != gridyparam){
-                    var val = this.selectedParams[key];
-                    plots = plots.filter(plot => plot.params[key] == val);
-                }
-            }
-            return plots;
         },
         setupSelection: function(){
             // sets up selectable params, including those choosable as 'x grid' or 'y rid'.
             // called once from 'init'
             var plots = this.plots;
-            var params = {};
+            var allparams = {};
             plots.forEach(plotElement => {
                var plotParams = plotElement.params;
-               for (key of Object.keys(plotParams)){
-                   if(!(key in params)){
-                       params[key] = new Set();
+               for (var key of Object.keys(plotParams)){
+                   var paramValue = plotParams[key];
+                   if(!(key in allparams)){
+                       allparams[key] = new Set();
                    }
-                   params[key].add(plotParams[key]);
+                   allparams[key].add(paramValue);
                }
             });
-            // store param names:
-            var paramNames = Object.keys(params);
-            // selected params is basically params where each key will be mapped to their first value:
-            var selectedParams = {};
+            
+            // adds a new parameter name to each plot and to all plot
+            // argument multiValue is boolean (false: single value)
+            var addParam = function(multiValue){
+                var newParamName = '';
+                while (newParamName in allparams){
+                    newParamName += ' ';
+                }
+                allparams[newParamName] = new Set();
+                for (var i=0; i < plots.length; i++){
+                    var val = multiValue ? i : 0;
+                    plots[i].params[newParamName] = val;
+                    allparams[newParamName].add(val);
+                }
+                return newParamName;
+            }
+            // param names with a single choosable value, and multi values:
+            var multiValueParamNames = Object.keys(allparams).filter(key => allparams[key].size > 1);
+            var singleValueParamNames = Object.keys(allparams).filter(key => allparams[key].size == 1);
+
+            var [paramNames, gridlabels2show] = [[], []];
+            
+            var gridlayouts = {};
+            var selectedgridlayout = '';
+            // set the param names to be choosen:
+            if (multiValueParamNames.length == 0){
+                if (plots.length == 1){
+                    if (singleValueParamNames.length == 1){
+                        gridlabels2show.push(singleValueParamNames[0]);
+                    }
+                    while (singleValueParamNames.length < 2){
+                        singleValueParamNames.push(addParam(false));
+                    }
+                    paramNames = singleValueParamNames.slice(0, 2);
+                    gridlayouts['---'] = paramNames;  // the key is ininfluent
+                    selectedgridlayout = '---';
+                }else{
+                    while (singleValueParamNames.length < 1){
+                        singleValueParamNames.push(addParam(false));
+                    }
+                    multiValueParamNames.push(addParam(true));
+                    paramNames = [singleValueParamNames[0], multiValueParamNames[0]];
+                    gridlayouts['&harr; stack horizontally'] = [paramNames[1], paramNames[0]];
+                    gridlayouts['&varr; stack vertically'] = [paramNames[0], paramNames[1]];
+                    selectedgridlayout = '&varr; stack vertically';
+                }
+            }else{
+                while (singleValueParamNames.length < 2){
+                    singleValueParamNames.push(addParam(false));
+                }
+                // take the multi value param and first single-value param:
+                paramNames = multiValueParamNames.concat(singleValueParamNames[0]).concat(singleValueParamNames[1]);
+                gridlabels2show = Array.from(multiValueParamNames);
+                gridlayouts['single plot'] = [singleValueParamNames[0], singleValueParamNames[1]];
+                if (multiValueParamNames.length == 1){
+                    var svp = singleValueParamNames[0];
+                    var mvp = multiValueParamNames[0];
+                    gridlayouts[`&harr; ${mvp}`] = [mvp, svp];
+                    gridlayouts[`&varr; ${mvp}`] = [svp, mvp];
+                    selectedgridlayout = `&varr; ${mvp}`;
+                }else{
+                    for (var prm1 of multiValueParamNames){
+                        for (var prm2 of multiValueParamNames){
+                            if (prm1 === prm2){
+                                continue;
+                            }
+                            gridlayouts[`&harr; ${prm1} vs. &varr; ${prm2}`] = [prm1, prm2];
+                            if (!selectedgridlayout){ // take the first combination as selected one:
+                                selectedgridlayout = `&harr; ${prm1} vs. &varr; ${prm2}`;
+                            }
+                        }
+                    }
+                }
+            }
             // replace sets with sorted Arrays (vuejs wants Arrays, not Sets), and remove proeprties that are 'empty'
             // (either empty array or have a single falsy element (empty string, null)):
+            var params = {};
             for(var key of paramNames){
-                var val = Array.from(params[key]);
-                if(!val.length || (val.length==1 && !val[0] && val[0]!==0)){
-                    delete params[key];
-                    continue;
-                }
+                var values = Array.from(allparams[key]);
                 // now sort values. Note that javascript array sort converts to string first (WTF!!!??), so
                 // use a particular sort function for numbers only (see https://stackoverflow.com/a/1063027):
-                if (typeof val[0] === 'number'){
-                    val.sort((a, b) => a - b);
+                if (typeof values[0] === 'number'){
+                    values.sort((a, b) => a - b);
                 }else{
-                    val.sort();
+                    values.sort();
                 }
-                params[key] = val;
-                selectedParams[key] = val[0];
+                params[key] = values;
             }
-            var [gridxparam, gridyparam] = this.defaultGridParams(params);
             // set defaults:
-            this.$set(this, 'gridxparam', gridxparam);
-            this.$set(this, 'gridyparam', gridyparam);
-            this.$set(this, 'selectedParams', selectedParams);
-            this.$set(this, 'params', params);
+            this.gridlayouts = gridlayouts;
+            this.selectedgridlayout = selectedgridlayout;
+            this.paramnames2showongrid = new Set(gridlabels2show);
+            this.params = params;
         },
-        displayPlots: function(divId, plotlyplots){
+        gridLayoutChanged: function(){
+            var params = this.params;
+            var [gridx, gridy] = this.gridlayouts[this.selectedgridlayout];
+            var selectedParams = {};
+            for(var paramName of Object.keys(params)){
+                if (paramName == gridx || paramName == gridy || params[paramName].length <= 1){
+                    continue;
+                }
+                // if value is in this.selectedParams, keep that value, otherwise
+                // take the first one:
+                var val = (paramName in this.selectedParams) ? this.selectedParams[paramName] : params[paramName][0];
+                // set as selected param the first value:
+                selectedParams[paramName] = val;
+            }
+            this.selectedParams = selectedParams;
+        },
+        relayout: function(divId){ // In most cases call relayout(), i.e. with divId=undefined which will use the default div Id
+            if (divId === undefined){
+                divId = this.plotdivid;
+            }
+            var [plots, plotsGridIndices, gridxparam, gridxvalues, gridyparam, gridyvalues] = this.getPlotsToDisplay();
+            this.$nextTick(() => {this.displayPlots(divId, plots, plotsGridIndices, gridxparam, gridxvalues, gridyparam, gridyvalues);});
+        },
+        getPlotsToDisplay: function(){
+            var plots = this.plots;
+            var params = this.params;
+
+            // filter plots according to selectedParams keys, i.e. the parameter names
+            // which are mapped to mupliple values AND are not currently set to be displayed on the
+            // grid x or grid y (basically, the parameters which will show up in a combo box on top of the whole plot)
+            // The number of these parameters might be zero: in this case the filter below has no effect and we
+            // still have all plots after the loop
+            for (var key of Object.keys(this.selectedParams)){
+                var val = this.selectedParams[key];
+                plots = plots.filter(plot => plot.params[key] == val);
+            }
+
+            var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+            var gridxvalues = params[gridxparam];
+            var gridyvalues = params[gridyparam];
+            var gridXval2index = new Map(gridxvalues.map((elm, idx) => [elm, idx]));
+            var gridYval2index = new Map(gridyvalues.map((elm, idx) => [elm, idx]));
+            // now build an array the same length as plots with each element the grids position [index_x, index_y]
+            var plotsGridIndices = [];
+            for (var plot of plots){
+                var plotXGridIndex = gridXval2index.get(plot.params[gridxparam]);
+                var plotYGridIndex = gridYval2index.get(plot.params[gridyparam]);
+                plotsGridIndices.push([plotXGridIndex, plotYGridIndex]);
+            }
+            
+            return [plots, plotsGridIndices, gridxparam, gridxvalues, gridyparam, gridyvalues];
+        },
+        displayPlots: function(divId, plotlyplots, plotsGridIndices, gridxparam, gridxvalues, gridyparam, gridyvalues){
             var layout = Object.assign({}, this.defaultlayout);
             this.configureLayout(layout);
             if (!('font' in layout)){
@@ -265,27 +390,13 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             layout.annotations = layout.annotations ? Array.from(this.defaultlayout.annotations) : [];
             // Purge plot. Check if we do actually need this:
             Plotly.purge(divId);
-            // diplsays subplot in the main plot. This method does some calculation that plotly
-            // does not, such as font-size dependent margins, and moreover fixes a bug whereby the xaxis.title
-            // annotation texts are misplaced (thus let's place them manually here)
-            var [gridxparam, gridyparam] = [this.gridxparam, this.gridyparam];
-            var [gridxvalues, gridyvalues] = [this.params[gridxparam], this.params[gridyparam]];
-            // map labels to indices (might be done thorugh binary search also, build object of
-            // labels mapped to their index is faster):
-            var gridxindices = new Map(gridxvalues.map((elm, idx) => [elm, idx]));
-            var gridyindices = new Map(gridyvalues.map((elm, idx) => [elm, idx]));
             var data = [];
             var xdomains = new Array(gridxvalues.length);  // used below to place correctly the x labels of the GRID
             var ydomains = new Array(gridyvalues.length);  // used below to place correctly the x labels of the GRID
             var annotation = this.getAnnotation;
             var legendgroups = new Set();
-            for (var plot of plotlyplots){
-                var gridxvalue = plot.params[gridxparam];
-                var gridxindex = gridxindices.get(gridxvalue); // plot horizontal index on the grid 
-                if(gridxindex === undefined){continue;}
-                var gridyvalue = plot.params[gridyparam];
-                var gridyindex = gridyindices.get(gridyvalue);  //plot vertical index on the grid
-                if(gridyindex === undefined){continue;}
+            for (var i = 0; i < plotlyplots.length; i++){
+                var [plot, [gridxindex, gridyindex]] = [plotlyplots[i], plotsGridIndices[i]];
                 var [axisIndex, xaxis, yaxis, xdomain, ydomain] = this.getAxis(divId, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
                 xdomains[gridxindex] = xaxis.domain;  // used below to place correctly the x labels of the GRID
                 ydomains[gridyindex] = yaxis.domain;  // used below to place correctly the y labels of the GRID
@@ -344,7 +455,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 }
           }
           // Grid X labels: (horizontally on top)
-          if (this.displayGrid(gridxparam, 'x')){
+          if (this.displayGridLabels_('x', gridxparam)){
               // determine the maximum y of all plot frames:
               // var y = Math.max(...ydomains.map(elm => elm[1]));
               // create the x labels of the vertical grid:
@@ -359,7 +470,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
               }
           }
           // Grid Y labels: (vertically on the right)
-          if (this.displayGrid(gridyparam, 'y')){
+          if (this.displayGridLabels_('y', gridyparam)){
               // determine the maximum x of all plot frames:
               // var x = Math.max(...xdomains.map(elm => elm[1]));
               // create the y labels of the vertical grid:
@@ -375,8 +486,14 @@ var _PLOT_DIV = Vue.component('plotdiv', {
               }
           }
           this.$set(this, 'plotlydata', data);
-          Plotly.newPlot(divId, data, layout);
+          Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
           this.$set(this, 'freezewatchers', false);
+        },
+        displayGridLabels_(axis, paramName){
+            if (this.paramnames2showongrid.has(paramName)){
+                return this.displayGridLabels(axis, paramName, this.params[paramName]);
+            }
+            return false;
         },
         getAxis: function(divId, row, col, rows, cols){
             // computes the sub-plot area according to the row and col index
@@ -384,8 +501,13 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // where xaxis and yaxis are the Objects to be passed to plotly's layout, xdomain = [x1, x2] and
             // ydomain = [y1, y2] are the two-element arrays denoting the enclosing area of the sub-plot
             var [uwidth, uheight] = this.getEmUnits(divId, this.plotfontsize);
-            var gridxparam = this.displayGrid(this.gridxparam, 'x') ? this.gridxparam : '';
-            var gridyparam = this.displayGrid(this.gridyparam, 'y') ? this.gridyparam : '';
+            var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+            if (!this.displayGridLabels_('x', gridxparam)){
+                gridxparam = '';
+            }
+            if (!this.displayGridLabels_('y', gridyparam)){
+                gridyparam = '';
+            }
             var tt = gridxparam ? 1.5 * uheight : 0;
             var rr = gridyparam ? 3 * uwidth : 0;
             // the legend, if present, is not included in the plot area, so we can safely ignore it. Comment this line:
@@ -465,60 +587,5 @@ var _PLOT_DIV = Vue.component('plotdiv', {
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         // no -op
-    },
-    watch: {
-        selectedParams: {
-            handler: function (newval, oldval) {
-                if (!this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
-                    this.relayout();
-                }
-            },
-            deep: true  // https://vuejs.org/v2/api/#vm-watch
-        },
-        gridxparam: function(newval, oldval){
-            if (this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
-                return;
-            }
-            if (newval == this.gridyparam){  // swap selection:
-                this.$set(this, 'gridyparam', oldval);
-                return;
-            }
-            this.relayout();
-        },
-        gridyparam: function(newval, oldval){
-            if (this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
-                return;
-            }
-            if (newval == this.gridxparam){  // swap selection:
-                this.$set(this, 'gridxparam', oldval);
-                return;
-            }
-            this.relayout();
-        },
-        data: function(newval, oldval){
-            this.visible = !Vue.isEmpty(this.data);
-            if (this.visible){ // see prop below
-                this.init.call(this, this.data);
-            }
-        }
-    },
-    computed: {  // https://stackoverflow.com/a/47044150
-        legendNames: function(){
-            return Object.keys(this.legend);
-        },
-        selectableParams: function(){
-            var ret = {};
-            for (var key of Object.keys(this.selectedParams)){
-                if (key != this.gridxparam && key != this.gridyparam && this.params[key].length > 1){
-                    ret[key] = this.params[key];
-                }
-            }
-            return ret;
-        },
-        showGridControls: function(){
-            // returns if grid controls to select the grid x and y should be visible. Basically, controls are shown if there
-            // is somthing to be grouped along the x and y axis (plots.length > 1)
-            return this.plots.length && this.plots.length > 1;
-        }
     }
 });

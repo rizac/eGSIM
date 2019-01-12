@@ -51,7 +51,7 @@ Vue.component('trellisplotdiv', {
             var plots = [];
             for (var fig of data['figures']){
                 var params = {};
-                params.xlabel = data['xlabel'];
+                // params.xlabel = data['xlabel'];
                 params.imt = fig.ylabel;
                 params.magnitude = fig.magnitude;
                 params.distance = fig.distance;
@@ -76,29 +76,16 @@ Vue.component('trellisplotdiv', {
                     }
                     return trace;
                 }, this);
-                plots.push({traces: traces, params: params, xaxis: {title: params.xlabel},
+                plots.push({traces: traces, params: params, xaxis: {title: data['xlabel']},
                     yaxis: {title: params.imt, type: 'log'}});
             }
             return plots;
         },
-        defaultGridParams: function(params){
-            // this optional method can be implemented to return an array [xKey, yKey] representing
-            // the default param names of the grid along the x and y axis, respectively.
-            // xKey and yKey should be keys of the params argument (js Object).
-            // If not implemented, by default this method returns the first 2 values of `Object.keys(params)`
-            
-            // override default behaviour, returns margnitude and distances:
-            if (params.magnitude && params.magnitude.length > 1 && params.distance && params.distance.length > 1){
-                return ['magnitude', 'distance'];
-            }
-            // default behaviour (we cannot call super, copy code):
-            var keys = Object.keys(params);
-            return [keys[0], keys[1]];
-        },
-        displayGrid: function(paramName, axis){
-            // this optional method can be implemented to hide particular grid labels IN THE PLOT along the
-            // specified axis ('x' or 'y'). If not implemented, by default this method returns true
-            return paramName != 'xlabel' && paramName != 'imt';
+        displayGridLabels: function(axis, paramName, paramValues){
+            // this optional method can be implemented to hide the labels of 'paramName' when it is set as grid parameter
+            // along the specified axis ('x' or 'y'). If not implemented, by default this method returns true if the length
+            // of paramValues (Array of the parameter possible values) is > 1
+            return paramName != 'imt';  // imt is already shown as y label
         },
         configureLayout: function(layout){
             // this optional method can be implemented to remove or add properties to the plotly `layout`
