@@ -264,7 +264,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                         singleValueParamNames.push(addParam(false));
                     }
                     paramNames = singleValueParamNames.slice(0, 2);
-                    gridlayouts['---'] = paramNames;  // the key is ininfluent
+                    gridlayouts['---'] = paramNames;  // the key of gridlayouts is ininfluent
                     selectedgridlayout = '---';
                 }else{
                     while (singleValueParamNames.length < 1){
@@ -513,7 +513,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // the legend, if present, is not included in the plot area, so we can safely ignore it. Comment this line:
             // rr += 0. * uwidth * Math.max(...Object.keys(this.plotTraceColors).map(elm => elm.length)) ;
             var axisIndex = 1 + row * cols + col;
-            // assure the width is at least a font unit assuming 10px as minimum):
+            // assure the dimensions are at least a minimum, otherwise plotly complains (assuming 10px as font-minimum):
             var [minuwidth, minuheight] = this.getEmUnits(divId, 10);
             // calculate plot width and height:
             var colwidth = Math.max(minuwidth, (1-rr) / cols);
