@@ -381,6 +381,8 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
     def to_python(self, value):
         if isinstance(value, str):
             value = [value]
+#         elif value is None:
+#             value = []
         values = set()
         for val in value:
             if not val:

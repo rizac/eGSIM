@@ -50,4 +50,5 @@ urlpatterns = [
 
     # test views, TEMPORARY:
     url(r'^_test/?$', views.test, name='test'),
+    url(r'^data/tr_models', views.get_tr_models),
 ]

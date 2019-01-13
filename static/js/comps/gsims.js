@@ -4,7 +4,13 @@
  * (without extension)
  */
 Vue.component('gsims', {
-    props: {'initurl': {type:String}, 'url': {type:String}, 'eventbus':{default:null}, 'avalgsims': Map, 'selectedgsims': Array},
+    props: {
+        form: Object,
+        url: String,
+        // response: {type: Object, default: () => {return {}}},
+        post: Function,
+        tr_models_url: String
+    },
     data: function(){
         return {
             'id': 'tr_map_id',
@@ -17,7 +23,7 @@ Vue.component('gsims', {
             'colorMap': Vue.colorMap() // defined in vueutil.js
         }
     },
-    template:`<div class='d-flex flex-column'>
+    template:`<div class='flexible d-flex flex-column'>
         <select v-model='selectedModel' class='form-control mb-2'>
             <option v-for='mod in modelNames' :key='mod'>
                 {{ mod }}
@@ -26,15 +32,21 @@ Vue.component('gsims', {
         <div :id='id' class='flexible'></div>
         </div>`,
     created: function(){
-         if(this.eventbus){
-             this.eventbus.$on('postresponse', (response, isError) => {
-                 if ((response.config.url == this.initurl) && !isError){
-                     this.$set(this, 'models', response.data.models);
-                     this.$set(this, 'selectedModel', response.data.selected_model || Object.keys(response.data.models)[0]);
-                 }
-             });
-             this.eventbus.$emit('postrequest', this.initurl);
-         }
+        this.post(this.tr_models_url).then(response => {
+            if (response && response.data){
+                this.models = response.data.models;
+                this.selectedModel = response.data.selected_model || Object.keys(response.data.models)[0];
+            } 
+        });
+//         if(this.eventbus){
+//             this.eventbus.$on('postresponse', (response, isError) => {
+//                 if ((response.config.url == this.initurl) && !isError){
+//                     this.$set(this, 'models', response.data.models);
+//                     this.$set(this, 'selectedModel', response.data.selected_model || Object.keys(response.data.models)[0]);
+//                 }
+//             });
+//             this.eventbus.$emit('postrequest', this.initurl);
+//         }
     },
     watch:{
         selectedModel: function(oldVal, newVal){
@@ -60,10 +72,17 @@ Vue.component('gsims', {
         //       ]
         // }
         var map = L.map(this.id, {center: [48, 7], zoom: 4});
-        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+        var bl1 = L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://www.mapbox.com/about/maps/">MapBox</a> <a href="https://www.mapbox.com/map-feedback/#/-74.5/40/10">Improve this Map</a>' ,
             maxZoom: 18,
             id: 'mapbox.streets'
           }).addTo(map);
+        
+        var bl2 = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
         
         // https://esri.github.io/esri-leaflet/examples/switching-basemaps.html:
 //        var layerName = 'ShadedRelief';
@@ -73,7 +92,7 @@ Vue.component('gsims', {
 
         // instantiate a layer control (the button on the top-right corner for showing/hiding overlays
         // overlays will be added when setting the tr model
-        this.$set(this, 'layersControl', L.control.layers({}, {}, {collapsed:false}).addTo(map));  // https://gis.stackexchange.com/a/68243
+        this.$set(this, 'layersControl', L.control.layers({'base layer (mapbox)' :bl1, 'base layer (carto)' :bl2}, {}, {collapsed:false}).addTo(map));  // https://gis.stackexchange.com/a/68243
         // note above: collapsed:false makes the legend control visible. This does not work though in 100% of the cases,
         // so see in updateDom a hack for solving this problem (remove control height, if set)
         this.$set(this, 'map', map);

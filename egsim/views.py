@@ -296,7 +296,7 @@ def test(request):
     initdata = {'component_props': components_props,
                 'gsims': [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]}
 
-    return render(request, 'egsim.html', {'sel_component': comps[2][0],
+    return render(request, 'egsim.html', {'sel_component': comps[1][0],
                                           'components': [_[:3] for _ in comps],
                                           'initdata': json.dumps(initdata),
                                           'server_error_message': err,
@@ -320,6 +320,7 @@ APIS = [
 MENUS = [
     ('home', 'Home', 'fa-home', {'src': 'service/home'}),
     ('gsims', 'Gsim selection', 'fa-map-marker', {'url': 'query/gsims',
+                                                  'tr_models_url': 'data/tr_models',
                                                   'form': GsimSelectionForm()}),
     ('trellis', 'Trellis Plots', 'fa-area-chart', {'url': 'query/trellis',
                                                    'form': TrellisForm()}),

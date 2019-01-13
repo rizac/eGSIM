@@ -126,7 +126,7 @@ var EGSIM_BASE = {
                 // set the global error message:
                 this.setError(error);
                 // allow chaining this promise from sub-components:
-                return response;   // https://github.com/axios/axios/issues/1057#issuecomment-324433430
+                throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
             }).finally(() => {
                 this.setLoading(false);
             });
