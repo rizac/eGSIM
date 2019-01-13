@@ -288,43 +288,93 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             
             var gridlayouts = {};
             var selectedgridlayout = '';
-            // set the param names to be choosen:
+            
+            // set the param names to be choosen.
+            // DEFINITIONS:
+            // SVP (single value param): a parameter that has the same value for all plots
+            // MVP (multi value param): a parameter that has a unique value for each plot
+            // (note that the case where two plots share the same param value should never happen,
+            // but we cannot check and correct for it)
+            
             if (multiValueParamNames.length == 0){
                 if (plots.length == 1){
+                    
+                    // case 1 (see DEFINITIONS above): only N>=0 SVPs, and the plots count is one:
+                    // nothing complex to do: assure the param count is at least two,
+                    // take the first two and provide a single possible grid selection (based on those two parameters)
+                    // the grid selection will be hidden as nothing can be choosen
+
+                    // if we have a single SVP, and one plot, display the param name for that SVP
+                    // on the xgrid above the plot, as to emulate a title, if one wants to:
                     if (singleValueParamNames.length == 1){
                         gridlabels2show.push(singleValueParamNames[0]);
                     }
+                    
+                    // assure SVPs are at least two:
                     while (singleValueParamNames.length < 2){
                         singleValueParamNames.push(addParam(false));
                     }
+                    
+                    // set the two SVPs as only choosable grid option (the option will be hidden as
+                    // there is nothing else to choose):
                     paramNames = singleValueParamNames.slice(0, 2);
                     gridlayouts['---'] = paramNames;  // the key of gridlayouts is ininfluent
                     selectedgridlayout = '---';
                 }else{
+                    
+                    // case 2 (see DEFINITIONS above): only N>=0 SVPs and the plots count is more than one:
+                    // this should not happen but neverthless provide a 'stack horizontally' and
+                    // 'stack vertically' grid options, by the order specified by building a "fake"
+                    // multi-value-param which assigns an incremental index to each plot
+
+                    // assure SVPs are at least one:
                     while (singleValueParamNames.length < 1){
                         singleValueParamNames.push(addParam(false));
                     }
+                    // create MVP:
                     multiValueParamNames.push(addParam(true));
+                    
+                    // set the two combinations of the SVP and the MVP as only choosable grid options
+                    // (providing a 'stack horizontally and 'stack vertically' generic names):
                     paramNames = [singleValueParamNames[0], multiValueParamNames[0]];
                     gridlayouts['&harr; stack horizontally'] = [paramNames[1], paramNames[0]];
                     gridlayouts['&varr; stack vertically'] = [paramNames[0], paramNames[1]];
                     selectedgridlayout = '&varr; stack vertically';
                 }
             }else{
+                
+                // assure SVPs are at least two:
                 while (singleValueParamNames.length < 2){
                     singleValueParamNames.push(addParam(false));
                 }
+
                 // take the multi value param and first single-value param:
                 paramNames = multiValueParamNames.concat(singleValueParamNames[0]).concat(singleValueParamNames[1]);
                 gridlabels2show = Array.from(multiValueParamNames);
+
+                // always provide a grid option selecting a single plot: when chosen, the MVPs will be set
+                // as this.selectedParams and displayed in one or more single <select> on top of the plots 
                 gridlayouts['single plot'] = [singleValueParamNames[0], singleValueParamNames[1]];
+
                 if (multiValueParamNames.length == 1){
+                    
+                    // case 3 (see DEFINITIONS above): N>=0 SVPs and 1 MVP: basically same as
+                    // case 2 above but we do not need to create a fake multi-value param, 
+                    // we use what we have providing the parameter name in the grid options
+                    // (horizontal vs vertical) with the parameter name
+                    // instead of generic 'stack horizontally' or 'stack vertically'
+
                     var svp = singleValueParamNames[0];
                     var mvp = multiValueParamNames[0];
                     gridlayouts[`&harr; ${mvp}`] = [mvp, svp];
                     gridlayouts[`&varr; ${mvp}`] = [svp, mvp];
                     selectedgridlayout = `&varr; ${mvp}`;
                 }else{
+                    
+                    // case 4 (see DEFINITIONS above): N>=0 SVPs and M>1 MVPs: build a choosable grid
+                    // with all combinations of the given MVPs times 2, as for each couple of P1, P2
+                    // we can display the grid as P1xP2 or P2xP1
+                    
                     for (var prm1 of multiValueParamNames){
                         for (var prm2 of multiValueParamNames){
                             if (prm1 === prm2){
@@ -619,10 +669,22 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             return !hidden;
         },
         downloadAsImage: function(){
+            
             var props = this.downloadasimageopts;
             if (!props.format){
                 return;
             }
+            
+            // FIXME: 1. props.size = 5 seems to increase resolution (by simply increasing the size)
+            // However, the fonts and the lines should be increased, too
+            // 2. legend is not present. If we want to add a legend, better would be to do it automatically
+            // (only one trace VISIBLE => no legend, otherwise yes), but then consider plotting on a new div, where
+            // we temporarily set this.defaultlayout.showlegend=true (currently, by changing showlegedn on the fly
+            // (e.g. in setBackround below) raises
+            // 3. Font size is not preserved in the image. But this has lower priority, as it turns out the
+            // font image (at least on Chrome + MacOsX) is a default Helvetica-like font which might be preferable
+            // as very common and readable
+            
 
             var elm = document.getElementById(this.plotdivid);
             var props = Object.assign({}, props);  // Object.assign(target, ...sources);
@@ -636,7 +698,11 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }
 
             function setBackground(gd) {
-                // https://community.plot.ly/t/plotly-toimage-background-color/8099 
+                // https://community.plot.ly/t/plotly-toimage-background-color/8099
+                
+                // this function actually allows the user to configure the plot
+                // before rendering it to imag (why is it called like this
+                // in plotly?) but note that not all modifications work as expected:
                 
                 // the paper bg color is set to transparent by default. However,
                 // jpeg does not support it and thus we would get black background.
@@ -644,35 +710,18 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 if(props.format == 'jpeg'){
                     gd._fullLayout.paper_bgcolor = 'rgba(255, 255, 255, 1)';
                 }
-                // gd._fullLayout.plot_bgcolor = 'rgba(0,0,0,0)';
                 
+                // this actually does not work (raises) if we change the showlegend:
+                // thus, more work is needed to setting showlegend=true temporarily and then
+                // drawing on a new div
                 // gd._fullLayout.showlegend = true;
-                
-//                window.getComputedStyle(gd).getPropertyValue('font-family');
-//                legends = gd.getElementsByClassName('legend');
-//                for (var legend of legends){
-//                    for (child of legend.childNodes){
-//                        if(child.tagName == 'rect'){
-//                            child.style.fillOpacity = '0';
-//                        }
-//                    }
-//                }
             }
             props.setBackground = setBackground;
-
-//            filename = props.filename;
-//            if (props.filename instanceof Array){
-//                for(var fnm of props.filename){
-//                    
-//                }
-//            }
-//            props.filename = filename;
 
             Plotly.downloadImage(elm, props);
             this.downloadasimageopts.show = false;
             this.downloadasimageopts.format = '';
 
-//            var [width, height] = elm.offsetWidth;
 //             // Plotly.toImage will turn the plot in the given div into a data URL string
 //             // toImage takes the div as the first argument and an object specifying image properties as the other
 //             Plotly.toImage(elm, {format: 'png', width: width, height: height}).then(function(dataUrl) {
