@@ -3,9 +3,10 @@
  */
 var _PLOT_DIV = Vue.component('plotdiv', {
     props: {
-        'data': {type: Object, default: () => { return{} }},
+        data: {type: Object, default: () => { return{} }},
         // this is used to calculate plot areas and set it in the default layout (use computed body font-size. Note that parseInt('16px')=16):
-        'plotfontsize': {type: Number, default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))}
+        plotfontsize: {type: Number, default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))},
+        filename: {type: String, default: 'egsim_plot'}
     },
     data: function(){
         // unique id based on the component name (note that if this is called by a subclass, then this.$options.name is the subclass name)
@@ -28,9 +29,10 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // for each sub-plot, the former only once per plot). The values can anyway be overridden, provide here only
             // common defaults:
             defaultlayout: {autosize: true,
-                paper_bgcolor: window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('background-color'),
+                paper_bgcolor: 'rgba(0,0,0,0)', //window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('background-color'),
                 // font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
                 showlegend: false,
+                legend: { bgcolor: 'rgba(0,0,0,0)'},
                 margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []},
             // the plotly config for plots. See
             // https://community.plot.ly/t/remove-options-from-the-hover-toolbar/130/14
@@ -38,7 +40,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             colorMap: Vue.colorMap(),  // defined in vueutil.js,
-            freezewatchers: true  // does what it says: it freezes watchers. Used when initializing to avoid fire Vue's re-layout
+            freezewatchers: true,  // does what it says: it freezes watchers. Used when initializing to avoid fire Vue's re-layout
+            downloadasimageopts: {show: false, width: null, height: null, filename: this.filename,
+                format: "", formats: ['', 'png', 'jpeg', 'svg'], scale: 5} //scale 5 works, scale 10 doesn't. Keep 5, it improves resolution
         }
     },
     template: `<div v-show='visible' class='d-flex flex-row'>
@@ -48,7 +52,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 <div v-for='(values, key) in selectedParams' class='d-flex flex-row flexible align-items-baseline ml-2'>
                     <span class='text-nowrap mr-1'>{{ key }}</span>
                     <select class='flexible form-control' v-model="selectedParams[key]">
-                        <option v-for='value in params[key]'>
+                        <option v-for='value in params[key]' :value="value">
                             {{ value }}
                         </option>
                     </select>
@@ -63,6 +67,28 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             v-if="Object.keys(legend).length || Object.keys(gridlayouts).length>1">
 
             <slot></slot> <!-- slot for custom buttons -->
+            
+            <select v-model='downloadasimageopts.format' class='form-control'>
+                <option v-for='(format, index) in downloadasimageopts.formats' :value='format'
+                    :disabled='format == downloadasimageopts.formats[0]'>
+                    {{ index ? format : 'download as:' }}
+                </option>
+            </select>
+            
+            <!--<button @click='downloadasimageopts.show=true' class='btn btn-primary' >
+                <i class='fa fa-file-image-o'></i> to image
+            </button>
+            <div :class="[downloadasimageopts.show ? 'd-flex' : 'd-none']" class='position-fixed flex-column'>
+                <input type='number' min='1' step='any' placeholder='width (empty=auto)'
+                    v-model='downloadasimageopts.width'></input>
+                <input type='number' min='1' step='any'  placeholder='height (empty=auto)'
+                    v-model='downloadasimageopts.height'></input>
+                <select v-model='downloadasimageopts.format'>
+                    <option v-for='format in downloadasimageopts.formats' :val="format">{{ format }}</option>
+                </select>
+                <input type="text" v-model='downloadasimageopts.filename'></input>
+                <button @click='downloadAsImage' class='btn btn-primary' >download</button>
+            </div>-->
             
             <div v-if='Object.keys(legend).length' class='flexible mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Legend</h5>
@@ -114,13 +140,21 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                        // add window event listener only once:
                        var divId = this.plotdivid;
                        window.onresize = () => {
-                           Plotly.Plots.resize(divId);
+                           // Plotly.Plots.resize(divId);
+                           this.relayout();
                        };
                    }
                    this.init.call(this, this.data);
                }
             }
-        }
+        },
+        'downloadasimageopts.format': function (newVal, oldVal){
+            // to work with changes in downloadasimageopts.format: https://stackoverflow.com/a/46331968
+            // we do not attach onchange on the <select> tag because of this: https://github.com/vuejs/vue/issues/293
+            if(newVal){
+                this.downloadAsImage();
+            }
+        },
     },
     computed: {  // https://stackoverflow.com/a/47044150
         legendNames: function(){
@@ -583,6 +617,67 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // so check for properties explicitly set as false: 
             var hidden = this.plotlydata.some(data => {return data.legendgroup === traceName && data.visible === false});
             return !hidden;
+        },
+        downloadAsImage: function(){
+            var props = this.downloadasimageopts;
+            if (!props.format){
+                return;
+            }
+
+            var elm = document.getElementById(this.plotdivid);
+            var props = Object.assign({}, props);  // Object.assign(target, ...sources);
+            var elm = document.getElementById(this.plotdivid);
+            var [width, height] = [elm.offsetWidth, elm.offsetHeight];
+            if (!(props.width)){
+                props.width = (props.height ? width*props.height/height : width); // + 'px';
+            }
+            if (!(props.height)){
+                props.height = (props.width ? height*props.width/width : height); // + 'px';
+            }
+
+            function setBackground(gd) {
+                // https://community.plot.ly/t/plotly-toimage-background-color/8099 
+                
+                // the paper bg color is set to transparent by default. However,
+                // jpeg does not support it and thus we would get black background.
+                // Therefore:
+                if(props.format == 'jpeg'){
+                    gd._fullLayout.paper_bgcolor = 'rgba(255, 255, 255, 1)';
+                }
+                // gd._fullLayout.plot_bgcolor = 'rgba(0,0,0,0)';
+                
+                // gd._fullLayout.showlegend = true;
+                
+//                window.getComputedStyle(gd).getPropertyValue('font-family');
+//                legends = gd.getElementsByClassName('legend');
+//                for (var legend of legends){
+//                    for (child of legend.childNodes){
+//                        if(child.tagName == 'rect'){
+//                            child.style.fillOpacity = '0';
+//                        }
+//                    }
+//                }
+            }
+            props.setBackground = setBackground;
+
+//            filename = props.filename;
+//            if (props.filename instanceof Array){
+//                for(var fnm of props.filename){
+//                    
+//                }
+//            }
+//            props.filename = filename;
+
+            Plotly.downloadImage(elm, props);
+            this.downloadasimageopts.show = false;
+            this.downloadasimageopts.format = '';
+
+//            var [width, height] = elm.offsetWidth;
+//             // Plotly.toImage will turn the plot in the given div into a data URL string
+//             // toImage takes the div as the first argument and an object specifying image properties as the other
+//             Plotly.toImage(elm, {format: 'png', width: width, height: height}).then(function(dataUrl) {
+//                 // use the dataUrl
+//             })
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load

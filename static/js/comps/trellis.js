@@ -106,7 +106,7 @@ Vue.component('trellis', {
           ${_TEMPLATE_TRELLIS}
       </egsimform>
 
-      <trellisplotdiv :data="responseData"
+      <trellisplotdiv :data="responseData" :filename="this.$options.name"
           class='position-absolute pos-0 m-0' style='z-index:1'>
           <slot>
               <button @click='formHidden=false' class='btn btn-sm btn-outline-primary'><i class='fa fa-wpforms'></i>params</button>
