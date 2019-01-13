@@ -20,29 +20,41 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             plots: [], //array of [{traces, params}], where traces is an Array of Objects representing the plot traces, and params is an Object
             params: {},  // a dict of property names mapped to an array of possible (string) values
             gridlayouts: {}, // dict of subplots layout (string) mapped to a two element array (xgrid param name, y grid param name)
-            selectedgridlayout: '',  // string denoting the selected key of gridLayouts 
-            selectedParams: {}, //a dict of property names mapped to a scalar denoting the selected value
+            selectedgridlayout: '',  // string denoting the selected key of gridLayouts
+            // selectedParams below is a dict of property names mapped to a scalar denoting the selected value
             // it is the keys of this.params without the values of this.gridlayouts[this.selectedgridlayout]
             // and each param will be displayed on one single-value-choosable combobox
-            plotlydata: [],  // the `data` argument passed to Plotly.newPlot(data, ...) holding the traces
-            // this default objects will be copied into the layout, xaxis, and yaxis objects (the latter two are instantiated
-            // for each sub-plot, the former only once per plot). The values can anyway be overridden, provide here only
-            // common defaults:
-            defaultlayout: {autosize: true,
+            selectedParams: {},
+            // defaultlayout. Note that defaultlayout.annotations, if specified here, will be copied and then
+            // xaxis and grid labels will be copied to the new copied Array before passing it to Plotly as layout argument
+            defaultlayout: {
+                autosize: true,
                 paper_bgcolor: 'rgba(0,0,0,0)', //window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('background-color'),
                 // font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
                 showlegend: false,
                 legend: { bgcolor: 'rgba(0,0,0,0)'},
-                margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []},
+                margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []
+            },
             // the plotly config for plots. See
             // https://community.plot.ly/t/remove-options-from-the-hover-toolbar/130/14
-            defaultplotlyconfig: {responsive: true, modeBarButtonsToRemove: ['sendDataToCloud', 'toImage'], displaylogo: false},
+            defaultplotlyconfig: {
+                responsive: true,
+                modeBarButtonsToRemove: ['sendDataToCloud', 'toImage'],
+                displaylogo: false
+            },
             defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             colorMap: Vue.colorMap(),  // defined in vueutil.js,
-            freezewatchers: true,  // does what it says: it freezes watchers. Used when initializing to avoid fire Vue's re-layout
-            downloadasimageopts: {show: false, width: null, height: null, filename: this.filename,
-                format: "", formats: ['', 'png', 'jpeg', 'svg'], scale: 5} //scale 5 works, scale 10 doesn't. Keep 5, it improves resolution
+            downloadasimageopts: { // most of the image options are not user defined for the moment (except format):
+                show: false,
+                width: null,
+                height: null,
+                filename: this.filename,
+                format: "",
+                formats: ['', 'png', 'jpeg', 'svg'],
+                // scale 5 increases the image size, thus increasing the resolution
+                // Note that you cannot provide any number (e.g. scale 10 raises Exception)
+                scale: 5}
         }
     },
     template: `<div v-show='visible' class='d-flex flex-row'>
@@ -119,17 +131,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
     watch: {
         selectedParams: {
             handler: function (newval, oldval) {
-                if (!this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
-                    this.relayout();
-                }
+                this.newPlot();
             },
             deep: true  // https://vuejs.org/v2/api/#vm-watch
         },
         selectedgridlayout: function(newval, oldval){
-            if (!this.freezewatchers){  // prevent firing if we are modifying values while parsing input for rendering the plots
-                this.gridLayoutChanged();
-                this.relayout();
-            }
+            this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
         },
         data: {
             immediate: true,
@@ -137,11 +144,14 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                this.visible = !Vue.isEmpty(this.data);
                if (this.visible){ // see prop below
                    if (Vue.isEmpty(oldval)){
-                       // add window event listener only once:
-                       var divId = this.plotdivid;
-                       window.onresize = () => {
-                           // Plotly.Plots.resize(divId);
-                           this.relayout();
+                       // avoid refreshing continuously, wait for resizing finished (most likely):
+                       var resizeTimer;
+                       var self = this;
+                       window.onresize = (e) => {
+                           clearTimeout(resizeTimer);
+                           resizeTimer = setTimeout(() => {
+                               self.react();
+                           }, 300);
                        };
                    }
                    this.init.call(this, this.data);
@@ -238,16 +248,14 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             return color;
         },
         init: function(jsondict){
-            this.$set(this, 'freezewatchers', true);
-            this.$set(this, 'legend', {});
+            this.legend = {};
             // convert data:
             var plots = this.getData(jsondict);
             this.$set(this, 'plots', plots);
             // this.$set(this, 'params', params);
             // update selection, taking into account previously selected stuff:
-            this.setupSelection();
-            this.gridLayoutChanged();
-            this.relayout();
+            this.setupSelection(); // which sets this.selectedgridlayout which calls this.gridLayoutChanged (see watch above)
+            // which in turn sets this.selectedParams which eventually calls this.newPlot (see watch above)
         },
         setupSelection: function(){
             // sets up selectable params, including those choosable as 'x grid' or 'y rid'.
@@ -424,14 +432,36 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }
             this.selectedParams = selectedParams;
         },
-        relayout: function(divId){ // In most cases call relayout(), i.e. with divId=undefined which will use the default div Id
+        newPlot: function(divId){
+            /**
+             * Filters the plots to display according to current parameters and grid choosen, and
+             * calls Plotly.newPlot on divId (the id of the chosen <div>)
+             * divId undefined (not passed) will use the default div Id, i.e. draw on this component's plots <div>
+             */
             if (divId === undefined){
                 divId = this.plotdivid;
             }
-            var [plots, plotsGridIndices, gridxparam, gridxvalues, gridyparam, gridyvalues] = this.getPlotsToDisplay();
-            this.$nextTick(() => {this.displayPlots(divId, plots, plotsGridIndices, gridxparam, gridxvalues, gridyparam, gridyvalues);});
+            var [data, layout] = this.createPlotlyDataAndLayout(divId);
+            this.$nextTick(() => {
+                Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
+                Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
+            });
         },
-        getPlotsToDisplay: function(){
+        react: function(divId){
+            /**
+             * Same as this.newPlot above, and can be used in its place to create a plot,
+             * but when called again on the same <div> will update it far more efficiently
+             */
+            if (divId === undefined){
+                divId = this.plotdivid;
+            }
+            var [data, layout] = this.createPlotlyDataAndLayout(divId);
+            this.$nextTick(() => {
+                // Purge plot. Check if we do actually need this:
+                Plotly.react(divId, data, layout);
+            });
+        },
+        createPlotlyDataAndLayout: function(divId){
             var plots = this.plots;
             var params = this.params;
 
@@ -457,10 +487,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 var plotYGridIndex = gridYval2index.get(plot.params[gridyparam]);
                 plotsGridIndices.push([plotXGridIndex, plotYGridIndex]);
             }
-            
-            return [plots, plotsGridIndices, gridxparam, gridxvalues, gridyparam, gridyvalues];
-        },
-        displayPlots: function(divId, plotlyplots, plotsGridIndices, gridxparam, gridxvalues, gridyparam, gridyvalues){
+
             var layout = Object.assign({}, this.defaultlayout);
             this.configureLayout(layout);
             if (!('font' in layout)){
@@ -472,15 +499,14 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             layout.font.size = this.plotfontsize;
             // copy layout annotations cause it's not a "primitive" type and thus we want to avoid old annotation to be re-rendered
             layout.annotations = layout.annotations ? Array.from(this.defaultlayout.annotations) : [];
-            // Purge plot. Check if we do actually need this:
-            Plotly.purge(divId);
+            
             var data = [];
             var xdomains = new Array(gridxvalues.length);  // used below to place correctly the x labels of the GRID
             var ydomains = new Array(gridyvalues.length);  // used below to place correctly the x labels of the GRID
             var annotation = this.getAnnotation;
             var legendgroups = new Set();
-            for (var i = 0; i < plotlyplots.length; i++){
-                var [plot, [gridxindex, gridyindex]] = [plotlyplots[i], plotsGridIndices[i]];
+            for (var i = 0; i < plots.length; i++){
+                var [plot, [gridxindex, gridyindex]] = [plots[i], plotsGridIndices[i]];
                 var [axisIndex, xaxis, yaxis, xdomain, ydomain] = this.getAxis(divId, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
                 xdomains[gridxindex] = xaxis.domain;  // used below to place correctly the x labels of the GRID
                 ydomains[gridyindex] = yaxis.domain;  // used below to place correctly the y labels of the GRID
@@ -569,9 +595,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 }));
               }
           }
-          this.$set(this, 'plotlydata', data);
-          Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
-          this.$set(this, 'freezewatchers', false);
+          return [data, layout];
         },
         displayGridLabels_(axis, paramName){
             if (this.paramnames2showongrid.has(paramName)){
@@ -647,26 +671,52 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             return [elm.offsetWidth, elm.offsetHeight];
         },
         toggleTraceVisibility: function(traceName){
+            var visible = null;
+            // iterate over all plot traces and set the visible property to its opposite:
+            for(var plot of this.plots){
+                for (var trace of plot.traces){
+                    if (trace.legendgroup === traceName){
+                        if (visible === null){  // visible uninitialized, set it:
+                            // trace might not have the visible property (meaning: true)
+                            var traceVisibility = 'visible' in trace ? trace.visible : true;
+                            visible = !traceVisibility;
+                        }
+                        trace.visible = visible;
+                    }
+                }
+            }
+            // now get the indices of the currently displayed plots to update them:
             var indices = [];
-            var visible = true;
-            this.plotlydata.forEach(function(data, i){
+            var plotlydata = this.getPlotlyDataAndLayout()[0]; 
+            plotlydata.forEach(function(data, i){
                 if(data.legendgroup === traceName){
                     indices.push(i);
-                    if (data.visible === false){
-                        visible = false;
-                    }
                 }
             });
             if(indices.length){
-                Plotly.restyle(this.plotdivid, {visible: !visible}, indices);
+                Plotly.restyle(this.plotdivid, {visible: visible}, indices);
             }
         },
         isTraceVisible: function(traceName){
             // get the first plotly trace with the legendgroup matching `traceName`
             // and check its 'visible' property. Note that missing property defaults to true,
-            // so check for properties explicitly set as false: 
-            var hidden = this.plotlydata.some(data => {return data.legendgroup === traceName && data.visible === false});
-            return !hidden;
+            // so check for properties explicitly set as false:
+            for(var plot of this.plots){
+                for (var trace of plot.traces){
+                    if (trace.legendgroup === traceName){
+                        return 'visible' in trace ? trace.visible : true;
+                    }
+                }
+            }
+            return false;
+        },
+        getPlotlyDataAndLayout: function(){
+            /**
+             * returns [data, layout] (Array an Object),
+             * i.e. the Plotly data and layout used to draw the plot
+             */
+            var elm = document.getElementById(this.plotdivid);
+            return elm ? [elm.data || [], elm.layout || {}] : [[], {}];
         },
         downloadAsImage: function(){
             
