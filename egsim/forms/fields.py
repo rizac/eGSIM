@@ -417,11 +417,11 @@ class GsimField(MultipleChoiceWildcardField):
 
     def clean(self, value):
         '''Converts each string into the mapped Egsim class'''
-        # We need to first check that the provided values (string)
-        # are in the list of available Gsims, and then convert thtem to Gsim objects.
-        # The check is done in self.validate, which is run AFTER self.to_python.
-        # Thus, we cannot perform the conversion in self.to_python but we need to do it here,
-        # after self.validate has been called
+        # We need to first check 1: that the provided values (string)
+        # are in the list of available Gsims, and then 2: convert thtem to Gsim objects.
+        # Note: the workflow is: self.to_python -> self.validate -> self.clean
+        # And the check 1 is done in self.validate
+        # thus we can not check2 in self.to_python.
         # Also note that super() alone fails here. See https://stackoverflow.com/a/39313448
         return [EGSIM.aval_gsims[gsim] for gsim in super(GsimField, self).clean(value)]
 

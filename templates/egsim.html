@@ -24,7 +24,8 @@
 				<div class="navbar-nav">
 				{% for component in components %}
 					<a class="nav-item nav-link" :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
-					 @click="setComponent('{{ component.0 }}')"><i class="fa {{ component.2 }}"></i> {{ component.1 }}</a>
+					 @click="setComponent('{{ component.0 }}')"
+					 style='cursor: pointer;'><i class="fa {{ component.2 }}"></i> {{ component.1 }}</a>
 				{% endfor %}
 				</div>
 			</div>
@@ -47,7 +48,8 @@
 				<keep-alive>
 					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
 					<component v-bind:is="selComponent"
-						v-bind="selComponentProps" v-bind:post='post'></component>
+						v-bind="selComponentProps" v-bind:post='post'
+						@gsim-selected='selectGsims'></component>
 				</keep-alive>
 				{% block main %}{% endblock %}
 			</div>

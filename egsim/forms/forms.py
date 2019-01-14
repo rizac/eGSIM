@@ -394,9 +394,8 @@ class GsimSelectionForm(BaseForm):
                                  'lon2': 'longitude2', 'gmpe': 'gsim'}
 
     # NOTE: DO NOT set initial
-    gsim = GsimField(required=False)  # , initial=list(EGSIM.aval_gsims.keys()))
-    imt = IMTField(required=False,  # , initial=EGSIM.aval_imts,
-                   sa_periods_required=False)
+    gsim = GsimField(required=False)
+    imt = IMTField(required=False, sa_periods_required=False)
 
     model = TrModelField(label='Tectonic region model', required=False)
     longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
@@ -408,15 +407,27 @@ class GsimSelectionForm(BaseForm):
     trt = TrtField(label='Tectonic region type(s)', required=False,
                    initial=list(EGSIM.aval_trts.keys()))
 
+
+    def __init__(self, *args, **kwargs):
+        '''Overrides init to set default values for gsim and imt'''
+        super(GsimSelectionForm, self).__init__(*args, **kwargs)
+
+        # Set gsim and imt default.
+        # This could be accomplished by simply setting the 'initial' argument
+        # in the class-level attributes gsim and imt (see above), but it would
+        # force by design the injection of large amount of data into the html template,
+        # We need to provide the defaults HERE and not in clean() because we
+        # have to force GsimField to convert convert its selected values to string-like
+        # classes (see fields.py)
+
+        for key, val in (('gsim', EGSIM.aval_gsims.keys()), ('imt', EGSIM.aval_imts)):
+            if self.data.get(key, self.fields[key].initial) == self.fields[key].initial:
+                self.data[key] = val
+
     def clean(self):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa
             (the same for longitude2 and latitude2)'''
         cleaned_data = super().clean()
-
-        if not cleaned_data.get('gsim', []):
-            cleaned_data['gsim'] = list(EGSIM.aval_gsims.keys())
-        if not cleaned_data.get('imt', []):
-            cleaned_data['imt'] = list(EGSIM.aval_imts)
 
         # check that params combinations are ok:
         couplings = (('latitude', 'longitude'), ('longitude2', 'latitude2'))

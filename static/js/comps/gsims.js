@@ -7,20 +7,20 @@ Vue.component('gsims', {
     props: {
         form: Object,
         url: String,
+        tr_models_url: String,
         // response: {type: Object, default: () => {return {}}},
-        post: Function,
-        tr_models_url: String
+        post: Function        
     },
     data: function(){
         return {
-            'id': 'tr_map_id',
-            'selectedModel': undefined, //name of selected tecttonic region model (e.g. SHARE)
-            'models': {},  //object of model names name mapped to geojson data
-            'map': undefined,
-            'layersControl': undefined,
-            'overlays': {},  // object of layer name (tectonic region) => leaflet layer
-            'clicked': false,
-            'colorMap': Vue.colorMap() // defined in vueutil.js
+            id: 'tr_map_id',
+            vuePopupComponent: null,
+            models: {},  //object of model names name mapped to geojson data
+            map: undefined,
+            layersControl: undefined,
+            overlays: {},  // object of layer name (tectonic region) => leaflet layer
+            // clicked: false,
+            colorMap: Vue.colorMap() // defined in vueutil.js
         }
     },
     template:`<div class='flexible d-flex flex-column'>
@@ -29,29 +29,36 @@ Vue.component('gsims', {
                 {{ mod }}
             </option>
         </select>
-        <div :id='id' class='flexible'></div>
+        <div :id='id' class='flexible' style='font: inherit !important'></div>
         </div>`,
     created: function(){
         this.post(this.tr_models_url).then(response => {
             if (response && response.data){
                 this.models = response.data.models;
-                this.selectedModel = response.data.selected_model || Object.keys(response.data.models)[0];
+                this.form.model.val = response.data.selected_model || Object.keys(response.data.models)[0];
             } 
         });
-//         if(this.eventbus){
-//             this.eventbus.$on('postresponse', (response, isError) => {
-//                 if ((response.config.url == this.initurl) && !isError){
-//                     this.$set(this, 'models', response.data.models);
-//                     this.$set(this, 'selectedModel', response.data.selected_model || Object.keys(response.data.models)[0]);
-//                 }
-//             });
-//             this.eventbus.$emit('postrequest', this.initurl);
-//         }
     },
     watch:{
         selectedModel: function(oldVal, newVal){
             if(newVal != oldVal){
                 this.$nextTick(this.updateDOM);  // executed after every part of the DOM has rendered, inlcuding mounted() below
+            }
+        }
+    },
+    computed:{
+        modelNames: function(){
+            return Object.keys(this.models);
+        },
+        selectedModel:{
+            get: function(){
+                return this.form.model.val;
+            },
+            set: function(oldval, newval){
+                this.form.model.val = newval;
+                if(newVal != oldVal){
+                    this.$nextTick(this.updateDOM);  // executed after every part of the DOM has rendered, inlcuding mounted() below
+                }
             }
         }
     },
@@ -72,83 +79,90 @@ Vue.component('gsims', {
         //       ]
         // }
         var map = L.map(this.id, {center: [48, 7], zoom: 4});
-        var bl1 = L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+        
+        // provide two base layers. Keep it simple as many base layers are just to shof off
+        // and they do not need to be the main map concern
+        // 1 MapBox Outdorrs (if you want more, sign in to mapbox. FIXME: why is it working with the token then?) 
+        var bl2 = L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://www.mapbox.com/about/maps/">MapBox</a> <a href="https://www.mapbox.com/map-feedback/#/-74.5/40/10">Improve this Map</a>' ,
             maxZoom: 18,
-            id: 'mapbox.streets'
-          }).addTo(map);
-        
-        var bl2 = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            id: 'mapbox.outdoors'  //  'mapbox.streets'
+          });
+        // 2 CartoDB gray scale map (very good with overlays, as in our case) 
+        // the added base layer added is set selected by default (do not add the others then)
+        var bl1 = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: 'abcd',
             maxZoom: 19
         }).addTo(map);
-        
-        // https://esri.github.io/esri-leaflet/examples/switching-basemaps.html:
-//        var layerName = 'ShadedRelief';
-//        var layer = L.esri.basemapLayer(layerName).addTo(map);
-//        var layerLabels = L.esri.basemapLayer(layerName + 'Labels');
-//        map.addLayer(layerLabels);
 
         // instantiate a layer control (the button on the top-right corner for showing/hiding overlays
         // overlays will be added when setting the tr model
-        this.$set(this, 'layersControl', L.control.layers({'base layer (mapbox)' :bl1, 'base layer (carto)' :bl2}, {}, {collapsed:false}).addTo(map));  // https://gis.stackexchange.com/a/68243
+        this.layersControl = L.control.layers({'base layer 1': bl1, 'base layer 2': bl2}, {}, {collapsed:false}).addTo(map);  // https://gis.stackexchange.com/a/68243
         // note above: collapsed:false makes the legend control visible. This does not work though in 100% of the cases,
         // so see in updateDom a hack for solving this problem (remove control height, if set)
-        this.$set(this, 'map', map);
+        this.map = map;
         map.on("click", this.clickHandler);
     },
     methods:{
         clickHandler: function(event) {
-            if(!this.eventbus){
-                return;
+            // destroy current vue popup component to free memory and all bound props which
+            // might throw useless errors when changed afterwards:
+            if(this.vuePopupComponent){
+                this.vuePopupComponent.$destroy();
             }
-            this.eventbus.$once('postresponse', (response, isError) => {
-                if ((response.config.url == this.url) && !isError){
+            // build a new one:
+            this.form.latitude.val = event.latlng.lat;
+            this.form.longitude.val = event.latlng.lng;
+            this.form.gsim.val = null; // force server to take all gsims by default
+            this.form.imt.val = null; // force server to take all gsims by default
+            var overlays = this.overlays;
+            // perform query only on visible layers selected. Get visible layers:
+            this.form.trt.val = Object.keys(overlays).filter(layerName => {
+               return overlays[layerName]._map ? true : false;
+            });
+            this.post(this.url, this.form).then(response => {
+                if(response.data && response.data.length){
                     this.openPopup(event, response.data);
                 }
             });
-            var data = {'model': this.selectedModel, 'latitude': event.latlng.lat,
-                        'longitude': event.latlng.lng};
-            // get visible layers:
-            var overlays = this.overlays;
-            data['trt'] = Object.keys(overlays).filter(layerName => {
-               return overlays[layerName]._map ? true : false;
-            });
-            this.eventbus.$emit('postrequest', this.url, data);
         },
-        openPopup: function(event, responseData){
+        openPopup: function(event, gsims){
             // dynamically create vue 'gsimselect' component:
             // https://css-tricks.com/creating-vue-js-component-instances-programmatically/
             // (the only difference with the link above is the use of Vue.options['components']['gsimselect']
             // to retrieve globally defined components):
             var ComponentClass = Vue.extend(Vue.options['components']['gsimselect'])
-            // build avalgsims as Map, because our <gsimselect> expects a Map.
-            // we can populate the map values as nulls AS LONG AS WE DO NOT USE the <gsimselect> filter options
-            // (and we don't)
-            avalgsims = new Map();
-            for(var gsim of responseData){
-                avalgsims.set(gsim, null);
-            }
+            
+            // modify the current form gsim field:
+            this.form.gsim.choices = Array.from(gsims);
+            this.form.gsim.val = [];
+            propsData = {form: this.form, selectbutton: 'Select'}
+
             var instance = new ComponentClass({
-                propsData: {avalgsims: avalgsims, selectedgsims: this.selectedgsims}
+                propsData: propsData
             })
+
             // forward the gsim selection fired by the <gsimselect> to the listeners of this component (if provided):
-            instance.$on('update:selectedgsims', newValue => {
-                this.$emit('update:selectedgsims', newValue);
+            instance.$on('selection-fired', gsims => {
+                this.$emit('gsim-selected', gsims);
             });
-            // Set the value of the label, wich is implemented as a (single) slot in the gsimselect
-            // (unfortunately, only plain text allowed for the moment):
-            instance.$slots.default = ['Gsims defined for the selected Tectonic Region(s):'];
+
             // mount the instance:
             instance.$mount() // pass nothing
             // add custom classes (must be done after mount):
-            instance.$el.style.maxWidth = '50vw';
+            // Note that we need to style also .leaflet-popup-content in `base.css`
+            // for this to work:
+            instance.$el.style.maxWidth = '60vw';
             instance.$el.style.maxHeight = '50vh';
-            instance.$el.style.height = `${avalgsims.size}em`;
+            instance.$el.style.height = `${gsims.length > 0 ? gsims.length : 10}em`;
+            instance.$el.style.width = '25em';
+            this.vuePopupComponent = instance;
+
             this.map.openPopup(instance.$el, event.latlng, {
                 offset: L.point(0, -5)
             });
+            
         },
         updateDOM: function() {
             /**
@@ -188,32 +202,52 @@ Vue.component('gsims', {
                 // http://leafletjs.com/examples/geojson/ and (add css class, not used but if needed):
                 // https://stackoverflow.com/questions/17086195/leaflet-path-how-can-i-set-a-css-class (2nd post)
                 var style = this.getStyle(key);
-                var layer = L.geoJson(featureCollections[key],
-                        {style: style, onEachFeature: this.onEachFeature}).addTo(map); //, style: style, onEachFeature: eachFeature })
+                var layer = L.geoJson(featureCollections[key],{
+                    style: style,
+                    onEachFeature: this.onEachFeature}
+                ).addTo(map); //, style: style, onEachFeature: eachFeature })
                 layersControl.addOverlay(layer, `<span style='color:${style.color}'>${key}</span>`);
                 overlays[key] = layer;
             });
             // hack for removing the height attribute on the control. Seems that {collapsed:false}} does not
             // work only if we are loading the page and the latter is visible (activated):
-            var form = document.querySelector('form.leaflet-control-layers-list');
-            if (form){
-                form.style.height = "";
+            var leafLegend = document.querySelector('form.leaflet-control-layers-list');
+            if (leafLegend){
+                leafLegend.style.height = "";
+            }
+            
+            // also style differently the leaflet controls
+            var leafControls = document.querySelectorAll('div.leaflet-control');
+            for (var ctrl of leafControls){
+                ctrl.style.borderWidth = "1px";
+                ctrl.classList.add("shadow");
             }
             
          },
          getStyle: function(trName){
+             // FIXME: is there any documentation about the styling properties????!!!!:
+             // The following where found by playing around with it and googling A LOT
              return {
-                     color: this.colorMap.get(trName),
-                     weight: 1
+                 fillColor: this.colorMap.get(trName),
+                 fillOpacity: 0.2,  // if you remove this, it defaults to 0.2 (checked on the map)
+                 color: this.colorMap.get(trName),
+                 opacity: .5,
+                 weight: .25,  // areas border width (did not find any doc, just palyed around and checked ion the map)
              };
          },
          onEachFeature: function(feature, layer) {
-             return; // no-op (for the moment)
+             layer.on('mouseover', function () {
+                 this.setStyle({
+                     weight: 2,
+                     fillOpacity: 0.5,
+                 });
+             });
+             layer.on('mouseout', function () {
+                 this.setStyle({
+                     weight: .25,
+                     fillOpacity: 0.2,
+                 });
+             });
          }
-    },
-    computed:{
-        modelNames: function(){
-            return Object.keys(this.models);
-        }
     }
 });

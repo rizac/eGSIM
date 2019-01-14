@@ -21,7 +21,6 @@ var EGSIM_BASE = {
         var [avalGsims, avalImts] = this.getInitData(this.initdata.gsims);
         var gsims = Array.from(avalGsims.keys());
         var imts = Array.from(avalImts);
-        
         // set processed data:
         this.$set(this, 'componentProps', this.initdata.component_props);
         Object.keys(this.componentProps).forEach(name => {
@@ -63,7 +62,7 @@ var EGSIM_BASE = {
         setUrlInBrowser(menu){
             var location = window.location;
             var newHref = location.href.replace(/\/\w+\/*$/, "/" + menu);
-            window.history.replaceState({}, document.title, newHref);
+            // window.history.replaceState({}, document.title, newHref);
             return false; // in case accessed from within anchors
         },
         getInitData(data) {
@@ -130,6 +129,21 @@ var EGSIM_BASE = {
             }).finally(() => {
                 this.setLoading(false);
             });
+        },
+        selectGsims(gsims){
+            Object.keys(this.componentProps).forEach(name => {
+                var compProps = this.componentProps[name];
+                if (typeof compProps === 'object'){
+                    Object.keys(compProps).forEach(pname => {
+                        var element = compProps[pname];
+                        if (this.isFormObject(element)){
+                            if (element.gsim){
+                                element.gsim.val = Array.from(gsims);
+                            }
+                        }
+                    });
+                }
+             });
         },
         isFormObject(obj){
             if (typeof obj !== 'object'){

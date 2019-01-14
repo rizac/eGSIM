@@ -1,10 +1,11 @@
 Vue.component('gsimselect', {
   //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
   props: {
-      'name': {type: String, default: 'gsim'},
-      'imtName': {type: String, default: 'imt'},
-      'showfilter': {type: Boolean, default: false},
-      'form': Object
+      name: {type: String, default: 'gsim'},
+      imtName: {type: String, default: 'imt'},
+      showfilter: {type: Boolean, default: false},
+      form: Object,
+      selectbutton: {type: String, default: ''}
   },
   data: function () {
       return {
@@ -16,13 +17,13 @@ Vue.component('gsimselect', {
   },
   template: `<div class='d-flex flex-column'>
     <div class='d-flex flex-row align-items-baseline'>
-      <h5>{{ name }}</h5>
-      <div class='small flexible text-right ml-3'>
-          <span class='text-danger'>{{ form[name].err }}</span>
-          <span v-if='!form[name].err' class='text-muted'>
-              {{ form[name].label }}: {{ form[name].val.length }} of {{ form[name].choices.length }} selected
-          </span>
-      </div>
+        <h5>{{ name }}</h5>
+        <div class='small flexible text-right ml-3'>
+            <span class='text-danger'>{{ form[name].err }}</span>
+            <span v-if='!form[name].err' class='text-muted'>
+                {{ form[name].label }}: {{ form[name].val.length }} of {{ form[name].choices.length }} selected
+            </span>
+        </div>
     </div>  
     <div class='flexible d-flex flex-column'>
         <select v-model="form[name].val" v-bind="form[name].attrs" class="form-control flexible">
@@ -42,6 +43,12 @@ Vue.component('gsimselect', {
             </option>
         </select>
         <input v-model="filterText" type="text" class="form-control" style='width:initial'>
+    </div>
+    
+    <div v-if='selectbutton' class='mt-2'>
+        <button @click="$emit('selection-fired', form[name].val)" v-html='selectbutton' 
+         :disabled='!(form[name].val || []).length' class='btn btn-outline-primary form-control'>
+        </button>
     </div>
   </div>`,
   methods: {
@@ -77,7 +84,7 @@ Vue.component('gsimselect', {
                   return trt.search(regexp) > -1;
               }
           }
-          this.$set(this, 'filterFunc', filterFunc);
+          this.filterFunc = filterFunc;
       }
   },
   watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
