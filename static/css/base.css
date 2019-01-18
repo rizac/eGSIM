@@ -93,20 +93,24 @@ browsers but opera and IE11 */
 	font-weight: bold !important;
 } */
 
-.bg-light{ /* override bootstrap */
+/* override bootstrap */
+/* .bg-light{
 	background-color: #fafafa !important;
-}
+} */
 
 /* shadows not enabled in bootstrap, copy code here: */
-.shadow-sm { /* small */
+/* .shadow-sm { small
     box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
 }
-.shadow { /* normal */
+.shadow { normal
     box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
 }
-.shadow-lg { /* large */
+.shadow-lg { large
     box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
-}
+} */
+
+
+
 /* change disabled text color to makei it lighter. Also add the class 'disabled' which renders the same text color */
 *[disabled], .disabled{ /*input[type="text"][disabled] {*/
    color: lightgray;
@@ -118,6 +122,17 @@ select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:
 select[multiple] option:checked:not(:disabled), select[size] option:checked:not(:disabled) {
 	background-image: linear-gradient(0deg, #d6e9c6 0%, #d6e9c6	 100%);
 }
+
+
+/* plotly */
+.js-plotly-plot .plotly .modebar--hover{
+	padding: 1rem;
+	border-radius: .5rem;
+	right: 3px !important;
+	box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+}
+
+/* leaflet*/
 .leaflet-popup-content {
 	width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
 }

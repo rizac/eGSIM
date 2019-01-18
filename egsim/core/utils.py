@@ -15,13 +15,15 @@ from dateutil import parser as dateparser
 from dateutil.tz import tzutc
 
 from yaml import safe_load, YAMLError
-
+import numpy as np
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib import imt
 
 from smtk import load_database
+import csv
+from contextlib import contextmanager
 
 
 def tostr(object, none='null'):
@@ -340,3 +342,73 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
             cls._trmodels = {splitext(f)[0]: loadjson(join(root, f)) for f in listdir(root)
                              if splitext(f)[1].lower() == '.json'}
         return cls._trmodels
+
+
+class TextResponseCreator:
+
+    def __init__(self, data, horizontal=True, delimiter=';'):
+        self.data = data
+        self.horizontal = horizontal
+        self.delimiter = delimiter
+
+    def to_string_matrix(self, data):
+        '''Abstract-like method to be implemented in subclasses
+
+        :return: a list of sub-lists, where each sub-list is a list of
+        strings representing a row to be printed to the csv. The orientation
+        (horizontal vs vertical) will be handled in the __str__ method'''
+        raise NotImplementedError()
+
+    @staticmethod
+    def scalar2str(value):
+        if value is None:
+            return ''
+        if isinstance(value, str):
+            return value
+        if isinstance(value, bytes):
+            return value.decode('utf8')
+        try:
+            if np.isnan(value):
+                return ''
+        except TypeError:
+            pass
+        return str(value)
+
+    def __str__(self):
+        fileobj = StringIO()
+        data2print = self.to_string_matrx(self.data)
+        if not self.horizontal:
+            data2print = zip(*data2print)
+
+        csv_writer = csv.writer(fileobj, delimiter=self.delimiter,
+                                quotechar='"',
+                                quoting=csv.QUOTE_MINIMAL)
+        for row in data2print:
+            csv_writer.writerow([self.scalar2str(r) for r in row])
+        ret = fileobj.getvalue()
+        fileobj.close()
+        return ret
+
+
+class TrellisTextResponseCreator(TextResponseCreator):
+
+    def to_string_matrx(self, data):
+        figures = data['figures']
+        gsims = None
+
+        def_header_fields = ['gsim:', 'magnitude:', 'distance:', 'vs30:']
+        if len(figures) > 0:
+            yield def_header_fields +\
+                [''] * (1 + len(data['xvalues']))
+
+            yield [''] * len(def_header_fields) + [data['xlabel']] + data['xvalues']
+
+            if gsims is None:
+                gsims = sorted(figures[0]['yvalues'].keys())
+
+            for gsim in gsims:
+                for fig in figures:
+                    yvalues = fig['yvalues'].get(gsim, None)
+                    if yvalues is not None:
+                        mag, dist, vs30 = fig['magnitude'], fig['distance'], fig['vs30']
+                        yield [gsim, mag, dist, vs30, fig['ylabel']] + yvalues

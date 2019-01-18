@@ -13,6 +13,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         var id = this.$options.name + new Date().getTime().toString();
         return {
             visible: !Vue.isEmpty(this.data),
+            watchers: [],  // dynamically created watchers (see init)
             paramnames2showongrid: new Set(),  // parameter names to show on the grid
             plotdivid: Date.now().toString(),
             // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
@@ -76,7 +77,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         </div>
     
         <div class='d-flex flex-column my-2 mr-2 pl-2 border-left'
-            v-if="Object.keys(legend).length || Object.keys(gridlayouts).length>1">
+            v-show="legendNames.length || isGridCusomizable">
 
             <slot></slot> <!-- slot for custom buttons -->
             
@@ -102,7 +103,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 <button @click='downloadAsImage' class='btn btn-primary' >download</button>
             </div>-->
             
-            <div v-if='Object.keys(legend).length' class='flexible mt-3 border-top'>
+            <div v-show='legendNames.length' class='flexible mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Legend</h5>
                 <div v-for="key in legendNames">
                     <label v-bind:style="{color: legend[key]}">
@@ -112,7 +113,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 </div>
             </div>
 
-            <div v-if="Object.keys(gridlayouts).length>1" class='mt-3 border-top'>
+            <div v-show="isGridCusomizable" class='mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Subplots layout</h5>
 
                 <select class='form-control' v-model='selectedgridlayout'>
@@ -129,15 +130,15 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         // no-op
     },
     watch: {
-        selectedParams: {
-            handler: function (newval, oldval) {
-                this.newPlot();
-            },
-            deep: true  // https://vuejs.org/v2/api/#vm-watch
-        },
-        selectedgridlayout: function(newval, oldval){
-            this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
-        },
+//        selectedParams: {
+//            handler: function (newval, oldval) {
+//                this.newPlot();
+//            },
+//            deep: true  // https://vuejs.org/v2/api/#vm-watch
+//        },
+//        selectedgridlayout: function(newval, oldval){
+//            this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
+//        },
         data: {
             immediate: true,
             handler(newval, oldval){
@@ -169,6 +170,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
     computed: {  // https://stackoverflow.com/a/47044150
         legendNames: function(){
             return Object.keys(this.legend);
+        },
+        isGridCusomizable: function(){
+            return Object.keys(this.gridlayouts).length>1;
         }
     },
     methods: {
@@ -248,6 +252,10 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             return color;
         },
         init: function(jsondict){
+            // unwatch watchers, if any:
+            for(var watcher of this.watchers){
+                watcher();
+            }
             this.legend = {};
             // convert data:
             var plots = this.getData(jsondict);
@@ -256,6 +264,17 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // update selection, taking into account previously selected stuff:
             this.setupSelection(); // which sets this.selectedgridlayout which calls this.gridLayoutChanged (see watch above)
             // which in turn sets this.selectedParams which eventually calls this.newPlot (see watch above)
+            
+            // set watchers:
+            this.watchers = [ // https://vuejs.org/v2/api/#vm-watch
+                this.$watch('selectedParams', function (newval, oldval) {
+                    this.newPlot();
+                },{deep: true}),  // https://vuejs.org/v2/api/#vm-watch
+                this.$watch('selectedgridlayout', function(newval, oldval){
+                    this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
+                })];
+            // now plot:
+            this.newPlot();
         },
         setupSelection: function(){
             // sets up selectable params, including those choosable as 'x grid' or 'y rid'.

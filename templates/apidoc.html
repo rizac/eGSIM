@@ -443,8 +443,8 @@ Trellis plot data returned in JSON format will have the following structure:
 <pre><code class="language-json">{
 	"xvalues": [2.905, 3.771, ... ],
 	"xlabel": "Rupture Dist. (km)",
-	"figures": {
-			"PGA": {
+	"figures": [
+			{
 				"yvalues":{
 					"AkkarEtAl2013": [0.3811, 0.3812, ...],
 					"CauzziEtAl2014": [0.283, 0.283, ...],
@@ -455,12 +455,11 @@ Trellis plot data returned in JSON format will have the following structure:
 				"distance": null,
 				"vs30": 760
 			},
-			"PGV": {
+			{
 				...
 			},
 			...
-		},
-		...
+		]
 	}
 }</code></pre>
 <p class='footnote'>
@@ -484,7 +483,8 @@ Trellis plot data returned in CSV format will have the following structure.
 
 <table class='csv'>
 <tr>
-	<td>&nbsp;</td>
+	<td>gsim:</td>
+	<td></td>
 	<td>AkkarEtAl2013</td>
 	<td>AkkarEtAl2013</td>
 	<td>&hellip;</td>
@@ -492,15 +492,8 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
-	<td>PGA</td>
-	<td>PGA</td>
-	<td>&hellip;</td>
-	<td>PGA</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
 	<td>magnitude:</td>
+	<td></td>
 	<td>5</td>
 	<td>5.5</td>
 	<td>&hellip;</td>
@@ -509,14 +502,16 @@ Trellis plot data returned in CSV format will have the following structure.
 </tr>
 <tr>
 	<td>distance:</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td></td>
+	<td></td>
+	<td></td>
 	<td>&hellip;</td>
-	<td>&nbsp;</td>
+	<td></td>
 	<td>&hellip;</td>
 </tr>
 <tr>
 	<td>vs30:</td>
+	<td></td>
 	<td>760</td>
 	<td>760</td>
 	<td>&hellip;</td>
@@ -524,6 +519,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td></td>
 	<td class='xvalues'>Rupture Dist. (km)</td>
 	<td class='yvalues'>Median PGA (g)</td>
 	<td class='yvalues'>Median PGA (g)</td>
@@ -532,6 +528,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
+	<td></td>
 	<td class='xvalues'>2.905</td>
 	<td class='yvalues'>0.3811</td>
 	<td class='yvalues'>0.283</td>
@@ -540,6 +537,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
+	<td></td>
 	<td class='xvalues'>3.771</td>
 	<td class='yvalues'>0.3812</td>
 	<td class='yvalues'>0.283</td>
@@ -548,6 +546,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
+	<td></td>
 	<td class='xvalues'>&hellip;</td>
 	<td class='yvalues'>&hellip;</td>
 	<td class='yvalues'>&hellip;</td>
@@ -562,14 +561,20 @@ Trellis plot data returned in CSV format will have the following structure.
 
 <table class='csv'>
 <tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>gsim:</td>
+	<td>magnitude:</td>
+	<td>distance:</td>
+	<td>vs30:</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
 	<td class='xvalues'>Rupture Dist. (km)</td>
 	<td class='xvalues'>2.905</td>
 	<td class='xvalues'>3.771</td>
@@ -577,12 +582,8 @@ Trellis plot data returned in CSV format will have the following structure.
 </tr>
 <tr>
 	<td>AkkarEtAl2013</td>
-	<td>PGA</td>
-	<td>magnitude:</td>
 	<td>5</td>
-	<td>distance:</td>
 	<td></td>
-	<td>vs30:</td>
 	<td>760</td>
 	<td class='yvalues'>Median PGA (g)</td>
 	<td class='yvalues'>0.3811</td>
@@ -591,12 +592,8 @@ Trellis plot data returned in CSV format will have the following structure.
 </tr>
 <tr>
 	<td>AkkarEtAl2013</td>
-	<td>PGA</td>
-	<td>magnitude:</td>
 	<td>5.5</td>
-	<td>distance:</td>
 	<td></td>
-	<td>vs30:</td>
 	<td>760</td>
 	<td class='yvalues'>Median PGA (g)</td>
 	<td class='yvalues'>0.283</td>
@@ -606,10 +603,6 @@ Trellis plot data returned in CSV format will have the following structure.
 <tr>
 	<td>&hellip;</td>
 	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&hellip;</td>
-	<td>&nbsp;</td>
 	<td>&hellip;</td>
 	<td>&hellip;</td>
 	<td class='yvalues'>&hellip;</td>
@@ -619,12 +612,8 @@ Trellis plot data returned in CSV format will have the following structure.
 </tr>
 <tr>
 	<td>CauzziEtAl2014</td>
-	<td>PGA</td>
-	<td>magnitude:</td>
 	<td>5</td>
-	<td>distance:</td>
 	<td></td>
-	<td>vs30:</td>
 	<td>760</td>
 	<td class='yvalues'>Median PGA (g)</td>
 	<td class='yvalues'>0.21</td>
@@ -764,84 +753,133 @@ csv table).
 
 <table class='csv'>
 <tr>
+	<td>gsim:</td>
+	<td></td>
 	<td>AkkarEtAl2013</td>
-	<td>&nbsp;</td>
+	<td></td>
 	<td>AkkarEtAl2013</td>
-	<td>&nbsp;</td>
 	<td>&hellip;</td>
+	<td></td>
 	<td>AkkarEtAl2013</td>
-	<td>&nbsp;</td>
 	<td>&hellip;</td>
+	<td></td>
 	<td>CauzziEtAl2014</td>
-	<td>&nbsp;</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td>imt:</td>
+	<td></td>
 	<td>PGA</td>
-	<td>&nbsp;</td>
+	<td></td>
 	<td>PGA</td>
-	<td>&nbsp;</td>
 	<td>&hellip;</td>
+	<td></td>
 	<td>PGV</td>
-	<td>&nbsp;</td>
 	<td>&hellip;</td>
+	<td></td>
 	<td>PGA</td>
-	<td>&nbsp;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>type:</td>
+	<td></td>
+	<td>Intra Event</td>
+	<td></td>
+	<td>Inter Event</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td>Intra Event</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td>Intra Event</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>mean:</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>stddev:</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>median:</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
 	<td>&hellip;</td>
 </tr>
 <tr>
 	<td>slope:</td>
+	<td></td>
 	<td>0.269</td>
-	<td>slope:</td>
+	<td></td>
 	<td>0.103</td>
 	<td>&hellip;</td>
-	<td>slope:</td>
+	<td></td>
 	<td>0.171</td>
 	<td>&hellip;</td>
-	<td>slope:</td>
+	<td></td>
 	<td>0.28</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
 	<td>intercept:</td>
+	<td></td>
 	<td>-1.998</td>
-	<td>intercept:</td>
+	<td></td>
 	<td>-1.281</td>
 	<td>&hellip;</td>
-	<td>intercept:</td>
+	<td></td>
 	<td>-2.12</td>
 	<td>&hellip;</td>
-	<td>intercept:</td>
+	<td></td>
 	<td>-2.281</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
 	<td>pvalue:</td>	
+	<td></td>
 	<td>6.6e-8</td>
-	<td>pvalue:</td>	
+	<td></td>	
 	<td>0.163</td>
 	<td>&hellip;</td>
-	<td>pvalue:</td>	
+	<td></td>	
 	<td>0.002</td>
 	<td>&hellip;</td>
-	<td>pvalue:</td>	
+	<td></td>	
 	<td>1.21e-8</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>Intra Event</td>
-	<td>&nbsp;</td>
-	<td>Inter Event</td>
-	<td>&nbsp;</td>
-	<td>&hellip;</td>
-	<td>Intra Event</td>
-	<td>&nbsp;</td>
-	<td>&hellip;</td>
-	<td>Intra Event</td>
-	<td>&nbsp;</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
+	<td></td>
 	<td class='xvalues'>Magnitude</td>
 	<td class='yvalues'>Z (PGA)</td>	
 	<td class='xvalues'>Magnitude</td>
@@ -855,6 +893,7 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td></td>
 	<td class='xvalues'>4</td>
 	<td class='yvalues'>-2.11</td>	
 	<td class='xvalues'>4</td>
@@ -868,6 +907,7 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td></td>
 	<td class='xvalues'>4</td>
 	<td class='yvalues'>-2.27</td>	
 	<td class='xvalues'>4</td>
@@ -881,6 +921,7 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td></td>
 	<td class='xvalues'>3.9</td>
 	<td class='yvalues'>-2.08</td>	
 	<td class='xvalues'>3.9</td>
@@ -894,6 +935,7 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td></td>
 	<td class='xvalues'>&hellip;</td>
 	<td class='yvalues'>&hellip;</td>
 	<td class='xvalues'>&hellip;</td>
@@ -913,15 +955,31 @@ csv table).
 
 <table class='csv'>
 <tr>
-	<td>AkkarEtAl2013</td>
-	<td>PGA</td>
+	<td>gsim:</td>
+	<td>imt:</td>
+	<td>type:</td>
+	<td>mean:</td>
+	<td>stddev:</td>
+	<td>median:</td>
 	<td>slope:</td>
-	<td>0.269</td>
 	<td>intercept:</td>
-	<td>-1.998</td>
 	<td>pvalue:</td>
-	<td>6.6e-8</td>
-	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>	
 	<td class='xvalues'>Magnitude</td>
 	<td class='xvalues'>4</td>
 	<td class='xvalues'>4</td>
@@ -929,15 +987,15 @@ csv table).
 	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>AkkarEtAl2013</td>
+	<td>PGA</td>
+	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.269</td>
+	<td>-1.998</td>
+	<td>6.6e-8</td>
 	<td class='yvalues'>Z (PGA)</td>
 	<td class='yvalues'>-2.11</td>
 	<td class='yvalues'>-2.27</td>
@@ -945,15 +1003,15 @@ csv table).
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarEtAl2013</td>
-	<td>PGA</td>
-	<td>slope:</td>
-	<td>0.103</td>
-	<td>intercept:</td>
-	<td>-1.281</td>
-	<td>pvalue:</td>
-	<td>0.163</td>
-	<td>Inter Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
 	<td class='xvalues'>Magnitude</td>
 	<td class='xvalues'>4</td>
 	<td class='xvalues'>4</td>
@@ -961,15 +1019,15 @@ csv table).
 	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>AkkarEtAl2013</td>
+	<td>PGA</td>
+	<td>Inter Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.103</td>
+	<td>-1.281</td>
+	<td>0.163</td>
 	<td class='yvalues'>Z (PGA)</td>
 	<td class='yvalues'>-1.832</td>
 	<td class='yvalues'>-1.913</td>
@@ -993,15 +1051,15 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarEtAl2013</td>
-	<td>PGV</td>
-	<td>slope:</td>
-	<td>0.171</td>
-	<td>intercept:</td>
-	<td>-2.12</td>
-	<td>pvalue:</td>
-	<td>0.002</td>
-	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
 	<td class='xvalues'>Magnitude</td>
 	<td class='xvalues'>4</td>
 	<td class='xvalues'>4</td>
@@ -1009,15 +1067,15 @@ csv table).
 	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>AkkarEtAl2013</td>
+	<td>PGV</td>
+	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.171</td>
+	<td>-2.12</td>
+	<td>0.002</td>
 	<td class='yvalues'>Z (PGV)</td>
 	<td class='yvalues'>-0.17</td>
 	<td class='yvalues'>-1.11</td>
@@ -1041,15 +1099,15 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
-	<td>CauzziEtAl2014</td>
-	<td>PGA</td>
-	<td>slope:</td>
-	<td>0.28</td>
-	<td>intercept:</td>
-	<td>-2.281</td>
-	<td>pvalue:</td>
-	<td>1.21e-8</td>
-	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
 	<td class='xvalues'>Magnitude</td>
 	<td class='xvalues'>4</td>
 	<td class='xvalues'>4</td>
@@ -1057,15 +1115,15 @@ csv table).
 	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
-	<td>&nbsp;</td>
+	<td>CauzziEtAl2014</td>
+	<td>PGA</td>
+	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.28</td>
+	<td>-2.281</td>
+	<td>1.21e-8</td>
 	<td class='yvalues'>Z (PGA)</td>
 	<td class='yvalues'>-1.116</td>
 	<td class='yvalues'>-2.815</td>

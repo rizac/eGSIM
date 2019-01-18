@@ -136,8 +136,9 @@ class EgsimQueryViewMeta(type):
     See :class:`EgsimChoiceField` documentation for details'''
     def __init__(cls, name, bases, nmspc):
         super(EgsimQueryViewMeta, cls).__init__(name, bases, nmspc)
-        cls.arrayfields = set() if cls.formclass is None else\
-            set(_ for _, f in cls.formclass.declared_fields.items() if isinstance(f, ArrayField))
+        if cls.formclass is not None:
+            cls.arrayfields = set(_ for (_, f) in cls.formclass.declared_fields.items()
+                                  if isinstance(f, ArrayField))
 
 
 class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
@@ -146,6 +147,7 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
     the a normal query in the standard API'''
 
     formclass = None
+    arrayfields = set()
     EXCEPTION_CODE = 400
     VALIDATION_ERR_MSG = 'Input validation error'
 
