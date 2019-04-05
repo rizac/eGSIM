@@ -87,28 +87,24 @@ browsers but opera and IE11 */
 .grid-col-span{grid-column: 1 / -1;}
 .grid-row-span{grid-row: 1 / -1;}
 
-/* h5{ 
-	font-size: 1.2rem !important;
-	margin-bottom: .5rem !important;
-	font-weight: bold !important;
-} */
 
-/* override bootstrap */
-/* .bg-light{
-	background-color: #fafafa !important;
-} */
+/* navbar stuff */
 
-/* shadows not enabled in bootstrap, copy code here: */
-/* .shadow-sm { small
-    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+nav .menu-item{
+	padding: 1rem .6rem;
+	color: rgba(255,255,255,.5) !important;
+	cursor: pointer;
 }
-.shadow { normal
-    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-}
-.shadow-lg { large
-    box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
-} */
 
+nav .menu-item.active{
+	color: #FFF !important;
+}
+
+@media (max-width: 875px){
+	nav .menu-item span {
+    	display: none !important;
+	}
+}
 
 
 /* change disabled text color to makei it lighter. Also add the class 'disabled' which renders the same text color */

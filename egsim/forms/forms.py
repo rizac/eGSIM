@@ -178,9 +178,9 @@ class BaseForm(Form):
         'label' (the label text), 'err': (the error text), 'attrs' (a dict
         of attributes), 'choices' (empty list if not ChoiceField, otherwise
         the list of available choices). 'gsim' and 'imt' will have choices set
-        to the empty list as these will be injected only once in the template
-        for performance reasons: it is the client library responsible to
-        set the vailable choices (See Javascript code)
+        to the empty list to avoid injecting too much data redundantly
+        (in case of several components) in the HTML template: it is the client library
+        responsible to set the vailable choices (See Javascript code)
         '''
         formdata = {}
         for name, _ in self.declared_fields.items():  # pylint: disable=no-member
@@ -251,7 +251,7 @@ class BaseForm(Form):
                         cls._addnote('The value can be supplied (not from the GUI) '
                                      'as string with special characters e.g.:'
                                      '* (matches zero or more characters) or '
-                                     '? (metches any single character). See '
+                                     '? (matches any single character). See '
                                      '<a href="https://docs.python.org/3/library/fnmatch.html" '
                                      'target="_blank">here</a> for details', notes)
 
@@ -382,6 +382,8 @@ class BaseForm(Form):
 
     @staticmethod
     def _equals(str1, str2):
+        '''Tests equality of strings (ignoring the case). Underscore and spaces are
+        considered the same character''' 
         return str1.lower().replace(' ', '_') == str2.lower().replace(' ', '_')
 
 
@@ -414,15 +416,15 @@ class GsimSelectionForm(BaseForm):
 
         # Set gsim and imt default.
         # This could be accomplished by simply setting the 'initial' argument
-        # in the class-level attributes gsim and imt (see above), but it would
-        # force by design the injection of large amount of data into the html template,
-        # We need to provide the defaults HERE and not in clean() because we
-        # have to force GsimField to convert convert its selected values to string-like
+        # in the class-level attributes `gsim` and `imt` (see above), but it would
+        # force by design the injection of large amount of data into the html template.
+        # Note also that we need to provide the defaults HERE and not in clean() because we
+        # have to force GsimField to convert its selected values to string-like
         # classes (see fields.py)
 
         for key, val in (('gsim', EGSIM.aval_gsims.keys()), ('imt', EGSIM.aval_imts)):
             if self.data.get(key, self.fields[key].initial) == self.fields[key].initial:
-                self.data[key] = val
+                self.data[key] = list(val)  # Django MultiChoiceField accepts lists or tuples
 
     def clean(self):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa

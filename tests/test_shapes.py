@@ -1,5 +1,5 @@
 '''
-Test the shapes module
+Test the core.shapes module
 
 Created on 2 Jul 2018
 
@@ -40,7 +40,7 @@ def test_share_geojson():
     for feat in geojson['features']:
         props = feat['properties']
         trt = mappings[(props.get('TECTONICS', '') or props['TECREG']).lower()]
-        assert trt in trts2
+        assert trt in trts2.values()
         props['OQ_TRT'] = trt
 
     # do a test with random coordinates:
@@ -57,6 +57,7 @@ def test_share_geojson():
     assert not fts
 
     props1 = get_feature_properties(geojson, *berlin_coordinates)
-    props2 = get_feature_properties(geojson, *berlin_coordinates_rect)
+    props2 = get_feature_properties(geojson, *berlin_coordinates_rect[:2], None,
+                                    *berlin_coordinates_rect[2:])
     assert props1 == props2 == {'Stable Shallow Crust'}
 
