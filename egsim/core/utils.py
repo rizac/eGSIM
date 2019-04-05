@@ -14,10 +14,12 @@ from collections import OrderedDict
 from datetime import date, datetime
 from dateutil import parser as dateparser
 from dateutil.tz import tzutc
+import inspect
 
 from yaml import safe_load, YAMLError
 import numpy as np
 from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
+from openquake.hazardlib.gsim.base import NotVerifiedWarning
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
@@ -232,15 +234,19 @@ def _get_data():
     with warnings.catch_warnings():
         # Catch warnings as if they were exceptions, and skip deprecation w.
         # https://stackoverflow.com/a/30368735
-        warnings.filterwarnings('error')
+        warnings.filterwarnings('error')  # raises every time, not only 1st
         for key, gsim in get_available_gsims().items():
+            if inspect.isabstract(gsim):
+                continue
             try:
                 gsim_inst = gsim()
             except (TypeError, OSError, NotImplementedError) as exc:
                 gsim_inst = gsim
-            except OQDeprecationWarning:
+            except OQDeprecationWarning as warn:
                 # the builtin DeprecationWarning is silenced, OQ uses it's own
                 continue
+            except NotVerifiedWarning as warn:
+                pass
             except Warning as warn:
                 pass
             try:
