@@ -135,27 +135,3 @@ def testdata(request):  # pylint: disable=unused-argument
             return yaml_load(self.path(filename))
 
     return Data()
-
-
-    
-
-# @pytest.fixture(scope="module")
-# def requesthandler(request):  # pylint: disable=unused-argument
-#     '''Fixture handling a request.
-#     It takes the calling modules and rad the 'request.yaml' file into a dict.
-#     From there, it can return the dict or perform some automated Django utilities
-#     '''
-#     class Data:
-#         '''class handling common read operations on files in the 'data' folder'''
-# 
-#         def __init__(self):
-#             self.yamlfile = os.path.join(os.path.dirname(request.fspath), 'request.yaml')
-#             self._dict = yaml_load(self.yamlfile)
-# 
-#         def dict(self, **overrides):
-#             return dict(self._dict, **overrides)
-# 
-#         def querystr(self, baseurl=None, **overrides):
-#             return querystring(self.dict(**overrides), baseurl=baseurl)
-# 
-#     return Data()
