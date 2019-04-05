@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'egsim'  # https://docs.djangoproject.com/en/2.2/topics/db/models/#using-models
      # 'widget_tweaks',
 ]
 
