@@ -30,6 +30,19 @@ pip install -U pip setuptools
 pip install -r ./requirements.txt
 
 
+### Install (REAL)
+
+python3 -m venv  env/egsim/
+source env/bin/activate
+source env/egsim/bin/activate
+which python  # just to check
+pip install -U pip setuptools
+# move to oq-engine
+pip install -e .
+# move to gmpe-smtk
+pip install -e .
+
+
 ## Old stuff (ignore, will be removed soon):
 
 ### (Optional) First install numpy

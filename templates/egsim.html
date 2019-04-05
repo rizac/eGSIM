@@ -11,24 +11,16 @@
 {% block body %}
 	<div class="d-flex flex-column height100" id='egsim-vue'>
 
-		<nav class="navbar navbar-expand-lg navbar-dark bg-dark" style='min-height: 3.5rem;' id='navbarNavAltMarkup'>
-
-			<!-- <a class="navbar-brand" href="#">{{ project_name }}</a> -->
-			<button class="navbar-toggler" type="button" data-toggle="collapse"
-				data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup"
-				aria-expanded="false" aria-label="Toggle navigation">
-				<span class="navbar-toggler-icon"></span>
-			</button>
-
-			<div class="collapse navbar-collapse" id="navbar">
-				<div class="navbar-nav">
+		<nav class="d-flex flex-row navbar-dark bg-dark" id='navbarNavAltMarkup'>
 				{% for component in components %}
-					<a class="nav-item nav-link" :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
-					 @click="setComponent('{{ component.0 }}')"
-					 style='cursor: pointer;'><i class="fa {{ component.2 }}"></i> {{ component.1 }}</a>
+                    {% if forloop.last %}
+                        <div class='flexible'></div>
+                    {% endif %}
+					<a class='menu-item' :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
+							@click="setComponent('{{ component.0 }}')" title="{{ component.1 }}">
+						<i class="fa {{ component.2 }}"></i> <span>{{ component.1 }}</span>
+					</a>
 				{% endfor %}
-				</div>
-			</div>
 		</nav>
 
 		<div class='flexible d-flex flex-column position-relative'>

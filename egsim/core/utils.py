@@ -7,62 +7,77 @@ from os import listdir
 from os.path import join, dirname, isdir, splitext, isfile
 import warnings
 import json
+import csv
 from io import StringIO
 from urllib.parse import quote
 from collections import OrderedDict
-from datetime import datetime
+from datetime import date, datetime
 from dateutil import parser as dateparser
 from dateutil.tz import tzutc
 
 from yaml import safe_load, YAMLError
 import numpy as np
+from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib import imt
-
 from smtk import load_database
-import csv
-from contextlib import contextmanager
 
 
-def tostr(object, none='null'):
-    '''Returns str(object) with these exceptions:
-    - if object is a datetime, returns its ISO format representation, either
-    '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S' or '%Y-%m-%dT%H:%M:%S.%f'
-    - if object is boolean returns 'true' or 'false' (to lower case)
-    - if object is None, returns the `none` argument (defaults to 'null')
+def tostr(obj, none='null'):
+    '''Returns str(obj) to be injected into YAML or JSON variables.
+
+    It therefore returns `str(obj)` with these exceptions:
+    - if obj is a date or datetime, returns its ISO format representation,
+    either '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S' or '%Y-%m-%dT%H:%M:%S.%f'
+    - if obj is boolean returns 'true' or 'false' (to lower case)
+    - if obj is None, returns the `none` argument (defaults to 'null')
     '''
-    if object is None:
+    if obj is None:
         return none
-    elif object is True or object is False:
-        return str(object).lower()
-    elif isinstance(object, datetime):
-        if object.microsecond == 0:
-            if object.hour == object.minute == object.second == 0:
-                return object.strftime('%Y-%m-%d')
-            return object.strftime('%Y-%m-%dT%H:%M:%S')
-        return object.strftime('%Y-%m-%dT%H:%M:%S.%f')
-    else:
-        return str(object)
+    if obj is True or obj is False:
+        return str(obj).lower()
+    if isinstance(obj, (date, datetime)):
+        if not isinstance(obj, datetime) \
+            or (obj.microsecond == obj.hour ==
+                obj.minute == obj.second == 0):
+            return obj.strftime('%Y-%m-%d')
+        if obj.microsecond == 0:
+            return obj.strftime('%Y-%m-%dT%H:%M:%S')
+        return obj.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    return str(obj)
 
 
-# From https://en.wikipedia.org/wiki/Query_string#URL_encoding:
-# Letters (A–Z and a–z), numbers (0–9) and the characters '*','-','.' and '_' are left as-is
-# Moreover, for query parameter other set of characters are permitted
-# (see https://stackoverflow.com/a/2375597). Among those, '*' and '?' (which EGSIM might
-# interpret as wildcards), ',' (interpreted as array separator) and ':' (numeric range separator
-# and time separator). If other characters have to be added in the future, first check
-# the latter link (and in case the RFC 3896 spec). For the moment, the safe characters for a
-# query string in eGSIM are:
+# Set the non-encoded characters. Sources:
+# https://perishablepress.com/stop-using-unsafe-characters-in-urls/
+# https://stackoverflow.com/a/2375597
+# https://en.wikipedia.org/wiki/Query_string#URL_encoding
+# (using the latter as ref here, although all links actually say something different).
+# Letters (A–Z and a–z), numbers (0–9) and the characters "*-.?,:_" are left as they are
+# (unencoded)
+# Remember that eGSIM special characters might be '&|><=!' (for gmdb selection),
+# '*?[~]' (for parameters accepting wildcards) and ':' (numeric range separator
+# and time separator)
 QUERY_PARAMS_SAFE_CHARS = "*-.?,:_"
 
 
 def querystring(dic, baseurl=None):
-    '''Converts dic to a query string to be used in URLs'''
+    '''Converts dic to a query string to be used in URLs. It escapes all unsafe
+    characters (as defined in `QUERY_PARAMS_SAFE_CHARS`) and converts lists to comma-
+    separated encoded strings
+
+    :param dic: a dictionary of values, as returned e.g., from JSON or YAML
+        parsed content. The dictionary CAN NOT have nested dictionaries, as they
+        can not be represented in a URL query string
+    :param baseurl: if provided, it is the base url which will be prefixed in the
+        returned url string. It does not matter if it ends or not with a '?' character
+    '''
 
     def escape(value):
         '''escapes a scalar or array'''
+        if isinstance(value, dict):
+            raise ValueError('Can not represent nested dicts in a query string')
         return quote(tostr(value), safe=QUERY_PARAMS_SAFE_CHARS) if isscalar(value) else \
             ','.join(quote(tostr(_), safe=QUERY_PARAMS_SAFE_CHARS) for _ in value)
 
@@ -215,12 +230,19 @@ def _get_data():
     # get all gsims:
     _aval_gsims = OrderedDict()
     with warnings.catch_warnings():
-        warnings.filterwarnings('ignore')
+        # Catch warnings as if they were exceptions, and skip deprecation w.
+        # https://stackoverflow.com/a/30368735
+        warnings.filterwarnings('error')
         for key, gsim in get_available_gsims().items():
             try:
                 gsim_inst = gsim()
             except (TypeError, OSError, NotImplementedError) as exc:
                 gsim_inst = gsim
+            except OQDeprecationWarning:
+                # the builtin DeprecationWarning is silenced, OQ uses it's own
+                continue
+            except Warning as warn:
+                pass
             try:
                 gsim_imts = gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             except AttributeError:
@@ -344,71 +366,71 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
         return cls._trmodels
 
 
-class TextResponseCreator:
-
-    def __init__(self, data, horizontal=True, delimiter=';'):
-        self.data = data
-        self.horizontal = horizontal
-        self.delimiter = delimiter
-
-    def to_string_matrix(self, data):
-        '''Abstract-like method to be implemented in subclasses
-
-        :return: a list of sub-lists, where each sub-list is a list of
-        strings representing a row to be printed to the csv. The orientation
-        (horizontal vs vertical) will be handled in the __str__ method'''
-        raise NotImplementedError()
-
-    @staticmethod
-    def scalar2str(value):
-        if value is None:
-            return ''
-        if isinstance(value, str):
-            return value
-        if isinstance(value, bytes):
-            return value.decode('utf8')
-        try:
-            if np.isnan(value):
-                return ''
-        except TypeError:
-            pass
-        return str(value)
-
-    def __str__(self):
-        fileobj = StringIO()
-        data2print = self.to_string_matrx(self.data)
-        if not self.horizontal:
-            data2print = zip(*data2print)
-
-        csv_writer = csv.writer(fileobj, delimiter=self.delimiter,
-                                quotechar='"',
-                                quoting=csv.QUOTE_MINIMAL)
-        for row in data2print:
-            csv_writer.writerow([self.scalar2str(r) for r in row])
-        ret = fileobj.getvalue()
-        fileobj.close()
-        return ret
-
-
-class TrellisTextResponseCreator(TextResponseCreator):
-
-    def to_string_matrx(self, data):
-        figures = data['figures']
-        gsims = None
-
-        def_header_fields = ['gsim:', 'magnitude:', 'distance:', 'vs30:']
-        if len(figures) > 0:
-            yield def_header_fields +\
-                [''] * (1 + len(data['xvalues']))
-
-            yield [''] * len(def_header_fields) + [data['xlabel']] + data['xvalues']
-
-            if gsims is None:
-                gsims = sorted(figures[0]['yvalues'].keys())
-
-            for gsim in gsims:
-                for fig in figures:
-                    yvalues = fig['yvalues'].get(gsim, None)
-                    if yvalues is not None:
-                        mag, dist, vs30 = fig['magnitude'], fig['distance'], fig['vs30']
-                        yield [gsim, mag, dist, vs30, fig['ylabel']] + yvalues
+# class TextResponseCreator:
+# 
+#     def __init__(self, data, horizontal=True, delimiter=';'):
+#         self.data = data
+#         self.horizontal = horizontal
+#         self.delimiter = delimiter
+# 
+#     def to_string_matrix(self, data):
+#         '''Abstract-like method to be implemented in subclasses
+# 
+#         :return: a list of sub-lists, where each sub-list is a list of
+#         strings representing a row to be printed to the csv. The orientation
+#         (horizontal vs vertical) will be handled in the __str__ method'''
+#         raise NotImplementedError()
+# 
+#     @staticmethod
+#     def scalar2str(value):
+#         if value is None:
+#             return ''
+#         if isinstance(value, str):
+#             return value
+#         if isinstance(value, bytes):
+#             return value.decode('utf8')
+#         try:
+#             if np.isnan(value):
+#                 return ''
+#         except TypeError:
+#             pass
+#         return str(value)
+# 
+#     def __str__(self):
+#         fileobj = StringIO()
+#         data2print = self.to_string_matrx(self.data)
+#         if not self.horizontal:
+#             data2print = zip(*data2print)
+# 
+#         csv_writer = csv.writer(fileobj, delimiter=self.delimiter,
+#                                 quotechar='"',
+#                                 quoting=csv.QUOTE_MINIMAL)
+#         for row in data2print:
+#             csv_writer.writerow([self.scalar2str(r) for r in row])
+#         ret = fileobj.getvalue()
+#         fileobj.close()
+#         return ret
+# 
+# 
+# class TrellisTextResponseCreator(TextResponseCreator):
+# 
+#     def to_string_matrx(self, data):
+#         figures = data['figures']
+#         gsims = None
+# 
+#         def_header_fields = ['gsim:', 'magnitude:', 'distance:', 'vs30:']
+#         if len(figures) > 0:
+#             yield def_header_fields +\
+#                 [''] * (1 + len(data['xvalues']))
+# 
+#             yield [''] * len(def_header_fields) + [data['xlabel']] + data['xvalues']
+# 
+#             if gsims is None:
+#                 gsims = sorted(figures[0]['yvalues'].keys())
+# 
+#             for gsim in gsims:
+#                 for fig in figures:
+#                     yvalues = fig['yvalues'].get(gsim, None)
+#                     if yvalues is not None:
+#                         mag, dist, vs30 = fig['magnitude'], fig['distance'], fig['vs30']
+#                         yield [gsim, mag, dist, vs30, fig['ylabel']] + yvalues

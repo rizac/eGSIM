@@ -37,21 +37,19 @@ def get_gsims(params):
     TRT = 'trt'  # pylint: disable=invalid-name
 
     gsims = params[GSIM]
-    if gsims and params.get(IMT, None):
+    if gsims and IMT in params:
         chosen_imts = set(params[IMT])
         gsims = [gsim for gsim in gsims if chosen_imts & gsim.imts]
 
-    if gsims:
+    if gsims and TRT in params and MODEL in params:
         trts = set(params[TRT])
-        tr_model = params.get(MODEL, None)
-        if tr_model:
-            # Instantiate the selection object with a database as argument:
-            trts = get_feature_properties(tr_model,
-                                          lon0=params[LON],
-                                          lat0=params[LAT],
-                                          trts=params[TRT],
-                                          lon1=params.get(LON2, None),
-                                          lat1=params.get(LAT2, None), key='OQ_TRT')
+        tr_model = params[MODEL]
+        trts = get_feature_properties(tr_model,
+                                      lon0=params[LON],
+                                      lat0=params[LAT],
+                                      trts=params[TRT],
+                                      lon1=params.get(LON2, None),
+                                      lat1=params.get(LAT2, None), key='OQ_TRT')
         gsims = [gsim for gsim in gsims if gsim.trt in trts]
 
     return sorted(str(gsim) for gsim in gsims)
