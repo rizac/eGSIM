@@ -15,11 +15,13 @@
 
 {% block body %}
 <div class='flexible d-flex flex-row'>
-<div id='toc' class='px-4 pt-3' style='overflow:auto'>
+<div id='toc' class='shadow px-4 pt-3' style='overflow:auto'>
 </div>
-<div class='flexible text-justify px-4 pt-3'>
+<div class='flexible text-justify px-5 pt-3'>
 <div class='content'>
 
+<!-- NOTE FOR DEVELOPERS: H2 and H3 MUST HAVE AN ID, THE TOC WILL BE GENERATED
+AUTOMATICALLY AT THE PAGE BOTTOM -->
 
 <!--  NOTE FOR GENERATING THE PAGE WITH wkhtml...:
 wkhtmltopdf --no-stop-slow-scripts --print-media-type -B 25 -T 25 -L 25 -R 25 --title "eGSIM API Documentation" http://127.0.0.1:8000/service/apidoc ~/Desktop/egsim.pdf
@@ -156,7 +158,7 @@ req = Request("write here your eGSIM endpoint URL", data=yamldata)</code></pre>
 <p>
 Request parameters can be input in three ways: in the URL of a GET request, in a YAML- or
 JSON-formatted text file in case of POST request, or via input components of the
-web Graphical User Interface (GUI) thorugh a web browser.
+web Graphical User Interface (GUI) through a web browser.
 eGSIM supports the following parameter types:
 </p>
 
@@ -253,7 +255,7 @@ section below.
 
 <h3 id="responsedata">Response data</h3>
 <p>
-The response data type of a successfully fullfilled request might depend on the service used and
+The response data type of a successfully fulfilled request might depend on the service used and
 the parameter issued in the request, but all eGSIM services can return data at the least in CSV
 and JSON formatted text (bytes sequences). 
 JSON is by far preferable in web applications
@@ -297,7 +299,7 @@ Notes: the code and the message are standard HTTP numeric status codes &ge;400 a
 text. For invalid parameters, the code is 400. In this case the the parameter 'errors' might
 be provided (in all other cases it's missing), and it is a list of objects with these
 properties: domain (indicating the parameter name raising the error), message
-(indicating the error message) and reason (indicatin th error reason).
+(indicating the error message) and reason (indicating the error reason).
 </p>
 
 <p>
@@ -336,7 +338,7 @@ except URLError as e1:
 <h2 id="gsimselection">Gsim selection</h2>
 <p><b>Endpoint: <code>{{ baseurl }}/{{ gsimsel }}</code></b></p>
 <p>
-This simple service pefrorms a GMPE selection based on several filtering parameter,
+This simple service performs a GMPE selection based on several filtering parameter,
 including matching tectonic regions defined in specified Area source (or Tectonic region) models.
 </p>
 
@@ -375,7 +377,7 @@ better visualization.
 <h2 id="trellisplots">Trellis plots</h2>
 <p><b>Endpoint: <code>{{ baseurl }}/{{ trellis }}</code></b></p>
 <p>
-Trellis plots provide an understanding of the manner in which each GMPE characterises the ground
+Trellis plots provide an understanding of the manner in which each GMPE characterizes the ground
 motion scaling with respect to the properties of the seismic source, and the attenuation of the
 motion with respect to distance. By means of the
 underlying GMPE-SMTK library, eGSIM can generate different plot types:
@@ -464,13 +466,13 @@ Trellis plot data returned in JSON format will have the following structure:
 }</code></pre>
 <p class='footnote'>
 Notes: All plots share the same x axis and x values, thus for performance reasons
-those veriables are not repeated inside each nested object. Magnitude and distance
+those variables are not repeated inside each nested object. Magnitude and distance
 attributes of each nested object are null for those plot type using them as x axis values
 and not as iteration parameter to generate several plots. 
 </p>
 
 
-<h4 style='page-break-before: always !important;'>CSV</h4>
+<h4>CSV</h4>
 <p>
 Trellis plot data returned in CSV format will have the following structure.
 <br>
@@ -1201,10 +1203,17 @@ document.querySelectorAll('h2, h3').forEach((elm, index) => {
         subsecIndex ++;
     }
     var text = setupH(elm, secIndex, subsecIndex);
-    tocItemsHTML.push(`${subsecIndex ? '&nbsp;'.repeat(4) : ''} <a href="#${elm.getAttribute('id')}">${text}</a>`); 
+    tocItemsHTML.push(`<a class='d-block rounded p-1 menu-item' href="#${elm.getAttribute('id')}">${subsecIndex ? '&nbsp;'.repeat(4) : ''}${text}</a>`); 
 });
-document.querySelector('#toc').innerHTML = `<div>${tocItemsHTML.join('</div><div>')}</div>`;
+document.querySelector('#toc').innerHTML = `${tocItemsHTML.join('\n')}`;
 
+/* function tocClicked(element){
+    for (var divItem of document.getElementById('toc').querySelectorAll('div.menu-item')){
+        divItem.classList.remove("active");
+    }
+    element.parentNode.classList.add("active");
+    return true; //prevents # in URL ?
+} */
 </script>
 
 {% endblock %}

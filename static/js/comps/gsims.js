@@ -104,6 +104,13 @@ Vue.component('gsims', {
         this.map = map;
         map.on("click", this.clickHandler);
     },
+    activated: function(){
+        // Called when a kept-alive component is activated to fix leaflet problems on resize.
+        // See https://vuejs.org/v2/api/#activated
+        // https://github.com/Leaflet/Leaflet/issues/4835#issuecomment-241445225
+        var map = this.map;
+        setTimeout(function(){ map.invalidateSize()}, 100);
+    },
     methods:{
         clickHandler: function(event) {
             // destroy current vue popup component to free memory and all bound props which

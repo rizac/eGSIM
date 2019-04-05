@@ -1,4 +1,8 @@
 '''
+Tests array fields functionalities
+(array fields are django textfields which
+accept scalar and vectors as string inputs)
+
 Created on 16 Feb 2018
 
 @author: riccardo
@@ -27,10 +31,10 @@ from egsim.core.utils import isscalar
     ('3.135e+2:100:413.5', [313.5, 413.5]),
     ('3.135e+2:100:413.5000001', [313.5, 413.5]),
     ('3.135e+2:100:413.4999999', [313.5]),
-    ("[123.56]", [123.56]),  # check that we return an array (brackets explicitly given)
+    ("[123.56]", [123.56]),  # check that we return an array (brackets given)
     ("123.56", 123.56),  # check we return a scalar (no brackets)
     ("1  , 55, 67.5", [1, 55, 67.5]),  # check no need for brackets in json
-    ("[1  , 55, 67.5]", [1, 55, 67.5]),  # check this is the same as above (standard json)
+    ("[1  , 55, 67.5]", [1, 55, 67.5]),  # check this is the same as above
     ("1 55   67.5", [1, 55, 67.5]),  # check shlex
     ("[1 55   67.5]", [1, 55, 67.5]),  # check this is the same as above
     ("[  1 55   67.5   ]", [1, 55, 67.5]),  # (spaces after brackets ignored)
@@ -41,11 +45,14 @@ from egsim.core.utils import isscalar
     ("0:1:9.99999999999999", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     ("[0.274:0.137:0.959]", [0.274, .411, .548, .685, .822, .959]),
     # mixed notations, check all these are the same:
-    ("[0.274:0.137:0.959 5 6.67]", [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
-    ("0.274:0.137:0.959 5  6.67", [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
-    ("0.274:0.137:0.959,  5,  6.67", ValidationError),  # json invalid with semicolon
+    ("[0.274:0.137:0.959 5 6.67]",
+     [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
+    ("0.274:0.137:0.959 5  6.67",
+     [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
+    ("0.274:0.137:0.959,  5,  6.67", ValidationError),  # json invalid with ":"
     # this should work (quote):
-    ('"0.274:0.137:0.959", 5 ,  6.67', [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
+    ('"0.274:0.137:0.959", 5 ,  6.67',
+     [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
     ("0.274:0.137:0.959, 5 6.67", ValidationError),
     ("", []),
     ("[]", []),
@@ -58,7 +65,7 @@ def test_to_python(input, expected):
     n = NArrayField()
     
     if expected == ValidationError:
-        with pytest.raises(ValidationError):
+        with pytest.raises(ValidationError):  # @UndefinedVariable
             val = n.to_python(input)
     else:
         val = n.to_python(input)
@@ -69,17 +76,18 @@ def test_to_python(input, expected):
         if len_ > 0:
             min_ = val if isscalar(val) else min(val)
             max_ = val if isscalar(val) else max(val)
-            with pytest.raises(ValidationError):
+            with pytest.raises(ValidationError):  # @UndefinedVariable
                 NArrayField(min_value=min_+1).to_python(val)
-            with pytest.raises(ValidationError):
+            with pytest.raises(ValidationError):  # @UndefinedVariable
                 NArrayField(max_value=max_-1).to_python(val)
-            with pytest.raises(ValidationError):
+            with pytest.raises(ValidationError):  # @UndefinedVariable
                 NArrayField(min_count=len_+1).to_python(val)
-            with pytest.raises(ValidationError):
+            with pytest.raises(ValidationError):  # @UndefinedVariable
                 NArrayField(max_count=len_-1).to_python(val)
             # test ok case by providing boundary conditions:
-            val2 = NArrayField(max_count=len_+1, min_count=len_-1,
-                               min_value=min_-1, max_value=max_+1).to_python(val)
+            val2 = \
+                NArrayField(max_count=len_+1, min_count=len_-1,
+                            min_value=min_-1, max_value=max_+1).to_python(val)
             # test ok case by providing boundary conditions as arrays (val):
             val2 = NArrayField(max_count=len_+1, min_count=len_-1,
                                min_value=val, max_value=val).to_python(val)

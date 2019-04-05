@@ -379,26 +379,35 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
     to regex and all matching elements will be returned'''
 
     def to_python(self, value):
-        if isinstance(value, str):
-            value = [value]
-#         elif value is None:
-#             value = []
-        values = set()
-        for val in value:
-            if not val:
-                continue
-            if not isinstance(val, str) or \
-                    ('*' not in val and '?' not in val and not ('[' in val and ']' in val)):
-                # no special characters, avoid unnecessary overhead, add string:
-                values.add(val)
-            else:
-                reg = MultipleChoiceWildcardField.to_regex(val)
-                for k, _ in self.choices:
-                    if reg.match(str(k)):
-                        values.add(k)
-            if len(values) == len(self.choices):
-                break
-        return super(MultipleChoiceWildcardField, self).to_python(list(values))
+        '''converts strings with wildcards to matching elements, and calls the
+        super method with the converted value. For valid wilcard characters,
+        see https://docs.python.org/3.4/library/fnmatch.html'''
+        # value might be None, string, list. Call FIRST the super method
+        # which raises if value is truthy AND is not a (list, tuple), otherwise
+        # assures that value is a list of strings
+        # self.validate will be called later and will check that any item
+        # in the list is acceptable (choosable)
+        if value and isinstance(value, str):
+            value = [value]  # no need to call super
+        else:
+            value = super(MultipleChoiceWildcardField, self).to_python(value)
+            # value is now a list of strings (empty if value was falsy)
+        if value:
+            # now convert wildcard strings to matching elements
+            values = {}  # use a dict to preserve insertion order and avoid duplicates
+            for val in value:
+                possible_values = [val]
+                if '*' in val or '?' in val or ('[' in val and ']' in val):
+                    possible_values = []
+                    reg = MultipleChoiceWildcardField.to_regex(val)
+                    for choice, _ in self.choices:
+                        if reg.match(str(choice)):
+                            possible_values.append(choice)
+                for pval in possible_values:
+                    if pval not in values:
+                        values[pval] = None  # None or whatever, doesn't matter
+            value = list(values)
+        return value
 
     @staticmethod
     def to_regex(value):
