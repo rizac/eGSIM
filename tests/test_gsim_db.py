@@ -21,11 +21,14 @@ def test_db_0(django_db_setup):
     # FIXME: see help_text!!!!
 
     # ANyway, populate db:
-    trt1 = Trt.objects.create(key='active_shallow_crust')
-    trt2 = Trt.objects.create(key='stable_shallow_crust')
+    trt1 = Trt.objects.\
+        create(key='active_shallow_crust')  # pylint: disable=no-member
+    trt2 = Trt.objects.\
+        create(key='stable_shallow_crust')  # pylint: disable=no-member
 
-    imt1 = Imt.objects.create(key='PGA')
-    imt2 = Imt.objects.create(key='SA', needs_args=True)
+    imt1 = Imt.objects.create(key='PGA')  # pylint: disable=no-member
+    imt2 = Imt.objects.\
+        create(key='SA', needs_args=True)  # pylint: disable=no-member
 
     gsims = []
     for imt, trt, warn in product([imt1, imt2], [trt1, trt2],
@@ -82,10 +85,7 @@ def test_db_0(django_db_setup):
     test1 = [_ for _ in get_gsims(trts=[trt1.key])]
     assert len(test1) == 4
 
-    # supplying instances works as well:
-    # try to supply two imts, we should get all gsims again:
-    
-
+    # select_related does not seem to add duplicates:
     sel1 = _get_gsims(select_related=False).all()
     sel2 = _get_gsims(select_related=True).all()
     assert len(sel1) == len(sel2)

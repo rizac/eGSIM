@@ -14,46 +14,46 @@ from shapefile import Reader
 from shapely.geometry import Point, shape, Polygon, mapping
 
 
-def find_shp(root):
-    '''finds all shape file ('.shp') in the specified directory `root` (recursive search)'''
-    shapefiles = []
-    for (dirpath, dirnames, filenames) in walk(root):
-        shapefiles.extend(join(dirpath, f) for f in filenames if splitext(f)[1] == '.shp')
-    return shapefiles
+# def find_shp(root):
+#     '''finds all shape file ('.shp') in the specified directory `root` (recursive search)'''
+#     shapefiles = []
+#     for (dirpath, dirnames, filenames) in walk(root):
+#         shapefiles.extend(join(dirpath, f) for f in filenames if splitext(f)[1] == '.shp')
+#     return shapefiles
 
 
-def to_geojson(*shapefiles):
-    '''reads the given shape files ('.shp') and return them as a 'FeatureCollection'
-    geojson dict'''
-    features = [feat for shapefile in shapefiles for feat in to_geojson_feature(shapefile)]
-    return {"type": "FeatureCollection", 'features': features}
+# def to_geojson(*shapefiles):
+#     '''reads the given shape files ('.shp') and return them as a 'FeatureCollection'
+#     geojson dict'''
+#     features = [feat for shapefile in shapefiles for feat in to_geojson_features(shapefile)]
+#     return {"type": "FeatureCollection", 'features': features}
 
 
-def to_geojson_feature(shapefilepath):
-    '''reads the given shape file ('.shp') and returns it as a list of geojson
-    features of the form:
-    ```
-        {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [125.6, 10.1]
-                },
-            "properties": {
-                "name": "Dinagat Islands"
-            }
-        }
-    ```
-    '''
-    shp = Reader(shapefilepath)  # open the shapefile
-    shapes = shp.shapes()  # get all the polygons (class shapefile._Shape)
-    records = shp.records()
-    fields = [field[0] for field in shp.fields[1:]]
-    assert len(shapes) == len(records)
-    # Reminder: geojson syntax: http://geojson.org/:
-    return [{"type": "Feature",
-             'geometry': mapping(shape(s)),  # https://stackoverflow.com/a/40631091
-             'properties': OrderedDict(zip(fields, r))} for s, r in zip(shapes, records)]
+# def to_geojson_features(shapefilepath):
+#     '''reads the given shape file ('.shp') and returns it as a list of geojson
+#     features of the form:
+#     ```
+#         {
+#             "type": "Feature",
+#             "geometry": {
+#                 "type": "Point",
+#                 "coordinates": [125.6, 10.1]
+#                 },
+#             "properties": {
+#                 "name": "Dinagat Islands"
+#             }
+#         }
+#     ```
+#     '''
+#     shp = Reader(shapefilepath)  # open the shapefile
+#     shapes = shp.shapes()  # get all the polygons (class shapefile._Shape)
+#     records = shp.records()
+#     fields = [field[0] for field in shp.fields[1:]]
+#     assert len(shapes) == len(records)
+#     # Reminder: geojson syntax: http://geojson.org/:
+#     return [{"type": "Feature",
+#              'geometry': mapping(shape(s)),  # https://stackoverflow.com/a/40631091
+#              'properties': OrderedDict(zip(fields, r))} for s, r in zip(shapes, records)]
 
 
 def featuresiter(geojson):
