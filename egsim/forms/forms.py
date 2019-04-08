@@ -33,6 +33,7 @@ from egsim.core.utils import vectorize, EGSIM, isscalar, yaml_load, querystring,
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrField, \
     PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField, \
     TrModelField, MultipleChoiceWildcardField
+from egsim.models import aval_imts, aval_gsims, aval_trts
 
 
 class BaseForm(Form):
@@ -407,7 +408,7 @@ class GsimSelectionForm(BaseForm):
     latitude2 = FloatField(label='Latitude 2nd point', min_value=-90, max_value=90,
                            required=False)
     trt = TrtField(label='Tectonic region type(s)', required=False,
-                   initial=list(EGSIM.aval_trts.keys()))
+                   initial=list(aval_trts()))
 
 
     def __init__(self, *args, **kwargs):
@@ -421,10 +422,9 @@ class GsimSelectionForm(BaseForm):
         # Note also that we need to provide the defaults HERE and not in clean() because we
         # have to force GsimField to convert its selected values to string-like
         # classes (see fields.py)
-
-        for key, val in (('gsim', EGSIM.aval_gsims.keys()), ('imt', EGSIM.aval_imts)):
+        for key, val in (('gsim', aval_gsims), ('imt', aval_imts)):
             if self.data.get(key, self.fields[key].initial) == self.fields[key].initial:
-                self.data[key] = list(val)  # Django MultiChoiceField accepts lists or tuples
+                self.data[key] = list(val())  # Django MultiChoiceField accepts lists or tuples
 
     def clean(self):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa

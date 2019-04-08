@@ -20,39 +20,39 @@ from smtk.strong_motion_selector import SMRecordSelector
 from smtk.database_visualiser import DISTANCE_LABEL, get_magnitude_distances
 
 from egsim.core.utils import vectorize
-from egsim.core.shapes import get_feature_properties
+# from egsim.core.shapes import get_feature_properties
 
 
-def get_gsims(params):
-    '''Computes the selection from the given already validated params and returns a filtered
-    list of gsim names'''
-    # params:
-    GSIM = 'gsim'  # pylint: disable=invalid-name
-    IMT = 'imt'  # pylint: disable=invalid-name
-    MODEL = 'model'  # pylint: disable=invalid-name
-    LAT = 'latitude'  # pylint: disable=invalid-name
-    LON = 'longitude'  # pylint: disable=invalid-name
-    LAT2 = 'latitude2'  # pylint: disable=invalid-name
-    LON2 = 'longitude2'  # pylint: disable=invalid-name
-    TRT = 'trt'  # pylint: disable=invalid-name
-
-    gsims = params[GSIM]
-    if gsims and IMT in params:
-        chosen_imts = set(params[IMT])
-        gsims = [gsim for gsim in gsims if chosen_imts & gsim.imts]
-
-    if gsims and TRT in params and MODEL in params:
-        trts = set(params[TRT])
-        tr_model = params[MODEL]
-        trts = get_feature_properties(tr_model,
-                                      lon0=params[LON],
-                                      lat0=params[LAT],
-                                      trts=params[TRT],
-                                      lon1=params.get(LON2, None),
-                                      lat1=params.get(LAT2, None), key='OQ_TRT')
-        gsims = [gsim for gsim in gsims if gsim.trt in trts]
-
-    return sorted(str(gsim) for gsim in gsims)
+# def get_gsims(params):
+#     '''Computes the selection from the given already validated params and returns a filtered
+#     list of gsim names'''
+#     # params:
+#     GSIM = 'gsim'  # pylint: disable=invalid-name
+#     IMT = 'imt'  # pylint: disable=invalid-name
+#     MODEL = 'model'  # pylint: disable=invalid-name
+#     LAT = 'latitude'  # pylint: disable=invalid-name
+#     LON = 'longitude'  # pylint: disable=invalid-name
+#     LAT2 = 'latitude2'  # pylint: disable=invalid-name
+#     LON2 = 'longitude2'  # pylint: disable=invalid-name
+#     TRT = 'trt'  # pylint: disable=invalid-name
+# 
+#     gsims = params[GSIM]
+#     if gsims and IMT in params:
+#         chosen_imts = set(params[IMT])
+#         gsims = [gsim for gsim in gsims if chosen_imts & gsim.imts]
+# 
+#     if gsims and TRT in params and MODEL in params:
+#         trts = set(params[TRT])
+#         tr_model = params[MODEL]
+#         trts = get_feature_properties(tr_model,
+#                                       lon0=params[LON],
+#                                       lat0=params[LAT],
+#                                       trts=params[TRT],
+#                                       lon1=params.get(LON2, None),
+#                                       lat1=params.get(LAT2, None), key='OQ_TRT')
+#         gsims = [gsim for gsim in gsims if gsim.trt in trts]
+# 
+#     return sorted(str(gsim) for gsim in gsims)
 
 
 def get_trellis(params):

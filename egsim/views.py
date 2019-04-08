@@ -22,6 +22,7 @@ from egsim.forms.forms import TrellisForm, GsimSelectionForm, GmdbForm, Residual
 from egsim.core.utils import EGSIM, QUERY_PARAMS_SAFE_CHARS
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
+from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
 
 
 _COMMON_PARAMS = {
@@ -51,9 +52,10 @@ def home(request):
 
 def get_tr_models(request):
     '''returns a JSON response with all tr(tectonic region) models for gsim selection'''
-    return JsonResponse({'models': EGSIM.trmodels(),
-                         'selected_model': list(EGSIM.trmodels().keys())[0]},
+    models = list(aval_trmodels())
+    return JsonResponse({'models': models, 'selected_model': models[0]},
                         safe=False)
+
 
 def apidoc(request):
     '''view for the home page (iframe in browser)'''
@@ -68,7 +70,7 @@ def apidoc(request):
                     try:
                         last_modified = date.fromtimestamp(os.path.getmtime(path))
                         break
-                    except:  # @IgnorePep8
+                    except:  #  @IgnorePep8  pylint: disable=bare-except
                         pass
     return render(request, filename, dict(_COMMON_PARAMS,
                                           query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
@@ -122,12 +124,7 @@ def get_init_params(request):  # @UnusedVariable pylint: disable=unused-argument
     """
     Returns input parameters for input selection. Called when app initializes
     """
-    # FIXME: Referencing _gsims from BaseForm is quite hacky: it prevents re-calculating
-    # the gsims list but there might be better soultions. NOTE: sessions need to much configuration
-    # Cahce session are discouraged.:
-    # https://docs.djangoproject.com/en/2.0/topics/http/sessions/#using-cached-sessions
-    # so for the moment let's keep this hack
-    return JsonResponse([gsim.asjson() for gsim in EGSIM.aval_gsims.values()], safe=False)
+    return JsonResponse(aval_gsims(asjsonlist=True), safe=False)
 
 
 class EgsimQueryViewMeta(type):
@@ -240,7 +237,26 @@ class GsimsView(EgsimQueryView):
 
     @classmethod
     def process(cls, params):
-        return egsim_smtk.get_gsims(params)
+        GSIM = 'gsim'  # pylint: disable=invalid-name
+        TRT = 'trt'  # pylint: disable=invalid-name
+        IMT = 'imt'  # pylint: disable=invalid-name
+        MODEL = 'model'  # pylint: disable=invalid-name
+        LAT = 'latitude'  # pylint: disable=invalid-name
+        LON = 'longitude'  # pylint: disable=invalid-name
+        LAT2 = 'latitude2'  # pylint: disable=invalid-name
+        LON2 = 'longitude2'  # pylint: disable=invalid-name
+        tr_selector = None
+        if MODEL in params or LAT in params or LON in params:
+            try:
+                tr_selector = TrSelector(params[MODEL], params[LON], params[LAT],
+                                         params.get(LON2), params.get(LAT2))
+            except KeyError:
+                raise Exception('at least a tectonic regionalisation name '
+                                '(model), a longitude and a '
+                                'latitude must be specified')
+        # return a list from the QuerySet in order to be json-serializable
+        return list(gsim_names(params.get(GSIM), params.get(IMT),
+                               params.get(TRT), tr_selector))
 
 
 class GmdbPlotView(EgsimQueryView):
@@ -296,7 +312,7 @@ def test(request):
 
 
     initdata = {'component_props': components_props,
-                'gsims': [gsim.asjson() for gsim in EGSIM.aval_gsims.values()]}
+                'gsims': aval_gsims(asjsonlist=True)}
 
     return render(request, 'egsim.html', {'sel_component': comps[1][0],
                                           'components': [_[:3] for _ in comps],

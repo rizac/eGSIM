@@ -10,13 +10,17 @@ import os
 from io import StringIO, BytesIO
 
 import pytest
+from pytest_django import fixtures as pytest_django_fixtures
 import yaml
 import numpy as np
+from django.core.management import call_command
 from django.test.client import Client
 
 from egsim.core.utils import yaml_load
 from egsim.core.utils import querystring
 import json
+from egsim.models import Trt
+
 
 
 # https://docs.pytest.org/en/3.0.0/parametrize.html#basic-pytest-generate-tests-example
@@ -135,3 +139,8 @@ def testdata(request):  # pylint: disable=unused-argument
             return yaml_load(self.path(filename))
 
     return Data()
+
+@pytest.fixture(scope='session')
+def django_db_setup(django_db_setup, django_db_blocker):
+    with django_db_blocker.unblock():
+        call_command('initdb')
