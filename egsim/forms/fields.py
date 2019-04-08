@@ -26,7 +26,9 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrell
 from smtk.residuals.residual_plots import residuals_density_distribution, residuals_with_depth,\
     residuals_with_distance, residuals_with_magnitude, residuals_with_vs30, likelihood
 
-from egsim.core.utils import vectorize, EGSIM, isscalar, _convert, strptime
+from egsim.core.utils import vectorize, EGSIM, isscalar, \
+    apply_if_input_notnone, strptime
+from egsim.models import aval_gsims, aval_imts, aval_trts, aval_trmodels
 
 
 class ArrayField(CharField):
@@ -340,9 +342,9 @@ class GmdbField(EgsimChoiceField):
 
 
 class TrModelField(EgsimChoiceField):
-    '''EgsimChoiceField for Ground motion databases'''
+    '''EgsimChoiceField for Tectonic regionalisation models'''
     # last argument is unused
-    _base_choices = EGSIM.trmodels()
+    _base_choices = [(_, _) for _ in aval_trmodels()]
 
 
 class GmdbSelectionField(EgsimChoiceField):
@@ -352,11 +354,11 @@ class GmdbSelectionField(EgsimChoiceField):
     Returns a tuple of two functions: the domain string and the casting function for validating
     the min and max parameters of the selection domain
     '''
-    _base_choices = {'distance': ['distance', _convert(float)],
-                     'vs30': ['vs30', _convert(float)],
-                     'magnitude': ['magnitude', _convert(float)],
-                     'time': ['time', _convert(strptime)],
-                     'depth': ['depth', _convert(float)]}
+    _base_choices = {'distance': ['distance', apply_if_input_notnone(float)],
+                     'vs30': ['vs30', apply_if_input_notnone(float)],
+                     'magnitude': ['magnitude', apply_if_input_notnone(float)],
+                     'time': ['time', apply_if_input_notnone(strptime)],
+                     'depth': ['depth', apply_if_input_notnone(float)]}
 
 
 class ResidualplottypeField(EgsimChoiceField):
@@ -412,27 +414,19 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
     @staticmethod
     def to_regex(value):
         '''converts string (a unix shell string, see
-        https://docs.python.org/3/library/fnmatch.html) to regexp
+        https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
+        will have the IGNORECASE flag ON
         '''
-        return re.compile(translate(value))
+        return re.compile(translate(value),
+                          re.IGNORECASE)  # @UndefinedVariable
 
 
 class GsimField(MultipleChoiceWildcardField):
     '''MultipleChoiceWildcardField with default `choices` argument, if not provided'''
     def __init__(self, **kwargs):
-        kwargs.setdefault('choices', zip(EGSIM.aval_gsims.keys(), EGSIM.aval_gsims.keys()))
+        kwargs.setdefault('choices', [(_, _) for _ in aval_gsims()])
         kwargs.setdefault('label', 'Ground Shaking Intensity Model(s)')
         super(GsimField, self).__init__(**kwargs)
-
-    def clean(self, value):
-        '''Converts each string into the mapped Egsim class'''
-        # We need to first check 1: that the provided values (string)
-        # are in the list of available Gsims, and then 2: convert thtem to Gsim objects.
-        # Note: the workflow is: self.to_python -> self.validate -> self.clean
-        # And the check 1 is done in self.validate
-        # thus we can not check2 in self.to_python.
-        # Also note that super() alone fails here. See https://stackoverflow.com/a/39313448
-        return [EGSIM.aval_gsims[gsim] for gsim in super(GsimField, self).clean(value)]
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
@@ -452,7 +446,7 @@ class IMTField(MultipleChoiceWildcardField):
     }
 
     def __init__(self, sa_periods_required=True, **kwargs):
-        kwargs.setdefault('choices', zip(EGSIM.aval_imts, EGSIM.aval_imts))
+        kwargs.setdefault('choices', [(_, _) for _ in aval_imts()])
         kwargs.setdefault('label', 'Intensity Measure Type(s)')
         super(IMTField, self).__init__(**kwargs)
         self.sa_periods_required = sa_periods_required
@@ -506,8 +500,7 @@ class TrtField(MultipleChoiceWildcardField, metaclass=EgsimChoiceFieldMeta):
     # Note that this class could have overridden both MultipleChoiceWildcardField and
     # EgsimChoiceField but I suspect we should have needed even more time to adjust which
     # superclass to call
-    _base_choices = EGSIM.aval_trts  #zip(EGSIM.aval_trts.keys(), EGSIM.aval_trts.values(),
-                        # EGSIM.aval_trts.values())
+    _base_choices = [_ for _ in aval_trts(include_oq_name=True)]
 
     def __init__(self, **kwargs):
         # __init__ is NEEDED to replicate what we do in EgsimChoiceField as we do not inheit it
