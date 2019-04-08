@@ -1,15 +1,12 @@
-gsims:
-  - "AkkarBommer2010"
-  - "CauzziFaccioli2008"
+#Test config file for the API gsims service
 
-imts:
-  - "SA"
-  - "PGA"
-  - "PGV"
+# (gsim not provided)
+
+# (imt not provided)
   
 trt: 'stable_shallow_crust'
 
-model: 'share'
+model: 'SHARE'
 
 latitude: 50
 
