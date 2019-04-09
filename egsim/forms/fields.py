@@ -417,8 +417,8 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
         will have the IGNORECASE flag ON
         '''
-        return re.compile(translate(value),
-                          re.IGNORECASE)  # @UndefinedVariable
+        return re.compile(translate(value))
+                          # , re.IGNORECASE)  # @UndefinedVariable
 
 
 class GsimField(MultipleChoiceWildcardField):

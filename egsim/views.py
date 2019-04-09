@@ -51,9 +51,20 @@ def home(request):
 
 
 def get_tr_models(request):
-    '''returns a JSON response with all tr(tectonic region) models for gsim selection'''
-    models = list(aval_trmodels())
-    return JsonResponse({'models': models, 'selected_model': models[0]},
+    '''Returns a JsonResponse with the data for the '''
+    models = {}
+    selected_model = None
+
+    for (model, trt, geojson) in aval_trmodels(asjsonlist=True):
+        if selected_model is None:
+            selected_model = model
+        if model not in models:
+            models[model] = {}
+        if trt not in models[model]:
+            models[model][trt] = {'type': "FeatureCollection", 'features': []}
+        models[model][trt]['features'].append(json.loads(geojson))
+
+    return JsonResponse({'models': models, 'selected_model': selected_model},
                         safe=False)
 
 
