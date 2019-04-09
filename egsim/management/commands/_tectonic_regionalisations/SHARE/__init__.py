@@ -31,8 +31,9 @@ def create(trts):
                 except KeyError:
                     continue
                 # remove all properties (save space)
-                # and just put our 'OQ_TRT' property
-                feat['properties'] = {'OQ_TRT': trt.key}
+                # put here whatever you need to be accessible in the frontend
+                # (the TRT information will be available in any case)
+                feat['properties'] = {}
                 # Note: the model attribute will be set in the caller
                 # if not present:
                 tecregions.append(TectonicRegion(geojson=json.dumps(feat),

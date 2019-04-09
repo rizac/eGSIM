@@ -181,8 +181,18 @@ def aval_trts(include_oq_name=False):
     return trtobjects.order_by('key').values_list('key', flat=True)
 
 
-def aval_trmodels():
+def aval_trmodels(asjsonlist=False):
+    '''Returns the QueryList of models (strings) if asjsonlist is missing or
+    False,
+    returns QueryList of sub-lists:
+        [model, type, geojson]
+    otherwise (all list elements are strings. Type is the associated Trt key.
+    Geojson can be converted to a dict by calling as usual:
+    `json.dumps(geojson)`)
+    '''
     trobjects = TectonicRegion.objects  # pylint: disable=no-member
+    if asjsonlist is True:
+        return trobjects.values_list('model', 'type__key', 'geojson')
     return trobjects.order_by('model').values_list('model', flat=True).distinct()
 
 
