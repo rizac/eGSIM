@@ -23,22 +23,6 @@ Vue.component('gsims', {
             colorMap: Vue.colorMap() // defined in vueutil.js
         }
     },
-    template:`<div class='flexible d-flex flex-column'>
-        <select v-model='selectedModel' class='form-control mb-2'>
-            <option v-for='mod in modelNames' :key='mod'>
-                {{ mod }}
-            </option>
-        </select>
-        <div :id='id' class='flexible' style='font: inherit !important'></div>
-        </div>`,
-    created: function(){
-        this.post(this.tr_models_url).then(response => {
-            if (response && response.data){
-                this.models = response.data.models;
-                this.form.model.val = response.data.selected_model || Object.keys(response.data.models)[0];
-            } 
-        });
-    },
     watch:{
         selectedModel: function(oldVal, newVal){
             if(newVal != oldVal){
@@ -62,22 +46,23 @@ Vue.component('gsims', {
             }
         }
     },
+    template:`<div class='flexible d-flex flex-column'>
+        <select v-model='selectedModel' class='form-control mb-2'>
+            <option v-for='mod in modelNames' :key='mod'>
+                {{ mod }}
+            </option>
+        </select>
+        <div :id='id' class='flexible' style='font: inherit !important'></div>
+        </div>`,
+    created: function(){
+        this.post(this.tr_models_url).then(response => {
+            if (response && response.data){
+                this.models = response.data.models;
+                this.form.model.val = response.data.selected_model || Object.keys(response.data.models)[0];
+            } 
+        });
+    },
     mounted: function(){
-        // models: object of names (string) mapped to the geojson featurecollection object:
-        // { "type": 'FeatureCollection',
-        //   "features": [
-        //        {
-        //          "type": "Feature",
-        //          "geometry": {
-        //            "type": "Point",
-        //            "coordinates": [125.6, 10.1]
-        //          },
-        //          "properties": {
-        //            "OQ_TRT": "Active shallow crust"  // THIS PROPERTY IS MANDATORY!
-        //          }
-        //        }, ...
-        //       ]
-        // }
         var map = L.map(this.id, {center: [48, 7], zoom: 4});
         
         // provide two base layers. Keep it simple as many base layers are just to shof off
@@ -187,20 +172,23 @@ Vue.component('gsims', {
             });
     
             overlays = this.overlays = {};
-            var geojson = this.models[this.selectedModel] || {};
-            var features = ((geojson.features || geojson) || []);
-            // group features by their feature.property.OQ_TRT (openquake tectonic region type),
-            // the Object featureCollections maps a OQ_TRT to a geojson featureCollection: 
-            var featureCollections = {};
-            features.forEach(feature => {
-                var t = feature.properties.OQ_TRT;
-                // create feature collection if not already set:
-                if (!featureCollections[t]){
-                    featureCollections[t] = {type: "FeatureCollection", features: []};
-                }
-                // add out feature:
-                featureCollections[t].features.push(feature);
-            });
+            // this.models is a dict of model (string) mapped to a dict representing the model
+            // data (see below)
+            var featureCollections = this.models[this.selectedModel] || {};
+            // featureCollections is a dict of TRT (string) mapped to a Geojson
+            // feature collection of the form:
+            // { "type": 'FeatureCollection',
+            //   "features": [
+            //        {
+            //          "type": "Feature",
+            //          "geometry": {
+            //             "type": "Point",
+            //             "coordinates": [125.6, 10.1]
+            //          },
+            //          "properties": {}  // empty for perf. reasons
+            //        }, ...
+            //   ]
+            // }
     
             // update the map:
             Object.keys(featureCollections).forEach(key => {
@@ -232,14 +220,13 @@ Vue.component('gsims', {
             
          },
          getStyle: function(trName){
-             // FIXME: is there any documentation about the styling properties????!!!!:
-             // The following where found by playing around with it and googling A LOT
+             // FIXME: is there any *EASILY accessible* documentation about the styling properties????!!!!:
              return {
                  fillColor: this.colorMap.get(trName),
                  fillOpacity: 0.2,  // if you remove this, it defaults to 0.2 (checked on the map)
                  color: this.colorMap.get(trName),
                  opacity: .5,
-                 weight: .25,  // areas border width (did not find any doc, just palyed around and checked ion the map)
+                 weight: .25,  // areas border width (found out by playing around + visual check)
              };
          },
          onEachFeature: function(feature, layer) {
