@@ -28,6 +28,10 @@ from smtk.residuals.residual_plots import residuals_density_distribution, residu
 
 from egsim.core.utils import vectorize, EGSIM, isscalar, \
     apply_if_input_notnone, strptime
+    
+# IMPORTANT: do not access the database at module import, as otherwise
+# make migrations does not work! So these methods should be called inside
+# each INSTANCE creation (__init__) not in the class. But this is too late ...
 from egsim.models import aval_gsims, aval_imts, aval_trts, aval_trmodels
 
 
@@ -105,7 +109,7 @@ class ArrayField(CharField):
 
             # check lengths:
             try:
-                self.checkragne(len(values), self.min_count, self.max_count)
+                self.checkrange(len(values), self.min_count, self.max_count)
             except ValidationError as verr:  # just re-format exception string and raise:
                 # msg should be in the form '% not in ...', remove first '%s'
                 msg = verr.message[verr.message.find(' '):]
@@ -117,7 +121,7 @@ class ArrayField(CharField):
             maxval = [maxval] * len(values) if isscalar(maxval) else maxval
             for numval, mnval, mxval in zip(values, chain(minval, repeat(None)),
                                             chain(maxval, repeat(None))):
-                self.checkragne(numval, mnval, mxval)
+                self.checkrange(numval, mnval, mxval)
 
         return values[0] if (len(values) == 1 and not is_vector) else values
 
@@ -133,13 +137,13 @@ class ArrayField(CharField):
         '''Returns True if the given value is in the range defined by minval and maxval
             (endpoints are included). None's in minval and maxval mean: do not check'''
         try:
-            NArrayField.checkragne(value, minval, maxval)
+            NArrayField.checkrange(value, minval, maxval)
             return True
         except ValidationError:
             return False
 
     @staticmethod
-    def checkragne(value, minval=None, maxval=None):
+    def checkrange(value, minval=None, maxval=None):
         '''checks that the given value is in the range defined by minval and maxval
             (endpoints are included). None's in minval and maxval mean: do not check.
             This method does not return any value but raises ValueError if value is not in the
@@ -217,7 +221,7 @@ class NArrayField(ArrayField):
                 dec1 = 0 if idx_dec < 0 else \
                     len(string[idx_dec+1: None if idx_exp < 0 else idx_exp])
                 dec2 = 0 if idx_exp < 0 else -int(string[idx_exp+1:])
-                decimals = max([decimals, dec1, dec2])
+                decimals = max([decimals, dec1 + dec2])
             return decimals  # 0 as we do not care for big numbers (they are int anyway)
         except ValueError:
             return None
@@ -240,114 +244,144 @@ class PointField(NArrayField):
             raise ValidationError(_(str(exc)), code='invalid')
 
 
-class EgsimChoiceFieldMeta(type):
-    '''metaclass for EgsimChoiceField subclasses. Takes the class attribute _base_choices
-    and modifies it into a valid `choices` argument, and creates the dict `cls._mappings`
-    See :class:`EgsimChoiceField` documentation for details'''
-    def __init__(cls, name, bases, nmspc):
-        super(EgsimChoiceFieldMeta, cls).__init__(name, bases, nmspc)
-        base_choices, mappings = [], {}
-        if isinstance(cls._base_choices, dict):
-            mappings = cls._base_choices
-            base_choices = [(k, k) for k in cls._base_choices]
-        else:
-            two_elements = None
-            for item in cls._base_choices:
-                if two_elements is None:
-                    two_elements = len(item) == 2
-                if two_elements:
-                    base_choices.append((item[0], item[0]))
-                    mappings[item[0]] = item[1]
-                else:
-                    base_choices.append((item[0], item[1]))
-                    mappings[item[0]] = item[2]
-        cls._base_choices = base_choices
-        cls._mappings = mappings
+# class EgsimChoiceFieldMeta(type):
+#     '''metaclass for EgsimChoiceField subclasses. Takes the class attribute _base_choices
+#     and modifies it into a valid `choices` argument, and creates the dict `cls._mappings`
+#     See :class:`EgsimChoiceField` documentation for details'''
+#     def __init__(cls, name, bases, nmspc):
+#         super(EgsimChoiceFieldMeta, cls).__init__(name, bases, nmspc)
+#         base_choices, mappings = [], {}
+#         if isinstance(cls._base_choices, dict):
+#             mappings = cls._base_choices
+#             base_choices = [(k, k) for k in cls._base_choices]
+#         else:
+#             two_elements = None
+#             for item in cls._base_choices:
+#                 if two_elements is None:
+#                     two_elements = len(item) == 2
+#                 if two_elements:
+#                     base_choices.append((item[0], item[0]))
+#                     mappings[item[0]] = item[1]
+#                 else:
+#                     base_choices.append((item[0], item[1]))
+#                     mappings[item[0]] = item[2]
+#         cls._base_choices = base_choices
+#         cls._mappings = mappings
+# 
+# 
+# class EgsimChoiceField(ChoiceField, metaclass=EgsimChoiceFieldMeta):
+#     '''Choice field which returns a user defined object mapped to the selected item
+# 
+#     Subclasses should implement a _base_choices CLASS attribute as either:
+#         1) a list/tuple of 3-element iterables:
+#             [(A, B, C), ... ]
+#         where the 1st element (A) is the actual value to be set on the model,
+#         the 2nd element (B) is the human-readable name (this is django ChoiceField default
+#         behavior) **and** the 3rd element is the object to be returned after validation.
+# 
+#         2) A dict of where dict keys will be the field names *and* field values and the
+#         dict values will be the objectw to be returned after validation. In other words,
+#         a dictw of the form:
+#             {A:B, ....}
+#         will be treated as a list/tuple of the form (see above):
+#             [(A, A, B), ... ]
+# 
+#     *Note*: the _base_choices attribute will be modified at *class creation* (thus only once)
+#     reulting into a modified _base_choices attribute and a newly creates _mappings dict.
+#     See :class:`EgsimChoiceFieldMeta` above for details
+#     '''
+#     _base_choices = []  # modified at class creation, you should override it but not access it
+# 
+#     def __init__(self, **kwargs):
+#         kwargs['choices'] = self._base_choices   # override if provided
+#         super(EgsimChoiceField, self).__init__(**kwargs)
+# 
+#     def map(self, field_value, mapped_obj):
+#         '''returns the mapping for the specific value. By default, returns the third element
+#         of self._base_choices[i], where i is the index such as self._base_choices[i] == value
+# 
+#         :param value: a (usually string) value belonging to one of this field choices
+#         '''
+#         return mapped_obj
+# 
+#     def clean(self, value):
+#         # super() alone fails here. See
+#         # https://stackoverflow.com/a/39313448
+#         value = super(EgsimChoiceField, self).clean(value)  # already parsed
+#         return self.map(value, self._mappings[value])  # pylint: disable=no-member
 
 
-class EgsimChoiceField(ChoiceField, metaclass=EgsimChoiceFieldMeta):
-    '''Choice field which returns a user defined object mapped to the selected item
-
-    Subclasses should implement a _base_choices CLASS attribute as either:
-        1) a list/tuple of 3-element iterables:
-            [(A, B, C), ... ]
-        where the 1st element (A) is the actual value to be set on the model,
-        the 2nd element (B) is the human-readable name (this is django ChoiceField default
-        behavior) **and** the 3rd element is the object to be returned after validation.
-
-        2) A dict of where dict keys will be the field names *and* field values and the
-        dict values will be the objectw to be returned after validation. In other words,
-        a dictw of the form:
-            {A:B, ....}
-        will be treated as a list/tuple of the form (see above):
-            [(A, A, B), ... ]
-
-    *Note*: the _base_choices attribute will be modified at *class creation* (thus only once)
-    reulting into a modified _base_choices attribute and a newly creates _mappings dict.
-    See :class:`EgsimChoiceFieldMeta` above for details
-    '''
-    _base_choices = []  # modified at class creation, you should override it but not access it
-
-    def __init__(self, **kwargs):
-        kwargs['choices'] = self._base_choices   # override if provided
-        super(EgsimChoiceField, self).__init__(**kwargs)
-
-    def map(self, field_value, mapped_obj):
-        '''returns the mapping for the specific value. By default, returns the third element
-        of self._base_choices[i], where i is the index such as self._base_choices[i] == value
-
-        :param value: a (usually string) value belonging to one of this field choices
-        '''
-        return mapped_obj
-
-    def clean(self, value):
-        # super() alone fails here. See
-        # https://stackoverflow.com/a/39313448
-        value = super(EgsimChoiceField, self).clean(value)  # already parsed
-        return self.map(value, self._mappings[value])  # pylint: disable=no-member
-
-
-class MsrField(EgsimChoiceField):
-    '''A EgsimChoiceField handling the selected Magnitude Scaling Relation object'''
+class MsrField(ChoiceField):
+    '''A ChoiceField handling the selected Magnitude Scaling Relation object'''
     _base_choices = get_available_magnitude_scalerel()
 
-    def map(self, field_value, mapped_obj):
-        '''overrides super.map in that it returns an instance from a given class'''
-        return mapped_obj()
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices', ((_, _) for _ in self._base_choices))
+        super(MsrField, self).__init__(**kwargs)
+
+    def clean(self, value):
+        '''Converts the given value (string) into the OpenQuake instance
+        and returns the latter'''
+        value = super(MsrField, self).clean(value)
+        return self._base_choices[value]
 
 
-class TrellisplottypeField(EgsimChoiceField):
-    '''A EgsimChoiceField returning the selected `BaseTrellis` class for computing the
+class TrellisplottypeField(ChoiceField):
+    '''A ChoiceField returning the selected `BaseTrellis` class for computing the
         Trellis plots'''
-    _base_choices = (
-        ('d', 'IMT vs. Distance', DistanceIMTTrellis),
-        ('m', 'IMT vs. Magnitude', MagnitudeIMTTrellis),
-        ('s', 'Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis),
-        ('ds', 'IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
-        ('ms', 'IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
-        ('ss', 'Magnitude-Distance Spectra  (st.dev)', MagnitudeDistanceSpectraSigmaTrellis)
-    )
+    _base_choices = {
+        'd': ('IMT vs. Distance', DistanceIMTTrellis),
+        'm': ('IMT vs. Magnitude', MagnitudeIMTTrellis),
+        's': ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis),
+        'ds': ('IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
+        'ms': ('IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
+        'ss': ('Magnitude-Distance Spectra  (st.dev)', MagnitudeDistanceSpectraSigmaTrellis)
+    }
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices',
+                          [(k, v[0]) for k, v in self._base_choices.items()])
+        super(TrellisplottypeField, self).__init__(**kwargs)
+
+    def clean(self, value):
+        '''Converts the given value (string) into the OpenQuake instance
+        and returns the latter'''
+        value = super(TrellisplottypeField, self).clean(value)
+        return self._base_choices[value][1]
 
 
-class GmdbField(EgsimChoiceField):
+class GmdbField(ChoiceField):
     '''EgsimChoiceField for Ground motion databases'''
     # last argument is unused
-    _base_choices = zip(EGSIM.gmdb_names(), EGSIM.gmdb_names(), repeat(''))
+    # _base_choices = zip(EGSIM.gmdb_names(), EGSIM.gmdb_names(), repeat(''))
 
-    def map(self, field_value, mapped_obj):
-        '''overrides super.map in that it does not return the third argument of _base_choices
-        above but the Ground motion database lazily created only on demand because
-        time-consuming'''
-        return EGSIM.gmdb(field_value)
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices',
+                          [(_, _) for _ in EGSIM.gmdb_names()])
+        super(GmdbField, self).__init__(**kwargs)
+
+    def clean(self, value):
+        '''Converts the given value (string) into the OpenQuake instance
+        and returns the latter'''
+        value = super(GmdbField, self).clean(value)
+        return EGSIM.gmdb(value)
+
+#     def map(self, field_value, mapped_obj):
+#         '''overrides super.map in that it does not return the third argument of _base_choices
+#         above but the Ground motion database lazily created only on demand because
+#         time-consuming'''
+#         return EGSIM.gmdb(field_value)
 
 
-class TrModelField(EgsimChoiceField):
+class TrModelField(ChoiceField):
     '''EgsimChoiceField for Tectonic regionalisation models'''
-    # last argument is unused
-    _base_choices = [(_, _) for _ in aval_trmodels()]
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices',
+                          [(_, _) for _ in aval_trmodels()])
+        super(TrModelField, self).__init__(**kwargs)
 
 
-class GmdbSelectionField(EgsimChoiceField):
+class GmdbSelectionField(ChoiceField):
     '''Implements the ***FILTER*** (smtk code calls it 'selection') field on a Ground motion
     database (e.g., distance, magnitude, vs30), i.e., the domain on which a gmdb has to be
     filtered.
@@ -360,19 +394,41 @@ class GmdbSelectionField(EgsimChoiceField):
                      'time': ['time', apply_if_input_notnone(strptime)],
                      'depth': ['depth', apply_if_input_notnone(float)]}
 
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices',
+                          [(k, v[0]) for k, v in self._base_choices.items()])
+        super(GmdbSelectionField, self).__init__(**kwargs)
 
-class ResidualplottypeField(EgsimChoiceField):
+    def clean(self, value):
+        '''Converts the given value (string) into the OpenQuake instance
+        and returns the latter'''
+        value = super(GmdbSelectionField, self).clean(value)
+        return self._base_choices[value][1]
+
+
+class ResidualplottypeField(ChoiceField):
     '''An EgsimChoiceField which returns the selected function to compute residual plots'''
-    _base_choices = (
-        ('res', 'Residuals density distribution', residuals_density_distribution),
-        ('lh', 'Likelihood', likelihood),
-        ('mag', 'Residuals vs. Magnitude', residuals_with_magnitude),
-        ('dist', 'Residuals vs. Distance', residuals_with_distance),
-        ('vs30', 'Residuals vs. Vs30', residuals_with_vs30),
-        ('depth', 'Residuals vs. Depth', residuals_with_depth),
-        ('site', 'Residuals vs. Site', None),
-        ('intra', 'Intra Event Residuals vs. Site', None),
-    )
+    _base_choices = {
+        'res': ('Residuals density distribution', residuals_density_distribution),
+        'lh': ('Likelihood', likelihood),
+        'mag': ('Residuals vs. Magnitude', residuals_with_magnitude),
+        'dist': ('Residuals vs. Distance', residuals_with_distance),
+        'vs30': ('Residuals vs. Vs30', residuals_with_vs30),
+        'depth': ('Residuals vs. Depth', residuals_with_depth),
+#         'site': ('Residuals vs. Site', None),
+#         'intra': ('Intra Event Residuals vs. Site', None),
+    }
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices',
+                          [(k, v[0]) for k, v in self._base_choices.items()])
+        super(ResidualplottypeField, self).__init__(**kwargs)
+
+    def clean(self, value):
+        '''Converts the given value (string) into the OpenQuake instance
+        and returns the latter'''
+        value = super(ResidualplottypeField, self).clean(value)
+        return self._base_choices[value][1]
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
@@ -490,21 +546,11 @@ class IMTField(MultipleChoiceWildcardField):
             return False
 
 
-class TrtField(MultipleChoiceWildcardField, metaclass=EgsimChoiceFieldMeta):
+class TrtField(MultipleChoiceWildcardField):
     '''MultipleChoiceWildcardField field which also bahaves as kind of EgsimChoiceField
     '''
-
-    # remember: first item is the Django value, second is the Django label, third is
-    # the Egsim value that will be returned from clean. Basically, use internally the tectonic
-    # region names without spaces, and return a OpenQuake tectonic region name (with spaces)
-    # Note that this class could have overridden both MultipleChoiceWildcardField and
-    # EgsimChoiceField but I suspect we should have needed even more time to adjust which
-    # superclass to call
-    _base_choices = [_ for _ in aval_trts(include_oq_name=True)]
-
     def __init__(self, **kwargs):
-        # __init__ is NEEDED to replicate what we do in EgsimChoiceField as we do not inheit it
-        kwargs['choices'] = self._base_choices
+        kwargs.setdefault('choices', [_ for _ in aval_trts(include_oq_name=True)])
         super(TrtField, self).__init__(**kwargs)
 
 #     def clean(self, value):

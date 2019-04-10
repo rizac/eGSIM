@@ -41,7 +41,7 @@ class Test:
         expected_gsims = [_ for _ in expected_gsims if _[0] in ('a', 'A')]
         inputdic['gsim'] = expected_gsims
         resp1 = client.get(self.url, data=inputdic)
-        inputdic['gsim'] = 'a*'
+        inputdic['gsim'] = 'A*'
         resp2 = client.get(self.url, data=inputdic)
         assert resp1.status_code == resp2.status_code == 200
         assert areequal(resp1.json(), resp2.json())

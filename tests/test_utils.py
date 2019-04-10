@@ -5,9 +5,9 @@ Created on 16 Feb 2018
 '''
 from datetime import datetime, date
 
-from egsim.core.utils import vectorize, querystring
-from egsim.forms.fields import MultipleChoiceWildcardField
 import pytest
+
+from egsim.core.utils import vectorize, querystring
 
 
 def test_vectorize():
@@ -37,4 +37,28 @@ def test_querystring():
     value = {'abc': [1, 'a', 1.1, '&invalid']}
     patt = querystring(value)
     assert patt == 'abc=1,a,1.1,%26invalid'
-    
+
+
+@pytest.mark.django_db
+def test_narrayfield_get_decimals():
+    # this should be impoerted inside the test marked with django_db
+    from egsim.forms.fields import NArrayField
+    d0 = NArrayField.get_decimals('1.3e45')
+    assert d0 == 0
+    d0 = NArrayField.get_decimals('1.3e1')
+    assert d0 == 0
+    d0 = NArrayField.get_decimals('1.3e0')
+    assert d0 == 1
+    d1 = NArrayField.get_decimals('1e-45')
+    assert d1 == 45
+    d2 = NArrayField.get_decimals('-5.005601')
+    assert d2 == 6
+    d2 = NArrayField.get_decimals('-5.0')
+    assert d2 == 1
+    d3 = NArrayField.get_decimals('-6')
+    assert d3 == 0
+    d4 = NArrayField.get_decimals('1.3E-6')
+    assert d4 == 7
+    d5 = NArrayField.get_decimals('1.3e45', '1.3E-6', '-6', '-5.005601',
+                                  '1e-45')
+    assert d5 == 45
