@@ -33,7 +33,8 @@ from egsim.core.utils import vectorize, EGSIM, isscalar, yaml_load, querystring,
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrField, \
     PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField, \
     TrModelField, MultipleChoiceWildcardField
-from egsim.models import aval_imts, aval_gsims, aval_trts
+from egsim.models import aval_imts, aval_gsims, aval_trts, \
+    sharing_gsims, shared_imts
 
 
 class BaseForm(Form):
@@ -495,7 +496,7 @@ class GsimImtForm(BaseForm):
         imt_classnames = set(imt_from_string(imtname).__class__.__name__
                              for imtname in cleaned_data.get("imt", []))
 
-        invalid_gsims = self.invalid_gsims(gsims, imt_classnames)
+        invalid_gsims = set(gsims) - set(sharing_gsims(imt_classnames))
 
         if invalid_gsims:
             # instead of raising ValidationError, which is keyed with '__all__'
@@ -503,7 +504,7 @@ class GsimImtForm(BaseForm):
             # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
             # note: pass only invalid_gsims as the result would be equal than passing all gsims
             # but the loop is faster:
-            invalid_imts = self.invalid_imts(invalid_gsims, imt_classnames)
+            invalid_imts = set(imt_classnames) - set(shared_imts(gsims))
             err_gsim = ValidationError(_("%(num)d gsim(s) not defined for all supplied "
                                          "imt(s)"),
                                        params={'num': len(invalid_gsims)}, code='invalid')
@@ -535,19 +536,19 @@ class GsimImtForm(BaseForm):
 
         return invalid_imts
 
-    @classmethod
-    def invalid_gsims(cls, gsims, imts):
-        '''returns a *list* of all invalid gsim(s) from the given selected gsims and imts
-
-        :param gsims: iterable of Egsim objects denoting the selected gsims
-        :param gsims: iterable of strings denoting the selected imts
-        :return: a list of invalid gsims
-        '''
-        if not isinstance(imts, set):
-            imts = set(imts)
-#         if imts == cls._aval_imts:  # as no gsim is defined for all imts, thus return the list
-#             return list(gsims)
-        return [gsim for gsim in gsims if imts - gsim.imts]
+#     @classmethod
+#     def invalid_gsims(cls, gsims, imts):
+#         '''returns a *list* of all invalid gsim(s) from the given selected gsims and imts
+# 
+#         :param gsims: iterable of Egsim objects denoting the selected gsims
+#         :param gsims: iterable of strings denoting the selected imts
+#         :return: a list of invalid gsims
+#         '''
+#         if not isinstance(imts, set):
+#             imts = set(imts)
+# #         if imts == cls._aval_imts:  # as no gsim is defined for all imts, thus return the list
+# #             return list(gsims)
+#         return [gsim for gsim in gsims if imts - gsim.imts]
 
 
 class TrellisForm(GsimImtForm):

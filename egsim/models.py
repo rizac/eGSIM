@@ -50,7 +50,8 @@ class Trt(models.Model):
         # Django does not have hybrid attributes. Workaround is to set the key
         # from the oq_name (https://stackoverflow.com/a/7558665)
         if not self.key:  # it might be empty string (the def.)
-            self.key = self.oq_name.replace(' ', '_').lower()  # pylint: disable=no-member
+            self.key = self.oq_att
+            # self.key = self.oq_name.replace(' ', '_').lower()  # pylint: disable=no-member
         super(Trt, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -118,28 +119,6 @@ def empty_all():
     Trt.objects.all().delete()  # pylint: disable=no-member
 
 
-# def get_gsims_asjson(sort=True):
-#     '''
-#         Returns a tuple of Gsims in json serializable format:
-#         (gsim.key, [gsim.imt1.key, .. gsim.imtN.key], gsim.trt, gsim.warning)
-#         where all tuple elements are strings.
-#
-#         :param sort: returns the Gsim sorted according to their key (Gsim
-#             unique name)
-#     '''
-#     ret = {}  # in python 3.7+ dicts preserve insertion order
-#     manager = Gsim.objects  # pylint: disable=no-member
-#     # https://docs.djangoproject.com/en/2.2/ref/models/querysets/#select-related:
-#     queryset = manager.prefetch_related('imts').select_related('trt')
-#     if sort:
-#         queryset = queryset.order_by('key')
-#     for gsim in queryset.all():
-#         if gsim.key in ret:  # should not happen, but for safety ...
-#             continue
-#         ret[gsim.key] = gsim.asjson()
-#     return tuple(ret.values())
-
-
 def aval_gsims(asjsonlist=False):
     '''Returns a list of available gsims.
 
@@ -164,17 +143,18 @@ def aval_gsims(asjsonlist=False):
 
 def aval_imts():
     '''Returns a QuerySet of strings denoting the available imts'''
-    imtobjects = Imt.objects  # pylint: disable=no-member
-    # return imts mapped to at least one gsim
-    # (https://stackoverflow.com/a/12101599)
-    # for values_list, see: https://stackoverflow.com/a/37205928
-    return imtobjects.annotate(c=Count('gsims')).filter(c__gt=0).\
-        values_list('key', flat=True)
+#     imtobjects = Imt.objects  # pylint: disable=no-member
+#     # return imts mapped to at least one gsim
+#     # (https://stackoverflow.com/a/12101599)
+#     # for values_list, see: https://stackoverflow.com/a/37205928
+#     return imtobjects.annotate(c=Count('gsims')).filter(c__gt=0).\
+#         values_list('key', flat=True)
+    return shared_imts(None)
 
 
 def aval_trts(include_oq_name=False):
     '''Returns a QuerySet of strings denoting the available Trts
-    The Trts are returned sorted alphabetically'''
+    The Trts are returned sorted alphabetically by their keys'''
     trtobjects = Trt.objects  # pylint: disable=no-member
     if include_oq_name:
         return trtobjects.order_by('key').values_list('key', 'oq_name')
@@ -183,10 +163,9 @@ def aval_trts(include_oq_name=False):
 
 def aval_trmodels(asjsonlist=False):
     '''Returns the QueryList of models (strings) if asjsonlist is missing or
-    False,
-    returns QueryList of sub-lists:
+    False. Otherwise, returns QueryList of sub-lists:
         [model, type, geojson]
-    otherwise (all list elements are strings. Type is the associated Trt key.
+    where all list elements are strings (type is the associated Trt key.
     Geojson can be converted to a dict by calling as usual:
     `json.dumps(geojson)`)
     '''
@@ -196,7 +175,49 @@ def aval_trmodels(asjsonlist=False):
     return trobjects.order_by('model').values_list('model', flat=True).distinct()
 
 
-def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None):
+def shared_imts(gsims):
+    '''Returns a QuerySet of strings with the the keys (=unique names) of the
+    imts shared by all supplied gsims
+
+    :param gsims: list of integers (gsim id), gsims instances, or
+        strings denoting a Gsim key
+    '''
+    # Do not expose pubicly the fact that passing None returns all imts
+    # defined for at least one gsim, as the user shopuld use `aval_imts()`
+    # instead
+    imtobjects = Imt.objects  # pylint: disable=no-member
+    min_required_gsims = 1
+    if gsims is not None:
+        min_required_gsims = len(gsims)
+        if not any(isinstance(_, str) for _ in gsims):
+            imtobjects = imtobjects.filter(gsims__in=gsims)
+        else:
+            expr = or_(Q(gsims__key=_) if isinstance(_, str) else Q(gsims=_)
+                       for _ in gsims)
+            imtobjects = imtobjects.filter(expr)
+
+    # return imts mapped to at least `min_required_gsims` gsim
+    # (https://stackoverflow.com/a/12101599)
+    # for values_list, see: https://stackoverflow.com/a/37205928
+    # This assures that, if gsims is given, we return imts matching at
+    # least all supplied gsims
+    # (https://stackoverflow.com/a/8637972)
+    return imtobjects.annotate(kount=Count('gsims')).\
+        filter(kount__gte=min_required_gsims).values_list('key', flat=True)
+
+
+def sharing_gsims(imts):
+    '''Returns a QuerySet of strings with the keys (=unique names)
+    of the gsims defined for all supplied imts
+
+    :param imts: list of integers (imt id), imts instances, or
+        strings denoting an Imt key
+    '''
+    return gsim_names(imts, imts_match_all=True)
+
+
+def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None,
+               imts_match_all=False):
     '''
         Returns a QuerySet
         (https://docs.djangoproject.com/en/2.2/ref/models/querysets/)
@@ -204,16 +225,18 @@ def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None):
         A Gsim name is the OpenQuake name and actually acts as a
         unique key for that Gsim (this is why it is referred as key in the
         Model).
-        Note that Gsims having ANY of the provided imt(s) AND
-        ANY of the provided trt(s) will be returned, where ANY stands for
-        "at least one of".
+        A gsim is returned when it matches ALL the conditions
+        specified by the provided arguments (missing arguments are skipped),
+        which are:
 
         :param gsims: iterable of strings (Gsim.key) or Gsim instances, or
             both. If None (the default), no filter is applied. Otherwise,
             return Gsims whose name matches any of the provided Gsim(s)
         :param imts: iterable of strings (Imt.key) or Imt instances, or both.
             If None (the default), no filter is applied. Otherwise, return
-            Gsims whose imts match any of the provided imt(s)
+            Gsims whose imts match any of the provided imt(s). If
+            `imts_match_all`=True, return Gsims defined for (at least) all
+            the provided imt(s)
         :param trts: iterable of strings (Trt.key) or Trt instances, or both.
             If None (the default), no filter is applied. Otherwise, return
             only Gsims defined for any of the provided trt(s)
@@ -222,10 +245,11 @@ def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None):
             database (see 'TectonicRegion' model) for filtering the search to
             a specific geographical point or rectangle. If None, nothing
             is filtered
-        :param sort: when True (the default), the returned Gsims will be
-            sorted ascending alphabetically
-            (https://docs.djangoproject.com/en/2.2/ref/models/querysets/#order-by)
-    '''
+        :param imts_match_all: boolean, ignored if `imts` is None or missing.
+            When False (the default), any gsim defined for at least *one*
+            of the provided imts will be taken. When True, any gsim defined
+            for at least *all* provided imts will be taken.
+        '''
     # trt can be a trt instance, an int denoting the trt pkey,
     # or a string denoting the trt key field (unique)
     # in the expressions .filter(imts_in=[...]) the arguments in
@@ -253,6 +277,11 @@ def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None):
             expr = or_(Q(imts__key=_) if isinstance(_, str) else Q(imts=_)
                        for _ in imts)
             gsimobjects = gsimobjects.filter(expr)
+
+        if imts_match_all:
+            # https://stackoverflow.com/a/8637972
+            gsimobjects = gsimobjects.annotate(num_imts=Count('imts')).\
+                filter(num_imts__gte=len(imts))
 
     if tr_selector is not None:
         trts = tr_selector.get_trt_names(trts)
@@ -286,18 +315,6 @@ def or_(q_expressions):
     return expr
 
 
-def and_(q_expressions):
-    '''Concatenates the given Q expression with an 'AND'. Returns None if
-    `q_expressions` (iterable) has no items'''
-    expr = None
-    for expr_chunk in q_expressions:
-        if expr is None:
-            expr = expr_chunk
-        else:
-            expr &= expr_chunk
-    return expr
-
-
 # These are the possible combinations
 
 # trts OK
@@ -324,8 +341,8 @@ class TrSelector:
         returned. Otherwise, all Trt(s) *including* the point specified by
         lon0 and lat0 will be returned.
 
-        :param tr_model: string. a tectonic regionalisation model, must be present
-            int the table 'TectonicRegions' under the 'model' column
+        :param tr_model: string. a tectonic regionalisation model, must be
+            present int the table 'TectonicRegions' under the 'model' column
         :param lon0: float, the latitude (in degreees) of the point
         :param lon0: float, the longitude (in degrees) of the point
         '''
@@ -337,7 +354,8 @@ class TrSelector:
                                   (lon1, lat1), (lon1, lat0)])
 
     def get_trt_names(self, trts=None):
-        geojsons = TectonicRegion.objects.filter(model=self.tr_model)
+        tecregobjects = TectonicRegion.objects  # pylint: disable=no-member
+        geojsons = tecregobjects.filter(model=self.tr_model)
         if trts is not None:
             if not any(isinstance(_, str) for _ in trts):
                 geojsons = geojsons.filter(type__in=trts)
@@ -357,16 +375,3 @@ class TrSelector:
                 matched_trts[trt] = None
 
         return list(matched_trts.keys())
-
-# def _or(expressions):
-#     expr = expressions[0]
-#     for expr_ in expressions[1:]:
-#         expr |= expr_
-#     return expr
-# 
-# 
-# def _and(expressions):
-#     expr = expressions[0]
-#     for expr_ in expressions[1:]:
-#         expr &= expr_
-#     return expr
