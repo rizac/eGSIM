@@ -11,11 +11,13 @@ from datetime import date, datetime
 from dateutil import parser as dateparser
 from dateutil.tz import tzutc
 
+from django.conf import settings
 from yaml import safe_load, YAMLError
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
 from smtk import load_database
+from smtk.sm_table import get_dbnames
 
 
 def tostr(obj, none='null'):
@@ -212,6 +214,17 @@ def strptime(obj):
 
     # the datetime has no timezone provided AND is in UTC:
     return dtime
+
+
+def get_gmdb_path():
+    return join(settings.BASE_DIR, 'gmdb.hf5')
+
+
+def get_gmdb_names():
+    fpath = get_gmdb_path()
+    if not isfile(fpath):
+        return []
+    return get_dbnames(fpath)
 
 
 class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/6798042
