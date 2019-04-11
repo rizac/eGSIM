@@ -22,7 +22,6 @@ import json
 from egsim.models import Trt
 
 
-
 # https://docs.pytest.org/en/3.0.0/parametrize.html#basic-pytest-generate-tests-example
 
 
@@ -32,7 +31,7 @@ def pytest_generate_tests(metafunc):
     argument 'client' (which is a fixture defined below)'''
     if 'client' in metafunc.fixturenames:
         client_args = [{'HTTP_USER_AGENT': 'Mozilla/5.0'}, {}]
-        dburls = [_ for _ in client_args if _]
+        # dburls = [_ for _ in client_args if _]
         ids = ["Django Test Client(%s)" % str(_) for _ in client_args]
         # metafunc.parametrize("db", dburls)
         metafunc.parametrize('client', [Client(**_) for _ in client_args],
@@ -121,7 +120,7 @@ def testdata(request):  # pylint: disable=unused-argument
             '''returns the full path (string) of the given data file name
             :param filename: a string denoting the file name inside the test data directory'''
             filepath = os.path.join(self.root, filename)
-            assert os.path.isfile(filepath)
+            # assert os.path.isfile(filepath)
             return filepath
 
         def read(self, filename, decode=None):
@@ -139,6 +138,7 @@ def testdata(request):  # pylint: disable=unused-argument
             return yaml_load(self.path(filename))
 
     return Data()
+
 
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):

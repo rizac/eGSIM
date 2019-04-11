@@ -23,6 +23,7 @@ from egsim.core.utils import EGSIM, QUERY_PARAMS_SAFE_CHARS
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
+from django.forms.fields import MultipleChoiceField
 
 
 _COMMON_PARAMS = {
@@ -146,7 +147,7 @@ class EgsimQueryViewMeta(type):
         super(EgsimQueryViewMeta, cls).__init__(name, bases, nmspc)
         if cls.formclass is not None:
             cls.arrayfields = set(_ for (_, f) in cls.formclass.declared_fields.items()
-                                  if isinstance(f, ArrayField))
+                                  if isinstance(f, (MultipleChoiceField, ArrayField)))
 
 
 class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):

@@ -8,12 +8,27 @@ Created on 2 Jun 2018
 import json
 
 import pytest
+from yaml.error import YAMLError
 from openquake.hazardlib import imt
 
 from egsim.forms.forms import TrellisForm, GsimImtForm
 
 
 GSIM, IMT = 'gsim', 'imt'
+
+
+# @mock.patch('egsim.core import yaml_load', side_effect=yaml_load)
+def test_trellis_load(testdata):
+    # https://stackoverflow.com/a/3166985
+    with pytest.raises(YAMLError) as context:  # @UndefinedVariable
+        TrellisForm.load(testdata.path('trellis1'))
+    with pytest.raises(YAMLError) as context:  # @UndefinedVariable
+        TrellisForm.load(testdata.path('trellis_malformed.yaml'))
+    with pytest.raises(YAMLError) as context:  # @UndefinedVariable
+        TrellisForm.load(testdata.path('trellis_filenot_found.yaml'))
+    _ = TrellisForm.load(testdata.path('request_trellis.yaml'))
+    # do not assert is valid unless you mark it with django_db:
+    # assert _.is_valid()
 
 
 @pytest.mark.django_db
