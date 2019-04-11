@@ -16,6 +16,7 @@ from egsim.forms.forms import TrellisForm, GsimImtForm
 GSIM, IMT = 'gsim', 'imt'
 
 
+@pytest.mark.django_db
 def test_gsimimt_form_invalid(areequal):  # areequal: fixture in conftest.py
     '''tests the gsimimt form invalid case. The form is the base class for all
     forms using imgt and gsim as input'''
@@ -86,6 +87,7 @@ def test_gsimimt_form_invalid(areequal):  # areequal: fixture in conftest.py
     assert areequal(err, expected_err)
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize('data',
                          [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']}),
@@ -114,6 +116,7 @@ def test_gsimimt_form_valid(data,
     assert imts[1].period == 0.2
 
 
+@pytest.mark.django_db
 def test_trellisform_invalid(areequal):
     '''Tests trellis form invalid.
     :param comparator: pytest fixture defined in conftest.py, it is used to
@@ -157,6 +160,7 @@ def test_trellisform_invalid(areequal):
                                '"code": "required"}]}'))
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize('data, expected_yaml, expected_json',
                          [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV'],

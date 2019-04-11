@@ -33,8 +33,7 @@ from egsim.core.utils import vectorize, EGSIM, isscalar, yaml_load, querystring,
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrField, \
     PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField, \
     TrModelField, MultipleChoiceWildcardField
-from egsim.models import aval_imts, aval_gsims, aval_trts, \
-    sharing_gsims, shared_imts
+from egsim.models import aval_imts, aval_gsims, sharing_gsims, shared_imts
 
 
 class BaseForm(Form):
@@ -68,6 +67,22 @@ class BaseForm(Form):
                 self.data[name] = self.fields[name].initial
 
         self.customize_widget_attrs()
+
+    def clean(self):
+        '''Checks that if longitude is provided, also latitude is provided, and vice versa
+            (the same for longitude2 and latitude2)'''
+        cleaned_data = super().clean()
+        # django sets all values provided in self.declared_fields with a
+        # default if the field is not provided, usually falsy
+        # (e.g. [] for MultipleChoiceField. See django.forms.Form._clean_fields)
+        # If the field is required, this behaviour allows to set the 'missing'
+        # error (see e.g. MultipleChoiceField.validate), but if the field
+        # is not required, we want simply the field to be missing, not having
+        # a value set. Hence:
+        for key in list(_ for _ in cleaned_data if _ not in self.data):
+            cleaned_data.pop(key)
+
+        return cleaned_data
 
     def customize_widget_attrs(self):
         '''customizes the widget attributes'''
@@ -394,28 +409,29 @@ class GsimSelectionForm(BaseForm):
     This form is currently only used as validator as the HTML page renderes a map.
     '''
 
-    __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude', 'lat2': 'latitude2',
-                                 'lon2': 'longitude2', 'gmpe': 'gsim'}
+    __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude',
+                                 'lat2': 'latitude2', 'lon2': 'longitude2',
+                                 'gmpe': 'gsim'}
 
     # NOTE: DO NOT set initial
     gsim = GsimField(required=False)
     imt = IMTField(required=False, sa_periods_required=False)
 
     model = TrModelField(label='Tectonic region model', required=False)
-    longitude = FloatField(label='Longitude', min_value=-180, max_value=180, required=False)
-    latitude = FloatField(label='Latitude', min_value=-90, max_value=90, required=False)
-    longitude2 = FloatField(label='Longitude 2nd point', min_value=-180, max_value=180,
-                            required=False)
-    latitude2 = FloatField(label='Latitude 2nd point', min_value=-90, max_value=90,
+    longitude = FloatField(label='Longitude', min_value=-180, max_value=180,
                            required=False)
-    trt = TrtField(label='Tectonic region type(s)', required=False,
-                   initial=list(aval_trts()))
+    latitude = FloatField(label='Latitude', min_value=-90, max_value=90,
+                          required=False)
+    longitude2 = FloatField(label='Longitude 2nd point', min_value=-180,
+                            max_value=180, required=False)
+    latitude2 = FloatField(label='Latitude 2nd point', min_value=-90,
+                           max_value=90, required=False)
+    trt = TrtField(label='Tectonic region type(s)', required=False)
 
 
     def __init__(self, *args, **kwargs):
         '''Overrides init to set default values for gsim and imt'''
         super(GsimSelectionForm, self).__init__(*args, **kwargs)
-
         # Set gsim and imt default.
         # This could be accomplished by simply setting the 'initial' argument
         # in the class-level attributes `gsim` and `imt` (see above), but it would
@@ -423,9 +439,9 @@ class GsimSelectionForm(BaseForm):
         # Note also that we need to provide the defaults HERE and not in clean() because we
         # have to force GsimField to convert its selected values to string-like
         # classes (see fields.py)
-        for key, val in (('gsim', aval_gsims), ('imt', aval_imts)):
-            if self.data.get(key, self.fields[key].initial) == self.fields[key].initial:
-                self.data[key] = list(val())  # Django MultiChoiceField accepts lists or tuples
+#         for key, val in (('gsim', aval_gsims), ('imt', aval_imts)):
+#             if self.data.get(key, self.fields[key].initial) == self.fields[key].initial:
+#                 self.data[key] = list(val())  # Django MultiChoiceField accepts lists or tuples
 
     def clean(self):
         '''Checks that if longitude is provided, also latitude is provided, and vice versa
@@ -496,27 +512,24 @@ class GsimImtForm(BaseForm):
         imt_classnames = set(imt_from_string(imtname).__class__.__name__
                              for imtname in cleaned_data.get("imt", []))
 
-        invalid_gsims = set(gsims) - set(sharing_gsims(imt_classnames))
+        if gsims and imt_classnames:
+            invalid_gsims = set(gsims) - set(sharing_gsims(imt_classnames))
 
-        if invalid_gsims:
-            # instead of raising ValidationError, which is keyed with '__all__'
-            # we add the error keyed to the given field name `name` via `self.add_error`:
-            # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-            # note: pass only invalid_gsims as the result would be equal than passing all gsims
-            # but the loop is faster:
-            invalid_imts = set(imt_classnames) - set(shared_imts(gsims))
-            err_gsim = ValidationError(_("%(num)d gsim(s) not defined for all supplied "
-                                         "imt(s)"),
-                                       params={'num': len(invalid_gsims)}, code='invalid')
-            err_imt = ValidationError(_("%(num)d imt(s) not defined for all supplied "
-                                        "gsim(s)"),
-                                      params={'num': len(invalid_imts)}, code='invalid')
-            self.add_error('gsim', err_gsim)
-            self.add_error('imt', err_imt)
-        else:
-            # replace Egsims objects with strings, as methods using this form/validator
-            # want strings (e.g. trellis, residuals):
-            cleaned_data["gsim"] = [_.name for _ in gsims]
+            if invalid_gsims:
+                # instead of raising ValidationError, which is keyed with '__all__'
+                # we add the error keyed to the given field name `name` via `self.add_error`:
+                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+                # note: pass only invalid_gsims as the result would be equal than passing all gsims
+                # but the loop is faster:
+                invalid_imts = set(imt_classnames) - set(shared_imts(gsims))
+                err_gsim = ValidationError(_("%(num)d gsim(s) not defined for all supplied "
+                                             "imt(s)"),
+                                           params={'num': len(invalid_gsims)}, code='invalid')
+                err_imt = ValidationError(_("%(num)d imt(s) not defined for all supplied "
+                                            "gsim(s)"),
+                                          params={'num': len(invalid_imts)}, code='invalid')
+                self.add_error('gsim', err_gsim)
+                self.add_error('imt', err_imt)
 
         return cleaned_data
 
@@ -536,20 +549,6 @@ class GsimImtForm(BaseForm):
 
         return invalid_imts
 
-#     @classmethod
-#     def invalid_gsims(cls, gsims, imts):
-#         '''returns a *list* of all invalid gsim(s) from the given selected gsims and imts
-# 
-#         :param gsims: iterable of Egsim objects denoting the selected gsims
-#         :param gsims: iterable of strings denoting the selected imts
-#         :return: a list of invalid gsims
-#         '''
-#         if not isinstance(imts, set):
-#             imts = set(imts)
-# #         if imts == cls._aval_imts:  # as no gsim is defined for all imts, thus return the list
-# #             return list(gsims)
-#         return [gsim for gsim in gsims if imts - gsim.imts]
-
 
 class TrellisForm(GsimImtForm):
     '''Form for Trellis plot generation'''
@@ -557,8 +556,10 @@ class TrellisForm(GsimImtForm):
     # merge additional fieldnames (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distance',
                                  'tr': 'tectonic_region',
-                                 'msr': 'magnitude_scalerel', 'lineazi': 'line_azimuth',
-                                 'vs30m': 'vs30_measured', 'hyploc': 'hypocentre_location',
+                                 'msr': 'magnitude_scalerel',
+                                 'lineazi': 'line_azimuth',
+                                 'vs30m': 'vs30_measured',
+                                 'hyploc': 'hypocentre_location',
                                  **GsimImtForm.__additional_fieldnames__}
 
     plot_type = TrellisplottypeField(label='Plot type')
@@ -599,7 +600,7 @@ class TrellisForm(GsimImtForm):
 
     def clean(self):
         cleaned_data = super(TrellisForm, self).clean()
-        cleaned_data['tectonic_region'] = 'Active Shallow Crust'  # see FIXME above
+        # cleaned_data['tectonic_region'] = 'Active Shallow Crust'  # see FIXME above
         # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
         vs30 = cleaned_data['vs30']  # surely a list with st least one element
         vs30scalar = isscalar(vs30)

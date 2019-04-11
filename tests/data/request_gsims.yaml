@@ -4,7 +4,7 @@
 
 # (imt not provided)
   
-trt: 'stable_shallow_crust'
+trt: 'STABLE_CONTINENTAL'  # 'stable_shallow_crust'
 
 model: 'SHARE'
 
