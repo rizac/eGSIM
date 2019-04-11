@@ -13,11 +13,13 @@ from egsim.models import aval_gsims
 
 @pytest.mark.django_db
 class Test:
+    '''tests the gsim service'''
 
     url = '/query/gsims'
     request_filename = 'request_gsims.yaml'
 
-    def test_gsims_service(self, testdata, areequal, django_db_setup, client):
+    def test_gsims_service(self, testdata, areequal,  # django_db_setup,
+                           client):
         '''tests the gsims API service.
         :param requesthandler: pytest fixture which handles the read from the yaml file
             request.yaml which MUST  BE INSIDE this module's directory
@@ -28,8 +30,9 @@ class Test:
             function is iteratively called with a list of different Clients created in conftest.py
         '''
         inputdic = testdata.readyaml(self.request_filename)
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
-        resp2 = client.get(self.url, data=inputdic)
         assert resp1.status_code == resp2.status_code == 200
         assert areequal(resp1.json(), resp2.json())
 
@@ -42,14 +45,16 @@ class Test:
         inputdic['gsim'] = expected_gsims
         resp1 = client.get(self.url, data=inputdic)
         inputdic['gsim'] = 'A*'
-        resp2 = client.get(self.url, data=inputdic)
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
         assert resp1.status_code == resp2.status_code == 200
         assert areequal(resp1.json(), resp2.json())
         assert sorted(resp1.json()) == sorted(resp1.json()) == \
             sorted(expected_gsims)
 
     def test_gsims_service_no_result_wrong_trt(self, testdata, areequal,
-                                               django_db_setup, client):
+                                               # django_db_setup,
+                                               client):
         '''tests the gsims API service.
         :param requesthandler: pytest fixture which handles the read from the yaml file
             request.yaml which MUST  BE INSIDE this module's directory
@@ -63,13 +68,15 @@ class Test:
         inputdic.update(trt='stable_continental_region')
         # use a key which is not in the defined sets of OpenQuake's TRTs:
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
-        resp2 = client.get(self.url, data=inputdic)
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         assert isinstance(resp1.json(), dict) and resp1.json()['error']['code'] == 400
 
     def test_gsims_service_imt_no_match(self, testdata, areequal,
-                                        django_db_setup, client):
+                                        # django_db_setup,
+                                        client):
         '''tests the gsims API service.
         :param requesthandler: pytest fixture which handles the read from the yaml file
             request.yaml which MUST  BE INSIDE this module's directory

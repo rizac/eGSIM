@@ -4,7 +4,7 @@ Created on 29 Jan 2018
 @author: riccardo
 '''
 from os import listdir
-from os.path import join, dirname, isdir, splitext, isfile
+from os.path import join, dirname, isdir, isfile
 from io import StringIO
 from urllib.parse import quote
 from datetime import date, datetime
