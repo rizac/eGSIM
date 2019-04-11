@@ -38,7 +38,7 @@ class Test:
         assert sorted(resp1.json()) == sorted(expected_gsims)
 
         # now try to supply two filters on gsim:
-        expected_gsims = [_ for _ in expected_gsims if _[0] in ('a', 'A')]
+        expected_gsims = [_ for _ in expected_gsims if _[0] in ('A',)]
         inputdic['gsim'] = expected_gsims
         resp1 = client.get(self.url, data=inputdic)
         inputdic['gsim'] = 'A*'

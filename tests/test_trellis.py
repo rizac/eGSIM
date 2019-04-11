@@ -45,6 +45,7 @@ def get_form(**overrides):
     return tform
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize('trellis_type', ['d', 'ds'])
 def test_trellis_dist(trellis_type):
     '''test trellis distance and distance stdev'''
@@ -62,6 +63,7 @@ def test_trellis_dist(trellis_type):
         assert sorted(yvalues.keys()) == sorted(input_['gsim'])
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize('trellis_type', ['m', 'ms'])
 def test_trellis_mag(trellis_type):
     '''test trellis magnitude and magnitude stdev'''
@@ -79,6 +81,7 @@ def test_trellis_mag(trellis_type):
         assert sorted(yvalues.keys()) == sorted(input_['gsim'])
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize('trellis_type', ['s', 'ss'])
 def test_trellis_spec(trellis_type):
     '''test trellis magnitude-distance spectra and magnitude-distance stdev'''
@@ -96,6 +99,7 @@ def test_trellis_spec(trellis_type):
         assert sorted(yvalues.keys()) == sorted(input_['gsim'])
 
 
+@pytest.mark.django_db
 def test_error(areequal):
     '''tests a special case where we supply a deprecated gsim (not in EGSIM
     list)'''
@@ -113,6 +117,7 @@ def test_error(areequal):
     assert areequal(err_json, expected_err_json)
 
 
+@pytest.mark.django_db
 def test_empty_gsim():
     '''tests a special case whereby a GSIM is empty (this case raised before a PR to
     smtk repository)'''

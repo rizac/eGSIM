@@ -8,7 +8,7 @@ from datetime import datetime, date
 import pytest
 
 from egsim.core.utils import vectorize, querystring
-
+from egsim.forms.fields import NArrayField
 
 def test_vectorize():
     '''tests the vectorize function'''
@@ -42,7 +42,7 @@ def test_querystring():
 @pytest.mark.django_db
 def test_narrayfield_get_decimals():
     # this should be impoerted inside the test marked with django_db
-    from egsim.forms.fields import NArrayField
+    
     d0 = NArrayField.get_decimals('1.3e45')
     assert d0 == 0
     d0 = NArrayField.get_decimals('1.3e1')

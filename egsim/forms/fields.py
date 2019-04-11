@@ -244,73 +244,6 @@ class PointField(NArrayField):
             raise ValidationError(_(str(exc)), code='invalid')
 
 
-# class EgsimChoiceFieldMeta(type):
-#     '''metaclass for EgsimChoiceField subclasses. Takes the class attribute _base_choices
-#     and modifies it into a valid `choices` argument, and creates the dict `cls._mappings`
-#     See :class:`EgsimChoiceField` documentation for details'''
-#     def __init__(cls, name, bases, nmspc):
-#         super(EgsimChoiceFieldMeta, cls).__init__(name, bases, nmspc)
-#         base_choices, mappings = [], {}
-#         if isinstance(cls._base_choices, dict):
-#             mappings = cls._base_choices
-#             base_choices = [(k, k) for k in cls._base_choices]
-#         else:
-#             two_elements = None
-#             for item in cls._base_choices:
-#                 if two_elements is None:
-#                     two_elements = len(item) == 2
-#                 if two_elements:
-#                     base_choices.append((item[0], item[0]))
-#                     mappings[item[0]] = item[1]
-#                 else:
-#                     base_choices.append((item[0], item[1]))
-#                     mappings[item[0]] = item[2]
-#         cls._base_choices = base_choices
-#         cls._mappings = mappings
-# 
-# 
-# class EgsimChoiceField(ChoiceField, metaclass=EgsimChoiceFieldMeta):
-#     '''Choice field which returns a user defined object mapped to the selected item
-# 
-#     Subclasses should implement a _base_choices CLASS attribute as either:
-#         1) a list/tuple of 3-element iterables:
-#             [(A, B, C), ... ]
-#         where the 1st element (A) is the actual value to be set on the model,
-#         the 2nd element (B) is the human-readable name (this is django ChoiceField default
-#         behavior) **and** the 3rd element is the object to be returned after validation.
-# 
-#         2) A dict of where dict keys will be the field names *and* field values and the
-#         dict values will be the objectw to be returned after validation. In other words,
-#         a dictw of the form:
-#             {A:B, ....}
-#         will be treated as a list/tuple of the form (see above):
-#             [(A, A, B), ... ]
-# 
-#     *Note*: the _base_choices attribute will be modified at *class creation* (thus only once)
-#     reulting into a modified _base_choices attribute and a newly creates _mappings dict.
-#     See :class:`EgsimChoiceFieldMeta` above for details
-#     '''
-#     _base_choices = []  # modified at class creation, you should override it but not access it
-# 
-#     def __init__(self, **kwargs):
-#         kwargs['choices'] = self._base_choices   # override if provided
-#         super(EgsimChoiceField, self).__init__(**kwargs)
-# 
-#     def map(self, field_value, mapped_obj):
-#         '''returns the mapping for the specific value. By default, returns the third element
-#         of self._base_choices[i], where i is the index such as self._base_choices[i] == value
-# 
-#         :param value: a (usually string) value belonging to one of this field choices
-#         '''
-#         return mapped_obj
-# 
-#     def clean(self, value):
-#         # super() alone fails here. See
-#         # https://stackoverflow.com/a/39313448
-#         value = super(EgsimChoiceField, self).clean(value)  # already parsed
-#         return self.map(value, self._mappings[value])  # pylint: disable=no-member
-
-
 class MsrField(ChoiceField):
     '''A ChoiceField handling the selected Magnitude Scaling Relation object'''
     _base_choices = get_available_magnitude_scalerel()
@@ -352,8 +285,6 @@ class TrellisplottypeField(ChoiceField):
 
 class GmdbField(ChoiceField):
     '''EgsimChoiceField for Ground motion databases'''
-    # last argument is unused
-    # _base_choices = zip(EGSIM.gmdb_names(), EGSIM.gmdb_names(), repeat(''))
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
@@ -366,18 +297,12 @@ class GmdbField(ChoiceField):
         value = super(GmdbField, self).clean(value)
         return EGSIM.gmdb(value)
 
-#     def map(self, field_value, mapped_obj):
-#         '''overrides super.map in that it does not return the third argument of _base_choices
-#         above but the Ground motion database lazily created only on demand because
-#         time-consuming'''
-#         return EGSIM.gmdb(field_value)
-
 
 class TrModelField(ChoiceField):
     '''EgsimChoiceField for Tectonic regionalisation models'''
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
-                          [(_, _) for _ in aval_trmodels()])
+                          LazyCached(lambda: [(_, _) for _ in aval_trmodels()]))
         super(TrModelField, self).__init__(**kwargs)
 
 
@@ -480,7 +405,8 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
 class GsimField(MultipleChoiceWildcardField):
     '''MultipleChoiceWildcardField with default `choices` argument, if not provided'''
     def __init__(self, **kwargs):
-        kwargs.setdefault('choices', [(_, _) for _ in aval_gsims()])
+        kwargs.setdefault('choices',
+                          LazyCached(lambda: [(_, _) for _ in aval_gsims()]))
         kwargs.setdefault('label', 'Ground Shaking Intensity Model(s)')
         super(GsimField, self).__init__(**kwargs)
 
@@ -502,12 +428,14 @@ class IMTField(MultipleChoiceWildcardField):
     }
 
     def __init__(self, sa_periods_required=True, **kwargs):
-        kwargs.setdefault('choices', [(_, _) for _ in aval_imts()])
+        kwargs.setdefault('choices',
+                          LazyCached(lambda: [(_, _) for _ in aval_imts()]))
         kwargs.setdefault('label', 'Intensity Measure Type(s)')
         super(IMTField, self).__init__(**kwargs)
         self.sa_periods_required = sa_periods_required
         self.sa_periods = []  # can be string or iterable of strings
         # strings must be numeric parsable (see NArrayField)
+
 
     # this method is called first in the validation pipeline:
     def to_python(self, value):
@@ -550,13 +478,29 @@ class TrtField(MultipleChoiceWildcardField):
     '''MultipleChoiceWildcardField field which also bahaves as kind of EgsimChoiceField
     '''
     def __init__(self, **kwargs):
-        kwargs.setdefault('choices', [_ for _ in aval_trts(include_oq_name=True)])
+        kwargs.setdefault('choices',
+                          LazyCached(lambda: [_ for _ in aval_trts(include_oq_name=True)]))
         super(TrtField, self).__init__(**kwargs)
 
-#     def clean(self, value):
-#         '''Replaces any internal selected tectonic region name (in `EGSIM.val_trts.keys()`) with
-#         their standard Openquake tectonic region name (basically the same as the selected name,
-#         with spacing replacing the underscores and no lower case)'''
-#         if value is None:
-#             return value
-#         return [self._mappings[v] for v in value]  # pylint: disable=no-member
+
+class LazyCached:
+    '''A callable returning an iterable which caches its result.
+    Used in the keyword argument 'choices' to lazily create the list of choices.
+    The rationale is to avoid DB access at import / initialization time,
+    which is messy with tests (for an introduction of the problem, see:
+    https://stackoverflow.com/questions/43326132/how-to-avoid-import-time-database-access-in-django).
+    The simplest solution would be to simply pass a callable to the 'choices'
+    argument (see Django ChoiceField), but the callable re-evaluated each
+    time (i.e., the db is accessed each time). This class solves the
+    problem: it is callables, so Django interprets it correctly and evaluates
+    it upon access only, but it caches the iterated elements, so that a later
+    call does not re-evaluate the result
+    '''
+    def __init__(self, callable_returning_iterator):
+        self._callable_returning_iterator = callable_returning_iterator
+        self._data = None
+
+    def __call__(self):
+        if self._data is None:
+            self._data = list(self._callable_returning_iterator())
+        return self._data

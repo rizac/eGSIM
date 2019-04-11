@@ -213,7 +213,7 @@ def sharing_gsims(imts):
     :param imts: list of integers (imt id), imts instances, or
         strings denoting an Imt key
     '''
-    return gsim_names(imts, imts_match_all=True)
+    return gsim_names(imts=imts, imts_match_all=True)
 
 
 def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None,
