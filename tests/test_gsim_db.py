@@ -7,41 +7,36 @@ from itertools import product
 import uuid
 
 import pytest
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from egsim.models import Gsim, Trt, Imt, gsim_names, aval_gsims, \
-    aval_imts, aval_trts, aval_trmodels, TectonicRegion
+    aval_imts, aval_trts, aval_trmodels, TectonicRegion, shared_imts, sharing_gsims,\
+    TrSelector
+
+from openquake.hazardlib.gsim import registry
+from egsim.core.utils import OQ
 
 
 @pytest.mark.django_db
 def test_db_0(django_db_setup):
     '''Tests the egsim db'''
-    with pytest.raises(ObjectDoesNotExist):  # @UndefinedVariable
+    with pytest.raises(MultipleObjectsReturned):  # @UndefinedVariable
         Gsim.objects.get()  # pylint: disable=no-member
 
-    # ANyway, populate db:
-    trtcreate = Trt.objects.create  # pylint: disable=no-member
-    trt1 = trtcreate(oq_name='active_shallow_crust', oq_att='asc')
-    trt2 = trtcreate(oq_name='stable_shallow_crust', oq_att='ssc')
-
-    imtcreate = Imt.objects.create  # pylint: disable=no-member
-    imt1 = imtcreate(key='PGA')
-    imt2 = imtcreate(key='SA', needs_args=True)
-
-    gsims = []
-    gsimcreate = Gsim.objects.create  # pylint: disable=no-member
-    for imt, trt, warn in product([imt1, imt2], [trt1, trt2],
-                                  [None, 'warning']):
-        # generate a random string. This also implies almost certainly to
-        # insert gsims non alphabetically
-        key = str(uuid.uuid4())
-        gsim = gsimcreate(key=key, warning=warn, trt=trt)
-        if warn:
-            gsim.imts.set([imt1, imt2])
-        elif imt is imt1:
-            gsim.imts.set([imt1])
-
-        gsims.append(gsim)
+    # from oq-engine
+    # (https://github.com/gem/oq-engine/tree/master/openquake/hazardlib/gsim)
+    #
+    # AbrahamsonEtAl2014: 'PGA', 'SA', 'PGV'
+    # const.TRT.ACTIVE_SHALLOW_CRUST
+    #
+    # AbrahamsonEtAl2015SInter: 'PGA' 'SA'
+    # const.TRT.SUBDUCTION_INTERFACE
+    #
+    # BommerEtAl2009RSD: 'RSD595', 'RSD575'
+    # const.TRT.ACTIVE_SHALLOW_CRUST
+    #
+    # CauzziEtAl2014: 'PGA', 'SA', 'PGV'
+    # const.TRT.ACTIVE_SHALLOW_CRUST
 
     # there are:
     # 4 gsims with trt1
@@ -50,74 +45,95 @@ def test_db_0(django_db_setup):
     # 2 gsims with imt1
     # 2 gims with no imt
 
+    test1 = list(aval_gsims())
+    assert len(test1) <= len(OQ.gsims())
+
+    test2 = list(aval_gsims())
+    assert len(test2) <= len(OQ.gsims())
+    assert len(test1) == len(test2)
+
+    test1 = list(aval_imts())
+    assert len(test1) <= len(OQ.imts())
+
+    test1 = list(aval_trts())
+    assert len(test1) <= len(OQ.trts())
+
     test1 = list(gsim_names())
-    assert len(test1) == len(gsims)
+    assert len(test1) <= len(OQ.gsims())
 
     # Note that below we can supply each instance key (string, e.g.
     # 'PGA') or the entity itself. Same for trt
 
-    test1 = list(gsim_names(imts=['PGA', 'SA']))
-    assert len(test1) == 6
+    test1 = set(gsim_names(imts=['PGA', 'SA']))
+    expected = set(['AbrahamsonEtAl2014', 'AbrahamsonEtAl2015SInter',
+                    'CauzziEtAl2014'])
+    assert expected & test1 == expected
+    assert 'BommerEtAl2009RSD' not in test1
 
-    test1 = list(gsim_names(trts=[trt1.key], imts=[imt1.key]))
-    assert len(test1) == 3
+    imtobjs = Imt.objects  # pylint: disable=no-member
+    PGA, SA = list(imtobjs.filter(key='PGA')), list(imtobjs.filter(key='SA'))
+    assert len(PGA) == len(SA) == 1
+    PGA, SA = PGA[0], SA[0]
+    # try by querying via objects (same result as above):
+    test2 = set(gsim_names(imts=[PGA, SA]))
+    assert test1 == test2
+    # try to get by id (same result as above):
+    test2 = set(gsim_names(imts=[PGA.id, SA.id]))
+    assert test1 == test2
 
-    test1 = list(gsim_names(trts=[trt2.key], imts=[imt1.key]))
-    assert len(test1) == 3
+    test1 = set(gsim_names(imts=['PGA', 'SA'], trts=['SUBDUCTION_INTERFACE']))
+    assert 'AbrahamsonEtAl2015SInter' in test1
+    not_expected = set(['AbrahamsonEtAl2014', 'BommerEtAl2009RSD',
+                        'CauzziEtAl2014'])
+    assert not (not_expected & test1)
 
-    test1 = list(gsim_names(trts=[trt1.key], imts=[imt2.key]))
-    assert len(test1) == 2
+    test1 = set(gsim_names(gsims=[_ for _ in aval_gsims() if _[0] == 'C'],
+                           imts=['PGA', 'SA'], trts=['ACTIVE_SHALLOW_CRUST']))
+    assert 'CauzziEtAl2014' in test1
+    not_expected = set(['AbrahamsonEtAl2014', 'AbrahamsonEtAl2015SInter',
+                        'BommerEtAl2009RSD'])
+    assert not (not_expected & test1)
 
-    test1 = list(gsim_names(trts=[trt2.key], imts=[imt2.key]))
-    assert len(test1) == 2
+    test1 = set(gsim_names(imts=['PGA', 'SA', 'PGV']))
+    expected = set(['AbrahamsonEtAl2014', 'AbrahamsonEtAl2015SInter',
+                    'CauzziEtAl2014'])
+    assert expected & test1 == expected
+    assert 'BommerEtAl2009RSD' not in test1
 
-    test1 = list(gsim_names(imts=[imt1, imt2]))
-    assert len(test1) == 6
+    # BUT now provide strict match for imts:
+    test1 = set(gsim_names(imts=['PGA', 'SA', 'PGV'],
+                           imts_match_all=True))
+    expected = set(['AbrahamsonEtAl2014', 'CauzziEtAl2014'])
+    assert expected & test1 == expected
+    assert 'BommerEtAl2009RSD' not in test1
+    assert 'AbrahamsonEtAl2015SInter' not in test1
 
-    test1 = list(gsim_names(imts=[imt1]))
-    assert len(test1) == 6
+    # AbrahamsonEtAl2014: 'PGA', 'SA', 'PGV'
+    # const.TRT.ACTIVE_SHALLOW_CRUST
+    #
+    # AbrahamsonEtAl2015SInter: 'PGA' 'SA'
+    # const.TRT.SUBDUCTION_INTERFACE
+    #
+    # BommerEtAl2009RSD: 'RSD595', 'RSD575'
+    # const.TRT.ACTIVE_SHALLOW_CRUST
+    #
+    # CauzziEtAl2014: 'PGA', 'SA', 'PGV'
+    # const.TRT.ACTIVE_SHALLOW_CRUST
 
-    test1 = list(gsim_names(imts=[imt2]))
-    assert len(test1) == 4
+    expected_imts = ['PGA', 'SA']
+    assert sorted(shared_imts(['AbrahamsonEtAl2014', 'AbrahamsonEtAl2015SInter',
+                               'CauzziEtAl2014'])) == expected_imts
 
-    test1 = list(gsim_names(trts=[trt1]))
-    assert len(test1) == 4
+    expected_gsims = set(['AbrahamsonEtAl2014', 'AbrahamsonEtAl2015SInter',
+                          'CauzziEtAl2014'])
+    sharing_gsims_set = set(sharing_gsims(['PGA','SA']))
+    assert sharing_gsims_set & expected_gsims == expected_gsims
+    assert 'BommerEtAl2009RSD' not in sharing_gsims_set
 
-    test1 = list(gsim_names(trts=[trt1.key]))
-    assert len(test1) == 4
-
-    # select_related does not seem to add duplicates:
-    test1_ = list(gsim_names(gsims=[gsims[0].key]))
-    test2_ = list(gsim_names(gsims=[gsims[0]]))
-    test3_ = list(gsim_names(gsims=[gsims[0].id]))
-    assert test1_ == test2_ == test3_
-
-    test1_ = list(gsim_names(gsims=[gsims[0].key, gsims[1]]))
-    test2_ = list(gsim_names(gsims=[gsims[0], gsims[1].id]))
-    test3_ = list(gsim_names(gsims=[gsims[0].id, gsims[1].key]))
-    assert test1_ == test2_ == test3_
-
-    alljson = list(aval_gsims(asjsonlist=True))
-    assert len(alljson) == 8
-    assert [_[0] for _ in alljson] == sorted(_.key for _ in gsims)
-
-    # test aval_imts and aval_gsims
-    gsims_ = aval_gsims()
-    imts_ = aval_imts()
-    trts_ = aval_trts()
-    assert list(gsims_) == sorted(_.key for _ in gsims)
-    assert sorted(imts_) == ['PGA', 'SA']
-    assert sorted(trts_) == ['active_shallow_crust', 'stable_shallow_crust']
-    # now add a new imt and check it's not returned (no matching gsim):
-    imt1 = imtcreate(key='IDONTHAVE_GSIMS')
-    assert sorted(aval_imts()) == ['PGA', 'SA']
-    # but assert we wrote the last imt created:
-    assert len(Imt.objects.all()) == 3  # pylint: disable=no-member
-
-    # small test on Tectonic Regions:
-    assert not list(aval_trmodels())
-    tr_objs = TectonicRegion.objects  # pylint: disable=no-member
-    trg1 = tr_objs.create(model='mymodel', geojson='{asc}', type=trt1)
-    trg2 = tr_objs.create(model='mymodel', geojson='{asc}', type=trt2)
-    assert len(tr_objs.all()) == 2
-    assert list(aval_trmodels()) == ['mymodel']
+    # type a point on italy (active shallow crust), and see
+    trsel = TrSelector('SHARE', lon0=11, lat0=44)
+    test1 = set(gsim_names(tr_selector=trsel))
+    expected_gsims = set(['AbrahamsonEtAl2014', 'BommerEtAl2009RSD',
+                          'CauzziEtAl2014'])
+    assert expected_gsims & test1 == expected_gsims
+    assert 'AbrahamsonEtAl2015SInter' not in test1

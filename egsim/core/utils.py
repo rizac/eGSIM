@@ -5,25 +5,16 @@ Created on 29 Jan 2018
 '''
 from os import listdir
 from os.path import join, dirname, isdir, splitext, isfile
-import warnings
-import json
-import csv
 from io import StringIO
 from urllib.parse import quote
-from collections import OrderedDict
 from datetime import date, datetime
 from dateutil import parser as dateparser
 from dateutil.tz import tzutc
-import inspect
 
 from yaml import safe_load, YAMLError
-import numpy as np
-from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
-from openquake.hazardlib.gsim.base import NotVerifiedWarning
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
-from openquake.hazardlib import imt
 from smtk import load_database
 
 
@@ -152,114 +143,6 @@ def isscalar(value):
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
 
 
-# class Egsim:
-#     '''simple container object for a gsim: attributes are the gsim name (string),
-#     its intensity measure types (frozenset) and the tectonic region type (string)
-#     '''
-#     def __init__(self, name, imts, trt):
-#         '''Initializes a new Egsim
-#         :param name: string, name of the gsim
-#         :param imts: iterable of strings denoting the gsim intensoty measure types
-#         :pram trt: string, tectonic region type defined for the gsim
-#         '''
-#         self.name = name
-#         self.imts = frozenset(imts)
-#         self.trt = trt
-# 
-#     def __str__(self):
-#         return self.name
-# 
-#     def asjson(self):
-#         '''Converts this object as a json-serializable tuple of strings:
-#         (gsim, imts, tectonic_region_type) where the first and last arguments
-#         are strings, and the second is a list of strings'''
-#         return self.name, list(self.imts), self.trt
-# 
-#     # the two methods below are not used but make this class behave the same as the gsim name
-#     # (string) in sets and dicts. Note that we have to implement both __hash__ (used first) and
-#     # __eq__ (used as check in case hashes are the same). this way, called e=Egsim('bla',...),
-#     # both the statements are True: `'bla' in set([e])` and `e in {'bla': None}`
-#     def __hash__(self):
-#         return hash(self.name)
-# 
-#     def __eq__(self, other):
-#         return self.name.__eq__(other)
-
-
-# def _get_data():
-#     '''Returns a tuple of three elements:
-#     1) all openquake-available gsim data in an Ordered dict keyed with the gsim
-#         names mapped to a Egsim object
-#     2) all openquake available imts used by the gsims, with no repetitions (list of strings)
-#     3) all openquake available tectonic region types used by the gsims,
-#         with no repetitions (dictionary of the openquake class attributes, lower case, mapped
-#         to their string value. Basically, each key is the same as each value but lowercase and
-#         with spaces replaced by the underscore)
-#     '''
-# 
-#     _aval_imts = OrderedDict()  # this should be a set of strings, but we want it ordered ...
-# 
-#     def sanitycheck(imt_objs):
-#         '''filters out the elements of `imt_obj` which require additional
-#            argument (except SA, which is fine) because we do not know how to deal with them,
-#            and populates the keys of _aval_imts representing all imts passed here, with no
-#            repetitions'''
-#         for imt_obj in imt_objs:
-#             imt_s = imt_obj.__name__
-#             if imt_s not in _aval_imts:
-#                 imt_v = hazardlib_imt_registry.get(imt_s, None)
-#                 if imt_v is None:
-#                     continue
-#                 if imt_v != imt.SA:  # test we di not need arguments if imt is not SA
-#                     try:
-#                         # this creates an instance of the class. If the instance needs argument,
-#                         # it fails (except below)
-#                         imt.from_string(imt_s)
-#                     except:  # @IgnorePep8 pylint: disable=bare-except
-#                         continue
-#                 _aval_imts[imt_s] = None  # whatever value is fine, None is just the one chosen ...
-#             yield imt_s
-# 
-#     # get all TRTs: use the TRT class of openquake and get all attributes without a leading
-#     # underscore and mapped to a string:
-#     _aval_trts = {getattr(TRT, a).replace(' ', '_').lower(): getattr(TRT, a)
-#                   for a in dir(TRT) if a[:1] != '_' and isinstance(getattr(TRT, a), str)}
-# 
-#     # inverse the _aval_trts above, and set for each Egsim the TRT stripped with spaces
-#     # and lower case:
-#     _trt_i = {v: k for k, v in _aval_trts.items()}
-# 
-#     # get all gsims:
-#     _aval_gsims = OrderedDict()
-#     with warnings.catch_warnings():
-#         # Catch warnings as if they were exceptions, and skip deprecation w.
-#         # https://stackoverflow.com/a/30368735
-#         warnings.filterwarnings('error')  # raises every time, not only 1st
-#         for key, gsim in get_available_gsims().items():
-#             if inspect.isabstract(gsim):
-#                 continue
-#             try:
-#                 gsim_inst = gsim()
-#             except (TypeError, OSError, NotImplementedError) as exc:
-#                 gsim_inst = gsim
-#             except OQDeprecationWarning as warn:
-#                 # the builtin DeprecationWarning is silenced, OQ uses it's own
-#                 continue
-#             except NotVerifiedWarning as warn:
-#                 pass
-#             except Warning as warn:
-#                 pass
-#             try:
-#                 gsim_imts = gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES
-#             except AttributeError:
-#                 continue
-#             if gsim_imts and hasattr(gsim_imts, '__iter__'):
-#                 trt = _trt_i.get(gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE, '')
-#                 _aval_gsims[key] = Egsim(key, (_ for _ in sanitycheck(gsim_imts)), trt)
-# 
-#     return _aval_gsims, tuple(_aval_imts.keys()), _aval_trts
-
-
 def apply_if_input_notnone(func):
     '''function acting as decorator returning None if the input is None, otherwise calling
     func(input). Example: _convert(float)('5.5')
@@ -355,22 +238,36 @@ class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/
             entry[1] = load_database(entry[0])
         return entry[1]
 
-#     @classmethod
-#     def trmodels(cls):
-#         '''Returns a list of all available tectonic region model names (string)'''
-# 
-#         def loadjson(filepath):
-#             '''loads json from file'''
-#             with open(filepath) as fpt:  # https://stackoverflow.com/a/14870531
-#                 return json.load(fpt)
-# 
-#         if not cls._trmodels:
-#             # FIXME: hardcoded, change it!
-#             root = join(dirname(dirname(__file__)), 'data')
-#             cls._trmodels = {splitext(f)[0]: loadjson(join(root, f)) for f in listdir(root)
-#                              if splitext(f)[1].lower() == '.json'}
-#         return cls._trmodels
 
+class OQ:
+
+    @classmethod
+    def trts(cls):
+        '''Returns a (new) dictionary of:
+            att_name (string) mapped to its att_value (string)
+            defining all Tectonic Region Types defined in OpenQuake
+        '''
+        return {a: getattr(TRT, a) for a in dir(TRT)
+                if a[:1] != '_' and isinstance(getattr(TRT, a), str)}
+#         for attname in dir(TRT):
+#             if attname[:1] != '_' and isinstance(getattr(TRT, attname), str):
+#                 yield attname, getattr(TRT, attname)
+
+    @classmethod
+    def imts(cls):
+        '''Returns a (new) dictionary of:
+            imt_name (string) mapped to its imt_class (class object)
+            defining all Intensity Measure Types defined in OpenQuake
+        '''
+        return dict(hazardlib_imt_registry)
+
+    @classmethod
+    def gsims(cls):
+        '''Returns a (new) dict of:
+            gsim_name (string) mapped to its gsim_class (class object)
+            defining all Ground Shaking Intensity Models defined in OpenQuake.
+        '''
+        return get_available_gsims().items()
 
 # class TextResponseCreator:
 # 
