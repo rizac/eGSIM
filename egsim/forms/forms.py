@@ -27,13 +27,14 @@ from django.forms.fields import BooleanField, CharField, FloatField, \
 
 from openquake.hazardlib.imt import from_string as imt_from_string
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-from smtk.database_visualiser import DISTANCES
+# from smtk.database_visualiser import DISTANCES
 
-from egsim.core.utils import vectorize, EGSIM, isscalar, yaml_load, querystring, tostr
+from egsim.core.utils import vectorize, isscalar, yaml_load, querystring, tostr,\
+    DISTANCE_LABEL
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, MsrField, \
-    PointField, TrtField, GmdbField, ResidualplottypeField, GmdbSelectionField, GsimField, \
+    PointField, TrtField, GmdbField, ResidualplottypeField, GsimField, \
     TrModelField, MultipleChoiceWildcardField
-from egsim.models import aval_imts, aval_gsims, sharing_gsims, shared_imts
+from egsim.models import sharing_gsims, shared_imts
 
 
 class BaseForm(Form):
@@ -626,41 +627,13 @@ class TrellisForm(GsimImtForm):
 class GmdbForm(BaseForm):
     '''Abstract-like class for handling gmdb (GroundMotionDatabase)'''
 
-    __additional_fieldnames__ = {'sel': 'selection', 'min': 'selection_min',
-                                 'max': 'selection_max', 'dist': 'distance_type'}
+    __additional_fieldnames__ = {'sel': 'selexpr', 'dist': 'distance_type'}
 
     gmdb = GmdbField(label='Ground Motion database', required=True)
-    selection = GmdbSelectionField(label='Filter by', required=False)
-    selection_min = CharField(label='Min', required=False,
-                              help_text='The type of value depends on the selection')
-    selection_max = CharField(label='Max', required=False,
-                              help_text='The type of value depends on the selection')
-    distance_type = ChoiceField(label='Distance type', choices=zip(DISTANCES.keys(),
-                                                                   DISTANCES.keys()),
+    selexpr = CharField(label='Selection expression', required=False)
+    distance_type = ChoiceField(label='Distance type',
+                                choices=list(DISTANCE_LABEL.items()),
                                 initial='rrup')
-
-    def clean(self):
-        '''Cleans this Form checking that selection_min and selection_max parameter
-        values, if provided, conform to the expected type of selection (e.g., float, datetime)'''
-        cleaned_data = super().clean()
-        min_, max_, sel_ = 'selection_min', 'selection_max', 'selection'
-        if sel_ not in cleaned_data or not cleaned_data[sel_]:
-            return cleaned_data
-        seldomain, conversion_func = cleaned_data[sel_]
-        try:
-            cleaned_data[min_] = conversion_func(cleaned_data.get(min_, None))
-        except Exception as exc:  # pylint: disable=broad-except
-            error = ValidationError(_(str(exc)), code='invalid')
-            self.add_error(min_, error)
-        try:
-            cleaned_data[  max_] = conversion_func(cleaned_data.get(max_, None))
-        except Exception as exc:  # pylint: disable=broad-except
-            error = ValidationError(_(str(exc)), code='invalid')
-            self.add_error(max_, error)
-
-        cleaned_data[sel_] = seldomain  # replace the conversion function with the selection
-        # domain, we will need only that one
-        return cleaned_data
 
 
 class ResidualsForm(GsimImtForm, GmdbForm):
