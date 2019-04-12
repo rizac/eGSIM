@@ -7,7 +7,6 @@ import os
 import json
 from collections import OrderedDict
 from datetime import date
-import inspect
 
 from yaml.error import YAMLError
 
@@ -15,15 +14,15 @@ from django.http import JsonResponse
 from django.shortcuts import render
 # from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.base import View
+from django.forms.fields import MultipleChoiceField
 from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import TrellisForm, GsimSelectionForm, GmdbForm, ResidualsForm, BaseForm
-from egsim.core.utils import EGSIM, QUERY_PARAMS_SAFE_CHARS
+from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_names
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
-from django.forms.fields import MultipleChoiceField
 
 
 _COMMON_PARAMS = {
@@ -109,8 +108,11 @@ def trellis(request):
 
 def get_gmdbs(request):
     '''view for the residuals page (iframe in browser)'''
-    return JsonResponse({'avalgmdbs': EGSIM.gmdb_names(),
-                         'selectedgmdb': next(iter(EGSIM.gmdb_names()))},
+    gmdbnames, selgmdbname = list(get_gmdb_names()), None
+    if gmdbnames:
+        selgmdbname = gmdbnames[0]
+    return JsonResponse({'avalgmdbs': gmdbnames,
+                         'selectedgmdb': selgmdbname},
                         safe=False)
 
 

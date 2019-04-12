@@ -1,0 +1,8 @@
+#Test config file for the API gmdbplot service
+
+
+gmdb: 'esm_sa_flatfile_2018'  # 'stable_shallow_crust'
+
+# selexpr: '(vs30 >= 730) & ((magnitude <=4) | (magnitude>=7))'
+
+dist: 'repi'  # could be also distance_type (see forms)

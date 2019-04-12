@@ -26,9 +26,8 @@ from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrell
 from smtk.residuals.residual_plots import residuals_density_distribution, residuals_with_depth,\
     residuals_with_distance, residuals_with_magnitude, residuals_with_vs30, likelihood
 
-from egsim.core.utils import vectorize, EGSIM, isscalar, \
-    apply_if_input_notnone, strptime
-    
+from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path
+
 # IMPORTANT: do not access the database at module import, as otherwise
 # make migrations does not work! So these methods should be called inside
 # each INSTANCE creation (__init__) not in the class. But this is too late ...
@@ -288,14 +287,14 @@ class GmdbField(ChoiceField):
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
-                          [(_, _) for _ in EGSIM.gmdb_names()])
+                          LazyCached(lambda: [(_, _)
+                                              for _ in get_gmdb_names()]))
         super(GmdbField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''Converts the given value (string) into the OpenQuake instance
-        and returns the latter'''
-        value = super(GmdbField, self).clean(value)
-        return EGSIM.gmdb(value)
+        '''Converts the given value (string) into the tuple
+        hf5 path, database name (both strings)'''
+        return (get_gmdb_path(), value)
 
 
 class TrModelField(ChoiceField):
@@ -304,31 +303,6 @@ class TrModelField(ChoiceField):
         kwargs.setdefault('choices',
                           LazyCached(lambda: [(_, _) for _ in aval_trmodels()]))
         super(TrModelField, self).__init__(**kwargs)
-
-
-class GmdbSelectionField(ChoiceField):
-    '''Implements the ***FILTER*** (smtk code calls it 'selection') field on a Ground motion
-    database (e.g., distance, magnitude, vs30), i.e., the domain on which a gmdb has to be
-    filtered.
-    Returns a tuple of two functions: the domain string and the casting function for validating
-    the min and max parameters of the selection domain
-    '''
-    _base_choices = {'distance': ['distance', apply_if_input_notnone(float)],
-                     'vs30': ['vs30', apply_if_input_notnone(float)],
-                     'magnitude': ['magnitude', apply_if_input_notnone(float)],
-                     'time': ['time', apply_if_input_notnone(strptime)],
-                     'depth': ['depth', apply_if_input_notnone(float)]}
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('choices',
-                          [(k, v[0]) for k, v in self._base_choices.items()])
-        super(GmdbSelectionField, self).__init__(**kwargs)
-
-    def clean(self, value):
-        '''Converts the given value (string) into the OpenQuake instance
-        and returns the latter'''
-        value = super(GmdbSelectionField, self).clean(value)
-        return self._base_choices[value][1]
 
 
 class ResidualplottypeField(ChoiceField):
