@@ -7,7 +7,7 @@ Created on 22 Oct 2018
 '''
 import pytest
 
-from egsim.core.utils import querystring, EGSIM
+from egsim.core.utils import querystring
 from egsim.models import aval_gsims
 
 

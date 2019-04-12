@@ -17,9 +17,10 @@ from smtk.residuals.gmpe_residuals import (Residuals, Likelihood)
 from smtk.residuals.residual_plots import residuals_with_distance, likelihood
 
 from smtk.strong_motion_selector import SMRecordSelector
-from smtk.database_visualiser import DISTANCE_LABEL, get_magnitude_distances
+# from smtk.database_visualiser import get_magnitude_distances
 
-from egsim.core.utils import vectorize
+from egsim.core.utils import vectorize, DISTANCE_LABEL
+from smtk.sm_table import GroundMotionTable, records_where
 # from egsim.core.shapes import get_feature_properties
 
 
@@ -107,55 +108,44 @@ def get_gmdbplot(params):
     # params:
     DIST_TYPE = 'distance_type'  # pylint: disable=invalid-name
 
-    gmdb = _get_gmdb(params)
     dist_type = params[DIST_TYPE]
-    mags, dists = get_magnitude_distances(gmdb, dist_type)
-    return {'x': dists, 'y': mags, 'labels': [r.id for r in gmdb.records],
+    mags, dists = get_magnitude_distances(records_iter(params), dist_type)
+    return {'x': dists, 'y': mags,  # 'labels': [r.id for r in gmdb.records],
             'xlabel': DISTANCE_LABEL[dist_type], 'ylabel': 'Magnitude'}
 
 
-def _get_gmdb(params):
+def get_magnitude_distances(records, dist_type):
+    """
+    From the Strong Motion database, returns lists of magnitude and distance
+    pairs
+    """
+    mags = []
+    dists = []
+    for record in records:
+        mag = record['magnitude']
+        dist = record[dist_type]
+        if dist_type == "rjb" and np.isnan(dist):
+            dist = record["repi"]
+        elif dist_type == "rrup" and np.isnan(dist):
+            dists.append(record["rhypo"])
+        if not np.isnan(mag) and not np.isnan(dist):
+            mags.append(mag)
+            dists.append(dist)
+    return mags, dists
+
+
+def records_iter(params):
     '''Computes the selection from the given already validated params and returns a filtered
     GroundMotionDatabase object'''
     # params:
     GMDB = 'gmdb'  # pylint: disable=invalid-name
-    SEL = 'selection'  # pylint: disable=invalid-name
-    MIN = 'selection_min'  # pylint: disable=invalid-name
-    MAX = 'selection_max'  # pylint: disable=invalid-name
-    DIST_TYPE = 'distance_type'  # pylint: disable=invalid-name
+    SEL = 'selexpr'  # pylint: disable=invalid-name
 
     # Instantiate the selection object with a database as argument:
     gmdb = params[GMDB]
-    if params[MIN] is None and params[MAX] is None:
-        return gmdb
-
-    selector = SMRecordSelector(gmdb)
-    selection = params[SEL]
-    if selection == 'distance':
-        def ret(params):
-            '''forwards call to associated selector's method'''
-            return selector.select_within_distance_range(params[DIST_TYPE], params[MIN],
-                                                         params[MAX], as_db=True)
-    elif selection == 'magnitude':
-        def ret(params):
-            '''forwards call to associated selector's method'''
-            return selector.select_within_magnitude(params[MIN], params[MAX], as_db=True)
-    elif selection == 'vs30':
-        def ret(params):
-            '''forwards call to associated selector's method'''
-            return selector.select_within_vs30_range(params[MIN], params[MAX], as_db=True)
-    elif selection == 'time':
-        def ret(params):
-            '''forwards call to associated selector's method'''
-            return selector.select_within_time(params[MIN], params[MAX], as_db=True)
-    elif selection == 'depth':
-        def ret(params):
-            '''forwards call to associated selector's method'''
-            return selector.select_within_depths(params[MIN], params[MAX], as_db=True)
-    else:
-        raise ValueError('invalid selection type')
-
-    return ret(params)
+    with GroundMotionTable(*gmdb, mode='r') as gmdb:
+        for rec in records_where(gmdb.table, params.get(SEL) or None):
+            yield rec
 
 
 def get_residuals(params):

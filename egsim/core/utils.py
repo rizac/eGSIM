@@ -16,9 +16,11 @@ from yaml import safe_load, YAMLError
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
-from smtk import load_database
 from smtk.sm_table import get_dbnames
+from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
 
+DISTANCE_LABEL = dict(**{k: v for k, v in SMTK_DISTANCE_LABEL.items() if k != 'r_x'},
+                      rx=SMTK_DISTANCE_LABEL['r_x'])
 
 def tostr(obj, none='null'):
     '''Returns str(obj) to be injected into YAML or JSON variables.
@@ -145,18 +147,6 @@ def isscalar(value):
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
 
 
-def apply_if_input_notnone(func):
-    '''function acting as decorator returning None if the input is None, otherwise calling
-    func(input). Example: _convert(float)('5.5')
-    '''
-    def wrapper(string):
-        '''wrapping function'''
-        if not string or string is None:
-            return None
-        return func(string)
-    return wrapper
-
-
 def strptime(obj):
     """
         Converts `obj` to a `datetime` object **in UTC without tzinfo**.
@@ -217,42 +207,20 @@ def strptime(obj):
 
 
 def get_gmdb_path():
+    '''Returns the path to the eGSIM Ground Motion Database'''
     return join(settings.BASE_DIR, 'gmdb.hf5')
 
 
 def get_gmdb_names():
+    '''Returns the path to each table in the eGSIM Ground Motion Database'''
     fpath = get_gmdb_path()
     if not isfile(fpath):
         return []
     return get_dbnames(fpath)
 
 
-class EGSIM:  # For metaclasses (not used anymore): https://stackoverflow.com/a/6798042
-    '''Namespace container for Openquake related data used in this program'''
-#     aval_gsims, aval_imts, aval_trts = _get_data()
-#     _trmodels = None  # dict of names mapped to a geojson colleciton (will be lazily created)
-    _gmdbs = {}  # ground motion databases: name (str) -> [file_path, ground motion db obj
-
-    @classmethod
-    def gmdb_names(cls):
-        if not cls._gmdbs:
-            # FIXME: hardcoded, change it!
-            root = join(dirname(dirname(dirname(__file__))),
-                        'tmp', 'data', 'flatfiles', 'output')
-            cls._gmdbs = {f: [join(root, f), None] for f in listdir(root)
-                          if isdir(join(root, f))}
-        return list(cls._gmdbs.keys())
-
-    @classmethod
-    def gmdb(cls, name):
-        '''Returns a GroundMotionDatabase from the given file name (not path, just the name)'''
-        entry = cls._gmdbs[name]
-        if entry[1] is None:
-            entry[1] = load_database(entry[0])
-        return entry[1]
-
-
 class OQ:
+    '''container class for OpenQuake entities'''
 
     @classmethod
     def trts(cls):
