@@ -644,12 +644,12 @@ class GmdbPlot(GmdbForm):
                                 initial='rrup')
 
 
-class ResidualsForm(GsimImtForm, GmdbForm):
+class ResidualsForm(GsimImtForm, GmdbPlot):
     '''Form for residual analysis'''
 
     # merge additional fieldnames (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
-                                 **GmdbForm.__additional_fieldnames__}
+                                 **GmdbPlot.__additional_fieldnames__}
 
     plot_type = ResidualplottypeField(required=True)
 

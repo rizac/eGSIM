@@ -129,34 +129,39 @@ def get_magnitude_distances(records, dist_type):
 
 
 def records_iter(params):
-    '''Computes the selection from the given already validated params and returns a filtered
-    GroundMotionDatabase object'''
+    '''Computes the selection from the given already validated params and
+    returns a filtered GroundMotionDatabase object'''
     # params:
     GMDB = 'gmdb'  # pylint: disable=invalid-name
     SEL = 'selexpr'  # pylint: disable=invalid-name
 
-    # Instantiate the selection object with a database as argument:
-    gmdb = params[GMDB]
-    with GroundMotionTable(*gmdb, mode='r') as gmdb:
-        for rec in records_where(gmdb.table, params.get(SEL) or None):
+    # params[GMDB] is the tuple (hdf file name, table name):
+    with GroundMotionTable(*params[GMDB], mode='r') as gmdb:
+        for rec in records_where(gmdb.table, params.get(SEL)):
             yield rec
 
 
 def get_residuals(params):
     # params:
+    GMDB = 'gmdb'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
     IMT = 'imt'  # pylint: disable=invalid-name
     DTYPE = 'distance_type'  # pylint: disable=invalid-name
     PLOTTYPE = 'plot_type'  # pylint: disable=invalid-name
+    SEL = 'selexpr'  # pylint: disable=invalid-name
 
-    gmdb = _get_gmdb(params)
+    # params[GMDB] is the tuple (hdf file name, table name):
+    gmdb = GroundMotionTable(*params[GMDB], mode='r')
+    if params.get(SEL):
+        gmdb = gmdb.filter(params[SEL])
+
     func = params[PLOTTYPE]
-    if func == likelihood:
+    if func == likelihood:  # pylint: disable=comparison-with-callable
         residuals = Likelihood(params[GSIM], params[IMT])
     else:
         residuals = Residuals(params[GSIM], params[IMT])
     # Compute residuals.
-    residuals.get_residuals(gmdb)  # FIXME: add 'component' argument?
+    residuals.get_residuals(gmdb)
     # statistics = residuals.get_residual_statistics()
     ret = defaultdict(lambda: defaultdict(lambda: {}))
     distance_type = params[DTYPE]
@@ -170,9 +175,5 @@ def get_residuals(params):
             if func == residuals_with_distance:
                 kwargs['distance_type'] = distance_type
             ret[gsim][imt] = func(**kwargs)
-
-#     import json
-#     with open('/Users/riccardo/work/gfz/projects/sources/python/egsim/tmp/data/residuals.json', 'w') as fp:
-#         json.dump(ret, fp)
 
     return ret
