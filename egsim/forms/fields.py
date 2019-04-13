@@ -316,7 +316,7 @@ class TrModelField(ChoiceField):
 class ResidualplottypeField(ChoiceField):
     '''An EgsimChoiceField which returns the selected function to compute residual plots'''
     _base_choices = {
-        'res': ('Residuals density distribution', residuals_density_distribution),
+        'dd': ('Residuals density distribution', residuals_density_distribution),
         'lh': ('Likelihood', likelihood),
         'mag': ('Residuals vs. Magnitude', residuals_with_magnitude),
         'dist': ('Residuals vs. Distance', residuals_with_distance),
