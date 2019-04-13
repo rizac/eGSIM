@@ -24,7 +24,12 @@ class Command(BaseCommand):
     parserclass = GMTableParser
     
     outpath = get_gmdb_path()
-    dbnames = get_gmdb_names()
+
+    @property
+    def dbnames(self):
+        '''returns the database (table) names in the HDF file pointed by
+        self.outpath'''
+        return get_gmdb_names(self.outpath)
 
     def add_arguments(self, parser):
         parser.add_argument('flatfile', nargs='+', help='Flatfile path')

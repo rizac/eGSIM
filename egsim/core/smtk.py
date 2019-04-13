@@ -9,19 +9,13 @@ Created on 31 May 2018
 from collections import defaultdict
 
 import numpy as np
-
-from smtk.trellis.trellis_plots import (DistanceIMTTrellis, MagnitudeIMTTrellis,
-                                        DistanceSigmaIMTTrellis, MagnitudeSigmaIMTTrellis)
-
-from smtk.residuals.gmpe_residuals import (Residuals, Likelihood)
+from smtk.trellis.trellis_plots import DistanceIMTTrellis, \
+    MagnitudeIMTTrellis, DistanceSigmaIMTTrellis, MagnitudeSigmaIMTTrellis
+from smtk.sm_table import GroundMotionTable, records_where
+from smtk.residuals.gmpe_residuals import Residuals, Likelihood
 from smtk.residuals.residual_plots import residuals_with_distance, likelihood
 
-from smtk.strong_motion_selector import SMRecordSelector
-# from smtk.database_visualiser import get_magnitude_distances
-
 from egsim.core.utils import vectorize, DISTANCE_LABEL
-from smtk.sm_table import GroundMotionTable, records_where
-# from egsim.core.shapes import get_feature_properties
 
 
 def get_trellis(params):
