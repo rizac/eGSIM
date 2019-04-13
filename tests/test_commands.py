@@ -22,7 +22,7 @@ def test_mycommand(capsys):
     sout = captured.out
 
 
-@patch('egsim.core.utils.get_gmdb_path')
+@patch('egsim.management.commands.gmdb.get_gmdb_path')
 def test_gmdb_esm(mock_get_gmdb_path, testdata, capsys):
     '''Test gmdb_esm command (and consequently, also gmbd command)'''
     ffname = 'esm_sa_flatfile_2018.csv'

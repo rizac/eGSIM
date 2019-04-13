@@ -631,6 +631,14 @@ class GmdbForm(BaseForm):
 
     gmdb = GmdbField(label='Ground Motion database', required=True)
     selexpr = CharField(label='Selection expression', required=False)
+
+
+class GmdbPlot(GmdbForm):
+    '''Abstract-like class for handling gmdb (GroundMotionDatabase)'''
+
+    __additional_fieldnames__ = {**GmdbForm.__additional_fieldnames__,
+                                 'dist': 'distance_type'}
+
     distance_type = ChoiceField(label='Distance type',
                                 choices=list(DISTANCE_LABEL.items()),
                                 initial='rrup')

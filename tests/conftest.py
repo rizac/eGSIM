@@ -70,6 +70,7 @@ def areequal(request):
                 obj1 = [obj1[k] for k in keys1]
                 obj2 = [obj2[k] for k in keys2]
             else:
+                # FIXME: what if obj1 and obj2 are lists of (unsortable) dicts?
                 obj1, obj2 = sorted(obj1), sorted(obj2)
 
             if obj1 != obj2:

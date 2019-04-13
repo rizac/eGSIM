@@ -211,9 +211,8 @@ def get_gmdb_path():
     return join(settings.BASE_DIR, 'gmdb.hf5')
 
 
-def get_gmdb_names():
+def get_gmdb_names(fpath):
     '''Returns the path to each table in the eGSIM Ground Motion Database'''
-    fpath = get_gmdb_path()
     if not isfile(fpath):
         return []
     return get_dbnames(fpath)
