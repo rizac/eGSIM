@@ -45,9 +45,7 @@ class ExceptionHandlerMiddleware(MiddlewareMixin):  # https://stackoverflow.com/
 
         :param kwargs: other optional arguments which will be inserted in the response data
         '''
-        if isinstance(exception, Exception):
-            errormsg = '%s (%s)' % (str(exception), exception.__class__.__name__)
-        else:
-            errormsg = str(exception)
-        return JsonResponse({'error': dict({'code': code, 'message': errormsg}, **kwargs)},
+        errormsg = str(exception)
+        return JsonResponse({'error': dict({'code': code,
+                                            'message': errormsg}, **kwargs)},
                             safe=False, status=code)

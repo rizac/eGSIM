@@ -283,18 +283,26 @@ class TrellisplottypeField(ChoiceField):
 
 
 class GmdbField(ChoiceField):
-    '''EgsimChoiceField for Ground motion databases'''
+    '''EgsimChoiceField for Ground motion databases
+    It accepts an optional argument gmdbpath which defaults to the Django
+    app db path
+    '''
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
-                          LazyCached(lambda: [(_, _)
-                                              for _ in get_gmdb_names()]))
+                          LazyCached(lambda: [(_, _) for _ in
+                                              get_gmdb_names(self.gmdbpath)]))
         super(GmdbField, self).__init__(**kwargs)
+
+    @property
+    def gmdbpath(self):
+        return get_gmdb_path()
 
     def clean(self, value):
         '''Converts the given value (string) into the tuple
         hf5 path, database name (both strings)'''
-        return (get_gmdb_path(), value)
+        value = super(GmdbField, self).clean(value)
+        return (self.gmdbpath, value)
 
 
 class TrModelField(ChoiceField):

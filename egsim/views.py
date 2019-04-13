@@ -18,8 +18,9 @@ from django.forms.fields import MultipleChoiceField
 from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
-from egsim.forms.forms import TrellisForm, GsimSelectionForm, GmdbForm, ResidualsForm, BaseForm
-from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_names
+from egsim.forms.forms import TrellisForm, GsimSelectionForm, ResidualsForm, \
+    BaseForm, GmdbPlot
+from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
@@ -83,10 +84,14 @@ def apidoc(request):
                         break
                     except:  #  @IgnorePep8  pylint: disable=bare-except
                         pass
+    # baseurl is the base URL for the services explained in the tutorial
+    # It is the request.META['HTTP_HOST'] key. But during testing, this
+    # key is not present. Actually, just use a string for the moment:
+    baseurl = "[eGSIM domain URL]"  # request.META.get('HTTP_HOST', '[eGSIM domain URL]')
     return render(request, filename, dict(_COMMON_PARAMS,
                                           query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
                                           last_modified=last_modified,
-                                          baseurl=request.META['HTTP_HOST']+"/query",
+                                          baseurl=baseurl+"/query",
                                           trellis='trellis', residuals='residuals',
                                           gsimsel='gsims', test='testing',
                                           param=BaseForm.parnames(),
@@ -94,43 +99,43 @@ def apidoc(request):
                                           form_residuals=ResidualsForm.toHTML(),
                                           form_gsims=GsimSelectionForm.toHTML()))
 
-def trsel(request):
-    '''view returing the page forfor the gsim tectonic region
-    selection'''
-    return render(request, 'trsel.html', dict(_COMMON_PARAMS, post_url='../query/gsims'))
+# def trsel(request):
+#     '''view returing the page forfor the gsim tectonic region
+#     selection'''
+#     return render(request, 'trsel.html', dict(_COMMON_PARAMS, post_url='../query/gsims'))
 
 
-def trellis(request):
-    '''view for the trellis page (iframe in browser)'''
-    return render(request, 'trellis.html', dict(_COMMON_PARAMS, form=TrellisForm(),
-                                                post_url='../query/trellis'))
+# def trellis(request):
+#     '''view for the trellis page (iframe in browser)'''
+#     return render(request, 'trellis.html', dict(_COMMON_PARAMS, form=TrellisForm(),
+#                                                 post_url='../query/trellis'))
 
 
-def get_gmdbs(request):
-    '''view for the residuals page (iframe in browser)'''
-    gmdbnames, selgmdbname = list(get_gmdb_names()), None
-    if gmdbnames:
-        selgmdbname = gmdbnames[0]
-    return JsonResponse({'avalgmdbs': gmdbnames,
-                         'selectedgmdb': selgmdbname},
-                        safe=False)
+# def get_gmdbs(request):
+#     '''view for the residuals page (iframe in browser)'''
+#     gmdbnames, selgmdbname = list(get_gmdb_names()), None
+#     if gmdbnames:
+#         selgmdbname = gmdbnames[0]
+#     return JsonResponse({'avalgmdbs': gmdbnames,
+#                          'selectedgmdb': selgmdbname},
+#                         safe=False)
 
 
-def gmdb(request):
-    '''view for the residuals page (iframe in browser)'''
-    return render(request, 'gmdb.html', dict(_COMMON_PARAMS, form=GmdbForm(),
-                                             post_url='../query/gmdbplot'))
-
-
-def residuals(request):
-    '''view for the residuals page (iframe in browser)'''
-    return render(request, 'residuals.html', dict(_COMMON_PARAMS, form=ResidualsForm(),
-                                                  post_url='../query/residuals'))
-
-
-def loglikelihood(request):
-    '''view for the log-likelihood page (iframe in browser)'''
-    return render(request, 'loglikelihood.html', _COMMON_PARAMS)
+# def gmdb(request):
+#     '''view for the residuals page (iframe in browser)'''
+#     return render(request, 'gmdb.html', dict(_COMMON_PARAMS, form=GmdbPlot(),
+#                                              post_url='../query/gmdbplot'))
+# 
+# 
+# def residuals(request):
+#     '''view for the residuals page (iframe in browser)'''
+#     return render(request, 'residuals.html', dict(_COMMON_PARAMS, form=ResidualsForm(),
+#                                                   post_url='../query/residuals'))
+# 
+# 
+# def loglikelihood(request):
+#     '''view for the log-likelihood page (iframe in browser)'''
+#     return render(request, 'loglikelihood.html', _COMMON_PARAMS)
 
 
 # @api_view(['GET', 'POST'])
@@ -202,7 +207,9 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
                                                                code=cls.EXCEPTION_CODE,
                                                                errors=errors)
 
-        return JsonResponse(cls.process(form.cleaned_data), safe=False)
+        data = cls.process(form.cleaned_data)
+        return data if isinstance(data, JsonResponse) else \
+            JsonResponse(data, safe=False)  # see GmdbPlotView.process
 
     @classmethod
     def process(cls, params):
@@ -236,7 +243,7 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
 
 
 class TrellisView(EgsimQueryView):
-    '''EgsimQueryView subclass for generating Trelli plots responses'''
+    '''EgsimQueryView subclass for generating Trellis plots responses'''
 
     formclass = TrellisForm
 
@@ -246,6 +253,7 @@ class TrellisView(EgsimQueryView):
 
 
 class GsimsView(EgsimQueryView):
+    '''EgsimQueryView subclass for generating Gsim selection responses'''
 
     formclass = GsimSelectionForm
 
@@ -274,12 +282,21 @@ class GsimsView(EgsimQueryView):
 
 
 class GmdbPlotView(EgsimQueryView):
+    '''EgsimQueryView subclass for generating Gmdb's
+       magnitude vs distance plots responses'''
 
-    formclass = GmdbForm
+    formclass = GmdbPlot
 
     @classmethod
     def process(cls, params):
-        return egsim_smtk.get_gmdbplot(params)
+        try:
+            return egsim_smtk.get_gmdbplot(params)
+        except SyntaxError as serr:
+            # catch SyntaxErrors as they are most likely due to
+            # selection errors, and raise appropriate Json response
+            # bypassing default middleware (if installed):
+            msg = 'Selection expression error: "%s"' % serr.text
+            return ExceptionHandlerMiddleware.jsonerr_response(Exception(msg))
 
 
 class ResidualsView(EgsimQueryView):
@@ -316,14 +333,14 @@ def test(request):
 
         components_props[name] = data
 
-    # REMOVE THESE LINES!!!
+    # REMOVE LINES BELOW!!!
     components_props['trellis']['form']['gsim']['val'] = ['AbrahamsonEtAl2014']
     components_props['trellis']['form']['imt']['val'] = ['PGA']
     components_props['trellis']['form']['magnitude']['val'] = "3:4"
     components_props['trellis']['form']['distance']['val'] = "0:1:100"
     components_props['trellis']['form']['aspect']['val'] = 1
     components_props['trellis']['form']['dip']['val'] = 60
-
+    # remove lines above!
 
     initdata = {'component_props': components_props,
                 'gsims': aval_gsims(asjsonlist=True)}
@@ -357,7 +374,7 @@ MENUS = [
     ('trellis', 'Trellis Plots', 'fa-area-chart', {'url': 'query/trellis',
                                                    'form': TrellisForm()}),
     ('gmdbplot', 'Ground Motion database', 'fa-database', {'url': 'query/gmdbplot',
-                                                           'form': GmdbForm()}),
+                                                           'form': GmdbPlot()}),
     ('residuals', 'Residuals', 'fa-bar-chart', {'url': 'query/residuals',
                                                 'form': ResidualsForm()}),
     ('testing', 'Testing', 'fa-list', {'url': 'query/testing',
