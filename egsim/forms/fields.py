@@ -6,6 +6,7 @@ Created on 16 Sep 2018
 @author: riccardo
 '''
 import re
+from collections import OrderedDict
 from fnmatch import translate
 import json
 import shlex
@@ -20,11 +21,12 @@ from django.forms.fields import CharField, MultipleChoiceField, ChoiceField
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
-from smtk.trellis.trellis_plots import DistanceIMTTrellis, DistanceSigmaIMTTrellis, \
-    MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, MagnitudeDistanceSpectraTrellis, \
-    MagnitudeDistanceSpectraSigmaTrellis
-from smtk.residuals.residual_plots import residuals_density_distribution, residuals_with_depth,\
-    residuals_with_distance, residuals_with_magnitude, residuals_with_vs30, likelihood
+from smtk.trellis.trellis_plots import DistanceIMTTrellis, \
+    DistanceSigmaIMTTrellis, MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, \
+    MagnitudeDistanceSpectraTrellis, MagnitudeDistanceSpectraSigmaTrellis
+from smtk.residuals.residual_plots import residuals_density_distribution, \
+    residuals_with_depth, residuals_with_distance, residuals_with_magnitude, \
+    residuals_with_vs30, likelihood
 
 from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path
 
@@ -36,31 +38,36 @@ from egsim.models import aval_gsims, aval_imts, aval_trts, aval_trmodels
 
 class ArrayField(CharField):
     '''
-        Implements a django CharField which parses and validates the input expecting a
-        string-formatted element (or an array of elements) in JSON or Unix shell
-        (space separated variables) formats. Note that in both syntaxes leading and trailing
-        square brackets are optional.
+        Implements a django CharField which parses and validates the input
+        expecting an array of elements in JSON or Unix shell (space separated
+        variables) formatted strings. Note that in both syntaxes leading and
+        trailing square brackets are optional.
         The type of the parsed elements depends on the method `self.parse(token)`
         which by default returns `token` but might be overridden by subclasses
         (see. :class:`NArrayField`).
-        As Form fields act also as validators, an object of this class can deal also with
-        already parsed arrays (e.g., after inputing Yaml POST data in yaml format which would
-        return an array of python objects and not their string representation).
+        As Form fields act also as validators, an object of this class can
+        deal also with already parsed arrays (e.g., after inputing Yaml POST
+        data in yaml format which would return an array of python objects and
+        not their string representation).
     '''
-    def __init__(self, *, min_count=None, max_count=None, min_value=None, max_value=None,
-                 **kwargs):
+    def __init__(self, *, min_count=None, max_count=None,
+                 min_value=None, max_value=None, **kwargs):
         '''Initializes a new ArrayField
-         :param min_count: numeric or None. The minimum required count of the elements
-             of the parsed array. Note that `min_length` is already defined in the super-class.
-             If None (the default), parsed array can have any minimum length >=0.
-         :param max_count: numeric or None. The maximum required count of the elements
-             of the parsed array. Note that `max_length` is already defined in the super-class.
-             If None (the default), parsed array can have any maximum length >=0.
+         :param min_count: numeric or None. The minimum required count of the
+             elements of the parsed array. Note that `min_length` is already
+             defined in the super-class. If None (the default), parsed array
+             can have any minimum length >=0.
+         :param max_count: numeric or None. The maximum required count of the
+             elements of the parsed array. Note that `max_length` is already
+             defined in the super-class. If None (the default), parsed array
+             can have any maximum length >=0.
          :param min_value: object. The minimum possible value for the
-             elements of the parsed array. If None (the default) do not impose any minimum
-             value. If iterable, sets the minimum required value element-wise (padding with
-             None or slicing in case of lengths mismatch)
-         :param max_value: object. Self-explanatory. Behaves the same as `min_value`
+             elements of the parsed array. If None (the default) do not impose
+             any minimum value. If iterable, sets the minimum required value
+             element-wise (padding with None or slicing in case of lengths
+             mismatch)
+         :param max_value: object. Self-explanatory. Behaves the same as
+             `min_value`
          :param kwargs: keyword arguments forwarded to the Django super-class.
         '''
         # Parameters after “*” or “*identifier” are keyword-only parameters
@@ -71,7 +78,7 @@ class ArrayField(CharField):
         self.min_value = min_value
         self.max_value = max_value
 
-    def to_python(self, value):  # pylint: disable=too-many-branches, too-many-locals
+    def to_python(self, value):
         # three scenarios: iterable: take iterable
         # non iterable: parse [value]
         # string: split value into iterable
@@ -88,7 +95,8 @@ class ArrayField(CharField):
                     value = json.loads(value if is_vector else "[%s]" % value)
                 except Exception:  # pylint: disable=broad-except
                     try:
-                        value = shlex.split(value[1:-1].strip() if is_vector else value)
+                        value = shlex.split(value[1:-1].strip() if is_vector
+                                            else value)
                     except Exception:
                         raise ValidationError('Input syntax error')
 
@@ -103,22 +111,26 @@ class ArrayField(CharField):
                 if isscalar(vls):
                     values.append(vls)
                 else:
-                    is_vector = True  # force the return value to be list even if we have 1 elm.
+                    # force the return value to be list even if we have 1 elm:
+                    is_vector = True
                     values.extend(vls)
 
             # check lengths:
             try:
                 self.checkrange(len(values), self.min_count, self.max_count)
-            except ValidationError as verr:  # just re-format exception string and raise:
+            except ValidationError as verr:
+                # just re-format exception stringand raise:
                 # msg should be in the form '% not in ...', remove first '%s'
                 msg = verr.message[verr.message.find(' '):]
-                raise ValidationError('number of elements (%d) %s' % (len(values), msg))
+                raise ValidationError('number of elements (%d) %s' %
+                                      (len(values), msg))
 
             # check bounds:
             minval, maxval = self.min_value, self.max_value
             minval = [minval] * len(values) if isscalar(minval) else minval
             maxval = [maxval] * len(values) if isscalar(maxval) else maxval
-            for numval, mnval, mxval in zip(values, chain(minval, repeat(None)),
+            for numval, mnval, mxval in zip(values,
+                                            chain(minval, repeat(None)),
                                             chain(maxval, repeat(None))):
                 self.checkrange(numval, mnval, mxval)
 
@@ -133,8 +145,9 @@ class ArrayField(CharField):
 
     @staticmethod
     def isinragne(value, minval=None, maxval=None):
-        '''Returns True if the given value is in the range defined by minval and maxval
-            (endpoints are included). None's in minval and maxval mean: do not check'''
+        '''Returns True if the given value is in the range defined by minval
+        and maxval (endpoints are included). None's in minval and maxval
+        mean: do not check'''
         try:
             NArrayField.checkrange(value, minval, maxval)
             return True
@@ -143,14 +156,15 @@ class ArrayField(CharField):
 
     @staticmethod
     def checkrange(value, minval=None, maxval=None):
-        '''checks that the given value is in the range defined by minval and maxval
-            (endpoints are included). None's in minval and maxval mean: do not check.
-            This method does not return any value but raises ValueError if value is not in the
-            given range'''
+        '''checks that the given value is in the range defined by minval and
+        maxval (endpoints are included). None's in minval and maxval mean:
+        do not check. This method does not return any value but raises
+        ValueError if value is not in the given range'''
         toolow = (minval is not None and value < minval)
         toohigh = (maxval is not None and value > maxval)
         if toolow and toohigh:
-            raise ValidationError('%s not in [%s, %s]' % (str(value), str(minval), str(maxval)))
+            raise ValidationError('%s not in [%s, %s]' %
+                                  (str(value), str(minval), str(maxval)))
         elif toolow:
             raise ValidationError('%s < %s' % (str(value), str(minval)))
         elif toohigh:
@@ -162,13 +176,15 @@ class NArrayField(ArrayField):
 
     @staticmethod
     def float(val):
-        '''wrapper around the built-in `float` function. Raises ValidationError in case of errors'''
+        '''wrapper around the built-in `float` function.
+        Raises ValidationError in case of errors'''
         try:
             return float(val)
         except ValueError:
             raise ValidationError("Not a number: '%s'" % val)
         except TypeError:
-            raise ValidationError("input must be string(s) or number(s), not '%s'" % str(val))
+            raise ValidationError(("input must be string(s) or number(s), "
+                                   "not '%s'") % str(val))
 
     @classmethod
     def parse(cls, token):
@@ -186,17 +202,19 @@ class NArrayField(ArrayField):
         if len(spl) < 2 or len(spl) > 3:
             if ':' in token:
                 raise ValidationError("Expected format '<start>:<end>' or "
-                                      "'<start>:<step>:<end>', found: '%s'" % token)
-            else:
-                raise ValidationError("Unparsable string '%s'" % token)
+                                      "'<start>:<step>:<end>', found: '%s'"
+                                      % token)
+            raise ValidationError("Unparsable string '%s'" % token)
 
         start, step, stop = \
-            cls.float(spl[0]), 1 if len(spl) == 2 else cls.float(spl[1]), cls.float(spl[-1])
+            cls.float(spl[0]), 1 if len(spl) == 2 else \
+            cls.float(spl[1]), cls.float(spl[-1])
         decimals = cls.get_decimals(*spl)
 
         arange = np.arange(start, stop, step, dtype=float)
         if decimals is not None:
-            if round(arange[-1].item()+step, decimals) == round(stop, decimals):
+            if round(arange[-1].item() + step, decimals) == \
+                    round(stop, decimals):
                 arange = np.append(arange, stop)
 
             arange = np.round(arange, decimals=decimals)
@@ -207,8 +225,9 @@ class NArrayField(ArrayField):
     @classmethod
     def get_decimals(cls, *strings):
         '''parses each string and returns the maximum number of decimals
-        :param strings: a sequence of strings. Note that they do not need to be parsable
-        as floats, this method searches for the dot and the letter 'E' (ignoring case)
+        :param strings: a sequence of strings. Note that they do not need to
+        be parsable as floats, this method searches for the dot and the
+        letter 'E' (ignoring case)
         '''
         decimals = 0
         try:
@@ -221,21 +240,25 @@ class NArrayField(ArrayField):
                     len(string[idx_dec+1: None if idx_exp < 0 else idx_exp])
                 dec2 = 0 if idx_exp < 0 else -int(string[idx_exp+1:])
                 decimals = max([decimals, dec1 + dec2])
-            return decimals  # 0 as we do not care for big numbers (they are int anyway)
+            # reutrn 0 as we do not care for big numbers (they are int anyway)
+            return decimals
         except ValueError:
             return None
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 class PointField(NArrayField):
-    '''NArrayField which validates a 2-element iterable and returns an openquake Point'''
-    def __init__(self, **kwargs):  # FIXME: implement depth? should be >0 in case ?
+    '''NArrayField which validates a 2-element iterable and returns an
+    openquake Point'''
+    def __init__(self, **kwargs):  # FIXME: depth? should be >0 in case ?
         super(PointField, self).__init__(min_count=2, max_count=2, **kwargs)
 
     def clean(self, value):
-        '''Converts the given value to a :class:` openquake.hazardlib.geo.point.Point` object.
-        It is usually better to perform these types of conversions subclassing `clean`, as the
-        latter is called at the end of the validation workflow'''
+        '''Converts the given value to a
+        :class:` openquake.hazardlib.geo.point.Point` object.
+        It is usually better to perform these types of conversions
+        subclassing `clean`, as the latter is called at the end of the
+        validation workflow'''
         value = NArrayField.clean(self, value)
         try:
             return Point(*value)
@@ -259,8 +282,8 @@ class MsrField(ChoiceField):
 
 
 class TrellisplottypeField(ChoiceField):
-    '''A ChoiceField returning the selected `BaseTrellis` class for computing the
-        Trellis plots'''
+    '''A ChoiceField returning the selected `BaseTrellis` class for
+    computing the Trellis plots'''
     _base_choices = {
         'd': ('IMT vs. Distance', DistanceIMTTrellis),
         'm': ('IMT vs. Magnitude', MagnitudeIMTTrellis),
@@ -309,12 +332,14 @@ class TrModelField(ChoiceField):
     '''EgsimChoiceField for Tectonic regionalisation models'''
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
-                          LazyCached(lambda: [(_, _) for _ in aval_trmodels()]))
+                          LazyCached(lambda: [(_, _)
+                                              for _ in aval_trmodels()]))
         super(TrModelField, self).__init__(**kwargs)
 
 
 class ResidualplottypeField(ChoiceField):
-    '''An EgsimChoiceField which returns the selected function to compute residual plots'''
+    '''An EgsimChoiceField which returns the selected function to compute
+    residual plots'''
     _base_choices = {
         'dd': ('Residuals density distribution', residuals_density_distribution),
         'lh': ('Likelihood', likelihood),
@@ -339,8 +364,8 @@ class ResidualplottypeField(ChoiceField):
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
-    '''MultipleChoiceField which accepts lists of values (the default) but also a single string,
-    in which case the string will be converted
+    '''MultipleChoiceField which accepts lists of values (the default) but
+    also a single string, in which case the string will be converted
     to regex and all matching elements will be returned'''
 
     def to_python(self, value):
@@ -359,7 +384,8 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
             # value is now a list of strings (empty if value was falsy)
         if value:
             # now convert wildcard strings to matching elements
-            values = {}  # use a dict to preserve insertion order and avoid duplicates
+            # OrderedDict is to preserve insertion order and avoid duplicates:
+            values = OrderedDict()
             for val in value:
                 possible_values = [val]
                 if '*' in val or '?' in val or ('[' in val and ']' in val):
@@ -385,7 +411,8 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
 
 
 class GsimField(MultipleChoiceWildcardField):
-    '''MultipleChoiceWildcardField with default `choices` argument, if not provided'''
+    '''MultipleChoiceWildcardField with default `choices` argument,
+    if not provided'''
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
                           LazyCached(lambda: [(_, _) for _ in aval_gsims()]))
@@ -396,12 +423,13 @@ class GsimField(MultipleChoiceWildcardField):
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 class IMTField(MultipleChoiceWildcardField):
     '''Field for IMT selection.
-    This class overrides `to_python`, which first calls the super-method (which for
-    `MultipleChoiceField`s parses the input into a list of strings), then it adds to the parsed
-    list the `SA`s based on `self.sa_periods` (if truthy), which
-    is a string or a list of numeric parsable strings.
-    Finally, `valid_value` is overridden to ignore `self.choices` (if provided) and to
-    validate each string on whether it's a valid imt or not via openquake utilities
+    This class overrides `to_python`, which first calls the super-method
+    (which for `MultipleChoiceField`s parses the input into a list of strings),
+    then it adds to the parsed list the `SA`s based on `self.sa_periods`
+    (if truthy), which is a string or a list of numeric parsable strings.
+    Finally, `valid_value` is overridden to ignore `self.choices`
+    (if provided) and to validate each string on whether it's a valid imt or
+    not via openquake utilities
     '''
     SA = 'SA'
     default_error_messages = {
@@ -418,14 +446,15 @@ class IMTField(MultipleChoiceWildcardField):
         self.sa_periods = []  # can be string or iterable of strings
         # strings must be numeric parsable (see NArrayField)
 
-
     # this method is called first in the validation pipeline:
     def to_python(self, value):
-        # call super: returns an list of strings. Excpets value to be a list or tuple:
+        # call super: returns an list of strings. Expects value to be a list
+        # or tuple:
         # if not value:
         #     return []
         # elif not isinstance(value, (list, tuple)):
-        #     raise ValidationError(self.error_messages['invalid_list'], code='invalid_list')
+        #     raise ValidationError(self.error_messages['invalid_list'],
+        #                           code='invalid_list')
         # return [str(val) for val in value]
         all_values = super().to_python(value)
         if not self.sa_periods_required:
@@ -433,7 +462,8 @@ class IMTField(MultipleChoiceWildcardField):
         sastr = self.SA
         values = [v for v in all_values if v != sastr]
         if self.sa_periods:
-            sa_periods = vectorize(NArrayField(required=False).clean(self.sa_periods))
+            sa_periods = \
+                vectorize(NArrayField(required=False).clean(self.sa_periods))
             values += ['%s(%f)' % (sastr, f) for f in sa_periods]
         elif len(all_values) > len(values):
             raise ValidationError(
@@ -443,9 +473,8 @@ class IMTField(MultipleChoiceWildcardField):
         return values
 
     def valid_value(self, value):
-        """
-        Validate the given value, ignoring the super method which compares to the choices
-        attribute if self.sa_periods_required is True
+        """Validate the given value, ignoring the super method which compares
+        to the choices attribute if self.sa_periods_required is True
         """
         if not self.sa_periods_required:
             return super(IMTField, self).valid_value(value)
@@ -457,19 +486,21 @@ class IMTField(MultipleChoiceWildcardField):
 
 
 class TrtField(MultipleChoiceWildcardField):
-    '''MultipleChoiceWildcardField field which also bahaves as kind of EgsimChoiceField
-    '''
+    '''MultipleChoiceWildcardField field which also bahaves as kind of
+    EgsimChoiceField'''
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
-                          LazyCached(lambda: [_ for _ in aval_trts(include_oq_name=True)]))
+                          LazyCached(lambda: [_ for _ in
+                                              aval_trts(include_oq_name=True)])
+                          )
         super(TrtField, self).__init__(**kwargs)
 
 
 class LazyCached:
     '''A callable returning an iterable which caches its result.
-    Used in the keyword argument 'choices' to lazily create the list of choices.
-    The rationale is to avoid DB access at import / initialization time,
-    which is messy with tests (for an introduction of the problem, see:
+    Used in the keyword argument 'choices' to lazily create the list of
+    choices. The rationale is to avoid DB access at import / initialization
+    time, which is messy with tests (for an introduction of the problem, see:
     https://stackoverflow.com/questions/43326132/how-to-avoid-import-time-database-access-in-django).
     The simplest solution would be to simply pass a callable to the 'choices'
     argument (see Django ChoiceField), but the callable re-evaluated each
