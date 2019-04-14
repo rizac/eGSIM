@@ -8,7 +8,6 @@ Created on 29 Jan 2018
 
 import re
 import sys
-import os
 import json
 from datetime import datetime
 from collections import OrderedDict
@@ -21,8 +20,6 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext as _
 from django.forms import Form
 from django.utils.safestring import mark_safe
-from django.forms.widgets import RadioSelect, CheckboxSelectMultiple, \
-    CheckboxInput
 from django.forms.fields import BooleanField, CharField, FloatField, \
     ChoiceField
 
@@ -42,17 +39,17 @@ class BaseForm(Form):
     '''Base eGSIM form'''
 
     def __init__(self, *args, **kwargs):
-        '''Overrides init to set custom attributes on field widgets and to set the initial
-        value for fields of this class with no match in the keys of self.data'''
-        kwargs.setdefault('label_suffix', '')  # remove colon in labels by default in templates
-        # How do we implement custom attributes for js libraries (e.,g. bootstrap, angular...)?
-        # All solutions (widget_tweaks, django-angular) are, as always, for big projects and they
-        # are huge overheads for the goal we want to achieve.
-        # So, after all we just need to overwrite few attributes on a form:
+        '''Overrides init to set custom attributes on field widgets and to set
+        the initial value for fields of this class with no match in the keys
+        of self.data'''
+        # remove colon in labels by default in templates:
+        kwargs.setdefault('label_suffix', '')
+        # call super:
         super(BaseForm, self).__init__(*args, **kwargs)
-        # now we want to re-name potential parameter names (e.g., 'mag' into 'magnitude')
-        # To do this, define a __additional_fieldnames__ as class attribute, where
-        # is a dict of name (string) mapped to its possible
+        # now we want to re-name potential parameter names (e.g., 'mag' into
+        # 'magnitude'). To do this, define a dict __additional_fieldnames__ as
+        # class attribute (see sub-classes) of name (string) mapped to its
+        # possible alternative name
         repl_dict = getattr(self, '__additional_fieldnames__', None)
         if repl_dict:
             for key in list(self.data.keys()):
@@ -62,21 +59,27 @@ class BaseForm(Form):
 
         # https://stackoverflow.com/a/20309754:
         # Defaults are set accoridng to the initial value in the field
-        # This must be set here cause in clean() required fields are processed before and their
-        # error set in the error form
+        # This must be set here cause in clean() required fields are processed
+        # before and their error set in the error form
         for name in self.fields:
-            if not self[name].html_name in self.data and self.fields[name].initial is not None:
+            if not self[name].html_name in self.data and \
+                    self.fields[name].initial is not None:
                 self.data[name] = self.fields[name].initial
 
+        # Custom attributes for js libraries (e.,g. bootstrap, angular...)?
+        # All solutions (widget_tweaks, django-angular) are too much overhead
+        # in our simple scenario. This is the best solution but not that
+        # after refactoring it is no-op:
         self.customize_widget_attrs()
 
     def clean(self):
-        '''Checks that if longitude is provided, also latitude is provided, and vice versa
-            (the same for longitude2 and latitude2)'''
+        '''Checks that if longitude is provided, also latitude is provided,
+        and vice versa (the same for longitude2 and latitude2)
+        '''
         cleaned_data = super().clean()
         # django sets all values provided in self.declared_fields with a
-        # default if the field is not provided, usually falsy
-        # (e.g. [] for MultipleChoiceField. See django.forms.Form._clean_fields)
+        # default if the field is not provided, usually falsy (e.g. []
+        # for MultipleChoiceField. See django.forms.Form._clean_fields)
         # If the field is required, this behaviour allows to set the 'missing'
         # error (see e.g. MultipleChoiceField.validate), but if the field
         # is not required, we want simply the field to be missing, not having
@@ -86,20 +89,21 @@ class BaseForm(Form):
 
         return cleaned_data
 
-    def customize_widget_attrs(self):
-        '''customizes the widget attributes'''
+    def customize_widget_attrs(self):  # pylint: disable=no-self-use
+        '''customizes the widget attributes. This method is no-op and might be
+        overwritten in subclasses. Check however `self.to_rendering_dict`
+        which is currently the method to be used in order to inject data in
+        the frontend'''
         # this method is no-op, as we delegate the view (frontend)
-        # to set the custom attributes
+        # to set the custom attributes. Example in case subclassed:
+        #
+        # atts = {'class': 'form-control'}  # for bootstrap
+        # for name, field in self.fields.items():  # @UnusedVariable
+        #     if not isinstance(field.widget,
+        #                       (CheckboxInput, CheckboxSelectMultiple,
+        #                        RadioSelect)) and not field.widget.is_hidden:
+        #         field.widget.attrs.update(atts)
         return
-        # Old colde:
-        atts = {'class': 'form-control'}  # for bootstrap
-        for name, field in self.fields.items():  # @UnusedVariable
-            # add class only for specific html elements, some other might have weird layout
-            # if class 'form-control' is added on them:
-            if not isinstance(field.widget,
-                              (CheckboxInput, CheckboxSelectMultiple, RadioSelect))\
-                    and not field.widget.is_hidden:
-                field.widget.attrs.update(atts)
 
     @classmethod
     def load(cls, obj):
@@ -110,14 +114,15 @@ class BaseForm(Form):
         """Serialize this Form instance into a YAML, JSON or URL query stream.
            If stream is None, return the produced string instead.
 
-           :param stream: A stream **for text I/O** like a file-like object (in general any
-               object with a write method, e.g. StringIO) or None.
-           :param syntax: string, either 'json', 'yaml' or 'GET'. If not either string, this
-                method raises ValueError
+           :param stream: A stream **for text I/O** like a file-like object
+               (in general any object with a write method, e.g. StringIO) or
+               None.
+           :param syntax: string, either 'json', 'yaml' or 'GET'. If not
+               either string, this method raises ValueError
         """
         syntax = syntax.lower()
         if syntax not in ('json', 'yaml'):
-            raise ValueError("Form serialization syntax must be 'json' or 'yaml'")
+            raise ValueError("Argument 'syntax' must be 'json' or 'yaml'")
 
         obj = self.to_dict()
 
@@ -129,13 +134,16 @@ class BaseForm(Form):
                 stream.write(querystr)
         elif syntax == 'json':  # JSON
             if stream is None:
-                return json.dumps(obj, indent=2, separators=(',', ': '), sort_keys=True)
+                return json.dumps(obj, indent=2, separators=(',', ': '),
+                                  sort_keys=True)
             else:
-                json.dump(obj, stream, indent=2, separators=(',', ': '), sort_keys=True)
+                json.dump(obj, stream, indent=2, separators=(',', ': '),
+                          sort_keys=True)
         else:  # YAML
 
             class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
-                '''forces indentation of lists. See https://stackoverflow.com/a/39681672'''
+                '''forces indentation of lists.
+                See https://stackoverflow.com/a/39681672'''
                 def increase_indent(self, flow=False, indentless=False):
                     return super(MyDumper, self).increase_indent(flow, False)
 
@@ -145,16 +153,19 @@ class BaseForm(Form):
             # ... and so on ...
             html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)<\\/\\1>')
 
-            # inject comments in yaml by using the field label and the label help:
+            # inject comments in yaml by using the field label and its help:
             stringio = StringIO() if stream is None else stream
             for name, value in obj.items():
                 field = self.fields[name]
-                label = field.label + ('' if not field.help_text else ' (%s)' % field.help_text)
+                label = field.label + \
+                    ('' if not field.help_text else ' (%s)' % field.help_text)
                 if label:
-                    # replace html characters with their content (or empty str if no content):
+                    # replace html characters with their content
+                    # (or empty str if no content):
                     label = html_tags_re.sub(r'\2', label)
                     # replace newlines for safety:
-                    label = '# %s\n' % (label.replace('\n', ' ').replace('\r', ' '))
+                    label = '# %s\n' % (label.replace('\n', ' ').
+                                        replace('\r', ' '))
                     stringio.write(label)
                 yaml.dump({name: value}, stream=stringio, Dumper=MyDumper,
                           default_flow_style=False)
@@ -167,10 +178,11 @@ class BaseForm(Form):
         return None
 
     def to_dict(self):
-        '''Converts this form to python dict. Each value is the `to_python` method of the
-        corresponding django Field. Note that for lists, the original value is checked and,
-        if string and contains the colon ':', it indicates a range and thus is returned
-        as it was. Also, datetimes are quoted in ISO format as json might not support them.
+        '''Converts this form to python dict. Each value is the `to_python`
+        method of the corresponding django Field. Note that for lists, the
+        original value is checked and, if string and contains the colon ':',
+        it indicates a range and thus is returned as it was. Also, datetimes
+        are quoted in ISO format as json might not support them.
 
         raise: ValidationError if the form is not valid
         '''
@@ -191,14 +203,15 @@ class BaseForm(Form):
 
     def to_rendering_dict(self):
         '''Converts this form to a python dict for rendering the field as input
-        in the frontend, free from django limiitation and allowing it to use wuth custom
-        frontend libraries such as Vuejs or AngularJS: each Field name is mapped to
-        a dict of keys such as 'val' (the value), 'help' (the help text),
-        'label' (the label text), 'err': (the error text), 'attrs' (a dict
-        of attributes), 'choices' (empty list if not ChoiceField, otherwise
-        the list of available choices). 'gsim' and 'imt' will have choices set
-        to the empty list to avoid injecting too much data redundantly
-        (in case of several components) in the HTML template: it is the client library
+        in the frontend, free from django limiitation and allowing it to use
+        with custom frontend libraries such as Vuejs or AngularJS: each
+        Field name is mapped to a dict of keys such as 'val' (the value),
+        'help' (the help text), 'label' (the label text), 'err':
+        (the error text), 'attrs' (a dict of attributes),
+        'choices' (empty list if not ChoiceField, otherwise the list of
+        available choices). 'gsim' and 'imt' will have choices set to the
+        empty list to avoid injecting too much data redundantly (in case of
+        several components) in the HTML template: it is the client library
         responsible to set the vailable choices (See Javascript code)
         '''
         formdata = {}
@@ -229,8 +242,8 @@ class BaseForm(Form):
 
     @classmethod
     def parnames(cls):  # FIXME: Is this method necessary?
-        '''returns an object where attributes are ALL parameters found on any Form of this
-        module'''
+        '''returns an object where attributes are ALL parameters found on any
+        Form of this module'''
         ret = OrderedDict()
         thismodule = sys.modules[__name__]
         for name in dir(thismodule):
@@ -238,9 +251,11 @@ class BaseForm(Form):
             try:
                 if issubclass(obj, cls):
                     ret[obj.__name__.lower()] = \
-                        {key: {"name": key, "label": field.label, "help": field.help_text,
+                        {key: {"name": key, "label": field.label,
+                               "help": field.help_text,
                                'choices': [{'name': n, 'label': l}
-                                           for n, l in getattr(field, 'choices', [])]}
+                                           for n, l in getattr(field,
+                                                               'choices', [])]}
                          for key, field in obj.declared_fields.items()}
             except:
                 pass
@@ -249,7 +264,8 @@ class BaseForm(Form):
 
 class GsimSelectionForm(BaseForm):
     '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle.
-    This form is currently only used as validator as the HTML page renderes a map.
+    This form is currently only used as validator as the HTML page renderes
+    a custom map.
     '''
 
     __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude',
@@ -271,33 +287,24 @@ class GsimSelectionForm(BaseForm):
                            max_value=90, required=False)
     trt = TrtField(label='Tectonic region type(s)', required=False)
 
-
-    def __init__(self, *args, **kwargs):
-        '''Overrides init to set default values for gsim and imt'''
-        super(GsimSelectionForm, self).__init__(*args, **kwargs)
-        # Set gsim and imt default.
-        # This could be accomplished by simply setting the 'initial' argument
-        # in the class-level attributes `gsim` and `imt` (see above), but it would
-        # force by design the injection of large amount of data into the html template.
-        # Note also that we need to provide the defaults HERE and not in clean() because we
-        # have to force GsimField to convert its selected values to string-like
-        # classes (see fields.py)
-#         for key, val in (('gsim', aval_gsims), ('imt', aval_imts)):
-#             if self.data.get(key, self.fields[key].initial) == self.fields[key].initial:
-#                 self.data[key] = list(val())  # Django MultiChoiceField accepts lists or tuples
+#     def __init__(self, *args, **kwargs):
+#         '''Overrides init to set default values for gsim and imt'''
+#         super(GsimSelectionForm, self).__init__(*args, **kwargs)
 
     def clean(self):
-        '''Checks that if longitude is provided, also latitude is provided, and vice versa
-            (the same for longitude2 and latitude2)'''
+        '''Checks that if longitude is provided, also latitude is provided,
+        and vice versa (the same for longitude2 and latitude2)'''
         cleaned_data = super().clean()
 
         # check that params combinations are ok:
         couplings = (('latitude', 'longitude'), ('longitude2', 'latitude2'))
         for (key1, key2) in couplings:
-            val1, val2 = cleaned_data.get(key1, None), cleaned_data.get(key2, None)
+            val1, val2 = \
+                cleaned_data.get(key1, None), cleaned_data.get(key2, None)
             if val1 is None and val2 is not None:
-                # instead of raising ValidationError, which is keyed with '__all__'
-                # we add the error keyed to the given field name `name` via `self.add_error`:
+                # instead of raising ValidationError, which is keyed with
+                # '__all__' we add the error keyed to the given field name
+                # `name` via `self.add_error`:
                 # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
                 error = ValidationError(_("missing value"), code='missing')
                 self.add_error(key1, error)
@@ -309,22 +316,21 @@ class GsimSelectionForm(BaseForm):
 
 
 class GsimImtForm(BaseForm):
-    '''Base form for any form needing (At least) Gsim+Imt selections'''
+    '''Base abstract-like form for any form requiring Gsim+Imt selection'''
 
     __additional_fieldnames__ = {'gmpe': 'gsim', 'sap': 'sa_periods'}
 
-    # fields (not used for rendering, just for validation): required is True by default
-    # FIXME: do we provide choices, as actually we are rendering the component with an
-    # ajax request in vue.js?
+    # fields (not used for rendering, just for validation)
     gsim = GsimField(required=True)
     imt = IMTField(required=True)
     sa_periods = NArrayField(label="The Spectral Acceleration (SA) period(s)",
                              required=False,
                              help_text=("Required only if SA is a selected "
-                                        "Intensity Measure Type. Alternatively, you can "
-                                        "ignore this parameter but each SA must be supplied "
-                                        "with its period in parentheses, "
-                                        "e.g: SA(0.1) SA(0.2)"))
+                                        "Intensity Measure Type. "
+                                        "Alternatively, you can ignore this "
+                                        "parameter but each SA must be "
+                                        "supplied with its period in "
+                                        "parentheses, e.g: SA(0.1) SA(0.2)"))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -332,8 +338,8 @@ class GsimImtForm(BaseForm):
         self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
 
     def clean(self):
-        '''runs validation where we must validate selected gsim(s) based on selected intensity
-        measure type. For info see:
+        '''runs validation where we must validate selected gsim(s) based on
+        selected intensity measure type. For info see:
         https://docs.djangoproject.com/en/1.11/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
         '''
         # UNCOMMENT THE BLOCK BELOW IF YOU WHISH TO BE STRICT with unkwnown params
@@ -359,18 +365,21 @@ class GsimImtForm(BaseForm):
             invalid_gsims = set(gsims) - set(sharing_gsims(imt_classnames))
 
             if invalid_gsims:
-                # instead of raising ValidationError, which is keyed with '__all__'
-                # we add the error keyed to the given field name `name` via `self.add_error`:
+                # instead of raising ValidationError, which is keyed with
+                # '__all__' we add the error keyed to the given field name
+                # `name` via `self.add_error`:
                 # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-                # note: pass only invalid_gsims as the result would be equal than passing all gsims
-                # but the loop is faster:
+                # note: pass only invalid_gsims as the result would be equal
+                # than passing all gsims but the loop is faster:
                 invalid_imts = set(imt_classnames) - set(shared_imts(gsims))
-                err_gsim = ValidationError(_("%(num)d gsim(s) not defined for all supplied "
-                                             "imt(s)"),
-                                           params={'num': len(invalid_gsims)}, code='invalid')
-                err_imt = ValidationError(_("%(num)d imt(s) not defined for all supplied "
-                                            "gsim(s)"),
-                                          params={'num': len(invalid_imts)}, code='invalid')
+                err_gsim = ValidationError(_("%(num)d gsim(s) not defined "
+                                             "for all supplied imt(s)"),
+                                           params={'num': len(invalid_gsims)},
+                                           code='invalid')
+                err_imt = ValidationError(_("%(num)d imt(s) not defined for "
+                                            "all supplied gsim(s)"),
+                                          params={'num': len(invalid_imts)},
+                                          code='invalid')
                 self.add_error('gsim', err_gsim)
                 self.add_error('imt', err_imt)
 
@@ -378,11 +387,13 @@ class GsimImtForm(BaseForm):
 
     @classmethod
     def invalid_imts(cls, gsims, imts):
-        '''returns a *set* of all invalid imt(s) from the given selected gsims and imts
+        '''returns a *set* of all invalid imt(s) from the given selected
+        gsims and imts
 
         :param gsims: iterable of Egsim objects denoting the selected gsims
-        :param gsims: iterable of strings denoting the selected imts. Strings should represent
-            the imt class name only, so e.g. 'SA', not 'SA(2.0)'
+        :param gsims: iterable of strings denoting the selected imts. Strings
+            should represent the imt class name only, so e.g. 'SA', not
+            'SA(2.0)'
         :return: a set of invalid imts
         '''
         imts = set(imts)
@@ -396,7 +407,7 @@ class GsimImtForm(BaseForm):
 class TrellisForm(GsimImtForm):
     '''Form for Trellis plot generation'''
 
-    # merge additional fieldnames (see https://stackoverflow.com/a/26853961/3526777):
+    # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distance',
                                  'tr': 'tectonic_region',
                                  'msr': 'magnitude_scalerel',
@@ -409,33 +420,46 @@ class TrellisForm(GsimImtForm):
     # GSIM RUPTURE PARAMS:
     magnitude = NArrayField(label='Magnitude(s)', min_count=1)
     distance = NArrayField(label='Distance(s)', min_count=1)
-    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0., min_count=1,
-                       initial=760.0)
+    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0.,
+                       min_count=1, initial=760.0)
     aspect = FloatField(label='Rupture Length / Width', min_value=0.)
     dip = FloatField(label='Dip', min_value=0., max_value=90.)
-    # FIXME: removed field below, it is not used. Should we add it in clean (see below)?
-#     tectonic_region = CharField(label='Tectonic Region Type',
-#                                 initial='Active Shallow Crust', widget=HiddenInput)
-    rake = FloatField(label='Rake', min_value=-180., max_value=180., initial=0.)
-    strike = FloatField(label='Strike', min_value=0., max_value=360., initial=0.)
-    ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0., initial=0.)
-    magnitude_scalerel = MsrField(label='Magnitude Scaling Relation', initial="WC1994")
-    initial_point = PointField(label="Location on Earth", help_text='Longitude Latitude',
-                               min_value=[-180, -90], max_value=[180, 90], initial="0 0")
-    hypocentre_location = NArrayField(label="Location of Hypocentre", initial='0.5 0.5',
-                                      help_text='Along-strike fraction, Down-dip fraction',
+    # FIXME: removed field below, it is not used. Should we add it
+    # in clean (see below)?
+    #  tectonic_region = CharField(label='Tectonic Region Type',
+    #                              initial='Active Shallow Crust',
+    #                              widget=HiddenInput)
+    rake = FloatField(label='Rake', min_value=-180., max_value=180.,
+                      initial=0.)
+    strike = FloatField(label='Strike', min_value=0., max_value=360.,
+                        initial=0.)
+    ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0.,
+                      initial=0.)
+    magnitude_scalerel = MsrField(label='Magnitude Scaling Relation',
+                                  initial="WC1994")
+    initial_point = PointField(label="Location on Earth",
+                               help_text='Longitude Latitude', initial="0 0",
+                               min_value=[-180, -90], max_value=[180, 90])
+    hypocentre_location = NArrayField(label="Location of Hypocentre",
+                                      initial='0.5 0.5',
+                                      help_text=('Along-strike fraction, '
+                                                 'Down-dip fraction'),
                                       min_count=2, max_count=2,
                                       min_value=[0, 0], max_value=[1, 1])
     # END OF RUPTURE PARAMS
-    vs30_measured = BooleanField(label=mark_safe('Is V<sub>S30</sub> measured?'),
-                                 help_text='Otherwise is inferred', initial=True, required=False)
+    vs30_measured = BooleanField(label=mark_safe('Is V<sub>S30</sub> '
+                                                 'measured?'),
+                                 help_text='Otherwise is inferred',
+                                 initial=True, required=False)
     line_azimuth = FloatField(label='Azimuth of Comparison Line',
                               min_value=0., max_value=360., initial=0.)
-    z1pt0 = NArrayField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
+    z1pt0 = NArrayField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> '
+                                        'layer (m)'),
                         min_value=0., required=False,
                         help_text=mark_safe("Calculated from the "
                                             "V<sub>S30</sub> if not given"))
-    z2pt5 = NArrayField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
+    z2pt5 = NArrayField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> '
+                                        'layer (km)'),
                         min_value=0., required=False,
                         help_text=mark_safe("Calculated from the  "
                                             "V<sub>S30</sub> if not given"))
@@ -443,24 +467,29 @@ class TrellisForm(GsimImtForm):
 
     def clean(self):
         cleaned_data = super(TrellisForm, self).clean()
-        # cleaned_data['tectonic_region'] = 'Active Shallow Crust'  # see FIXME above
+        # cleaned_data['tectonic_region'] = 'Active Shallow Crust'
         # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
         vs30 = cleaned_data['vs30']  # surely a list with st least one element
         vs30scalar = isscalar(vs30)
         vs30s = np.array(vectorize(vs30), dtype=float)
 
         # check vs30-dependent values:
-        for name, func in (['z1pt0', vs30_to_z1pt0_cy14], ['z2pt5', vs30_to_z2pt5_cb14]):
+        for name, func in (['z1pt0', vs30_to_z1pt0_cy14],
+                           ['z2pt5', vs30_to_z2pt5_cb14]):
             if name not in cleaned_data or cleaned_data[name] == []:
                 values = func(vs30s)  # numpy-function
-                cleaned_data[name] = float(values[0]) if vs30scalar else values.tolist()
+                cleaned_data[name] = \
+                    float(values[0]) if vs30scalar else values.tolist()
             elif not isscalar(cleaned_data[name]) and not isscalar(vs30) \
                     and len(vs30) != len(cleaned_data[name]):
-                # instead of raising ValidationError, which is keyed with '__all__'
-                # we add the error keyed to the given field name `name` via `self.add_error`:
+                # instead of raising ValidationError, which is keyed with
+                # '__all__' we add the error keyed to the given field name
+                # `name` via `self.add_error`:
                 # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-                error = ValidationError(_("value must be scalar, empty or a %(num)d-elements "
-                                          "vector"), params={'num': len(vs30)}, code='invalid')
+                error = ValidationError(_("value must be scalar, empty or "
+                                          "a %(num)d-elements vector"),
+                                        params={'num': len(vs30)},
+                                        code='invalid')
                 self.add_error(name, error)
 
         return cleaned_data
@@ -489,11 +518,13 @@ class GmdbPlot(GmdbForm):
 class ResidualsForm(GsimImtForm, GmdbPlot):
     '''Form for residual analysis'''
 
-    # merge additional fieldnames (see https://stackoverflow.com/a/26853961/3526777):
+    # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
                                  **GmdbPlot.__additional_fieldnames__}
 
     plot_type = ResidualplottypeField(required=True)
 
     def clean(self):
-        GsimImtForm.clean(self)  # <- this calls super WHICH CALLS: GmdbForm.clean(self) CHECK!!
+        # Note: the call below calls GmdbForm.clean(self) BUT we should
+        # check why and how:
+        GsimImtForm.clean(self)
