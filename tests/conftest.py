@@ -41,9 +41,9 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture(scope="function")
 def areequal(request):
-    '''This fixture allows to deeply compare two objects for equality, allowing
-    numeric arrays (including nested ones) to be compared as for numpy's
-    `allclose`'''
+    '''This fixture allows to *deeply* compare python numbers, lists, dicts,
+    numpy arrays for equality. Numeric arrays can be compared, when found,
+    using numpy's `allclose`'''
     class Comparator:
 
         def __call__(self, obj1, obj2, rtol=1e-05, atol=1e-08, equal_nan=True):
@@ -52,46 +52,63 @@ def areequal(request):
 
             isiter1, isiter2 = \
                 hasattr(obj1, '__iter__'), hasattr(obj2, '__iter__')
-            # if any of the two is not iterable, or any of the two is string,
+            # if at least one is not iterable, orat least one is string,
             # return False: no other comparison possible
             if any(_ is False for _ in [isiter1, isiter2]) \
                     or any(isinstance(_, (str, bytes)) for _ in [obj1, obj2]):
+                # if both are not iterable, they might be numbers, try
+                # with numpy:
+                if not isiter1 and not isiter2:
+                    try:
+                        if np.allclose([obj1], [obj2], rtol=rtol, atol=atol,
+                                       equal_nan=equal_nan):
+                            return True
+                    except:
+                        pass
                 return False
 
             # both obj1 and obj2 are iterables and not strings
-            if isinstance(obj1, dict):
+            isdic1, isdic2 = isinstance(obj1, dict), isinstance(obj2, dict)
+            if isdic1 != isdic2:
+                return False
+            if isdic1:  # also obj2 is dict
                 # convert dicts to a list of their values, sorted according
-                # to their keys (which must be equal)
-                if not isinstance(obj2, dict):
+                skeys1, skeys2 = sorted(obj1.keys()), sorted(obj2.keys())
+                if skeys1 != skeys2:
                     return False
-                keys1, keys2 = sorted(obj1.keys()), sorted(obj2.keys())
-                if keys1 != keys2:
-                    return False
-                obj1 = [obj1[k] for k in keys1]
-                obj2 = [obj2[k] for k in keys2]
-            else:
-                # FIXME: what if obj1 and obj2 are lists of (unsortable) dicts?
-                obj1, obj2 = sorted(obj1), sorted(obj2)
+                # convert to lists where each element having the same key
+                # has the same position:
+                obj1 = [obj1[k] for k in skeys1]
+                obj2 = [obj2[k] for k in skeys2]
+            else:  # obj1 and obj2 are iterables (not dict), convert to lists:
+                obj1, obj2 = list(obj1), list(obj2)
 
+            if len(obj1) != len(obj2):
+                return False
             if obj1 != obj2:
-                if len(obj1) != len(obj2):
-                    return False
                 allclose = np.allclose  # @UndefinedVariable
                 try:
                     if allclose(obj1, obj2, rtol=rtol, atol=atol,
                                 equal_nan=equal_nan):
                         return True
-                except TypeError:
+                except (TypeError, ValueError):
                     pass
                     # TypeError means they are not numbers,
                     # so compare one by one below
                 except:  # @IgnorePep8 pylint: disable=bare-except
                     return False
                     # any other exception raises False: objects are not equal
-                for val1, val2 in zip(obj1, obj2):
-                    if not self.__call__(val1, val2, rtol=rtol, atol=atol,
+
+                while obj1:
+                    item1 = obj1.pop(0)
+                    for i, item2 in enumerate(obj2):
+                        if self.__call__(item1, item2, rtol=rtol, atol=atol,
                                          equal_nan=equal_nan):
+                            obj2.pop(i)
+                            break
+                    if len(obj1) != len(obj2):
                         return False
+
             return True
 
     return Comparator()
