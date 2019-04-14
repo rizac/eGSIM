@@ -15,40 +15,42 @@ Including another URLconf
 """
 from django.conf.urls import url  # added by default by django
 from django.contrib import admin  # added by default by django
-# from django.views.generic.base import RedirectView
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from . import views
 from django.views.generic.base import RedirectView
+from . import views
 
 
 # for infor with trailing slashes:
 # https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
 
-urlpatterns = [
+urlpatterns = [  # pylint: disable=invalid-name
     url(r'^admin/', admin.site.urls),  # added by default by django
-    url(r'^$', RedirectView.as_view(pattern_name='main', url='home', permanent=False)),
-    # url(r'^$', views.index, name='index'),  # same as /home (see views.py)
-    url(r'^(?P<menu>[a-zA-Z]+)/?$', views.main, name='main'),  # main page entry point
-    url(r'^service/home/?$', views.home, name='home'),
-    # url(r'^service/trsel/?$', views.trsel, name='trsel'),
-    # url(r'^service/trellis/?$', views.trellis, name='trellis'),
-    # url(r'^service/gmdb/?$', views.gmdb, name='gmdb'),
-    # url(r'^service/residuals/?$', views.residuals, name='residuals'),
-    url(r'^service/apidoc/?$', views.apidoc, name='apidoc'),
-    url(r'get_init_params', views.get_init_params),
-    # url(r'get_tr_models', views.get_tr_models),
-    # url(r'get_gmdbs', views.get_gmdbs),
-    # url(r'get_trellis_plots', views.TrellisPlotsView.as_view()),
-    url(r'test_err', views.test_err),
-
-    # REST (or alike) views:
-    url(r'^query/trellis/?$', views.TrellisView.as_view(), name='trellis_api'),
-    url(r'^query/gsims/?$', views.GsimsView.as_view(), name='gsimsel_api'),
-    url(r'^query/gmdbplot/?$', views.GmdbPlotView.as_view(), name='gmdbplot_api'),
-    url(r'^query/residuals/?$', views.ResidualsView.as_view(), name='residuals_api'),
-
-    # test views, TEMPORARY:
-    url(r'^_test/?$', views.test, name='test'),
+    url(r'^$', RedirectView.as_view(pattern_name='main', url='home',
+                                    permanent=False)),
+    # main page entry point:
+    url(r'^(?P<selected_menu>[a-zA-Z]+)/?$', views.main, name='main'),
+    # other urls called from within the page:
+    url(r'^pages/home/?$', views.home, name='home'),
+    url(r'^pages/apidoc/?$', views.apidoc, name='apidoc'),
     url(r'^data/tr_models', views.get_tr_models),
+    # test stuff: (FIXME: REMOVE)
+    url(r'test_err', views.test_err),
 ]
+
+# REST APIS:
+urlpatterns.extend([
+    url(r'^%s/?$' % views.GsimsView.url,  # query/gsims
+        views.GsimsView.as_view(),
+        name=views.GsimsView.url.split('/')[-1]),
+    url(r'^%s/?$' % views.TrellisView.url,  # query/trellis
+        views.TrellisView.as_view(),
+        name=views.TrellisView.url.split('/')[-1]),
+    url(r'^%s/?$' % views.GmdbPlotView.url,  # query/gmdbplot
+        views.GmdbPlotView.as_view(),
+        name=views.GmdbPlotView.url.split('/')[-1]),
+    url(r'^%s/?$' % views.ResidualsView.url,  # query/residuals
+        views.ResidualsView.as_view(),
+        name=views.ResidualsView.url.split('/')[-1]),
+    url(r'^%s/?$' % views.TestingView.url,  # query/testing
+        views.TestingView.as_view(),
+        name=views.TestingView.url.split('/')[-1]),
+])
