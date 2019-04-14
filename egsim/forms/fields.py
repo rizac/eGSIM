@@ -378,7 +378,7 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
     def to_regex(value):
         '''converts string (a unix shell string, see
         https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
-        will have the IGNORECASE flag ON
+        will match accounting for the case (ignore case off)
         '''
         return re.compile(translate(value))
                           # , re.IGNORECASE)  # @UndefinedVariable
