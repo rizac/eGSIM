@@ -24,6 +24,7 @@ from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
+from egsim.forms.tohtml import to_html_table
 
 
 _COMMON_PARAMS = {
@@ -88,16 +89,17 @@ def apidoc(request):
     # It is the request.META['HTTP_HOST'] key. But during testing, this
     # key is not present. Actually, just use a string for the moment:
     baseurl = "[eGSIM domain URL]"  # request.META.get('HTTP_HOST', '[eGSIM domain URL]')
-    return render(request, filename, dict(_COMMON_PARAMS,
-                                          query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
-                                          last_modified=last_modified,
-                                          baseurl=baseurl+"/query",
-                                          trellis='trellis', residuals='residuals',
-                                          gsimsel='gsims', test='testing',
-                                          param=BaseForm.parnames(),
-                                          form_trellis=TrellisForm.toHTML(),
-                                          form_residuals=ResidualsForm.toHTML(),
-                                          form_gsims=GsimSelectionForm.toHTML()))
+    return render(request, filename,
+                  dict(_COMMON_PARAMS,
+                       query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
+                       last_modified=last_modified,
+                       baseurl=baseurl+"/query",
+                       trellis='trellis', residuals='residuals',
+                       gsimsel='gsims', test='testing',
+                       param=BaseForm.parnames(),
+                       form_trellis=to_html_table(TrellisForm),
+                       form_residuals=to_html_table(ResidualsForm),
+                       form_gsims=to_html_table(GsimSelectionForm)))
 
 # def trsel(request):
 #     '''view returing the page forfor the gsim tectonic region
