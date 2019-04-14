@@ -24,7 +24,7 @@ from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
-from egsim.forms.tohtml import to_html_table
+from egsim.forms.htmldoc import to_html_table
 
 
 _COMMON_PARAMS = {
