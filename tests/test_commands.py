@@ -14,7 +14,7 @@ from django.core.management import call_command
 
 
 @pytest.mark.django_db
-def test_mycommand(capsys):
+def test_initdb(capsys):
     " Test initdb command."
     ret = call_command('initdb')
     captured = capsys.readouterr()

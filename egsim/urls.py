@@ -24,7 +24,7 @@ from . import views
 
 urlpatterns = [  # pylint: disable=invalid-name
     url(r'^admin/', admin.site.urls),  # added by default by django
-    url(r'^$', RedirectView.as_view(pattern_name='main', url='home',
+    url(r'^/?$', RedirectView.as_view(pattern_name='main', url='home',
                                     permanent=False)),
     # main page entry point:
     url(r'^(?P<selected_menu>[a-zA-Z]+)/?$', views.main, name='main'),

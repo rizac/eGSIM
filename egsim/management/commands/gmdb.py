@@ -23,7 +23,9 @@ class Command(BaseCommand):
 
     parserclass = GMTableParser
     
-    outpath = get_gmdb_path()
+    @property
+    def outpath(self):
+        return get_gmdb_path()
 
     @property
     def dbnames(self):
