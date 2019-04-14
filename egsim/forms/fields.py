@@ -347,8 +347,8 @@ class ResidualplottypeField(ChoiceField):
         'dist': ('Residuals vs. Distance', residuals_with_distance),
         'vs30': ('Residuals vs. Vs30', residuals_with_vs30),
         'depth': ('Residuals vs. Depth', residuals_with_depth),
-#         'site': ('Residuals vs. Site', None),
-#         'intra': ('Intra Event Residuals vs. Site', None),
+        # 'site': ('Residuals vs. Site', None),
+        # 'intra': ('Intra Event Residuals vs. Site', None),
     }
 
     def __init__(self, **kwargs):
@@ -407,7 +407,6 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         will match accounting for the case (ignore case off)
         '''
         return re.compile(translate(value))
-                          # , re.IGNORECASE)  # @UndefinedVariable
 
 
 class GsimField(MultipleChoiceWildcardField):
