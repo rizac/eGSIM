@@ -62,3 +62,22 @@ def test_narrayfield_get_decimals():
     d5 = NArrayField.get_decimals('1.3e45', '1.3E-6', '-6', '-5.005601',
                                   '1e-45')
     assert d5 == 45
+
+
+def test_areequal(areequal):
+    '''tests our fixture areequal used extensively in tests'''
+    obj1 = [{'a': 9, 'b': 120}, 'abc', [1.00000001, 2, 2.000000005]]
+    obj2 = ['abc', [1, 2, 2], {'b': 120, 'a': 9}]
+    assert areequal(obj1, obj2)
+    # make a small perturbation in 'a':
+    obj2 = ['abc', [1, 2, 2], {'b': 120, 'a': 9.00000001}]
+    assert areequal(obj1, obj2)  # still equal
+    assert not areequal([], {})
+    assert not areequal({}, [])
+    assert areequal([1.0000000000001], [1])
+    assert areequal({'a': 1.0000000000001, 'b': [1, 2, 3], 'c': 'abc'},
+                    {'c': 'abc', 'b': [1, 1.99999999998, 3], 'a': 1})
+    # 'b' is now 1.9, retol says: not equal:
+    assert not areequal({'a': 1.0000000000001, 'b': [1, 2, 3], 'c': 'abc'},
+                        {'c': 'abc', 'b': [1, 1.9, 3], 'a': 1})
+    assert areequal(1.0000000000001, 1)
