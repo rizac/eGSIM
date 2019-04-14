@@ -21,7 +21,7 @@ from django.utils.translation import ugettext as _
 from django.forms import Form
 from django.utils.safestring import mark_safe
 from django.forms.fields import BooleanField, CharField, FloatField, \
-    ChoiceField
+    ChoiceField, CallableChoiceIterator
 
 from openquake.hazardlib.imt import from_string as imt_from_string
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
@@ -201,18 +201,23 @@ class BaseForm(Form):
 
         return ret
 
-    def to_rendering_dict(self):
+    def to_rendering_dict(self, ignore_callable_choices=True):
         '''Converts this form to a python dict for rendering the field as input
-        in the frontend, free from django limiitation and allowing it to use
-        with custom frontend libraries such as Vuejs or AngularJS: each
+        in the frontend, allowing it to be injected into frontend libraries
+        like VueJS (the currently used library) or AngularJS: each
         Field name is mapped to a dict of keys such as 'val' (the value),
         'help' (the help text), 'label' (the label text), 'err':
-        (the error text), 'attrs' (a dict of attributes),
-        'choices' (empty list if not ChoiceField, otherwise the list of
-        available choices). 'gsim' and 'imt' will have choices set to the
-        empty list to avoid injecting too much data redundantly (in case of
-        several components) in the HTML template: it is the client library
-        responsible to set the vailable choices (See Javascript code)
+        (the error text), 'attrs' (a dict of HTML element attributes),
+        'choices' (the list of available choices, see argument
+        `ignore_callable_choices`).
+
+        :param ignore_callable_choices: handles the 'choices' for fields
+            defining it as CallableChoiceIterator: if True (the default) the
+            function is not evluated and the choices are simply set to [].
+            If False, the choices function will be evaluated.
+            Use True when the choices list is too big or too expensive and
+            there is a faster way to provide them to the frontend (e.g., later
+            via HTTP requests).
         '''
         formdata = {}
         for name, _ in self.declared_fields.items():  # pylint: disable=no-member
@@ -237,6 +242,11 @@ class BaseForm(Form):
                          'is_hidden': widgetdata.pop('is_hidden', False),
                          'val': val}
             fielddata['choices'] = getattr(_, 'choices', [])
+            if isinstance(fielddata['choices'], CallableChoiceIterator):
+                if ignore_callable_choices:
+                    fielddata['choices'] = []
+                else:
+                    fielddata['choices'] = list(fielddata['choices'])
             formdata[name] = fielddata
         return formdata
 
