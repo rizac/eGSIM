@@ -3,11 +3,6 @@
  * (first argument of 'Vue.component' below must be equal to this file's name 
  * (without extension)
  */
-
-// template for the trellis form
-// Note the slot-scope 'self' which refers to the egsimform component
-// (see related .js file for info)
-// the main <div> is the body of the <form>
 Vue.component('trellis', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
@@ -42,6 +37,8 @@ Vue.component('trellis', {
             }
         }
     },
+    // template for the trellis form
+    // Note the slot-scope 'self' which refers to the egsimform component:
     template: `
 <div class='flexible d-flex flex-column'>
     <egsimform :form='form' v-on:submit="request"
