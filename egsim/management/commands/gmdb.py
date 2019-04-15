@@ -22,9 +22,10 @@ class Command(BaseCommand):
             'The database name will be the file name, without extension')
 
     parserclass = GMTableParser
-    
+
     @property
     def outpath(self):
+        '''Returns the database HDF file path'''
         return get_gmdb_path()
 
     @property

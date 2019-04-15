@@ -50,6 +50,11 @@ var EGSIM_BASE = {
            }
         });
     },
+    computed: {
+        selComponentProps(){  // https://stackoverflow.com/a/43658979
+            return this.componentProps[this.selComponent];
+        }
+    },
     mounted: function() {
         // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         // no -op for the moment
@@ -162,11 +167,6 @@ var EGSIM_BASE = {
         },
         setLoading(value){
             this.$set(this, 'loading', value);
-        }
-    },
-    computed: {
-        selComponentProps(){  // https://stackoverflow.com/a/43658979
-            return this.componentProps[this.selComponent];
         }
     }
 };
