@@ -4,47 +4,44 @@
 // then 'self.form' can be used in the template to access all passed form fields and customize
 // the inputs and select tags.
 var EGSIMFORM = Vue.component('egsimform', {
-  //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
-  props: {
-      'form': Object,
-      'hidden': {type: Boolean, default: false},  // wheather the form is visible
-      'modalwindow': {type: Boolean, default: false},  // wheather the form is a modal window (e.g., close button is shown)
-  },
-  // note below: v-show="visible" does not work with class='d-flex', as the latter is !important
-  // thus use: :class="visible ? 'd-flex' : 'd-none'"
-  template: `<form novalidate v-on:submit.prevent='submitForm'
-                  class='flex-column px-4 pb-4'
-                  :class="[visible ? 'd-flex' : 'd-none',
-                           modalwindow ? ['shadow', 'border', 'bg-light', 'pt-2', 'mb-3'] : 'pt-4']"  
-                  >
-                <div v-show='modalwindow' class='text-right'>
-                    <button type="button" v-on:click='visible=false' class="close" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <slot v-bind:form="form"></slot>
-            </form>`,
-  methods: {
-      setVisible: function(value){
-          this.visible = value;
-      },
-      submitForm(){
-          this.$emit('submit', this.form);
-      }
-  },
-  computed: {
-      visible: {  // https://vuejs.org/v2/guide/computed.html#Computed-Setter
-        // getter
-        get: function () {
-          return !this.hidden;
-        },
-        // setter
-        set: function (newValue) {
-            this.$emit('update:hidden', !newValue);
+    //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
+    props: {
+        'form': Object,
+        'hidden': {type: Boolean, default: false},  // wheather the form is visible
+        'modalwindow': {type: Boolean, default: false},  // wheather the form is a modal window (e.g., close button is shown)
+    },
+    computed: {
+        visible: {  // https://vuejs.org/v2/guide/computed.html#Computed-Setter
+          // getter
+          get: function () {
+              return !this.hidden;
+          },
+          // setter
+          set: function (newValue) {
+              this.$emit('update:hidden', !newValue);
+          }
         }
-      }
-  },
-  created: function(){
-      // no-op
-  }
+    },
+    template: `<form novalidate v-on:submit.prevent='submitForm'
+                    class='d-flex flex-column px-4 pb-4'
+                    v-show="visible"
+                    :class="[modalwindow ? ['shadow', 'border', 'bg-light', 'pt-2', 'mb-3'] : 'pt-4']">
+        <div v-show='modalwindow' class='text-right'>
+            <button type="button" v-on:click='visible=false' class="close" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <slot v-bind:form="form"></slot>
+    </form>`,
+    methods: {
+        setVisible: function(value){
+            this.visible = value;
+        },
+        submitForm(){
+            this.$emit('submit', this.form);
+        }
+    },
+    created: function(){
+        // no-op
+    }
 });
