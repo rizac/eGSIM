@@ -135,8 +135,20 @@ data: function(){
 		errormsg: "",
 		initdata: {"component_props": {"home": {"src": "pages/home"},
 									   "gsims": {"tr_models_url": "data/tr_models",
-									   		"url": "query/gsims",
-									   	"form": {"gsim": {"help": "", "label": "Ground Shaking Intensity Model(s)", "attrs": {"multiple": "multiple", "required": false, "id": "id_gsim", "name": "gsim"}, "err": "", "is_hidden": false, "val": null, "choices": []}, ... ]]}
+									   			 "url": "query/gsims",
+									   			 "form": {"gsim": {"help": "",
+									   			                   "label": "Ground Shaking Intensity Model(s)",
+									   			                   "attrs": {"multiple": "multiple",
+									   			                             "required": false,
+									   			                             "id": "id_gsim",
+									   			                             "name": "gsim"},
+									   			                   "err": "",
+									   			                   "is_hidden": false,
+									   			                   "val": null,
+									   			                   "choices": []
+									   			                   },
+									   			          }
+									   			} ... ]]}
 	};
 }
 
