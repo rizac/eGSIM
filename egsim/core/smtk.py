@@ -121,7 +121,7 @@ def get_magnitude_distances(records, dist_type):
         if dist_type == "rjb" and np.isnan(dist):
             dist = record["repi"]
         elif dist_type == "rrup" and np.isnan(dist):
-            dists.append(record["rhypo"])
+            dist = record["rhypo"]
         if not np.isnan(mag) and not np.isnan(dist):
             mags.append(mag)
             dists.append(dist)
