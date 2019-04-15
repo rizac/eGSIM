@@ -58,6 +58,45 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 scale: 5}
         }
     },
+    watch: {
+        // NOTE: selectedParams and selectedGridLayout are watched dynamically in 'init'
+        // this is to avoid calling them while setting up the data from the server
+        data: {
+            immediate: true,
+            handler(newval, oldval){
+               this.visible = !Vue.isEmpty(this.data);
+               if (this.visible){ // see prop below
+                   if (Vue.isEmpty(oldval)){
+                       // avoid refreshing continuously, wait for resizing finished (most likely):
+                       var resizeTimer;
+                       var self = this;
+                       window.onresize = (e) => {
+                           clearTimeout(resizeTimer);
+                           resizeTimer = setTimeout(() => {
+                               self.react();
+                           }, 300);
+                       };
+                   }
+                   this.init.call(this, this.data);
+               }
+            }
+        },
+        'downloadasimageopts.format': function (newVal, oldVal){
+            // to work with changes in downloadasimageopts.format: https://stackoverflow.com/a/46331968
+            // we do not attach onchange on the <select> tag because of this: https://github.com/vuejs/vue/issues/293
+            if(newVal){
+                this.downloadAsImage();
+            }
+        },
+    },
+    computed: {  // https://stackoverflow.com/a/47044150
+        legendNames: function(){
+            return Object.keys(this.legend);
+        },
+        isGridCusomizable: function(){
+            return Object.keys(this.gridlayouts).length>1;
+        }
+    },
     template: `<div v-show='visible' class='d-flex flex-row'>
         
         <div class='flexible d-flex flex-column m-2'>
@@ -128,52 +167,6 @@ var _PLOT_DIV = Vue.component('plotdiv', {
     </div>`,
     created: function() { // https://vuejs.org/v2/api/#created
         // no-op
-    },
-    watch: {
-//        selectedParams: {
-//            handler: function (newval, oldval) {
-//                this.newPlot();
-//            },
-//            deep: true  // https://vuejs.org/v2/api/#vm-watch
-//        },
-//        selectedgridlayout: function(newval, oldval){
-//            this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
-//        },
-        data: {
-            immediate: true,
-            handler(newval, oldval){
-               this.visible = !Vue.isEmpty(this.data);
-               if (this.visible){ // see prop below
-                   if (Vue.isEmpty(oldval)){
-                       // avoid refreshing continuously, wait for resizing finished (most likely):
-                       var resizeTimer;
-                       var self = this;
-                       window.onresize = (e) => {
-                           clearTimeout(resizeTimer);
-                           resizeTimer = setTimeout(() => {
-                               self.react();
-                           }, 300);
-                       };
-                   }
-                   this.init.call(this, this.data);
-               }
-            }
-        },
-        'downloadasimageopts.format': function (newVal, oldVal){
-            // to work with changes in downloadasimageopts.format: https://stackoverflow.com/a/46331968
-            // we do not attach onchange on the <select> tag because of this: https://github.com/vuejs/vue/issues/293
-            if(newVal){
-                this.downloadAsImage();
-            }
-        },
-    },
-    computed: {  // https://stackoverflow.com/a/47044150
-        legendNames: function(){
-            return Object.keys(this.legend);
-        },
-        isGridCusomizable: function(){
-            return Object.keys(this.gridlayouts).length>1;
-        }
     },
     methods: {
         // methods to be overridden:
@@ -460,8 +453,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             if (divId === undefined){
                 divId = this.plotdivid;
             }
-            var [data, layout] = this.createPlotlyDataAndLayout(divId);
             this.$nextTick(() => {
+                var [data, layout] = this.createPlotlyDataAndLayout(divId);
                 Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
                 Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
             });
@@ -474,8 +467,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             if (divId === undefined){
                 divId = this.plotdivid;
             }
-            var [data, layout] = this.createPlotlyDataAndLayout(divId);
             this.$nextTick(() => {
+                var [data, layout] = this.createPlotlyDataAndLayout(divId);
                 // Purge plot. Check if we do actually need this:
                 Plotly.react(divId, data, layout);
             });
