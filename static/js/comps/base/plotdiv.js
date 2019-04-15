@@ -126,22 +126,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                     {{ index ? format : 'download as:' }}
                 </option>
             </select>
-            
-            <!--<button @click='downloadasimageopts.show=true' class='btn btn-primary' >
-                <i class='fa fa-file-image-o'></i> to image
-            </button>
-            <div v-show="downloadasimageopts.show" class='position-fixed flex-column'>
-                <input type='number' min='1' step='any' placeholder='width (empty=auto)'
-                    v-model='downloadasimageopts.width'></input>
-                <input type='number' min='1' step='any'  placeholder='height (empty=auto)'
-                    v-model='downloadasimageopts.height'></input>
-                <select v-model='downloadasimageopts.format'>
-                    <option v-for='format in downloadasimageopts.formats' :val="format">{{ format }}</option>
-                </select>
-                <input type="text" v-model='downloadasimageopts.filename'></input>
-                <button @click='downloadAsImage' class='btn btn-primary' >download</button>
-            </div>-->
-            
+
             <div v-show='legendNames.length' class='flexible mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Legend</h5>
                 <div v-for="key in legendNames">
@@ -214,10 +199,16 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // (in case of conflicts, the properties of this.defaultyaxis will be overridden)
         },
         displayGridLabels: function(axis, paramName, paramValues){
-            // this optional method can be implemented to hide the labels of 'paramName' when it is set as grid parameter
-            // along the specified axis ('x' or 'y'). If not implemented, by default this method returns true. Note
-            // that some plot parameters (specifically those for which all plots are mapped to the same value)
-            // are not shown by defult because it would be redundant and space consuming
+            // this optional method can be implemented to hide the labels of 'paramName' when it is
+            // set as grid parameter along the specified axis ('x' or 'y'). If not implemented,
+            // by default this method returns true if `paramValues.length > 1` because display the
+            // only parameter value on the grid would be redundant and space consuming
+            //
+            // params:
+            // 
+            // axis: string, either 'x' or 'y'
+            // paramName: the string denoting the parameter name along the given axis
+            // paramValues: Array of the values of the parameter keyed by 'paramName'
             return paramValues.length > 1;
         },
         configureLayout: function(layout){
@@ -251,9 +242,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }
             this.legend = {};
             // convert data:
-            var plots = this.getData(jsondict);
-            this.$set(this, 'plots', plots);
-            // this.$set(this, 'params', params);
+            this.plots = this.getData(jsondict);
             // update selection, taking into account previously selected stuff:
             this.setupSelection(); // which sets this.selectedgridlayout which calls this.gridLayoutChanged (see watch above)
             // which in turn sets this.selectedParams which eventually calls this.newPlot (see watch above)

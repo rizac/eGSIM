@@ -19,6 +19,7 @@ var EGSIM_BASE = {
         // process input data (injected in the template with the minimum
         // amount possible for performance reasons):
         var [avalGsims, avalImts] = this.getInitData(this.initdata.gsims);
+        var gmdbNames = (this.initdata.gmdbnames || []).map(x => [x, x]);
         var gsims = Array.from(avalGsims.keys());
         var imts = Array.from(avalImts);
         // set processed data:
@@ -43,6 +44,12 @@ var EGSIM_BASE = {
                            if (!element.imt.val){
                                // convert null to empty list in case:
                                element.imt.val = [];
+                           }
+                       }
+                       if (element.gmdb){
+                           element.gmdb.choices = gmdbNames;
+                           if (gmdbNames.length){
+                               element.gmdb.val = gmdbNames[0][0];
                            }
                        }
                    }

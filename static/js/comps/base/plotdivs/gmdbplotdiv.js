@@ -1,4 +1,4 @@
-Vue.component('trellisplotdiv', {
+Vue.component('gmdbplotdiv', {
     extends: _PLOT_DIV,  // defined in plotdiv.js
     methods: {
         // methods to be overridden:
@@ -46,40 +46,32 @@ Vue.component('trellisplotdiv', {
             // The Object returned here will be merged with the properties defined this.defaultyaxis
             // (in case of conflicts, the properties of this.defaultyaxis will be overridden)
 
-            // setup  label texts:
-            var data = responseObject;
-            var plots = [];
-            for (var fig of data['figures']){
-                var params = {};
-                // params.xlabel = data['xlabel'];
-                params.imt = fig.ylabel;
-                params.magnitude = fig.magnitude;
-                params.distance = fig.distance;
-                params.vs30 = fig.vs30;
-                
-                var traces = Object.keys(fig.yvalues).map(function(name){
-                    // FIXME: check if with arrow function we can avoid apply and this
-                    // to test that plots are correctly placed, uncomment this:
-                    // var name = `${name}_${params.magnitude}_${params.distance}_${params.vs30}`;
-                    var trace = {
-                            x: data.xvalues,
-                            y: fig.yvalues[name],
-                            type: 'scatter',
-                            mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
-                            name: name
-                    };
-                    var color = this.addLegend(trace, name);  // Sets also trace.legendgroup = name
-                    if (data.xvalues.length == 1){
-                        trace.marker = {color: color};
-                    }else{
-                        trace.line = {color: color};
-                    }
-                    return trace;
-                }, this);
-                plots.push({traces: traces, params: params, xaxis: {title: data['xlabel']},
-                    yaxis: {title: params.imt, type: 'log'}});
-            }
-            return plots;
+            // defined normal dist. constants:
+            var jsondict = responseObject;
+            // set plotly data from jsondict:
+            var trace = {
+                    x: jsondict['x'],
+                    y: jsondict['y'],
+                    mode: 'markers',
+                    type: 'scatter',
+                    text: jsondict['labels'] || [],
+                    marker: { size: 10, color: this.colorMap.transparentize(0, .5) }
+                  };
+            // modify here the defaut layout:
+            // this.defaultlayout.title = `Magnitude Distance plot (${trace.x.length} records in database)`;
+            var data = [ trace ];
+            var xaxis = {
+                type: 'log',
+                title: jsondict['xlabel']
+            };
+            var yaxis = {
+                title: jsondict['ylabel']
+            };
+            // build the params. Setting just a single param allows us to
+            // display a sort of title on the x axis:
+            var numFormatted = trace.x.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); //https://stackoverflow.com/a/2901298
+            var params = {'Magnitude Distance plot': `${numFormatted} records`};
+            return [{traces: [trace], params: params, xaxis: xaxis, yaxis: yaxis}];
         },
         displayGridLabels: function(axis, paramName, paramValues){
             // this optional method can be implemented to hide the labels of 'paramName' when it is
@@ -92,7 +84,7 @@ Vue.component('trellisplotdiv', {
             // axis: string, either 'x' or 'y'
             // paramName: the string denoting the parameter name along the given axis
             // paramValues: Array of the values of the parameter keyed by 'paramName'
-            return paramValues.length > 1 && paramName != 'imt';  // imt is already shown as y label
+            return true;  // we have  single param (sort of title on the x axis), alswya show
         },
         /**configureLayout is the same as the super class 'plotdiv' and thus not overwritten.**/
         // END OF OVERRIDABLE METHODS

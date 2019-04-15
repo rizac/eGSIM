@@ -20,7 +20,7 @@ from django.conf import settings
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import TrellisForm, GsimSelectionForm, ResidualsForm, \
     BaseForm, GmdbPlot
-from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS
+from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_names, get_gmdb_path
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
@@ -83,7 +83,8 @@ def main(request, selected_menu=None):
     # remove lines above!
 
     initdata = {'component_props': components_props,
-                'gsims': aval_gsims(asjsonlist=True)}
+                'gsims': aval_gsims(asjsonlist=True),
+                'gmdbnames': get_gmdb_names(get_gmdb_path())}
 
     return render(request, 'egsim.html', {**_COMMON_PARAMS,
                                           'sel_component': sel_component,
@@ -224,8 +225,9 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
                                         errors=errors)
 
         data = cls.process(form.cleaned_data)
-        return data if isinstance(data, JsonResponse) else \
-            JsonResponse(data, safe=False)  # see GmdbPlotView.process
+        if isinstance(data, JsonResponse):
+            return data
+        return JsonResponse(data, safe=False)  # see GmdbPlotView.process
 
     @classmethod
     def process(cls, params):
@@ -322,6 +324,12 @@ class GmdbPlotView(EgsimQueryView):
             # selection errors, and raise appropriate Json response
             # bypassing default middleware (if installed):
             msg = 'Selection expression error: "%s"' % serr.text
+            return ExceptionHandlerMiddleware.jsonerr_response(Exception(msg))
+        except NameError as nerr:
+            # catch SyntaxErrors as they are most likely due to
+            # selection errors, and raise appropriate Json response
+            # bypassing default middleware (if installed):
+            msg = 'Selection expression error: "%s"' % str(nerr)
             return ExceptionHandlerMiddleware.jsonerr_response(Exception(msg))
 
 

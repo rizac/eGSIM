@@ -200,3 +200,8 @@ FIXME: TODO: descibe event @gsim-selected='selectGsims'
 FIXME TODO: describe component pros: url, form, request, post to help the user
 undeerstanding also each component
 
+
+IMPLEMENTING A NEW COMPONENT:
+
+- add script tag in egsim.html
+- copy one of the existing components in a new JS file
