@@ -19,7 +19,8 @@ Vue.component('trellis', {
         }
     },
     methods: {
-        request: function(form){
+        request: function(){
+            var form = this.form;
             this.post(this.url, form).then(response => {
                 if (response && response.data){
                     this.responseData = response.data;
@@ -37,28 +38,32 @@ Vue.component('trellis', {
             }
         }
     },
-    // template for the trellis form
-    // Note the slot-scope 'self' which refers to the egsimform component:
     template: `
 <div class='flexible d-flex flex-column'>
-    <egsimform :form='form' v-on:submit="request"
-            :modalwindow='formModal' :hidden.sync="formHidden"
-            class='flexible align-self-center position-relative' style='z-index:10'>
+
+    <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
+        :class="[formModal ? ['shadow', 'border', 'bg-light', 'pt-2', 'mb-3'] : 'pt-4']"
+        class='d-flex flex-column px-4 pb-4 flexible align-self-center position-relative' style='z-index:10'>
+
+        <div v-show='formModal' class='text-right'>
+            <button type="button" v-on:click='formHidden=true' class="close" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
         
-        <div class="d-flex flex-column flexible" slot-scope="self">
+        <div class="d-flex flex-column flexible">
             <div class="d-flex flexible flex-row mb-4">
+
                 <div class="d-flex flexible flex-column">
-                    
                     <gsimselect :form="form" showfilter class="flexible mb-4"></gsimselect>
                     <imtselect :form="form"></imtselect>
-                
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
                     <h5>Scenario configuration</h5>
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
-                        <template v-for="(data, name) in self.form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
+                        <template v-for="(data, name) in form" v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)">
                             <div class="d-flex flex-row mb-0 mt-2 pt-1 align-items-baseline">
                                 <label :for="data.attrs.id" class='mb-0 text-nowrap'>
                                     <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)" v-model="data.val" v-bind="data.attrs" class='mr-1'>
@@ -83,11 +88,11 @@ Vue.component('trellis', {
                         <div class="d-flex flex-column">
                             <div class='d-flex flex-row align-items-baseline'>
                                 <h5>{{ name }}</h5>
-                                <span class="text-danger small flexible ml-3 text-right">{{ self.form[name].err }}</span>
+                                <span class="text-danger small flexible ml-3 text-right">{{ form[name].err }}</span>
                             </div>
                             
-                            <select v-model="self.form[name].val" v-bind="self.form[name].attrs" size="4"  class='form-control'>
-                                <option v-for='opt in self.form[name].choices' :value="opt[0]">{{ opt[1] }}</option>
+                            <select v-model="form[name].val" v-bind="form[name].attrs" size="4"  class='form-control'>
+                                <option v-for='opt in form[name].choices' :value="opt[0]">{{ opt[1] }}</option>
                             </select>
                         </div>
                     </template>
@@ -100,7 +105,7 @@ Vue.component('trellis', {
         
         </div>
         
-    </egsimform>
+    </form>
 
     <trellisplotdiv :data="responseData" :filename="this.$options.name"
         class='position-absolute pos-0 m-0' style='z-index:1'>
