@@ -130,7 +130,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             <!--<button @click='downloadasimageopts.show=true' class='btn btn-primary' >
                 <i class='fa fa-file-image-o'></i> to image
             </button>
-            <div :class="[downloadasimageopts.show ? 'd-flex' : 'd-none']" class='position-fixed flex-column'>
+            <div v-show="downloadasimageopts.show" class='position-fixed flex-column'>
                 <input type='number' min='1' step='any' placeholder='width (empty=auto)'
                     v-model='downloadasimageopts.width'></input>
                 <input type='number' min='1' step='any'  placeholder='height (empty=auto)'
