@@ -98,8 +98,7 @@
 	}
 	</script>
 	
-	<!-- load our vue.util file (at the real end, caise we want to be sure we loaded vue, either from a cdn
-	or from file, if there is no connection-->
+	<!-- load our vue.util file (at the real end because we want to be sure we loaded vue-->
 	{% if vue %}
 	<script type='text/javascript' src = "{% static 'js/vueutil.js' %}"></script>
 	{% endif %}

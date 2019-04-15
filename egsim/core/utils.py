@@ -152,7 +152,7 @@ def vectorize(value):
 def isscalar(value):
     '''Returns True if value is a scalr object, i.e. not having the attribute
     '__iter__' Note that strings and bytes are the only exceptions as they
-    are considered scalars
+    are considered scalars: isscalar([1]) = isscalar('a') = True
     '''
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
 
@@ -195,4 +195,4 @@ class OQ:
             gsim_name (string) mapped to its gsim_class (class object)
             defining all Ground Shaking Intensity Models defined in OpenQuake.
         '''
-        return get_available_gsims().items()
+        return dict(get_available_gsims())
