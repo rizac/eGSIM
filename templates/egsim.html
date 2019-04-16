@@ -56,16 +56,16 @@
 	{{ block.super }}
 	
 	{% for component in components %}
-	<script type='text/javascript' src = "{% static 'js/comps/' %}{{ component.0 }}.js"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/' %}{{ component.0 }}.js"></script>
 	{% endfor %}
 
-	<script type='text/javascript' src = "{% static 'js/comps/base/gsimselect.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/comps/base/imtselect.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/comps/base/forminput.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/comps/base/plotdiv.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/comps/base/plotdivs/trellisplotdiv.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/comps/base/plotdivs/gmdbplotdiv.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/comps/base/plotdivs/residualsplotdiv.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/gsimselect.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/imtselect.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/forminput.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/plotdiv.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/plotdivs/trellisplotdiv.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/plotdivs/gmdbplotdiv.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/plotdivs/residualsplotdiv.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 
 	<script>
