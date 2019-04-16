@@ -13,6 +13,11 @@ not working as expected. This stylesheet must be loaded AFTER bootstrap.css
 */
 *[style*="display: none"] { display: none !important; }
 
+/* form controls have a nice border, BUT for divs the height set is misleading, thus reset it: */
+div.form-control {
+    height: initial;
+}
+
 .d-flex > .flexible, .d-flex > .flexible-half{
 	flex: 1 1 auto; /* for letting this work with grid layout the last element (flex-basis) should be zero: https://stackoverflow.com/a/48454476 */
 }
