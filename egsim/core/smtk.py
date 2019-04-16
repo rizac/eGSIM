@@ -172,6 +172,13 @@ def get_residuals(params):
         for imt in residuals.residuals[gsim]:
             kwargs['gmpe'] = gsim
             kwargs['imt'] = imt
+
+            # convert nans. FIXME: Ask Graeme:
+#             _data = residuals.residuals[gsim][imt]
+#             for key in ['Total', 'Intra event', 'Inter event']:
+#                 vals = _data[key]
+#                 _data[key] = vals[np.isfinite(vals)]
+
             if func == residuals_with_distance:
                 kwargs['distance_type'] = distance_type
             ret[gsim][imt] = func(**kwargs)

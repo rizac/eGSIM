@@ -63,9 +63,10 @@ Vue.component('trellis', {
                     <h5>Scenario configuration</h5>
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
-                        <forminput v-for="(data, name) in form" :key="name"
+                        <forminput v-for="(data, name) in form"
+                            :data='data' :name='name' :key="name"
                             v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)"
-                            :data='data' :name='name' class='mt-2'>
+                            class='mt-2'>
                         </forminput>
                         
                     </div>
@@ -76,11 +77,11 @@ Vue.component('trellis', {
                                 <h5>{{ name }}</h5>
                                 <span class="text-danger small flexible ml-3 text-right">{{ form[name].err }}</span>
                             </div>
-                            
+
                             <select v-model="form[name].val" v-bind="form[name].attrs" size="4"
                              class='form-control'>
                                 <option v-for='opt in form[name].choices' :value="opt[0]">
-                                    {{ opt[0] + ': ' + opt[1] }}
+                                    {{ '[' + opt[0] + '] ' + opt[1] }}
                                 </option>
                             </select>
                         </div>
