@@ -55,6 +55,20 @@ and https://stackoverflow.com/a/38187626 */
 	
 }*/
 
+
+/* override bootstrap focus */
+.form-control:focus, .btn.focus, .btn:focus {
+    /*color: #495057;
+      background-color: #fff;
+      border-color: #80bdff;
+      outline: 0;*/
+    /* make border inset, decrease it to 1 px and increase the blur:
+    Also, make it important so that .btn-outline, .btn-primary and any "subclass"
+    of .btn or btn does not override these values:*/
+    box-shadow: inset 0px 0px 5px 1px rgba(0,123,255,.25) !important;
+}
+
+
 /* absolute positioning (not in standard bootstrap), to be used with bootstrap's .position-absolute: */
 .pos-t-0, .pos-y-0, .pos-0{
 	top: 0px;
