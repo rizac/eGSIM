@@ -303,8 +303,12 @@ class GsimsView(EgsimQueryView):
                                 '(model), a longitude and a '
                                 'latitude must be specified')
         # return a list from the QuerySet in order to be json-serializable
-        return list(gsim_names(params.get(GSIM), params.get(IMT),
-                               params.get(TRT), tr_selector))
+        # Note that from the API, GSIM, IMT should be either provided or not
+        # But from the frontend, they might be empty lists. Thus use get or
+        # None:
+        return list(gsim_names(params.get(GSIM) or None,
+                               params.get(IMT) or None,
+                               params.get(TRT) or None, tr_selector))
 
 
 class GmdbPlotView(EgsimQueryView):
