@@ -416,6 +416,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             this.selectedgridlayout = selectedgridlayout;
             this.paramnames2showongrid = new Set(gridlabels2show);
             this.params = params;
+            // update grid layouts:
+            this.gridLayoutChanged();
         },
         gridLayoutChanged: function(){
             var params = this.params;
