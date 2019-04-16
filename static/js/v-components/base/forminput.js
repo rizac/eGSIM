@@ -15,9 +15,10 @@ Vue.component('forminput', {
     },
     template: `<div>
         <div class="d-flex flex-row mb-0 pt-1 align-items-baseline">
-            <label :for="data.attrs.id" class='mb-0 text-nowrap'>
+            <label :for="data.attrs.id" class='mb-0 text-nowrap'
+            :class="[data.disabled ? ['text-muted'] : ['']]">
                 <input v-if="!data.choices.length && ['radio', 'checkbox'].includes(data.attrs.type)"
-                    v-model="data.val" v-bind="data.attrs" class='mr-1'>
+                    v-model="data.val" v-bind="data.attrs" :disabled="data.disabled" class='mr-1'>
                 {{ name }}
             </label>
             <div class="text-muted small flexible ml-3 text-right">
@@ -31,8 +32,9 @@ Vue.component('forminput', {
             </div>
         </div>
         <input v-if="!data.choices.length && !['radio', 'checkbox'].includes(data.attrs.type)"
-            v-model="data.val" v-bind="data.attrs" class='form-control'>
-        <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs" class='form-control'>
+            v-model="data.val" v-bind="data.attrs" :disabled="data.disabled" class='form-control'>
+        <select v-if="data.choices.length" v-model="data.val" v-bind="data.attrs" :disabled="data.disabled"
+            class='form-control'>
             <option v-for='opt in data.choices' :value='opt[0]'>{{ opt[1] }}</option>
         </select>
     </div>`

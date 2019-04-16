@@ -13,8 +13,9 @@ from yaml import safe_load, YAMLError
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
-from smtk.sm_table import get_dbnames
+from smtk.sm_table import get_dbnames, GMTableDescription
 from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
+from smtk.sm_utils import MECHANISM_TYPE
 
 DISTANCE_LABEL = dict(**{k: v for k, v in SMTK_DISTANCE_LABEL.items()
                          if k != 'r_x'},
@@ -168,6 +169,33 @@ def get_gmdb_names(fpath):
         return []
     return get_dbnames(fpath)
 
+
+def get_gmdb_column_desc():
+    keys = sorted(GMTableDescription)
+    ret = {}
+    for key in keys:
+        col = GMTableDescription[key]
+        classname = col.__class__.__name__
+        if key == 'event_time':
+            type2str = 'date-time string: "YYYY-MM-dd", "YYYY-MM-ddTHH:mm:ss"'
+        elif key == 'style_of_faulting':
+            type2str = 'string in %s' % \
+                ' '.join('"%s" (%s)' % (str(k), str(v))
+                         for k, v in MECHANISM_TYPE.items())
+        elif classname.lower().startswith('int'):
+            type2str = 'integer'
+        elif classname.lower().startswith('float'):
+            type2str = 'float'
+        elif classname.lower().startswith('bool'):
+            type2str = 'True or False'
+        elif classname.lower().startswith('str'):
+            type2str = 'string'
+        else:
+            type2str = '? (unkwnown type)'
+        
+        ret[key] = type2str
+    return ret
+        
 
 class OQ:
     '''container class for OpenQuake entities'''
