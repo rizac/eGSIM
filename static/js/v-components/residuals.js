@@ -36,6 +36,16 @@ Vue.component('residuals', {
                 this.formModal = !empty;
                 this.formHidden = !empty;
             }
+        },
+        // watch for the property val of plot_type in form
+        // i.e., tch when we change the value of plot_type
+        'form.plot_type.val': {
+        	immediate: true,
+        	handler: function(newVal, oldVal){
+        		var enabled = "dist" == newVal;
+        		this.$set(this.form.distance_type, 'disabled', !enabled);
+        		// this.form['distance_type'].disabled = !enabled;
+        	}
         }
     },
     template: `
@@ -62,9 +72,10 @@ Vue.component('residuals', {
                 <div class="d-flex flex-column flexible ml-4">
                     <h5>Database</h5>
                     <div class="flexible form-control mb-4" style="background-color:transparent">
-
+        
                         <forminput v-for="(data, name) in form"
                             :data='data' :name='name' :key="name"
+                            v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)"
                             class='mt-2'>
                         </forminput>
 

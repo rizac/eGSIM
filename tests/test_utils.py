@@ -7,8 +7,17 @@ from datetime import datetime, date
 
 import pytest
 
-from egsim.core.utils import vectorize, querystring
+from egsim.core.utils import vectorize, querystring, get_gmdb_column_desc
 from egsim.forms.fields import NArrayField
+
+
+def test_gmdb_columns():
+    '''test the gmdb column descriptions'''
+    ret = get_gmdb_column_desc()
+    assert not any(_ == '? (unkwnown type)' for _ in ret.values())
+    assert ret['style_of_faulting'].startswith('string in "')
+    assert ret['event_time'].startswith('date-time string: "')
+
 
 def test_vectorize():
     '''tests the vectorize function'''
