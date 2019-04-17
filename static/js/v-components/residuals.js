@@ -38,13 +38,13 @@ Vue.component('residuals', {
             }
         },
         // watch for the property val of plot_type in form
-        // i.e., tch when we change the value of plot_type
+        // this is a bit hacky in that it relies on the parameter names
+        // plot_type and distance_type:
         'form.plot_type.val': {
         	immediate: true,
         	handler: function(newVal, oldVal){
         		var enabled = "dist" == newVal;
         		this.$set(this.form.distance_type, 'disabled', !enabled);
-        		// this.form['distance_type'].disabled = !enabled;
         	}
         }
     },
@@ -70,7 +70,7 @@ Vue.component('residuals', {
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
-                    <h5>Database</h5>
+                    <h5>Observations</h5>
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
                         <forminput v-for="(data, name) in form"

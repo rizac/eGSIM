@@ -72,12 +72,12 @@ Vue.component('gsimselect', {
     
       <!-- GSIM FILTER CONTROLS: -->
       <div class="d-flex flex-row mt-1" v-if='showfilter'>  
-          <select v-model="filterType" class="form-control" style='border:0px; background-color:transparent'>
+          <select v-model="filterType" class="form-control form-control-sm" style='border:0px; background-color:transparent'>
               <option v-for="item in filterTypes" :key="item" v-bind:value="item">
                       Filter by {{ item }}:
               </option>
           </select>
-          <input v-model="filterText" type="text" class="form-control" style='width:initial'>
+          <input v-model="filterText" type="text" class="form-control form-control-sm" style='width:initial'>
       </div>
       
       <div v-if='selectbutton' class='mt-2'>
@@ -94,6 +94,7 @@ Vue.component('gsimselect', {
             return this.selectableGsimsSet.has(gsim);
         },
         updateFilter(){
+            this.adjustWidth();
             var regexp = this.filterText ? 
                 new RegExp(this.filterText.replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i') : 
                     undefined;
@@ -120,6 +121,25 @@ Vue.component('gsimselect', {
                 }
             }
             this.filterFunc = filterFunc;
+        },
+        adjustWidth(){
+            // fixes or releases the <select> tag width before filtering
+            // to avoid upleasant rapid width changes
+            if (!this.showfilter){
+                return;
+            }
+            var reset = !this.filterText;
+            var elm = document.querySelector('select#id_gsim');
+            if (!elm){
+                return;
+            }
+            elm.style.width = reset ? 'initial' : elm.offsetWidth + 'px';
         }
+    },
+    mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
+        // no -op
+    },
+    deactivated: function(){
+        // no-op
     }
 });

@@ -150,18 +150,19 @@ def get_residuals(params):
     PLOTTYPE = 'plot_type'  # pylint: disable=invalid-name
     SEL = 'selexpr'  # pylint: disable=invalid-name
 
-    # params[GMDB] is the tuple (hdf file name, table name):
-    gmdb = GroundMotionTable(*params[GMDB], mode='r')
-    if params.get(SEL):
-        gmdb = gmdb.filter(params[SEL])
-
     func = params[PLOTTYPE]
     if func == likelihood:  # pylint: disable=comparison-with-callable
         residuals = Likelihood(params[GSIM], params[IMT])
     else:
         residuals = Residuals(params[GSIM], params[IMT])
+
     # Compute residuals.
+    # params[GMDB] is the tuple (hdf file name, table name):
+    gmdb = GroundMotionTable(*params[GMDB], mode='r')
+    if params.get(SEL):
+        gmdb = gmdb.filter(params[SEL])
     residuals.get_residuals(gmdb)
+
     # statistics = residuals.get_residual_statistics()
     ret = defaultdict(lambda: defaultdict(lambda: {}))
     distance_type = params[DTYPE]
@@ -184,3 +185,25 @@ def get_residuals(params):
             ret[gsim][imt] = func(**kwargs)
 
     return ret
+
+
+def testing(params):
+    GMDB = 'gmdb'  # pylint: disable=invalid-name
+    GSIM = 'gsim'  # pylint: disable=invalid-name
+    IMT = 'imt'  # pylint: disable=invalid-name
+    TEST = 'test'  # pylint: disable=invalid-name
+    CONFIG = 'config'  # pylint: disable=invalid-name
+    SEL = 'selexpr'  # pylint: disable=invalid-name
+
+    residuals = Residuals(params[GSIM], params[IMT])
+    # Compute residuals.
+    # params[GMDB] is the tuple (hdf file name, table name):
+    gmdb = GroundMotionTable(*params[GMDB], mode='r')
+    if params.get(SEL):
+        gmdb = gmdb.filter(params[SEL])
+    residuals.get_residuals(gmdb)
+    # residuals = res.Residuals(self.gsims, self.imts)
+    config = params.get(CONFIG, {})
+    for func in params[TEST]:
+        _ = func(residuals, config)
+        asd = 9

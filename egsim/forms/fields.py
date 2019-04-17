@@ -34,6 +34,7 @@ from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path
 # make migrations does not work! So these methods should be called inside
 # each INSTANCE creation (__init__) not in the class. But this is too late ...
 from egsim.models import aval_gsims, aval_imts, aval_trts, aval_trmodels
+from smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS
 
 
 class ArrayField(CharField):
@@ -361,6 +362,15 @@ class ResidualplottypeField(ChoiceField):
         and returns the latter'''
         value = super(ResidualplottypeField, self).clean(value)
         return self._base_choices[value][1]
+
+
+class ResidualsTestField(MultipleChoiceField):
+    _base_choices = GSIM_MODEL_DATA_TESTS
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices',
+                          [(_, _) for _ in self._base_choices.keys()])
+        super(ResidualsTestField, self).__init__(**kwargs)
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
