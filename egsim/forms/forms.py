@@ -31,7 +31,7 @@ from egsim.core.utils import vectorize, isscalar, yaml_load, querystring, \
     tostr, DISTANCE_LABEL
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, \
     MsrField, PointField, TrtField, GmdbField, ResidualplottypeField, \
-    GsimField, TrModelField
+    GsimField, TrModelField, ResidualsTestField
 from egsim.models import sharing_gsims, shared_imts
 
 
@@ -344,7 +344,9 @@ class GsimImtForm(BaseForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # put 'sa_periods in the IMTField:
+        # put 'sa_periods in the IMTField: Note: modify self.fields, not
+        # self.base_fields or self.declared_fields
+        # (https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form)
         self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
 
     def clean(self):
@@ -537,4 +539,30 @@ class ResidualsForm(GsimImtForm, GmdbPlot):
     def clean(self):
         # Note: the call below calls GmdbForm.clean(self) BUT we should
         # check why and how:
-        GsimImtForm.clean(self)
+        return GsimImtForm.clean(self)
+
+
+class TestingForm(GsimImtForm, GmdbForm):
+
+        # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
+    __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
+                                 **GmdbForm.__additional_fieldnames__}
+
+    test = ResidualsTestField(required=True)
+
+    edr_bandwidth = FloatField(required=False, initial=0.01)
+    edr_multiplier = FloatField(required=False, initial=3.0)
+
+    def __init__(self, *args, **kwargs):
+        # Note: the call below calls GmdbForm.clean(self) BUT we should
+        # check why and how:
+        super().__init__(*args, **kwargs)
+        # put 'sa_periods in the IMTField: Note: modify self.fields, not
+        # self.base_fields or self.declared_fields
+        # (https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form)
+        config = {}
+        for parname in ['edr_bandwidth', 'edr_multiplier']:
+            if parname in self.data:
+                self.data.config[parname] = self.data.pop(parname)
+        self.data['config'] = config
+
