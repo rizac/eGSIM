@@ -4,7 +4,11 @@
 }
 
 body{
-	font-family: Encode Sans Condensed, sans-serif, "Ubuntu Mono", "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+	font-family: 'Encode Sans Condensed', sans-serif, "Ubuntu Mono", "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+}
+
+.small, .form-control-sm{
+	font-family: 'Encode Sans' !important;
 }
 
 /* Overriding BADLY IMPLEMENTED bootstrap !important that makes Vue v-show
@@ -118,6 +122,10 @@ browsers but opera and IE11 */
 nav .menu-item{
 	padding: 1rem .6rem;
 	color: rgba(255,255,255,.5) !important;
+}
+
+/* pointer must be set for all inner elements otherwise seems no to work: */
+nav .menu-item, nav .menu-item *{
 	cursor: pointer;
 }
 
@@ -131,6 +139,12 @@ nav .menu-item.active{
 	}
 }
 
+
+/* change the 'border' class and make it a little bit darker: */
+.border {
+    /* border: 1px solid #dee2e6!important; */
+    border: 1px solid rgba(0,0,0,.2) !important;
+}
 
 /* change disabled text color to makei it lighter. Also add the class 'disabled' which renders the same text color */
 *[disabled], .disabled{ /*input[type="text"][disabled] {*/

@@ -41,6 +41,17 @@ class Test:
                                           'reason': 'required'}]}}
 
         assert areequal(json_, exp_json)
+        
+        
+        inputdic = dict(inputdic)
+        for ddd in ['dist', 'distance_type']:
+            inputdic.pop('dist', None)
+        inputdic['plot_type'] = 'dist'
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
+        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        assert resp1.status_code == resp2.status_code == 400
+        
 
     @patch('egsim.forms.fields.get_gmdb_path')
     def test_residuals_service_(self, mock_gmdb_path, testdata, areequal,  # django_db_setup,
