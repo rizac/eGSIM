@@ -7,6 +7,7 @@ Created on 31 May 2018
 @author: riccardo
 '''
 from collections import defaultdict
+import json
 
 import numpy as np
 from smtk.trellis.trellis_plots import DistanceIMTTrellis, \
@@ -151,10 +152,7 @@ def get_residuals(params):
     SEL = 'selexpr'  # pylint: disable=invalid-name
 
     func = params[PLOTTYPE]
-    if func == likelihood:  # pylint: disable=comparison-with-callable
-        residuals = Likelihood(params[GSIM], params[IMT])
-    else:
-        residuals = Residuals(params[GSIM], params[IMT])
+    residuals = Residuals(params[GSIM], params[IMT])
 
     # Compute residuals.
     # params[GMDB] is the tuple (hdf file name, table name):
@@ -191,7 +189,7 @@ def testing(params):
     GMDB = 'gmdb'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
     IMT = 'imt'  # pylint: disable=invalid-name
-    TEST = 'test'  # pylint: disable=invalid-name
+    FIT_M = 'fit_measure'  # pylint: disable=invalid-name
     CONFIG = 'config'  # pylint: disable=invalid-name
     SEL = 'selexpr'  # pylint: disable=invalid-name
 
@@ -203,7 +201,38 @@ def testing(params):
         gmdb = gmdb.filter(params[SEL])
     residuals.get_residuals(gmdb)
     # residuals = res.Residuals(self.gsims, self.imts)
+    
+    # in case of likelihodd: take first tuple element
+    # the second element is informative but it's not the actual metric
+    # so discard it
+    ret = {}
     config = params.get(CONFIG, {})
-    for func in params[TEST]:
-        _ = func(residuals, config)
-        asd = 9
+    for name, func in params[FIT_M]:
+        result = func(residuals, config)
+        ret[name] = result[0] if isinstance(result, (list, tuple)) else result
+
+    return _jsonify_nested(ret)
+
+
+def _jsonify_nested(dic):
+    for key, val in list(dic.items()):
+        if isinstance(val, dict):
+            dic[key] = _jsonify_nested(val)
+            continue
+        try:
+            json.dumps(val)
+        except Exception as exc:
+            try:  # try converting from numpy. If it fails, raise exc above
+                pyval = val.tolist()
+                json.dumps(pyval)
+                nans = np.argwhere(~np.isfinite(val)).flatten()
+                if nans and val.ndim == 0:
+                    pyval = None
+                else:
+                    for idx in nans:
+                        pyval[idx] = None
+                dic[key] = pyval
+            except:
+                raise exc
+            
+    return dic

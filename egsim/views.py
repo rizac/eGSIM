@@ -69,7 +69,7 @@ def main(request, selected_menu=None):
         MENU_RES: {'url': ResidualsView.url,
                    'form': ResidualsView.formclass().to_rendering_dict()},
         MENU_TEST: {'url': TestingView.url,
-                    'form': {}},
+                    'form': TestingView.formclass().to_rendering_dict()},
         MENU_DOC: {'src': 'pages/apidoc'}
     }
 
@@ -327,7 +327,8 @@ class GmdbPlotView(EgsimQueryView):
             # catch SyntaxErrors as they are most likely due to
             # selection errors, and raise appropriate Json response
             # bypassing default middleware (if installed):
-            msg = 'Selection expression error: "%s"' % serr.text
+            msg = 'Selection expression error: %s ("%s")' % (serr.msg,
+                                                             serr.text)
             return ExceptionHandlerMiddleware.jsonerr_response(Exception(msg))
         except NameError as nerr:
             # catch SyntaxErrors as they are most likely due to

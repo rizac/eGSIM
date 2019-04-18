@@ -375,7 +375,7 @@ class ResidualsTestField(MultipleChoiceField):
     def clean(self, value):
         '''Converts the given value (string) into the smtk function'''
         value = super(ResidualsTestField, self).clean(value)
-        return [self._base_choices[_] for _ in value]
+        return [(_, self._base_choices[_]) for _ in value]
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
