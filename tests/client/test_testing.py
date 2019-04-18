@@ -8,8 +8,7 @@ Created on 22 Oct 2018
 import pytest
 from mock import patch
 
-from egsim.core.utils import querystring, DISTANCE_LABEL
-from egsim.forms.fields import ResidualplottypeField
+from egsim.core.utils import querystring
 
 
 @pytest.mark.django_db
@@ -41,8 +40,7 @@ class Test:
                                           'reason': 'required'}]}}
 
         assert areequal(json_, exp_json)
-        
-        
+
         inputdic = dict(inputdic)
         for ddd in ['dist', 'distance_type']:
             inputdic.pop('dist', None)
@@ -66,4 +64,7 @@ class Test:
         assert resp1.status_code == resp2.status_code == 200
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
-        exp_json = "?"
+        assert isinstance(json_, dict) and \
+            all(isinstance(_, dict) for _ in json_.values())
+        
+        

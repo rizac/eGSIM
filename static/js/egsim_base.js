@@ -33,18 +33,10 @@ var EGSIM_BASE = {
                        if (element.gsim){
                            element.gsim.choices = gsims;
                            element.gsim.GSIMS_MANAGER = avalGsims;
-                           if (!element.gsim.val){
-                               // convert null to empty list in case:
-                               element.gsim.val = [];
-                           }
                        }
                        if (element.imt){
                            element.imt.choices = imts;
                            element.gsim.GSIMS_MANAGER = avalGsims;
-                           if (!element.imt.val){
-                               // convert null to empty list in case:
-                               element.imt.val = [];
-                           }
                        }
                        if (element.gmdb){
                            element.gmdb.choices = gmdbNames;

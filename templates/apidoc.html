@@ -1138,9 +1138,379 @@ csv table).
 
 <h2 id="testing">Testing</h2>
 <p><b>Endpoint: <code>{{ baseurl }}/{{ test }}</code></b></p>
+
+<h3>Request</h3>
 <p>
 
 </p>
+
+<h3>Response</h3>
+The reponse Object is of tyhis type:
+<pre><code class="language-json">{
+	"Residuals":{
+		"BindiEtAl2011": {
+			"SA(0.2)":{
+				"Inter event": {
+					"Mean": -0.254
+					"Std Dev": 0.9312
+				},
+				"Intra event": {
+					... same object as above ...
+				},
+				"Total": {
+					... same object as above ...
+				}
+			},
+			... (iterate for all available IMTs)
+		},
+		... (iterate for all available GSIMs)
+	},
+	"Likelihood":{
+		"BindiEtAl2011": {
+			"SA(0.2)":{
+				"Inter event": [-0.274, 0.49, ...],
+				"Intra event": [... same object as above ...],
+				"Total": [... same object as above ...]
+			},
+			...
+		},
+		...		
+	},
+	"LLH":{
+		"BindiEtAl2011": {
+			"SA(0.2)": 2.07,
+			"PGA": 4.1,
+			"PGV": 2.46
+			"All": 2.889
+		},
+		...		
+	},
+	"MultivariateLLH":{
+		"BindiEtAl2011": {
+			"SA(0.2)": 2.08,
+			"PGA": 4.1,
+			"PGV": 2.46
+			"All": 2.889
+		},
+		...		
+	},
+	"EDR":{
+		"BindiEtAl2011": {
+			"MDE Norm": 2.12,
+			"sqrt Kappa": 3.71,
+			"EDR": 2.46
+		},
+		...		
+	},
+	
+}</code></pre>
+
+<table class='csv'>
+<tr>
+	<td>Measure of fit</td>
+	<td>gsim</td>
+	<td>imt</td>
+	<td>type</td>
+	<td>Mean</td>
+	<td>Std Dev</td>
+	<td>MDE Norm</td>
+	<td>sqrt Kappa</td>
+	<td>EDR</td>
+	<td>value(s)</td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>Residuals</td>
+	<td>BindiEtAl2011</td>
+	<td>SA(0.2)</td>
+	<td>Inter event</td>
+	<td>-0.254</td>
+	<td>0.9312</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>Residuals</td>
+	<td>BindiEtAl2011</td>
+	<td>SA(0.2)</td>
+	<td>Intra event</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>Residuals</td>
+	<td>BindiEtAl2011</td>
+	<td>SA(0.2)</td>
+	<td>Total</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>Residuals</td>
+	<td>BindiEtAl2011</td>
+	<td>PGA</td>
+	<td>Inter event</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>Likelihood</td>
+	<td>BindiEtAl2011</td>
+	<td>SA(0.2)</td>
+	<td>Inter event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>-0.274</td>
+	<td>0.49</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>LLH</td>
+	<td>BindiEtAl2011</td>
+	<td>SA(0.2)</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>2.07</td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>MultivariateLLH</td>
+	<td>BindiEtAl2011</td>
+	<td>SA(0.2)</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>2.08</td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>EDR</td>
+	<td>BindiEtAl2011</td>
+	<td>SA(0.2)</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>2.12</td>
+	<td>3.71</td>
+	<td>2.46</td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+</table>
+
+<!--  <table class='csv'>
+<tr>
+	<td>Measure of fit:</td>
+	<td>Residuals</td>
+	<td>&hellip;</td>
+	<td>Likelihood</td>
+	<td>&hellip;</td>
+	<td>LLH</td>
+	<td>&hellip;</td>
+	<td>MultivariateLLH</td>
+	<td>&hellip;</td>
+	<td>EDR</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>gsim:</td>
+	<td>BindiEtAl2011</td>
+	<td>&hellip;</td>
+	<td>BindiEtAl2011</td>
+	<td>&hellip;</td>
+	<td>BindiEtAl2011</td>
+	<td>&hellip;</td>
+	<td>BindiEtAl2011</td>
+	<td>&hellip;</td>
+	<td>BindiEtAl2011</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>imt:</td>
+	<td>SA(0.2)</td>
+	<td>&hellip;</td>
+	<td>SA(0.2)</td>
+	<td>&hellip;</td>
+	<td>SA(0.2)</td>
+	<td>&hellip;</td>
+	<td>SA(0.2)</td>
+	<td>&hellip;</td>
+	<td>SA(0.2)</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>type:</td>
+	<td>Inter event</td>
+	<td>&hellip;</td>
+	<td>Inter event</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>value(s) label:</td>
+	<td>Mean</td>
+	<td>&hellip;</td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td>&hellip;</td>
+	<td>MDE Norm</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td></td>
+	<td>-0.254</td>
+	<td>&hellip;</td>
+	<td>-0.274</td>
+	<td>&hellip;</td>
+	<td>2.07</td>
+	<td>&hellip;</td>
+	<td>2.08</td>
+	<td>&hellip;</td>
+	<td>2.12</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.49</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>&hellip;</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+</table> -->
+
 
 </div>	
 </div>
