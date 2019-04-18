@@ -21,7 +21,7 @@ from django.utils.translation import ugettext as _
 from django.forms import Form
 from django.utils.safestring import mark_safe
 from django.forms.fields import BooleanField, CharField, FloatField, \
-    ChoiceField, CallableChoiceIterator
+    ChoiceField, CallableChoiceIterator, MultipleChoiceField
 
 from openquake.hazardlib.imt import from_string as imt_from_string
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
@@ -240,7 +240,9 @@ class BaseForm(Form):
                          'attrs': attrs,
                          'err': '',
                          'is_hidden': widgetdata.pop('is_hidden', False),
-                         'val': val}
+                         # coerce val to [] in case val falsy and multichoice:
+                         'val': [] if isinstance(_, MultipleChoiceField)
+                         and not val else val}
             fielddata['choices'] = getattr(_, 'choices', [])
             if isinstance(fielddata['choices'], CallableChoiceIterator):
                 if ignore_callable_choices:
@@ -546,9 +548,10 @@ class TestingForm(GsimImtForm, GmdbForm):
 
         # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
-                                 **GmdbForm.__additional_fieldnames__}
+                                 **GmdbForm.__additional_fieldnames__,
+                                 'fitm': 'fit_measure'}
 
-    test = ResidualsTestField(required=True)
+    fit_measure = ResidualsTestField(required=True)
 
     edr_bandwidth = FloatField(required=False, initial=0.01)
     edr_multiplier = FloatField(required=False, initial=3.0)
