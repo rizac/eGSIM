@@ -372,6 +372,11 @@ class ResidualsTestField(MultipleChoiceField):
                           [(_, _) for _ in self._base_choices.keys()])
         super(ResidualsTestField, self).__init__(**kwargs)
 
+    def clean(self, value):
+        '''Converts the given value (string) into the smtk function'''
+        value = super(ResidualsTestField, self).clean(value)
+        return [self._base_choices[_] for _ in value]
+
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
     '''MultipleChoiceField which accepts lists of values (the default) but

@@ -19,7 +19,7 @@ from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import TrellisForm, GsimSelectionForm, ResidualsForm, \
-    BaseForm, GmdbPlot
+    BaseForm, GmdbPlot, TestingForm
 from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_names, get_gmdb_path
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
@@ -350,10 +350,10 @@ class ResidualsView(EgsimQueryView):
 
 class TestingView(EgsimQueryView):
 
-    formclass = None
+    formclass = TestingForm
     # url will be used in views. Do not end with '/':
     url = 'query/testing'
 
     @classmethod
     def process(cls, params):
-        raise NotImplementedError()
+        return egsim_smtk.testing(params)

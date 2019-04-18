@@ -537,7 +537,7 @@ class ResidualsForm(GsimImtForm, GmdbPlot):
     plot_type = ResidualplottypeField(required=True)
 
     def clean(self):
-        # Note: the call below calls GmdbForm.clean(self) BUT we should
+        # Note: the call below calls GmdbPlot.clean(self) BUT we should
         # check why and how:
         return GsimImtForm.clean(self)
 
@@ -553,16 +553,14 @@ class TestingForm(GsimImtForm, GmdbForm):
     edr_bandwidth = FloatField(required=False, initial=0.01)
     edr_multiplier = FloatField(required=False, initial=3.0)
 
-    def __init__(self, *args, **kwargs):
-        # Note: the call below calls GmdbForm.clean(self) BUT we should
+    def clean(self):
+        # Note: the call below calls GmdbPlot.clean(self) BUT we should
         # check why and how:
-        super().__init__(*args, **kwargs)
-        # put 'sa_periods in the IMTField: Note: modify self.fields, not
-        # self.base_fields or self.declared_fields
-        # (https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form)
+        cleaned_data = GsimImtForm.clean(self)
         config = {}
         for parname in ['edr_bandwidth', 'edr_multiplier']:
-            if parname in self.data:
-                self.data.config[parname] = self.data.pop(parname)
-        self.data['config'] = config
+            if parname in cleaned_data:
+                config[parname] = cleaned_data[parname]
+        cleaned_data['config'] = config
+        return cleaned_data
 
