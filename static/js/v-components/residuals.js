@@ -12,6 +12,10 @@ Vue.component('residuals', {
         post: Function
     },
     data: function () {
+    	// set the size of the plot_type <select>. Maybe this is not the right place
+    	// (maybe the 'created' method would be better:
+    	// https://vuejs.org/v2/api/#created) but it works:
+    	this.$set(this.form['plot_type'].attrs, 'size', 6);
         return {
             formModal: false,
             responseData: this.response,
@@ -72,14 +76,14 @@ Vue.component('residuals', {
                 <div class="d-flex flex-column flexible ml-4">
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
-        				<forminput :form='form' :name='"gmdb"' class='mt-2'></forminput>
+        				<forminput :form='form' :name='"gmdb"'></forminput>
                     	<forminput :form='form' :name='"selexpr"' class='mt-2'></forminput>
 
                     </div>
 
 					<div class="form-control" style="background-color:transparent">
 
-                    	<forminput :form='form' :name='"plot_type"' class='mt-2'></forminput>
+                    	<forminput :form='form' :name='"plot_type"'></forminput>
                     	<forminput :form='form' :name='"distance_type"' class='mt-2'></forminput>
 
 					</div>

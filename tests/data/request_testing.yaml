@@ -8,8 +8,8 @@ gmdb: 'esm_sa_flatfile_2018'  # 'stable_shallow_crust'
 selexpr: '(vs30 >= 730) & ((magnitude <=4) | (magnitude>=7))'
 
 fit_measure:
- - "Residuals"
- - "Likelihood"
- - "LLH"
- - "MultivariateLLH"
- - "EDR"
+ - "res"
+ - "lh"
+ - "llh"
+ - "mllh"
+ - "edr"
