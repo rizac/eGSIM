@@ -34,7 +34,7 @@ Vue.component('gmdbplot', {
             <form novalidate v-on:submit.prevent="request" class='d-flex flex-column'>
                 <div class="d-flex flex-column flexible">
 
-                    <forminput v-for="(data, name) in form" :key="name" :data='data' :name='name'>
+                    <forminput v-for="name in Object.keys(form)" :key="name" :form='form' :name='name'>
                     </forminput>
 
                     <button type="submit" class="btn btn-outline-primary mt-2">
