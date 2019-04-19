@@ -51,15 +51,7 @@ Vue.component('gsimselect', {
         }
     },
     template: `<div class='d-flex flex-column'>
-      <div class='d-flex flex-row align-items-baseline'>
-          <h5>{{ name }}</h5>
-          <div class='small flexible text-right ml-3'>
-              <span class='text-danger'>{{ form[name].err }}</span>
-              <span v-if='!form[name].err' class='text-muted'>
-                  {{ form[name].label }}: {{ form[name].val.length }} of {{ form[name].choices.length }} selected
-              </span>
-          </div>
-      </div>
+      <forminput :form="form" :name='"gsim"' headonly></forminput>
       <div class='flexible d-flex flex-column'>
           <select v-model="form[name].val" v-bind="form[name].attrs" class="form-control flexible">
               <option v-for="gsim in form[name].choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)"
