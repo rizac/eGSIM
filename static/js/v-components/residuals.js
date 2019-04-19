@@ -44,7 +44,7 @@ Vue.component('residuals', {
         	immediate: true,
         	handler: function(newVal, oldVal){
         		var enabled = "dist" == newVal;
-        		this.$set(this.form.distance_type, 'disabled', !enabled);
+        		this.$set(this.form.distance_type.attrs, 'disabled', !enabled);
         	}
         }
     },
@@ -73,15 +73,21 @@ Vue.component('residuals', {
                     <h5>Observations</h5>
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
-                        <forminput v-for="(data, name) in form"
-                            :data='data' :name='name' :key="name"
-                            v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)"
-                            class='mt-2'>
+        			<template v-for="name in ['gmdb', 'selexpr']">
+                        <forminput :data='form[name]' :name='name' :key="name" class='mt-2'>
                         </forminput>
+                    </template>
 
                     </div>
 
-                    <template v-for="name in ['plot_type']">
+					<div class="form-control" style="background-color:transparent">
+					
+					<template v-for="name in ['plot_type']">
+                     	<forminput :data='form[name]' :name='name' :key="name" class='mt-2'>
+                    	</forminput>
+                    </template>
+         
+                    <!--<template v-for="name in ['plot_type']">
                         <div class="d-flex flex-column">
                             <div class='d-flex flex-row align-items-baseline'>
                                 <h5>{{ name }}</h5>
@@ -95,7 +101,14 @@ Vue.component('residuals', {
                                 </option>
                             </select>
                         </div>
+                    </template>-->
+                    
+                    <template v-for="name in ['distance_type']">
+                     	<forminput :data='form[name]' :name='name' :key="name" class='mt-2'>
+                    	</forminput>
                     </template>
+					</div>
+
                 </div>
             </div>
 

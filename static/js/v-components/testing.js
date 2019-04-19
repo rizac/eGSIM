@@ -44,8 +44,8 @@ Vue.component('testing', {
         	immediate: true,
         	handler: function(newVal, oldVal){
         		var enabled = newVal && newVal.length && newVal.some(val => val.toLowerCase() == 'edr');
-        		this.$set(this.form.edr_bandwidth, 'disabled', !enabled);
-        		this.$set(this.form.edr_multiplier, 'disabled', !enabled);
+        		this.$set(this.form.edr_bandwidth.attrs, 'disabled', !enabled);
+        		this.$set(this.form.edr_multiplier.attrs, 'disabled', !enabled);
         	}
         }
     },
