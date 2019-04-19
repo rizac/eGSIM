@@ -74,14 +74,14 @@ Vue.component('testing', {
 
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
-                        <forminput :form='form' :name='"gmdb"' class='mt-2'></forminput>
+                        <forminput :form='form' :name='"gmdb"'></forminput>
                     	<forminput :form='form' :name='"selexpr"' class='mt-2'></forminput>
 
                     </div>
                     
                     <div class="form-control" style="background-color:transparent">
 
-                    	<forminput :form='form' :name='"fit_measure"' class='mt-2'></forminput>
+                    	<forminput :form='form' :name='"fit_measure"'></forminput>
                     	<forminput :form='form' :name='"edr_bandwidth"' class='mt-2'></forminput>
                     	<forminput :form='form' :name='"edr_multiplier"' class='mt-2'></forminput>
 
@@ -91,7 +91,7 @@ Vue.component('testing', {
             </div>
 
             <button type="submit" class="btn btn-outline-primary">
-                Display plots
+                Display results
             </button>
 
         </div>
