@@ -60,32 +60,22 @@ Vue.component('trellis', {
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
-                    <h5>Scenario configuration</h5>
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
-                        <forminput v-for="(data, name) in form"
-                            :data='data' :name='name' :key="name"
+                        <forminput v-for="name in Object.keys(form)"
+                            :form='form' :name='name' :key="name"
                             v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)"
                             class='mt-2'>
                         </forminput>
-                        
-                    </div>
-                    
-                    <template v-for="name in ['plot_type']">
-                        <div class="d-flex flex-column">
-                            <div class='d-flex flex-row align-items-baseline'>
-                                <h5>{{ name }}</h5>
-                                <span class="text-danger small flexible ml-3 text-right">{{ form[name].err }}</span>
-                            </div>
 
-                            <select v-model="form[name].val" v-bind="form[name].attrs" size="4"
-                             class='form-control'>
-                                <option v-for='opt in form[name].choices' :value="opt[0]">
-                                    {{ '[' + opt[0] + '] ' + opt[1] }}
-                                </option>
-                            </select>
-                        </div>
-                    </template>
+                    </div>
+
+                    <div class="form-control" style="background-color:transparent">
+
+                        <forminput :form='form' :name='"plot_type"' class='mt-2'></forminput>
+
+                    </div>
+
                 </div>
             </div>
         

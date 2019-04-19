@@ -71,32 +71,22 @@ Vue.component('testing', {
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
-                    <h5>Observations</h5>
+
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
-                        <forminput v-for="(data, name) in form"
-                            :data='data' :name='name' :key="name"
-                            v-if="!['gsim', 'imt', 'sa_periods', 'fit_measure'].includes(name)"
-                            class='mt-2'>
-                        </forminput>
+                        <forminput :form='form' :name='"gmdb"' class='mt-2'></forminput>
+                    	<forminput :form='form' :name='"selexpr"' class='mt-2'></forminput>
 
                     </div>
+                    
+                    <div class="form-control" style="background-color:transparent">
 
-                    <template v-for="name in ['fit_measure']">
-                        <div class="d-flex flex-column">
-                            <div class='d-flex flex-row align-items-baseline'>
-                                <h5>{{ name }}</h5>
-                                <span class="text-danger small flexible ml-3 text-right">{{ form[name].err }}</span>
-                            </div>
+                    	<forminput :form='form' :name='"fit_measure"' class='mt-2'></forminput>
+                    	<forminput :form='form' :name='"edr_bandwidth"' class='mt-2'></forminput>
+                    	<forminput :form='form' :name='"edr_multiplier"' class='mt-2'></forminput>
 
-                            <select v-model="form[name].val" v-bind="form[name].attrs" size="6"
-                             class='form-control'>
-                                <option v-for='opt in form[name].choices' :value="opt[0]">
-                                    {{ '[' + opt[0] + '] ' + opt[1] }}
-                                </option>
-                            </select>
-                        </div>
-                    </template>
+					</div>
+
                 </div>
             </div>
 
