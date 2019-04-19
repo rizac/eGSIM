@@ -342,7 +342,7 @@ class ResidualplottypeField(ChoiceField):
     '''An EgsimChoiceField which returns the selected function to compute
     residual plots'''
     _base_choices = {
-        'dd': ('Residuals density distribution', residuals_density_distribution),
+        'res': ('Residuals (density distribution)', residuals_density_distribution),
         'lh': ('Likelihood', likelihood),
         'mag': ('Residuals vs. Magnitude', residuals_with_magnitude),
         'dist': ('Residuals vs. Distance', residuals_with_distance),
@@ -365,17 +365,28 @@ class ResidualplottypeField(ChoiceField):
 
 
 class ResidualsTestField(MultipleChoiceField):
-    _base_choices = GSIM_MODEL_DATA_TESTS
+    _base_choices = {'res': ('Residuals (density distribution)',
+                             GSIM_MODEL_DATA_TESTS['Residuals']),
+                     'lh': ("Likelihood",
+                            GSIM_MODEL_DATA_TESTS["Likelihood"]),
+                     "llh": ("Log-Likelihood",
+                             GSIM_MODEL_DATA_TESTS["LLH"]),
+                     "mllh": ("Multivariate Log-Likelihood",
+                              GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
+                     "edr": ("Euclidean Distance-Based",
+                             GSIM_MODEL_DATA_TESTS["EDR"])
+                    }
+                     
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
-                          [(_, _) for _ in self._base_choices.keys()])
+                          [(k, v[0]) for k, v in self._base_choices.items()])
         super(ResidualsTestField, self).__init__(**kwargs)
 
     def clean(self, value):
         '''Converts the given value (string) into the smtk function'''
         value = super(ResidualsTestField, self).clean(value)
-        return [(_, self._base_choices[_]) for _ in value]
+        return [self._base_choices[_] for _ in value]
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):

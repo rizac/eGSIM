@@ -551,7 +551,7 @@ class TestingForm(GsimImtForm, GmdbForm):
                                  **GmdbForm.__additional_fieldnames__,
                                  'fitm': 'fit_measure'}
 
-    fit_measure = ResidualsTestField(required=True)
+    fit_measure = ResidualsTestField(required=True, label="Measure(s) of fit")
 
     edr_bandwidth = FloatField(required=False, initial=0.01)
     edr_multiplier = FloatField(required=False, initial=3.0)

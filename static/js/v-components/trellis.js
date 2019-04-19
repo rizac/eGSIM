@@ -12,10 +12,15 @@ Vue.component('trellis', {
         post: Function
     },
     data: function () {
+    	// set the size of the plot_type <select>. Maybe this is not the right place
+    	// (maybe the 'created' method would be better:
+    	// https://vuejs.org/v2/api/#created) but it works:
+    	this.$set(this.form['plot_type'].attrs, 'size', 3);
         return {
             formModal: false,
             responseData: this.response,
-            formHidden: false
+            formHidden: false,
+            scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' & key!='sa_periods' & key!='plot_type')
         }
     },
     methods: {
@@ -60,20 +65,16 @@ Vue.component('trellis', {
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
-                    <div class="flexible form-control mb-4" style="background-color:transparent">
-        
-                        <forminput v-for="name in Object.keys(form)"
-                            :form='form' :name='name' :key="name"
-                            v-if="!['gsim', 'imt', 'sa_periods', 'plot_type'].includes(name)"
-                            class='mt-2'>
-                        </forminput>
 
+                    <div class="flexible form-control mb-4" style="background-color:transparent">
+                        <forminput v-for="(name, index) in scenarioKeys"
+                            :form='form' :name='name' :key="name"
+                            :class="{ 'mt-2': index > 0 }">
+                        </forminput>
                     </div>
 
                     <div class="form-control" style="background-color:transparent">
-
-                        <forminput :form='form' :name='"plot_type"' class='mt-2'></forminput>
-
+                        <forminput :form='form' :name='"plot_type"'></forminput>
                     </div>
 
                 </div>
