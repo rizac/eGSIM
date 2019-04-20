@@ -120,12 +120,11 @@ Vue.component('gsimselect', {
             if (!this.showfilter){
                 return;
             }
-            var reset = !this.filterText;
             var elm = document.querySelector('select#id_gsim');
             if (!elm){
                 return;
             }
-            elm.style.width = reset ? 'initial' : elm.offsetWidth + 'px';
+            elm.style.width = !this.filterText ? '' : elm.offsetWidth + 'px';
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load

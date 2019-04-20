@@ -20,7 +20,8 @@ from django.conf import settings
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import TrellisForm, GsimSelectionForm, ResidualsForm, \
     BaseForm, GmdbPlot, TestingForm
-from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_names, get_gmdb_path
+from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_names, get_gmdb_path,\
+    get_gmdb_column_desc
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
@@ -144,9 +145,11 @@ def apidoc(request):
                        trellis='trellis', residuals='residuals',
                        gsimsel='gsims', test='testing',
                        param=BaseForm.parnames(),
+                       gmt=get_gmdb_column_desc(),
                        form_trellis=to_html_table(TrellisForm),
                        form_residuals=to_html_table(ResidualsForm),
-                       form_gsims=to_html_table(GsimSelectionForm)))
+                       form_gsims=to_html_table(GsimSelectionForm),
+                       form_testing=to_html_table(TestingForm)))
 
 
 def test_err(request):  # FIXME: REMOVE!!!!!
