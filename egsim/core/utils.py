@@ -177,17 +177,17 @@ def get_gmdb_column_desc():
         col = GMTableDescription[key]
         classname = col.__class__.__name__
         if key == 'event_time':
-            type2str = 'date-time string: "YYYY-MM-dd", "YYYY-MM-ddTHH:mm:ss"'
+            type2str = 'date-time (ISO formatted) string'
         elif key == 'style_of_faulting':
             type2str = 'string in %s' % \
                 ' '.join('"%s" (%s)' % (str(k), str(v))
                          for k, v in MECHANISM_TYPE.items())
         elif classname.lower().startswith('int'):
-            type2str = 'integer'
+            type2str = 'numeric (integer)'
         elif classname.lower().startswith('float'):
-            type2str = 'float'
+            type2str = 'numeric (float)'
         elif classname.lower().startswith('bool'):
-            type2str = 'True or False'
+            type2str = 'bool: true or false'
         elif classname.lower().startswith('str'):
             type2str = 'string'
         else:
