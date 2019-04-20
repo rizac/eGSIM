@@ -480,87 +480,6 @@ Trellis plot data returned in CSV format will have the following structure.
 <span class='yvalues'></span> = y values (first cell is the y label)
 </p>
 
-
-<h5>Vertical display (&varr;)</h5>
-
-<table class='csv'>
-<tr>
-	<td>gsim:</td>
-	<td></td>
-	<td>AkkarEtAl2013</td>
-	<td>AkkarEtAl2013</td>
-	<td>&hellip;</td>
-	<td>CauzziEtAl2014</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>magnitude:</td>
-	<td></td>
-	<td>5</td>
-	<td>5.5</td>
-	<td>&hellip;</td>
-	<td>5</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>distance:</td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>vs30:</td>
-	<td></td>
-	<td>760</td>
-	<td>760</td>
-	<td>&hellip;</td>
-	<td>760</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>Rupture Dist. (km)</td>
-	<td class='yvalues'>Median PGA (g)</td>
-	<td class='yvalues'>Median PGA (g)</td>
-	<td class='yvalues'>&hellip;</td>
-	<td class='yvalues'>Median PGA (g)</td>
-	<td class='yvalues'>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>2.905</td>
-	<td class='yvalues'>0.3811</td>
-	<td class='yvalues'>0.283</td>
-	<td class='yvalues'>&hellip;</td>
-	<td class='yvalues'>0.21</td>
-	<td class='yvalues'>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>3.771</td>
-	<td class='yvalues'>0.3812</td>
-	<td class='yvalues'>0.283</td>
-	<td class='yvalues'>&hellip;</td>
-	<td class='yvalues'>0.291</td>
-	<td class='yvalues'>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-</tr>
-</table>
-
-
-<h5>Horizontal display (&harr;)</h5>
-
 <table class='csv'>
 <tr>
 	<td>gsim:</td>
@@ -646,6 +565,12 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 
 {{ form_residuals | safe }}
 
+<h4>Notes on selection expression
+<a style="display: none;" class="headerlink" href="#selexpr_section" title="Permalink to this headline">¶</a>
+</h4>
+
+{% include "selexpr_help.html" with gmt=gmt %}
+
 <h3>Response</h3>
 <p>
 The number of generated Residuals plots will be the product of the requested Intensity
@@ -691,7 +616,7 @@ into three subplots:
 	<td>{{ param.residualsform.plot_type.choices.5.label}}</td>
 	<td>Same as above with depth as point's x</td>
 </tr>
-<tr>
+<!-- <tr>
 	<td>{{ param.residualsform.plot_type.choices.6.label}}</td>
 	<td>Same as above with stations as point's x</td>
 </tr>
@@ -702,7 +627,7 @@ into three subplots:
 	'Variabilities distribution' (the distribution residual variabilities for each station)</td>
 	<td>Scatter plots of the plot residuals (y axis) vs. each station (x)</td>
 	<td>mean and standard deviation</td>
-</tr>
+</tr> -->
 </tbody>
 </table>
 
@@ -750,210 +675,6 @@ csv table).
 <span class='xvalues'></span> = x values (first cell is the x label), 
 <span class='yvalues'></span> = y values (first cell is the y label)
 </p>
-
-<h5>Vertical display (&varr;)</h5>
-
-<table class='csv'>
-<tr>
-	<td>gsim:</td>
-	<td></td>
-	<td>AkkarEtAl2013</td>
-	<td></td>
-	<td>AkkarEtAl2013</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>AkkarEtAl2013</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>CauzziEtAl2014</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>imt:</td>
-	<td></td>
-	<td>PGA</td>
-	<td></td>
-	<td>PGA</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>PGV</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>PGA</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>type:</td>
-	<td></td>
-	<td>Intra Event</td>
-	<td></td>
-	<td>Inter Event</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>Intra Event</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>Intra Event</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>mean:</td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>stddev:</td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>median:</td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>slope:</td>
-	<td></td>
-	<td>0.269</td>
-	<td></td>
-	<td>0.103</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>0.171</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>0.28</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>intercept:</td>
-	<td></td>
-	<td>-1.998</td>
-	<td></td>
-	<td>-1.281</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>-2.12</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>-2.281</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>pvalue:</td>	
-	<td></td>
-	<td>6.6e-8</td>
-	<td></td>	
-	<td>0.163</td>
-	<td>&hellip;</td>
-	<td></td>	
-	<td>0.002</td>
-	<td>&hellip;</td>
-	<td></td>	
-	<td>1.21e-8</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>Magnitude</td>
-	<td class='yvalues'>Z (PGA)</td>	
-	<td class='xvalues'>Magnitude</td>
-	<td class='yvalues'>Z (PGA)</td>	
-	<td>&hellip;</td>	
-	<td class='xvalues'>Magnitude</td>
-	<td class='yvalues'>Z (PGV)</td>	
-	<td>&hellip;</td>
-	<td class='xvalues'>Magnitude</td>
-	<td class='yvalues'>Z (PGA)</td>	
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>4</td>
-	<td class='yvalues'>-2.11</td>	
-	<td class='xvalues'>4</td>
-	<td class='yvalues'>-1.832</td>	
-	<td>&hellip;</td>
-	<td class='xvalues'>4</td>
-	<td class='yvalues'>-0.17</td>	
-	<td>&hellip;</td>
-	<td class='xvalues'>4</td>
-	<td class='yvalues'>-1.116</td>	
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>4</td>
-	<td class='yvalues'>-2.27</td>	
-	<td class='xvalues'>4</td>
-	<td class='yvalues'>-1.913</td>	
-	<td>&hellip;</td>
-	<td class='xvalues'>4</td>
-	<td class='yvalues'>-1.11</td>	
-	<td>&hellip;</td>
-	<td class='xvalues'>4</td>
-	<td class='yvalues'>-2.815</td>	
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>3.9</td>
-	<td class='yvalues'>-2.08</td>	
-	<td class='xvalues'>3.9</td>
-	<td class='yvalues'>-1.85</td>	
-	<td>&hellip;</td>
-	<td class='xvalues'>3.9</td>
-	<td class='yvalues'>-0.871</td>	
-	<td>&hellip;</td>
-	<td class='xvalues'>3.9</td>
-	<td class='yvalues'>-2.11</td>	
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td class='xvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-	<td class='xvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-	<td>&hellip;</td>
-	<td class='xvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-	<td>&hellip;</td>
-	<td class='xvalues'>&hellip;</td>
-	<td class='yvalues'>&hellip;</td>
-	<td>&hellip;</td>
-</tr>
-</table>
-
-
-<h5>Horizontal display (&harr;)</h5>
 
 <table class='csv'>
 <tr>
@@ -1139,9 +860,26 @@ csv table).
 <h2 id="testing">Testing</h2>
 <p><b>Endpoint: <code>{{ baseurl }}/{{ test }}</code></b></p>
 
+<p>
+eGSIM, through the GMPE-SMTK library, offers the ability to test observed ground motions with
+the GMPE model predictions using the GMPE implementations found inside OpenQuake and
+one or more measures of fit.
+The request for such a service is outlined below. Note that the selection
+expression has been described in <a href="#">the residuals section above</a>
+</p>
+ 
 <h3>Request</h3>
 <p>
+A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
+database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
+URL (GET method) or as separate text data in JSON or YAML format (POST method) and are:
+</p>
 
+{{ form_testing | safe }}
+
+<p>
+The selection expression syntax has already been discussed in the
+relative <a href="#selexpr_section">section above</a>.
 </p>
 
 <h3>Response</h3>
@@ -1403,113 +1141,6 @@ The reponse Object is of tyhis type:
 	<td></td>
 </tr>
 </table>
-
-<!--  <table class='csv'>
-<tr>
-	<td>Measure of fit:</td>
-	<td>Residuals</td>
-	<td>&hellip;</td>
-	<td>Likelihood</td>
-	<td>&hellip;</td>
-	<td>LLH</td>
-	<td>&hellip;</td>
-	<td>MultivariateLLH</td>
-	<td>&hellip;</td>
-	<td>EDR</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>gsim:</td>
-	<td>BindiEtAl2011</td>
-	<td>&hellip;</td>
-	<td>BindiEtAl2011</td>
-	<td>&hellip;</td>
-	<td>BindiEtAl2011</td>
-	<td>&hellip;</td>
-	<td>BindiEtAl2011</td>
-	<td>&hellip;</td>
-	<td>BindiEtAl2011</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>imt:</td>
-	<td>SA(0.2)</td>
-	<td>&hellip;</td>
-	<td>SA(0.2)</td>
-	<td>&hellip;</td>
-	<td>SA(0.2)</td>
-	<td>&hellip;</td>
-	<td>SA(0.2)</td>
-	<td>&hellip;</td>
-	<td>SA(0.2)</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>type:</td>
-	<td>Inter event</td>
-	<td>&hellip;</td>
-	<td>Inter event</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>value(s) label:</td>
-	<td>Mean</td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td>&hellip;</td>
-	<td>MDE Norm</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td>-0.254</td>
-	<td>&hellip;</td>
-	<td>-0.274</td>
-	<td>&hellip;</td>
-	<td>2.07</td>
-	<td>&hellip;</td>
-	<td>2.08</td>
-	<td>&hellip;</td>
-	<td>2.12</td>
-	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td>0.49</td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-</tr>
-<tr>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td>&hellip;</td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-</tr>
-</table> -->
 
 
 </div>	
