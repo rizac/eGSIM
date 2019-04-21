@@ -311,11 +311,16 @@ class GmdbField(ChoiceField):
     It accepts an optional argument gmdbpath which defaults to the Django
     app db path
     '''
+    # load base choices once per class instantiation. Note that
+    # if the operation gets slow, we should consider alternative ways.
+    # In any case, this variable is needed when requesting the html page
+    # so it must be loaded somehow
+    _base_choices = tuple((_, _) for _ in get_gmdb_names(get_gmdb_path()))
 
     def __init__(self, **kwargs):
-        kwargs.setdefault('choices',
-                          LazyCached(lambda: [(_, _) for _ in
-                                              get_gmdb_names(self.gmdbpath)]))
+        kwargs.setdefault('choices', self._base_choices)
+        if self._base_choices:
+            kwargs.setdefault('initial', self._base_choices[0][0])
         super(GmdbField, self).__init__(**kwargs)
 
     @property

@@ -38,12 +38,6 @@ var EGSIM_BASE = {
                            element.imt.choices = imts;
                            element.gsim.GSIMS_MANAGER = avalGsims;
                        }
-                       if (element.gmdb){
-                           element.gmdb.choices = gmdbNames;
-                           if (gmdbNames.length){
-                               element.gmdb.val = gmdbNames[0][0];
-                           }
-                       }
                    }
                });
            }
@@ -65,8 +59,9 @@ var EGSIM_BASE = {
         },
         setUrlInBrowser(menu){
             var location = window.location;
-            var newHref = location.href.replace(/\/\w+\/*$/, "/" + menu);
-            // window.history.replaceState({}, document.title, newHref);
+            var newHref = location.href.replace(/\/\w+\/*$/, `/${menu}`);
+            // https://developer.mozilla.org/en-US/docs/Web/API/History_API
+            window.history.replaceState({}, document.title, newHref);
             return false; // in case accessed from within anchors
         },
         getInitData(data) {
