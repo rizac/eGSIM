@@ -32,7 +32,7 @@ Vue.component('forminput', {
             labelText: labelText
         }
     },
-    template: `<div>
+    template: `<div v-if="!elm.is_hidden">
         <div class="d-flex flex-row mb-0 pt-1 align-items-baseline">
             <label :for="elm.attrs.id" class='mb-0 text-nowrap' :class="[elm.attrs.disabled ? ['text-muted'] : ['']]">
                 <input v-if="!headonly && isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='mr-1'>

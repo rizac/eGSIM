@@ -16,6 +16,7 @@ from django.shortcuts import render
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 from django.conf import settings
+from django.template.loader import get_template
 
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import TrellisForm, GsimSelectionForm, ResidualsForm, \
@@ -26,6 +27,7 @@ from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
 from egsim.forms.htmldoc import to_html_table
+from django.template.exceptions import TemplateDoesNotExist
 
 
 _COMMON_PARAMS = {
@@ -83,11 +85,21 @@ def main(request, selected_menu=None):
     components_props['trellis']['form']['dip']['val'] = 60
     # remove lines above!
 
+    # load once the selection expression help and add a custom new
+    # attribute to the forms of interest. Inject only one instance
+    # because it might be relatively heavy to duplicate it for all concerned
+    # fields (do it frontend side)
+#     try:
+#         selexpr_help = get_template('selexpr_help.html').\
+#             render(dict(gmt=get_gmdb_column_desc()))
+#     except TemplateDoesNotExist:
+#         selexpr_help = ""
+
     initdata = {'component_props': components_props,
-                'gsims': aval_gsims(asjsonlist=True),
-                'gmdbnames': get_gmdb_names(get_gmdb_path())}
+                'gsims': aval_gsims(asjsonlist=True)}
 
     return render(request, 'egsim.html', {**_COMMON_PARAMS,
+                                          'gmt': get_gmdb_column_desc(),
                                           'sel_component': sel_component,
                                           'components': components_tabs,
                                           'initdata': json.dumps(initdata),
