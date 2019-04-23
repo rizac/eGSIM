@@ -34,7 +34,9 @@ Vue.component('gmdbplot', {
             <form novalidate v-on:submit.prevent="request" class='d-flex flex-column'>
                 <div class="d-flex flex-column flexible">
 
-                    <forminput v-for="name in Object.keys(form)" :key="name" :form='form' :name='name'>
+					<!-- @helprequested below is actually redundant (not called) in all but one field -->
+                    <forminput v-for="name in Object.keys(form)" :key="name" :form='form' :name='name'
+                    	:showhelpbutton="name == 'selexpr'" @helprequested='$emit("movetoapidoc", "selexpr")'>
                     </forminput>
 
                     <button type="submit" class="btn btn-outline-primary mt-2">

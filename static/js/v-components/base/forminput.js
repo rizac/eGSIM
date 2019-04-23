@@ -10,7 +10,9 @@ Vue.component('forminput', {
     	// with properties 'err', 'val', 'choices' ...
         'form': {type: Object},  
         'name': {type: String},
-        'headonly': {type: Boolean, default:false} // if true, display only header (name and infos)
+        'headonly': {type: Boolean, default:false}, // if true, display only header (name and infos)
+        'showhelpbutton': {type: Boolean, default:false}  // if true, ehlp button sshows up in the ehader
+        // if true, this component emits an 'helpwanted' event with no arguments (for the moment)
     },
     data: function () {
     	var elm = this.form[this.name];
@@ -33,7 +35,7 @@ Vue.component('forminput', {
         }
     },
     template: `<div v-if="!elm.is_hidden">
-        <div class="d-flex flex-row mb-0 pt-1 align-items-baseline">
+        <div class="d-flex flex-row mb-0 pt-1" :class="[showhelpbutton ? ['align-items-end'] : ['align-items-baseline']]">
             <label :for="elm.attrs.id" class='mb-0 text-nowrap' :class="[elm.attrs.disabled ? ['text-muted'] : ['']]">
                 <input v-if="!headonly && isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='mr-1'>
                 {{ name }}
@@ -45,6 +47,10 @@ Vue.component('forminput', {
                 	<span v-if="isSelectMultiple">{{ elm.val.length || 0 }} of {{ elm.choices.length }} selected</span>
                 </template>
             </div>
+            <button v-if="showhelpbutton" type="button" @click='$emit("helprequested")'
+    		 		class='btn-outline-secondary btn-sm ml-1 mb-1 py-0'>
+    			<i class="fa fa-info-circle"></i>
+    		</button>
         </div>
         <template v-if="!headonly">
 	        <select v-if="isSelect" v-model="elm.val" v-bind="elm.attrs" class='form-control'>

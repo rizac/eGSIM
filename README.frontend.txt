@@ -4,7 +4,7 @@ Front-end TUTORIAL for DEVELOPERS:
 Our frontend (client-side application) uses Vuejs. The reason is that as of
 2018 it is the best framework giving model-view bindings and other facilities
 *without* forcing us to over eingeneering our app
-(Want a hint about web dev. histeria?
+(Want a hint about web develompment histeria?
 https://www.planningforaliens.com/blog/2016/04/11/why-js-development-is-crazy/).
 
 Vue defines "instances" and "components". Technically, they are both JsavaScript
@@ -83,14 +83,15 @@ VueJs component called 'trellis':
 
 Vue.component('trellis', { ... })
 
-(the lines of code importing trellis.js are defined near the end of
+The lines of code importing trellis.js are defined near the end of
 egsim.html:
 
 {% for component in components %}
 	<script type='text/javascript' src = "{% static 'js/comps/' %}{{ component.0 }}.js"></script>
 {% endfor %}
 
-)
+(in our basic project made of classical javascript imports via <script> tag,
+remember to import FIRST the components js files and as last the instance js file)
 
 
 Components
@@ -101,7 +102,10 @@ variable change accordingly, but where is the binding which forces updates in th
 At the end of egsim.html where we define our "keep alive" <component>:
 
 <keep-alive>
-	<component v-bind:is="selComponent" v-bind="selComponentProps" v-bind:post='post' @gsim-selected='selectGsims'>
+	<component v-bind:is="selComponent"
+		v-bind="selComponentProps" v-bind:post='post'
+		@gsim-selected='selectGsims'
+		@movetoapidoc='moveToApidoc'>
 	</component>
 </keep-alive>
 
@@ -117,6 +121,12 @@ The <component> has also two data bindings i.e. data that is passed from the Vue
 instance into the Vue component:
 
 v-bind="selComponentProps" v-bind:post='post'
+
+and two event listeners:
+
+@gsim-selected='selectGsims' @movetoapidoc='moveToApidoc'
+
+Let's see these in details:
 
 
 Binding component properties
@@ -174,7 +184,6 @@ Vue.component('home', {
 Binding component post function
 +++++++++++++++++++++++++++++++
 
-
 Also, the 'post' function defined in the main Vue instance is passed to any
 child component so that a post can be issued from anywhere and has the same
 behaviour: freeze buttons, show waitbar etceters. The result of the POST can
@@ -195,10 +204,32 @@ and the Vue instance takes care of issuing the POST request, making the waitbar
 visible, displaying the error in case of error, and then providing custom
 component code via 'then' and 'catch' callbacks.
 
+
+Listening for events
+++++++++++++++++++++
+
+The <component> has also two (for the moment) attributes starting with '@' (or 'v-on:') they are
+event listeners. The syntax is:
+
+@event_name="function_to_be_called"
+
+The function to be called is implemented in egsim_base.js, whereas the event 
+can be fired within each component with he syntax $emit('event_name', arguments), where
+arguments are any (optional) argument that have to be implemented in the attached function
+of egsim_base.js.
+
+The events fired are currently two: the selection of gsims from the gsims.js component:
+@gsim-selected='selectGsims'
+
+And the link to the selection expression help from within each component implementing
+a gmdb (Ground Motion batabase) selection expression (e.g., residuals.js):
+@movetoapidoc='moveToApidoc'
+
+
+
 -------------------------------------------------------------------------------
-FIXME: TODO: descibe event @gsim-selected='selectGsims'
 FIXME TODO: describe component pros: url, form, request, post to help the user
-undeerstanding also each component
+understanding also each component
 
 
 IMPLEMENTING A NEW COMPONENT:

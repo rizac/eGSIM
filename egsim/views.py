@@ -99,7 +99,6 @@ def main(request, selected_menu=None):
                 'gsims': aval_gsims(asjsonlist=True)}
 
     return render(request, 'egsim.html', {**_COMMON_PARAMS,
-                                          'gmt': get_gmdb_column_desc(),
                                           'sel_component': sel_component,
                                           'components': components_tabs,
                                           'initdata': json.dumps(initdata),
