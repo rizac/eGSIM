@@ -69,12 +69,14 @@ Vue.component('residuals', {
             <div class="d-flex flexible flex-row mb-4">
 
                 <div class="d-flex flexible flex-column">
-                    <gsimselect :form="form" showfilter class="flexible mb-4"></gsimselect>
-                    <imtselect :form="form"></imtselect>
+                    <gsimselect :form="form" showfilter class="flexible"></gsimselect>
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
-                    <div class="flexible form-control mb-4" style="background-color:transparent">
+                    
+                   <imtselect :form="form" class="flexible"></imtselect>
+                
+                    <div class="form-control mt-4" style="background-color:transparent">
         
         				<forminput :form='form' :name='"gmdb"'></forminput>	
                 		<forminput :form='form' :name='"selexpr"' showhelpbutton
@@ -83,7 +85,7 @@ Vue.component('residuals', {
 						
                     </div>
 
-					<div class="form-control" style="background-color:transparent">
+					<div class="form-control mt-4" style="background-color:transparent">
 
                     	<forminput :form='form' :name='"plot_type"'></forminput>
                     	<forminput :form='form' :name='"distance_type"' class='mt-2'></forminput>

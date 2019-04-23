@@ -66,13 +66,14 @@ Vue.component('testing', {
             <div class="d-flex flexible flex-row mb-4">
 
                 <div class="d-flex flexible flex-column">
-                    <gsimselect :form="form" showfilter class="flexible mb-4"></gsimselect>
-                    <imtselect :form="form"></imtselect>
+                    <gsimselect :form="form" showfilter class="flexible"></gsimselect>
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
+                
+                	<imtselect :form="form" class='flexible'></imtselect>
 
-                    <div class="flexible form-control mb-4" style="background-color:transparent">
+                    <div class="form-control mt-4" style="background-color:transparent">
         
                         <forminput :form='form' :name='"gmdb"'></forminput>
                     	<forminput :form='form' :name='"selexpr"' showhelpbutton
@@ -81,7 +82,7 @@ Vue.component('testing', {
 
                     </div>
                     
-                    <div class="form-control" style="background-color:transparent">
+                    <div class="form-control mt-4" style="background-color:transparent">
 
                     	<forminput :form='form' :name='"fit_measure"'></forminput>
                     	<forminput :form='form' :name='"edr_bandwidth"' class='mt-2'></forminput>
