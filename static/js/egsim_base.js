@@ -54,15 +54,21 @@ var EGSIM_BASE = {
     },
     methods: {
         setComponent(name){
-            this.$set(this, 'selComponent', name);
+            this.selComponent = name;
             this.setUrlInBrowser(name);
         },
         setUrlInBrowser(menu){
             var location = window.location;
-            var newHref = location.href.replace(/\/\w+\/*$/, `/${menu}`);
-            // https://developer.mozilla.org/en-US/docs/Web/API/History_API
-            window.history.replaceState({}, document.title, newHref);
+            if (!location.pathname.startsWith(`/${menu}`)){
+            	var newHref = `${location.origin}/${menu}`
+            	// https://developer.mozilla.org/en-US/docs/Web/API/History_API
+            	window.history.replaceState({}, document.title, newHref);
+            }
             return false; // in case accessed from within anchors
+        },
+        moveToApidoc(fragmentName){
+        	this.componentProps['apidoc'].fragment = fragmentName.startsWith('#') ? fragmentName : '#' + fragmentName;
+        	this.setComponent('apidoc');
         },
         getInitData(data) {
             // initializes the base Vue instance returning the array [gsims, imts] where:
@@ -128,6 +134,9 @@ var EGSIM_BASE = {
             }).finally(() => {
                 this.setLoading(false);
             });
+        },
+        showDoc(fragment){
+        	
         },
         selectGsims(gsims){
             Object.keys(this.componentProps).forEach(name => {
