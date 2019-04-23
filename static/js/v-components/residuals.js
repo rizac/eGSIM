@@ -56,16 +56,16 @@ Vue.component('residuals', {
 <div class='flexible d-flex flex-column'>
 
     <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
-        :class="[formModal ? ['shadow', 'border', 'bg-light', 'pt-2', 'mb-3'] : 'pt-4']"
-        class='d-flex flex-column px-4 pb-4 flexible align-self-center position-relative' style='z-index:10'>
+        :class="[formModal ? ['shadow', 'border', 'bg-light'] : '']"
+        class='d-flex flex-column flexible align-self-center position-relative mb-3' style='z-index:10'>
 
-        <div v-show='formModal' class='text-right'>
+        <div v-show='formModal' class='text-right m-2'>
             <button type="button" v-on:click='formHidden=true' class="close" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
+                <i class="fa fa-times-circle"></i>
             </button>
         </div>
-        
-        <div class="d-flex flex-column flexible">
+
+        <div class="d-flex flex-column flexible" :class="[formModal ? ['mx-4', 'mb-4', 'mt-0'] : '']">
             <div class="d-flex flexible flex-row mb-4">
 
                 <div class="d-flex flexible flex-column">

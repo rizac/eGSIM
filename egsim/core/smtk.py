@@ -16,7 +16,7 @@ from smtk.sm_table import GroundMotionTable, records_where
 from smtk.residuals.gmpe_residuals import Residuals, Likelihood
 from smtk.residuals.residual_plots import residuals_with_distance, likelihood
 
-from egsim.core.utils import vectorize, DISTANCE_LABEL
+from egsim.core.utils import vectorize, DISTANCE_LABEL, MOF
 
 
 def get_trellis(params):
@@ -207,12 +207,78 @@ def testing(params):
     # so discard it
     ret = {}
     config = params.get(CONFIG, {})
-    for name, func in params[FIT_M]:
+    # columns: "Measure of fit" "imt" "gsim" "value(s)"
+    for key, name, func in params[FIT_M]:
         result = func(residuals, config)
-        ret[name] = result[0] if isinstance(result, (list, tuple)) else result
+        if isinstance(result, (list, tuple)):
+            result = result[0]
+        if key == MOF.RES:
+            for gsim in result:
+                subres0 = result[gsim]
+                for imt in subres0:
+                    subres1 = subres0[imt]
+                    for type_ in subres1:
+                        meass = subres1[type_]
+                        for meas in meass:
+                            moffit = "%s %s %s" % (name, type_, meas)
+                            if moffit not in ret:
+                                ret[moffit] = {}
+                            if imt not in ret[moffit]:
+                                ret[moffit][imt] = {}
+                            ret[moffit][imt][gsim] = meass[meas]
+        elif key == MOF.LH:
+            for gsim in result:
+                subres0 = result[gsim]
+                for imt in subres0:
+                    subres1 = subres0[imt]
+                    for type_ in subres1:
+                        moffit = "%s %s" % (name, type_)
+                        if moffit not in ret:
+                            ret[moffit] = {}
+                        if imt not in ret[moffit]:
+                            ret[moffit][imt] = {}
+                        ret[moffit][imt][gsim] = subres1[type_]
+        elif key in (MOF.LLH, MOF.MLLH):
+            for gsim in result:
+                subres0 = result[gsim]
+                for imt in subres0:
+                    moffit = name
+                    if moffit not in ret:
+                        ret[moffit] = {}
+                    if imt not in ret[moffit]:
+                        ret[moffit][imt] = {}
+                    ret[moffit][imt][gsim] = subres0[imt]
+        elif key == MOF.EDR:
+            for gsim in result:
+                subres0 = result[gsim]
+                imt = ""
+                for type_ in subres0:
+                    subres1 = subres0[type_]
+                    moffit = "%s %s" % (name, type_)
+                    if moffit not in ret:
+                        ret[moffit] = {}
+                    if imt not in ret[moffit]:
+                        ret[moffit][imt] = {}
+                    ret[moffit][imt][gsim] = subres0[type_]
 
     return _jsonify_nested(ret)
 
+
+def _res_iter(result):
+    for gsim in result:
+        subres0 = result[gsim]
+        for imt in subres0:
+            subres1 = subres0[imt]
+            for type_ in subres1:
+                meass = subres1[type_]
+                for meas in meass:
+                    moffit = "%s %s %s" % (name, type_, meas)
+                    if moffit not in ret:
+                        ret[moffit] = {}
+                    if imt not in ret[moffit]:
+                        ret[moffit][imt] = {}
+                    yield moffit, imt, gsim, value
+                    ret[moffit][imt][gsim] = meass[meas]
 
 def _jsonify_nested(dic):
     for key, val in list(dic.items()):

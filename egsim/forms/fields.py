@@ -28,7 +28,7 @@ from smtk.residuals.residual_plots import residuals_density_distribution, \
     residuals_with_depth, residuals_with_distance, residuals_with_magnitude, \
     residuals_with_vs30, likelihood
 
-from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path
+from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path, MOF
 
 # IMPORTANT: do not access the database at module import, as otherwise
 # make migrations does not work! So these methods should be called inside
@@ -347,8 +347,8 @@ class ResidualplottypeField(ChoiceField):
     '''An EgsimChoiceField which returns the selected function to compute
     residual plots'''
     _base_choices = {
-        'res': ('Residuals (density distribution)', residuals_density_distribution),
-        'lh': ('Likelihood', likelihood),
+        MOF.RES: ('Residuals (density distribution)', residuals_density_distribution),
+        MOF.LH: ('Likelihood', likelihood),
         'mag': ('Residuals vs. Magnitude', residuals_with_magnitude),
         'dist': ('Residuals vs. Distance', residuals_with_distance),
         'vs30': ('Residuals vs. Vs30', residuals_with_vs30),
@@ -370,18 +370,17 @@ class ResidualplottypeField(ChoiceField):
 
 
 class ResidualsTestField(MultipleChoiceField):
-    _base_choices = {'res': ('Residuals (density distribution)',
-                             GSIM_MODEL_DATA_TESTS['Residuals']),
-                     'lh': ("Likelihood",
-                            GSIM_MODEL_DATA_TESTS["Likelihood"]),
-                     "llh": ("Log-Likelihood",
-                             GSIM_MODEL_DATA_TESTS["LLH"]),
-                     "mllh": ("Multivariate Log-Likelihood",
-                              GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
-                     "edr": ("Euclidean Distance-Based",
-                             GSIM_MODEL_DATA_TESTS["EDR"])
+    _base_choices = {MOF.RES: ('Residuals',
+                               GSIM_MODEL_DATA_TESTS['Residuals']),
+                     MOF.LH: ("Likelihood",
+                              GSIM_MODEL_DATA_TESTS["Likelihood"]),
+                     MOF.LLH: ("Log-Likelihood",
+                               GSIM_MODEL_DATA_TESTS["LLH"]),
+                     MOF.MLLH: ("Multivariate Log-Likelihood",
+                                GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
+                     MOF.EDR: ("Euclidean Distance-Based",
+                               GSIM_MODEL_DATA_TESTS["EDR"])
                     }
-                     
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
@@ -391,7 +390,8 @@ class ResidualsTestField(MultipleChoiceField):
     def clean(self, value):
         '''Converts the given value (string) into the smtk function'''
         value = super(ResidualsTestField, self).clean(value)
-        return [self._base_choices[_] for _ in value]
+        # returns list of sub-lists [key, label, function]:
+        return [[_] + list(self._base_choices[_]) for _ in value]
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
