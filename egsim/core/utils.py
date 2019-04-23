@@ -21,6 +21,13 @@ DISTANCE_LABEL = dict(**{k: v for k, v in SMTK_DISTANCE_LABEL.items()
                          if k != 'r_x'},
                       rx=SMTK_DISTANCE_LABEL['r_x'])
 
+class MOF:
+    RES = 'res'
+    LH = 'lh'
+    LLH = "llh"
+    MLLH = "mllh"
+    EDR = "edr"
+
 
 def tostr(obj, none='null'):
     '''Returns str(obj) to be injected into YAML or JSON variables.
