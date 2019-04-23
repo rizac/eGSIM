@@ -60,20 +60,20 @@ Vue.component('trellis', {
             <div class="d-flex flexible flex-row mb-4">
 
                 <div class="d-flex flexible flex-column">
-                    <gsimselect :form="form" showfilter class="flexible mb-4"></gsimselect>
-                    <imtselect :form="form"></imtselect>
+                    <gsimselect :form="form" showfilter class="flexible"></gsimselect>
+                    <imtselect :form="form" class="mt-4"></imtselect>
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
 
-                    <div class="flexible form-control mb-4" style="background-color:transparent">
+                    <div class="flexible form-control" style="background-color:transparent">
                         <forminput v-for="(name, index) in scenarioKeys"
                             :form='form' :name='name' :key="name"
                             :class="{ 'mt-2': index > 0 }">
                         </forminput>
                     </div>
 
-                    <div class="form-control" style="background-color:transparent">
+                    <div class="form-control mt-4" style="background-color:transparent">
                         <forminput :form='form' :name='"plot_type"'></forminput>
                     </div>
 
