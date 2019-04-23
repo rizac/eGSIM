@@ -75,7 +75,9 @@ Vue.component('testing', {
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
                         <forminput :form='form' :name='"gmdb"'></forminput>
-                    	<forminput :form='form' :name='"selexpr"' class='mt-2'></forminput>
+                    	<forminput :form='form' :name='"selexpr"' showhelpbutton
+                			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2'>
+                		</forminput>
 
                     </div>
                     

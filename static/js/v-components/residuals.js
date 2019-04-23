@@ -76,9 +76,11 @@ Vue.component('residuals', {
                 <div class="d-flex flex-column flexible ml-4">
                     <div class="flexible form-control mb-4" style="background-color:transparent">
         
-        				<forminput :form='form' :name='"gmdb"'></forminput>
-                    	<forminput :form='form' :name='"selexpr"' class='mt-2'></forminput>
-
+        				<forminput :form='form' :name='"gmdb"'></forminput>	
+                		<forminput :form='form' :name='"selexpr"' showhelpbutton
+                			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2' >
+                		</forminput>
+						
                     </div>
 
 					<div class="form-control" style="background-color:transparent">
