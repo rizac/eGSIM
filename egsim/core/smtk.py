@@ -201,10 +201,7 @@ def testing(params):
         gmdb = gmdb.filter(params[SEL])
     residuals.get_residuals(gmdb)
     # residuals = res.Residuals(self.gsims, self.imts)
-    
-    # in case of likelihodd: take first tuple element
-    # the second element is informative but it's not the actual metric
-    # so discard it
+
     ret = {}
     config = params.get(CONFIG, {})
     # columns: "Measure of fit" "imt" "gsim" "value(s)"
@@ -212,93 +209,102 @@ def testing(params):
         result = func(residuals, config)
         if isinstance(result, (list, tuple)):
             result = result[0]
+        # Returned object are of this type (<GMPE>: any valid Gmpe as string,
+        # <IMT>: any valid IMT as string, <TYPE>: str in "Total", "Inter event"
+        # or "Intra event". <EDRTYPE>: string in "MDE Norm", "sqrt Kappa" or
+        # "EDR"):
+        #
+        # Residuals:
+        # {
+        #   <GMPE>: {
+        #      <IMT>: {
+        #        <TYPE>: {
+        #            "Mean": <float>,
+        #            "Std Dev": <float>
+        #        }
+        #      }
+        #   }
+        # }
+        #
+        # Likelihood:
+        # {
+        #   <GMPE>: {
+        #      <IMT>: {
+        #        <TYPE>: <ndarray>
+        #        }
+        #      }
+        #   }
+        # }
+        #
+        # Log-Likelihood, Multivariate Log-Likelihood:
+        # {
+        #   <GMPE>: {
+        #      <IMT>: <float>  # IMT includes the "All" key
+        #   }
+        # }
+        #
+        # EDR
+        # {
+        #   <GMPE>: {
+        #      <EDRTYPE>: <float>
+        #   }
+        # }
+        #
+        # The code belows re-arranges the dicts flattening them like this:
+        # "<Residual name> <residual type if any>":{
+        #        <IMT>: {
+        #           <GMPE>: float or ndarray
+        #        }
+        #     }
+        # }
+
         if key == MOF.RES:
-            for gsim in result:
-                subres0 = result[gsim]
-                for imt in subres0:
-                    subres1 = subres0[imt]
-                    for type_ in subres1:
-                        meass = subres1[type_]
-                        for meas in meass:
+            for gsim, gsim_result in result.items():
+                for imt, imt_result in gsim_result.items():
+                    for type_, type_result in imt_result.items():
+                        for meas, value in type_result.items():
                             moffit = "%s %s %s" % (name, type_, meas)
-                            if moffit not in ret:
-                                ret[moffit] = {}
-                            if imt not in ret[moffit]:
-                                ret[moffit][imt] = {}
-                            ret[moffit][imt][gsim] = meass[meas]
+                            ret.setdefault(moffit, {}).\
+                                setdefault(imt, {})[gsim] = _jsonify_num(value)
         elif key == MOF.LH:
-            for gsim in result:
-                subres0 = result[gsim]
-                for imt in subres0:
-                    subres1 = subres0[imt]
-                    for type_ in subres1:
+            for gsim, gsim_result in result.items():
+                for imt, imt_result in gsim_result.items():
+                    for type_, values in imt_result.items():
                         moffit = "%s %s" % (name, type_)
-                        if moffit not in ret:
-                            ret[moffit] = {}
-                        if imt not in ret[moffit]:
-                            ret[moffit][imt] = {}
-                        ret[moffit][imt][gsim] = subres1[type_]
+                        ret.setdefault(moffit, {}).\
+                            setdefault(imt, {})[gsim] = _jsonify_num(values)
         elif key in (MOF.LLH, MOF.MLLH):
-            for gsim in result:
-                subres0 = result[gsim]
-                for imt in subres0:
+            for gsim, gsim_result in result.items():
+                for imt, value in gsim_result.items():
                     moffit = name
-                    if moffit not in ret:
-                        ret[moffit] = {}
-                    if imt not in ret[moffit]:
-                        ret[moffit][imt] = {}
-                    ret[moffit][imt][gsim] = subres0[imt]
+                    ret.setdefault(moffit, {}).\
+                        setdefault(imt, {})[gsim] = _jsonify_num(value)
         elif key == MOF.EDR:
-            for gsim in result:
-                subres0 = result[gsim]
-                imt = ""
-                for type_ in subres0:
-                    subres1 = subres0[type_]
+            for gsim, gsim_result in result.items():
+                for type_, value in gsim_result.items():
                     moffit = "%s %s" % (name, type_)
-                    if moffit not in ret:
-                        ret[moffit] = {}
-                    if imt not in ret[moffit]:
-                        ret[moffit][imt] = {}
-                    ret[moffit][imt][gsim] = subres0[type_]
+                    imt = ""  # hack
+                    ret.setdefault(moffit, {}).\
+                        setdefault(imt, {})[gsim] = _jsonify_num(value)
 
-    return _jsonify_nested(ret)
+    return ret
 
 
-def _res_iter(result):
-    for gsim in result:
-        subres0 = result[gsim]
-        for imt in subres0:
-            subres1 = subres0[imt]
-            for type_ in subres1:
-                meass = subres1[type_]
-                for meas in meass:
-                    moffit = "%s %s %s" % (name, type_, meas)
-                    if moffit not in ret:
-                        ret[moffit] = {}
-                    if imt not in ret[moffit]:
-                        ret[moffit][imt] = {}
-                    yield moffit, imt, gsim, value
-                    ret[moffit][imt][gsim] = meass[meas]
+def _jsonify_num(val):
+    try:
+        json.dumps(val)
+    except Exception as exc:  # pylint: disable=broad-except
+        try:  # try converting from numpy. If it fails, raise exc above
+            pyval = val.tolist()
+            # json.dumps(pyval)
+            nans = np.argwhere(~np.isfinite(val)).flatten()
+            if len(nans) == 1 and val.ndim == 0:
+                pyval = None
+            else:
+                for idx in nans:
+                    pyval[idx] = None
+            val = pyval
+        except:  #  @IgnorePep8 pylint: disable=broad-except
+            raise exc
 
-def _jsonify_nested(dic):
-    for key, val in list(dic.items()):
-        if isinstance(val, dict):
-            dic[key] = _jsonify_nested(val)
-            continue
-        try:
-            json.dumps(val)
-        except Exception as exc:
-            try:  # try converting from numpy. If it fails, raise exc above
-                pyval = val.tolist()
-                json.dumps(pyval)
-                nans = np.argwhere(~np.isfinite(val)).flatten()
-                if nans and val.ndim == 0:
-                    pyval = None
-                else:
-                    for idx in nans:
-                        pyval[idx] = None
-                dic[key] = pyval
-            except:
-                raise exc
-            
-    return dic
+    return val
