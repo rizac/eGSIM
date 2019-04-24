@@ -882,25 +882,24 @@ relative <a href="#selexpr_section">section above</a>.
 
 <h3>Response</h3>
 The reponse Object is of tyhis type:
+
+dict_keys: dict_keys(['Residuals Intra event Mean', 'Residuals Intra event Std Dev',
+'Residuals Total Mean', 'Residuals Total Std Dev', 'Residuals Inter event Mean', 'Residuals Inter event Std Dev', 'Likelihood Intra event', 'Likelihood Total', 'Likelihood Inter event', 'Log-Likelihood', 'Multivariate Log-Likelihood', 'Euclidean Distance-Based MDE Norm', 'Euclidean Distance-Based sqrt Kappa', 'Euclidean Distance-Based EDR'])
+
 <pre><code class="language-json">{
-	"Residuals":{
-		"BindiEtAl2011": {
-			"SA(0.2)":{
-				"Inter event": {
-					"Mean": -0.254
-					"Std Dev": 0.9312
-				},
-				"Intra event": {
-					... same object as above ...
-				},
-				"Total": {
-					... same object as above ...
-				}
+	"Residuals Intra event Mean":{
+		"PGA": {
+			"BindiEtAl2011": 0.01,
+			"CauzziEtAl2014": 0.02,
+			...
 			},
 			... (iterate for all available IMTs)
-		},
-		... (iterate for all available GSIMs)
 	},
+	"Residuals Intra event Std Dev": { ... same object as above ... }
+	"Residuals Total Mean": { ... same object as above ... }
+	"Residuals Total Std Dev":
+	
+	
 	"Likelihood":{
 		"BindiEtAl2011": {
 			"SA(0.2)":{

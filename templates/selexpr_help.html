@@ -1,0 +1,48 @@
+<p>
+A Ground Motion database (gmdb) is a set of seismic records stored in a tabular model
+as horizontal rows of where vertical columns represent each record field.
+</p>
+<p>
+A selection expression on a gmdb is just a string containing a
+Python expression that will be evaluated for each record, returning matching rows only 
+(i.e., rows for which the expression is true). The expression involves at least one column, a
+comparison operator (<code>==</code>, <code>!=</code>, <code>&lt;</code>,
+<code>&lt;</code>=, <code>&gt;</code>, <code>&gt;</code>=) and any value (or algebraic expression)
+consistent with the column type. E.g.:</p>
+<p>
+<code>pga <= 0.01</code>
+</p>
+<p>
+Several simple expressions
+can be wrapped in parenthesis and combined with logical operators (<code>&</code>
+for logical and, <code>|</code> for logical or, and <code>~</code> for negation), e.g.:
+</p>
+
+<p>
+<code>(pga != nan) & ((magnitude > 5) | ~(event_time <= "2016-08-30"))</code>
+</p>
+
+<p>
+The columns of a gmdb and their type are listed below. Please note that:
+</p>
+<ul>
+<li>
+	Strings and float columns store missing values as "" (empty string) and nan, respectively.
+    This can be used to select records where the value of interest is not missing,
+    e.g.: <code>pgv != nan</code> </li>
+<li>
+	String column values must be quoted. Date-time columns (e.g., event_time) must be
+    typed as strings (thus quoted) in ISO format: <code>YYYY-mm-dd</code>, 
+    <code>YYYY-mm-ddTHH:MM:SS</code>, e.g.: <code>event_time &lt;= "2016-08-31"</code>
+</li>
+</ul>
+
+<table class='selexpr_table'>
+	<tr><th>Column name</th><th>Column type</th></tr>
+	{% for key, value in gmt.items %}
+    <tr>
+        <td>{{ key }}</td>
+        <td>{{ value }}</td>
+    </tr>
+    {% endfor %}
+</table> 
