@@ -83,6 +83,12 @@ def main(request, selected_menu=None):
     components_props['trellis']['form']['distance']['val'] = "0:1:100"
     components_props['trellis']['form']['aspect']['val'] = 1
     components_props['trellis']['form']['dip']['val'] = 60
+    components_props['testing']['form']['gsim']['val'] = ['AbrahamsonEtAl2014',
+                                                          'AbrahamsonSilva2008']
+    components_props['testing']['form']['imt']['val'] = ['PGA', 'PGV']
+    components_props['testing']['form']['selexpr']['val'] = '(vs30 != nan) & ((dip_1 != nan) | (dip_2 != nan)) & ((strike_1 != nan) | (strike_2 != nan)) & ((rake_1 != nan) | (rake_2 != nan))'
+    components_props['testing']['form']['fit_measure']['val'] = ['res', 'lh']
+    
     # remove lines above!
 
     # load once the selection expression help and add a custom new

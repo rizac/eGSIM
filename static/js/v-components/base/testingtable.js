@@ -1,111 +1,161 @@
 // register the grid component
 Vue.component('testingtable', {
     props: {
-        data: {type: Object, default: () => { return{} }},
-        filterKey: String
+        data: {type: Object, default: () => { return{} }}
     },
     data: function () {
+    	var columns = ['Measure of fit', 'IMT', 'GSIM', 'Value(s)'];
+    	// define sortOrder here so that it will be reactive (nested):
+    	var sortOrders = {};
+    	for(var col of columns){
+    		sortOrders[col] = -1;
+    	}
         return {
-            sortKey: '',
-            sortOrders: {},
+            visible: false,
             tableData: {},
-            columns: []
+            maxNumDecimalDigits: 5,
+            columns: columns,
+            sortKey: columns[columns.length-1],
+            sortOrders: sortOrders,
         }
     },
-    computed: {
+    watch: {
         data: {
             immediate: true,
             handler(newval, oldval){
-               this.visible = !Vue.isEmpty(this.data);
-               if (this.visible){ // see prop below
-                   this.init.call(this, this.data);
-               }
+                this.visible = !Vue.isEmpty(newval);
+                try{
+                    this.tableData = this.visible ? this.init.call(this, this.data) : [];
+                }catch(error){
+                    this.visible = false;
+                }
             }
         },
-        filteredHeroes: function () {
-            var sortKey = this.sortKey
-            var filterKey = this.filterKey && this.filterKey.toLowerCase()
-            var order = this.sortOrders[sortKey] || 1
-            var heroes = this.heroes
-            if (filterKey) {
-                heroes = heroes.filter(function (row) {
-                    return Object.keys(row).some(function (key) {
-                        return String(row[key]).toLowerCase().indexOf(filterKey) > -1
-                    })
-                })
+    },
+    computed: {    
+        filteredSortedEntries: function () {  // (filtering actually not yet implemented)
+            var sortKey = this.sortKey;
+            var index = this.columns.indexOf(sortKey);
+            var tData = this.tableData;
+            var order = this.sortOrders[sortKey] || 1;
+            if (order !== 0){
+            	tData = tData.slice();  // .slice() makes a copy right ??
+	            if (index === this.columns.length - 1){
+	            	// if clicking on the values, then sort by GROUP (it does
+	            	// not make sense to sort all values together)
+	            	var [mofIdx, imtIdx, gsimIdx] = [{}, {}, {}];
+	            	
+	            	tData = tData.sort(function(elm1, elm2) {  // .slice() makes a copy right ??
+	            		// sort up to index, preserving the group:
+	            		for (var i=0; i<2 ; i++){
+	            			if (elm1[i] > elm2[i]){
+	            				return 1 * (index == i ? order : 1);
+	            			}else if(elm2[i] > elm1[i]){
+	            				return -1 * (index == i ? order : 1);
+	            			}
+	            		}
+	            		
+	            		var idx = index > 1 ? index : this.columns.length -1;
+	            		// keys are the same up to index, sort by index:
+	                    val1 = elm1[idx].sortval || elm1[idx];
+	                    val2 = elm2[idx].sortval || elm2[idx];
+	                    return (val1 >= val2 ? 1 : -1) * (index == idx ? order : 1);
+	                })
+	            }
+	            if (index > -1) {
+	                var order = this.sortOrders[sortKey] || 1;
+	            	tData = tData.sort(function(elm1, elm2) {  // .slice() makes a copy right ??
+	            		// sort up to index, preserving the group:
+	            		for (var i=0; i<2 ; i++){
+	            			if (elm1[i] > elm2[i]){
+	            				return 1 * (index == i ? order : 1);
+	            			}else if(elm2[i] > elm1[i]){
+	            				return -1 * (index == i ? order : 1);
+	            			}
+	            		}
+	            		
+	            		var idx = index > 1 ? index : this.columns.length -1;
+	            		// keys are the same up to index, sort by index:
+	                    val1 = elm1[idx].sortval || elm1[idx];
+	                    val2 = elm2[idx].sortval || elm2[idx];
+	                    return (val1 >= val2 ? 1 : -1) * (index == idx ? order : 1);
+	                })
+	            }
             }
-            if (sortKey) {
-                heroes = heroes.slice().sort(function (a, b) {
-                    a = a[sortKey]
-                    b = b[sortKey]
-                    return (a === b ? 0 : a > b ? 1 : -1) * order
-                })
-            }
-            return heroes
+            return tData
         }
     },
-    template: `<table>
+    // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
+    template: `<div v-show="visible">
+    <table class='testing-table'>
         <thead>
             <tr>
                 <th v-for="key in columns"
                   @click="sortBy(key)"
-                  :class="{ active: sortKey == key }">
-                  {{ key | capitalize }}
-                  <span class="arrow" :class="sortOrders[key] > 0 ? 'asc' : 'dsc'">
+                  :class="{ active: sortKey == key }"
+                  class='btn-primary'>
+                  {{ key }}
+                  <span v-if='sortKey == key && sortOrders[key] > 0'> <!-- ascending -->
+                  	[ASC]
+                  </span>
+                  <span v-else='sortKey == key && sortOrders[key] > 0'> <!-- descending -->
+                  	[DESC]
+                  </span>
+                  <!-- <span class="arrow" :class="sortOrders[key] > 0 ? 'asc' : 'dsc'"> -->
                   </span>
                 </th>
             </tr>
         </thead>
         <tbody>
-            <tr v-for="entry in filteredHeroes">
-                <td v-for="key in columns">
-                {{entry[key]}}
-                </td>
+            <tr v-for="entry in filteredSortedEntries">
+                <template v-for="(element, index) in entry">
+                    <td :class="{ 'text-right': index === entry.length-1 }">
+                    {{ element.strval || element }}
+                    </td>
+                </template>
             </tr>
         </tbody>
-    </table>`,
+    </table>
+    </div>`,
     filters: {
-        capitalize: function (str) {
-            return str.charAt(0).toUpperCase() + str.slice(1)
-        }
+//         toCellStr: function (value) {
+//             
+//         }
     },
     methods: {
         sortBy: function (key) {
             this.sortKey = key
-            this.sortOrders[key] = (this.sortOrders[key] || -1) * -1
+            this.sortOrders[key] = (this.sortOrders[key] || -1) * -1;
         },
         init: function(data){
-            columns = ["Measure of fit", "gsim", "imt"];
-            keys = Object.keys(data)
-            if (keys.some(elm => elm == 'Residuals' || elm == 'Likelihood')){
-                columns.push('type');
-            }
-            if (keys.includes('Residuals')){
-                columns.push('Mean', 'Std Dev');
-            }
-            if (keys.includes('EDR')){
-                columns.push("MDE Norm", "sqrt Kappa", "EDR");
-            }
-            for (var key of Object.keys(data)){
-                if (key.toLowerCase().startsWith('residuals')){
-                    columns.push('type')
+            var MAXARRAYSIZE = 6;
+            var maxD = this.maxNumDecimalDigits;
+            var ret = [];
+            for (var mof of Object.keys(data)){
+                var imts = data[mof];
+                for(var imt of Object.keys(imts)){
+                    var gsims = imts[imt];
+                    var [strval, sortval] = ['', 0];
+                    for (var gsim of Object.keys(gsims)){
+                        var val = gsims[gsim];
+                       	if(typeof val == 'object' & val instanceof Array){
+                       		if(val.length > MAXARRAYSIZE){
+                        		strval = val.slice(0, MAXARRAYSIZE/2).map(elm => Number(elm).toFixed(maxD)).concat(['...'],
+                        			val.slice(val.length-MAXARRAYSIZE/2, val.length).map(elm => Number(elm).toFixed(maxD)));
+                        	}else{
+                        		strval = val.map(elm => Number(elm).toFixed(maxD));
+                        	}
+                        	strval = `${strval.join(', ')} (${val.length} elements)`;
+                        	sortval = Number(val[0]);
+                       	}else{
+                        	strval = Number(val).toFixed(maxD);
+                        	sortval = val;
+                       	}
+                        ret.push([mof, imt, gsim, {val: val, sortval: sortval, strval: strval}]);
+                    }
                 }
             }
+            return ret;
         }
     }
-})
-
-// bootstrap the demo
-var demo = new Vue({
-  el: '#demo',
-  data: {
-    searchQuery: '',
-    gridColumns: ['name', 'power'],
-    gridData: [
-      { name: 'Chuck Norris', power: Infinity },
-      { name: 'Bruce Lee', power: 9000 },
-      { name: 'Jackie Chan', power: 7000 },
-      { name: 'Jet Li', power: 8000 }
-    ]
-  }
-})
+});

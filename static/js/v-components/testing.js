@@ -13,9 +13,8 @@ Vue.component('testing', {
     },
     data: function () {
         return {
-            formModal: false,
-            responseData: this.response,
-            formHidden: false
+            responseDataEmpty: true,
+            responseData: this.response
         }
     },
     methods: {
@@ -32,9 +31,7 @@ Vue.component('testing', {
         responseData: {
             immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
             handler: function(newval, oldval){
-                var empty = Vue.isEmpty(newval); // defined in vueutil.js
-                this.formModal = !empty;
-                this.formHidden = !empty;
+                this.responseDataEmpty = Vue.isEmpty(newval); // defined in vueutil.js
             }
         },
         // watch for the property val of plot_type in form
@@ -50,19 +47,11 @@ Vue.component('testing', {
         }
     },
     template: `
-<div class='flexible d-flex flex-column'>
+<div class='flexible d-flex flex-row justify-content-around'>
 
-    <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
-        :class="[formModal ? ['shadow', 'border', 'bg-light'] : '']"
-        class='d-flex flex-column flexible align-self-center position-relative mb-3' style='z-index:10'>
-
-        <div v-show='formModal' class='text-right m-2'>
-            <button type="button" v-on:click='formHidden=true' class="close" aria-label="Close">
-                <i class="fa fa-times-circle"></i>
-            </button>
-        </div>
+    <form novalidate v-on:submit.prevent="request" class='d-flex flex-column mb-3'>
         
-        <div class="d-flex flex-column flexible" :class="[formModal ? ['mx-4', 'mb-4', 'mt-0'] : '']">
+        <div class="d-flex flex-column flexible">
             <div class="d-flex flexible flex-row mb-4">
 
                 <div class="d-flex flexible flex-column">
@@ -101,11 +90,7 @@ Vue.component('testing', {
 
     </form>
 
-    <residualsplotdiv :data="responseData" :filename="this.$options.name"
-        class='position-absolute pos-0 m-0' style='z-index:1'>
-        <slot>
-            <button @click='formHidden=false' class='btn btn-sm btn-outline-primary mb-1'><i class='fa fa-wpforms'></i> params</button>
-        </slot>
-    </residualsplotdiv>
+    <testingtable :data="responseData" :filename="this.$options.name" class='flexible ml-4'>
+    </testingtable>
 </div>`
 })

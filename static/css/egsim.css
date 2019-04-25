@@ -30,3 +30,11 @@
 }
 /* end custom progressbar/waitbar */
 
+.table.testing-table{
+	width: 100%;
+    border-width: 2px;
+    border-style: solid;
+    border-collapse: initial;
+    border-radius: 4px;
+}
+
