@@ -14,6 +14,7 @@ Vue.component('testing', {
     data: function () {
         return {
             responseDataEmpty: true,
+            formHidden: false,
             responseData: this.response
         }
     },
@@ -32,6 +33,7 @@ Vue.component('testing', {
             immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
             handler: function(newval, oldval){
                 this.responseDataEmpty = Vue.isEmpty(newval); // defined in vueutil.js
+                this.formHidden = !this.responseDataEmpty;
             }
         },
         // watch for the property val of plot_type in form
@@ -49,9 +51,18 @@ Vue.component('testing', {
     template: `
 <div class='flexible d-flex flex-row justify-content-around'>
 
-    <form novalidate v-on:submit.prevent="request" class='d-flex flex-column mb-3'>
+	<transition name="egsimform">
+    <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
+    :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light']]"
+    class='d-flex flex-column mb-3' style='z-index:10'>
         
-        <div class="d-flex flex-column flexible">
+        <div v-show='!responseDataEmpty' class='text-right m-2'>
+            <button type="button" v-on:click='formHidden=true' class="close" aria-label="Close">
+                <i class="fa fa-times-circle"></i>
+            </button>
+        </div>
+        
+        <div class="d-flex flex-column flexible" :class="[!responseDataEmpty ? ['mx-4', 'mb-4', 'mt-0'] : '']">
             <div class="d-flex flexible flex-row mb-4">
 
                 <div class="d-flex flexible flex-column">
@@ -89,8 +100,12 @@ Vue.component('testing', {
         </div>
 
     </form>
+    </transition>
 
-    <testingtable :data="responseData" :filename="this.$options.name" class='flexible ml-4'>
+    <testingtable :data="responseData" :filename="this.$options.name" class='position-absolute pos-0 m-0' style='z-index:1'>
+    	<slot>
+            <button @click='formHidden=false' class='btn btn-sm btn-outline-primary mb-1'><i class='fa fa-wpforms'></i> params</button>
+        </slot>
     </testingtable>
 </div>`
 })
