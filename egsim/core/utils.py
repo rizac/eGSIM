@@ -177,7 +177,7 @@ def get_gmdb_names(fpath):
     return get_dbnames(fpath)
 
 
-def get_gmdb_column_desc():
+def get_gmdb_column_desc(as_html=True):
     keys = sorted(GMTableDescription)
     ret = {}
     for key in keys:
@@ -185,15 +185,16 @@ def get_gmdb_column_desc():
         classname = col.__class__.__name__
         missingval = ''
         if key == 'event_time':
-            type2str = ('date-time (ISO formatted) string: e.g., '
-                        'event_time <= "2006-08-31" (date format YYYY-MM-dd) or '
-                        'event_time <= "2006-08-31T12:50:45" (date-time '
-                        'format YYYY-MM-ddTHH:MM:SS)')
+            type2str = ('date-time (ISO formatted) string: e.g.\n'
+                        'event_time <= "2006-08-31"\n'
+                        '(date format YYYY-MM-dd), or\n'
+                        'event_time <= "2006-08-31T12:50:45"\n'
+                        '(date-time format YYYY-MM-ddTHH:MM:SS)')
             missingval = '""'
         elif key == 'style_of_faulting':
-            type2str = 'string in %s' % \
-                ' '.join('"%s" (%s)' % (str(k), str(v))
-                         for k, v in MECHANISM_TYPE.items())
+            type2str = 'string. Possible values are:\n%s' % \
+                '\n'.join('"%s" (%s)' % (str(k), str(v))
+                          for k, v in MECHANISM_TYPE.items())
             missingval = '""'
         elif classname.lower().startswith('int'):
             type2str = 'numeric (integer)'
@@ -207,7 +208,10 @@ def get_gmdb_column_desc():
             missingval = '""'
         else:
             type2str = '? (unkwnown type)'
-        
+
+        if as_html:
+            type2str = "<span style='white-space: nowrap'>%s</span>" % \
+                type2str.replace('\n', '<br>')
         ret[key] = (type2str, missingval)
     return ret
         
