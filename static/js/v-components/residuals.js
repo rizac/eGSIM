@@ -55,6 +55,7 @@ Vue.component('residuals', {
     template: `
 <div class='flexible d-flex flex-column'>
 
+	<transition name="egsimform">
     <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
         :class="[formModal ? ['shadow', 'border', 'bg-light'] : '']"
         class='d-flex flex-column flexible align-self-center position-relative mb-3' style='z-index:10'>
@@ -102,6 +103,7 @@ Vue.component('residuals', {
         </div>
 
     </form>
+    </transition>
 
     <residualsplotdiv :data="responseData" :filename="this.$options.name"
         class='position-absolute pos-0 m-0' style='z-index:1'>
