@@ -46,9 +46,10 @@ Vue.component('trellis', {
     template: `
 <div class='flexible d-flex flex-column'>
 
+	<transition name="egsimform">
     <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
         :class="[formModal ? ['shadow', 'border', 'bg-light'] : '']"
-        class='d-flex flex-column flexible align-self-center position-relative mb-3' style='z-index:10'>
+        class='d-flex flex-column flexible position-relative mb-3 align-self-center' style='z-index:10'>
 
         <div v-show='formModal' class='text-right m-2'>
             <button type="button" v-on:click='formHidden=true' class="close" aria-label="Close">
@@ -87,6 +88,7 @@ Vue.component('trellis', {
         </div>
         
     </form>
+	</transition>
 
     <trellisplotdiv :data="responseData" :filename="this.$options.name"
         class='position-absolute pos-0 m-0' style='z-index:1'>
