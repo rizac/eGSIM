@@ -62,7 +62,7 @@ Vue.component('testing', {
             </button>
         </div>
         
-        <div class="d-flex flex-column flexible" :class="[!responseDataEmpty ? ['mx-4', 'mb-4', 'mt-0'] : '']">
+        <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mb-4', 'mt-0']]">
             <div class="d-flex flexible flex-row mb-4">
 
                 <div class="d-flex flexible flex-column">

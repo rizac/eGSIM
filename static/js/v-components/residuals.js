@@ -17,9 +17,9 @@ Vue.component('residuals', {
     	// https://vuejs.org/v2/api/#created) but it works:
     	this.$set(this.form['plot_type'].attrs, 'size', 6);
         return {
-            formModal: false,
-            responseData: this.response,
-            formHidden: false
+            responseDataEmpty: true,
+            formHidden: false,
+            responseData: this.response
         }
     },
     methods: {
@@ -36,9 +36,8 @@ Vue.component('residuals', {
         responseData: {
             immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
             handler: function(newval, oldval){
-                var empty = Vue.isEmpty(newval); // defined in vueutil.js
-                this.formModal = !empty;
-                this.formHidden = !empty;
+                this.responseDataEmpty = Vue.isEmpty(newval); // defined in vueutil.js
+                this.formHidden = !this.responseDataEmpty;
             }
         },
         // watch for the property val of plot_type in form
@@ -57,16 +56,16 @@ Vue.component('residuals', {
 
 	<transition name="egsimform">
     <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
-        :class="[formModal ? ['shadow', 'border', 'bg-light'] : '']"
+        :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light']]"
         class='d-flex flex-column flexible align-self-center position-relative mb-3' style='z-index:10'>
 
-        <div v-show='formModal' class='text-right m-2'>
+        <div v-show='!responseDataEmpty' class='text-right m-2'>
             <button type="button" v-on:click='formHidden=true' class="close" aria-label="Close">
                 <i class="fa fa-times-circle"></i>
             </button>
         </div>
 
-        <div class="d-flex flex-column flexible" :class="[formModal ? ['mx-4', 'mb-4', 'mt-0'] : '']">
+        <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mb-4', 'mt-0']]">
             <div class="d-flex flexible flex-row mb-4">
 
                 <div class="d-flex flexible flex-column">

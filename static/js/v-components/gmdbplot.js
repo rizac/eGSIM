@@ -32,11 +32,12 @@ Vue.component('gmdbplot', {
     template: `<div class='flexible d-flex flex-column'>
         <div>
             <form novalidate v-on:submit.prevent="request" class='d-flex flex-column'>
-                <div class="d-flex flex-column flexible">
+                <div class="d-flex flex-row flexible align-items-end">
 
 					<!-- @helprequested below is actually redundant (not called) in all but one field -->
                     <forminput v-for="name in Object.keys(form)" :key="name" :form='form' :name='name'
-                    	:showhelpbutton="name == 'selexpr'" @helprequested='$emit("movetoapidoc", "selexpr")'>
+                    	:showhelpbutton="name == 'selexpr'" @helprequested='$emit("movetoapidoc", "selexpr")'
+                    	:class="{ 'flexible': name == 'selexpr' }" class='mr-3'>
                     </forminput>
 
                     <button type="submit" class="btn btn-outline-primary mt-2">
