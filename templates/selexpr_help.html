@@ -1,6 +1,6 @@
 <p>
 A Ground Motion database (gmdb) is a set of seismic records stored in a tabular model
-as horizontal rows of where vertical columns represent each record field.
+as horizontal rows, where the model vertical columns represent each record field.
 </p>
 <p>
 A selection expression on a gmdb is just a string containing a
@@ -13,6 +13,13 @@ consistent with the column type. E.g.:</p>
 <code>pga <= 0.01</code>
 </p>
 <p>
+<code>pga != nan</code> (select records where PGA is not missing)
+</p>
+<p>
+<code>station_name == "ASD"</code> (note quotes around string-column values)
+</p>
+
+<p>
 Several simple expressions
 can be wrapped in parenthesis and combined with logical operators (<code>&</code>
 for logical and, <code>|</code> for logical or, and <code>~</code> for negation), e.g.:
@@ -22,27 +29,14 @@ for logical and, <code>|</code> for logical or, and <code>~</code> for negation)
 <code>(pga != nan) & ((magnitude > 5) | ~(event_time <= "2016-08-30"))</code>
 </p>
 
-<p>
-The columns of a gmdb and their type are listed below. Please note that:
-</p>
-<ul>
-<li>
-	Strings and float columns store missing values as "" (empty string) and nan, respectively.
-    This can be used to select records where the value of interest is not missing,
-    e.g.: <code>pgv != nan</code> </li>
-<li>
-	String column values must be quoted. Date-time columns (e.g., event_time) must be
-    typed as strings (thus quoted) in ISO format: <code>YYYY-mm-dd</code>, 
-    <code>YYYY-mm-ddTHH:MM:SS</code>, e.g.: <code>event_time &lt;= "2016-08-31"</code>
-</li>
-</ul>
-
 <table class='selexpr_table'>
-	<tr><th>Column name</th><th>Column type</th></tr>
-	{% for key, value in gmt.items %}
+	<tr><th>Column name</th><th>Column type</th><th>Missing values stored as (empty cell=no missing value available)</th></tr>
+	{% for key, values in gmt.items %}
     <tr>
         <td>{{ key }}</td>
+        {% for value in values %}
         <td>{{ value }}</td>
+        {% endfor %}
     </tr>
     {% endfor %}
-</table> 
+</table>

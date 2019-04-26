@@ -183,24 +183,32 @@ def get_gmdb_column_desc():
     for key in keys:
         col = GMTableDescription[key]
         classname = col.__class__.__name__
+        missingval = ''
         if key == 'event_time':
-            type2str = 'date-time (ISO formatted) string'
+            type2str = ('date-time (ISO formatted) string: e.g., '
+                        'event_time <= "2006-08-31" (date format YYYY-MM-dd) or '
+                        'event_time <= "2006-08-31T12:50:45" (date-time '
+                        'format YYYY-MM-ddTHH:MM:SS)')
+            missingval = '""'
         elif key == 'style_of_faulting':
             type2str = 'string in %s' % \
                 ' '.join('"%s" (%s)' % (str(k), str(v))
                          for k, v in MECHANISM_TYPE.items())
+            missingval = '""'
         elif classname.lower().startswith('int'):
             type2str = 'numeric (integer)'
         elif classname.lower().startswith('float'):
             type2str = 'numeric (float)'
+            missingval = 'nan'
         elif classname.lower().startswith('bool'):
             type2str = 'bool: true or false'
         elif classname.lower().startswith('str'):
             type2str = 'string'
+            missingval = '""'
         else:
             type2str = '? (unkwnown type)'
         
-        ret[key] = type2str
+        ret[key] = (type2str, missingval)
     return ret
         
 

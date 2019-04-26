@@ -99,6 +99,11 @@ Vue.component('testingtable', {
 				if (groupChanged){
 	        		oddeven = 1-oddeven;
 	        	}
+	        	/* note: isHidden below should hold a set of keys (columns) mapped to boolean values
+	        	telling if for that row the cell should be displayed (ret[index].isHidden(colname)).
+	        	It's not used and defaults to the empty dict. If
+	        	you want to remove the property, look at the template and remove it from there
+	        	as well */
 	        	var ret = {isHidden: {}, group: oddeven};
 	        	/*ret.isHidden[COL_MOF] = !groupChanged && !mofDiffers;
 	        	ret.isHidden[COL_IMT] = !groupChanged && !imtDiffers;
@@ -110,41 +115,47 @@ Vue.component('testingtable', {
     },
     // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
     template: `<div v-show="visible" class="d-flex flex-column">
-    <div class='testing-table flexible btn-primary'>
-    <table class='table testing-table'>
-        <thead>
-            <tr>
-                <th v-for="key in colnames"
-                  @click="sortBy(key)"
-                  class='btn-primary text-center align-text-top'>
-                  {{ key }}
-                  <br>
-                  <i v-if='isSortKey(key) && columns[key].sortOrder > 0' class="fa fa-chevron-down"></i>
-                  <i v-else-if='isSortKey(key) && columns[key].sortOrder < 0' class="fa fa-chevron-up"></i>
-                  <i v-else> &nbsp;</i> <!--hack for preserving height when no arrow icon is there. tr.min-height css does not work -->
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-	        <template v-for="(entry, index) in filteredSortedEntries">
-	            <tr :style="rowInfo[index].group ? 'background-color: rgba(0,0,0,.05)':  ''">
-	            	<template v-for="colname in colnames">
-	            		<td v-if="colname === COL_VAL" class='align-top text-right'>
-	            			{{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
-	            		</td>
-	            		<td v-else class='align-top'>
-	            			{{ rowInfo[index].isHidden[colname] ? "" : entry[colname] }}
-	            		</td>
-	            	</template>
-	            </tr>
-            </template>
-        </tbody>
-    </table>
-    </div>
-    <div class='small text-muted'>
-    Click on the table headers to sort (Notes on "{{ COL_VAL }}": 1. the column will always group rows by ({{ COL_MOF }}, {{ COL_IMT }})
-    and then sort within each group. 2. Numeric arrays will be compared by their first element)
-    </div>
+	    <div class='d-flex flex-row align-items-baseline mb-1'>
+	    <span>
+	    Testing results (click on the table headers to sort)
+	    </span>
+	    <span class='flexible small text-muted ml-3'>
+	    Notes: "{{ COL_VAL }}" will not sort rows "globally" but within each group of equal ({{ COL_MOF }}, {{ COL_IMT }}).
+	    Numeric arrays will be compared by their first element
+	    </span>
+	    <slot></slot>
+	    </div>
+	    <div class='testing-table flexible btn-primary'>
+		    <table class='table testing-table'>
+		        <thead>
+		            <tr>
+		                <th v-for="key in colnames"
+		                  @click="sortBy(key)"
+		                  class='btn-primary text-center align-text-top'>
+		                  {{ key }}
+		                  <br>
+		                  <i v-if='isSortKey(key) && columns[key].sortOrder > 0' class="fa fa-chevron-down"></i>
+		                  <i v-else-if='isSortKey(key) && columns[key].sortOrder < 0' class="fa fa-chevron-up"></i>
+		                  <i v-else> &nbsp;</i> <!--hack for preserving height when no arrow icon is there. tr.min-height css does not work -->
+		                </th>
+		            </tr>
+		        </thead>
+		        <tbody>
+			        <template v-for="(entry, index) in filteredSortedEntries">
+			            <tr :style="rowInfo[index].group ? 'background-color: rgba(0,0,0,.05)':  ''">
+			            	<template v-for="colname in colnames">
+			            		<td v-if="colname === COL_VAL" class='align-top text-right'>
+			            			{{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
+			            		</td>
+			            		<td v-else class='align-top'>
+			            			{{ rowInfo[index].isHidden[colname] ? "" : entry[colname] }}
+			            		</td>
+			            	</template>
+			            </tr>
+		            </template>
+		        </tbody>
+		    </table>
+	    </div>
     </div>`,
     filters: {
         numCell2Str: function (val, maxNumDigits, maxArraySize) {
@@ -170,13 +181,14 @@ Vue.component('testingtable', {
         	var ret = {}; // copy a new Object (see below)
         	this.colnames.forEach(colname => {
         		columns[colname].sortKey = key === colname;
+        		var newSortOrder = 0; //default sort order (all columns except the sorting column will be reset to this value)
         		if (columns[colname].sortKey){
         			newSortOrder = columns[colname].sortOrder + 1;
         			if (newSortOrder > 1){
         				newSortOrder = -1;
         			}
-        			columns[colname].sortOrder = newSortOrder;
         		}
+				columns[colname].sortOrder = newSortOrder;
         		ret[colname] = columns[colname];
         	});
         	// by setting a new object we trigger the template refresh.

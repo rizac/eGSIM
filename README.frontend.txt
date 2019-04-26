@@ -101,6 +101,7 @@ The tabs above set the selected component into the Vue instance. The Vue instanc
 variable change accordingly, but where is the binding which forces updates in the HTML?
 At the end of egsim.html where we define our "keep alive" <component>:
 
+<transition name='fade' ... >
 <keep-alive>
 	<component v-bind:is="selComponent"
 		v-bind="selComponentProps" v-bind:post='post'
@@ -108,7 +109,14 @@ At the end of egsim.html where we define our "keep alive" <component>:
 		@movetoapidoc='moveToApidoc'>
 	</component>
 </keep-alive>
+</transition>
 
+Let's forget about <transition>: it basically handles the ... transition between
+components added/removed. making them fade in and out smoothly. The transition
+properties are implemented in egsim.css .fade-enter* classes, which are class names
+Vuejs automatically recognizes for the "fade" transition
+(https://vuejs.org/v2/guide/transitions.html#Transitioning-Between-Elements).
+ 
 The <component> tag is a way to say: here
 there is a component which is 'selComponent', and everytime we change the latter
 change also the component here, and viceversa. The keep-alive is just a wrapper
