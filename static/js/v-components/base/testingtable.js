@@ -8,6 +8,7 @@ Vue.component('testingtable', {
 	    return {
             visible: false,
             tableData: [],
+            rowInfo: [], // Array of Objects storign row info for styling/rendereing (popolated in filteredSortedEntries)
             MAX_NUM_DIGITS: 5,  // 0 or below represent the number as it is
             MAX_ARRAY_SIZE: 4,  // arrays longer than this will be truncated in their string represenation (in the table)
             COL_MOF: colnames[0],
@@ -34,87 +35,116 @@ Vue.component('testingtable', {
     computed: {    
         filteredSortedEntries: function () {  // (filtering actually not yet implemented)
         	var [sortCol, sortOrder] = this.sortKeyAndOrder();
-        	var tData = this.tableData;
+        	var tData = this.tableData;   
         	var columns = this.columns;
         	var colnames= this.colnames;
-        	var isSorting = sortCol && sortOrder!=0;
-        	if (!isSorting){
-        		return tData;
-        	}
-        	// we need to sort:
-        	var isSortingValues =  isSorting && (sortCol === this.COL_VAL);
-        	var [COL_MOF, COL_IMT] = [this.COL_MOF, this.COL_IMT]; //this is not passed in the func below
-        	return tData.slice().sort(function(elm1, elm2) {  // .slice() makes a copy right ??
-        		// try to sort by the sortColumn first:
-        		// (NOTE: JavaScript compares arrays bu first element):
-    			var [val1, val2] = [elm1[sortCol], elm2[sortCol]];
-    			var sortResult = (val1 > val2 ? 1 : (val1 < val2 ? -1: 0 )) * sortOrder;
-
-        		if (!isSortingValues && sortResult == 0){ // we are not sorting by values: if sortResult is in (-1, 1)
-        			// great, no need to get herein, Otherwise, use other columns to calculate a non-zero sort
-        			// Order (there MUST be one)
-    				for (var colname of colnames){
-        				if (colname == sortCol){
-        					continue;
-        				}
-        				var colvalues = columns[colname].values;
-        				var [val1, val2] = [colvalues.indexOf(elm1[colname]), colvalues.indexOf(elm2[colname])];
-        				sortResult = (val1 > val2 ? 1 : (val1 < val2 ? -1: 0 ));
-        				if (sortResult !== 0){
-        					return sortResult;
-        				}
-        			}
+        	var [COL_MOF, COL_IMT, COL_GSIM] = [this.COL_MOF, this.COL_IMT, this.COL_GSIM]; //this is not passed in the func below
+	        var isSorting = sortCol && sortOrder!=0;
+        	if (isSorting){
+        		tData = tData.slice()  // we need copy of data (by ref, shouldn't be too heavy)
+	        	// we need to sort:
+	        	var isSortingValues =  isSorting && (sortCol === this.COL_VAL);
+	        	tData = tData.sort(function(elm1, elm2) {
+	        		// try to sort by the sortColumn first:
+	        		// (NOTE: JavaScript compares arrays bu first element):
+	    			var [val1, val2] = [elm1[sortCol], elm2[sortCol]];
+	    			var sortResult = (val1 > val2 ? 1 : (val1 < val2 ? -1: 0 )) * sortOrder;
 	
-        		}else if (isSortingValues){
-        			// we are sorting by values. Most likely, the sortResult is in (-1,1), but we want
-        			// too kepp sorting GRROUPED BY [MOF, and IMT]. So, first SORT
-        			// by those columns (thre might NOT be a different value) and return the sort result
-        			// if it's not zero. If zero, return the sortResult we calculated above
-        			for (var colname of [COL_MOF, COL_IMT]){
-        				var colvalues = columns[colname].values;
-        				var [val1, val2] = [colvalues.indexOf(elm1[colname]), colvalues.indexOf(elm2[colname])];
-        				var sortResult2 = (val1 > val2 ? 1 : (val1 < val2 ? -1: 0 ));
-        				if (sortResult2 !== 0){
-        					return sortResult2;
-        				}
-        			}
-        		}
-        		return sortResult;
-            });
+	        		if (!isSortingValues && sortResult == 0){ // we are not sorting by values: if sortResult is in (-1, 1)
+	        			// great, no need to get herein, Otherwise, use other columns to calculate a non-zero sort
+	        			// Order (there MUST be one)
+	    				for (var colname of colnames){
+	        				if (colname == sortCol){
+	        					continue;
+	        				}
+	        				var colvalues = columns[colname].values;
+	        				var [val1, val2] = [colvalues.indexOf(elm1[colname]), colvalues.indexOf(elm2[colname])];
+	        				sortResult = (val1 > val2 ? 1 : (val1 < val2 ? -1: 0 ));
+	        				if (sortResult !== 0){
+	        					return sortResult;
+	        				}
+	        			}
+		
+	        		}else if (isSortingValues){
+	        			// we are sorting by values. Most likely, the sortResult is in (-1,1), but we want
+	        			// too kepp sorting GRROUPED BY [MOF, and IMT]. So, first SORT
+	        			// by those columns (thre might NOT be a different value) and return the sort result
+	        			// if it's not zero. If zero, return the sortResult we calculated above
+	        			for (var colname of [COL_MOF, COL_IMT]){
+	        				var colvalues = columns[colname].values;
+	        				var [val1, val2] = [colvalues.indexOf(elm1[colname]), colvalues.indexOf(elm2[colname])];
+	        				var sortResult2 = (val1 > val2 ? 1 : (val1 < val2 ? -1: 0 ));
+	        				if (sortResult2 !== 0){
+	        					return sortResult2;
+	        				}
+	        			}
+	        		}
+	        		return sortResult;
+	            });
+	        }
+	        // the sort groups are defined by [COL_MOF, COL_IMT] unless
+	        // sortCol == COL_GSIM or sortCol == COL_IMT
+	        var oddeven = 1;
+	        this.rowInfo = tData.map((item, idx, items) => {
+	        	var mofDiffers = idx == 0 || (item[COL_MOF] !== items[idx-1][COL_MOF]);
+	        	var imtDiffers = idx == 0 || (item[COL_IMT] !== items[idx-1][COL_IMT]);
+	        	var gsimDiffers = idx == 0 || (item[COL_GSIM] !== items[idx-1][COL_GSIM]);
+	        	if (isSorting && (sortCol == COL_GSIM)){
+	        		groupChanged = gsimDiffers;
+	        	}else if (isSorting && (sortCol == COL_IMT)){
+	        		groupChanged = imtDiffers;
+	        	}else{
+	        		groupChanged = mofDiffers || imtDiffers;
+	        	}
+				if (groupChanged){
+	        		oddeven = 1-oddeven;
+	        	}
+	        	var ret = {isHidden: {}, group: oddeven};
+	        	/*ret.isHidden[COL_MOF] = !groupChanged && !mofDiffers;
+	        	ret.isHidden[COL_IMT] = !groupChanged && !imtDiffers;
+	        	ret.isHidden[COL_GSIM] = !groupChanged && !gsimDiffers;*/
+	        	return ret;
+	        });
+            return tData;
         }
     },
     // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
-    template: `<div v-show="visible">
-    <table class='testing-table'>
+    template: `<div v-show="visible" class="d-flex flex-column">
+    <div class='testing-table flexible btn-primary'>
+    <table class='table testing-table'>
         <thead>
             <tr>
                 <th v-for="key in colnames"
                   @click="sortBy(key)"
-                  :class="{ active: isSortKey(key) }"
-                  class='btn-primary align-items-baseline' style='cursor:pointer'>
+                  class='btn-primary text-center align-text-top'>
                   {{ key }}
-                  <span v-if='isSortKey(key) && columns[key].sortOrder > 0'> <!-- ascending -->
-                  	<i class="fa fa-sort-desc"></i>  <!-- ascending means we grow as we go down, so desc icon (V) makes more sense --> 
-                  </span>
-                  <span v-else-if='isSortKey(key) && columns[key].sortOrder < 0'> <!-- descending -->
-                  	<i class="fa fa-sort-asc"></i>  <!-- descending means we grow as we go up, so asc icon (^) makes more sense --> 
-                  </span>
+                  <br>
+                  <i v-if='isSortKey(key) && columns[key].sortOrder > 0' class="fa fa-chevron-down"></i>
+                  <i v-else-if='isSortKey(key) && columns[key].sortOrder < 0' class="fa fa-chevron-up"></i>
+                  <i v-else> &nbsp;</i> <!--hack for preserving height when no arrow icon is there. tr.min-height css does not work -->
                 </th>
             </tr>
         </thead>
         <tbody>
-            <tr v-for="entry in filteredSortedEntries">
-            	<template v-for="colname in colnames">
-            		<td v-if="colname === COL_VAL" class='text-right'>
-            			{{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
-            		</td>
-            		<td v-else>
-            			{{ entry[colname] }}
-            		</td>
-            	</template>
-            </tr>
+	        <template v-for="(entry, index) in filteredSortedEntries">
+	            <tr :style="rowInfo[index].group ? 'background-color: rgba(0,0,0,.05)':  ''">
+	            	<template v-for="colname in colnames">
+	            		<td v-if="colname === COL_VAL" class='align-top text-right'>
+	            			{{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
+	            		</td>
+	            		<td v-else class='align-top'>
+	            			{{ rowInfo[index].isHidden[colname] ? "" : entry[colname] }}
+	            		</td>
+	            	</template>
+	            </tr>
+            </template>
         </tbody>
     </table>
+    </div>
+    <div class='small text-muted'>
+    Click on the table headers to sort (Notes on "{{ COL_VAL }}": 1. the column will always group rows by ({{ COL_MOF }}, {{ COL_IMT }})
+    and then sort within each group. 2. Numeric arrays will be compared by their first element)
+    </div>
     </div>`,
     filters: {
         numCell2Str: function (val, maxNumDigits, maxArraySize) {
