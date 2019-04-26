@@ -48,3 +48,11 @@ table.testing-table th{
 	cursor:pointer
 }
 
+
+.egsimform-enter-active, .egsimform-leave-active {
+  transition: all .4s;  /* with all, everything put in the class below will be animated (transitioned) */
+  transform-origin: top;
+}
+.egsimform-enter, .egsimform-leave-to /* .fade-leave-active below version 2.1.8 */ {
+  transform: scaleY(0);
+}
