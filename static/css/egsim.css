@@ -30,11 +30,21 @@
 }
 /* end custom progressbar/waitbar */
 
-.table.testing-table{
-	width: 100%;
-    border-width: 2px;
+
+div.testing-table{
+	border-width: 2px;
     border-style: solid;
-    border-collapse: initial;
     border-radius: 4px;
+    padding: 3px;
+    /* override bootstrap: */
+	color: initial !important;
+    background-color: initial !important;
+}
+
+table.testing-table th{
+	border: none !important;
+	padding:.5rem;
+	line-height: 1rem;
+	cursor:pointer
 }
 
