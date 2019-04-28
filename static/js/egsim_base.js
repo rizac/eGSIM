@@ -11,7 +11,7 @@ var EGSIM_BASE = {
         initdata: {},
         errormsg: '',
         selComponent: '',
-        componentProps: {}
+        componentProps: {} // an object of Objects keyed by each string denoting a component name (<=> menu tab)
         // In case we want to use an event bus:
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
@@ -23,7 +23,7 @@ var EGSIM_BASE = {
         var gsims = Array.from(avalGsims.keys());
         var imts = Array.from(avalImts);
         // set processed data:
-        this.$set(this, 'componentProps', this.initdata.component_props);
+        this.componentProps = this.initdata.component_props;
         Object.keys(this.componentProps).forEach(name => {
            var compProps = this.componentProps[name];
            if (typeof compProps === 'object'){
@@ -135,9 +135,6 @@ var EGSIM_BASE = {
                 this.setLoading(false);
             });
         },
-        showDoc(fragment){
-        	
-        },
         selectGsims(gsims){
             Object.keys(this.componentProps).forEach(name => {
                 var compProps = this.componentProps[name];
@@ -166,10 +163,10 @@ var EGSIM_BASE = {
             if (typeof error === 'string'){
                 error = {message: error};
             }
-            this.$set(this, 'errormsg', error.message);
+            this.errormsg = error.message;
         },
         setLoading(value){
-            this.$set(this, 'loading', value);
+            this.loading = value;
         }
     }
 };
