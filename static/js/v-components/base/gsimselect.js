@@ -2,18 +2,21 @@ Vue.component('gsimselect', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         name: {type: String, default: 'gsim'},
-        imtName: {type: String, default: 'imt'},
         showfilter: {type: Boolean, default: false},
         form: Object,
         selectbutton: {type: String, default: ''}
     },
     data: function () {
+    	var elm = this.form[this.name]; //wlm is an Object with several component properties
         return {
+        	elm: elm,
             filterText: '',
             filterType: 'GSIM name',
             filterTypes: ['GSIM name', 'IMT', 'Tectonic Region Type'],
             filterFunc: elm => true,
-            gsimManager: this.form[this.name].gsimManager  // Object defined in egsim_base.js ('created' function)
+            gsimManager: elm.gsimManager,  // Object defined in egsim_base.js ('created' function),
+            selectableGsims: new Set(),  // updated in wathcer below
+            warnings: [] //list of strings of warnings (updated also in watchers below)
         }
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
@@ -26,6 +29,29 @@ Vue.component('gsimselect', {
             if (oldValue !== value){
                 this.updateFilter();
             }
+        },
+        // listen for changes in the selected imts:
+        'form.imt.val': {  // we should not, but in any case if we change the imt param name, change it also here ...
+        	immediate: true,
+        	handler: function(newVal, oldVal){
+        		var selectedimts = newVal;
+	            var selectableGsims = this.elm.choices;
+	            if (selectedimts.length){
+	                var gsimManager = this.gsimManager;  // Object defined in egsim_base.js ('created' function)
+	            	selectableGsims = selectableGsims.filter(gsim => {
+	                	return selectedimts.every(imt => gsimManager.imtsOf(gsim).includes(imt));
+	                });
+	            }
+	            this.selectableGsims = new Set(selectableGsims);
+        	}
+        },
+        // listen for changes in gsim selection
+        'elm.val': {
+        	immediate: true,
+        	handler: function(newVal, oldVal){
+	        	var gsimManager = this.gsimManager;  // Object defined in egsim_base.js ('created' function)
+        		this.warnings = (newVal || []).filter(gsim => gsimManager.warningOf(gsim)).map(gsim => gsimManager.warningOf(gsim));
+        	}
         }
     },
     computed: {
@@ -33,28 +59,30 @@ Vue.component('gsimselect', {
         // the watched variable used therein are changed.
         // https://vuejs.org/v2/guide/computed.html
         // https://forum.vuejs.org/t/how-do-computed-properties-know-how-to-change/24140/2
-        selectableGsimsSet: function(){
-            var selectedimts = this.form[this.imtName].val;
-            var selectableGsims = this.form[this.name].choices;
-            if (selectedimts.length){
-                var gsimManager = this.gsimManager;  // Object defined in egsim_base.js ('created' function)
-            	selectableGsims = selectableGsims.filter(gsim => {
-                	return selectedimts.every(imt => gsimManager.imtsOf(gsim).includes(imt));
-                });
-            }
-            return new Set(selectableGsims);
-        }
+        // no-op for the moment
     },
     template: `<div class='d-flex flex-column'>
-      <forminput :form="form" :name='"gsim"' headonly></forminput>
+      <forminput :form="form" :name='name' headonly></forminput>
       <div class='flexible d-flex flex-column'>
-          <select v-model="form[name].val" v-bind="form[name].attrs" class="form-control flexible with-icons">
-              <option v-for="gsim in form[name].choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)"
-               v-bind:style="!isGsimSelectable(gsim) ? {'text-decoration': 'line-through'} : ''"
-               v-bind:class="!isGsimSelectable(gsim) ? ['disabled'] : ''">
+          <select v-model="elm.val" v-bind="elm.attrs"
+          v-bind:class="{'rounded-bottom-0': warnings.length}"
+          class="form-control flexible with-icons">
+              <option v-for="gsim in elm.choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)"
+               v-bind:style="!selectableGsims.has(gsim) ? {'text-decoration': 'line-through'} : ''"
+               v-bind:class="{'disabled': !selectableGsims.has(gsim)}">
                   {{ gsim }} {{ gsimManager.warningOf(gsim) ? '&#xf071;' : '' }} 
               </option>
           </select>
+          <div v-show='warnings.length' class='form-control position-relative border-top-0 rounded-top-0'
+          		style='height:4rem;overflow:auto'>
+          			
+          	  <div class='small position-absolute pos-x-0 pos-y-0 p-1'>
+          	  	  <div>{{ warnings.length }} warning(s):</div>
+          	      <div v-for='warn in warnings'>
+          		      <span class='text-warning'><i class="fa fa-exclamation-triangle"></i></span> {{ warn }}
+          		  </div>
+          	  </div>
+          </div>
       </div>
     
       <!-- GSIM FILTER CONTROLS: -->
@@ -68,17 +96,14 @@ Vue.component('gsimselect', {
       </div>
       
       <div v-if='selectbutton' class='mt-2'>
-          <button @click="$emit('selection-fired', form[name].val)" v-html='selectbutton' 
-           :disabled='!(form[name].val || []).length' class='btn btn-outline-primary form-control'>
+          <button @click="$emit('selection-fired', elm.val)" v-html='selectbutton' 
+           :disabled='!(elm.val || []).length' class='btn btn-outline-primary form-control'>
           </button>
       </div>
     </div>`,
     methods: {
         isGsimVisible(gsim){
             return this.filterFunc(gsim);
-        },
-        isGsimSelectable(gsim){
-            return this.selectableGsimsSet.has(gsim);
         },
         updateFilter(){
             this.adjustWidth();
@@ -102,11 +127,11 @@ Vue.component('gsimselect', {
             if (!this.showfilter){
                 return;
             }
-            var elm = document.querySelector('select#id_gsim');
-            if (!elm){
+            var htmElm = document.querySelector('select#id_gsim');
+            if (!htmElm){
                 return;
             }
-            elm.style.width = !this.filterText ? '' : elm.offsetWidth + 'px';
+            htmElm.style.width = !this.filterText ? '' : htmElm.offsetWidth + 'px';
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load

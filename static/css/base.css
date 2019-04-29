@@ -82,6 +82,16 @@ and https://stackoverflow.com/a/38187626 */
 }
 
 
+/* classes for resetting top and bottom rounded borders */
+.rounded-top-0 {
+    border-top-left-radius: 0rem!important;
+    border-top-right-radius: 0rem!important;
+}
+.rounded-bottom-0 {
+    border-bottom-left-radius: 0rem!important;
+    border-bottom-right-radius: 0rem!important;
+}
+
 /* absolute positioning (not in standard bootstrap), to be used with bootstrap's .position-absolute: */
 .pos-t-0, .pos-y-0, .pos-0{
 	top: 0px;
