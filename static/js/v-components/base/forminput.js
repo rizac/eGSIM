@@ -8,10 +8,10 @@ Vue.component('forminput', {
     	// form is an object with names (string) mapped to elements (elm).
     	// Each elm represents the input or select type and it's in turn an object
     	// with properties 'err', 'val', 'choices' ...
-        'form': {type: Object},  
-        'name': {type: String},
-        'headonly': {type: Boolean, default:false}, // if true, display only header (name and infos)
-        'showhelpbutton': {type: Boolean, default:false}  // if true, ehlp button sshows up in the ehader
+        form: {type: Object},  
+        name: {type: String},
+        headonly: {type: Boolean, default:false}, // if true, display only header (name and infos)
+        showhelpbutton: {type: Boolean, default:false}  // if true, ehlp button sshows up in the ehader
         // if true, this component emits an 'helpwanted' event with no arguments (for the moment)
     },
     data: function () {
