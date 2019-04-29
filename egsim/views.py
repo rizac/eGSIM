@@ -101,13 +101,14 @@ def main(request, selected_menu=None):
 #     except TemplateDoesNotExist:
 #         selexpr_help = ""
 
-    initdata = {'component_props': components_props,
-                'gsims': aval_gsims(asjsonlist=True)}
+#     initdata = {'component_props': components_props,
+#                 'gsims': {_[0]: _ [1:] for _ in aval_gsims(asjsonlist=True)}
 
     return render(request, 'egsim.html', {**_COMMON_PARAMS,
                                           'sel_component': sel_component,
                                           'components': components_tabs,
-                                          'initdata': json.dumps(initdata),
+                                          'component_props': json.dumps(components_props),
+                                          'gsims': json.dumps({_[0]: _ [1:] for _ in aval_gsims(asjsonlist=True)}),
                                           'server_error_message': ""})
 
 
