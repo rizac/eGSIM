@@ -17,23 +17,24 @@ Vue.component('imtselect', {
         // https://vuejs.org/v2/guide/computed.html
         // https://forum.vuejs.org/t/how-do-computed-properties-know-how-to-change/24140/2
         selectableImtsSet: function(){
-            var avalgsims = this.form[this.gsimName].GSIMS_MANAGER;
+        	var gsimManager = this.form[this.gsimName].gsimManager;  // Object defined in egsim_base.js ('created' function)
             var selectedgsims = this.form[this.gsimName].val;
-            var selectableimts = new Set(this.form[this.name].choices);
+            var selectableimts = [];
             for (var gsim of selectedgsims){
-                var gsimImts = avalgsims.get(gsim)[0]; // it's a Set
-                var intersection = new Set();
-                for (var imt of selectableimts){
-                    if (gsimImts.has(imt)){
-                        intersection.add(imt);
-                    }
-                }
-                selectableimts = intersection;
-                if (!selectableimts.size){
-                    break;
-                }
+            	if (!selectableimts.length){ // first gsim element
+            		selectableimts = Array.from(gsimManager.imtsOf(gsim));  // make a copy
+            	}else{
+            		for (var i=selectableimts.length-1; i>=0; i--){
+            			if (!gsimManager.imtsOf(gsim).includes(selectableimts[i])){
+            				selectableimts.splice(i, 1);
+            			}
+            		}
+            	}
+            	if (!selectableimts.length){
+            		break;
+            	}
             }
-            return selectableimts;
+            return new Set(selectableimts);
         },
         selectedImtSet : function(){
             return new Set(this.form[this.name].val);

@@ -11,6 +11,10 @@ nav, h1, h2, h3, h4, h5, h6{
 	font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
 }
 
+select.with-icons { /* https://stackoverflow.com/questions/36743041/font-awesome-icon-in-select-option */
+	font-family: 'FontAwesome', 'Encode Sans Semi Condensed', Helvetica, sans-serif;
+}
+
 
 /* .small, .form-control-sm{
 	font-family: 'Encode Sans' !important;

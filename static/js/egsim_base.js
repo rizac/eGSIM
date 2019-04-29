@@ -8,22 +8,27 @@ var EGSIM_BASE = {
         // selectedGsims: [],
         // selectedImts: [],
         loading: false,
-        initdata: {},
         errormsg: '',
         selComponent: '',
+        gsims: {}, // an Object of gsim names (string) mapped to [[... imts ...], trt, oq_gsim_warning] (all elements strings)
         componentProps: {} // an object of Objects keyed by each string denoting a component name (<=> menu tab)
         // In case we want to use an event bus:
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
     created: function(){
-        // process input data (injected in the template with the minimum
-        // amount possible for performance reasons):
-        var [avalGsims, avalImts] = this.getInitData(this.initdata.gsims);
-        var gmdbNames = (this.initdata.gmdbnames || []).map(x => [x, x]);
-        var gsims = Array.from(avalGsims.keys());
-        var imts = Array.from(avalImts);
+        var gsims = this.gsims;
+        var gsimNames = Object.keys(gsims).sort();
+        var imtNames = new Set();
+        gsimNames.forEach(gsimName => {
+        	gsims[gsimName][0].forEach(imt => imtNames.add(imt));
+        });
+        imtNames = Array.from(imtNames);
+        var gsimManager = {
+        	imtsOf: function(gsim){ return gsims[gsim][0]; },
+			trtOf: function(gsim){ return gsims[gsim][1]; },
+			warningOf: function(gsim){ return gsims[gsim][2]; }	
+        }
         // set processed data:
-        this.componentProps = this.initdata.component_props;
         Object.keys(this.componentProps).forEach(name => {
            var compProps = this.componentProps[name];
            if (typeof compProps === 'object'){
@@ -31,12 +36,12 @@ var EGSIM_BASE = {
                    var element = compProps[pname];
                    if (this.isFormObject(element)){
                        if (element.gsim){
-                           element.gsim.choices = gsims;
-                           element.gsim.GSIMS_MANAGER = avalGsims;
+                           element.gsim.choices = gsimNames;
+                           element.gsim.gsimManager = gsimManager;
                        }
                        if (element.imt){
-                           element.imt.choices = imts;
-                           element.gsim.GSIMS_MANAGER = avalGsims;
+                           element.imt.choices = imtNames;
+                           element.gsim.gsimManager = gsimManager;
                        }
                    }
                });
@@ -69,23 +74,6 @@ var EGSIM_BASE = {
         moveToApidoc(fragmentName){
         	this.componentProps['apidoc'].fragment = fragmentName.startsWith('#') ? fragmentName : '#' + fragmentName;
         	this.setComponent('apidoc');
-        },
-        getInitData(data) {
-            // initializes the base Vue instance returning the array [gsims, imts] where:
-            // gsims is a Map of gsim name -> [imts (Set), trt (string), ruptureParams (Array? - not used)]
-            // imts is a set of all available imts
-            var gsims = new Map();
-            var imts = new Set();
-            for (let gsim of data) {
-                var gsimName = gsim[0];
-                var gImts = new Set(gsim[1]);
-                for (let gImt of gImts){
-                    imts.add(gImt);
-                }
-                var trt = gsim[2];
-                gsims.set(gsimName, [gImts, trt]);
-            }
-            return [gsims, imts];
         },
         // this function returns a promise and is passed to each sub-component:
         post(url, data, config) { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load

@@ -79,7 +79,8 @@
 	    data: function(){ /* FIXME: check what's the difference between returning function and dict */
 	        return {selComponent: "{{sel_component}}",
 	        		errormsg: "{{ server_error_message }}",
-	        		initdata: {{ initdata|safe }}
+	        		componentProps: {{ component_props|safe }},
+	        		gsims: {{ gsims|safe }},
 	        		};  
 	    }
 	});
