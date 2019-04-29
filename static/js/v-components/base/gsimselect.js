@@ -31,11 +31,11 @@ Vue.component('gsimselect', {
             }
         },
         // listen for changes in the selected imts:
-        'form.imt.val': {  // we should not, but in any case if we change the imt param name, change it also here ...
+        'form.imt.val': {  // even if it should not happen: if we change the imt param name, change it also here ...
         	immediate: true,
         	handler: function(newVal, oldVal){
-        		var selectedimts = newVal;
-	            var selectableGsims = this.elm.choices;
+        		var selectableGsims = this.elm.choices;
+	            var selectedimts = newVal;
 	            if (selectedimts.length){
 	                var gsimManager = this.gsimManager;  // Object defined in egsim_base.js ('created' function)
 	            	selectableGsims = selectableGsims.filter(gsim => {
