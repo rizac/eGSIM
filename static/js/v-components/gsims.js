@@ -106,8 +106,8 @@ Vue.component('gsims', {
             // build a new one:
             this.form.latitude.val = event.latlng.lat;
             this.form.longitude.val = event.latlng.lng;
-            this.form.gsim.val = null; // force server to take all gsims by default
-            this.form.imt.val = null; // force server to take all gsims by default
+            // this.form.gsim.val = []; // force server to take all gsims by default
+            // this.form.imt.val = []; // force server to take all gsims by default
             var overlays = this.overlays;
             // perform query only on visible layers selected. Get visible layers:
             this.form.trt.val = Object.keys(overlays).filter(layerName => {
@@ -129,7 +129,7 @@ Vue.component('gsims', {
             // modify the current form gsim field:
             this.form.gsim.choices = Array.from(gsims);
             this.form.gsim.val = [];
-            propsData = {form: this.form, selectbutton: 'Select'}
+            propsData = {form: this.form, selectbutton: 'Select for Trellis plots, Residuals and Testing'}
 
             var instance = new ComponentClass({
                 propsData: propsData

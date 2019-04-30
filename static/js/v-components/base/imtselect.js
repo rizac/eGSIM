@@ -56,7 +56,7 @@ Vue.component('imtselect', {
     template: `<div class='d-flex flex-column'>
         <forminput :form="form" :name='name' headonly></forminput>
         <div class='mb-1 flexible d-flex flex-column'>
-          <select v-model="elm.val" v-bind="elm.attrs" class="form-control flexible">
+          <select v-model="elm.val" v-bind="elm.attrs" class="form-control flexible" :class="{'border-danger': !!elm.err}">
               <option v-for='imt in elm.choices' :key='imt'
                   v-bind:style="!selectableImts.has(imt) ? {'text-decoration': 'line-through'} : ''"
                   v-bind:class="!selectableImts.has(imt) ? ['disabled'] : ''">

@@ -51,6 +51,20 @@ Vue.component('gsimselect', {
         	handler: function(newVal, oldVal){
 	        	var gsimManager = this.gsimManager;  // Object defined in egsim_base.js ('created' function)
         		this.warnings = (newVal || []).filter(gsim => gsimManager.warningOf(gsim)).map(gsim => gsimManager.warningOf(gsim));
+        		if (this.warnings.length && newVal && newVal.length && this.$refs.select){
+        			// scroll last element into view because we might hide it (see template)
+        			// (https://vuejs.org/v2/guide/components-edge-cases.html#Accessing-Child-Component-Instances-amp-Child-Elements)
+        			var elm = Array.from(this.$refs.select.options).filter(opt => opt.value === newVal[newVal.length-1]);
+        			if (elm && elm.length == 1){
+        				this.$nextTick(() => {
+        					var [r1, r2] = [elm[0].parentElement.getBoundingClientRect(),
+				        					elm[0].getBoundingClientRect()];
+				        	if (r2.y >= r1.height + r1.y){
+			                	elm[0].scrollIntoView(false);
+			                }
+			            });
+        			}
+        		}
         	}
         }
     },
@@ -64,8 +78,8 @@ Vue.component('gsimselect', {
     template: `<div class='d-flex flex-column'>
       <forminput :form="form" :name='name' headonly></forminput>
       <div class='flexible d-flex flex-column'>
-          <select v-model="elm.val" v-bind="elm.attrs"
-          v-bind:class="{'rounded-bottom-0': warnings.length}"
+          <select v-model="elm.val" v-bind="elm.attrs" ref="select"
+          v-bind:class="{'rounded-bottom-0': warnings.length, 'border-danger': !!elm.err}"
           class="form-control flexible with-icons">
               <option v-for="gsim in elm.choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)"
                v-bind:style="!selectableGsims.has(gsim) ? {'text-decoration': 'line-through'} : ''"

@@ -53,12 +53,14 @@ Vue.component('forminput', {
     		</button>
         </div>
         <template v-if="!headonly">
-	        <select v-if="isSelect" v-model="elm.val" v-bind="elm.attrs" class='form-control'>
+	        <select v-if="isSelect" v-model="elm.val" v-bind="elm.attrs" class='form-control'
+	        	:class="{'border-danger': !!elm.err}">
 	        	<option v-for='opt in elm.choices' :value='opt[0]'>
 	        		{{ (opt[0] == opt[1] ? '' : '[' + opt[0] + '] ') +  opt[1] }}
 	        	</option>
 	    	</select>
-	    	<input v-else-if="!isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='form-control'>
+	    	<input v-else-if="!isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='form-control'
+	    		:class="{'border-danger': !!elm.err}">
     	</template>
     </div>`
 })
