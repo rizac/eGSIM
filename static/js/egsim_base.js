@@ -151,19 +151,26 @@ var EGSIM_BASE = {
         	this.setError('');
         	// clear all errors in forms:
         	// set processed data:
-	        Object.keys(this.componentProps).forEach(name => {
+        	for (var [name, form] of this.forms()){
+        		Object.keys(form).forEach(fieldname => {
+        	        form[fieldname].err = '';
+        	    });
+        	}
+        },
+        forms(){
+        	var ret = [];
+        	Object.keys(this.componentProps).forEach(name => {
 	           var compProps = this.componentProps[name];
 	           if (typeof compProps === 'object'){
 	               Object.keys(compProps).forEach(pname => {
 	                   var element = compProps[pname];
 	                   if (this.isFormObject(element)){
-	                   	   Object.keys(element).forEach(fieldname => {
-	                   	       element[fieldname].err = '';
-	                   	   });
+	                       ret.push([name, element]);
 	                   }
 	               });
 	           }
 	        });
+	        return ret;
         },
         setError(error){ // error must be a google-json dict-like {message: String, code: String, errors: Array}
             if (typeof error === 'string'){
