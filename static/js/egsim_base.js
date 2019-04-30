@@ -147,6 +147,24 @@ var EGSIM_BASE = {
                 return (typeof elm === 'object') && ('val' in elm) && ('err' in elm);
             });
         },
+        clearErrors(){
+        	this.setError('');
+        	// clear all errors in forms:
+        	// set processed data:
+	        Object.keys(this.componentProps).forEach(name => {
+	           var compProps = this.componentProps[name];
+	           if (typeof compProps === 'object'){
+	               Object.keys(compProps).forEach(pname => {
+	                   var element = compProps[pname];
+	                   if (this.isFormObject(element)){
+	                   	   Object.keys(element).forEach(fieldname => {
+	                   	       element[fieldname].err = '';
+	                   	   });
+	                   }
+	               });
+	           }
+	        });
+        },
         setError(error){ // error must be a google-json dict-like {message: String, code: String, errors: Array}
             if (typeof error === 'string'){
                 error = {message: error};
