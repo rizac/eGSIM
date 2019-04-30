@@ -81,6 +81,14 @@ and https://stackoverflow.com/a/38187626 */
     box-shadow: inset 0px 0px 5px 1px rgba(0,123,255,.25) !important;
 }
 
+/* fix webkit autocomplete */
+/* https://stackoverflow.com/a/14205976 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active  {
+    -webkit-box-shadow: 0 0 0 30px white inset;
+}
 
 /* classes for resetting top and bottom rounded borders */
 .rounded-top-0 {
@@ -138,7 +146,7 @@ nav .menu-item.active{
 
 /* change disabled text color to makei it lighter. Also add the class 'disabled' which renders the same text color */
 *[disabled], .disabled{ /*input[type="text"][disabled] {*/
-   color: lightgray;
+   color: lightgray !important;
 }
 /* change option selection color. NOTE: we can only set a background image on them:*/
 select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:checked:not(:disabled) {
