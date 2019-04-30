@@ -270,9 +270,12 @@ def testing(params):
             for gsim, gsim_result in result.items():
                 for imt, imt_result in gsim_result.items():
                     for type_, values in imt_result.items():
-                        moffit = "%s %s" % (name, type_)
-                        ret.setdefault(moffit, {}).\
-                            setdefault(imt, {})[gsim] = _jsonify_num(values)
+                        # change array value into:
+                        p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
+                        for kkk, vvv in (('Median', p50), ('IQR', p75-p25)):
+                            moffit = "%s %s %s" % (name, type_, kkk)
+                            ret.setdefault(moffit, {}).\
+                                setdefault(imt, {})[gsim] = _jsonify_num(vvv)
         elif key in (MOF.LLH, MOF.MLLH):
             for gsim, gsim_result in result.items():
                 for imt, value in gsim_result.items():
