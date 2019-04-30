@@ -33,12 +33,12 @@
 			<div v-show='errormsg'
 				class='d-flex flex-row bg-danger text-sm-center text-white text-truncate position-absolute pos-t-0 pos-x-0'
 				style='z-index:10'>
-				<div class='flexible'>
+				<div class='flexible ml-1'>
 					&#123;&#123; errormsg &#125;&#125;
 				</div>
-				<button type="button" v-on:click='clearErrors()' class="close"
+				<button type="button" v-on:click='clearErrors()' class="close mr-1"
 					style='color:inherit' aria-label="Clear error messages">
-                	<i class="fa fa-times"></i>
+                	&times;
             	</button>
 			</div>
 			

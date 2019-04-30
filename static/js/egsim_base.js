@@ -29,24 +29,16 @@ var EGSIM_BASE = {
 			warningOf: function(gsim){ return gsims[gsim][2]; }	
         }
         // set processed data:
-        Object.keys(this.componentProps).forEach(name => {
-           var compProps = this.componentProps[name];
-           if (typeof compProps === 'object'){
-               Object.keys(compProps).forEach(pname => {
-                   var element = compProps[pname];
-                   if (this.isFormObject(element)){
-                       if (element.gsim){
-                           element.gsim.choices = gsimNames;
-                           element.gsim.gsimManager = gsimManager;
-                       }
-                       if (element.imt){
-                           element.imt.choices = imtNames;
-                           element.gsim.gsimManager = gsimManager;
-                       }
-                   }
-               });
-           }
-        });
+        for (var [name, form] of this.forms()){
+        	if (form.gsim){
+               	form.gsim.choices = gsimNames;
+               	form.gsim.gsimManager = gsimManager;
+           	}
+           	if (form.imt){
+            	form.imt.choices = imtNames;
+            	form.gsim.gsimManager = gsimManager;
+        	}
+        }
     },
     computed: {
         selComponentProps(){  // https://stackoverflow.com/a/43658979
@@ -92,7 +84,7 @@ var EGSIM_BASE = {
             this.setError('');
             this.setLoading(true);
             var config = Object.assign(config || {}, {headers: {"X-CSRFToken": this.csrftoken}});
-            var jsonData = data || {}
+            var jsonData = data || {};
             var isFormObj = this.isFormObject(data);
             if (isFormObj){ // data is a Form Object, convert jsonData  to dict of scalars:
                 jsonData = {};
@@ -124,28 +116,11 @@ var EGSIM_BASE = {
             });
         },
         selectGsims(gsims){
-            Object.keys(this.componentProps).forEach(name => {
-                var compProps = this.componentProps[name];
-                if (typeof compProps === 'object'){
-                    Object.keys(compProps).forEach(pname => {
-                        var element = compProps[pname];
-                        if (this.isFormObject(element)){
-                            if (element.gsim){
-                                element.gsim.val = Array.from(gsims);
-                            }
-                        }
-                    });
+        	for (var [name, form] of this.forms()){
+        		if (form.gsim){
+                	form.gsim.val = Array.from(gsims);
                 }
-             });
-        },
-        isFormObject(obj){
-            if (typeof obj !== 'object'){
-                return false;
-            }
-            return Object.keys(obj).every(key => {
-                var elm = obj[key];
-                return (typeof elm === 'object') && ('val' in elm) && ('err' in elm);
-            });
+        	}
         },
         clearErrors(){
         	this.setError('');
@@ -171,6 +146,15 @@ var EGSIM_BASE = {
 	           }
 	        });
 	        return ret;
+        },
+        isFormObject(obj){
+            if (typeof obj !== 'object'){
+                return false;
+            }
+            return Object.keys(obj).every(key => {
+                var elm = obj[key];
+                return (typeof elm === 'object') && ('val' in elm) && ('err' in elm);
+            });
         },
         setError(error){ // error must be a google-json dict-like {message: String, code: String, errors: Array}
             if (typeof error === 'string'){
