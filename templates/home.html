@@ -7,33 +7,44 @@
 {% endblock %}
 
 {% block extra-head %}
-	<link rel="stylesheet" type="text/css" href="{% static 'css/home.css' %}">
+<!--  include the (few) css declarations here to avoid loading external css -->
+<style type="text/css">
+	.home-title{
+		font-size: 500%;
+		text-shadow: 2px 8px 6px rgba(0,0,0,0.2), 0px -5px 35px rgba(255,255,255,0.3);
+	}
+</style>
 {% endblock %}
 
 {% block body %}
 	<div class='flexible d-flex flex-column'>
 			
-		<div class='flexible jumbotron' style='text-align:center; background-color:initial'>
+		<div class='d-flex flex-column flexible pt-5 pb-5 text-center'>
 			<div>
 				<h1 class='home-title'>{{ project_name }}</h1>
-				<p>&nbsp;</p>
 				<h3>European Ground Shaking Intensity Model</h3>
-				<p>a web service for selecting and testing ground shaking models in Europe</p>
+				<p>a web service for selecting and testing ground shaking models</p>
 			</div>
-			<img class="logo" style='height:45vh' src="{% static 'img/logos/efehr_flyer_trans_scaled.png' %}" />
+			<!-- the mess below is just to align image centered horizontally and 100% available space
+			(normal flexbox does not work in safari on mac) -->
+			<div class='flexible position-relative'>
+				<div class='position-absolute pos-0 text-center'>
+					<img class="h-100" src="{% static 'img/logos/efehr_flyer_trans_scaled.png' %}" />
+				</div>
+			</div>
 		</div>
-		<div class="logos">
+		<div class="text-center pb-1" style='height:3rem;max-height:3rem;min-height:3rem'>
 			<a target="_blank" href='http://www.efehr.org/en/home/'>
-				<img class="logo" src="{% static 'img/logos/efehr_fin@3x.png' %}" />
+				<img class="h-100" src="{% static 'img/logos/efehr_fin@3x.png' %}" />
 			</a>
 			<a target="_blank" href='https://www.globalquakemodel.org/oq-getting-started'>
-				<img class="logo" src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans.png' %}" />
+				<img class="h-100 ml-3" src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans_scaled.png' %}" />
 			</a>
 			<a target="_blank" href='http://www.sera-eu.org/en/home/'>
-				<img class="logo" src="{% static 'img/logos/SERA_logo.png' %}" />
+				<img class="h-100 ml-3" src="{% static 'img/logos/SERA_logo_scaled.png' %}" />
 			</a>
 			<a target="_blank" href='https://www.gfz-potsdam.de/en/home/'>
-				<img class="logo" src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" />
+				<img class="h-100 ml-3" src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" />
 			</a>
 		
 		</div>
