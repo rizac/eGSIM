@@ -56,8 +56,6 @@ iframe{
 	margin:0;
 }
 
-/* TRYING TO FIX COPMPLEX BROWSER COMPATIBILITY ISSUES: */
-
 /* PROBLEM: focused element outline is "cropped", amke it inline */
 /* override focus */
 .form-control:focus, .btn.focus, .btn:focus {
@@ -68,7 +66,7 @@ iframe{
     /* make border inset, decrease it to 1 px and increase the blur:
     Also, make it important so that .btn-outline, .btn-primary and any "subclass"
     of .btn or btn does not override these values:*/
-    box-shadow: inset 0px 0px 5px 1px rgba(0,123,255,.25) !important;
+    box-shadow: inset 0px 0px 5px 1px rgba(128,198,237,.95) !important;
 }
 
 /* PROBLEM: emove Firefox ugly option or select dotted outline on focus?
@@ -85,48 +83,52 @@ input:-webkit-autofill:focus,
 input:-webkit-autofill:active  {
     -webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
 }
-/* change disabled text color to makei it lighter. Also add the class 'disabled' which renders the same text color */
+/* change disabled text color FOREGROUND */
 *[disabled],
-.disabled,
+.disabled{
+    color: lightgray !important;
+}
+/* prevent chrome autofill to override the above. Note: put these commands separately
+otherwise firefox does not apply the above */
 input[disabled]:-webkit-autofill,
 input.disabled:-webkit-autofill{
-    color: lightgray !important;
-	-webkit-text-fill-color: lightgray !important;
+    -webkit-text-fill-color: lightgray !important;
 }
-
+/* change disabled text color BACKGROUND */
 input[disabled],
 input.disabled,
 select[disabled],
-select.disabled,
+select.disabled{
+    background-color: #f8f9fa !important;
+}
+/* prevent chrome autofill to override the above. Note: put these commands separately
+otherwise firefox does not apply the above */
 input[disabled]:-webkit-autofill,
 input.disabled:-webkit-autofill{
-    background-color: #f8f9fa !important;
-    -webkit-box-shadow: 0 0 0 30px #f8f9fa inset !important;
+     -webkit-box-shadow: 0 0 0 30px #f8f9fa inset !important;
 }
 
 /* change option selection color. NOTE: we can only set a background image on them:*/
 select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:checked:not(:disabled) {
-	background-color: rgba(129, 183, 184, 1);
-	-webkit-box-shadow: 0 0 0 30px rgba(129, 183, 184, 1) inset !important;
+	background-color: transparent;
 	/* https://stackoverflow.com/a/36899803 seems we need a hacky background-emulating linear gradient for some browsers
-	(but which one?): */
-	background-image: linear-gradient(0deg, rgba(129, 183, 184, 1) 0%, rgba(129, 183, 184, 1) 100%);
+	(but which one?): original color was : #a2cd7e */
+	background-image: linear-gradient(0deg, rgba(163, 196, 135, 1) 0%, rgba(163, 196, 135, 1) 100%);
 }
 select[multiple] option:checked:not(:disabled), select[size] option:checked:not(:disabled) {
-	background-color: rgba(129, 183, 184, .5);
-	-webkit-box-shadow: 0 0 0 30px rgba(129, 183, 184, .5) inset !important;
+	background-color: transparent;
 	/* https://stackoverflow.com/a/36899803 seems we need a hacky background-emulating linear gradient for some browsers
 	(but which one? and also, is transparency "added" for browser supporting more than one instruction here, then we have a
-	problem): */
-	background-image: linear-gradient(0deg, rgba(129, 183, 184, .66) 0%, rgba(129, 183, 184, .66) 100%);
+	problem): original color was : #a2cd7e */
+	background-image: linear-gradient(0deg, rgba(163, 196, 135, .66) 0%, rgba(163, 196, 135, .66) 100%);
 }
-/* styling <select> when single selection and no size */
+/* styling <select> when single selection and no size (combo box) */
 select:not([multiple]):not([size]).form-control{
 	/* prevent browser to style <select>:*/
 	-moz-appearance: none;
     -webkit-appearance: none;
     appearance: none;
-	/* set two background images: the first is the arrow, svg percent-encoded (from '%3Csvg' on)
+	/* set two background image (arrow), svg percent-encoded (from '%3Csvg' on)
 	you can put several images comma-separated. Then also backround propreties below can be comma separated and refer to
 	the i-th image here*/
 	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
@@ -135,9 +137,27 @@ select:not([multiple]):not([size]).form-control{
     background-size: .65em auto;
     /* set padding (depends on background-position second value above (.3rem): */
 	padding: 0rem 1.2rem 0rem .3rem !important;
-	
 }
 
+/* overriding btn-primary */
+.btn-outline-primary {
+    color: rgba(7, 104, 159, 1);
+    border-color: rgba(7, 104, 159, 1);
+    background-color: transparent;
+}
+.btn-outline-primary:hover,
+.btn-outline-primary:not(:disabled):not(.disabled):active,
+.btn-primary {
+	color: #fff;
+	border-color: rgba(7, 104, 159, 1);
+    background-color: rgba(7, 104, 159, 1);
+}
+.btn-primary:hover,
+.btn-primary:not(:disabled):not(.disabled):active{
+	color: #fff;
+	border-color: rgba(5, 73, 113, 1);
+    background-color: rgba(5, 73, 113, 1);
+}
 
 /* classes for resetting top and bottom rounded borders */
 .rounded-top-0 {
