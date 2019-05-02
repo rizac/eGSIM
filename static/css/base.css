@@ -56,19 +56,10 @@ iframe{
 	margin:0;
 }
 
-/* style combo-boxes (select elements). For info see: https://github.com/twbs/bootstrap/issues/16201#issuecomment-260872271
-and https://stackoverflow.com/a/38187626 */
-/*select.form-control:not([multiple]) {
-     -webkit-appearance: none;
-     -moz-appearance: none;
-     appearance: none;
-     background: none right / 20px no-repeat #fff;
-     background-image: url("data:image/svg+xml,<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='28px' height='14px' viewBox='0 0 1200 1200' fill='rgb(51,51,51)'> <path d='M1100 411l-198 -199l-353 353l-353 -353l-197 199l551 551z'/> </svg>");
-	
-}*/
+/* TRYING TO FIX COPMPLEX BROWSER COMPATIBILITY ISSUES: */
 
-
-/* override (bootstrap?) focus */
+/* PROBLEM: focused element outline is "cropped", amke it inline */
+/* override focus */
 .form-control:focus, .btn.focus, .btn:focus {
     /*color: #495057;
       background-color: #fff;
@@ -79,6 +70,13 @@ and https://stackoverflow.com/a/38187626 */
     of .btn or btn does not override these values:*/
     box-shadow: inset 0px 0px 5px 1px rgba(0,123,255,.25) !important;
 }
+
+/* PROBLEM: emove Firefox ugly option or select dotted outline on focus?
+The solution below does not work, we set it for inputs and buttons and select but it does
+not make any difference */
+/* button::-moz-focus-inner, input::-moz-focus-inner, select::-moz-focus-inner {
+  border: 0;
+} */
 
 /* fix disabled background and foregrounds and chrome webkit autocomplete */
 input:-webkit-autofill,
@@ -108,15 +106,38 @@ input.disabled:-webkit-autofill{
 
 /* change option selection color. NOTE: we can only set a background image on them:*/
 select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:checked:not(:disabled) {
-	background-color: rgb(0, 135, 171);
-	-webkit-box-shadow: 0 0 0 30px rgb(0, 135, 171) inset !important;
-	background-image: linear-gradient(0deg, #a2cd7e 0%, #a2cd7e 100%);
+	background-color: rgba(129, 183, 184, 1);
+	-webkit-box-shadow: 0 0 0 30px rgba(129, 183, 184, 1) inset !important;
+	/* https://stackoverflow.com/a/36899803 seems we need a hacky background-emulating linear gradient for some browsers
+	(but which one?): */
+	background-image: linear-gradient(0deg, rgba(129, 183, 184, 1) 0%, rgba(129, 183, 184, 1) 100%);
 }
 select[multiple] option:checked:not(:disabled), select[size] option:checked:not(:disabled) {
-	background-color: rgb(0, 135, 171, 0.5);
-	-webkit-box-shadow: 0 0 0 30px rgb(0, 135, 171, 0.5) inset !important;
-	background-image: linear-gradient(0deg, #d6e9c6 0%, #d6e9c6	 100%);
+	background-color: rgba(129, 183, 184, .5);
+	-webkit-box-shadow: 0 0 0 30px rgba(129, 183, 184, .5) inset !important;
+	/* https://stackoverflow.com/a/36899803 seems we need a hacky background-emulating linear gradient for some browsers
+	(but which one? and also, is transparency "added" for browser supporting more than one instruction here, then we have a
+	problem): */
+	background-image: linear-gradient(0deg, rgba(129, 183, 184, .66) 0%, rgba(129, 183, 184, .66) 100%);
 }
+/* styling <select> when single selection and no size */
+select:not([multiple]):not([size]).form-control{
+	/* prevent browser to style <select>:*/
+	-moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+	/* set two background images: the first is the arrow, svg percent-encoded (from '%3Csvg' on)
+	you can put several images comma-separated. Then also backround propreties below can be comma separated and refer to
+	the i-th image here*/
+	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right .3em top 50%;
+    background-size: .65em auto;
+    /* set padding (depends on background-position second value above (.3rem): */
+	padding: 0rem 1.2rem 0rem .3rem !important;
+	
+}
+
 
 /* classes for resetting top and bottom rounded borders */
 .rounded-top-0 {
@@ -125,6 +146,14 @@ select[multiple] option:checked:not(:disabled), select[size] option:checked:not(
 }
 .rounded-bottom-0 {
     border-bottom-left-radius: 0rem!important;
+    border-bottom-right-radius: 0rem!important;
+}
+.rounded-left-0 {
+    border-top-left-radius: 0rem!important;
+    border-bottom-left-radius: 0rem!important;
+}
+.rounded-right-0 {
+    border-top-right-radius: 0rem!important;
     border-bottom-right-radius: 0rem!important;
 }
 
@@ -144,7 +173,9 @@ select[multiple] option:checked:not(:disabled), select[size] option:checked:not(
 
 
 /* navbar stuff */
-
+nav#egsim-nav {
+	min-height: 3.5rem;  /* for safari */
+}
 nav .menu-item{
 	padding: 1rem .6rem;
 	color: rgba(255,255,255,.5) !important;
