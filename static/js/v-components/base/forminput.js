@@ -48,7 +48,7 @@ Vue.component('forminput', {
                 </template>
             </div>
             <button v-if="showhelpbutton" type="button" @click='$emit("helprequested")'
-    		 		class='btn-outline-secondary btn-sm ml-1 mb-1 py-0'>
+    		 		class='btn btn-outline-secondary btn-sm ml-1 mb-1 py-0'>
     			<i class="fa fa-info-circle"></i>
     		</button>
         </div>
