@@ -1,10 +1,9 @@
+/**
+ * Main css styleshett for eGSIM
+ */
 
-.height100{
-	height: 100vh;
-}
 
-
-/* FONTS */
+/* ================ FONTS =============================== */
 
 body{
 	font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
@@ -14,21 +13,29 @@ nav, h1, h2, h3, h4, h5, h6{
 	font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
 }
 
-select.with-icons { /* https://stackoverflow.com/questions/36743041/font-awesome-icon-in-select-option */
+/* MAKE <select> with icons. REQUIRES bootstrap-fontawesome
+https://stackoverflow.com/questions/36743041/font-awesome-icon-in-select-option
+*/
+select.with-icons {
 	font-family: 'FontAwesome', 'Encode Sans Semi Condensed', Helvetica, sans-serif;
 }
 
 
-/* Overriding BADLY IMPLEMENTED bootstrap !important that makes Vue v-show
-not working as expected. This stylesheet must be loaded AFTER bootstrap.css
-(see https://github.com/vuejs/vue/issues/3761#issuecomment-251545116):
-*/
-*[style*="display: none"] { display: none !important; }
+/* ================== custom classes / settings =================*/
 
-/* form controls have a nice border, BUT for divs the height set is misleading, thus reset it: */
-div.form-control {
-    height: initial;
+.height100{
+	height: 100vh;
 }
+
+iframe{
+	border:0;
+	margin:0;
+}
+
+
+/* ========================================================================= */
+/* ================ FLEX LAYOUT ADDONS ===================================== */
+/* ========================================================================= */
 
 .d-flex > .flexible{
 	flex: 1 1 auto; /* for letting this work with grid layout the last element (flex-basis) should be zero: https://stackoverflow.com/a/48454476 */
@@ -39,102 +46,35 @@ div.form-control {
 .d-flex.flex-column > .flexible{
 	overflow-y: auto;
 }
-.flex-center{
-	flex-direction: column;  /* make main axis vertical */
-    justify-content: center; /* center items vertically, in this case */
-    align-items: center;     /* center items horizontally, in this case */
-}
 
 
-iframe{
-	border:0;
-	margin:0;
-}
+/* ========================================================================= */
+/* ================ OVERRIDE BOOTSTRAP (4) ================================= */
+/* ========================================================================= */
 
-/* PROBLEM: focused element outline is "cropped", amke it inline */
-/* override focus */
+/* Overriding BADLY IMPLEMENTED bootstrap !important that makes Vue v-show
+not working as expected. This stylesheet must be loaded AFTER bootstrap.css
+(see https://github.com/vuejs/vue/issues/3761#issuecomment-251545116):*/
+*[style*="display: none"] { display: none !important; }
+
+/* make focus border inset, otherwise it is outside the element and sometimes
+   "cropped", and the effect it's not nice*/
 .form-control:focus, .btn.focus, .btn:focus {
-    /*color: #495057;
-      background-color: #fff;
-      border-color: #80bdff;
-      outline: 0;*/
-    /* make border inset, decrease it to 1 px and increase the blur:
-    Also, make it important so that .btn-outline, .btn-primary and any "subclass"
-    of .btn or btn does not override these values:*/
     box-shadow: inset 0px 0px 5px 1px rgba(128,198,237,.95) !important;
 }
 
-/* PROBLEM: emove Firefox ugly option or select dotted outline on focus?
-The solution below does not work, we set it for inputs and buttons and select but it does
-not make any difference */
-/* button::-moz-focus-inner, input::-moz-focus-inner, select::-moz-focus-inner {
-  border: 0;
-} */
-
-/* fix disabled background and foregrounds and chrome webkit autocomplete */
-input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
-input:-webkit-autofill:active  {
-    -webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
-}
-/* change disabled text color FOREGROUND */
-*[disabled],
-.disabled{
-    color: lightgray !important;
-}
-/* prevent chrome autofill to override the above. Note: put these commands separately
-otherwise firefox does not apply the above */
-input[disabled]:-webkit-autofill,
-input.disabled:-webkit-autofill{
-    -webkit-text-fill-color: lightgray !important;
-}
-/* change disabled text color BACKGROUND */
-input[disabled],
-input.disabled,
-select[disabled],
-select.disabled{
-    background-color: #f8f9fa !important;
-}
-/* prevent chrome autofill to override the above. Note: put these commands separately
-otherwise firefox does not apply the above */
-input[disabled]:-webkit-autofill,
-input.disabled:-webkit-autofill{
-     -webkit-box-shadow: 0 0 0 30px #f8f9fa inset !important;
+/* form-control is used also for divs for its nice border, BUT for divs the height set is misleading, thus reset it: */
+div.form-control {
+    height: initial;
 }
 
-/* change option selection color. NOTE: we can only set a background image on them:*/
-select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:checked:not(:disabled) {
-	background-color: transparent;
-	/* https://stackoverflow.com/a/36899803 seems we need a hacky background-emulating linear gradient for some browsers
-	(but which one?): original color was : #a2cd7e */
-	background-image: linear-gradient(0deg, rgba(163, 196, 135, 1) 0%, rgba(163, 196, 135, 1) 100%);
-}
-select[multiple] option:checked:not(:disabled), select[size] option:checked:not(:disabled) {
-	background-color: transparent;
-	/* https://stackoverflow.com/a/36899803 seems we need a hacky background-emulating linear gradient for some browsers
-	(but which one? and also, is transparency "added" for browser supporting more than one instruction here, then we have a
-	problem): original color was : #a2cd7e */
-	background-image: linear-gradient(0deg, rgba(163, 196, 135, .66) 0%, rgba(163, 196, 135, .66) 100%);
-}
-/* styling <select> when single selection and no size (combo box) */
-select:not([multiple]):not([size]).form-control{
-	/* prevent browser to style <select>:*/
-	-moz-appearance: none;
-    -webkit-appearance: none;
-    appearance: none;
-	/* set two background image (arrow), svg percent-encoded (from '%3Csvg' on)
-	you can put several images comma-separated. Then also backround propreties below can be comma separated and refer to
-	the i-th image here*/
-	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
-    background-repeat: no-repeat;
-    background-position: right .3em top 50%;
-    background-size: .65em auto;
-    /* set padding (depends on background-position second value above (.3rem): */
-	padding: 0rem 1.2rem 0rem .3rem !important;
+/* make border it a little bit darker. Original: border: 1px solid #dee2e6!important; */
+.border {
+    border: 1px solid rgba(0,0,0,.2) !important;
 }
 
-/* overriding btn-primary */
+
+/* Make btn primary color darker (and nicer) */
 .btn-outline-primary {
     color: rgba(7, 104, 159, 1);
     border-color: rgba(7, 104, 159, 1);
@@ -154,7 +94,111 @@ select:not([multiple]):not([size]).form-control{
     background-color: rgba(5, 73, 113, 1);
 }
 
-/* classes for resetting top and bottom rounded borders */
+
+/* ========================================================================= */
+/* ================ NAVBAR ================================================= */
+/* ========================================================================= */
+
+nav#egsim-nav {
+	min-height: 3.5rem;  /* for safari */
+}
+nav .menu-item{
+	padding: 1rem .6rem;
+	color: rgba(255,255,255,.5) !important;
+}
+/* pointer must be set for all inner elements otherwise seems no to work: */
+nav .menu-item,
+nav .menu-item *{
+	cursor: pointer;
+}
+nav .menu-item.active{
+	color: #FFF !important;
+}
+@media (max-width: 875px){
+	nav .menu-item span {
+    	display: none !important;
+	}
+}
+
+
+/* ========================================================================= */
+/* ================ HARMONIZING BROWSER APPEARENCE ========================= */
+/* ========================================================================= */
+ 
+/* Remove Firefox focus border (this is a border added regardless of our focus
+   border that might be set) DOES NOT WORK on current MacOS and Firefox. In any
+   case, for info see https://stackoverflow.com/a/19451423 */
+
+/* fix disabled background and foregrounds in Chrome webkit autocomplete */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active  {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
+}
+
+/* change disabled text color FOREGROUND */
+*[disabled],
+.disabled{
+    color: lightgray !important;
+}
+/* prevent chrome autofill to override the above. Note: put these commands separately
+otherwise firefox does not apply the above */
+input[disabled]:-webkit-autofill,
+input.disabled:-webkit-autofill{
+    -webkit-text-fill-color: lightgray !important;
+}
+
+/* change disabled text color BACKGROUND */
+input[disabled],
+input.disabled,
+select[disabled],
+select.disabled{
+    background-color: #f8f9fa !important;
+}
+/* prevent chrome autofill to override the above. Note: put these commands separately
+otherwise firefox does not apply the above */
+input[disabled]:-webkit-autofill,
+input.disabled:-webkit-autofill{
+     -webkit-box-shadow: 0 0 0 30px #f8f9fa inset !important;
+}
+
+/* change <option> selected (or checked) color. DOES NOT WORK IN SAFARI.
+The solutions proboped below (https://stackoverflow.com/a/36899803) work
+in Firefox and Chrome. Still have to test if we really need the hack of setting
+a background image instead of a background-color */
+select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:checked:not(:disabled) {
+	background-color: transparent;  /* to be sure that color transparency, if set, is not added up with bg image below */
+	background-image: linear-gradient(0deg, rgba(163, 196, 135, 1) 0%, rgba(163, 196, 135, 1) 100%);
+}
+select[multiple] option:checked:not(:disabled), select[size] option:checked:not(:disabled) {
+	background-color: transparent; /* to be sure that color transparency, if set, is not added up with bg image below */
+	background-image: linear-gradient(0deg, rgba(163, 196, 135, .66) 0%, rgba(163, 196, 135, .66) 100%);
+}
+
+/* styling <select> when single selection and no size (combo box). Works on Mac in Safari, Chrome, Firefox */
+select:not([multiple]):not([size]).form-control{
+	/* prevent browser to style <select>:*/
+	-moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
+	/* set two background image (arrow), svg percent-encoded (from '%3Csvg' on)
+	you can put several images comma-separated. Then also backround propreties below can be comma separated and refer to
+	the i-th image here*/
+	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right .3em top 50%;
+    background-size: .65em auto;
+    /* set padding (depends on background-position second value above (.3rem)*/
+	padding: 0rem 1.2rem 0rem .3rem !important;  /* top right bottom left */
+}
+
+
+/* ========================================================================= */
+/* ================ NEW CLASSES EMULATING BOOTSTRAP LOGIC ================== */
+/* ========================================================================= */
+
+/* classes for resetting top and bottom rounded borders, to be used alsone or tiwht .rounded */
 .rounded-top-0 {
     border-top-left-radius: 0rem!important;
     border-top-right-radius: 0rem!important;
@@ -172,7 +216,7 @@ select:not([multiple]):not([size]).form-control{
     border-bottom-right-radius: 0rem!important;
 }
 
-/* absolute positioning (not in standard bootstrap), to be used with bootstrap's .position-absolute: */
+/* absolute positioning, to be used with bootstrap's .position-absolute: */
 .pos-t-0, .pos-y-0, .pos-0{
 	top: 0px;
 }
@@ -187,37 +231,9 @@ select:not([multiple]):not([size]).form-control{
 }
 
 
-/* navbar stuff */
-nav#egsim-nav {
-	min-height: 3.5rem;  /* for safari */
-}
-nav .menu-item{
-	padding: 1rem .6rem;
-	color: rgba(255,255,255,.5) !important;
-}
-
-/* pointer must be set for all inner elements otherwise seems no to work: */
-nav .menu-item, nav .menu-item *{
-	cursor: pointer;
-}
-
-nav .menu-item.active{
-	color: #FFF !important;
-}
-
-@media (max-width: 875px){
-	nav .menu-item span {
-    	display: none !important;
-	}
-}
-
-
-/* change the 'border' class and make it a little bit darker: */
-.border {
-    /* border: 1px solid #dee2e6!important; */
-    border: 1px solid rgba(0,0,0,.2) !important;
-}
-
+/* ========================================================================= */
+/* ================ CUSTOMIZING LIBRARIES ================================== */
+/* ========================================================================= */
 
 /* plotly */
 .js-plotly-plot .plotly .modebar--hover{
@@ -227,7 +243,8 @@ nav .menu-item.active{
 	box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
 }
 
-/* leaflet*/
+
+/* Leaflet */
 .leaflet-popup-content {
 	width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
 }
