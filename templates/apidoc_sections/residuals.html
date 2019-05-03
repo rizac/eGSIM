@@ -1,0 +1,308 @@
+
+<p><b>Endpoint: <code>{{ baseurl }}/{{ residuals }}</code></b></p>
+<p>
+eGSIM, through the GMPE-SMTK library, offers the ability to compare observed ground motions with
+the GMPE model predictions using the GMPE implementations found inside OpenQuake.
+This is a particularly powerful tool as it permits a
+hazard modeller to undertake the GMPE comparison using the exact same GMPE implementation
+found inside the seismic hazard software. All analyses undertaken will, by default,
+analyse the total residual, the inter-event residual and the intra-event residual, exposed to the
+user via Residuals plots.
+</p>
+
+<h3 id="residuals.request">Request</h3>
+<p>
+A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
+database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
+URL (GET method) or as separate text data in JSON or YAML format (POST method) and are:
+</p>
+
+{{ form_residuals | safe }}
+
+<h4 id="selexpr">Selection expression</h4>
+
+{% include "apidoc_sections/selexpr_help.html" %}
+
+<h3 id="residuals.response">Response</h3>
+<p>
+The number of generated Residuals plots will be the product of the requested Intensity
+measure types (parameter {{ param.residualsform.imt.name }}) and the requested GMPEs
+(parameter {{ param.residualsform.gsim.name }}. Each Residual plot is futher subdivided
+into three subplots:
+</p>
+
+<table class='nopagebreak'>
+<thead>
+<tr>
+	<td>Plot type</td>
+	<td>Residual plots per (GMPE, IMT) tuple</td>
+	<td>Plot description</td>
+	<td>Additional plot attributes</td>
+</thead>
+<tbody class='grid'>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.0.label }}</td>
+	<td rowspan="7">'Intra Event', 'Inter Event' and 'Total'</td>
+	<td>Histogram of frequencies (y axis) vs residuals bins (x)</td>
+	<td>Mean, standard deviation of the distribution</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.1.label}}</td>
+	<td>Histogram of the frequencies (y) vs residuals likelihood bins (x)</td>
+	<td>Median of the distribution</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.2.label}}</td>
+	<td>Scatter plot of residuals (y) vs. magnitude (x)</td>
+	<td rowspan="5">p-value and linear regression (slope, intercept)</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.3.label}}</td>
+	<td>Same as above with distance as point's x</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.4.label}}</td>
+	<td>Same as above with Vs<sub>30</sub> as point's x</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.5.label}}</td>
+	<td>Same as above with depth as point's x</td>
+</tr>
+<!-- <tr>
+	<td>{{ param.residualsform.plot_type.choices.6.label}}</td>
+	<td>Same as above with stations as point's x</td>
+</tr>
+<tr>
+	<td>{{ param.residualsform.plot_type.choices.7.label}}</td>
+	<td style='width:18em'>'Intra Event' (not normalised by the intra-event standard deviation),
+	'Average within-event' (Average within-event residual for each station),
+	'Variabilities distribution' (the distribution residual variabilities for each station)</td>
+	<td>Scatter plots of the plot residuals (y axis) vs. each station (x)</td>
+	<td>mean and standard deviation</td>
+</tr> -->
+</tbody>
+</table>
+
+
+<h4>JSON</h4>
+<p>
+Residuals plot data returned in JSON format will have the following structure:
+</p>
+<pre><code class="language-json">{
+	"AkkarEtAl2013": {
+		"PGA": {
+			"Intra Event": {
+				"xvalues": [4, 4, 3.9, ...],
+				"xlabel": "Magnitude",
+				"yvalues": [-2.11, -2.27, -2.08, ...],
+				"ylabel": "Z (PGA)",
+				"slope": 0.269,
+				"intercept": -1.998,
+				"pvalue": 6.6e-8,
+				"median": null,
+				"mean": null,
+				"stdev": null
+			}
+		},
+		"PGV": {
+			...
+		},
+		...
+	},
+	"CauzziEtAl2014": {
+		...
+	},
+	...
+}</code></pre>
+<p class='footnote'>
+Notes: the parameters from slope, intercept, pvalue, median, stdev are null for specific
+plot types
+</p>
+
+<h4>CSV</h4>
+<p>
+Residuals plot data returned in CSV format will have the following structure (represented as
+csv table).
+<br>
+<span class='xvalues'></span> = x values (first cell is the x label), 
+<span class='yvalues'></span> = y values (first cell is the y label)
+</p>
+
+<table class='csv'>
+<tr>
+	<td>gsim:</td>
+	<td>imt:</td>
+	<td>type:</td>
+	<td>mean:</td>
+	<td>stddev:</td>
+	<td>median:</td>
+	<td>slope:</td>
+	<td>intercept:</td>
+	<td>pvalue:</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>	
+	<td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>AkkarEtAl2013</td>
+	<td>PGA</td>
+	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.269</td>
+	<td>-1.998</td>
+	<td>6.6e-8</td>
+	<td class='yvalues'>Z (PGA)</td>
+	<td class='yvalues'>-2.11</td>
+	<td class='yvalues'>-2.27</td>
+	<td class='yvalues'>-2.08</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>AkkarEtAl2013</td>
+	<td>PGA</td>
+	<td>Inter Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.103</td>
+	<td>-1.281</td>
+	<td>0.163</td>
+	<td class='yvalues'>Z (PGA)</td>
+	<td class='yvalues'>-1.832</td>
+	<td class='yvalues'>-1.913</td>
+	<td class='yvalues'>-1.85</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>AkkarEtAl2013</td>
+	<td>PGV</td>
+	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.171</td>
+	<td>-2.12</td>
+	<td>0.002</td>
+	<td class='yvalues'>Z (PGV)</td>
+	<td class='yvalues'>-0.17</td>
+	<td class='yvalues'>-1.11</td>
+	<td class='yvalues'>-0.871</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>CauzziEtAl2014</td>
+	<td>PGA</td>
+	<td>Intra Event</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.28</td>
+	<td>-2.281</td>
+	<td>1.21e-8</td>
+	<td class='yvalues'>Z (PGA)</td>
+	<td class='yvalues'>-1.116</td>
+	<td class='yvalues'>-2.815</td>
+	<td class='yvalues'>-2.11</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+</table>

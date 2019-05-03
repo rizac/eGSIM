@@ -29,8 +29,6 @@
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
 		integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
 		crossorigin="anonymous">
-	<!-- egsim base css:  -->
-	<link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
 
 	{% if leaflet %}
 	<!-- LEAFLET (http://leafletjs.com/download.html) -->
@@ -98,11 +96,14 @@
 		
 	}
 	</script>
-	
+
 	<!-- load our vue.util file (at the real end because we want to be sure we loaded vue-->
 	{% if vue %}
 	<script type='text/javascript' src = "{% static 'js/vueutil.js' %}"></script>
 	{% endif %}
+
+	<!-- egsim base css. Load at the real end:  -->
+	<link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
 	
 	{% endblock %}
 
