@@ -30,13 +30,13 @@ div.form-control {
     height: initial;
 }
 
-.d-flex > .flexible, .d-flex > .flexible-half{
+.d-flex > .flexible{
 	flex: 1 1 auto; /* for letting this work with grid layout the last element (flex-basis) should be zero: https://stackoverflow.com/a/48454476 */
 }
-.d-flex.flex-row > .flexible, .d-flex.flex-row > .flexible-half{
+.d-flex.flex-row > .flexible{
 	overflow-x: auto;
 }
-.d-flex.flex-column > .flexible, .d-flex.flex-column > .flexible-half{
+.d-flex.flex-column > .flexible{
 	overflow-y: auto;
 }
 .flex-center{
@@ -45,12 +45,7 @@ div.form-control {
     align-items: center;     /* center items horizontally, in this case */
 }
 
-/* flexible-half has the property of setting its base width/height to 50% of the container,
-used for twin panels aligned left and right (or top and bottom) which might take 100% space if alone,
-or same space of the other twin, if present: */
-.d-flex.flex-row > .flexible-half, .d-flex.flex-column > .flexible-half{
-	flex-basis: 50% !important;
-}
+
 iframe{
 	border:0;
 	margin:0;
