@@ -1,0 +1,124 @@
+<p><b>Endpoint: <code>{{ baseurl }}/{{ test }}</code></b></p>
+
+<p>
+eGSIM, through the GMPE-SMTK library, offers the ability to test observed ground motions with
+the GMPE model predictions using the GMPE implementations found inside OpenQuake and
+one or more measures of fit.
+The request for such a service is outlined below. Note that the selection
+expression has been described in <a href="#">the residuals section above</a>
+</p>
+ 
+<h3 id="testing.request">Request</h3>
+<p>
+A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
+database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
+URL (GET method) or as separate text data in JSON or YAML format (POST method) and are:
+</p>
+
+{{ form_testing | safe }}
+
+<p>
+The selection expression syntax has already been discussed in the
+relative <a href="#selexpr_section">section above</a>.
+</p>
+
+<h3 id="testing.request">Response</h3>
+
+<p>
+The reponse Object is of tyhis type is an Object with keys representing
+the choosen measures of fit (MOF). Note that from a single MOF of the request
+several values might be returned (e.g., choosing 'res' the MOFs in the response
+are six: "Residuals Inter event Mean", "Residuals Inter event Std Dev",
+"Residuals Intra event Mean", "Residuals Intra event Std Dev",
+"Residuals Total Mean" and "Residuals Total Std Dev").
+Each MOF is then mapped to an Object where each chosen IMT is in turn mapped 
+to an Object of the choosen GMPEs, each mapped to the value of the GMPE
+for the current MOF and IMT. Example:
+</p>
+
+<pre><code class="language-json">{
+	"Residuals Inter event Mean": {
+		# Map each IMT to an Object of {GMPE: value}.
+		# The same type of object is returned for all following MOF keys
+		# and it will be indicated below with {...} 
+		"PGA": {
+			"BindiEtAl2011": 0.01,
+			"CauzziEtAl2014": 0.02,
+			# ...
+			},
+		... (iterate for all available IMTs)
+	},
+	"Residuals Inter event Std Dev": { ... same object as above ... },
+	"Residuals Intra event Mean": { ... same object as above ... },
+	"Residuals Intra event Std Dev": { ... same object as above ... },
+	"Residuals Total Mean": { ... same object as above ... },
+	"Residuals Total Std Dev": { ... same object as above ... },
+	
+	"Likelihood Inter event Median": { ... same object as above ... },
+	"Likelihood Intra event Median": { ... same object as above ... },
+	"Likelihood Total Median": { ... same object as above ... },
+	"Likelihood Inter event IQR": { ... same object as above ... },
+	"Likelihood Intra event IQR": { ... same object as above ... },
+	"Likelihood Total IQR": { ... same object as above ... },
+
+	"LLH": { ... same object as above ... },
+	
+	"MultivariateLLH": { ... same object as above ... },
+
+	"Euclidean Distance-Based MDE Norm": { ... same object as above ... },
+	"Euclidean Distance-Based sqrt Kappa": { ... same object as above ... },
+	"Euclidean Distance-Based EDR": { ... same object as above ... }
+	
+}</code></pre>
+<p class='footnote'>
+LLH and MultivariateLLH include also the IMT "All". Euclidean Distance-Based
+are not associated with any IMT, thus their values will be an Object
+keyed by "" and associated to each {GMPE: value} pairs.
+</p>
+
+<table class='csv'>
+<tbody>
+<tr>
+	<td>Measure of fit</td>
+	<td>gsim</td>
+	<td>imt</td>
+	<td>value</td>
+</tr>
+<tr>
+	<td>Residuals Inter event Mean</td>
+	<td>PGA</td>
+	<td>BindiEtAl2011</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>Residuals Inter event Mean</td>
+	<td>PGA</td>
+	<td>CauzziEtAl2014</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>Residuals Inter event Mean</td>
+	<td>PGV</td>
+	<td>BindiEtAl2011</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>Residuals Inter event Mean</td>
+	<td>PGV</td>
+	<td>CauzziEtAl2014</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+</tbody>
+</table>

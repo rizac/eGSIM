@@ -89,8 +89,10 @@ var EGSIM_BASE = {
             if (isFormObj){ // data is a Form Object, convert jsonData  to dict of scalars:
                 jsonData = {};
                 for (var key of Object.keys(data)){
-                    data[key].err = '';  // initialize error
-                    jsonData[key] = data[key].val;  // assign value to object up to be sent
+                	if (data[key].attrs && !data[key].attrs.disabled){
+	                    data[key].err = '';  // initialize error
+    	                jsonData[key] = data[key].val;  // assign value to object up to be sent
+    	            }
                 }
             }
             return axios.post(url, jsonData, config).then(response => {

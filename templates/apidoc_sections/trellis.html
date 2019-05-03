@@ -1,0 +1,167 @@
+<p><b>Endpoint: <code>{{ baseurl }}/{{ trellis }}</code></b></p>
+<p>
+Trellis plots provide an understanding of the manner in which each GMPE characterizes the ground
+motion scaling with respect to the properties of the seismic source, and the attenuation of the
+motion with respect to distance. By means of the
+underlying GMPE-SMTK library, eGSIM can generate different plot types:
+<ul>
+<li> IMT vs Magnitude plots show how the ground motion intensity value scales with
+respect to the magnitude of the rupture.
+<li> IMT vs Distance plots allow to compare how the GMPEs describe the attenuation of strong
+motion with distance for a given magnitude. 
+<li> Magnitude-Distance spectra let the user understand how a
+GMPE will scale the response spectrum with magnitude and distance.
+</ul>
+<p>
+In addition to viewing the scaling of the expected ground motion from the GMPE,
+it is also possible to view the scaling of the standard deviation, for a total of six
+choosable plot types.
+</p>
+
+<h3 id="trellis.request">Request</h3>
+<p>
+A request to the Trellis plot service requires a list of GMPEs and IMTs,
+the desired plot type and the parameters configuring the scenario (rupture), most of which are
+optional. As discussed, parameters can be given in the endpoint URL (GET method) or as
+separate text data in JSON or YAML format (POST method) and are:
+</p>
+
+{{ form_trellis | safe }}
+
+<h3 id="trellis.response">Response</h3>
+<p>
+The number of generated Trellis plots depends on the requested Intensity measure types (parameter
+{{ param.trellisform.imt.name }}) <i>and</i> the parameters {{ param.trellisform.magnitude.name }},
+{{ param.trellisform.distance.name }} and
+{{ param.trellisform.vs30.name }} (which can be given as numeric scalr or array):
+</p>
+
+<table class='nopagebreak'>
+<thead>
+<tr>
+	<td>Plot type</td>
+	<td>Parameter setting the x values (should be numeric array):</td>
+	<td>The number of generated plots is the product of all supplied values of:</td></tr>
+</thead>
+<tbody>
+<tr>
+	<td>{{ param.trellisform.plot_type.choices.0.label }}</td>
+	<td>{{ param.trellisform.distance.name }}</td>
+	<td>{{ param.trellisform.imt.name }}, {{ param.trellisform.magnitude.name }}, {{ param.trellisform.vs30.name }}</td>
+</tr>
+<tr>
+	<td>{{ param.trellisform.plot_type.choices.1.label }}</td>
+	<td>{{ param.trellisform.magnitude.name }}</td>
+	<td>{{ param.trellisform.imt.name }}, {{ param.trellisform.distance.name }}, {{ param.trellisform.vs30.name }}</td>
+</tr>
+<tr>
+	<td>{{ param.trellisform.plot_type.choices.2.label }}</td>
+	<td>None: a set of pre-defined periods will be used</td>
+	<td>{{ param.trellisform.imt.name }}, {{ param.trellisform.magnitude.name }}, {{ param.trellisform.distance.name }}, {{ param.trellisform.vs30.name }}</td>
+</tbody>
+</table>
+
+<h4>JSON</h4>
+<p>
+Trellis plot data returned in JSON format will have the following structure:
+</p>
+<pre><code class="language-json">{
+	"xvalues": [2.905, 3.771, ... ],
+	"xlabel": "Rupture Dist. (km)",
+	"figures": [
+			{
+				"yvalues":{
+					"AkkarEtAl2013": [0.3811, 0.3812, ...],
+					"CauzziEtAl2014": [0.283, 0.283, ...],
+					...
+				},
+				"ylabel": "Median PGA (g)",
+				"magnitude": 5,
+				"distance": null,
+				"vs30": 760
+			},
+			{
+				...
+			},
+			...
+		]
+	}
+}</code></pre>
+<p class='footnote'>
+Notes: All plots share the same x axis and x values, thus for performance reasons
+those variables are not repeated inside each nested object. Magnitude and distance
+attributes of each nested object are null for those plot type using them as x axis values
+and not as iteration parameter to generate several plots. 
+</p>
+
+
+<h4>CSV</h4>
+<p>
+Trellis plot data returned in CSV format will have the following structure.
+<br>
+<span class='xvalues'></span> = x values (first cell is the x label), 
+<span class='yvalues'></span> = y values (first cell is the y label)
+</p>
+
+<table class='csv'>
+<tr>
+	<td>gsim:</td>
+	<td>magnitude:</td>
+	<td>distance:</td>
+	<td>vs30:</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td class='xvalues'>Rupture Dist. (km)</td>
+	<td class='xvalues'>2.905</td>
+	<td class='xvalues'>3.771</td>
+	<td class='xvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>AkkarEtAl2013</td>
+	<td>5</td>
+	<td></td>
+	<td>760</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>0.3811</td>
+	<td class='yvalues'>0.3812</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>AkkarEtAl2013</td>
+	<td>5.5</td>
+	<td></td>
+	<td>760</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>0.283</td>
+	<td class='yvalues'>0.283</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td>CauzziEtAl2014</td>
+	<td>5</td>
+	<td></td>
+	<td>760</td>
+	<td class='yvalues'>Median PGA (g)</td>
+	<td class='yvalues'>0.21</td>
+	<td class='yvalues'>0.291</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+</table>
