@@ -1,5 +1,5 @@
 @page{
-	margin: 25mm 25mm 25mm 25mm; /*top right bottom left*/
+	margin: 2.5cm 2.5cm 2.5cm 2.5cm; /*top right bottom left*/
 }
 
 @media print {  /* https://stackoverflow.com/a/28441659 */
@@ -21,13 +21,52 @@
     	background-color: initial !important;
     }
     table, pre[class*=language-]{font-size:80% !important;}
-    table.csv{font-size:65% !important;}
+    table.csv{font-size: 65% !important;}
     pre[class*=language-], table.csv, /*.nopagebreak,*/ ul {page-break-inside: avoid !important;}
     pre[class*=language-] > code{white-space: pre-wrap !important;}
     div#toc{display: none !important;}
     /* these must be repeated here with important in order to work:*/
     a, a:hover{text-decoration:none !important;}
     table{box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;}
+}
+
+/* counters */
+
+h1, #toc {
+	counter-reset: section;
+}
+h2, #toc a._h2 {
+	counter-reset: subsection;
+}
+h3, #toc a._h3{
+	counter-reset: subsubsection;
+}
+h2::before, #toc a._h2:before {
+	counter-increment: section;
+  	content: counter(section) ".";
+  	padding-right: .25rem;
+  	margin-right: .25rem;
+}
+h3::before, #toc a._h3:before{
+	counter-increment: subsection;
+  	content: counter(section) "." counter(subsection);
+  	padding-right: .25rem;
+  	margin-right: .25rem;
+}
+h4::before, #toc a._h4:before {
+  	counter-increment: subsubsection;
+  	content: counter(section) "." counter(subsection) counter(subsubsection, lower-latin);
+  	padding-right: .25rem;
+  	margin-right: .25rem;
+}
+#toc a._h2 {
+	padding-left: 0rem;
+}
+#toc a._h3{
+	padding-left: 1rem;
+}
+#toc a._h4{
+	padding-left: 2rem;
 }
 
 .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6{
@@ -47,12 +86,15 @@
 	border-bottom: 2px double rgba(236, 236, 236, .6) !important;
 }
 
-.h2, h2, .h3, h3{
-	padding-left: .5rem;
-	border-radius: 5px;
-	background-color: rgba(236, 236, 236, .6) !important;
+.h2, h2, .h3, h3, .h4, h4, h2::before, h3::before, h4::before{
+	border-top-left-radius:.25rem;
+	border-bottom-left-radius:.25rem;
 }
 
+.h2, h2, .h3, h3{
+	padding-left: .5rem;
+	background-color: rgba(236, 236, 236, .8) !important;
+}
 
 
 p, ul, table{font-family: Lato, Helvetica, Arial, Tahoma, sans-serif;}
