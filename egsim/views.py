@@ -77,18 +77,35 @@ def main(request, selected_menu=None):
     }
 
     # REMOVE LINES BELOW!!!
-    components_props['trellis']['form']['gsim']['val'] = ['AbrahamsonEtAl2014']
+    gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
+                 'CauzziEtAl2014']
+    components_props['trellis']['form']['gsim']['val'] = gsimnames
     components_props['trellis']['form']['imt']['val'] = ['PGA']
-    components_props['trellis']['form']['magnitude']['val'] = "3:4"
-    components_props['trellis']['form']['distance']['val'] = "0:1:100"
+    components_props['trellis']['form']['magnitude']['val'] = "5:7"
+    components_props['trellis']['form']['distance']['val'] = "10 50 100"
     components_props['trellis']['form']['aspect']['val'] = 1
     components_props['trellis']['form']['dip']['val'] = 60
-    components_props['testing']['form']['gsim']['val'] = ['AbrahamsonEtAl2014',
-                                                          'AbrahamsonSilva2008']
-    components_props['testing']['form']['imt']['val'] = ['PGA', 'PGV']
-    components_props['testing']['form']['selexpr']['val'] = '(vs30 != nan) & ((dip_1 != nan) | (dip_2 != nan)) & ((strike_1 != nan) | (strike_2 != nan)) & ((rake_1 != nan) | (rake_2 != nan))'
-    components_props['testing']['form']['fit_measure']['val'] = ['res', 'lh']
-    
+    components_props['trellis']['form']['plot_type']['val'] = 's'
+
+    components_props['residuals']['form']['gsim']['val'] = gsimnames
+    components_props['residuals']['form']['imt']['val'] = ['PGA', 'SA']
+    components_props['residuals']['form']['sa_periods']['val'] = "0.2 1.0 2.0"
+    components_props['residuals']['form']['selexpr']['val'] = "magnitude > 5"
+    components_props['residuals']['form']['plot_type']['val'] = 'res'
+
+    components_props['testing']['form']['gsim']['val'] = gsimnames
+    components_props['testing']['form']['imt']['val'] = ['PGA', 'SA']
+    components_props['testing']['form']['sa_periods']['val'] = "0.2 1.0 2.0"
+    components_props['testing']['form']['selexpr']['val'] = \
+        ("(magnitude > 5) & (vs30 != nan) & ((dip_1 != nan) | (dip_2 != nan)) "
+         "& ((strike_1 != nan) | (strike_2 != nan)) & "
+         "((rake_1 != nan) | (rake_2 != nan))")
+    components_props['testing']['form']['fit_measure']['val'] = ['res',
+                                                                 'lh',
+                                                                 'llh',
+                                                                 'mllh',
+                                                                 'edr']
+
     # remove lines above!
 
     # load once the selection expression help and add a custom new
