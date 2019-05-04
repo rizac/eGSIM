@@ -8,35 +8,32 @@ Python expression that will be evaluated for each record, returning matching row
 (i.e., rows for which the expression is true). The expression involves at least one column, a
 comparison operator (<code>==</code>, <code>!=</code>, <code>&lt;</code>,
 <code>&lt;</code>=, <code>&gt;</code>, <code>&gt;</code>=) and any value (or algebraic expression)
-consistent with the column type. E.g.:</p>
-<p>
-<code>pga <= 0.01</code>
-</p>
-<p>
-<code>pga != nan</code> (select records where PGA is not missing)
-</p>
-<p>
-<code>station_name == "ASD"</code> (note quotes around string-column values)
+consistent with the column type. E.g.:
+<pre><code class="language-python">pga <= 0.01
+pga != nan             # select records where PGA is not missing
+station_name == "ASD"  # note quotes around string-column values
+</code></pre>
 </p>
 
 <p>
 Several simple expressions
 can be wrapped in parenthesis and combined with logical operators (<code>&</code>
 for logical and, <code>|</code> for logical or, and <code>~</code> for negation), e.g.:
+<pre><code class="language-python">(pga != nan) & ((magnitude > 5) | ~(event_time <= "2016-08-30"))
+</code></pre>
 </p>
 
-<p>
-<code>(pga != nan) & ((magnitude > 5) | ~(event_time <= "2016-08-30"))</code>
-</p>
-
-Gmdb columns summary:
+<p>The gmdb columns which can be used in a selection expression are listed below</p>
 
 <table class='selexpr_table'>
-	<tr>
-		<th>Column name:</th>
-		<th>Column type:</th>
-		<th>Missing values are stored as (empty cell: no missing value available):</th>
-	</tr>
+	<thead>
+		<tr>
+			<th>Column name:</th>
+			<th>Column type:</th>
+			<th>Missing values are stored as (empty cell: no missing value available):</th>
+		</tr>
+	</thead>
+	<tbody>
 	{% for key, values in gmt.items %}
     <tr>
         <td>{{ key }}</td>
@@ -45,4 +42,5 @@ Gmdb columns summary:
         {% endfor %}
     </tr>
     {% endfor %}
+    </tbody>
 </table>
