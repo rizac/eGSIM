@@ -2,7 +2,9 @@
 	margin: 2.5cm 2.5cm 2.5cm 2.5cm; /*top right bottom left*/
 }
 
-@media print {  /* https://stackoverflow.com/a/28441659 */
+@media print {
+
+	/* https://stackoverflow.com/a/28441659 */
 	div { float: initial !important; position: initial !important; display: initial !important; 
           box-sizing: initial !important; width: initial !important; max-width: initial !important;
           /*padding: initial !important; margin: initial !important;*/ background-color: unset !important;
@@ -10,24 +12,14 @@
     body {
     	height: initial !important;
         font-size: 20px !important;
-    }
-    /* h2:not(:first-of-type) {page-break-before: always !important;} */
-
-    /* set no background on body: */
-    body, body.bg-light{  /* body.bg-light works here, adding body in case we
-    	remove the class in the future. Also note that pre equal signs are rendered
-    	with white background in the page. In HTML it's hardly visible but in the pdf better
-    	no background */
     	background-color: initial !important;
     }
-    table, pre[class*=language-]{font-size:80% !important;}
-    table.csv{font-size: 65% !important;}
-    pre[class*=language-], table.csv, /*.nopagebreak,*/ ul {page-break-inside: avoid !important;}
-    pre[class*=language-] > code{white-space: pre-wrap !important;}
-    div#toc{display: none !important;}
-    /* these must be repeated here with important in order to work:*/
-    a, a:hover{text-decoration:none !important;}
-    table{box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;}
+    div#toc{
+    	display: none !important;
+    }
+    .bg-light{
+    	background-color: initial !important;
+    }
 }
 
 /* counters */
