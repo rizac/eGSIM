@@ -95,6 +95,12 @@ document.querySelectorAll('h2, h3, h4').forEach((elm, index) => {
     }
 });
 document.querySelector('#toc').innerHTML = `${tocItemsHTML.join('\n')}`;
+/* now make all external anchor tags open in a new frame */
+document.querySelectorAll("a").forEach(elm => {
+    if ((elm.getAttribute('href') || '').startsWith('http')){
+        elm.setAttribute("target", "_blank");
+    }
+});
 </script>
 
 {% endblock %}
