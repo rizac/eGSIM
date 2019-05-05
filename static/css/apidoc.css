@@ -51,14 +51,15 @@ h4::before, #toc a._h4:before {
   	padding-right: .25rem;
   	margin-right: .25rem;
 }
-#toc a._h2 {
-	padding-left: 0rem;
+#toc a._h2, #toc a._h3, #toc a._h4 {
+	padding-left: 0.25rem;
+	padding-right: 0.25rem;
 }
 #toc a._h3{
-	padding-left: 1rem;
+	padding-left: 1.25rem;
 }
 #toc a._h4{
-	padding-left: 2rem;
+	padding-left: 2.25rem;
 }
 
 .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6{

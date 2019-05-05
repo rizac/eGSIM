@@ -9,14 +9,15 @@ import pytest
 
 from egsim.core.utils import vectorize, querystring, get_gmdb_column_desc
 from egsim.forms.fields import NArrayField
+from egsim.core.smtk import _relabel_sa
 
 
 def test_gmdb_columns():
     '''test the gmdb column descriptions'''
     ret = get_gmdb_column_desc()
     assert not any(_ == '? (unkwnown type)' for _ in ret.values())
-    assert ret['style_of_faulting'].startswith('string in "')
-    assert ret['event_time'].startswith('date-time string: "')
+    assert 'string. Possible values are:' in ret['style_of_faulting'][0]
+    assert 'date-time (ISO formatted) string' in ret['event_time'][0]
 
 
 def test_vectorize():
@@ -49,28 +50,60 @@ def test_querystring():
 
 
 @pytest.mark.django_db
-def test_narrayfield_get_decimals():
-    # this should be impoerted inside the test marked with django_db
-    
-    d0 = NArrayField.get_decimals('1.3e45')
-    assert d0 == 0
-    d0 = NArrayField.get_decimals('1.3e1')
-    assert d0 == 0
-    d0 = NArrayField.get_decimals('1.3e0')
-    assert d0 == 1
-    d1 = NArrayField.get_decimals('1e-45')
-    assert d1 == 45
-    d2 = NArrayField.get_decimals('-5.005601')
-    assert d2 == 6
-    d2 = NArrayField.get_decimals('-5.0')
-    assert d2 == 1
-    d3 = NArrayField.get_decimals('-6')
-    assert d3 == 0
-    d4 = NArrayField.get_decimals('1.3E-6')
-    assert d4 == 7
-    d5 = NArrayField.get_decimals('1.3e45', '1.3E-6', '-6', '-5.005601',
-                                  '1e-45')
-    assert d5 == 45
+def tst_narrayfield_get_decimals():
+    '''tests ndarrayfield get_decimals'''
+    d_0 = NArrayField.get_decimals('1.3e45')
+    assert d_0 == 0
+    d_0 = NArrayField.get_decimals('1.3e1')
+    assert d_0 == 0
+    d_0 = NArrayField.get_decimals('1.3e0')
+    assert d_0 == 1
+    d_1 = NArrayField.get_decimals('1e-45')
+    assert d_1 == 45
+    d_2 = NArrayField.get_decimals('-5.005601')
+    assert d_2 == 6
+    d_2 = NArrayField.get_decimals('-5.0')
+    assert d_2 == 1
+    d_3 = NArrayField.get_decimals('-6')
+    assert d_3 == 0
+    d_4 = NArrayField.get_decimals('1.3E-6')
+    assert d_4 == 7
+    d_5 = NArrayField.get_decimals('1.3e45', '1.3E-6', '-6', '-5.005601',
+                                   '1e-45')
+    assert d_5 == 45
+
+
+def test_relabel_sa():
+    '''tests _relabel_sa, which removes redundant trailing zeroes'''
+    inputs = ['SA(1)', 'SA(1.133)', 'SA(10000)',
+              ' SA(1)', ' SA(1.133)', ' SA(10000)',
+              'SA(1) ', 'SA(1.133) ', 'SA(10000) ',
+              '-SA(.100)', 'aSA(.100)', 'SA(1.1030)r', 'SA(1.1030)-']
+    for string in inputs:
+        assert _relabel_sa(string) == string
+
+    assert _relabel_sa('SA(.100)') == 'SA(.1)'
+    assert _relabel_sa('SA(.100) ') == 'SA(.1) '
+    assert _relabel_sa(' SA(.100)') == ' SA(.1)'
+    assert _relabel_sa('SA(1.1030)') == 'SA(1.103)'
+    assert _relabel_sa(' SA(1.1030)') == ' SA(1.103)'
+    assert _relabel_sa('SA(1.1030) ') == 'SA(1.103) '
+    assert _relabel_sa('SA(1.1030)') == 'SA(1.103)'
+    assert _relabel_sa(' SA(1.1030)') == ' SA(1.103)'
+    assert _relabel_sa('SA(1.1030) ') == 'SA(1.103) '
+    assert _relabel_sa('SA(1.000)') == 'SA(1.0)'
+    assert _relabel_sa(' SA(1.000)') == ' SA(1.0)'
+    assert _relabel_sa('SA(1.000) ') == 'SA(1.0) '
+    assert _relabel_sa('(SA(1.000))') == '(SA(1.0))'
+    assert _relabel_sa(' (SA(1.000))') == ' (SA(1.0))'
+    assert _relabel_sa('(SA(1.000)) ') == '(SA(1.0)) '
+    # test some "real" case:
+    assert _relabel_sa('Median SA(0.200000) (g)') == \
+        'Median SA(0.2) (g)'
+    assert _relabel_sa('Median SA(2.00000) (g)') == \
+        'Median SA(2.0) (g)'
+    assert _relabel_sa('Z (SA(2.00000))') == \
+        'Z (SA(2.0))'
 
 
 def test_areequal(areequal):
