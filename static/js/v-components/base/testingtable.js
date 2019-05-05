@@ -4,7 +4,7 @@ Vue.component('testingtable', {
         data: {type: Object, default: () => { return{} }}
     },
     data: function () {
-	    var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value(s)'];
+	    var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value'];
 	    return {
             visible: false,
             tableData: [],
@@ -117,11 +117,10 @@ Vue.component('testingtable', {
     template: `<div v-show="visible" class="d-flex flex-column">
 	    <div class='d-flex flex-row align-items-baseline mb-1'>
 	    <span>
-	    Testing results (click on the table headers to sort)
+	    Testing results
 	    </span>
 	    <span class='flexible small text-muted ml-3'>
-	    Notes: "{{ COL_VAL }}" will not sort rows "globally" but within each group of equal ({{ COL_MOF }}, {{ COL_IMT }}).
-	    Numeric arrays will be compared by their first element
+	    Click on the table headers to sort. Note that "{{ COL_VAL }}" will not sort rows globally but within each group of equal ({{ COL_MOF }}, {{ COL_IMT }}).
 	    </span>
 	    <slot></slot>
 	    </div>
@@ -129,13 +128,14 @@ Vue.component('testingtable', {
 		    <table class='table testing-table'>
 		        <thead>
 		            <tr>
-		                <th v-for="key in colnames"
-		                  @click="sortBy(key)"
-		                  class='btn-primary text-center align-text-top'>
-		                  {{ key }}
+		            	<th v-for="colname in colnames" @click="sortBy(colname)"
+		                  class='btn-primary align-text-top'
+		                  :class="{'text-right': colname === COL_VAL}"
+		                  >
+		                  {{ colname }}
 		                  <br>
-		                  <i v-if='isSortKey(key) && columns[key].sortOrder > 0' class="fa fa-chevron-down"></i>
-		                  <i v-else-if='isSortKey(key) && columns[key].sortOrder < 0' class="fa fa-chevron-up"></i>
+		                  <i v-if='isSortKey(colname) && columns[colname].sortOrder > 0' class="fa fa-chevron-down"></i>
+		                  <i v-else-if='isSortKey(colname) && columns[colname].sortOrder < 0' class="fa fa-chevron-up"></i>
 		                  <i v-else> &nbsp;</i> <!--hack for preserving height when no arrow icon is there. tr.min-height css does not work -->
 		                </th>
 		            </tr>
