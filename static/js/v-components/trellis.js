@@ -17,7 +17,7 @@ Vue.component('trellis', {
     	// https://vuejs.org/v2/api/#created) but it works:
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
         return {
-            responseDataEmpty: true,
+        	responseDataEmpty: true,
             responseData: this.response,
             formHidden: false,
             scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' & key!='sa_period' & key!='plot_type')
@@ -40,6 +40,28 @@ Vue.component('trellis', {
                 this.responseDataEmpty = Vue.isEmpty(newval); // defined in vueutil.js
                 this.formHidden = !this.responseDataEmpty;
             }
+        },
+        // watch for the property val of plot_type in form
+        // and make imt enabled if we are not choosing spectra plots
+        // this is a bit hacky in that it relies on the parameter names
+        // plot_type and imt:
+        'form.plot_type.val': {
+        	immediate: true,
+        	handler: function(newVal, oldVal){
+        		var enabled = newVal !== 's' && newVal !== 'ss';
+        		this.$set(this.form.imt.attrs, 'disabled', !enabled);
+        		if (!enabled){
+        			this.form.imt.valTmp = this.form.imt.val;
+        			this.form.sa_period.valTmp =this.form.sa_period.val;
+        			this.form.imt.val = ['SA'];
+        			this.form.sa_period.val = '(set of pre-defined periods)';
+        		}else if('valTmp' in this.form.imt){
+        			this.form.imt.val = this.form.imt.valTmp;
+        			this.form.sa_period.val = this.form.sa_period.valTmp;
+        			delete this.form.imt.valTmp;
+        			delete this.form.sa_period.valTmp;
+        		}
+        	}
         }
     },
     template: `

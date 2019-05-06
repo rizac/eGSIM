@@ -29,13 +29,13 @@ separate text data in JSON or YAML format (POST method) and are:
 {{ form_trellis | safe }}
 
 <p class='footnote'>
-Notes: If {{ param.trellisform.plot_type.name }} is
+Note: if {{ param.trellisform.plot_type.name }} is
 <code>{{ param.trellisform.plot_type.choices.2.name }}</code>
 (<code>{{ param.trellisform.plot_type.choices.2.label }}</code>) or
 <code>{{ param.trellisform.plot_type.choices.5.name }}</code>
 (<code>{{ param.trellisform.plot_type.choices.5.label }}</code>), then
 <code>{{ param.trellisform.imt.name }}</code> and
-<code>{{ param.trellisform.sa_period.name }}</code> are optional as they will
+<code>{{ param.trellisform.sa_period.name }}</code> will
 default to 'SA' and a set of pre-define periods, respectively: any value
 explicitly provided by the user will thus be ignored in case.
 </p>
