@@ -64,21 +64,21 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         data: {
             immediate: true,
             handler(newval, oldval){
-               this.visible = !Vue.isEmpty(this.data);
-               if (this.visible){ // see prop below
-                   if (Vue.isEmpty(oldval)){
-                       // avoid refreshing continuously, wait for resizing finished (most likely):
-                       var resizeTimer;
-                       var self = this;
-                       window.onresize = (e) => {
-                           clearTimeout(resizeTimer);
-                           resizeTimer = setTimeout(() => {
-                               self.react();
-                           }, 300);
-                       };
-                   }
-                   this.init.call(this, this.data);
-               }
+                this.visible = !Vue.isEmpty(this.data);
+                if (this.visible){ // see prop below
+                    if (Vue.isEmpty(oldval)){
+                        // avoid refreshing continuously, wait for resizing finished (most likely):
+                    	var resizeTimer;
+                        var self = this;
+                        window.onresize = (e) => {
+                            clearTimeout(resizeTimer);
+                            resizeTimer = setTimeout(() => {
+                                self.react();
+                            }, 300);
+                        };
+                    }
+                    this.init.call(this, this.data);
+                }
             }
         },
         'downloadasimageopts.format': function (newVal, oldVal){
@@ -89,6 +89,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }
         },
     },
+//     activated: function(){
+//     	this.active = true;
+//     },
+//     deactivated: function(){
+//     	this.active = true;
+//     },
     computed: {  // https://stackoverflow.com/a/47044150
         legendNames: function(){
             return Object.keys(this.legend);
@@ -671,6 +677,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         },
         getPlotDivSize: function(divId){
             var elm = document.getElementById(divId);
+            if (!elm){
+            	var fgh = 9;
+            }
             return [elm.offsetWidth, elm.offsetHeight];
         },
         toggleTraceVisibility: function(traceName){
