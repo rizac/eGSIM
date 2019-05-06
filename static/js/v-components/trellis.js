@@ -20,7 +20,7 @@ Vue.component('trellis', {
             responseDataEmpty: true,
             responseData: this.response,
             formHidden: false,
-            scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' & key!='sa_periods' & key!='plot_type')
+            scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' & key!='sa_period' & key!='plot_type')
         }
     },
     methods: {

@@ -28,7 +28,7 @@ from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 # from smtk.database_visualiser import DISTANCES
 
 from egsim.core.utils import vectorize, isscalar, yaml_load, querystring, \
-    tostr, DISTANCE_LABEL
+    tostr, DISTANCE_LABEL, trellis_default_periods
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, \
     MsrField, PointField, TrtField, GmdbField, ResidualplottypeField, \
     GsimField, TrModelField, ResidualsTestField
@@ -51,7 +51,7 @@ class BaseForm(Form):
     # of the default. Example:
     # __doc__overrides__ = {'imt': {'required':
     #                               'This field is required conditionally'}}
-    # __doc__overrides__ = {}
+    __doc__overrides__ = {}
 
     def __init__(self, *args, **kwargs):
         '''Overrides init to set custom attributes on field widgets and to set
@@ -352,25 +352,26 @@ class GsimSelectionForm(BaseForm):
 class GsimImtForm(BaseForm):
     '''Base abstract-like form for any form requiring Gsim+Imt selection'''
 
-    __additional_fieldnames__ = {'gmpe': 'gsim', 'sap': 'sa_periods'}
+    __additional_fieldnames__ = {'gmpe': 'gsim', 'sap': 'sa_period'}
 
     gsim = GsimField(required=True)
     imt = IMTField(required=True)
-    sa_periods = NArrayField(label="Spectral Acceleration (SA) period(s)",
-                             required=False,
-                             help_text=("Required only if SA is a selected "
-                                        "Intensity Measure Type. "
-                                        "Alternatively, you can ignore this "
-                                        "parameter but each SA must be "
-                                        "supplied with its period in "
-                                        "parentheses, e.g: SA(0.1) SA(0.2)"))
+    sa_period = NArrayField(label="Spectral Acceleration (SA) period(s)",
+                            required=False,
+                            help_text=("Required only if SA is a selected "
+                                       "Intensity Measure Type. "
+                                       "Alternatively, you can ignore this "
+                                       "parameter but each SA must be "
+                                       "supplied with its period in "
+                                       "parentheses, e.g: SA(0.1) SA(0.2)"))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # put 'sa_periods in the IMTField: Note: modify self.fields, not
-        # self.base_fields or self.declared_fields
+        # put 'sa_period in the IMTField: Note: modify self.fields, not
+        # self.base_fields or self.declared_fields or self.base_fields (the
+        # latter two are the same)
         # (https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form)
-        self.fields['imt'].sa_periods = self.data.pop('sa_periods', [])
+        self.fields['imt'].sa_periods = self.data.pop('sa_period', [])
 
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on
@@ -387,14 +388,21 @@ class GsimImtForm(BaseForm):
         #                         params={'param': p}, code='unknown')
         #         for p in unknown_params])
 
-        cleaned_data = super().clean()
+        super().clean()
+        self.validate_gsim_and_imt()
+        return self.cleaned_data
 
-        gsims = cleaned_data.get("gsim", [])
+    def validate_gsim_and_imt(self):
+        '''Validates gsim and imt assuring that all gsims are defined for all
+        supplied imts, and all imts are defined for all supplied gsim.
+        This method calls self.add_error and works on self.cleaned_data, thus
+        it should be called after super().clean()'''
+        gsims = self.cleaned_data.get("gsim", [])
         # We need to reduce all IMT strings in cleaned_data['imt'] to a set
         # where all 'SA(#)' strings are counted as 'SA' once..
         # Use imt.from_string and get the class name: quite cumbersome, but it works
         imt_classnames = set(imt_from_string(imtname).__class__.__name__
-                             for imtname in cleaned_data.get("imt", []))
+                             for imtname in self.cleaned_data.get("imt", []))
 
         if gsims and imt_classnames:
             invalid_gsims = set(gsims) - set(sharing_gsims(imt_classnames))
@@ -417,26 +425,6 @@ class GsimImtForm(BaseForm):
                                           code='invalid')
                 self.add_error('gsim', err_gsim)
                 self.add_error('imt', err_imt)
-
-        return cleaned_data
-
-    @classmethod
-    def invalid_imts(cls, gsims, imts):
-        '''returns a *set* of all invalid imt(s) from the given selected
-        gsims and imts
-
-        :param gsims: iterable of Egsim objects denoting the selected gsims
-        :param gsims: iterable of strings denoting the selected imts. Strings
-            should represent the imt class name only, so e.g. 'SA', not
-            'SA(2.0)'
-        :return: a set of invalid imts
-        '''
-        imts = set(imts)
-        invalid_imts = set()
-        for gsim in gsims:
-            invalid_imts |= imts - gsim.imts
-
-        return invalid_imts
 
 
 class TrellisForm(GsimImtForm):
@@ -500,9 +488,22 @@ class TrellisForm(GsimImtForm):
                                             "V<sub>S30</sub> if not given"))
     backarc = BooleanField(label='Backarc Path', initial=False, required=False)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # If the plot_type is 's' or 'ss', remove imt and sa_period
+        # and set the field (note NOT self.base_fields or self.declared_fields!
+        # not to be required, so validation will be ok
+        if self.data.get('plot_type', '') in ('s', 'ss'):
+            self.data.pop('imt', None)
+            self.data.pop('sa_period', None)
+            self.fields['imt'].required = False
+
     def clean(self):
         cleaned_data = super(TrellisForm, self).clean()
+
+        # this parameter is not used, comment out:
         # cleaned_data['tectonic_region'] = 'Active Shallow Crust'
+
         # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
         vs30 = cleaned_data['vs30']  # surely a list with st least one element
         vs30scalar = isscalar(vs30)
