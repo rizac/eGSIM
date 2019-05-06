@@ -28,7 +28,7 @@ from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 # from smtk.database_visualiser import DISTANCES
 
 from egsim.core.utils import vectorize, isscalar, yaml_load, querystring, \
-    tostr, DISTANCE_LABEL, trellis_default_periods
+    tostr, DISTANCE_LABEL
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, \
     MsrField, PointField, TrtField, GmdbField, ResidualplottypeField, \
     GsimField, TrModelField, ResidualsTestField
