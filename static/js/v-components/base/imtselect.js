@@ -3,7 +3,7 @@ Vue.component('imtselect', {
     props: {
         'name': {type: String, default: 'imt'},
         'gsimName': {type: String, default: 'gsim'},
-        'saPeriodsName': {type: String, default: 'sa_periods'},
+        'saPeriodsName': {type: String, default: 'sa_period'},
         'form': Object
     },
     data: function () {

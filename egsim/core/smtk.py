@@ -47,9 +47,9 @@ def get_trellis(params):
 
     # dip, aspect will be used below, we oparse them here because they are
     # mandatory (FIXME: are they?)
-    magnitude, distance, vs30, z1pt0, z2pt5, gsim, imt = \
+    magnitude, distance, vs30, z1pt0, z2pt5, gsim = \
         params.pop(MAG), params.pop(DIST), params.pop(VS30), \
-        params.pop(Z1PT0), params.pop(Z2PT5), params.pop(GSIM), params.pop(IMT)
+        params.pop(Z1PT0), params.pop(Z2PT5), params.pop(GSIM)
     magnitudes = np.asarray(vectorize(magnitude))  # smtk wants numpy arrays
     distances = np.asarray(vectorize(distance))  # smtk wants numpy arrays
 
@@ -61,9 +61,12 @@ def get_trellis(params):
     isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
     ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
     if not isdist and not ismag:  # magnitudedistancetrellis:
-        # imt is actually a vector of periods for the SA.
-        # FIXME: PR to gmpe-smtk?
+        # imt is actually a vector of periods for the SA. This is misleading in
+        # smtk, might be better implemented (maybe future PR?)
         imt = _default_periods_for_spectra()
+        params.pop(IMT, None)  # remove IMT and do not raise if not defined
+    else:
+        imt = params.pop(IMT)  # this raises if IMT is not in dict
 
     def jsonserialize(value):
         '''serializes a numpy scalr into python scalar, no-op if value is not
