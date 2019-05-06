@@ -13,6 +13,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         var id = this.$options.name + new Date().getTime().toString();
         return {
             visible: !Vue.isEmpty(this.data),
+            resizeListener: null,  //callback to be passed to window.addEventListener('resize', ...). See addResizeListener and removeResizeListener
             watchers: [],  // dynamically created watchers (see init)
             paramnames2showongrid: new Set(),  // parameter names to show on the grid
             plotdivid: Date.now().toString(),
@@ -66,18 +67,11 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             handler(newval, oldval){
                 this.visible = !Vue.isEmpty(this.data);
                 if (this.visible){ // see prop below
-                    if (Vue.isEmpty(oldval)){
-                        // avoid refreshing continuously, wait for resizing finished (most likely):
-                    	var resizeTimer;
-                        var self = this;
-                        window.onresize = (e) => {
-                            clearTimeout(resizeTimer);
-                            resizeTimer = setTimeout(() => {
-                                self.react();
-                            }, 300);
-                        };
-                    }
                     this.init.call(this, this.data);
+                    this.addResizeListener(); // start redrawing plots on resize, see bottom of the file
+                    // should be better added inside a this.$nextTick(() => { this.addResizeListener(); } ?
+                }else{
+                	this.removeResizeListener();  // stop redrawing plots on resize, see bottom of the file
                 }
             }
         },
@@ -89,12 +83,13 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }
         },
     },
-//     activated: function(){
-//     	this.active = true;
-//     },
-//     deactivated: function(){
-//     	this.active = true;
-//     },
+    activated: function(){  // when component become active
+    	this.addResizeListener(); // start redrawing plots on resize, see bottom of the file
+    	// should be better added inside a this.$nextTick(() => { this.addResizeListener(); } ?
+    },
+    deactivated: function(){   // when component is deactivated
+    	this.removeResizeListener(); // stop redrawing plots on resize, see bottom of the file
+    },
     computed: {  // https://stackoverflow.com/a/47044150
         legendNames: function(){
             return Object.keys(this.legend);
@@ -789,7 +784,30 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 //             Plotly.toImage(elm, {format: 'png', width: width, height: height}).then(function(dataUrl) {
 //                 // use the dataUrl
 //             })
-        }
+        },
+        addResizeListener: function(){
+        	// adds (if not already added) a resize listener redrawing plots on window.resize
+        	if (!this.resizeListener){
+        		 // see prop below                    
+                // avoid refreshing continuously, wait for resizing finished (most likely):
+            	var resizeTimer;
+                var self = this;
+                this.resizeListener = function(){
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        self.react();
+                    }, 300);
+                };
+                window.addEventListener('resize', this.resizeListener);
+            }
+       	},
+       	removeResizeListener: function(){
+       		// removes (if it has been set) the resize listener redrawing plots on window.resize
+        	if (this.resizeListener){
+        		window.removeEventListener('resize', this.resizeListener);
+        		this.resizeListener = null;
+            }
+       	},
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         // no -op
