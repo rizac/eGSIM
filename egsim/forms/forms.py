@@ -38,6 +38,21 @@ from egsim.models import sharing_gsims, shared_imts
 class BaseForm(Form):
     '''Base eGSIM form'''
 
+    # Subclass this attribute to write optional field names mapped to any of
+    # the form field names. You can also merge two parent classes additional
+    # field names with the py3 notation:
+    # __additional_fieldnames__ = {**ParentForm1.__additional_fieldnames__,
+    #                              **ParentForm2.__additional_fieldnames__}
+    __additional_fieldnames__ = {}
+
+    # this is a dict that will be used when writing this form for documentation
+    # (see module htmldoc): any field name implemented here is mapped to
+    # a dict of field attr: field doc string that will be displayed instead
+    # of the default. Example:
+    # __doc__overrides__ = {'imt': {'required':
+    #                               'This field is required conditionally'}}
+    # __doc__overrides__ = {}
+
     def __init__(self, *args, **kwargs):
         '''Overrides init to set custom attributes on field widgets and to set
         the initial value for fields of this class with no match in the keys
@@ -50,7 +65,7 @@ class BaseForm(Form):
         # 'magnitude'). To do this, define a dict __additional_fieldnames__ as
         # class attribute (see sub-classes) of name (string) mapped to its
         # possible alternative name
-        repl_dict = getattr(self, '__additional_fieldnames__', None)
+        repl_dict = self.__additional_fieldnames__ or {}
         if repl_dict:
             for key in list(self.data.keys()):
                 repl_key = repl_dict.get(key, None)
@@ -80,10 +95,11 @@ class BaseForm(Form):
         # django sets all values provided in self.declared_fields with a
         # default if the field is not provided, usually falsy (e.g. []
         # for MultipleChoiceField. See django.forms.Form._clean_fields)
-        # If the field is required, this behaviour allows to set the 'missing'
-        # error (see e.g. MultipleChoiceField.validate), but if the field
-        # is not required, we want simply the field to be missing, not having
-        # a value set. Hence:
+        # This behaviour should not be changed as it allows to raise the
+        # 'missing' ValidationError (see e.g. MultipleChoiceField.validate)
+        # if the field is required, but prevents subclasses to know if the
+        # field was explicitly provided or not. To achieve the latter, remove
+        # fields not in self.data:
         for key in list(_ for _ in cleaned_data if _ not in self.data):
             cleaned_data.pop(key)
 
@@ -130,15 +146,13 @@ class BaseForm(Form):
             querystr = querystring(obj)
             if stream is None:
                 return querystr
-            else:
-                stream.write(querystr)
+            stream.write(querystr)
         elif syntax == 'json':  # JSON
             if stream is None:
                 return json.dumps(obj, indent=2, separators=(',', ': '),
                                   sort_keys=True)
-            else:
-                json.dump(obj, stream, indent=2, separators=(',', ': '),
-                          sort_keys=True)
+            json.dump(obj, stream, indent=2, separators=(',', ': '),
+                      sort_keys=True)
         else:  # YAML
 
             class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
@@ -221,6 +235,18 @@ class BaseForm(Form):
         '''
         formdata = {}
         for name, _ in self.declared_fields.items():  # pylint: disable=no-member
+            # little spec: self.declared_fields and self.base_fields are the
+            # same thing (see django.forms.forms.DeclarativeFieldsMetaclass)
+            # and are declared AT CLASS level: modifying them applies changes
+            # to all instances, thus avoid. On the other hand,
+            # self.fields[name] returns the fields on the instance level and
+            # it's where specific instance-level changes have to be made 
+            # https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form
+            # Finally, self[name] creates a BoundField from self.fields[name]:
+            # A BoundField deals with displaying the field and populating it
+            # with any values. So for returning *all* field data (also that
+            # set automatically by django on our init parameter, so this is the
+            # case) it should be used.
             boundfield = self[name]
             val = boundfield.value()
             widget = boundfield.field.widget
@@ -299,10 +325,6 @@ class GsimSelectionForm(BaseForm):
                            max_value=90, required=False)
     trt = TrtField(label='Tectonic region type(s)', required=False)
 
-#     def __init__(self, *args, **kwargs):
-#         '''Overrides init to set default values for gsim and imt'''
-#         super(GsimSelectionForm, self).__init__(*args, **kwargs)
-
     def clean(self):
         '''Checks that if longitude is provided, also latitude is provided,
         and vice versa (the same for longitude2 and latitude2)'''
@@ -332,7 +354,6 @@ class GsimImtForm(BaseForm):
 
     __additional_fieldnames__ = {'gmpe': 'gsim', 'sap': 'sa_periods'}
 
-    # fields (not used for rendering, just for validation)
     gsim = GsimField(required=True)
     imt = IMTField(required=True)
     sa_periods = NArrayField(label="Spectral Acceleration (SA) period(s)",
