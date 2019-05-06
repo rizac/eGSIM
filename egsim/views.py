@@ -89,13 +89,13 @@ def main(request, selected_menu=None):
 
     components_props['residuals']['form']['gsim']['val'] = gsimnames
     components_props['residuals']['form']['imt']['val'] = ['PGA', 'SA']
-    components_props['residuals']['form']['sa_periods']['val'] = "0.2 1.0 2.0"
+    components_props['residuals']['form']['sa_period']['val'] = "0.2 1.0 2.0"
     components_props['residuals']['form']['selexpr']['val'] = "magnitude > 5"
     components_props['residuals']['form']['plot_type']['val'] = 'res'
 
     components_props['testing']['form']['gsim']['val'] = gsimnames
     components_props['testing']['form']['imt']['val'] = ['PGA', 'SA']
-    components_props['testing']['form']['sa_periods']['val'] = "0.2 1.0 2.0"
+    components_props['testing']['form']['sa_period']['val'] = "0.2 1.0 2.0"
     components_props['testing']['form']['selexpr']['val'] = \
         ("(magnitude > 5) & (vs30 != nan) & ((dip_1 != nan) | (dip_2 != nan)) "
          "& ((strike_1 != nan) | (strike_2 != nan)) & "
@@ -156,6 +156,7 @@ def apidoc(request):
     '''view for the home page (iframe in browser)'''
     filename = 'apidoc.html'
     # get the last modified attribute to print in the document
+    # FIXME: too much overhead?
     last_modified = None
     for tmp_ in settings.TEMPLATES:
         for dir_ in tmp_.get('DIRS', []):

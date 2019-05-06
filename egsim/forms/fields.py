@@ -492,6 +492,9 @@ class IMTField(MultipleChoiceWildcardField):
         sastr = self.SA
         values = [v for v in all_values if v != sastr]
         if self.sa_periods:
+            # this method is called from super._clean_fields which catches
+            # Validation errors and sets the error with domain = 'imt', so
+            # no need to catch:
             sa_periods = \
                 vectorize(NArrayField(required=False).clean(self.sa_periods))
             values += ['%s(%f)' % (sastr, f) for f in sa_periods]
