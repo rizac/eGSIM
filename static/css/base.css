@@ -247,4 +247,5 @@ select:not([multiple]):not([size]).form-control{
 /* Leaflet */
 .leaflet-popup-content {
 	width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
+	margin: 1.5rem !important; /*increase margins (nicer and more consistent with the page elements) */
 }
