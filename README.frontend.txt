@@ -234,6 +234,50 @@ a gmdb (Ground Motion batabase) selection expression (e.g., residuals.js):
 @movetoapidoc='moveToApidoc'
 
 
+The component form Object
++++++++++++++++++++++++++
+
+For those components requiring communication between the server to generate data
+(e.g. Trellis, Residuals, Testing, Gsim selection), an Object is associated in
+'componentProps'. E.g. componentProps.trellis = {...}
+This object has a key 'form' whch represents the Form data. The Form Object is
+in turn an Object of input element names mapped to the input element data
+(by input element, we mean any HTML input element, including e.g. <select> elements).
+A Form Object has this schema:
+{
+	...
+	dip: {					<-- form element name
+		val: 60				<-- mandatory key. The input element value
+		err: "",			<-- mandatory key. The error validation (empty: no error)
+		attrs: {			<-- attributes bound to the via v-bind to the input element
+			id: "id_dip"
+			max: 90
+			min: 0
+			name: "dip"
+			required: true
+			step: "any"
+			type: "number"
+		}
+		choices: [  		<-- used only if 'type' above is select
+			(name, label),
+			...
+			(name, label)
+		],
+		help: "",   		<-- the help text
+		is_hidden: false,	<-- whether the input element should be hidden
+		label: "Dip",   	<-- input element label
+	}
+}
+
+The Form object is created via Django server-side. Once injected in the html
+page, each Vue component is responsible of building an HTML input element with the data
+provided (see e.g., <forminput>, <gsimselect>, <imtselect>). Vue takes
+care of synchronizing any change in the input element with the corresponding 'val'.
+When a submit button is clicked, the 'post' function implemented in egsim_base.js
+(and passed down to each sub-component requiring it) builds an Object of values
+from the Form Object, sends it to the server API which gives back the
+data. In case of errors, the post function populates each 'err' field, which
+Vue will render in the HTML via borders, red colors etcetera.
 
 -------------------------------------------------------------------------------
 FIXME TODO: describe component pros: url, form, request, post to help the user
