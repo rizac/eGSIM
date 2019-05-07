@@ -84,8 +84,10 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         },
     },
     activated: function(){  // when component become active
-    	this.addResizeListener(); // start redrawing plots on resize, see bottom of the file
-    	// should be better added inside a this.$nextTick(() => { this.addResizeListener(); } ?
+    	if (this.visible){
+    		this.addResizeListener(); // start redrawing plots on resize, see bottom of the file
+    		// should be better added inside a this.$nextTick(() => { this.addResizeListener(); } ?
+    	}
     },
     deactivated: function(){   // when component is deactivated
     	this.removeResizeListener(); // stop redrawing plots on resize, see bottom of the file
@@ -672,9 +674,6 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         },
         getPlotDivSize: function(divId){
             var elm = document.getElementById(divId);
-            if (!elm){
-            	var fgh = 9;
-            }
             return [elm.offsetWidth, elm.offsetHeight];
         },
         toggleTraceVisibility: function(traceName){
