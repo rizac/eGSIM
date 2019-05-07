@@ -6,6 +6,11 @@ Vue.component('imtselect', {
         'form': Object
     },
     data: function () {
+    	// initialize here some properties. Note that it seems this is called before the template
+    	// rendering which is called before created, which is called before mounting:
+    	this.$set(this.form[this.saPeriodName].attrs, 'disabled', false);
+    	// HACK! FIXME: this should be modified server side:
+    	this.form[this.saPeriodName].help = '';
         return {
             elm: this.form[this.name], // elm just to type 'this.elm' instead of 'this.form[this.name]'
             // throughout this component:
@@ -16,9 +21,6 @@ Vue.component('imtselect', {
         }
     },
     created: function(){
-    	this.$set(this.form[this.saPeriodName].attrs, 'placeholder', this.form[this.saPeriodName].label);
-    	// set the disabled state of SaPeriods reactive:
-        this.$set(this.form[this.saPeriodName].attrs, 'disabled', false);
     	if ('disabled' in this.elm.attrs){
     		// add a further watcher for this.elm.attrs.disabled (refresh saPeriods enabled state):
     		this.$watch('elm.attrs.disabled', function(newVal, oldVal){
@@ -60,10 +62,11 @@ Vue.component('imtselect', {
               </option>
           </select>
         </div>
-        <div>  
+        <forminput :form="form" :name='saPeriodName'></forminput> 
+        <!-- <div>  
             <input type='text' v-model="form[saPeriodName].val" :name='saPeriodName' 
             	v-bind="form[saPeriodName].attrs" class="form-control" >
-        </div>
+        </div>-->
     </div>`,
     methods: {
         // no-op
