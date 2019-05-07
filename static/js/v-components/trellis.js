@@ -16,6 +16,7 @@ Vue.component('trellis', {
     	// (maybe the 'created' method would be better:
     	// https://vuejs.org/v2/api/#created) but it works:
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
+    	this.$set(this.form.imt.attrs, 'disabled', false);
         return {
         	responseDataEmpty: true,
             responseData: this.response,
@@ -49,10 +50,10 @@ Vue.component('trellis', {
         	immediate: true,
         	handler: function(newVal, oldVal){
         		var enabled = newVal !== 's' && newVal !== 'ss';
-        		this.$set(this.form.imt.attrs, 'disabled', !enabled);
+        		this.form.imt.attrs.disabled = !enabled;
         		if (!enabled){
         			this.form.imt.valTmp = this.form.imt.val;
-        			this.form.sa_period.valTmp =this.form.sa_period.val;
+        			this.form.sa_period.valTmp = this.form.sa_period.val;
         			this.form.imt.val = ['SA'];
         			this.form.sa_period.val = '(set of pre-defined periods)';
         		}else if('valTmp' in this.form.imt){
