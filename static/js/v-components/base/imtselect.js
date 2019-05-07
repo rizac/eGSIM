@@ -57,22 +57,38 @@ Vue.component('imtselect', {
           <select v-model="elm.val" v-bind="elm.attrs" class="form-control flexible" :class="{'border-danger': !!elm.err}">
               <option v-for='imt in elm.choices' :key='imt'
                   v-bind:style="!selectableImts.has(imt) ? {'text-decoration': 'line-through'} : ''"
-                  v-bind:class="!selectableImts.has(imt) ? ['disabled'] : ''">
+                  v-bind:class="{'disabled': !selectableImts.has(imt)}">
                   {{ imt }}
               </option>
           </select>
         </div>
-        <forminput :form="form" :name='saPeriodName'></forminput> 
-        <!-- <div>  
+        <!-- Instead of this: <forminput :form="form" :name='saPeriodName'></forminput> 
+        we render for the moment the sa periods a little bit differently: -->
+        <div class='d-flex flex-row align-items-baseline'>
+        	<label :disabled="!selectableImts.has('SA') || form[saPeriodName].attrs.disabled"
+        		:for='form[saPeriodName].attrs.id' class='mr-1 text-nowrap small'>
+        		{{ form[saPeriodName].label }}
+        	</label>  
             <input type='text' v-model="form[saPeriodName].val" :name='saPeriodName' 
-            	v-bind="form[saPeriodName].attrs" class="form-control" >
-        </div>-->
+            	:class = "{'disabled': !selectableImts.has('SA')}"
+            	v-bind="form[saPeriodName].attrs" class="form-control form-control-sm" >
+        </div>
     </div>`,
     methods: {
         // no-op
         updateSaPeriodsEnabledState: function(){
+        	// sa_period will be set disabled in case the imt <input> has been explicitly set disabled, or
+        	// SA is not selected. Note that a disabled input does not send its value to the server
+        	// (see egsim-base.js). 
+        	// On the other hand, when SA is not in the selectable imts
+        	// (because oif the currently selected gsims), we can not disable the sa_periods <input>,
+        	// (e.g.: no gsim selected, 'SA' selected as imt, sa_periods specified in the <input>:
+        	// if we made the input disabled => 'SA must be specified with periods' message, misleading)
+        	// Thus we just add the class 'disabled' (see template above) if SA is not in the selectable
+        	// imts, the <input> looks disabled but it's not, and the data will be sent to the server: if
+        	// there is an error, it's fine to show it and will not be misleading
         	var selectableImts = this.selectableImts;
-        	var disabled = !!this.elm.attrs.disabled || !selectableImts.has('SA') || !this.elm.val.includes('SA');
+        	var disabled = !!this.elm.attrs.disabled || !this.elm.val.includes('SA');
         	this.form[this.saPeriodName].attrs.disabled = disabled;
         },
         computeSelectableImts: function(){

@@ -356,7 +356,7 @@ class GsimImtForm(BaseForm):
 
     gsim = GsimField(required=True)
     imt = IMTField(required=True)
-    sa_period = NArrayField(label="Spectral Acceleration (SA) period(s)",
+    sa_period = NArrayField(label="SA period(s)",
                             required=False,
                             help_text=("Required only if SA is a selected "
                                        "Intensity Measure Type. "
