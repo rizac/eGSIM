@@ -15,7 +15,7 @@ Vue.component('residuals', {
     	// set the size of the plot_type <select>. Maybe this is not the right place
     	// (maybe the 'created' method would be better:
     	// https://vuejs.org/v2/api/#created) but it works:
-    	this.$set(this.form['plot_type'].attrs, 'size', 8);
+    	this.$set(this.form['plot_type'].attrs, 'size', 10);
         return {
             responseDataEmpty: true,
             formHidden: false,
@@ -56,7 +56,7 @@ Vue.component('residuals', {
         </div>
 
         <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mb-4', 'mt-0']]">
-            <div class="d-flex flexible flex-row mb-4">
+            <div class="d-flex flexible flex-row mb-3">
 
                 <div class="d-flex flexible flex-column">
                     <gsimselect :form="form" showfilter class="flexible"></gsimselect>
@@ -70,7 +70,7 @@ Vue.component('residuals', {
         
         				<forminput :form='form' :name='"gmdb"'></forminput>	
                 		<forminput :form='form' :name='"selexpr"' showhelpbutton
-                			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2' >
+                			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-1' >
                 		</forminput>
 						
                     </div>

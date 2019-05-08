@@ -12,6 +12,10 @@ Vue.component('testing', {
         post: Function
     },
     data: function () {
+    	// set the size of the plot_type <select>. Maybe this is not the right place
+    	// (maybe the 'created' method would be better:
+    	// https://vuejs.org/v2/api/#created) but it works:
+    	this.$set(this.form['fit_measure'].attrs, 'size', 5);
         return {
             responseDataEmpty: true,
             formHidden: false,
@@ -41,8 +45,8 @@ Vue.component('testing', {
         	immediate: true,
         	handler: function(newVal, oldVal){
         		var enabled = newVal && newVal.length && newVal.some(val => val.toLowerCase() == 'edr');
-        		this.form.edr_bandwidth.attrs.disabled = !enabled;
-        		this.form.edr_multiplier.attrs.disabled = !enabled;
+        		this.form.edr_bandwidth.is_hidden = !enabled;
+        		this.form.edr_multiplier.is_hidden = !enabled;
         	}
         }
     },
@@ -61,7 +65,7 @@ Vue.component('testing', {
         </div>
         
         <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mb-4', 'mt-0']]">
-            <div class="d-flex flexible flex-row mb-4">
+            <div class="d-flex flexible flex-row mb-3">
 
                 <div class="d-flex flexible flex-column">
                     <gsimselect :form="form" showfilter class="flexible"></gsimselect>
@@ -75,7 +79,7 @@ Vue.component('testing', {
         
                         <forminput :form='form' :name='"gmdb"'></forminput>
                     	<forminput :form='form' :name='"selexpr"' showhelpbutton
-                			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2'>
+                			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-1'>
                 		</forminput>
 
                     </div>
@@ -83,8 +87,8 @@ Vue.component('testing', {
                     <div class="mt-4" style="background-color:transparent">
 
                     	<forminput :form='form' :name='"fit_measure"'></forminput>
-                    	<forminput :form='form' :name='"edr_bandwidth"' class='mt-2'></forminput>
-                    	<forminput :form='form' :name='"edr_multiplier"' class='mt-2'></forminput>
+                    	<forminputlite :form='form' :name='"edr_bandwidth"' class='mt-1'></forminputlite>
+                    	<forminputlite :form='form' :name='"edr_multiplier"' class='mt-1'></forminputlite>
 
 					</div>
 
