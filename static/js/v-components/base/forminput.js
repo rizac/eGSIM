@@ -24,36 +24,29 @@ Vue.component('forminput', {
     	// define the Object whose data is associated to this component:
     	var elm = this.form[this.name];
     	var isSelect = elm.attrs.type == 'select' || (elm.choices && elm.choices.length);
-    	// build label text according to the label and help attribute:
-    	var nameEqualsLabel = (elm.label || "").replace(/ /g, "_").toLowerCase() == this.name.replace(/ /g, "_").toLowerCase();
-    	var labelText = nameEqualsLabel ? (elm.help || "") : (elm.help ? elm.label + ' (' + elm.help + ')' : (elm.label || ""));
-        var isSelectMultiple = isSelect && elm.attrs.multiple;
-        if (labelText && isSelectMultiple){
-        	labelText += ": ";
-        }
         return {
         	elm: elm,
             // calculate (once) data for the template below:
             isCheckOrRadio: elm.attrs.type == 'radio' || elm.attrs.type == 'checkbox',
             // type might be undefined, thus we need to check the choices for <select>:
             isSelect: isSelect,
-            isSelectMultiple: isSelectMultiple,
-            labelText: labelText
+            isSelectMultiple: isSelect && elm.attrs.multiple
         }
     },
     template: `<div v-if="!elm.is_hidden">
         <div class="d-flex flex-row mb-0" :class="[showhelpbutton ? ['align-items-end'] : ['align-items-baseline']]">
-            <label :for="elm.attrs.id" class='mb-0 text-nowrap' :class="[elm.attrs.disabled ? ['text-muted'] : ['']]">
+            <label :for="elm.attrs.id" class='mb-0 text-nowrap' :class="[elm.attrs.disabled ? ['text-muted'] : ['font-weight-bold']]">
                 <input v-if="!headonly && isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='mr-1'>
-                {{ name }}
+                <span v-html="elm.label"></span>
             </label>
             <div class="text-muted small flexible ml-3 text-right">
                 <span v-if="elm.err" class="text-danger">{{ elm.err }}</span>
-                <template v-else-if="labelText || isSelectMultiple">
-                	<span v-if="labelText" v-html="labelText"></span>
-                	<span v-if="isSelectMultiple">{{ elm.val.length || 0 }} of {{ elm.choices.length }} selected</span>
-                </template>
+                <span v-else>[{{ name }}]</span>
             </div>
+            <template v-if="!elm.err">
+            	<div class="text-muted small ml-1" v-if="elm.help" v-html="elm.help"></div>
+            	<div class="text-muted small ml-1" v-if="isSelectMultiple">{{ elm.val.length || 0 }} of {{ elm.choices.length }} selected</div>
+            </template>
             <button v-if="showhelpbutton" type="button" @click='$emit("helprequested")'
     		 		class='btn btn-outline-secondary btn-sm ml-1 mb-1 py-0'>
     			<i class="fa fa-info-circle"></i>

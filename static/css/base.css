@@ -49,7 +49,7 @@ iframe{
 
 
 /* ========================================================================= */
-/* ================ OVERRIDE BOOTSTRAP (4) ================================= */
+/* ================ OVERRIDE BOOTSTRAP4 ==================================== */
 /* ========================================================================= */
 
 /* Overriding BADLY IMPLEMENTED bootstrap !important that makes Vue v-show
@@ -94,6 +94,22 @@ div.form-control {
     background-color: rgba(5, 73, 113, 1);
 }
 
+/* margins m*-4 increased to 2rem (bootstrap4 default is 1.5rem */
+.m-4 {
+    margin: 2rem!important;
+}
+.mt-4, .my-4 {
+    margin-top: 2rem!important;
+}
+.mr-4, .mx-4 {
+    margin-right: 2rem!important;
+}
+.mb-4, .my-4 {
+    margin-bottom: 2rem!important;
+}
+.ml-4, .mx-4 {
+    margin-left: 2rem!important;
+}
 
 /* ========================================================================= */
 /* ================ NAVBAR ================================================= */
