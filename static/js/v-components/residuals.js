@@ -15,7 +15,7 @@ Vue.component('residuals', {
     	// set the size of the plot_type <select>. Maybe this is not the right place
     	// (maybe the 'created' method would be better:
     	// https://vuejs.org/v2/api/#created) but it works:
-    	this.$set(this.form['plot_type'].attrs, 'size', 6);
+    	this.$set(this.form['plot_type'].attrs, 'size', 8);
         return {
             responseDataEmpty: true,
             formHidden: false,
