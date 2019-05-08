@@ -179,11 +179,10 @@ def get_residuals(params):
     GMDB = 'gmdb'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
     IMT = 'imt'  # pylint: disable=invalid-name
-    DTYPE = 'distance_type'  # pylint: disable=invalid-name
     PLOTTYPE = 'plot_type'  # pylint: disable=invalid-name
     SEL = 'selexpr'  # pylint: disable=invalid-name
 
-    func = params[PLOTTYPE]
+    func, kwargs = params[PLOTTYPE]
     residuals = Residuals(params[GSIM], params[IMT])
 
     # Compute residuals.
@@ -195,23 +194,15 @@ def get_residuals(params):
 
     # statistics = residuals.get_residual_statistics()
     ret = defaultdict(lambda: defaultdict(lambda: {}))
-    distance_type = params[DTYPE]
 
-    kwargs = dict(residuals=residuals, as_json=True)
+    # extend keyword arguments:
+    kwargs = dict(kwargs, residuals=residuals, as_json=True)
     # linestep = binwidth/10
     for gsim in residuals.residuals:
         for imt in residuals.residuals[gsim]:
             kwargs['gmpe'] = gsim
             kwargs['imt'] = imt
 
-            # convert nans. FIXME: Ask Graeme:
-#             _data = residuals.residuals[gsim][imt]
-#             for key in ['Total', 'Intra event', 'Inter event']:
-#                 vals = _data[key]
-#                 _data[key] = vals[np.isfinite(vals)]
-
-            if func == residuals_with_distance:
-                kwargs['distance_type'] = distance_type
             imt2 = _relabel_sa(imt)
             ret[gsim][imt2] = func(**kwargs)
             if imt2 != imt:

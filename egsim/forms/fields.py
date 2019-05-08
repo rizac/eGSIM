@@ -28,7 +28,8 @@ from smtk.residuals.residual_plots import residuals_density_distribution, \
     residuals_with_depth, residuals_with_distance, residuals_with_magnitude, \
     residuals_with_vs30, likelihood
 
-from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path, MOF
+from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path, MOF,\
+    DISTANCE_LABEL
 
 # IMPORTANT: do not access the database at module import, as otherwise
 # make migrations does not work! So these methods should be called inside
@@ -346,13 +347,19 @@ class TrModelField(ChoiceField):
 class ResidualplottypeField(ChoiceField):
     '''An EgsimChoiceField which returns the selected function to compute
     residual plots'''
+    # _base_choices maps the REST key to the tuple:
+    # (GUI label, [function, dict_of_functon_kwargs])
     _base_choices = {
-        MOF.RES: ('Residuals (density distribution)', residuals_density_distribution),
-        MOF.LH: ('Likelihood', likelihood),
-        'mag': ('Residuals vs. Magnitude', residuals_with_magnitude),
-        'dist': ('Residuals vs. Distance', residuals_with_distance),
-        'vs30': ('Residuals vs. Vs30', residuals_with_vs30),
-        'depth': ('Residuals vs. Depth', residuals_with_depth),
+        MOF.RES: ('Residuals (density distribution)',
+                  residuals_density_distribution, {}),
+        MOF.LH: ('Likelihood', likelihood, {}),
+        'mag': ('Residuals vs. Magnitude', residuals_with_magnitude, {}),
+        'vs30': ('Residuals vs. Vs30', residuals_with_vs30, {}),
+        'depth': ('Residuals vs. Depth', residuals_with_depth, {}),
+        # insert distances related residuals:
+        **{'dist_%s' % n: ("Residuals vs. %s" % l, residuals_with_distance,
+                           {'distance_type': n})
+           for n, l in DISTANCE_LABEL.items()}
         # 'site': ('Residuals vs. Site', None),
         # 'intra': ('Intra Event Residuals vs. Site', None),
     }
@@ -363,10 +370,11 @@ class ResidualplottypeField(ChoiceField):
         super(ResidualplottypeField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''Converts the given value (string) into the OpenQuake instance
-        and returns the latter'''
+        '''Takes the given value (string) and returns the tuple
+        (smtk_function, function_kwargs)
+        '''
         value = super(ResidualplottypeField, self).clean(value)
-        return self._base_choices[value][1]
+        return self._base_choices[value][1:]
 
 
 class ResidualsTestField(MultipleChoiceField):

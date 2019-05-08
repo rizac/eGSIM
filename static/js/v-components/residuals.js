@@ -39,13 +39,6 @@ Vue.component('residuals', {
                 this.responseDataEmpty = Vue.isEmpty(newval); // defined in vueutil.js
                 this.formHidden = !this.responseDataEmpty;
             }
-        },
-        'form.plot_type.val': {
-        	// watch for changes in the plot_type (<select> element):
-        	immediate: true,
-        	handler: function(newVal, oldVal){
-        		this.form.distance_type.attrs.disabled = "dist" !== newVal;
-        	}
         }
     },
     template: `
@@ -83,10 +76,7 @@ Vue.component('residuals', {
                     </div>
 
 					<div class="form-control mt-4" style="background-color:transparent">
-
                     	<forminput :form='form' :name='"plot_type"'></forminput>
-                    	<forminput :form='form' :name='"distance_type"' class='mt-2'></forminput>
-
 					</div>
 
                 </div>

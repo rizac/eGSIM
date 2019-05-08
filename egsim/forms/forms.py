@@ -551,17 +551,17 @@ class GmdbPlot(GmdbForm):
                                 initial='rrup')
 
 
-class ResidualsForm(GsimImtForm, GmdbPlot):
+class ResidualsForm(GsimImtForm, GmdbForm):
     '''Form for residual analysis'''
 
     # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
-                                 **GmdbPlot.__additional_fieldnames__}
+                                 **GmdbForm.__additional_fieldnames__}
 
     plot_type = ResidualplottypeField(required=True)
 
     def clean(self):
-        # Note: the call below calls GmdbPlot.clean(self) BUT we should
+        # Note: the call below calls GmdbForm.clean(self) BUT we should
         # check why and how:
         return GsimImtForm.clean(self)
 
