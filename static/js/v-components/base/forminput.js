@@ -1,20 +1,27 @@
 /**
- * Implements a simple form input (or radio, or checkbox) from a given Object holding
- * the component properties and a given name
+ * Implements a component representing a form element (<input>, <select>)
  */
 Vue.component('forminput', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
-    	// form is an object with names (string) mapped to elements (elm).
-    	// Each elm represents the input or select type and it's in turn an object
-    	// with properties 'err', 'val', 'choices' ...
-        form: {type: Object},  
+    	// form is an object where a name (string) is mapped to an Object representing HTML input elements (elm).
+    	// Each elm is in turn an object with properties 'err' (string), 'val' (any),
+    	// 'attrs' (Object of strings mapped to any value representing attributes dynamically bound to
+    	// the HTML element via Vuejs), is_hidden (boolean), 'choices' (list of two element lists, for <select>s),
+    	// label and help (both strings). Only 'err' and 'val' are mandatory. If you want to attach a new attribute
+    	// to be bound to the element (e.g. `elm.attrs.disabled`) remember to use Vuejs $set to make the prop reactive
+    	// before passing the form to this component (https://vuejs.org/v2/guide/reactivity.html#Change-Detection-Caveats)
+        form: {type: Object},
+        // the name of the input component. form[name] must be the Object 'elm' described above
         name: {type: String},
-        headonly: {type: Boolean, default:false}, // if true, display only header (name and infos)
-        showhelpbutton: {type: Boolean, default:false}  // if true, ehlp button sshows up in the ehader
-        // if true, this component emits an 'helpwanted' event with no arguments (for the moment)
+        // if true, display header only (name and infos) and not input element
+        headonly: {type: Boolean, default:false},
+        // if true, help button shows up in the header  and this component
+        // emits an 'helprequested' event with no arguments (for the moment):
+        showhelpbutton: {type: Boolean, default:false}
     },
     data: function () {
+    	// define the Object whose data is associated to this component:
     	var elm = this.form[this.name];
     	var isSelect = elm.attrs.type == 'select' || (elm.choices && elm.choices.length);
     	// build label text according to the label and help attribute:

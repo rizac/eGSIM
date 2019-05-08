@@ -1,9 +1,23 @@
+/**
+ * Implements a component representing the form element of IMTs and SA periods
+ */
 Vue.component('imtselect', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
-        'name': {type: String, default: 'imt'},
-        'saPeriodName': {type: String, default: 'sa_period'},
-        'form': Object
+    	// form is an object where a name (string) is mapped to an Object representing HTML input elements (elm).
+    	// Each elm is in turn an object with properties 'err' (string), 'val' (any),
+    	// 'attrs' (Object of strings mapped to any value representing attributes dynamically bound to
+    	// the HTML element via Vuejs), is_hidden (boolean), 'choices' (list of two element lists, for <select>s),
+    	// label and help (both strings). Only 'err' and 'val' are mandatory. If you want to attach a new attribute
+    	// to be bound to the element (e.g. `elm.attrs.disabled`) remember to use Vuejs $set to make the prop reactive
+    	// before passing the form to this component (https://vuejs.org/v2/guide/reactivity.html#Change-Detection-Caveats)
+        form: {type: Object},
+    	// (optional) name of the input component. form[name] must be the Object 'elm' described above:
+        name: {type: String, default: 'imt'},
+        // (optional) name of the SA periods input component. form[saPeriodName] must be an Object
+        // of the same type of 'elm' described above:
+        saPeriodName: {type: String, default: 'sa_period'},
+        
     },
     data: function () {
     	// initialize here some properties. Note that it seems this is called before the template
@@ -12,12 +26,12 @@ Vue.component('imtselect', {
     	// HACK! FIXME: this should be modified server side:
     	this.form[this.saPeriodName].help = '';
         return {
-            elm: this.form[this.name], // elm just to type 'this.elm' instead of 'this.form[this.name]'
-            // throughout this component:
-            // elm is an Object with properties. E.g., elm.attrs (Object to be bound to the html element attrs via v-bind),
-            // elm.val (any js value to be bound to the Vue element model), and so on ...
-            gsimData: this.form.gsim,  // an Object with the related gsim data (gsimData.val = list of selected gsims, etcetera)
-            selectableImts: new Set() // will be updated in watchers, see below
+        	// define the Object whose data is associated to this component:
+            elm: this.form[this.name],
+            // define the Object whose data is associated to the selected gsims:
+            gsimData: this.form.gsim,
+            // define the Set of the selectable IMTs (see watchers below):
+            selectableImts: new Set()
         }
     },
     created: function(){
@@ -29,9 +43,11 @@ Vue.component('imtselect', {
     	}
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
+    	// watch for properties that should update this.selectableImts:
     	'gsimData.gsimManager': function(newVal, oldVal){
-    		// gsimForm.gsimManager is an Object defined in egsim_base.js ('created' function)
-    		// in principle, it's static, but watch for changes of it
+    		// watch for changes in gsimManager, which is an Object defined in egsim_base.js
+    		// ('created' function) holding information of each gsim's imt and trt.
+    		// In principle, it's static, but watch for changes of it
     		this.computeSelectableImts();
     	},
     	'gsimData.val': function(newVal, oldVal){
@@ -77,17 +93,14 @@ Vue.component('imtselect', {
     methods: {
         // no-op
         updateSaPeriodsEnabledState: function(){
-        	// sa_period will be set disabled in case the imt <input> has been explicitly set disabled, or
-        	// SA is not selected. Note that a disabled input does not send its value to the server
-        	// (see egsim-base.js). 
-        	// On the other hand, when SA is not in the selectable imts
-        	// (because oif the currently selected gsims), we can not disable the sa_periods <input>,
-        	// (e.g.: no gsim selected, 'SA' selected as imt, sa_periods specified in the <input>:
-        	// if we made the input disabled => 'SA must be specified with periods' message, misleading)
+        	// The sa_period <input> will be set disabled in case the imt <input> has been explicitly
+        	// set disabled, or SA is not selected. Note that a disabled input does not send its
+        	// value to the server (see egsim-base.js). Previously, we disabled the sa_period <input>
+        	// also when the SA was not in the selectable imts (i.e., not all selected gsim are defined for SA),
+        	// but this would lead to a misleading 'SA must be specified with periods' error message,
+        	// even when SA is selected and sa_periods is provided, if sa_period <input> was disabled.
         	// Thus we just add the class 'disabled' (see template above) if SA is not in the selectable
-        	// imts, the <input> looks disabled but it's not, and the data will be sent to the server: if
-        	// there is an error, it's fine to show it and will not be misleading
-        	var selectableImts = this.selectableImts;
+        	// imts, obtaining the same visual effect (see css) but avoiding misleading errors
         	var disabled = !!this.elm.attrs.disabled || !this.elm.val.includes('SA');
         	this.form[this.saPeriodName].attrs.disabled = disabled;
         },
@@ -110,7 +123,9 @@ Vue.component('imtselect', {
             	}
             }
             this.selectableImts = new Set(selectableImts);
-            this.updateSaPeriodsEnabledState();
+            // we do not need to call this method anymore, as the disabled state of sa_periods
+            // does not depend on the selectableImts (we provide the class 'disabled', see template)
+            // this.updateSaPeriodsEnabledState();
         }
     }
 })
