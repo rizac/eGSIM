@@ -53,14 +53,26 @@ Vue.component('forminput', {
     		</button>
         </div>
         <template v-if="!headonly">
-	        <select v-if="isSelect" v-model="elm.val" v-bind="elm.attrs" class='form-control'
-	        	:class="{'border-danger': !!elm.err}">
-	        	<option v-for='opt in elm.choices' :value='opt[0]'>
-	        		{{ (opt[0] == opt[1] ? '' : '[' + opt[0] + '] ') +  opt[1] }}
+	        <select
+	        	v-if="isSelect"
+	        	v-model="elm.val"
+	        	v-bind="elm.attrs"
+	        	class='form-control'
+	        	:class="{'border-danger': !!elm.err}"
+	        >
+	        	<option
+	        		v-for='opt in elm.choices'
+	        		:value='opt[0]'
+	        		v-html='getOptionLabel(opt)'>
 	        	</option>
 	    	</select>
 	    	<input v-else-if="!isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='form-control'
 	    		:class="{'border-danger': !!elm.err}">
     	</template>
-    </div>`
+    </div>`,
+    methods: {
+    	getOptionLabel: function(opt){
+    		return opt[1] + (opt[0] == opt[1] ? '' : '&nbsp;&nbsp;[' + opt[0] + '] ')
+    	}
+    }
 })
