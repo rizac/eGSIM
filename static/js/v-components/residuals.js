@@ -66,7 +66,7 @@ Vue.component('residuals', {
                     
                    <imtselect :form="form" class="flexible"></imtselect>
                 
-                    <div class="form-control mt-4" style="background-color:transparent">
+                    <div class="mt-4" style="background-color:transparent">
         
         				<forminput :form='form' :name='"gmdb"'></forminput>	
                 		<forminput :form='form' :name='"selexpr"' showhelpbutton
@@ -75,7 +75,7 @@ Vue.component('residuals', {
 						
                     </div>
 
-					<div class="form-control mt-4" style="background-color:transparent">
+					<div class="mt-4" style="background-color:transparent">
                     	<forminput :form='form' :name='"plot_type"'></forminput>
 					</div>
 
