@@ -96,19 +96,19 @@ div.form-control {
 
 /* margins m*-4 increased to 2rem (bootstrap4 default is 1.5rem */
 .m-4 {
-    margin: 2rem!important;
+    margin: 2.5rem!important;
 }
 .mt-4, .my-4 {
-    margin-top: 2rem!important;
+    margin-top: 2.5rem!important;
 }
 .mr-4, .mx-4 {
-    margin-right: 2rem!important;
+    margin-right: 2.5rem!important;
 }
 .mb-4, .my-4 {
-    margin-bottom: 2rem!important;
+    margin-bottom: 2.5rem!important;
 }
 .ml-4, .mx-4 {
-    margin-left: 2rem!important;
+    margin-left: 2.5rem!important;
 }
 
 /* ========================================================================= */

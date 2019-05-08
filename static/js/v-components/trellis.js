@@ -97,7 +97,7 @@ Vue.component('trellis', {
                         </forminput>
                     </div>
 
-                    <div class="form-control mt-4" style="background-color:transparent">
+                    <div class="mt-4" style="background-color:transparent">
                         <forminput :form='form' :name='"plot_type"'></forminput>
                     </div>
 
