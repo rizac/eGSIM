@@ -151,7 +151,7 @@ class ArrayField(CharField):
         and maxval (endpoints are included). None's in minval and maxval
         mean: do not check'''
         try:
-            NArrayField.checkrange(value, minval, maxval)
+            ArrayField.checkrange(value, minval, maxval)
             return True
         except ValidationError:
             return False
@@ -167,9 +167,9 @@ class ArrayField(CharField):
         if toolow and toohigh:
             raise ValidationError('%s not in [%s, %s]' %
                                   (str(value), str(minval), str(maxval)))
-        elif toolow:
+        if toolow:
             raise ValidationError('%s < %s' % (str(value), str(minval)))
-        elif toohigh:
+        if toohigh:
             raise ValidationError('%s > %s' % (str(value), str(maxval)))
 
 
