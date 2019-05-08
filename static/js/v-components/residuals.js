@@ -40,14 +40,11 @@ Vue.component('residuals', {
                 this.formHidden = !this.responseDataEmpty;
             }
         },
-        // watch for the property val of plot_type in form
-        // this is a bit hacky in that it relies on the parameter names
-        // plot_type and distance_type:
         'form.plot_type.val': {
+        	// watch for changes in the plot_type (<select> element):
         	immediate: true,
         	handler: function(newVal, oldVal){
-        		var enabled = "dist" == newVal;
-        		this.$set(this.form.distance_type.attrs, 'disabled', !enabled);
+        		this.form.distance_type.attrs.disabled = "dist" !== newVal;
         	}
         }
     },

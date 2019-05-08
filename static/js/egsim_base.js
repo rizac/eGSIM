@@ -38,6 +38,13 @@ var EGSIM_BASE = {
             	form.imt.choices = imtNames;
             	form.gsim.gsimManager = gsimManager;
         	}
+        	// set disabled element in attrs if not present:
+        	// (use $set to make the property reactive)
+        	for (var key of Object.keys(form)){
+        		if (form[key].attrs && !('disabled' in form[key].attrs)){
+        			this.$set(form[key].attrs, 'disabled', false);
+        		}
+        	}
         }
     },
     computed: {
