@@ -53,7 +53,6 @@ Vue.component('imtselect', {
     		immediate: true,
     		handler: function(newVal, oldVal){
     			this.computeSelectableImts();
-    			this.updateSaPeriodsEnabledState();
     		}
     	}
     },
@@ -81,39 +80,14 @@ Vue.component('imtselect', {
               </option>
           </select>
         </div>
-        <!-- Instead of this: <forminput :form="form" :name='saPeriodName'></forminput> 
-        we render for the sa periods a little bit differently: -->
-        <div class='d-flex flex-row align-items-baseline'>
-        	<label
-        		:disabled="!selectableImts.has('SA') || form[saPeriodName].attrs.disabled"
-        		:for='form[saPeriodName].attrs.id'
-        		class='mr-1 text-nowrap small'
-        	>
-        		{{ form[saPeriodName].label }}
-        	</label>
-            <input
-            	:name='saPeriodName' 
-            	type='text'
-            	v-model="form[saPeriodName].val"
-            	v-bind="form[saPeriodName].attrs" 
-            	:class = "{'disabled': !selectableImts.has('SA')}"
-            	class="form-control form-control-sm"
-            >
-        </div>
+        <forminputlite :form="form" :name='saPeriodName'></forminputlite>
     </div>`,
     methods: {
         // no-op
         updateSaPeriodsEnabledState: function(){
-        	// The sa_period <input> will be set disabled in case the imt <input> has been explicitly
-        	// set disabled, or SA is not selected. Note that a disabled input does not send its
-        	// value to the server (see egsim-base.js). Previously, we disabled the sa_period <input>
-        	// also when the SA was not in the selectable imts (i.e., not all selected gsim are defined for SA),
-        	// but this would lead to a misleading 'SA must be specified with periods' error message,
-        	// even when SA is selected and sa_periods is provided, if sa_period <input> was disabled.
-        	// Thus we just add the class 'disabled' (see template above) if SA is not in the selectable
-        	// imts, obtaining the same visual effect (see css) but avoiding misleading errors
-        	var disabled = !!this.elm.attrs.disabled || !this.elm.val.includes('SA');
+        	var disabled = !!this.elm.attrs.disabled || !this.selectableImts.has('SA');
         	this.form[this.saPeriodName].attrs.disabled = disabled;
+        	this.form[this.saPeriodName].is_hidden = !this.elm.val.includes('SA');
         },
         computeSelectableImts: function(){
         	var gsimManager = this.gsimData.gsimManager;  
@@ -134,9 +108,7 @@ Vue.component('imtselect', {
             	}
             }
             this.selectableImts = new Set(selectableImts);
-            // we do not need to call this method anymore, as the disabled state of sa_periods
-            // does not depend on the selectableImts (we provide the class 'disabled', see template)
-            // this.updateSaPeriodsEnabledState();
+            this.updateSaPeriodsEnabledState();
         }
     }
 })
