@@ -1,9 +1,23 @@
+/**
+ * Implements a component representing the form element of GSIMs
+ */
 Vue.component('gsimselect', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
+    	// form is an object where a name (string) is mapped to an Object representing HTML input elements (elm).
+    	// Each elm is in turn an object with properties 'err' (string), 'val' (any),
+    	// 'attrs' (Object of strings mapped to any value representing attributes dynamically bound to
+    	// the HTML element via Vuejs), is_hidden (boolean), 'choices' (list of two element lists, for <select>s),
+    	// label and help (both strings). Only 'err' and 'val' are mandatory. If you want to attach a new attribute
+    	// to be bound to the element (e.g. `elm.attrs.disabled`) remember to use Vuejs $set to make the prop reactive
+    	// before passing the form to this component (https://vuejs.org/v2/guide/reactivity.html#Change-Detection-Caveats)
+        form: {type: Object},
+    	// (optional) name of the input component. form[name] must be the Object 'elm' described above:
         name: {type: String, default: 'gsim'},
+        // whether to show the "show filter" component on the bottom of the <select> main component
         showfilter: {type: Boolean, default: false},
-        form: Object,
+        // if true, a button shows up and this when clicked it
+        // emits a 'selection-fired' event with the list of selected GSIMs as argument:
         selectbutton: {type: String, default: ''}
     },
     data: function () {
