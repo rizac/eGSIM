@@ -71,7 +71,7 @@ Vue.component('testing', {
                 
                 	<imtselect :form="form" class='flexible'></imtselect>
 
-                    <div class="form-control mt-4" style="background-color:transparent">
+                    <div class="mt-4" style="background-color:transparent">
         
                         <forminput :form='form' :name='"gmdb"'></forminput>
                     	<forminput :form='form' :name='"selexpr"' showhelpbutton
@@ -80,7 +80,7 @@ Vue.component('testing', {
 
                     </div>
                     
-                    <div class="form-control mt-4" style="background-color:transparent">
+                    <div class="mt-4" style="background-color:transparent">
 
                     	<forminput :form='form' :name='"fit_measure"'></forminput>
                     	<forminput :form='form' :name='"edr_bandwidth"' class='mt-2'></forminput>
