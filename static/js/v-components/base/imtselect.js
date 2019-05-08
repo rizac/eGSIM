@@ -20,12 +20,7 @@ Vue.component('imtselect', {
         
     },
     data: function () {
-    	// initialize here some properties. Note that it seems this is called before the template
-    	// rendering which is called before created, which is called before mounting:
-    	this.$set(this.form[this.saPeriodName].attrs, 'disabled', false);
-    	// HACK! FIXME: this should be modified server side:
-    	this.form[this.saPeriodName].help = '';
-        return {
+    	return {
         	// define the Object whose data is associated to this component:
             elm: this.form[this.name],
             // define the Object whose data is associated to the selected gsims:
@@ -35,12 +30,7 @@ Vue.component('imtselect', {
         }
     },
     created: function(){
-    	if ('disabled' in this.elm.attrs){
-    		// add a further watcher for this.elm.attrs.disabled (refresh saPeriods enabled state):
-    		this.$watch('elm.attrs.disabled', function(newVal, oldVal){
-    			this.updateSaPeriodsEnabledState();
-    		}, {immediate: true});
-    	}
+    	// no-op
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
     	// watch for properties that should update this.selectableImts:
@@ -54,11 +44,16 @@ Vue.component('imtselect', {
     		// watch for changes in selected gsims
     		this.computeSelectableImts();
     	},
+    	'elm.attrs.disabled': function(newVal, oldVal){
+    		// watch for changes in disabled state of the imt
+    		this.updateSaPeriodsEnabledState();
+    	},
     	'elm.val': {
     		// watch for changes in selected imts. Immediate=true: call handler immediately
     		immediate: true,
     		handler: function(newVal, oldVal){
     			this.computeSelectableImts();
+    			this.updateSaPeriodsEnabledState();
     		}
     	}
     },
@@ -70,24 +65,40 @@ Vue.component('imtselect', {
     template: `<div class='d-flex flex-column'>
         <forminput :form="form" :name='name' headonly></forminput>
         <div class='mb-1 flexible d-flex flex-column'>
-          <select v-model="elm.val" v-bind="elm.attrs" class="form-control flexible" :class="{'border-danger': !!elm.err}">
-              <option v-for='imt in elm.choices' :key='imt'
-                  v-bind:style="!selectableImts.has(imt) ? {'text-decoration': 'line-through'} : ''"
-                  v-bind:class="{'disabled': !selectableImts.has(imt)}">
+          <select
+          		v-model="elm.val"
+          		v-bind="elm.attrs"
+          		:class="{'border-danger': !!elm.err}"
+          		class="form-control flexible"
+          >
+              <option
+              		v-for='imt in elm.choices'
+              		:key='imt'
+              		:style="!selectableImts.has(imt) ? {'text-decoration': 'line-through'} : ''"
+                  	:class="{'disabled': !selectableImts.has(imt)}"
+              >
                   {{ imt }}
               </option>
           </select>
         </div>
         <!-- Instead of this: <forminput :form="form" :name='saPeriodName'></forminput> 
-        we render for the moment the sa periods a little bit differently: -->
+        we render for the sa periods a little bit differently: -->
         <div class='d-flex flex-row align-items-baseline'>
-        	<label :disabled="!selectableImts.has('SA') || form[saPeriodName].attrs.disabled"
-        		:for='form[saPeriodName].attrs.id' class='mr-1 text-nowrap small'>
+        	<label
+        		:disabled="!selectableImts.has('SA') || form[saPeriodName].attrs.disabled"
+        		:for='form[saPeriodName].attrs.id'
+        		class='mr-1 text-nowrap small'
+        	>
         		{{ form[saPeriodName].label }}
-        	</label>  
-            <input type='text' v-model="form[saPeriodName].val" :name='saPeriodName' 
+        	</label>
+            <input
+            	:name='saPeriodName' 
+            	type='text'
+            	v-model="form[saPeriodName].val"
+            	v-bind="form[saPeriodName].attrs" 
             	:class = "{'disabled': !selectableImts.has('SA')}"
-            	v-bind="form[saPeriodName].attrs" class="form-control form-control-sm" >
+            	class="form-control form-control-sm"
+            >
         </div>
     </div>`,
     methods: {

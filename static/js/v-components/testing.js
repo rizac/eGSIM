@@ -36,15 +36,13 @@ Vue.component('testing', {
                 this.formHidden = !this.responseDataEmpty;
             }
         },
-        // watch for the property val of plot_type in form
-        // this is a bit hacky in that it relies on the parameter names
-        // plot_type and distance_type:
         'form.fit_measure.val': {
+        	// watch for changes in the fit_measure (<select> element):
         	immediate: true,
         	handler: function(newVal, oldVal){
         		var enabled = newVal && newVal.length && newVal.some(val => val.toLowerCase() == 'edr');
-        		this.$set(this.form.edr_bandwidth.attrs, 'disabled', !enabled);
-        		this.$set(this.form.edr_multiplier.attrs, 'disabled', !enabled);
+        		this.form.edr_bandwidth.attrs.disabled = !enabled;
+        		this.form.edr_multiplier.attrs.disabled = !enabled;
         	}
         }
     },
