@@ -12,11 +12,11 @@ Vue.component('trellis', {
         post: Function
     },
     data: function () {
-    	// set the size of the plot_type <select>. Maybe this is not the right place
-    	// (maybe the 'created' method would be better:
-    	// https://vuejs.org/v2/api/#created) but it works:
+    	// set the size of the plot_type <select>. Note that it turns out
+    	// that 'created' is executed after the template is created, so we add
+    	// reactive properties like 'size' here (or maybe 'beforeCreate' would be
+    	// a better place? https://vuejs.org/v2/api/#beforeCreate)
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
-    	this.$set(this.form.imt.attrs, 'disabled', false);
         return {
         	responseDataEmpty: true,
             responseData: this.response,
@@ -90,7 +90,8 @@ Vue.component('trellis', {
                 <div class="d-flex flex-column flexible ml-4">
 
                     <div class="flexible form-control" style="background-color:transparent">
-                        <forminput v-for="(name, index) in scenarioKeys"
+                        <forminput
+                        	v-for="(name, index) in scenarioKeys"
                             :form='form' :name='name' :key="name"
                             :class="{ 'mt-2': index > 0 }">
                         </forminput>
