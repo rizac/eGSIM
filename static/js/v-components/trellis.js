@@ -80,16 +80,17 @@ Vue.component('trellis', {
         </div>
         
         <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mb-4', 'mt-0']]">
-            <div class="d-flex flexible flex-row mb-4">
+            <div class="d-flex flexible flex-row mb-3">
 
                 <div class="d-flex flexible flex-column">
                     <gsimselect :form="form" showfilter class="flexible"></gsimselect>
-                    <imtselect :form="form" class="mt-4"></imtselect>
                 </div>
                 
                 <div class="d-flex flex-column flexible ml-4">
 
-                    <div class="flexible form-control" style="background-color:transparent">
+					<imtselect :form="form"></imtselect>
+
+                    <div class="flexible form-control mt-4" style="background-color:transparent">
                         <forminput
                         	v-for="(name, index) in scenarioKeys"
                             :form='form' :name='name' :key="name"
