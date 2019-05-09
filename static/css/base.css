@@ -75,6 +75,15 @@ div.form-control {
 
 
 /* Make btn primary color darker (and nicer) */
+.bg-primary{
+	background-color: rgba(7, 104, 159, 1) !important;
+}
+.border-primary {
+    border-color: rgba(7, 104, 159, 1) !important;
+}
+.text-primary{
+	color: rgba(7, 104, 159, 1) !important;
+}
 .btn-outline-primary {
     color: rgba(7, 104, 159, 1);
     border-color: rgba(7, 104, 159, 1);
@@ -93,6 +102,7 @@ div.form-control {
 	border-color: rgba(5, 73, 113, 1);
     background-color: rgba(5, 73, 113, 1);
 }
+
 
 /* margins m*-4 increased to 2rem (bootstrap4 default is 1.5rem */
 .m-4 {

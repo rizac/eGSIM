@@ -388,7 +388,7 @@ class ResidualsTestField(MultipleChoiceField):
                                 GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
                      MOF.EDR: ("Euclidean Distance-Based",
                                GSIM_MODEL_DATA_TESTS["EDR"])
-                    }
+                     }
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
@@ -460,70 +460,106 @@ class GsimField(MultipleChoiceWildcardField):
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 class IMTField(MultipleChoiceWildcardField):
-    '''Field for IMT selection.
-    This class overrides `to_python`, which first calls the super-method
-    (which for `MultipleChoiceField`s parses the input into a list of strings),
-    then it adds to the parsed list the `SA`s based on `self.sa_periods`
-    (if truthy), which is a string or a list of numeric parsable strings.
-    Finally, `valid_value` is overridden to ignore `self.choices`
-    (if provided) and to validate each string on whether it's a valid imt or
-    not via openquake utilities
+    '''Field for IMT selection. Simple MultipleChoiceWildcardField which
+    also accepts values not present in the list of choices, when they
+    represent valid IMTs (e.g. "SA(0.2)").
+    It has also a method `combine_with_periods` which accepts a string
+    of space- or comma-separated numbers (see ArrayField class) to replace
+    'SA' with the defined periods
     '''
     SA = 'SA'
     default_error_messages = {
         'sa_without_period': _("intensity measure type '%s' must "
                                "be specified with period(s)" % SA),
+        'invalid_period': _("error while parsing '%s' period(s)" % SA),
+        'invalid_imt': _('%(value)s is not a valid IMT.'),
     }
 
-    def __init__(self, sa_periods_required=True, **kwargs):
+    def __init__(self, **kwargs):
         kwargs.setdefault('choices',
                           LazyCached(lambda: [(_, _) for _ in aval_imts()]))
         kwargs.setdefault('label', 'Intensity Measure Type(s)')
         super(IMTField, self).__init__(**kwargs)
-        self.sa_periods_required = sa_periods_required
-        self.sa_periods = []  # can be string or iterable of strings
-        # strings must be numeric parsable (see NArrayField)
-
-    # this method is called first in the validation pipeline:
-    def to_python(self, value):
-        # call super: returns an list of strings. Expects value to be a list
-        # or tuple:
-        # if not value:
-        #     return []
-        # elif not isinstance(value, (list, tuple)):
-        #     raise ValidationError(self.error_messages['invalid_list'],
-        #                           code='invalid_list')
-        # return [str(val) for val in value]
-        all_values = super().to_python(value)
-        if not self.sa_periods_required:
-            return all_values
-        sastr = self.SA
-        values = [v for v in all_values if v != sastr]
-        if self.sa_periods:
-            # this method is called from super._clean_fields which catches
-            # Validation errors and sets the error with domain = 'imt', so
-            # no need to catch:
-            sa_periods = \
-                vectorize(NArrayField(required=False).clean(self.sa_periods))
-            values += ['%s(%f)' % (sastr, f) for f in sa_periods]
-        elif len(all_values) > len(values):
-            raise ValidationError(
-                self.error_messages['sa_without_period'],
-                code='sa_without_period',
-            )
-        return values
 
     def valid_value(self, value):
         """Validate the given value, ignoring the super method which compares
         to the choices attribute if self.sa_periods_required is True
         """
-        if not self.sa_periods_required:
-            return super(IMTField, self).valid_value(value)
-        try:
-            imt.from_string(value)
-            return True
-        except Exception:  # pylint: disable=broad-except
-            return False
+        if not super(IMTField, self).valid_value(value):  # not in the list
+            # It is perfectly fine to raise ValidationError from here, as
+            # this allows us to customize the message that otherwise would be
+            # a too generic 'incalid choice'
+            try:
+                imt.from_string(value)
+            except Exception:  # pylint: disable=broad-except
+                if value == 'SA':
+                    raise ValidationError(
+                        self.error_messages['sa_without_period'],
+                        code='sa_without_period',
+                    )
+                # this should never happen, however:
+                # copied and modified from ChoiceField
+                raise ValidationError(
+                    self.error_messages['invalid_imt'],
+                    code='invalid_imt',
+                    params={'value': value},
+                )
+
+        return True
+
+    def combine_with_periods(self, imts, periods_str):
+        '''Returns a list of the IMT values combined with all SA with periods
+        defined in `self.sa_period`, This method first removes all instances
+        of 'SA' from `imts`, and then inserts each 'SA(p)' at the index
+        where the first 'SA' was found (or at the end of the list if no 'SA'
+        was found). If `periods_str` is falsy, simply returns `imts`.
+
+        :param imts: the list of strings previously validted via this object
+            `clean` method
+        :param periods_str: a string of comma or space separated SA periods
+            (see ArrayField class) to be appended to imts
+        '''
+        if periods_str:
+            try:
+                saindex = imts.index('SA')
+            except ValueError:
+                saindex = len(imts)
+
+            try:
+                periods = \
+                    vectorize(ArrayField(required=False).clean(periods_str))
+                ret = [_ for _ in imts if _ != 'SA']
+                sa_periods = ['SA(%s)' % _ for _ in periods]
+                imts = ret[:saindex] + sa_periods + ret[saindex:]
+            except Exception:
+                raise ValidationError(
+                    self.error_messages['invalid_period'],
+                    code='invalid_period(s)'
+                )
+
+        return imts
+
+    def validate_imts(self, imts):
+        '''Returns imts if they are all valid IMT strings (thus, 'SA' is
+        invalid). Raises ValidationError if any imt in imts is invalid.
+        '''
+        for imt_ in imts:
+            try:
+                imt.from_string(imt_)
+            except Exception:  # pylint: disable=broad-except
+                if imt_ == 'SA':
+                    raise ValidationError(
+                        self.error_messages['sa_without_period'],
+                        code='sa_without_period',
+                    )
+                # this should never happen, however:
+                # copied and modified from ChoiceField
+                raise ValidationError(
+                    self.error_messages['invalid_imt'],
+                    code='invalid_imt',
+                    params={'value': imt_},
+                )
+        return imts
 
 
 class TrtField(MultipleChoiceWildcardField):

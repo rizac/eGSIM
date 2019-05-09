@@ -75,11 +75,11 @@ Vue.component('testing', {
                 
                 	<imtselect :form="form" class='flexible'></imtselect>
 
-                    <div class="mt-4" style="background-color:transparent">
+                    <div class="mt-4 form-control" style="background-color:transparent">
         
                         <forminput :form='form' :name='"gmdb"'></forminput>
                     	<forminput :form='form' :name='"selexpr"' showhelpbutton
-                			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-1'>
+                			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2'>
                 		</forminput>
 
                     </div>

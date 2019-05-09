@@ -31,7 +31,7 @@ from egsim.core.utils import vectorize, isscalar, yaml_load, querystring, \
     tostr, DISTANCE_LABEL
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, \
     MsrField, PointField, TrtField, GmdbField, ResidualplottypeField, \
-    GsimField, TrModelField, ResidualsTestField
+    GsimField, TrModelField, ResidualsTestField, ArrayField
 from egsim.models import sharing_gsims, shared_imts
 
 
@@ -312,7 +312,7 @@ class GsimSelectionForm(BaseForm):
 
     # NOTE: DO NOT set initial
     gsim = GsimField(required=False)
-    imt = IMTField(required=False, sa_periods_required=False)
+    imt = IMTField(required=False)
 
     model = TrModelField(label='Tectonic region model', required=False)
     longitude = FloatField(label='Longitude', min_value=-180, max_value=180,
@@ -356,22 +356,12 @@ class GsimImtForm(BaseForm):
 
     gsim = GsimField(required=True)
     imt = IMTField(required=True)
-    sa_period = NArrayField(label="SA period(s)",
-                            required=False,
-                            help_text=("Required only if SA is a selected "
-                                       "Intensity Measure Type. "
-                                       "Alternatively, you can ignore this "
-                                       "parameter but each SA must be "
-                                       "supplied with its period in "
-                                       "parentheses, e.g: SA(0.1) SA(0.2)"))
+    # sa_periods should not be exposed through the API, it is only used
+    # from the frontend GUI. Thus "required" is necessary. Also look at
+    # __init__. We use a CharField because in principle it should never
+    # raise: If SA periods are malformed, the IMT field holds the error
+    sa_period = CharField(label="SA period(s)", required=False)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # put 'sa_period in the IMTField: Note: modify self.fields, not
-        # self.base_fields or self.declared_fields or self.base_fields (the
-        # latter two are the same)
-        # (https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form)
-        self.fields['imt'].sa_periods = self.data.pop('sa_period', [])
 
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on
@@ -398,14 +388,14 @@ class GsimImtForm(BaseForm):
         This method calls self.add_error and works on self.cleaned_data, thus
         it should be called after super().clean()'''
         gsims = self.cleaned_data.get("gsim", [])
-        # We need to reduce all IMT strings in cleaned_data['imt'] to a set
-        # where all 'SA(#)' strings are counted as 'SA' once..
-        # Use imt.from_string and get the class name: quite cumbersome, but it works
-        imt_classnames = set(imt_from_string(imtname).__class__.__name__
-                             for imtname in self.cleaned_data.get("imt", []))
+        imts = self.cleaned_data.get("imt", [])
 
-        if gsims and imt_classnames:
-            invalid_gsims = set(gsims) - set(sharing_gsims(imt_classnames))
+        if gsims and imts:
+            # We need to reduce all IMT strings in cleaned_data['imt'] to a set
+            # where all 'SA(#)' strings are counted as 'SA' once..
+            # Use imt.from_string and get the class name:
+            imts = set(_ for _ in imts if not _.startswith('SA('))
+            invalid_gsims = set(gsims) - set(sharing_gsims(imts))
 
             if invalid_gsims:
                 # instead of raising ValidationError, which is keyed with
@@ -414,7 +404,7 @@ class GsimImtForm(BaseForm):
                 # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
                 # note: pass only invalid_gsims as the result would be equal
                 # than passing all gsims but the loop is faster:
-                invalid_imts = set(imt_classnames) - set(shared_imts(gsims))
+                invalid_imts = imts - set(shared_imts(gsims))
                 err_gsim = ValidationError(_("%(num)d gsim(s) not defined "
                                              "for all supplied imt(s)"),
                                            params={'num': len(invalid_gsims)},
@@ -423,7 +413,22 @@ class GsimImtForm(BaseForm):
                                             "all supplied gsim(s)"),
                                           params={'num': len(invalid_imts)},
                                           code='invalid')
+                # add_error removes also the field from self.cleaned_data:
                 self.add_error('gsim', err_gsim)
+                self.add_error('imt', err_imt)
+
+        # now build imts with periods, and validate them:
+        gsims = self.cleaned_data.get("gsim", [])
+        imts = self.cleaned_data.get("imt", [])
+        periods_str = self.cleaned_data.get('sa_period', '')
+        if gsims and imts and periods_str:
+            imtfield = self.fields['imt']
+            try:
+                # combine with periods (if no period, it's no-op):
+                imts = imtfield.combine_with_periods(imts, periods_str)
+                # re-clean the value with periods:
+                self.cleaned_data['imt'] = imtfield.clean(imts)
+            except ValidationError as err_imt:
                 self.add_error('imt', err_imt)
 
 
@@ -492,11 +497,12 @@ class TrellisForm(GsimImtForm):
         super().__init__(*args, **kwargs)
         # If the plot_type is 's' or 'ss', remove imt and sa_period
         # and set the field (note NOT self.base_fields or self.declared_fields!
-        # not to be required, so validation will be ok
+        # not to be required, so validation will be ok:
         if self.data.get('plot_type', '') in ('s', 'ss'):
             self.data.pop('imt', None)
             self.data.pop('sa_period', None)
             self.fields['imt'].required = False
+            self.fields['sa_period'].required = False  # for safety
 
     def clean(self):
         cleaned_data = super(TrellisForm, self).clean()
