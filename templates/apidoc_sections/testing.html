@@ -15,7 +15,22 @@ database (GMDB) and the the desired plot type. As discussed, parameters can be g
 URL (GET method) or as separate text data in JSON or YAML format (POST method) and are:
 </p>
 
-{{ form_testing | safe }}
+<table class='request'>
+	{% include "apidoc_sections/request.template.html" with form=form.testing %}
+	<tfoot>
+	<tr><td colspan='3'>Notes:</td></tr>
+	<tr><td colspan='3'>"SA" in {{ form.trellis.imt.attrs.name }} must be provided
+		with the given period in parentheses, e.g. "SA(0.2)".
+	</td></tr>
+	<tr><td colspan='3'> {{ form.trellis.gsim.attrs.name }} and 
+		{{ form.trellis.imt.attrs.name }}
+		can be input as space- or comma-separated lists of values. They can also be input with
+		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
+		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
+	</td></tr>
+	</tfoot>
+</table>
+
 
 <p>
 The selection expression syntax has already been discussed in the

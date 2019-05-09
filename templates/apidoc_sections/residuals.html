@@ -17,7 +17,22 @@ database (GMDB) and the the desired plot type. As discussed, parameters can be g
 URL (GET method) or as separate text data in JSON or YAML format (POST method) and are:
 </p>
 
-{{ form_residuals | safe }}
+<table class='request'>
+	{% include "apidoc_sections/request.template.html" with form=form.residuals %}
+	<tfoot>
+	<tr><td colspan='3'>Notes:</td></tr>
+	<tr><td colspan='3'>"SA" in {{ form.trellis.imt.attrs.name }} must be provided
+		with the given period in parentheses, e.g. "SA(0.2)".
+	</td></tr>
+	<tr><td colspan='3'> {{ form.trellis.gsim.attrs.name }} and 
+		{{ form.trellis.imt.attrs.name }}
+		can be input as space- or comma-separated lists of values. They can also be input with
+		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
+		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
+	</td></tr>
+	</tfoot>
+</table>
+
 
 <h4 id="selexpr">Selection expression</h4>
 
@@ -26,12 +41,12 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 <h3 id="residuals.response">Response</h3>
 <p>
 The number of generated Residuals plots will be the product of the requested Intensity
-measure types (parameter {{ param.residualsform.imt.name }}) and the requested GMPEs
-(parameter {{ param.residualsform.gsim.name }}. Each Residual plot is futher subdivided
+measure types (parameter {{ form.residuals.imt.attrs.name }}) and the requested GMPEs
+(parameter {{ form.residuals.gsim.attrs.name }}. Each Residual plot is futher subdivided
 into three subplots:
 </p>
 
-<table class='nopagebreak'>
+<table>
 <thead>
 <tr>
 	<td>Plot type</td>
@@ -41,39 +56,39 @@ into three subplots:
 </thead>
 <tbody class='grid'>
 <tr>
-	<td>{{ param.residualsform.plot_type.choices.0.label }}</td>
+	<td>{{ form.residuals.plot_type.choices.0.1 }}</td>
 	<td rowspan="7">'Intra event', 'Inter event' and 'Total'</td>
 	<td>Histogram of frequencies (y axis) vs residuals bins (x)</td>
 	<td>Mean, standard deviation of the distribution</td>
 </tr>
 <tr>
-	<td>{{ param.residualsform.plot_type.choices.1.label}}</td>
+	<td>{{ form.residuals.plot_type.choices.1.1 }}</td>
 	<td>Histogram of the frequencies (y) vs residuals likelihood bins (x)</td>
 	<td>Median of the distribution</td>
 </tr>
 <tr>
-	<td>{{ param.residualsform.plot_type.choices.2.label}}</td>
+	<td>{{ form.residuals.plot_type.choices.2.1 }}</td>
 	<td>Scatter plot of residuals (y) vs. magnitude (x)</td>
 	<td rowspan="5">p-value and linear regression (slope, intercept)</td>
 </tr>
 <tr>
-	<td>{{ param.residualsform.plot_type.choices.3.label}}</td>
+	<td>{{ form.residuals.plot_type.choices.3.1 }}</td>
 	<td>Same as above with distance as point's x</td>
 </tr>
 <tr>
-	<td>{{ param.residualsform.plot_type.choices.4.label}}</td>
+	<td>{{ form.residuals.plot_type.choices.4.1 }}</td>
 	<td>Same as above with Vs<sub>30</sub> as point's x</td>
 </tr>
 <tr>
-	<td>{{ param.residualsform.plot_type.choices.5.label}}</td>
+	<td>{{ form.residuals.plot_type.choices.5.1 }}</td>
 	<td>Same as above with depth as point's x</td>
 </tr>
 <!-- <tr>
-	<td>{ param.residualsform.plot_type.choices.6.label }</td>
+	<td>{ form.residuals.plot_type.choices.6.1 }</td>
 	<td>Same as above with stations as point's x</td>
 </tr>
 <tr>
-	<td>{ param.residualsform.plot_type.choices.7.label }</td>
+	<td>{ form.residuals.plot_type.choices.7.1 }</td>
 	<td style='width:18em'>'Intra event' (not normalised by the intra-event standard deviation),
 	'Average within-event' (Average within-event residual for each station),
 	'Variabilities distribution' (the distribution residual variabilities for each station)</td>

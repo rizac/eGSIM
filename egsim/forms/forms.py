@@ -33,6 +33,7 @@ from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, \
     MsrField, PointField, TrtField, GmdbField, ResidualplottypeField, \
     GsimField, TrModelField, ResidualsTestField, ArrayField
 from egsim.models import sharing_gsims, shared_imts
+from django.forms.widgets import HiddenInput
 
 
 class BaseForm(Form):
@@ -234,6 +235,8 @@ class BaseForm(Form):
             via HTTP requests).
         '''
         formdata = {}
+        optional_names = {v: k
+                          for k, v in self.__additional_fieldnames__.items()}
         for name, _ in self.declared_fields.items():  # pylint: disable=no-member
             # little spec: self.declared_fields and self.base_fields are the
             # same thing (see django.forms.forms.DeclarativeFieldsMetaclass)
@@ -261,7 +264,8 @@ class BaseForm(Form):
             if 'id' not in attrs:
                 attrs['id'] = boundfield.auto_id
             attrs['name'] = widgetdata.pop('name')
-            fielddata = {'help': boundfield.help_text,
+            fielddata = {'name2': optional_names.get(name, ''),
+                         'help': boundfield.help_text,
                          'label': boundfield.label,
                          'attrs': attrs,
                          'err': '',
@@ -277,27 +281,6 @@ class BaseForm(Form):
                     fielddata['choices'] = list(fielddata['choices'])
             formdata[name] = fielddata
         return formdata
-
-    @classmethod
-    def parnames(cls):  # FIXME: Is this method necessary?
-        '''returns an object where attributes are ALL parameters found on any
-        Form of this module'''
-        ret = OrderedDict()
-        thismodule = sys.modules[__name__]
-        for name in dir(thismodule):
-            obj = thismodule.__dict__[name]
-            try:
-                if issubclass(obj, cls):
-                    ret[obj.__name__.lower()] = \
-                        {key: {"name": key, "label": field.label,
-                               "help": field.help_text,
-                               'choices': [{'name': n, 'label': l}
-                                           for n, l in getattr(field,
-                                                               'choices', [])]}
-                         for key, field in obj.declared_fields.items()}
-            except:
-                pass
-        return ret
 
 
 class GsimSelectionForm(BaseForm):
@@ -360,7 +343,8 @@ class GsimImtForm(BaseForm):
     # from the frontend GUI. Thus "required" is necessary. Also look at
     # __init__. We use a CharField because in principle it should never
     # raise: If SA periods are malformed, the IMT field holds the error
-    sa_period = CharField(label="SA period(s)", required=False)
+    sa_period = CharField(label="SA period(s)", required=False,
+                          widget=HiddenInput)
 
 
     def clean(self):
@@ -581,8 +565,12 @@ class TestingForm(GsimImtForm, GmdbForm):
 
     fit_measure = ResidualsTestField(required=True, label="Measure(s) of fit")
 
-    edr_bandwidth = FloatField(required=False, initial=0.01)
-    edr_multiplier = FloatField(required=False, initial=3.0)
+    edr_bandwidth = FloatField(required=False, initial=0.01,
+                               help_text=('Ignored if EDR is not a '
+                                          'selected measure of fit'))
+    edr_multiplier = FloatField(required=False, initial=3.0,
+                                help_text=('Ignored if EDR is not a '
+                                           'selected measure of fit'))
 
     def clean(self):
         # Note: the call below calls GmdbPlot.clean(self) BUT we should
