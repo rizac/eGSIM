@@ -26,29 +26,45 @@ optional. As discussed, parameters can be given in the endpoint URL (GET method)
 separate text data in JSON or YAML format (POST method) and are:
 </p>
 
-{{ form_trellis | safe }}
 
-<p class='footnote'>
-Note: if {{ param.trellisform.plot_type.name }} is
-<code>{{ param.trellisform.plot_type.choices.2.name }}</code>
-(<code>{{ param.trellisform.plot_type.choices.2.label }}</code>) or
-<code>{{ param.trellisform.plot_type.choices.5.name }}</code>
-(<code>{{ param.trellisform.plot_type.choices.5.label }}</code>), then
-<code>{{ param.trellisform.imt.name }}</code> and
-<code>{{ param.trellisform.sa_period.name }}</code> will
-default to 'SA' and a set of pre-define periods, respectively: any value
-explicitly provided by the user will thus be ignored in case.
-</p>
+<table class='request'>
+	{% include "apidoc_sections/request.template.html" with form=form.trellis %}
+	<tfoot>
+	<tr><td colspan='3'>Notes:</td></tr>
+	<tr><td colspan='3'> "SA" in {{ form.trellis.imt.attrs.name }} must be provided
+		with the given period in parentheses, e.g. "SA(0.2)".
+		If {{ form.trellis.plot_type.attrs.name }} is
+		<code>{{ form.trellis.plot_type.choices.2.0 }}</code>
+		 or
+		<code>{{ form.trellis.plot_type.choices.5.0 }}</code>
+		(<code>{{ form.trellis.plot_type.choices.2.1 }}</code> or
+		<code>{{ form.trellis.plot_type.choices.5.1 }}</code>), then
+		<code>{{ form.trellis.imt.attrs.name }}</code> will
+		default to 'SA' with a set of pre-defined periods: any value
+		explicitly provided by the user will thus be ignored in case.
+	</td></tr>
+	<tr><td colspan='3'> {{ form.trellis.gsim.attrs.name }}, 
+		{{ form.trellis.imt.attrs.name }}, {{ form.trellis.magnitude.attrs.name }},
+		{{ form.trellis.distance.attrs.name }}, {{ form.trellis.vs30.attrs.name }}
+		(and, from the gui, the value provided for "{{ form.trellis.sa_period.label }}")
+		can be input as space- or comma-separated lists of values. {{ form.trellis.gsim.attrs.name }} and 
+		{{ form.trellis.imt.attrs.name }} can also be input with
+		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
+		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
+	</td></tr>
+	</tfoot>
+</table>
+
 
 <h3 id="trellis.response">Response</h3>
 <p>
 The number of generated Trellis plots depends on the requested Intensity measure types (parameter
-{{ param.trellisform.imt.name }}) <i>and</i> the parameters {{ param.trellisform.magnitude.name }},
-{{ param.trellisform.distance.name }} and
-{{ param.trellisform.vs30.name }} (which can be given as numeric scalr or array):
+{{ form.trellis.imt.attrs.name }}) <i>and</i> the parameters {{ form.trellis.magnitude.attrs.name }},
+{{ form.trellis.distance.attrs.name }} and
+{{ form.trellis.vs30.attrs.name }} (which can be given as numeric scalr or array):
 </p>
 
-<table class='nopagebreak'>
+<table>
 <thead>
 <tr>
 	<td>Plot type</td>
@@ -57,19 +73,25 @@ The number of generated Trellis plots depends on the requested Intensity measure
 </thead>
 <tbody>
 <tr>
-	<td>{{ param.trellisform.plot_type.choices.0.label }}</td>
-	<td>{{ param.trellisform.distance.name }}</td>
-	<td>{{ param.trellisform.imt.name }}, {{ param.trellisform.magnitude.name }}, {{ param.trellisform.vs30.name }}</td>
+	<td>{{ form.trellis.plot_type.choices.0.1 }}</td>
+	<td>{{ form.trellis.distance.attrs.name }}</td>
+	<td>{{ form.trellis.imt.attrs.name }},
+	    {{ form.trellis.magnitude.attrs.name }},
+	    {{ form.trellis.vs30.attrs.name }}</td>
 </tr>
 <tr>
-	<td>{{ param.trellisform.plot_type.choices.1.label }}</td>
-	<td>{{ param.trellisform.magnitude.name }}</td>
-	<td>{{ param.trellisform.imt.name }}, {{ param.trellisform.distance.name }}, {{ param.trellisform.vs30.name }}</td>
+	<td>{{ form.trellis.plot_type.choices.1.1 }}</td>
+	<td>{{ form.trellis.magnitude.attrs.name }}</td>
+	<td>{{ form.trellis.imt.attrs.name }},
+	    {{ form.trellis.distance.attrs.name }},
+	    {{ form.trellis.vs30.attrs.name }}</td>
 </tr>
 <tr>
-	<td>{{ param.trellisform.plot_type.choices.2.label }}</td>
+	<td>{{ form.trellis.plot_type.choices.2.1 }}</td>
 	<td>None: a set of pre-defined periods will be used</td>
-	<td>{{ param.trellisform.magnitude.name }}, {{ param.trellisform.distance.name }}, {{ param.trellisform.vs30.name }}</td>
+	<td>{{ form.trellis.magnitude.attrs.name }},
+	    {{ form.trellis.distance.attrs.name }},
+	    {{ form.trellis.vs30.attrs.name }}</td>
 </tbody>
 </table>
 

@@ -35,17 +35,17 @@ _COMMON_PARAMS = {
     'debug': settings.DEBUG,
     }
 
+MENU_HOME = 'home'  # pylint: disable=invalid-name
+MENU_GSIMS = 'gsims'  # pylint: disable=invalid-name
+MENU_TRELLIS = 'trellis'  # pylint: disable=invalid-name
+MENU_GMDB = 'gmdbplot'  # pylint: disable=invalid-name
+MENU_RES = 'residuals'  # pylint: disable=invalid-name
+MENU_TEST = 'testing'  # pylint: disable=invalid-name
+MENU_DOC = 'apidoc'  # pylint: disable=invalid-name
+
 
 def main(request, selected_menu=None):
     '''view for the main page'''
-
-    MENU_HOME = 'home'  # pylint: disable=invalid-name
-    MENU_GSIMS = 'gsims'  # pylint: disable=invalid-name
-    MENU_TRELLIS = 'trellis'  # pylint: disable=invalid-name
-    MENU_GMDB = 'gmdbplot'  # pylint: disable=invalid-name
-    MENU_RES = 'residuals'  # pylint: disable=invalid-name
-    MENU_TEST = 'testing'  # pylint: disable=invalid-name
-    MENU_DOC = 'apidoc'  # pylint: disable=invalid-name
 
     # Tab components (one per tab, one per activated vue component)
     # (key, label and icon) (the last is bootstrap fontawesome name)
@@ -173,19 +173,24 @@ def apidoc(request):
     # It is the request.META['HTTP_HOST'] key. But during testing, this
     # key is not present. Actually, just use a string for the moment:
     baseurl = "[eGSIM domain URL]"
+    form = {
+        MENU_GSIMS: GsimsView.formclass().to_rendering_dict(False),
+        MENU_TRELLIS: TrellisView.formclass().to_rendering_dict(False),
+        MENU_GMDB: GmdbPlotView.formclass().to_rendering_dict(False),
+        MENU_RES: ResidualsView.formclass().to_rendering_dict(False),
+        MENU_TEST: TestingView.formclass().to_rendering_dict(False)
+    }
     return render(request, filename,
                   dict(_COMMON_PARAMS,
+                       form=form,
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
                        last_modified=last_modified,
                        baseurl=baseurl+"/query",
                        trellis='trellis', residuals='residuals',
                        gsimsel='gsims', test='testing',
-                       param=BaseForm.parnames(),
                        gmt=get_gmdb_column_desc(),
-                       form_trellis=to_html_table(TrellisForm),
-                       form_residuals=to_html_table(ResidualsForm),
-                       form_gsims=to_html_table(GsimSelectionForm),
-                       form_testing=to_html_table(TestingForm)))
+                       )
+                  )
 
 
 def test_err(request):  # FIXME: REMOVE!!!!!
