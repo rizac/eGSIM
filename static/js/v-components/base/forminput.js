@@ -41,12 +41,12 @@ Vue.component('forminput', {
             </label>
             <div class="text-muted small flexible ml-3 text-right">
                 <span v-if="elm.err" class="text-danger">{{ elm.err }}</span>
-                <span v-else>[{{ name }}]</span>
+                <template v-else>
+            		<span class="text-muted mr-1" v-if="elm.help" v-html="elm.help"></span>
+            		<span class="text-muted mr-1" v-if="isSelectMultiple">({{ elm.val.length || 0 }} of {{ elm.choices.length }} selected)</span>
+            		<span class='text-primary bg-white rounded'>{{ name }}</span>
+            	</template>
             </div>
-            <template v-if="!elm.err">
-            	<div class="text-muted small ml-1" v-if="elm.help" v-html="elm.help"></div>
-            	<div class="text-muted small ml-1" v-if="isSelectMultiple">{{ elm.val.length || 0 }} of {{ elm.choices.length }} selected</div>
-            </template>
             <button v-if="showhelpbutton" type="button" @click='$emit("helprequested")'
     		 		class='btn btn-outline-secondary btn-sm ml-1 mb-1 py-0'>
     			<i class="fa fa-info-circle"></i>
