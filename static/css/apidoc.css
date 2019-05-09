@@ -12,13 +12,9 @@
     body {
     	height: initial !important;
         font-size: 20px !important;
-    	background-color: initial !important;
     }
     div#toc{
     	display: none !important;
-    }
-    .bg-light{
-    	background-color: initial !important;
     }
 }
 
