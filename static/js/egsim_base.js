@@ -96,9 +96,9 @@ var EGSIM_BASE = {
             if (isFormObj){ // data is a Form Object, convert jsonData  to dict of scalars:
                 jsonData = {};
                 for (var key of Object.keys(data)){
-                	if (data[key].attrs && !data[key].attrs.disabled){
-	                    data[key].err = '';  // initialize error
-    	                jsonData[key] = data[key].val;  // assign value to object up to be sent
+                	data[key].err = '';  // initialize error
+    	            if (!data[key].is_hidden){
+	                    jsonData[key] = data[key].val;  // assign value to object up to be sent
     	            }
                 }
             }
