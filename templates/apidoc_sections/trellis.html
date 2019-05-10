@@ -30,8 +30,8 @@ separate text data in JSON or YAML format (POST method) and are:
 <table class='request'>
 	{% include "apidoc_sections/request.template.html" with form=form.trellis %}
 	<tfoot>
-	<tr><td colspan='3'>Notes:</td></tr>
-	<tr><td colspan='3'> "SA" in {{ form.trellis.imt.attrs.name }} must be provided
+	<tr><td colspan='2'>Notes:</td></tr>
+	<tr><td colspan='2'> "SA" in {{ form.trellis.imt.attrs.name }} must be provided
 		with the given period in parentheses, e.g. "SA(0.2)".
 		If {{ form.trellis.plot_type.attrs.name }} is
 		<code>{{ form.trellis.plot_type.choices.2.0 }}</code>
@@ -43,7 +43,7 @@ separate text data in JSON or YAML format (POST method) and are:
 		default to 'SA' with a set of pre-defined periods: any value
 		explicitly provided by the user will thus be ignored in case.
 	</td></tr>
-	<tr><td colspan='3'> {{ form.trellis.gsim.attrs.name }}, 
+	<tr><td colspan='2'> {{ form.trellis.gsim.attrs.name }}, 
 		{{ form.trellis.imt.attrs.name }}, {{ form.trellis.magnitude.attrs.name }},
 		{{ form.trellis.distance.attrs.name }}, {{ form.trellis.vs30.attrs.name }}
 		(and, from the gui, the value provided for "{{ form.trellis.sa_period.label }}")
