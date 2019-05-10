@@ -112,7 +112,11 @@ table{
 	background-color: #ececec !important;
 } */
 
-table td{padding: .3rem; vertical-align:middle;text-align:initial;}
+table td, table th{
+	padding: 0.5rem .25rem;
+	vertical-align:top;
+	text-align:initial;
+}
 table > thead{font-weight: bold;}
 
 /* table borders: */
