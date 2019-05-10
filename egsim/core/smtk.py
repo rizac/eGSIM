@@ -18,7 +18,7 @@ from smtk.sm_table import GroundMotionTable, records_where
 from smtk.residuals.gmpe_residuals import Residuals
 from smtk.residuals.residual_plots import residuals_with_distance
 
-from egsim.core.utils import vectorize, DISTANCE_LABEL, MOF, OQ
+from egsim.core.utils import vectorize, DISTANCE_LABEL, MOF, OQ, GSIM_REQUIRED_ATTRS
 
 
 def _relabel_sa(string):
@@ -224,82 +224,93 @@ def testing(params):
     CONFIG = 'config'  # pylint: disable=invalid-name
     SEL = 'selexpr'  # pylint: disable=invalid-name
 
-    residuals = Residuals(params[GSIM], params[IMT])
-    # Compute residuals.
     # params[GMDB] is the tuple (hdf file name, table name):
-    gmdb = GroundMotionTable(*params[GMDB], mode='r')
-    if params.get(SEL):
-        gmdb = gmdb.filter(params[SEL])
-    residuals.get_residuals(gmdb)
-    # residuals = res.Residuals(self.gsims, self.imts)
+    gmdb_base = GroundMotionTable(*params[GMDB], mode='r')
 
     ret = {}
+    obs_count = defaultdict(int)
     config = params.get(CONFIG, {})
     # columns: "Measure of fit" "imt" "gsim" "value(s)"
-    for key, name, func in params[FIT_M]:
-        result = func(residuals, config)
-        if isinstance(result, (list, tuple)):
-            result = result[0]
-        # Returned object are of this type (<GMPE>: any valid Gmpe as string,
-        # <IMT>: any valid IMT as string, <TYPE>: str in "Total", "Inter event"
-        # or "Intra event". <EDRTYPE>: string in "MDE Norm", "sqrt Kappa" or
-        # "EDR"):
-        #
-        # Residuals:
-        # {
-        #   <GMPE>: {
-        #      <IMT>: {
-        #        <TYPE>: {
-        #            "Mean": <float>,
-        #            "Std Dev": <float>
-        #        }
-        #      }
-        #   }
-        # }
-        #
-        # Likelihood:
-        # {
-        #   <GMPE>: {
-        #      <IMT>: {
-        #        <TYPE>: <ndarray>
-        #        }
-        #      }
-        #   }
-        # }
-        #
-        # Log-Likelihood, Multivariate Log-Likelihood:
-        # {
-        #   <GMPE>: {
-        #      <IMT>: <float>  # IMT includes the "All" key
-        #   }
-        # }
-        #
-        # EDR
-        # {
-        #   <GMPE>: {
-        #      <EDRTYPE>: <float>
-        #   }
-        # }
-        #
-        # The code belows re-arranges the dicts flattening them like this:
-        # "<Residual name> <residual type if any>":{
-        #        <IMT>: {
-        #           <GMPE>: float or ndarray
-        #        }
-        #     }
-        # }
+    for gsim in params[GSIM]:
+        residuals = Residuals([gsim], params[IMT])
+        selexpr = get_selexpr(gsim, params.get(SEL, ''))
+        # get number of records (observations) to be used. Maybe there might
+        # be a more efficient way
+        numrecords = 0
+        with gmdb_base:
+            for _ in records_where(gmdb_base.table, selexpr):
+                numrecords += 1
+        obs_count[gsim] = numrecords
+        if not numrecords:
+            continue
 
-        if key == MOF.RES:
-            for gsim, gsim_result in result.items():
+        # we have some record to be used, compute residuals:
+        gmdb = gmdb_base.filter(selexpr)
+        residuals.get_residuals(gmdb)
+
+        for key, name, func in params[FIT_M]:
+            result = func(residuals, config)
+            if isinstance(result, (list, tuple)):
+                result = result[0]
+            # Returned object are of this type (<GMPE>: any valid Gmpe as string,
+            # <IMT>: any valid IMT as string, <TYPE>: str in "Total", "Inter event"
+            # or "Intra event". <EDRTYPE>: string in "MDE Norm", "sqrt Kappa" or
+            # "EDR"):
+            #
+            # Residuals:
+            # {
+            #   <GMPE>: {
+            #      <IMT>: {
+            #        <TYPE>: {
+            #            "Mean": <float>,
+            #            "Std Dev": <float>
+            #        }
+            #      }
+            #   }
+            # }
+            #
+            # Likelihood:
+            # {
+            #   <GMPE>: {
+            #      <IMT>: {
+            #        <TYPE>: <ndarray>
+            #        }
+            #      }
+            #   }
+            # }
+            #
+            # Log-Likelihood, Multivariate Log-Likelihood:
+            # {
+            #   <GMPE>: {
+            #      <IMT>: <float>  # IMT includes the "All" key
+            #   }
+            # }
+            #
+            # EDR
+            # {
+            #   <GMPE>: {
+            #      <EDRTYPE>: <float>
+            #   }
+            # }
+            #
+            # The code belows re-arranges the dicts flattening them like this:
+            # "<Residual name> <residual type if any>":{
+            #        <IMT>: {
+            #           <GMPE>: float or ndarray
+            #        }
+            #     }
+            # }
+            gsim_result = result[gsim]
+            if key == MOF.RES:
                 for imt, imt_result in gsim_result.items():
                     imt2 = _relabel_sa(imt)
                     for type_, type_result in imt_result.items():
                         for meas, value in type_result.items():
                             moffit = "%s %s %s" % (name, type_, meas)
                             ret.setdefault(moffit, {}).\
-                                setdefault(imt2, {})[gsim] = _jsonify_num(value)
-        elif key == MOF.LH:
-            for gsim, gsim_result in result.items():
+                                setdefault(imt2, {})[gsim] = \
+                                _jsonify_num(value)
+            elif key == MOF.LH:
                 for imt, imt_result in gsim_result.items():
                     imt2 = _relabel_sa(imt)
                     for type_, values in imt_result.items():
@@ -309,81 +320,47 @@ def testing(params):
                             moffit = "%s %s %s" % (name, type_, kkk)
                             ret.setdefault(moffit, {}).\
                                 setdefault(imt2, {})[gsim] = _jsonify_num(vvv)
-        elif key in (MOF.LLH, MOF.MLLH):
-            for gsim, gsim_result in result.items():
+            elif key in (MOF.LLH, MOF.MLLH):
                 for imt, value in gsim_result.items():
                     imt2 = _relabel_sa(imt)
                     moffit = name
                     ret.setdefault(moffit, {}).\
                         setdefault(imt2, {})[gsim] = _jsonify_num(value)
-        elif key == MOF.EDR:
-            for gsim, gsim_result in result.items():
+            elif key == MOF.EDR:
                 for type_, value in gsim_result.items():
                     moffit = "%s %s" % (name, type_)
                     imt = ""  # hack
                     ret.setdefault(moffit, {}).\
                         setdefault(imt, {})[gsim] = _jsonify_num(value)
 
+    ret['Database records used'] = obs_count
     return ret
 
 
 def get_selexpr(gsim, user_selexpr):
-    '''builds a selection expression from a given gsim name'''
-    
-    # REMEBER: unknown (not in gm database columns) are:
-    # "{'vs30measured', 'lat', 'rvolc', 'dip', 'ztor', 'siteclass', 'mag',
-    #   'rake', 'rcdpp', 'lon', 'hypo_depth', 'width', 'z1pt0'}" 
-    # OK are: "{'rjb', 'rhypo', 'azimuth', 'rrup', 'ry0', 'backarc',
-    #           'z2pt5', 'vs30', 'rx', 'repi'}"
-
-    OK_PARAM = {'rjb', 'rhypo', 'azimuth', 'rrup', 'ry0', 'backarc',
-                'z2pt5', 'vs30', 'rx', 'repi'}
-    MAPPINGS = {
-        'z1pt0': 'z1',
-        'mag': 'event_magnitude',
-        'lat': 'event_latitude',
-        'lon': 'event_longitude',
-        'vs30measured': 'vs30_measured',
-        'hypo_depth': 'hypocenter_depth',
-        'ztor': 'depth_top_of_rupture',
-    }
-    UNKNOWN: {
-        # handled below (as well as strike):
-        'rake', 'dip',
-        # ignored (not used in smtk):
-        'rvolc', 'rcdpp', 'siteclass',
-        # it is handled within the smtk code:
-        'width'
-    }
-    # here we implement the missing values for specific columns which do
-    # not has nan as default. An empty or falsy value mapped to a column means:
-    # skip that column (no missing value supported. E.g. boolean columns).
-    # For string columns remember to type '""'):
-    MISSING_VAL = {'backarc': '', 'vs30measured': ''}
-
-    gsim_class = OQ.gsims()[gsim]
-    attrs = chain(*[getattr(gsim_class, _) for _ in dir(gsim_class)
-                    if _.startswith('REQUIRES_')])
+    '''builds a selection expression from a given gsim name concatenating
+    the given `user_selexpr` (user defined selection expression with the
+    expression obtained by inspecting the required arguments of the given
+    gsim'''
+    attrs = OQ.required_attrs(gsim)
     selexpr_chunks = []
-    for prop in attrs:
-        if prop in ('rake', 'strike', 'dip'):
+    for att in attrs:
+        if att in ('rake', 'strike', 'dip'):
             selexpr_chunks.append('((dip_1 != nan) & '
-                                  '(strike_1) != nan & '
+                                  '(strike_1 != nan) & '
                                   '(rake_1 != nan)) | '
                                   '((dip_2 != nan) & '
-                                  '(strike_2) != nan & '
+                                  '(strike_2 != nan) & '
                                   '(rake_2 !=nan))')
             continue
-        if prop not in OK_PARAM:
-            prop = MAPPINGS.get(prop, '')
-        if not prop:
-            continue
-        missing_val = MISSING_VAL.get(prop, 'nan')
-        if missing_val:
-            selexpr_chunks.append('(%s != %s)' % (prop, missing_val))
+        (column, missing_val) = GSIM_REQUIRED_ATTRS.get(att, ['', ''])
+        if column and missing_val:
+            selexpr_chunks.append('(%s != %s)' % (column, missing_val))
 
+    if not selexpr_chunks:
+        return user_selexpr
     if user_selexpr:
-        selexpr_chunks.append('(%s)' % user_selexpr)
+        selexpr_chunks.insert(0, '(%s)' % user_selexpr)
 
     return " & ".join(selexpr_chunks)
 

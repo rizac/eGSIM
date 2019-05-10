@@ -46,13 +46,11 @@ class BaseForm(Form):
     #                              **ParentForm2.__additional_fieldnames__}
     __additional_fieldnames__ = {}
 
-    # this is a dict that will be used when writing this form for documentation
-    # (see module htmldoc): any field name implemented here is mapped to
-    # a dict of field attr: field doc string that will be displayed instead
-    # of the default. Example:
-    # __doc__overrides__ = {'imt': {'required':
-    #                               'This field is required conditionally'}}
-    __doc__overrides__ = {}
+    # this is a list of fields that should be hidden from the doc
+    # and not used in the API. By specifying widget=HiddenInput in the field
+    # you achieve the same result BUT also the <input> will be of type hidden
+    # in the GUI
+    __hidden_fieldnames__ = []
 
     def __init__(self, *args, **kwargs):
         '''Overrides init to set custom attributes on field widgets and to set
@@ -234,6 +232,7 @@ class BaseForm(Form):
             there is a faster way to provide them to the frontend (e.g., later
             via HTTP requests).
         '''
+        hidden_fn = set(self.__hidden_fieldnames__)
         formdata = {}
         optional_names = {v: k
                           for k, v in self.__additional_fieldnames__.items()}
@@ -243,7 +242,7 @@ class BaseForm(Form):
             # and are declared AT CLASS level: modifying them applies changes
             # to all instances, thus avoid. On the other hand,
             # self.fields[name] returns the fields on the instance level and
-            # it's where specific instance-level changes have to be made 
+            # it's where specific instance-level changes have to be made
             # https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form
             # Finally, self[name] creates a BoundField from self.fields[name]:
             # A BoundField deals with displaying the field and populating it
@@ -264,12 +263,14 @@ class BaseForm(Form):
             if 'id' not in attrs:
                 attrs['id'] = boundfield.auto_id
             attrs['name'] = widgetdata.pop('name')
+            is_hidden = widgetdata.pop('is_hidden', False) or \
+                name in hidden_fn
             fielddata = {'name2': optional_names.get(name, ''),
                          'help': boundfield.help_text,
                          'label': boundfield.label,
                          'attrs': attrs,
                          'err': '',
-                         'is_hidden': widgetdata.pop('is_hidden', False),
+                         'is_hidden': is_hidden,
                          # coerce val to [] in case val falsy and multichoice:
                          'val': [] if isinstance(_, MultipleChoiceField)
                          and not val else val}
@@ -336,6 +337,7 @@ class GsimImtForm(BaseForm):
     '''Base abstract-like form for any form requiring Gsim+Imt selection'''
 
     __additional_fieldnames__ = {'gmpe': 'gsim', 'sap': 'sa_period'}
+    __hidden_fieldnames__ = ['sa_period']
 
     gsim = GsimField(required=True)
     imt = IMTField(required=True)
@@ -343,9 +345,7 @@ class GsimImtForm(BaseForm):
     # from the frontend GUI. Thus "required" is necessary. Also look at
     # __init__. We use a CharField because in principle it should never
     # raise: If SA periods are malformed, the IMT field holds the error
-    sa_period = CharField(label="SA period(s)", required=False,
-                          widget=HiddenInput)
-
+    sa_period = CharField(label="SA period(s)", required=False)
 
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on
