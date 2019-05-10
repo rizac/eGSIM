@@ -9,6 +9,7 @@ Created on 31 May 2018
 from collections import defaultdict
 import json
 import re
+from itertools import chain
 
 import numpy as np
 from smtk.trellis.trellis_plots import DistanceIMTTrellis, \
@@ -17,7 +18,7 @@ from smtk.sm_table import GroundMotionTable, records_where
 from smtk.residuals.gmpe_residuals import Residuals
 from smtk.residuals.residual_plots import residuals_with_distance
 
-from egsim.core.utils import vectorize, DISTANCE_LABEL, MOF
+from egsim.core.utils import vectorize, DISTANCE_LABEL, MOF, OQ
 
 
 def _relabel_sa(string):
@@ -324,6 +325,67 @@ def testing(params):
                         setdefault(imt, {})[gsim] = _jsonify_num(value)
 
     return ret
+
+
+def get_selexpr(gsim, user_selexpr):
+    '''builds a selection expression from a given gsim name'''
+    
+    # REMEBER: unknown (not in gm database columns) are:
+    # "{'vs30measured', 'lat', 'rvolc', 'dip', 'ztor', 'siteclass', 'mag',
+    #   'rake', 'rcdpp', 'lon', 'hypo_depth', 'width', 'z1pt0'}" 
+    # OK are: "{'rjb', 'rhypo', 'azimuth', 'rrup', 'ry0', 'backarc',
+    #           'z2pt5', 'vs30', 'rx', 'repi'}"
+
+    OK_PARAM = {'rjb', 'rhypo', 'azimuth', 'rrup', 'ry0', 'backarc',
+                'z2pt5', 'vs30', 'rx', 'repi'}
+    MAPPINGS = {
+        'z1pt0': 'z1',
+        'mag': 'event_magnitude',
+        'lat': 'event_latitude',
+        'lon': 'event_longitude',
+        'vs30measured': 'vs30_measured',
+        'hypo_depth': 'hypocenter_depth',
+        'ztor': 'depth_top_of_rupture',
+    }
+    UNKNOWN: {
+        # handled below (as well as strike):
+        'rake', 'dip',
+        # ignored (not used in smtk):
+        'rvolc', 'rcdpp', 'siteclass',
+        # it is handled within the smtk code:
+        'width'
+    }
+    # here we implement the missing values for specific columns which do
+    # not has nan as default. An empty or falsy value mapped to a column means:
+    # skip that column (no missing value supported. E.g. boolean columns).
+    # For string columns remember to type '""'):
+    MISSING_VAL = {'backarc': '', 'vs30measured': ''}
+
+    gsim_class = OQ.gsims()[gsim]
+    attrs = chain(*[getattr(gsim_class, _) for _ in dir(gsim_class)
+                    if _.startswith('REQUIRES_')])
+    selexpr_chunks = []
+    for prop in attrs:
+        if prop in ('rake', 'strike', 'dip'):
+            selexpr_chunks.append('((dip_1 != nan) & '
+                                  '(strike_1) != nan & '
+                                  '(rake_1 != nan)) | '
+                                  '((dip_2 != nan) & '
+                                  '(strike_2) != nan & '
+                                  '(rake_2 !=nan))')
+            continue
+        if prop not in OK_PARAM:
+            prop = MAPPINGS.get(prop, '')
+        if not prop:
+            continue
+        missing_val = MISSING_VAL.get(prop, 'nan')
+        if missing_val:
+            selexpr_chunks.append('(%s != %s)' % (prop, missing_val))
+
+    if user_selexpr:
+        selexpr_chunks.append('(%s)' % user_selexpr)
+
+    return " & ".join(selexpr_chunks)
 
 
 def _jsonify_num(val):

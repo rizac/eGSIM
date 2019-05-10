@@ -7,9 +7,12 @@ from datetime import datetime, date
 
 import pytest
 
-from egsim.core.utils import vectorize, querystring, get_gmdb_column_desc
+from egsim.core.utils import vectorize, querystring, get_gmdb_column_desc,\
+    GSIM_REQUIRED_ATTRS, OQ
 from egsim.forms.fields import NArrayField
 from egsim.core.smtk import _relabel_sa
+from smtk.sm_table import GMTableDescription
+from egsim.models import aval_gsims
 
 
 def test_gmdb_columns():
@@ -123,3 +126,25 @@ def test_areequal(areequal):
     assert not areequal({'a': 1.0000000000001, 'b': [1, 2, 3], 'c': 'abc'},
                         {'c': 'abc', 'b': [1, 1.9, 3], 'a': 1})
     assert areequal(1.0000000000001, 1)
+
+
+def test_gsim_required_attrs_mappings_are_in_gmtable():
+    '''self explanatory'''
+    columns = set(GMTableDescription.keys())
+    for (column, nanval) in GSIM_REQUIRED_ATTRS.values():
+        if column:
+            assert column in columns
+
+
+@pytest.mark.django_db
+def test_gsim_required_attrs_mappings_are_in_gsims():
+    # now test that all keys are in Gsims required attrs:
+    gsims_attrs = set()
+    for gsim in aval_gsims():
+        gsims_attrs |= set(OQ.required_attrs(gsim))
+    # exlude some attributes not currently in any gsim but that we
+    # be included in future OpenQuake releases:
+    exclude = set(['strike'])
+    for att in GSIM_REQUIRED_ATTRS:
+        if att not in exclude:
+            assert att in gsims_attrs
