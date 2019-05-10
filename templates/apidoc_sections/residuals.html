@@ -20,11 +20,11 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 <table class='request'>
 	{% include "apidoc_sections/request.template.html" with form=form.residuals %}
 	<tfoot>
-	<tr><td colspan='3'>Notes:</td></tr>
-	<tr><td colspan='3'>"SA" in {{ form.trellis.imt.attrs.name }} must be provided
+	<tr><td colspan='2'>Notes:</td></tr>
+	<tr><td colspan='2'>"SA" in {{ form.trellis.imt.attrs.name }} must be provided
 		with the given period in parentheses, e.g. "SA(0.2)".
 	</td></tr>
-	<tr><td colspan='3'> {{ form.trellis.gsim.attrs.name }} and 
+	<tr><td colspan='2'> {{ form.trellis.gsim.attrs.name }} and 
 		{{ form.trellis.imt.attrs.name }}
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
