@@ -16,10 +16,30 @@ from django.core.management import call_command
 @pytest.mark.django_db
 def test_initdb(capsys):
     " Test initdb command."
-    ret = call_command('initdb')
+    call_command('initdb')
     captured = capsys.readouterr()
     assert not captured.err
-    sout = captured.out
+    # sout = captured.out
+
+
+@pytest.mark.django_db
+def test_initdb_gsim_required_attrs_not_defined(capsys):
+    """Test initdb command, with new Gsims and required attributes not
+    managed by egsim"""
+    # why is it @patch not working if provided as decorator?
+    # It has conflicts with capsys fixture, but only here ....
+    # Anyway:
+    with patch('egsim.management.commands.initdb.'
+               'get_gsim_required_attrs_dict',
+               return_value={'rjb': 'rjb'}) as _:
+        call_command('initdb')
+        captured = capsys.readouterr()
+        capout = captured.out
+        assert 'WARNING: ' in capout
+
+    for key in ['vs30measured', 'ztor', 'dip']:
+        assert "%s (defined for " % key in capout
+    assert "rjb" not in capout
 
 
 @patch('egsim.management.commands.gmdb.get_gmdb_path')

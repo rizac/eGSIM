@@ -7,6 +7,7 @@ from os.path import join, isfile
 from io import StringIO
 from urllib.parse import quote
 from datetime import date, datetime
+from itertools import chain
 
 from django.conf import settings
 from yaml import safe_load, YAMLError
@@ -245,3 +246,58 @@ class OQ:
             defining all Ground Shaking Intensity Models defined in OpenQuake.
         '''
         return dict(get_available_gsims())
+
+    @classmethod
+    def required_attrs(cls, gsim):
+        '''Returns an iterator yielding all the required attributes (strings)
+        from the given Gsim (either string denoting the Gsim name, or class
+        instance)'''
+        gsim_class = cls.gsims()[gsim] if isinstance(gsim, str) else gsim
+        return chain(*[getattr(gsim_class, _) for _ in dir(gsim_class)
+                     if _.startswith('REQUIRES_')])
+
+
+# dict mapping the OpenQuake's REQUIRES_* attributes defined on each Gsim,
+# and the columns of an smtk GMTable (keys of the :class:`GMTableDescription`
+# dict). All attributes available for all Gsims used in eGSIM are here.
+# If OpenQuake will be upgraded, the
+# 'initdb' command takes care to issue a WARNING for any attribute not
+# implemented here. In case, consult smtk maintainers and write the new
+# attribute as string key mapped to the tuple: (column_name, missing value).
+# Both tuple elements are strings. If the first element is empty, the attribute
+# does not have a mapping with any GMTable column. If the second element
+# is empty, there is no missing value available for the given column.
+# For an example of the application of this dict, see egsim.core.smtk.
+GSIM_REQUIRED_ATTRS = {
+    # attrs with a mapping to itself:
+    'rjb': ('rjb', 'nan'),
+    'rhypo': ('rhypo', 'nan'),
+    'azimuth': ('azimuth', 'nan'),
+    'rrup': ('rrup', 'nan'),
+    'ry0': ('ry0', 'nan'),
+    'backarc': ('backarc', ''),  # empty => no missing value
+    'z2pt5': ('z2pt5', 'nan'),
+    'vs30': ('vs30', 'nan'),
+    'rx': ('rx', 'nan'),
+    'repi': ('repi', 'nan'),
+    # attrs with a 1-1 mapping to another name:
+    'z1pt0': ('z1', 'nan'),
+    'mag': ('magnitude', 'nan'),
+    'lat': ('event_latitude', 'nan'),
+    'lon': ('event_longitude', 'nan'),
+    'vs30measured': ('vs30_measured', ''),  # empty => no missing value
+    'hypo_depth': ('hypocenter_depth', 'nan'),
+    'ztor': ('depth_top_of_rupture', 'nan'),
+    # attrs that we decided to skip from check for various reasons
+    # simply put their mapping name to empty. Some of them will be handled
+    # the other will use the empty missing val to be skipped
+    'rake': ('', 'nan'),
+    'dip': ('', 'nan'),
+    'strike': ('', 'nan'),
+    # ignored (not used in smtk):
+    'rvolc': ('', ''),
+    'rcdpp': ('', ''),
+    'siteclass': ('', ''),
+    # it is handled within the smtk code:
+    'width': ('rupture_width', '')
+}

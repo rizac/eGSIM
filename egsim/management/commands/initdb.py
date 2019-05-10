@@ -12,7 +12,7 @@ Created on 6 Apr 2019
 import os
 import warnings
 import inspect
-from collections import OrderedDict
+from collections import defaultdict
 from importlib import import_module
 import importlib.util
 
@@ -28,6 +28,7 @@ from openquake.hazardlib import imt
 
 from egsim.models import Gsim, Imt, Trt, Error, TectonicRegion, ENTITIES, \
     empty_all
+from egsim.core.utils import OQ, GSIM_REQUIRED_ATTRS
 from ._tectonic_regionalisations import SHARE
 
 # these are the functions to populate the TectonicRegion model.
@@ -107,6 +108,37 @@ class Command(BaseCommand):
                                                      'written (model: %s)' %
                                                      (count, key)))
 
+            # Scan the required Gsims attributes and their
+            # mapping in the Flatfile (GmTable) columns, checking if some
+            # attribute is not handled (this might happen in case OpenQuake
+            # is upgraded and has some newly implemented Gsims):
+            # In case of warnings, talk with G.W. and add the mappings in
+            # GSIM_REQUIRED_ATTRS
+            gsim_names = Gsim.objects  # pylint: disable=no-member
+            gsim_names = gsim_names.values_list('key', flat=True)
+            unknown_attrs = check_gsims_required_attrs(gsim_names)
+            if unknown_attrs:
+                self.stdout.write(self.style.ERROR('WARNING: %d attributes '
+                                                   'are defined as required '
+                                                   'for some '
+                                                   'OpenQuake '
+                                                   'Gsims, but are not handled '
+                                                   'in egsim.core.utils.'
+                                                   'GSIM_REQUIRED_ATTRS. '
+                                                   'This is not critical but '
+                                                   'might result in faling '
+                                                   '"measures of fit" '
+                                                   'computations due to NaNs' %
+                                                   len(unknown_attrs)))
+                self.stdout.write(self.style.ERROR('List of attributes:'))
+                for att, gsims in unknown_attrs.items():
+                    gsim_str = '(defined for "%s"' % str(gsims[0])
+                    if len(gsims) > 1:
+                        gsim_str += ' and other %d Gsims)' % (len(gsims)-1)
+                    else:
+                        gsim_str += ')'
+                    self.stdout.write(self.style.ERROR('%s %s' %
+                                                       (att, gsim_str)))
         except CommandError:
             raise
         except Exception as exc:
@@ -235,3 +267,23 @@ def get_gsims(trts, imts):
             gsims.append(gsim)
 
     return gsims
+
+
+def check_gsims_required_attrs(gsim_names):
+    '''Checks that the attributes handled in GSIM_REQUIRED_ATTRS cover all
+    OpenQuake required attributes implemented for all gsims
+
+    :param gsim_names: iterable of strings denoting the Gsims in the database
+    '''
+    unknowns = defaultdict(list)
+    for gsim in gsim_names:
+        attrs = OQ.required_attrs(gsim)
+        for att in attrs:
+            if att not in get_gsim_required_attrs_dict():
+                unknowns[att].append(gsim)
+    return unknowns
+
+
+def get_gsim_required_attrs_dict():
+    '''wrapper returning `GSIM_REQUIRED_ATTRS`, useful for unit-testing'''
+    return GSIM_REQUIRED_ATTRS
