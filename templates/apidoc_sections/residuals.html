@@ -10,7 +10,7 @@ analyse the total residual, the inter-event residual and the intra-event residua
 user via Residuals plots.
 </p>
 
-<h3 id="residuals.request">Request</h3>
+<h3 id="{{ residuals }}_request">Request</h3>
 <p>
 A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
 database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
@@ -38,7 +38,7 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 
 {% include "apidoc_sections/selexpr_help.html" %}
 
-<h3 id="residuals.response">Response</h3>
+<h3 id="{{ residuals }}_response">Response</h3>
 <p>
 The number of generated Residuals plots will be the product of the requested Intensity
 measure types (parameter {{ form.residuals.imt.attrs.name }}) and the requested GMPEs
