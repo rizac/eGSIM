@@ -1,6 +1,6 @@
 '''
-Core functions (decoupled from any web related stuff) calling the actual computation functions.
-This module is basically a bridge between eGSIM and smtk.
+Core functions (decoupled from any web related stuff) calling the actual
+computation functions of the gmpe-smtk package.
 
 Created on 31 May 2018
 
@@ -9,16 +9,17 @@ Created on 31 May 2018
 from collections import defaultdict
 import json
 import re
-from itertools import chain
 
 import numpy as np
-from smtk.trellis.trellis_plots import DistanceIMTTrellis, \
-    MagnitudeIMTTrellis, DistanceSigmaIMTTrellis, MagnitudeSigmaIMTTrellis
+from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
+                                        MagnitudeIMTTrellis,
+                                        DistanceSigmaIMTTrellis,
+                                        MagnitudeSigmaIMTTrellis)
 from smtk.sm_table import GroundMotionTable, records_where
 from smtk.residuals.gmpe_residuals import Residuals
-from smtk.residuals.residual_plots import residuals_with_distance
 
-from egsim.core.utils import vectorize, DISTANCE_LABEL, MOF, OQ, GSIM_REQUIRED_ATTRS
+from egsim.core.utils import (vectorize, DISTANCE_LABEL, MOF, OQ,
+                              GSIM_REQUIRED_ATTRS)
 
 
 def _relabel_sa(string):
@@ -333,8 +334,7 @@ def testing(params):
                     ret.setdefault(moffit, {}).\
                         setdefault(imt, {})[gsim] = _jsonify_num(value)
 
-    ret['Database records used'] = obs_count
-    return ret
+    return {'Measure of fit': ret, 'Db records': obs_count}
 
 
 def get_selexpr(gsim, user_selexpr):
