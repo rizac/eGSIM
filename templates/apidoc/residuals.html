@@ -18,14 +18,14 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 </p>
 
 <table class='request'>
-	{% include "apidoc_sections/request.template.html" with form=form.residuals %}
+	{% include "apidoc/request_template.html" with form=form.residuals %}
 	<tfoot>
 	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'>"SA" in {{ form.trellis.imt.attrs.name }} must be provided
+	<tr><td colspan='2'>"SA" in {{ form.trellis.imt.name }} must be provided
 		with the given period in parentheses, e.g. "SA(0.2)".
 	</td></tr>
-	<tr><td colspan='2'> {{ form.trellis.gsim.attrs.name }} and 
-		{{ form.trellis.imt.attrs.name }}
+	<tr><td colspan='2'> {{ form.trellis.gsim.name }} and 
+		{{ form.trellis.imt.name }}
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
 		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
@@ -36,13 +36,13 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 
 <h4 id="selexpr">Selection expression</h4>
 
-{% include "apidoc_sections/selexpr_help.html" %}
+{% include "apidoc/selexpr_help.html" %}
 
 <h3 id="{{ residuals }}_response">Response</h3>
 <p>
 The number of generated Residuals plots will be the product of the requested Intensity
-measure types (parameter {{ form.residuals.imt.attrs.name }}) and the requested GMPEs
-(parameter {{ form.residuals.gsim.attrs.name }}. Each Residual plot is futher subdivided
+measure types (parameter {{ form.residuals.imt.name }}) and the requested GMPEs
+(parameter {{ form.residuals.gsim.name }}. Each Residual plot is futher subdivided
 into three subplots:
 </p>
 
