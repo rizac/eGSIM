@@ -27,21 +27,9 @@ Vue.component('testingtable', {
             handler(newval, oldval){
                 this.visible = !Vue.isEmpty(newval);
                 if (this.visible){
-                	var RECUSED_LABEL = 'Database records used';
-                	var recordsUsed = newval[RECUSED_LABEL];
-                	var [gsimsRecords, gsimsSkipped] = [[], []];
-                	for (var gsim of Object.keys(recordsUsed)){
-		        		var recUsed = recordsUsed[gsim]; 
-		        		if (recUsed > 0){
-		        			gsimsRecords.push([gsim, recUsed]);
-		        		}else{
-		        			gsimsSkipped.push(gsim);
-		        		}
-		        	}
-                	this.gsimsRecords = gsimsRecords;
-                	this.gsimsSkipped = gsimsSkipped;
-                	delete newval[RECUSED_LABEL];
-                	this.tableData = this.init.call(this, newval);
+                    var tableData = newval['Measure of fit'];
+                    this.gsimsRecords = newval['Db records'];
+                	this.tableData = this.init.call(this, tableData);
                 }else{
                 	this.gsimsRecords = [];
                 	this.gsimsSkipped = [];
@@ -132,27 +120,7 @@ Vue.component('testingtable', {
         }
     },
     // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
-    template: `<div v-show="visible" class="d-flex flex-column">
-	    <div class='d-flex flex-row align-items-baseline mb-1'>
-	    <span>
-	    Testing results
-	    </span>
-	    <span class='flexible small text-muted ml-3'>
-	    Click on the table headers to sort. Note that "{{ COL_VAL }}" will not sort rows globally but within each group of equal ({{ COL_MOF }}, {{ COL_IMT }}).
-	    </span>
-	    <slot></slot>
-	    </div>
-	    <div>
-	    	<template v-if="gsimsRecords.length">
-	    		<i class="fas fa-info-circle"></i>
-	    		<span v-for="item in gsimsRecords"> {{ item[0] }}: {{ item[1] }} record(s) used</span>
-	    	</template>
-	    	<template v-if="gsimsSkipped.length">
-		    	<i class="ml-2 fa fa-exclamation-triangle"></i>
-		    	<span class='text-danger'>Gsim skipped (no record found): </span>
-	    		<span v-for="item in gsimsSkipped" class='text-danger'> {{ item }} </span>
-	    	</template>
-	    </div>
+    template: `<div v-show="visible" class="d-flex flex-row">
 	    <div class='testing-table flexible btn-primary'>
 		    <table class='table testing-table'>
 		        <thead>
@@ -185,6 +153,28 @@ Vue.component('testingtable', {
 		        </tbody>
 		    </table>
 	    </div>
+	   
+	    <div class='d-flex flex-column mr-2 pl-2 border-left'>
+
+            <slot></slot> <!-- slot for custom buttons -->
+            
+            <div class='mt-3 border-top' style='overflow:auto'>
+                <div>Database records used:</div>
+                <div
+                    v-for="gsimname in Object.keys(gsimsRecords)"
+                    :class="{'text-danger': gsimsRecords[gsimname] <= 0}"
+                >
+                    {{ gsimname }}: {{ gsimsRecords[gsimname] }}
+                </div>
+            </div>
+            <div class='position-relative flexible mt-3'>
+                <span class='position-absolute pos-b-0 small text-muted'>
+                    <i class="fa fa-info-circle"></i>
+                    Click on the table headers to sort. Note that "{{ COL_VAL }}" will not sort
+                    rows globally but within each group of equal ({{ COL_MOF }}, {{ COL_IMT }}).
+                </span>
+            </div>
+        </div>
     </div>`,
     filters: {
         numCell2Str: function (val, maxNumDigits, maxArraySize) {

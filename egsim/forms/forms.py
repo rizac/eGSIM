@@ -247,7 +247,7 @@ class BaseForm(Form):
             # Finally, self[name] creates a BoundField from self.fields[name]:
             # A BoundField deals with displaying the field and populating it
             # with any values. So for returning *all* field data (also that
-            # set automatically by django on our init parameter, so this is the
+            # set automatically by django on our init parameter, as in this
             # case) it should be used.
             boundfield = self[name]
             val = boundfield.value()
@@ -340,14 +340,14 @@ class GsimSelectionForm(BaseForm):
 class GsimImtForm(BaseForm):
     '''Base abstract-like form for any form requiring Gsim+Imt selection'''
 
-    __additional_fieldnames__ = {'gmpe': 'gsim', 'sap': 'sa_period'}
+    __additional_fieldnames__ = {'gmpe': 'gsim'}
     __hidden_fieldnames__ = ['sa_period']
 
     gsim = GsimField(required=True)
     imt = IMTField(required=True)
     # sa_periods should not be exposed through the API, it is only used
-    # from the frontend GUI. Thus "required" is necessary. Also look at
-    # __init__. We use a CharField because in principle it should never
+    # from the frontend GUI. Thus required=False is necessary.
+    # We use a CharField because in principle it should never
     # raise: If SA periods are malformed, the IMT field holds the error
     sa_period = CharField(label="SA period(s)", required=False)
 
