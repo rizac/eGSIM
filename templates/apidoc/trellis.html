@@ -28,27 +28,27 @@ separate text data in JSON or YAML format (POST method) and are:
 
 
 <table class='request'>
-	{% include "apidoc_sections/request.template.html" with form=form.trellis %}
+	{% include "apidoc/request_template.html" with form=form.trellis %}
 	<tfoot>
 	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'> "SA" in {{ form.trellis.imt.attrs.name }} must be provided
+	<tr><td colspan='2'> "SA" in {{ form.trellis.imt.name }} must be provided
 		with the given period in parentheses, e.g. "SA(0.2)".
-		If {{ form.trellis.plot_type.attrs.name }} is
+		If {{ form.trellis.plot_type.name }} is
 		<code>{{ form.trellis.plot_type.choices.2.0 }}</code>
 		 or
 		<code>{{ form.trellis.plot_type.choices.5.0 }}</code>
 		(<code>{{ form.trellis.plot_type.choices.2.1 }}</code> or
 		<code>{{ form.trellis.plot_type.choices.5.1 }}</code>), then
-		<code>{{ form.trellis.imt.attrs.name }}</code> will
+		<code>{{ form.trellis.imt.name }}</code> will
 		default to 'SA' with a set of pre-defined periods: any value
 		explicitly provided by the user will thus be ignored in case.
 	</td></tr>
-	<tr><td colspan='2'> {{ form.trellis.gsim.attrs.name }}, 
-		{{ form.trellis.imt.attrs.name }}, {{ form.trellis.magnitude.attrs.name }},
-		{{ form.trellis.distance.attrs.name }}, {{ form.trellis.vs30.attrs.name }}
+	<tr><td colspan='2'> {{ form.trellis.gsim.name }}, 
+		{{ form.trellis.imt.name }}, {{ form.trellis.magnitude.name }},
+		{{ form.trellis.distance.name }}, {{ form.trellis.vs30.name }}
 		(and, from the gui, the value provided for "{{ form.trellis.sa_period.label }}")
-		can be input as space- or comma-separated lists of values. {{ form.trellis.gsim.attrs.name }} and 
-		{{ form.trellis.imt.attrs.name }} can also be input with
+		can be input as space- or comma-separated lists of values. {{ form.trellis.gsim.name }} and 
+		{{ form.trellis.imt.name }} can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
 		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
 	</td></tr>
@@ -59,9 +59,9 @@ separate text data in JSON or YAML format (POST method) and are:
 <h3 id="{{ trellis }}_response">Response</h3>
 <p>
 The number of generated Trellis plots depends on the requested Intensity measure types (parameter
-{{ form.trellis.imt.attrs.name }}) <i>and</i> the parameters {{ form.trellis.magnitude.attrs.name }},
-{{ form.trellis.distance.attrs.name }} and
-{{ form.trellis.vs30.attrs.name }} (which can be given as numeric scalr or array):
+{{ form.trellis.imt.name }}) <i>and</i> the parameters {{ form.trellis.magnitude.name }},
+{{ form.trellis.distance.name }} and
+{{ form.trellis.vs30.name }} (which can be given as numeric scalr or array):
 </p>
 
 <table>
@@ -74,24 +74,24 @@ The number of generated Trellis plots depends on the requested Intensity measure
 <tbody>
 <tr>
 	<td>{{ form.trellis.plot_type.choices.0.1 }}</td>
-	<td>{{ form.trellis.distance.attrs.name }}</td>
-	<td>{{ form.trellis.imt.attrs.name }},
-	    {{ form.trellis.magnitude.attrs.name }},
-	    {{ form.trellis.vs30.attrs.name }}</td>
+	<td>{{ form.trellis.distance.name }}</td>
+	<td>{{ form.trellis.imt.name }},
+	    {{ form.trellis.magnitude.name }},
+	    {{ form.trellis.vs30.name }}</td>
 </tr>
 <tr>
 	<td>{{ form.trellis.plot_type.choices.1.1 }}</td>
-	<td>{{ form.trellis.magnitude.attrs.name }}</td>
-	<td>{{ form.trellis.imt.attrs.name }},
-	    {{ form.trellis.distance.attrs.name }},
-	    {{ form.trellis.vs30.attrs.name }}</td>
+	<td>{{ form.trellis.magnitude.name }}</td>
+	<td>{{ form.trellis.imt.name }},
+	    {{ form.trellis.distance.name }},
+	    {{ form.trellis.vs30.name }}</td>
 </tr>
 <tr>
 	<td>{{ form.trellis.plot_type.choices.2.1 }}</td>
 	<td>None: a set of pre-defined periods will be used</td>
-	<td>{{ form.trellis.magnitude.attrs.name }},
-	    {{ form.trellis.distance.attrs.name }},
-	    {{ form.trellis.vs30.attrs.name }}</td>
+	<td>{{ form.trellis.magnitude.name }},
+	    {{ form.trellis.distance.name }},
+	    {{ form.trellis.vs30.name }}</td>
 </tbody>
 </table>
 

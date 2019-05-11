@@ -265,15 +265,19 @@ class BaseForm(Form):
             attrs['name'] = widgetdata.pop('name')
             is_hidden = widgetdata.pop('is_hidden', False) or \
                 name in hidden_fn
-            fielddata = {'name2': optional_names.get(name, ''),
-                         'help': boundfield.help_text,
-                         'label': boundfield.label,
-                         'attrs': attrs,
-                         'err': '',
-                         'is_hidden': is_hidden,
-                         # coerce val to [] in case val falsy and multichoice:
-                         'val': [] if isinstance(_, MultipleChoiceField)
-                         and not val else val}
+            # coerce val to [] in case val falsy and multichoice:
+            if isinstance(_, MultipleChoiceField) and not val:
+                val = []
+            fielddata = {
+                'name': attrs['name'],
+                'name2': optional_names.get(name, ''),
+                'help': boundfield.help_text,
+                'label': boundfield.label,
+                'attrs': attrs,
+                'err': '',
+                'is_hidden': is_hidden,
+                'val': val
+            }
             fielddata['choices'] = getattr(_, 'choices', [])
             if isinstance(fielddata['choices'], CallableChoiceIterator):
                 if ignore_callable_choices:
