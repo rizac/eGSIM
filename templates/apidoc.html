@@ -78,7 +78,6 @@ var tocItemsHTML = [];
 document.querySelectorAll('h2, h3, h4').forEach((elm, index) => {
     var id = elm.getAttribute('id');
     if (id){
-        elm.setAttribute("name", id);
         var text = elm.innerText;
         var newText = `${text} <a style='display:none' class="headerlink" href="#${id}" title="Permalink to this headline">&#182;</a>`;
     	elm.innerHTML = newText;
