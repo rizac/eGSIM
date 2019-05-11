@@ -18,7 +18,7 @@ it is also possible to view the scaling of the standard deviation, for a total o
 choosable plot types.
 </p>
 
-<h3 id="trellis.request">Request</h3>
+<h3 id="{{ trellis }}_request">Request</h3>
 <p>
 A request to the Trellis plot service requires a list of GMPEs and IMTs,
 the desired plot type and the parameters configuring the scenario (rupture), most of which are
@@ -56,7 +56,7 @@ separate text data in JSON or YAML format (POST method) and are:
 </table>
 
 
-<h3 id="trellis.response">Response</h3>
+<h3 id="{{ trellis }}_response">Response</h3>
 <p>
 The number of generated Trellis plots depends on the requested Intensity measure types (parameter
 {{ form.trellis.imt.attrs.name }}) <i>and</i> the parameters {{ form.trellis.magnitude.attrs.name }},

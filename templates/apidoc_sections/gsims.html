@@ -4,7 +4,7 @@ This simple service performs a GMPE selection based on several filtering paramet
 including matching tectonic regions defined in specified Area source (or Tectonic region) models.
 </p>
 
-<h3 id="gsims.request">Request</h3>
+<h3 id="{{ gsimsel }}_request">Request</h3>
 <p>
 A request to the GSIM selection service does not require any mandatory parameter: in case, all
 OpenQuake's available GMPEs will be returned. This rather trivial search is usually refined
@@ -39,7 +39,7 @@ separate text data in JSON or YAML format (POST method) and are:
 </table>
 
 
-<h3 id="gsims.reqsponse">Response</h3>
+<h3 id="{{ gsimsel }}_reqsponse">Response</h3>
 <p>
 The list of selected GMPEs will be returned as JSON-formatted array of strings or as CSV. In the
 latter case, the user can choose the orientation (vertical vs. horizontal) for e.g.,
