@@ -44,7 +44,7 @@ Vue.component('forminput', {
                 <template v-else>
             		<span class="text-muted mr-1" v-if="elm.help" v-html="elm.help"></span>
             		<span class="text-muted mr-1" v-if="isSelectMultiple">({{ elm.val.length || 0 }} of {{ elm.choices.length }} selected)</span>
-            		<span class='text-primary bg-white rounded'>{{ name }}</span>
+            		<span class='text-primary rounded'>{{ name }}</span>
             	</template>
             </div>
             <button v-if="showhelpbutton" type="button" @click='$emit("helprequested")'
