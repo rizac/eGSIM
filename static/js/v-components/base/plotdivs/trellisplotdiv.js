@@ -76,8 +76,16 @@ Vue.component('trellisplotdiv', {
                     }
                     return trace;
                 }, this);
-                plots.push({traces: traces, params: params, xaxis: {title: data['xlabel']},
-                    yaxis: {title: params.imt, type: 'log'}});
+                plots.push({
+                    traces: traces,
+                    params: params,
+                    xaxis: {
+                        title: data['xlabel']
+                    },
+                    yaxis: {
+                        title: params.imt, type: 'log'
+                    }
+                });
             }
             return plots;
         },
