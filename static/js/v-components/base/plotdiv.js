@@ -14,7 +14,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         return {
             visible: !Vue.isEmpty(this.data),
             resizeListener: null,  //callback to be passed to window.addEventListener('resize', ...). See addResizeListener and removeResizeListener
-            watchers: [],  // dynamically created watchers (see init)
+            watchers: {},  // dynamically created watchers (see init)
             paramnames2showongrid: new Set(),  // parameter names to show on the grid
             plotdivid: Date.now().toString(),
             // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
@@ -35,7 +35,17 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 // font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
                 showlegend: false,
                 legend: { bgcolor: 'rgba(0,0,0,0)'},
-                margin: {r: 0, b: 0, t: 0, l:0, pad:0}, annotations: []
+                margin: {r: 0, b: 0, t: 0, l:0, pad:0},
+                annotations: []
+            },
+            mouseMode: { // https://plot.ly/python/reference/#layout-hovermode
+	            hovermodes: ["closest", "x", "y", false],
+	            // the labels of hovermodes to be displayed. Copied from plotly modebar after visual test:
+	            hovermodeLabels: {closest: 'show closest point', x: 'compare data', y: 'show y value', false: 'do nothing'},
+       			dragmodes: ["zoom", "pan"],  // "select", "lasso" are useless. false does not seem to work (it's zoom)
+ 				dragmodeLabels: {zoom: 'zoom', pan: 'pan'},
+       			hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
+ 				dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
             },
             // the plotly config for plots. See
             // https://community.plot.ly/t/remove-options-from-the-hover-toolbar/130/14
@@ -140,6 +150,22 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 </div>
             </div>
 
+			<div class='mt-3 border-top d-flex flex-column'>
+				<h5 class='mt-2 mb-2'>Mouse interactions</h5>
+				<div class='d-flex flex-row mt-2'>
+					<label> on hover:</label>
+            		<select v-model="mouseMode.hovermode" class='form-control'>
+            			<option v-for='name in mouseMode.hovermodes' :value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
+            		</select>
+            	</div>
+            	<div class='d-flex flex-row mt-2'>
+					<label> on drag:</label>
+            		<select v-model="mouseMode.dragmode" class='form-control'>
+            			<option v-for='name in mouseMode.dragmodes' :value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
+            		</select>
+            	</div>
+            </div>
+
             <div v-show="isGridCusomizable" class='mt-3 border-top'>
                 <h5 class='mt-2 mb-2'>Subplots layout</h5>
 
@@ -240,8 +266,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         },
         init: function(jsondict){
             // unwatch watchers, if any:
-            for(var watcher of this.watchers){
-                watcher();
+            for(var name of Object.keys(this.watchers)){
+                this.watchers[name]();
             }
             this.legend = {};
             // convert data:
@@ -251,13 +277,14 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // which in turn sets this.selectedParams which eventually calls this.newPlot (see watch above)
             
             // set watchers:
-            this.watchers = [ // https://vuejs.org/v2/api/#vm-watch
-                this.$watch('selectedParams', function (newval, oldval) {
+            this.watchers = { // https://vuejs.org/v2/api/#vm-watch
+                'selectedParams': this.$watch('selectedParams', function (newval, oldval) {
                     this.newPlot();
                 },{deep: true}),  // https://vuejs.org/v2/api/#vm-watch
-                this.$watch('selectedgridlayout', function(newval, oldval){
+                'selectedgridlayout': this.$watch('selectedgridlayout', function(newval, oldval){
                     this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
-                })];
+                })
+            };
             // now plot:
             this.newPlot();
         },
@@ -448,9 +475,24 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 divId = this.plotdivid;
             }
             this.$nextTick(() => {
+            	var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
+            	if (hover in this.watchers){
+            		this.watchers[hover]();  // unwatch. we will change the layout and we do not want to re-layout
+            		delete this.watchers[hover];
+            	}
+            	if (drag in this.watchers){
+            		this.watchers[drag]();  // unwatch. we will change the layout and we do not want to re-layout
+            		delete this.watchers[drag];
+            	}
                 var [data, layout] = this.createPlotlyDataAndLayout(divId);
                 Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
                 Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
+                this.$watch(hover, function (newval, oldval) {
+                    this.setMouseModes(newval, undefined);  // hovermode, mousemode
+                }),
+                this.$watch(drag, function(newval, oldval){
+                    this.setMouseModes(undefined, newval);  // hovermode, mousemode
+                })
             });
         },
         react: function(divId){
@@ -496,6 +538,16 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 
             var layout = Object.assign({}, this.defaultlayout);
             this.configureLayout(layout);
+            // synchronize hovermode and hovermode
+            // between the layout and this.mouseMode:
+            ['hovermode', 'dragmode'].forEach(elm => {
+            	if (layout[elm]){
+            		this.mouseMode[elm] = layout[elm];
+            	}else{
+            		layout[elm] = this.mouseMode[elm];
+            	}
+            });
+            // set font (if not present):
             if (!('font' in layout)){
                 layout.font = {};
             }
@@ -807,6 +859,21 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         		this.resizeListener = null;
             }
        	},
+       	setMouseModes: function(hovermode, dragmode){
+       		var [data, layout] = this.getPlotlyDataAndLayout();
+       		var relayout = false;
+       		if (this.mouseMode.hovermodes.includes(hovermode)){
+       			layout.hovermode = hovermode;
+       			relayout = true;
+       		}
+       		if (this.mouseMode.dragmodes.includes(dragmode)){
+       			layout.dragmode = dragmode;
+       			relayout = true;
+       		}
+       		if (relayout){
+       			Plotly.relayout(this.plotdivid, layout);
+       		}
+       	}
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         // no -op
