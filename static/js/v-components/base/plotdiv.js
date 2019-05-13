@@ -47,6 +47,20 @@ var _PLOT_DIV = Vue.component('plotdiv', {
        			hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
  				dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
             },
+            // axis options:
+            axis: {
+            	// reminder: x.log and y.log determine the type of axis. Plotly has xaxis.type that can be:
+            	// ['-', 'linear', 'log', ... other values ], we will set here only 'normal' (log checkbox unselected)
+            	// or log (log checkbox selected)
+        		x: {
+            		log: undefined,  // undefined: infer from plots, null: disable the option, otherwise boolean
+            		sameRange: undefined, // same as above
+            	},
+            	y: {
+            		log: undefined, // see above
+            		sameRange: undefined // see above
+            	}
+            },
             // the plotly config for plots. See
             // https://community.plot.ly/t/remove-options-from-the-hover-toolbar/130/14
             defaultplotlyconfig: {
@@ -66,7 +80,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 formats: ['', 'png', 'jpeg', 'svg'],
                 // scale 5 increases the image size, thus increasing the resolution
                 // Note that you cannot provide any number (e.g. scale 10 raises Exception)
-                scale: 5}
+                scale: 5
+            }
         }
     },
     watch: {
@@ -151,16 +166,45 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             </div>
 
 			<div class='mt-3 border-top d-flex flex-column'>
+				<div class='mt-2 mb-2 font-weight-bold'>Axis</div>
+				<div v-for="type in ['x', 'y']" class='d-flex flex-row mt-2 text-nowrap mr-1 align-items-baseline'>
+					<span class='text-nowrap'>{{ type }}:</span>
+            		<label
+            			class='text-nowrap ml-2'
+            			:disabled="![true, false].includes(axis[type].sameRange)"
+            		>
+	            		<input
+	            			type='checkbox'
+	            			v-model='axis[type].sameRange'
+	            			:disabled="![true, false].includes(axis[type].sameRange)"
+	            		>	
+	            		<span class='ml-1'>same range</span>
+	            	</label>
+            		<label
+            			class='text-nowrap ml-2'
+            			:disabled="![true, false].includes(axis[type].log)"
+            		>
+	            		<input
+	            			type='checkbox'
+	            			v-model='axis[type].log'
+	            			:disabled="![true, false].includes(axis[type].log)"
+	            		>	
+	            		<span class='ml-1'>log scale</span>
+	            	</label>
+            	</div>
+            </div>
+
+			<div class='mt-3 border-top d-flex flex-column'>
 				<div class='mt-2 mb-2 font-weight-bold'>Mouse interactions</div>
 				<div class='d-flex flex-row mt-2 align-items-baseline'>
 					<span class='text-nowrap mr-1'> on hover:</span>
-            		<select v-model="mouseMode.hovermode" class='form-control'>
+            		<select v-model="mouseMode.hovermode" class='form-control form-control-sm'>
             			<option v-for='name in mouseMode.hovermodes' :value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
             		</select>
             	</div>
             	<div class='d-flex flex-row mt-2 align-items-baseline'>
 					<span class='text-nowrap mr-1'> on drag:</span>
-            		<select v-model="mouseMode.dragmode" class='form-control'>
+            		<select v-model="mouseMode.dragmode" class='form-control form-control-sm'>
             			<option v-for='name in mouseMode.dragmodes' :value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
             		</select>
             	</div>
@@ -474,7 +518,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 divId = this.plotdivid;
             }
             this.$nextTick(() => {
-            	var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
+            	var [hover, drag, x, y] = ['mouseMode.hovermode', 'mouseMode.dragmode', 'axis.x', 'axis.y'];
             	if (hover in this.watchers){
             		this.watchers[hover]();  // unwatch. we will change the layout and we do not want to re-layout
             		delete this.watchers[hover];
@@ -488,10 +532,16 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
                 this.$watch(hover, function (newval, oldval) {
                     this.setMouseModes(newval, undefined);  // hovermode, mousemode
-                }),
+                });
                 this.$watch(drag, function(newval, oldval){
                     this.setMouseModes(undefined, newval);  // hovermode, mousemode
-                })
+                });
+                this.$watch(x, function(newval, oldval){
+                    this.react();
+                }, {deep: true});
+                this.$watch(y, function(newval, oldval){
+                    this.react();
+                }, {deep: true});
             });
         },
         react: function(divId){
@@ -511,6 +561,29 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         createPlotlyDataAndLayout: function(divId){
             var plots = this.plots;
             var params = this.params;
+            
+            this.setupAxisDefaults(plots);
+            // setup the range checkboxes: if all plots have the same bounds, set the value to
+            // null which means: disable it (or hide it, depending on what the implementation is):
+            // this has to be done here on all plots before filtering the plots to be displayed:
+            if (this.axis.x.sameRange === undefined){
+            	// get if all axis have the same bounds:
+            	var pltBounds = plots[0].xaxis._range;
+            	if (plots.every(plot => plot.xaxis._range.every((elm, index) => elm === pltBounds[index]))){
+            		this.axis.x.sameRange = null;
+            	}else{
+            		this.axis.x.sameRange = false;
+            	}
+            }
+            if (this.axis.y.sameRange === undefined){
+            	// get if all axis have the same bounds:
+            	var pltBounds = plots[0].yaxis._range;
+            	if (plots.every(plot => plot.yaxis._range.every((elm, index) => elm === pltBounds[index]))){
+            		this.axis.y.sameRange = null;
+            	}else{
+            		this.axis.y.sameRange = false;
+            	}
+            }
 
             // filter plots according to selectedParams keys, i.e. the parameter names
             // which are mapped to mupliple values AND are not currently set to be displayed on the
@@ -521,6 +594,100 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 var val = this.selectedParams[key];
                 plots = plots.filter(plot => plot.params[key] == val);
             }
+            
+//            axis: {
+//             	x: {
+//             		log: undefined,  // undefined: infer from plots, null: disable the option, otherwise boolean
+//             		sameRange: undefined, // same as above
+//             	},
+//             	y: {
+//             		log: undefined, // see above
+//             		sameRange: undefined // see above
+//             	}
+//             },
+
+            console.log('creating plots');
+     
+            // set type (log disabled or not):
+            // this is a two way binding from the checkbox to the plots, depending
+            // on what has been set
+            if (this.axis.x.log === undefined){  // set the checkbox initial value
+            	this.axis.x.log = plots.every(plot => plot.xaxis._type === 'log');
+            }else{  // set the plots value according to the checkbox value
+            	plots.forEach(plot => {
+            		plot.xaxis.type = this.axis.x.log ? 'log' : plot.xaxis._type;
+            		// now, the idea is that if we have the "log" unchecked, to restore the
+            		// old value. But the old value might be missing (there was no 'type' key in the 
+            		// plotly xxis Object) or 'log' (log was the default 'type' key set in the subclasses)
+            		// So we want to delete the 'type' key in these circumstances:
+            		if (!this.axis.x.log && (!plot.xaxis.type || plot.xaxis.type == 'log')){
+	            		delete plot.xaxis.type;  // reset to default, whatever it is
+	            	}
+            	});
+            }
+            if (this.axis.y.log === undefined){  // set the checkbox initial value
+            	this.axis.y.log = plots.every(plot => plot.yaxis._type === 'log');
+            }else{  // set the plots value according to the checkbox value
+            	plots.forEach(plot => {
+            		plot.yaxis.type = this.axis.y.log ? 'log' : plot.yaxis._type;
+            		// see note above for the x axis:
+            		if (!this.axis.y.log && (!plot.yaxis.type || plot.yaxis.type == 'log')){
+	            		delete plot.yaxis.type;  // reset to default, whatever it is
+	            	}
+            	});
+            }
+
+			var log10 = Math.log10;
+			// set ranges:
+            // this is a two way binding from the checkbox to the plots, depending
+            // on what has been set
+            if (!this.axis.x.sameRange){
+            	// note: !this.axis.x.sameRange here means: the same range is not
+            	// an option, cause all plots have the same x range
+            	plots.forEach(plot => {
+        			delete plot.xaxis.range;
+        		});
+            }else{
+            	var range = [NaN, NaN];
+            	plots.forEach(plot => {
+            		range = this.nanrange(...range, ...plot.xaxis._range);
+            	});
+            	var margin = Math.abs(range[1] - range[0]) / 100;
+	        	if (!this.axis.x.log || range[0]-margin > 0){
+	        		range[0] -= margin;
+	        		range[1] += margin;
+	        	}
+	        	if (range.every(elm => !isNaN(elm))){
+	        		plots.forEach(plot => {
+	        			// plotly wants range converted to log if axis type is 'log':
+	        			plot.xaxis.range = plot.xaxis.type === 'log' ? [log10(range[0]), log10(range[1])] : range;	
+	            	});
+            	}
+        	}
+            if (!this.axis.y.sameRange){
+            	// see note above for x.sameRange
+            	plots.forEach(plot => {
+        			delete plot.yaxis.range;
+        		});
+            }else{
+            	var range = [NaN, NaN];
+            	plots.forEach(plot => {
+            		range = this.nanrange(...range, ...plot.yaxis._range);
+            	});
+            	var margin = Math.abs(range[1] - range[0]) / 100;
+	        	if (!this.axis.y.log || range[0]-margin > 0){
+	        		range[0] -= margin;
+	        		range[1] += margin;
+	        	}
+	        	if (range.every(elm => !isNaN(elm))){
+	        		plots.forEach(plot => {
+	        			// plotly wants range converted to log if axis type is 'log':
+	        			plot.yaxis.range = plot.yaxis.type === 'log' ? [log10(range[0]), log10(range[1])] : range;	
+	            	});
+            	}
+        	}
+            
+            
 
             var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
             var gridxvalues = params[gridxparam];
@@ -654,6 +821,32 @@ var _PLOT_DIV = Vue.component('plotdiv', {
           }
           return [data, layout];
         },
+        setupAxisDefaults(plots){
+        	// sets up the axis default for each plot.
+        	// Currently, we set _range and _type, which are the counterparts
+        	// of 'range' and 'type', respectively. The latter are Plotly reserved
+        	// keyswords and apparently it's harmless to add our custom (underscored)
+        	// counterparts
+        	plots.forEach(plot => {
+        		if (!plot.xaxis){
+        			plot.xaxis={};
+        		}
+        		if (!plot.yaxis){
+        			plot.yaxis={};
+        		}
+        		if (!plot.xaxis._range || !plot.yaxis._range){
+        			var [rangex, rangey] = this.getPlotBounds(plot.traces);  // note that hidden traces count
+        			plot.xaxis._range = rangex;
+        			plot.yaxis._range = rangey;
+        		}
+        		if (!plot.xaxis._type){
+        			plot.xaxis._type = plot.xaxis.type || '';
+        		}
+        		if (!plot.yaxis._log){
+        			plot.yaxis._type = plot.yaxis.type || '';
+        		}
+        	});
+        },
         displayGridLabels_(axis, paramName){
             if (this.paramnames2showongrid.has(paramName)){
                 return this.displayGridLabels(axis, paramName, this.params[paramName]);
@@ -775,6 +968,23 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             var elm = document.getElementById(this.plotdivid);
             return elm ? [elm.data || [], elm.layout || {}] : [[], {}];
         },
+        getPlotBounds: function(traces){
+        	// gets the bounds min max of all the traces of 'plot', which must be an
+        	// element of this.plots. Returns [rangeX, rangeY] where each range has two numeric elements
+        	// pmin, max] which might be NaN
+        	var [rangeX, rangeY] = [[NaN, NaN], [NaN, NaN]];
+        	for (var trace of traces){
+        		var [rangex, rangey] = [this.nanrange(...trace.x), this.nanrange(...trace.y)];
+        		rangeX = this.nanrange(...rangeX, ...rangex);
+        		rangeY = this.nanrange(...rangeY, ...rangey);
+        	}
+        	return [rangeX, rangeY];
+        },
+        nanrange: function(...values){
+			values = values.filter(elm => typeof elm === 'number' && !isNaN(elm));
+		  	var m = Math;
+		  	return values.length? [m.min(...values), m.max(...values)] : [NaN, NaN];
+		},
         downloadAsImage: function(){
             
             var props = this.downloadasimageopts;
