@@ -77,7 +77,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 height: null,
                 filename: this.filename,
                 format: "",
-                formats: ['', 'png', 'jpeg', 'svg'],
+                formats: ['', 'png', 'jpeg', 'svg', 'json (all plots data)'],
                 // scale 5 increases the image size, thus increasing the resolution
                 // Note that you cannot provide any number (e.g. scale 10 raises Exception)
                 scale: 5
@@ -519,13 +519,11 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }
             this.$nextTick(() => {
             	var [hover, drag, x, y] = ['mouseMode.hovermode', 'mouseMode.dragmode', 'axis.x', 'axis.y'];
-            	if (hover in this.watchers){
-            		this.watchers[hover]();  // unwatch. we will change the layout and we do not want to re-layout
-            		delete this.watchers[hover];
-            	}
-            	if (drag in this.watchers){
-            		this.watchers[drag]();  // unwatch. we will change the layout and we do not want to re-layout
-            		delete this.watchers[drag];
+            	for (var key of [hover, drag, x, y]){
+	            	if (key in this.watchers){
+	            		this.watchers[key]();  // unwatch. we will change the layout and we do not want to re-layout
+	            		delete this.watchers[key];
+	            	}
             	}
                 var [data, layout] = this.createPlotlyDataAndLayout(divId);
                 Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
@@ -649,7 +647,10 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         		});
             }else{
             	var range = [NaN, NaN];
-            	plots.forEach(plot => {
+            	// if the plots to show is just one, then it does not make much sense
+            	// to calculate the range on itself. In this case use all plots
+            	var plots2ComputeRanges = plots.length < 2 ? this.plots : plots;
+            	plots2ComputeRanges.forEach(plot => {
             		range = this.nanrange(...range, ...plot.xaxis._range);
             	});
             	var margin = Math.abs(range[1] - range[0]) / 100;
@@ -671,7 +672,10 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         		});
             }else{
             	var range = [NaN, NaN];
-            	plots.forEach(plot => {
+            	// if the plots to show is just one, then it does not make much sense
+            	// to calculate the range on itself. In this case use all plots
+            	var plots2ComputeRanges = plots.length < 2 ? this.plots : plots;
+            	plots2ComputeRanges.forEach(plot => {
             		range = this.nanrange(...range, ...plot.yaxis._range);
             	});
             	var margin = Math.abs(range[1] - range[0]) / 100;
@@ -842,7 +846,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         		if (!plot.xaxis._type){
         			plot.xaxis._type = plot.xaxis.type || '';
         		}
-        		if (!plot.yaxis._log){
+        		if (!plot.yaxis._type){
         			plot.yaxis._type = plot.yaxis.type || '';
         		}
         	});
@@ -992,50 +996,54 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 return;
             }
             
-            // FIXME: 1. props.size = 5 seems to increase resolution (by simply increasing the size)
-            // However, the fonts and the lines should be increased, too
-            // 2. legend is not present. If we want to add a legend, better would be to do it automatically
-            // (only one trace VISIBLE => no legend, otherwise yes), but then consider plotting on a new div, where
-            // we temporarily set this.defaultlayout.showlegend=true (currently, by changing showlegedn on the fly
-            // (e.g. in setBackround below) raises
-            // 3. Font size is not preserved in the image. But this has lower priority, as it turns out the
-            // font image (at least on Chrome + MacOsX) is a default Helvetica-like font which might be preferable
-            // as very common and readable
-            
-
-            var elm = document.getElementById(this.plotdivid);
-            var props = Object.assign({}, props);  // Object.assign(target, ...sources);
-            var elm = document.getElementById(this.plotdivid);
-            var [width, height] = [elm.offsetWidth, elm.offsetHeight];
-            if (!(props.width)){
-                props.width = (props.height ? width*props.height/height : width); // + 'px';
-            }
-            if (!(props.height)){
-                props.height = (props.width ? height*props.width/width : height); // + 'px';
-            }
-
-            function setBackground(gd) {
-                // https://community.plot.ly/t/plotly-toimage-background-color/8099
-                
-                // this function actually allows the user to configure the plot
-                // before rendering it to imag (why is it called like this
-                // in plotly?) but note that not all modifications work as expected:
-                
-                // the paper bg color is set to transparent by default. However,
-                // jpeg does not support it and thus we would get black background.
-                // Therefore:
-                if(props.format == 'jpeg'){
-                    gd._fullLayout.paper_bgcolor = 'rgba(255, 255, 255, 1)';
-                }
-                
-                // this actually does not work (raises) if we change the showlegend:
-                // thus, more work is needed to setting showlegend=true temporarily and then
-                // drawing on a new div
-                // gd._fullLayout.showlegend = true;
-            }
-            props.setBackground = setBackground;
-
-            Plotly.downloadImage(elm, props);
+            if (props.format.startsWith('json')){
+            	this.downloadAsJson();
+            }else{
+	            // FIXME: 1. props.size = 5 seems to increase resolution (by simply increasing the size)
+	            // However, the fonts and the lines should be increased, too
+	            // 2. legend is not present. If we want to add a legend, better would be to do it automatically
+	            // (only one trace VISIBLE => no legend, otherwise yes), but then consider plotting on a new div, where
+	            // we temporarily set this.defaultlayout.showlegend=true (currently, by changing showlegedn on the fly
+	            // (e.g. in setBackround below) raises
+	            // 3. Font size is not preserved in the image. But this has lower priority, as it turns out the
+	            // font image (at least on Chrome + MacOsX) is a default Helvetica-like font which might be preferable
+	            // as very common and readable
+	            
+	
+	            var elm = document.getElementById(this.plotdivid);
+	            var props = Object.assign({}, props);  // Object.assign(target, ...sources);
+	            var elm = document.getElementById(this.plotdivid);
+	            var [width, height] = [elm.offsetWidth, elm.offsetHeight];
+	            if (!(props.width)){
+	                props.width = (props.height ? width*props.height/height : width); // + 'px';
+	            }
+	            if (!(props.height)){
+	                props.height = (props.width ? height*props.width/width : height); // + 'px';
+	            }
+	
+	            function setBackground(gd) {
+	                // https://community.plot.ly/t/plotly-toimage-background-color/8099
+	                
+	                // this function actually allows the user to configure the plot
+	                // before rendering it to imag (why is it called like this
+	                // in plotly?) but note that not all modifications work as expected:
+	                
+	                // the paper bg color is set to transparent by default. However,
+	                // jpeg does not support it and thus we would get black background.
+	                // Therefore:
+	                if(props.format == 'jpeg'){
+	                    gd._fullLayout.paper_bgcolor = 'rgba(255, 255, 255, 1)';
+	                }
+	                
+	                // this actually does not work (raises) if we change the showlegend:
+	                // thus, more work is needed to setting showlegend=true temporarily and then
+	                // drawing on a new div
+	                // gd._fullLayout.showlegend = true;
+	            }
+	            props.setBackground = setBackground;
+	
+	            Plotly.downloadImage(elm, props);
+	        }
             this.downloadasimageopts.show = false;
             this.downloadasimageopts.format = '';
 
@@ -1045,6 +1053,16 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 //                 // use the dataUrl
 //             })
         },
+        downloadAsJson(){
+        	var filename = this.downloadasimageopts.filename;
+		    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
+		    var downloadAnchorNode = document.createElement('a');
+		    downloadAnchorNode.setAttribute("href",     dataStr);
+		    downloadAnchorNode.setAttribute("download", `${filename}.json`);
+		    document.body.appendChild(downloadAnchorNode); // required for firefox
+		    downloadAnchorNode.click();
+		    downloadAnchorNode.remove();
+		},
         addResizeListener: function(){
         	// adds (if not already added) a resize listener redrawing plots on window.resize
         	if (!this.resizeListener){
