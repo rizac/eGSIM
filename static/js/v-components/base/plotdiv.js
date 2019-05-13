@@ -41,7 +41,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             mouseMode: { // https://plot.ly/python/reference/#layout-hovermode
 	            hovermodes: ["closest", "x", "y", false],
 	            // the labels of hovermodes to be displayed. Copied from plotly modebar after visual test:
-	            hovermodeLabels: {closest: 'show closest point', x: 'compare data', y: 'show y value', false: 'do nothing'},
+	            hovermodeLabels: {closest: 'show closest point', x: 'show x', y: 'show y', false: 'do nothing'},
        			dragmodes: ["zoom", "pan"],  // "select", "lasso" are useless. false does not seem to work (it's zoom)
  				dragmodeLabels: {zoom: 'zoom', pan: 'pan'},
        			hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
@@ -141,7 +141,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             </select>
 
             <div v-show='legendNames.length' class='flexible mt-3 border-top'>
-                <h5 class='mt-2 mb-2'>Legend</h5>
+                <div class='mt-2 mb-2 font-weight-bold'>Legend</div>
                 <div v-for="key in legendNames">
                     <label v-bind:style="{color: legend[key]}">
                         <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
@@ -151,15 +151,15 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             </div>
 
 			<div class='mt-3 border-top d-flex flex-column'>
-				<h5 class='mt-2 mb-2'>Mouse interactions</h5>
-				<div class='d-flex flex-row mt-2'>
-					<label> on hover:</label>
+				<div class='mt-2 mb-2 font-weight-bold'>Mouse interactions</div>
+				<div class='d-flex flex-row mt-2 align-items-baseline'>
+					<span class='text-nowrap mr-1'> on hover:</span>
             		<select v-model="mouseMode.hovermode" class='form-control'>
             			<option v-for='name in mouseMode.hovermodes' :value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
             		</select>
             	</div>
-            	<div class='d-flex flex-row mt-2'>
-					<label> on drag:</label>
+            	<div class='d-flex flex-row mt-2 align-items-baseline'>
+					<span class='text-nowrap mr-1'> on drag:</span>
             		<select v-model="mouseMode.dragmode" class='form-control'>
             			<option v-for='name in mouseMode.dragmodes' :value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
             		</select>
@@ -167,8 +167,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             </div>
 
             <div v-show="isGridCusomizable" class='mt-3 border-top'>
-                <h5 class='mt-2 mb-2'>Subplots layout</h5>
-
+                <div class='mt-2 mb-2 font-weight-bold'>Subplots layout</div>
                 <select class='form-control' v-model='selectedgridlayout'>
                     <option v-for='key in Object.keys(gridlayouts)' v-bind:value="key" v-html="key">
                     </option>
@@ -541,7 +540,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // synchronize hovermode and hovermode
             // between the layout and this.mouseMode:
             ['hovermode', 'dragmode'].forEach(elm => {
-            	if (layout[elm]){
+            	if (elm in layout){
             		this.mouseMode[elm] = layout[elm];
             	}else{
             		layout[elm] = this.mouseMode[elm];
