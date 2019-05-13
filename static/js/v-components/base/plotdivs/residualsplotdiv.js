@@ -97,10 +97,10 @@ Vue.component('residualsplotdiv', {
                         var plotdata = data[gsim][imt][type];
                         var scatterPlot = 'intercept' in plotdata && 'slope' in plotdata;
                         var mainTrace = {
-                                x: plotdata.x,
-                                y: plotdata.y,
-                                type: scatterPlot ? 'scatter' : 'bar',
-                                name: type
+                            x: plotdata.x,
+                            y: plotdata.y,
+                            type: scatterPlot ? 'scatter' : 'bar',
+                            name: type
                         };
                         var color = this.addLegend(mainTrace, mainTrace.name); //sets also mainTrace.legendgroup
                         // set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
@@ -113,11 +113,11 @@ Vue.component('residualsplotdiv', {
                             var [min, max] = endpoints(plotdata.x);
                             var [slope, intercept] = [plotdata.slope, plotdata.intercept];
                             var linregtrace = {
-                                    x: [min, max],
-                                    y: [min*slope+intercept, max*slope+intercept],
-                                    type: 'scatter',
-                                    mode: 'lines',
-                                    name: 'Linear regression'
+                                x: [min, max],
+                                y: [min*slope+intercept, max*slope+intercept],
+                                type: 'scatter',
+                                mode: 'lines',
+                                name: 'Linear regression'
                             }
                             var color = this.addLegend(linregtrace, linregtrace.name, '#331100');
                             linregtrace.line = {color: color};
@@ -134,21 +134,21 @@ Vue.component('residualsplotdiv', {
                                 // show normal distribution and reference normal dist. (mean=0 sigma=1)
                                 var x = resample(plotdata.x);
                                 var normdistline = {
-                                        x: x,
-                                        y: normdist(x, plotdata.mean, plotdata.stddev),
-                                        type: 'scatter',
-                                        mode: 'lines',
-                                        name: 'Normal distribution'
+                                    x: x,
+                                    y: normdist(x, plotdata.mean, plotdata.stddev),
+                                    type: 'scatter',
+                                    mode: 'lines',
+                                    name: 'Normal distribution'
                                 };
                                 var color = this.addLegend(normdistline, normdistline.name, '#331100');
                                 normdistline.line = {color: color};
                                 
                                 var refnormdistline = {
-                                        x: x,
-                                        y: normdist(x, 0, 1),
-                                        type: 'scatter',
-                                        mode: 'lines',
-                                        name: 'Normal distribution (μ=0, σ=1)'
+                                    x: x,
+                                    y: normdist(x, 0, 1),
+                                    type: 'scatter',
+                                    mode: 'lines',
+                                    name: 'Normal distribution (μ=0, σ=1)'
                                 };
                                 var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
                                 refnormdistline.line = {color: color};
@@ -159,11 +159,11 @@ Vue.component('residualsplotdiv', {
 
                                 var [min, max] = endpoints(plotdata.y);
                                 var medianline = {
-                                        x: [plotdata.median, plotdata.median],
-                                        y: [0, max],
-                                        type: 'scatter',
-                                        mode: 'lines',
-                                        name: 'Median LH'
+                                    x: [plotdata.median, plotdata.median],
+                                    y: [0, max],
+                                    type: 'scatter',
+                                    mode: 'lines',
+                                    name: 'Median LH'
                                 };
                                 var color = this.addLegend(medianline, medianline.name, '#331100');
                                 medianline.line = {color: color, dash: 'dot'};
@@ -172,7 +172,12 @@ Vue.component('residualsplotdiv', {
                             }
                         }
                         var plotparams = {gsim: gsim, imt: imt, 'residual type': type};
-                        plots.push({'traces': traces, 'params': plotparams, xaxis:{title: plotdata.xlabel}, yaxis:{title: plotdata.ylabel}});
+                        plots.push({
+                            traces: traces,
+                            params: plotparams,
+                            xaxis: { title: plotdata.xlabel },
+                            yaxis: { title: plotdata.ylabel }
+                        });
                     }
                 }
             }
