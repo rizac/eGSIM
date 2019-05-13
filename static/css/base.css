@@ -262,13 +262,9 @@ select:not([multiple]):not([size]).form-control{
 /* ========================================================================= */
 
 /* plotly */
-.js-plotly-plot .plotly .modebar--hover{
-	padding: 1rem;
-	border-radius: .5rem;
-	right: 3px !important;
-	box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+div.modebar.modebar--hover{
+	display: none;
 }
-
 
 /* Leaflet */
 .leaflet-popup-content {
