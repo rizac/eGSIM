@@ -4,25 +4,49 @@
 var _PLOT_DIV = Vue.component('plotdiv', {
     props: {
         data: {type: Object, default: () => { return{} }},
-        // this is used to calculate plot areas and set it in the default layout (use computed body font-size. Note that parseInt('16px')=16):
-        plotfontsize: {type: Number, default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))},
+        // this is used to calculate plot areas and set it in the default layout
+        // (use computed body font-size. Note that parseInt('16px')=16):
+        plotfontsize: {
+        	type: Number,
+        	default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))
+       	},
         filename: {type: String, default: 'egsim_plot'}
     },
     data: function(){
-        // unique id based on the component name (note that if this is called by a subclass, then this.$options.name is the subclass name)
+    	// NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
+
+        // unique id based on the component name (note that if this is called by a subclass,
+        // then this.$options.name is the subclass name). FIXME: NOT USED REMOVE?
         var id = this.$options.name + new Date().getTime().toString();
         return {
             visible: !Vue.isEmpty(this.data),
-            resizeListener: null,  //callback to be passed to window.addEventListener('resize', ...). See addResizeListener and removeResizeListener
-            watchers: {},  // dynamically created watchers (see init)
+            //callback to be passed to window.addEventListener('resize', ...).
+            // See addResizeListener and removeResizeListener:
+            resizeListener: null,
+            // store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
+            watchers: {},
             paramnames2showongrid: new Set(),  // parameter names to show on the grid
             plotdivid: Date.now().toString(),
-            // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
-            legend: {}, // an Object of names -> html color (string) values
-            plots: [], //array of [{traces, params}], where traces is an Array of Objects representing the plot traces, and params is an Object
-            params: {},  // a dict of property names mapped to an array of possible (string) values
-            gridlayouts: {}, // dict of subplots layout (string) mapped to a two element array (xgrid param name, y grid param name)
-            selectedgridlayout: '',  // string denoting the selected key of gridLayouts
+            // an Object of names -> html color (string) values:
+            legend: {},
+            // plots is the data constructed from the received response.
+            // It is an Array of Objects, each Object representing a plot P:
+            // P: {
+            //   traces: Array of Plotly Objects,
+            //   params: Object of keys (string) mapped to a value, with the values
+            //           of this plot used to retrieve it when selecting what to show
+            //   xaxis: Plotly Object with the xaxis data
+            //   yaxis: Plotly Object with the yaxis data
+            // }
+            plots: [],
+            // a dict of property names mapped (string) to an array of possible (string) values. This is
+            // built automatically according to all possible values of the each Plot.params Object (see above)
+            params: {},
+            // dict of subplots layout (string) mapped to a two element Array
+            // [xgrid param name, y grid param name]:
+            gridlayouts: {},
+            // string denoting the selected key of gridLayouts:
+            selectedgridlayout: '',
             // selectedParams below is a dict of property names mapped to a scalar denoting the selected value
             // it is the keys of this.params without the values of this.gridlayouts[this.selectedgridlayout]
             // and each param will be displayed on one single-value-choosable combobox
@@ -129,10 +153,19 @@ var _PLOT_DIV = Vue.component('plotdiv', {
     template: `<div v-show='visible' class='d-flex flex-row'>
         
         <div class='flexible d-flex flex-column m-2'>
-            <div v-if="Object.keys(selectedParams).length" class='d-flex flex-row justify-content-around mb-1'>
-                <div v-for='(values, key) in selectedParams' class='d-flex flex-row flexible align-items-baseline ml-2'>
+            <div
+            	v-if="Object.keys(selectedParams).length"
+            	class='d-flex flex-row justify-content-around mb-1'
+            >
+                <div
+                	v-for='(values, key) in selectedParams'
+                	class='d-flex flex-row flexible align-items-baseline ml-2'
+                >
                     <span class='text-nowrap mr-1'>{{ key }}</span>
-                    <select class='flexible form-control' v-model="selectedParams[key]">
+                    <select
+                    	v-model="selectedParams[key]"
+                    	class='flexible form-control'
+                    >
                         <option v-for='value in params[key]' :value="value">
                             {{ value }}
                         </option>
@@ -149,27 +182,51 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 
             <slot></slot> <!-- slot for custom buttons -->
             
-            <div v-show='legendNames.length' class='flexible mt-3 border p-2 bg-white'>
+            <div
+            	v-show='legendNames.length'
+            	class='flexible mt-3 border p-2 bg-white'
+            >
                 <div>Legend</div>
                 <div v-for="key in legendNames">
-                    <label v-bind:style="{color: legend[key]}" class='my-0 mt-2'>
-                        <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
-                        {{ key }}
+                    <label
+                    	v-bind:style="{color: legend[key]}"
+                    	class='my-0 mt-2'
+                    >
+                        <input
+                        	type='checkbox'
+                        	v-bind:checked="isTraceVisible(key)"
+                        	v-on:click="toggleTraceVisibility(key)"
+                        > {{ key }}
                     </label>
                 </div>
             </div>
 
 			<div>
-				<select v-model='downloadopts.format' class='form-control mt-3'>
-	                <option v-for='(format, index) in downloadopts.formats' :value='format'
-	                    :disabled='format == downloadopts.formats[0]'>
-	                    {{ index ? format : 'download as:' }}
-	                </option>
-	            </select>
+				<div class='d-flex flex-row mt-3 text-nowrap align-items-baseline border p-2 bg-white'>
+					<i class="fa fa-download"></i>
+					<select
+						v-model='downloadopts.format'
+						class='form-control ml-2'
+					>
+		                <option
+		                	v-for='(format, index) in downloadopts.formats'
+		                	:value='format'
+		                    :disabled='format == downloadopts.formats[0]'
+		                >
+		                    {{ index ? format : 'download as:' }}
+		                </option>
+		            </select>
+	            </div>
 	
-				<div v-show="isGridCusomizable" class='mt-3 border p-2 bg-white'>
+				<div
+					v-show="isGridCusomizable"
+					class='mt-3 border p-2 bg-white'
+				>
 	                <div>Subplots layout</div>
-	                <select class='form-control mt-1' v-model='selectedgridlayout'>
+	                <select
+	                	v-model='selectedgridlayout'
+	                	class='form-control mt-1'
+	                >
 	                    <option v-for='key in Object.keys(gridlayouts)' v-bind:value="key" v-html="key">
 	                    </option>
 	                </select>
@@ -209,14 +266,24 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 					<div> Mouse interactions</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
 						<span class='text-nowrap mr-1'> on hover:</span>
-	            		<select v-model="mouseMode.hovermode" class='form-control form-control-sm'>
-	            			<option v-for='name in mouseMode.hovermodes' :value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
+	            		<select
+	            			v-model="mouseMode.hovermode"
+	            			class='form-control form-control-sm'
+	            		>
+	            			<option
+	            				v-for='name in mouseMode.hovermodes'
+	            				:value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
 	            		</select>
 	            	</div>
 	            	<div class='d-flex flex-row mt-1 align-items-baseline'>
 						<span class='text-nowrap mr-1'> on drag:</span>
-	            		<select v-model="mouseMode.dragmode" class='form-control form-control-sm'>
-	            			<option v-for='name in mouseMode.dragmodes' :value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
+	            		<select
+	            			v-model="mouseMode.dragmode"
+	            			class='form-control form-control-sm'
+	            		>
+	            			<option
+	            				v-for='name in mouseMode.dragmodes'
+	            				:value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
 	            		</select>
 	            	</div>
 	            </div>
