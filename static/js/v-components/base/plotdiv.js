@@ -518,8 +518,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 divId = this.plotdivid;
             }
             this.$nextTick(() => {
-            	var [hover, drag, x, y] = ['mouseMode.hovermode', 'mouseMode.dragmode', 'axis.x', 'axis.y'];
-            	for (var key of [hover, drag, x, y]){
+            	var [hover, drag, xLog, yLog, xSameRange, ySameRange] =
+            		['mouseMode.hovermode', 'mouseMode.dragmode', 'axis.x.log', 'axis.y.log', 'axis.x.sameRange', 'axis.y.sameRange'];
+            	for (var key of [hover, drag, xLog, yLog, xSameRange, ySameRange]){
 	            	if (key in this.watchers){
 	            		this.watchers[key]();  // unwatch. we will change the layout and we do not want to re-layout
 	            		delete this.watchers[key];
@@ -534,12 +535,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 this.$watch(drag, function(newval, oldval){
                     this.setMouseModes(undefined, newval);  // hovermode, mousemode
                 });
-                this.$watch(x, function(newval, oldval){
-                    this.react();
-                }, {deep: true});
-                this.$watch(y, function(newval, oldval){
-                    this.react();
-                }, {deep: true});
+                for (var key of [xLog, yLog, xSameRange, ySameRange]){
+                	// watch each prop separately because with 'deep=true' react is called more than once ...
+                	this.$watch(key, function(newval, oldval){
+                    	this.react();
+                	});
+                }
             });
         },
         react: function(divId){
