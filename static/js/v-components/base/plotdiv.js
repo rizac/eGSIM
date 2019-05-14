@@ -111,7 +111,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
     },
     activated: function(){  // when component become active
     	if (this.visible){
-    		this.addResizeListener(); // start redrawing plots on resize, see bottom of the file
+    		this.addResizeListener(true); // start redrawing plots on resize, see bottom of the file
     		// should be better added inside a this.$nextTick(() => { this.addResizeListener(); } ?
     	}
     },
@@ -1067,7 +1067,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 		    downloadAnchorNode.click();
 		    downloadAnchorNode.remove();
 		},
-        addResizeListener: function(){
+        addResizeListener: function(fireResizeNow){
         	// adds (if not already added) a resize listener redrawing plots on window.resize
         	if (!this.resizeListener){
         		 // see prop below                    
@@ -1081,6 +1081,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                     }, 300);
                 };
                 window.addEventListener('resize', this.resizeListener);
+                if (fireResizeNow){
+                	this.react();
+                }
             }
        	},
        	removeResizeListener: function(){
