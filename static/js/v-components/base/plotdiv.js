@@ -53,12 +53,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             	// ['-', 'linear', 'log', ... other values ], we will set here only 'normal' (log checkbox unselected)
             	// or log (log checkbox selected)
         		x: {
-            		log: undefined,  // undefined: infer from plots, null: disable the option, otherwise boolean
-            		sameRange: undefined, // same as above
+            		log: {disabled: false, value: undefined},  // undefined: infer from plots, null: disable the option, otherwise boolean
+            		sameRange: {disabled: false, value: undefined}, // same as above
             	},
             	y: {
-            		log: undefined, // see above
-            		sameRange: undefined // see above
+            		log: {disabled: false, value: undefined}, // see above
+            		sameRange: {disabled: false, value: undefined} // see above
             	}
             },
             // the plotly config for plots. See
@@ -85,8 +85,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         }
     },
     watch: {
-        // NOTE: selectedParams and selectedGridLayout are watched dynamically in 'init'
-        // this is to avoid calling them while setting up the data from the server
+        // NOTE: There are several data variable that are watched dynamically
+        // to avoid redrawing and recalculating the plot with recursive loops
+        // See 'init' (calling 'turnWatchersOn')
         data: {
             immediate: true,
             handler(newval, oldval){
@@ -171,23 +172,23 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 					<span class='text-nowrap'>{{ type }}:</span>
             		<label
             			class='text-nowrap ml-2'
-            			:disabled="![true, false].includes(axis[type].sameRange)"
+            			:disabled="axis[type].sameRange.disabled"
             		>
 	            		<input
 	            			type='checkbox'
-	            			v-model='axis[type].sameRange'
-	            			:disabled="![true, false].includes(axis[type].sameRange)"
+	            			v-model='axis[type].sameRange.value'
+	            			:disabled="axis[type].sameRange.disabled"
 	            		>	
 	            		<span class='ml-1'>same range</span>
 	            	</label>
             		<label
             			class='text-nowrap ml-2'
-            			:disabled="![true, false].includes(axis[type].log)"
+            			:disabled="axis[type].log.disabled"
             		>
 	            		<input
 	            			type='checkbox'
-	            			v-model='axis[type].log'
-	            			:disabled="![true, false].includes(axis[type].log)"
+	            			v-model='axis[type].log.value'
+	            			:disabled="axis[type].log.disabled"
 	            		>	
 	            		<span class='ml-1'>log scale</span>
 	            	</label>
@@ -309,27 +310,41 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         },
         init: function(jsondict){
             // unwatch watchers, if any:
-            for(var name of Object.keys(this.watchers)){
-                this.watchers[name]();
-            }
+            this.watchOff();
             this.legend = {};
             // convert data:
             this.plots = this.getData(jsondict);
             // update selection, taking into account previously selected stuff:
             this.setupSelection(); // which sets this.selectedgridlayout which calls this.gridLayoutChanged (see watch above)
             // which in turn sets this.selectedParams which eventually calls this.newPlot (see watch above)
+            this.watchOn('selectedParams', function (newval, oldval) {
+                this.newPlot();
+            },{deep: true});
+            this.watchOn('selectedgridlayout', function(newval, oldval){
+                this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
+            });
             
-            // set watchers:
-            this.watchers = { // https://vuejs.org/v2/api/#vm-watch
-                'selectedParams': this.$watch('selectedParams', function (newval, oldval) {
-                    this.newPlot();
-                },{deep: true}),  // https://vuejs.org/v2/api/#vm-watch
-                'selectedgridlayout': this.$watch('selectedgridlayout', function(newval, oldval){
-                    this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
-                })
-            };
+            this.setupAxisDefaults();
             // now plot:
             this.newPlot();
+        },
+        watchOff: function(...keys){
+        	// turns (dynamically created/destroyed) watchers off.
+        	// If keys (list of strings) is NOT provided, turns off and deletes all watchers
+        	var keys2delete = keys.length ? keys : Object.keys(this.watchers);
+        	for(var name of keys2delete){
+        		if (name in this.watchers){
+                	this.watchers[name]();
+                	delete this.watchers[name];
+                }
+            }
+        },
+        watchOn: function(key, callback, options){
+        	if (key in this.watchers){
+        		this.watchOff(key);
+        	}
+        	var watch = this.$watch(key, callback, options || {});
+        	this.watchers[key] = watch;
         },
         setupSelection: function(){
             // sets up selectable params, including those choosable as 'x grid' or 'y rid'.
@@ -508,6 +523,81 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }
             this.selectedParams = selectedParams;
         },
+        setupAxisDefaults(){
+        	// sets up the axis default for each plot and in the VueJs settings
+        	// modifies each plot xaxis / yaxis data and `this.axis` Object
+        	//
+        	// Remember that:
+        	// 1. `plots` is a subset of `this.plots` and it is an Array of plots,
+        	// i.e. Objects of the form:
+        	// plot= {
+        	//		traces: [] //list of Plotly Objects representing traces
+        	//		xaxis: {} //Plotly Object representing x axis
+        	//		yaxis: Plotly Object representing y axis
+        	//	 }, ..
+        	//
+        	// The Vue Object controlling axis settings is of the form:
+        	// axis: {
+            //    		x: {
+            //   			log: {value:undefined, disabled:false},  // undefined: infer from plots, null: disable the option, otherwise boolean
+            //   			sameRange: {value:undefined, disabled: false} // same as above
+            //   		},
+  			//		y: { same as above }
+            //   }, 
+        	
+        	var keys = ['axis.x.log.value',
+            		 	'axis.y.log.value',
+            		 	'axis.x.sameRange.value',
+            		 	'axis.y.sameRange.value'];
+        	this.watchOff(...keys);
+        	
+        	// Set "private" variable in the xaxis and yaxis Objects used to
+        	// remember some defaults, if set.
+        	// Currently, we set _range and _type, which are the counterparts
+        	// of 'range' and 'type', respectively. The latter are Plotly reserved
+        	// keyswords and apparently it's harmless to add our custom (underscored)
+        	// counterparts
+        	this.plots.forEach(plot => {
+        		if (!plot.xaxis){
+        			plot.xaxis={};
+        		}
+        		if (!plot.yaxis){
+        			plot.yaxis={};
+        		}
+        		var [rangex, rangey] = this.getPlotBounds(plot.traces || []);  // note that hidden traces count
+        		plot.xaxis._range = rangex;
+        		plot.yaxis._range = rangey;
+        		
+        		plot.xaxis._type = !(plot.xaxis.type) || (plot.xaxis.type == 'log') ? '' : plot.xaxis.type;
+        		plot.yaxis._type = !(plot.yaxis.type) || (plot.yaxis.type == 'log') ? '' : plot.yaxis.type;
+        	});
+
+        	// setup default values:
+        	for (var key of ['x', 'y']){
+            	var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
+            	var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
+            	// axis.sameRange.disabled = false;
+            	axis.sameRange.value = false;
+            	// get if all axis have the same bounds:
+            	var pltBounds = this.plots[0][plotkey]._range;
+            	if (this.plots.every(plot => plot[plotkey]._range.every((elm, index) => elm === pltBounds[index]))){
+            		// axis.sameRange.disabled = true;
+            		axis.sameRange.value = true;
+            	}
+            	// log scale:
+            	axis.log.value = this.plots.every(plot => plot[plotkey].type === 'log');
+            	// set log scale disabled if the traces do not have 'log' as type and there are axis bound <=0:
+            	//axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
+            }
+
+            // restart watching: 
+            for (var key of keys){
+            	// watch each prop separately because with 'deep=true' react is called more than once ...
+            	this.watchOn(key, function(newval, oldval){
+                	this.react();
+            	});
+            }
+        },
         newPlot: function(divId){
             /**
              * Filters the plots to display according to current parameters and grid choosen, and
@@ -518,29 +608,18 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 divId = this.plotdivid;
             }
             this.$nextTick(() => {
-            	var [hover, drag, xLog, yLog, xSameRange, ySameRange] =
-            		['mouseMode.hovermode', 'mouseMode.dragmode', 'axis.x.log', 'axis.y.log', 'axis.x.sameRange', 'axis.y.sameRange'];
-            	for (var key of [hover, drag, xLog, yLog, xSameRange, ySameRange]){
-	            	if (key in this.watchers){
-	            		this.watchers[key]();  // unwatch. we will change the layout and we do not want to re-layout
-	            		delete this.watchers[key];
-	            	}
-            	}
+            	var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
+            	this.watchOff(hover, drag);
                 var [data, layout] = this.createPlotlyDataAndLayout(divId);
                 Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
                 Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
-                this.$watch(hover, function (newval, oldval) {
+                this.watchOn(hover, function (newval, oldval) {
                     this.setMouseModes(newval, undefined);  // hovermode, mousemode
                 });
-                this.$watch(drag, function(newval, oldval){
+                this.watchOn(drag, function(newval, oldval){
                     this.setMouseModes(undefined, newval);  // hovermode, mousemode
                 });
-                for (var key of [xLog, yLog, xSameRange, ySameRange]){
-                	// watch each prop separately because with 'deep=true' react is called more than once ...
-                	this.$watch(key, function(newval, oldval){
-                    	this.react();
-                	});
-                }
+                
             });
         },
         react: function(divId){
@@ -561,139 +640,19 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             var plots = this.plots;
             var params = this.params;
             
-            this.setupAxisDefaults(plots);
-            // setup the range checkboxes: if all plots have the same bounds, set the value to
-            // null which means: disable it (or hide it, depending on what the implementation is):
-            // this has to be done here on all plots before filtering the plots to be displayed:
-            if (this.axis.x.sameRange === undefined){
-            	// get if all axis have the same bounds:
-            	var pltBounds = plots[0].xaxis._range;
-            	if (plots.every(plot => plot.xaxis._range.every((elm, index) => elm === pltBounds[index]))){
-            		this.axis.x.sameRange = null;
-            	}else{
-            		this.axis.x.sameRange = false;
-            	}
-            }
-            if (this.axis.y.sameRange === undefined){
-            	// get if all axis have the same bounds:
-            	var pltBounds = plots[0].yaxis._range;
-            	if (plots.every(plot => plot.yaxis._range.every((elm, index) => elm === pltBounds[index]))){
-            		this.axis.y.sameRange = null;
-            	}else{
-            		this.axis.y.sameRange = false;
-            	}
-            }
-
             // filter plots according to selectedParams keys, i.e. the parameter names
             // which are mapped to mupliple values AND are not currently set to be displayed on the
             // grid x or grid y (basically, the parameters which will show up in a combo box on top of the whole plot)
             // The number of these parameters might be zero: in this case the filter below has no effect and we
-            // still have all plots after the loop
+            // still have all plots after the loop. Note also that the filter returns a copy of the original array.
             for (var key of Object.keys(this.selectedParams)){
                 var val = this.selectedParams[key];
                 plots = plots.filter(plot => plot.params[key] == val);
             }
-            
-//            axis: {
-//             	x: {
-//             		log: undefined,  // undefined: infer from plots, null: disable the option, otherwise boolean
-//             		sameRange: undefined, // same as above
-//             	},
-//             	y: {
-//             		log: undefined, // see above
-//             		sameRange: undefined // see above
-//             	}
-//             },
 
-            console.log('creating plots');
-     
-            // set type (log disabled or not):
-            // this is a two way binding from the checkbox to the plots, depending
-            // on what has been set
-            if (this.axis.x.log === undefined){  // set the checkbox initial value
-            	this.axis.x.log = plots.every(plot => plot.xaxis._type === 'log');
-            }else{  // set the plots value according to the checkbox value
-            	plots.forEach(plot => {
-            		plot.xaxis.type = this.axis.x.log ? 'log' : plot.xaxis._type;
-            		// now, the idea is that if we have the "log" unchecked, to restore the
-            		// old value. But the old value might be missing (there was no 'type' key in the 
-            		// plotly xxis Object) or 'log' (log was the default 'type' key set in the subclasses)
-            		// So we want to delete the 'type' key in these circumstances:
-            		if (!this.axis.x.log && (!plot.xaxis.type || plot.xaxis.type == 'log')){
-	            		delete plot.xaxis.type;  // reset to default, whatever it is
-	            	}
-            	});
-            }
-            if (this.axis.y.log === undefined){  // set the checkbox initial value
-            	this.axis.y.log = plots.every(plot => plot.yaxis._type === 'log');
-            }else{  // set the plots value according to the checkbox value
-            	plots.forEach(plot => {
-            		plot.yaxis.type = this.axis.y.log ? 'log' : plot.yaxis._type;
-            		// see note above for the x axis:
-            		if (!this.axis.y.log && (!plot.yaxis.type || plot.yaxis.type == 'log')){
-	            		delete plot.yaxis.type;  // reset to default, whatever it is
-	            	}
-            	});
-            }
-
-			var log10 = Math.log10;
-			// set ranges:
-            // this is a two way binding from the checkbox to the plots, depending
-            // on what has been set
-            if (!this.axis.x.sameRange){
-            	// note: !this.axis.x.sameRange here means: the same range is not
-            	// an option, cause all plots have the same x range
-            	plots.forEach(plot => {
-        			delete plot.xaxis.range;
-        		});
-            }else{
-            	var range = [NaN, NaN];
-            	// if the plots to show is just one, then it does not make much sense
-            	// to calculate the range on itself. In this case use all plots
-            	var plots2ComputeRanges = plots.length < 2 ? this.plots : plots;
-            	plots2ComputeRanges.forEach(plot => {
-            		range = this.nanrange(...range, ...plot.xaxis._range);
-            	});
-            	var margin = Math.abs(range[1] - range[0]) / 100;
-	        	if (!this.axis.x.log || range[0]-margin > 0){
-	        		range[0] -= margin;
-	        		range[1] += margin;
-	        	}
-	        	if (range.every(elm => !isNaN(elm))){
-	        		plots.forEach(plot => {
-	        			// plotly wants range converted to log if axis type is 'log':
-	        			plot.xaxis.range = plot.xaxis.type === 'log' ? [log10(range[0]), log10(range[1])] : range;	
-	            	});
-            	}
-        	}
-            if (!this.axis.y.sameRange){
-            	// see note above for x.sameRange
-            	plots.forEach(plot => {
-        			delete plot.yaxis.range;
-        		});
-            }else{
-            	var range = [NaN, NaN];
-            	// if the plots to show is just one, then it does not make much sense
-            	// to calculate the range on itself. In this case use all plots
-            	var plots2ComputeRanges = plots.length < 2 ? this.plots : plots;
-            	plots2ComputeRanges.forEach(plot => {
-            		range = this.nanrange(...range, ...plot.yaxis._range);
-            	});
-            	var margin = Math.abs(range[1] - range[0]) / 100;
-	        	if (!this.axis.y.log || range[0]-margin > 0){
-	        		range[0] -= margin;
-	        		range[1] += margin;
-	        	}
-	        	if (range.every(elm => !isNaN(elm))){
-	        		plots.forEach(plot => {
-	        			// plotly wants range converted to log if axis type is 'log':
-	        			plot.yaxis.range = plot.yaxis.type === 'log' ? [log10(range[0]), log10(range[1])] : range;	
-	            	});
-            	}
-        	}
-            
-            
-
+            // console.log('creating plots');
+     		this.setupPlotAxisData(plots);
+			
             var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
             var gridxvalues = params[gridxparam];
             var gridyvalues = params[gridyparam];
@@ -826,31 +785,74 @@ var _PLOT_DIV = Vue.component('plotdiv', {
           }
           return [data, layout];
         },
-        setupAxisDefaults(plots){
-        	// sets up the axis default for each plot.
-        	// Currently, we set _range and _type, which are the counterparts
-        	// of 'range' and 'type', respectively. The latter are Plotly reserved
-        	// keyswords and apparently it's harmless to add our custom (underscored)
-        	// counterparts
-        	plots.forEach(plot => {
-        		if (!plot.xaxis){
-        			plot.xaxis={};
-        		}
-        		if (!plot.yaxis){
-        			plot.yaxis={};
-        		}
-        		if (!plot.xaxis._range || !plot.yaxis._range){
-        			var [rangex, rangey] = this.getPlotBounds(plot.traces);  // note that hidden traces count
-        			plot.xaxis._range = rangex;
-        			plot.yaxis._range = rangey;
-        		}
-        		if (!plot.xaxis._type){
-        			plot.xaxis._type = plot.xaxis.type || '';
-        		}
-        		if (!plot.yaxis._type){
-        			plot.yaxis._type = plot.yaxis.type || '';
-        		}
-        	});
+        setupPlotAxisData(plots){
+        	// sets up the plotly axis data on the plots to be plotted, according to
+        	// the current axis setting and the plot data
+
+        	// set the plot.xaxis.type (same for y):
+            for (var key of ['x', 'y']){
+            	var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
+            	var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
+            	plots.forEach(plot => {
+            		plot[plotkey].type = axis.log.value ? 'log' : plot[plotkey]._type;
+            		// we might have falsy plot type, meaning that the non-log type was unspecified
+            		// thus remove:
+            		if (!plot[plotkey].type){
+	            		delete plot[plotkey].type;  // reset to default, whatever it is
+	            	}
+            	});
+            	// set disabled state (some plots are not displayable as log. Although they might be actually be
+            	// displayed as log, this depends on the default settings, just prevent here the user to switch log on/off):
+	            axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
+            }
+
+			// set the plot.xaxis.type (same for y):
+			var [sign, log10] = [Math.sign, Math.log10];
+			// displaybars tells us if we are displaying (at least one) bar: this changes the behaviour
+			// of the margin for custom-defined ranges (see below)
+			var displaybars = plots.every(plot => plot.traces.some(trace => trace.type === 'bar'));
+            for (var key of ['x', 'y']){
+            	var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
+            	var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
+            	
+				// set same Range disabled, preventing the user to perform useless click:
+            	// Note that this includes we are shoing only one plot:
+            	var pltBounds = plots[0][plotkey]._range;
+            	axis.sameRange.disabled = 
+            		(plots.every(plot => plot[plotkey]._range.every((elm, index) => elm === pltBounds[index])));
+            	if (!axis.sameRange.value || axis.sameRange.disabled){
+            		plots.forEach(plot => {
+	        			delete plot[plotkey].range;
+	        		});
+            		continue;
+            	}
+            	// here deal with the case we have 'sameRange' clicked (and enabled):
+            	var range = [NaN, NaN];
+            	plots.forEach(plot => {
+            		range = this.nanrange(...range, ...plot[plotkey]._range);
+            	});
+            	// calculate margins. Do not add them IF:
+            	// 1. log scale and adding/removing margin causes value <=0
+            	// 2. if range[0], Is displaybars, range  if: no log displayed or bound+- margin still positive,
+            	// no bar displayed OR signum min
+            	var margin = Math.abs(range[1] - range[0]) / 50;
+            	if (displaybars && sign(range[0]) >= 0 && sign(range[1]) >= 0){
+            		// do not add margin to the minimum
+            	}else if (!axis.log.value || range[0] - margin > 0){
+	        		range[0] -= margin;
+	        	}
+	        	if (displaybars && sign(range[0]) <= 0 && sign(range[1]) <= 0){
+            		// do not add margin to the maximum
+            	}else if (!axis.log.value || range[1] + margin > 0){
+	        		range[1] += margin;
+	        	}
+	        	if (range.every(elm => !isNaN(elm))){
+	        		plots.forEach(plot => {
+	        			// plotly wants range converted to log if axis type is 'log':
+	        			plot[plotkey].range = plot[plotkey].type === 'log' ? [log10(range[0]), log10(range[1])] : range;	
+	            	});
+            	}
+           	}
         },
         displayGridLabels_(axis, paramName){
             if (this.paramnames2showongrid.has(paramName)){
