@@ -71,7 +71,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             colorMap: Vue.colorMap(),  // defined in vueutil.js,
-            downloadasimageopts: { // most of the image options are not user defined for the moment (except format):
+            downloadopts: { // most of the image options are not user defined for the moment (except format):
                 show: false,
                 width: null,
                 height: null,
@@ -101,11 +101,11 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 }
             }
         },
-        'downloadasimageopts.format': function (newVal, oldVal){
-            // to work with changes in downloadasimageopts.format: https://stackoverflow.com/a/46331968
+        'downloadopts.format': function (newVal, oldVal){
+            // to work with changes in downloadopts.format: https://stackoverflow.com/a/46331968
             // we do not attach onchange on the <select> tag because of this: https://github.com/vuejs/vue/issues/293
             if(newVal){
-                this.downloadAsImage();
+                this.download();
             }
         },
     },
@@ -144,82 +144,83 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             </div>
         </div>
     
-        <div class='d-flex flex-column my-2 mr-2 pl-2 border-left'
+        <div class='d-flex flex-column my-2 mr-2 pl-3'
             v-show="legendNames.length || isGridCusomizable">
 
             <slot></slot> <!-- slot for custom buttons -->
             
-            <select v-model='downloadasimageopts.format' class='form-control'>
-                <option v-for='(format, index) in downloadasimageopts.formats' :value='format'
-                    :disabled='format == downloadasimageopts.formats[0]'>
-                    {{ index ? format : 'download as:' }}
-                </option>
-            </select>
-
-            <div v-show='legendNames.length' class='flexible mt-3 border-top'>
-                <div class='mt-2 mb-2 font-weight-bold'>Legend</div>
+            <div v-show='legendNames.length' class='flexible mt-3 border p-2 bg-white'>
+                <div>Legend</div>
                 <div v-for="key in legendNames">
-                    <label v-bind:style="{color: legend[key]}">
+                    <label v-bind:style="{color: legend[key]}" class='my-0 mt-2'>
                         <input type='checkbox' v-bind:checked="isTraceVisible(key)" v-on:click="toggleTraceVisibility(key)">
                         {{ key }}
                     </label>
                 </div>
             </div>
 
-			<div class='mt-3 border-top d-flex flex-column'>
-				<div class='mt-2 mb-2 font-weight-bold'>Axis</div>
-				<div v-for="type in ['x', 'y']" class='d-flex flex-row mt-2 text-nowrap mr-1 align-items-baseline'>
-					<span class='text-nowrap'>{{ type }}:</span>
-            		<label
-            			class='text-nowrap ml-2'
-            			:disabled="axis[type].sameRange.disabled"
-            		>
-	            		<input
-	            			type='checkbox'
-	            			v-model='axis[type].sameRange.value'
+			<div>
+				<select v-model='downloadopts.format' class='form-control mt-3'>
+	                <option v-for='(format, index) in downloadopts.formats' :value='format'
+	                    :disabled='format == downloadopts.formats[0]'>
+	                    {{ index ? format : 'download as:' }}
+	                </option>
+	            </select>
+	
+				<div v-show="isGridCusomizable" class='mt-3 border p-2 bg-white'>
+	                <div>Subplots layout</div>
+	                <select class='form-control mt-1' v-model='selectedgridlayout'>
+	                    <option v-for='key in Object.keys(gridlayouts)' v-bind:value="key" v-html="key">
+	                    </option>
+	                </select>
+	
+	            </div>
+	
+				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
+					<div>Axis</div>
+					<div v-for="type in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
+						<span class='text-nowrap'>{{ type }}:</span>
+	            		<label
+	            			class='text-nowrap m-0 ml-2'
 	            			:disabled="axis[type].sameRange.disabled"
-	            		>	
-	            		<span class='ml-1'>same range</span>
-	            	</label>
-            		<label
-            			class='text-nowrap ml-2'
-            			:disabled="axis[type].log.disabled"
-            		>
-	            		<input
-	            			type='checkbox'
-	            			v-model='axis[type].log.value'
+	            		>
+		            		<input
+		            			type='checkbox'
+		            			v-model='axis[type].sameRange.value'
+		            			:disabled="axis[type].sameRange.disabled"
+		            		>	
+		            		<span class='ml-1'>same range</span>
+		            	</label>
+	            		<label
+	            			class='text-nowrap m-0 ml-2'
 	            			:disabled="axis[type].log.disabled"
-	            		>	
-	            		<span class='ml-1'>log scale</span>
-	            	</label>
-            	</div>
-            </div>
-
-			<div class='mt-3 border-top d-flex flex-column'>
-				<div class='mt-2 mb-2 font-weight-bold'>Mouse interactions</div>
-				<div class='d-flex flex-row mt-2 align-items-baseline'>
-					<span class='text-nowrap mr-1'> on hover:</span>
-            		<select v-model="mouseMode.hovermode" class='form-control form-control-sm'>
-            			<option v-for='name in mouseMode.hovermodes' :value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
-            		</select>
-            	</div>
-            	<div class='d-flex flex-row mt-2 align-items-baseline'>
-					<span class='text-nowrap mr-1'> on drag:</span>
-            		<select v-model="mouseMode.dragmode" class='form-control form-control-sm'>
-            			<option v-for='name in mouseMode.dragmodes' :value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
-            		</select>
-            	</div>
-            </div>
-
-            <div v-show="isGridCusomizable" class='mt-3 border-top'>
-                <div class='mt-2 mb-2 font-weight-bold'>Subplots layout</div>
-                <select class='form-control' v-model='selectedgridlayout'>
-                    <option v-for='key in Object.keys(gridlayouts)' v-bind:value="key" v-html="key">
-                    </option>
-                </select>
-
-            </div>
- 
+	            		>
+		            		<input
+		            			type='checkbox'
+		            			v-model='axis[type].log.value'
+		            			:disabled="axis[type].log.disabled"
+		            		>	
+		            		<span class='ml-1'>log scale</span>
+		            	</label>
+	            	</div>
+	            </div>
+	
+				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
+					<div> Mouse interactions</div>
+					<div class='d-flex flex-row mt-1 align-items-baseline'>
+						<span class='text-nowrap mr-1'> on hover:</span>
+	            		<select v-model="mouseMode.hovermode" class='form-control form-control-sm'>
+	            			<option v-for='name in mouseMode.hovermodes' :value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
+	            		</select>
+	            	</div>
+	            	<div class='d-flex flex-row mt-1 align-items-baseline'>
+						<span class='text-nowrap mr-1'> on drag:</span>
+	            		<select v-model="mouseMode.dragmode" class='form-control form-control-sm'>
+	            			<option v-for='name in mouseMode.dragmodes' :value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
+	            		</select>
+	            	</div>
+	            </div>
+ 			</div>
         </div>
      
     </div>`,
@@ -992,9 +993,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 		  	var m = Math;
 		  	return values.length? [m.min(...values), m.max(...values)] : [NaN, NaN];
 		},
-        downloadAsImage: function(){
+        download: function(){
             
-            var props = this.downloadasimageopts;
+            var props = this.downloadopts;
             if (!props.format){
                 return;
             }
@@ -1047,8 +1048,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 	
 	            Plotly.downloadImage(elm, props);
 	        }
-            this.downloadasimageopts.show = false;
-            this.downloadasimageopts.format = '';
+            this.downloadopts.show = false;
+            this.downloadopts.format = '';
 
 //             // Plotly.toImage will turn the plot in the given div into a data URL string
 //             // toImage takes the div as the first argument and an object specifying image properties as the other
@@ -1057,7 +1058,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 //             })
         },
         downloadAsJson(){
-        	var filename = this.downloadasimageopts.filename;
+        	var filename = this.downloadopts.filename;
 		    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
 		    var downloadAnchorNode = document.createElement('a');
 		    downloadAnchorNode.setAttribute("href",     dataStr);
