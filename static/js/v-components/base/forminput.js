@@ -27,7 +27,8 @@ Vue.component('forminput', {
         return {
         	elm: elm,
             // calculate (once) data for the template below:
-            isCheckOrRadio: elm.attrs.type == 'radio' || elm.attrs.type == 'checkbox',
+            isRadio: elm.attrs.type == 'radio',
+            isCheck: elm.attrs.type == 'checkbox',
             // type might be undefined, thus we need to check the choices for <select>:
             isSelect: isSelect,
             isSelectMultiple: isSelect && elm.attrs.multiple
@@ -35,8 +36,10 @@ Vue.component('forminput', {
     },
     template: `<div v-if="!elm.is_hidden">
         <div class="d-flex flex-row mb-0" :class="[showhelpbutton ? ['align-items-end'] : ['align-items-baseline']]">
-            <label :for="elm.attrs.id" class='mb-0 text-nowrap' :class="[elm.attrs.disabled ? ['text-muted'] : ['font-weight-bold']]">
-                <input v-if="!headonly && isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='mr-1'>
+            <label :for="elm.attrs.id" class='mb-0 text-nowrap' :disabled='elm.attrs.disabled'
+            :class="{'checked': elm.val, 'customcheckbox': isCheck, 'customradio': isRadio}"
+            >
+                <input v-if="!headonly && (isCheck || isRadio)" v-model="elm.val" v-bind="elm.attrs" class='mr-1'>
                 <span v-html="elm.label"></span>
             </label>
             <div class="text-muted small flexible ml-3 text-right">
@@ -66,7 +69,7 @@ Vue.component('forminput', {
 	        		v-html='getOptionLabel(opt)'>
 	        	</option>
 	    	</select>
-	    	<input v-else-if="!isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='form-control'
+	    	<input v-else-if="!isCheck && !isRadio" v-model="elm.val" v-bind="elm.attrs" class='form-control'
 	    		:class="{'border-danger': !!elm.err}">
     	</template>
     </div>`,

@@ -258,6 +258,75 @@ select:not([multiple]):not([size]).form-control{
 
 
 /* ========================================================================= */
+/* ================ CUSTOMIZING CHECKBOXES AND RADIO BUTTONS =============== */
+/* ========================================================================= */
+
+label.customcheckbox,
+label.customradio{
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+label.customcheckbox input[type=checkbox],
+label.customradio input[type=radio]{
+	display:none;
+}
+
+label.customcheckbox:before,
+label.customradio:before{
+	/* font-family can be removed, it will use the default font. But you should
+	also change 'content' below to display a checkmark, e.g.: content: "\2714";*/
+	font-family: FontAwesome; 
+	content: "\f00c";
+    box-sizing: border-box;
+    font-weight:bold;
+    text-align:center;
+    border-width: 1px;
+    border-style: solid;
+  	margin-right: .25em;
+    transition: .5s;
+    font-size: 66.66%;  /* this aligns text vertically, but it must be the inverse of line-height. Thus add also: */
+    line-height: 1.5em;
+    padding: 0px .1rem; /* this widens the box a bit horizontally to make it square */
+    
+}
+
+label.customradio:before{
+	content: "";
+    border-radius: .75em;
+}
+
+/* colors. Note: font-colors (for the checkmark) might not work. Consider using fontawesome */
+label.customcheckbox:before,
+label.customradio:before{
+    color: transparent;
+    background-color: white;
+	border-color: black;
+}
+label.customcheckbox.checked:before,
+label.customradio.checked:before{
+	color: white;
+    background-color: rgba(7, 104, 159, 1);
+}
+label.customcheckbox.disabled:before,
+label.customradio.disabled:before,
+label.customcheckbox[disabled]:before,
+label.customradio[disabled]:before{
+	border-color: #aaa;
+}
+
+label.customcheckbox.checked.disabled:before,
+label.customradio.checked.disabled:before,
+label.customcheckbox[disabled].checked:before,
+label.customradio[disabled].checked:before{
+	color: #aaa;
+	background-color: lightgray;
+}
+
+
+/* ========================================================================= */
 /* ================ CUSTOMIZING LIBRARIES ================================== */
 /* ========================================================================= */
 

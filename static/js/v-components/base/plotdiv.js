@@ -27,7 +27,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             watchers: {},
             paramnames2showongrid: new Set(),  // parameter names to show on the grid
             plotdivid: Date.now().toString(),
-            // an Object of names -> html color (string) values:
+            // an Object of names -> {visible: boolean, color: html color (string)}:
             legend: {},
             // plots is the data constructed from the received response.
             // It is an Array of Objects, each Object representing a plot P:
@@ -187,16 +187,17 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             	class='flexible mt-3 border p-2 bg-white'
             >
                 <div>Legend</div>
-                <div v-for="key in legendNames">
+                <div v-for="traceName in legendNames">
                     <label
-                    	v-bind:style="{color: legend[key]}"
-                    	class='my-0 mt-2'
+                    	v-bind:style="{color: legend[traceName].color}"
+                    	class='my-0 mt-2 customcheckbox'
+                    	:class="{'checked': legend[traceName].visible}"
                     >
                         <input
                         	type='checkbox'
-                        	v-bind:checked="isTraceVisible(key)"
-                        	v-on:click="toggleTraceVisibility(key)"
-                        > {{ key }}
+                        	v-model="legend[traceName].visible"
+                        	@change="traceVisibilityChanged(traceName)"
+                        > {{ traceName }}
                     </label>
                 </div>
             </div>
@@ -238,7 +239,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 					<div v-for="type in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
 						<span class='text-nowrap'>{{ type }}:</span>
 	            		<label
-	            			class='text-nowrap m-0 ml-2'
+	            			class='text-nowrap m-0 ml-2 customcheckbox'
+                            :class="{'checked': axis[type].sameRange.value}"
 	            			:disabled="axis[type].sameRange.disabled"
 	            		>
 		            		<input
@@ -249,7 +251,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 		            		<span class='ml-1'>same range</span>
 		            	</label>
 	            		<label
-	            			class='text-nowrap m-0 ml-2'
+	            			class='text-nowrap m-0 ml-2 customcheckbox'
+	            			:class="{'checked': axis[type].log.value}"
 	            			:disabled="axis[type].log.disabled"
 	            		>
 		            		<input
@@ -372,7 +375,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }else{
                 color = colorMap.get(key);  // sets also the key if not existing
             }
-            this.legend[key] = color;
+            if (!(key in this.legend)){
+            	// make the key reactive:
+            	this.$set(this.legend, key, {visible: true, color:color});
+            }else{
+	            this.legend[key].color = color;
+            }
             trace.legendgroup = key;
             return color;
         },
@@ -391,7 +399,6 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             this.watchOn('selectedgridlayout', function(newval, oldval){
                 this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
             });
-            
             this.setupAxisDefaults();
             // now plot:
             this.newPlot();
@@ -995,45 +1002,21 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             var elm = document.getElementById(divId);
             return [elm.offsetWidth, elm.offsetHeight];
         },
-        toggleTraceVisibility: function(traceName){
-            var visible = null;
-            // iterate over all plot traces and set the visible property to its opposite:
-            for(var plot of this.plots){
-                for (var trace of plot.traces){
-                    if (trace.legendgroup === traceName){
-                        if (visible === null){  // visible uninitialized, set it:
-                            // trace might not have the visible property (meaning: true)
-                            var traceVisibility = 'visible' in trace ? trace.visible : true;
-                            visible = !traceVisibility;
-                        }
-                        trace.visible = visible;
-                    }
-                }
-            }
-            // now get the indices of the currently displayed plots to update them:
-            var indices = [];
-            var plotlydata = this.getPlotlyDataAndLayout()[0]; 
+        traceVisibilityChanged: function(traceName){
+        	var indices = [];
+            var plotlydata = this.getPlotlyDataAndLayout()[0];
+			var legend = this.legend;
+			var visible = legend[traceName].visible;
             plotlydata.forEach(function(data, i){
-                if(data.legendgroup === traceName){
-                    indices.push(i);
-                }
+            	var plotlyVisible = ('visible' in data) ? !!data.visible : true;
+            	if (data.legendgroup === traceName && visible !== plotlyVisible){
+            		data.visible = visible;
+            		indices.push(i);
+            	}
             });
             if(indices.length){
                 Plotly.restyle(this.plotdivid, {visible: visible}, indices);
             }
-        },
-        isTraceVisible: function(traceName){
-            // get the first plotly trace with the legendgroup matching `traceName`
-            // and check its 'visible' property. Note that missing property defaults to true,
-            // so check for properties explicitly set as false:
-            for(var plot of this.plots){
-                for (var trace of plot.traces){
-                    if (trace.legendgroup === traceName){
-                        return 'visible' in trace ? trace.visible : true;
-                    }
-                }
-            }
-            return false;
         },
         getPlotlyDataAndLayout: function(){
             /**
