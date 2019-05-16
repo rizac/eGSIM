@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+<link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+
+<style>
+
+label.customcheckbox,
+label.customradio{
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+label.customcheckbox input[type=checkbox],
+label.customradio input[type=radio]{
+	display:none;
+}
+
+label.customcheckbox:before,
+label.customradio:before{
+	/* font-family can be removed, it will use the default font. But you should
+	also change 'content' below to display a checkmark, e.g.: content: "\2714";*/
+	font-family: FontAwesome; 
+	content: "\f00c";
+    box-sizing: border-box;
+    font-weight:bold;
+    text-align:center;
+    border-width: 1px;
+    border-style: solid;
+  	margin-right: .25em;
+    transition: .5s;
+    font-size: 66.66%;
+    /* these numbers mist be equal: */
+    width: 1.5em;
+    height: 1.5em;
+    line-height: 1.5em;
+}
+
+label.customradio:before{
+	content: "";
+    border-radius: .75em;
+}
+
+/* colors. Note: font-colors (for the checkmark) might not work. Consider using fontawesome */
+label.customcheckbox:before,
+label.customradio:before{
+    color: transparent;
+    background-color: white;
+	border-color: black;
+}
+label.customcheckbox.checked:before,
+label.customradio.checked:before{
+	color: white;
+    background-color: rgba(7, 104, 159, 1);
+}
+label.customcheckbox.disabled:before,
+label.customradio.disabled:before,
+label.customcheckbox[disabled]:before,
+label.customradio[disabled]:before{
+	border-color: #aaa;
+}
+
+label.customcheckbox.checked.disabled:before,
+label.customradio.checked.disabled:before,
+label.customcheckbox[disabled].checked:before,
+label.customradio[disabled].checked:before{
+	color: #aaa;
+	background-color: lightgray;
+}
+
+
+</style>
+
+</head>
+
+<body>
+<h2>Normal controls</h2>
+  <input type="checkbox" id="fruit1u" name="fruit-1" value="Apple">
+  <label tabindex="0" for="fruit1u" onkeyup="if(event.keyCode == 32){var e=document.getElementById(this.getAttribute('for'));e.click();}">Normal</label>
+  
+  <input type="checkbox" id="fruit2u" name="fruit-2" value="Banana" disabled>
+  <label tabindex="0" for="fruit2u" onkeyup="if(event.keyCode == 32){var e=document.getElementById(this.getAttribute('for'));e.click();}">Disabled</label>
+  
+  <input type="checkbox" id="fruit3u" name="fruit-3" value="Cherry" checked disabled>
+  <label tabindex="0" for="fruit3u" onkeyup="if(event.keyCode == 32){var e=document.getElementById(this.getAttribute('for'));e.click();}">Disabled Checked</label>
+  
+  <input type="checkbox" id="fruit4u" name="fruit-4" value="Strawberry" checked>
+  <label tabindex="0" for="fruit4u" onkeyup="if(event.keyCode == 32){var e=document.getElementById(this.getAttribute('for'));e.click();}">Checked</label>
+  
+  <br>
+  
+  
+ <input type="radio" class='hidden' id="fruit1" name="fruit-1" value="Apple">
+  <label class='styled4checkbox' tabindex="0" for="fruit1" onkeyup="if(event.keyCode == 32){var e=document.getElementById(this.getAttribute('for'));e.click();}">Normal</label>
+  
+  <input type="radio" class='hidden' id="fruit2" name="fruit-2" value="Banana" disabled>
+  <label class='styled4checkbox' tabindex="0" for="fruit2" onkeyup="if(event.keyCode == 32){var e=document.getElementById(this.getAttribute('for'));e.click();}">Disabled</label>
+  
+  <input type="radio" class='hidden' id="fruit3" name="fruit-3" value="Cherry" checked disabled>
+  <label class='styled4checkbox' tabindex="0" for="fruit3" onkeyup="if(event.keyCode == 32){var e=document.getElementById(this.getAttribute('for'));e.click();}">Disabled Checked</label>
+  
+  <input type="radio" class='hidden' id="fruit4" name="fruit-4" value="Strawberry" checked>
+  <label class='styled4checkbox' tabindex="0" for="fruit4" onkeyup="if(event.keyCode == 32){var e=document.getElementById(this.getAttribute('for'));e.click();}">Checked</label>
+
+
+<h2>Customized controls</h2>
+
+<label class='customcheckbox'><input type='checkbox'>normal</label>
+<label class='customcheckbox checked'><input type='checkbox' checked>checked</label>
+<label class='customcheckbox disabled'><input type='checkbox' disabled>disabled</label>
+<label class='customcheckbox checked disabled'><input type='checkbox' checked disabled>checked disabled</label>
+<br>
+<label class='customradio'><input type='radio'>normal</label>
+<label class='customradio checked'><input type='radio' checked>checked</label>
+<label class='customradio disabled'><input type='radio' disabled>disabled</label>
+<label class='customradio checked disabled'><input type='radio' checked disabled>checked disabled</label>
+
+</body>
+
+</html>
