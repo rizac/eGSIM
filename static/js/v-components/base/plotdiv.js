@@ -20,6 +20,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         var id = this.$options.name + new Date().getTime().toString();
         return {
             visible: !Vue.isEmpty(this.data),
+            // boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
+            drawingPlots: true,
             //callback to be passed to window.addEventListener('resize', ...).
             // See addResizeListener and removeResizeListener:
             resizeListener: null,
@@ -173,6 +175,18 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 </div>
             </div>
             <div class='flexible position-relative'>
+            	<div
+            		v-show='drawingPlots'
+            		class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
+            		style='font-size:200%;z-index:1001;background-color:rgba(0,0,0,0.0)'
+            	>
+            		<span
+            			class='p-2 shadow border rounded text-white'
+            			style="background-color:rgba(0,0,0,0.3)"
+            		>
+            			Drawing plots ... <i class="fa fa-hourglass-o"></i>
+            		</span>
+            	</div>
                 <div class='position-absolute pos-0' :id="plotdivid"></div>
             </div>
         </div>
@@ -687,14 +701,15 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             	this.watchOff(hover, drag);
                 var [data, layout] = this.createPlotlyDataAndLayout(divId);
                 Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
-                Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
-                this.watchOn(hover, function (newval, oldval) {
-                    this.setMouseModes(newval, undefined);  // hovermode, mousemode
-                });
-                this.watchOn(drag, function(newval, oldval){
-                    this.setMouseModes(undefined, newval);  // hovermode, mousemode
-                });
-                
+                this.execute(function(){
+	                Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
+	                this.watchOn(hover, function (newval, oldval) {
+	                    this.setMouseModes(newval, undefined);  // hovermode, mousemode
+	                });
+	                this.watchOn(drag, function(newval, oldval){
+	                    this.setMouseModes(undefined, newval);  // hovermode, mousemode
+	                });
+	            });
             });
         },
         react: function(divId){
@@ -706,10 +721,19 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 divId = this.plotdivid;
             }
             this.$nextTick(() => {
-                var [data, layout] = this.createPlotlyDataAndLayout(divId);
-                // Purge plot. Check if we do actually need this:
-                Plotly.react(divId, data, layout);
+                this.execute(function(){
+                	var [data, layout] = this.createPlotlyDataAndLayout(divId);
+                	Plotly.react(divId, data, layout);
+                });
             });
+        },
+        execute: function(callback){
+        	var self = this;
+        	this.drawingPlots=true;
+        	setTimeout(function(){
+	            callback.call(self);
+	            self.drawingPlots=false;
+	        }, 200);
         },
         createPlotlyDataAndLayout: function(divId){
             var plots = this.plots;
@@ -1015,7 +1039,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             	}
             });
             if(indices.length){
-                Plotly.restyle(this.plotdivid, {visible: visible}, indices);
+            	this.execute(function(){
+	                Plotly.restyle(this.plotdivid, {visible: visible}, indices);
+	            });
             }
         },
         getPlotlyDataAndLayout: function(){
@@ -1155,7 +1181,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
        			relayout = true;
        		}
        		if (relayout){
-       			Plotly.relayout(this.plotdivid, layout);
+       			this.execute(function(){
+	       			Plotly.relayout(this.plotdivid, layout);
+	       		});
        		}
        	}
     },
