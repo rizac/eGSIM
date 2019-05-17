@@ -7,10 +7,9 @@ Created on 29 Jan 2018
 '''
 
 import re
-import sys
+# import sys
 import json
 from datetime import datetime
-from collections import OrderedDict
 from io import StringIO
 
 import yaml
@@ -22,18 +21,15 @@ from django.forms import Form
 from django.utils.safestring import mark_safe
 from django.forms.fields import BooleanField, CharField, FloatField, \
     ChoiceField, CallableChoiceIterator, MultipleChoiceField
-
-from openquake.hazardlib.imt import from_string as imt_from_string
+# from django.forms.widgets import HiddenInput
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-# from smtk.database_visualiser import DISTANCES
 
 from egsim.core.utils import vectorize, isscalar, yaml_load, querystring, \
     tostr, DISTANCE_LABEL
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, \
     MsrField, PointField, TrtField, GmdbField, ResidualplottypeField, \
-    GsimField, TrModelField, ResidualsTestField, ArrayField, SelExprField
+    GsimField, TrModelField, ResidualsTestField, SelExprField
 from egsim.models import sharing_gsims, shared_imts
-from django.forms.widgets import HiddenInput
 
 
 class BaseForm(Form):
