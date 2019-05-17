@@ -107,6 +107,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 // scale 5 increases the image size, thus increasing the resolution
                 // Note that you cannot provide any number (e.g. scale 10 raises Exception)
                 scale: 5
+            },
+            // the waitbar while drawing plots
+            waitbar: {
+            	msg: '',  // the message to be displayed, and below some defaults:
+            	DRAWING: 'Drawing plots... <i class="fa fa-hourglass-o"></i>',
+            	UPDATING: 'Updating plots... <i class="fa fa-hourglass-o"></i>'
             }
         }
     },
@@ -183,8 +189,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             		<span
             			class='p-2 shadow border rounded text-white'
             			style="background-color:rgba(0,0,0,0.3)"
+            			v-html="waitbar.msg"
             		>
-            			Drawing plots ... <i class="fa fa-hourglass-o"></i>
             		</span>
             	</div>
                 <div class='position-absolute pos-0' :id="plotdivid"></div>
@@ -700,16 +706,18 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             	var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
             	this.watchOff(hover, drag);
                 var [data, layout] = this.createPlotlyDataAndLayout(divId);
-                Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
                 this.execute(function(){
-	                Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
+	                Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
+                	Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
 	                this.watchOn(hover, function (newval, oldval) {
 	                    this.setMouseModes(newval, undefined);  // hovermode, mousemode
 	                });
 	                this.watchOn(drag, function(newval, oldval){
 	                    this.setMouseModes(undefined, newval);  // hovermode, mousemode
 	                });
-	            });
+	            }, {delay: 300});  // this delay is increased because we might have the animation
+	            // of the form closing to be finished: overlapping waitbar and form closing is
+	            // sometimes not nice
             });
         },
         react: function(divId){
@@ -727,13 +735,20 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 });
             });
         },
-        execute: function(callback){
+        execute: function(callback, options){
+        	// Executes asynchronously the given callback
+        	// (with this component as 'this' argument) showing a waitbar meanwhile.
+        	// 'options' is an Object with two optional properties:
+        	// options.msg (the waitbar message, defaults to self.waitbar.msg)
+        	// and delay (the delay to execute the given callback, defaults to self.waitbar.delay: 200)
+        	var delay = (options || {}).delay || 200;
+        	this.waitbar.msg = (options || {}).msg || this.waitbar.DRAWING;
         	var self = this;
         	this.drawingPlots=true;
         	setTimeout(function(){
 	            callback.call(self);
 	            self.drawingPlots=false;
-	        }, 200);
+	        }, delay);
         },
         createPlotlyDataAndLayout: function(divId){
             var plots = this.plots;
@@ -1183,7 +1198,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
        		if (relayout){
        			this.execute(function(){
 	       			Plotly.relayout(this.plotdivid, layout);
-	       		});
+	       		}, {msg: this.waitbar.UPDATING});
        		}
        	}
     },
