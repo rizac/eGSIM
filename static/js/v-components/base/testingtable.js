@@ -9,7 +9,7 @@ Vue.component('testingtable', {
             visible: false,
             tableData: [],
             gsimsRecords: [], // array of [gsim, records] elements (string, int)
-            gsimsSkipped: [], //array of gsims (strings) with zero records found
+            gsimsSkipped: {}, //Object of gsims (strings) mapped to its error (e.g., 0 records found)
             rowInfo: [], // Array of Objects storign row info for styling/rendereing (popolated in filteredSortedEntries)
             MAX_NUM_DIGITS: 5,  // 0 or below represent the number as it is
             MAX_ARRAY_SIZE: 4,  // arrays longer than this will be truncated in their string represenation (in the table)
@@ -27,9 +27,9 @@ Vue.component('testingtable', {
             handler(newval, oldval){
                 this.visible = !Vue.isEmpty(newval);
                 if (this.visible){
-                    var tableData = newval['Measure of fit'];
                     this.gsimsRecords = newval['Db records'];
-                	this.tableData = this.init.call(this, tableData);
+                    this.gsimsSkipped = newval['Gsim skipped'];
+                	this.tableData = this.init.call(this, newval['Measure of fit']);
                 }else{
                 	this.gsimsRecords = [];
                 	this.gsimsSkipped = [];
@@ -158,13 +158,21 @@ Vue.component('testingtable', {
 
             <slot></slot> <!-- slot for custom buttons -->
             
-            <div class='mt-3 border-top' style='overflow:auto'>
-                <div>Database records used:</div>
+            <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto'>
+                <div><i class="fa fa-info-circle"></i> Database records used:</div>
                 <div
                     v-for="gsimname in Object.keys(gsimsRecords)"
-                    :class="{'text-danger': gsimsRecords[gsimname] <= 0}"
                 >
                     {{ gsimname }}: {{ gsimsRecords[gsimname] }}
+                </div>
+            </div>
+            <div v-show="Object.keys(gsimsSkipped).length" class='mt-3 border p-2 bg-whitetext-danger' style='overflow:auto'>
+                <div><i class="fa fa-exclamation-triangle"></i> Gsim skipped:</div>
+                <div
+                    v-for="gsimname in Object.keys(gsimsSkipped)"
+                    
+                >
+                    {{ gsimname }}: {{ gsimsSkipped[gsimname] }}
                 </div>
             </div>
             <div class='position-relative flexible mt-3'>
