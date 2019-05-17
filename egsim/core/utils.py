@@ -9,12 +9,13 @@ from urllib.parse import quote
 from datetime import date, datetime
 from itertools import chain
 
+import tables
 from django.conf import settings
 from yaml import safe_load, YAMLError
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
-from smtk.sm_table import get_dbnames, GMTableDescription
+from smtk.sm_table import get_dbnames, GMTableDescription, records_where
 from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
 from smtk.sm_utils import MECHANISM_TYPE
 
@@ -178,6 +179,36 @@ def get_gmdb_names(fpath):
     if not isfile(fpath):
         return []
     return get_dbnames(fpath)
+
+
+def test_selexpr(selexpr):
+    '''tests the given selection expression on an in-memory hdf5 file that
+    will be closed. Raises in case of failure'''
+    # create an in-memory file with no save upon close:
+    # https://www.pytables.org/cookbook/inmemory_hdf5_files.html#backing-store
+    h5file = None
+    try:
+        h5file = tables.open_file("new_sample.h5", "w", driver="H5FD_CORE",
+                                  driver_core_backing_store=0)
+        # create a group:
+        group = h5file.create_group("/", 'test_group')
+        # create a new table
+        # https://www.pytables.org/usersguide/tutorials.html#creating-a-new-table
+        table = h5file.create_table(group, 'test_table',
+                                    description=dict(GMTableDescription))
+        # append a table row (made of nans):
+        row = table.row
+        row.append()  # pylint: disable=no-member
+        table.flush()
+        l = list(records_where(table, ''))
+
+        # execute sel expression. Remember to wrap into list otherwise it is
+        # not run (a generator is returned). Use limit=1 to skip useless
+        # iterations:
+        list(records_where(table, selexpr, limit=1))
+    finally:
+        if h5file is not None:
+            h5file.close()
 
 
 def get_gmdb_column_desc(as_html=True):

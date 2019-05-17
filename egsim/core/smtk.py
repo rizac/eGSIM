@@ -235,19 +235,21 @@ def testing(params):
     for gsim in params[GSIM]:
         residuals = Residuals([gsim], params[IMT])
         selexpr = get_selexpr(gsim, params.get(SEL, ''))
-        # get number of records (observations) to be used. Maybe there might
-        # be a more efficient way
-        numrecords = 0
-        with gmdb_base:
-            for _ in records_where(gmdb_base.table, selexpr):
-                numrecords += 1
-        obs_count[gsim] = numrecords
-        if not numrecords:
-            continue
 
         # we have some record to be used, compute residuals:
         gmdb = gmdb_base.filter(selexpr)
         residuals.get_residuals(gmdb)
+
+        # get number of records (observations) to be used. This avoids
+        # opening the file twice, first for counting, then for calculating, as
+        # we have the number of observations in each 'EventIndex' list of
+        # each context element of residuals.contexts:
+        numrecords = 0
+        for context in residuals.contexts:
+            numrecords += len(context.get('EventIndex', []))
+        obs_count[gsim] = numrecords
+        if not numrecords:
+            continue
 
         for key, name, func in params[FIT_M]:
             result = func(residuals, config)
