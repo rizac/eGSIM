@@ -9,18 +9,22 @@ Vue.component('trellisplotdiv', {
             // {traces: Array, params: Object, xaxis: Object, yaxis: Object} where:
             //
             // traces:
-            // an Array of valid representable plotly objects e.g. {x: Array, y: Array, name: string}
-            // (providing a `name` key makes the name showing when hovering over the trace with
-            // the mouse. For other keys, refer to plotly doc for details). The object keys
-            // `xaxis`, 'yaxis', 'showlegend' needs not to be specified as they will be overridden.
-            // NOTE: To add a unique color mapped to a trace id (e.g. the trace name) and
+            // an Array of valid representable plotly objects e.g. {x: Array, y: Array, name: string}.
+            // It is basically the 'data' argument passed to Plotly
+            // (https://plot.ly/javascript/plotlyjs-function-reference/#plotlynewplot). A list of
+            // valid keys / properties of each Object is available at
+            // https://plot.ly/javascript/reference/ for details, but consider that this class will
+            // dynamically create some of them for correctly placing plots on the grid: thus
+            // the keys `xaxis` (string), 'yaxis' (string), 'showlegend' (boolean) will be ignored
+            // (overwritten) if specified.
+            // NOTE1: Providing a `name` key makes the name showing when hovering over the trace with
+            // the mouse
+            // NOTE2: To add a unique color mapped to a trace id (e.g. the trace name) and
             // setup the legendgroup and automatically map the trace to a legend item toggling
             // the trace visibility, use `this.addLegend(trace, key)`, e.g.:
-            //
-            //   var trace = {x: Array, y: Array, name: 'mytrace'}
-            //   var color = this.addLegend(trace, trace.name)
-            //   trace.line = {color: color}  // set the trace color to the legend assigned color
-            //
+            //     var trace = {x: Array, y: Array, name: 'mytrace'}
+            //     var color = this.addLegend(trace, trace.name)
+            //     trace.line = {color: color}  // set the trace color to the legend assigned color
             // `addLegend(trace, K)` maps the returned color to the key K provided;
             // subsequent calls to this.addLegend(..., K) return the same color.
             // The returned color is a color assigned to K by cycling through an internal color
@@ -31,20 +35,28 @@ Vue.component('trellisplotdiv', {
             //
             // params:
             // an Object of selectable params (string) mapped to the plot specific values
-            // (e.g. {magnitude: 5, 'xlabel: 'PGA'}). This object should have always the same keys
-            // and at least two keys in order to map them to the x and y grid (see `defaultGridParams`)
-            //
+            // (e.g. {magnitude: 5, 'xlabel: 'PGA'}). All possible values and all possible keys
+            // will be processed to build the parameters whereby it is possible to filter/select
+            // specific plots, as single view or on a XY grid (for the latter, at least two keys
+            // must be provided). Note that if only one
+            // key is provided, then the string "<key>: <value>" will be used as plot title (statically,
+            // as there are no grid parameter to be tuned). E.g., returning always
+            // {'plot title': '1'} will display 'plot title: 1' as plot title.
+            // 
             // xaxis:
-            // a dict of x axis properties. Example: {title: 'plottitle', type: 'log'}
-            // The properties 'domain' and 'anchor' needs not to be specified as they will be overridden. 
-            // The Object returned here will be merged with the properties defined this.defaultxaxis
-            // (in case of conflicts, the properties of this.defaultxaxis will be overridden)
+            // a dict of x axis properties. Example: {title: 'plottitle', type: 'log'}.
+            // It is basically the 'layout.xaxis<N>' Object (where N is an integer which
+            // depends on the plot placement on the grid), where 'layout' is the layout argument
+            // passed to Plotly (https://plot.ly/javascript/plotlyjs-function-reference/#plotlynewplot).
+            // 'layout.xaxis<N>' will be built by merging `this.defaultxaxis` and the values
+            // provided here. A list of valid keys / properties of this Object is available at
+            // https://plot.ly/javascript/reference/#layout-xaxis for details, but consider that this class will
+            // dynamically create some of them for correctly placing plots on the gird: thus
+            // the keys 'domain' and 'anchor' will be ignored (overwritten) if specified.
             //
             // yaxis:
-            // a dict of y axis properties. Example: {title: 'plottitle', type: 'log'}
-            // The properties 'domain' and 'anchor' needs not to be specified as they will be overridden. 
-            // The Object returned here will be merged with the properties defined this.defaultyaxis
-            // (in case of conflicts, the properties of this.defaultyaxis will be overridden)
+            // a dict of y axis properties. See documentation for 'xaxis'
+            // above for details, just replace 'xaxis' with 'yaxis'.
 
             // setup  label texts:
             var data = responseObject;
