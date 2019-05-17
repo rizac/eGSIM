@@ -5,29 +5,25 @@ Created on 17 Jan 2018
 '''
 import os
 import json
-from collections import OrderedDict
 from datetime import date
 
 from yaml.error import YAMLError
 
 from django.http import JsonResponse
 from django.shortcuts import render
-# from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 from django.conf import settings
-from django.template.loader import get_template
+# from django.views.decorators.csrf import csrf_exempt
+# from django.template.loader import get_template
 
 from egsim.middlewares import ExceptionHandlerMiddleware
-from egsim.forms.forms import TrellisForm, GsimSelectionForm, ResidualsForm, \
-    BaseForm, GmdbPlot, TestingForm
-from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_names, get_gmdb_path,\
-    get_gmdb_column_desc
+from egsim.forms.forms import (TrellisForm, GsimSelectionForm, ResidualsForm,
+                               GmdbPlot, TestingForm)
+from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
-from egsim.forms.htmldoc import to_html_table
-from django.template.exceptions import TemplateDoesNotExist
 
 
 _COMMON_PARAMS = {
@@ -107,26 +103,14 @@ def main(request, selected_menu=None):
                                                                  'edr']
 
     # remove lines above!
-
-    # load once the selection expression help and add a custom new
-    # attribute to the forms of interest. Inject only one instance
-    # because it might be relatively heavy to duplicate it for all concerned
-    # fields (do it frontend side)
-#     try:
-#         selexpr_help = get_template('selexpr_help.html').\
-#             render(dict(gmt=get_gmdb_column_desc()))
-#     except TemplateDoesNotExist:
-#         selexpr_help = ""
-
-#     initdata = {'component_props': components_props,
-#                 'gsims': {_[0]: _ [1:] for _ in aval_gsims(asjsonlist=True)}
-
-    return render(request, 'egsim.html', {**_COMMON_PARAMS,
-                                          'sel_component': sel_component,
-                                          'components': components_tabs,
-                                          'component_props': json.dumps(components_props),
-                                          'gsims': json.dumps({_[0]: _ [1:] for _ in aval_gsims(asjsonlist=True)}),
-                                          'server_error_message': ""})
+    gsims = json.dumps({_[0]: _[1:] for _ in aval_gsims(asjsonlist=True)})
+    return render(request, 'egsim.html',
+                  {**_COMMON_PARAMS,
+                   'sel_component': sel_component,
+                   'components': components_tabs,
+                   'component_props': json.dumps(components_props),
+                   'gsims': gsims,
+                   'server_error_message': ""})
 
 
 def get_tr_models(request):
