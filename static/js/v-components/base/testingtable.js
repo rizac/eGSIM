@@ -160,20 +160,24 @@ Vue.component('testingtable', {
             
             <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto'>
                 <div><i class="fa fa-info-circle"></i> Database records used:</div>
-                <div
+                <table>
+                <tr
                     v-for="gsimname in Object.keys(gsimsRecords)"
                 >
-                    {{ gsimname }}: {{ gsimsRecords[gsimname] }}
-                </div>
+                    <td class='text-right pr-2'>{{ gsimname }}:<td></td>{{ gsimsRecords[gsimname] }}</td>
+                </tr>
+                </table>
             </div>
-            <div v-show="Object.keys(gsimsSkipped).length" class='mt-3 border p-2 bg-whitetext-danger' style='overflow:auto'>
+            <div v-show="Object.keys(gsimsSkipped).length" class='mt-3 border p-2 bg-white text-danger' style='overflow:auto'>
                 <div><i class="fa fa-exclamation-triangle"></i> Gsim skipped:</div>
-                <div
+                <table>
+                <tr
                     v-for="gsimname in Object.keys(gsimsSkipped)"
                     
                 >
-                    {{ gsimname }}: {{ gsimsSkipped[gsimname] }}
-                </div>
+                    <td class='text-right pr-2'>{{ gsimname }}:</td><td>{{ gsimsSkipped[gsimname] }}</td>
+                </tr>
+                </table>
             </div>
             <div class='position-relative flexible mt-3'>
                 <span class='position-absolute pos-b-0 small text-muted'>
