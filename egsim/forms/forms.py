@@ -31,7 +31,7 @@ from egsim.core.utils import vectorize, isscalar, yaml_load, querystring, \
     tostr, DISTANCE_LABEL
 from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, \
     MsrField, PointField, TrtField, GmdbField, ResidualplottypeField, \
-    GsimField, TrModelField, ResidualsTestField, ArrayField
+    GsimField, TrModelField, ResidualsTestField, ArrayField, SelExprField
 from egsim.models import sharing_gsims, shared_imts
 from django.forms.widgets import HiddenInput
 
@@ -530,8 +530,8 @@ class GmdbForm(BaseForm):
 
     __additional_fieldnames__ = {'sel': 'selexpr', 'dist': 'distance_type'}
 
-    gmdb = GmdbField(label='Ground Motion database', required=True)
-    selexpr = CharField(label='Selection expression', required=False)
+    gmdb = GmdbField(required=True)
+    selexpr = SelExprField(required=False)
 
 
 class GmdbPlot(GmdbForm):
