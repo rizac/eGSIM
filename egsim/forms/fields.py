@@ -29,7 +29,7 @@ from smtk.residuals.residual_plots import residuals_density_distribution, \
     residuals_with_vs30, likelihood
 
 from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path, MOF,\
-    DISTANCE_LABEL
+    DISTANCE_LABEL, test_selexpr
 
 # IMPORTANT: do not access the database at module import, as otherwise
 # make migrations does not work! So these methods should be called inside
@@ -252,6 +252,7 @@ class NArrayField(ArrayField):
 class PointField(NArrayField):
     '''NArrayField which validates a 2-element iterable and returns an
     openquake Point'''
+
     def __init__(self, **kwargs):  # FIXME: depth? should be >0 in case ?
         super(PointField, self).__init__(min_count=2, max_count=2, **kwargs)
 
@@ -266,6 +267,31 @@ class PointField(NArrayField):
             return Point(*value)
         except Exception as exc:
             raise ValidationError(_(str(exc)), code='invalid')
+
+
+class SelExprField(CharField):
+    '''Field implementing a selection expression on a Ground Motion Database
+    (gmdb). It is a CharField with custom validation performed by testing the
+    selection expression on an in-memory Gmdb'''
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('label', 'Selection expression')
+        super(SelExprField, self).__init__(**kwargs)
+
+    def clean(self, value):
+        '''Converts the given value (string) into the OpenQuake instance
+        and returns the latter'''
+        value = super(SelExprField, self).clean(value)
+        if value:
+            try:
+                test_selexpr(value)
+            except SyntaxError as serr:
+                raise ValidationError('%s: "%s"' %
+                                      (serr.msg, serr.text[:serr.offset]),
+                                      code='invalid')
+            except Exception as exc:
+                raise ValidationError(str(exc), code='invalid')
+        return value
 
 
 class MsrField(ChoiceField):
@@ -319,6 +345,7 @@ class GmdbField(ChoiceField):
     _base_choices = tuple((_, _) for _ in get_gmdb_names(get_gmdb_path()))
 
     def __init__(self, **kwargs):
+        kwargs.setdefault('label', 'Ground Motion database')
         kwargs.setdefault('choices', self._base_choices)
         if self._base_choices:
             kwargs.setdefault('initial', self._base_choices[0][0])
