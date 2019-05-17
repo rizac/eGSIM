@@ -230,31 +230,46 @@ def testing(params):
 
     ret = {}
     obs_count = defaultdict(int)
+    gsim_skipped = {}
     config = params.get(CONFIG, {})
     # columns: "Measure of fit" "imt" "gsim" "value(s)"
     for gsim in params[GSIM]:
-        residuals = Residuals([gsim], params[IMT])
-        selexpr = get_selexpr(gsim, params.get(SEL, ''))
+        try:
+            residuals = Residuals([gsim], params[IMT])
+            selexpr = get_selexpr(gsim, params.get(SEL, ''))
 
-        # we have some record to be used, compute residuals:
-        gmdb = gmdb_base.filter(selexpr)
-        residuals.get_residuals(gmdb)
+            # we have some record to be used, compute residuals:
+            gmdb = gmdb_base.filter(selexpr)
+            residuals.get_residuals(gmdb)
 
-        # get number of records (observations) to be used. This avoids
-        # opening the file twice, first for counting, then for calculating, as
-        # we have the number of observations in each 'EventIndex' list of
-        # each context element of residuals.contexts:
-        numrecords = 0
-        for context in residuals.contexts:
-            numrecords += len(context.get('EventIndex', []))
-        obs_count[gsim] = numrecords
-        if not numrecords:
-            continue
+            # get number of records (observations) to be used. This avoids
+            # opening the file twice, first for counting, then for calculating, as
+            # we have the number of observations in each 'EventIndex' list of
+            # each context element of residuals.contexts:
+            numrecords = 0
+            for context in residuals.contexts:
+                numrecords += len(context.get('EventIndex', []))
+            obs_count[gsim] = numrecords
+            if not numrecords:
+                gsim_skipped[gsim] = 'No matching Db record found'
+                continue
 
-        for key, name, func in params[FIT_M]:
-            result = func(residuals, config)
-            if isinstance(result, (list, tuple)):
-                result = result[0]
+            gsim_values = []
+
+            for key, name, func in params[FIT_M]:
+                result = func(residuals, config)
+                gsim_values.extend(_itervalues(gsim, key, name, result))
+
+            for moffit, imt, value in gsim_values:
+                ret.setdefault(moffit, {}).\
+                                setdefault(imt, {})[gsim] = \
+                                _jsonify_num(value)
+
+        except Exception as exc:
+            gsim_skipped[gsim] = str(exc)
+
+#             if isinstance(result, (list, tuple)):
+#                 result = result[0]
             # Returned object are of this type (<GMPE>: any valid Gmpe as string,
             # <IMT>: any valid IMT as string, <TYPE>: str in "Total", "Inter event"
             # or "Intra event". <EDRTYPE>: string in "MDE Norm", "sqrt Kappa" or
@@ -303,40 +318,140 @@ def testing(params):
             #        }
             #     }
             # }
-            gsim_result = result[gsim]
-            if key == MOF.RES:
-                for imt, imt_result in gsim_result.items():
-                    imt2 = _relabel_sa(imt)
-                    for type_, type_result in imt_result.items():
-                        for meas, value in type_result.items():
-                            moffit = "%s %s %s" % (name, type_, meas)
-                            ret.setdefault(moffit, {}).\
-                                setdefault(imt2, {})[gsim] = \
-                                _jsonify_num(value)
-            elif key == MOF.LH:
-                for imt, imt_result in gsim_result.items():
-                    imt2 = _relabel_sa(imt)
-                    for type_, values in imt_result.items():
-                        # change array value into:
-                        p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
-                        for kkk, vvv in (('Median', p50), ('IQR', p75-p25)):
-                            moffit = "%s %s %s" % (name, type_, kkk)
-                            ret.setdefault(moffit, {}).\
-                                setdefault(imt2, {})[gsim] = _jsonify_num(vvv)
-            elif key in (MOF.LLH, MOF.MLLH):
-                for imt, value in gsim_result.items():
-                    imt2 = _relabel_sa(imt)
-                    moffit = name
-                    ret.setdefault(moffit, {}).\
-                        setdefault(imt2, {})[gsim] = _jsonify_num(value)
-            elif key == MOF.EDR:
-                for type_, value in gsim_result.items():
-                    moffit = "%s %s" % (name, type_)
-                    imt = ""  # hack
-                    ret.setdefault(moffit, {}).\
-                        setdefault(imt, {})[gsim] = _jsonify_num(value)
+#             gsim_result = result[gsim]
+#             if key == MOF.RES:
+#                 for imt, imt_result in gsim_result.items():
+#                     imt2 = _relabel_sa(imt)
+#                     for type_, type_result in imt_result.items():
+#                         for meas, value in type_result.items():
+#                             moffit = "%s %s %s" % (name, type_, meas)
+#                             ret.setdefault(moffit, {}).\
+#                                 setdefault(imt2, {})[gsim] = \
+#                                 _jsonify_num(value)
+#             elif key == MOF.LH:
+#                 for imt, imt_result in gsim_result.items():
+#                     imt2 = _relabel_sa(imt)
+#                     for type_, values in imt_result.items():
+#                         # change array value into Median and IQR:
+#                         p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
+#                         for kkk, vvv in (('Median', p50), ('IQR', p75-p25)):
+#                             moffit = "%s %s %s" % (name, type_, kkk)
+#                             ret.setdefault(moffit, {}).\
+#                                 setdefault(imt2, {})[gsim] = _jsonify_num(vvv)
+#             elif key in (MOF.LLH, MOF.MLLH):
+#                 for imt, value in gsim_result.items():
+#                     imt2 = _relabel_sa(imt)
+#                     moffit = name
+#                     ret.setdefault(moffit, {}).\
+#                         setdefault(imt2, {})[gsim] = _jsonify_num(value)
+#             elif key == MOF.EDR:
+#                 for type_, value in gsim_result.items():
+#                     moffit = "%s %s" % (name, type_)
+#                     imt = ""  # hack
+#                     ret.setdefault(moffit, {}).\
+#                         setdefault(imt, {})[gsim] = _jsonify_num(value)
 
-    return {'Measure of fit': ret, 'Db records': obs_count}
+    return {'Measure of fit': ret, 'Db records': obs_count,
+            'Gsim skipped': gsim_skipped}
+
+
+def _itervalues(gsim, key, name, result):
+    '''Processes the 'testing' result of a smtk function and yields the 
+    tuples m_of_fit, imt, value, where m_of_fit is the (expanded) measure
+    of fit, imt is the relative IMT, and the value is the measure of fit value
+    
+    :param key: the key denoting a measure of fit
+    :param name: a name denoting the measure of fit
+    :param result: the result of the smtk computation of the given measure of
+        fit on the given gsim
+    '''
+    
+    if isinstance(result, (list, tuple)):
+        result = result[0]
+    # Returned object are of this type (<GMPE>: any valid Gmpe as string,
+    # <IMT>: any valid IMT as string, <TYPE>: str in "Total", "Inter event"
+    # or "Intra event". <EDRTYPE>: string in "MDE Norm", "sqrt Kappa" or
+    # "EDR"):
+    #
+    # Residuals:
+    # {
+    #   <GMPE>: {
+    #      <IMT>: {
+    #        <TYPE>: {
+    #            "Mean": <float>,
+    #            "Std Dev": <float>
+    #        }
+    #      }
+    #   }
+    # }
+    #
+    # Likelihood:
+    # {
+    #   <GMPE>: {
+    #      <IMT>: {
+    #        <TYPE>: <ndarray>
+    #        }
+    #      }
+    #   }
+    # }
+    #
+    # Log-Likelihood, Multivariate Log-Likelihood:
+    # {
+    #   <GMPE>: {
+    #      <IMT>: <float>  # IMT includes the "All" key
+    #   }
+    # }
+    #
+    # EDR
+    # {
+    #   <GMPE>: {
+    #      <EDRTYPE>: <float>
+    #   }
+    # }
+    #
+    # The code belows re-arranges the dicts flattening them like this:
+    # "<Residual name> <residual type if any>":{
+    #        <IMT>: {
+    #           <GMPE>: float or ndarray
+    #        }
+    #     }
+    # }
+    gsim_result = result[gsim]
+    if key == MOF.RES:
+        for imt, imt_result in gsim_result.items():
+            imt2 = _relabel_sa(imt)
+            for type_, type_result in imt_result.items():
+                for meas, value in type_result.items():
+                    moffit = "%s %s %s" % (name, type_, meas)
+                    yield moffit, imt2, value
+#                         ret.setdefault(moffit, {}).\
+#                             setdefault(imt2, {})[gsim] = \
+#                             _jsonify_num(value)
+    elif key == MOF.LH:
+        for imt, imt_result in gsim_result.items():
+            imt2 = _relabel_sa(imt)
+            for type_, values in imt_result.items():
+                # change array value into Median and IQR:
+                p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
+                for kkk, vvv in (('Median', p50), ('IQR', p75-p25)):
+                    moffit = "%s %s %s" % (name, type_, kkk)
+                    yield moffit, imt2, vvv
+#                         ret.setdefault(moffit, {}).\
+#                             setdefault(imt2, {})[gsim] = _jsonify_num(vvv)
+    elif key in (MOF.LLH, MOF.MLLH):
+        for imt, value in gsim_result.items():
+            imt2 = _relabel_sa(imt)
+            moffit = name
+            yield moffit, imt2, value
+#                 ret.setdefault(moffit, {}).\
+#                     setdefault(imt2, {})[gsim] = _jsonify_num(value)
+    elif key == MOF.EDR:
+        for type_, value in gsim_result.items():
+            moffit = "%s %s" % (name, type_)
+            imt = ""  # hack
+            yield moffit, imt, value
+#                 ret.setdefault(moffit, {}).\
+#                     setdefault(imt, {})[gsim] = _jsonify_num(value)
 
 
 def get_selexpr(gsim, user_selexpr):
