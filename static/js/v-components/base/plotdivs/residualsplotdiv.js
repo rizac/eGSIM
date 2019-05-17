@@ -9,7 +9,7 @@ Vue.component('residualsplotdiv', {
             // {traces: Array, params: Object, xaxis: Object, yaxis: Object} where:
             //
             // traces:
-            // an Array of valid representable plotly objects e.g. {x: Array, y: Array, name: string}:
+            // an Array of valid representable plotly objects e.g. {x: Array, y: Array, name: string}.
             // It is basically the 'data' argument passed to Plotly
             // (https://plot.ly/javascript/plotlyjs-function-reference/#plotlynewplot). A list of
             // valid keys / properties of each Object is available at
@@ -22,11 +22,9 @@ Vue.component('residualsplotdiv', {
             // NOTE2: To add a unique color mapped to a trace id (e.g. the trace name) and
             // setup the legendgroup and automatically map the trace to a legend item toggling
             // the trace visibility, use `this.addLegend(trace, key)`, e.g.:
-            //
-            //   var trace = {x: Array, y: Array, name: 'mytrace'}
-            //   var color = this.addLegend(trace, trace.name)
-            //   trace.line = {color: color}  // set the trace color to the legend assigned color
-            //
+            //     var trace = {x: Array, y: Array, name: 'mytrace'}
+            //     var color = this.addLegend(trace, trace.name)
+            //     trace.line = {color: color}  // set the trace color to the legend assigned color
             // `addLegend(trace, K)` maps the returned color to the key K provided;
             // subsequent calls to this.addLegend(..., K) return the same color.
             // The returned color is a color assigned to K by cycling through an internal color
@@ -39,12 +37,12 @@ Vue.component('residualsplotdiv', {
             // an Object of selectable params (string) mapped to the plot specific values
             // (e.g. {magnitude: 5, 'xlabel: 'PGA'}). All possible values and all possible keys
             // will be processed to build the parameters whereby it is possible to filter/select
-            // specific plots, as single view or on a grid. Note that if only one
+            // specific plots, as single view or on a XY grid (for the latter, at least two keys
+            // must be provided). Note that if only one
             // key is provided, then the string "<key>: <value>" will be used as plot title (statically,
             // as there are no grid parameter to be tuned). E.g., returning always
             // {'plot title': '1'} will display 'plot title: 1' as plot title.
             // 
-            //
             // xaxis:
             // a dict of x axis properties. Example: {title: 'plottitle', type: 'log'}.
             // It is basically the 'layout.xaxis<N>' Object (where N is an integer which
