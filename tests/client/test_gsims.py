@@ -1,5 +1,5 @@
 '''
-Tests the client for the gsims service
+Tests the client for the gsims service API
 
 Created on 22 Oct 2018
 
@@ -18,17 +18,10 @@ class Test:
     url = '/query/gsims'
     request_filename = 'request_gsims.yaml'
 
-    def test_gsims_service(self, testdata, areequal,  # django_db_setup,
-                           client):
-        '''tests the gsims API service.
-        :param requesthandler: pytest fixture which handles the read from the yaml file
-            request.yaml which MUST  BE INSIDE this module's directory
-        :param areequal: pytest fixture qith a method `equal` that tests for object equality
-            with optional error tolerances for numeric arrays and other utilities (e.g. lists
-            with same elements in different orders are equal)
-        :param client: a Django test.Client object automatically created in conftest. This
-            function is iteratively called with a list of different Clients created in conftest.py
-        '''
+    def test_gsims_service(self,
+                           # pytest fixtures:
+                           testdata, areequal, client):
+        '''tests the gsims API service'''
         inputdic = testdata.readyaml(self.request_filename)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -52,18 +45,17 @@ class Test:
         assert sorted(resp1.json()) == sorted(resp1.json()) == \
             sorted(expected_gsims)
 
-    def test_gsims_service_no_result_wrong_trt(self, testdata, areequal,
-                                               # django_db_setup,
-                                               client):
-        '''tests the gsims API service.
-        :param requesthandler: pytest fixture which handles the read from the yaml file
-            request.yaml which MUST  BE INSIDE this module's directory
-        :param areequal: pytest fixture qith a method `equal` that tests for object equality
-            with optional error tolerances for numeric arrays and other utilities (e.g. lists
-            with same elements in different orders are equal)
-        :param client: a Django test.Client object automatically created in conftest. This
-            function is iteratively called with a list of different Clients created in conftest.py
-        '''
+        # test text format:
+        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+                            content_type='text/csv')
+        assert resp2.status_code == 200
+        assert areequal(resp1.json(), [_.decode('utf8')
+                                       for _ in resp2.content.split()])
+
+    def test_gsims_service_no_result_wrong_trt(self,
+                                               # pytest fixtures:
+                                               testdata, areequal, client):
+        '''tests the gsims API service with a wrong tectonic region type'''
         inputdic = testdata.readyaml(self.request_filename)
         inputdic.update(trt='stable_continental_region')
         # use a key which is not in the defined sets of OpenQuake's TRTs:
@@ -72,20 +64,14 @@ class Test:
                             content_type='application/json')
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
-        assert isinstance(resp1.json(), dict) and resp1.json()['error']['code'] == 400
+        assert isinstance(resp1.json(), dict) and \
+            resp1.json()['error']['code'] == 400
 
-    def test_gsims_service_imt_no_match(self, testdata, areequal,
-                                        # django_db_setup,
-                                        client):
-        '''tests the gsims API service.
-        :param requesthandler: pytest fixture which handles the read from the yaml file
-            request.yaml which MUST  BE INSIDE this module's directory
-        :param areequal: pytest fixture qith a method `equal` that tests for object equality
-            with optional error tolerances for numeric arrays and other utilities (e.g. lists
-            with same elements in different orders are equal)
-        :param client: a Django test.Client object automatically created in conftest. This
-            function is iteratively called with a list of different Clients created in conftest.py
-        '''
+    def test_gsims_service_imt_no_match(self,
+                                        # pytest fixtures:
+                                        testdata, areequal, client):
+        '''tests the gsims API service with no match for imt provided with
+        wildcards'''
         inputdic = testdata.readyaml(self.request_filename)
         # use a key which is not in the defined sets of OpenQuake's IMTs.
         inputdic.update(imt='*KW?,[]')

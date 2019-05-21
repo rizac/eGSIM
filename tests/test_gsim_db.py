@@ -9,9 +9,9 @@ import uuid
 import pytest
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
-from egsim.models import Gsim, Trt, Imt, gsim_names, aval_gsims, \
-    aval_imts, aval_trts, aval_trmodels, TectonicRegion, shared_imts, sharing_gsims,\
-    TrSelector
+from egsim.models import (Gsim, Trt, Imt, gsim_names, aval_gsims, aval_imts,
+                          aval_trts, aval_trmodels, TectonicRegion,
+                          shared_imts, sharing_gsims, TrSelector)
 
 from openquake.hazardlib.gsim import registry
 from egsim.core.utils import OQ
@@ -121,7 +121,8 @@ def test_db_0(django_db_setup):
     # const.TRT.ACTIVE_SHALLOW_CRUST
 
     expected_imts = ['PGA', 'SA']
-    assert sorted(shared_imts(['AbrahamsonEtAl2014', 'AbrahamsonEtAl2015SInter',
+    assert sorted(shared_imts(['AbrahamsonEtAl2014',
+                               'AbrahamsonEtAl2015SInter',
                                'CauzziEtAl2014'])) == expected_imts
 
     expected_gsims = set(['AbrahamsonEtAl2014', 'AbrahamsonEtAl2015SInter',
