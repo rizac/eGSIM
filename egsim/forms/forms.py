@@ -32,7 +32,7 @@ from egsim.forms.fields import (NArrayField, ImtclassField, ImtField,
                                 TrellisplottypeField, MsrField, PointField,
                                 TrtField, GmdbField, ResidualplottypeField,
                                 GsimField, TrModelField, MeasureOfFitField,
-                                SelExprField)
+                                SelExprField, TextDecField, TextSepField)
 from egsim.models import sharing_gsims, shared_imts
 
 
@@ -588,26 +588,17 @@ class FormatForm(BaseForm):
     a request'''
     # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {}
-    _textsep_choices = {'comma': ',', ',': ',', 'semicolon': ';', ';': ';',
-                        'space': ' ', ' ': ' ', 'tab': '\t', '\t': '\t'}
-    _textdec_choices = {'comma': ',', ',': ',', 'period': '.', '.': '.'}
 
     format = ChoiceField(required=False, initial='json',
                          choices=[('json', 'json'), ('text', 'text/csv')])
 
-    text_sep = ChoiceField(required=False, initial=',',
-                           choices=[(_, _) for _ in _textsep_choices.keys()])
-    text_dec = ChoiceField(required=False, initial='.',
-                           choices=[(_, _) for _ in _textdec_choices.keys()])
+    text_sep = TextSepField(required=False, initial='comma')
+    text_dec = TextDecField(required=False, initial='period')
 
     def clean(self):
         super().clean()
         tsep, tdec = 'text_sep', 'text_dec'
         # convert to symbols:
-        self.cleaned_data[tsep] = \
-            self._textsep_choices[self.cleaned_data[tsep]]
-        self.cleaned_data[tdec] = \
-            self._textdec_choices[self.cleaned_data[tdec]]
         if self.cleaned_data[tsep] == self.cleaned_data[tdec] and \
                 self.cleaned_data['format'] == 'text':
             msg = _("'%s' must differ from '%s' in 'text' format" %

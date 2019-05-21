@@ -9,8 +9,8 @@ import re
 import pytest
 from mock import patch, PropertyMock
 
-from egsim.core.utils import querystring, get_gmdb_names
-from egsim.forms.fields import ResidualplottypeField, GmdbField
+from egsim.core.utils import querystring
+from egsim.forms.fields import ResidualplottypeField
 from egsim.forms.forms import ResidualsForm
 
 
@@ -23,23 +23,15 @@ class Test:
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
     @pytest.fixture(autouse=True)
-    def setup_gmdb(self, testdata):  # pylint: disable=no-self-use
+    def setup_gmdb(self,
+                   # pytest fixtures:
+                   mocked_gmdbfield):
         '''This fixtures mocks the gmdb and it's called before each test
         of this class'''
-        gmdbpath = testdata.path(self.gmdb_fname)
-
-        class MockedGmdbField(GmdbField):
-            '''Mocks GmdbField'''
-            def __init__(self, *a, **v):
-                v['choices'] = [(_, _) for _ in get_gmdb_names(gmdbpath)]
-                super(MockedGmdbField, self).__init__(*a, **v)
-
-            def _get_gmdbpath(self):
-                return gmdbpath
 
         class MockedResidualsForm(ResidualsForm):
             '''mocks GmdbPlot'''
-            gmdb = MockedGmdbField()
+            gmdb = mocked_gmdbfield(self.gmdb_fname)
 
         with patch('egsim.views.ResidualsView.formclass',
                    new_callable=PropertyMock) as mock_gmdb_field:
