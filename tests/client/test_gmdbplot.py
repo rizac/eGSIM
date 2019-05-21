@@ -10,7 +10,7 @@ import pytest
 from mock import patch, PropertyMock
 
 from egsim.core.utils import querystring, DISTANCE_LABEL
-from egsim.forms.forms import GmdbPlot
+from egsim.forms.forms import GmdbPlotForm
 # from egsim.forms.fields import GmdbField
 
 
@@ -28,13 +28,13 @@ class Test:
         '''This fixtures mocks the gmdb and it's called before each test
         of this class'''
 
-        class MockedGmdbplot(GmdbPlot):
-            '''mocks GmdbPlot'''
+        class MockedGmdbplotForm(GmdbPlotForm):
+            '''mocks GmdbPlotForm'''
             gmdb = mocked_gmdbfield(self.gmdb_fname)
 
         with patch('egsim.views.GmdbPlotView.formclass',
                    new_callable=PropertyMock) as mock_gmdb_field:
-            mock_gmdb_field.return_value = MockedGmdbplot
+            mock_gmdb_field.return_value = MockedGmdbplotForm
             yield
 
     def test_gmbdplot_service(self,

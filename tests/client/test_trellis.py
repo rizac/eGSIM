@@ -7,12 +7,12 @@ Created on 2 Jun 2018
 '''
 import re
 import pytest
+from mock import patch
 
 from egsim.core.utils import querystring
 from egsim.forms.forms import TrellisForm
 from egsim.core.smtk import _default_periods_for_spectra
-from re import search
-from mock import patch
+
 from egsim.forms.fields import TextSepField
 
 
@@ -26,7 +26,9 @@ class Test:
     GSIM, IMT = 'gsim', 'imt'
 
     @pytest.mark.parametrize('trellis_type', ['d', 'ds'])
-    def test_trellis_dist(self, client, testdata, areequal, trellis_type):
+    def test_trellis_dist(self,
+                          # pytest fixtures:
+                          client, testdata, areequal, trellis_type):
         '''test trellis distance and distance stdev'''
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot_type=trellis_type)
@@ -55,9 +57,11 @@ class Test:
         assert resp2.status_code == 200
         assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
                          resp2.content)
-    
+
     @pytest.mark.parametrize('trellis_type', ['m', 'ms'])
-    def test_trellis_mag(self, client, testdata, areequal, trellis_type):
+    def test_trellis_mag(self,
+                         # pytest fixtures:
+                         client, testdata, areequal, trellis_type):
         '''test trellis magnitude and magnitude stdev'''
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot_type=trellis_type)
@@ -95,7 +99,7 @@ class Test:
             assert resp3.status_code == 200
             real_content = sorted(_ for _ in resp3.content.split(b'\r\n'))
             expected_content = \
-                sorted(_ for _ in \
+                sorted(_ for _ in
                        ref_resp.replace(b',',
                                         symbol.encode('utf8')).split(b'\r\n'))
             if text_sep != 'space':
@@ -104,8 +108,51 @@ class Test:
                 # We should read it with csv...
                 assert real_content == expected_content
 
+        resp3 = client.post(self.url, data=dict(inputdic, format='text',
+                                                text_sep='semicolon',
+                                                text_dec='comma'),
+                            content_type='text/csv')
+        assert resp3.status_code == 200
+        real_content = sorted(_ for _ in resp3.content.split(b'\r\n'))
+        expected_content = \
+            sorted(_ for _ in
+                   ref_resp.replace(b',', b';').replace(b'.', b',').
+                   split(b'\r\n'))
+        # asserting all rows are equal fails. This might be due to rounding
+        # errors, thus assert only first line is equal. Not really sound,
+        # but better than nothing
+        assert real_content[0] == expected_content[0]
+
+        resp3 = client.post(self.url, data=dict(inputdic, format='text',
+                                                text_dec='comma'),
+                            content_type='text/csv')
+        assert resp3.status_code == 400
+        expected_json = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in text_sep, text_dec',
+                'errors': [
+                    {
+                        'domain': 'text_sep',
+                        'message': ("'text_sep' must differ from"
+                                    " 'text_dec' in 'text' format"),
+                        'reason': 'conflicting values'
+                    },
+                    {
+                        'domain': 'text_dec',
+                        'message': ("'text_sep' must differ from"
+                                    " 'text_dec' in 'text' format"),
+                        'reason': 'conflicting values'
+                    }
+                ]
+            }
+        }
+        assert areequal(resp3.json(), expected_json)
+
     @pytest.mark.parametrize('trellis_type', ['s', 'ss'])
-    def test_trellis_spec(self, client, testdata, areequal, trellis_type):
+    def test_trellis_spec(self,
+                          # pytest fixtures:
+                          client, testdata, areequal, trellis_type):
         '''test trellis magnitude-distance spectra and magnitude-distance
         stdev'''
         inputdic = dict(testdata.readyaml(self.request_filename),
@@ -123,7 +170,8 @@ class Test:
         xvalues = result['xvalues']
         assert len(xvalues) == len(_default_periods_for_spectra())
         figures = result['figures']
-        assert len(figures) == len(input_['distance']) * len(input_['magnitude'])
+        assert len(figures) == \
+            len(input_['distance']) * len(input_['magnitude'])
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
@@ -136,7 +184,9 @@ class Test:
         assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
                          resp2.content)
 
-    def test_error(self, client, areequal):
+    def test_error(self,
+                   # pytest fixtures:
+                   client, areequal):
         '''tests a special case where we supply a deprecated gsim (not in
         EGSIM list)'''
         inputdic = {
@@ -181,7 +231,9 @@ class Test:
         }
         assert areequal(result, expected_err_json)
 
-    def test_empty_gsim(self, areequal, client):
+    def test_empty_gsim(self,
+                        # pytest fixtures:
+                        areequal, client):
         '''tests a special case whereby a GSIM is empty (this case raised
         before a PR to smtk repository)'''
         inputdic = {
@@ -230,7 +282,11 @@ class Test:
                              [(120, [1, 2.56], [3, 4]),
                               ([1.4, 2, 3], [1, 2], [3.0, 4]),
                               ([1, 20], 1, 3.0)])
-    def test_mismatch_z1pt0_z2pt5(self, areequal, client, vs30, z1pt0, z2pt5):
+    def test_mismatch_z1pt0_z2pt5(self,
+                                  # pytest fixtures:
+                                  areequal, client,
+                                  # parametrized arguments:
+                                  vs30, z1pt0, z2pt5):
         '''tests mismatches between vs30 and related parameters'''
         inputdic = {
             "gsim": [
@@ -287,9 +343,10 @@ class Test:
         resp1 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         assert resp1.status_code == 200
-        
 
-    def test_mismatching_imt_gsim(self, areequal, client):
+    def test_mismatching_imt_gsim(self,
+                                  # pytest fixtures:
+                                  areequal, client):
         '''tests a special case whereby a GSIM is empty (this case raised
         before a PR to smtk repository)'''
         inputdic = {

@@ -20,7 +20,7 @@ from django.conf import settings
 
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import (TrellisForm, GsimSelectionForm, ResidualsForm,
-                               GmdbPlot, TestingForm, FormatForm)
+                               GmdbPlotForm, TestingForm, FormatForm)
 from egsim.core.utils import (QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc,
                               yaml_load)
 from egsim.core import smtk as egsim_smtk
@@ -460,7 +460,7 @@ class GmdbPlotView(EgsimQueryView):
     '''EgsimQueryView subclass for generating Gmdb's
        magnitude vs distance plots responses'''
 
-    formclass = GmdbPlot
+    formclass = GmdbPlotForm
     # url will be used in views. Do not end with '/':
     url = 'query/gmdbplot'
 
