@@ -247,15 +247,8 @@ def testing(params):
 
             # we have some record to be used, compute residuals:
             gmdb = gmdb_base.filter(selexpr)
-            residuals.get_residuals(gmdb)
+            numrecords = gmdb_records(residuals, gmdb)
 
-            # get number of records (observations) to be used. This avoids
-            # opening the file twice, first for counting, then for calculating, as
-            # we have the number of observations in each 'EventIndex' list of
-            # each context element of residuals.contexts:
-            numrecords = 0
-            for context in residuals.contexts:
-                numrecords += len(context.get('EventIndex', []))
             obs_count[gsim] = numrecords
             if not numrecords:
                 gsim_skipped[gsim] = 'No matching Db record found'
@@ -268,111 +261,60 @@ def testing(params):
                 gsim_values.extend(_itervalues(gsim, key, name, result))
 
             for moffit, imt, value in gsim_values:
+                # note: value isa Numpy scalar, but not ALL numpy scalar
+                # are json serializable: only those that are equal to Python's
                 ret.setdefault(moffit, {}).\
-                                setdefault(imt, {})[gsim] = \
-                                _jsonify_num(value)
+                                setdefault(imt, {})[gsim] = value.item()
 
         except Exception as exc:
             gsim_skipped[gsim] = str(exc)
-
-#             if isinstance(result, (list, tuple)):
-#                 result = result[0]
-            # Returned object are of this type (<GMPE>: any valid Gmpe as string,
-            # <IMT>: any valid IMT as string, <TYPE>: str in "Total", "Inter event"
-            # or "Intra event". <EDRTYPE>: string in "MDE Norm", "sqrt Kappa" or
-            # "EDR"):
-            #
-            # Residuals:
-            # {
-            #   <GMPE>: {
-            #      <IMT>: {
-            #        <TYPE>: {
-            #            "Mean": <float>,
-            #            "Std Dev": <float>
-            #        }
-            #      }
-            #   }
-            # }
-            #
-            # Likelihood:
-            # {
-            #   <GMPE>: {
-            #      <IMT>: {
-            #        <TYPE>: <ndarray>
-            #        }
-            #      }
-            #   }
-            # }
-            #
-            # Log-Likelihood, Multivariate Log-Likelihood:
-            # {
-            #   <GMPE>: {
-            #      <IMT>: <float>  # IMT includes the "All" key
-            #   }
-            # }
-            #
-            # EDR
-            # {
-            #   <GMPE>: {
-            #      <EDRTYPE>: <float>
-            #   }
-            # }
-            #
-            # The code belows re-arranges the dicts flattening them like this:
-            # "<Residual name> <residual type if any>":{
-            #        <IMT>: {
-            #           <GMPE>: float or ndarray
-            #        }
-            #     }
-            # }
-#             gsim_result = result[gsim]
-#             if key == MOF.RES:
-#                 for imt, imt_result in gsim_result.items():
-#                     imt2 = _relabel_sa(imt)
-#                     for type_, type_result in imt_result.items():
-#                         for meas, value in type_result.items():
-#                             moffit = "%s %s %s" % (name, type_, meas)
-#                             ret.setdefault(moffit, {}).\
-#                                 setdefault(imt2, {})[gsim] = \
-#                                 _jsonify_num(value)
-#             elif key == MOF.LH:
-#                 for imt, imt_result in gsim_result.items():
-#                     imt2 = _relabel_sa(imt)
-#                     for type_, values in imt_result.items():
-#                         # change array value into Median and IQR:
-#                         p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
-#                         for kkk, vvv in (('Median', p50), ('IQR', p75-p25)):
-#                             moffit = "%s %s %s" % (name, type_, kkk)
-#                             ret.setdefault(moffit, {}).\
-#                                 setdefault(imt2, {})[gsim] = _jsonify_num(vvv)
-#             elif key in (MOF.LLH, MOF.MLLH):
-#                 for imt, value in gsim_result.items():
-#                     imt2 = _relabel_sa(imt)
-#                     moffit = name
-#                     ret.setdefault(moffit, {}).\
-#                         setdefault(imt2, {})[gsim] = _jsonify_num(value)
-#             elif key == MOF.EDR:
-#                 for type_, value in gsim_result.items():
-#                     moffit = "%s %s" % (name, type_)
-#                     imt = ""  # hack
-#                     ret.setdefault(moffit, {}).\
-#                         setdefault(imt, {})[gsim] = _jsonify_num(value)
 
     return {'Measure of fit': ret, 'Db records': obs_count,
             'Gsim skipped': gsim_skipped}
 
 
+def gmdb_records(residuals, gm_table=None):
+    '''Returns the number of the given GM Table records in the given
+    `residuals` object.
+    Example:
+
+    residual = Residuals([gsims], [imts])
+    gmdb = GroundMotionTable(path)
+    gmdb_records(residual, gmdb)
+
+    :param residuals: an instance of
+        :class:`smtk.residuals.gmpe_residuals.Residuals`. Note that
+        residuals.geT_residuals() must have been called on the instance if
+        `gm_table` is None. Otherwise, it computes db residuals by calling
+        `residuals.get_residuals(gm_table)`
+    :param gm_table: optional, defaults to None if missing. A
+        :class:`smtk.sm_table.GroundMotionTable` class to compute the
+        db records before returning their count. If None, such a class must
+        have been provided before this method call, otherwise 0 is returned
+    '''
+    if gm_table is not None:
+        residuals.get_residuals(gm_table)
+    # get number of records (observations) to be used. This avoids
+    # opening the file twice, first for counting, then for calculating, as
+    # we have the number of observations in each 'EventIndex' list of
+    # each context element of residuals.contexts:
+    numrecords = 0
+    for context in residuals.contexts:
+        numrecords += len(context.get('EventIndex', []))
+    return numrecords
+
+
 def _itervalues(gsim, key, name, result):
-    '''Processes the 'testing' result of a smtk function and yields the 
-    tuples m_of_fit, imt, value, where m_of_fit is the (expanded) measure
-    of fit, imt is the relative IMT, and the value is the measure of fit value
-    
+    '''Yields the tuples
+        (Measure of fit, IMT, value)
+    (str, str, numeric) by parsing `result`
+
     :param key: the key denoting a measure of fit
     :param name: a name denoting the measure of fit
     :param result: the result of the smtk computation of the given measure of
         fit on the given gsim
     '''
-    
+
     if isinstance(result, (list, tuple)):
         result = result[0]
     # Returned object are of this type (<GMPE>: any valid Gmpe as string,
@@ -431,9 +373,6 @@ def _itervalues(gsim, key, name, result):
                 for meas, value in type_result.items():
                     moffit = "%s %s %s" % (name, type_, meas)
                     yield moffit, imt2, value
-#                         ret.setdefault(moffit, {}).\
-#                             setdefault(imt2, {})[gsim] = \
-#                             _jsonify_num(value)
     elif key == MOF.LH:
         for imt, imt_result in gsim_result.items():
             imt2 = _relabel_sa(imt)
@@ -443,39 +382,35 @@ def _itervalues(gsim, key, name, result):
                 for kkk, vvv in (('Median', p50), ('IQR', p75-p25)):
                     moffit = "%s %s %s" % (name, type_, kkk)
                     yield moffit, imt2, vvv
-#                         ret.setdefault(moffit, {}).\
-#                             setdefault(imt2, {})[gsim] = _jsonify_num(vvv)
     elif key in (MOF.LLH, MOF.MLLH):
         for imt, value in gsim_result.items():
             imt2 = _relabel_sa(imt)
             moffit = name
             yield moffit, imt2, value
-#                 ret.setdefault(moffit, {}).\
-#                     setdefault(imt2, {})[gsim] = _jsonify_num(value)
     elif key == MOF.EDR:
         for type_, value in gsim_result.items():
             moffit = "%s %s" % (name, type_)
             imt = ""  # hack
             yield moffit, imt, value
-#                 ret.setdefault(moffit, {}).\
-#                     setdefault(imt, {})[gsim] = _jsonify_num(value)
 
 
-def get_selexpr(gsim, user_selexpr):
+def get_selexpr(gsim, user_selexpr=None):
     '''builds a selection expression from a given gsim name concatenating
     the given `user_selexpr` (user defined selection expression with the
     expression obtained by inspecting the required arguments of the given
     gsim'''
     attrs = OQ.required_attrs(gsim)
     selexpr_chunks = []
+    strike_dip_rake_found = False
     for att in attrs:
-        if att in ('rake', 'strike', 'dip'):
-            selexpr_chunks.append('((dip_1 != nan) & '
+        if att in ('rake', 'strike', 'dip') and not strike_dip_rake_found:
+            strike_dip_rake_found = True
+            selexpr_chunks.append('(((dip_1 != nan) & '
                                   '(strike_1 != nan) & '
                                   '(rake_1 != nan)) | '
                                   '((dip_2 != nan) & '
                                   '(strike_2 != nan) & '
-                                  '(rake_2 !=nan))')
+                                  '(rake_2 !=nan)))')
             continue
         (column, missing_val) = GSIM_REQUIRED_ATTRS.get(att, ['', ''])
         if column and missing_val:
@@ -487,23 +422,3 @@ def get_selexpr(gsim, user_selexpr):
         selexpr_chunks.insert(0, '(%s)' % user_selexpr)
 
     return " & ".join(selexpr_chunks)
-
-
-def _jsonify_num(val):
-    try:
-        json.dumps(val)
-    except Exception as exc:  # pylint: disable=broad-except
-        try:  # try converting from numpy. If it fails, raise exc above
-            pyval = val.tolist()
-            # json.dumps(pyval)
-            nans = np.argwhere(~np.isfinite(val)).flatten()
-            if len(nans) == 1 and val.ndim == 0:
-                pyval = None
-            else:
-                for idx in nans:
-                    pyval[idx] = None
-            val = pyval
-        except:  #  @IgnorePep8 pylint: disable=broad-except
-            raise exc
-
-    return val

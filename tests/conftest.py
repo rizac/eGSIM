@@ -16,10 +16,11 @@ import numpy as np
 from django.core.management import call_command
 from django.test.client import Client
 
-from egsim.core.utils import yaml_load
+from egsim.core.utils import yaml_load, get_gmdb_names
 from egsim.core.utils import querystring
 import json
 from egsim.models import Trt
+from egsim.forms.fields import GmdbField
 
 
 # https://docs.pytest.org/en/3.0.0/parametrize.html#basic-pytest-generate-tests-example
@@ -162,3 +163,27 @@ def testdata(request):  # pylint: disable=unused-argument
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         call_command('initdb')
+
+
+@pytest.fixture(scope="session")
+def mocked_gmdbfield(request, testdata):  # pylint: disable=unused-argument
+    '''Fixture returning a mock class for the GmdbField.
+    '''
+    def func(tetdata_filename):
+        gmdbpath = testdata.path(tetdata_filename)
+
+        class MockedGmdbField(GmdbField):
+            '''Mocks GmdbField'''
+            def __init__(self, *a, **v):
+                v['choices'] = [(_, _) for _ in get_gmdb_names(gmdbpath)]
+                super(MockedGmdbField, self).__init__(*a, **v)
+
+            def clean(self, value):
+                '''Converts the given value (string) into the tuple
+                hf5 path, database name (both strings)'''
+                (_, value) = super(MockedGmdbField, self).clean(value)
+                return (gmdbpath, value)
+
+        return MockedGmdbField()
+
+    return func

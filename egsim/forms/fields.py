@@ -301,19 +301,39 @@ class SelExprField(CharField):
         return value
 
 
-class MsrField(ChoiceField):
-    '''A ChoiceField handling the selected Magnitude Scaling Relation object'''
-    _base_choices = get_available_magnitude_scalerel()
+class _DictChoiceField(ChoiceField):
+    '''ChoiceField where the choices are supplied via a class dict:
+    the dict keys will be the values to be accepted as input, the dict
+    value will be the value returned from clean().
+    As Django form input, the <select> will display the dict keys
+    as both value and text'''
+    _base_choices = {}
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices', ((_, _) for _ in self._base_choices))
-        super(MsrField, self).__init__(**kwargs)
+        super(_DictChoiceField, self).__init__(**kwargs)
 
     def clean(self, value):
         '''Converts the given value (string) into the OpenQuake instance
         and returns the latter'''
-        value = super(MsrField, self).clean(value)
+        value = super(_DictChoiceField, self).clean(value)
         return self._base_choices[value]
+
+
+class MsrField(_DictChoiceField):
+    '''A ChoiceField handling the selected Magnitude Scaling Relation object'''
+    _base_choices = get_available_magnitude_scalerel()
+
+
+class TextSepField(_DictChoiceField):
+    '''A ChoiceField handling the text separators in the text response'''
+    _base_choices = OrderedDict([('comma', ','), ('semicolon', ';'),
+                                 ('space', ' '), ('tab', '\t')])
+
+
+class TextDecField(_DictChoiceField):
+    '''A ChoiceField handling the text decimal in the text response'''
+    _base_choices = OrderedDict([('period', '.'), ('comma', ',')])
 
 
 class TrellisplottypeField(ChoiceField):
@@ -383,14 +403,11 @@ class GmdbField(ChoiceField):
             kwargs.setdefault('initial', kwargs['choices'][0][0])
         super(GmdbField, self).__init__(**kwargs)
 
-    def _get_gmdbpath(self):
-        return get_gmdb_path()
-
     def clean(self, value):
         '''Converts the given value (string) into the tuple
         hf5 path, database name (both strings)'''
         value = super(GmdbField, self).clean(value)
-        return (self._get_gmdbpath(), value)
+        return (get_gmdb_path(), value)
 
 
 class TrModelField(ChoiceField):

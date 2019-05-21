@@ -10,9 +10,10 @@ import pytest
 from egsim.core.utils import vectorize, querystring, get_gmdb_column_desc,\
     GSIM_REQUIRED_ATTRS, OQ
 from egsim.forms.fields import NArrayField
-from egsim.core.smtk import _relabel_sa
-from smtk.sm_table import GMTableDescription
+from egsim.core.smtk import _relabel_sa, gmdb_records, get_selexpr
+from smtk.sm_table import GMTableDescription, GroundMotionTable
 from egsim.models import aval_gsims
+from smtk.residuals.gmpe_residuals import Residuals
 
 
 def test_gmdb_columns():
@@ -148,3 +149,23 @@ def test_gsim_required_attrs_mappings_are_in_gsims():
     for att in GSIM_REQUIRED_ATTRS:
         if att not in exclude:
             assert att in gsims_attrs
+
+
+def check_gsim_defined_for_current_db(testdata):
+    '''no test function, it is used to inspect in debug mode in order to get
+    gsims with records in the current gmdb used for tests'''
+    for gsim in OQ.gsims():
+        try:
+            residuals = Residuals([gsim], ['PGA', 'PGV', 'SA(0.1)'])
+            gmdbpath = testdata.path('esm_sa_flatfile_2018.csv.hd5')
+            gm_table = GroundMotionTable(gmdbpath, 'esm_sa_flatfile_2018',
+                                         mode='r')
+            selexpr = get_selexpr(gsim)
+            num = gmdb_records(residuals, gm_table.filter(selexpr))
+        except:
+            pass
+        if num > 0:
+            asd = 9
+
+
+        

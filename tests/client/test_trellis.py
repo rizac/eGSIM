@@ -12,6 +12,8 @@ from egsim.core.utils import querystring
 from egsim.forms.forms import TrellisForm
 from egsim.core.smtk import _default_periods_for_spectra
 from re import search
+from mock import patch
+from egsim.forms.fields import TextSepField
 
 
 @pytest.mark.django_db
@@ -84,7 +86,21 @@ class Test:
         assert resp2.status_code == 200
         assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
                          resp2.content)
-    
+        ref_resp = resp2.content
+        # test different text formats
+        for text_sep, symbol in TextSepField._base_choices.items():
+            resp3 = client.post(self.url, data=dict(inputdic, format='text',
+                                                    text_sep=text_sep),
+                                content_type='text/csv')
+            assert resp3.status_code == 200
+            real_content = sorted(_ for _ in resp3.content.split(b'\r\n'))
+            expected_content = \
+                sorted(_ for _ in \
+                       ref_resp.replace(b',',
+                                        symbol.encode('utf8')).split(b'\r\n'))
+            if text_sep != 'space':
+                assert real_content == expected_content
+
     @pytest.mark.parametrize('trellis_type', ['s', 'ss'])
     def test_trellis_spec(self, client, testdata, areequal, trellis_type):
         '''test trellis magnitude-distance spectra and magnitude-distance
@@ -258,3 +274,25 @@ class Test:
             }
         }
         assert areequal(resp1.json(), expected_json)
+
+    @patch('egsim.views.TrellisView.to_rows')
+    def test_notimplemented_text_format(self, mock_trellis_to_rows,
+                                        # pytest fixtures:
+                                        testdata, client, areequal):
+        '''tests the not implemented error'''
+        def seff(*a, **v):
+            raise NotImplementedError()
+        mock_trellis_to_rows.side_effect = seff
+        inputdic = dict(testdata.readyaml(self.request_filename),
+                        plot_type='m')
+        # test the text response:
+        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+                            content_type='text/csv')
+        assert resp2.status_code == 400
+        expected_json = {
+            "error": {
+                "code": 400,
+                "message": "format \"text\" is not currently implemented"
+            }
+        }
+        assert areequal(resp2.json(), expected_json)

@@ -137,6 +137,9 @@ def test_gsimimt_form_invalid(areequal):  # areequal: fixture in conftest.py
                             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']}),
                           ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA', 'PGA', 'PGV'],
+                            'sa_period': '0.1:0.1:0.2'}),
+                          ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                            IMT: ['PGA', 'PGV'],
                             'sa_period': '0.1:0.1:0.2'})])
 def test_gsimimt_form_valid(data,
                             areequal):  # areequal: fixture in conftest.py
