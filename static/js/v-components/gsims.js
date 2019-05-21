@@ -113,9 +113,10 @@ Vue.component('gsims', {
             this.form.trt.val = Object.keys(overlays).filter(layerName => {
                return overlays[layerName]._map ? true : false;
             });
-            // make imt hidden, this will NOT send the parameter to the
+            // make imt and gsim hidden, this will NOT send the parameter to the
             // client (=> do not filter by IMTs)
             this.form.imt.is_hidden = true;
+            this.form.gsim.is_hidden = true;
             // send request:
             this.post(this.url, this.form).then(response => {
                 if(response.data && response.data.length){
@@ -133,7 +134,11 @@ Vue.component('gsims', {
             // modify the current form gsim field:
             this.form.gsim.choices = Array.from(gsims);
             this.form.gsim.val = [];
-            propsData = {form: this.form, selectbutton: 'Select for Trellis plots, Residuals and Testing'}
+            propsData = {
+            	form: this.form,
+            	selectbutton: 'Select for Trellis plots, Residuals and Testing',
+            	showfilter: true
+            }
 
             var instance = new ComponentClass({
                 propsData: propsData
