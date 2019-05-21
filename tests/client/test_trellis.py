@@ -99,6 +99,9 @@ class Test:
                        ref_resp.replace(b',',
                                         symbol.encode('utf8')).split(b'\r\n'))
             if text_sep != 'space':
+                # FIXME: we do not test the space because quotation marks
+                # are involved and thus the text comparison is harder.
+                # We should read it with csv...
                 assert real_content == expected_content
 
     @pytest.mark.parametrize('trellis_type', ['s', 'ss'])
@@ -223,6 +226,68 @@ class Test:
         figures = result['figures']
         assert figures[1]['yvalues']['AkkarBommer2010SWISS01'] == []
 
+    @pytest.mark.parametrize('vs30, z1pt0, z2pt5',
+                             [(120, [1, 2.56], [3, 4]),
+                              ([1.4, 2, 3], [1, 2], [3.0, 4]),
+                              ([1, 20], 1, 3.0)])
+    def test_mismatch_z1pt0_z2pt5(self, areequal, client, vs30, z1pt0, z2pt5):
+        '''tests mismatches between vs30 and related parameters'''
+        inputdic = {
+            "gsim": [
+                "AbrahamsonEtAl2014",
+            ],
+            "imt": ["PGA", "PGV"],
+            "magnitude": "3:4",
+            "distance": "10:12",
+            "dip": "60",
+            "aspect": "1.5",
+            "rake": "0.0",
+            "ztor": "0.0",
+            "strike": "0.0",
+            "msr": "WC1994",
+            "initial_point": "0 0",
+            "hypocentre_location": "0.5 0.5",
+            "vs30": vs30,
+            "vs30_measured": True,
+            "line_azimuth": "0.0",
+            "plot_type": "ds",
+            "z1pt0": z1pt0,
+            'z2pt5': z2pt5
+        }
+        resp1 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
+        result = resp1.json()
+        expected_str = "%d-elements vector" % len(vs30) \
+            if hasattr(vs30, '__len__') else 'scalar'
+        expected_json = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in z1pt0, z2pt5',
+                'errors': [
+                    {
+                        'domain': 'z1pt0',
+                        'message': ('value must be consistent with '
+                                    'vs30 (%s)' % expected_str),
+                        'reason': 'invalid'
+                    },
+                    {
+                        'domain': 'z2pt5',
+                        'message': ('value must be consistent with '
+                                    'vs30 (%s)' % expected_str),
+                        'reason': 'invalid'
+                    }
+                ]
+            }
+        }
+        assert areequal(result, expected_json)
+        assert resp1.status_code == 400
+
+        # now test all vectors of same length:
+        inputdic['vs30'] = inputdic['z1pt0'] = inputdic['z2pt5'] = [760, 800]
+        resp1 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
+        assert resp1.status_code == 200
+        
 
     def test_mismatching_imt_gsim(self, areequal, client):
         '''tests a special case whereby a GSIM is empty (this case raised
