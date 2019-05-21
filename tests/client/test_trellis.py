@@ -1,13 +1,17 @@
 '''
+Tests the client for the trellis service API
+
 Created on 2 Jun 2018
 
 @author: riccardo
 '''
+import re
 import pytest
 
 from egsim.core.utils import querystring
 from egsim.forms.forms import TrellisForm
 from egsim.core.smtk import _default_periods_for_spectra
+from re import search
 
 
 @pytest.mark.django_db
@@ -42,6 +46,13 @@ class Test:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
             assert sorted(yvalues.keys()) == sorted(input_['gsim'])
+
+        # test the text response:
+        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+                            content_type='text/csv')
+        assert resp2.status_code == 200
+        assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
+                         resp2.content)
     
     @pytest.mark.parametrize('trellis_type', ['m', 'ms'])
     def test_trellis_mag(self, client, testdata, areequal, trellis_type):
@@ -66,6 +77,13 @@ class Test:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
             assert sorted(yvalues.keys()) == sorted(input_['gsim'])
+
+        # test the text response:
+        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+                            content_type='text/csv')
+        assert resp2.status_code == 200
+        assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
+                         resp2.content)
     
     @pytest.mark.parametrize('trellis_type', ['s', 'ss'])
     def test_trellis_spec(self, client, testdata, areequal, trellis_type):
@@ -91,18 +109,35 @@ class Test:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
             assert sorted(yvalues.keys()) == sorted(input_['gsim'])
-    
+
+        # test the text response:
+        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+                            content_type='text/csv')
+        assert resp2.status_code == 200
+        assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
+                         resp2.content)
+
     def test_error(self, client, areequal):
         '''tests a special case where we supply a deprecated gsim (not in
         EGSIM list)'''
-        inputdic = {"gsim": ["AkkarEtAl2013", "AkkarEtAlRepi2014"],
-                    "imt": ["PGA", "PGV"], "magnitude": "3:4",
-                    "distance": "10:12", "dip": "60",
-                    "aspect": "1.5", "rake": "0.0", "ztor": "0.0",
-                    "strike": "0.0", "msr": "WC1994",
-                    "initial_point": "0 0", "hypocentre_location": "0.5 0.5",
-                    "vs30": "760.0", "vs30_measured": True,
-                    "line_azimuth": "0.0", "plot_type": "ds"}
+        inputdic = {
+            "gsim": ["AkkarEtAl2013", "AkkarEtAlRepi2014"],
+            "imt": ["PGA", "PGV"],
+            "magnitude": "3:4",
+            "distance": "10:12",
+            "dip": "60",
+            "aspect": "1.5",
+            "rake": "0.0",
+            "ztor": "0.0",
+            "strike": "0.0",
+            "msr": "WC1994",
+            "initial_point": "0 0",
+            "hypocentre_location": "0.5 0.5",
+            "vs30": "760.0",
+            "vs30_measured": True,
+            "line_azimuth": "0.0",
+            "plot_type": "ds"
+        }
 
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
@@ -111,38 +146,55 @@ class Test:
         assert resp1.status_code == 400
         assert areequal(result, resp2.json())
 
-        expected_err_json = \
-            {'error': {'code': 400,
-                       'message': 'Input validation error in gsim',
-                       'errors': [{'domain': 'gsim',
-                                   'message': ('Select a valid choice. '
-                                               'AkkarEtAl2013 is not one of '
-                                               'the available choices.'),
-                                   'reason': 'invalid_choice'}]}}
-
+        expected_err_json = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in gsim',
+                'errors': [
+                    {
+                        'domain': 'gsim',
+                        'message': ('Select a valid choice. AkkarEtAl2013 is '
+                                    'not one of the available choices.'),
+                        'reason': 'invalid_choice'
+                    }
+                ]
+            }
+        }
         assert areequal(result, expected_err_json)
 
     def test_empty_gsim(self, areequal, client):
         '''tests a special case whereby a GSIM is empty (this case raised
         before a PR to smtk repository)'''
-        inputdic = {"gsim": ["AbrahamsonEtAl2014",
-                             "AbrahamsonEtAl2014NSHMPLower",
-                             "AbrahamsonEtAl2014NSHMPMean",
-                             "AbrahamsonEtAl2014NSHMPUpper",
-                             "AbrahamsonEtAl2014RegCHN",
-                             "AbrahamsonEtAl2014RegJPN",
-                             "AbrahamsonEtAl2014RegTWN",
-                             "AkkarBommer2010SWISS01",
-                             "AkkarBommer2010SWISS04",
-                             "AkkarBommer2010SWISS08",
-                             "AkkarEtAlRepi2014"],
-                    "imt": ["PGA", "PGV"], "magnitude": "3:4",
-                    "distance": "10:12", "dip": "60",
-                    "aspect": "1.5", "rake": "0.0", "ztor": "0.0",
-                    "strike": "0.0", "msr": "WC1994",
-                    "initial_point": "0 0", "hypocentre_location": "0.5 0.5",
-                    "vs30": "760.0", "vs30_measured": True,
-                    "line_azimuth": "0.0", "plot_type": "ds"}
+        inputdic = {
+            "gsim": [
+                "AbrahamsonEtAl2014",
+                "AbrahamsonEtAl2014NSHMPLower",
+                "AbrahamsonEtAl2014NSHMPMean",
+                "AbrahamsonEtAl2014NSHMPUpper",
+                "AbrahamsonEtAl2014RegCHN",
+                "AbrahamsonEtAl2014RegJPN",
+                "AbrahamsonEtAl2014RegTWN",
+                "AkkarBommer2010SWISS01",
+                "AkkarBommer2010SWISS04",
+                "AkkarBommer2010SWISS08",
+                "AkkarEtAlRepi2014"
+            ],
+            "imt": ["PGA", "PGV"],
+            "magnitude": "3:4",
+            "distance": "10:12",
+            "dip": "60",
+            "aspect": "1.5",
+            "rake": "0.0",
+            "ztor": "0.0",
+            "strike": "0.0",
+            "msr": "WC1994",
+            "initial_point": "0 0",
+            "hypocentre_location": "0.5 0.5",
+            "vs30": "760.0",
+            "vs30_measured": True,
+            "line_azimuth": "0.0",
+            "plot_type": "ds"
+        }
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -154,3 +206,55 @@ class Test:
 #         result = get_trellis(form.cleaned_data)
         figures = result['figures']
         assert figures[1]['yvalues']['AkkarBommer2010SWISS01'] == []
+
+
+    def test_mismatching_imt_gsim(self, areequal, client):
+        '''tests a special case whereby a GSIM is empty (this case raised
+        before a PR to smtk repository)'''
+        inputdic = {
+            "gsim": [
+                "AkkarEtAlRjb2014"
+            ],
+            "imt": ["CAV"],
+            "magnitude": "3:4",
+            "distance": "10:12",
+            "dip": "60",
+            "aspect": "1.5",
+            "rake": "0.0",
+            "ztor": "0.0",
+            "strike": "0.0",
+            "msr": "WC1994",
+            "initial_point": "0 0",
+            "hypocentre_location": "0.5 0.5",
+            "vs30": "760.0",
+            "vs30_measured": True,
+            "line_azimuth": "0.0",
+            "plot_type": "ds"
+        }
+        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
+        result = resp1.json()
+        assert resp1.status_code == 400
+        assert areequal(result, resp2.json())
+        expected_json = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in gsim, imt',
+                'errors': [
+                    {
+                        'domain': 'gsim',
+                        'message': ('1 gsim(s) not defined for '
+                                    'all supplied imt(s)'),
+                        'reason': 'invalid'
+                    },
+                    {
+                        'domain': 'imt',
+                        'message': ('1 imt(s) not defined for all '
+                                    'supplied gsim(s)'),
+                        'reason': 'invalid'
+                    }
+                ]
+            }
+        }
+        assert areequal(resp1.json(), expected_json)

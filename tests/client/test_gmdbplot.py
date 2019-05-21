@@ -1,34 +1,61 @@
 '''
-Tests the client for the gsims service
+Tests the client for the gmdbplot service API (as of June 2019, not publicly
+exposed)
 
 Created on 22 Oct 2018
 
 @author: riccardo
 '''
 import pytest
-from mock import patch
+from mock import patch, PropertyMock
 
-from egsim.core.utils import querystring, DISTANCE_LABEL
+from egsim.core.utils import querystring, DISTANCE_LABEL, get_gmdb_names
+from egsim.forms.fields import GmdbField
+from egsim.forms.forms import GmdbPlot
+# from egsim.forms.fields import GmdbField
 
 
 class Test:
-    '''tests the gsim service'''
+    '''tests the gmdbplot service'''
 
     url = '/query/gmdbplot'
     request_filename = 'request_gmdbplot.yaml'
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
-    # @patch('egsim.core.utils.get_gmdb_path')
-    @patch('egsim.forms.fields.get_gmdb_path')
-    def test_gmbdplot_service(self, mock_gmdb_path, testdata, areequal,  # django_db_setup,
-                              client):
+    @pytest.fixture(autouse=True)
+    def setup_gmdb(self, testdata):  # pylint: disable=no-self-use
+        '''This fixtures mocks the gmdb and it's called before each test
+        of this class'''
+        gmdbpath = testdata.path(self.gmdb_fname)
+
+        class MockedGmdbField(GmdbField):
+            '''Mocks GmdbField'''
+            def __init__(self, *a, **v):
+                v['choices'] = [(_, _) for _ in get_gmdb_names(gmdbpath)]
+                super(MockedGmdbField, self).__init__(*a, **v)
+
+            def _get_gmdbpath(self):
+                return gmdbpath
+
+        class MockedGmdbplot(GmdbPlot):
+            '''mocks GmdbPlot'''
+            gmdb = MockedGmdbField()
+
+        with patch('egsim.views.GmdbPlotView.formclass',
+                   new_callable=PropertyMock) as mock_gmdb_field:
+            mock_gmdb_field.return_value = MockedGmdbplot
+            yield
+
+    def test_gmbdplot_service(self,
+                              # pytest fixtures:
+                              testdata, areequal, client):
         '''tests the gmdbplot API service.'''
-        mock_gmdb_path.return_value = testdata.path(self.gmdb_fname)
         print(testdata.path(self.gmdb_fname))
         inputdic = testdata.readyaml(self.request_filename)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        print(str(resp1.json()))
         assert resp1.status_code == resp2.status_code == 200
         assert areequal(resp1.json(), resp2.json())
         json_no_sel = resp1.json()
@@ -48,13 +75,10 @@ class Test:
         # test that magnitudes are what we expect:
         assert any(_ <= 4 or _ >= 7 for _ in json_sel['y'])
 
-    # @patch('egsim.core.utils.get_gmdb_path')
-    @patch('egsim.forms.fields.get_gmdb_path')
-    def test_gmbdplot_service_dists(self, mock_gmdb_path, testdata, areequal,  # django_db_setup,
-                                    client):
+    def test_gmbdplot_service_dists(self,
+                                    # pytest fixtures:
+                                    testdata, areequal, client):
         '''tests the gmdbplot API service iterating on all distances'''
-        mock_gmdb_path.return_value = testdata.path(self.gmdb_fname)
-
         for dist in DISTANCE_LABEL.keys():
             inputdic = testdata.readyaml(self.request_filename)
             inputdic['distance_type'] = dist
@@ -66,14 +90,10 @@ class Test:
             json_ = resp1.json()
             assert len(json_['x']) == len(json_['y']) > 0
 
-    # @patch('egsim.core.utils.get_gmdb_path')
-    @patch('egsim.forms.fields.get_gmdb_path')
-    def test_gmbdplot_errors(self, mock_gmdb_path, 
-                             testdata, areequal,  # django_db_setup,
-                             client):
+    def test_gmbdplot_errors(self,
+                             # pytest fixtures:
+                             testdata, areequal, client):
         '''tests the gmdbplot API service with errors'''
-        mock_gmdb_path.return_value = testdata.path(self.gmdb_fname)
-        # mock_gmdb_path2.return_value = testdata.path(self.gmdb_fname)
 
         inputdic = testdata.readyaml(self.request_filename)
         inputdic['gmdb'] = 'notexistingtable'
@@ -83,14 +103,20 @@ class Test:
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
-        expected_json = {'error': {'code': 400,
-                                   'message': 'Input validation error in gmdb',
-                                   'errors': [{'domain': 'gmdb', 'message':
-                                               ('Select a valid '
-                                                'choice. notexistingtable is '
-                                                'not one of the available '
-                                                'choices.'),
-                                               'reason': 'invalid_choice'}]}}
+        expected_json = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in gmdb',
+                'errors': [
+                    {
+                        'domain': 'gmdb',
+                        'message': ('Select a valid choice. notexistingtable '
+                                    'is not one of the available choices.'),
+                        'reason': 'invalid_choice'
+                    }
+                ]
+            }
+        }
         assert areequal(json_, expected_json)
 
         inputdic = testdata.readyaml(self.request_filename)
@@ -101,16 +127,20 @@ class Test:
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
-        expected_json = {'error': {'code': 400, 'message':
-                                   'Input validation error in distance_type',
-                                   'errors': [{'domain': 'distance_type',
-                                               'message': ('Select a valid '
-                                                           'choice. '
-                                                           'notexistingdist '
-                                                           'is not one of the '
-                                                           'available '
-                                                           'choices.'),
-                                               'reason': 'invalid_choice'}]}}
+        expected_json = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in distance_type',
+                'errors': [
+                    {
+                        'domain': 'distance_type',
+                        'message': ('Select a valid choice. notexistingdist '
+                                    'is not one of the available choices.'),
+                        'reason': 'invalid_choice'
+                    }
+                ]
+            }
+        }
         assert areequal(json_, expected_json)
 
         inputdic = testdata.readyaml(self.request_filename)
@@ -123,7 +153,18 @@ class Test:
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
-        expected = {'error': {'code': 400, 'message': ('Selection expression '
-                                                       'error: "(magnitude > '
-                                                       '5a"')}}
+        expected = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in selexpr',
+                'errors': [
+                    {
+                        'domain': 'selexpr',
+                        'message': ('unexpected EOF while parsing: '
+                                    '"(magnitude > 5a"'),
+                        'reason': 'invalid'
+                    }
+                ]
+            }
+        }
         assert areequal(json_, expected)

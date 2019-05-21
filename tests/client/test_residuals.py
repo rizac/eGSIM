@@ -1,32 +1,55 @@
 '''
-Tests the client for the gsims service
+Tests the client for the residuals service API
 
 Created on 22 Oct 2018
 
 @author: riccardo
 '''
+import re
 import pytest
-from mock import patch
+from mock import patch, PropertyMock
 
-from egsim.core.utils import querystring, DISTANCE_LABEL
-from egsim.forms.fields import ResidualplottypeField
+from egsim.core.utils import querystring, get_gmdb_names
+from egsim.forms.fields import ResidualplottypeField, GmdbField
+from egsim.forms.forms import ResidualsForm
 
 
 @pytest.mark.django_db
 class Test:
-    '''tests the gsim service'''
+    '''tests the residuals service'''
 
     url = '/query/residuals'
     request_filename = 'request_residuals.yaml'
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
-    # @patch('egsim.core.utils.get_gmdb_path')
-    @patch('egsim.forms.fields.get_gmdb_path')
-    def test_residuals_service_err(self, mock_gmdb_path, testdata, areequal,  # django_db_setup,
-                                   client):
-        '''tests the gmdbplot API service.'''
-        mock_gmdb_path.return_value = testdata.path(self.gmdb_fname)
-        print(testdata.path(self.gmdb_fname))
+    @pytest.fixture(autouse=True)
+    def setup_gmdb(self, testdata):  # pylint: disable=no-self-use
+        '''This fixtures mocks the gmdb and it's called before each test
+        of this class'''
+        gmdbpath = testdata.path(self.gmdb_fname)
+
+        class MockedGmdbField(GmdbField):
+            '''Mocks GmdbField'''
+            def __init__(self, *a, **v):
+                v['choices'] = [(_, _) for _ in get_gmdb_names(gmdbpath)]
+                super(MockedGmdbField, self).__init__(*a, **v)
+
+            def _get_gmdbpath(self):
+                return gmdbpath
+
+        class MockedResidualsForm(ResidualsForm):
+            '''mocks GmdbPlot'''
+            gmdb = MockedGmdbField()
+
+        with patch('egsim.views.ResidualsView.formclass',
+                   new_callable=PropertyMock) as mock_gmdb_field:
+            mock_gmdb_field.return_value = MockedResidualsForm
+            yield
+
+    def test_residuals_service_err(self,
+                                   # pytest fixtures:
+                                   testdata, areequal, client):
+        '''tests errors in the residuals API service.'''
         inputdic = testdata.readyaml(self.request_filename)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -34,12 +57,19 @@ class Test:
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
-        exp_json = {'error': {'code': 400,
-                              'message': 'Input validation error in plot_type',
-                              'errors': [{'domain': 'plot_type',
-                                          'message': 'This field is required.',
-                                          'reason': 'required'}]}}
-
+        exp_json = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in plot_type',
+                'errors': [
+                    {
+                        'domain': 'plot_type',
+                        'message': 'This field is required.',
+                        'reason': 'required'
+                    }
+                ]
+            }
+        }
         assert areequal(json_, exp_json)
 
         # FIXME: better test, check more in the errors!
@@ -61,12 +91,13 @@ class Test:
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         assert resp1.status_code == resp2.status_code == 400
 
-    @patch('egsim.forms.fields.get_gmdb_path')
-    def test_residuals_service_(self, mock_gmdb_path, testdata, areequal,  # django_db_setup,
-                                client):
-        '''tests the gmdbplot API service.'''
-        mock_gmdb_path.return_value = testdata.path(self.gmdb_fname)
-        print(testdata.path(self.gmdb_fname))
+    def test_residuals_service_(self,
+                                # pytest fixtures:
+                                testdata, areequal, client):
+        '''tests the residuals API service.'''
+        expected_txt = \
+            re.compile(b'^gsim,imt,type,mean,stddev,median,slope,'
+                       b'intercept,pvalue,,*\r\n')
         base_inputdic = testdata.readyaml(self.request_filename)
         for restype in ResidualplottypeField._base_choices:
             inputdic = dict(base_inputdic, plot_type=restype,
@@ -77,4 +108,12 @@ class Test:
             assert resp1.status_code == resp2.status_code == 200
             assert areequal(resp1.json(), resp2.json())
             json_ = resp1.json()
-            exp_json = "?"
+            # FIXME: IMPROVE TESTS? what to assert?
+
+            # test text format:
+            resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+                                content_type='text/csv')
+            assert resp2.status_code == 200
+            assert expected_txt.search(resp2.content)
+            assert len(resp2.content) > len(expected_txt.pattern)
+
