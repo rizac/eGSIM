@@ -505,15 +505,17 @@ class TrellisForm(GsimImtForm):
                 values = func(vs30s)  # numpy-function
                 cleaned_data[name] = \
                     float(values[0]) if vs30scalar else values.tolist()
-            elif not isscalar(cleaned_data[name]) and not isscalar(vs30) \
-                    and len(vs30) != len(cleaned_data[name]):
+            elif isscalar(cleaned_data[name]) != isscalar(vs30) or \
+                    (not isscalar(vs30) and
+                     len(vs30) != len(cleaned_data[name])):
+                str_ = 'scalar' if isscalar(vs30) else \
+                    '%d-elements vector' % len(vs30)
                 # instead of raising ValidationError, which is keyed with
                 # '__all__' we add the error keyed to the given field name
                 # `name` via `self.add_error`:
                 # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-                error = ValidationError(_("value must be scalar, empty or "
-                                          "a %(num)d-elements vector"),
-                                        params={'num': len(vs30)},
+                error = ValidationError(_("value must be consistent with vs30 "
+                                          "(%s)" % str_),
                                         code='invalid')
                 self.add_error(name, error)
 

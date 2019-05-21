@@ -85,3 +85,33 @@ class Test:
         assert resp1.status_code == resp2.status_code == 200
         # no gsim found:
         assert resp1.json() == resp2.json() == []
+
+    def test_gsims_service_no_lat_or_lon_provided(self,
+                                                  # pytest fixtures:
+                                                  testdata, areequal, client):
+        '''tests the gsims API service with missing lat or lon'''
+        for key in ['latitude', 'longitude']:
+            inputdic = testdata.readyaml(self.request_filename)
+            inputdic.pop(key)
+            # use a key which is not in the defined sets of OpenQuake's TRTs:
+            resp1 = client.get(querystring(inputdic, baseurl=self.url))
+            assert resp1.status_code == 400
+            expected_json = {
+                "error": {
+                    "code": 400,
+                    "message": "Invalid input in %s" % key,
+                    "errors": [
+                        {
+                            "domain": key,
+                            "message": "missing value",
+                            "reason": "missing"
+                        }
+                    ]
+                }
+            }
+            assert areequal(resp1.json(), expected_json)
+
+            
+            
+            
+            
