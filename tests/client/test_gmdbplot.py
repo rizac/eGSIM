@@ -9,8 +9,7 @@ Created on 22 Oct 2018
 import pytest
 from mock import patch, PropertyMock
 
-from egsim.core.utils import querystring, DISTANCE_LABEL, get_gmdb_names
-from egsim.forms.fields import GmdbField
+from egsim.core.utils import querystring, DISTANCE_LABEL
 from egsim.forms.forms import GmdbPlot
 # from egsim.forms.fields import GmdbField
 
@@ -23,23 +22,15 @@ class Test:
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
     @pytest.fixture(autouse=True)
-    def setup_gmdb(self, testdata):  # pylint: disable=no-self-use
+    def setup_gmdb(self,
+                   # pytest fixtures:
+                   mocked_gmdbfield):
         '''This fixtures mocks the gmdb and it's called before each test
         of this class'''
-        gmdbpath = testdata.path(self.gmdb_fname)
-
-        class MockedGmdbField(GmdbField):
-            '''Mocks GmdbField'''
-            def __init__(self, *a, **v):
-                v['choices'] = [(_, _) for _ in get_gmdb_names(gmdbpath)]
-                super(MockedGmdbField, self).__init__(*a, **v)
-
-            def _get_gmdbpath(self):
-                return gmdbpath
 
         class MockedGmdbplot(GmdbPlot):
             '''mocks GmdbPlot'''
-            gmdb = MockedGmdbField()
+            gmdb = mocked_gmdbfield(self.gmdb_fname)
 
         with patch('egsim.views.GmdbPlotView.formclass',
                    new_callable=PropertyMock) as mock_gmdb_field:
@@ -50,12 +41,10 @@ class Test:
                               # pytest fixtures:
                               testdata, areequal, client):
         '''tests the gmdbplot API service.'''
-        print(testdata.path(self.gmdb_fname))
         inputdic = testdata.readyaml(self.request_filename)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
-        print(str(resp1.json()))
         assert resp1.status_code == resp2.status_code == 200
         assert areequal(resp1.json(), resp2.json())
         json_no_sel = resp1.json()
