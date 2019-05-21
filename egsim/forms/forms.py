@@ -381,14 +381,17 @@ class GsimImtForm(BaseForm):
         supplied imts, and all imts are defined for all supplied gsim.
         This method calls self.add_error and works on self.cleaned_data, thus
         it should be called after super().clean()'''
+        # the check here is to replace potential imt errors with
+        # the more relevant mismatch with the supplied gsim.
+        # E.g., if the user supplied imt = 'SA(abc)' (error) and
+        # a gsim='SomeGsimNotDefinedForSA', the error dict should replace
+        # the SA error with 'Imt not defined for supplied Gsim':
         gsims = self.cleaned_data.get("gsim", [])
+        # return the class names of the supplied Imts. Thus 'Sa(...), Sa(...)'
+        # is counted once as 'SA':
         imts = self.fields['imt'].get_imt_classnames(self.data.get('imt', ''))
 
         if gsims and imts:
-            # We need to reduce all IMT strings in cleaned_data['imt'] to a set
-            # where all 'SA(#)' strings are counted as 'SA' once..
-            # Use imt.from_string and get the class name:
-            imts = set(_ for _ in imts if not _.startswith('SA('))
             invalid_gsims = set(gsims) - set(sharing_gsims(imts))
 
             if invalid_gsims:
@@ -411,7 +414,7 @@ class GsimImtForm(BaseForm):
                 self.add_error('gsim', err_gsim)
                 if 'imt' in self.errors:
                     self.errors.pop('imt', None)
-                self.add_error('imt', err_imt)        
+                self.add_error('imt', err_imt)
 
 
 class TrellisForm(GsimImtForm):
@@ -531,8 +534,8 @@ class GmdbForm(BaseForm):
     selexpr = SelExprField(required=False)
 
 
-class GmdbPlot(GmdbForm):
-    '''Abstract-like class for handling gmdb (GroundMotionDatabase)'''
+class GmdbPlotForm(GmdbForm):
+    '''Form for the Gmdb plot (currently undocumented API, frontend only)'''
 
     __additional_fieldnames__ = {**GmdbForm.__additional_fieldnames__,
                                  'dist': 'distance_type'}
@@ -558,8 +561,9 @@ class ResidualsForm(GsimImtForm, GmdbForm):
 
 
 class TestingForm(GsimImtForm, GmdbForm):
+    '''Form for testing Gsims via Measures of Fit'''
 
-        # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
+    # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
                                  **GmdbForm.__additional_fieldnames__,
                                  'fitm': 'fit_measure'}
