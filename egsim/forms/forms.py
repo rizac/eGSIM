@@ -10,6 +10,7 @@ import re
 # import sys
 import json
 from datetime import datetime
+from collections import defaultdict
 from io import StringIO
 
 import yaml
@@ -19,16 +20,19 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext as _
 from django.forms import Form
 from django.utils.safestring import mark_safe
-from django.forms.fields import BooleanField, CharField, FloatField, \
-    ChoiceField, CallableChoiceIterator, MultipleChoiceField
+from django.forms.fields import (BooleanField, CharField, FloatField,
+                                 ChoiceField, CallableChoiceIterator,
+                                 MultipleChoiceField)
 # from django.forms.widgets import HiddenInput
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-from egsim.core.utils import vectorize, isscalar, yaml_load, querystring, \
-    tostr, DISTANCE_LABEL
-from egsim.forms.fields import NArrayField, IMTField, TrellisplottypeField, \
-    MsrField, PointField, TrtField, GmdbField, ResidualplottypeField, \
-    GsimField, TrModelField, ResidualsTestField, SelExprField
+from egsim.core.utils import (vectorize, isscalar, yaml_load, querystring,
+                              tostr, DISTANCE_LABEL)
+from egsim.forms.fields import (NArrayField, ImtclassField, ImtField,
+                                TrellisplottypeField, MsrField, PointField,
+                                TrtField, GmdbField, ResidualplottypeField,
+                                GsimField, TrModelField, MeasureOfFitField,
+                                SelExprField)
 from egsim.models import sharing_gsims, shared_imts
 
 
@@ -230,8 +234,9 @@ class BaseForm(Form):
         '''
         hidden_fn = set(self.__hidden_fieldnames__)
         formdata = {}
-        optional_names = {v: k
-                          for k, v in self.__additional_fieldnames__.items()}
+        optional_names = defaultdict(list)
+        for k, v in self.__additional_fieldnames__.items():
+            optional_names[v].append(k)
         for name, _ in self.declared_fields.items():  # pylint: disable=no-member
             # little spec: self.declared_fields and self.base_fields are the
             # same thing (see django.forms.forms.DeclarativeFieldsMetaclass)
@@ -266,7 +271,7 @@ class BaseForm(Form):
                 val = []
             fielddata = {
                 'name': attrs['name'],
-                'name2': optional_names.get(name, ''),
+                'opt_names': optional_names.get(name, []),
                 'help': boundfield.help_text,
                 'label': boundfield.label,
                 'attrs': attrs,
@@ -296,7 +301,7 @@ class GsimSelectionForm(BaseForm):
 
     # NOTE: DO NOT set initial
     gsim = GsimField(required=False)
-    imt = IMTField(required=False)
+    imt = ImtclassField(required=False)
 
     model = TrModelField(label='Tectonic region model', required=False)
     longitude = FloatField(label='Longitude', min_value=-180, max_value=180,
@@ -340,12 +345,17 @@ class GsimImtForm(BaseForm):
     __hidden_fieldnames__ = ['sa_period']
 
     gsim = GsimField(required=True)
-    imt = IMTField(required=True)
+    imt = ImtField(required=True)
     # sa_periods should not be exposed through the API, it is only used
     # from the frontend GUI. Thus required=False is necessary.
     # We use a CharField because in principle it should never
     # raise: If SA periods are malformed, the IMT field holds the error
     sa_period = CharField(label="SA period(s)", required=False)
+
+    def __init__(self, *args, **kwargs):
+        super(GsimImtForm, self).__init__(*args, **kwargs)
+        # remove sa_periods and put them in imt field:
+        self.fields['imt'].sa_periods_str = self.data.pop('sa_period', '')
 
     def clean(self):
         '''runs validation where we must validate selected gsim(s) based on
@@ -372,7 +382,7 @@ class GsimImtForm(BaseForm):
         This method calls self.add_error and works on self.cleaned_data, thus
         it should be called after super().clean()'''
         gsims = self.cleaned_data.get("gsim", [])
-        imts = self.cleaned_data.get("imt", [])
+        imts = self.fields['imt'].get_imt_classnames(self.data.get('imt', ''))
 
         if gsims and imts:
             # We need to reduce all IMT strings in cleaned_data['imt'] to a set
@@ -399,21 +409,9 @@ class GsimImtForm(BaseForm):
                                           code='invalid')
                 # add_error removes also the field from self.cleaned_data:
                 self.add_error('gsim', err_gsim)
-                self.add_error('imt', err_imt)
-
-        # now build imts with periods, and validate them:
-        gsims = self.cleaned_data.get("gsim", [])
-        imts = self.cleaned_data.get("imt", [])
-        periods_str = self.cleaned_data.get('sa_period', '')
-        if gsims and imts and periods_str:
-            imtfield = self.fields['imt']
-            try:
-                # combine with periods (if no period, it's no-op):
-                imts = imtfield.combine_with_periods(imts, periods_str)
-                # re-clean the value with periods:
-                self.cleaned_data['imt'] = imtfield.clean(imts)
-            except ValidationError as err_imt:
-                self.add_error('imt', err_imt)
+                if 'imt' in self.errors:
+                    self.errors.pop('imt', None)
+                self.add_error('imt', err_imt)        
 
 
 class TrellisForm(GsimImtForm):
@@ -426,6 +424,7 @@ class TrellisForm(GsimImtForm):
                                  'lineazi': 'line_azimuth',
                                  'vs30m': 'vs30_measured',
                                  'hyploc': 'hypocentre_location',
+                                 'vs30measured': 'vs30_measured',
                                  **GsimImtForm.__additional_fieldnames__}
 
     plot_type = TrellisplottypeField(label='Plot type')
@@ -563,7 +562,7 @@ class TestingForm(GsimImtForm, GmdbForm):
                                  **GmdbForm.__additional_fieldnames__,
                                  'fitm': 'fit_measure'}
 
-    fit_measure = ResidualsTestField(required=True, label="Measure(s) of fit")
+    fit_measure = MeasureOfFitField(required=True, label="Measure(s) of fit")
 
     edr_bandwidth = FloatField(required=False, initial=0.01,
                                help_text=('Ignored if EDR is not a '
@@ -583,3 +582,39 @@ class TestingForm(GsimImtForm, GmdbForm):
         cleaned_data['config'] = config
         return cleaned_data
 
+
+class FormatForm(BaseForm):
+    '''Form handling the validation of the format related argument in
+    a request'''
+    # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
+    __additional_fieldnames__ = {}
+    _textsep_choices = {'comma': ',', ',': ',', 'semicolon': ';', ';': ';',
+                        'space': ' ', ' ': ' ', 'tab': '\t', '\t': '\t'}
+    _textdec_choices = {'comma': ',', ',': ',', 'period': '.', '.': '.'}
+
+    format = ChoiceField(required=False, initial='json',
+                         choices=[('json', 'json'), ('text', 'text/csv')])
+
+    text_sep = ChoiceField(required=False, initial=',',
+                           choices=[(_, _) for _ in _textsep_choices.keys()])
+    text_dec = ChoiceField(required=False, initial='.',
+                           choices=[(_, _) for _ in _textdec_choices.keys()])
+
+    def clean(self):
+        super().clean()
+        tsep, tdec = 'text_sep', 'text_dec'
+        # convert to symbols:
+        self.cleaned_data[tsep] = \
+            self._textsep_choices[self.cleaned_data[tsep]]
+        self.cleaned_data[tdec] = \
+            self._textdec_choices[self.cleaned_data[tdec]]
+        if self.cleaned_data[tsep] == self.cleaned_data[tdec] and \
+                self.cleaned_data['format'] == 'text':
+            msg = _("'%s' must differ from '%s' in 'text' format" %
+                    (tsep, tdec))
+            err_ = ValidationError(msg, code='conflicting values')
+            # add_error removes also the field from self.cleaned_data:
+            self.add_error(tsep, err_)
+            self.add_error(tdec, err_)
+
+        return self.cleaned_data

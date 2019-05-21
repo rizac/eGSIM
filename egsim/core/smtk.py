@@ -22,6 +22,9 @@ from egsim.core.utils import (vectorize, DISTANCE_LABEL, MOF, OQ,
                               GSIM_REQUIRED_ATTRS)
 
 
+RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept', 'pvalue')
+
+
 def _relabel_sa(string):
     '''Simplifies SA string representation removing redundant trailing zeros,
     if present
@@ -207,6 +210,10 @@ def get_residuals(params):
 
             imt2 = _relabel_sa(imt)
             ret[gsim][imt2] = func(**kwargs)
+            for val in ret[gsim][imt2].values():
+                for stat in RESIDUALS_STATS:
+                    val.setdefault(stat, None)
+            # re-label SA(0.20000) into SA(0.2):
             if imt2 != imt:
                 for val in ret[gsim][imt2].values():
                     if 'xlabel' in val:

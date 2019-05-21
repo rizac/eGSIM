@@ -21,15 +21,22 @@ from django.forms.fields import CharField, MultipleChoiceField, ChoiceField
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
-from smtk.trellis.trellis_plots import DistanceIMTTrellis, \
-    DistanceSigmaIMTTrellis, MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, \
-    MagnitudeDistanceSpectraTrellis, MagnitudeDistanceSpectraSigmaTrellis
-from smtk.residuals.residual_plots import residuals_density_distribution, \
-    residuals_with_depth, residuals_with_distance, residuals_with_magnitude, \
-    residuals_with_vs30, likelihood
+from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
+                                        DistanceSigmaIMTTrellis,
+                                        MagnitudeIMTTrellis,
+                                        MagnitudeSigmaIMTTrellis,
+                                        MagnitudeDistanceSpectraTrellis,
+                                        MagnitudeDistanceSpectraSigmaTrellis)
+from smtk.residuals.residual_plots import (residuals_density_distribution,
+                                           residuals_with_depth,
+                                           residuals_with_distance,
+                                           residuals_with_magnitude,
+                                           residuals_with_vs30,
+                                           likelihood)
 
-from egsim.core.utils import vectorize, isscalar, get_gmdb_names, get_gmdb_path, MOF,\
-    DISTANCE_LABEL, test_selexpr
+from egsim.core.utils import (vectorize, isscalar, get_gmdb_names,
+                              get_gmdb_path, MOF, DISTANCE_LABEL,
+                              test_selexpr)
 
 # IMPORTANT: do not access the database at module import, as otherwise
 # make migrations does not work! So these methods should be called inside
@@ -44,7 +51,7 @@ class ArrayField(CharField):
         expecting an array of elements in JSON or Unix shell (space separated
         variables) formatted strings. Note that in both syntaxes leading and
         trailing square brackets are optional.
-        The type of the parsed elements depends on the method `self.parse(token)`
+        The type of the parsed elements depends on `self.parse(token)`
         which by default returns `token` but might be overridden by subclasses
         (see. :class:`NArrayField`).
         As Form fields act also as validators, an object of this class can
@@ -318,7 +325,8 @@ class TrellisplottypeField(ChoiceField):
         's': ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis),
         'ds': ('IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
         'ms': ('IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
-        'ss': ('Magnitude-Distance Spectra  (st.dev)', MagnitudeDistanceSpectraSigmaTrellis)
+        'ss': ('Magnitude-Distance Spectra  (st.dev)',
+               MagnitudeDistanceSpectraSigmaTrellis)
     }
 
     def __init__(self, **kwargs):
@@ -333,33 +341,56 @@ class TrellisplottypeField(ChoiceField):
         return self._base_choices[value][1]
 
 
+class LazyCached:
+    '''A callable returning an iterable which caches its result.
+    Used in the keyword argument 'choices' to lazily create the list of
+    choices. The rationale is to avoid DB access at import / initialization
+    time, which is messy with tests (for an introduction of the problem, see:
+    https://stackoverflow.com/questions/43326132/how-to-avoid-import-time-database-access-in-django).
+    The simplest solution would be to simply pass a callable to the 'choices'
+    argument (see Django ChoiceField), but the callable re-evaluated each
+    time (i.e., the db is accessed each time). This class solves the
+    problem: it is callables, so Django interprets it correctly and evaluates
+    it upon access only, but it caches the iterated elements, so that a later
+    call does not re-evaluate the result
+    '''
+    def __init__(self, callable_returning_iterator):
+        self._callable_returning_iterator = callable_returning_iterator
+        self._data = None
+
+    def __call__(self):
+        if self._data is None:
+            self._data = list(self._callable_returning_iterator())
+        return self._data
+
+
 class GmdbField(ChoiceField):
     '''EgsimChoiceField for Ground motion databases
     It accepts an optional argument gmdbpath which defaults to the Django
     app db path
     '''
-    # load base choices once per class instantiation. Note that
-    # if the operation gets slow, we should consider alternative ways.
-    # In any case, this variable is needed when requesting the html page
-    # so it must be loaded somehow
-    _base_choices = tuple((_, _) for _ in get_gmdb_names(get_gmdb_path()))
-
+    # We previosuly loaded ONCE here all the GMDB, in order to open
+    # only once the GMDB file. DO NOT DO THAT:
+    # 1. the performance improvement is not demonstrated
+    # 2. it messes up tests, as once loaded PER CLASS, the Ground motion
+    # databases can NOT be mocked by simply patching `get_gmdb_path()`
     def __init__(self, **kwargs):
         kwargs.setdefault('label', 'Ground Motion database')
-        kwargs.setdefault('choices', self._base_choices)
-        if self._base_choices:
-            kwargs.setdefault('initial', self._base_choices[0][0])
+        if 'choices' not in kwargs:
+            kwargs['choices'] = [(_, _) for _ in
+                                 get_gmdb_names(get_gmdb_path())]
+        if kwargs['choices']:
+            kwargs.setdefault('initial', kwargs['choices'][0][0])
         super(GmdbField, self).__init__(**kwargs)
 
-    @property
-    def gmdbpath(self):
+    def _get_gmdbpath(self):
         return get_gmdb_path()
 
     def clean(self, value):
         '''Converts the given value (string) into the tuple
         hf5 path, database name (both strings)'''
         value = super(GmdbField, self).clean(value)
-        return (self.gmdbpath, value)
+        return (self._get_gmdbpath(), value)
 
 
 class TrModelField(ChoiceField):
@@ -404,7 +435,7 @@ class ResidualplottypeField(ChoiceField):
         return self._base_choices[value][1:]
 
 
-class ResidualsTestField(MultipleChoiceField):
+class MeasureOfFitField(MultipleChoiceField):
     _base_choices = {MOF.RES: ('Residuals',
                                GSIM_MODEL_DATA_TESTS['Residuals']),
                      MOF.LH: ("Likelihood",
@@ -420,11 +451,11 @@ class ResidualsTestField(MultipleChoiceField):
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
                           [(k, v[0]) for k, v in self._base_choices.items()])
-        super(ResidualsTestField, self).__init__(**kwargs)
+        super(MeasureOfFitField, self).__init__(**kwargs)
 
     def clean(self, value):
         '''Converts the given value (string) into the smtk function'''
-        value = super(ResidualsTestField, self).clean(value)
+        value = super(MeasureOfFitField, self).clean(value)
         # returns list of sub-lists [key, label, function]:
         return [[_] + list(self._base_choices[_]) for _ in value]
 
@@ -485,108 +516,132 @@ class GsimField(MultipleChoiceWildcardField):
         super(GsimField, self).__init__(**kwargs)
 
 
-# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
-class IMTField(MultipleChoiceWildcardField):
-    '''Field for IMT selection. Simple MultipleChoiceWildcardField which
-    also accepts values not present in the list of choices, when they
-    represent valid IMTs (e.g. "SA(0.2)").
-    It has also a method `combine_with_periods` which accepts a string
-    of space- or comma-separated numbers (see ArrayField class) to replace
-    'SA' with the defined periods
-    '''
+class BaseImtField(MultipleChoiceWildcardField):
+    '''Base class for the IMT selection Form Field'''
     SA = 'SA'
     default_error_messages = {
-        'sa_without_period': _("intensity measure type '%s' must "
+        'sa_with_period': _("intensity measure type %s must "
+                            "be specified without period(s)" % SA),
+        'sa_without_period': _("intensity measure type %s must "
                                "be specified with period(s)" % SA),
-        'invalid_period': _("error while parsing '%s' period(s)" % SA),
-        'invalid_imt': _('%(value)s is not a valid IMT.'),
+        'invalid_sa_period': _("invalid period in %(value)s"),
+        'invalid_sa_periods': _("error while parsing %s period(s)" % SA)
     }
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
                           LazyCached(lambda: [(_, _) for _ in aval_imts()]))
         kwargs.setdefault('label', 'Intensity Measure Type(s)')
-        super(IMTField, self).__init__(**kwargs)
+        super(BaseImtField, self).__init__(**kwargs)
+
+
+class ImtclassField(BaseImtField):
+    '''Field for IMT class selection. Inherits from `BaseImtField` (thus
+    `MultipleChoiceWildcardField`): Imts should be provided as
+    class names (strings) with no arguments.
+    '''
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices',
+                          LazyCached(lambda: [(_, _) for _ in aval_imts()]))
+        kwargs.setdefault('label', 'Intensity Measure Type(s)')
+        super(ImtclassField, self).__init__(**kwargs)
+
+    def valid_value(self, value):
+        """Validate the given value, simply issues a more explicit warning
+        message if 'SA' is provided with periods
+        """
+        valid = super(ImtclassField, self).valid_value(value)
+        if not valid and value.startswith('%s(' % self.SA):  # not in the list
+            # It is perfectly fine to raise ValidationError from here, as
+            # this allows us to customize the message in case of 'SA':
+            raise ValidationError(
+                self.error_messages['sa_with_period'],
+                code='sa_with_period',
+            )
+
+        return valid
+
+
+# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
+class ImtField(BaseImtField):
+    '''Field for IMT class selection. Inherits from `BaseImtField` (thus
+    `MultipleChoiceWildcardField`):  Imts should be provided as
+    class names (strings) with arguments, if needed.
+    This class has also the property `sa_periods_str` that can be set
+    with the string value of SA periods provided separately
+    '''
+    @property
+    def sa_periods_str(self):
+        '''Sets the SA periods as string. The periods must be formatted
+        according to a `NArrayField` input (bascially, shlex or json
+        compatible). If provided, the `to_python` method will merge all
+        provided IMTs with all string chunks `SA(P)` built from the periods
+        chunks parsed from this string'''
+        return getattr(self, '_sa_periods_str', '')
+
+    @sa_periods_str.setter
+    def sa_periods_str(self, value):
+        setattr(self, '_sa_periods_str', value)
 
     def valid_value(self, value):
         """Validate the given value, ignoring the super method which compares
         to the choices attribute if self.sa_periods_required is True
         """
-        if not super(IMTField, self).valid_value(value):  # not in the list
+        if value == self.SA:
             # It is perfectly fine to raise ValidationError from here, as
-            # this allows us to customize the message that otherwise would be
-            # a too generic 'incalid choice'
+            # this allows us to customize the message in case of 'SA':
+            raise ValidationError(
+                    self.error_messages['sa_without_period'],
+                    code='sa_without_period',
+                )
+        valid = super(ImtField, self).valid_value(value)
+        if not valid:
             try:
                 imt.from_string(value)
+                valid = True
             except Exception:  # pylint: disable=broad-except
-                if value == 'SA':
+                if value.startswith('%s(' % self.SA):
                     raise ValidationError(
-                        self.error_messages['sa_without_period'],
-                        code='sa_without_period',
+                        self.error_messages['invalid_sa_period'],
+                        code='invalid_sa_period',
+                        params={'value': value},
                     )
-                # this should never happen, however:
-                # copied and modified from ChoiceField
-                raise ValidationError(
-                    self.error_messages['invalid_imt'],
-                    code='invalid_imt',
-                    params={'value': value},
-                )
 
-        return True
+        return valid
 
-    def combine_with_periods(self, imts, periods_str):
-        '''Returns a list of the IMT values combined with all SA with periods
-        defined in `self.sa_period`, This method first removes all instances
-        of 'SA' from `imts`, and then inserts each 'SA(p)' at the index
-        where the first 'SA' was found (or at the end of the list if no 'SA'
-        was found). If `periods_str` is falsy, simply returns `imts`.
-
-        :param imts: the list of strings previously validted via this object
-            `clean` method
-        :param periods_str: a string of comma or space separated SA periods
-            (see ArrayField class) to be appended to imts
-        '''
+    def to_python(self, value):
+        imts = ImtclassField.to_python(self, value)
+        # combine with separate SA periods, if provided
+        periods_str = self.sa_periods_str
         if periods_str:
             try:
-                saindex = imts.index('SA')
+                saindex = imts.index(self.SA)
             except ValueError:
                 saindex = len(imts)
 
             try:
                 periods = \
-                    vectorize(ArrayField(required=False).clean(periods_str))
-                ret = [_ for _ in imts if _ != 'SA']
-                sa_periods = ['SA(%s)' % _ for _ in periods]
+                    vectorize(NArrayField(required=False).clean(periods_str))
+                ret = [_ for _ in imts if _ != self.SA]
+                sa_str = '{}(%s)'.format(self.SA)
+                sa_periods = [sa_str % _ for _ in periods]
                 imts = ret[:saindex] + sa_periods + ret[saindex:]
             except Exception:
                 raise ValidationError(
-                    self.error_messages['invalid_period'],
-                    code='invalid_period(s)'
+                    self.error_messages['invalid_sa_periods'],
+                    code='invalid_sa_periods'
                 )
 
         return imts
 
-    def validate_imts(self, imts):
-        '''Returns imts if they are all valid IMT strings (thus, 'SA' is
-        invalid). Raises ValidationError if any imt in imts is invalid.
-        '''
-        for imt_ in imts:
+    def get_imt_classnames(self, value):
+        ret = set()
+        for imt_ in self.to_python(value):
             try:
-                imt.from_string(imt_)
+                ret.add(imt.from_string(imt_).__class__.__name__)
             except Exception:  # pylint: disable=broad-except
-                if imt_ == 'SA':
-                    raise ValidationError(
-                        self.error_messages['sa_without_period'],
-                        code='sa_without_period',
-                    )
-                # this should never happen, however:
-                # copied and modified from ChoiceField
-                raise ValidationError(
-                    self.error_messages['invalid_imt'],
-                    code='invalid_imt',
-                    params={'value': imt_},
-                )
-        return imts
+                pass
+        return ret
 
 
 class TrtField(MultipleChoiceWildcardField):
@@ -598,26 +653,3 @@ class TrtField(MultipleChoiceWildcardField):
                                               aval_trts(include_oq_name=True)])
                           )
         super(TrtField, self).__init__(**kwargs)
-
-
-class LazyCached:
-    '''A callable returning an iterable which caches its result.
-    Used in the keyword argument 'choices' to lazily create the list of
-    choices. The rationale is to avoid DB access at import / initialization
-    time, which is messy with tests (for an introduction of the problem, see:
-    https://stackoverflow.com/questions/43326132/how-to-avoid-import-time-database-access-in-django).
-    The simplest solution would be to simply pass a callable to the 'choices'
-    argument (see Django ChoiceField), but the callable re-evaluated each
-    time (i.e., the db is accessed each time). This class solves the
-    problem: it is callables, so Django interprets it correctly and evaluates
-    it upon access only, but it caches the iterated elements, so that a later
-    call does not re-evaluate the result
-    '''
-    def __init__(self, callable_returning_iterator):
-        self._callable_returning_iterator = callable_returning_iterator
-        self._data = None
-
-    def __call__(self):
-        if self._data is None:
-            self._data = list(self._callable_returning_iterator())
-        return self._data

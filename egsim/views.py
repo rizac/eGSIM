@@ -4,8 +4,11 @@ Created on 17 Jan 2018
 @author: riccardo
 '''
 import os
+import io
+import csv
 import json
 from datetime import date
+from itertools import chain, repeat
 
 from yaml.error import YAMLError
 
@@ -14,16 +17,16 @@ from django.shortcuts import render
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 from django.conf import settings
-# from django.views.decorators.csrf import csrf_exempt
-# from django.template.loader import get_template
 
 from egsim.middlewares import ExceptionHandlerMiddleware
 from egsim.forms.forms import (TrellisForm, GsimSelectionForm, ResidualsForm,
-                               GmdbPlot, TestingForm)
-from egsim.core.utils import QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc
+                               GmdbPlot, TestingForm, FormatForm)
+from egsim.core.utils import (QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc,
+                              yaml_load)
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
+from django.http.response import HttpResponse
 
 
 _COMMON_PARAMS = {
@@ -209,7 +212,11 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
     formclass = None
     arrayfields = set()
     EXCEPTION_CODE = 400
-    VALIDATION_ERR_MSG = 'Input validation error'
+    VALIDATION_ERR_MSG = 'Invalid input'
+    extensions = {
+        'json': 'json',
+        'text': 'csv'
+    }
 
     def get(self, request):
         '''processes a get request'''
@@ -230,46 +237,114 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
 
     def post(self, request):
         '''processes a post request'''
-        return self.response(request.body.decode('utf-8'))
+        try:
+            return self.response(yaml_load(request.body.decode('utf-8')))
+        except YAMLError as yerr:
+            return ExceptionHandlerMiddleware.\
+                jsonerr_response(yerr, code=self.EXCEPTION_CODE)
 
     @classmethod
-    def response(cls, obj):
-        '''processes an input object `obj`, returning a response object.
+    def response(cls, inputdict):
+        '''processes an input dict `inputdict`, returning a response object.
         Calls `self.process` if the input is valid according to the Form's
         class `formclass` otherwise returns an appropriate json response with
         validation-error messages, or a json response with a gene'''
-        ehm = ExceptionHandlerMiddleware
+        filename = inputdict.pop('filename', '')
+        formatform = FormatForm(inputdict)
+        if not formatform.is_valid():
+            return cls.jsonresponse_from_invalid_form(formatform)
+        formatdict = formatform.cleaned_data
+
+        for key in formatdict:
+            inputdict.pop(key, None)
+        dataform = cls.formclass(data=inputdict)  # pylint: disable=not-callable
+        if not dataform.is_valid():
+            return cls.jsonresponse_from_invalid_form(dataform)
+
+        outputdict = cls.process(dataform.cleaned_data)
+        frmt = formatdict['format'].lower()
         try:
-            form = cls.formclass.load(obj)
-        except YAMLError as yerr:
-            return ehm.jsonerr_response(yerr, code=cls.EXCEPTION_CODE)
+            if frmt == 'json':
+                response = cls.response_json(outputdict)
+            else:
+                response = cls.response_text(outputdict,
+                                             formatdict.get('text_sep', ','),
+                                             formatdict.get('text_dec', '.'))
+        except NotImplementedError:
+            return ExceptionHandlerMiddleware.\
+                jsonerr_response('format "%s" is not '
+                                 'currently implemented' % frmt,
+                                 code=cls.EXCEPTION_CODE)
 
-        if not form.is_valid():
-            errors = cls.format_validation_errors(form.errors)
-            msg = "%s in %s" % \
-                (cls.VALIDATION_ERR_MSG,
-                 ', '.join(_['domain'] for _ in errors if _.get('domain', '')))
-            return ehm.jsonerr_response(msg, code=cls.EXCEPTION_CODE,
-                                        errors=errors)
-
-        data = cls.process(form.cleaned_data)
-        if isinstance(data, JsonResponse):
-            return data
-        return JsonResponse(data, safe=False)  # see GmdbPlotView.process
+        if filename:
+            fname, ext = os.path.splitext(filename)
+            if not ext:
+                filename = "%s.%s" % (fname, cls.extensions[frmt])
+            response['Content-Disposition'] = \
+                'attachment; filename=%s' % filename
+        return response
 
     @classmethod
-    def process(cls, params):
-        ''' core (abstract) method to be implemented in subclasses
+    def response_json(cls, process_result):
+        '''Returns a JSON response
 
-        :param params: a dict of key-value paris which is assumed to be
-            **well-formatted**: no check will be done on the dict: if the
-            latter has to be validated (e.g., via a Django Form), **the
-            validation should be run before this method and `params` should
-            be the validated dict (e.g., as returned from `form.clean()`)**
-
-        :return: a json-serializable object to be sent as successful response
+        :param process_result: the output of `self.process`
         '''
-        raise NotImplementedError()
+        return JsonResponse(process_result, safe=False)
+
+    @classmethod
+    def response_text(cls, process_result, text_sep=',', text_dec='.'):
+        '''Returns a text/csv response
+
+        :param process_result: the output of `self.process`
+        '''
+        # code copied from: https://stackoverflow.com/a/41706831
+        buffer = io.StringIO()  # python 2 needs io.BytesIO() instead
+        wrt = csv.writer(buffer,
+                         delimiter=text_sep,
+                         quotechar='"',
+                         quoting=csv.QUOTE_MINIMAL)
+        # From the docs:
+        # The value None is written as the empty string.
+        # All non-string data are stringified with str() before being written.
+
+        # first build a list to get the maximum number of columns (for safety):
+        rowsaslist = []
+        maxcollen = 0
+        comma_decimal = text_dec == ','
+        for row in cls.to_rows(process_result):
+            if comma_decimal:
+                row = cls.convert_to_comma_as_decimal(row)
+            rowsaslist.append(row if hasattr(row, '__len__') else list(row))
+            maxcollen = max(maxcollen, len(rowsaslist[-1]))
+
+        wrt.writerows(chain(r, repeat(None, maxcollen-len(r)))
+                      for r in rowsaslist)
+        buffer.seek(0)
+        return HttpResponse(buffer, content_type='text/csv')
+
+    @classmethod
+    def convert_to_comma_as_decimal(cls, row):
+        '''Creates a generator yielding each element of row where numeric
+        values are converted to strings with comma as decimal separator.
+        For non-float values, each row element is yielded as it is
+
+        @param rows: a list of lists
+        '''
+        for cell in row:
+            if isinstance(cell, float):
+                yield str(cell).replace('.', ',')
+            else:
+                yield cell
+
+    @classmethod
+    def jsonresponse_from_invalid_form(cls, form):
+        errors = cls.format_validation_errors(form.errors)
+        msg = "%s in %s" % \
+            (cls.VALIDATION_ERR_MSG,
+             ', '.join(_['domain'] for _ in errors if _.get('domain', '')))
+        return ExceptionHandlerMiddleware.\
+            jsonerr_response(msg, code=cls.EXCEPTION_CODE, errors=errors)
 
     @classmethod
     def format_validation_errors(cls, errors):
@@ -290,17 +365,32 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
                                'reason': value.get('code', '')})
         return errors
 
+    @classmethod
+    def process(cls, inputdict):
+        ''' core (abstract) method to be implemented in subclasses
 
-class TrellisView(EgsimQueryView):
-    '''EgsimQueryView subclass for generating Trellis plots responses'''
+        :param inputdict: a dict of key-value pairs of input parameters, which
+            **is assumed to have been already validated via this.formclass()**
+            (thus no check is needed)
 
-    formclass = TrellisForm
-    # url will be used in views. Do not end with '/':
-    url = 'query/trellis'
+        :return: a json-serializable object to be sent as successful response
+        '''
+        raise NotImplementedError()
 
     @classmethod
-    def process(cls, params):
-        return egsim_smtk.get_trellis(params)
+    def to_rows(cls, process_result):
+        '''Abstract-like optional method to be implemented in subclasses.
+        Converts the input argument into an iterable of rows, where each
+        row is in turn an iterable of strings representing "cell" values:
+        the resulting output is in fact intended to be the input for
+        text/csv formatted responses.
+        Any code calling this method should not rely on all yielded rows
+        having the same number of elements (see e.g.
+        `self.response_text` where rows are padded with empty values).
+
+        :param process_result: the output of `self.process`
+        '''
+        raise NotImplementedError()
 
 
 class GsimsView(EgsimQueryView):
@@ -311,7 +401,7 @@ class GsimsView(EgsimQueryView):
     url = 'query/gsims'
 
     @classmethod
-    def process(cls, params):
+    def process(cls, inputdict):
         GSIM = 'gsim'  # pylint: disable=invalid-name
         TRT = 'trt'  # pylint: disable=invalid-name
         IMT = 'imt'  # pylint: disable=invalid-name
@@ -321,11 +411,11 @@ class GsimsView(EgsimQueryView):
         LAT2 = 'latitude2'  # pylint: disable=invalid-name
         LON2 = 'longitude2'  # pylint: disable=invalid-name
         tr_selector = None
-        if MODEL in params or LAT in params or LON in params:
+        if MODEL in inputdict or LAT in inputdict or LON in inputdict:
             try:
-                tr_selector = TrSelector(params[MODEL], params[LON],
-                                         params[LAT], params.get(LON2),
-                                         params.get(LAT2))
+                tr_selector = TrSelector(inputdict[MODEL], inputdict[LON],
+                                         inputdict[LAT], inputdict.get(LON2),
+                                         inputdict.get(LAT2))
             except KeyError:
                 raise Exception('at least a tectonic regionalisation name '
                                 '(model), a longitude and a '
@@ -334,9 +424,36 @@ class GsimsView(EgsimQueryView):
         # Note that from the API, GSIM, IMT should be either provided or not
         # But from the frontend, they might be empty lists. Thus use get or
         # None:
-        return list(gsim_names(params.get(GSIM) or None,
-                               params.get(IMT) or None,
-                               params.get(TRT) or None, tr_selector))
+        return list(gsim_names(inputdict.get(GSIM), inputdict.get(IMT),
+                               inputdict.get(TRT), tr_selector))
+
+    @classmethod
+    def to_rows(cls, process_result):
+        return [[str(_)] for _ in process_result]
+
+
+class TrellisView(EgsimQueryView):
+    '''EgsimQueryView subclass for generating Trellis plots responses'''
+
+    formclass = TrellisForm
+    # url will be used in views. Do not end with '/':
+    url = 'query/trellis'
+
+    @classmethod
+    def process(cls, inputdict):
+        return egsim_smtk.get_trellis(inputdict)
+
+    @classmethod
+    def to_rows(cls, process_result):
+
+        yield ['gsim', 'magnitude', 'distance', 'vs30']
+        yield chain(repeat('', 4), [process_result['xlabel']],
+                    process_result['xvalues'])
+        for obj in process_result['figures']:
+            mag, dist, vs30, ylabel = obj['magnitude'], obj['distance'],\
+                obj['vs30'], obj['ylabel']
+            for gsim, values in obj['yvalues'].items():
+                yield chain([gsim, mag, dist, vs30, ylabel], values)
 
 
 class GmdbPlotView(EgsimQueryView):
@@ -348,22 +465,8 @@ class GmdbPlotView(EgsimQueryView):
     url = 'query/gmdbplot'
 
     @classmethod
-    def process(cls, params):
-        try:
-            return egsim_smtk.get_gmdbplot(params)
-        except SyntaxError as serr:
-            # catch SyntaxErrors as they are most likely due to
-            # selection errors, and raise appropriate Json response
-            # bypassing default middleware (if installed):
-            msg = 'Selection expression error: %s ("%s")' % (serr.msg,
-                                                             serr.text)
-            return ExceptionHandlerMiddleware.jsonerr_response(Exception(msg))
-        except NameError as nerr:
-            # catch SyntaxErrors as they are most likely due to
-            # selection errors, and raise appropriate Json response
-            # bypassing default middleware (if installed):
-            msg = 'Selection expression error: "%s"' % str(nerr)
-            return ExceptionHandlerMiddleware.jsonerr_response(Exception(msg))
+    def process(cls, inputdict):
+        return egsim_smtk.get_gmdbplot(inputdict)
 
 
 class ResidualsView(EgsimQueryView):
@@ -373,8 +476,21 @@ class ResidualsView(EgsimQueryView):
     url = 'query/residuals'
 
     @classmethod
-    def process(cls, params):
-        return egsim_smtk.get_residuals(params)
+    def process(cls, inputdict):
+        return egsim_smtk.get_residuals(inputdict)
+
+    @classmethod
+    def to_rows(cls, process_result):
+        stats = egsim_smtk.RESIDUALS_STATS
+        yield chain(['gsim', 'imt', 'type'], stats)
+        for gsim, gsims in process_result.items():
+            for imt, imts in gsims.items():
+                for type_, values in imts.items():
+                    yield chain([gsim, imt, type_],
+                                (values[stat] for stat in stats),
+                                [values['xlabel']], values['x'])
+                    yield chain(repeat('', 9), [values['ylabel']],
+                                values['y'])
 
 
 class TestingView(EgsimQueryView):
@@ -384,5 +500,15 @@ class TestingView(EgsimQueryView):
     url = 'query/testing'
 
     @classmethod
-    def process(cls, params):
-        return egsim_smtk.testing(params)
+    def process(cls, inputdict):
+        return egsim_smtk.testing(inputdict)
+
+    @classmethod
+    def to_rows(cls, process_result):
+        fitmeasures = process_result['Measure of fit']
+        dbrecords = process_result['Db records']
+        yield ['measure of fit', 'imt', 'gsim', 'db records', 'value']
+        for mof, mofs in fitmeasures.items():
+            for imt, imts in mofs.items():
+                for gsim, value in imts.items():
+                    yield [mof, imt, gsim, dbrecords[gsim], value]

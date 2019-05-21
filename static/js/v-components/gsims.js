@@ -113,6 +113,10 @@ Vue.component('gsims', {
             this.form.trt.val = Object.keys(overlays).filter(layerName => {
                return overlays[layerName]._map ? true : false;
             });
+            // make imt hidden, this will NOT send the parameter to the
+            // client (=> do not filter by IMTs)
+            this.form.imt.is_hidden = true;
+            // send request:
             this.post(this.url, this.form).then(response => {
                 if(response.data && response.data.length){
                     this.openPopup(event, response.data);

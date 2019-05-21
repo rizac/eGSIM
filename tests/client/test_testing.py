@@ -1,14 +1,16 @@
 '''
-Tests the client for the gsims service
+Tests the client for the testing service API
 
 Created on 22 Oct 2018
 
 @author: riccardo
 '''
 import pytest
-from mock import patch
+from mock import patch, PropertyMock
 
-from egsim.core.utils import querystring
+from egsim.core.utils import querystring, get_gmdb_names
+from egsim.forms.forms import TestingForm
+from egsim.forms.fields import GmdbField
 
 
 @pytest.mark.django_db
@@ -19,44 +21,61 @@ class Test:
     request_filename = 'request_testing.yaml'
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
-    # @patch('egsim.core.utils.get_gmdb_path')
-    @patch('egsim.forms.fields.get_gmdb_path')
-    def tst_residuals_service_err(self, mock_gmdb_path, testdata, areequal,  # django_db_setup,
-                                  client):
-        '''tests the gmdbplot API service.'''
-        mock_gmdb_path.return_value = testdata.path(self.gmdb_fname)
-        print(testdata.path(self.gmdb_fname))
+    @pytest.fixture(autouse=True)
+    def setup_gmdb(self, testdata):  # pylint: disable=no-self-use
+        '''This fixtures mocks the gmdb and it's called before each test
+        of this class'''
+        gmdbpath = testdata.path(self.gmdb_fname)
+
+        class MockedGmdbField(GmdbField):
+            '''Mocks GmdbField'''
+            def __init__(self, *a, **v):
+                v['choices'] = [(_, _) for _ in get_gmdb_names(gmdbpath)]
+                super(MockedGmdbField, self).__init__(*a, **v)
+
+            def _get_gmdbpath(self):
+                return gmdbpath
+
+        class MockedTestingForm(TestingForm):
+            '''mocks GmdbPlot'''
+            gmdb = MockedGmdbField()
+
+        with patch('egsim.views.TestingView.formclass',
+                   new_callable=PropertyMock) as mock_gmdb_field:
+            mock_gmdb_field.return_value = MockedTestingForm
+            yield
+
+    def test_residuals_service_err(self,
+                                   # pytest fixtures:
+                                   testdata, areequal, client):
+        '''tests errors in the testing API service.'''
         inputdic = testdata.readyaml(self.request_filename)
+        inputdic.pop('fit_measure')
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
-        exp_json = {'error': {'code': 400,
-                              'message': 'Input validation error in plot_type',
-                              'errors': [{'domain': 'plot_type',
-                                          'message': 'This field is required.',
-                                          'reason': 'required'}]}}
-
+        exp_json = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in fit_measure',
+                'errors': [
+                    {
+                        'domain': 'fit_measure',
+                        'message': 'This field is required.',
+                        'reason': 'required'
+                    }
+                ]
+            }
+        }
         assert areequal(json_, exp_json)
 
-        inputdic = dict(inputdic)
-        for ddd in ['dist', 'distance_type']:
-            inputdic.pop('dist', None)
-        inputdic['plot_type'] = 'dist'
-        resp2 = client.post(self.url, data=inputdic,
-                            content_type='application/json')
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
-        assert resp1.status_code == resp2.status_code == 400
-        
-
-    @patch('egsim.forms.fields.get_gmdb_path')
-    def test_testing_service(self, mock_gmdb_path, testdata, areequal,  # django_db_setup,
-                             client):
+    def test_testing_service(self,
+                             # pytest fixtures:
+                             testdata, areequal, client):
         '''tests the gmdbplot API service.'''
-        mock_gmdb_path.return_value = testdata.path(self.gmdb_fname)
-        print(testdata.path(self.gmdb_fname))
         inputdic = testdata.readyaml(self.request_filename)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -66,5 +85,16 @@ class Test:
         json_ = resp1.json()
         assert isinstance(json_, dict) and \
             all(isinstance(_, dict) for _ in json_.values())
-        
-        
+
+        # test text format:
+        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+                            content_type='text/csv')
+        assert resp2.status_code == 200
+        assert resp2.content == b'measure of fit,imt,gsim,db records,value\r\n'
+        # test with no selexpr. Unfortunately, no matching db rows
+        # found. FIXME: try with some other gsim?
+        resp2 = client.post(self.url, data=dict(inputdic, format='text',
+                                                selexpr=''),
+                            content_type='text/csv')
+        assert resp2.status_code == 200
+        assert resp2.content == b'measure of fit,imt,gsim,db records,value\r\n'

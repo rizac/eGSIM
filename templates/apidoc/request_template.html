@@ -1,7 +1,7 @@
 
 <thead>
 	<tr>
-		<th>Parameter<br><span class='text-muted'>Alternative name</span></th>
+		<th>Parameter<br><span class='text-muted'>Alternative name(s)</span></th>
 		<th>Description</th>
 		<!--  <th>Optional</th>-->
 	</tr>
@@ -10,8 +10,7 @@
 	{% for key, value in form.items %}{% if not value.is_hidden %}
 	<tr>
 	<td>
-		{{ key }}
-		{% if value.name2 %}<br><span class='text-nowrap text-muted'>{{ value.name2 }}</span>{% endif %}
+		{{ key }}{% for name2 in value.opt_names %}<br><span class='text-nowrap text-muted'>{{ name2 }}</span>{% endfor %}
 	</td>
 	<td>
 		{% if not value.attrs.required or value.val or value.val == 0 %}

@@ -11,7 +11,7 @@ import pytest
 from yaml.error import YAMLError
 from openquake.hazardlib import imt
 
-from egsim.forms.forms import TrellisForm, GsimImtForm
+from egsim.forms.forms import TrellisForm, GsimImtForm, ResidualsForm, TestingForm
 
 
 GSIM, IMT = 'gsim', 'imt'
@@ -49,31 +49,54 @@ def test_gsimimt_form_invalid(areequal):  # areequal: fixture in conftest.py
     form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
     assert not form.is_valid()
     err = json.loads(form.errors.as_json())
-    expected_err = json.loads('{"imt": '
-                              '[{"message": "This field is required.", '
-                              '"code": "required"}]}')
+    expected_err = {
+        "imt": [
+            {
+                "message": "This field is required.",
+                "code": "required"
+            }
+        ]
+    }
     assert areequal(err, expected_err)
 
     form = GsimImtForm({GSIM: ['abcde', 'BindiEtAl2014Rjb']})
     assert not form.is_valid()
     err = json.loads(form.errors.as_json())
-    expected_err = json.loads('{"gsim": [{"message": "Select a valid choice. '
-                              'abcde is not one of the available choices.", '
-                              '"code": "invalid_choice"}], "imt": '
-                              '[{"message": "This field is required.",'
-                              ' "code": "required"}]}')
+    expected_err = {
+        "gsim": [
+            {
+                "message": ("Select a valid choice. abcde is not one of the "
+                            "available choices."),
+                "code": "invalid_choice"
+            }
+        ],
+        "imt": [
+            {
+                "message": "This field is required.",
+                "code": "required"
+            }
+        ]
+    }
     assert areequal(err, expected_err)
 
     form = GsimImtForm({IMT: ['abcde', 'BindiEtAl2014Rjb']})
     assert not form.is_valid()
     err = json.loads(form.errors.as_json())
-    expected_err = json.loads('{"gsim": '
-                              '[{"message": "This field is required.", '
-                              '"code": "required"}], '
-                              '"imt": '
-                              '[{"message": "Select a valid choice. abcde '
-                              'is not one of the available choices."'
-                              ', "code": "invalid_choice"}]}')
+    expected_err = {
+        'gsim': [
+            {
+                'message': 'This field is required.',
+                'code': 'required'
+            }
+        ],
+        'imt': [
+            {
+                'message': ('Select a valid choice. abcde is not one of the '
+                            'available choices.'),
+                'code': 'invalid_choice'
+            }
+        ]
+    }
     assert areequal(err, expected_err)
 
     form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
@@ -90,16 +113,22 @@ def test_gsimimt_form_invalid(areequal):  # areequal: fixture in conftest.py
 #     assert not form.is_valid()
 #     err = form.errors.as_json()
 
-    data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-            IMT: ['SA', 'PGA', 'PGV']}
+    data = {
+        GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+        IMT: ['SA', 'PGA', 'PGV']
+    }
     form = GsimImtForm(data)
     assert not form.is_valid()
-    err = json.loads(form.errors.as_json())
-    expected_err = \
-        json.loads('{"imt": [{"message": "intensity measure type \'SA\' '
-                   'must be specified with period(s)", "code": '
-                   '"sa_without_period"}]}')
-    assert areequal(err, expected_err)
+    expected_dict = {
+        'imt': [
+            {
+                'message': ('intensity measure type SA must be specified '
+                            'with period(s)'),
+                'code': 'sa_without_period'
+            }
+        ]
+    }
+    assert areequal(json.loads(form.errors.as_json()), expected_dict)
 
 
 @pytest.mark.django_db
@@ -108,7 +137,7 @@ def test_gsimimt_form_invalid(areequal):  # areequal: fixture in conftest.py
                             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']}),
                           ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA', 'PGA', 'PGV'],
-                            'sa_periods': '0.1:0.1:0.2'})])
+                            'sa_period': '0.1:0.1:0.2'})])
 def test_gsimimt_form_valid(data,
                             areequal):  # areequal: fixture in conftest.py
     form = GsimImtForm(data)
@@ -144,20 +173,46 @@ def test_trellisform_invalid(areequal):
     form = TrellisForm(data)
     assert not form.is_valid()
     err = form.errors.as_json()
-    expected_json = \
-        ('{"imt": [{"message": "intensity measure type \'SA\' must be '
-         'specified with period(s)", "code": "sa_without_period"}], '
-         '"plot_type": '
-         '[{"message": "This field is required.", "code": "required"}], '
-         '"magnitude": '
-         '[{"message": "This field is required.", "code": "required"}], '
-         '"distance": '
-         '[{"message": "This field is required.", "code": "required"}], '
-         '"dip": '
-         '[{"message": "This field is required.", "code": "required"}], '
-         '"aspect": '
-         '[{"message": "This field is required.", "code": "required"}]}')
-    assert areequal(json.loads(err), json.loads(expected_json))
+    expected_json = {
+        'imt': [
+            {
+                'message': ('intensity measure type SA must be specified '
+                            'with period(s)'),
+                'code': 'sa_without_period'
+            }
+        ],
+        'plot_type': [
+            {
+                'message': 'This field is required.',
+                'code': 'required'
+            }
+        ],
+        'magnitude': [
+            {
+                'message': 'This field is required.',
+                'code': 'required'
+            }
+        ],
+        'distance': [
+            {
+                'message': 'This field is required.',
+                'code': 'required'
+            }
+        ],
+        'aspect': [
+            {
+                'message': 'This field is required.',
+                'code': 'required'
+            }
+        ],
+        'dip': [
+            {
+                'message': 'This field is required.',
+                'code': 'required'
+            }
+        ]
+    }
+    assert areequal(json.loads(err), expected_json)
 
     # test invalid by supplying some parameters:
     data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
@@ -167,12 +222,21 @@ def test_trellisform_invalid(areequal):
     assert not form.is_valid()
 
     err = form.errors.as_json()
-    assert areequal(json.loads(err),
-                    json.loads('{"aspect": [{"message": "Enter a number.", '
-                               '"code": "invalid"}], '
-                               '"plot_type": '
-                               '[{"message": "This field is required.", '
-                               '"code": "required"}]}'))
+    expected_json = {
+        "aspect": [
+            {
+                "message": "Enter a number.",
+                "code": "invalid"
+            }
+        ],
+        "plot_type": [
+            {
+                "message": "This field is required.",
+                "code": "required"
+            }
+        ]
+    }
+    assert areequal(json.loads(err), expected_json)
 
 
 @pytest.mark.django_db
