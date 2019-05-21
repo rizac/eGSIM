@@ -164,6 +164,19 @@ def test_gsimimt_form_valid(data,
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('data',
+                         [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                            IMT: ['SA(r)', 'SA(0.2)', 'PGA', 'PGV']}),
+                          ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                            IMT: ['SA', 'PGA', 'PGV'],
+                            'sa_period': 'r:0.1:0.2'})])
+def test_gsimimt_form_invalid_periods(data,
+                                      areequal):  # areequal: fixture in conftest.py
+    form = GsimImtForm(data)
+    assert not form.is_valid()
+
+
+@pytest.mark.django_db
 def test_trellisform_invalid(areequal):
     '''Tests trellis form invalid.
     :param comparator: pytest fixture defined in conftest.py, it is used to
