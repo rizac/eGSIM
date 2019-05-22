@@ -150,9 +150,9 @@ class Test:
         assert areequal(resp3.json(), expected_json)
 
     @pytest.mark.parametrize('trellis_type', ['s', 'ss'])
-    def test_trellis_spec(self,
-                          # pytest fixtures:
-                          client, testdata, areequal, trellis_type):
+    def test_trellis_spectra(self,
+                             # pytest fixtures:
+                             client, testdata, areequal, trellis_type):
         '''test trellis magnitude-distance spectra and magnitude-distance
         stdev'''
         inputdic = dict(testdata.readyaml(self.request_filename),
@@ -183,6 +183,20 @@ class Test:
         assert resp2.status_code == 200
         assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
                          resp2.content)
+
+        # test for the frontend: supply SA incorrectly but check that it's
+        # ignored
+        resp1 = client.post(self.url, data=dict(inputdic, imt='SA',
+                                                sa_period='(set'),
+                            content_type='application/json')
+        result = resp1.json()
+        assert resp1.status_code == 200
+        # supply also wrong imt (ignored, SA is used):
+        resp1 = client.post(self.url, data=dict(inputdic, imt='PGV',
+                                                sa_period='(set'),
+                            content_type='application/json')
+        result = resp1.json()
+        assert resp1.status_code == 200
 
     def test_error(self,
                    # pytest fixtures:

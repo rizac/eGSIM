@@ -266,7 +266,7 @@ def testing(params):
                 ret.setdefault(moffit, {}).\
                                 setdefault(imt, {})[gsim] = value.item()
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             gsim_skipped[gsim] = str(exc)
 
     return {'Measure of fit': ret, 'Db records': obs_count,
