@@ -643,7 +643,7 @@ class ImtField(BaseImtField):
                 sa_str = '{}(%s)'.format(self.SA)
                 sa_periods = [sa_str % _ for _ in periods]
                 imts = ret[:saindex] + sa_periods + ret[saindex:]
-            except Exception:
+            except Exception as _:
                 raise ValidationError(
                     self.error_messages['invalid_sa_periods'],
                     code='invalid_sa_periods'

@@ -485,6 +485,7 @@ class TrellisForm(GsimImtForm):
         # and set the field (note NOT self.base_fields or self.declared_fields!
         # not to be required, so validation will be ok:
         if self.data.get('plot_type', '') in ('s', 'ss'):
+            self.fields['imt'].sa_periods_str = ''  # see superclass __init__
             self.data.pop('imt', None)
             self.data.pop('sa_period', None)
             self.fields['imt'].required = False
