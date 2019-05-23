@@ -173,13 +173,14 @@ magnitudes) the user input, depending on the request's method, should look like:
 vs30:
  - 560
  - 760
-magnitude: "3:0.5:5"
-</code></pre></td>
+magnitude: "3:0.5:5"</code></pre>
+	</td>
 	<td><pre><code class="language-json">{
   "dip": 45, 
   "vs30": [560, 760],
   "magnitude": "3:0.5:5"
-}</code></pre></td>
+}</code></pre>
+	</td>
 </tr>
 <tr>
 	<td>Web GUI components</td>
@@ -208,13 +209,13 @@ next section accept the following parameters in the request:
 <table class='request'>
 	{% include "apidoc/request_template.html" with form=form.format %}
 	<tfoot>
-	<tr>
-	<td colspan="2">
-	Note: the gsims service ignores {{ form.format.text_sep.name }} and
-	{{ form.format.text_dec.name }} also when format is text, as there
-	is only one column returned (the list of matching GMPEs)
-	</td>
-	</tr>
+		<tr>
+			<td colspan="2">
+			Note: the gsims service ignores {{ form.format.text_sep.name }} and
+			{{ form.format.text_dec.name }} also when format is text, as the list
+			of matching Gsims is returned "vertically" in a single column
+			</td>
+		</tr>
 	</tfoot>
 </table>
 

@@ -34,6 +34,7 @@ _COMMON_PARAMS = {
     'debug': settings.DEBUG,
     }
 
+# define the menu keys in the frontend:
 MENU_HOME = 'home'  # pylint: disable=invalid-name
 MENU_GSIMS = 'gsims'  # pylint: disable=invalid-name
 MENU_TRELLIS = 'trellis'  # pylint: disable=invalid-name
@@ -41,6 +42,8 @@ MENU_GMDB = 'gmdbplot'  # pylint: disable=invalid-name
 MENU_RES = 'residuals'  # pylint: disable=invalid-name
 MENU_TEST = 'testing'  # pylint: disable=invalid-name
 MENU_DOC = 'apidoc'  # pylint: disable=invalid-name
+
+# (See API_VIEWS at the end of the page)
 
 
 def main(request, selected_menu=None):
@@ -142,20 +145,6 @@ def home(request):
 def apidoc(request):
     '''view for the home page (iframe in browser)'''
     filename = 'apidoc.html'
-    # get the last modified attribute to print in the document
-    # FIXME: too much overhead?
-    last_modified = None
-    for tmp_ in settings.TEMPLATES:
-        for dir_ in tmp_.get('DIRS', []):
-            if isinstance(dir_, str) and os.path.isdir(dir_):
-                path = os.path.join(dir_, filename)
-                if os.path.isfile(path):
-                    try:
-                        last_modified = \
-                            date.fromtimestamp(os.path.getmtime(path))
-                        break
-                    except:  #  @IgnorePep8  pylint: disable=bare-except
-                        pass
     # baseurl is the base URL for the services explained in the tutorial
     # It is the request.META['HTTP_HOST'] key. But during testing, this
     # key is not present. Actually, just use a string for the moment:
@@ -172,7 +161,6 @@ def apidoc(request):
                   dict(_COMMON_PARAMS,
                        form=form,
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
-                       last_modified=last_modified,
                        baseurl=baseurl+"/query",
                        trellis='trellis', residuals='residuals',
                        gsimsel='gsims', test='testing',
@@ -218,6 +206,20 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
         'json': 'json',
         'text': 'csv'
     }
+
+    @classmethod
+    def get_req(cls, request, syntax='json'):
+        '''Returns the request re-formatted according to the given syntax
+        '''
+        dic = yaml_load(request.body.decode('utf-8'))
+        if syntax == 'json':
+            return JsonResponse(dic, safe=False)
+        else:
+            buffer = io.StringIO()
+            frm = cls.formclass(data=dic)  # pylint: disable=not-callable
+            frm.dump(buffer, syntax=syntax)
+            buffer.seek(0)
+            return HttpResponse(buffer, content_type='text/plain')
 
     def get(self, request):
         '''processes a get request'''
@@ -515,3 +517,15 @@ class TestingView(EgsimQueryView):
             for imt, imts in mofs.items():
                 for gsim, value in imts.items():
                     yield [mof, imt, gsim, dbrecords[gsim], value]
+
+
+# create a global dict of strings mapped to views
+# REMEMBER: Each key defines the endpoint of the URL, thus only alphanumeric
+# characters
+API_VIEWS = {
+    MENU_GSIMS: GsimsView,
+    MENU_TRELLIS: TrellisView,
+    MENU_GMDB: GmdbPlotView,
+    MENU_RES: ResidualsView,
+    MENU_TEST: TestingView
+}
