@@ -170,7 +170,7 @@ class BaseForm(Form):
             stringio = StringIO() if stream is None else stream
             for name, value in obj.items():
                 field = self.fields[name]
-                label = field.label + \
+                label = (field.label or '') + \
                     ('' if not field.help_text else ' (%s)' % field.help_text)
                 if label:
                     # replace html characters with their content
