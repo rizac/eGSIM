@@ -103,26 +103,26 @@ Vue.component('residualsplotdiv', {
             // setup  plots:
             var data = responseObject;
             var plots = [];
-            for (var gsim of Object.keys(data)){
-                for (var imt of Object.keys(data[gsim])){
-                    for (var type of Object.keys(data[gsim][imt])){
-                        var plotdata = data[gsim][imt][type];
-                        var scatterPlot = 'intercept' in plotdata && 'slope' in plotdata;
+            for (var imt of Object.keys(data)){
+                for (var type of Object.keys(data[imt])){
+            	    for (var gsim of Object.keys(data[imt][type])){
+                	    var plotdata = data[imt][type][gsim];
+                	    var hasLinearRegression = plotdata.intercept != null && plotdata.slope != null;
                         var mainTrace = {
-                            x: plotdata.x,
-                            y: plotdata.y,
-                            type: scatterPlot ? 'scatter' : 'bar',
+                            x: plotdata.xvalues,
+                            y: plotdata.yvalues,
+                            type: hasLinearRegression ? 'scatter' : 'bar',
                             name: type
                         };
                         var color = this.addLegend(mainTrace, mainTrace.name); //sets also mainTrace.legendgroup
                         // set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
                         mainTrace.marker = {color: this.colorMap.transparentize(color, .5)};
                         // add other stuff (normal distributions, regression lines, ...):
-                        if (scatterPlot){
+                        if (hasLinearRegression){  // scatter plot
                             mainTrace.mode = 'markers';  // hide connecting lines
                             mainTrace.marker.size = 10;
                             // show linear regression according to slope and intercept:
-                            var [min, max] = endpoints(plotdata.x);
+                            var [min, max] = endpoints(plotdata.xvalues);
                             var [slope, intercept] = [plotdata.slope, plotdata.intercept];
                             var linregtrace = {
                                 x: [min, max],
@@ -140,11 +140,12 @@ Vue.component('residualsplotdiv', {
                                 color: color,
                                 width: 2
                             };
-                            
-                            if ('mean' in plotdata && 'stddev' in plotdata){
+                            var hasMeanStdev = plotdata.mean != null && plotdata.stddev != null;
+                            var hasMedian = plotdata.median != null;
+                            if (hasMeanStdev){
                             
                                 // show normal distribution and reference normal dist. (mean=0 sigma=1)
-                                var x = resample(plotdata.x);
+                                var x = resample(plotdata.xvalues);
                                 var normdistline = {
                                     x: x,
                                     y: normdist(x, plotdata.mean, plotdata.stddev),
@@ -167,9 +168,9 @@ Vue.component('residualsplotdiv', {
         
                                 var traces = [mainTrace, normdistline, refnormdistline];
 
-                            }else if('median' in plotdata){
+                            }else if(hasMedian){
 
-                                var [min, max] = endpoints(plotdata.y);
+                                var [min, max] = endpoints(plotdata.yvalues);
                                 var medianline = {
                                     x: [plotdata.median, plotdata.median],
                                     y: [0, max],

@@ -200,6 +200,23 @@ The full description of the parameters and their constraints will be given in ea
 section below.
 </p>
 
+<h4 id="request-format">Formats</h4>
+
+eGSIM requests support two formats: JSON and TEXT/CSV. All services described in the
+next section accept the following parameters in the request:
+
+<table class='request'>
+	{% include "apidoc/request_template.html" with form=form.format %}
+	<tfoot>
+	<tr>
+	<td colspan="2">
+	Note: the gsims service ignores {{ form.format.text_sep.name }} and
+	{{ form.format.text_dec.name }} also when format is text, as there
+	is only one column returned (the list of matching GMPEs)
+	</td>
+	</tr>
+	</tfoot>
+</table>
 
 <h3 id="responsedata">Response data</h3>
 <p>
