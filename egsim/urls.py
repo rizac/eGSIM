@@ -40,5 +40,5 @@ urlpatterns = [  # pylint: disable=invalid-name
 for key, view in views.API_VIEWS.items():
     urlpatterns.append(url(r'^query/%s/?$' % key, view.as_view(), name=key))
     # append the url for querying the form parameters:
-    urlpatterns.append(url(r'^data/query/%s/self/(?P<syntax>[a-zA-Z]+)/?$' % key,
-                           view.get_req, name=key+"/self"))
+    urlpatterns.append(url(r'^data/query/%s/toyaml/?$' % key,
+                           view.yaml_response, name=key+".toyaml"))

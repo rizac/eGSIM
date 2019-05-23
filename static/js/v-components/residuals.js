@@ -34,7 +34,7 @@ Vue.component('residuals', {
         },
         fetchYaml: function(){
         	var form = this.form;
-            this.post("data/" + this.url + "/self/yaml", form).then(response => {
+            this.post("data/" + this.url + "/toyaml", form).then(response => {
                 if (response && response.data){
                     this.yamlData = response.data;
                 } 
@@ -99,7 +99,8 @@ Vue.component('residuals', {
 
     </form>
     </transition>
-    <textarea v-html="yamlData" style='width:10em;height:10em'></textarea>
+    <visualizerdiv :data="yamlData" :filename="this.$options.name + '.yaml'" style='width:10em;height:10em'></visualizerdiv>
+    <visualizerdiv :data="form" :filename="this.$options.name + '.json'" style='width:10em;height:10em'></visualizerdiv>
     
 
     <residualsplotdiv :data="responseData" :filename="this.$options.name"

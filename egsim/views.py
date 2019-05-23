@@ -208,18 +208,15 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
     }
 
     @classmethod
-    def get_req(cls, request, syntax='json'):
+    def yaml_response(cls, request):
         '''Returns the request re-formatted according to the given syntax
         '''
         dic = yaml_load(request.body.decode('utf-8'))
-        if syntax == 'json':
-            return JsonResponse(dic, safe=False)
-        else:
-            buffer = io.StringIO()
-            frm = cls.formclass(data=dic)  # pylint: disable=not-callable
-            frm.dump(buffer, syntax=syntax)
-            buffer.seek(0)
-            return HttpResponse(buffer, content_type='text/plain')
+        buffer = io.StringIO()
+        frm = cls.formclass(data=dic)  # pylint: disable=not-callable
+        frm.yamldump(buffer)
+        buffer.seek(0)
+        return HttpResponse(buffer, content_type='application/x-yaml')
 
     def get(self, request):
         '''processes a get request'''
