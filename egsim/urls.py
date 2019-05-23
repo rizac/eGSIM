@@ -24,7 +24,7 @@ from . import views
 
 urlpatterns = [  # pylint: disable=invalid-name
     url(r'^admin/', admin.site.urls),  # added by default by django
-    url(r'^/?$', RedirectView.as_view(pattern_name='main', url='home',
+    url(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                     permanent=False)),
     # main page entry point:
     url(r'^(?P<selected_menu>[a-zA-Z]+)/?$', views.main, name='main'),
@@ -37,20 +37,8 @@ urlpatterns = [  # pylint: disable=invalid-name
 ]
 
 # REST APIS:
-urlpatterns.extend([
-    url(r'^%s/?$' % views.GsimsView.url,  # query/gsims
-        views.GsimsView.as_view(),
-        name=views.GsimsView.url.split('/')[-1]),
-    url(r'^%s/?$' % views.TrellisView.url,  # query/trellis
-        views.TrellisView.as_view(),
-        name=views.TrellisView.url.split('/')[-1]),
-    url(r'^%s/?$' % views.GmdbPlotView.url,  # query/gmdbplot
-        views.GmdbPlotView.as_view(),
-        name=views.GmdbPlotView.url.split('/')[-1]),
-    url(r'^%s/?$' % views.ResidualsView.url,  # query/residuals
-        views.ResidualsView.as_view(),
-        name=views.ResidualsView.url.split('/')[-1]),
-    url(r'^%s/?$' % views.TestingView.url,  # query/testing
-        views.TestingView.as_view(),
-        name=views.TestingView.url.split('/')[-1]),
-])
+for key, view in views.API_VIEWS.items():
+    urlpatterns.append(url(r'^query/%s/?$' % key, view.as_view(), name=key))
+    # append the url for querying the form parameters:
+    urlpatterns.append(url(r'^data/query/%s/self/(?P<syntax>[a-zA-Z]+)/?$' % key,
+                           view.get_req, name=key+"/self"))

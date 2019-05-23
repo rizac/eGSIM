@@ -19,7 +19,8 @@ Vue.component('residuals', {
         return {
             responseDataEmpty: true,
             formHidden: false,
-            responseData: this.response
+            responseData: this.response,
+            yamlData: ''
         }
     },
     methods: {
@@ -30,7 +31,15 @@ Vue.component('residuals', {
                     this.responseData = response.data;
                 } 
             });
-        }
+        },
+        fetchYaml: function(){
+        	var form = this.form;
+            this.post("data/" + this.url + "/self/yaml", form).then(response => {
+                if (response && response.data){
+                    this.yamlData = response.data;
+                } 
+            });
+        },
     },
     watch: {
         responseData: {
@@ -90,6 +99,8 @@ Vue.component('residuals', {
 
     </form>
     </transition>
+    <textarea v-html="yamlData" style='width:10em;height:10em'></textarea>
+    
 
     <residualsplotdiv :data="responseData" :filename="this.$options.name"
         class='position-absolute pos-0 m-0' style='z-index:1'>
@@ -97,5 +108,10 @@ Vue.component('residuals', {
             <button @click='formHidden=false' class='btn btn-sm btn-outline-primary'><i class='fa fa-wpforms'></i> params</button>
         </slot>
     </residualsplotdiv>
-</div>`
+</div>`,
+	mounted: function () {
+		this.$nextTick(function () {
+    		this.fetchYaml();
+    	});
+	}
 })
