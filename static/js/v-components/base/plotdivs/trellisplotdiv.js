@@ -61,43 +61,45 @@ Vue.component('trellisplotdiv', {
             // setup  label texts:
             var data = responseObject;
             var plots = [];
-            for (var fig of data['figures']){
-                var params = {};
-                // params.xlabel = data['xlabel'];
-                params.imt = fig.ylabel;
-                params.magnitude = fig.magnitude;
-                params.distance = fig.distance;
-                params.vs30 = fig.vs30;
-                
-                var traces = Object.keys(fig.yvalues).map(function(name){
-                    // FIXME: check if with arrow function we can avoid apply and this
-                    // to test that plots are correctly placed, uncomment this:
-                    // var name = `${name}_${params.magnitude}_${params.distance}_${params.vs30}`;
-                    var trace = {
-                            x: data.xvalues,
-                            y: fig.yvalues[name],
-                            type: 'scatter',
-                            mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
-                            name: name
-                    };
-                    var color = this.addLegend(trace, name);  // Sets also trace.legendgroup = name
-                    if (data.xvalues.length == 1){
-                        trace.marker = {color: color};
-                    }else{
-                        trace.line = {color: color};
-                    }
-                    return trace;
-                }, this);
-                plots.push({
-                    traces: traces,
-                    params: params,
-                    xaxis: {
-                        title: data['xlabel']
-                    },
-                    yaxis: {
-                        title: params.imt, type: 'log'
-                    }
-                });
+            for (var imt of data.imts){
+                var figures = data[imt];
+                for (var fig of figures){
+                    var params = {};
+                    params.imt = imt;
+                    params.magnitude = fig.magnitude;
+                    params.distance = fig.distance;
+                    params.vs30 = fig.vs30;
+                    
+                    var traces = Object.keys(fig.yvalues).map(function(name){
+                        // FIXME: check if with arrow function we can avoid apply and this
+                        // to test that plots are correctly placed, uncomment this:
+                        // var name = `${name}_${params.magnitude}_${params.distance}_${params.vs30}`;
+                        var trace = {
+                                x: data.xvalues,
+                                y: fig.yvalues[name],
+                                type: 'scatter',
+                                mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
+                                name: name
+                        };
+                        var color = this.addLegend(trace, name);  // Sets also trace.legendgroup = name
+                        if (data.xvalues.length == 1){
+                            trace.marker = {color: color};
+                        }else{
+                            trace.line = {color: color};
+                        }
+                        return trace;
+                    }, this);
+                    plots.push({
+                        traces: traces,
+                        params: params,
+                        xaxis: {
+                            title: data.xlabel
+                        },
+                        yaxis: {
+                            title: fig.ylabel, type: 'log'
+                        }
+                    });
+                }
             }
             return plots;
         },

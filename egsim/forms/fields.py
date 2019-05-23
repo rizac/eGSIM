@@ -461,7 +461,7 @@ class MeasureOfFitField(MultipleChoiceField):
                                GSIM_MODEL_DATA_TESTS["LLH"]),
                      MOF.MLLH: ("Multivariate Log-Likelihood",
                                 GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
-                     MOF.EDR: ("Euclidean Distance-Based",
+                     MOF.EDR: ("Euclidean Distance-Based Ranking",
                                GSIM_MODEL_DATA_TESTS["EDR"])
                      }
 

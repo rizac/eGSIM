@@ -597,10 +597,17 @@ class FormatForm(BaseForm):
     __additional_fieldnames__ = {}
 
     format = ChoiceField(required=False, initial='json',
+                         label='The format of the data returned',
                          choices=[('json', 'json'), ('text', 'text/csv')])
 
-    text_sep = TextSepField(required=False, initial='comma')
-    text_dec = TextDecField(required=False, initial='period')
+    text_sep = TextSepField(required=False, initial='comma',
+                            label='The (column) separator character',
+                            help_text=('Ignored if the requested '
+                                       'format is not text'))
+    text_dec = TextDecField(required=False, initial='period',
+                            label='The decimal separator character',
+                            help_text=('Ignored if the requested '
+                                       'format is not text'))
 
     def clean(self):
         super().clean()
