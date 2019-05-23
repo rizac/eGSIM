@@ -100,27 +100,31 @@ The number of generated Trellis plots depends on the requested Intensity measure
 <p>
 Trellis plot data returned in JSON format will have the following structure:
 </p>
-<pre><code class="language-json">{
-	"xvalues": [2.905, 3.771, ... ],
-	"xlabel": "Rupture Dist. (km)",
-	"figures": [
-			{
-				"yvalues":{
-					"AkkarEtAl2013": [0.3811, 0.3812, ...],
-					"CauzziEtAl2014": [0.283, 0.283, ...],
-					...
-				},
-				"ylabel": "Median PGA (g)",
-				"magnitude": 5,
-				"distance": null,
-				"vs30": 760
-			},
-			{
-				...
-			},
-			...
-		]
-	}
+<pre><code class="language-python">{
+    "xvalues": [2.905, 3.771, ... ],
+    "xlabel": "Rupture Dist. (km)",
+    "imts": ["PGA", "PGV"],
+    "PGA": [
+        {
+            "yvalues": {
+                "AkkarEtAl2013": [0.3811, 0.3812, ...],
+                "CauzziEtAl2014": [0.283, 0.283, ...],
+                ...
+            },
+            "ylabel": "Median PGA (g)",
+            "magnitude": 5,    # it might be null
+            "distance": null,  # it might be null
+            "vs30": 760
+        },
+        {
+           # ... (same Object type as above) ...
+        },
+        ...
+    ],
+    "PGV": [
+        # ... (same Array type as above) ...
+    ],
+    ...
 }</code></pre>
 <p class='footnote'>
 Notes: All plots share the same x axis and x values, thus for performance reasons
@@ -138,18 +142,21 @@ Trellis plot data returned in CSV format will have the following structure.
 <span class='yvalues'></span> = y values (first cell is the y label)
 </p>
 
+
 <table class='csv'>
 <tr>
-	<td>gsim:</td>
-	<td>magnitude:</td>
-	<td>distance:</td>
-	<td>vs30:</td>
+	<td>imt</td>
+	<td>gsim</td>
+	<td>magnitude</td>
+	<td>distance</td>
+	<td>vs30</td>
 	<td></td>
 	<td></td>
 	<td></td>
 	<td></td>
 </tr>
 <tr>
+	<td></td>
 	<td></td>
 	<td></td>
 	<td></td>
@@ -160,6 +167,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
+	<td>PGA</td>
 	<td>AkkarEtAl2013</td>
 	<td>5</td>
 	<td></td>
@@ -170,6 +178,7 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
+	<td>PGA</td>
 	<td>AkkarEtAl2013</td>
 	<td>5.5</td>
 	<td></td>
@@ -184,12 +193,14 @@ Trellis plot data returned in CSV format will have the following structure.
 	<td>&hellip;</td>
 	<td>&hellip;</td>
 	<td>&hellip;</td>
+	<td>&hellip;</td>
 	<td class='yvalues'>&hellip;</td>
 	<td class='yvalues'>&hellip;</td>
 	<td class='yvalues'>&hellip;</td>
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
+	<td>PGA</td>
 	<td>CauzziEtAl2014</td>
 	<td>5</td>
 	<td></td>

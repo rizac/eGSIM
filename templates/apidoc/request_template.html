@@ -32,8 +32,7 @@
 				a list of {{ value.choices|length }} choices (too long to show)
 			{% else %}
 				{% for nme, lbl in value.choices %}
-					{% if not forloop.first %}, {% endif %}
-					{{ nme }} {% if lbl and lbl != nme %}({{ lbl }}){% endif %}
+					<span class="token string"><b>{{ nme }}</b></span>{% if lbl and lbl != nme %} ({{ lbl }}){% endif %}{% if not forloop.last %}, {% endif %}
 				{% endfor %}
 			{% endif %}
 			{% if value.choices|length == 1 %}

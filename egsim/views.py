@@ -165,7 +165,8 @@ def apidoc(request):
         MENU_TRELLIS: TrellisView.formclass().to_rendering_dict(False),
         MENU_GMDB: GmdbPlotView.formclass().to_rendering_dict(False),
         MENU_RES: ResidualsView.formclass().to_rendering_dict(False),
-        MENU_TEST: TestingView.formclass().to_rendering_dict(False)
+        MENU_TEST: TestingView.formclass().to_rendering_dict(False),
+        'format': FormatForm().to_rendering_dict(False)
     }
     return render(request, filename,
                   dict(_COMMON_PARAMS,
@@ -446,17 +447,19 @@ class TrellisView(EgsimQueryView):
     @classmethod
     def to_rows(cls, process_result):
 
-        yield ['gsim', 'magnitude', 'distance', 'vs30']
-        yield chain(repeat('', 4), [process_result['xlabel']],
+        yield ['imt', 'gsim', 'magnitude', 'distance', 'vs30']
+        yield chain(repeat('', 5), [process_result['xlabel']],
                     process_result['xvalues'])
-        for obj in process_result['figures']:
-            mag, dist, vs30, ylabel = obj['magnitude'], obj['distance'],\
-                obj['vs30'], obj['ylabel']
-            for gsim, values in obj['yvalues'].items():
-                yield chain([gsim, mag, dist, vs30, ylabel], values)
+        for imt in process_result['imts']:
+            imt_objs = process_result[imt]
+            for obj in imt_objs:
+                mag, dist, vs30, ylabel = obj['magnitude'], obj['distance'],\
+                    obj['vs30'], obj['ylabel']
+                for gsim, values in obj['yvalues'].items():
+                    yield chain([imt, gsim, mag, dist, vs30, ylabel], values)
 
 
-class GmdbPlotView(EgsimQueryView):
+class GmdbPlotView(EgsimQueryView):  # pylint: disable=abstract-method
     '''EgsimQueryView subclass for generating Gmdb's
        magnitude vs distance plots responses'''
 
@@ -482,15 +485,15 @@ class ResidualsView(EgsimQueryView):
     @classmethod
     def to_rows(cls, process_result):
         stats = egsim_smtk.RESIDUALS_STATS
-        yield chain(['gsim', 'imt', 'type'], stats)
-        for gsim, gsims in process_result.items():
-            for imt, imts in gsims.items():
-                for type_, values in imts.items():
-                    yield chain([gsim, imt, type_],
-                                (values[stat] for stat in stats),
-                                [values['xlabel']], values['x'])
-                    yield chain(repeat('', 9), [values['ylabel']],
-                                values['y'])
+        yield chain(['imt', 'type', 'gsim'], stats)
+        for imt, imts in process_result.items():
+            for type_, types in imts.items():
+                for gsim, res_plot in types.items():
+                    yield chain([imt, type_, gsim],
+                                (res_plot[stat] for stat in stats),
+                                [res_plot['xlabel']], res_plot['xvalues'])
+                    yield chain(repeat('', 9), [res_plot['ylabel']],
+                                res_plot['yvalues'])
 
 
 class TestingView(EgsimQueryView):

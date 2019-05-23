@@ -103,34 +103,38 @@ into three subplots:
 <p>
 Residuals plot data returned in JSON format will have the following structure:
 </p>
-<pre><code class="language-json">{
-	"AkkarEtAl2013": {
-		"PGA": {
-			"Intra event": {
-				"xvalues": [4, 4, 3.9, ...],
-				"xlabel": "Magnitude",
-				"yvalues": [-2.11, -2.27, -2.08, ...],
-				"ylabel": "Z (PGA)",
-				"slope": 0.269,
-				"intercept": -1.998,
-				"pvalue": 6.6e-8,
-				"median": null,
-				"mean": null,
-				"stdev": null
-			}
-		},
-		"PGV": {
-			...
-		},
-		...
-	},
-	"CauzziEtAl2014": {
-		...
-	},
-	...
+<pre><code class="language-python">{
+    "PGA": {
+        "Intra event": {
+            "AkkarEtAl2013": {
+                "xvalues": [4, 4, 3.9, ...],
+                "xlabel": "Magnitude",
+                "yvalues": [-2.11, -2.27, -2.08, ...],
+                "ylabel": "Z (PGA)",
+                "slope": 0.269,      # it might be null
+                "intercept": -1.998, # it might be null
+                "pvalue": 6.6e-8,    # it might be null
+                "median": null,      # it might be null
+                "mean": null,        # it might be null
+                "stddev": null        # it might be null
+            },
+            "CauzziEtAl2014": {
+                # ... (same Object type as above) ...
+            },
+            ...
+        },
+        "Inter event": {
+            # ... (same Object types as above) ...
+        },
+        ...
+    },
+    "PGV": {
+        # ... (same Object type as above) ...
+    },
+    ...
 }</code></pre>
 <p class='footnote'>
-Notes: the parameters from slope, intercept, pvalue, median, stdev are null for specific
+Notes: the parameters from slope, intercept, pvalue, median, stddev are null for specific
 plot types
 </p>
 
@@ -145,20 +149,36 @@ csv table).
 
 <table class='csv'>
 <tr>
-	<td>gsim:</td>
-	<td>imt:</td>
-	<td>type:</td>
-	<td>mean:</td>
-	<td>stddev:</td>
-	<td>median:</td>
-	<td>slope:</td>
-	<td>intercept:</td>
-	<td>pvalue:</td>
+	<td>imt</td>
+	<td>type</td>
+	<td>gsim</td>
+	<td>mean</td>
+	<td>stddev</td>
+	<td>median</td>
+	<td>slope</td>
+	<td>intercept</td>
+	<td>pvalue</td>
 	<td></td>
 	<td></td>
 	<td></td>
 	<td></td>
 	<td></td>
+</tr>
+<tr>
+	<td>PGA</td>
+	<td>Intra event</td>
+	<td>AkkarEtAl2013</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td>0.269</td>
+	<td>-1.998</td>
+	<td>6.6e-8</td>
+	<td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
 	<td></td>
@@ -170,22 +190,6 @@ csv table).
 	<td></td>
 	<td></td>
 	<td></td>	
-	<td class='xvalues'>Magnitude</td>
-	<td class='xvalues'>4</td>
-	<td class='xvalues'>4</td>
-	<td class='xvalues'>3.9</td>
-	<td class='xvalues'>&hellip;</td>
-</tr>
-<tr>
-	<td>AkkarEtAl2013</td>
-	<td>PGA</td>
-	<td>Intra event</td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td>0.269</td>
-	<td>-1.998</td>
-	<td>6.6e-8</td>
 	<td class='yvalues'>Z (PGA)</td>
 	<td class='yvalues'>-2.11</td>
 	<td class='yvalues'>-2.27</td>
@@ -193,15 +197,15 @@ csv table).
 	<td class='yvalues'>&hellip;</td>
 </tr>
 <tr>
+	<td>PGA</td>
+	<td>Intra event</td>
+	<td>CauzziEtAl2014</td>
 	<td></td>
 	<td></td>
 	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
+	<td>0.28</td>
+	<td>-2.281</td>
+	<td>1.21e-8</td>
 	<td class='xvalues'>Magnitude</td>
 	<td class='xvalues'>4</td>
 	<td class='xvalues'>4</td>
@@ -209,15 +213,47 @@ csv table).
 	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarEtAl2013</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td class='yvalues'>Z (PGA)</td>
+	<td class='yvalues'>-1.116</td>
+	<td class='yvalues'>-2.815</td>
+	<td class='yvalues'>-2.11</td>
+	<td class='yvalues'>&hellip;</td>
+</tr>
+<tr>
 	<td>PGA</td>
 	<td>Inter event</td>
+	<td>AkkarEtAl2013</td>
 	<td></td>
 	<td></td>
 	<td></td>
 	<td>0.103</td>
 	<td>-1.281</td>
 	<td>0.163</td>
+	<td class='xvalues'>Magnitude</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>4</td>
+	<td class='xvalues'>3.9</td>
+	<td class='xvalues'>&hellip;</td>
+</tr>
+<tr>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
 	<td class='yvalues'>Z (PGA)</td>
 	<td class='yvalues'>-1.832</td>
 	<td class='yvalues'>-1.913</td>
@@ -241,15 +277,15 @@ csv table).
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td>PGV</td>
+	<td>Intra event</td>
+	<td>AkkarEtAl2013</td>
 	<td></td>
 	<td></td>
 	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
+	<td>0.171</td>
+	<td>-2.12</td>
+	<td>0.002</td>
 	<td class='xvalues'>Magnitude</td>
 	<td class='xvalues'>4</td>
 	<td class='xvalues'>4</td>
@@ -257,15 +293,15 @@ csv table).
 	<td class='xvalues'>&hellip;</td>
 </tr>
 <tr>
-	<td>AkkarEtAl2013</td>
-	<td>PGV</td>
-	<td>Intra event</td>
 	<td></td>
 	<td></td>
 	<td></td>
-	<td>0.171</td>
-	<td>-2.12</td>
-	<td>0.002</td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
+	<td></td>
 	<td class='yvalues'>Z (PGV)</td>
 	<td class='yvalues'>-0.17</td>
 	<td class='yvalues'>-1.11</td>
@@ -287,37 +323,5 @@ csv table).
 	<td>&hellip;</td>
 	<td>&hellip;</td>
 	<td>&hellip;</td>
-</tr>
-<tr>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td class='xvalues'>Magnitude</td>
-	<td class='xvalues'>4</td>
-	<td class='xvalues'>4</td>
-	<td class='xvalues'>3.9</td>
-	<td class='xvalues'>&hellip;</td>
-</tr>
-<tr>
-	<td>CauzziEtAl2014</td>
-	<td>PGA</td>
-	<td>Intra event</td>
-	<td></td>
-	<td></td>
-	<td></td>
-	<td>0.28</td>
-	<td>-2.281</td>
-	<td>1.21e-8</td>
-	<td class='yvalues'>Z (PGA)</td>
-	<td class='yvalues'>-1.116</td>
-	<td class='yvalues'>-2.815</td>
-	<td class='yvalues'>-2.11</td>
-	<td class='yvalues'>&hellip;</td>
 </tr>
 </table>

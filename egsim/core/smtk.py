@@ -65,13 +65,15 @@ def get_trellis(params):
     trellisclass = params.pop('plot_type')
     isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
     ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
-    if not isdist and not ismag:  # magnitudedistancetrellis:
+    isspectra = not isdist and not ismag
+    if isspectra:  # magnitudedistancetrellis:
         # imt is actually a vector of periods for the SA. This is misleading in
         # smtk, might be better implemented (maybe future PR?)
         imt = _default_periods_for_spectra()
         params.pop(IMT, None)  # remove IMT and do not raise if not defined
+        imt_names = ['SA']
     else:
-        imt = params.pop(IMT)  # this raises if IMT is not in dict
+        imt = imt_names = params.pop(IMT)  # this raises if IMT is not in dict
 
     def jsonserialize(value):
         '''serializes a numpy scalr into python scalar, no-op if value is not
@@ -82,7 +84,8 @@ def get_trellis(params):
             return value
 
     ret = None
-    fig_key, col_key, row_key = 'figures', 'column', 'row'
+    figures = defaultdict(list)
+    col_key, row_key = 'column', 'row'
     for vs30, z1pt0, z2pt5 in zip(vs30s, z1pt0s, z2pt5s):
         params[VS30] = vs30
         params[Z1PT0] = z1pt0
@@ -100,27 +103,55 @@ def get_trellis(params):
             distiter = zip(distances, distances) if ismag else \
                 zip([None], [distances])
             for dist, dists in distiter:
-                func = trellisclass.from_rupture_properties
-                data = func(params, mags, dists, gsim, imt).to_dict()
+                trellis_obj = trellisclass.from_rupture_properties(params,
+                                                                   mags,
+                                                                   dists,
+                                                                   gsim,
+                                                                   imt)
+                
+                data = trellis_obj.to_dict()
+                #
+                # data = {
+                #    xlabel: string
+                #    xvalues: list of floats
+                #    figures: [
+                #        ylabel:
+                #        magnitude:
+                #        distance:
+                #        row:
+                #        column:
+                #        yvalues:
+                #    ]
+                # }
                 if ret is None:
-                    ret = {k: v for k, v in data.items() if k != fig_key}
-                    ret[fig_key] = []
-                    # change labels SA(1.0000) into SA(1.0):
-                    if 'xlabel' in ret:
-                        ret['xlabel'] = _relabel_sa(ret['xlabel'])
-                dst_figures = ret[fig_key]
-                src_figures = data[fig_key]
+                    ret = {
+                        'xlabel': _relabel_sa(data['xlabel']),
+                        'xvalues': data['xvalues']
+                    }
+                # get the imt. Unfortunately, the imt is "hidden"
+                # within each data.figures.ylabel, thus we have to
+                # re-evaluate them using trellis_obj._get_ylabel,
+                # which is what smtk uses
+                if not isspectra:
+                    ylabel2imt = {trellis_obj._get_ylabel(_): _ for _ in imt}
+
+                src_figures = data['figures']
                 for fig in src_figures:
                     fig.pop(col_key, None)
                     fig.pop(row_key, None)
                     fig[VS30] = jsonserialize(vs30)
                     fig[MAG] = jsonserialize(fig.get(MAG, mag))
                     fig[DIST] = jsonserialize(fig.get(DIST, dist))
-                    # change labels SA(1.0000) into SA(1.0):
-                    if 'ylabel' in fig:
-                        fig['ylabel'] = _relabel_sa(fig['ylabel'])
-                    dst_figures.append(fig)
-    return ret
+                    imt_name = \
+                        'SA' if isspectra else ylabel2imt[fig['ylabel']]
+                    figures[imt_name].append(fig)
+                    # change labels SA(1.0000) into SA(1.0) but at the end
+                    # because the ylabel might have been used
+                    # as key (see line above)
+                    fig['ylabel'] = _relabel_sa(fig['ylabel'])
+
+    # re-arrange labels FIXME: implement it in smtk?
+    return {**ret, **{'imts': imt_names}, **figures}
 
 
 def _default_periods_for_spectra():
@@ -207,19 +238,18 @@ def get_residuals(params):
         for imt in residuals.residuals[gsim]:
             kwargs['gmpe'] = gsim
             kwargs['imt'] = imt
-
             imt2 = _relabel_sa(imt)
-            ret[gsim][imt2] = func(**kwargs)
-            for val in ret[gsim][imt2].values():
+            res_plots = func(**kwargs)
+            for res_type, res_plot in res_plots.items():
                 for stat in RESIDUALS_STATS:
-                    val.setdefault(stat, None)
-            # re-label SA(0.20000) into SA(0.2):
-            if imt2 != imt:
-                for val in ret[gsim][imt2].values():
-                    if 'xlabel' in val:
-                        val['xlabel'] = _relabel_sa(val['xlabel'])
-                    if 'ylabel' in val:
-                        val['ylabel'] = _relabel_sa(val['ylabel'])
+                    res_plot.setdefault(stat, None)
+                if imt2 != imt:
+                    res_plot['xlabel'] = _relabel_sa(res_plot['xlabel'])
+                    res_plot['ylabel'] = _relabel_sa(res_plot['ylabel'])
+                # make also x and y keys consistent with trellis response:
+                res_plot['xvalues'] = res_plot.pop('x')
+                res_plot['yvalues'] = res_plot.pop('y')
+                ret[imt2][res_type][gsim] = res_plot
 
     return ret
 
@@ -251,7 +281,7 @@ def testing(params):
 
             obs_count[gsim] = numrecords
             if not numrecords:
-                gsim_skipped[gsim] = 'No matching Db record found'
+                gsim_skipped[gsim] = 'No matching db record found'
                 continue
 
             gsim_values = []
@@ -365,6 +395,15 @@ def _itervalues(gsim, key, name, result):
     #        }
     #     }
     # }
+
+    def title(string):
+        '''Makes the string with the first letter of the first word capitalized
+        only and replaces 'std dev' with 'stddev' for consistency with
+        residuals
+        '''
+        return (string[:1].upper() + string[1:].lower()).replace('std dev',
+                                                                 'stddev')
+
     gsim_result = result[gsim]
     if key == MOF.RES:
         for imt, imt_result in gsim_result.items():
@@ -372,7 +411,7 @@ def _itervalues(gsim, key, name, result):
             for type_, type_result in imt_result.items():
                 for meas, value in type_result.items():
                     moffit = "%s %s %s" % (name, type_, meas)
-                    yield moffit, imt2, value
+                    yield title(moffit), imt2, value
     elif key == MOF.LH:
         for imt, imt_result in gsim_result.items():
             imt2 = _relabel_sa(imt)
@@ -381,17 +420,17 @@ def _itervalues(gsim, key, name, result):
                 p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
                 for kkk, vvv in (('Median', p50), ('IQR', p75-p25)):
                     moffit = "%s %s %s" % (name, type_, kkk)
-                    yield moffit, imt2, vvv
+                    yield title(moffit), imt2, vvv
     elif key in (MOF.LLH, MOF.MLLH):
         for imt, value in gsim_result.items():
             imt2 = _relabel_sa(imt)
             moffit = name
-            yield moffit, imt2, value
+            yield title(moffit), imt2, value
     elif key == MOF.EDR:
         for type_, value in gsim_result.items():
             moffit = "%s %s" % (name, type_)
             imt = ""  # hack
-            yield moffit, imt, value
+            yield title(moffit), imt, value
 
 
 def get_selexpr(gsim, user_selexpr=None):

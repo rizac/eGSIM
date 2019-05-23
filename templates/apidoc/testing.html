@@ -50,40 +50,46 @@ Each MOF is then mapped to an Object where each chosen IMT is in turn mapped
 to an Object of the choosen GMPEs, each mapped to the value of the GMPE
 for the current MOF and IMT. Example:
 </p>
-
-<pre><code class="language-json">{
-	"Residuals Inter event Mean": {
-		# Map each IMT to an Object of {GMPE: value}.
-		# The same type of object is returned for all following MOF keys
-		# and it will be indicated below with {...} 
-		"PGA": {
-			"BindiEtAl2011": 0.01,
-			"CauzziEtAl2014": 0.02,
-			# ...
+            
+<pre><code class="language-python">{
+	"Measure of fit": 
+		"Residuals inter event mean": {
+			"PGA": {
+				"BindiEtAl2011": 0.01,
+				"CauzziEtAl2014": 0.02,
+				...
 			},
-		... (iterate for all available IMTs)
+			"PGV": {
+				# (... same Object type as above ...)
+			},
+			...
+		},
+		"Residuals inter event stddev": { ... },
+		"Residuals intra event mean": { ... },
+		"Residuals intra event stddev": { ... },
+		"Residuals total mean": { ...  },
+		"Residuals total stddev": { ... },
+		"Likelihood inter event median": { ... },
+		"Likelihood intra event median": { ... },
+		"Likelihood total median": { ... },
+		"Likelihood inter event iqr": { ... },
+		"Likelihood intra event iqr": { ... },
+		"Likelihood total iqr": { ... },
+		"Log-likelihood": { ... },
+		"Multivariate log-likelihood": { ... },
+		"Euclidean distance-based ranking mde norm": { ... },
+		"Euclidean distance-based ranking sqrt kappa": { ... },
+		"Euclidean distance-based ranking edr": { ... }
 	},
-	"Residuals Inter event Std Dev": { ... same object as above ... },
-	"Residuals Intra event Mean": { ... same object as above ... },
-	"Residuals Intra event Std Dev": { ... same object as above ... },
-	"Residuals Total Mean": { ... same object as above ... },
-	"Residuals Total Std Dev": { ... same object as above ... },
-	
-	"Likelihood Inter event Median": { ... same object as above ... },
-	"Likelihood Intra event Median": { ... same object as above ... },
-	"Likelihood Total Median": { ... same object as above ... },
-	"Likelihood Inter event IQR": { ... same object as above ... },
-	"Likelihood Intra event IQR": { ... same object as above ... },
-	"Likelihood Total IQR": { ... same object as above ... },
-
-	"LLH": { ... same object as above ... },
-	
-	"MultivariateLLH": { ... same object as above ... },
-
-	"Euclidean Distance-Based MDE Norm": { ... same object as above ... },
-	"Euclidean Distance-Based sqrt Kappa": { ... same object as above ... },
-	"Euclidean Distance-Based EDR": { ... same object as above ... }
-	
+	"Db records": {
+		"BindiEtAl2011": 1023,
+		"CauzziEtAl2014": 2012,
+		...
+	},
+	"Gsim skipped":{
+		"AbrahamsonEtAl2014NSHMPUpper": "No db record found",
+		...
+	}
 }</code></pre>
 <p class='footnote'>
 LLH and MultivariateLLH include also the IMT "All". Euclidean Distance-Based
@@ -91,27 +97,46 @@ are not associated with any IMT, thus their values will be an Object
 keyed by "" and associated to each {GMPE: value} pairs.
 </p>
 
+
 <table class='csv'>
 <tbody>
 <tr>
-	<td>Measure of fit</td>
+	<td>measure of fit</td>
 	<td>gsim</td>
 	<td>imt</td>
+	<td>db records</td>
 	<td>value</td>
 </tr>
 <tr>
-	<td>Residuals Inter event Mean</td>
+	<td>Residuals inter event mean</td>
 	<td>PGA</td>
 	<td>BindiEtAl2011</td>
 	<td>&hellip;</td>
-</tr>
-<tr>
-	<td>Residuals Inter event Mean</td>
-	<td>PGA</td>
-	<td>CauzziEtAl2014</td>
 	<td>&hellip;</td>
 </tr>
 <tr>
+	<td>Residuals inter event mean</td>
+	<td>PGA</td>
+	<td>CauzziEtAl2014</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>Residuals intra event mean</td>
+	<td>PGA</td>
+	<td>BindiEtAl2011</td>
+	<td>&hellip;</td>
+	<td>&hellip;</td>
+</tr>
+<tr>
+	<td>&hellip;</td>
 	<td>&hellip;</td>
 	<td>&hellip;</td>
 	<td>&hellip;</td>
@@ -122,14 +147,17 @@ keyed by "" and associated to each {GMPE: value} pairs.
 	<td>PGV</td>
 	<td>BindiEtAl2011</td>
 	<td>&hellip;</td>
+	<td>&hellip;</td>
 </tr>
 <tr>
 	<td>Residuals Inter event Mean</td>
 	<td>PGV</td>
 	<td>CauzziEtAl2014</td>
 	<td>&hellip;</td>
+	<td>&hellip;</td>
 </tr>
 <tr>
+	<td>&hellip;</td>
 	<td>&hellip;</td>
 	<td>&hellip;</td>
 	<td>&hellip;</td>
