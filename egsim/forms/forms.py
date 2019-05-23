@@ -120,99 +120,79 @@ class BaseForm(Form):
         #         field.widget.attrs.update(atts)
         return
 
-    @classmethod
-    def load(cls, obj):
-        '''Safely loads the YAML-formatted object `obj` into a Form instance'''
-        return cls(data=yaml_load(obj))
+#     @classmethod
+#     def load(cls, obj):
+#         '''Safely loads the YAML-formatted object `obj` into a Form instance'''
+#         return cls(data=yaml_load(obj))
 
-    def dump(self, stream=None, syntax='yaml'):
-        """Serialize this Form instance into a YAML, JSON or URL query stream.
+    def yamldump(self, stream=None):
+        """Serialize this Form instance into a YAML stream.
            If stream is None, return the produced string instead.
 
            :param stream: A stream **for text I/O** like a file-like object
                (in general any object with a write method, e.g. StringIO) or
                None.
-           :param syntax: string, either 'json', 'yaml' or 'GET'. If not
-               either string, this method raises ValueError
         """
-        syntax = syntax.lower()
-        if syntax not in ('json', 'yaml'):
-            raise ValueError("Argument 'syntax' must be 'json' or 'yaml'")
 
-        obj = self.to_dict()
+        class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
+            '''forces indentation of lists.
+            See https://stackoverflow.com/a/39681672'''
+            def increase_indent(self, flow=False, indentless=False):
+                return super(MyDumper, self).increase_indent(flow, False)
 
-        if syntax == 'GET':  # GET
-            querystr = querystring(obj)
-            if stream is None:
-                return querystr
-            stream.write(querystr)
-        elif syntax == 'json':  # JSON
-            if stream is None:
-                return json.dumps(obj, indent=2, separators=(',', ': '),
-                                  sort_keys=True)
-            json.dump(obj, stream, indent=2, separators=(',', ': '),
-                      sort_keys=True)
-        else:  # YAML
+        # regexp to replace html entities with their content, i.e.:
+        # <a href='#'>bla</a> -> bla
+        # V<sub>s30</sub> -> Vs30
+        # ... and so on ...
+        html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)<\\/\\1>')
 
-            class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
-                '''forces indentation of lists.
-                See https://stackoverflow.com/a/39681672'''
-                def increase_indent(self, flow=False, indentless=False):
-                    return super(MyDumper, self).increase_indent(flow, False)
-
-            # regexp to replace html entities with their content, i.e.:
-            # <a href='#'>bla</a> -> bla
-            # V<sub>s30</sub> -> Vs30
-            # ... and so on ...
-            html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)<\\/\\1>')
-
-            # inject comments in yaml by using the field label and its help:
-            stringio = StringIO() if stream is None else stream
-            for name, value in obj.items():
-                field = self.fields[name]
-                label = (field.label or '') + \
-                    ('' if not field.help_text else ' (%s)' % field.help_text)
-                if label:
-                    # replace html characters with their content
-                    # (or empty str if no content):
-                    label = html_tags_re.sub(r'\2', label)
-                    # replace newlines for safety:
-                    label = '# %s\n' % (label.replace('\n', ' ').
-                                        replace('\r', ' '))
-                    stringio.write(label)
-                yaml.dump({name: value}, stream=stringio, Dumper=MyDumper,
-                          default_flow_style=False)
-                stringio.write('\n')
-            # compatibility with yaml dump if stream is None:
-            if stream is None:
-                ret = stringio.getvalue()
-                stringio.close()
-                return ret
+        # inject comments in yaml by using the field label and its help:
+        stringio = StringIO() if stream is None else stream
+        obj = self.to_rendering_dict(ignore_callable_choices=False)
+        for name, field in obj.items():
+            label = (field['label'] or '') + \
+                ('' if not field['help'] else ' (%s)' % field['help'])
+            if label:
+                # replace html characters with their content
+                # (or empty str if no content):
+                label = html_tags_re.sub(r'\2', label)
+                # replace newlines for safety:
+                label = '# %s\n' % (label.replace('\n', ' ').
+                                    replace('\r', ' '))
+                stringio.write(label)
+            yaml.dump({name: field['val']}, stream=stringio, Dumper=MyDumper,
+                      default_flow_style=False)
+            stringio.write('\n')
+        # compatibility with yaml dump if stream is None:
+        if stream is None:
+            ret = stringio.getvalue()
+            stringio.close()
+            return ret
         return None
 
-    def to_dict(self):
-        '''Converts this form to python dict. Each value is the `to_python`
-        method of the corresponding django Field. Note that for lists, the
-        original value is checked and, if string and contains the colon ':',
-        it indicates a range and thus is returned as it was. Also, datetimes
-        are quoted in ISO format as json might not support them.
-
-        raise: ValidationError if the form is not valid
-        '''
-        if not self.is_valid():
-            raise ValidationError(self.errors, code='invalid')
-
-        ret = {}
-        for name, val in self.data.items():
-            parsedval = self.fields[name].to_python(val)
-            is_scalar = isscalar(parsedval)
-            if is_scalar and isinstance(parsedval, datetime):
-                parsedval = tostr(parsedval)
-            elif not is_scalar and isinstance(val, str) and ':' in val:
-                parsedval = val
-            ret[name] = parsedval
-
-        return ret
+#     def to_dict(self):
+#         '''Converts this form to python dict. Each value is the `to_python`
+#         method of the corresponding django Field. Note that for lists, the
+#         original value is checked and, if string and contains the colon ':',
+#         it indicates a range and thus is returned as it was. Also, datetimes
+#         are quoted in ISO format as json might not support them.
+# 
+#         raise: ValidationError if the form is not valid
+#         '''
+#         if not self.is_valid():
+#             raise ValidationError(self.errors, code='invalid')
+# 
+#         ret = {}
+#         for name, val in self.data.items():
+#             parsedval = self.fields[name].to_python(val)
+#             is_scalar = isscalar(parsedval)
+#             if is_scalar and isinstance(parsedval, datetime):
+#                 parsedval = tostr(parsedval)
+#             elif not is_scalar and isinstance(val, str) and ':' in val:
+#                 parsedval = val
+#             ret[name] = parsedval
+# 
+#         return ret
 
     def to_rendering_dict(self, ignore_callable_choices=True):
         '''Converts this form to a python dict for rendering the field as input

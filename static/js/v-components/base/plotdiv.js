@@ -19,7 +19,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         // then this.$options.name is the subclass name). FIXME: NOT USED REMOVE?
         var id = this.$options.name + new Date().getTime().toString();
         return {
-            visible: !Vue.isEmpty(this.data),
+            visible: !Vue.isEmpty(this.data),  // defined in vueutil.js
             // boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
             drawingPlots: true,
             //callback to be passed to window.addEventListener('resize', ...).
@@ -96,7 +96,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             },
             defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
-            colorMap: Vue.colorMap(),  // defined in vueutil.js,
+            colorMap: Vue.colorMap(),  // defined in vueutil.js
             downloadopts: { // most of the image options are not user defined for the moment (except format):
                 show: false,
                 width: null,
@@ -123,7 +123,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         data: {
             immediate: true,
             handler(newval, oldval){
-                this.visible = !Vue.isEmpty(this.data);
+                this.visible = !Vue.isEmpty(this.data);  // defined in vueutil.js
                 if (this.visible){ // see prop below
                     this.init.call(this, this.data);
                     this.addResizeListener(); // start redrawing plots on resize, see bottom of the file
@@ -1162,14 +1162,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 //             })
         },
         downloadAsJson(){
-        	var filename = this.downloadopts.filename;
-		    var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
-		    var downloadAnchorNode = document.createElement('a');
-		    downloadAnchorNode.setAttribute("href",     dataStr);
-		    downloadAnchorNode.setAttribute("download", `${filename}.json`);
-		    document.body.appendChild(downloadAnchorNode); // required for firefox
-		    downloadAnchorNode.click();
-		    downloadAnchorNode.remove();
+        	var filename = this.downloadopts.filename + '.json';
+        	var string = JSON.stringify(this.data);
+        	Vue.download(string, filename); // defined in vueutil.js
 		},
         addResizeListener: function(fireResizeNow){
         	// adds (if not already added) a resize listener redrawing plots on window.resize

@@ -92,7 +92,7 @@ var EGSIM_BASE = {
             this.setLoading(true);
             var config = Object.assign(config || {}, {headers: {"X-CSRFToken": this.csrftoken}});
             var jsonData = data || {};
-            var isFormObj = this.isFormObject(data);
+            var isFormObj = Vue.isFormObject(data);  // defined in vueutil.js
             if (isFormObj){ // data is a Form Object, convert jsonData  to dict of scalars:
                 jsonData = {};
                 for (var key of Object.keys(data)){
@@ -148,22 +148,13 @@ var EGSIM_BASE = {
 	           if (typeof compProps === 'object'){
 	               Object.keys(compProps).forEach(pname => {
 	                   var element = compProps[pname];
-	                   if (this.isFormObject(element)){
+	                   if (Vue.isFormObject(element)){  // defined in vueutil.js
 	                       ret.push([name, element]);
 	                   }
 	               });
 	           }
 	        });
 	        return ret;
-        },
-        isFormObject(obj){
-            if (typeof obj !== 'object'){
-                return false;
-            }
-            return Object.keys(obj).every(key => {
-                var elm = obj[key];
-                return (typeof elm === 'object') && ('val' in elm) && ('err' in elm);
-            });
         },
         setError(error){ // error must be a google-json dict-like {message: String, code: String, errors: Array}
             if (typeof error === 'string'){
