@@ -97,13 +97,13 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
             colorMap: Vue.colorMap(),  // defined in vueutil.js
-            downloadopts: { // most of the image options are not user defined for the moment (except format):
-                show: false,
+            // download options. see this.download(). Note thqt
+            // most of the image options are not used for the moment
+            downloadopts: {
                 width: null,
                 height: null,
-                filename: this.filename,
-                format: "",
-                formats: ['', 'png', 'jpeg', 'svg', 'json (all plots data)'],
+                filename: this.filename + '.request',
+                formats: ['png', 'jpeg', 'svg', 'json (all plots data)'],
                 // scale 5 increases the image size, thus increasing the resolution
                 // Note that you cannot provide any number (e.g. scale 10 raises Exception)
                 scale: 5
@@ -132,14 +132,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 	this.removeResizeListener();  // stop redrawing plots on resize, see bottom of the file
                 }
             }
-        },
-        'downloadopts.format': function (newVal, oldVal){
-            // to work with changes in downloadopts.format: https://stackoverflow.com/a/46331968
-            // we do not attach onchange on the <select> tag because of this: https://github.com/vuejs/vue/issues/293
-            if(newVal){
-                this.download();
-            }
-        },
+        }
     },
     activated: function(){  // when component become active
     	if (this.visible){
@@ -223,21 +216,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             </div>
 
 			<div>
-				<div class='d-flex flex-row mt-3 text-nowrap align-items-baseline border p-2 bg-white'>
-					<i class="fa fa-download"></i>
-					<select
-						v-model='downloadopts.format'
-						class='form-control ml-2'
-					>
-		                <option
-		                	v-for='(format, index) in downloadopts.formats'
-		                	:value='format'
-		                    :disabled='format == downloadopts.formats[0]'
-		                >
-		                    {{ index ? format : 'download as:' }}
-		                </option>
-		            </select>
-	            </div>
+				<downloadselect
+	            	:items='downloadopts.formats' @selected='download'
+	            	class='mt-3 border p-2 bg-white'
+	            >
+	            Download response as:
+	            </downloadselect>
 	
 				<div
 					v-show="isGridCusomizable"
@@ -1097,16 +1081,17 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 		  	var m = Math;
 		  	return values.length? [m.min(...values), m.max(...values)] : [NaN, NaN];
 		},
-        download: function(){
+        download: function(format, formatIndex, formats){
             
-            var props = this.downloadopts;
-            if (!props.format){
+            if (!format){  // for safety
                 return;
             }
             
-            if (props.format.startsWith('json')){
+            if (format.startsWith('json')){
             	this.downloadAsJson();
             }else{
+            	var props = this.downloadopts;
+
 	            // FIXME: 1. props.size = 5 seems to increase resolution (by simply increasing the size)
 	            // However, the fonts and the lines should be increased, too
 	            // 2. legend is not present. If we want to add a legend, better would be to do it automatically
@@ -1120,6 +1105,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 	
 	            var elm = document.getElementById(this.plotdivid);
 	            var props = Object.assign({}, props);  // Object.assign(target, ...sources);
+	            props.format = format;
 	            var elm = document.getElementById(this.plotdivid);
 	            var [width, height] = [elm.offsetWidth, elm.offsetHeight];
 	            if (!(props.width)){
@@ -1139,7 +1125,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 	                // the paper bg color is set to transparent by default. However,
 	                // jpeg does not support it and thus we would get black background.
 	                // Therefore:
-	                if(props.format == 'jpeg'){
+	                if(format == 'jpeg'){
 	                    gd._fullLayout.paper_bgcolor = 'rgba(255, 255, 255, 1)';
 	                }
 	                
@@ -1152,8 +1138,6 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 	
 	            Plotly.downloadImage(elm, props);
 	        }
-            this.downloadopts.show = false;
-            this.downloadopts.format = '';
 
 //             // Plotly.toImage will turn the plot in the given div into a data URL string
 //             // toImage takes the div as the first argument and an object specifying image properties as the other
@@ -1162,7 +1146,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 //             })
         },
         downloadAsJson(){
-        	var filename = this.downloadopts.filename + '.json';
+        	var filename = this.downloadopts.filename + 'request.json';
         	Vue.download(this.data, filename); // defined in vueutil.js
 		},
         addResizeListener: function(fireResizeNow){

@@ -40,7 +40,7 @@ Vue.component('residuals', {
                     Vue.download(response.data, filename);
                 } 
             });
-        },
+        }
     },
     watch: {
         responseData: {
@@ -59,13 +59,7 @@ Vue.component('residuals', {
         :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light']]"
         class='d-flex flex-column flexible align-self-center position-relative mb-3' style='z-index:10'>
 
-        <div v-show='!responseDataEmpty' class='text-right m-2'>
-            <button type="button" v-on:click='formHidden=true' class="close" aria-label="Close">
-                <i class="fa fa-times-circle"></i>
-            </button>
-        </div>
-
-        <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mb-4', 'mt-0']]">
+        <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mt-4', 'mb-3']]">
             <div class="d-flex flexible flex-row mb-3">
 
                 <div class="d-flex flexible flex-column">
@@ -92,27 +86,28 @@ Vue.component('residuals', {
                 </div>
             </div>
 			
-			<div class='d-flex flex-row justify-content-center border-top pt-2'>
+			<div class='d-flex flex-row justify-content-center border-top pt-3'>
 				<downloadselect
-					:keys="[this.$options.name + '.request.json', this.$options.name + '.request.yaml']"
+					:items="[this.$options.name + '.request.json', this.$options.name + '.request.yaml']"
 					@selected="download"
-					class='mr-2'
 				>
 					Download request as:
 				</downloadselect>
-	            <button type="submit" class="btn btn-outline-primary">
-	                Display plots
+	            <button type="submit" class="btn btn-outline-primary ml-2">
+	                <i class="fa fa-play"></i> Display plots
+	            </button>
+	            <button type="button" class="btn btn-outline-primary ml-2"
+	            	v-show='!responseDataEmpty'
+	            	@click='formHidden=true'
+	            >
+	                <i class="fa fa-times"></i> Close
 	            </button>
             </div>
 
         </div>
 
     </form>
-    </transition>
-    
-    <!--<visualizerdiv :data="yamlData" :filename="this.$options.name + '.yaml'" style='width:10em;height:10em'></visualizerdiv>
-    <visualizerdiv :data="form" :filename="this.$options.name + '.json'" style='width:10em;height:10em'></visualizerdiv>-->
-    
+    </transition>    
 
     <residualsplotdiv :data="responseData" :filename="this.$options.name"
         class='position-absolute pos-0 m-0' style='z-index:1'>
