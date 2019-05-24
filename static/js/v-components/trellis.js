@@ -93,7 +93,8 @@ Vue.component('trellis', {
 
 					<imtselect :form="form"></imtselect>
 
-                    <div class="flexible form-control mt-4" style="background-color:transparent">
+                    <div class="flexible form-control mt-4"
+                    	style="background-color:transparent;overflow-y:auto">
                         <forminput
                         	v-for="(name, index) in scenarioKeys"
                             :form='form' :name='name' :key="name"

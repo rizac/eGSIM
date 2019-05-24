@@ -38,13 +38,11 @@ iframe{
 /* ========================================================================= */
 
 .d-flex > .flexible{
-	flex: 1 1 auto; /* for letting this work with grid layout the last element (flex-basis) should be zero: https://stackoverflow.com/a/48454476 */
-}
-.d-flex.flex-row > .flexible{
-	overflow-x: auto;
-}
-.d-flex.flex-column > .flexible{
-	overflow-y: auto;
+	/* for letting this work with grid layout the last element (flex-basis) should be zero: https://stackoverflow.com/a/48454476
+	Also, flex-basis zero is needed in safari. The drawback is that some element might shrink too
+	much, but in that case play around setting flex-basis:auto on it and/or the parent
+	*/
+	flex: 1 1 0; 
 }
 
 
