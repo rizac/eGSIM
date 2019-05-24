@@ -105,10 +105,10 @@ Vue.component('testing', {
 				>
 					Download request as:
 				</downloadselect>
-	            <button type="submit" class="btn btn-outline-primary ml-2">
+	            <button type="submit" class="btn btn-primary ml-2">
 	                <i class="fa fa-play"></i> Display plots
 	            </button>
-	            <button type="button" class="btn btn-outline-primary ml-2"
+	            <button type="button" class="btn btn-primary ml-2"
 	            	v-show='!responseDataEmpty'
 	            	@click='formHidden=true'
 	            >
@@ -123,7 +123,7 @@ Vue.component('testing', {
 
     <testingtable :data="responseData" :filename="this.$options.name" class='position-absolute pos-0 m-0' style='z-index:1'>
     	<slot>
-            <button @click='formHidden=false' class='btn btn-sm btn-outline-primary'><i class='fa fa-wpforms'></i> params</button>
+            <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-wpforms'></i> params</button>
         </slot>
     </testingtable>
 </div>`
