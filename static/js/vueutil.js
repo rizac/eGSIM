@@ -69,6 +69,9 @@ Vue.use({
         	// with or without prefixing period 
         	// Recognized extensions are: 'json', 'yaml', 'csv'. Any non-recognized  extension
         	// defaults to 'text/plain'
+        	// Details here:
+        	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
+        	// and here: https://stackoverflow.com/a/332159
         	var spl = (filename || "").split('.');
     		var ext = (spl.length > 1 ? spl[spl.length-1] : "").toLowerCase();
     		if (ext == 'json'){
@@ -82,9 +85,12 @@ Vue.use({
     		}
     		return mimeType;
         };
-        Vue.download = function(textContent, filename, mimeType){
-        	// downloads the file with given name `filename` and content `textContent`
+        Vue.download = function(content, filename, mimeType){
+        	// downloads the file with given name `filename` and content `content`
         	// in the browser download directory.
+        	// content can be any object, if mimeType is 'applicaion/json' and content
+        	// is not a string, it will be converted with JSON.stringify, otherwise
+        	// content.toString().
         	// If mimeType is missing or falsy, it will be inferred from filename
         	// (see Vue.getMIMEType)
         	// Supported filename extensions: (ignoring the case):
@@ -95,8 +101,11 @@ Vue.use({
         	if (!mimeType){
         		mimeType = Vue.getMIMEType(filename);
         	}
+        	if (typeof content !== 'string'){
+        		content = mimeType === 'application/json' ? JSON.stringify(content, null, 4) : content.toString();
+        	}
         	// Encode and download (for details see https://stackoverflow.com/a/30800715):
-        	var encodedStr = encodeURIComponent(textContent);
+        	var encodedStr = encodeURIComponent(content);
 		    var dataStr = `data:${mimeType};charset=utf-8,${encodedStr}`;
 		    var downloadAnchorNode = document.createElement('a');
 		    downloadAnchorNode.setAttribute("href",     dataStr);

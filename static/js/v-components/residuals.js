@@ -32,11 +32,12 @@ Vue.component('residuals', {
                 } 
             });
         },
-        fetchYaml: function(){
+        download: function(filename, index, filenames){
         	var form = this.form;
-            this.post("data/" + this.url + "/toyaml", form).then(response => {
+        	var ext = filename.substring(filename.lastIndexOf('.')+1, filename.length);
+            this.post("data/" + this.url + "/downloadrequest/" + filename, form).then(response => {
                 if (response && response.data){
-                    this.yamlData = response.data;
+                    Vue.download(response.data, filename);
                 } 
             });
         },
@@ -90,17 +91,27 @@ Vue.component('residuals', {
 
                 </div>
             </div>
-
-            <button type="submit" class="btn btn-outline-primary">
-                Display plots
-            </button>
+			
+			<div class='d-flex flex-row justify-content-center border-top pt-2'>
+				<downloadselect
+					:keys="[this.$options.name + '.request.json', this.$options.name + '.request.yaml']"
+					@selected="download"
+					class='mr-2'
+				>
+					Download request as:
+				</downloadselect>
+	            <button type="submit" class="btn btn-outline-primary">
+	                Display plots
+	            </button>
+            </div>
 
         </div>
 
     </form>
     </transition>
-    <visualizerdiv :data="yamlData" :filename="this.$options.name + '.yaml'" style='width:10em;height:10em'></visualizerdiv>
-    <visualizerdiv :data="form" :filename="this.$options.name + '.json'" style='width:10em;height:10em'></visualizerdiv>
+    
+    <!--<visualizerdiv :data="yamlData" :filename="this.$options.name + '.yaml'" style='width:10em;height:10em'></visualizerdiv>
+    <visualizerdiv :data="form" :filename="this.$options.name + '.json'" style='width:10em;height:10em'></visualizerdiv>-->
     
 
     <residualsplotdiv :data="responseData" :filename="this.$options.name"
@@ -109,10 +120,5 @@ Vue.component('residuals', {
             <button @click='formHidden=false' class='btn btn-sm btn-outline-primary'><i class='fa fa-wpforms'></i> params</button>
         </slot>
     </residualsplotdiv>
-</div>`,
-	mounted: function () {
-		this.$nextTick(function () {
-    		this.fetchYaml();
-    	});
-	}
+</div>`
 })

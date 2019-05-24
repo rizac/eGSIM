@@ -1163,8 +1163,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         },
         downloadAsJson(){
         	var filename = this.downloadopts.filename + '.json';
-        	var string = JSON.stringify(this.data);
-        	Vue.download(string, filename); // defined in vueutil.js
+        	Vue.download(this.data, filename); // defined in vueutil.js
 		},
         addResizeListener: function(fireResizeNow){
         	// adds (if not already added) a resize listener redrawing plots on window.resize
