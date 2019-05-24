@@ -47,10 +47,15 @@ class BaseForm(Form):
     __additional_fieldnames__ = {}
 
     # this is a list of fields that should be hidden from the doc
-    # and not used in the API. By specifying widget=HiddenInput in the field
+    # and not used in the API. Also, the 'dump' method does not returns them.
+    # By specifying widget=HiddenInput in the field
     # you achieve the same result BUT also the <input> will be of type hidden
     # in the GUI
     __hidden_fieldnames__ = []
+    
+    # this is a list of fields where the 'dump' method must return
+    # the cleaned_data and not the data passed in the constructor
+    __dump_returns_cleaneddata_for__ = []
 
     def __init__(self, *args, **kwargs):
         '''Overrides init to set custom attributes on field widgets and to set
@@ -120,19 +125,33 @@ class BaseForm(Form):
         #         field.widget.attrs.update(atts)
         return
 
-#     @classmethod
-#     def load(cls, obj):
-#         '''Safely loads the YAML-formatted object `obj` into a Form instance'''
-#         return cls(data=yaml_load(obj))
+    def dump(self, stream=None, syntax='yaml'):
+        """Serialize this Form instance into a YAML stream. The result
+        collects the fields of `self.data` or self.cleaned_data
+        depoending on what is in `self.__dump_returns_cleaneddata_for__`.
+        Hidden fields in `self.__hidden_fieldnames__` are not returned.
+        The form needs to be validated via e.g. `form.is_valid()`
+        If stream is None, return the produced string instead.
 
-    def yamldump(self, stream=None):
-        """Serialize this Form instance into a YAML stream.
-           If stream is None, return the produced string instead.
-
-           :param stream: A stream **for text I/O** like a file-like object
-               (in general any object with a write method, e.g. StringIO) or
-               None.
+       :param stream: A stream **for text I/O** like a file-like object
+           (in general any object with a write method, e.g. StringIO) or
+           None.
+        :param syntax: string either json or yaml. Deault: yaml.
         """
+        hidden_fn = set(self.__hidden_fieldnames__)
+        cleaneddata_fn = set(self.__dump_returns_cleaneddata_for__)
+        cleaned_data = {
+            key: self.cleaned_data[key] if key in cleaneddata_fn else val
+            for key, val in self.data.items() if key not in hidden_fn
+        }
+
+        if syntax == 'json':
+            if stream is None:
+                return json.dumps(cleaned_data, indent=4,
+                                  separators=(',', ': '), sort_keys=True)
+            json.dump(cleaned_data, stream, indent=4, separators=(',', ': '),
+                      sort_keys=True)
+            return
 
         class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
             '''forces indentation of lists.
@@ -148,8 +167,9 @@ class BaseForm(Form):
 
         # inject comments in yaml by using the field label and its help:
         stringio = StringIO() if stream is None else stream
-        obj = self.to_rendering_dict(ignore_callable_choices=False)
-        for name, field in obj.items():
+        fields = self.to_rendering_dict(ignore_callable_choices=False)
+        for name, value in cleaned_data.items():
+            field = fields[name]
             label = (field['label'] or '') + \
                 ('' if not field['help'] else ' (%s)' % field['help'])
             if label:
@@ -160,7 +180,7 @@ class BaseForm(Form):
                 label = '# %s\n' % (label.replace('\n', ' ').
                                     replace('\r', ' '))
                 stringio.write(label)
-            yaml.dump({name: field['val']}, stream=stringio, Dumper=MyDumper,
+            yaml.dump({name: value}, stream=stringio, Dumper=MyDumper,
                       default_flow_style=False)
             stringio.write('\n')
         # compatibility with yaml dump if stream is None:
@@ -169,30 +189,6 @@ class BaseForm(Form):
             stringio.close()
             return ret
         return None
-
-#     def to_dict(self):
-#         '''Converts this form to python dict. Each value is the `to_python`
-#         method of the corresponding django Field. Note that for lists, the
-#         original value is checked and, if string and contains the colon ':',
-#         it indicates a range and thus is returned as it was. Also, datetimes
-#         are quoted in ISO format as json might not support them.
-# 
-#         raise: ValidationError if the form is not valid
-#         '''
-#         if not self.is_valid():
-#             raise ValidationError(self.errors, code='invalid')
-# 
-#         ret = {}
-#         for name, val in self.data.items():
-#             parsedval = self.fields[name].to_python(val)
-#             is_scalar = isscalar(parsedval)
-#             if is_scalar and isinstance(parsedval, datetime):
-#                 parsedval = tostr(parsedval)
-#             elif not is_scalar and isinstance(val, str) and ':' in val:
-#                 parsedval = val
-#             ret[name] = parsedval
-# 
-#         return ret
 
     def to_rendering_dict(self, ignore_callable_choices=True):
         '''Converts this form to a python dict for rendering the field as input
@@ -323,6 +319,7 @@ class GsimImtForm(BaseForm):
 
     __additional_fieldnames__ = {'gmpe': 'gsim'}
     __hidden_fieldnames__ = ['sa_period']
+    __dump_returns_cleaneddata_for__ = ['imt']
 
     gsim = GsimField(required=True)
     imt = ImtField(required=True)
