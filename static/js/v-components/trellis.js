@@ -32,6 +32,15 @@ Vue.component('trellis', {
                     this.responseData = response.data;
                 } 
             });
+        },
+        download: function(filename, index, filenames){
+        	var form = this.form;
+        	var ext = filename.substring(filename.lastIndexOf('.')+1, filename.length);
+            this.post("data/" + this.url + "/downloadrequest/" + filename, form).then(response => {
+                if (response && response.data){
+                    Vue.download(response.data, filename);
+                } 
+            });
         }
     },
     watch: {
@@ -72,14 +81,8 @@ Vue.component('trellis', {
     <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
         :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light']]"
         class='d-flex flex-column flexible position-relative mb-3 align-self-center' style='z-index:10'>
-
-        <div v-show='!responseDataEmpty' class='text-right m-2'>
-            <button type="button" v-on:click='formHidden=true' class="close" aria-label="Close">
-                <i class="fa fa-times-circle"></i>
-            </button>
-        </div>
         
-        <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mb-4', 'mt-0']]">
+        <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mt-4', 'mb-3']]">
             <div class="d-flex flexible flex-row mb-3">
 
                 <div class="d-flex flexible flex-column">
@@ -105,10 +108,24 @@ Vue.component('trellis', {
                 </div>
             </div>
         
-            <button type="submit" class="btn btn-outline-primary">
-                Display plots
-            </button>
-        
+			<div class='d-flex flex-row justify-content-center border-top pt-3'>
+				<downloadselect
+					:items="[this.$options.name + '.request.json', this.$options.name + '.request.yaml']"
+					@selected="download"
+				>
+					Download request as:
+				</downloadselect>
+	            <button type="submit" class="btn btn-outline-primary ml-2">
+	                <i class="fa fa-play"></i> Display plots
+	            </button>
+	            <button type="button" class="btn btn-outline-primary ml-2"
+	            	v-show='!responseDataEmpty'
+	            	@click='formHidden=true'
+	            >
+	                <i class="fa fa-times"></i> Close
+	            </button>
+            </div>
+
         </div>
         
     </form>
