@@ -208,15 +208,26 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
     }
 
     @classmethod
-    def yaml_response(cls, request):
-        '''Returns the request re-formatted according to the given syntax
+    def download_request(cls, request, filename):
+        '''Returns the request re-formatted according to the given syntax.
+        Uses request.body so this method should be called from a POST request
         '''
-        dic = yaml_load(request.body.decode('utf-8'))
+        inputdict = yaml_load(request.body.decode('utf-8'))
+        dataform = cls.formclass(data=inputdict)  # pylint: disable=not-callable
+        if not dataform.is_valid():
+            return cls.jsonresponse_from_invalid_form(dataform)
         buffer = io.StringIO()
-        frm = cls.formclass(data=dic)  # pylint: disable=not-callable
-        frm.yamldump(buffer)
+        ext = os.path.splitext(filename)[1].lower()
+        if ext[:1] == '.':
+            ext = ext[1:]
+        dataform.dump(buffer, syntax=ext)
         buffer.seek(0)
-        return HttpResponse(buffer, content_type='application/x-yaml')
+        if ext == 'json':
+            response = HttpResponse(buffer, content_type='application/json')
+        else:
+            response = HttpResponse(buffer, content_type='application/x-yaml')
+        response['Content-Disposition'] = 'attachment; filename=%s' % filename
+        return response
 
     def get(self, request):
         '''processes a get request'''
