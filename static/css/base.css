@@ -279,50 +279,26 @@ label.customradio:before{
 	/* font-family can be removed, it will use the default font. But you should
 	also change 'content' below to display a checkmark, e.g.: content: "\2714";*/
 	font-family: FontAwesome; 
-	content: "\f00c";
-    box-sizing: border-box;
-    font-weight:bold;
-    text-align:center;
-    border-width: 1px;
-    border-style: solid;
-  	margin-right: .25em;
-    transition: .5s;
-    font-size: 66.66%;  /* this aligns text vertically, but it must be the inverse of line-height. Thus add also: */
-    line-height: 1.5em;
-    padding: 0px .1rem; /* this widens the box a bit horizontally to make it square */
-    
+	content: "\f096"; /* toggle-of is:  "\f204"; */
+    /* margin-right: .25em; */
+    /* instead of the above, the rule below assures "width stability"
+    if content and content:checked
+    do not have the same width: */
+    width: 1.25em;
+    transition: .5s; /* does not work for text change */
 }
 
-label.customradio:before{
-	content: "";
-    border-radius: .75em;
-}
-
-/* colors. Note: font-colors (for the checkmark) might not work. Consider using fontawesome */
-label.customcheckbox:before,
-label.customradio:before{
-    color: transparent;
-    background-color: white;
-	border-color: black;
-}
 label.customcheckbox.checked:before,
 label.customradio.checked:before{
-	color: white;
-    background-color: rgba(7, 104, 159, 1);
+	content: "\f14a";  /* toggle-of is:  "\f205"; */
 }
-label.customcheckbox.disabled:before,
-label.customradio.disabled:before,
-label.customcheckbox[disabled]:before,
-label.customradio[disabled]:before{
-	border-color: #aaa;
-}
+
 
 label.customcheckbox.checked.disabled:before,
 label.customradio.checked.disabled:before,
 label.customcheckbox[disabled].checked:before,
 label.customradio[disabled].checked:before{
 	color: #aaa;
-	background-color: lightgray;
 }
 
 
