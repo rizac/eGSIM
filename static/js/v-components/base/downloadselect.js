@@ -4,11 +4,11 @@
 Vue.component('downloadselect', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
-        keys: {default: () => []}
+        items: {default: () => []}
     },
     data: function () {
     	var emptyValue = '';
-    	while(this.keys.includes(emptyValue)){
+    	while(this.items.includes(emptyValue)){
     		emptyValue += ' ';
     	}
     	return {
@@ -23,9 +23,9 @@ Vue.component('downloadselect', {
     watch: {
     	'selKey': function (newVal, oldVal){
             // we do not attach onchange on the <select> tag because of this: https://github.com/vuejs/vue/issues/293
-            var idx = this.keys.indexOf(newVal);
+            var idx = this.items.indexOf(newVal);
             if(idx > -1){
-            	this.$emit('selected', newVal, idx, this.keys.slice());   
+            	this.$emit('selected', newVal, idx, this.items.slice());   
             }
             this.selKey = this.emptyValue;
         }
@@ -46,10 +46,10 @@ Vue.component('downloadselect', {
                 <slot></slot>
             </option>
             <option
-            	v-for='(key, index) in keys'
-            	:value='key'
+            	v-for='(item, index) in items'
+            	:value='item'
             >
-            	{{ key }}
+            	{{ item }}
             </option>
         </select>
     </div>`,
