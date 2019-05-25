@@ -5,26 +5,20 @@
  */
 Vue.component('testing', {
 	extends: _BASE_FORM,  // defined in baseform.js
+    props: {
+		filename: {type:String, default:'testing'}
+	},
     data: function () {
     	// set the size of the plot_type <select>. Maybe this is not the right place
     	// (maybe the 'created' method would be better:
     	// https://vuejs.org/v2/api/#created) but it works:
     	this.$set(this.form['fit_measure'].attrs, 'size', 5);
         return {
-            /* 
-            this object will be merged with the data Object returned by the parent
-            which has the following properties:
-            responseDataEmpty: true,
-            responseData: this.response,
-            formHidden: false
-            */
+        	responseData: {}
         }
     },
-    methods: {
-        // see parent class
-    },
     watch: {
-        // see parent class
+        // see parent class for watchers on the form
         
         // watch additionally for this field and set other fields visible/disabled accordingly:
         'form.fit_measure.val': {
@@ -39,9 +33,12 @@ Vue.component('testing', {
     },
     template: `
 <div class='flexible d-flex flex-column'>
-
 	<!-- $props passes all of the props on to the "parent" component -->
-	<baseform v-bind="$props">
+	<!-- https://stackoverflow.com/a/40485023 -->
+	<baseform
+		v-bind="$props"
+		@responsereceived="responseData = arguments[0]"
+	>
         <slot>        
             <div class="d-flex flex-column flexible ml-4">
             
@@ -63,7 +60,7 @@ Vue.component('testing', {
     	</slot>
     </baseform>
 
-    <testingtable :data="responseData" :filename="this.$options.name" class='position-absolute pos-0 m-0' style='z-index:1'>
+    <testingtable :data="responseData" :filename="filename" class='position-absolute pos-0 m-0' style='z-index:1'>
     	<slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-wpforms'></i> params</button>
         </slot>

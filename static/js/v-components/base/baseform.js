@@ -6,7 +6,9 @@ var _BASE_FORM = Vue.component('baseform', {
         form: Object,
         url: String,
         response: {type: Object, default: () => {return {}}},
-        post: Function
+        post: Function,
+        filename: {type: String, default: 'egsim'},
+        toggleFormVisible: {type: Boolean, default: true}
     },
     data: function () {
     	return {
@@ -21,6 +23,7 @@ var _BASE_FORM = Vue.component('baseform', {
             this.post(this.url, form).then(response => {
                 if (response && response.data){
                     this.responseData = response.data;
+                    this.$emit('responsereceived', response.data);
                 } 
             });
         },
@@ -41,6 +44,9 @@ var _BASE_FORM = Vue.component('baseform', {
                 this.responseDataEmpty = Vue.isEmpty(newval); // defined in vueutil.js
                 this.formHidden = !this.responseDataEmpty;
             }
+        },
+        toggleFormVisible:  function(newVal, oldVal){
+        	this.formHidden = !this.formHidden;
         }
     },
     template: `
@@ -56,13 +62,13 @@ var _BASE_FORM = Vue.component('baseform', {
                     <gsimselect :form="form" showfilter class="flexible"></gsimselect>
                 </div>
                 
-                <slot/> <!-- << HERE CUSTOM FORM ELEMENTS -->
+                <slot/> <!-- << HERE CUSTOM FORM ELEMENTS IN CHILD COMPONENTS -->
 
             </div>
         
 			<div class='d-flex flex-row justify-content-center border-top pt-3'>
 				<downloadselect
-					:items="[this.$options.name + '.request.json', this.$options.name + '.request.yaml']"
+					:items="[filename + '.request.json', filename + '.request.yaml']"
 					@selected="download"
 				>
 					Download request as:
