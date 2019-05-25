@@ -36,7 +36,7 @@ Vue.component('forminputlite', {
             <label
             	:for="elm.attrs.id"
             	class='mb-0 text-nowrap small'
-            	:class="[elm.attrs.disabled ? ['text-muted'] : ['font-weight-bold']]"
+            	:class="[elm.attrs.disabled ? ['text-muted'] : ['']]"
             >
                 <input v-if="isCheckOrRadio" v-model="elm.val" v-bind="elm.attrs" class='mr-1'>
                 <span v-html="elm.label"></span>
