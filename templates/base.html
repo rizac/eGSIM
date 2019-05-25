@@ -68,6 +68,7 @@
 
 	<!--  THESE ARE FALLBACKS, COMMENT OUT IF YOU WORK OFFLINE -->
 	<script type='text/javascript'>
+	{% if debug %}
 	if (!navigator.onLine){
 	    {% if vue %}
 		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.js'><\/script>");
@@ -93,8 +94,8 @@
 		document.write("<script type='text/javascript' src='/static/fallbacks/plotly-cartesian-1.38.3.js'><\/script>");
 		//document.write("<script type='text/javascript' src='/static/fallbacks/plotly.1.33.1.js'><\/script>");
 		{% endif %}
-		
 	}
+	{% endif %}
 	</script>
 
 	<!-- load our vue.util file (at the real end because we want to be sure we loaded vue-->
