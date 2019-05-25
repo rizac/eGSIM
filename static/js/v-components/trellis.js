@@ -5,6 +5,9 @@
  */
 Vue.component('trellis', {
 	extends: _BASE_FORM,  // defined in baseform.js
+	props: {
+		filename: {type:String, default:'trellis'},
+	},
     data: function () {
     	// set the size of the plot_type <select>. Note that it turns out
     	// that 'created' is executed after the template is created, so we add
@@ -12,21 +15,13 @@ Vue.component('trellis', {
     	// a better place? https://vuejs.org/v2/api/#beforeCreate)
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
         return {
-        	/* 
-            this object will be merged with the data Object returned by the parent
-            which has the following properties:
-            responseDataEmpty: true,
-            responseData: this.response,
-            formHidden: false
-            */
+        	responseData: {},
+        	toggleFormVisible: false,
             scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' & key!='sa_period' & key!='plot_type')
         }
     },
-    methods: {
-        // see parent class
-    },
     watch: {
-        // see parent class
+        // see parent class for watchers on the form
 
         // watch additionally for the property val of plot_type in form
         // and make imt enabled if we are not choosing spectra plots
@@ -53,9 +48,13 @@ Vue.component('trellis', {
     },
     template: `
 <div class='flexible d-flex flex-column'>
-
 	<!-- $props passes all of the props on to the "parent" component -->
-	<baseform v-bind="$props">
+	<!-- https://stackoverflow.com/a/40485023 -->
+	<baseform
+		v-bind="$props"
+		:toggleFormVisible="toggleFormVisible"
+		@responsereceived="responseData = arguments[0]"  
+    >
     	<slot>
             <div class="d-flex flex-column flexible ml-4">
 
@@ -78,10 +77,10 @@ Vue.component('trellis', {
         </slot>
     </baseform>
 
-    <trellisplotdiv :data="responseData" :filename="this.$options.name"
+    <trellisplotdiv :data="responseData" :filename="filename"
         class='position-absolute pos-0 m-0' style='z-index:1'>
         <slot>
-            <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-wpforms'></i> params</button>
+            <button @click='toggleFormVisible=!toggleFormVisible' class='btn btn-sm btn-primary'><i class='fa fa-wpforms'></i> params</button>
         </slot>
     </trellisplotdiv>
 </div>`
