@@ -63,6 +63,8 @@
 
 {% block after-body %}
 	{{ block.super }}
+
+	<script type='text/javascript' src = "{% static 'js/v-components/base/baseform.js' %}"></script>
 	
 	{% for component in components %}
 	<script type='text/javascript' src = "{% static 'js/v-components/' %}{{ component.0 }}.js"></script>

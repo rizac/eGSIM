@@ -4,13 +4,7 @@
  * (without extension)
  */
 Vue.component('trellis', {
-    //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
-    props: {
-        form: Object,
-        url: String,
-        response: {type: Object, default: () => {return {}}},
-        post: Function
-    },
+	extends: _BASE_FORM,  // defined in baseform.js
     data: function () {
     	// set the size of the plot_type <select>. Note that it turns out
     	// that 'created' is executed after the template is created, so we add
@@ -18,40 +12,23 @@ Vue.component('trellis', {
     	// a better place? https://vuejs.org/v2/api/#beforeCreate)
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
         return {
-        	responseDataEmpty: true,
+        	/* 
+            this object will be merged with the data Object returned by the parent
+            which has the following properties:
+            responseDataEmpty: true,
             responseData: this.response,
-            formHidden: false,
+            formHidden: false
+            */
             scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' & key!='sa_period' & key!='plot_type')
         }
     },
     methods: {
-        request: function(){
-            var form = this.form;
-            this.post(this.url, form).then(response => {
-                if (response && response.data){
-                    this.responseData = response.data;
-                } 
-            });
-        },
-        download: function(filename, index, filenames){
-        	var form = this.form;
-        	var ext = filename.substring(filename.lastIndexOf('.')+1, filename.length);
-            this.post("data/" + this.url + "/downloadrequest/" + filename, form).then(response => {
-                if (response && response.data){
-                    Vue.download(response.data, filename);
-                } 
-            });
-        }
+        // see parent class
     },
     watch: {
-        responseData: {
-            immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
-            handler: function(newval, oldval){
-                this.responseDataEmpty = Vue.isEmpty(newval); // defined in vueutil.js
-                this.formHidden = !this.responseDataEmpty;
-            }
-        },
-        // watch for the property val of plot_type in form
+        // see parent class
+
+        // watch additionally for the property val of plot_type in form
         // and make imt enabled if we are not choosing spectra plots
         // this is a bit hacky in that it relies on the parameter names
         // plot_type and imt:
@@ -77,60 +54,29 @@ Vue.component('trellis', {
     template: `
 <div class='flexible d-flex flex-column'>
 
-	<transition name="egsimform">
-    <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
-        :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light']]"
-        class='d-flex flex-column flexible position-relative mb-3 align-self-center' style='z-index:10'>
-        
-        <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mt-4', 'mb-3']]">
-            <div class="d-flex flexible flex-row mb-3">
+	<!-- $props passes all of the props on to the "parent" component -->
+	<baseform v-bind="$props">
+    	<slot>
+            <div class="d-flex flex-column flexible ml-4">
 
-                <div class="d-flex flexible flex-column">
-                    <gsimselect :form="form" showfilter class="flexible"></gsimselect>
+				<imtselect :form="form"></imtselect>
+
+                <div class="flexible form-control mt-4"
+                	style="flex-basis:0;background-color:transparent;overflow-y:auto">
+                    <forminput
+                    	v-for="(name, index) in scenarioKeys"
+                        :form='form' :name='name' :key="name"
+                        :class="{ 'mt-2': index > 0 }">
+                    </forminput>
                 </div>
-                
-                <div class="d-flex flex-column flexible ml-4">
 
-					<imtselect :form="form"></imtselect>
-
-                    <div class="flexible form-control mt-4"
-                    	style="flex-basis:0;background-color:transparent;overflow-y:auto">
-                        <forminput
-                        	v-for="(name, index) in scenarioKeys"
-                            :form='form' :name='name' :key="name"
-                            :class="{ 'mt-2': index > 0 }">
-                        </forminput>
-                    </div>
-
-                    <div class="mt-4" style="background-color:transparent">
-                        <forminput :form='form' :name='"plot_type"'></forminput>
-                    </div>
-
+                <div class="mt-4" style="background-color:transparent">
+                    <forminput :form='form' :name='"plot_type"'></forminput>
                 </div>
-            </div>
-        
-			<div class='d-flex flex-row justify-content-center border-top pt-3'>
-				<downloadselect
-					:items="[this.$options.name + '.request.json', this.$options.name + '.request.yaml']"
-					@selected="download"
-				>
-					Download request as:
-				</downloadselect>
-	            <button type="submit" class="btn btn-primary ml-2">
-	                <i class="fa fa-play"></i> Display plots
-	            </button>
-	            <button type="button" class="btn btn-primary ml-2"
-	            	v-show='!responseDataEmpty'
-	            	@click='formHidden=true'
-	            >
-	                <i class="fa fa-times"></i> Close
-	            </button>
-            </div>
 
-        </div>
-        
-    </form>
-	</transition>
+            </div>
+        </slot>
+    </baseform>
 
     <trellisplotdiv :data="responseData" :filename="this.$options.name"
         class='position-absolute pos-0 m-0' style='z-index:1'>
