@@ -63,13 +63,12 @@ Vue.component('imtselect', {
     // be able to deselect them if gsims are changed. Just style them gray and use strike-through
     template: `<div class='d-flex flex-column'>
         <forminput :form="form" :name='name' headonly></forminput>
-        <div class='mb-1 flexible d-flex flex-column' style='flex-basis:auto'>
+        <div class='mb-1 flexible d-flex flex-column'>
           <select
           		v-model="elm.val"
           		v-bind="elm.attrs"
           		:class="{'border-danger': !!elm.err}"
           		class="form-control flexible"
-          		style='flex-basis:auto'
           >
               <option
               		v-for='imt in elm.choices'
