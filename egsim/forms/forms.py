@@ -77,7 +77,7 @@ class BaseForm(Form):
                     self.data[repl_key] = self.data.pop(key)
 
         # https://stackoverflow.com/a/20309754:
-        # Defaults are set accoridng to the initial value in the field
+        # Defaults are set according to the initial value in the field
         # This must be set here cause in clean() required fields are processed
         # before and their error set in the error form
         for name in self.fields:
@@ -140,10 +140,20 @@ class BaseForm(Form):
         """
         hidden_fn = set(self.__hidden_fieldnames__)
         cleaneddata_fn = set(self.__dump_returns_cleaneddata_for__)
-        cleaned_data = {
-            key: self.cleaned_data[key] if key in cleaneddata_fn else val
-            for key, val in self.data.items() if key not in hidden_fn
-        }
+        cleaned_data = {}
+        for key, val in self.data.items():
+            if key in hidden_fn:
+                continue
+            if key not in cleaneddata_fn:
+                fld = self.fields[key]
+                # Handle now the cases when we can omit to add some fields
+                # to cleaned_data. This is not to make the dumped string more
+                # readable and light in bytes:
+                if val == fld.initial:
+                    if not fld.required or val is not None:
+                        continue
+            cleaned_data[key] = self.cleaned_data[key] \
+                if key in cleaneddata_fn else val
 
         if syntax == 'json':
             if stream is None:
