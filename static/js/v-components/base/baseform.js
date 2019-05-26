@@ -7,14 +7,12 @@ var _BASE_FORM = Vue.component('baseform', {
         url: String,
         response: {type: Object, default: () => {return {}}},
         post: Function,
-        filename: {type: String, default: 'egsim'},
-        toggleFormVisible: {type: Boolean, default: true}
+        filename: {type: String, default: 'egsim'}
     },
     data: function () {
     	return {
         	responseDataEmpty: true,
-            responseData: this.response,
-            formHidden: false
+            responseData: this.response
         }
     },
     methods: {
@@ -23,7 +21,6 @@ var _BASE_FORM = Vue.component('baseform', {
             this.post(this.url, form).then(response => {
                 if (response && response.data){
                     this.responseData = response.data;
-                    this.$emit('responsereceived', response.data);
                 } 
             });
         },
@@ -40,18 +37,17 @@ var _BASE_FORM = Vue.component('baseform', {
     watch: {
         responseData: {
             immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
-            handler: function(newval, oldval){
-                this.responseDataEmpty = Vue.isEmpty(newval); // defined in vueutil.js
-                this.formHidden = !this.responseDataEmpty;
+            handler: function(newVal, oldVal){
+                this.responseDataEmpty = Vue.isEmpty(newVal); // defined in vueutil.js
+                if (!this.responseDataEmpty){
+                	this.$emit('responsereceived', newVal);
+                }
             }
-        },
-        toggleFormVisible:  function(newVal, oldVal){
-        	this.formHidden = !this.formHidden;
         }
     },
     template: `
 	<transition name="egsimform">
-    <form novalidate v-on:submit.prevent="request" v-show="!formHidden"
+    <form novalidate v-on:submit.prevent="request"
         :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light']]"
         class='d-flex flex-column flexible position-relative mb-3 align-self-center' style='z-index:10'>
         
@@ -78,7 +74,7 @@ var _BASE_FORM = Vue.component('baseform', {
 	            </button>
 	            <button type="button" class="btn btn-primary ml-2"
 	            	v-show='!responseDataEmpty'
-	            	@click='formHidden=true'
+	            	@click='$emit("closebuttonclicked")'
 	            >
 	                <i class="fa fa-times"></i> Close
 	            </button>
