@@ -14,7 +14,8 @@ Vue.component('residuals', {
     	// https://vuejs.org/v2/api/#created) but it works:
     	this.$set(this.form['plot_type'].attrs, 'size', 10);
         return {
-            responseData: {}
+            responseData: {},
+            formHidden: false
         }
     },
     template: `
@@ -22,8 +23,10 @@ Vue.component('residuals', {
 	<!-- $props passes all of the props on to the "parent" component -->
 	<!-- https://stackoverflow.com/a/40485023 -->
 	<baseform
+		v-show="!formHidden"
 		v-bind="$props"
-		@responsereceived="responseData = arguments[0]"
+		@responsereceived="responseData = arguments[0]; formHidden = true"
+		@closebuttonclicked="formHidden = true"
 	>	
 		<slot> 
 	        <div class="d-flex flex-column flexible ml-4">
