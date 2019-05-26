@@ -16,7 +16,7 @@ Vue.component('trellis', {
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
         return {
         	responseData: {},
-        	toggleFormVisible2: false,
+        	formHidden: false,
             scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' & key!='sa_period' & key!='plot_type')
         }
     },
@@ -51,9 +51,10 @@ Vue.component('trellis', {
 	<!-- $props passes all of the props on to the "parent" component -->
 	<!-- https://stackoverflow.com/a/40485023 -->
 	<baseform
+		v-show="!formHidden"
 		v-bind="$props"
-		:toggleFormVisible="toggleFormVisible2"
-		@responsereceived="responseData = arguments[0]"  
+		@responsereceived="responseData = arguments[0]; formHidden = true"
+		@closebuttonclicked="formHidden = true"
     >
     	<slot>
             <div class="d-flex flex-column flexible ml-4">
@@ -80,7 +81,7 @@ Vue.component('trellis', {
     <trellisplotdiv :data="responseData" :filename="filename"
         class='position-absolute pos-0 m-0' style='z-index:1'>
         <slot>
-            <button @click='toggleFormVisible2=!toggleFormVisible2' class='btn btn-sm btn-primary'><i class='fa fa-wpforms'></i> params</button>
+            <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-wpforms'></i> params</button>
         </slot>
     </trellisplotdiv>
 </div>`
