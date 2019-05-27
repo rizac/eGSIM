@@ -7,18 +7,20 @@ import os
 import io
 import csv
 import json
+import re
 from datetime import date
 from itertools import chain, repeat
 
 from yaml.error import YAMLError
 
 from django.http import JsonResponse
+from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 from django.conf import settings
 
-from egsim.middlewares import ExceptionHandlerMiddleware
+from egsim.core.responseerrors import exc2json, invalidform2json
 from egsim.forms.forms import (TrellisForm, GsimSelectionForm, ResidualsForm,
                                GmdbPlotForm, TestingForm, FormatForm)
 from egsim.core.utils import (QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc,
@@ -26,24 +28,41 @@ from egsim.core.utils import (QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc,
 from egsim.core import smtk as egsim_smtk
 from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
-from django.http.response import HttpResponse
 
 
+# common parameters to be passed to any Django template:
 _COMMON_PARAMS = {
     'project_name': 'eGSIM',
     'debug': settings.DEBUG,
-    }
+}
 
-# define the menu keys in the frontend:
-MENU_HOME = 'home'  # pylint: disable=invalid-name
-MENU_GSIMS = 'gsims'  # pylint: disable=invalid-name
-MENU_TRELLIS = 'trellis'  # pylint: disable=invalid-name
-MENU_GMDB = 'gmdbplot'  # pylint: disable=invalid-name
-MENU_RES = 'residuals'  # pylint: disable=invalid-name
-MENU_TEST = 'testing'  # pylint: disable=invalid-name
-MENU_DOC = 'apidoc'  # pylint: disable=invalid-name
 
-# (See API_VIEWS at the end of the page)
+class KEY:
+    '''Container class (enum-like) defining the string keys for the program
+    urls/services. Each string should be unique and
+    associated to a menu in the frontend (see `main`),
+    and optionally to a URL in the REST API (see the module 'urls' and
+    `api_url`).
+    A new key here in principle should be associated to some modification
+    in `main` and/or the module 'urls'.
+    '''
+    HOME = 'home'
+    GSIMS = 'gsims'  # pylint: disable=invalid-name
+    TRELLIS = 'trellis'  # pylint: disable=invalid-name
+    GMDB = 'gmdbplot'  # pylint: disable=invalid-name
+    RES = 'residuals'  # pylint: disable=invalid-name
+    TEST = 'testing'  # pylint: disable=invalid-name
+    DOC = 'apidoc'  # pylint: disable=invalid-name
+
+
+def api_url(urlkey):
+    '''Builds a query from the given urlkey (string)
+    This function should be used as central point where we define the eGSIM
+    query API urls, so that it can be changed in a single place.
+    Currently, it appends `urlkey` (stripped tiwh ending slashes, if any) to
+    'query/'
+    '''
+    return "query/%s" % re.sub(r'/+$', '',  urlkey)
 
 
 def main(request, selected_menu=None):
@@ -51,62 +70,63 @@ def main(request, selected_menu=None):
 
     # Tab components (one per tab, one per activated vue component)
     # (key, label and icon) (the last is bootstrap fontawesome name)
-    components_tabs = [(MENU_HOME, 'Home', 'fa-home'),
-                       (MENU_GSIMS, 'Gsim selection', 'fa-map-marker'),
-                       (MENU_TRELLIS, 'Trellis Plots', 'fa-area-chart'),
-                       (MENU_GMDB, 'Ground Motion database', 'fa-database'),
-                       (MENU_RES, 'Residuals', 'fa-bar-chart'),
-                       (MENU_TEST, 'Testing', 'fa-list'),
-                       (MENU_DOC, 'API Documentation', 'fa-info-circle')]
+    components_tabs = [(KEY.HOME, 'Home', 'fa-home'),
+                       (KEY.GSIMS, 'Gsim selection', 'fa-map-marker'),
+                       (KEY.TRELLIS, 'Trellis Plots', 'fa-area-chart'),
+                       (KEY.GMDB, 'Ground Motion database', 'fa-database'),
+                       (KEY.RES, 'Residuals', 'fa-bar-chart'),
+                       (KEY.TEST, 'Testing', 'fa-list'),
+                       (KEY.DOC, 'API Documentation', 'fa-info-circle')]
     # this can be changed if needed:
-    sel_component = MENU_HOME if not selected_menu else selected_menu
+    sel_component = KEY.HOME if not selected_menu else selected_menu
 
     # properties to be passed to vuejs components:
     components_props = {
-        MENU_HOME: {'src': 'pages/home'},
-        MENU_GSIMS: {'tr_models_url': 'data/tr_models',
-                     'url': GsimsView.url,
-                     'form': GsimsView.formclass().to_rendering_dict()},
-        MENU_TRELLIS: {'url': TrellisView.url,
-                       'form': TrellisView.formclass().to_rendering_dict()},
-        MENU_GMDB: {'url': GmdbPlotView.url,
-                    'form': GmdbPlotView.formclass().to_rendering_dict()},
-        MENU_RES: {'url': ResidualsView.url,
-                   'form': ResidualsView.formclass().to_rendering_dict()},
-        MENU_TEST: {'url': TestingView.url,
-                    'form': TestingView.formclass().to_rendering_dict()},
-        MENU_DOC: {'src': 'pages/apidoc'}
+        KEY.HOME: {'src': 'pages/home'},
+        KEY.GSIMS: {'tr_models_url': 'data/tr_models',
+                    'url': api_url(KEY.GSIMS),
+                    'form': GsimsView.formclass().to_rendering_dict()},
+        KEY.TRELLIS: {'url': api_url(KEY.TRELLIS),
+                      'form': TrellisView.formclass().to_rendering_dict()},
+        KEY.GMDB: {'url': api_url(KEY.GMDB),
+                   'form': GmdbPlotView.formclass().to_rendering_dict()},
+        KEY.RES: {'url': api_url(KEY.RES),
+                  'form': ResidualsView.formclass().to_rendering_dict()},
+        KEY.TEST: {'url': api_url(KEY.TEST),
+                   'form': TestingView.formclass().to_rendering_dict()},
+        KEY.DOC: {'src': 'pages/apidoc'}
     }
 
     # REMOVE LINES BELOW!!!
-    gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
-                 'CauzziEtAl2014']
-    components_props['trellis']['form']['gsim']['val'] = gsimnames
-    components_props['trellis']['form']['imt']['val'] = ['PGA']
-    components_props['trellis']['form']['magnitude']['val'] = "5:7"
-    components_props['trellis']['form']['distance']['val'] = "10 50 100"
-    components_props['trellis']['form']['aspect']['val'] = 1
-    components_props['trellis']['form']['dip']['val'] = 60
-    components_props['trellis']['form']['plot_type']['val'] = 's'
+    if settings.DEBUG:
+        gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
+                     'CauzziEtAl2014']
+        trellisformdict = components_props['trellis']['form']
+        trellisformdict['gsim']['val'] = gsimnames
+        trellisformdict['imt']['val'] = ['PGA']
+        trellisformdict['magnitude']['val'] = "5:7"
+        trellisformdict['distance']['val'] = "10 50 100"
+        trellisformdict['aspect']['val'] = 1
+        trellisformdict['dip']['val'] = 60
+        trellisformdict['plot_type']['val'] = 's'
 
-    components_props['residuals']['form']['gsim']['val'] = gsimnames
-    components_props['residuals']['form']['imt']['val'] = ['PGA', 'SA']
-    components_props['residuals']['form']['sa_period']['val'] = "0.2 1.0 2.0"
-    components_props['residuals']['form']['selexpr']['val'] = "magnitude > 5"
-    components_props['residuals']['form']['plot_type']['val'] = 'res'
+        residualsformdict = components_props['residuals']['form']
+        residualsformdict['gsim']['val'] = gsimnames
+        residualsformdict['imt']['val'] = ['PGA', 'SA']
+        residualsformdict['sa_period']['val'] = "0.2 1.0 2.0"
+        residualsformdict['selexpr']['val'] = "magnitude > 5"
+        residualsformdict['plot_type']['val'] = 'res'
 
-    components_props['testing']['form']['gsim']['val'] = gsimnames
-    components_props['testing']['form']['imt']['val'] = ['PGA', 'SA']
-    components_props['testing']['form']['sa_period']['val'] = "0.2 1.0 2.0"
-    components_props['testing']['form']['selexpr']['val'] = \
-        ("(magnitude > 5) & (vs30 != nan) & ((dip_1 != nan) | (dip_2 != nan)) "
-         "& ((strike_1 != nan) | (strike_2 != nan)) & "
-         "((rake_1 != nan) | (rake_2 != nan))")
-    components_props['testing']['form']['fit_measure']['val'] = ['res',
-                                                                 'lh',
-                                                                 'llh',
-                                                                 'mllh',
-                                                                 'edr']
+        testingformdict = components_props['testing']['form']
+        testingformdict['gsim']['val'] = gsimnames
+        testingformdict['imt']['val'] = ['PGA', 'SA']
+        testingformdict['sa_period']['val'] = "0.2 1.0 2.0"
+
+        components_props['testing']['form']['fit_measure']['val'] = ['res',
+                                                                     'lh',
+                                                                     'llh',
+                                                                     'mllh',
+                                                                     'edr']
 
     # remove lines above!
     gsims = json.dumps({_[0]: _[1:] for _ in aval_gsims(asjsonlist=True)})
@@ -119,7 +139,7 @@ def main(request, selected_menu=None):
                    'server_error_message': ""})
 
 
-def get_tr_models(request):
+def get_tr_models(request):  # pylint: disable=unused-argument
     '''Returns a JsonResponse with the data for the '''
     models = {}
     selected_model = None
@@ -150,11 +170,11 @@ def apidoc(request):
     # key is not present. Actually, just use a string for the moment:
     baseurl = "[eGSIM domain URL]"
     form = {
-        MENU_GSIMS: GsimsView.formclass().to_rendering_dict(False),
-        MENU_TRELLIS: TrellisView.formclass().to_rendering_dict(False),
-        MENU_GMDB: GmdbPlotView.formclass().to_rendering_dict(False),
-        MENU_RES: ResidualsView.formclass().to_rendering_dict(False),
-        MENU_TEST: TestingView.formclass().to_rendering_dict(False),
+        KEY.GSIMS: GsimsView.formclass().to_rendering_dict(False),
+        KEY.TRELLIS: TrellisView.formclass().to_rendering_dict(False),
+        KEY.GMDB: GmdbPlotView.formclass().to_rendering_dict(False),
+        KEY.RES: ResidualsView.formclass().to_rendering_dict(False),
+        KEY.TEST: TestingView.formclass().to_rendering_dict(False),
         'format': FormatForm().to_rendering_dict(False)
     }
     return render(request, filename,
@@ -193,41 +213,39 @@ class EgsimQueryViewMeta(type):
                                   )
 
 
-class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
+def download_request(request, filename, formclass):
+    '''Returns the request re-formatted according to the given syntax.
+    Uses request.body so this method should be called from a POST request
+    '''
+    inputdict = yaml_load(request.body.decode('utf-8'))
+    dataform = formclass(data=inputdict)  # pylint: disable=not-callable
+    if not dataform.is_valid():
+        return invalidform2json(dataform)
+    buffer = io.StringIO()
+    ext = os.path.splitext(filename)[1].lower()
+    if ext[:1] == '.':
+        ext = ext[1:]
+    dataform.dump(buffer, syntax=ext)
+    buffer.seek(0)
+    if ext == 'json':
+        response = HttpResponse(buffer, content_type='application/json')
+    else:
+        response = HttpResponse(buffer, content_type='application/x-yaml')
+    response['Content-Disposition'] = 'attachment; filename=%s' % filename
+    return response
+
+
+class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
     '''base view for every eGSIM view handling data request and returning data
     in response this is usually accomplished via a form in the web page or a
     POST reqeust from the a normal query in the standard API
     '''
     formclass = None
     arrayfields = set()
-    EXCEPTION_CODE = 400
-    VALIDATION_ERR_MSG = 'Invalid input'
     extensions = {
         'json': 'json',
         'text': 'csv'
     }
-
-    @classmethod
-    def download_request(cls, request, filename):
-        '''Returns the request re-formatted according to the given syntax.
-        Uses request.body so this method should be called from a POST request
-        '''
-        inputdict = yaml_load(request.body.decode('utf-8'))
-        dataform = cls.formclass(data=inputdict)  # pylint: disable=not-callable
-        if not dataform.is_valid():
-            return cls.jsonresponse_from_invalid_form(dataform)
-        buffer = io.StringIO()
-        ext = os.path.splitext(filename)[1].lower()
-        if ext[:1] == '.':
-            ext = ext[1:]
-        dataform.dump(buffer, syntax=ext)
-        buffer.seek(0)
-        if ext == 'json':
-            response = HttpResponse(buffer, content_type='application/json')
-        else:
-            response = HttpResponse(buffer, content_type='application/x-yaml')
-        response['Content-Disposition'] = 'attachment; filename=%s' % filename
-        return response
 
     def get(self, request):
         '''processes a get request'''
@@ -251,8 +269,7 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
         try:
             return self.response(yaml_load(request.body.decode('utf-8')))
         except YAMLError as yerr:
-            return ExceptionHandlerMiddleware.\
-                jsonerr_response(yerr, code=self.EXCEPTION_CODE)
+            return exc2json(yerr)
 
     @classmethod
     def response(cls, inputdict):
@@ -263,14 +280,14 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
         filename = inputdict.pop('filename', '')
         formatform = FormatForm(inputdict)
         if not formatform.is_valid():
-            return cls.jsonresponse_from_invalid_form(formatform)
+            return invalidform2json(formatform)
         formatdict = formatform.cleaned_data
 
         for key in formatdict:
             inputdict.pop(key, None)
         dataform = cls.formclass(data=inputdict)  # pylint: disable=not-callable
         if not dataform.is_valid():
-            return cls.jsonresponse_from_invalid_form(dataform)
+            return invalidform2json(dataform)
 
         outputdict = cls.process(dataform.cleaned_data)
         frmt = formatdict['format'].lower()
@@ -282,10 +299,7 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
                                              formatdict.get('text_sep', ','),
                                              formatdict.get('text_dec', '.'))
         except NotImplementedError:
-            return ExceptionHandlerMiddleware.\
-                jsonerr_response('format "%s" is not '
-                                 'currently implemented' % frmt,
-                                 code=cls.EXCEPTION_CODE)
+            return exc2json('format "%s" is not currently implemented' % frmt)
 
         if filename:
             fname, ext = os.path.splitext(filename)
@@ -349,34 +363,6 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
                 yield cell
 
     @classmethod
-    def jsonresponse_from_invalid_form(cls, form):
-        errors = cls.format_validation_errors(form.errors)
-        msg = "%s in %s" % \
-            (cls.VALIDATION_ERR_MSG,
-             ', '.join(_['domain'] for _ in errors if _.get('domain', '')))
-        return ExceptionHandlerMiddleware.\
-            jsonerr_response(msg, code=cls.EXCEPTION_CODE, errors=errors)
-
-    @classmethod
-    def format_validation_errors(cls, errors):
-        '''format the validation error returning the list of errors. Each
-        item is a dict with keys:
-             ```
-             {'domain': <str>, 'message': <str>, 'code': <str>}
-            ```
-            :param errors: a django ErrorDict returned by the `Form.errors`
-                property
-        '''
-        dic = json.loads(errors.as_json())
-        errors = []
-        for key, values in dic.items():
-            for value in values:
-                errors.append({'domain': key,
-                               'message': value.get('message', ''),
-                               'reason': value.get('code', '')})
-        return errors
-
-    @classmethod
     def process(cls, inputdict):
         ''' core (abstract) method to be implemented in subclasses
 
@@ -404,12 +390,10 @@ class EgsimQueryView(View, metaclass=EgsimQueryViewMeta):
         raise NotImplementedError()
 
 
-class GsimsView(EgsimQueryView):
+class GsimsView(RESTAPIView):
     '''EgsimQueryView subclass for generating Gsim selection responses'''
 
     formclass = GsimSelectionForm
-    # url will be used in views. Do not end with '/':
-    url = 'query/gsims'
 
     @classmethod
     def process(cls, inputdict):
@@ -443,12 +427,10 @@ class GsimsView(EgsimQueryView):
         return [[str(_)] for _ in process_result]
 
 
-class TrellisView(EgsimQueryView):
+class TrellisView(RESTAPIView):
     '''EgsimQueryView subclass for generating Trellis plots responses'''
 
     formclass = TrellisForm
-    # url will be used in views. Do not end with '/':
-    url = 'query/trellis'
 
     @classmethod
     def process(cls, inputdict):
@@ -469,24 +451,20 @@ class TrellisView(EgsimQueryView):
                     yield chain([imt, gsim, mag, dist, vs30, ylabel], values)
 
 
-class GmdbPlotView(EgsimQueryView):  # pylint: disable=abstract-method
+class GmdbPlotView(RESTAPIView):  # pylint: disable=abstract-method
     '''EgsimQueryView subclass for generating Gmdb's
        magnitude vs distance plots responses'''
 
     formclass = GmdbPlotForm
-    # url will be used in views. Do not end with '/':
-    url = 'query/gmdbplot'
 
     @classmethod
     def process(cls, inputdict):
         return egsim_smtk.get_gmdbplot(inputdict)
 
 
-class ResidualsView(EgsimQueryView):
+class ResidualsView(RESTAPIView):
 
     formclass = ResidualsForm
-    # url will be used in views. Do not end with '/':
-    url = 'query/residuals'
 
     @classmethod
     def process(cls, inputdict):
@@ -506,11 +484,9 @@ class ResidualsView(EgsimQueryView):
                                 res_plot['yvalues'])
 
 
-class TestingView(EgsimQueryView):
+class TestingView(RESTAPIView):
 
     formclass = TestingForm
-    # url will be used in views. Do not end with '/':
-    url = 'query/testing'
 
     @classmethod
     def process(cls, inputdict):
@@ -525,15 +501,3 @@ class TestingView(EgsimQueryView):
             for imt, imts in mofs.items():
                 for gsim, value in imts.items():
                     yield [mof, imt, gsim, dbrecords[gsim], value]
-
-
-# create a global dict of strings mapped to views
-# REMEMBER: Each key defines the endpoint of the URL, thus only alphanumeric
-# characters
-API_VIEWS = {
-    MENU_GSIMS: GsimsView,
-    MENU_TRELLIS: TrellisView,
-    MENU_GMDB: GmdbPlotView,
-    MENU_RES: ResidualsView,
-    MENU_TEST: TestingView
-}
