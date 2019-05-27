@@ -28,18 +28,33 @@ urlpatterns = [  # pylint: disable=invalid-name
                                     permanent=False)),
     # main page entry point:
     url(r'^(?P<selected_menu>[a-zA-Z]+)/?$', views.main, name='main'),
+
     # other urls called from within the page:
     url(r'^pages/home/?$', views.home, name='home'),
     url(r'^pages/apidoc/?$', views.apidoc, name='apidoc'),
     url(r'^data/tr_models', views.get_tr_models),
+
+    # download request urls:
+    url(r'^data/%s/downloadrequest/(?P<filename>.+)/?$' %
+        views.api_url(views.KEY.TRELLIS),
+        views.download_request, {'formclass': views.TrellisView.formclass}),
+    url(r'^data/query/%s/downloadrequest/(?P<filename>.+)/?$' %
+        views.api_url(views.KEY.TEST),
+        views.download_request,  {'formclass': views.TestingView.formclass}),
+    url(r'^data/query/%s/downloadrequest/(?P<filename>.+)/?$' %
+        views.api_url(views.KEY.RES),
+        views.download_request,  {'formclass': views.ResidualsView.formclass}),
+
+    # REST APIS:
+    url(r'^%s/?$' % views.api_url(views.KEY.GSIMS),
+        views.GsimsView.as_view()),
+    url(r'^%s/?$' % views.api_url(views.KEY.TRELLIS),
+        views.TrellisView.as_view()),
+    url(r'^%s/?$' % views.api_url(views.KEY.RES),
+        views.ResidualsView.as_view()),
+    url(r'^%s/?$' % views.api_url(views.KEY.TEST),
+        views.TestingView.as_view()),
+
     # test stuff: (FIXME: REMOVE)
     url(r'test_err', views.test_err),
 ]
-
-# REST APIS:
-for key, view in views.API_VIEWS.items():
-    urlpatterns.append(url(r'^query/%s/?$' % key, view.as_view(), name=key))
-    # append the url for querying the form parameters:
-    urlpatterns.append(url(r'^data/query/%s/downloadrequest/'
-                           '(?P<filename>.+)/?$' % key,
-                           view.download_request, name=key+".request"))
