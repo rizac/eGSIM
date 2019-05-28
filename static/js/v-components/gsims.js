@@ -7,7 +7,7 @@ Vue.component('gsims', {
     props: {
         form: Object,
         url: String,
-        tr_models_url: String,
+        trUrl: String,
         // response: {type: Object, default: () => {return {}}},
         post: Function        
     },
@@ -55,7 +55,7 @@ Vue.component('gsims', {
         <div :id='id' class='flexible' style='font: inherit !important'></div>
         </div>`,
     created: function(){
-        this.post(this.tr_models_url).then(response => {
+        this.post(this.trUrl).then(response => {
             if (response && response.data){
                 this.models = response.data.models;
                 this.form.model.val = response.data.selected_model || Object.keys(response.data.models)[0];

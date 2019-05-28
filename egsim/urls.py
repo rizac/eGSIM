@@ -32,29 +32,44 @@ urlpatterns = [  # pylint: disable=invalid-name
     # other urls called from within the page:
     url(r'^pages/home/?$', views.home, name='home'),
     url(r'^pages/apidoc/?$', views.apidoc, name='apidoc'),
-    url(r'^data/tr_models', views.get_tr_models),
+    url(r'^%s/?$' % views.URLS.GSIMS_TR, views.get_tr_models),
 
     # download request urls:
-    url(r'^data/%s/downloadrequest/(?P<filename>.+)/?$' %
-        views.api_url(views.KEY.TRELLIS),
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.TRELLIS_DOWNLOAD_REQ,
         views.download_request, {'formclass': views.TrellisView.formclass}),
-    url(r'^data/query/%s/downloadrequest/(?P<filename>.+)/?$' %
-        views.api_url(views.KEY.TEST),
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.TESTING_DOWNLOAD_REQ,
         views.download_request,  {'formclass': views.TestingView.formclass}),
-    url(r'^data/query/%s/downloadrequest/(?P<filename>.+)/?$' %
-        views.api_url(views.KEY.RES),
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.RESIDUALS_DOWNLOAD_REQ,
         views.download_request,  {'formclass': views.ResidualsView.formclass}),
 
     # REST APIS:
-    url(r'^%s/?$' % views.api_url(views.KEY.GSIMS),
-        views.GsimsView.as_view()),
-    url(r'^%s/?$' % views.api_url(views.KEY.TRELLIS),
-        views.TrellisView.as_view()),
-    url(r'^%s/?$' % views.api_url(views.KEY.RES),
-        views.ResidualsView.as_view()),
-    url(r'^%s/?$' % views.api_url(views.KEY.TEST),
-        views.TestingView.as_view()),
+    url(r'^%s/?$' % views.URLS.GSIMS_RESTAPI, views.GsimsView.as_view()),
+    url(r'^%s/?$' % views.URLS.TRELLIS_RESTAPI, views.TrellisView.as_view()),
+    url(r'^%s/?$' % views.URLS.RESIDUALS_RESTAPI, views.ResidualsView.as_view()),
+    url(r'^%s/?$' % views.URLS.TESTING_RESTAPI, views.TestingView.as_view()),
+    # this is not documented but used from frontend:
+    url(r'^%s/?$' % views.URLS.GMDBPLOT_RESTAPI, views.GmdbPlotView.as_view()),
+
+    # download as text:
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.TRELLIS_DOWNLOAD_ASTEXT,
+        views.download_astext,
+        {'viewclass': views.TrellisView}),
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.RESIDUALS_DOWNLOAD_ASTEXT,
+        views.download_astext,
+        {'viewclass': views.ResidualsView}),
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.TESTING_DOWNLOAD_ASTEXT,
+        views.download_astext,
+        {'viewclass': views.TestingView}),
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.TRELLIS_DOWNLOAD_ASTEXT_EU,
+        views.download_astext,
+        {'viewclass': views.TrellisView, 'text_sep': ';', 'text_dec': ','}),
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU,
+        views.download_astext,
+        {'viewclass': views.ResidualsView, 'text_sep': ';', 'text_dec': ','}),
+    url(r'^%s/(?P<filename>.+)/?$' % views.URLS.TESTING_DOWNLOAD_ASTEXT_EU,
+        views.download_astext,
+        {'viewclass': views.TestingView, 'text_sep': ';', 'text_dec': ','}),
 
     # test stuff: (FIXME: REMOVE)
-    url(r'test_err', views.test_err),
+    url(r'___test_err', views.test_err),
 ]
