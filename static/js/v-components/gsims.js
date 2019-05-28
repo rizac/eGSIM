@@ -7,13 +7,15 @@ Vue.component('gsims', {
     props: {
         form: Object,
         url: String,
-        trUrl: String,
-        // response: {type: Object, default: () => {return {}}},
+        // Additional urls Object (string key mapped to urls).
+        // Note: use a function for the 'default' key to prevent sharing the same object (https://github.com/vuejs/vue/issues/1032#issuecomment-120212888)
+        urls: {type: Object, default: () => {return {}}},
         post: Function        
     },
     data: function(){
         return {
             id: 'tr_map_id',
+            trUrl: this.urls.getTectonicRegionalisations,  // this props is passed from backend
             vuePopupComponent: null,
             models: {},  //object of model names name mapped to geojson data
             map: undefined,

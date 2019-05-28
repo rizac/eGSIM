@@ -10,10 +10,24 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         	type: Number,
         	default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))
        	},
-        filename: {type: String, default: 'egsim_plot'}
+        filename: {type: String, default: ''},
+        responseDownloadFunctions: {type: Map, default: () => { return new Map(); }}
     },
     data: function(){
     	// NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
+
+		// build a Map of label -> download request functions form the provided
+		// responseDownloadFunctions and the custom Plotly download as image formats
+		var downloadFunctions = new Map();
+		if (this.filename){
+			downloadFunctions.set('plots image (png)', () => { this.downloadAsImage.call(this, 'png'); });
+			downloadFunctions.set('plots image (jpg)', () => { this.downloadAsImage.call(this, 'jpeg'); });
+			downloadFunctions.set('plots image (svg)', () => { this.downloadAsImage.call(this, 'svg'); });
+			// append the given responseDownloadFunctions
+			for (var [key, value] of this.responseDownloadFunctions) {
+				downloadFunctions.set(`all data (${key})`, value);
+			}
+		}
 
         // unique id based on the component name (note that if this is called by a subclass,
         // then this.$options.name is the subclass name). FIXME: NOT USED REMOVE?
@@ -99,11 +113,11 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             colorMap: Vue.colorMap(),  // defined in vueutil.js
             // download options. see this.download(). Note thqt
             // most of the image options are not used for the moment
-            downloadopts: {
+            downloadFunctions: downloadFunctions,
+            downloadAsImgOptions: {
                 width: null,
                 height: null,
                 filename: this.filename + '.request',
-                formats: ['png', 'jpeg', 'svg', 'json (all plots data)'],
                 // scale 5 increases the image size, thus increasing the resolution
                 // Note that you cannot provide any number (e.g. scale 10 raises Exception)
                 scale: 5
@@ -216,11 +230,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             </div>
 
 			<div>
-				<downloadselect
-	            	:items='downloadopts.formats' @selected='download'
-	            	class='mt-3 border p-2 bg-white'
-	            >
-	            Download response as:
+				<downloadselect :model='downloadFunctions' class='mt-3 border p-2 bg-white'>
+		            Download:
 	            </downloadselect>
 	
 				<div
@@ -1081,74 +1092,68 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 		  	var m = Math;
 		  	return values.length? [m.min(...values), m.max(...values)] : [NaN, NaN];
 		},
-        download: function(format, formatIndex, formats){
+        downloadAsImage: function(format){  // format can be png, jpeg, svg
             
             if (!format){  // for safety
                 return;
             }
             
-            if (format.startsWith('json')){
-            	this.downloadAsJson();
-            }else{
-            	var props = this.downloadopts;
+        	var props = this.downloadAsImgOptions;
 
-	            // FIXME: 1. props.size = 5 seems to increase resolution (by simply increasing the size)
-	            // However, the fonts and the lines should be increased, too
-	            // 2. legend is not present. If we want to add a legend, better would be to do it automatically
-	            // (only one trace VISIBLE => no legend, otherwise yes), but then consider plotting on a new div, where
-	            // we temporarily set this.defaultlayout.showlegend=true (currently, by changing showlegedn on the fly
-	            // (e.g. in setBackround below) raises
-	            // 3. Font size is not preserved in the image. But this has lower priority, as it turns out the
-	            // font image (at least on Chrome + MacOsX) is a default Helvetica-like font which might be preferable
-	            // as very common and readable
-	            
-	
-	            var elm = document.getElementById(this.plotdivid);
-	            var props = Object.assign({}, props);  // Object.assign(target, ...sources);
-	            props.format = format;
-	            var elm = document.getElementById(this.plotdivid);
-	            var [width, height] = [elm.offsetWidth, elm.offsetHeight];
-	            if (!(props.width)){
-	                props.width = (props.height ? width*props.height/height : width); // + 'px';
-	            }
-	            if (!(props.height)){
-	                props.height = (props.width ? height*props.width/width : height); // + 'px';
-	            }
-	
-	            function setBackground(gd) {
-	                // https://community.plot.ly/t/plotly-toimage-background-color/8099
-	                
-	                // this function actually allows the user to configure the plot
-	                // before rendering it to imag (why is it called like this
-	                // in plotly?) but note that not all modifications work as expected:
-	                
-	                // the paper bg color is set to transparent by default. However,
-	                // jpeg does not support it and thus we would get black background.
-	                // Therefore:
-	                if(format == 'jpeg'){
-	                    gd._fullLayout.paper_bgcolor = 'rgba(255, 255, 255, 1)';
-	                }
-	                
-	                // this actually does not work (raises) if we change the showlegend:
-	                // thus, more work is needed to setting showlegend=true temporarily and then
-	                // drawing on a new div
-	                // gd._fullLayout.showlegend = true;
-	            }
-	            props.setBackground = setBackground;
-	
-	            Plotly.downloadImage(elm, props);
-	        }
+            // FIXME: 1. props.size = 5 seems to increase resolution (by simply increasing the size)
+            // However, the fonts and the lines should be increased, too
+            // 2. legend is not present. If we want to add a legend, better would be to do it automatically
+            // (only one trace VISIBLE => no legend, otherwise yes), but then consider plotting on a new div, where
+            // we temporarily set this.defaultlayout.showlegend=true (currently, by changing showlegedn on the fly
+            // (e.g. in setBackround below) raises
+            // 3. Font size is not preserved in the image. But this has lower priority, as it turns out the
+            // font image (at least on Chrome + MacOsX) is a default Helvetica-like font which might be preferable
+            // as very common and readable
+            
 
-//             // Plotly.toImage will turn the plot in the given div into a data URL string
-//             // toImage takes the div as the first argument and an object specifying image properties as the other
-//             Plotly.toImage(elm, {format: 'png', width: width, height: height}).then(function(dataUrl) {
-//                 // use the dataUrl
-//             })
+            var elm = document.getElementById(this.plotdivid);
+            var props = Object.assign({}, props);  // Object.assign(target, ...sources);
+            props.format = format;
+            var elm = document.getElementById(this.plotdivid);
+            var [width, height] = [elm.offsetWidth, elm.offsetHeight];
+            if (!(props.width)){
+                props.width = (props.height ? width*props.height/height : width); // + 'px';
+            }
+            if (!(props.height)){
+                props.height = (props.width ? height*props.width/width : height); // + 'px';
+            }
+
+            function setBackground(gd) {
+                // https://community.plot.ly/t/plotly-toimage-background-color/8099
+                
+                // this function actually allows the user to configure the plot
+                // before rendering it to imag (why is it called like this
+                // in plotly?) but note that not all modifications work as expected:
+                
+                // the paper bg color is set to transparent by default. However,
+                // jpeg does not support it and thus we would get black background.
+                // Therefore:
+                if(format == 'jpeg'){
+                    gd._fullLayout.paper_bgcolor = 'rgba(255, 255, 255, 1)';
+                }
+                
+                // this actually does not work (raises) if we change the showlegend:
+                // thus, more work is needed to setting showlegend=true temporarily and then
+                // drawing on a new div
+                // gd._fullLayout.showlegend = true;
+            }
+            props.setBackground = setBackground;
+
+            Plotly.downloadImage(elm, props);
+	        
+			/*
+            // Plotly.toImage will turn the plot in the given div into a data URL string
+            // toImage takes the div as the first argument and an object specifying image properties as the other
+            Plotly.toImage(elm, {format: 'png', width: width, height: height}).then(function(dataUrl) {
+                // use the dataUrl
+            })
+            */
         },
-        downloadAsJson(){
-        	var filename = this.downloadopts.filename + 'request.json';
-        	Vue.download(this.data, filename); // defined in vueutil.js
-		},
         addResizeListener: function(fireResizeNow){
         	// adds (if not already added) a resize listener redrawing plots on window.resize
         	if (!this.resizeListener){
