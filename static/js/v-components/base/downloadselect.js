@@ -25,7 +25,7 @@ Vue.component('downloadselect', {
             // we do not attach onchange on the <select> tag because of this: https://github.com/vuejs/vue/issues/293
             var idx = this.items.indexOf(newVal);
             if(idx > -1){
-            	this.$emit('selected', newVal, idx, this.items.slice());   
+            	this.$emit('selected', newVal);   
             }
             this.selKey = this.emptyValue;
         }

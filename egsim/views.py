@@ -40,11 +40,8 @@ _COMMON_PARAMS = {
 class KEY:
     '''Container class (enum-like) defining the string keys for the program
     urls/services. Each string should be unique and
-    associated to a menu in the frontend (see `main`),
-    and optionally to a URL in the REST API (see the module 'urls' and
-    `api_url`).
-    A new key here in principle should be associated to some modification
-    in `main` and/or the module 'urls'.
+    associated to a menu in the frontend (see `main`) AND a javascript
+    file named <KEY>.js (see javascript directory)
     '''
     HOME = 'home'
     GSIMS = 'gsims'  # pylint: disable=invalid-name
@@ -55,14 +52,35 @@ class KEY:
     DOC = 'apidoc'  # pylint: disable=invalid-name
 
 
-def api_url(urlkey):
-    '''Builds a query from the given urlkey (string)
-    This function should be used as central point where we define the eGSIM
-    query API urls, so that it can be changed in a single place.
-    Currently, it appends `urlkey` (stripped tiwh ending slashes, if any) to
-    'query/'
+class URLS:
+    '''This class is a container for URLS which should be injected into
+    the web page (via Django) AND used in :module:`urls` for defining
+    the urls and relative views, in order to be DRY
+    All URLS SHOULD NOT END WITH SLASH "/"
     '''
-    return "query/%s" % re.sub(r'/+$', '',  urlkey)
+
+    # REST API URLS:
+    GSIMS_RESTAPI = 'query/gsims'
+    TRELLIS_RESTAPI = 'query/trellis'
+    RESIDUALS_RESTAPI = 'query/residuals'
+    TESTING_RESTAPI = 'query/testing'
+    GMDBPLOT_RESTAPI = 'query/gmdbplot'
+
+    # url for downloading tectonic regionalisations (GeoJson)
+    GSIMS_TR = 'data/gsims/tr_models'
+
+    # url(s) for downloading the requests in json or yaml:
+    TRELLIS_DOWNLOAD_REQ = 'data/trellis/downloadrequest'
+    RESIDUALS_DOWNLOAD_REQ = 'data/residuals/downloadrequest'
+    TESTING_DOWNLOAD_REQ = 'data/testing/downloadrequest'
+
+    # urls for downloading text:
+    TRELLIS_DOWNLOAD_ASTEXT = 'data/trellis/astext'
+    RESIDUALS_DOWNLOAD_ASTEXT = 'data/residuals/astext'
+    TESTING_DOWNLOAD_ASTEXT = 'data/testing/astext'
+    TRELLIS_DOWNLOAD_ASTEXT_EU = 'data/trellis/astext_eu'
+    RESIDUALS_DOWNLOAD_ASTEXT_EU = 'data/residuals/astext_eu'
+    TESTING_DOWNLOAD_ASTEXT_EU = 'data/testing/astext_eu'
 
 
 def main(request, selected_menu=None):
@@ -82,19 +100,42 @@ def main(request, selected_menu=None):
 
     # properties to be passed to vuejs components:
     components_props = {
-        KEY.HOME: {'src': 'pages/home'},
-        KEY.GSIMS: {'tr_models_url': 'data/tr_models',
-                    'url': api_url(KEY.GSIMS),
-                    'form': GsimsView.formclass().to_rendering_dict()},
-        KEY.TRELLIS: {'url': api_url(KEY.TRELLIS),
-                      'form': TrellisView.formclass().to_rendering_dict()},
-        KEY.GMDB: {'url': api_url(KEY.GMDB),
-                   'form': GmdbPlotView.formclass().to_rendering_dict()},
-        KEY.RES: {'url': api_url(KEY.RES),
-                  'form': ResidualsView.formclass().to_rendering_dict()},
-        KEY.TEST: {'url': api_url(KEY.TEST),
-                   'form': TestingView.formclass().to_rendering_dict()},
-        KEY.DOC: {'src': 'pages/apidoc'}
+        KEY.HOME: {
+            'src': 'pages/home'
+        },
+        KEY.GSIMS: {
+            'trUrl': URLS.GSIMS_TR,
+            'url': URLS.GSIMS_RESTAPI,
+            'form': GsimsView.formclass().to_rendering_dict()
+        },
+        KEY.TRELLIS: {
+            'url': URLS.TRELLIS_RESTAPI,
+            'downloadrequestUrl': URLS.TRELLIS_DOWNLOAD_REQ,
+            'downloadAsTextUrl': URLS.TRELLIS_DOWNLOAD_ASTEXT,
+            'downloadAsTextEuUrl': URLS.TRELLIS_DOWNLOAD_ASTEXT_EU,
+            'form': TrellisView.formclass().to_rendering_dict()
+        },
+        KEY.GMDB: {
+            'url': URLS.GMDBPLOT_RESTAPI,
+            'form': GmdbPlotView.formclass().to_rendering_dict()
+        },
+        KEY.RES: {
+            'url': URLS.RESIDUALS_RESTAPI,
+            'downloadrequestUrl': URLS.RESIDUALS_DOWNLOAD_REQ,
+            'downloadAsTextUrl': URLS.RESIDUALS_DOWNLOAD_ASTEXT,
+            'downloadAsTextEuUrl': URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU,
+            'form': ResidualsView.formclass().to_rendering_dict()
+        },
+        KEY.TEST: {
+            'url': URLS.TESTING_RESTAPI,
+            'downloadrequestUrl': URLS.TESTING_DOWNLOAD_REQ,
+            'downloadAsTextUrl': URLS.TESTING_DOWNLOAD_ASTEXT,
+            'downloadAsTextEuUrl': URLS.TESTING_DOWNLOAD_ASTEXT_EU,
+            'form': TestingView.formclass().to_rendering_dict()
+        },
+        KEY.DOC: {
+            'src': 'pages/apidoc'
+        }
     }
 
     # REMOVE LINES BELOW!!!
@@ -172,7 +213,7 @@ def apidoc(request):
     form = {
         KEY.GSIMS: GsimsView.formclass().to_rendering_dict(False),
         KEY.TRELLIS: TrellisView.formclass().to_rendering_dict(False),
-        KEY.GMDB: GmdbPlotView.formclass().to_rendering_dict(False),
+        # KEY.GMDB: GmdbPlotView.formclass().to_rendering_dict(False),
         KEY.RES: ResidualsView.formclass().to_rendering_dict(False),
         KEY.TEST: TestingView.formclass().to_rendering_dict(False),
         'format': FormatForm().to_rendering_dict(False)
@@ -214,7 +255,8 @@ class EgsimQueryViewMeta(type):
 
 
 def download_request(request, filename, formclass):
-    '''Returns the request re-formatted according to the given syntax.
+    '''Returns the request re-formatted according to the syntax
+    inferred from filename (*.json or *.yaml).
     Uses request.body so this method should be called from a POST request
     '''
     inputdict = yaml_load(request.body.decode('utf-8'))
@@ -231,6 +273,16 @@ def download_request(request, filename, formclass):
         response = HttpResponse(buffer, content_type='application/json')
     else:
         response = HttpResponse(buffer, content_type='application/x-yaml')
+    response['Content-Disposition'] = 'attachment; filename=%s' % filename
+    return response
+
+
+def download_astext(request, filename, viewclass, text_sep=',', text_dec='.'):
+    '''Returns the request re-formatted as text/csv.
+    Uses request.body so this method should be called from a POST request
+    '''
+    inputdict = yaml_load(request.body.decode('utf-8'))
+    response = viewclass.response_text(inputdict, text_sep, text_dec)
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response
 
