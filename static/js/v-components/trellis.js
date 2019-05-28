@@ -6,7 +6,7 @@
 Vue.component('trellis', {
 	extends: _BASE_FORM,  // defined in baseform.js
 	props: {
-		filename: {type:String, default:'trellis'},
+		filename: {type: String, default:'trellis'}  // overrides "super-class" filename
 	},
     data: function () {
     	// set the size of the plot_type <select>. Note that it turns out
@@ -14,6 +14,7 @@ Vue.component('trellis', {
     	// reactive properties like 'size' here (or maybe 'beforeCreate' would be
     	// a better place? https://vuejs.org/v2/api/#beforeCreate)
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
+   		
         return {
         	responseData: {},
         	formHidden: false,
@@ -48,7 +49,7 @@ Vue.component('trellis', {
     },
     template: `
 <div class='flexible d-flex flex-column'>
-	<!-- $props passes all of the props on to the "parent" component -->
+	<!-- v-bind="$props" passes all of the props on to the "parent" component -->
 	<!-- https://stackoverflow.com/a/40485023 -->
 	<baseform
 		v-show="!formHidden"
@@ -78,8 +79,12 @@ Vue.component('trellis', {
         </slot>
     </baseform>
 
-    <trellisplotdiv :data="responseData" :filename="filename"
-        class='position-absolute pos-0 m-0' style='z-index:1'>
+    <trellisplotdiv
+    	:data="responseData"
+    	:filename="filename"
+    	:responseDownloadFunctions="responseDownloadFunctions"
+        class='position-absolute pos-0 m-0' style='z-index:1'
+    >
         <slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-wpforms'></i> params</button>
         </slot>

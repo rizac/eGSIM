@@ -98,40 +98,50 @@ def main(request, selected_menu=None):
     # this can be changed if needed:
     sel_component = KEY.HOME if not selected_menu else selected_menu
 
-    # properties to be passed to vuejs components:
+    # properties to be passed to vuejs components.
+    # If you change THE KEYS of the dict here you should change also the
+    # javascript:
     components_props = {
         KEY.HOME: {
             'src': 'pages/home'
         },
         KEY.GSIMS: {
-            'trUrl': URLS.GSIMS_TR,
+            'form': GsimsView.formclass().to_rendering_dict(),
             'url': URLS.GSIMS_RESTAPI,
-            'form': GsimsView.formclass().to_rendering_dict()
+            'urls': {
+                'getTectonicRegionalisations': URLS.GSIMS_TR
+            }
         },
         KEY.TRELLIS: {
+            'form': TrellisView.formclass().to_rendering_dict(),
             'url': URLS.TRELLIS_RESTAPI,
-            'downloadrequestUrl': URLS.TRELLIS_DOWNLOAD_REQ,
-            'downloadAsTextUrl': URLS.TRELLIS_DOWNLOAD_ASTEXT,
-            'downloadAsTextEuUrl': URLS.TRELLIS_DOWNLOAD_ASTEXT_EU,
-            'form': TrellisView.formclass().to_rendering_dict()
+            'urls': {
+                'downloadRequest': URLS.TRELLIS_DOWNLOAD_REQ,
+                'downloadResponseCsv': URLS.TRELLIS_DOWNLOAD_ASTEXT,
+                'downloadResponseCsvDecComma': URLS.TRELLIS_DOWNLOAD_ASTEXT_EU
+            }
         },
         KEY.GMDB: {
-            'url': URLS.GMDBPLOT_RESTAPI,
-            'form': GmdbPlotView.formclass().to_rendering_dict()
+            'form': GmdbPlotView.formclass().to_rendering_dict(),
+            'url': URLS.GMDBPLOT_RESTAPI
         },
         KEY.RES: {
+            'form': ResidualsView.formclass().to_rendering_dict(),
             'url': URLS.RESIDUALS_RESTAPI,
-            'downloadrequestUrl': URLS.RESIDUALS_DOWNLOAD_REQ,
-            'downloadAsTextUrl': URLS.RESIDUALS_DOWNLOAD_ASTEXT,
-            'downloadAsTextEuUrl': URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU,
-            'form': ResidualsView.formclass().to_rendering_dict()
+            'urls': {
+                'downloadRequest': URLS.RESIDUALS_DOWNLOAD_REQ,
+                'downloadResponseCsv': URLS.RESIDUALS_DOWNLOAD_ASTEXT,
+                'downloadResponseCsvDecComma': URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU
+            }
         },
         KEY.TEST: {
+            'form': TestingView.formclass().to_rendering_dict(),
             'url': URLS.TESTING_RESTAPI,
-            'downloadrequestUrl': URLS.TESTING_DOWNLOAD_REQ,
-            'downloadAsTextUrl': URLS.TESTING_DOWNLOAD_ASTEXT,
-            'downloadAsTextEuUrl': URLS.TESTING_DOWNLOAD_ASTEXT_EU,
-            'form': TestingView.formclass().to_rendering_dict()
+            'urls': {
+                'downloadRequest': URLS.TESTING_DOWNLOAD_REQ,
+                'downloadResponseCsv': URLS.TESTING_DOWNLOAD_ASTEXT,
+                'downloadResponseCsvDecComma': URLS.TESTING_DOWNLOAD_ASTEXT_EU
+            }
         },
         KEY.DOC: {
             'src': 'pages/apidoc'

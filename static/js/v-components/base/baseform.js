@@ -5,14 +5,60 @@ var _BASE_FORM = Vue.component('baseform', {
     props: {
         form: Object,
         url: String,
+        // Additional urls Object (string key mapped to urls).
+		// This should contain e.g., urls for downloading responses as text
+        // Note: use a function for the 'default' key to prevent sharing the same object (https://github.com/vuejs/vue/issues/1032#issuecomment-120212888)
+        urls: {type: Object, default: () => {return {}}},
         response: {type: Object, default: () => {return {}}},
         post: Function,
-        filename: {type: String, default: 'egsim'}
+        filename: {type: String, default: ''}
     },
     data: function () {
+    	// Build an Object 'responseDownloadFunctions': it is a Map of (string, function) entries
+    	// where the keys (string) describes the download type (e.g. 'JSON', 'text/csv' ...)
+    	// and might be used to display the download in an associated GUI control,
+    	// and the function performs the download of the response data.
+    	// It might seem weird to couple 'responseDownloadFunctions' with this object
+    	// which deals with RESPONSES, but it makes the code DRY.
+    	var responseDownloadFunctions = new Map();  // Map preserves the insertion order
+    	if (this.filename){
+    		// download as JSON (needs only a response object):
+	    	responseDownloadFunctions.set('json',
+				() => { Vue.download.call(this, this.responseData, this.filename + '.response.json'); });  // see vueutil.js
+			// define a function for downloading as text (basically calls the 'this.post'
+			// with a provided URL)
+			var downloadAsCsv = (url) => {
+	    		var fname =  this.filename + '.response.csv'
+				this.post(url + "/" + fname, this.responseData).then(response => {
+	                if (response && response.data){
+	                    Vue.download(response.data, fname);
+	                } 
+	            });
+			}
+			// now try to see if we have the download as text urls passed in this.urls:
+			if (this.urls.downloadResponseCsv){
+				responseDownloadFunctions.set("text/csv",
+					() => { downloadAsCsv.call(this, this.urls.downloadResponseCsv); });
+			}
+			if (this.urls.downloadResponseCsvDecComma){
+				responseDownloadFunctions.set("text/csv, decimal comma",
+					() => { downloadAsCsv.call(this, this.urls.downloadResponseCsvDecComma); });
+			}
+ 		}
+ 		// now create the functions for the request download:
+ 		var requestDownloadFunctions = {};
+ 		if (this.filename && this.urls.downloadRequest){
+ 			var [jsonfname, yamlfname] = [this.filename + '.request.json', this.filename + '.request.yaml'];
+ 			requestDownloadFunctions = {
+ 				json: () => { this.download.call(this, jsonfname); },
+ 				yaml: () => { this.download.call(this, yamlfname); }
+ 			}
+ 		}
     	return {
         	responseDataEmpty: true,
-            responseData: this.response
+            responseData: this.response && this.response.data ? this.response.data : {},
+            requestDownloadFunctions: requestDownloadFunctions,
+            responseDownloadFunctions: responseDownloadFunctions
         }
     },
     methods: {
@@ -24,10 +70,9 @@ var _BASE_FORM = Vue.component('baseform', {
                 } 
             });
         },
-        download: function(filename, index, filenames){
+        download: function(filename){
         	var form = this.form;
-        	var ext = filename.substring(filename.lastIndexOf('.')+1, filename.length);
-            this.post("data/" + this.url + "/downloadrequest/" + filename, form).then(response => {
+        	this.post(this.urls.downloadRequest + "/" + filename, form).then(response => {
                 if (response && response.data){
                     Vue.download(response.data, filename);
                 } 
@@ -63,10 +108,7 @@ var _BASE_FORM = Vue.component('baseform', {
             </div>
         
 			<div class='d-flex flex-row justify-content-center border-top pt-3'>
-				<downloadselect
-					:items="[filename + '.request.json', filename + '.request.yaml']"
-					@selected="download"
-				>
+				<downloadselect :model="requestDownloadFunctions">
 					Download request as:
 				</downloadselect>
 	            <button type="submit" class="btn btn-primary ml-2">
