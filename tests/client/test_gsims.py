@@ -9,13 +9,14 @@ import pytest
 
 from egsim.core.utils import querystring
 from egsim.models import aval_gsims
+from egsim.views import URLS
 
 
 @pytest.mark.django_db
 class Test:
     '''tests the gsim service'''
 
-    url = '/query/gsims'
+    url = "/" + URLS.GSIMS_RESTAPI  # '/query/gsims'
     request_filename = 'request_gsims.yaml'
 
     def test_gsims_service(self,

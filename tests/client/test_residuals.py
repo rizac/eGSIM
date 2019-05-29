@@ -12,13 +12,14 @@ from mock import patch, PropertyMock
 from egsim.core.utils import querystring
 from egsim.forms.fields import ResidualplottypeField
 from egsim.forms.forms import ResidualsForm
+from egsim.views import URLS
 
 
 @pytest.mark.django_db
 class Test:
     '''tests the residuals service'''
 
-    url = '/query/residuals'
+    url = "/" + URLS.RESIDUALS_RESTAPI  # '/query/residuals'
     request_filename = 'request_residuals.yaml'
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 

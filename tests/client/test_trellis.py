@@ -12,15 +12,15 @@ from mock import patch
 from egsim.core.utils import querystring
 from egsim.forms.forms import TrellisForm
 from egsim.core.smtk import _default_periods_for_spectra
-
 from egsim.forms.fields import TextSepField
+from egsim.views import URLS
 
 
 @pytest.mark.django_db
 class Test:
     '''tests the gsim service'''
 
-    url = '/query/trellis'
+    url = "/" + URLS.TRELLIS_RESTAPI  # '/query/trellis'
     request_filename = 'request_trellis.yaml'
     csv_expected_text = b'^imt,gsim,magnitude,distance,vs30(,+)\r\n,,,,'
     GSIM, IMT = 'gsim', 'imt'

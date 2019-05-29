@@ -10,13 +10,14 @@ from mock import patch, PropertyMock
 
 from egsim.core.utils import querystring
 from egsim.forms.forms import TestingForm
+from egsim.views import URLS
 
 
 @pytest.mark.django_db
 class Test:
     '''tests the gsim service'''
 
-    url = '/query/testing'
+    url = "/" + URLS.TESTING_RESTAPI  # '/query/testing'
     request_filename = 'request_testing.yaml'
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
