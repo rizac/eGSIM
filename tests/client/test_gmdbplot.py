@@ -11,13 +11,13 @@ from mock import patch, PropertyMock
 
 from egsim.core.utils import querystring, DISTANCE_LABEL
 from egsim.forms.forms import GmdbPlotForm
-# from egsim.forms.fields import GmdbField
+from egsim.views import URLS
 
 
 class Test:
     '''tests the gmdbplot service'''
 
-    url = '/query/gmdbplot'
+    url = "/" + URLS.GMDBPLOT_RESTAPI  # '/query/gmdbplot'
     request_filename = 'request_gmdbplot.yaml'
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
