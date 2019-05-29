@@ -81,8 +81,8 @@ Vue.component('trellis', {
 
     <trellisplotdiv
     	:data="responseData"
-    	:filename="filename"
-    	:responseDownloadFunctions="responseDownloadFunctions"
+    	:downloadurls="urls.downloadResponse"
+    	:post="post"
         class='position-absolute pos-0 m-0' style='z-index:1'
     >
         <slot>

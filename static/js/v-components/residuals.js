@@ -48,8 +48,12 @@ Vue.component('residuals', {
 		</slot>
 	</baseform>            
 
-    <residualsplotdiv :data="responseData" :filename="filename"
-        class='position-absolute pos-0 m-0' style='z-index:1'>
+    <residualsplotdiv
+    	:data="responseData"
+    	:downloadurls="urls.downloadResponse"
+    	:post="post"
+        class='position-absolute pos-0 m-0' style='z-index:1'
+    >
         <slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-wpforms'></i> params</button>
         </slot>
