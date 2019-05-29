@@ -272,13 +272,17 @@ def main(request, selected_menu=None):
 
     # remove lines above!
     gsims = json.dumps({_[0]: _[1:] for _ in aval_gsims(asjsonlist=True)})
-    return render(request, 'egsim.html',
-                  {**_COMMON_PARAMS,
-                   'sel_component': sel_component,
-                   'components': components_tabs,
-                   'component_props': json.dumps(components_props),
-                   'gsims': gsims,
-                   'server_error_message': ""})
+    return render(request,
+                  'egsim.html',
+                  {
+                      **_COMMON_PARAMS,
+                      'sel_component': sel_component,
+                      'components': components_tabs,
+                      'component_props': json.dumps(components_props),
+                      'gsims': gsims,
+                      'server_error_message': ""
+                  }
+                  )
 
 
 def get_tr_models(request):  # pylint: disable=unused-argument
@@ -387,40 +391,37 @@ def download_astext(request, filename, viewclass, text_sep=',', text_dec='.'):
 
 
 class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
-    '''base view for every eGSIM view handling data request and returning data
-    in response this is usually accomplished via a form in the web page or a
-    POST reqeust from the a normal query in the standard API
+    '''base view for every eGSIM REST API endpoint
     '''
     formclass = None
     arrayfields = set()
-    extensions = {
-        'json': 'json',
-        'text': 'csv'
-    }
 
     def get(self, request):
         '''processes a get request'''
-        #  get to dict:
-        #  Note that percent-encoded characters are decoded automatiically
-        ret = {}
-        for key, values in request.GET.lists():
-            newlist = []
-            for val in values:
-                if key in self.arrayfields and isinstance(val, str) \
-                        and ',' in val:
-                    newlist.extend(val.split(','))
-                else:
-                    newlist.append(val)
-            ret[key] = newlist[0] if len(newlist) == 1 else newlist
+        try:
+            #  get to dict:
+            #  Note that percent-encoded characters are decoded automatiically
+            ret = {}
+            for key, values in request.GET.lists():
+                newlist = []
+                for val in values:
+                    if key in self.arrayfields and isinstance(val, str) \
+                            and ',' in val:
+                        newlist.extend(val.split(','))
+                    else:
+                        newlist.append(val)
+                ret[key] = newlist[0] if len(newlist) == 1 else newlist
+            return self.response(ret)
 
-        return self.response(ret)
+        except Exception as err:
+            return exc2json(err)
 
     def post(self, request):
         '''processes a post request'''
         try:
             return self.response(yaml_load(request.body.decode('utf-8')))
-        except YAMLError as yerr:
-            return exc2json(yerr)
+        except Exception as err:
+            return exc2json(err)
 
     @classmethod
     def response(cls, inputdict):
