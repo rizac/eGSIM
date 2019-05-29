@@ -46,9 +46,9 @@ class KEY:
     HOME = 'home'
     GSIMS = 'gsims'  # pylint: disable=invalid-name
     TRELLIS = 'trellis'  # pylint: disable=invalid-name
-    GMDB = 'gmdbplot'  # pylint: disable=invalid-name
-    RES = 'residuals'  # pylint: disable=invalid-name
-    TEST = 'testing'  # pylint: disable=invalid-name
+    GMDBPLOT = 'gmdbplot'  # pylint: disable=invalid-name
+    RESIDUALS = 'residuals'  # pylint: disable=invalid-name
+    TESTING = 'testing'  # pylint: disable=invalid-name
     DOC = 'apidoc'  # pylint: disable=invalid-name
 
 
@@ -60,27 +60,30 @@ class URLS:
     '''
 
     # REST API URLS:
-    GSIMS_RESTAPI = 'query/gsims'
-    TRELLIS_RESTAPI = 'query/trellis'
-    RESIDUALS_RESTAPI = 'query/residuals'
-    TESTING_RESTAPI = 'query/testing'
-    GMDBPLOT_RESTAPI = 'query/gmdbplot'
+    GSIMS_RESTAPI = 'query/%s' % KEY.GSIMS
+    TRELLIS_RESTAPI = 'query/%s' % KEY.TRELLIS
+    RESIDUALS_RESTAPI = 'query/%s' % KEY.RESIDUALS
+    TESTING_RESTAPI = 'query/%s' % KEY.TESTING
+    GMDBPLOT_RESTAPI = 'query/%s' % KEY.GMDBPLOT
 
     # url for downloading tectonic regionalisations (GeoJson)
-    GSIMS_TR = 'data/gsims/tr_models'
+    GSIMS_TR = 'data/%s/tr_models' % KEY.GSIMS
 
     # url(s) for downloading the requests in json or yaml:
-    TRELLIS_DOWNLOAD_REQ = 'data/trellis/downloadrequest'
-    RESIDUALS_DOWNLOAD_REQ = 'data/residuals/downloadrequest'
-    TESTING_DOWNLOAD_REQ = 'data/testing/downloadrequest'
+    TRELLIS_DOWNLOAD_REQ = 'data/%s/dlrequest' % KEY.TRELLIS
+    RESIDUALS_DOWNLOAD_REQ = 'data/%s/dlrequest' % KEY.RESIDUALS
+    TESTING_DOWNLOAD_REQ = 'data/%s/dlrequest' % KEY.TESTING
 
     # urls for downloading text:
-    TRELLIS_DOWNLOAD_ASTEXT = 'data/trellis/astext'
-    RESIDUALS_DOWNLOAD_ASTEXT = 'data/residuals/astext'
-    TESTING_DOWNLOAD_ASTEXT = 'data/testing/astext'
-    TRELLIS_DOWNLOAD_ASTEXT_EU = 'data/trellis/astext_eu'
-    RESIDUALS_DOWNLOAD_ASTEXT_EU = 'data/residuals/astext_eu'
-    TESTING_DOWNLOAD_ASTEXT_EU = 'data/testing/astext_eu'
+    TRELLIS_DOWNLOAD_ASTEXT = 'data/%s/dltextresponse' % KEY.TRELLIS
+    RESIDUALS_DOWNLOAD_ASTEXT = 'data/%s/dltextresponse' % KEY.RESIDUALS
+    TESTING_DOWNLOAD_ASTEXT = 'data/%s/dltextresponse' % KEY.TESTING
+    TRELLIS_DOWNLOAD_ASTEXT_EU = 'data/%s/dltextresponse_eu' % KEY.TRELLIS
+    RESIDUALS_DOWNLOAD_ASTEXT_EU = 'data/%s/dltextresponse_eu' % KEY.RESIDUALS
+    TESTING_DOWNLOAD_ASTEXT_EU = 'data/%s/dltextresponse_eu' % KEY.TESTING
+
+    HOME_PAGE = 'pages/home'
+    DOC_PAGE = 'pages/apidoc'
 
 
 def main(request, selected_menu=None):
@@ -91,9 +94,9 @@ def main(request, selected_menu=None):
     components_tabs = [(KEY.HOME, 'Home', 'fa-home'),
                        (KEY.GSIMS, 'Gsim selection', 'fa-map-marker'),
                        (KEY.TRELLIS, 'Trellis Plots', 'fa-area-chart'),
-                       (KEY.GMDB, 'Ground Motion database', 'fa-database'),
-                       (KEY.RES, 'Residuals', 'fa-bar-chart'),
-                       (KEY.TEST, 'Testing', 'fa-list'),
+                       (KEY.GMDBPLOT, 'Ground Motion database', 'fa-database'),
+                       (KEY.RESIDUALS, 'Residuals', 'fa-bar-chart'),
+                       (KEY.TESTING, 'Testing', 'fa-list'),
                        (KEY.DOC, 'API Documentation', 'fa-info-circle')]
     # this can be changed if needed:
     sel_component = KEY.HOME if not selected_menu else selected_menu
@@ -103,7 +106,7 @@ def main(request, selected_menu=None):
     # javascript:
     components_props = {
         KEY.HOME: {
-            'src': 'pages/home'
+            'src': URLS.HOME_PAGE
         },
         KEY.GSIMS: {
             'form': GsimsView.formclass().to_rendering_dict(),
@@ -116,35 +119,123 @@ def main(request, selected_menu=None):
             'form': TrellisView.formclass().to_rendering_dict(),
             'url': URLS.TRELLIS_RESTAPI,
             'urls': {
-                'downloadRequest': URLS.TRELLIS_DOWNLOAD_REQ,
-                'downloadResponseCsv': URLS.TRELLIS_DOWNLOAD_ASTEXT,
-                'downloadResponseCsvDecComma': URLS.TRELLIS_DOWNLOAD_ASTEXT_EU
+                # download* below must be pairs of [key, url]. Each url
+                # must return a
+                # response['Content-Disposition'] = 'attachment; filename=%s'
+                # url can also start with 'file:///' telling the frontend
+                # to simply download the data
+                'downloadRequest': [
+                    [
+                        'json',
+                        "%s/%s.request.json" % (URLS.TRELLIS_DOWNLOAD_REQ,
+                                                KEY.TRELLIS)
+                    ],
+                    [
+                        'yaml',
+                        "%s/%s.request.yaml" % (URLS.TRELLIS_DOWNLOAD_REQ,
+                                                KEY.TRELLIS)
+                    ]
+                ],
+                'downloadResponse': [
+                    [
+                        'json',
+                        'file:///%s.json' % KEY.TRELLIS
+                    ],
+                    [
+                        'text/csv',
+                        "%s/%s.csv" % (URLS.TRELLIS_DOWNLOAD_ASTEXT,
+                                       KEY.TRELLIS)
+                    ],
+                    [
+                        "text/csv, decimal comma",
+                        "%s/%s.csv" % (URLS.TRELLIS_DOWNLOAD_ASTEXT_EU,
+                                       KEY.TRELLIS)
+                    ],
+                ]
             }
         },
-        KEY.GMDB: {
+        KEY.GMDBPLOT: {
             'form': GmdbPlotView.formclass().to_rendering_dict(),
             'url': URLS.GMDBPLOT_RESTAPI
         },
-        KEY.RES: {
+        KEY.RESIDUALS: {
             'form': ResidualsView.formclass().to_rendering_dict(),
             'url': URLS.RESIDUALS_RESTAPI,
             'urls': {
-                'downloadRequest': URLS.RESIDUALS_DOWNLOAD_REQ,
-                'downloadResponseCsv': URLS.RESIDUALS_DOWNLOAD_ASTEXT,
-                'downloadResponseCsvDecComma': URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU
+                # download* below must be pairs of [key, url]. Each url
+                # must return a
+                # response['Content-Disposition'] = 'attachment; filename=%s'
+                # url can also start with 'file:///' telling the frontend
+                # to simply download the data
+                'downloadRequest': [
+                    [
+                        'json',
+                        "%s/%s.request.json" % (URLS.RESIDUALS_DOWNLOAD_REQ,
+                                                KEY.RESIDUALS)],
+                    [
+                        'yaml',
+                        "%s/%s.request.yaml" % (URLS.RESIDUALS_DOWNLOAD_REQ,
+                                                KEY.RESIDUALS)],
+                ],
+                'downloadResponse': [
+                    [
+                        'json',
+                        'file:///%s.json' % KEY.RESIDUALS
+                    ],
+                    [
+                        'text/csv',
+                        "%s/%s.csv" % (URLS.RESIDUALS_DOWNLOAD_ASTEXT,
+                                       KEY.RESIDUALS)
+                    ],
+                    [
+                        "text/csv, decimal comma",
+                        "%s/%s.csv" % (URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU,
+                                       KEY.RESIDUALS)
+                    ]
+                ]
             }
         },
-        KEY.TEST: {
+        KEY.TESTING: {
             'form': TestingView.formclass().to_rendering_dict(),
             'url': URLS.TESTING_RESTAPI,
             'urls': {
-                'downloadRequest': URLS.TESTING_DOWNLOAD_REQ,
-                'downloadResponseCsv': URLS.TESTING_DOWNLOAD_ASTEXT,
-                'downloadResponseCsvDecComma': URLS.TESTING_DOWNLOAD_ASTEXT_EU
+                # download* below must be pairs of [key, url]. Each url
+                # must return a
+                # response['Content-Disposition'] = 'attachment; filename=%s'
+                # url can also start with 'file:///' telling the frontend
+                # to simply download the data
+                'downloadRequest': [
+                    [
+                        'json',
+                        "%s/%s.request.json" % (URLS.TESTING_DOWNLOAD_REQ,
+                                                KEY.TESTING)
+                    ],
+                    [
+                        'yaml',
+                        "%s/%s.request.yaml" % (URLS.TESTING_DOWNLOAD_REQ,
+                                                KEY.TESTING)
+                    ]
+                ],
+                'downloadResponse': [
+                    [
+                        'json',
+                        'file:///%s.json' % KEY.TESTING
+                    ],
+                    [
+                        'text/csv',
+                        "%s/%s.csv" % (URLS.TESTING_DOWNLOAD_ASTEXT,
+                                       KEY.TESTING)
+                    ],
+                    [
+                        "text/csv, decimal comma",
+                        "%s/%s.csv" % (URLS.TESTING_DOWNLOAD_ASTEXT_EU,
+                                       KEY.TESTING)
+                    ]
+                ]
             }
         },
         KEY.DOC: {
-            'src': 'pages/apidoc'
+            'src': URLS.DOC_PAGE
         }
     }
 
@@ -224,8 +315,8 @@ def apidoc(request):
         KEY.GSIMS: GsimsView.formclass().to_rendering_dict(False),
         KEY.TRELLIS: TrellisView.formclass().to_rendering_dict(False),
         # KEY.GMDB: GmdbPlotView.formclass().to_rendering_dict(False),
-        KEY.RES: ResidualsView.formclass().to_rendering_dict(False),
-        KEY.TEST: TestingView.formclass().to_rendering_dict(False),
+        KEY.RESIDUALS: ResidualsView.formclass().to_rendering_dict(False),
+        KEY.TESTING: TestingView.formclass().to_rendering_dict(False),
         'format': FormatForm().to_rendering_dict(False)
     }
     return render(request, filename,
@@ -274,12 +365,10 @@ def download_request(request, filename, formclass):
     if not dataform.is_valid():
         return invalidform2json(dataform)
     buffer = io.StringIO()
-    ext = os.path.splitext(filename)[1].lower()
-    if ext[:1] == '.':
-        ext = ext[1:]
-    dataform.dump(buffer, syntax=ext)
+    ext_nodot = os.path.splitext(filename)[1][1:].lower()
+    dataform.dump(buffer, syntax=ext_nodot)
     buffer.seek(0)
-    if ext == 'json':
+    if ext_nodot == 'json':
         response = HttpResponse(buffer, content_type='application/json')
     else:
         response = HttpResponse(buffer, content_type='application/x-yaml')
@@ -339,7 +428,6 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
         Calls `self.process` if the input is valid according to the Form's
         class `formclass` otherwise returns an appropriate json response with
         validation-error messages, or a json response with a gene'''
-        filename = inputdict.pop('filename', '')
         formatform = FormatForm(inputdict)
         if not formatform.is_valid():
             return invalidform2json(formatform)
@@ -363,12 +451,6 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
         except NotImplementedError:
             return exc2json('format "%s" is not currently implemented' % frmt)
 
-        if filename:
-            fname, ext = os.path.splitext(filename)
-            if not ext:
-                filename = "%s.%s" % (fname, cls.extensions[frmt])
-            response['Content-Disposition'] = \
-                'attachment; filename=%s' % filename
         return response
 
     @classmethod

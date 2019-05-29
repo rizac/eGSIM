@@ -63,56 +63,5 @@ Vue.use({
                 return (typeof elm === 'object') && ('val' in elm) && ('err' in elm);
             });
         };
-        Vue.getMIMEType = function(filename){
-        	// returns the mimeType associated to filename inferring it
-        	// from its extension (ignoring the case). filename can also be the extension alsone,
-        	// with or without prefixing period 
-        	// Recognized extensions are: 'json', 'yaml', 'csv'. Any non-recognized  extension
-        	// defaults to 'text/plain'
-        	// Details here:
-        	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
-        	// and here: https://stackoverflow.com/a/332159
-        	var spl = (filename || "").split('.');
-    		var ext = (spl.length > 1 ? spl[spl.length-1] : "").toLowerCase();
-    		if (ext == 'json'){
-    			mimeType = 'application/json';
-    		}else if (ext == 'yaml'){
-    			mimeType = 'application/x-yaml';
-    		}else if (ext == 'csv'){
-    			mimeType = 'text/csv';
-    		}else{
-    			mimeType = 'text/plain';
-    		}
-    		return mimeType;
-        };
-        Vue.download = function(content, filename, mimeType){
-        	// downloads the file with given name `filename` and content `content`
-        	// in the browser download directory.
-        	// content can be any object, if mimeType is 'applicaion/json' and content
-        	// is not a string, it will be converted with JSON.stringify, otherwise
-        	// content.toString().
-        	// If mimeType is missing or falsy, it will be inferred from filename
-        	// (see Vue.getMIMEType)
-        	// Supported filename extensions: (ignoring the case):
-        	// json -> application/json
-        	// csv -> text/csv
-        	// yaml -> application/x-yaml
-        	// (mimeType missing or falsy) -> text/plain
-        	if (!mimeType){
-        		mimeType = Vue.getMIMEType(filename);
-        	}
-        	if (typeof content !== 'string'){
-        		content = mimeType === 'application/json' ? JSON.stringify(content, null, 4) : content.toString();
-        	}
-        	// Encode and download (for details see https://stackoverflow.com/a/30800715):
-        	var encodedStr = encodeURIComponent(content);
-		    var dataStr = `data:${mimeType};charset=utf-8,${encodedStr}`;
-		    var downloadAnchorNode = document.createElement('a');
-		    downloadAnchorNode.setAttribute("href",     dataStr);
-		    downloadAnchorNode.setAttribute("download", filename);
-		    document.body.appendChild(downloadAnchorNode); // required for firefox
-		    downloadAnchorNode.click();
-		    downloadAnchorNode.remove();
-        }
     }
 });

@@ -2,7 +2,10 @@
 Vue.component('testingtable', {
     props: {
         data: {type: Object, default: () => { return{} }},
-        filename: {type: String}
+        filename: {type: String},
+        // these two properties are passed to the downloadselect for downloading the response:
+        downloadurls: {type: Array, default: () => []},
+        post: {type: Function}
     },
     data: function () {
 	    var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value'];
@@ -160,11 +163,11 @@ Vue.component('testingtable', {
             <slot></slot> <!-- slot for custom buttons -->
             
             <downloadselect
-	            	:items='["json"]' @selected='download'
-	            	class='mt-3 border p-2 bg-white'
-	            >
-	            Download response as:
-	       </downloadselect>
+				:urls="downloadurls"
+				:post="post"
+				:data="data"
+				class='mt-3 border p-2 bg-white'
+			/>
 	           
             <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto'>
                 <div><i class="fa fa-info-circle"></i> Database records used:</div>
