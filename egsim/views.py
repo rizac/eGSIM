@@ -640,8 +640,8 @@ class TestingView(RESTAPIView):
     def to_rows(cls, process_result):
         fitmeasures = process_result['Measure of fit']
         dbrecords = process_result['Db records']
-        yield ['measure of fit', 'imt', 'gsim', 'db records', 'value']
+        yield ['measure of fit', 'imt', 'gsim', 'value', 'db records used']
         for mof, mofs in fitmeasures.items():
             for imt, imts in mofs.items():
                 for gsim, value in imts.items():
-                    yield [mof, imt, gsim, dbrecords[gsim], value]
+                    yield [mof, imt, gsim, value, dbrecords[gsim]]

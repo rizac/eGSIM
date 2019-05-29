@@ -88,7 +88,7 @@ class Test:
                                 testdata, areequal, client):
         '''tests the residuals API service.'''
         expected_txt = \
-            re.compile(b'^gsim,imt,type,mean,stddev,median,slope,'
+            re.compile(b'^imt,type,gsim,mean,stddev,median,slope,'
                        b'intercept,pvalue,,*\r\n')
         base_inputdic = testdata.readyaml(self.request_filename)
         for restype in ResidualplottypeField._base_choices:

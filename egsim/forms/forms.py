@@ -76,10 +76,12 @@ class BaseForm(Form):
                 if repl_key is not None:
                     self.data[repl_key] = self.data.pop(key)
 
-        # https://stackoverflow.com/a/20309754:
-        # Defaults are set according to the initial value in the field
-        # This must be set here cause in clean() required fields are processed
-        # before and their error set in the error form
+        # Make fields initial value the default when missing.
+        # From https://stackoverflow.com/a/20309754 and other posts therein:
+        # initial isn't really meant to be used to set default values for form
+        # fields. Instead, it's really more a placeholder utility when
+        # displaying forms to the user, and won't work well if the field isn't
+        # required (see also the class method is_optional):
         for name in self.fields:
             if not self[name].html_name in self.data and \
                     self.fields[name].initial is not None:
@@ -125,11 +127,27 @@ class BaseForm(Form):
         #         field.widget.attrs.update(atts)
         return
 
+    @classmethod
+    def is_optional(cls, field):
+        '''Returns True if the given fieldname is optional.
+        A field is optional if either field.required=False OR
+        the filed inital value is specified (not None). Remeber that
+        a field initial value acts as default value when missing
+        
+        :param field: a Field object or a string denoting the name of one of
+            this Form's fields
+        '''
+        if isinstance(field, str):
+            field = cls.declared_fields[field]
+        return not field.required or field.initial is not None
+
     def dump(self, stream=None, syntax='yaml'):
         """Serialize this Form instance into a YAML stream. The result
         collects the fields of `self.data` or self.cleaned_data
-        depoending on what is in `self.__dump_returns_cleaneddata_for__`.
+        depending on what is in `self.__dump_returns_cleaneddata_for__`.
         Hidden fields in `self.__hidden_fieldnames__` are not returned.
+        Also fields which are optional (see `self.is_optional`) AND whose value
+        equals the initial default value are not returned.
         The form needs to be validated via e.g. `form.is_valid()`
         If stream is None, return the produced string instead.
 
@@ -138,6 +156,10 @@ class BaseForm(Form):
            None.
         :param syntax: string either json or yaml. Deault: yaml.
         """
+        if syntax not in ('yaml', 'json'):
+            raise ValueError("invalid `syntax` argument in `dump`: '%s' "
+                             "not in ('json', 'yam')" % syntax)
+
         hidden_fn = set(self.__hidden_fieldnames__)
         cleaneddata_fn = set(self.__dump_returns_cleaneddata_for__)
         cleaned_data = {}
@@ -149,9 +171,8 @@ class BaseForm(Form):
                 # Handle now the cases when we can omit to add some fields
                 # to cleaned_data. This is not to make the dumped string more
                 # readable and light in bytes:
-                if val == fld.initial:
-                    if not fld.required or val is not None:
-                        continue
+                if self.is_optional(key) and val == fld.initial:
+                    continue
             cleaned_data[key] = self.cleaned_data[key] \
                 if key in cleaneddata_fn else val
 
@@ -258,6 +279,7 @@ class BaseForm(Form):
             fielddata = {
                 'name': attrs['name'],
                 'opt_names': optional_names.get(name, []),
+                'is_optional': self.is_optional(name),
                 'help': boundfield.help_text,
                 'label': boundfield.label,
                 'attrs': attrs,
