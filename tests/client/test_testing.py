@@ -83,7 +83,7 @@ class Test:
         resp2 = client.post(self.url, data=dict(inputdic, format='text'),
                             content_type='text/csv')
         assert resp2.status_code == 200
-        exp_str = b'measure of fit,imt,gsim,db records,value\r\n'
+        exp_str = b'measure of fit,imt,gsim,value,db records used\r\n'
         assert resp2.content.startswith(exp_str)
         assert len(resp2.content) > len(exp_str)
 
@@ -105,11 +105,13 @@ class Test:
         resp2 = client.post(self.url, data=dict(inputdic, format='text'),
                             content_type='text/csv')
         assert resp2.status_code == 200
-        assert resp2.content == b'measure of fit,imt,gsim,db records,value\r\n'
+        assert resp2.content == (b'measure of fit,imt,gsim,value,'
+                                 b'db records used\r\n')
         # test with no selexpr. Unfortunately, no matching db rows
         # found. FIXME: try with some other gsim?
         resp2 = client.post(self.url, data=dict(inputdic, format='text',
                                                 selexpr=''),
                             content_type='text/csv')
         assert resp2.status_code == 200
-        assert resp2.content == b'measure of fit,imt,gsim,db records,value\r\n'
+        assert resp2.content == (b'measure of fit,imt,gsim,value,'
+                                 b'db records used\r\n')

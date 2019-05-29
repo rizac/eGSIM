@@ -12,23 +12,10 @@ from yaml.error import YAMLError
 from openquake.hazardlib import imt
 
 from egsim.forms.forms import TrellisForm, GsimImtForm, ResidualsForm, TestingForm
+from egsim.core.utils import yaml_load
 
 
 GSIM, IMT = 'gsim', 'imt'
-
-
-# @mock.patch('egsim.core import yaml_load', side_effect=yaml_load)
-def test_trellis_load(testdata):
-    # https://stackoverflow.com/a/3166985
-    with pytest.raises(YAMLError) as context:  # @UndefinedVariable
-        TrellisForm.load(testdata.path('trellis1'))
-    with pytest.raises(YAMLError) as context:  # @UndefinedVariable
-        TrellisForm.load(testdata.path('trellis_malformed.yaml'))
-    with pytest.raises(YAMLError) as context:  # @UndefinedVariable
-        TrellisForm.load(testdata.path('trellis_filenot_found.yaml'))
-    _ = TrellisForm.load(testdata.path('request_trellis.yaml'))
-    # do not assert is valid unless you mark it with django_db:
-    # assert _.is_valid()
 
 
 @pytest.mark.django_db
@@ -262,7 +249,9 @@ def test_trellisform_invalid(areequal):
                             'aspect': 1.2,
                             'dip': 5, 'magnitude': '1:1:5',
                             'distance': [1, 2, 3, 4, 5],
-                            'plot_type': 'm'}, " '1:1:5'", '"1:1:5"'),
+                            'plot_type': 'm'},
+                            " '1:1:5'",
+                            '"1:1:5"'),
                           ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV'],
                             'aspect': 1.2,
@@ -287,22 +276,23 @@ def test_trellisform_load_dump(data, expected_yaml, expected_json, areequal):
     form's clean method'''
     form = TrellisForm(data)
     assert form.is_valid()
+
+    with pytest.raises(ValueError):  # @UndefinedVariable
+        form.dump(syntax='whatever')
+
     cleaned_data = form.cleaned_data
     yaml_ = form.dump(syntax='yaml')
     json_ = form.dump(syntax='json')
 
     # pass the yaml and json to validate and see that we obtain the same
     # dict(s):
-    form_from_yaml = TrellisForm.load(yaml_)
+    form_from_yaml = TrellisForm(data=yaml_load(yaml_))
     assert form_from_yaml.is_valid()
     assert areequal(cleaned_data, form_from_yaml.cleaned_data)
 
-    form_from_json = TrellisForm.load(json_)
+    form_from_json = TrellisForm(data=yaml_load(json_))
     assert form_from_json.is_valid()
     assert areequal(cleaned_data, form_from_json.cleaned_data)
-
-    with pytest.raises(ValueError):  # @UndefinedVariable
-        TrellisForm(data).dump(syntax='whatever')
 
     expected_json_ = """{
   "aspect": 1.2,
@@ -343,7 +333,13 @@ def test_trellisform_load_dump(data, expected_yaml, expected_json, areequal):
   "vs30_measured": true,
   "ztor": 0.0
 }""" % expected_json
-    assert areequal(json.loads(json_), json.loads(expected_json_))
+
+    expected_json_ = json.loads(expected_json_)
+    # remove optional fields because they will not be rendered by dump:
+    for key in list(expected_json_.keys()):
+        if TrellisForm.is_optional(key):
+            expected_json_.pop(key)
+    assert areequal(json.loads(json_), expected_json_)
 
     expected_yaml_ = """# Ground Shaking Intensity Model(s)
 gsim:
@@ -361,55 +357,28 @@ imt:
 aspect: 1.2
 
 # Dip
-dip: 5.0
+dip: 5
 
 # Magnitude(s)
 magnitude:%s
 
 # Distance(s)
 distance:
-  - 1.0
-  - 2.0
-  - 3.0
-  - 4.0
-  - 5.0
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
 
 # Plot type
 plot_type: m
 
-# VS30 (m/s)
-vs30: 760.0
-
-# Rake
-rake: 0.0
-
-# Strike
-strike: 0.0
-
-# Top of Rupture Depth (km)
-ztor: 0.0
-
-# Magnitude Scaling Relation
-magnitude_scalerel: WC1994
-
-# Location on Earth (Longitude Latitude)
-initial_point:
-  - 0.0
-  - 0.0
-
-# Location of Hypocentre (Along-strike fraction, Down-dip fraction)
-hypocentre_location:
-  - 0.5
-  - 0.5
-
-# Is VS30 measured? (Otherwise is inferred)
-vs30_measured: true
-
-# Azimuth of Comparison Line
-line_azimuth: 0.0
-
-# Backarc Path
-backarc: false
-
 """ % expected_yaml
-    assert yaml_ == expected_yaml_
+
+    yaml_ = yaml_load(yaml_)
+    expected_yaml_ = yaml_load(expected_yaml_)
+    # remove optional fields because they will not be rendered by dump:
+    for key in list(expected_yaml_.keys()):
+        if TrellisForm.is_optional(key):
+            expected_yaml_.pop(key)
+    assert areequal(yaml_, expected_yaml_)
