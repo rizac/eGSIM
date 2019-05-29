@@ -27,11 +27,11 @@ urlpatterns = [  # pylint: disable=invalid-name
     url(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                     permanent=False)),
     # main page entry point:
-    url(r'^(?P<selected_menu>[a-zA-Z]+)/?$', views.main, name='main'),
+    url(r'^(?P<selected_menu>[a-zA-Z]+)/?$', views.main),
 
     # other urls called from within the page:
-    url(r'^pages/home/?$', views.home, name='home'),
-    url(r'^pages/apidoc/?$', views.apidoc, name='apidoc'),
+    url(r'^%s/?$' % views.URLS.HOME_PAGE, views.home),
+    url(r'^%s/?$' % views.URLS.DOC_PAGE, views.apidoc),
     url(r'^%s/?$' % views.URLS.GSIMS_TR, views.get_tr_models),
 
     # download request urls:
