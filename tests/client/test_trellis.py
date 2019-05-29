@@ -22,8 +22,14 @@ class Test:
 
     url = '/query/trellis'
     request_filename = 'request_trellis.yaml'
-
+    csv_expected_text = b'^imt,gsim,magnitude,distance,vs30(,+)\r\n,,,,'
     GSIM, IMT = 'gsim', 'imt'
+
+    def get_figures(self, result):
+        ret = []
+        for imt_ in result['imts']:
+            ret.extend(result[imt_])
+        return ret
 
     @pytest.mark.parametrize('trellis_type', ['d', 'ds'])
     def test_trellis_dist(self,
@@ -41,10 +47,11 @@ class Test:
         form = TrellisForm(data=inputdic)
         assert form.is_valid()
         input_ = form.cleaned_data
-        assert sorted(result.keys()) == ['figures', 'xlabel', 'xvalues']
+        assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
+                                         'xlabel', 'xvalues']
         xvalues = result['xvalues']
         assert len(xvalues) == len(input_['distance']) + 1  # FIXME: should be len(distance)!!!
-        figures = result['figures']
+        figures = self.get_figures(result)
         assert len(figures) == len(input_['magnitude']) * len(input_['imt'])
         for fig in figures:
             yvalues = fig['yvalues']
@@ -55,8 +62,7 @@ class Test:
         resp2 = client.post(self.url, data=dict(inputdic, format='text'),
                             content_type='text/csv')
         assert resp2.status_code == 200
-        assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
-                         resp2.content)
+        assert re.search(self.csv_expected_text, resp2.content)
 
     @pytest.mark.parametrize('trellis_type', ['m', 'ms'])
     def test_trellis_mag(self,
@@ -74,10 +80,11 @@ class Test:
         form = TrellisForm(data=inputdic)
         assert form.is_valid()
         input_ = form.cleaned_data
-        assert sorted(result.keys()) == ['figures', 'xlabel', 'xvalues']
+        assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
+                                         'xlabel', 'xvalues']
         xvalues = result['xvalues']
         assert len(xvalues) == len(input_['magnitude'])
-        figures = result['figures']
+        figures = self.get_figures(result)
         assert len(figures) == len(input_['distance']) * len(input_['imt'])
         for fig in figures:
             yvalues = fig['yvalues']
@@ -88,8 +95,7 @@ class Test:
         resp2 = client.post(self.url, data=dict(inputdic, format='text'),
                             content_type='text/csv')
         assert resp2.status_code == 200
-        assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
-                         resp2.content)
+        assert re.search(self.csv_expected_text, resp2.content)
         ref_resp = resp2.content
         # test different text formats
         for text_sep, symbol in TextSepField._base_choices.items():
@@ -166,10 +172,10 @@ class Test:
         form = TrellisForm(data=inputdic)
         assert form.is_valid()
         input_ = form.cleaned_data
-        assert sorted(result.keys()) == ['figures', 'xlabel', 'xvalues']
+        assert sorted(result.keys()) == ['SA', 'imts', 'xlabel', 'xvalues']
         xvalues = result['xvalues']
         assert len(xvalues) == len(_default_periods_for_spectra())
-        figures = result['figures']
+        figures = self.get_figures(result)
         assert len(figures) == \
             len(input_['distance']) * len(input_['magnitude'])
         for fig in figures:
@@ -181,8 +187,7 @@ class Test:
         resp2 = client.post(self.url, data=dict(inputdic, format='text'),
                             content_type='text/csv')
         assert resp2.status_code == 200
-        assert re.search(b'^gsim,magnitude,distance,vs30(,+)\r\n,,,,',
-                         resp2.content)
+        assert re.search(self.csv_expected_text, resp2.content)
 
         # test for the frontend: supply SA incorrectly but check that it's
         # ignored
@@ -289,8 +294,9 @@ class Test:
 #         form = TrellisForm(in)
 #         assert form.is_valid()
 #         result = get_trellis(form.cleaned_data)
-        figures = result['figures']
-        assert figures[1]['yvalues']['AkkarBommer2010SWISS01'] == []
+        figures = self.get_figures(result)
+        assert any(_['yvalues']['AkkarBommer2010SWISS01'] == []
+                   for _ in figures)
 
     @pytest.mark.parametrize('vs30, z1pt0, z2pt5',
                              [(120, [1, 2.56], [3, 4]),

@@ -13,8 +13,8 @@
 		{{ key }}{% for name2 in value.opt_names %}<br><span class='text-nowrap text-muted'>{{ name2 }}</span>{% endfor %}
 	</td>
 	<td>
-		{% if not value.attrs.required or value.val or value.val == 0 %}
-			{% if value.val or value.val == 0 %}
+		{% if value.is_optional %}
+			{% if value.val or value.val != None %}
 				(<i>OPTIONAL</i>, default: {{ value.val }})
 			{% else %}
 				(<i>OPTIONAL</i>)

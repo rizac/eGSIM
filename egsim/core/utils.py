@@ -101,10 +101,10 @@ def querystring(dic, baseurl=None):
 
 
 def yaml_load(obj):
-    '''Safely loads the YAML-formatted object `obj` into a dict. Note that
-    being YAML a superset of json, all properly json-formatted strings are
-    also correctly loaded and the quote character ' is also allowed (in pure
-    json, only " is allowed).
+    '''Safely loads the YAML-formatted object `obj` into a dict and returns
+    that dict. Note that being YAML a superset of json, all properly
+    json-formatted strings are also correctly loaded and the quote character
+    ' is also allowed (in pure json, only " is allowed).
 
     :param obj: (dict, stream, string denoting an existing file path, or
         string denoting the file content in YAML syntax): If stream (i.e.,
@@ -140,8 +140,12 @@ def yaml_load(obj):
         # for some weird reason, in case of a string ret is the string itself,
         # and no error is raised. Let's do it here:
         if not isinstance(ret, dict):
-            raise YAMLError('Output should be dict, got %s (input: %s)'
-                            % (ret.__class__.__name__, obj.__class__.__name__))
+            if isinstance(obj, (str, bytes)):
+                raise YAMLError('The given string input is neither a valid '
+                                'YAML content nor the path of an existing '
+                                'YAML file')
+            raise YAMLError('Unable to load input (%s) as YAML'
+                            % (obj.__class__.__name__))
         return ret
     except YAMLError as _:
         raise
