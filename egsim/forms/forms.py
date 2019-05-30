@@ -52,7 +52,7 @@ class BaseForm(Form):
     # you achieve the same result BUT also the <input> will be of type hidden
     # in the GUI
     __hidden_fieldnames__ = []
-    
+
     # this is a list of fields where the 'dump' method must return
     # the cleaned_data and not the data passed in the constructor
     __dump_returns_cleaneddata_for__ = []
@@ -131,9 +131,9 @@ class BaseForm(Form):
     def is_optional(cls, field):
         '''Returns True if the given fieldname is optional.
         A field is optional if either field.required=False OR
-        the filed inital value is specified (not None). Remeber that
+        the field inital value is specified (not None). Remeber that
         a field initial value acts as default value when missing
-        
+
         :param field: a Field object or a string denoting the name of one of
             this Form's fields
         '''
