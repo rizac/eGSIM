@@ -13,13 +13,11 @@ import os
 import warnings
 import inspect
 from collections import defaultdict
-from importlib import import_module
-import importlib.util
 
 from django.db.utils import OperationalError
 from django.core.management.base import BaseCommand, CommandError
-from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
-from openquake.hazardlib.gsim.base import NotVerifiedWarning
+from openquake.baselib.general import (DeprecationWarning as
+                                       OQDeprecationWarning)
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
@@ -168,10 +166,11 @@ def get_imts():
     for imt_name, imt_class in hazardlib_imt_registry.items():
         if inspect.isabstract(imt_class):
             continue
-        if imt_class != imt.SA:  # test we di not need arguments if imt is not SA
+        if imt_class != imt.SA:
+            # test we did not need arguments if imt is not SA
             try:
-                # this creates an instance of the class. If the instance needs argument,
-                # it fails (except below)
+                # this creates an instance of the class. If the instance
+                # needs argument, it fails (except below)
                 imt.from_string(imt_name)
             except Exception as exc:  # pylint: disable=broad-except
                 create_err(type=exc.__class__.__name__,
