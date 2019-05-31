@@ -172,9 +172,11 @@ def get_gmdbplot(params):
     DIST_TYPE = 'distance_type'  # pylint: disable=invalid-name
 
     dist_type = params[DIST_TYPE]
-    mags, dists = get_magnitude_distances(records_iter(params), dist_type)
-    return {'x': dists, 'y': mags,  # 'labels': [r.id for r in gmdb.records],
-            'xlabel': DISTANCE_LABEL[dist_type], 'ylabel': 'Magnitude'}
+    mags, dists, nan_count = \
+        get_magnitude_distances(records_iter(params), dist_type)
+    return {'xvalues': dists, 'yvalues': mags,  # 'labels': [r.id for r in gmdb.records],
+            'xlabel': DISTANCE_LABEL[dist_type], 'ylabel': 'Magnitude',
+            'nan_count': nan_count}
 
 
 def get_magnitude_distances(records, dist_type):
@@ -184,6 +186,7 @@ def get_magnitude_distances(records, dist_type):
     """
     mags = []
     dists = []
+    nan_count = 0
     for record in records:
         mag = record['magnitude']
         dist = record[dist_type]
@@ -194,7 +197,9 @@ def get_magnitude_distances(records, dist_type):
         if not np.isnan(mag) and not np.isnan(dist):
             mags.append(mag)
             dists.append(dist)
-    return mags, dists
+        else:
+            nan_count += 1
+    return mags, dists, nan_count
 
 
 def records_iter(params):
