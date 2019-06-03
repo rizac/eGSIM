@@ -55,7 +55,7 @@ table.testing-table th{
   transform-origin: top;
 }
 .egsimform-enter, .egsimform-leave-to /* .fade-leave-active below version 2.1.8 */ {
-  transform: scaleY(0);  /* in case you wnoder, width, max-width (and height) do not work (conflict with flex layout?) */
+  transform: scaleY(0);  /* in case you wonder, width, max-width (and height) do not work (conflict with flex layout?) */
 }
 
 
