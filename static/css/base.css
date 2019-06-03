@@ -157,7 +157,7 @@ select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:
 }
 select[multiple] option:checked:not(:disabled), select[size] option:checked:not(:disabled) {
 	background-color: transparent; /* to be sure that color transparency, if set, is not added up with bg image below */
-	background-image: linear-gradient(0deg, rgba(163, 196, 135, .66) 0%, rgba(163, 196, 135, .66) 100%);
+	background-image: linear-gradient(0deg, rgba(163, 196, 135, .4) 0%, rgba(163, 196, 135, .4) 100%);
 }
 
 /* styling <select> when single selection and no size (combo box). Works on Mac in Safari, Chrome, Firefox */
