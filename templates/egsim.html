@@ -33,8 +33,7 @@
 			<div v-show='errormsg'
 				class='d-flex flex-row bg-danger text-sm-center text-white text-truncate position-absolute pos-t-0 pos-x-0'
 				style='z-index:10'>
-				<div class='flexible ml-1'>
-					&#123;&#123; errormsg &#125;&#125;
+				<div class='flexible ml-1' v-html='errormsg'>
 				</div>
 				<button type="button" v-on:click='clearErrors()' class="close mr-1"
 					style='color:inherit' aria-label="Clear error messages">
@@ -84,12 +83,64 @@
 	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 
 	<script>
+	// functions for checking the browser version:
+	function _pInt(value){
+	    return value===undefined || value === null || isNaN(parseInt(value)) ? undefined : parseInt(value);
+	}
+	function getBrowser() {  // https://stackoverflow.com/a/16938481
+	    var ua=navigator.userAgent;
+		var tem;
+		var M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || []; 
+	    if(/trident/i.test(M[1])){
+	        tem=/\brv[ :]+(\d+)/g.exec(ua) || []; 
+	        return {
+	            name:'IE',
+	            version: _pInt(tem[1])
+	        };
+	    }   
+	    if(M[1]==='Chrome'){
+	        tem=ua.match(/\bOPR|Edge\/(\d+)/)
+	        if(tem!=null){
+	            return {
+	                name:'Opera',
+	                version: _pInt(tem[1])
+	            };
+	        }
+	    }   
+	    M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
+	    if((tem=ua.match(/version\/(\d+)/i))!=null){
+	        M.splice(1,1,tem[1]);
+	    }
+	    return {
+	      	name: M[0].toLowerCase(),
+	    	version: _pInt(M[1])
+	    };
+	}
+	function incompatibleBrowser(){
+	    var testedBrowsers = [['Chrome', 49], ['Firefox', 45], ['Safari', 10]];
+	    var testedBrowsersToString = testedBrowsers.map(elm => elm[0] + ` (v.&ge;${elm[1]})`).join(", ")
+	    var msg = `Some functionalities might not work correctly. 
+        			In case, please use any of the following tested browsers: ${testedBrowsersToString}`;
+		var browser = getBrowser();
+		for (var [testedBrowser, testedVersion] of testedBrowsers){
+		    if (browser.name.toLowerCase() === testedBrowser.toLowerCase()){
+		        if (browser.version === undefined || browser.version < testedVersion){
+		            return msg;
+		        }else{
+		            return '';
+		        }
+		    }
+		}
+		return msg;
+	}
+	// instantiate the EGSIM Vue Instance with content injected from the server and the
+	// browser version check just implemented:
 	var EGSIM = new Vue({
 	    el: '#egsim-vue',
 	    mixins: [EGSIM_BASE],  /* defined in script above */
 	    data: function(){ /* FIXME: check what's the difference between returning function and dict */
 	        return {selComponent: "{{sel_component}}",
-	        		errormsg: "{{ server_error_message }}",
+	        		errormsg: incompatibleBrowser() || "{{ server_error_message }}",
 	        		componentProps: {{ component_props|safe }},
 	        		gsims: {{ gsims|safe }},
 	        		};  
