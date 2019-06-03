@@ -68,10 +68,9 @@ div.form-control {
 }
 
 /* make border it a little bit darker. Original: border: 1px solid #dee2e6!important; */
-.border {
-    border: 1px solid rgba(0,0,0,.2) !important;
+.border, *.form-control:not([style*="border"]) {
+    border: 1px solid rgba(0,0,0,.3) !important;
 }
-
 
 /* Make btn primary color darker (and nicer) */
 .bg-primary{
@@ -105,25 +104,23 @@ div.form-control {
 
 /* margins m*-4 increased to 2rem (bootstrap4 default is 1.5rem */
 .m-4 {
-    margin: 2.5rem!important;
+    margin: 2rem !important;
 }
 .mt-4, .my-4 {
-    margin-top: 2.5rem!important;
+    margin-top: 2rem !important;
 }
 .mr-4, .mx-4 {
-    margin-right: 2.5rem!important;
+    margin-right: 2rem !important;
 }
 .mb-4, .my-4 {
-    margin-bottom: 2.5rem!important;
+    margin-bottom: 2rem !important;
 }
 .ml-4, .mx-4 {
-    margin-left: 2.5rem!important;
+    margin-left: 2rem !important;
 }
 
-/* ========================================================================= */
-/* ================ NAVBAR ================================================= */
-/* ========================================================================= */
 
+/* nav */
 nav#egsim-nav {
 	min-height: 3.5rem;  /* for safari */
 }
@@ -154,38 +151,12 @@ nav .menu-item.active{
    border that might be set) DOES NOT WORK on current MacOS and Firefox. In any
    case, for info see https://stackoverflow.com/a/19451423 */
 
-/* fix disabled background and foregrounds in Chrome webkit autocomplete */
+/* fix background and foregrounds in Chrome webkit autocomplete */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
 input:-webkit-autofill:active  {
     -webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
-}
-
-/* change disabled text color FOREGROUND */
-*[disabled],
-.disabled{
-    color: lightgray !important;
-}
-/* prevent chrome autofill to override the above. Note: put these commands separately
-otherwise firefox does not apply the above */
-input[disabled]:-webkit-autofill,
-input.disabled:-webkit-autofill{
-    -webkit-text-fill-color: lightgray !important;
-}
-
-/* change disabled text color BACKGROUND */
-input[disabled],
-input.disabled,
-select[disabled],
-select.disabled{
-    background-color: #f8f9fa !important;
-}
-/* prevent chrome autofill to override the above. Note: put these commands separately
-otherwise firefox does not apply the above */
-input[disabled]:-webkit-autofill,
-input.disabled:-webkit-autofill{
-     -webkit-box-shadow: 0 0 0 30px #f8f9fa inset !important;
 }
 
 /* change <option> selected (or checked) color. DOES NOT WORK IN SAFARI.
@@ -216,6 +187,13 @@ select:not([multiple]):not([size]).form-control{
     background-size: .65em auto;
     /* set padding (depends on background-position second value above (.3rem)*/
 	padding: 0rem 1.2rem 0rem .3rem !important;  /* top right bottom left */
+}
+
+/* disabled elements: */
+
+*[disabled],
+.disabled{
+    opacity: 0.65 !important;
 }
 
 
@@ -290,14 +268,6 @@ label.customradio:before{
 label.customcheckbox.checked:before,
 label.customradio.checked:before{
 	content: "\f14a";  /* toggle-of is:  "\f205"; */
-}
-
-
-label.customcheckbox.checked.disabled:before,
-label.customradio.checked.disabled:before,
-label.customcheckbox[disabled].checked:before,
-label.customradio[disabled].checked:before{
-	color: #aaa;
 }
 
 
