@@ -211,10 +211,20 @@ Vue.component('gsims', {
                 var layer = L.geoJson(featureCollections[key],{
                     style: style,
                     onEachFeature: this.onEachFeature}
-                ).addTo(map); //, style: style, onEachFeature: eachFeature })
-                layersControl.addOverlay(layer, `<span style='color:${style.color}'>${key}</span>`);
+                ).addTo(map);
+                // add a span label with the data-tr-color attribute (why? see later for details)
+                var k = layersControl.addOverlay(layer, `<span data-tr-color='${style.color}'>${key}</span>`);
                 overlays[key] = layer;
             });
+            
+            // hack for styling the control <label> and its <input type=checkbox ... :
+            // we get all span Use that data attribute to retreive
+            // all the span[data-tr-color] elements and we style the parent label.
+            // See custom css for details:
+            for (var spanElm of document.querySelectorAll('span[data-tr-color]')){
+            	this._customizeOverlayCheckbox(spanElm, spanElm.getAttribute('data-tr-color'));
+            };
+            
             // hack for removing the height attribute on the control. Seems that {collapsed:false}} does not
             // work only if we are loading the page and the latter is visible (activated):
             var leafLegend = document.querySelector('form.leaflet-control-layers-list');
@@ -229,6 +239,25 @@ Vue.component('gsims', {
                 ctrl.classList.add("shadow");
             }
             
+         },
+         _customizeOverlayCheckbox: function(spanElement, color){
+         	var label = spanElement.parentNode;
+		    while (label && label.tagName.toLowerCase() != 'label'){
+		    	label = label.parentNode;
+		    }
+         	// this customizes the <label> tag of the checkbox and wrapping <label> for each
+         	// Tectonic Region. Yes, hacky, but Leaflet forces us to do so: 
+         	label.classList.add('customcheckbox', 'checked');
+         	label.style.display = 'flex';  // customcheckbox it is inline-flex by default
+         	label.style.color = color;
+        	label.querySelector('input[type=checkbox]').addEventListener('change', function() {
+        		// on checkbox change, add checked class to the wrapping label. See css for styled checkbox
+			    if(this.checked) {
+			        label.classList.add('checked');
+			    } else {
+			        label.classList.remove('checked');
+			    }
+			});
          },
          getStyle: function(trName){
              // FIXME: is there any *EASILY accessible* documentation about the styling properties????!!!!:

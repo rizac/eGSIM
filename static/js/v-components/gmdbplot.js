@@ -40,7 +40,7 @@ Vue.component('gmdbplot', {
                     	:class="{ 'flexible': name == 'selexpr' }" class='mr-3'>
                     </forminput>
 
-                    <button type="submit" class="btn btn-outline-primary mt-2">
+                    <button type="submit" class="btn btn-primary mt-2">
                         Display magnitude-distance plot
                     </button>
 
