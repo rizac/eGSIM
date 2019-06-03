@@ -125,7 +125,7 @@ Vue.component('gsimselect', {
       
       <div v-if='selectbutton' class='mt-2'>
           <button @click="$emit('selection-fired', elm.val)" v-html='selectbutton' 
-           :disabled='!(elm.val || []).length' class='btn btn-outline-primary form-control'>
+           :disabled='!(elm.val || []).length' class='btn btn-primary form-control'>
           </button>
       </div>
     </div>`,

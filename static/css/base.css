@@ -283,7 +283,7 @@ label.customradio:before{
     /* instead of the above, the rule below assures "width stability"
     if content and content:checked
     do not have the same width: */
-    width: 1.25em;
+    width: 1.15em;
     transition: .5s; /* does not work for text change */
 }
 
