@@ -47,7 +47,6 @@ Vue.component('gmdbplot', {
                 </div>
             </form>
         </div>
-        <gmdbplotdiv :data="responseData" :filename="this.$options.name" class='flexible'>
-        </gmdbplotdiv>
+        <gmdbplotdiv :data="responseData" class='flexible' />
     </div>`
 })

@@ -5,9 +5,6 @@
  */
 Vue.component('testing', {
 	extends: _BASE_FORM,  // defined in baseform.js
-    props: {
-		filename: {type:String, default:'testing'}
-	},
     data: function () {
     	// set the size of the plot_type <select>. Maybe this is not the right place
     	// (maybe the 'created' method would be better:
