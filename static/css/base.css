@@ -67,38 +67,26 @@ div.form-control {
     height: initial;
 }
 
-/* make border it a little bit darker. Original: border: 1px solid #dee2e6!important; */
-.border, *.form-control:not([style*="border"]) {
-    border: 1px solid rgba(0,0,0,.3) !important;
+/* make border it a little bit darker. Original: border: 1px solid #dee2e6!important;
+Apply also to form-controls without a border specified as css inline*/
+.border, *.form-control:not([style*="border"]), .leaflet-control {
+    border: 1px solid rgba(0,0,0,.25) !important;
 }
 
-/* Make btn primary color darker (and nicer) */
-.bg-primary{
+/* Make primary color nicer with a darker blue. Taken from */
+.bg-primary, .btn-primary{
 	background-color: rgba(7, 104, 159, 1) !important;
 }
-.border-primary {
+.border-primary, .btn-primary {
     border-color: rgba(7, 104, 159, 1) !important;
 }
 .text-primary{
 	color: rgba(7, 104, 159, 1) !important;
 }
-.btn-outline-primary {
-    color: rgba(7, 104, 159, 1);
-    border-color: rgba(7, 104, 159, 1);
-    background-color: transparent;
-}
-.btn-outline-primary:hover,
-.btn-outline-primary:not(:disabled):not(.disabled):active,
-.btn-primary {
-	color: #fff;
-	border-color: rgba(7, 104, 159, 1);
-    background-color: rgba(7, 104, 159, 1);
-}
 .btn-primary:hover,
 .btn-primary:not(:disabled):not(.disabled):active{
-	color: #fff;
-	border-color: rgba(5, 73, 113, 1);
-    background-color: rgba(5, 73, 113, 1);
+	border-color: rgba(5, 73, 113, 1) !important;
+    background-color: rgba(5, 73, 113, 1) !important;
 }
 
 
