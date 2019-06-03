@@ -125,7 +125,7 @@ Vue.component('testingtable', {
     },
     // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
     template: `<div v-show="visible" class="d-flex flex-row">
-	    <div class='testing-table flexible btn-primary'>
+	    <div class='testing-table flexible border-primary'>
 		    <table class='table testing-table'>
 		        <thead>
 		            <tr>
