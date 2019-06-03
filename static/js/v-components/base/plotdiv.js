@@ -244,7 +244,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 		            			v-model='axis[type].sameRange.value'
 		            			:disabled="axis[type].sameRange.disabled"
 		            		>	
-		            		<span class='ml-1'>same range</span>
+		            		<span>same range</span>
 		            	</label>
 	            		<label
 	            			class='text-nowrap m-0 ml-2 customcheckbox'
@@ -256,7 +256,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 		            			v-model='axis[type].log.value'
 		            			:disabled="axis[type].log.disabled"
 		            		>	
-		            		<span class='ml-1'>log scale</span>
+		            		<span>log scale</span>
 		            	</label>
 	            	</div>
 	            </div>
