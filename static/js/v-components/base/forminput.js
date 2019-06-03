@@ -42,12 +42,12 @@ Vue.component('forminput', {
                 <input v-if="!headonly && (isCheck || isRadio)" v-model="elm.val" v-bind="elm.attrs" class='mr-1'>
                 <span v-html="elm.label"></span>
             </label>
-            <div class="text-muted small flexible ml-3 text-right">
-                <span v-if="elm.err" class="text-danger">{{ elm.err }}</span>
+            <div class="text-muted small d-flex flex-row flexible">
+                <span v-if="elm.err" class="text-danger ml-2">{{ elm.err }}</span>
                 <template v-else>
-            		<span class="text-muted mr-1" v-if="elm.help" v-html="elm.help"></span>
-            		<span class="text-muted mr-1" v-if="isSelectMultiple">({{ elm.val.length || 0 }} of {{ elm.choices.length }} selected)</span>
-            		<span class='text-primary rounded'>{{ name }}</span>
+            		<span class="text-muted ml-2" v-if="elm.help" v-html="elm.help"></span>
+            		<span class="text-muted ml-2" v-if="isSelectMultiple">({{ elm.val.length || 0 }} of {{ elm.choices.length }} selected)</span>
+            		<span class='text-primary ml-3 flexible text-right'>{{ name }}</span>
             	</template>
             </div>
             <button v-if="showhelpbutton" type="button" @click='$emit("helprequested")'
