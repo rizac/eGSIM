@@ -23,38 +23,38 @@
 h1, #toc {
 	counter-reset: section;
 }
-h2, #toc a._h2 {
+h2, #toc a.ref-h2 {
 	counter-reset: subsection;
 }
-h3, #toc a._h3{
+h3, #toc a.ref-h3{
 	counter-reset: subsubsection;
 }
-h2::before, #toc a._h2:before {
+h2::before, #toc a.ref-h2:before {
 	counter-increment: section;
   	content: counter(section) ".";
   	padding-right: .25rem;
   	margin-right: .25rem;
 }
-h3::before, #toc a._h3:before{
+h3::before, #toc a.ref-h3:before{
 	counter-increment: subsection;
   	content: counter(section) "." counter(subsection);
   	padding-right: .25rem;
   	margin-right: .25rem;
 }
-h4::before, #toc a._h4:before {
+h4::before, #toc a.ref-h4:before {
   	counter-increment: subsubsection;
   	content: counter(section) "." counter(subsection) counter(subsubsection, lower-latin);
   	padding-right: .25rem;
   	margin-right: .25rem;
 }
-#toc a._h2, #toc a._h3, #toc a._h4 {
+#toc a.ref-h2, #toc a.ref-h3, #toc a.ref-h4 {
 	padding-left: 0.25rem;
 	padding-right: 0.25rem;
 }
-#toc a._h3{
+#toc a.ref-h3{
 	padding-left: 1.25rem;
 }
-#toc a._h4{
+#toc a.ref-h4{
 	padding-left: 2.25rem;
 }
 
@@ -173,6 +173,6 @@ table.egsim-form-parameters .param-alternative-name,
 #toc .menu-item{
 	color: initial !important;
 }
-#toc .menu-item:hover, .toc .menu-item.active{
+#toc .menu-item:hover, #toc .menu-item.active{
 	background-color: #b8daff;
 }

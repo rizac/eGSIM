@@ -74,38 +74,84 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/plugins/data-uri-highlight/prism-data-uri-highlight.min.js"></script>
 
 <script type='text/javascript'>
-/** creates TOC. Gets all H2, H3, H4 with id assigned and creates the hyperlink next to them, plus adds the item to the TOC **/
+// Custom js. Just include the few lines here avoiding external javascript loading
+
+// 1] TOC and Hyperlinks: Loop thorugh all Headers "H*" with id assigned and:
+//    1a] create the hyperlink next to them,
+// 	  1b] Add an anchor (a.menu-item) in the Table of Content (TOC): clicking on the anchor scrolls
+// 	      the relative Header to visible
 var tocItemsHTML = [];
-document.querySelectorAll('h2, h3, h4').forEach((elm, index) => {
+var selectedHs = 'h2[id], h3[id], h4[id]';
+document.querySelectorAll(selectedHs).forEach((elm, index) => {
     var id = elm.getAttribute('id');
-    if (id){
-        var text = elm.innerText;
-        var newText = `${text} <a style='display:none' class="headerlink" href="#${id}" title="Permalink to this headline">&#182;</a>`;
-    	elm.innerHTML = newText;
-    	// add mouseenter mouseleave. Note mouseout! see here:
-    	// https://javascript.info/mousemove-mouseover-mouseout-mouseenter-mouseleave#extra-mouseout-when-leaving-for-a-child
-    	elm.onmouseenter = mouseevent => {
-    	    var target = mouseevent.target;
-    	    target.children[target.childElementCount-1].style.display = '';
-    	};
-    	elm.onmouseleave = mouseevent => {
-    	    var target = mouseevent.target;
-    	    target.children[target.childElementCount-1].style.display = 'none';
-    	};
-    	tocItemsHTML.push(`<a class='d-block rounded py-1 menu-item _${elm.tagName.toLowerCase()}' href="#${id}">${text}</a>`);
-    }
+    var text = elm.innerText;
+    var newText = `${text} <a style='display:none' class="headerlink" href="#${id}" title="Permalink to this headline">&#182;</a>`;
+	elm.innerHTML = newText;
+	// add mouseenter mouseleave. Note mouseout! see here:
+	// https://javascript.info/mousemove-mouseover-mouseout-mouseenter-mouseleave#extra-mouseout-when-leaving-for-a-child
+	elm.onmouseenter = mouseevent => {
+	    var target = mouseevent.target;
+	    target.children[target.childElementCount-1].style.display = '';
+	};
+	elm.onmouseleave = mouseevent => {
+	    var target = mouseevent.target;
+	    target.children[target.childElementCount-1].style.display = 'none';
+	};
+	tocItemsHTML.push(`<a class="d-block rounded py-1 menu-item ref-${elm.tagName.toLowerCase()}" data-ref="${id}" href="#${id}">${text}</a>`);
 });
 document.querySelector('#toc').innerHTML = `${tocItemsHTML.join('\n')}`;
-/* now make all external anchor tags open in a new frame */
+
+// 2] listen for page scroll changes (https://stackoverflow.com/a/7557433):
+// 2a] Create a function that tells us if an element is visible (in the viewport)
+function isElementInViewport (el) {
+    var rect = el.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && 
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+}
+
+// 2b] Create a function that checks which element is visible among our Headers defined above
+// This function will be called on window scroll, resize etcetera (see below)
+function getHVisible(e){  // (e is the event, not used)
+    var visElm = null;
+    for (var elm of Array.from(document.querySelectorAll(selectedHs))){
+        if (isElementInViewport(elm)){
+            visElm = elm;
+            break;
+        }
+    }
+    if (!visElm){
+        return;
+    }
+    var refAnchors = document.querySelector('#toc').querySelectorAll('a[data-ref]');
+    refAnchors.forEach(anchor => {
+       var active = anchor.getAttribute('data-ref') === visElm.getAttribute('id');
+       if (active){
+           anchor.classList.add('active');
+       }else{
+           anchor.classList.remove('active');   
+       }
+    });
+}
+
+// 2c] Attach the function above to several window events
+//     Note that 'scroll' and 'resize' need the third argument as true to work
+//     (see https://stackoverflow.com/a/30723677):
+addEventListener('DOMContentLoaded', getHVisible, false); 
+addEventListener('load', getHVisible, false);
+addEventListener('scroll', getHVisible, true); 
+addEventListener('resize', getHVisible, true); 
+
+// 3] Make all external anchor tags open in a new frame
 document.querySelectorAll("a").forEach(elm => {
     if ((elm.getAttribute('href') || '').startsWith('http')){
         elm.setAttribute("target", "_blank");
     }
 });
-//listen for page scroll changes (https://stackoverflow.com/a/30723677):
-/* document.addEventListener('scroll', function(e){
-    
-}, true); */
+
 </script>
 
 {% endblock %}
