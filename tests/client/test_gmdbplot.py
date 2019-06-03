@@ -60,9 +60,9 @@ class Test:
         json_sel = resp1.json()
 
         # test that the selection worked
-        assert len(json_no_sel['x']) > len(json_sel['x'])
+        assert len(json_no_sel['xvalues']) > len(json_sel['xvalues'])
         # test that magnitudes are what we expect:
-        assert any(_ <= 4 or _ >= 7 for _ in json_sel['y'])
+        assert any(_ <= 4 or _ >= 7 for _ in json_sel['yvalues'])
 
     def test_gmbdplot_service_dists(self,
                                     # pytest fixtures:
@@ -77,7 +77,7 @@ class Test:
             assert resp1.status_code == resp2.status_code == 200
             assert areequal(resp1.json(), resp2.json())
             json_ = resp1.json()
-            assert len(json_['x']) == len(json_['y']) > 0
+            assert len(json_['xvalues']) == len(json_['yvalues']) > 0
 
     def test_gmbdplot_errors(self,
                              # pytest fixtures:
