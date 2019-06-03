@@ -183,6 +183,11 @@ select:not([multiple]):not([size]).form-control{
 .disabled{
     opacity: 0.65 !important;
 }
+/* safari has limited support for options, thus the rule above does not work, but text color is supported*/
+option[disabled],
+option.disabled{
+    color: #bbb !important;
+}
 
 
 /* ========================================================================= */
