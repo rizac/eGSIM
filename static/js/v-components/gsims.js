@@ -49,11 +49,14 @@ Vue.component('gsims', {
         }
     },
     template:`<div class='flexible d-flex flex-column'>
-        <select v-model='selectedModel' class='form-control mb-2'>
-            <option v-for='mod in modelNames' :key='mod'>
-                {{ mod }}
-            </option>
-        </select>
+    	<div class='d-flex flex-row align-items-baseline'>
+	        <span class='mr-2 text-nowrap'>Tectonic regionalisation model</span>
+	        <select v-model='selectedModel' class='form-control mb-2 flexible'>
+	            <option v-for='mod in modelNames' :key='mod'>
+	                {{ mod }}
+	            </option>
+	        </select>
+        </div>
         <div :id='id' class='flexible' style='font: inherit !important'></div>
         </div>`,
     created: function(){
