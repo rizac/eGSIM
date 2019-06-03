@@ -5,9 +5,6 @@
  */
 Vue.component('trellis', {
 	extends: _BASE_FORM,  // defined in baseform.js
-	props: {
-		filename: {type: String, default:'trellis'}  // overrides "super-class" filename
-	},
     data: function () {
     	// set the size of the plot_type <select>. Note that it turns out
     	// that 'created' is executed after the template is created, so we add
