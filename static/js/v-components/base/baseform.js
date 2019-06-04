@@ -13,6 +13,7 @@ var _BASE_FORM = Vue.component('baseform', {
     	return {
         	responseDataEmpty: true,
             responseData: {},
+            mounted: false
         }
     },
     methods: {
@@ -25,6 +26,19 @@ var _BASE_FORM = Vue.component('baseform', {
             });
         }
     },
+    mounted: function () {
+    	// set the mounted variable in order to activate the transition after the
+    	// whole component has been mounted
+    	// the transition is used just to show up / hide the form
+    	if (this.mounted){
+    		return;
+    	}
+  		this.$nextTick(function () {
+    		// Code that will run only after the
+    		// entire view has been rendered
+    		this.mounted = true;
+  		})
+	},
     watch: {
         responseData: {
             immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
@@ -47,7 +61,7 @@ var _BASE_FORM = Vue.component('baseform', {
     	}	
     },
     template: `
-	<transition name="egsimform">
+	<transition :name="mounted ? 'egsimform' : ''"">
     <form novalidate v-on:submit.prevent="request"
         :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light']]"
         class='d-flex flex-column flexible position-relative mb-3 align-self-center' style='z-index:10'
