@@ -23,33 +23,52 @@ Vue.component('forminput', {
     data: function () {
     	// define the Object whose data is associated to this component:
     	var elm = this.form[this.name];
-    	var isSelect = elm.attrs.type == 'select' || (elm.choices && elm.choices.length);
-        return {
+    	return {
         	elm: elm,
             // calculate (once) data for the template below:
             isRadio: elm.attrs.type == 'radio',
             isCheck: elm.attrs.type == 'checkbox',
-            // type might be undefined, thus we need to check the choices for <select>:
-            isSelect: isSelect,
-            isSelectMultiple: isSelect && elm.attrs.multiple
+            // The <select> type might be undefined, this makes us know is we are dealing with a <select>:
+            isSelect: elm.attrs.type == 'select' || (!elm.attrs.type && elm.choices && elm.choices.length)
         }
+    },
+    computed: {
+    	info: function(){
+    		// returns the string to be displayed next to the element label which might be
+
+    		var elm = this.form[this.name];
+    		// if the element value has error, the info is the error, thus return it:
+    		if (elm.err){
+    			return elm.err;
+    		}
+    		// return the element html help
+    		var info = elm.help || '';
+    		if (this.isSelect && elm.attrs.multiple){
+    			// if the element is a <select multiple...>, display also the selected
+    			// elements. Note that being this a computed property, Vue will collect all
+    			// variables referenced here (e.g., `elm.val`, `elm.choices`, see below):
+    			// when any of them will change, Vue will re-render the HTML by calling this property
+    			var selected = `(${elm.val.length || 0} of ${elm.choices.length} selected)`;
+    			return info ? `${info} ${selected}` : selected;
+    		}
+    		return info;
+    	}
     },
     template: `<div v-if="!elm.is_hidden">
         <div class="d-flex flex-row mb-0" :class="[showhelpbutton ? ['align-items-end'] : ['align-items-baseline']]">
             <label :for="elm.attrs.id" class='mb-0 text-nowrap' :disabled='elm.attrs.disabled'
-            :class="{'checked': elm.val, 'customcheckbox': isCheck, 'customradio': isRadio}"
+            	:class="{'checked': elm.val, 'customcheckbox': isCheck, 'customradio': isRadio}"
             >
                 <input v-if="!headonly && (isCheck || isRadio)" v-model="elm.val" v-bind="elm.attrs" class='mr-1'>
                 <span v-html="elm.label"></span>
             </label>
-            <div class="text-muted small d-flex flex-row flexible">
-                <span v-if="elm.err" class="text-danger ml-2">{{ elm.err }}</span>
-                <template v-else>
-            		<span class="text-muted ml-2" v-if="elm.help" v-html="elm.help"></span>
-            		<span class="text-muted ml-2" v-if="isSelectMultiple">({{ elm.val.length || 0 }} of {{ elm.choices.length }} selected)</span>
-            		<span class='text-primary ml-3 flexible text-right'>{{ name }}</span>
-            	</template>
-            </div>
+            <span
+            	v-html="info"
+            	:class="[elm.err ? 'text-danger' : 'text-muted']"
+            	class="small flexible ml-2"
+            >
+            </span>
+            <span class='text-primary small ml-3 text-right'>{{ name }}</span>
             <button v-if="showhelpbutton" type="button" @click='$emit("helprequested")'
     		 		class='btn btn-outline-secondary btn-sm ml-1 mb-1 py-0'>
     			<i class="fa fa-info-circle"></i>
