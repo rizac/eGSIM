@@ -130,9 +130,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# we have to define also this directory, still do not understand why, and use the static function
-# in templates 9this is weird)
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 # https://docs.djangoproject.com/en/2.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
