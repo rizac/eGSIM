@@ -1,9 +1,6 @@
 // Add global property / method / directives to Vue (https://vuejs.org/v2/guide/plugins.html)
 Vue.use({
     install : function (Vue, options) {
-        // 1. add global method or property by means of which we can say:
-        // var colors = Vue.colors()
-        // var color = colors(
         class ColorMap extends Map {
             constructor() {
                 super();
