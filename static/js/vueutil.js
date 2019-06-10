@@ -1,12 +1,16 @@
-// Add global property / method / directives to Vue (https://vuejs.org/v2/guide/plugins.html)
+/** 
+ * Add global property / method / directives to Vue (https://vuejs.org/v2/guide/plugins.html) 
+*/
 Vue.use({
     install : function (Vue, options) {
+    	// defines ColorMap class extensing Map and retrievable via Vue.colorMap() (see below):
         class ColorMap extends Map {
             constructor() {
                 super();
                 this._defaults = {
                         index: 0,
-                        colors: ['#1f77b4',  // muted blue
+                        colors: [
+                        	'#1f77b4',  // muted blue
                             '#ff7f0e',  // safety orange
                             '#2ca02c',  // cooked asparagus green
                             '#d62728',  // brick red
@@ -15,7 +19,8 @@ Vue.use({
                             '#e377c2',  // raspberry yogurt pink
                             '#7f7f7f',  // middle gray
                             '#bcbd22',  // curry yellow-green
-                            '#17becf']  // blue-teal
+                            '#17becf'   // blue-teal
+                        ]
                 }
             }
             get(key){
