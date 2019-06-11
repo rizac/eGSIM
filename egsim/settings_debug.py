@@ -127,9 +127,16 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
-
 STATIC_URL = '/static/'
 
+# static files dir:
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+# static files url:
+MEDIA_URL = '/media/'
+
+# media dir:
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # https://docs.djangoproject.com/en/2.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
