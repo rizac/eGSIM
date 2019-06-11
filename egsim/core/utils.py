@@ -175,7 +175,7 @@ def isscalar(value):
 
 def get_gmdb_path():
     '''Returns the path to the eGSIM Ground Motion Database'''
-    return join(settings.BASE_DIR, 'gmdb.hf5')
+    return join(settings.MEDIA_ROOT, 'gmdb.hf5')
 
 
 def get_gmdb_names(fpath):
