@@ -125,12 +125,49 @@ USE_L10N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.11/howto/static-files/
+# static files (CSS JavaScript, Images). The managing of static files
+# is very badly documented in Django. If comments below do not satisfy you,
+# please check:
+# WHAT THESE VARIABLES DO (most of the comments here below come from that url):
+#   https://stackoverflow.com/a/40330875
+# Another explanation about static files:
+#   https://scotch.io/tutorials/working-with-django-templates-static-files#toc-settings-for-managing-static-files
+# How to structure a static directory *within an app*:
+#   https://stackoverflow.com/a/34636847 and
+#   point 6 in https://www.toptal.com/django/django-top-10-mistakes for details
+
+# static files root (path on the server) I GUESS it is not used at all in development
+# mode. In production, it is used as URL to retreive static files, if they
+# are hosted on some machine (e.g. AWS), or by some server on the same
+# machine (after configuring Nginx accordingly to serve static files at this url):
 STATIC_URL = '/static/'
 
-# static files dir:
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# While in development (debug=True), STATIC_ROOT does nothing. You even don't
+# need to set it. Django looks for static files inside each app's directory
+# (djangoproject/appname/static) and then in STATICFILES_DIRS (see below) and
+# serves them automatically (this is the magic done by manage.py runserver
+# when DEBUG=True). Note that in our case djangoproject = appname = egsim.
+# When your project goes live, things differ. Most likely you will serve
+# dynamic content using Django and static files will be served by Nginx. Why?
+# Because Nginx is incredibly efficient and will reduce the workload off Django.
+# This is where STATIC_ROOT becomes handy, as Nginx doesn't know anything about
+# our django project and doesn't know where to find static files.
+# So you set STATIC_ROOT = '/some/folder/' and tell Nginx to look for static
+# files in /some/folder/. Then you run manage.py collectstatic and Django
+# will copy static files from all the apps you have to /some/folder/.
+STATIC_ROOT = ''
+
+# STATICFILES_DIRS is used to include additional directories for collectstatic
+# to look for, and in development (debug=True) to search for static files
+# in *addition* to the default djangoproject/appname/static.
+# To keep things simple because we have just onedjango  project and one app
+# (both named 'egsim') we do not want to tie any static file to a particular app,
+# thus we adopt a very common approach: store static files under
+# 'djangoproject/static' folder, which has the only drawback that we have to
+# add the path to STATICFILES_DIRS
+STATICFILES_DIRS = (
+     os.path.join(BASE_DIR, 'static'),
+)
 
 # static files url:
 MEDIA_URL = '/media/'

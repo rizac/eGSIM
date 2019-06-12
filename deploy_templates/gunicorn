@@ -1,0 +1,26 @@
+# Gunicorn configuration file template for serving the app (Nginx is delegated for static files).
+# Copied from https://djangodeployment.com/wp-content/uploads/2017/03/Django-deployment-cheatsheet.pdf
+# INSTRUCTIONS:
+# > pip install gunicorn
+# > cp $THIS_FILE /etc/systemd/system/$DJANGO_PROJECT.service
+# Edit the copied file replacing all variables (starting with $) accordingly
+# Start the server:
+# > systemctl enable $DJANGO_PROJECT
+# > service $DJANGO_PROJECT start
+
+[Unit]
+Description=$DJANGO_PROJECT
+[Service]
+User=$DJANGO_USER
+Group=$DJANGO_GROUP
+WorkingDirectory=/opt/$DJANGO_PROJECT
+Environment="PYTHONPATH=/etc/opt/$DJANGO_PROJECT"
+Environment="DJANGO_SETTINGS_MODULE=settings"
+ExecStart=/opt/$DJANGO_PROJECT/venv/bin/gunicorn \
+--workers=4 --log-file=/var/log/$DJANGO_PROJECT/gunicorn.log \
+--bind=127.0.0.1:8000 --bind=[::1]:8000 \
+$DJANGO_PROJECT.wsgi:application
+
+
+[Install]
+WantedBy=multi-user.target
