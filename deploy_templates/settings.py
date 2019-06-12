@@ -24,12 +24,12 @@ DATABASES = {
 # static files root (path on the server)
 STATIC_ROOT = '/var/cache/$DJANGO_PROJECT/static/'
 # static files url:
-# STATIC_URL = '/static/'
+STATIC_URL = '/static/'
 
 # media root (path on the server):
 MEDIA_ROOT = '/var/opt/$DJANGO_PROJECT/media/'
 # static files url:
-# MEDIA_URL = '/media/'
+MEDIA_URL = '/media/'
 
 # EMAIL configuration (disabled by default, uncomment if needed):
 # SERVER_EMAIL = 'noreply@$DOMAIN'
