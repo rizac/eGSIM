@@ -362,17 +362,19 @@ class TrellisplottypeField(ChoiceField):
 
 
 class LazyCached:
-    '''A callable returning an iterable which caches its result.
+    '''A callable returning a cached (i.e., evaluated only once) iterable.
     Used in the keyword argument 'choices' to lazily create the list of
-    choices. The rationale is to avoid DB access at import / initialization
-    time, which is messy with tests (for an introduction of the problem, see:
+    choices. E.g.:
+    ```
+    choices = LazyCached(lambda: [(_, _) for _ in some_costly_iterable])
+    ```
+    The rationale is to avoid costly operations or DB access at module import
+    / initialization time which are messy with tests (for an introduction of
+    the problem, see:
     https://stackoverflow.com/questions/43326132/how-to-avoid-import-time-database-access-in-django).
-    The simplest solution would be to simply pass a callable to the 'choices'
-    argument (see Django ChoiceField), but the callable re-evaluated each
-    time (i.e., the db is accessed each time). This class solves the
-    problem: it is callables, so Django interprets it correctly and evaluates
-    it upon access only, but it caches the iterated elements, so that a later
-    call does not re-evaluate the result
+    The solution is to pass a callable to the 'choices' argument (see Django
+    ChoiceField), but the callable is re-evaluated each time. If you want to
+    cache the result and evaluate it only once, use this class as callable
     '''
     def __init__(self, callable_returning_iterator):
         self._callable_returning_iterator = callable_returning_iterator
@@ -402,8 +404,7 @@ class GmdbField(ChoiceField):
 
     def __init__(self, **kwargs):
         kwargs.setdefault('label', 'Ground Motion database')
-        if 'choices' not in kwargs:
-            kwargs['choices'] = [(_, _) for _ in self._base_choices.keys()]
+        kwargs.setdefault('choices', [(_, _) for _ in self._base_choices])
         if kwargs['choices']:
             kwargs.setdefault('initial', kwargs['choices'][0][0])
         super(GmdbField, self).__init__(**kwargs)
@@ -449,6 +450,7 @@ class ResidualplottypeField(ChoiceField):
 
 
 class MeasureOfFitField(MultipleChoiceField):
+    '''MultipleChoiceField handling the possible Measures of Fit'''
     _base_choices = {MOF.RES: ('Residuals',
                                GSIM_MODEL_DATA_TESTS['Residuals']),
                      MOF.LH: ("Likelihood",

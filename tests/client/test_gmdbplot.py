@@ -37,7 +37,7 @@ class Test:
             mock_gmdb_field.return_value = MockedGmdbplotForm
             yield
 
-    def test_gmbdplot_service(self,
+    def test_gmdbplot_service(self,
                               # pytest fixtures:
                               testdata, areequal, client):
         '''tests the gmdbplot API service.'''
@@ -64,7 +64,7 @@ class Test:
         # test that magnitudes are what we expect:
         assert any(_ <= 4 or _ >= 7 for _ in json_sel['yvalues'])
 
-    def test_gmbdplot_service_dists(self,
+    def test_gmdbplot_service_dists(self,
                                     # pytest fixtures:
                                     testdata, areequal, client):
         '''tests the gmdbplot API service iterating on all distances'''
@@ -79,7 +79,7 @@ class Test:
             json_ = resp1.json()
             assert len(json_['xvalues']) == len(json_['yvalues']) > 0
 
-    def test_gmbdplot_errors(self,
+    def test_gmdbplot_errors(self,
                              # pytest fixtures:
                              testdata, areequal, client):
         '''tests the gmdbplot API service with errors'''
