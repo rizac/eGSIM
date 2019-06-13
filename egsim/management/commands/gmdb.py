@@ -25,7 +25,7 @@ class Command(BaseCommand):
 
     @property
     def outpath(self):
-        '''Returns the database HDF file path'''
+        '''Returns the directory housing all database HDF files'''
         return get_gmdb_path()
 
     @property

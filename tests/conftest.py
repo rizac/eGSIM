@@ -16,7 +16,7 @@ import numpy as np
 from django.core.management import call_command
 from django.test.client import Client
 
-from egsim.core.utils import yaml_load, get_gmdb_names
+from egsim.core.utils import yaml_load, get_dbnames
 from egsim.core.utils import querystring
 import json
 from egsim.models import Trt
@@ -174,15 +174,17 @@ def mocked_gmdbfield(request, testdata):  # pylint: disable=unused-argument
 
         class MockedGmdbField(GmdbField):
             '''Mocks GmdbField'''
-            def __init__(self, *a, **v):
-                v['choices'] = [(_, _) for _ in get_gmdb_names(gmdbpath)]
-                super(MockedGmdbField, self).__init__(*a, **v)
+            _base_choices = {k: gmdbpath for k in get_dbnames(gmdbpath)}
 
-            def clean(self, value):
-                '''Converts the given value (string) into the tuple
-                hf5 path, database name (both strings)'''
-                (_, value) = super(MockedGmdbField, self).clean(value)
-                return (gmdbpath, value)
+#             def __init__(self, *a, **v):
+#                 v['choices'] = [(_, _) for _ in get_dbnames(gmdbpath)]
+#                 super(MockedGmdbField, self).__init__(*a, **v)
+
+#             def clean(self, value):
+#                 '''Converts the given value (string) into the tuple
+#                 hf5 path, database name (both strings)'''
+#                 (_, value) = super(MockedGmdbField, self).clean(value)
+#                 return (gmdbpath, value)
 
         return MockedGmdbField()
 

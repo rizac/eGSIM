@@ -3,7 +3,8 @@ Created on 29 Jan 2018
 
 @author: riccardo
 '''
-from os.path import join, isfile
+from os import listdir
+from os.path import join, isfile, isdir, abspath
 from io import StringIO
 from urllib.parse import quote
 from datetime import date, datetime
@@ -174,15 +175,25 @@ def isscalar(value):
 
 
 def get_gmdb_path():
-    '''Returns the path to the eGSIM Ground Motion Database'''
-    return join(settings.MEDIA_ROOT, 'gmdb.hf5')
+    '''Returns the path to the directory housing all eGSIM Ground Motion
+    Databases (HDF5 files)'''
+    return join(settings.MEDIA_ROOT, 'gmdb')
 
 
 def get_gmdb_names(fpath):
-    '''Returns the path to each table in the eGSIM Ground Motion Database'''
-    if not isfile(fpath):
-        return []
-    return get_dbnames(fpath)
+    '''Returns a dict of Ground motion database names mapped to the relative
+    HDF5 file path (absolute)'''
+    # Although smtk supports several gmdb tables in a single HDF5 file,
+    # egsim stores a single database per file. The database name is
+    # the one stored therein
+    gmdbases = {}
+    for fle in listdir(fpath) if isdir(fpath) else []:
+        flepath = abspath(join(fpath, fle))
+        try:
+            gmdbases.update({k: flepath for k in get_dbnames(flepath)})
+        except:  # @IgnorePep8 pylint: disable=bare-except
+            pass
+    return gmdbases
 
 
 def test_selexpr(selexpr):
