@@ -384,21 +384,26 @@ class LazyCached:
         return self._data
 
 
+class TrModelField(ChoiceField):
+    '''EgsimChoiceField for Tectonic regionalisation models'''
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices',
+                          LazyCached(lambda: [(_, _)
+                                              for _ in aval_trmodels()]))
+        super(TrModelField, self).__init__(**kwargs)
+
+
 class GmdbField(ChoiceField):
     '''EgsimChoiceField for Ground motion databases
     It accepts an optional argument gmdbpath which defaults to the Django
     app db path
     '''
-    # We previosuly loaded ONCE here all the GMDB, in order to open
-    # only once the GMDB file. DO NOT DO THAT:
-    # 1. the performance improvement is not demonstrated
-    # 2. it messes up tests, as once loaded PER CLASS, the Ground motion
-    # databases can NOT be mocked by simply patching `get_gmdb_path()`
+    _base_choices = get_gmdb_names(get_gmdb_path())
+
     def __init__(self, **kwargs):
         kwargs.setdefault('label', 'Ground Motion database')
         if 'choices' not in kwargs:
-            kwargs['choices'] = [(_, _) for _ in
-                                 get_gmdb_names(get_gmdb_path())]
+            kwargs['choices'] = [(_, _) for _ in self._base_choices.keys()]
         if kwargs['choices']:
             kwargs.setdefault('initial', kwargs['choices'][0][0])
         super(GmdbField, self).__init__(**kwargs)
@@ -407,16 +412,7 @@ class GmdbField(ChoiceField):
         '''Converts the given value (string) into the tuple
         hf5 path, database name (both strings)'''
         value = super(GmdbField, self).clean(value)
-        return (get_gmdb_path(), value)
-
-
-class TrModelField(ChoiceField):
-    '''EgsimChoiceField for Tectonic regionalisation models'''
-    def __init__(self, **kwargs):
-        kwargs.setdefault('choices',
-                          LazyCached(lambda: [(_, _)
-                                              for _ in aval_trmodels()]))
-        super(TrModelField, self).__init__(**kwargs)
+        return (self._base_choices[value], value)
 
 
 class ResidualplottypeField(ChoiceField):
