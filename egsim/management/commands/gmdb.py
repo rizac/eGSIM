@@ -59,28 +59,27 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         '''parses each passed flatfile (as simple command line argument):
             ```
-            python manage.py gmdb_esm file1.csv file2.csv
+            python manage.py gmdb file1.csv file2.csv
             ```
             and writes them as file1.hdf5, file2.hdf5 in `self.outpath`,
-            which should be some directory specified in the Django settings
-            file (usually, the MEDIA_ROOT or some subfolder)
+            which is usually some directory specified in the Django settings
+            file (e.g. the MEDIA_ROOT or some subfolder)
 
-            Note that each flatfile will generate a HDF% file with a single
-            Gorund motion table (HDF group) with the same name of the file
-            (without extension). Although the smtk GroundMotionDatabase was
-            designed to have each flatfile as a table of a HDF5 Group
-            (= HDF5 directory) of a single HDF file, we create one Hdf5 file
-            per flatfile for three reasons:
+            Note that an HDF5 file can store several flatfiles in the
+            form of an HDF5 table (one table = one Ground Motion databases,
+            gmdb). This command creates one HDF5 file with one gmdb per
+            flatfile, for three reasons:
             1. In case of errors or maintainence tasks, we do not have to
-               recreate all flatfiles but only those we need to
-            2. It is easier to know which Gm database we have and their name
+               recreate all gmdb but only those we need to
+            2. It is easier to know which gmdb we have and their name
                by simply looking at the files within `self.outpath`
-            3. In principle, all Gmdb HDF5 files are read-only, so there
-               should not be a problem in concurrent access. However, avoiding
-               concurrent access to the same file when possible is surely not
-               a hindrances
+            3. In principle, all HDF5 files are intended to be only read and
+               not modified, so there shouldn't be concurrency problems.
+               However, avoiding concurrent access to the same file when
+               possible is surely not a hindrances
             Note that if in the future we want to merge all files into a single
-            one, egsim is already capable of doing that. See `get_gmdb_names`
+            one, we have to change the code here only: egsim is not expecting
+            a single table per HDF5 file. See `get_gmdb_names`
             and `get_gmdb_path` in `utils.py` for details
         '''
         try:

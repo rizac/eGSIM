@@ -43,6 +43,18 @@ pip install -e .
 pip install -e .
 
 
+### Test
+
+Normal test (x=stop at first error, v*=increase verbosity):
+```bash
+pytest -xvvv --ds=egsim.settings_debug ./tests/
+```
+
+Test with coverage
+```bash
+pytest -xvvv --ds=egsim.settings_debug --cov=./egsim/ --cov-report=html ./tests/
+```
+
 ## Old stuff (ignore, will be removed soon):
 
 ### (Optional) First install numpy
