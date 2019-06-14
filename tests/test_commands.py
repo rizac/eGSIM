@@ -6,7 +6,7 @@ Created on 6 Apr 2019
 @author: riccardo
 '''
 import os
-from stat import S_IWUSR
+from stat import S_IWUSR, S_IWGRP, S_IWOTH
 import pytest
 
 from mock import patch
@@ -86,7 +86,14 @@ def test_gmdb_esm(mock_input,
         sout = captured.out
         # try to remove the file: not permitted:
         assert os.access(outpath, os.R_OK)
-        assert not os.access(outpath, os.W_OK)
+        # this is False if you are testing from root, as root has always
+        # write privileges: https://stackoverflow.com/a/27747471
+        # Thus this MIGHT not work:
+        # assert not os.access(outpath, os.W_OK)
+        # therefore
+        assert not os.stat(outpath).st_mode & S_IWUSR
+        assert not os.stat(outpath).st_mode & S_IWGRP
+        assert not os.stat(outpath).st_mode & S_IWOTH
 
         # now that the file exists, test that overwriting on the same
         # db raises:
