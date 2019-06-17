@@ -116,3 +116,14 @@ class Test:
         assert resp2.status_code == 200
         assert resp2.content == (b'measure of fit,imt,gsim,value,'
                                  b'db records used\r\n')
+
+    def test_tesing_bug(self,
+                        # pytest fixtures:
+                        testdata, areequal, client):
+        '''Tests a bug we spotted by testing the API from an external query'''
+        resp1 = client.get(self.url +
+                           '?gsim=BindiEtAl2014Rjb&imt=PGA&fit_measure=res',
+                           content_type='application/json')
+        assert resp1.status_code == 200
+        
+        

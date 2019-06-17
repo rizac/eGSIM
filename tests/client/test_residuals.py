@@ -110,3 +110,32 @@ class Test:
             assert expected_txt.search(resp2.content)
             assert len(resp2.content) > len(expected_txt.pattern)
 
+    def test_reiduals_invalid_get(self,
+                                  # pytest fixtures:
+                                  testdata, areequal, client):
+        '''Tests supplying twice the plot_type (invalid) and see what
+        happens. This request error can happen only from an API request, not
+        from the web portal'''
+        resp1 = client.get(self.url +
+                           ('?gsim=BindiEtAl2014Rjb'
+                            '&imt=PGA&plot_type=res&plot_type=llh'),
+                           content_type='application/json')
+        # FIXME: the error messages might be made more clear by simply stating:
+        # 'only one value possible', but for the moment is ok like this.
+        expected_dict = {
+            'error': {
+                'code': 400,
+                'message': 'Invalid input in plot_type',
+                'errors': [
+                    {
+                        'domain': 'plot_type',
+                        'message': ("Select a valid choice. "
+                                    "['res', 'llh'] is not one of the "
+                                    "available choices."),
+                        'reason': 'invalid_choice'
+                    }
+                ]
+            }
+        }
+        assert areequal(expected_dict, resp1.json())
+        assert resp1.status_code == 400

@@ -6,7 +6,6 @@ Created on 16 Sep 2018
 @author: riccardo
 '''
 import re
-from collections import OrderedDict
 from fnmatch import translate
 import json
 import shlex
@@ -327,13 +326,13 @@ class MsrField(_DictChoiceField):
 
 class TextSepField(_DictChoiceField):
     '''A ChoiceField handling the text separators in the text response'''
-    _base_choices = OrderedDict([('comma', ','), ('semicolon', ';'),
-                                 ('space', ' '), ('tab', '\t')])
+    _base_choices = dict([('comma', ','), ('semicolon', ';'),
+                          ('space', ' '), ('tab', '\t')])
 
 
 class TextDecField(_DictChoiceField):
     '''A ChoiceField handling the text decimal in the text response'''
-    _base_choices = OrderedDict([('period', '.'), ('comma', ',')])
+    _base_choices = dict([('period', '.'), ('comma', ',')])
 
 
 class TrellisplottypeField(ChoiceField):
@@ -495,9 +494,9 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
             value = super(MultipleChoiceWildcardField, self).to_python(value)
             # value is now a list of strings (empty if value was falsy)
         if value:
-            # now convert wildcard strings to matching elements
-            # OrderedDict is to preserve insertion order and avoid duplicates:
-            values = OrderedDict()
+            # now convert wildcard strings to matching elements and avoid
+            # duplicates (in py>=3.7, dicts preserve insertion order):
+            values = {}
             for val in value:
                 possible_values = [val]
                 if '*' in val or '?' in val or ('[' in val and ']' in val):

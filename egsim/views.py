@@ -354,8 +354,7 @@ class EgsimQueryViewMeta(type):
         if cls.formclass is not None:
             cls.arrayfields = set(_ for (_, f) in
                                   cls.formclass.declared_fields.items()
-                                  if isinstance(f, (MultipleChoiceField,
-                                                    ArrayField))
+                                  if isinstance(f, (MultipleChoiceField,))
                                   )
 
 
@@ -402,15 +401,15 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
             #  get to dict:
             #  Note that percent-encoded characters are decoded automatiically
             ret = {}
+            # https://docs.djangoproject.com/en/2.2/ref/request-response/#django.http.QueryDict.lists
             for key, values in request.GET.lists():
-                newlist = []
-                for val in values:
-                    if key in self.arrayfields and isinstance(val, str) \
-                            and ',' in val:
-                        newlist.extend(val.split(','))
-                    else:
-                        newlist.append(val)
-                ret[key] = newlist[0] if len(newlist) == 1 else newlist
+                if key in self.arrayfields:
+                    newvalues = []
+                    for val in values:
+                        newvalues.extend(val.split(','))
+                    ret[key] = newvalues
+                else:
+                    ret[key] = values[0] if len(values) == 1 else values
             return self.response(ret)
 
         except Exception as err:
