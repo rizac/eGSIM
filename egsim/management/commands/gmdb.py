@@ -32,8 +32,9 @@ class Command(BaseCommand):
     @staticmethod
     def existingdir(fpath, prompt=True):
         if not os.path.isdir(fpath) and prompt:
-            res = input('"%s" does not exist. Should I create it? y=Yes, '
-                        'anything else=exit')
+            res = input('Output directory "%s" does not exist. '
+                        'Create it? y=Yes, '
+                        'anything else=exit\n' % str(fpath))
             if res == 'y':
                 try:
                     os.makedirs(fpath)

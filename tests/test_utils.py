@@ -164,8 +164,13 @@ def check_gsim_defined_for_current_db(testdata):
             num = gmdb_records(residuals, gm_table.filter(selexpr))
         except:
             pass
-        if num > 0:
-            asd = 9
 
 
-        
+def test_dict_is_ordered():
+    '''Stupid test to assert that dicts keys are sorted according to insertion
+    order (from py3.6 on, standard from py3.7 on)'''
+    assert list(dict([[1, 2], [3, 4], [6, 5], [3, 5], [1, 1]]).keys()) \
+        == [1, 3, 6]
+    assert list(dict({1: 2, 3: 4, 6: 5, 3: 5, 1: 1}).keys()) == [1, 3, 6]
+    assert list({11: 5, 'g': 67}) == [11, 'g']
+    assert list({'11': 5, 6.05: 67}) == ['11', 6.05]

@@ -30,7 +30,7 @@ from egsim.core.utils import OQ, GSIM_REQUIRED_ATTRS
 from ._tectonic_regionalisations import SHARE
 
 # these are the functions to populate the TectonicRegion model.
-# For info on implementing new ones, see tectonic_regionalisations/README.txt
+# For info on implementing new ones, see _tectonic_regionalisations/README.txt
 # The key is the model name, the value is the relative function
 TECREG_FUNCTIONS = {'SHARE': SHARE.create}
 

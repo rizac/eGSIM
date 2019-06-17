@@ -3,7 +3,6 @@ database'''
 
 import os
 import json
-from collections import OrderedDict
 
 from shapefile import Reader
 from shapely.geometry import Point, shape, Polygon, mapping
@@ -65,9 +64,10 @@ def get_shapefiles():
 
 
 def to_geojson(*shapefiles):
-    '''reads the given shape files ('.shp') and return them as a 'FeatureCollection'
-    geojson dict'''
-    features = [feat for shapefile in shapefiles for feat in to_geojson_features(shapefile)]
+    '''reads the given shape files ('.shp') and return them as a
+    'FeatureCollection' geojson dict'''
+    features = [feat for shapefile in shapefiles
+                for feat in to_geojson_features(shapefile)]
     return {"type": "FeatureCollection", 'features': features}
 
 
@@ -93,6 +93,11 @@ def to_geojson_features(shapefilepath):
     fields = [field[0] for field in shp.fields[1:]]
     assert len(shapes) == len(records)
     # Reminder: geojson syntax: http://geojson.org/:
-    return [{"type": "Feature",
-             'geometry': mapping(shape(s)),  # https://stackoverflow.com/a/40631091
-             'properties': OrderedDict(zip(fields, r))} for s, r in zip(shapes, records)]
+    return [
+        {
+            "type": "Feature",
+            'geometry': mapping(shape(s)),  # https://stackoverflow.com/a/40631091
+            'properties': dict(zip(fields, r))
+        }
+        for s, r in zip(shapes, records)
+    ]
