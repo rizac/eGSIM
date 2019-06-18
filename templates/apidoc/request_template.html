@@ -7,43 +7,39 @@
 	</tr>
 </thead>
 <tbody>
-	{% for key, value in form.items %}{% if not value.is_hidden %}
+	{% for key, field in form.items %}{% if not field.is_hidden %}
 	<tr>
 	<td>
-		{{ key }}{% for name2 in value.opt_names %}<br><span class='text-nowrap text-muted'>{{ name2 }}</span>{% endfor %}
+		{{ key }}{% for name2 in field.opt_names %}<br><span class='text-nowrap text-muted'>{{ name2 }}</span>{% endfor %}
 	</td>
 	<td>
-		{% if value.is_optional %}
-			{% if value.val or value.val != None %}
-				(<i>OPTIONAL</i>, default: {{ value.val }})
-			{% else %}
-				(<i>OPTIONAL</i>)
-			{% endif %}
+		{% if field.is_optional %}
+			(<i>OPTIONAL</i>{% if field.initial != None %}, default: {{ field.initial }}{% endif %})
 		{% endif %}
 		
-		{{ value.label }}{% if not value.help %}.{% endif %}
-		{% if value.help %}
-			({{ value.help }}). 
+		{{ field.label }}{% if not field.help %}.{% endif %}
+		{% if field.help %}
+			({{ field.help }}). 
 		{% endif %}
-		{% if value.choices %}
-			{% if value.attrs.multiple %}One or more values{% else %}A value{% endif %}
-			choosable from{% if not value.choices|length > 30 %}:{% endif %}
-			{% if value.choices|length > 30 %}
-				a list of {{ value.choices|length }} choices (too long to show)
+		{% if field.choices %}
+			{% if field.attrs.multiple %}One or more values{% else %}A value{% endif %}
+			choosable from{% if not field.choices|length > 30 %}:{% endif %}
+			{% if field.choices|length > 30 %}
+				a list of {{ field.choices|length }} choices (too long to show)
 			{% else %}
-				{% for nme, lbl in value.choices %}
+				{% for nme, lbl in field.choices %}
 					<span class="token string"><b>{{ nme }}</b></span>{% if lbl and lbl != nme %} ({{ lbl }}){% endif %}{% if not forloop.last %}, {% endif %}
 				{% endfor %}
 			{% endif %}
-			{% if value.choices|length == 1 %}
+			{% if field.choices|length == 1 %}
 			(currently, only one choice is implemented)
 			{% endif %}
 		{% else %}
-			{% if value.attrs.min or value.attrs.min == 0 %}
-				Min: {{ value.attrs.min }}{% if value.attrs.max or value.attrs.max == 0%},{% endif %}
+			{% if field.attrs.min or field.attrs.min == 0 %}
+				Min: {{ field.attrs.min }}{% if field.attrs.max or field.attrs.max == 0%},{% endif %}
 			{%endif %}
-			{% if value.attrs.max or value.attrs.max == 0 %}
-				Max: {{ value.attrs.max }}
+			{% if field.attrs.max or field.attrs.max == 0 %}
+				Max: {{ field.attrs.max }}
 			{%endif %}
 		{% endif %}
 	</td>
