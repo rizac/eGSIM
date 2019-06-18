@@ -1,5 +1,7 @@
 This directory contains sub-directories each representing 
 a Tectonic regionalisation (TR) for gsim selection.
+A TR is simply a list of Geographic Polygons each with a specific
+Tectonic Region Type assigned.
 To implement a new TR with name $MODEL, create a $model directory
 ($model is usually equal to $MODEL but it needs not to: e.g., when
 $MODEL contains invalid Python characters) and put in the directory all needed
@@ -8,8 +10,9 @@ data and an __init__.py module. In the module, create a function:
 def create(trts)
 ```
 which must return a list of `egsim.models.TectonicRegion` objects.
-The argument, trts, is a list of Tectonic region type objects
-(`egsim.models.Trt`) currently saved on the database
+The argument, trts, is the list of Tectonic region type objects
+(`egsim.models.Trt`) currently saved on the database. See the already
+implemented 'share' for details.
 
 Once done, register the function to be called in the TECREG_FUNCTIONS global
 dict of `initdb.py` :

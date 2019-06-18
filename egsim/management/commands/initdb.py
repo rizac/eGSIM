@@ -27,22 +27,25 @@ from openquake.hazardlib import imt
 from egsim.models import Gsim, Imt, Trt, Error, TectonicRegion, ENTITIES, \
     empty_all
 from egsim.core.utils import OQ, GSIM_REQUIRED_ATTRS
-from ._tectonic_regionalisations import SHARE
+from ._tectonic_regionalisations import share
 
 # these are the functions to populate the TectonicRegion model.
 # For info on implementing new ones, see _tectonic_regionalisations/README.txt
 # The key is the model name, the value is the relative function
-TECREG_FUNCTIONS = {'SHARE': SHARE.create}
+TECREG_FUNCTIONS = {'SHARE': share.create}
 
 
 class Command(BaseCommand):
     '''Command to initialize the db:
         python manage.py initdb
     '''
-    help = ('Initializes the database and creates with OpenQuake information'
-            'and tectonic regions. The latter can be incremented by writing'
-            'a new folder in the `egsim/management/commands/tr_models`'
-            'directory, and putting shape files (.shp) therein')
+    help = ('Initializes and  populates the database with all GSIMs, IMTs and '
+            'TRTs (Tectonic region types) of OpenQuake. Additionally, if any '
+            'tectonic regionalisation is implemented, (see '
+            '\'commands/_tectonic_regionalisations/README.txt\''
+            ' for details) adds it to the database '
+            '(a tectonic regionalisation is a set of Geographic ploygons each '
+            'with a specific TRT assigned)')
 
 #     def add_arguments(self, parser):
 #         parser.add_argument('poll_id', nargs='+', type=int)

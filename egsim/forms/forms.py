@@ -129,7 +129,7 @@ class BaseForm(Form):
 
     @classmethod
     def is_optional(cls, field):
-        '''Returns True if the given fieldname is optional.
+        '''Returns True if the given field is optional.
         A field is optional if either field.required=False OR
         the field inital value is specified (not None). Remeber that
         a field initial value acts as default value when missing
@@ -244,7 +244,7 @@ class BaseForm(Form):
         optional_names = defaultdict(list)
         for k, v in self.__additional_fieldnames__.items():
             optional_names[v].append(k)
-        for name, _ in self.declared_fields.items():  # pylint: disable=no-member
+        for name, field in self.declared_fields.items():  # pylint: disable=no-member
             # little spec: self.declared_fields and self.base_fields are the
             # same thing (see django.forms.forms.DeclarativeFieldsMetaclass)
             # and are declared AT CLASS level: modifying them applies changes
@@ -274,7 +274,7 @@ class BaseForm(Form):
             is_hidden = widgetdata.pop('is_hidden', False) or \
                 name in hidden_fn
             # coerce val to [] in case val falsy and multichoice:
-            if isinstance(_, MultipleChoiceField) and not val:
+            if isinstance(field, MultipleChoiceField) and not val:
                 val = []
             fielddata = {
                 'name': attrs['name'],
@@ -285,9 +285,10 @@ class BaseForm(Form):
                 'attrs': attrs,
                 'err': '',
                 'is_hidden': is_hidden,
-                'val': val
+                'val': val,
+                'initial': field.initial
             }
-            fielddata['choices'] = getattr(_, 'choices', [])
+            fielddata['choices'] = getattr(field, 'choices', [])
             if isinstance(fielddata['choices'], CallableChoiceIterator):
                 if ignore_callable_choices:
                     fielddata['choices'] = []
