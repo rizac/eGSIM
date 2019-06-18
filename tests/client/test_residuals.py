@@ -139,3 +139,31 @@ class Test:
         }
         assert areequal(expected_dict, resp1.json())
         assert resp1.status_code == 400
+
+    def test_allen2012(self,
+                       # pytest fixtures:
+                       testdata, areequal, client):
+        '''test a case where the browser simply stops calculating without
+        error messages. The casue was due to an AssertionError with empty
+        message. Fixed now'''
+        inputdict = {
+            "gsim": [
+                "Allen2012"
+            ],
+            "imt": [
+                "PGA"
+            ],
+            "plot_type": "mag"
+        }
+        resp1 = client.get(self.url, data=inputdict,
+                           content_type='application/json')
+        expected_json = {
+            'error': {
+                'code': 400,
+                'message': ('Unable to perform the request with the current '
+                            'parameters (AssertionError)')
+            }
+        }
+        assert areequal(expected_json, resp1.json())
+        assert resp1.status_code == 400
+        
