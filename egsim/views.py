@@ -20,13 +20,13 @@ from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 from django.conf import settings
 
-from egsim.core.responseerrors import exc2json, invalidform2json
+from egsim.core.responseerrors import (exc2json, invalidform2json,
+                                       requestexc2json)
 from egsim.forms.forms import (TrellisForm, GsimSelectionForm, ResidualsForm,
                                GmdbPlotForm, TestingForm, FormatForm)
 from egsim.core.utils import (QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc,
                               yaml_load)
 from egsim.core import smtk as egsim_smtk
-from egsim.forms.fields import ArrayField
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
 
 
@@ -413,14 +413,14 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
             return self.response(ret)
 
         except Exception as err:
-            return exc2json(err)
+            return requestexc2json(err)
 
     def post(self, request):
         '''processes a post request'''
         try:
             return self.response(yaml_load(request.body.decode('utf-8')))
         except Exception as err:
-            return exc2json(err)
+            return requestexc2json(err)
 
     @classmethod
     def response(cls, inputdict):

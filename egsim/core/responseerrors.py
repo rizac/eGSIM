@@ -48,6 +48,36 @@ def errordict2jsonlist(errors):
     return errors
 
 
+def requestexc2json(exception, code=400, **kwargs):
+    '''Converts the given exception or string message `exception` into a json
+    response. The difference between this function and `exc2json` is that this
+    is more specific and related to any unknown exception in a response.
+    As a consequence, the error message is more detailed and prefixed with
+    "Unable to perform the request with the current parameters".
+    See :func:`exc2json` for details
+
+    :param exception: Exception raised during a request while processing the
+        response
+
+    :param kwargs: other optional arguments which will be inserted in the
+        response data dict.
+    '''
+    # sometimes exception is empty or its string representation is empty
+    # this is misleading and thus we reformulate the error message:
+    errormsg = 'Unable to perform the request with the current parameters'
+    if not isinstance(exception, str):
+        if str(exception):
+            errormsg += " (%s: %s)" % (exception.__class__.__name__,
+                                       str(exception))
+        else:
+            errormsg += " (%s)" % (exception.__class__.__name__)
+    else:
+        if errormsg:
+            errormsg += " (%s)" % str(exception)
+
+    return exc2json(errormsg, code, **kwargs)
+
+
 def exc2json(exception, code=400, **kwargs):
     '''Converts the given exception or string message `exception` into a json
     response. the response data will be the dict:
