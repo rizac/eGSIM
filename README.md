@@ -68,16 +68,16 @@ Called $FLATFILE_PATH the full path of the CSV file just copied, now parse it in
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py gmdb_esm $FLATFILE_PATH
 ```
 
-#### ~Migrate (SHOULD NOT BE NEEDED in DEV MODE)~
+#### Migrate (setup django db)
 From within the egsim folder (check that manage.py is therein):
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
 ```
 
-#### ~Create db  (SHOULD NOT BE NEEDED in DEV MODE)~
+#### Create db  (setup egsim tables inside django db)
 From within the egsim folder (check that manage.py is therein):
 ```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py initdb
 ```
 
 ### Run:
@@ -88,4 +88,4 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver
 
 ## Installation (production)
 
-Please refer to 'deploy.html'
+Please refer to 'deploy.html' (dynamic web page, open it in your browser of choice)
