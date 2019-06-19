@@ -3,7 +3,7 @@ A web service for selecting and testing  ground shaking models in Europe (eGSIM)
 in the framework of the  Thematic Core Services for Seismology of EPOS-IP
 (European Plate Observing  System-Implementation Phase)
 
-## Installation
+## Installation (development)
 
 Disclaimer: this is a temporary tutorial tested with MacOS (El Capitan) and Ubuntu 16.04. 
 
@@ -15,33 +15,31 @@ brew install gcc
 sudo apt-get install git python3-venv python3-pip python3-dev
 ```
 
+Please use Python 3.7+. Check with ```python --version```: If it's Python2, then use ```python3 --version```. If it's not 3.7+, then you need to install Python3.7 **along with** (i.e., not replacing) the current default python3 installed on your computer.
+From now on, each `python` command refers to the path of the Python3.7 distribution you have (i.e., you might need to type e.g. `/opt/lib/python3.7` or something similar, instead of `python` or `python3`)
+
+
 ### Activate virtualenv (links TBD).
 [Pending: doc TBD] Three options:
-  1. python-venv (for python>=3.5): suggested as it does not issues the 'matplotlib installed as a framework ...' problem
+  1. python-venv (for python>=3.5): Please use this option as it does not issues the 'matplotlib installed as a framework ...' problem
   2. python-virtualenv
   3. virtualenvwrapper (our choice)
 
-*FROM NOW ON virtualenv is activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton WITH no mess-up with the OS python distribution*
+*FROM NOW ON virtualenv is activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton with no conflicts with the OS python distribution*
 
 ### Upgrade pip and setuptools:
+```bash
 pip install -U pip setuptools
+```
+
+### Clone this repository
+`git clone` and so on (see Github). From now on we assume you are inside the git repo (the local folder you clone the project into)
+
 
 ### Install
-pip install -r ./requirements.txt
-
-
-### Install (REAL)
-
-python3 -m venv  env/egsim/
-source env/bin/activate
-source env/egsim/bin/activate
-which python  # just to check
-pip install -U pip setuptools
-# move to oq-engine
-pip install -e .
-# move to gmpe-smtk
-pip install -e .
-
+```bash
+pip install -r ./requirements.dev.txt
+```
 
 ### Test
 
@@ -55,55 +53,39 @@ Test with coverage
 pytest -xvvv --ds=egsim.settings_debug --cov=./egsim/ --cov-report=html ./tests/
 ```
 
-## Old stuff (ignore, will be removed soon):
+### Create data
 
-### (Optional) First install numpy
-
-*Note: this is maybe not necessary as it turned out we needed gcc first (see above). However it's harmless to do it now*
-
+#### Flatfile (ESM):
+This procedure should be executed for all flatfiles to be included in the application.
+For testing purposes, we will use ESM flatfile (2018) only.
+Download ESM flatfile from https://esm.mi.ingv.it//flatfile-2018/flatfile.php  (ESM_flatfile_2018)
+Unzip it and from within the same directory, copy the file:
 ```bash
-pip install numpy
-pip install scipy
+cp ESM_flatfile_2018/ESM_flatfile_SA.csv ./ESM_flatfile_2018_SA.csv
 ```
-
-### Install oq-engine:
-
-Full ref here: https://github.com/gem/oq-engine/blob/master/doc/installing/development.md
-
-clone repository. Given a directory with full path `$DIR` (whatever you want):
+Called $FLATFILE_PATH the full path of the CSV file just copied, now parse it into the ESM database, the database will be a HDF5 file inside the /media/ directory of the egsim repository (git ignores that directory):
 ```bash
-mkdir $DIR
-cd $DIR
-git clone https://github.com/gem/oq-engine.git .
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py gmdb_esm $FLATFILE_PATH
 ```
-install as editable (this should make git-pull in the repository enough to have the newest version):
+
+#### ~Migrate (SHOULD NOT BE NEEDED in DEV MODE)~
+From within the egsim folder (check that manage.py is therein):
 ```bash
-pip install -e .
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
 ```
 
-### ~~Install gmpe-smtk~~:
-
-Full ref here: https://github.com/GEMScienceTools/gmpe-smtk
-
-clone repository. Given a directory with full path `$DIR` (whatever you want):
+#### ~Create db  (SHOULD NOT BE NEEDED in DEV MODE)~
+From within the egsim folder (check that manage.py is therein):
 ```bash
-mkdir $DIR
-cd $DIR
-git clone https://github.com/GEMScienceTools/gmpe-smtk.git .
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
 ```
-install as editable (this should make git-pull in the repository enough to have the newest version):
+
+### Run:
 ```bash
-pip install -e .
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver
 ```
 
-## Creating flat-files:
-Pending: we will need to provide a (migration script?) to create flat-files once
 
-## Run locally:
-```
-python manage.py runserver
-```
+## Installation (production)
 
-## Install on a server
-Pending: update doc. This will require a full django documentation
-
+Please refer to 'deploy.html'
