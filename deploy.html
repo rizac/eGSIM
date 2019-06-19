@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" class='height100'>
+<head>
+    <meta charset="UTF-8">
+    <title>Server installation</title>
+
+    <!--  Google font:, also related:  -->
+    <!--  Encode+Sans|Encode+Sans+Condensed|Encode+Sans+Semi+Condensed|Montserrat|Open+Sans+Condensed:300|Cabin+Condensed| -->
+    <link href="https://fonts.googleapis.com/css?family=Encode+Sans+Condensed|Lato&display=swap" rel="stylesheet">
+    
+    <!--  -->
+    <!-- BOOTSTRAP for safety, it must be loaded before all posibble plugins -->
+    <!--<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+        integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+        crossorigin="anonymous">-->
+    
+    <!-- font awesome (e.g. required by easybutton & sidebar) FIXME: CHECK LICENSE (MIT) -->
+    <!-- <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> 
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+     -->
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/themes/prism.min.css">
+
+    <style type='text/css'>
+        .note{
+            color: #666;
+        }
+        body{
+            font-family: 'Lato', sans-serif;
+            max-width: 55em;
+            line-height:1.5em;
+        }
+        h1, h2, h3, h4, h5, h6{
+            font-family: 'Encode Sans Condensed', sans-serif;
+        }
+        table td{
+            vertical-align:top;
+        }
+        input[type=text]{
+            padding:0.5em;
+            min-width:20em;
+            font-size: 100%;
+        }
+        /* numbering */
+        body {
+            counter-reset: h2counter;
+        }
+        h1 {
+            counter-reset: h2counter;
+        }
+        h2:before {
+            content: counter(h2counter) ".\0000a0\0000a0";
+            counter-increment: h2counter;
+            counter-reset: h3counter;
+        }
+        h3:before {
+            content: counter(h2counter) "." counter(h3counter) ".\0000a0\0000a0";
+            counter-increment: h3counter;
+        }
+    </style>
+    <script type='text/javascript'>
+        var $DOMAIN = '$DOMAIN';
+        var $DJANGO_PROJECT = '$DJANGO_PROJECT';
+        var $DJANGO_USER = '$DJANGO_USER';
+        var $VENV_PATH = '$VENV_PATH';
+    </script>
+</head>
+
+<body>
+<h1>Server installation</h1>
+
+<p>
+The following cheatsheet assumes that you already have access to a remote machine either via ssh or VMWare or whatever.
+The following instructions have been tested on Ubuntu 18.04 MATE.
+Docker installation is beyond the scope of this simple tutorial, it might be added in the future if needed.
+</p>
+
+<p>
+Set the following variables (document updates on change):
+</p>
+<table>
+    <tr>
+        <td>
+            <input type='text' id='DOMAIN' />
+        </td>
+        <td>
+            The domain name of the computer, i.e. the internet address it is assigned to, e.g.: rz-vm183d.gfz-potsdam.de, www.example.com
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <input type='text' id='DJANGO_PROJECT' />
+        </td>
+        <td>
+            The eGSIM Django project name where all Python packages will be placed (including eGSIM package)
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <input type='text' id='DJANGO_USER' />
+        </td>
+        <td>
+            The Django user (can be the same as <code>$DJANGO_PROJECT</code>)
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <input type='text' id='VENV_PATH' />
+        </td>
+        <td>
+            the Python virtual environment path: If creating the virtual environment with python3 venv (encouraged as it might solve some matplotlib issues), it is the argument of `python3 -m venv`: <pre><code class="language-bash">python3 -m venv $VENV_PATH</code></pre> (For safety, check that the directory contains, among others, bin/ lib/ pyvenv.cfg)
+        </td>
+    </tr>
+</table>
+
+<h2>Important files</h2>
+
+<table>
+    <tr>
+        <td>/etc/opt/$DJANGO_PROJECT/settings.py</td><td>the settings, keep confidential, root access needed</td>
+    </tr>
+    <tr>
+        <td>/etc/nginx/sites-available/$DJANGO_PROJECT</td><td>the nginx config for the egsim site</td>
+    </tr>
+    <tr>
+        <td>/etc/nginx/sites-available/default</td><td>the default nginx config. It should be the "fallback" when all other configs are not used. We saved the original not-modified config in <code>default.backup</code> in the same directory</td>
+    </tr>
+    <tr>
+        <td>/etc/systemd/system/$DJANGO_PROJECT.service</td><td>the Gunicorn script to start the django production server</td>
+    </tr>
+    <tr>
+        <td>sudo tail -30 /var/log/nginx/access.log</td><td>inspects the nginx log (access infos)</td>
+    </tr>
+    <tr>
+        <td>sudo tail -30 /var/log/nginx/error.log</td><td>inspects the nginx log (error infos)</td>
+    </tr>
+    <tr>
+        <td>sudo tail -30 /var/log/$DJANGO_PROJECT/gunicorn.log</td><td>inspects the django server log</td>
+    </tr>
+    <tr>
+        <td>/etc/nginx/nginx.conf</td><td>the main nginx configuration (should not be modified frequently and only in rare cases)</td>
+    </tr>
+    <tr>
+        <td>/etc/hosts</td><td>where the maching hosts are written: should not be modified frequently, we did it only once to add the domain name (line "127.0.0.1  $DOMAIN", without quotes)</td>
+    </tr>
+</table>
+
+
+<h2>System requirements</h2>
+
+Update and upgrade
+<pre><code class="language-bash">
+sudo apt-get update && sudo apt-get upgrade
+</code></pre> 
+
+<p>Install required libraries</p>
+<pre><code class="language-bash">
+apt install git nginx-light curl libhdf5-dev gcc python3-rtree
+</code></pre>
+
+<p class='note'>
+(libhdf5-dev gcc required by openquake, see below. python3-rtree required by gmpe-smtk, see below)
+</p>
+
+<p>Optional installations</p>
+<pre><code class="language-bash">
+apt install vim
+</code></pre>
+
+<p>Install python 3.7</p>
+<pre><code class="language-bash">
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install python3.7 python3.7-dev
+</code></pre>
+
+
+<p>add django user (It's good practice)</p>
+
+<pre><code class="language-bash">
+adduser --system --home=/var/opt/$DJANGO_PROJECT --no-create-home --disabled-password --group --shell=/bin/bash $DJANGO_USER
+</code></pre>
+
+
+<h2>Program requirements</h2>
+
+<p>Create project folder</p>
+<pre><code class="language-bash">
+cd /opt
+mkdir $DJANGO_PROJECT
+cd $DJANGO_PROJECT
+</code></pre>
+
+<p>Clone packages</p>
+<p>eGSIM</p>
+<pre><code class="language-bash">
+git clone https://github.com/rizac/eGSIM.git
+</code></pre>
+
+<p>OpenQuake</p>
+<pre><code class="language-bash">
+git clone https://github.com/gem/oq-engine.git
+</code></pre>
+<p class='note'>
+Reset this repository's master branch to the commit of interest
+(the commit hash is the currently used and might change after future upgrades)
+<pre><code class="language-bash">
+cd ./oq-engine
+git reset --hard 570cf1f620
+</code></pre>
+</p>
+
+<p>gmpe-smtk</p>
+<pre><code class="language-bash">
+git clone https://github.com/GEMScienceTools/gmpe-smtk.git
+</code></pre>
+<p class='note'>
+Reset this repository's master branch to the commit of interest
+(the commit hash is the currently used and might change after future upgrades)
+<pre><code class="language-bash">
+cd ./gmpe-smtk/
+git reset --hard 4d01f68aba5c78b5d27c68bb9db7bb93e6cadd61
+</code></pre>
+</pre>
+</p>
+
+<p>Create the virtual environment</p>
+
+<p>IMPORTANT: from now on, <b>activate virtualenv</b> means switching to the Python in the virtual environment we are about to create. You activate it by typing (after that, each new terminal line should start with the activated virtualenv in parentheses):</p>
+<pre><code class="language-bash">
+source $VENV_PATH/bin/activate
+</code></pre>
+
+<p>Installation #1 (separated pip install) due to a <a href='https://stackoverflow.com/a/26314477' target='_blank'>pip bug (experienced with Ubuntu MATE)</a></p>
+<pre><code class="language-bash">
+python3.7 -m venv --without-pip $VENV_PATH
+</code></pre>
+<p>activate the virtual environment and install pip</p>
+<pre><code class="language-bash">
+curl https://bootstrap.pypa.io/get-pip.py | python
+deactivate
+</code></pre>
+
+<p>Installation #2 (standard)</p>
+<pre><code class="language-bash">
+python3.7 -m venv $VENV_PATH
+</code></pre>
+
+<p>Check correct path: activate virtualenv and type</p>
+<pre><code class="language-bash">
+which python
+python --version
+</code></pre>
+<p>the Python path should refer to the newly installed Python in the current virtual environment (Python version should be 3.7+)</p>
+
+<p>Now the directory: $DJANGO_PROJECT should contain the three git repositories we just fetched: eGSIM, gmpe-smtk and oq-engine.
+<b>We assume hereafter that you are in $DJANGO_PROJECT</b></p>
+
+<p>Install the repositories</p>
+<p class='note'>For any error in any of the 'pip install' commands below,
+the most likely cause is some System package missing: we suggest to google the error first, then check if anybody suggests to <code>apt install</code>
+missing packages and follow the instructions. <b>Ignore at first more complex solutions</b>. This doc was created by adding incrementally in the apt-install command above all packages that we discovered missing, so hopefully a fresh new installation might work fine without any new error</p>
+
+<p>Install oq-engine: activate virtualenv, then</p>
+<pre><code class="language-bash">
+cd ./oq-engine
+pip install -e .
+</code></pre>
+<p class='note'>For details (but in principle you should not need it) see <a href='https://github.com/gem/oq-engine/blob/master/doc/installing/development.md' target='_blank'>here</a></p>
+
+<p>Install gmpe-smtk: activate virtualenv, then</p>
+<pre><code class="language-bash">
+cd ./gmpe-smtk/
+pip install -e .
+</code></pre>
+
+<p>Install eGSIM: activate virtualenv, then</p>
+<pre><code class="language-bash">
+cd ./eGSIM/
+pip install -r ./requirements.txt
+</code></pre>
+
+<p>Test app: activate virtualenv, then</p>
+<pre><code class="language-bash">
+cd ./eGSIM
+pytest -xvvv --ds=egsim.settings_debug ./tests/
+</code></pre>
+
+<h2>Create project structure</h2>
+
+<p>Create data and directories, and assign ownership to $DJANGO_USER</p>
+<pre><code class="language-bash">
+mkdir /var/opt/$DJANGO_PROJECT
+chown $DJANGO_USER /var/opt/$DJANGO_PROJECT
+mkdir /var/log/$DJANGO_PROJECT
+chown $DJANGO_USER /var/log/$DJANGO_PROJECT
+mkdir /etc/opt/$DJANGO_PROJECT
+</code></pre>
+
+<p>Change group ownership (with the flag --group added to the command adduser above we created a group with the same name as $DJANGO_USER)</p>
+<pre><code class="language-bash">
+chgrp $DJANGO_USER /etc/opt/$DJANGO_PROJECT
+</code></pre>
+
+<p>Change permissions (750 means the current user, i.e. root, can read, write,
+and execute while the group and others cannot write)</p>
+<pre><code class="language-bash">
+chmod 750 /etc/opt/$DJANGO_PROJECT
+</code></pre>
+
+# FIXME: add links above to the online doc and check paths
+
+# FIXME: do I need to compileall?
+
+<h3>Fetch flatfiles</h3>
+
+<p>Create the directory for the flatfiles</p>
+<pre><code class="language-bash">
+mkdir /var/opt/$DJANGO_PROJECT/flatfiles
+</code></pre>
+
+<p>Download the flatfiles (showing operation for ESM only)</p>
+<p><a href='https://esm.mi.ingv.it//flatfile-2018/flatfile.php' target='_blank'>Download the ESM flatfile</a> (you need username and password. If you don't have them, register on the site). Then</p>
+<pre><code class="language-bash">
+cd /var/opt/$DJANGO_PROJECT/flatfiles
+unzip ESM_flatfile_2018.zip
+</code></pre>
+
+<p>Rename the flatfile of interest (copy) as <code>ESM_flatfile_2018_SA.csv</code>,
+so that later our Django command for creating a Grond Motion Database (gmdb) stores the db name as <code>ESM_flatfile_2018_SA</code> (flatfile file name without extension. <b>Consider this when adding other flatfiles whose name is not the desired displayed name on eGSIM</b></p>
+<pre><code class="language-bash">
+cp ESM_flatfile_2018/ESM_flatfile_SA.csv ./ESM_flatfile_2018_SA.csv
+</code></pre>
+
+
+<p>Proceed with other flatfiles, storing them under the same location <code>/var/opt/$DJANGO_PROJECT/flatfiles</code>. Remember that the directory should be accessible to $DJANGO_USER. In fact, it might be preferable to execute all flatfile operations as $DJANGO_USER. In any case, you can ignore which user you are but <b>eventually remember to give egsim the permission of the whole directory:</b></p>
+<pre><code class="language-bash">
+cd /var/opt/$DJANGO_PROJECT/flatfiles
+chown -R $DJANGO_USER:$DJANGO_USER .
+</code></pre>
+
+<h2>Setup the project</h4>
+
+<p>Create the settings file: Put in in <code>/etc/opt/$DJANGO_PROJECT/settings.py</code> the content below and edit all variables starting with "$". In principle, put in <code>allowed_hosts</code> the variable $DOMAIN and whatever you will put in <code>server_name</code> in the NGINX config file (see related section below):</p>
+
+<pre><code class="language-python">
+"""
+Django settings for eGSIM project.
+
+Copied from https://djangodeployment.com/wp-content/uploads/2017/03/Django-deployment-cheatsheet.pdf
+
+Copy this file in a specified folder of the server and replace all
+variables ("$*") with the corresponding value
+"""
+
+from egsim.settings_debug import *
+
+DEBUG = False  # DO NOT CHANGE THIS!
+ALLOWED_HOSTS = ['$DOMAIN', 'www.$DOMAIN']
+# $SECRET_KEY CAN BE GENERATED ON THE TERMINAL (WITHIN THE DJANGO VIRUAL ENV)  WITH THE COMMAND:
+# python -c "from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())"
+# COPY THE OTUPUT STRING HERE BELOW
+SECRET_KEY = ''
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': '/var/opt/$DJANGO_PROJECT/$DJANGO_PROJECT.db',
+    }
+}
+# static files root (path on the server)
+STATIC_ROOT = '/var/cache/$DJANGO_PROJECT/static/'
+# static files url:
+STATIC_URL = '/static/'
+
+# media root (path on the server):
+MEDIA_ROOT = '/var/opt/$DJANGO_PROJECT/media/'
+# static files url:
+MEDIA_URL = '/media/'
+
+# EMAIL configuration (disabled by default, uncomment if needed):
+# SERVER_EMAIL = 'noreply@$DOMAIN'
+# DEFAULT_FROM_EMAIL = 'noreply@$DOMAIN'
+# ADMINS = [
+#     ('$ADMIN_NAME', '$ADMIN_EMAIL_ADDRESS'),
+# ]
+# EMAIL_HOST = '$EMAIL_HOST'
+# EMAIL_HOST_USER = '$EMAIL_USER'
+# EMAIL_HOST_PASSWORD = '$EMAIL_PASSWORD'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+</code></pre>
+
+<!--<pre><code class="language-bash">
+vim /etc/opt/egsim/settings.py
+</code></pre>-->
+
+
+<p>Run collectstatic: copy static files to the new location. Activate virtualenv and:</p>
+<pre><code class="language-bash">
+export PYTHONPATH=/etc/opt/$DJANGO_PROJECT/;python manage.py collectstatic --settings=settings
+</code></pre>
+
+<p class='note'>(the PYTHONPATH simply makes the option <code>--settings=settings</code> to point to the newly created settings.py). You should see a message like:
+'175 static files copied to '/var/cache/$DJANGO_PROJECT/static'
+(the number of files might be huge but there are also Django css and so on
+</p>
+
+<p>Migration and data initialization scripts</p>
+
+<p>IMPORTANT: Execute these command as <code>$DJANGO_USER</code>, thus FIRST type:</p>
+<pre><code class="language-bash">
+su $DJANGO_USER
+</code></pre>
+
+<p class='note'>(if you were another user (e.g. root), you might have exited the virtualenv, thus re-activate it as <code>$DJANGO_USER</code>)</p>
+
+<p>Django migration. Activate virtualenv and then:</p>
+<pre><code class="language-bash">
+export PYTHONPATH=/etc/opt/$DJANGO_PROJECT/;export DJANGO_SETTINGS_MODULE=settings;python manage.py migrate
+</code></pre>
+
+<p>Create gmdb (Showing example for esm). Activate the virtualenv and run the command below, which will write in /media/gmdb, where $media is the MEDIA_ROOT specified in our <code>settings.py</code>. The user will be asked to create the directory (<code>mkdir -p</code>), if it does not exist</p>
+<pre><code class="language-bash">
+export PYTHONPATH=/etc/opt/$DJANGO_PROJECT/;export DJANGO_SETTINGS_MODULE=settings;python manage.py gmdb_esm /var/opt/$DJANGO_PROJECT/flatfiles/ESM_flatfile_2018_SA.csv
+</code></pre>
+<p class='note'>Repeat for all other flatfiles (change last argument). Note that currently there are two commands, <code>gmdb_esm</code> (see above) and <code>gmdb</code> which parses a "standard" flatfile as implemented in gmpe-smtk.</p>
+
+<p>Initialize our database (OpenQuake GSIMs IMTs and TRTs). Activate virtualenv and then</p>
+<pre><code class="language-bash">
+export PYTHONPATH=/etc/opt/$DJANGO_PROJECT; export DJANGO_SETTINGS_MODULE=settings;python manage.py initdb
+</code></pre>
+
+
+<h2>Server configuration</h2>
+
+<h3>NGINX</h3>
+<p>
+NGINX is the main application server, however, it delegates Gunicorn for serving everything except static and media files.</p>
+
+<p>create <code>/etc/nginx/sites-available/$DJANGO_PROJECT</code>, copy this content and modify all variables starting with $ AND UPPERCASE, if present ($ + lowercase variables are NGINX variables, <b>do not modify them</b>). Remember that in principle what is in <code>server_name</code> below should match what is in <code>allowed_hosts</code> in the Django <code>settings.py</code> file (see above):</p>
+<pre><code class="language-nginx">
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN www.$DOMAIN;
+    root /var/www/$DJANGO_PROJECT;
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 20m;
+    }
+    location /static/ {
+        alias /var/cache/$DJANGO_PROJECT/static/;
+    }
+    location /media/ {
+        alias /var/opt/$DJANGO_PROJECT/media/;
+    }
+}
+</code></pre>
+
+<p class='note'>The line <code>proxy_pass http://localhost:8000;</code> is the line that forwards to Gunicorn all locations starting with '/' and not matching '/static/' or '/media/'</p>
+
+<p>Create symbolik link in sites-enabled:</p>
+<pre><code class="language-bash">
+cd /etc/nginx/sites-enabled
+ln -s ../sites-available/$DJANGO_PROJECT .
+</code></pre>
+
+<p>Create a start page (This should not be mandatory in fact as we will never land there: we forward django for everything non-media and non-static, see alias above. The start page was probably due to the tutorial we followed which was written step-by-step for educational purposes)</p>
+<pre><code class="language-bash">
+mkdir /var/www/$DJANGO_PROJECT
+echo "<p>This is the web site for $DOMAIN.</p>" > /var/www/$DJANGO_PROJECT/index.html
+</code></pre>
+
+
+<p>Add $DOMAIN to known host (<b>This should be investigated: it is not mentioned in any documentation, but we needed to do it to make the site work</b>): open <code>/etc/hosts</code> and add the line</p>
+<pre><code class="language-bash">
+127.0.0.1	$DOMAIN
+</code></pre>
+
+<p>IMPORTANT: <b>After any operation, before checking the results online, reload the server:</b></p>
+<pre><code class="language-bash">
+service nginx reload
+</code></pre>
+
+
+<h3>Gunicorn</h3>
+
+<p>Become root (it might exit from virtualenv):</p>
+<pre><code class="language-bash">
+su root
+</code></pre>
+
+<p>Activate virtualenv and install Gunicorn:</p>
+Activate virtualenv and then</p>
+<pre><code class="language-bash">
+pip install gunicorn
+</code></pre>
+
+<p>OPTIONAL, test: start Gunicorn and go to $DOMAIN (from the server or another external computer) to test:</p>
+<pre><code class="language-bash">
+export PYTHONPATH=/etc/opt/$DJANGO_PROJECT; export DJANGO_SETTINGS_MODULE=settings
+gunicorn --workers=4 --log-file=/var/log/$DJANGO_PROJECT/gunicorn.log --bind=127.0.0.1:8000 --bind=[::1]:8000 egsim.wsgi:application
+</code></pre>
+
+<p>Create the systemd task to start automatically egsim django server</p>
+<pre><code class="language-bash">
+su $DJANGO_USER
+</code></pre>
+
+<p>Save the content below as $DJANGO_PROJECT.service in <code>/etc/systemd/system</code>
+by replacing all upper case variables starting with $ with your variables:
+</p>
+
+<pre><code class="language-bash">
+[Unit]
+Description=$DJANGO_PROJECT
+
+[Service]
+User=$DJANGO_USER
+Group=$DJANGO_USER
+Environment="PYTHONPATH=/etc/opt/$DJANGO_PROJECT:$VENV_PATH"
+Environment="DJANGO_SETTINGS_MODULE=settings"
+WorkingDirectory=/opt/$DJANGO_PROJECT/eGSIM
+ExecStart=$VENV_PATH/bin/gunicorn \
+    --workers=4 \
+    --log-file=/var/log/$DJANGO_PROJECT/gunicorn.log \
+    --bind=127.0.0.1:8000 --bind=[::1]:8000 \
+    egsim.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
+</code></pre>
+
+<p>On changes:</p>
+
+<p>1) To test the service</p>
+<pre><code class="language-bash">
+systemd-analyze verify $DJANGO_PROJECT
+</code></pre>
+
+<p>2) To restart the service (second line is mandatory only if the script aboce has been changed):</p>
+<pre><code class="language-bash">
+service $DJANGO_PROJECT stop
+systemctl daemon-reload
+service $DJANGO_PROJECT start
+</code></pre>
+
+<p>To start the service automatically on boot:</p>
+<pre><code class="language-bash">
+systemctl enable $DJANGO_PROJECT
+</code></pre>
+
+
+<h1>Maintenance</h1>
+
+<h2>Update the package (no db changes, no dependencies changes)</h2>
+
+
+<p>Move to /opt/$DJANGO_PROJECT/eGSIM, then, as root user, fetch the repo, reload NGINX, and reload Gunicorn (last two commands):</p>
+
+<pre><code class="language-bash">
+git pull
+service nginx reload
+service $DJANGO_PROJECT stop
+service $DJANGO_PROJECT start
+</code></pre>
+
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-nginx.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-python.min.js"></script>
+
+<script type='text/javascript'>
+
+window.onload=function(){
+    var codes = document.querySelectorAll('pre > code');
+    for(var code of codes){
+        code.innerHTML = code.innerHTML.trim();
+    }
+    var body = document.querySelector('body');
+    var docText = body.innerHTML;
+    docText = docText.replace(/\$DJANGO_USER/g, '<span data-key="$DJANGO_USER">' + $DJANGO_USER + '</span>');
+    docText = docText.replace(/\$DOMAIN/g, '<span data-key="$DOMAIN">' + $DOMAIN + '</span>');
+    docText = docText.replace(/\$DJANGO_PROJECT/g, '<span data-key="$DJANGO_PROJECT">' + $DJANGO_PROJECT + '</span>');
+    docText = docText.replace(/\$VENV_PATH/g, '<span data-key="$VENV_PATH">' + $VENV_PATH + '</span>');
+    body.innerHTML = docText;
+
+    document.getElementById('DJANGO_USER').oninput = function(){
+        setVal(this.id, this.value)
+    }
+    document.getElementById('DOMAIN').oninput = function(){
+        setVal(this.id, this.value)
+    }
+    document.getElementById('DJANGO_PROJECT').oninput = function(){
+        setVal(this.id, this.value)
+    }
+    document.getElementById('VENV_PATH').oninput = function(){
+        setVal(this.id, this.value)
+    }
+
+    function setVal(id, value){
+        var spans = document.querySelectorAll('span[data-key="$' + id + '"]');
+        for(var span of spans){
+            span.innerHTML = value;
+        }
+    }
+
+    for (var id of ['DJANGO_USER', 'DOMAIN', 'DJANGO_PROJECT', 'VENV_PATH']){
+        var elm = document.getElementById(id);
+        elm.oninput = function(){ setVal(this.id, this.value); }
+        elm.value = window['$'+id];
+    }
+       
+}
+</script>
+
+</html>
