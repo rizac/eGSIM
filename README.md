@@ -25,7 +25,7 @@ From now on, each `python` command refers to the path of the Python3.7 distribut
   2. python-virtualenv
   3. virtualenvwrapper (our choice)
 
-*FROM NOW ON virtualenv is activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton with no conflicts with the OS python distribution*
+*FROM NOW ON virtualenv MUST be activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton with no conflicts with the OS python distribution*
 
 ### Upgrade pip and setuptools:
 ```bash
@@ -53,7 +53,7 @@ Test with coverage
 pytest -xvvv --ds=egsim.settings_debug --cov=./egsim/ --cov-report=html ./tests/
 ```
 
-### Create data
+### Setup project data
 
 #### Flatfile (ESM):
 This procedure should be executed for all flatfiles to be included in the application.
@@ -80,10 +80,11 @@ From within the egsim folder (check that manage.py is therein):
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py initdb
 ```
 
-### Run:
+## Run:
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver
 ```
+and pen your browser (or use the API) at the URL address on the console 
 
 
 ## Installation (production)
