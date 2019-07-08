@@ -44,6 +44,7 @@ Vue.component('gsimselect', {
         },
         filterType: function(value, oldValue) {
             if (oldValue !== value){
+            	// when changing the filterType, reset also the default ("" or [], depending on the type):
             	var valIsStr = typeof this.filterValue === 'string';
             	if (value === this.filterTypes[0] && !valIsStr){
             		this.filterValue = '';  // calls updateFilter (see above)
@@ -99,6 +100,9 @@ Vue.component('gsimselect', {
         // https://vuejs.org/v2/guide/computed.html
         // https://forum.vuejs.org/t/how-do-computed-properties-know-how-to-change/24140/2
         // no-op for the moment
+        visibleGsimsSet: function(){
+        	return new Set(this.elm.choices.filter(gsim => this.filterFunc(gsim)));
+        }
     },
     template: `<div class='d-flex flex-column'>
       <forminput :form="form" :name='name' headonly></forminput>
@@ -106,7 +110,7 @@ Vue.component('gsimselect', {
           <select v-model="elm.val" v-bind="elm.attrs" ref="select"
           v-bind:class="{'rounded-bottom-0': warnings.length, 'border-danger': !!elm.err}"
           class="form-control flexible with-icons">
-              <option v-for="gsim in elm.choices" :value="gsim" :key="gsim" v-show="isGsimVisible(gsim)"
+              <option v-for="gsim in elm.choices" :value="gsim" :key="gsim" v-show="visibleGsimsSet.has(gsim)"
                v-bind:style="!selectableGsims.has(gsim) ? {'text-decoration': 'line-through'} : ''"
                v-bind:class="{'disabled': !selectableGsims.has(gsim)}">
                   {{ gsim }} {{ gsimManager.warningOf(gsim) ? '&#xf071;' : '' }} 
@@ -126,11 +130,16 @@ Vue.component('gsimselect', {
     
       <!-- GSIM FILTER CONTROLS: -->
       <div class="d-flex flex-row mt-1" v-if='showfilter'>  
-          <select v-model="filterType" class="form-control-sm" style='border:0px; background-color:transparent'>
-              <option v-for="item in filterTypes" :key="item" v-bind:value="item">
-                      Filter by {{ item }}:
-              </option>
-          </select>
+          <div class='d-flex flex-column'>
+	          <select v-model="filterType" class="form-control-sm" style='border:0px; background-color:transparent'>
+    	          <option v-for="item in filterTypes" :key="item" v-bind:value="item">
+        	              Filter by {{ item }}:
+              	  </option>
+          	  </select>
+          	  <span class='small text-muted form-control-sm pb-0'>
+          	  	({{ visibleGsimsSet.size }} of {{ elm.choices.length }} visible)
+          	  </span>
+          </div>
           <input v-if="filterType === filterTypes[0]" v-model="filterValue" type="text" class="form-control form-control-sm flexible" style='flex-basis:0;'>
           <select v-else-if="filterType === filterTypes[1]" v-model="filterValue" multiple size='3' class="form-control form-control-sm flexible" style='flex-basis:0;'>
           	  <option v-for='imt in gsimManager.imts' :value="imt">{{ imt }}</option>
@@ -147,9 +156,6 @@ Vue.component('gsimselect', {
       </div>
     </div>`,
     methods: {
-        isGsimVisible(gsim){
-            return this.filterFunc(gsim);
-        },
         updateFilter(){
             this.adjustWidth();
             var filterValue = this.filterValue;
