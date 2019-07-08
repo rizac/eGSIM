@@ -7,13 +7,13 @@ var _BASE_FORM = Vue.component('baseform', {
         url: String,
         post: Function,
         // urls properties are passed to the downloadselect for downloading the request:
-        urls: {type: Object, default: () => {return {}}},
+        urls: {type: Object, default: () => {return {}}}
     },
     data: function () {
     	return {
         	responseDataEmpty: true,
             responseData: {},
-            mounted: false
+            mounted: false,
         }
     },
     methods: {
@@ -24,6 +24,13 @@ var _BASE_FORM = Vue.component('baseform', {
                     this.responseData = response.data;
                 } 
             });
+        },
+        resetDefaults: function(){
+        	for (var key of Object.keys(this.form)){
+        		if (this.form[key].initial !== undefined){
+    				this.form[key].val = this.form[key].initial;
+    			}
+    		}
         }
     },
     mounted: function () {
@@ -84,9 +91,15 @@ var _BASE_FORM = Vue.component('baseform', {
 	                <i class="fa fa-play"></i> Display plots
 	            </button>
 	            <button type="button"
+	            	@click='resetDefaults'
+	            	class="btn btn-outline-secondary ml-2"
+	            >
+	                <i class="fa fa-fast-backward"></i> Reset defaults
+	            </button>
+	            <button type="button"
 	            	v-show='!responseDataEmpty'
 	            	@click='$emit("closebuttonclicked")'
-	            	class="btn btn-primary ml-2"
+	            	class="btn btn-outline-secondary ml-2"
 	            >
 	                <i class="fa fa-times"></i> Close
 	            </button>
