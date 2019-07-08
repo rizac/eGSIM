@@ -28,7 +28,10 @@ Vue.component('gsimselect', {
             filterType: 'GSIM name',
             filterTypes: ['GSIM name', 'IMT', 'Tectonic Region Type'],
             filterFunc: elm => true,
-            gsimManager: elm.gsimManager,  // Object defined in egsim_base.js ('created' function),
+            // Vue.eGSIM is created in vueutil.js: it's an Object storing gsims, imts, trts,
+            // and their relations via custom methods (e.g., imtsOf(gsim), trtOf(gsim), warningOf(gsim)...)
+            // make it available here as `this.gsimManager`:
+            gsimManager: Vue.eGSIM,
             selectableGsims: new Set(),  // updated in wathcer below
             warnings: [] //list of strings of warnings (updated also in watchers below)
         }
@@ -51,7 +54,7 @@ Vue.component('gsimselect', {
         		var selectableGsims = this.elm.choices;
 	            var selectedimts = newVal;
 	            if (selectedimts.length){
-	                var gsimManager = this.gsimManager;  // Object defined in egsim_base.js ('created' function)
+	                var gsimManager = this.gsimManager;
 	            	selectableGsims = selectableGsims.filter(gsim => {
 	                	return selectedimts.every(imt => gsimManager.imtsOf(gsim).includes(imt));
 	                });
@@ -63,7 +66,7 @@ Vue.component('gsimselect', {
         'elm.val': {
         	immediate: true,
         	handler: function(newVal, oldVal){
-	        	var gsimManager = this.gsimManager;  // Object defined in egsim_base.js ('created' function)
+	        	var gsimManager = this.gsimManager;
         		this.warnings = (newVal || []).filter(gsim => gsimManager.warningOf(gsim)).map(gsim => gsimManager.warningOf(gsim));
         		if (this.warnings.length && newVal && newVal.length && this.$refs.select){
         			// scroll last element into view because we might hide it (see template)
@@ -139,7 +142,7 @@ Vue.component('gsimselect', {
                 new RegExp(this.filterText.replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i') : 
                     undefined;
             var filterFunc = elm => true;
-            var gsimManager = this.gsimManager;  // Object defined in egsim_base.js ('created' function)
+            var gsimManager = this.gsimManager;
             if (this.filterType == this.filterTypes[0]){
                 var filterFunc = gsimName => gsimName.search(regexp) > -1;
             }else if (this.filterType == this.filterTypes[1]){
