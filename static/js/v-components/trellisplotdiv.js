@@ -85,7 +85,7 @@ Vue.component('trellisplotdiv', {
                         if (data.xvalues.length == 1){
                             trace.marker = {color: color};
                         }else{
-                            trace.line = {color: color};
+                            trace.line = {color: color, width: 3};
                         }
                         return trace;
                     }, this);
