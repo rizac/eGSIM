@@ -10,6 +10,13 @@ Vue.component('testing', {
     	// (maybe the 'created' method would be better:
     	// https://vuejs.org/v2/api/#created) but it works:
     	this.$set(this.form['fit_measure'].attrs, 'size', 5);
+    	// set `edr_bandwidth` and `edr_multiplier` inital value as undefined.
+    	// This means that we will skip setting the value
+   		// for those fields when clicking 'restore to defaults' (see baseform.js).
+   		// Their value will be set according to 'plot_type' (see 'watch' below):
+   		this.form.edr_bandwidth.initial = undefined;
+   		this.form.edr_multiplier.initial = undefined;
+   		// return data:
         return {
         	responseData: {},
             formHidden: false
