@@ -126,16 +126,16 @@ Vue.component('gsimselect', {
     
       <!-- GSIM FILTER CONTROLS: -->
       <div class="d-flex flex-row mt-1" v-if='showfilter'>  
-          <select v-model="filterType" class="form-control form-control-sm" style='border:0px; background-color:transparent'>
+          <select v-model="filterType" class="form-control-sm" style='border:0px; background-color:transparent'>
               <option v-for="item in filterTypes" :key="item" v-bind:value="item">
                       Filter by {{ item }}:
               </option>
           </select>
-          <input v-if="filterType === filterTypes[0]" v-model="filterValue" type="text" class="form-control form-control-sm" style='width:initial'>
-          <select v-else-if="filterType === filterTypes[1]" v-model="filterValue" multiple size='3' class="form-control form-control-sm" style='width:initial'>
+          <input v-if="filterType === filterTypes[0]" v-model="filterValue" type="text" class="form-control form-control-sm flexible" style='flex-basis:0;'>
+          <select v-else-if="filterType === filterTypes[1]" v-model="filterValue" multiple size='3' class="form-control form-control-sm flexible" style='flex-basis:0;'>
           	  <option v-for='imt in gsimManager.imts' :value="imt">{{ imt }}</option>
           </select>
-          <select v-else-if="filterType === filterTypes[2]" v-model="filterValue" multiple size='3' class="form-control form-control-sm" style='width:initial'>
+          <select v-else-if="filterType === filterTypes[2]" v-model="filterValue" multiple size='3' class="form-control form-control-sm flexible" style='flex-basis:0;'>
           	  <option v-for='trt in gsimManager.trts' :value="trt">{{ trt }}</option>
           </select>
       </div>
