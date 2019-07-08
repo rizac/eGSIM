@@ -16,27 +16,15 @@ var EGSIM_BASE = {
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
     created: function(){
-        var gsims = this.gsims;
-        var gsimNames = Object.keys(gsims).sort();
-        var imtNames = new Set();
-        gsimNames.forEach(gsimName => {
-        	gsims[gsimName][0].forEach(imt => imtNames.add(imt));
-        });
-        imtNames = Array.from(imtNames);
-        var gsimManager = {
-        	imtsOf: function(gsim){ return gsims[gsim][0]; },
-			trtOf: function(gsim){ return gsims[gsim][1]; },
-			warningOf: function(gsim){ return gsims[gsim][2]; }	
-        }
+        var gsimNames = Vue.eGSIM.gsims;  // defined in vueutil.js
+        var imtNames = Vue.eGSIM.imts;  // defined in vueutil.js
         // set processed data:
         for (var [name, form] of this.forms()){
         	if (form.gsim){
                	form.gsim.choices = gsimNames;
-               	form.gsim.gsimManager = gsimManager;
            	}
            	if (form.imt){
             	form.imt.choices = imtNames;
-            	form.gsim.gsimManager = gsimManager;
         	}
         	// set disabled element in attrs if not present:
         	// (use $set to make the property reactive)

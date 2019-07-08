@@ -133,17 +133,22 @@
 		}
 		return msg;
 	}
+
+	// Create theglobally available Vue.eGSIM Object:
+	// The function Vue.init is defined in vueutil.js
+	Vue.init({{ gsims|safe }});
+
 	// instantiate the EGSIM Vue Instance with content injected from the server and the
 	// browser version check just implemented:
 	var EGSIM = new Vue({
 	    el: '#egsim-vue',
 	    mixins: [EGSIM_BASE],  /* defined in script above */
 	    data: function(){ /* FIXME: check what's the difference between returning function and dict */
-	        return {selComponent: "{{sel_component}}",
-	        		errormsg: incompatibleBrowser() || "{{ server_error_message }}",
-	        		componentProps: {{ component_props|safe }},
-	        		gsims: {{ gsims|safe }},
-	        		};  
+	        return {
+	        	selComponent: "{{sel_component}}",
+	        	errormsg: incompatibleBrowser() || "{{ server_error_message }}",
+	        	componentProps: {{ component_props|safe }}
+	        };  
 	    }
 	});
 	</script>

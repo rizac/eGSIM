@@ -24,9 +24,13 @@ Vue.component('imtselect', {
         	// define the Object whose data is associated to this component:
             elm: this.form[this.name],
             // define the Object whose data is associated to the selected gsims:
-            gsimData: this.form.gsim,
+            gsimField: this.form.gsim,
             // define the Set of the selectable IMTs (see watchers below):
-            selectableImts: new Set()
+            selectableImts: new Set(),
+            // Vue.eGSIM is created in vueutil.js: it's an Object storing gsims, imts, trts,
+            // and their relations via custom methods (e.g., imtsOf(gsim), trtOf(gsim), warningOf(gsim)...)
+            // make it available here as `this.gsimManager`:
+            gsimManager: Vue.eGSIM
         }
     },
     created: function(){
@@ -34,13 +38,13 @@ Vue.component('imtselect', {
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
     	// watch for properties that should update this.selectableImts:
-    	'gsimData.gsimManager': function(newVal, oldVal){
-    		// watch for changes in gsimManager, which is an Object defined in egsim_base.js
-    		// ('created' function) holding information of each gsim's imt and trt.
-    		// In principle, it's static, but watch for changes of it
-    		this.computeSelectableImts();
-    	},
-    	'gsimData.val': function(newVal, oldVal){
+//    	'gsimData.gsimManager': function(newVal, oldVal){
+//    		// watch for changes in gsimManager, which is an Object defined in egsim_base.js
+//    		// ('created' function) holding information of each gsim's imt and trt.
+//    		// In principle, it's static, but watch for changes of it
+//    		this.computeSelectableImts();
+//    	},
+    	'gsimField.val': function(newVal, oldVal){
     		// watch for changes in selected gsims
     		this.computeSelectableImts();
     	},
@@ -90,8 +94,8 @@ Vue.component('imtselect', {
         	this.form[this.saPeriodName].is_hidden = !this.elm.val.includes('SA');
         },
         computeSelectableImts: function(){
-        	var gsimManager = this.gsimData.gsimManager;  
-            var selectedgsims = this.gsimData.val || [];
+        	var gsimManager = this.gsimManager;  
+            var selectedgsims = this.gsimField.val || [];
             var selectableImts = [];
             for (var gsim of selectedgsims){
             	if (!selectableImts.length){ // first gsim element
