@@ -40,10 +40,19 @@ var EGSIM_BASE = {
         	}
         	// set disabled element in attrs if not present:
         	// (use $set to make the property reactive)
+        	// and the initial value
         	for (var key of Object.keys(form)){
         		if (form[key].attrs && !('disabled' in form[key].attrs)){
         			this.$set(form[key].attrs, 'disabled', false);
         		}
+        		// set the initial value as the current value of the field.
+        		// The 'initial' value is the Django initial value, but might be None
+        		// (which means "initial value not set"). Here, we want to use the initial
+        		// value when we want the form to be "restored to defaults", i.e.
+        		// `form[key].val = form[key].initial`.
+        		// To make the latter a valid operation, we must be sure that ` form[key].initial`
+        		// is valid. As `form[key].val` IS valid and it's actually the default to be restored:
+        		form[key].initial = form[key].val;
         	}
         }
     },

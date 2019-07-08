@@ -11,7 +11,13 @@ Vue.component('trellis', {
     	// reactive properties like 'size' here (or maybe 'beforeCreate' would be
     	// a better place? https://vuejs.org/v2/api/#beforeCreate)
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
-   		
+   		// set `imt` and `sa_period` inital value as undefined.
+   		// This means that we will skip setting the value
+   		// for those fields when clicking 'restore to defaults' (see baseform.js).
+   		// Their value will be set according to 'plot_type' (see 'watch' below):
+   		this.form.imt.initial = undefined;
+   		this.form.sa_period.initial = undefined;
+		// return data:
         return {
         	responseData: {},
         	formHidden: false,
