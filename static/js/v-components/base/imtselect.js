@@ -37,13 +37,6 @@ Vue.component('imtselect', {
     	// no-op
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
-    	// watch for properties that should update this.selectableImts:
-//    	'gsimData.gsimManager': function(newVal, oldVal){
-//    		// watch for changes in gsimManager, which is an Object defined in egsim_base.js
-//    		// ('created' function) holding information of each gsim's imt and trt.
-//    		// In principle, it's static, but watch for changes of it
-//    		this.computeSelectableImts();
-//    	},
     	'gsimField.val': function(newVal, oldVal){
     		// watch for changes in selected gsims
     		this.computeSelectableImts();

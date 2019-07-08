@@ -24,7 +24,7 @@ Vue.component('gsimselect', {
     	var elm = this.form[this.name]; //wlm is an Object with several component properties
         return {
         	elm: elm,
-            filterText: '',
+            filterValue: '',
             filterType: 'GSIM name',
             filterTypes: ['GSIM name', 'IMT', 'Tectonic Region Type'],
             filterFunc: elm => true,
@@ -37,13 +37,21 @@ Vue.component('gsimselect', {
         }
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
-        filterText: function(value, oldValue) {
+        filterValue: function(value, oldValue) {
             if (oldValue !== value){
                 this.updateFilter();
             }
         },
         filterType: function(value, oldValue) {
             if (oldValue !== value){
+            	var valIsStr = typeof this.filterValue === 'string';
+            	if (value === this.filterTypes[0] && !valIsStr){
+            		this.filterValue = '';  // calls updateFilter (see above)
+            		return;
+            	}else if(valIsStr){
+            		this.filterValue = [];  // calls updateFilter (see above)
+            		return;
+            	}
                 this.updateFilter();
             }
         },
@@ -123,7 +131,13 @@ Vue.component('gsimselect', {
                       Filter by {{ item }}:
               </option>
           </select>
-          <input v-model="filterText" type="text" class="form-control form-control-sm" style='width:initial'>
+          <input v-if="filterType === filterTypes[0]" v-model="filterValue" type="text" class="form-control form-control-sm" style='width:initial'>
+          <select v-else-if="filterType === filterTypes[1]" v-model="filterValue" multiple size='3' class="form-control form-control-sm" style='width:initial'>
+          	  <option v-for='imt in gsimManager.imts' :value="imt">{{ imt }}</option>
+          </select>
+          <select v-else-if="filterType === filterTypes[2]" v-model="filterValue" multiple size='3' class="form-control form-control-sm" style='width:initial'>
+          	  <option v-for='trt in gsimManager.trts' :value="trt">{{ trt }}</option>
+          </select>
       </div>
       
       <div v-if='selectbutton' class='mt-2'>
@@ -138,23 +152,27 @@ Vue.component('gsimselect', {
         },
         updateFilter(){
             this.adjustWidth();
-            var regexp = this.filterText ? 
-                new RegExp(this.filterText.replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i') : 
-                    undefined;
+            var filterValue = this.filterValue;
             var filterFunc = elm => true;
             var gsimManager = this.gsimManager;
-            if (this.filterType == this.filterTypes[0]){
+            if (this.filterType == this.filterTypes[0] && filterValue){
+            	var regexp = filterValue ? 
+                	new RegExp(filterValue.replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i') : 
+                    	undefined;
                 var filterFunc = gsimName => gsimName.search(regexp) > -1;
-            }else if (this.filterType == this.filterTypes[1]){
-                var filterFunc = gsimName => gsimManager.imtsOf(gsimName).some(imt => imt.search(regexp) > -1);
-            }else if (this.filterType == this.filterTypes[2]){
-            	var filterFunc = gsimName => gsimManager.trtOf(gsimName).search(regexp) > -1;
+            }else if (this.filterType == this.filterTypes[1] && filterValue.length){
+            	filterValue = new Set(filterValue);
+                var filterFunc = gsimName => gsimManager.imtsOf(gsimName).some(imt => filterValue.has(imt));
+            }else if (this.filterType == this.filterTypes[2] && filterValue.length){
+            	filterValue = new Set(filterValue);
+            	var filterFunc = gsimName => filterValue.has(gsimManager.trtOf(gsimName));
             }
             this.filterFunc = filterFunc;
         },
         adjustWidth(){
-            // fixes or releases the <select> tag width before filtering
-            // to avoid upleasant rapid width changes
+            // fixes or releases the <select> tag width before filtering,
+            // as changes in the <option>s visibility cause
+            // unpleasant rapid width changes, which we want to avoid
             if (!this.showfilter){
                 return;
             }
@@ -162,7 +180,7 @@ Vue.component('gsimselect', {
             if (!htmElm){
                 return;
             }
-            htmElm.style.width = !this.filterText ? '' : htmElm.offsetWidth + 'px';
+            htmElm.style.width = !this.filterValue || !this.filterValue.length ? '' : htmElm.offsetWidth + 'px';
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
