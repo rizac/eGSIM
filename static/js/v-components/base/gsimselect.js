@@ -102,6 +102,9 @@ Vue.component('gsimselect', {
         // no-op for the moment
         visibleGsimsSet: function(){
         	return new Set(this.elm.choices.filter(gsim => this.filterFunc(gsim)));
+        },
+        selectedHiddenCount: function(){
+        	return this.elm.val.reduce((accumulator, gsim) => accumulator + !this.visibleGsimsSet.has(gsim), 0);
         }
     },
     template: `<div class='d-flex flex-column'>
@@ -137,9 +140,14 @@ Vue.component('gsimselect', {
         	              Filter by {{ item }}:
               	  </option>
           	  </select>
-          	  <span class='small text-muted form-control-sm pb-0'>
-          	  	({{ visibleGsimsSet.size }} of {{ elm.choices.length }} visible)
-          	  </span>
+          	  <div class='d-flex flex-column small' style='padding-left: .3rem;'>
+	          	  <span class='text-muted'>
+	          	  	{{ visibleGsimsSet.size }} of {{ elm.choices.length }} visible
+	          	  </span>
+	          	  <span v-if="selectedHiddenCount">
+	          	  	<i class="text-warning fa fa-exclamation-triangle"></i> {{ selectedHiddenCount }} selected hidden
+	          	  </span>
+          	  </div>
           </div>
           <input v-if="filterType === filterTypes[0]" v-model="filterValue" type="text" class="form-control form-control-sm flexible" style='flex-basis:0;'>
           <select v-else-if="filterType === filterTypes[1]" v-model="filterValue" multiple size='3' class="form-control form-control-sm flexible" style='flex-basis:0;'>
