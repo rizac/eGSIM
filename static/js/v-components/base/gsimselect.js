@@ -131,7 +131,8 @@ Vue.component('gsimselect', {
       <!-- GSIM FILTER CONTROLS: -->
       <div class="d-flex flex-row mt-1" v-if='showfilter'>  
           <div class='d-flex flex-column'>
-	          <select v-model="filterType" class="form-control-sm" style='border:0px; background-color:transparent'>
+	          <select v-model="filterType" class="form-control form-control-sm"
+	          	style='border:0px; background-color:transparent; width:initial!important'>
     	          <option v-for="item in filterTypes" :key="item" v-bind:value="item">
         	              Filter by {{ item }}:
               	  </option>

@@ -25,8 +25,8 @@ Vue.use({
             }
             get(key){
             	// sets a color mapping `key` if `key` is not in this Map
-            	// (the color will be set incrementally based on `this._defauls.colors`)
-            	// eventually returns the color (string) mapped to `key`, as the superclass does
+            	// (the color will be set incrementally based on `this._defauls.colors`).
+            	// Eventually, it returns the color (hex string) mapped to `key`, as the superclass does
                 var color = super.get(key);
                 if (color === undefined){
                     var colors = this._defaults.colors;
@@ -77,6 +77,8 @@ Vue.use({
         	// Creates the globally available
         	// Vue.eGSIM Object via the data passed from the server via Django (see egsim.html)
 	        var gsims = data;
+	        // data is an Array of Arrays: each Array element represents a GSIM:
+	        // [gsimName, [imtName1, ... imtNameN], TrtName, gsimOpenQuakeWarning] 
 	        var gsimNames = Object.keys(gsims).sort();
 	        var imtNames = new Set();
 	        var trtNames = new Set();
