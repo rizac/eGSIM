@@ -34,12 +34,10 @@ var EGSIM_BASE = {
         			this.$set(form[key].attrs, 'disabled', false);
         		}
         		// set the initial value as the current value of the field.
-        		// The 'initial' value is the Django initial value, but might be None
-        		// (which means "initial value not set"). Here, we want to use the initial
-        		// value when we want the form to be "restored to defaults", i.e.
-        		// `form[key].val = form[key].initial`.
-        		// To make the latter a valid operation, we must be sure that ` form[key].initial`
-        		// is valid. As `form[key].val` IS valid and it's actually the default to be restored:
+        		// The 'initial' value (`form[key].initial`) is the Django initial value, which
+        		// might be None/null (which means "initial value not set"). As null might be invalid
+        		// (e.g. <select multiple> need an empty Array instead) we write here the initial value
+        		// as the value currently hold in the field:
         		form[key].initial = form[key].val;
         	}
         }
