@@ -11,6 +11,9 @@ Vue.component('testingtable', {
 	    var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value'];
 	    return {
             visible: false,
+            filterNames: colnames.slice(0, colnames.length-1),
+            filterValues: {},  // Object of filterNames -> list of possible values for the filter name
+            filterSelectedValues: {}, // Object of filterNames -> list of chosen values for the filter name
             tableData: [],
             gsimsRecords: [], // array of [gsim, records] elements (string, int)
             gsimsSkipped: {}, //Object of gsims (strings) mapped to its error (e.g., 0 records found)
@@ -24,6 +27,9 @@ Vue.component('testingtable', {
             colnames: colnames, //this stores the indices
             columns: {}  // this stores columns data (Object) keyed by each colname. See `init`
         }
+    },
+    created: function(){
+    	this.createFilterValues([]);
     },
     watch: {
         data: {
@@ -41,8 +47,14 @@ Vue.component('testingtable', {
                 }
             }
         },
+//         filterSelectedValues: {
+//         	deep: true,
+//         	handler(newVal, oldVal){
+//         		var g = 9;
+//         	}
+//         }
     },
-    computed: {    
+    computed: {
         filteredSortedEntries: function () {  // (filtering actually not yet implemented)
         	var [sortCol, sortOrder] = this.sortKeyAndOrder();
         	var tData = this.tableData;   
@@ -92,6 +104,13 @@ Vue.component('testingtable', {
 	        		return sortResult;
 	            });
 	        }
+	        // filter:
+	        var fsv = this.filterSelectedValues;
+	        var filterNames = Object.keys(fsv);
+	        isTableEntryVisible =
+    			(entry) =>  filterNames.every(key => !fsv[key].length || fsv[key].includes(entry[key]));
+	        tData = tData.filter(entry => isTableEntryVisible(entry));
+
 	        // the sort groups are defined by [COL_MOF, COL_IMT] unless
 	        // sortCol == COL_GSIM or sortCol == COL_IMT
 	        var oddeven = 1;
@@ -162,13 +181,30 @@ Vue.component('testingtable', {
 
             <slot></slot> <!-- slot for custom buttons -->
             
-            <downloadselect
+            <div  v-show='Object.keys(filterSelectedValues).length' class='flexible mt-3 border p-2 bg-white' style='flex-basis:0px'>
+	       		<div class='d-flex flex-row'>
+		       		<span class='flexible'><i class="fa fa-filter"></i> Filter by:</span>
+		       		<button @click='clearFilters' type='button'
+		       			:style="[filtersCount() > 0 ? {} : {visibility: 'hidden'}]"
+		       			class='btn btn-outline-secondary btn-sm'>
+		       			<i class="fa fa-eraser"></i>Clear
+		       		</button>
+		       	</div>
+		       	<div v-for='filterName in Object.keys(filterSelectedValues)' class='mt-2' style='overflow:auto'>
+		       		<div>{{ filterName }} </div>
+		       		<select multiple v-model='filterSelectedValues[filterName]' class='form-control'>
+		       			<option v-for='value in filterValues[filterName]' :value="value" :key="value">{{ value }}</option>
+		       		</select>
+		       	</div>
+	       	</div>
+	
+			<downloadselect
 				:urls="downloadurls"
 				:post="post"
 				:data="data"
 				class='mt-3 border p-2 bg-white'
 			/>
-	           
+
             <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto'>
                 <div><i class="fa fa-info-circle"></i> Database records used:</div>
                 <table>
@@ -184,7 +220,6 @@ Vue.component('testingtable', {
                 <table>
                 <tr
                     v-for="gsimname in Object.keys(gsimsSkipped)"
-                    
                 >
                     <td class='text-right pr-2'>{{ gsimname }}:</td><td>{{ gsimsSkipped[gsimname] }}</td>
                 </tr>
@@ -217,7 +252,15 @@ Vue.component('testingtable', {
         }
     },
     methods: {
-        sortBy: function (key) {
+    	filtersCount: function(){
+    		var sum = 0;
+    		for (var k of Object.keys(this.filterSelectedValues)){ sum += this.filterSelectedValues[k].length; }
+    		return sum;
+    	},
+    	clearFilters: function(){
+    		for (var k of Object.keys(this.filterSelectedValues)){ this.filterSelectedValues[k] = []; }
+    	},
+    	sortBy: function (key) {
         	var columns = this.columns;
         	if (!(key in columns)){return;}
         	var ret = {}; // copy a new Object (see below)
@@ -234,7 +277,7 @@ Vue.component('testingtable', {
         		ret[colname] = columns[colname];
         	});
         	// by setting a new object we trigger the template refresh.
-        	// this might look overhead but it triggers vuwjs refresh without the need of watchers and/or
+        	// this might look overhead but it triggers vuejs refresh without the need of watchers and/or
         	// deep flags
         	this.columns = ret;
         },
@@ -266,7 +309,7 @@ Vue.component('testingtable', {
    			
             var mofs = columns[this.COL_MOF].values = Object.keys(data);
             var ret = [];
-   			for (var mof of mofs){
+            for (var mof of mofs){
                 var imts = data[mof];
                 for(var imt of Object.keys(imts)){
                 	if (!columns[this.COL_IMT].values.includes(imt)){
@@ -283,11 +326,33 @@ Vue.component('testingtable', {
 						row[this.COL_IMT] = imt;
 						row[this.COL_GSIM] = gsim;
 						row[this.COL_VAL] = val;
-                        ret.push(row);  // {val: val, sortval: sortval, strval: strval}]);
+						ret.push(row);  // {val: val, sortval: sortval, strval: strval}]);
                     }
                 }
             }
+   			this.createFilterValues(ret);
             return ret;
+        },
+        createFilterValues: function(tableData){
+            [this.filterValues, this.filterSelectedValues] = [{}, {}];
+            var filterNames = this.filterNames;
+            for (var key of filterNames){
+            	// use sets to assure unique values:
+                this.filterValues[key] = new Set();
+            }
+            for (var entry of tableData){
+            	for (var key of filterNames){
+	                this.filterValues[key].add(entry[key]);
+	            }
+            }
+            // convert sets to array:
+            for (var key of filterNames){
+            	if (this.filterValues[key].size <= 1){
+            		continue;
+            	}
+                this.filterValues[key] = Array.from(this.filterValues[key]);
+                this.$set(this.filterSelectedValues, key, []);
+            }
         },
         download: function(format, formatIndex, formats){
         	var filename = this.filename + '.request';
