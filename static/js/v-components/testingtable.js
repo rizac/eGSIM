@@ -17,7 +17,6 @@ Vue.component('testingtable', {
             tableData: [],
             gsimsRecords: [], // array of [gsim, records] elements (string, int)
             gsimsSkipped: {}, //Object of gsims (strings) mapped to its error (e.g., 0 records found)
-            rowInfo: [], // Array of Objects storign row info for styling/rendereing (popolated in filteredSortedEntries)
             MAX_NUM_DIGITS: 5,  // 0 or below represent the number as it is
             MAX_ARRAY_SIZE: 4,  // arrays longer than this will be truncated in their string represenation (in the table)
             COL_MOF: colnames[0],
@@ -114,7 +113,7 @@ Vue.component('testingtable', {
 	        // the sort groups are defined by [COL_MOF, COL_IMT] unless
 	        // sortCol == COL_GSIM or sortCol == COL_IMT
 	        var oddeven = 1;
-	        this.rowInfo = tData.map((item, idx, items) => {
+	        tData.forEach((item, idx, items) => {
 	        	var mofDiffers = idx == 0 || (item[COL_MOF] !== items[idx-1][COL_MOF]);
 	        	var imtDiffers = idx == 0 || (item[COL_IMT] !== items[idx-1][COL_IMT]);
 	        	var gsimDiffers = idx == 0 || (item[COL_GSIM] !== items[idx-1][COL_GSIM]);
@@ -128,16 +127,7 @@ Vue.component('testingtable', {
 				if (groupChanged){
 	        		oddeven = 1-oddeven;
 	        	}
-	        	/* note: isHidden below should hold a set of keys (columns) mapped to boolean values
-	        	telling if for that row the cell should be displayed (ret[index].isHidden(colname)).
-	        	It's not used and defaults to the empty dict. If
-	        	you want to remove the property, look at the template and remove it from there
-	        	as well */
-	        	var ret = {isHidden: {}, group: oddeven};
-	        	/*ret.isHidden[COL_MOF] = !groupChanged && !mofDiffers;
-	        	ret.isHidden[COL_IMT] = !groupChanged && !imtDiffers;
-	        	ret.isHidden[COL_GSIM] = !groupChanged && !gsimDiffers;*/
-	        	return ret;
+	        	item._group = oddeven;
 	        });
             return tData;
         }
@@ -162,14 +152,12 @@ Vue.component('testingtable', {
 		        </thead>
 		        <tbody>
 			        <template v-for="(entry, index) in filteredSortedEntries">
-			            <tr :style="rowInfo[index].group ? 'background-color: rgba(0,0,0,.05)':  ''">
+			            <tr :style="entry._group ? 'background-color: rgba(0,0,0,.05)':  ''">
 			            	<template v-for="colname in colnames">
 			            		<td v-if="colname === COL_VAL" class='align-top text-right'>
 			            			{{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
 			            		</td>
-			            		<td v-else class='align-top'>
-			            			{{ rowInfo[index].isHidden[colname] ? "" : entry[colname] }}
-			            		</td>
+			            		<td v-else class='align-top'>{{ entry[colname] }}</td>
 			            	</template>
 			            </tr>
 		            </template>
@@ -186,13 +174,14 @@ Vue.component('testingtable', {
 		       		<span class='flexible'><i class="fa fa-filter"></i> Filter by:</span>
 		       		<button @click='clearFilters' type='button'
 		       			:style="[filtersCount() > 0 ? {} : {visibility: 'hidden'}]"
-		       			class='btn btn-outline-secondary btn-sm'>
+		       			class='btn btn-outline-secondary btn-sm'
+		       		>
 		       			<i class="fa fa-eraser"></i>Clear
 		       		</button>
 		       	</div>
 		       	<div v-for='filterName in Object.keys(filterSelectedValues)' class='mt-2' style='overflow:auto'>
 		       		<div>{{ filterName }} </div>
-		       		<select multiple v-model='filterSelectedValues[filterName]' class='form-control'>
+		       		<select multiple v-model='filterSelectedValues[filterName]' class='form-control flexible' style='flex-basis:0;min-height:2em'>
 		       			<option v-for='value in filterValues[filterName]' :value="value" :key="value">{{ value }}</option>
 		       		</select>
 		       	</div>
