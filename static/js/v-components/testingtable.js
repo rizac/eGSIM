@@ -45,13 +45,7 @@ Vue.component('testingtable', {
                 	this.tableData = [];
                 }
             }
-        },
-//         filterSelectedValues: {
-//         	deep: true,
-//         	handler(newVal, oldVal){
-//         		var g = 9;
-//         	}
-//         }
+        }
     },
     computed: {
         filteredSortedEntries: function () {  // (filtering actually not yet implemented)
@@ -176,21 +170,28 @@ Vue.component('testingtable', {
 
             <slot></slot> <!-- slot for custom buttons -->
             
-            <div  v-show='Object.keys(filterSelectedValues).length' class='flexible mt-3 border p-2 bg-white' style='flex-basis:0px'>
-	       		<div class='d-flex flex-row'>
-		       		<span class='flexible'><i class="fa fa-filter"></i> Filter by:</span>
-		       		<button @click='clearFilters' type='button'
-		       			:style="[filtersCount() > 0 ? {} : {visibility: 'hidden'}]"
-		       			class='btn btn-outline-secondary btn-sm'
+            <div  v-show='Object.keys(filterSelectedValues).length' class='flexible mt-3 border p-2 bg-white'
+            	style='flex-basis:0; overflow:auto; min-height:3rem'
+            >
+		       	<div v-for='filterName in Object.keys(filterSelectedValues)' class="d-flex flex-column mt-2 flexible">
+		       		<div class='d-flex flex-row'>
+			       		<span class='flexible'><i class="fa fa-filter"></i> {{ filterName }}</span>
+			       		<button
+			       			@click='clearFilters(filterName)' type='button'
+			       			:style="[filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}]"
+			       			style='padding-top:0.1rem; padding-bottom:0.1rem'
+			       			class='btn btn-outline-secondary btn-sm'
+			       		>
+			       			<i class="fa fa-eraser"></i> Clear filter (show all)
+			       		</button>
+			       	</div>
+		       		<label
+		       			v-for='value in filterValues[filterName]'
+		       			class='customcheckbox'
+		       			:class="{'checked': filterSelectedValues[filterName].includes(value)}"
 		       		>
-		       			<i class="fa fa-eraser"></i>Clear
-		       		</button>
-		       	</div>
-		       	<div v-for='filterName in Object.keys(filterSelectedValues)' class="d-flex flex-column mt-2 flexible" style='flex-basis:0'>
-		       		<div>{{ filterName }} </div>
-		       		<select multiple v-model='filterSelectedValues[filterName]' class='form-control flexible'>
-		       			<option v-for='value in filterValues[filterName]' :value="value" :key="value">{{ value }}</option>
-		       		</select>
+		       			<input type='checkbox' :value="value" v-model='filterSelectedValues[filterName]'> {{ value }}
+		       		</label>
 		       	</div>
 	       	</div>
 	
@@ -201,7 +202,7 @@ Vue.component('testingtable', {
 				class='mt-3 border p-2 bg-white'
 			/>
 
-            <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto'>
+            <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto;  max-height:10rem'>
                 <div><i class="fa fa-info-circle"></i> Database records used:</div>
                 <table>
                 <tr
@@ -211,7 +212,7 @@ Vue.component('testingtable', {
                 </tr>
                 </table>
             </div>
-            <div v-show="Object.keys(gsimsSkipped).length" class='mt-3 border p-2 bg-white text-danger' style='overflow:auto'>
+            <div v-show="Object.keys(gsimsSkipped).length" class='mt-3 border p-2 bg-white text-danger' style='overflow:auto;  max-height:10rem'>
                 <div><i class="fa fa-exclamation-triangle"></i> Gsim skipped:</div>
                 <table>
                 <tr
@@ -241,13 +242,25 @@ Vue.component('testingtable', {
         }
     },
     methods: {
-    	filtersCount: function(){
+    	filtersCount: function(filterName){
+    		// returns the number of elements currently selected for the filter identified by 'filterName'
+    		// if 'filterName' is undefined, returns all elements currently selected for all filters
     		var sum = 0;
-    		for (var k of Object.keys(this.filterSelectedValues)){ sum += this.filterSelectedValues[k].length; }
+    		for (var k of Object.keys(this.filterSelectedValues)){
+    			if (filterName === undefined || filterName === k){
+    				sum += this.filterSelectedValues[k].length;
+    			}
+    		}
     		return sum;
     	},
-    	clearFilters: function(){
-    		for (var k of Object.keys(this.filterSelectedValues)){ this.filterSelectedValues[k] = []; }
+    	clearFilters: function(filterName){
+    		// clear the filter for the filter identified by 'filterName'
+    		// if 'filterName' is undefined, clears all filters (show all elements in table)
+    		for (var k of Object.keys(this.filterSelectedValues)){
+    			if (filterName === undefined || filterName === k){
+	    			this.filterSelectedValues[k] = [];
+	    		}
+	    	}
     	},
     	sortBy: function (key) {
         	var columns = this.columns;
