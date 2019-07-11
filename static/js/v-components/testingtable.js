@@ -134,35 +134,42 @@ Vue.component('testingtable', {
     },
     // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
     template: `<div v-show="visible" class="d-flex flex-row">
-	    <div class='testing-table flexible border-primary' style='overflow-y: auto;'>
-		    <table class='table testing-table'>
-		        <thead>
-		            <tr>
-		            	<th v-for="colname in colnames" @click="sortBy(colname)"
-		                  class='btn-primary align-text-top'
-		                  :class="{'text-right': colname === COL_VAL}"
-		                  >
-		                  {{ colname }}
-		                  <br>
-		                  <i v-if='isSortKey(colname) && columns[colname].sortOrder > 0' class="fa fa-chevron-down"></i>
-		                  <i v-else-if='isSortKey(colname) && columns[colname].sortOrder < 0' class="fa fa-chevron-up"></i>
-		                  <i v-else> &nbsp;</i> <!--hack for preserving height when no arrow icon is there. tr.min-height css does not work -->
-		                </th>
-		            </tr>
-		        </thead>
-		        <tbody>
-			        <template v-for="(entry, index) in filteredSortedEntries">
-			            <tr :style="entry._group ? 'background-color: rgba(0,0,0,.05)':  ''">
-			            	<template v-for="colname in colnames">
-			            		<td v-if="colname === COL_VAL" class='align-top text-right'>
-			            			{{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
-			            		</td>
-			            		<td v-else class='align-top'>{{ entry[colname] }}</td>
-			            	</template>
+    	<div class='d-flex flex-column flexible'>
+	    	<div class='testing-table flexible border-primary' style='overflow-y: auto;'>
+			    <table class='table testing-table flexible'>
+			        <thead>
+			            <tr>
+			            	<th v-for="colname in colnames" @click="sortBy(colname)"
+			                  class='btn-primary align-text-top'
+			                  :class="{'text-right': colname === COL_VAL}"
+			                  >
+			                  {{ colname }}
+			                  <br>
+			                  <i v-if='isSortKey(colname) && columns[colname].sortOrder > 0' class="fa fa-chevron-down"></i>
+			                  <i v-else-if='isSortKey(colname) && columns[colname].sortOrder < 0' class="fa fa-chevron-up"></i>
+			                  <i v-else> &nbsp;</i> <!--hack for preserving height when no arrow icon is there. tr.min-height css does not work -->
+			                </th>
 			            </tr>
-		            </template>
-		        </tbody>
-		    </table>
+			        </thead>
+			        <tbody>
+				        <template v-for="(entry, index) in filteredSortedEntries">
+				            <tr :style="entry._group ? 'background-color: rgba(0,0,0,.05)':  ''">
+				            	<template v-for="colname in colnames">
+				            		<td v-if="colname === COL_VAL" class='align-top text-right'>
+				            			{{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
+				            		</td>
+				            		<td v-else class='align-top'>{{ entry[colname] }}</td>
+				            	</template>
+				            </tr>
+			            </template>
+			        </tbody>
+			    </table>
+			</div>
+            <span class='small text-muted mt-1'>
+                <i class="fa fa-info-circle"></i>
+                Click on the table headers to sort. Note that "{{ COL_VAL }}" will not sort
+                rows globally but within each group of equal ({{ COL_MOF }}, {{ COL_IMT }}).
+            </span>
 	    </div>
 	   
 	    <div class='d-flex flex-column mr-2 pl-2 border-left'>
@@ -179,9 +186,9 @@ Vue.component('testingtable', {
 		       			<i class="fa fa-eraser"></i>Clear
 		       		</button>
 		       	</div>
-		       	<div v-for='filterName in Object.keys(filterSelectedValues)' class='mt-2' style='overflow:auto'>
+		       	<div v-for='filterName in Object.keys(filterSelectedValues)' class="d-flex flex-column mt-2 flexible" style='flex-basis:0'>
 		       		<div>{{ filterName }} </div>
-		       		<select multiple v-model='filterSelectedValues[filterName]' class='form-control flexible' style='flex-basis:0;min-height:2em'>
+		       		<select multiple v-model='filterSelectedValues[filterName]' class='form-control flexible'>
 		       			<option v-for='value in filterValues[filterName]' :value="value" :key="value">{{ value }}</option>
 		       		</select>
 		       	</div>
@@ -198,7 +205,7 @@ Vue.component('testingtable', {
                 <div><i class="fa fa-info-circle"></i> Database records used:</div>
                 <table>
                 <tr
-                    v-for="gsimname in Object.keys(gsimsRecords)"
+                    v-for="gsimname in Object.keys(gsimsRecords)" v-if="!Object.keys(gsimsSkipped).includes(gsimname)"
                 >
                     <td class='text-right pr-2'>{{ gsimname }}:<td></td>{{ gsimsRecords[gsimname] }}</td>
                 </tr>
@@ -213,13 +220,6 @@ Vue.component('testingtable', {
                     <td class='text-right pr-2'>{{ gsimname }}:</td><td>{{ gsimsSkipped[gsimname] }}</td>
                 </tr>
                 </table>
-            </div>
-            <div class='position-relative flexible mt-3'>
-                <span class='position-absolute pos-b-0 small text-muted'>
-                    <i class="fa fa-info-circle"></i>
-                    Click on the table headers to sort. Note that "{{ COL_VAL }}" will not sort
-                    rows globally but within each group of equal ({{ COL_MOF }}, {{ COL_IMT }}).
-                </span>
             </div>
         </div>
     </div>`,
