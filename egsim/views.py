@@ -260,15 +260,16 @@ def main(request, selected_menu=None):
         residualsformdict['plot_type']['val'] = 'res'
 
         testingformdict = components_props['testing']['form']
-        testingformdict['gsim']['val'] = gsimnames
-        testingformdict['imt']['val'] = ['PGA', 'SA']
+        testingformdict['gsim']['val'] = gsimnames + ['AbrahamsonSilva2008']
+        testingformdict['imt']['val'] = ['PGA', 'PGV']
         testingformdict['sa_period']['val'] = "0.2 1.0 2.0"
 
         components_props['testing']['form']['fit_measure']['val'] = ['res',
                                                                      'lh',
-                                                                     'llh',
-                                                                     'mllh',
-                                                                     'edr']
+                                                                     #'llh',
+                                                                     #'mllh',
+                                                                     #'edr'
+                                                                     ]
 
     # remove lines above!
     gsims = json.dumps({_[0]: _[1:] for _ in aval_gsims(asjsonlist=True)})
