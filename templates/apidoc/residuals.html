@@ -1,5 +1,4 @@
-
-<p><b>Endpoint: <code>{{ baseurl }}/{{ residuals }}</code></b></p>
+<p><b>Endpoint: <code>{{ baseurl }} / {{ data.path }}</code></b></p>
 <p>
 eGSIM, through the GMPE-SMTK library, offers the ability to compare observed ground motions with
 the GMPE model predictions using the GMPE implementations found inside OpenQuake.
@@ -10,7 +9,7 @@ analyse the total residual, the inter-event residual and the intra-event residua
 user via Residuals plots.
 </p>
 
-<h3 id="{{ residuals }}_request">Request</h3>
+<h3 id="{{ data.key }}_request">Request</h3>
 <p>
 A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
 database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
@@ -18,14 +17,14 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 </p>
 
 <table class='request'>
-	{% include "apidoc/request_template.html" with form=form.residuals %}
+	{% include "apidoc/request_template.html" with form=data.form %}
 	<tfoot>
 	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'>"SA" in {{ form.trellis.imt.name }} must be provided
+	<tr><td colspan='2'>"SA" in {{ data.form.imt.name }} must be provided
 		with the given period in parentheses, e.g. "SA(0.2)".
 	</td></tr>
-	<tr><td colspan='2'> {{ form.trellis.gsim.name }} and 
-		{{ form.trellis.imt.name }}
+	<tr><td colspan='2'> {{ data.form.gsim.name }} and 
+		{{ data.form.imt.name }}
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
 		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
@@ -38,11 +37,11 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 
 {% include "apidoc/selexpr_help.html" %}
 
-<h3 id="{{ residuals }}_response">Response</h3>
+<h3 id="{{ data.key }}_response">Response</h3>
 <p>
 The number of generated Residuals plots will be the product of the requested Intensity
-measure types (parameter {{ form.residuals.imt.name }}) and the requested GMPEs
-(parameter {{ form.residuals.gsim.name }}. Each Residual plot is futher subdivided
+measure types (parameter {{ data.form.imt.name }}) and the requested GMPEs
+(parameter {{ data.form.gsim.name }}. Each Residual plot is futher subdivided
 into three subplots:
 </p>
 
@@ -56,31 +55,31 @@ into three subplots:
 </thead>
 <tbody class='grid'>
 <tr>
-	<td>{{ form.residuals.plot_type.choices.0.1 }}</td>
+	<td>{{ data.form.plot_type.choices.0.1 }}</td>
 	<td rowspan="7">'Intra event', 'Inter event' and 'Total'</td>
 	<td>Histogram of frequencies (y axis) vs residuals bins (x)</td>
 	<td>Mean, standard deviation of the distribution</td>
 </tr>
 <tr>
-	<td>{{ form.residuals.plot_type.choices.1.1 }}</td>
+	<td>{{ data.form.plot_type.choices.1.1 }}</td>
 	<td>Histogram of the frequencies (y) vs residuals likelihood bins (x)</td>
 	<td>Median of the distribution</td>
 </tr>
 <tr>
-	<td>{{ form.residuals.plot_type.choices.2.1 }}</td>
+	<td>{{ data.form.plot_type.choices.2.1 }}</td>
 	<td>Scatter plot of residuals (y) vs. magnitude (x)</td>
 	<td rowspan="5">p-value and linear regression (slope, intercept)</td>
 </tr>
 <tr>
-	<td>{{ form.residuals.plot_type.choices.3.1 }}</td>
+	<td>{{ data.form.plot_type.choices.3.1 }}</td>
 	<td>Same as above with distance as point's x</td>
 </tr>
 <tr>
-	<td>{{ form.residuals.plot_type.choices.4.1 }}</td>
+	<td>{{ data.form.plot_type.choices.4.1 }}</td>
 	<td>Same as above with Vs<sub>30</sub> as point's x</td>
 </tr>
 <tr>
-	<td>{{ form.residuals.plot_type.choices.5.1 }}</td>
+	<td>{{ data.form.plot_type.choices.5.1 }}</td>
 	<td>Same as above with depth as point's x</td>
 </tr>
 <!-- <tr>
