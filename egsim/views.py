@@ -324,7 +324,36 @@ def get_tr_models(request):  # pylint: disable=unused-argument
 
 def home(request):
     '''view for the home page (iframe in browser)'''
-    return render(request, 'home.html', _COMMON_PARAMS)
+    egsim_data = {
+        'GSIMS': {
+            'title': TITLES.GSIMS,
+            'path': URLS.GSIMS_RESTAPI,
+            'key': KEY.GSIMS
+        },
+        'TRELLIS': {
+            'title': TITLES.TRELLIS,
+            'path': URLS.TRELLIS_RESTAPI,
+            'key': KEY.TRELLIS
+        },
+        'GMDB':{
+            'title': TITLES.GMDBPLOT
+        },
+        'RESIDUALS': {
+            'title': TITLES.RESIDUALS,
+            'path': URLS.RESIDUALS_RESTAPI,
+            'key': KEY.RESIDUALS
+        },
+        'TESTING': {
+            'title': TITLES.TESTING,
+            'path': URLS.TESTING_RESTAPI,
+            'key': KEY.TESTING
+        }
+    }
+    return render(request, 'home.html', dict(_COMMON_PARAMS,
+                                             egsim_data=egsim_data,
+                                             info_str=('Version 1.0.1, '
+                                                       'last updated: '
+                                                       'July 2019')))
 
 
 def apidoc(request):

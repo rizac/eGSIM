@@ -13,27 +13,112 @@
 		font-size: 500%;
 		text-shadow: 2px 8px 6px rgba(0,0,0,0.2), 0px -5px 35px rgba(255,255,255,0.3);
 	}
+	a.logo img{
+		height: 3rem !important;
+	}
+	a.logo{
+		display: inline-block;
+	}
 </style>
 {% endblock %}
 
 {% block body %}
-	<div class='flexible d-flex flex-column'>
-			
-		<div class='d-flex flex-column flexible pt-5 pb-5 text-center'>
-			<div>
-				<h1 class='home-title'>{{ project_name }}</h1>
-				<h3>European Ground Shaking Intensity Model</h3>
-				<p>a web service for selecting and testing ground shaking models</p>
+	<div class='flexible d-flex flex-column height100 bg-white'>
+
+		<div class='d-flex flex-column flexible'>
+			<!-- style='background-image:url("{% static 'img/logos/efehr_flyer_trans_scaled.png' %}")'>  -->
+			<div class='bg-light'>
+				<h1 class='home-title text-center'>{{ project_name }}</h1>
+				<!--  <h3>European Ground Shaking Intensity Model</h3> -->
+				<h5 class='text-center'>a web service for selecting and testing ground shaking models (GSIMs)</h5>
 			</div>
 			<!-- the mess below is just to align image centered horizontally and 100% available space
 			(normal flexbox does not work in safari on mac) -->
-			<div class='flexible position-relative'>
-				<div class='position-absolute pos-0 text-center'>
-					<img class="h-100" src="{% static 'img/logos/efehr_flyer_trans_scaled.png' %}" />
+			<!--  -->
+			<div class='d-flex flex-row flexible text-justify p-5 py-4'>
+				<div class='d-flex flex-column flexible' style='flex-basis:33%; overflow:auto'>
+					<p class='pr-5'>
+						The Ground-Shaking Intensity Model Service (eGSIM) is part of the
+						<a target='_blank' href='http://www.efehr.org/en/home/'>European Facilities for Earthquake Hazard and Risk</a>
+						(EFEHR), a non-profit network of organisations and
+						community resources aimed at advancing earthquake hazard and
+						risk assessment in the European-Mediterranean area.
+					</p>
+					<div class='flexible'
+						style='background-size: auto 90%;background-position:center;background-repeat:no-repeat;background-image:url("{% static 'img/logos/efehr_flyer_trans_scaled.png' %}")'>
+						<!-- <img src="{% static 'img/logos/efehr_flyer_trans_scaled.png' %}" class='position-absolute pos-0'/> -->
+					</div>
+				</div>
+				<div class='d-flex flex-column flexible position-relative' style='flex-basis:67%; overflow:auto'>
+					<div class='position-absolute pos-0'>
+						<p>
+							eGSIM is a web application programming interface (web API),
+							compliant with current FDSN standards: the user can query the toolkit via configurable
+							URLs in order to retrieve model predictions of ground motions from either observed or hypothetical
+							earthquake scenarios. These can be used to develop model-to-model comparisons of the expected shaking,
+							but also to provide fields of expected ground motions and their uncertainties at user-defined locations.
+							</p>
+						<p>
+							This portal is the service Graphical User Interface (GUI) allowing users to easily use
+							and visualize the API functionalities auch as:
+						</p>
+						<ul>
+							<li> Explore databases of GSIMs (also denoted as ground motion models, GMMs)
+								selected in previous projects such as the 2013
+								European Seismic Hazard Model and the European Seismic Risk Model 2020 (ESRM20) which will be released
+								in April 2020 (see menu <i>{{ egsim_data.GMDB.title }}</i>)
+							<li> Make their own selection of GMMs (see menu <i>{{ egsim_data.GSIMS.title }}</i>) in order to undertake visual
+								comparisons of models (see menu <i>{{ egsim_data.TRELLIS.title }}</i>)
+							<li> Retrieve the predicted model values, query observations of ground motions from multiple databases
+								and rapidly implement quantitative tools help understand the suitability of the models for their regions
+								of interest (see menu <i>{{ egsim_data.RESIDUALS.title }}</i> and  <i>{{ egsim_data.TESTING.title }}</i>)
+						</ul>
+						<p>Foreseen enhancements of the API and the GUI will soon include:</p>
+						<ul>
+						<li> Visualize and compute ground-shaking fields (“shake-maps”) taking into account fault finiteness,
+							spatial correlations of ground-shaking and definition of spatially variable amplification factors
+						<li> Explore the components of variability in predicted earthquake ground motions in order to
+							retrieve region-, source- (“between-event term”) and site-specific properties of strong motion scaling
+							(stations “site-term”)
+						</ul>
+						<h5>Feedback</h5>
+						<p>
+							We welcome feedback on eGSIM. Please open an Issue in the
+							<a target="_blank" href="https://github.com/rizac/eGSIM/issues">
+							GitHub Repository</a> with the desired label, e.g. (bug: Something isn't working,
+							enhancement: New feature or request,
+							question: Further information is requested)
+						</p>
+					</div>
+				</div>
+			</div>
+			
+			<div class="d-flex flex-row align-items-end px-5 pb-1">
+				<div>
+					<a target="_blank" class='logo' href='https://www.epos-ip.org/'>
+						<img class="h-100" src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
+					</a>
+					<a target="_blank" class='logo' href='http://www.efehr.org/en/home/'>
+						<img class="h-100 ml-3" src="{% static 'img/logos/efehr_fin@3x.png' %}" />
+					</a>
+					<a target="_blank" class='logo' href='http://www.sera-eu.org/en/home/'>
+						<img class="h-100 ml-3" src="{% static 'img/logos/SERA_logo_scaled.png' %}" />
+					</a>
+				</div>
+				<div class='flexible text-muted small text-right pr-4'>
+					Version 1.0.1, Last updated: August 2019
+				</div>
+				<div>
+					<a target="_blank" class='logo' href='https://www.globalquakemodel.org/oq-getting-started'>
+						<img class="h-100 ml-3" src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans_scaled.png' %}" />
+					</a>
+					<a target="_blank" class='logo' href='https://www.gfz-potsdam.de/en/home/'>
+						<img class="h-100 ml-3" src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" />
+					</a>
 				</div>
 			</div>
 		</div>
-		<div class="text-center pb-1" style='height:3rem;max-height:3rem;min-height:3rem'>
+		<!-- <div class="text-center pb-1" style='height:3rem;max-height:3rem;min-height:3rem'>
 			<a target="_blank" href='https://www.epos-ip.org/'>
 				<img class="h-100" src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
 			</a>
@@ -50,6 +135,6 @@
 				<img class="h-100 ml-3" src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" />
 			</a>
 		
-		</div>
+		</div> -->
 	</div>
 {% endblock %}
