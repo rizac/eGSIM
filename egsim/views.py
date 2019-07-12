@@ -334,36 +334,34 @@ def apidoc(request):
     # It is the request.META['HTTP_HOST'] key. But during testing, this
     # key is not present. Actually, just use a string for the moment:
     baseurl = "〈eGSIMsite〉"
-    # use the KEY class attribute names to identify the services: 'GSIMS',
-    # 'TRELLIS' etcetera:
-    GSIMS, TRELLIS, RESIDUALS, TESTING, FORMAT = \
-        'GSIMS', 'TRELLIS', 'RESIDUALS', 'TESTING', 'FORMAT'
-    data = {
-        GSIMS: {
+    # Note that the keus of the egsim_data dict below should NOT
+    # be changed: if you do, you should also change the templates
+    egsim_data = {
+        'GSIMS': {
             'title': TITLES.GSIMS,
             'path': URLS.GSIMS_RESTAPI,
             'form': GsimsView.formclass().to_rendering_dict(False),
-            'key': GSIMS
+            'key': KEY.GSIMS
         },
-        TRELLIS: {
+        'TRELLIS': {
             'title': TITLES.TRELLIS,
             'path': URLS.TRELLIS_RESTAPI,
             'form': TrellisView.formclass().to_rendering_dict(False),
-            'key': TRELLIS
+            'key': KEY.TRELLIS
         },
-        RESIDUALS: {
+        'RESIDUALS': {
             'title': TITLES.RESIDUALS,
             'path': URLS.RESIDUALS_RESTAPI,
             'form': ResidualsView.formclass().to_rendering_dict(False),
-            'key': RESIDUALS
+            'key': KEY.RESIDUALS
         },
-        TESTING: {
+        'TESTING': {
             'title': TITLES.TESTING,
             'path': URLS.TESTING_RESTAPI,
             'form': TestingView.formclass().to_rendering_dict(False),
-            'key': TESTING
+            'key': KEY.TESTING
         },
-        FORMAT: {
+        'FORMAT': {
             'form': FormatForm().to_rendering_dict(False)
         }
     }
@@ -371,7 +369,7 @@ def apidoc(request):
     return render(request, filename,
                   dict(_COMMON_PARAMS,
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
-                       egsim_data=data,
+                       egsim_data=egsim_data,
                        baseurl=baseurl,
                        gmt=get_gmdb_column_desc(),
                        )
