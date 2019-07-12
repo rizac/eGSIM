@@ -70,6 +70,20 @@ class TITLES:
     DOC = 'API Documentation'
 
 
+class ICONS:
+    '''Container class (Enum-like) of icons to be shown in the front end and
+    in the Home page. Strings denote the fontawesome icon name (for info see:
+    https://fontawesome.bootstrapcheatsheets.com/)
+    '''
+    HOME = 'fa-home'
+    GSIMS = 'fa-map-marker'
+    TRELLIS = 'fa-area-chart'
+    GMDBPLOT = 'fa-database'
+    RESIDUALS = 'fa-bar-chart'
+    TESTING = 'fa-list'
+    DOC = 'fa-info-circle'
+
+
 class URLS:
     '''This class is a container for URLS which should be injected into
     the web page (via Django) AND used in :module:`urls` for defining
@@ -109,13 +123,15 @@ def main(request, selected_menu=None):
 
     # Tab components (one per tab, one per activated vue component)
     # (key, label and icon) (the last is bootstrap fontawesome name)
-    components_tabs = [(KEY.HOME, TITLES.HOME, 'fa-home'),
-                       (KEY.GSIMS, TITLES.GSIMS, 'fa-map-marker'),
-                       (KEY.TRELLIS, TITLES.TRELLIS, 'fa-area-chart'),
-                       (KEY.GMDBPLOT, TITLES.GMDBPLOT, 'fa-database'),
-                       (KEY.RESIDUALS, TITLES.RESIDUALS, 'fa-bar-chart'),
-                       (KEY.TESTING, TITLES.TESTING, 'fa-list'),
-                       (KEY.DOC, TITLES.DOC, 'fa-info-circle')]
+    components_tabs = [
+        (KEY.HOME, TITLES.HOME, ICONS.HOME),
+        (KEY.GSIMS, TITLES.GSIMS, ICONS.GSIMS),
+        (KEY.TRELLIS, TITLES.TRELLIS, ICONS.TRELLIS),
+        (KEY.GMDBPLOT, TITLES.GMDBPLOT, ICONS.GMDBPLOT),
+        (KEY.RESIDUALS, TITLES.RESIDUALS, ICONS.RESIDUALS),
+        (KEY.TESTING, TITLES.TESTING, ICONS.TESTING),
+        (KEY.DOC, TITLES.DOC, ICONS.DOC)
+    ]
     # this can be changed if needed:
     sel_component = KEY.HOME if not selected_menu else selected_menu
 
@@ -327,26 +343,23 @@ def home(request):
     egsim_data = {
         'GSIMS': {
             'title': TITLES.GSIMS,
-            'path': URLS.GSIMS_RESTAPI,
-            'key': KEY.GSIMS
+            'icon': ICONS.GSIMS
         },
         'TRELLIS': {
             'title': TITLES.TRELLIS,
-            'path': URLS.TRELLIS_RESTAPI,
-            'key': KEY.TRELLIS
+            'icon': ICONS.TRELLIS
         },
-        'GMDB':{
-            'title': TITLES.GMDBPLOT
+        'GMDB': {
+            'title': TITLES.GMDBPLOT,
+            'icon': ICONS.GMDBPLOT
         },
         'RESIDUALS': {
             'title': TITLES.RESIDUALS,
-            'path': URLS.RESIDUALS_RESTAPI,
-            'key': KEY.RESIDUALS
+            'icon': ICONS.RESIDUALS
         },
         'TESTING': {
             'title': TITLES.TESTING,
-            'path': URLS.TESTING_RESTAPI,
-            'key': KEY.TESTING
+            'icon': ICONS.TESTING
         }
     }
     return render(request, 'home.html', dict(_COMMON_PARAMS,

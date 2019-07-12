@@ -141,7 +141,7 @@ Vue.component('gsims', {
             this.form.gsim.val = [];
             propsData = {
             	form: this.form,
-            	selectbutton: 'Select for Trellis plots, Residuals and Testing',
+            	selectbutton: 'Select globally for comparison and testing',
             	showfilter: true
             }
 
