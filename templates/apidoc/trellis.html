@@ -1,4 +1,4 @@
-<p><b>Endpoint: <code>{{ baseurl }}/{{ trellis }}</code></b></p>
+<p><b>Endpoint: <code>{{ baseurl }} / {{ data.path }}</code></b></p>
 <p>
 Trellis plots provide an understanding of the manner in which each GMPE characterizes the ground
 motion scaling with respect to the properties of the seismic source, and the attenuation of the
@@ -18,7 +18,7 @@ it is also possible to view the scaling of the standard deviation, for a total o
 choosable plot types.
 </p>
 
-<h3 id="{{ trellis }}_request">Request</h3>
+<h3 id="{{ data.key }}_request">Request</h3>
 <p>
 A request to the Trellis plot service requires a list of GMPEs and IMTs,
 the desired plot type and the parameters configuring the scenario (rupture), most of which are
@@ -28,27 +28,27 @@ separate text data in JSON or YAML format (POST method) and are:
 
 
 <table class='request'>
-	{% include "apidoc/request_template.html" with form=form.trellis %}
+	{% include "apidoc/request_template.html" with form=data.form %}
 	<tfoot>
 	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'> "SA" in {{ form.trellis.imt.name }} must be provided
+	<tr><td colspan='2'> "SA" in {{ data.form.imt.name }} must be provided
 		with the given period in parentheses, e.g. "SA(0.2)".
-		If {{ form.trellis.plot_type.name }} is
-		<code>{{ form.trellis.plot_type.choices.2.0 }}</code>
+		If {{ data.form.plot_type.name }} is
+		<code>{{ data.form.plot_type.choices.2.0 }}</code>
 		 or
-		<code>{{ form.trellis.plot_type.choices.5.0 }}</code>
-		(<code>{{ form.trellis.plot_type.choices.2.1 }}</code> or
-		<code>{{ form.trellis.plot_type.choices.5.1 }}</code>), then
-		<code>{{ form.trellis.imt.name }}</code> will
+		<code>{{ data.form.plot_type.choices.5.0 }}</code>
+		(<code>{{ data.form.plot_type.choices.2.1 }}</code> or
+		<code>{{ data.form.plot_type.choices.5.1 }}</code>), then
+		<code>{{ data.form.imt.name }}</code> will
 		default to 'SA' with a set of pre-defined periods: any value
 		explicitly provided by the user will thus be ignored in case.
 	</td></tr>
-	<tr><td colspan='2'> {{ form.trellis.gsim.name }}, 
-		{{ form.trellis.imt.name }}, {{ form.trellis.magnitude.name }},
-		{{ form.trellis.distance.name }}, {{ form.trellis.vs30.name }}
-		(and, from the gui, the value provided for "{{ form.trellis.sa_period.label }}")
-		can be input as space- or comma-separated lists of values. {{ form.trellis.gsim.name }} and 
-		{{ form.trellis.imt.name }} can also be input with
+	<tr><td colspan='2'> {{ data.form.gsim.name }}, 
+		{{ data.form.imt.name }}, {{ data.form.magnitude.name }},
+		{{ data.form.distance.name }}, {{ data.form.vs30.name }}
+		(and, from the gui, the value provided for "{{ data.form.sa_period.label }}")
+		can be input as space- or comma-separated lists of values. {{ data.form.gsim.name }} and 
+		{{ data.form.imt.name }} can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
 		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
 	</td></tr>
@@ -56,12 +56,12 @@ separate text data in JSON or YAML format (POST method) and are:
 </table>
 
 
-<h3 id="{{ trellis }}_response">Response</h3>
+<h3 id="{{ data.key }}_response">Response</h3>
 <p>
 The number of generated Trellis plots depends on the requested Intensity measure types (parameter
-{{ form.trellis.imt.name }}) <i>and</i> the parameters {{ form.trellis.magnitude.name }},
-{{ form.trellis.distance.name }} and
-{{ form.trellis.vs30.name }} (which can be given as numeric scalr or array):
+{{ data.form.imt.name }}) <i>and</i> the parameters {{ data.form.magnitude.name }},
+{{ data.form.distance.name }} and
+{{ data.form.vs30.name }} (which can be given as numeric scalr or array):
 </p>
 
 <table>
@@ -73,25 +73,25 @@ The number of generated Trellis plots depends on the requested Intensity measure
 </thead>
 <tbody>
 <tr>
-	<td>{{ form.trellis.plot_type.choices.0.1 }}</td>
-	<td>{{ form.trellis.distance.name }}</td>
-	<td>{{ form.trellis.imt.name }},
-	    {{ form.trellis.magnitude.name }},
-	    {{ form.trellis.vs30.name }}</td>
+	<td>{{ data.form.plot_type.choices.0.1 }}</td>
+	<td>{{ data.form.distance.name }}</td>
+	<td>{{ data.form.imt.name }},
+	    {{ data.form.magnitude.name }},
+	    {{ data.form.vs30.name }}</td>
 </tr>
 <tr>
-	<td>{{ form.trellis.plot_type.choices.1.1 }}</td>
-	<td>{{ form.trellis.magnitude.name }}</td>
-	<td>{{ form.trellis.imt.name }},
-	    {{ form.trellis.distance.name }},
-	    {{ form.trellis.vs30.name }}</td>
+	<td>{{ data.form.plot_type.choices.1.1 }}</td>
+	<td>{{ data.form.magnitude.name }}</td>
+	<td>{{ data.form.imt.name }},
+	    {{ data.form.distance.name }},
+	    {{ data.form.vs30.name }}</td>
 </tr>
 <tr>
-	<td>{{ form.trellis.plot_type.choices.2.1 }}</td>
+	<td>{{ data.form.plot_type.choices.2.1 }}</td>
 	<td>None: a set of pre-defined periods will be used</td>
-	<td>{{ form.trellis.magnitude.name }},
-	    {{ form.trellis.distance.name }},
-	    {{ form.trellis.vs30.name }}</td>
+	<td>{{ data.form.magnitude.name }},
+	    {{ data.form.distance.name }},
+	    {{ data.form.vs30.name }}</td>
 </tbody>
 </table>
 

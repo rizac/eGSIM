@@ -20,13 +20,17 @@ The following base URI pattern is to be used for each request:
 </p>
 
 <p>
-where <code>&lt;service&gt;</code> is one of the following:
+where {{ baseurl }} is the first part of the eGSIM URL including the starting <code>http://</code> (or <code>https://</code>)
+and up to the first slash character "/", e.g. <code>http://egsim.org</code>
+ ({{ baseurl }} is the first portion of the browser address of this page, if you are viewing this document online)
+
+and <code>&lt;service&gt;</code> is one of the following:
 </p>
 <ul>
-	<li><code>{{ gsimsel }}</code> for <a href="#gsimselection"> Gsim selection</a> </li>
-	<li><code>{{ trellis }}</code> for generating <a href="#trellisplots"> Trellis plots data</a> </li>
-	<li><code>{{ residuals }}</code> for <a href="#residualanalysis"> Residual analysis</a> </li>
-	<li><code>{{ test }}</code> for <a href="#testing">Testing</a> </li>
+	<li><code>{{ egsim_data.GSIMS.path }}</code> for <a href="#gsimselection"> Model Selection</a> </li>
+	<li><code>{{ egsim_data.TRELLIS.path }}</code> for <a href="#trellisplots"> Model-to-Model Comparison</a> </li>
+	<li><code>{{ egsim_data.RESIDUALS.path }}</code> for <a href="#residualanalysis"> Model-to-Data Comparison</a> </li>
+	<li><code>{{ egsim_data.TESTING.path }}</code> for <a href="#testing"> Model-to-Data Testing</a> </li>
 </ul>
 
 
@@ -207,12 +211,12 @@ eGSIM requests support two formats: JSON and TEXT/CSV. All services described in
 next section accept the following parameters in the request:
 
 <table class='request'>
-	{% include "apidoc/request_template.html" with form=form.format %}
+	{% include "apidoc/request_template.html" with form=egsim_data.FORMAT.form %}
 	<tfoot>
 		<tr>
 			<td colspan="2">
-			Note: the gsims service ignores {{ form.format.text_sep.name }} and
-			{{ form.format.text_dec.name }} also when format is text, as the list
+			Note: the gsims service ignores {{ egsim_data.FORMAT.form.text_sep.name }} and
+			{{ egsim_data.FORMAT.form.text_dec.name }} also when format is text, as the list
 			of matching Gsims is returned "vertically" in a single column
 			</td>
 		</tr>
