@@ -45,20 +45,20 @@
 			{% include "apidoc/intro.html" %}
 			
 			
-			<h2 id="gsimselection">Gsim selection</h2>
-			{% include "apidoc/gsims.html" %}
+			<h2 id="gsimselection">{{ egsim_data.GSIMS.title }}</h2>
+			{% include "apidoc/gsims.html" with data=egsim_data.GSIMS %}
 			
 			
-			<h2 id="trellisplots">Trellis plots</h2>
-			{% include "apidoc/trellis.html" %}
+			<h2 id="trellisplots">{{ egsim_data.TRELLIS.title }}</h2>
+			{% include "apidoc/trellis.html" with data=egsim_data.TRELLIS %}
 			
 			
-			<h2 id="residualanalysis">Residual analysis</h2>
-			{% include "apidoc/residuals.html" %}
+			<h2 id="residualanalysis">{{ egsim_data.RESIDUALS.title }}</h2>
+			{% include "apidoc/residuals.html" with data=egsim_data.RESIDUALS %}
 		
 		
-			<h2 id="testing">Testing</h2>
-			{% include "apidoc/testing.html" %}
+			<h2 id="testing">{{ egsim_data.TESTING.title }}</h2>
+			{% include "apidoc/testing.html" with data=egsim_data.TESTING %}
 		
 		
 		</div>	

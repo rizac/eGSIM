@@ -38,10 +38,15 @@ _COMMON_PARAMS = {
 
 
 class KEY:
-    '''Container class (enum-like) defining the string keys for the program
-    urls/services. Each string should be unique and
-    associated to a menu in the frontend (see `main`) AND a javascript
-    file named <KEY>.js (see javascript directory)
+    '''Container class (Enum-like) defining the string keys for the
+    program urls/services.
+    Not all keys might be associated to a REST API
+    service/URL, but when they do (e.g. KEY.GSIMS, KEY.TRELLIS, KEY.RESIDUALS)
+    the key value is currently used as part of the URL (see URLS below): this
+    is not mandatory and can be changed anytime.
+    Currently, each key is represents a menu in the front end
+    (see `main`) AND a javascript file named <KEY>.js implements the relative
+    VueJS component (see javascript directory)
     '''
     HOME = 'home'
     GSIMS = 'gsims'  # pylint: disable=invalid-name
@@ -50,6 +55,19 @@ class KEY:
     RESIDUALS = 'residuals'  # pylint: disable=invalid-name
     TESTING = 'testing'  # pylint: disable=invalid-name
     DOC = 'apidoc'  # pylint: disable=invalid-name
+
+
+class TITLES:
+    '''Container class (Enum-like) of titles to be shown in the front end and
+    in the documentation when talking about a service (member of the KEY class
+    above)'''
+    HOME = 'Home'
+    GSIMS = 'Model Selection'
+    TRELLIS = 'Model-to-Model Comparison'
+    GMDBPLOT = 'Ground Motion Database'
+    RESIDUALS = 'Model-to-Data Comparison'
+    TESTING = 'Model-to-Data Testing'
+    DOC = 'API Documentation'
 
 
 class URLS:
@@ -91,13 +109,13 @@ def main(request, selected_menu=None):
 
     # Tab components (one per tab, one per activated vue component)
     # (key, label and icon) (the last is bootstrap fontawesome name)
-    components_tabs = [(KEY.HOME, 'Home', 'fa-home'),
-                       (KEY.GSIMS, 'Gsim selection', 'fa-map-marker'),
-                       (KEY.TRELLIS, 'Trellis Plots', 'fa-area-chart'),
-                       (KEY.GMDBPLOT, 'Ground Motion database', 'fa-database'),
-                       (KEY.RESIDUALS, 'Residuals', 'fa-bar-chart'),
-                       (KEY.TESTING, 'Testing', 'fa-list'),
-                       (KEY.DOC, 'API Documentation', 'fa-info-circle')]
+    components_tabs = [(KEY.HOME, TITLES.HOME, 'fa-home'),
+                       (KEY.GSIMS, TITLES.GSIMS, 'fa-map-marker'),
+                       (KEY.TRELLIS, TITLES.TRELLIS, 'fa-area-chart'),
+                       (KEY.GMDBPLOT, TITLES.GMDBPLOT, 'fa-database'),
+                       (KEY.RESIDUALS, TITLES.RESIDUALS, 'fa-bar-chart'),
+                       (KEY.TESTING, TITLES.TESTING, 'fa-list'),
+                       (KEY.DOC, TITLES.DOC, 'fa-info-circle')]
     # this can be changed if needed:
     sel_component = KEY.HOME if not selected_menu else selected_menu
 
@@ -315,22 +333,46 @@ def apidoc(request):
     # baseurl is the base URL for the services explained in the tutorial
     # It is the request.META['HTTP_HOST'] key. But during testing, this
     # key is not present. Actually, just use a string for the moment:
-    baseurl = "[eGSIM domain URL]"
-    form = {
-        KEY.GSIMS: GsimsView.formclass().to_rendering_dict(False),
-        KEY.TRELLIS: TrellisView.formclass().to_rendering_dict(False),
-        # KEY.GMDB: GmdbPlotView.formclass().to_rendering_dict(False),
-        KEY.RESIDUALS: ResidualsView.formclass().to_rendering_dict(False),
-        KEY.TESTING: TestingView.formclass().to_rendering_dict(False),
-        'format': FormatForm().to_rendering_dict(False)
+    baseurl = "〈eGSIMsite〉"
+    # use the KEY class attribute names to identify the services: 'GSIMS',
+    # 'TRELLIS' etcetera:
+    GSIMS, TRELLIS, RESIDUALS, TESTING, FORMAT = \
+        'GSIMS', 'TRELLIS', 'RESIDUALS', 'TESTING', 'FORMAT'
+    data = {
+        GSIMS: {
+            'title': TITLES.GSIMS,
+            'path': URLS.GSIMS_RESTAPI,
+            'form': GsimsView.formclass().to_rendering_dict(False),
+            'key': GSIMS
+        },
+        TRELLIS: {
+            'title': TITLES.TRELLIS,
+            'path': URLS.TRELLIS_RESTAPI,
+            'form': TrellisView.formclass().to_rendering_dict(False),
+            'key': TRELLIS
+        },
+        RESIDUALS: {
+            'title': TITLES.RESIDUALS,
+            'path': URLS.RESIDUALS_RESTAPI,
+            'form': ResidualsView.formclass().to_rendering_dict(False),
+            'key': RESIDUALS
+        },
+        TESTING: {
+            'title': TITLES.TESTING,
+            'path': URLS.TESTING_RESTAPI,
+            'form': TestingView.formclass().to_rendering_dict(False),
+            'key': TESTING
+        },
+        FORMAT: {
+            'form': FormatForm().to_rendering_dict(False)
+        }
     }
+
     return render(request, filename,
                   dict(_COMMON_PARAMS,
-                       form=form,
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
-                       baseurl=baseurl+"/query",
-                       trellis='trellis', residuals='residuals',
-                       gsimsel='gsims', test='testing',
+                       egsim_data=data,
+                       baseurl=baseurl,
                        gmt=get_gmdb_column_desc(),
                        )
                   )

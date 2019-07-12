@@ -1,14 +1,12 @@
-<p><b>Endpoint: <code>{{ baseurl }}/{{ test }}</code></b></p>
+<p><b>Endpoint: <code>{{ baseurl }} / {{ data.path }}</code></b></p>
 
 <p>
 eGSIM, through the GMPE-SMTK library, offers the ability to test observed ground motions with
 the GMPE model predictions using the GMPE implementations found inside OpenQuake and
-one or more measures of fit.
-The request for such a service is outlined below. Note that the selection
-expression has been described in <a href="#">the residuals section above</a>
+one or more measures of fit. The request for such a service is outlined below
 </p>
  
-<h3 id="{{ test }}_request">Request</h3>
+<h3 id="{{ data.key }}_request">Request</h3>
 <p>
 A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
 database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
@@ -16,14 +14,14 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 </p>
 
 <table class='request'>
-	{% include "apidoc/request_template.html" with form=form.testing %}
+	{% include "apidoc/request_template.html" with form=data.form %}
 	<tfoot>
 	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'>"SA" in {{ form.trellis.imt.name }} must be provided
+	<tr><td colspan='2'>"SA" in {{ data.form.imt.name }} must be provided
 		with the given period in parentheses, e.g. "SA(0.2)".
 	</td></tr>
-	<tr><td colspan='2'> {{ form.trellis.gsim.name }} and 
-		{{ form.trellis.imt.name }}
+	<tr><td colspan='2'> {{ data.form.gsim.name }} and 
+		{{ data.form.imt.name }}
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
 		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
@@ -34,10 +32,10 @@ URL (GET method) or as separate text data in JSON or YAML format (POST method) a
 
 <p>
 The selection expression syntax has already been discussed in the
-relative <a href="#selexpr_section">section above</a>.
+relative <a href="#selexpr">section above</a>.
 </p>
 
-<h3 id="{{ test }}_response">Response</h3>
+<h3 id="{{ data.key }}_response">Response</h3>
 
 <p>
 The reponse Object is of tyhis type is an Object with keys representing

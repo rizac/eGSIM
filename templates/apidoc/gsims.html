@@ -1,10 +1,10 @@
-<p><b>Endpoint: <code>{{ baseurl }}/{{ gsimsel }}</code></b></p>
+<p><b>Endpoint: <code>{{ baseurl }} / {{ data.path }}</code></b></p>
 <p>
 This simple service performs a GMPE selection based on several filtering parameter,
 including matching tectonic regions defined in specified Area source (or Tectonic region) models.
 </p>
 
-<h3 id="{{ gsimsel }}_request">Request</h3>
+<h3 id="{{ data.key }}_request">Request</h3>
 <p>
 A request to the GSIM selection service does not require any mandatory parameter: in case, all
 OpenQuake's available GMPEs will be returned. This rather trivial search is usually refined
@@ -26,11 +26,11 @@ separate text data in JSON or YAML format (POST method) and are:
 </p>
 
 <table class='request'>
-	{% include "apidoc/request_template.html" with form=form.gsims %}
+	{% include "apidoc/request_template.html" with form=data.form %}
 	<tfoot>
 	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'> {{ form.trellis.gsim.name }} and 
-		{{ form.trellis.imt.name }}
+	<tr><td colspan='2'> {{ data.form.gsim.name }} and 
+		{{ data.form.imt.name }}
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
 		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
@@ -39,7 +39,7 @@ separate text data in JSON or YAML format (POST method) and are:
 </table>
 
 
-<h3 id="{{ gsimsel }}_reqsponse">Response</h3>
+<h3 id="{{ data.key }}_reqsponse">Response</h3>
 <p>
 The list of selected GMPEs will be returned as JSON-formatted array of strings or as CSV. In the
 latter case, the user can choose the orientation (vertical vs. horizontal) for e.g.,
