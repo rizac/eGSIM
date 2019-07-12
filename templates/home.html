@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
 
 {% block head %}
-	{% with fontawesome=False leaflet=False plotly=False %}
+	{% with fontawesome=True leaflet=False plotly=False %}
 		{{ block.super }}
 	{% endwith %}
 {% endblock %}
 
 {% block extra-head %}
+<link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
 <!--  include the (few) css declarations here to avoid loading external css -->
 <style type="text/css">
 	.home-title{
@@ -14,28 +15,32 @@
 		text-shadow: 2px 8px 6px rgba(0,0,0,0.2), 0px -5px 35px rgba(255,255,255,0.3);
 	}
 	a.logo img{
-		height: 3rem !important;
+		height: 2.5rem !important;
 	}
 	a.logo{
 		display: inline-block;
+	}
+	span.menu{
+		white-space: nowrap;
+		color: lightseagreen;
 	}
 </style>
 {% endblock %}
 
 {% block body %}
-	<div class='flexible d-flex flex-column height100 bg-white'>
+	<div class='flexible d-flex flex-column height100' style='font-family: Lato, Helvetica'>
 
 		<div class='d-flex flex-column flexible'>
 			<!-- style='background-image:url("{% static 'img/logos/efehr_flyer_trans_scaled.png' %}")'>  -->
-			<div class='bg-light'>
+			<div class='pb-2'>
 				<h1 class='home-title text-center'>{{ project_name }}</h1>
 				<!--  <h3>European Ground Shaking Intensity Model</h3> -->
-				<h5 class='text-center'>a web service for selecting and testing ground shaking models (GSIMs)</h5>
+				<h5 class='text-center'>a web service for selecting and testing Ground-Shaking Intensity Models (GSIMs)</h5>
 			</div>
 			<!-- the mess below is just to align image centered horizontally and 100% available space
 			(normal flexbox does not work in safari on mac) -->
 			<!--  -->
-			<div class='d-flex flex-row flexible text-justify p-5 py-4'>
+			<div class='d-flex flex-row flexible text-justify p-5 py-4  bg-white'>
 				<div class='d-flex flex-column flexible' style='flex-basis:33%; overflow:auto'>
 					<p class='pr-5'>
 						The Ground-Shaking Intensity Model Service (eGSIM) is part of the
@@ -52,26 +57,31 @@
 				<div class='d-flex flex-column flexible position-relative' style='flex-basis:67%; overflow:auto'>
 					<div class='position-absolute pos-0'>
 						<p>
-							eGSIM is a web application programming interface (web API),
+							eGSIM is a web application programming interface (API),
 							compliant with current FDSN standards: the user can query the toolkit via configurable
 							URLs in order to retrieve model predictions of ground motions from either observed or hypothetical
 							earthquake scenarios. These can be used to develop model-to-model comparisons of the expected shaking,
 							but also to provide fields of expected ground motions and their uncertainties at user-defined locations.
 							</p>
 						<p>
-							This portal is the service Graphical User Interface (GUI) allowing users to easily use
-							and visualize the API functionalities auch as:
+							This portal is the service Graphical User Interface (GUI) allowing users to:
 						</p>
 						<ul>
-							<li> Explore databases of GSIMs (also denoted as ground motion models, GMMs)
+							<li> Explore databases of GSIMs (also denoted as Ground Motion models, GMMs)
 								selected in previous projects such as the 2013
 								European Seismic Hazard Model and the European Seismic Risk Model 2020 (ESRM20) which will be released
-								in April 2020 (see menu <i>{{ egsim_data.GMDB.title }}</i>)
-							<li> Make their own selection of GMMs (see menu <i>{{ egsim_data.GSIMS.title }}</i>) in order to undertake visual
-								comparisons of models (see menu <i>{{ egsim_data.TRELLIS.title }}</i>)
+								in April 2020 (see
+								<span class='menu'><i class="fa {{ egsim_data.GMDB.icon }}"></i> {{ egsim_data.GMDB.title }}</span>)
+							<li> Make their own selection of GMMs (for a map-based tectonic regionalisation selection, see
+								<span class='menu'><i class="fa {{ egsim_data.GSIMS.icon }}"></i> {{ egsim_data.GSIMS.title }}</span>)
+							<li> Undertake visual comparisons of models (see
+								<span class='menu'><i class="fa {{ egsim_data.TRELLIS.icon }}"></i> {{ egsim_data.TRELLIS.title }}</span>)
 							<li> Retrieve the predicted model values, query observations of ground motions from multiple databases
 								and rapidly implement quantitative tools help understand the suitability of the models for their regions
-								of interest (see menu <i>{{ egsim_data.RESIDUALS.title }}</i> and  <i>{{ egsim_data.TESTING.title }}</i>)
+								of interest (see
+								<span class='menu'><i class="fa {{ egsim_data.RESIDUALS.icon }}"></i> {{ egsim_data.RESIDUALS.title }}</span>
+								and 
+								<span class='menu'><i class="fa {{ egsim_data.TESTING.icon }}"></i> {{ egsim_data.TESTING.title }}</span>)
 						</ul>
 						<p>Foreseen enhancements of the API and the GUI will soon include:</p>
 						<ul>
@@ -85,35 +95,33 @@
 						<p>
 							We welcome feedback on eGSIM. Please open an Issue in the
 							<a target="_blank" href="https://github.com/rizac/eGSIM/issues">
-							GitHub Repository</a> with the desired label, e.g. (bug: Something isn't working,
-							enhancement: New feature or request,
-							question: Further information is requested)
+							GitHub Repository</a> with the desired label (e.g. bug, enhancement, question, help)
 						</p>
 					</div>
 				</div>
 			</div>
 			
-			<div class="d-flex flex-row align-items-end px-5 pb-1">
+			<div class="d-flex flex-row align-items-end px-5 pt-2 pb-0">
 				<div>
 					<a target="_blank" class='logo' href='https://www.epos-ip.org/'>
-						<img class="h-100" src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
+						<img src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
 					</a>
-					<a target="_blank" class='logo' href='http://www.efehr.org/en/home/'>
-						<img class="h-100 ml-3" src="{% static 'img/logos/efehr_fin@3x.png' %}" />
+					<a target="_blank" class='logo ml-3' href='http://www.efehr.org/en/home/'>
+						<img src="{% static 'img/logos/efehr_fin@3x.png' %}" />
 					</a>
-					<a target="_blank" class='logo' href='http://www.sera-eu.org/en/home/'>
-						<img class="h-100 ml-3" src="{% static 'img/logos/SERA_logo_scaled.png' %}" />
+					<a target="_blank" class='logo ml-3' href='http://www.sera-eu.org/en/home/'>
+						<img src="{% static 'img/logos/SERA_logo_scaled.png' %}" />
 					</a>
 				</div>
-				<div class='flexible text-muted small text-right pr-4'>
-					Version 1.0.1, Last updated: August 2019
+				<div class='flexible text-muted small text-right'>
+					{{ info_str }}
 				</div>
 				<div>
-					<a target="_blank" class='logo' href='https://www.globalquakemodel.org/oq-getting-started'>
-						<img class="h-100 ml-3" src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans_scaled.png' %}" />
+					<a target="_blank" class='logo ml-3' href='https://www.globalquakemodel.org/oq-getting-started'>
+						<img src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans_scaled.png' %}" />
 					</a>
-					<a target="_blank" class='logo' href='https://www.gfz-potsdam.de/en/home/'>
-						<img class="h-100 ml-3" src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" />
+					<a target="_blank" class='logo ml-3' href='https://www.gfz-potsdam.de/en/home/'>
+						<img src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" />
 					</a>
 				</div>
 			</div>
