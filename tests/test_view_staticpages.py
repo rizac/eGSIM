@@ -20,9 +20,10 @@ class Test:
         '''Test apidoc page generation'''
         result = client.get('/pages/apidoc')
         assert result.status_code == 200
-        # stupid assert (better than nothing for the moment):
-        assert b"[eGSIM domain URL]/query" in result.content
         # check we do not have django undefined variables:
+        # (we set somewhere in the code to display when a template
+        # variable is not found. and Django prints <VARNAME> NOT FOUND
+        # in case. Thus:
         assert b" NOT FOUND" not in result.content
 
     def test_main(self,
