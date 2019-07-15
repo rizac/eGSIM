@@ -259,7 +259,8 @@ class Test:
             "vs30": "760.0",
             "vs30_measured": True,
             "line_azimuth": "0.0",
-            "plot_type": "ds"
+            "stdev": True,
+            "plot_type": "d"
         }
 
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
@@ -318,7 +319,8 @@ class Test:
             "vs30": "760.0",
             "vs30_measured": True,
             "line_azimuth": "0.0",
-            "plot_type": "ds"
+            "stdev": True,
+            "plot_type": "d"
         }
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
@@ -361,7 +363,8 @@ class Test:
             "vs30": vs30,
             "vs30_measured": True,
             "line_azimuth": "0.0",
-            "plot_type": "ds",
+            "stdev": True,
+            "plot_type": "d",
             "z1pt0": z1pt0,
             'z2pt5': z2pt5
         }
@@ -422,7 +425,8 @@ class Test:
             "vs30": "760.0",
             "vs30_measured": True,
             "line_azimuth": "0.0",
-            "plot_type": "ds"
+            "stdev": True,
+            "plot_type": "d"
         }
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
