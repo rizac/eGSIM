@@ -91,39 +91,10 @@ Vue.component('residualsplotdiv', {
                 newarray.push(array[array.length-1]);
                 return newarray;
             };
-            var resample_ = function(array, granularity=1){
-            	if (granularity === 1){
-            		return array.slice();
-            	}
-                var newarray = array;
-                if (granularity > 1 && array.length > 1){
-                    newarray = [];
-                    for (var i=1; i< array.length; i++){
-                        var step = (array[i] - array[i-1])/granularity;
-                        for(var j=0; j<granularity; j++){
-                            newarray.push(array[i-1] + step*j);
-                        }
-                    }
-                    newarray.push(array[array.length-1]);
-                }
-                return newarray;
-            };
             var endpoints = function(array){
-                var [min, max] = [undefined, undefined];
-                for(var i=0; i < array.length; i++){
-                    var val = array[i];
-                    if (val === null){
-                    	continue;
-                    }
-                    if (min === undefined){ // first loop
-                    	min = max = val;
-                    }else if (val < min){
-                        min = val;
-                    }else if (val > max){
-                        max = val;
-                    }
-                }
-                return [min, max];
+            	var sorted = array.filter(val => typeof val === 'number').
+            		sort((a,b) => a > b ? 1 : a < b ? -1 : 0);
+            	return sorted.length ? [sorted[0], sorted[sorted.length-1]] : [null, null];
             };
             // setup  plots:
             var data = responseObject;
@@ -133,12 +104,15 @@ Vue.component('residualsplotdiv', {
             	    for (var gsim of Object.keys(data[imt][type])){
                 	    var plotdata = data[imt][type][gsim];
                 	    var hasLinearRegression = plotdata.intercept != null && plotdata.slope != null;
+                	    var [xlbl, ylbl] = [plotdata.xlabel, plotdata.ylabel];
+                	    var ptText = `${plotdata.xlabel}=%{x}<br>${plotdata.ylabel}=%{y}`;
                         var mainTrace = {
                             x: plotdata.xvalues,
                             y: plotdata.yvalues,
                             type: hasLinearRegression ? 'scatter' : 'bar',
                             name: type,
-                            hovertemplate: `${gsim}<br>${plotdata.xlabel}=%{x}<br>${plotdata.ylabel}=%{y}`
+                            // <extra></extra> hides the second tooltip (white):
+                            hovertemplate: `${gsim}<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
                         };
                         var color = this.addLegend(mainTrace, mainTrace.name); //sets also mainTrace.legendgroup
                         // set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
@@ -158,7 +132,10 @@ Vue.component('residualsplotdiv', {
                                 type: 'scatter',
                                 mode: 'lines',
                                 name: 'Linear regression',
-                                hovertemplate: `${gsim} linear regression<br>slope=${slope}<br>intercept=${intercept}<br>pvalue=${plotdata.pvalue}`
+                                hovertemplate: `${gsim} linear regression` +
+                                	`<br>slope=${slope}<br>intercept=${intercept}<br>pvalue=${plotdata.pvalue}`+
+                                	`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
+                                	`<extra></extra>`
                             }
                             var color = this.addLegend(linregtrace, linregtrace.name, '#331100');
                             linregtrace.line = {color: color};
@@ -174,14 +151,17 @@ Vue.component('residualsplotdiv', {
                             if (hasMeanStdev){
                             
                                 // show normal distribution and reference normal dist. (mean=0 sigma=1)
-                                var x = resample(plotdata.xvalues, granularity=2);
+                                var x = resample(plotdata.xvalues, granularity=5);
                                 var normdistline = {
                                     x: x,
                                     y: normdist(x, plotdata.mean, plotdata.stddev),
                                     type: 'scatter',
                                     mode: 'lines',
                                     name: 'Normal distribution',
-                                    hovertemplate: `${gsim} normal distribution<br>μ=${plotdata.mean}<br>σ=${plotdata.stddev}`
+                                    hovertemplate: `${gsim} normal distribution` +
+                                    	`<br>μ=${plotdata.mean}<br>σ=${plotdata.stddev}` +
+                                    	`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
+                                    	`<extra></extra>`
                                 };
                                 var color = this.addLegend(normdistline, normdistline.name, '#331100');
                                 normdistline.line = {color: color};
@@ -192,7 +172,8 @@ Vue.component('residualsplotdiv', {
                                     type: 'scatter',
                                     mode: 'lines',
                                     name: 'Normal distribution (μ=0, σ=1)',
-                                    hovertemplate: `Reference normal distribution<br>μ=0<br>σ=1`
+                                    hovertemplate: `Standard normal distribution (μ=0, σ=1)` +
+                                    	`<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
                                 };
                                 var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
                                 refnormdistline.line = {color: color};
@@ -208,7 +189,7 @@ Vue.component('residualsplotdiv', {
                                     type: 'scatter',
                                     mode: 'lines',
                                     name: 'Median LH',
-                                    hovertemplate: `${gsim} median=${plotdata.median}`
+                                    hovertemplate: `${gsim} median<br>${xlbl}=${plotdata.median}<extra></extra>`
                                 };
                                 var color = this.addLegend(medianline, medianline.name, '#331100');
                                 medianline.line = {color: color, dash: 'dot'};
