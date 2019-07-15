@@ -71,7 +71,30 @@ Vue.component('residualsplotdiv', {
                    return multiplier * exp(-pow((x-mean), 2)/twoSigmaSquare); 
                 });
             };
-            var resample = function(array, granularity=10){
+            var resample = function(array, granularity=1, uniquesorted=true){
+            	if (uniquesorted){
+	            	var arr = Array.from(new Set(array)).sort((a,b) => a > b ? 1 : a < b ? -1 : 0);
+            	}else{
+            		var arr = array.slice();
+            	}
+            	if (granularity <= 1 || array.length <= 1){
+            		return arr;
+            	}
+            	var newarray = [];
+                for (var i=0; i< arr.length-1; i++){
+                	newarray.push(arr[i]);
+                    var step = (array[i+1] - array[i])/granularity;
+                    for(var j=1; j<granularity; j++){
+                        newarray.push(array[i] + step*j);
+                    }
+                }
+                newarray.push(array[array.length-1]);
+                return newarray;
+            };
+            var resample_ = function(array, granularity=1){
+            	if (granularity === 1){
+            		return array.slice();
+            	}
                 var newarray = array;
                 if (granularity > 1 && array.length > 1){
                     newarray = [];
@@ -87,12 +110,14 @@ Vue.component('residualsplotdiv', {
             };
             var endpoints = function(array){
                 var [min, max] = [undefined, undefined];
-                if (array.length > 0){
-                    min = max = array[0];
-                }
-                for(var i=1; i < array.length; i++){
+                for(var i=0; i < array.length; i++){
                     var val = array[i];
-                    if (val < min){
+                    if (val === null){
+                    	continue;
+                    }
+                    if (min === undefined){ // first loop
+                    	min = max = val;
+                    }else if (val < min){
                         min = val;
                     }else if (val > max){
                         max = val;
@@ -112,7 +137,8 @@ Vue.component('residualsplotdiv', {
                             x: plotdata.xvalues,
                             y: plotdata.yvalues,
                             type: hasLinearRegression ? 'scatter' : 'bar',
-                            name: type
+                            name: type,
+                            hovertemplate: `${gsim}<br>${plotdata.xlabel}=%{x}<br>${plotdata.ylabel}=%{y}`
                         };
                         var color = this.addLegend(mainTrace, mainTrace.name); //sets also mainTrace.legendgroup
                         // set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
@@ -122,11 +148,13 @@ Vue.component('residualsplotdiv', {
                             mainTrace.mode = 'markers';  // hide connecting lines
                             mainTrace.marker.size = 10;
                             // show linear regression according to slope and intercept:
-                            var [min, max] = endpoints(plotdata.xvalues);
+                            // var [min, max] = endpoints(plotdata.xvalues);
                             var [slope, intercept] = [plotdata.slope, plotdata.intercept];
+                            var xreg = resample(plotdata.xvalues);
+                            var yreg = xreg.map(x => x*slope+intercept);
                             var linregtrace = {
-                                x: [min, max],
-                                y: [min*slope+intercept, max*slope+intercept],
+                                x: xreg,
+                                y: yreg,
                                 type: 'scatter',
                                 mode: 'lines',
                                 name: 'Linear regression',
@@ -146,7 +174,7 @@ Vue.component('residualsplotdiv', {
                             if (hasMeanStdev){
                             
                                 // show normal distribution and reference normal dist. (mean=0 sigma=1)
-                                var x = resample(plotdata.xvalues);
+                                var x = resample(plotdata.xvalues, granularity=2);
                                 var normdistline = {
                                     x: x,
                                     y: normdist(x, plotdata.mean, plotdata.stddev),
