@@ -432,6 +432,7 @@ class TrellisForm(GsimImtForm):
 
     # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distance',
+                                 'stddev': 'stdev',
                                  'tr': 'tectonic_region',
                                  'msr': 'magnitude_scalerel',
                                  'lineazi': 'line_azimuth',
@@ -441,6 +442,9 @@ class TrellisForm(GsimImtForm):
                                  **GsimImtForm.__additional_fieldnames__}
 
     plot_type = TrellisplottypeField(label='Plot type')
+    stdev = BooleanField(label='Compute Standard Deviation(s)', required=False,
+                         initial=False)
+
     # GSIM RUPTURE PARAMS:
     magnitude = NArrayField(label='Magnitude(s)', min_count=1)
     distance = NArrayField(label='Distance(s)', min_count=1)

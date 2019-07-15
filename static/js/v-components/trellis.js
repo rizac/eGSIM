@@ -21,7 +21,7 @@ Vue.component('trellis', {
         return {
         	responseData: {},
         	formHidden: false,
-            scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' & key!='sa_period' & key!='plot_type')
+            scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='sa_period' && key!='plot_type' && key!='stdev')
         }
     },
     watch: {
@@ -76,6 +76,7 @@ Vue.component('trellis', {
 
                 <div class="mt-4" style="background-color:transparent">
                     <forminput :form='form' :name='"plot_type"'></forminput>
+                    <forminput :form='form' :name='"stdev"'></forminput>
                 </div>
 
             </div>

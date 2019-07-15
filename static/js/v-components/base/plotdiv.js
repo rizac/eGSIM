@@ -67,9 +67,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 annotations: []
             },
             mouseMode: { // https://plot.ly/python/reference/#layout-hovermode
-	            hovermodes: ["closest", "x", "y", false],
-	            // the labels of hovermodes to be displayed. Copied from plotly modebar after visual test:
-	            hovermodeLabels: {closest: 'show closest point', x: 'show x', y: 'show y', false: 'do nothing'},
+            	// hovermodes (plotly keys). Note that we remove the 'y' key because useless
+	            hovermodes: ["closest", "x", false],
+	            // the labels of hovermodes to be displayed. Copied from plotly modebar after visual test
+	            // (note that we remove  the value associated to 'y' because plotly does not implement it
+	            // and anyway, even providing a mapped label such as 'show y', tests revealed the mode was useless): 
+	            hovermodeLabels: {closest: 'show closest point', x: 'compare data',false: 'do nothing'},
        			dragmodes: ["zoom", "pan"],  // "select", "lasso" are useless. false does not seem to work (it's zoom)
  				dragmodeLabels: {zoom: 'zoom', pan: 'pan'},
        			hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
