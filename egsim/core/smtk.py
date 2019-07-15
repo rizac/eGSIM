@@ -14,7 +14,9 @@ import numpy as np
 from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeIMTTrellis,
                                         DistanceSigmaIMTTrellis,
-                                        MagnitudeSigmaIMTTrellis)
+                                        MagnitudeSigmaIMTTrellis,
+                                        MagnitudeDistanceSpectraTrellis,
+                                        MagnitudeDistanceSpectraSigmaTrellis)
 from smtk.sm_table import GroundMotionTable, records_where
 from smtk.residuals.gmpe_residuals import Residuals
 
@@ -23,21 +25,6 @@ from egsim.core.utils import (vectorize, DISTANCE_LABEL, MOF, OQ,
 
 
 RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept', 'pvalue')
-
-
-def _relabel_sa(string):
-    '''Simplifies SA string representation removing redundant trailing zeros,
-    if present
-    Examples:
-    'SA(1)' -> 'SA(1)' (unchanged)
-    'SA(1.0)' -> 'SA(1.0)' (unchanged)
-    'ASA(1.0)' -> 'ASA(1.0)' (unchanged)
-    'SA(1.00)' -> 'SA(1.0)'
-    'SA(1.000)' -> 'SA(1.0)'
-    'SA(.000)' -> 'SA(.0)'
-    '''
-    return re.sub(r'((?:^|\s|\()SA\(\d*\.\d\d*?)0+(\))(?=($|\s|\)))', r"\1\2",
-                  string)
 
 
 def get_trellis(params):
@@ -49,12 +36,15 @@ def get_trellis(params):
     Z2PT5 = 'z2pt5'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
     IMT = 'imt'  # pylint: disable=invalid-name
+    STDEV = 'stdev'  # pylint: disable=invalid-name
 
     # dip, aspect will be used below, we oparse them here because they are
     # mandatory (FIXME: are they?)
     magnitude, distance, vs30, z1pt0, z2pt5, gsim = \
         params.pop(MAG), params.pop(DIST), params.pop(VS30), \
         params.pop(Z1PT0), params.pop(Z2PT5), params.pop(GSIM)
+    # imt might be None for "spectra" Trellis classes, thus provide None:
+    imt = params.pop(IMT, None)
     magnitudes = np.asarray(vectorize(magnitude))  # smtk wants numpy arrays
     distances = np.asarray(vectorize(distance))  # smtk wants numpy arrays
 
@@ -63,17 +53,16 @@ def get_trellis(params):
     z2pt5s = vectorize(z2pt5)
 
     trellisclass = params.pop('plot_type')
-    isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
-    ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
-    isspectra = not isdist and not ismag
-    if isspectra:  # magnitudedistancetrellis:
-        # imt is actually a vector of periods for the SA. This is misleading in
-        # smtk, might be better implemented (maybe future PR?)
-        imt = _default_periods_for_spectra()
-        params.pop(IMT, None)  # remove IMT and do not raise if not defined
-        imt_names = ['SA']
-    else:
-        imt = imt_names = params.pop(IMT)  # this raises if IMT is not in dict
+
+    # define stddev trellis class if the parameter stdev is true
+    stdev_trellisclass = None  # do not compute stdev (default)
+    if params.get(STDEV, False):
+        if trellisclass == DistanceIMTTrellis:
+            stdev_trellisclass = DistanceSigmaIMTTrellis
+        elif trellisclass == MagnitudeIMTTrellis:
+            stdev_trellisclass = MagnitudeSigmaIMTTrellis
+        elif trellisclass == MagnitudeDistanceSpectraTrellis:
+            stdev_trellisclass = MagnitudeDistanceSpectraSigmaTrellis
 
     def jsonserialize(value):
         '''serializes a numpy scalr into python scalar, no-op if value is not
@@ -84,8 +73,9 @@ def get_trellis(params):
             return value
 
     ret = None
+    isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
+    ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
     figures = defaultdict(list)
-    col_key, row_key = 'column', 'row'
     for vs30, z1pt0, z2pt5 in zip(vs30s, z1pt0s, z2pt5s):
         params[VS30] = vs30
         params[Z1PT0] = z1pt0
@@ -103,55 +93,137 @@ def get_trellis(params):
             distiter = zip(distances, distances) if ismag else \
                 zip([None], [distances])
             for dist, dists in distiter:
-                trellis_obj = trellisclass.from_rupture_properties(params,
-                                                                   mags,
-                                                                   dists,
-                                                                   gsim,
-                                                                   imt)
-                
-                data = trellis_obj.to_dict()
-                #
-                # data = {
-                #    xlabel: string
-                #    xvalues: list of floats
-                #    figures: [
-                #        ylabel:
-                #        magnitude:
-                #        distance:
-                #        row:
-                #        column:
-                #        yvalues:
-                #    ]
-                # }
+                data = _get_trellis_dict(trellisclass, params, mags, dists,
+                                         gsim, imt)
+                stdev_data = None
+                if stdev_trellisclass is not None:
+                    stdev_data = _get_trellis_dict(stdev_trellisclass,
+                                                   params, mags, dists,
+                                                   gsim, imt)
+                    # convert the list to a dict with keys the imt
+                    # (each list element is mapped to a specified imt so this
+                    # is safe):
+                    stdev_data['figures'] = {_['_key']: _
+                                             for _ in stdev_data['figures']}
+
                 if ret is None:
                     ret = {
                         'xlabel': _relabel_sa(data['xlabel']),
                         'xvalues': data['xvalues']
                     }
-                # get the imt. Unfortunately, the imt is "hidden"
-                # within each data.figures.ylabel, thus we have to
-                # re-evaluate them using trellis_obj._get_ylabel,
-                # which is what smtk uses
-                if not isspectra:
-                    ylabel2imt = {trellis_obj._get_ylabel(_): _ for _ in imt}
 
                 src_figures = data['figures']
                 for fig in src_figures:
-                    fig.pop(col_key, None)
-                    fig.pop(row_key, None)
                     fig[VS30] = jsonserialize(vs30)
                     fig[MAG] = jsonserialize(fig.get(MAG, mag))
                     fig[DIST] = jsonserialize(fig.get(DIST, dist))
-                    imt_name = \
-                        'SA' if isspectra else ylabel2imt[fig['ylabel']]
+                    fig['stdvalues'] = {}
+                    fig['stdlabel'] = ''
+                    # now search for the
+                    fig_key = fig.pop('_key')
+                    if stdev_data is not None:
+                        std_fig = stdev_data['figures'].get(fig_key, {})
+                        fig['stdvalues'] = std_fig.get('yvalues', {})
+                        fig['stdlabel'] = std_fig.get('ylabel', '')
+                    imt_name = fig.pop('imt')
                     figures[imt_name].append(fig)
-                    # change labels SA(1.0000) into SA(1.0) but at the end
-                    # because the ylabel might have been used
-                    # as key (see line above)
-                    fig['ylabel'] = _relabel_sa(fig['ylabel'])
 
+    imt_names = imt if (ismag or isdist) else ['SA']
     # re-arrange labels FIXME: implement it in smtk?
     return {**ret, **{'imts': imt_names}, **figures}
+
+
+def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):
+    '''Compute the Trellis plot for a single set of eGSIM parameters
+    '''
+    isspectra = trellis_class in (MagnitudeDistanceSpectraTrellis,
+                                  MagnitudeDistanceSpectraSigmaTrellis)
+    trellis_obj = \
+        trellis_class.from_rupture_properties(params,
+                                              mags,
+                                              dists,
+                                              gsim,
+                                              _default_periods_for_spectra()
+                                              if isspectra else imt)
+    data = trellis_obj.to_dict()
+    # NOTE:
+    # data = {
+    #    xlabel: str
+    #    xvalues: numeric_list
+    #    figures: [
+    #        {
+    #            ylabel: str
+    #            row: ? (will be removed)
+    #            column: ? (will be removed)
+    #            yvalues: {
+    #                gsim1 : numeric_list,
+    #                ...
+    #                gsimN: numeric_list
+    #            }
+    #        },
+    #        ...
+    #    ]
+    # }
+
+    # We want to get each nested object with these proeprties:
+    #        {
+    #            ylabel: str (same as above, but delete trailing zeroes in IMT)
+    #            key: int, str (depends on context) unique id
+    #            imt: str (the imt)
+    #            yvalues: dict (same as above)
+    #        },
+
+    # get the imt. Unfortunately, the imt is "hidden"
+    # within each data.figures.ylabel, thus we have to
+    # re-evaluate them using trellis_obj._get_ylabel,
+    # which is what smtk uses.
+    ylabel2imt = {} if isspectra else \
+        {trellis_obj._get_ylabel(_): _ for _ in imt}
+    # ylabel2imt is NOT used if `isspectra=True`, because the plot ylabel
+    # is always the same and does not have information about the imt
+    # (which is by the way always 'SA').
+
+    # Fast bug in smtk
+    # whereby the figures 'ylabel' is 'Sa (g)' instead of 'Total Std Dev'
+    # for MagnitudeDistanceSpectraSigmaTrellis. FIX here:
+    fix_spectra_stdev_label = ''
+    if isinstance(trellis_obj, MagnitudeDistanceSpectraSigmaTrellis):
+        # the argument is not used so provide whatever (we use ''):
+        fix_spectra_stdev_label = trellis_obj._get_ylabel('')
+
+    src_figures = data['figures']
+    for fig in src_figures:
+        fig.pop('column', None)
+        fig.pop('row', None)
+        fig['imt'] = ylabel2imt[fig['ylabel']] if not isspectra else 'SA'
+        # set a key to uniquely identify the figure: in case os spectra,
+        # we trust the (magnitude, distance) pair. Otherwise, the IMT:
+        fig['_key'] = (fig['magnitude'], fig['distance']) if isspectra else \
+            fig['imt']
+        # fix for the MagnitudeDistanceSpectraSigmaTrellis bug:
+        ylabel = fix_spectra_stdev_label if fix_spectra_stdev_label else \
+            fig['ylabel']
+        # change labels SA(1.0000) into SA(1.0) but at the end
+        # because the ylabel might have been used
+        # as key (see line above)
+        fig['ylabel'] = _relabel_sa(ylabel)
+
+    return data
+
+
+def _relabel_sa(string):
+    '''Simplifies SA string representation removing redundant trailing zeros,
+    if present
+    Examples:
+    'SA(1)' -> 'SA(1)' (unchanged)
+    'SA(1.0)' -> 'SA(1.0)' (unchanged)
+    'ASA(1.0)' -> 'ASA(1.0)' (unchanged)
+    'SA(1.00)' -> 'SA(1.0)'
+    'SA(1.000)' -> 'SA(1.0)'
+    'SA(.000)' -> 'SA(.0)'
+    '''
+    return re.sub(r'((?:^|\s|\()SA\(\d*\.\d\d*?)0+(\))(?=($|\s|\)))', r"\1\2",
+                  string)
 
 
 def _default_periods_for_spectra():

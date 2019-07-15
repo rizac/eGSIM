@@ -676,6 +676,18 @@ class TrellisView(RESTAPIView):
                     obj['vs30'], obj['ylabel']
                 for gsim, values in obj['yvalues'].items():
                     yield chain([imt, gsim, mag, dist, vs30, ylabel], values)
+        # print standard deviations. Do it once for all at the end as we think
+        # it might be easier for a user using Excel or LibreOffice, than having
+        # each gsim with 'yvalues and 'stdvalues' next to each other
+        for imt in process_result['imts']:
+            imt_objs = process_result[imt]
+            for obj in imt_objs:
+                mag, dist, vs30, ylabel = obj['magnitude'], obj['distance'],\
+                    obj['vs30'], obj['stdlabel']
+                for gsim, values in obj['stdvalues'].items():
+                    # the dict we are iterating might be empty: in case
+                    # do not print anything
+                    yield chain([imt, gsim, mag, dist, vs30, ylabel], values)
 
 
 class GmdbPlotView(RESTAPIView):  # pylint: disable=abstract-method

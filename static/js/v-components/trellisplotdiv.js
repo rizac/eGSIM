@@ -58,7 +58,16 @@ Vue.component('trellisplotdiv', {
             // a dict of y axis properties. See documentation for 'xaxis'
             // above for details, just replace 'xaxis' with 'yaxis'.
 
-            // setup  label texts:
+			var ln10 = Math.log(10);
+			var mathlog = Math.log;
+			function log10(val) {  // https://stackoverflow.com/a/3019290
+  				return mathlog(val) / ln10;
+			}
+			var mathpow = Math.pow;
+			var pow10 = elm => mathpow(10, elm);
+
+			// setup  label texts:
+            var colorMap = Vue.colorMap();
             var data = responseObject;
             var plots = [];
             for (var imt of data.imts){
@@ -69,14 +78,16 @@ Vue.component('trellisplotdiv', {
                     params.magnitude = fig.magnitude;
                     params.distance = fig.distance;
                     params.vs30 = fig.vs30;
-                    
-                    var traces = Object.keys(fig.yvalues).map(function(name){
+                    var traces = [];
+                    Object.keys(fig.yvalues).map(function(name){
                         // FIXME: check if with arrow function we can avoid apply and this
                         // to test that plots are correctly placed, uncomment this:
                         // var name = `${name}_${params.magnitude}_${params.distance}_${params.vs30}`;
+                        var yvalues = fig.yvalues[name];
                         var trace = {
                                 x: data.xvalues,
-                                y: fig.yvalues[name],
+                                hovertemplate: `${name}<br>${data.xlabel}: %{x}<br>${fig.ylabel}: %{y}<extra></extra>`,
+                                y: yvalues,
                                 type: 'scatter',
                                 mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
                                 name: name
@@ -87,7 +98,45 @@ Vue.component('trellisplotdiv', {
                         }else{
                             trace.line = {color: color, width: 3};
                         }
-                        return trace;
+
+						var _traces = [trace];
+                        // add stdev if present:
+                        var stdev = (fig.stdvalues || {})[name];
+                        if (stdev && stdev.length){
+                        	//copy the trace Object (shallow except the 'y' property, copied deeply):
+                        	var _traces = [
+                        		trace,
+                        		Object.assign({}, trace, {y:  yvalues.slice()}),
+                        		Object.assign({}, trace, {y:  yvalues.slice()})
+                        	];
+                        	// put new values:
+                            stdev.forEach((std, index) => {
+                            	if (std === null || _traces[1].y[index] === null){
+                            		_traces[1].y[index] = null;
+                            		_traces[2].y[index] = null;
+                            	}else{
+	                                _traces[1].y[index] = pow10(log10(_traces[1].y[index]) + std);
+		                            _traces[2].y[index] = pow10(log10(_traces[2].y[index]) - std);
+		                        }
+                            });
+                            // Values are now ok, now arrange visual stuff:
+                            var colorT = colorMap.transparentize(color, 0.2);
+                            for (var i of [2]){
+                            	_traces[i].fill = 'tonexty'; // which actually fills to PREVIOUS TRACE!
+                            }
+                            for (var i of [1, 2]){
+                            	_traces[i].line = {width: 0, color: color};  // the color here will be used in the label on hover
+                            	_traces[i].fillcolor = colorT;
+                            	var info = i==1 ? `value computed as 10<sup>log(${imt})+σ</sup>` : `value computed as 10<sup>log(${imt})-σ</sup>`;
+                            	_traces[i].hovertemplate = `${name}<br>${data.xlabel}: %{x}<br>${fig.ylabel}: %{y}<br><i>(${info})</i><extra></extra>`;
+                            }
+                        }
+
+                        // put traces into array:
+                        for (var t of _traces){
+                        	traces.push(t);
+                        }
+                        
                     }, this);
                     plots.push({
                         traces: traces,

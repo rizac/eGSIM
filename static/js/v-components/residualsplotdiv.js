@@ -129,7 +129,8 @@ Vue.component('residualsplotdiv', {
                                 y: [min*slope+intercept, max*slope+intercept],
                                 type: 'scatter',
                                 mode: 'lines',
-                                name: 'Linear regression'
+                                name: 'Linear regression',
+                                hovertemplate: `${gsim} linear regression<br>slope=${slope}<br>intercept=${intercept}<br>pvalue=${plotdata.pvalue}`
                             }
                             var color = this.addLegend(linregtrace, linregtrace.name, '#331100');
                             linregtrace.line = {color: color};
@@ -151,7 +152,8 @@ Vue.component('residualsplotdiv', {
                                     y: normdist(x, plotdata.mean, plotdata.stddev),
                                     type: 'scatter',
                                     mode: 'lines',
-                                    name: 'Normal distribution'
+                                    name: 'Normal distribution',
+                                    hovertemplate: `${gsim} normal distribution<br>μ=${plotdata.mean}<br>σ=${plotdata.stddev}`
                                 };
                                 var color = this.addLegend(normdistline, normdistline.name, '#331100');
                                 normdistline.line = {color: color};
@@ -161,7 +163,8 @@ Vue.component('residualsplotdiv', {
                                     y: normdist(x, 0, 1),
                                     type: 'scatter',
                                     mode: 'lines',
-                                    name: 'Normal distribution (μ=0, σ=1)'
+                                    name: 'Normal distribution (μ=0, σ=1)',
+                                    hovertemplate: `Reference normal distribution<br>μ=0<br>σ=1`
                                 };
                                 var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
                                 refnormdistline.line = {color: color};
@@ -176,7 +179,8 @@ Vue.component('residualsplotdiv', {
                                     y: [0, max],
                                     type: 'scatter',
                                     mode: 'lines',
-                                    name: 'Median LH'
+                                    name: 'Median LH',
+                                    hovertemplate: `${gsim} median=${plotdata.median}`
                                 };
                                 var color = this.addLegend(medianline, medianline.name, '#331100');
                                 medianline.line = {color: color, dash: 'dot'};
