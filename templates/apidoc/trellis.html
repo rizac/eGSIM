@@ -32,13 +32,10 @@ separate text data in JSON or YAML format (POST method) and are:
 	<tfoot>
 	<tr><td colspan='2'>Notes:</td></tr>
 	<tr><td colspan='2'> "SA" in {{ data.form.imt.name }} must be provided
-		with the given period in parentheses, e.g. "SA(0.2)".
+		with the given period in parentheses, e.g. "SA(0.2)", "SA(0.1) SA(0.2)".
 		If {{ data.form.plot_type.name }} is
 		<code>{{ data.form.plot_type.choices.2.0 }}</code>
-		 or
-		<code>{{ data.form.plot_type.choices.5.0 }}</code>
-		(<code>{{ data.form.plot_type.choices.2.1 }}</code> or
-		<code>{{ data.form.plot_type.choices.5.1 }}</code>), then
+		(<code>{{ data.form.plot_type.choices.2.1 }}</code>), then
 		<code>{{ data.form.imt.name }}</code> will
 		default to 'SA' with a set of pre-defined periods: any value
 		explicitly provided by the user will thus be ignored in case.
