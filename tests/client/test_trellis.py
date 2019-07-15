@@ -26,18 +26,25 @@ class Test:
     GSIM, IMT = 'gsim', 'imt'
 
     def get_figures(self, result):
+        '''Returns a list of dicts scanning recursively `result` (the json
+        output of a trellis request), where each dict represents
+        a trellis plot and has the keys:
+        ylabel, yvalues, vs30, magnitude, distance, stdevs
+        '''
         ret = []
         for imt_ in result['imts']:
             ret.extend(result[imt_])
         return ret
 
-    @pytest.mark.parametrize('trellis_type', ['d', 'ds'])
-    def test_trellis_dist(self,
+    @pytest.mark.parametrize('st_dev', [False, True])
+    def tst_trellis_dist(self,
                           # pytest fixtures:
-                          client, testdata, areequal, trellis_type):
+                          client, testdata, areequal,
+                          # parametrized argument:
+                          st_dev):
         '''test trellis distance and distance stdev'''
         inputdic = dict(testdata.readyaml(self.request_filename),
-                        plot_type=trellis_type)
+                        plot_type='d', stdev=st_dev)
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -52,6 +59,14 @@ class Test:
         xvalues = result['xvalues']
         assert len(xvalues) == len(input_['distance']) + 1  # FIXME: should be len(distance)!!!
         figures = self.get_figures(result)
+        if st_dev:
+            # assert we wrtoe the stdevs:
+            assert all(_['stdvalues'] for _ in figures)
+            assert all(_['stdlabel'] for _ in figures)
+        else:
+            # assert we did NOT write stdevs:
+            assert not any(_['stdvalues'] for _ in figures)
+            assert not any(_['stdlabel'] for _ in figures)
         assert len(figures) == len(input_['magnitude']) * len(input_['imt'])
         for fig in figures:
             yvalues = fig['yvalues']
@@ -64,13 +79,15 @@ class Test:
         assert resp2.status_code == 200
         assert re.search(self.csv_expected_text, resp2.content)
 
-    @pytest.mark.parametrize('trellis_type', ['m', 'ms'])
-    def test_trellis_mag(self,
+    @pytest.mark.parametrize('st_dev', [False, True])
+    def tst_trellis_mag(self,
                          # pytest fixtures:
-                         client, testdata, areequal, trellis_type):
+                         client, testdata, areequal,
+                         # parametrized argument:
+                         st_dev):
         '''test trellis magnitude and magnitude stdev'''
         inputdic = dict(testdata.readyaml(self.request_filename),
-                        plot_type=trellis_type)
+                        plot_type='m', stdev=st_dev)
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -85,6 +102,14 @@ class Test:
         xvalues = result['xvalues']
         assert len(xvalues) == len(input_['magnitude'])
         figures = self.get_figures(result)
+        if st_dev:
+            # assert we wrtoe the stdevs:
+            assert all(_['stdvalues'] for _ in figures)
+            assert all(_['stdlabel'] for _ in figures)
+        else:
+            # assert we did NOT write stdevs:
+            assert not any(_['stdvalues'] for _ in figures)
+            assert not any(_['stdlabel'] for _ in figures)
         assert len(figures) == len(input_['distance']) * len(input_['imt'])
         for fig in figures:
             yvalues = fig['yvalues']
@@ -155,14 +180,16 @@ class Test:
         }
         assert areequal(resp3.json(), expected_json)
 
-    @pytest.mark.parametrize('trellis_type', ['s', 'ss'])
+    @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis_spectra(self,
                              # pytest fixtures:
-                             client, testdata, areequal, trellis_type):
+                             client, testdata, areequal,
+                             # parametrized argument:
+                             st_dev):
         '''test trellis magnitude-distance spectra and magnitude-distance
         stdev'''
         inputdic = dict(testdata.readyaml(self.request_filename),
-                        plot_type=trellis_type)
+                        plot_type='s', stdev=st_dev)
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -176,6 +203,14 @@ class Test:
         xvalues = result['xvalues']
         assert len(xvalues) == len(_default_periods_for_spectra())
         figures = self.get_figures(result)
+        if st_dev:
+            # assert we wrtoe the stdevs:
+            assert all(_['stdvalues'] for _ in figures)
+            assert all(_['stdlabel'] for _ in figures)
+        else:
+            # assert we did NOT write stdevs:
+            assert not any(_['stdvalues'] for _ in figures)
+            assert not any(_['stdlabel'] for _ in figures)
         assert len(figures) == \
             len(input_['distance']) * len(input_['magnitude'])
         for fig in figures:
