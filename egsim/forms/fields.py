@@ -342,10 +342,10 @@ class TrellisplottypeField(ChoiceField):
         'd': ('IMT vs. Distance', DistanceIMTTrellis),
         'm': ('IMT vs. Magnitude', MagnitudeIMTTrellis),
         's': ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis),
-        'ds': ('IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
-        'ms': ('IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
-        'ss': ('Magnitude-Distance Spectra  (st.dev)',
-               MagnitudeDistanceSpectraSigmaTrellis)
+        # 'ds': ('IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
+        # 'ms': ('IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
+        # 'ss': ('Magnitude-Distance Spectra  (st.dev)',
+        #        MagnitudeDistanceSpectraSigmaTrellis)
     }
 
     def __init__(self, **kwargs):

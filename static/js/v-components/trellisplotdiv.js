@@ -86,7 +86,9 @@ Vue.component('trellisplotdiv', {
                         var yvalues = fig.yvalues[name];
                         var trace = {
                                 x: data.xvalues,
-                                hovertemplate: `${name}<br>${data.xlabel}: %{x}<br>${fig.ylabel}: %{y}<extra></extra>`,
+                                // <extra></extra> hides the second tooltip (white):
+                                hovertemplate: `${name}<br>${data.xlabel}=%{x}<br>` +
+                                	`${fig.ylabel}=%{y}<extra></extra>`,
                                 y: yvalues,
                                 type: 'scatter',
                                 mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
@@ -128,7 +130,8 @@ Vue.component('trellisplotdiv', {
                             	_traces[i].line = {width: 0, color: color};  // the color here will be used in the label on hover
                             	_traces[i].fillcolor = colorT;
                             	var info = i==1 ? `value computed as 10<sup>log(${imt})+σ</sup>` : `value computed as 10<sup>log(${imt})-σ</sup>`;
-                            	_traces[i].hovertemplate = `${name}<br>${data.xlabel}: %{x}<br>${fig.ylabel}: %{y}<br><i>(${info})</i><extra></extra>`;
+                            	_traces[i].hovertemplate = `${name}<br>${data.xlabel}=%{x}<br>${fig.ylabel}=%{y}` + 
+                            		`<br><i>(${info})</i><extra></extra>`;
                             }
                         }
 

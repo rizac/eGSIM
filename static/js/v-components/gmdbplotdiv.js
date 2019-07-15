@@ -62,29 +62,32 @@ Vue.component('gmdbplotdiv', {
             var jsondict = responseObject;
             // set plotly data from jsondict:
             var trace = {
-                    x: jsondict['xvalues'],
-                    y: jsondict['yvalues'],
+                    x: jsondict.xvalues,
+                    y: jsondict.yvalues,
                     mode: 'markers',
                     type: 'scatter',
-                    text: jsondict['labels'] || [],
-                    marker: { size: 10, color: this.colorMap.transparentize(0, .5) }
+                    text: jsondict.labels || [],
+                    marker: { size: 10, color: this.colorMap.transparentize(0, .5) },
+                    // <extra></extra> hides the second tooltip (white):
+                    hovertemplate: `${jsondict.xlabel}=%{x}<br>${jsondict.ylabel}=%{y}`+
+                        `<extra></extra>`
                   };
             // modify here the defaut layout:
             // this.defaultlayout.title = `Magnitude Distance plot (${trace.x.length} records in database)`;
             var data = [ trace ];
             var xaxis = {
                 type: 'log',
-                title: jsondict['xlabel']
+                title: jsondict.xlabel
             };
             var yaxis = {
-                title: jsondict['ylabel']
+                title: jsondict.ylabel
             };
             // build the params. Setting just a single param allows us to
             // display a sort of title on the x axis:
             var numFormatted = trace.x.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); //https://stackoverflow.com/a/2901298
             var title = `${numFormatted} records`;
-            if (jsondict['nan_count']){
-                title += ' (' + jsondict['nan_count'] + ' NaN records not shown)';
+            if (jsondict.nan_count){
+                title += ' (' + jsondict.nan_count + ' NaN records not shown)';
             }
             var params = {'Magnitude Distance plot': title};
             return [{traces: [trace], params: params, xaxis: xaxis, yaxis: yaxis}];
