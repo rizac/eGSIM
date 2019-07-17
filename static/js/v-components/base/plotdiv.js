@@ -192,6 +192,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             <div
             	v-show='legendNames.length'
             	class='flexible mt-3 border p-2 bg-white'
+            	style='overflow: auto'
             >
                 <div>Legend</div>
                 <div v-for="traceName in legendNames">

@@ -1,47 +1,48 @@
-<p><b>Endpoint: <code>{{ baseurl }} / {{ data.path }}</code></b></p>
+<p><b>Endpoint: <code>{{ baseurl }}/{{ data.path }}</code></b></p>
 <p>
-This simple service performs a GMPE selection based on several filtering parameter,
-including matching tectonic regions defined in specified Area source (or Tectonic region) models.
+This simple service performs a GSIM selection based on several filtering parameters provided in the request.
 </p>
 
 <h3 id="{{ data.key }}_request">Request</h3>
 <p>
-A request to the GSIM selection service does not require any mandatory parameter: in case, all
-OpenQuake's available GMPEs will be returned. This rather trivial search is usually refined
-by specifying the desired GMPE names, IMTs or tectonic
-region types (TRT): all parameter values (strings) may include specific wildcard characters 
-with special meanings (see <a href="https://docs.python.org/3/library/fnmatch.html" target='_blank'>here</a>
-for details). In case of IMTs and TRTs, the GMPEs defined for any of the selected
-intensity measure types and tectonic regions will be returned.
-The search can be refined by specifying a tectonic region model (currently implemented
+A Request to this endpoint will return in response all
+OpenQuake's available GSIMs matching the request parameters (strings).
+Within each parameter, multiple values (e.g., <span class='token string'>imt=PGA,PGV</span>)
+will return the GSIMs matching <i>any</i> of those values (i.e., all GSIMs defined for PGA <b>or</b> PGV).
+However, the returned GSIMs will be those matching all provided parameters (e.g.: <span class='token string'>imt=PGA,PGV</span>
+and <span class='token string'>gsim=A*</span> will return all GSIM starting with 'A' <b>and</b> defined for either
+PGA or PGV).
+</p>
+<p>
+The search can be refined by specifying a tectonic region model (TRM, currently implemented
 is only <a href="http://www.efehr.org/en/Documentation/specific-hazard-models/europe/seismogenic-sources/"
 target='_blank'>SHARE</a>) and a location on earth (or a rectangular region): in this case,
-the TRTs will be further filtered based on the model's tectonic regions including that point
+the TRTs will be chosen based on the model's tectonic regions including that point
 (or intersecting the rectangle).
-eGSIM currently does not exploit any model-defined mapping between TRTs and GMPEs, but simply
-utilizes the tectonic regions defined on each GMPE in OpenQuake.
-
-As discussed, parameters can be given in the endpoint URL (GET method) or as
-separate text data in JSON or YAML format (POST method) and are:
 </p>
 
 <table class='request'>
 	{% include "apidoc/request_template.html" with form=data.form %}
-	<tfoot>
-	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'> {{ data.form.gsim.name }} and 
-		{{ data.form.imt.name }}
+</table>
+
+<div class='footnote'>
+Notes:
+<ul>
+	<li> {{ data.form.gsim.name }}, {{ data.form.imt.name }} and {{ data.form.trt.name }}
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
-		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
-	</td></tr>
-	</tfoot>
-</table>
+		eGSIM will then select all matching items (wildcards are not implemented in the GUI)
+
+</ul>
+
+</div>
 
 
 <h3 id="{{ data.key }}_reqsponse">Response</h3>
 <p>
-The list of selected GMPEs will be returned as JSON-formatted array of strings or as CSV. In the
-latter case, the user can choose the orientation (vertical vs. horizontal) for e.g.,
-better visualization.
+The list of selected GSIMs will be returned as JSON-formatted array of strings or as CSV. In the
+latter case, the list of matching GSIM is returned in a simple vertical text list (one line per GSIM).
+Consequently, when {{ egsim_data.FORMAT.form.format.name }}=text, 
+specifying {{ egsim_data.FORMAT.form.text_sep.name }} and
+{{ egsim_data.FORMAT.form.text_dec.name }} with  will have no effect.
 </p>
