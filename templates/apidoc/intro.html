@@ -1,18 +1,28 @@
 <p>
-eGSIM is implemented along the lines of typical seismological web services (see e.g. the
-<a target="_blank" href="https://www.fdsn.org/webservices/FDSN-WS-Specifications-1.1.pdf">FDSN protocol</a>):
-<i>requests</i> can be issued by a client (eGSIM user) in several ways such as e.g. command line
-applications like <code>wget</code> or inside client code with dedicated libraries
-(e.g. Python's <code>urllib.request</code>). Requests require an endpoint, i.e. an URL denoting
-a specific service, a method (GET vs POST) and usually parameters for tuning the functionality.
+eGSIM is a
+<a target='_blank' href='https://en.wikipedia.org/wiki/Representational_state_transfer#Applied_to_Web_services'>REST API</a>:
+i.e., along the lines of popular seismological web services (see e.g. the
+<a target="_blank" href="https://www.fdsn.org/webservices/FDSN-WS-Specifications-1.1.pdf">FDSN protocol</a>),
+it can be used via <i>requests</i> issued by a client (eGSIM user) in several ways such as e.g.
+the browser GUI, command line applications like <code>wget</code> or client code 
+(e.g. Python's <code>urllib.request</code>). Requests require:
+</p>
+<ol>
+<li>An endpoint, i.e. an URL denoting a specific service
+<li>A method (GET vs POST) defining the type of request, 
+<li>Parameters for customizing the desired response data
+</ol>
+<p>
 The web server processes the request and returns a <i>response</i> to the client in specific
-formats described in the remainder of this document.
+formats.
+This document describes eGSIM request and responses in details to help the user working
+with the API.
 </p>
 
 
 <h3 id="requestendpoints">Requests endpoints</h3> 
 <p>
-The following base URI pattern is to be used for each request:
+The following base URI pattern has to be used for each request:
 </p>
 
 <p>
@@ -20,9 +30,8 @@ The following base URI pattern is to be used for each request:
 </p>
 
 <p>
-where {{ baseurl }} is the first part of the eGSIM URL including the starting <code>http://</code> (or <code>https://</code>)
-and up to the first slash character "/", e.g. <code>http://egsim.org</code>
- ({{ baseurl }} is the first portion of the browser address of this page, if you are viewing this document online)
+where {{ baseurl }} is the base eGSIM URL (if you are viewing this document online, {{ baseurl }}
+is the browser address without the last "/apidoc" part)
 
 and <code>&lt;service&gt;</code> is one of the following:
 </p>
@@ -36,11 +45,10 @@ and <code>&lt;service&gt;</code> is one of the following:
 
 <h3 id="requestmethods">Requests methods</h3>
 <p>
-eGSIM services will be invoked using a subset of REST and HTTP methods. In particular all services
-can be invoked using the HTTP GET or POST methods, the latter being more suitable for the 
-cases where the selection parameters are potentially large in size (typically, POST request
-are used to send data to create/update a resource on the server. Unless otherwise stated,
-this is generally not the case here).
+eGSIM services can be invoked using the two standard HTTP methods: GET or POST.
+Typically, POST request are defined to send data to create/update a resource on the server.
+In eGSIM, both methods perform the same task of querying data. We suggest to use
+the GET method for simple reuqests with few parameters, and POST otherwise.
 </p>
 
 <h4>GET method</h4>
@@ -54,30 +62,48 @@ values directly in the URL:
 </p>
 
 <p>
-Where the portion of string after the question mark ? is called <i>query string</i>.
-Parameter names can be provided multiple times in the query string. In case, the result
-will be obtained by merging all matching values. Alternatively, the user can supply
-comma-separated list of values to obtain the same effect.
-Each parameter value might contain any alpha numeric character (a to z, A to Z, 0 to 9)
-and the following characters (some of which might have
-<a href='#requestparameters'>special meanings</a>): <code>{{ query_params_safe_chars }}</code>
-
-<p class='footnote'>Note: The set of characters above currently covers most of the needs of
-eGSIM users. Other characters should be 
+The portion of string after the question mark ? is called <i>query string</i>: as you can see,
+come characters are not <i>safe</i>, because they have special meanings and
+they will not be interpreted as they are (e.g. <span class='token string'>&amp;</span>)
+. The only safe characters are the alphanumeric ones (letter lower or uppercase, and numbers),
+all other characters should be
 <a href="https://en.wikipedia.org/wiki/Percent-encoding" target='_blank'>percent encoded</a>.
-For Python users, see the function <a href='https://docs.python.org/3/library/urllib.parse.html#url-quoting'>quote</a>
-and similar.
+E.g., in Python you can use the <code>urllib's quote</code> function:
 </p>
+<pre><code class="language-python">from urllib.parse import quote
+dip = 60.5
+vs30 = [700, 800]
+# convert to strings:
+dips = str(dip)  # "60.5"
+vs30s = ",".join(str(_) for _ in vs30)  # "700,800"
+# build query string:
+query_str = '?' + 'dip=' + quote(dips, '') + '&amp;' + 'vs30=' + quote(vs30s, '')
+</code></pre>
+<p>
+Percent encoding the parameters in a GET request can become quite cumbersome
+for complex parameter sets. In case,
+the user might be interested to issue POST requests instead.
+</p>
+<p class='footnote'>
+Note: These characters are <i>very likely</i> to be safe, but we cannot guarantee
+they will always be (do not encode them at your risk):
+</p>
+<p class='footnote'>
+<span class='token string'>{{ query_params_safe_chars }}</span>
+</p>
+
+
 
 <h4>POST method</h4>
 <p>
-Requests issued with the POST method should use the usual URI pattern:
+Requests issued with the POST method should use the usual URL pattern:
 <code>{{ baseurl }}/&lt;service&gt;</code>
 and provide the parameters set by means of additional data as text in
 <a target="_blank" href="https://en.wikipedia.org/wiki/JSON#Data_types.2C_syntax_and_example">JSON</a> or
 <a target="_blank" href="https://en.wikipedia.org/wiki/YAML#Example">YAML</a> format.
-The way the POST request has to be built with its data is responsibility of the user
-as it depends on the client software. For instance, this code snippet shows how to build a request using Python (see 
+This releases the user from encoding parameters and avoids writing long query strings
+as all parameters are provided in an external file. How to create a POST request
+depends  on the software or programming language used. Here a code snippet for Python (see 
 <a href='https://docs.python.org/3/howto/urllib2.html' target="_blank">HOWTO Fetch Internet Resources Using The urllib Package</a> for details):
 </p>
 
@@ -108,17 +134,14 @@ req = Request("write here your eGSIM endpoint URL", data=yamldata)</code></pre>
 <h3 id="requestparameters">Request parameters</h3>
 
 <p>
-Request parameters can be input in three ways: in the URL of a GET request, in a YAML- or
-JSON-formatted text file in case of POST request, or via input components of the
-web Graphical User Interface (GUI) through a web browser.
-eGSIM supports the following parameter types:
+eGSIM supports the following parameter types in a request:
 </p>
 
 
 <ul>
 <li>numeric
-<li>string
-<li>boolean
+<li>text (denoted as <code>string</code>)
+<li>boolean (<code>true</code> or <code>false</code>)
 <li>UTC date-time (in ISO format without timezone, e.g.:
 <code>2016-01-30T23:15:11</code> or <code>2016-01-31</code>)
 <li>arrays (vectors) of the previous types
@@ -129,45 +152,27 @@ eGSIM supports the following parameter types:
 </ul>
 
 <p>
-For POST requests, most types are supported in YAML and JSON <i>except</i> numeric ranges, which must be
-input as strings with quotes (e.g. <code>"0:0.1:0.3"</code>).
-JSON does <b>not</b> support also date-times, which thus need 
-to be input in the same way, e.g.: <code>"2016-01-31T23:15:00"</code> (in YAML, date-times as quoted
-strings are permitted but not mandatory).
-</p>
-
-<p>
-For GET request URLs, aside colons (:) for numeric ranges,
-<b>commas (,)</b> act as element separators in array strings. The user can also supply the same
-parameter name multiple times with different values. Besides alpha-numeric characters,
-always safe, remember to percent-encode all characters 
-non  not in <code>{{ query_params_safe_chars }}</code>. 
-In any case, no parameter value needs to be quoted.
-</p>
-
-<p>
-From within an input component of the Web GUI, aside colons (:) for numeric ranges,
-<b>commas (,) or spaces</b> act as element separators in array string. Arrays can be input 
-with or without leading and trailing square brackets '[' ']'.
-In both cases, no parameter value needs to be quoted.
-</p>
-
-<p>
- For instance, assuming a general <code>example</code> service requiring
-three numeric parameters (dip, scalar, Vs<sub>30</sub>, array and ranges of
-magnitudes) the user input, depending on the request's method, should look like:
+<b>Example</b> assuming a service with endpoint <code>http://egsim.org/example</code>, requiring
+three numeric parameters (dip, Vs<sub>30</sub>, mag, start) with different
+types (e.g., dip numeric scalar, Vs<sub>30</sub> and mag numeric scalar or array,
+start date-time).
+This is how the user request might look like:
 </p>
 
 <table>
 <tr>
 	<td>GET</td>
-	<td colspan="2"><code>{{ baseurl }}/example?dip=45&vs30=560,760&magnitude=3:0.5:5</code></td>
+	<td colspan="2">http://egsim.org/example?dip=45&vs30=560,760&mag=3:0.5:5&start=2016-12-31T12:00:00</td>
+<tr>
+</tr>
+	<td>GET (safe)</td>
+	<td colspan="2">http://egsim.org/example?dip=45&vs30=560<span class='token string'>%2C</span>760&mag=3<span class='token string'>%3A</span>0.5<span class='token string'>%3A</span>5&start=2016-12-31T12<span class='token string'>%3A</span>00<span class='token string'>%3A</span>00
+	<br><span class='text-muted small'>(Note <span class='token string'>percent encoded</span> characters)</span>
+	</td>
 </tr>
 <tr>
 	<td rowspan="3">POST</td>
-	<td colspan="2">
-		<code>{{ baseurl }}/example</code>
-	</td>
+	<td colspan="2">http://egsim.org/example</td>
 </tr>
 <tr>
 	<td style='border-color:transparent'>data (YAML file)</td><td style='border-color:transparent'>data (JSON file)</td>
@@ -177,12 +182,14 @@ magnitudes) the user input, depending on the request's method, should look like:
 vs30:
  - 560
  - 760
-magnitude: "3:0.5:5"</code></pre>
+mag: "3:0.5:5"
+start: "2016-12-31T12:00:00"</code></pre>
 	</td>
 	<td><pre><code class="language-json">{
   "dip": 45, 
   "vs30": [560, 760],
-  "magnitude": "3:0.5:5"
+  "mag": "3:0.5:5",
+  "start": "2016-12-31T12:00:00"
 }</code></pre>
 	</td>
 </tr>
@@ -190,43 +197,44 @@ magnitude: "3:0.5:5"</code></pre>
 	<td>Web GUI components</td>
 	<td colspan="2">
 		<div style='white-space: nowrap'>
-			<span class='mr-1'>Dip</span>
-			<input type="number" value="45"/>
+			<span class='ml-2'>Dip</span>
+			<input type="number" value="45"/><br>
 			<span class='ml-2 mr-1'>Vs<sub>30</sub></span>
-			<input type="text" value="560 760"/>
-			<span class='ml-2 mr-1'>Magnitude</span>
-			<input type="text" value="3:0.5:5"/>
+			<input type="text" value="560 760"/><br>
+			<span class='ml-2 mr-1'>Mag</span>
+			<input type="text" value="3:0.5:5"/><br>
+			<span class='ml-2 mr-1'>Start</span>
+			<input type="text" value="2016-12-31T12:00:00"/>
 		</div>
 	</td>
 </table>
+<div class='footnote'>
+Notes:
+<ul>
+<li>In YAML and JSON format, numeric ranges
+and date-times are not fully supported and should be
+input as strings with quotes (see example above).
+(YAML with Python seems to recognize date-times without quotes, but we suggest
+to type them as quoted strings for safety)
+<li>From within an input component of the Web GUI, 
+<b>spaces or commas</b> are both recognized as array element separators. Array can be optionally
+typed in JSON format as well, with leading and trailing square brackets '[' ']'
+</ul>
+</div>
 
 <p>
 The full description of the parameters and their constraints will be given in each service specific
 section below.
 </p>
 
-<h4 id="request-format">Formats</h4>
 
-eGSIM requests support two formats: JSON and TEXT/CSV. All services described in the
-next section accept the following parameters in the request:
-
-<table class='request'>
-	{% include "apidoc/request_template.html" with form=egsim_data.FORMAT.form %}
-	<tfoot>
-		<tr>
-			<td colspan="2">
-			Note: the gsims service ignores {{ egsim_data.FORMAT.form.text_sep.name }} and
-			{{ egsim_data.FORMAT.form.text_dec.name }} also when format is text, as the list
-			of matching Gsims is returned "vertically" in a single column
-			</td>
-		</tr>
-	</tfoot>
-</table>
 
 <h3 id="responsedata">Response data</h3>
+
+<h4 id="request-format">Formats</h4>
+
 <p>
-The response data type of a successfully fulfilled request might depend on the service used and
-the parameter issued in the request, but all eGSIM services can return data at the least in CSV
+All eGSIM services can return data at the least in CSV
 and JSON formatted text (bytes sequences). 
 JSON is by far preferable in web applications
 (the eGSIM web GUI for instances requests and processes data in this format), and CSV files have
@@ -241,6 +249,18 @@ functions, or Python
 standard libraries)
 </p>
 
+<p>
+All eGSIM services accept the following parameters in the request which will
+dictate the response format:
+</p>
+
+<table class='request'>
+	{% include "apidoc/request_template.html" with form=egsim_data.FORMAT.form %}
+</table>
+
+(the parameters above will be omitted for simplicity in the remainder of the document)
+
+<h4 id="request-errors">Errors</h4>
 
 <p>
 Unsuccessful requests might fail for several reasons. In case of client
@@ -264,13 +284,17 @@ google API specification</a>. Example:
 	}
 }</code></pre>
 
-<p class='footnote'>
-Notes: the code and the message are standard HTTP numeric status codes &ge;400 and &le; 500 and
-text. For invalid parameters, the code is 400. In this case the the parameter 'errors' might
-be provided (in all other cases it's missing), and it is a list of objects with these
-properties: domain (indicating the parameter name raising the error), message
-(indicating the error message) and reason (indicating the error reason).
-</p>
+<div class='footnote'>
+Notes:
+<ul>
+	<li>the code and the message are standard HTTP numeric status codes &ge;400 and &le; 500 and
+	text. For invalid parameters, the code is 400. In this case the the parameter 'errors' might
+	be provided (in all other cases it's missing), and it is a list of objects with these
+	properties: domain (indicating the parameter name raising the error), message
+	(indicating the error message) and reason (indicating the error reason)
+</ul>
+</div>
+
 
 <p>
 For instance, this code snippet modified from the

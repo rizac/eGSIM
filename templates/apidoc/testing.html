@@ -1,52 +1,51 @@
-<p><b>Endpoint: <code>{{ baseurl }} / {{ data.path }}</code></b></p>
+<p><b>Endpoint: <code>{{ baseurl }}/{{ data.path }}</code></b></p>
 
 <p>
 eGSIM, through the GMPE-SMTK library, offers the ability to test observed ground motions with
 the GMPE model predictions using the GMPE implementations found inside OpenQuake and
-one or more measures of fit. The request for such a service is outlined below
+one or more measures of fit.
 </p>
  
 <h3 id="{{ data.key }}_request">Request</h3>
 <p>
 A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
-database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
-URL (GET method) or as separate text data in JSON or YAML format (POST method) and are:
+database (GMDB) and the the desired plot type.
 </p>
 
 <table class='request'>
 	{% include "apidoc/request_template.html" with form=data.form %}
-	<tfoot>
-	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'>"SA" in {{ data.form.imt.name }} must be provided
-		with the given period in parentheses, e.g. "SA(0.2)".
-	</td></tr>
-	<tr><td colspan='2'> {{ data.form.gsim.name }} and 
+</table>
+
+<div class='footnote'>
+Notes:
+<ul>
+	<li>"SA" in {{ data.form.imt.name }} must be provided
+		with the given period in parentheses, e.g. "SA(0.2)"
+	<li>{{ data.form.gsim.name }} and 
 		{{ data.form.imt.name }}
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
-		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
-	</td></tr>
-	</tfoot>
-</table>
+		eGSIM will then select all matching items (wildcards are not implemented in the GUI)
+	<li>The selection expression syntax has already been discussed in the
+		relative <a href="#selexpr">section above</a>
+</ul>
+</div>
 
-
-<p>
-The selection expression syntax has already been discussed in the
-relative <a href="#selexpr">section above</a>.
-</p>
 
 <h3 id="{{ data.key }}_response">Response</h3>
 
 <p>
 The reponse Object is of tyhis type is an Object with keys representing
-the choosen measures of fit (MOF). Note that from a single MOF of the request
-several values might be returned (e.g., choosing 'res' the MOFs in the response
-are six: "Residuals Inter event Mean", "Residuals Inter event Std Dev",
+the choosen measures of fit (MOF), mapped to the choosen IMTs.
+Each IMT is in turn an Object of chosen GSIMs mapped to the 
+the the model-to-data value.
+Note that from a single MOF of the request
+several Measure of fit might be returned in response
+(e.g., choosing 'res' the MOFs in the request
+will return are six measure of fit in the response:
+"Residuals Inter event Mean", "Residuals Inter event Std Dev",
 "Residuals Intra event Mean", "Residuals Intra event Std Dev",
 "Residuals Total Mean" and "Residuals Total Std Dev").
-Each MOF is then mapped to an Object where each chosen IMT is in turn mapped 
-to an Object of the choosen GMPEs, each mapped to the value of the GMPE
-for the current MOF and IMT. Example:
 </p>
             
 <pre><code class="language-python">{
@@ -58,26 +57,75 @@ for the current MOF and IMT. Example:
 				...
 			},
 			"PGV": {
-				# (... same Object type as above ...)
+				# same Object type as above,
+				# computed for a different IMT
 			},
 			...
 		},
-		"Residuals inter event stddev": { ... },
-		"Residuals intra event mean": { ... },
-		"Residuals intra event stddev": { ... },
-		"Residuals total mean": { ...  },
-		"Residuals total stddev": { ... },
-		"Likelihood inter event median": { ... },
-		"Likelihood intra event median": { ... },
-		"Likelihood total median": { ... },
-		"Likelihood inter event iqr": { ... },
-		"Likelihood intra event iqr": { ... },
-		"Likelihood total iqr": { ... },
-		"Log-likelihood": { ... },
-		"Multivariate log-likelihood": { ... },
-		"Euclidean distance-based ranking mde norm": { ... },
-		"Euclidean distance-based ranking sqrt kappa": { ... },
-		"Euclidean distance-based ranking edr": { ... }
+		"Residuals inter event stddev": {
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Residuals intra event mean": {
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Residuals intra event stddev": {
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Residuals total mean": {
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Residuals total stddev": {
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Likelihood inter event median": {     # see note 1
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Likelihood intra event median": {     # see note 1
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Likelihood total median": {           # see note 1
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Likelihood inter event iqr": {        # see note 1
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Likelihood intra event iqr": {        # see note 1
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Likelihood total iqr": {              # see note 1
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Log-likelihood": {
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Multivariate log-likelihood": {       # see note 1
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Euclidean distance-based ranking mde norm": {    # see note 2
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Euclidean distance-based ranking sqrt kappa": {  # see note 2
+				# same Object type as above,
+				# computed for a different MOF
+		},
+		"Euclidean distance-based ranking edr": {         # see note 2
+				# same Object type as above,
+				# computed for a different MOF
+		}
 	},
 	"Db records": {
 		"BindiEtAl2011": 1023,
@@ -89,11 +137,16 @@ for the current MOF and IMT. Example:
 		...
 	}
 }</code></pre>
-<p class='footnote'>
-LLH and MultivariateLLH include also the IMT "All". Euclidean Distance-Based
-are not associated with any IMT, thus their values will be an Object
-keyed by "" and associated to each {GMPE: value} pairs.
-</p>
+
+<div class='footnote'>
+Notes:
+<ol>
+<li>LLH and MultivariateLLH include also the IMT "All"
+<li>Euclidean Distance-Based
+	are not associated with any IMT, thus their values will be an Object
+	keyed by "" and associated to each {GMPE: value} pairs.
+</ol>
+</div>
 
 
 <table class='csv'>
@@ -163,3 +216,11 @@ keyed by "" and associated to each {GMPE: value} pairs.
 </tr>
 </tbody>
 </table>
+
+<div class='footnote'>
+Notes:
+<ul>
+<li>The GSIM with no database records ot that were not calculated (due to errors)
+	are not reported in the format above
+</ul>
+</div>
