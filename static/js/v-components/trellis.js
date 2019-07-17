@@ -76,7 +76,7 @@ Vue.component('trellis', {
 
                 <div class="mt-4" style="background-color:transparent">
                     <forminput :form='form' :name='"plot_type"'></forminput>
-                    <forminput :form='form' :name='"stdev"'></forminput>
+                    <forminput :form='form' :name='"stdev"' class='mt-1'></forminput>
                 </div>
 
             </div>

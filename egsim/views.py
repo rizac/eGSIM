@@ -375,7 +375,7 @@ def apidoc(request):
     # baseurl is the base URL for the services explained in the tutorial
     # It is the request.META['HTTP_HOST'] key. But during testing, this
     # key is not present. Actually, just use a string for the moment:
-    baseurl = "〈eGSIMsite〉"
+    baseurl = "<eGSIMsite>"
     # Note that the keus of the egsim_data dict below should NOT
     # be changed: if you do, you should also change the templates
     egsim_data = {

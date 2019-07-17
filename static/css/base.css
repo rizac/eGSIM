@@ -124,7 +124,7 @@ nav .menu-item *{
 nav .menu-item.active{
 	color: #FFF !important;
 }
-@media (max-width: 875px){
+@media (max-width: 1200px){
 	nav .menu-item span {
     	display: none !important;
 	}

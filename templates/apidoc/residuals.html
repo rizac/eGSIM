@@ -1,4 +1,4 @@
-<p><b>Endpoint: <code>{{ baseurl }} / {{ data.path }}</code></b></p>
+<p><b>Endpoint: <code>{{ baseurl }}/{{ data.path }}</code></b></p>
 <p>
 eGSIM, through the GMPE-SMTK library, offers the ability to compare observed ground motions with
 the GMPE model predictions using the GMPE implementations found inside OpenQuake.
@@ -12,26 +12,26 @@ user via Residuals plots.
 <h3 id="{{ data.key }}_request">Request</h3>
 <p>
 A request to the Residuals plot service requires a list of GMPEs and IMTs, a Ground Motion
-database (GMDB) and the the desired plot type. As discussed, parameters can be given in the endpoint
-URL (GET method) or as separate text data in JSON or YAML format (POST method) and are:
+database (GMDB) and the the desired plot type
 </p>
 
 <table class='request'>
 	{% include "apidoc/request_template.html" with form=data.form %}
-	<tfoot>
-	<tr><td colspan='2'>Notes:</td></tr>
-	<tr><td colspan='2'>"SA" in {{ data.form.imt.name }} must be provided
-		with the given period in parentheses, e.g. "SA(0.2)".
-	</td></tr>
-	<tr><td colspan='2'> {{ data.form.gsim.name }} and 
+</table>
+
+<div class='footnote'>
+Notes:
+<ul>
+	<li>"SA" in {{ data.form.imt.name }} must be provided
+		with the given period in parentheses, e.g. "SA(0.2)"
+	<li>{{ data.form.gsim.name }} and 
 		{{ data.form.imt.name }}
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
-		eGSIM will then select all matching items (wildcards are not implemented in the GUI).
-	</td></tr>
-	</tfoot>
-</table>
+		eGSIM will then select all matching items (wildcards are not implemented in the GUI)
+</ul>
 
+</div>
 
 <h4 id="selexpr">Selection expression</h4>
 
@@ -110,32 +110,38 @@ Residuals plot data returned in JSON format will have the following structure:
                 "xlabel": "Magnitude",
                 "yvalues": [-2.11, -2.27, -2.08, ...],
                 "ylabel": "Z (PGA)",
-                "slope": 0.269,      # it might be null
-                "intercept": -1.998, # it might be null
-                "pvalue": 6.6e-8,    # it might be null
-                "median": null,      # it might be null
-                "mean": null,        # it might be null
-                "stddev": null        # it might be null
+                "slope": 0.269,      # see note 1
+                "intercept": -1.998, # see note 1
+                "pvalue": 6.6e-8,    # see note 1
+                "median": null,      # see note 1
+                "mean": null,        # see note 1
+                "stddev": null       # see note 1
             },
             "CauzziEtAl2014": {
-                # ... (same Object type as above) ...
+                # same Object type as above,
+                # computed for a different GSIM
             },
             ...
         },
         "Inter event": {
-            # ... (same Object types as above) ...
+            # same Object types as above,
+            # computed for a different Residuals type
         },
         ...
     },
     "PGV": {
-        # ... (same Object type as above) ...
+        # same Object types as above,
+        # computed for a different IMT
     },
     ...
 }</code></pre>
-<p class='footnote'>
-Notes: the parameters from slope, intercept, pvalue, median, stddev are null for specific
-plot types
-</p>
+<div class='footnote'>
+Notes:
+<ol>
+	<li>the parameters from slope, intercept, pvalue, median, stddev are provided (not null) depending on the
+	plot type chosen
+</ol>
+</div>
 
 <h4>CSV</h4>
 <p>
