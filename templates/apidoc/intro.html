@@ -9,7 +9,7 @@ the browser GUI, command line applications like <code>wget</code> or client code
 </p>
 <ol>
 <li>An endpoint, i.e. an URL denoting a specific service
-<li>A method (GET vs POST) defining the type of request, 
+<li>A method (GET vs POST) defining the type of request
 <li>Parameters for customizing the desired response data
 </ol>
 <p>
@@ -63,7 +63,7 @@ values directly in the URL:
 
 <p>
 The portion of string after the question mark ? is called <i>query string</i>: as you can see,
-come characters are not <i>safe</i>, because they have special meanings and
+some characters are not <i>safe</i>, because they have special meanings and
 they will not be interpreted as they are (e.g. <span class='token string'>&amp;</span>)
 . The only safe characters are the alphanumeric ones (letter lower or uppercase, and numbers),
 all other characters should be
@@ -89,7 +89,7 @@ Note: These characters are <i>very likely</i> to be safe, but we cannot guarante
 they will always be (do not encode them at your risk):
 </p>
 <p class='footnote'>
-<span class='token string'>{{ query_params_safe_chars }}</span>
+<span class='token string' style='letter-spacing: 1rem'>{{ query_params_safe_chars }}</span>
 </p>
 
 
@@ -153,12 +153,18 @@ eGSIM supports the following parameter types in a request:
 
 <p>
 <b>Example</b> assuming a service with endpoint <code>http://egsim.org/example</code>, requiring
-three numeric parameters (dip, Vs<sub>30</sub>, mag, start) with different
-types (e.g., dip numeric scalar, Vs<sub>30</sub> and mag numeric scalar or array,
-start date-time).
-This is how the user request might look like:
+the following parameters:
 </p>
 
+<ul>
+<li>dip (numeric scalar)
+<li>Vs<sub>30</sub> (numeric array)
+<li>mag (numeric array)
+<li>start (date-time)
+</ul>
+<p>
+Then a user request might look like this:
+</p>
 <table>
 <tr>
 	<td>GET</td>
