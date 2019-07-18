@@ -32,7 +32,7 @@
 
 		<div class='d-flex flex-column flexible'>
 			<!-- style='background-image:url("{% static 'img/logos/efehr_flyer_trans_scaled.png' %}")'>  -->
-			<div class='pb-2'>
+			<div class='pb-2 border-bottom'>
 				<h1 class='home-title text-center'>{{ project_name }}</h1>
 				<!--  <h3>European Ground Shaking Intensity Model</h3> -->
 				<h5 class='text-center'>a web service for selecting and testing Ground-Shaking Intensity Models (GSIMs)</h5>
@@ -40,7 +40,7 @@
 			<!-- the mess below is just to align image centered horizontally and 100% available space
 			(normal flexbox does not work in safari on mac) -->
 			<!--  -->
-			<div class='d-flex flex-row flexible text-justify p-5 py-4  bg-white'>
+			<div class='d-flex flex-row flexible text-justify p-5 py-4 bg-white'>
 				<div class='d-flex flex-column flexible' style='flex-basis:33%; overflow:auto'>
 					<p class='pr-5'>
 						The Ground-Shaking Intensity Model Service (eGSIM) is part of the
@@ -82,14 +82,11 @@
 								<span class='menu'><i class="fa {{ egsim_data.RESIDUALS.icon }}"></i> {{ egsim_data.RESIDUALS.title }}</span>
 								and 
 								<span class='menu'><i class="fa {{ egsim_data.TESTING.icon }}"></i> {{ egsim_data.TESTING.title }}</span>)
-						</ul>
-						<p>Foreseen enhancements of the API and the GUI will soon include:</p>
-						<ul>
-						<li> Visualize and compute ground-shaking fields (“shake-maps”) taking into account fault finiteness,
-							spatial correlations of ground-shaking and definition of spatially variable amplification factors
-						<li> Explore the components of variability in predicted earthquake ground motions in order to
-							retrieve region-, source- (“between-event term”) and site-specific properties of strong motion scaling
-							(stations “site-term”)
+							<li class='text-muted'> <span >(In progress)</span> Visualize and compute ground-shaking fields (“shake-maps”) taking into account fault finiteness,
+								spatial correlations of ground-shaking and definition of spatially variable amplification factors
+							<li class='text-muted'> <span class='text-muted'>(In progress)</span> Explore the components of variability in predicted earthquake ground motions in order to
+								retrieve region-, source- (“between-event term”) and site-specific properties of strong motion scaling
+								(stations “site-term”)
 						</ul>
 						<h5>Feedback</h5>
 						<p>
@@ -101,7 +98,7 @@
 				</div>
 			</div>
 			
-			<div class="d-flex flex-row align-items-end px-5 pt-2 pb-0">
+			<div class="d-flex flex-row align-items-end px-5 pt-2 pb-0 border-top">
 				<div>
 					<a target="_blank" class='logo' href='https://www.epos-ip.org/'>
 						<img src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
