@@ -34,11 +34,13 @@ Notes:
 
 <h3 id="{{ data.key }}_response">Response</h3>
 
+<h4>JSON</h4>
+
 <p>
 The reponse Object is of tyhis type is an Object with keys representing
 the choosen measures of fit (MOF), mapped to the choosen IMTs.
 Each IMT is in turn an Object of chosen GSIMs mapped to the 
-the the model-to-data value.
+the the model-to-data testing value.
 Note that from a single MOF of the request
 several Measure of fit might be returned in response
 (e.g., choosing 'res' the MOFs in the request
@@ -62,70 +64,24 @@ will return are six measure of fit in the response:
 			},
 			...
 		},
-		"Residuals inter event stddev": {
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Residuals intra event mean": {
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Residuals intra event stddev": {
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Residuals total mean": {
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Residuals total stddev": {
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Likelihood inter event median": {     # see note 1
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Likelihood intra event median": {     # see note 1
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Likelihood total median": {           # see note 1
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Likelihood inter event iqr": {        # see note 1
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Likelihood intra event iqr": {        # see note 1
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Likelihood total iqr": {              # see note 1
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Log-likelihood": {
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Multivariate log-likelihood": {       # see note 1
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Euclidean distance-based ranking mde norm": {    # see note 2
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Euclidean distance-based ranking sqrt kappa": {  # see note 2
-				# same Object type as above,
-				# computed for a different MOF
-		},
-		"Euclidean distance-based ranking edr": {         # see note 2
-				# same Object type as above,
-				# computed for a different MOF
-		}
+		# all following Objects are of the same type as above,
+		# computed for a different MOF:
+		"Residuals inter event stddev": { ... },
+		"Residuals intra event mean": { ... },
+		"Residuals intra event stddev": { ... },
+		"Residuals total mean": { ... },
+		"Residuals total stddev": { ... },
+		"Likelihood inter event median": { ... },  # see note 1
+		"Likelihood intra event median": { ... },  # see note 1
+		"Likelihood total median": { ... },        # see note 1
+		"Likelihood inter event iqr": { ... },     # see note 1
+		"Likelihood intra event iqr": { ... },     # see note 1
+		"Likelihood total iqr": { ... },           # see note 1
+		"Log-likelihood": { ... },
+		"Multivariate log-likelihood": { ... }     # see note 1
+		"Euclidean distance-based ranking mde norm": { ... }    # see note 2
+		"Euclidean distance-based ranking sqrt kappa": { ... }  # see note 2
+		"Euclidean distance-based ranking edr": { ... }         # see note 2
 	},
 	"Db records": {
 		"BindiEtAl2011": 1023,
@@ -148,6 +104,8 @@ Notes:
 </ol>
 </div>
 
+
+<h4>CSV</h4>
 
 <table class='csv'>
 <tbody>
