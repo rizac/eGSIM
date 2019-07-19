@@ -560,15 +560,19 @@ systemctl enable $DJANGO_PROJECT
 <h2>Update the package (no db changes, no dependencies changes)</h2>
 
 
-<p>Move to /opt/$DJANGO_PROJECT/eGSIM, then, as root user, fetch the repo, reload NGINX, and reload Gunicorn (last two commands):</p>
+<p>Move to /opt/$DJANGO_PROJECT/eGSIM, then, as root user:</p>
 
 <pre><code class="language-bash">
 git pull
+source $VENV_PATH/bin/activate 
+export PYTHONPATH=/etc/opt/$DJANGO_PROJECT/;python manage.py collectstatic --settings=settings
 service nginx reload
 service $DJANGO_PROJECT stop
 service $DJANGO_PROJECT start
 </code></pre>
 
+(If there were no changes in the staticfiles, i.e. images, javascript etcetera,
+you can skip second line: activate virtualenv, and third line: update static files)
 </body>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/prism.min.js"></script>
