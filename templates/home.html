@@ -30,10 +30,30 @@
 {% block body %}
 	<div class='flexible d-flex flex-column height100' style='font-family: Lato, Helvetica'>
 
-		<div class='pb-2 border-bottom'>
+		<div class='px-5 pb-3 border-bottom'>
 			<h1 class='home-title text-center'>{{ project_name }}</h1>
-			<!--  <h3>European Ground Shaking Intensity Model</h3> -->
-			<h5 class='text-center'>a web service for selecting and testing Ground-Shaking Intensity Models (GSIMs)</h5>
+			<div class='d-flex flex-row align-items-center'>
+				<div style='flex-basis:25%'>
+					<a target="_blank" class='logo' href='https://www.epos-ip.org/'>
+						<img src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
+					</a>
+					<a target="_blank" class='logo ml-3' href='http://www.efehr.org/en/home/'>
+						<img src="{% static 'img/logos/efehr_fin@3x.png' %}" />
+					</a>
+					<a target="_blank" class='logo ml-3' href='http://www.sera-eu.org/en/home/'>
+						<img src="{% static 'img/logos/SERA_logo_scaled.png' %}" />
+					</a>
+				</div>
+				<h5 class='p-0 m-0 flexible text-center'>a web service for selecting and testing Ground-Shaking Intensity Models (GSIMs)</h5>
+				<div class='text-right' style='flex-basis:25%'>
+					<a target="_blank" class='logo ml-3' href='https://www.globalquakemodel.org/oq-getting-started'>
+						<img src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans_scaled.png' %}" />
+					</a>
+					<a target="_blank" class='logo ml-3' href='https://www.gfz-potsdam.de/en/home/'>
+						<img src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" />
+					</a>
+				</div>
+			</div>
 		</div>
 		<div class='flexible' style='overflow:auto'>
 			<div class='d-flex flex-row text-justify p-5 py-4 bg-white'>
@@ -94,26 +114,13 @@
 			</div>
 			<div class="d-flex flex-row align-items-end px-5 pt-2 pb-0 border-top">
 				<div>
-					<a target="_blank" class='logo' href='https://www.epos-ip.org/'>
-						<img src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
-					</a>
-					<a target="_blank" class='logo ml-3' href='http://www.efehr.org/en/home/'>
-						<img src="{% static 'img/logos/efehr_fin@3x.png' %}" />
-					</a>
-					<a target="_blank" class='logo ml-3' href='http://www.sera-eu.org/en/home/'>
-						<img src="{% static 'img/logos/SERA_logo_scaled.png' %}" />
-					</a>
+					
 				</div>
 				<div class='flexible text-muted small text-right'>
 					{{ info_str }}
 				</div>
 				<div>
-					<a target="_blank" class='logo ml-3' href='https://www.globalquakemodel.org/oq-getting-started'>
-						<img src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans_scaled.png' %}" />
-					</a>
-					<a target="_blank" class='logo ml-3' href='https://www.gfz-potsdam.de/en/home/'>
-						<img src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" />
-					</a>
+					
 				</div>
 			</div>
 		</div>
