@@ -18,7 +18,7 @@ from django.contrib import admin  # added by default by django
 from django.views.generic.base import RedirectView
 
 from egsim.views import (URLS, main, home, apidoc, get_tr_models,
-                         download_request, download_astext, test_err,
+                         download_request, download_astext, download_asimage,
                          TrellisView, GsimsView, ResidualsView, GmdbPlotView,
                          TestingView)
 
@@ -77,6 +77,10 @@ urlpatterns = [  # pylint: disable=invalid-name
         download_astext,
         {'viewclass': TestingView, 'text_sep': ';', 'text_dec': ','}),
 
+    # donwload as image:
+    url(r'^%s/(?P<filename>.+?)/(?P<format>.+)/?$' % URLS.DOWNLOAD_ASIMG,
+        download_asimage)
+
     # test stuff: (FIXME: REMOVE)
-    url(r'___test_err', test_err),
+    # url(r'_test_err', _test_err),
 ]
