@@ -26,7 +26,7 @@ from egsim.forms.forms import (TrellisForm, GsimSelectionForm, ResidualsForm,
                                GmdbPlotForm, TestingForm, FormatForm)
 from egsim.core.utils import (QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc,
                               yaml_load)
-from egsim.core import smtk as egsim_smtk
+from egsim.core import smtk as egsim_smtk, figutils
 from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
 
 
@@ -114,6 +114,13 @@ class URLS:
     RESIDUALS_DOWNLOAD_ASTEXT_EU = 'data/%s/dltextresponse_eu' % KEY.RESIDUALS
     TESTING_DOWNLOAD_ASTEXT_EU = 'data/%s/dltextresponse_eu' % KEY.TESTING
 
+    # urls for downloading as image. Note that these views POST data is the
+    # frontend data, in turn previously generated from the server side json
+    # data: this is a bit convoluted but we want to generate figures based on
+    # what the user choose, and also sometimes the json data cannot be
+    # converted to image (e.g., 3D grid of plots)
+    DOWNLOAD_ASIMG = 'data/dlimage'
+
     HOME_PAGE = 'pages/home'
     DOC_PAGE = 'pages/apidoc'
 
@@ -185,6 +192,24 @@ def main(request, selected_menu=None):
                         "%s/%s.csv" % (URLS.TRELLIS_DOWNLOAD_ASTEXT_EU,
                                        KEY.TRELLIS)
                     ],
+                ],
+                'downloadImage': [
+                    [
+                        'png (visible plots only)',
+                        "%s/%s/png" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
+                    ],
+                    [
+                        'pdf (visible plots only)',
+                        "%s/%s/pdf" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
+                    ],
+                    [
+                        'eps (visible plots only)',
+                        "%s/%s/eps" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
+                    ],
+                    [
+                        'svg (visible plots only)',
+                        "%s/%s/svg" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
+                    ]
                 ]
             }
         },
@@ -225,6 +250,24 @@ def main(request, selected_menu=None):
                         "text/csv, decimal comma",
                         "%s/%s.csv" % (URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU,
                                        KEY.RESIDUALS)
+                    ]
+                ],
+                'downloadImage': [
+                    [
+                        'png (visible plots only)',
+                        "%s/%s/png" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
+                    ],
+                    [
+                        'pdf (visible plots only)',
+                        "%s/%s/pdf" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
+                    ],
+                    [
+                        'eps (visible plots only)',
+                        "%s/%s/eps" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
+                    ],
+                    [
+                        'svg (visible plots only)',
+                        "%s/%s/svg" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
                     ]
                 ]
             }
@@ -418,29 +461,6 @@ def apidoc(request):
                   )
 
 
-def test_err(request):  # FIXME: REMOVE!!!!!
-    raise ValueError('this is a test error!')
-
-
-############################################################################
-# eGSIM API Views:
-############################################################################
-
-
-class EgsimQueryViewMeta(type):
-    '''metaclass for EgsimChoiceField subclasses. Populates the class attribute
-    arrayfields with fields which accept array-like values. If the formclass
-    is not defined, this metaclass is no-op
-    '''
-    def __init__(cls, name, bases, nmspc):
-        super(EgsimQueryViewMeta, cls).__init__(name, bases, nmspc)
-        if cls.formclass is not None:
-            cls.arrayfields = set(_ for (_, f) in
-                                  cls.formclass.declared_fields.items()
-                                  if isinstance(f, (MultipleChoiceField,))
-                                  )
-
-
 def download_request(request, filename, formclass):
     '''Returns the request re-formatted according to the syntax
     inferred from filename (*.json or *.yaml).
@@ -470,6 +490,55 @@ def download_astext(request, filename, viewclass, text_sep=',', text_dec='.'):
     response = viewclass.response_text(inputdict, text_sep, text_dec)
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response
+
+
+def download_asimage(request, filename, format):
+    '''Returns the image from the given request built in the frontend according
+    to the visible plots
+    '''
+    jsondata = json.loads(request.body.decode('utf-8'))
+    data, layout, width, height = (jsondata['data'],
+                                   jsondata['layout'],
+                                   jsondata['width'],
+                                   jsondata['height'])
+    bytestr = figutils.get_img(data, layout, width, height, format)
+    if format == 'eps':
+        response = HttpResponse(bytestr, content_type='application/postscript')
+    elif format == 'pdf':
+        response = HttpResponse(bytestr, content_type='application/pdf')
+    elif format == 'svg':
+        response = HttpResponse(bytestr, content_type='image/svg+xml')
+    else:
+        response = HttpResponse(bytestr, content_type='image/png')
+    response['Content-Disposition'] = \
+        'attachment; filename=%s.%s' % (filename, format)
+    response['Content-Length'] = len(bytestr)
+    return response
+
+
+def _test_err(request):
+    '''Stupid function raiseing for front end test purposes. Might be removed
+    soon'''
+    raise ValueError('this is a test error!')
+
+
+############################################################################
+# eGSIM API Views:
+############################################################################
+
+
+class EgsimQueryViewMeta(type):
+    '''metaclass for EgsimChoiceField subclasses. Populates the class attribute
+    arrayfields with fields which accept array-like values. If the formclass
+    is not defined, this metaclass is no-op
+    '''
+    def __init__(cls, name, bases, nmspc):
+        super(EgsimQueryViewMeta, cls).__init__(name, bases, nmspc)
+        if cls.formclass is not None:
+            cls.arrayfields = set(_ for (_, f) in
+                                  cls.formclass.declared_fields.items()
+                                  if isinstance(f, (MultipleChoiceField,))
+                                  )
 
 
 class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
@@ -572,8 +641,17 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
 
         wrt.writerows(chain(r, repeat(None, maxcollen-len(r)))
                       for r in rowsaslist)
+
+        # calculate the content length. This has to be done before creating
+        # the response as it might be that the latter closes the buffer. It
+        # is questionable then to use a buffer (we might use getvalue() on it
+        # but we pospone this check ...
+        buffer.seek(0, os.SEEK_END)
+        contentlength = buffer.tell()
         buffer.seek(0)
-        return HttpResponse(buffer, content_type='text/csv')
+        response = HttpResponse(buffer, content_type='text/csv')
+        response['Content-Length'] = str(contentlength)
+        return response
 
     @classmethod
     def convert_to_comma_as_decimal(cls, row):

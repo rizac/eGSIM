@@ -28,8 +28,11 @@ from egsim.forms.fields import GmdbField
 
 # make all test functions having 'db' in their argument use the passed databases
 def pytest_generate_tests(metafunc):
-    '''This function is called before generating all tests and parametrizes all tests with the
-    argument 'client' (which is a fixture defined below)'''
+    '''This function is called before generating all tests and parametrizes
+    all tests with the argument 'client' (which is a fixture defined below)'''
+    # note August 2019: There is apparently no need to run the test twice
+    # with two different USER AGENTs. We leave the code below and return:
+    return
     if 'client' in metafunc.fixturenames:
         client_args = [{'HTTP_USER_AGENT': 'Mozilla/5.0'}, {}]
         # dburls = [_ for _ in client_args if _]
