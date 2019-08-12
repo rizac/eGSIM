@@ -37,16 +37,16 @@ _COMMON_PARAMS = {
 }
 
 
-class KEY:
+class KEY:  # pylint: disable=too-few-public-methods
     '''Container class (Enum-like) defining the string keys for the
     program urls/services.
     Not all keys might be associated to a REST API
     service/URL, but when they do (e.g. KEY.GSIMS, KEY.TRELLIS, KEY.RESIDUALS)
     the key value is currently used as part of the URL (see URLS below): this
     is not mandatory and can be changed anytime.
-    Currently, each key is represents a menu in the front end
-    (see `main`) AND a javascript file named <KEY>.js implements the relative
-    VueJS component (see javascript directory)
+    Currently, 1) each key represents a menu in the front end
+    (see `main`) AND 2) a javascript file named <KEY>.js implements the
+    relative VueJS component (see javascript directory)
     '''
     HOME = 'home'
     GSIMS = 'gsims'  # pylint: disable=invalid-name
@@ -57,7 +57,7 @@ class KEY:
     DOC = 'apidoc'  # pylint: disable=invalid-name
 
 
-class TITLES:
+class TITLES:  # pylint: disable=too-few-public-methods
     '''Container class (Enum-like) of titles to be shown in the front end and
     in the documentation when talking about a service (member of the KEY class
     above)'''
@@ -70,7 +70,7 @@ class TITLES:
     DOC = 'API Documentation'
 
 
-class ICONS:
+class ICONS:  # pylint: disable=too-few-public-methods
     '''Container class (Enum-like) of icons to be shown in the front end and
     in the Home page. Strings denote the fontawesome icon name (for info see:
     https://fontawesome.bootstrapcheatsheets.com/)
@@ -84,11 +84,11 @@ class ICONS:
     DOC = 'fa-info-circle'
 
 
-class URLS:
-    '''This class is a container for URLS which should be injected into
-    the web page (via Django) AND used in :module:`urls` for defining
-    the urls and relative views, in order to be DRY
-    All URLS SHOULD NOT END WITH SLASH "/"
+class URLS:  # pylint: disable=too-few-public-methods
+    '''Container class (Enum-like) defining the URLS which should be injected
+    into the web page (via Django) AND used in :module:`urls` for defining
+    the urls and relative views.
+    All URLS MUST **NOT** END WITH THE SLASH CHARACTER "/"
     '''
 
     # REST API URLS:
@@ -101,25 +101,27 @@ class URLS:
     # url for downloading tectonic regionalisations (GeoJson)
     GSIMS_TR = 'data/%s/tr_models' % KEY.GSIMS
 
-    # url(s) for downloading the requests in json or yaml:
-    TRELLIS_DOWNLOAD_REQ = 'data/%s/dlrequest' % KEY.TRELLIS
-    RESIDUALS_DOWNLOAD_REQ = 'data/%s/dlrequest' % KEY.RESIDUALS
-    TESTING_DOWNLOAD_REQ = 'data/%s/dlrequest' % KEY.TESTING
+    # url(s) for downloading the requests (configuration params) in json or
+    # yaml. Example of a complete url:
+    # DOWNLOAD_CFG/trellis/filename.json
+    # (see function 'main' below and module 'urls')
+    DOWNLOAD_CFG = 'data/downloadcfg'
 
-    # urls for downloading text:
-    TRELLIS_DOWNLOAD_ASTEXT = 'data/%s/dltextresponse' % KEY.TRELLIS
-    RESIDUALS_DOWNLOAD_ASTEXT = 'data/%s/dltextresponse' % KEY.RESIDUALS
-    TESTING_DOWNLOAD_ASTEXT = 'data/%s/dltextresponse' % KEY.TESTING
-    TRELLIS_DOWNLOAD_ASTEXT_EU = 'data/%s/dltextresponse_eu' % KEY.TRELLIS
-    RESIDUALS_DOWNLOAD_ASTEXT_EU = 'data/%s/dltextresponse_eu' % KEY.RESIDUALS
-    TESTING_DOWNLOAD_ASTEXT_EU = 'data/%s/dltextresponse_eu' % KEY.TESTING
+    # urls for downloading text. Example of a complete url:
+    # DOWNLOAD_ASTEXT/trellis/filename.csv
+    # DOWNLOAD_ASTEXT_EU/trellis/filename.csv
+    # (see function 'main' below and module 'urls')
+    DOWNLOAD_ASTEXT = 'data/downloadascsv'
+    DOWNLOAD_ASTEXT_EU = 'data/downloadaseucsv'
 
-    # urls for downloading as image. Note that these views POST data is the
-    # frontend data, in turn previously generated from the server side json
-    # data: this is a bit convoluted but we want to generate figures based on
-    # what the user choose, and also sometimes the json data cannot be
-    # converted to image (e.g., 3D grid of plots)
-    DOWNLOAD_ASIMG = 'data/dlimage'
+    # url for downloading as image. Note that the request body (POST data) is
+    # the frontend data, in turn previously generated from one of the REST APIs
+    # above: this is a bit convoluted and prevents the url to be used outside
+    # the web page (all other endpoints can in principle be used as REST
+    # endpoints without the web page), but we want to generate figures based on
+    # what the user chooses, and also it is not always possible to convert
+    # a REST API response to image (e.g., 3D grid of plots)
+    DOWNLOAD_ASIMG = 'data/downloadasimage'
 
     HOME_PAGE = 'pages/home'
     DOC_PAGE = 'pages/apidoc'
@@ -160,21 +162,22 @@ def main(request, selected_menu=None):
             'form': TrellisView.formclass().to_rendering_dict(),
             'url': URLS.TRELLIS_RESTAPI,
             'urls': {
-                # download* below must be pairs of [key, url]. Each url
-                # must return a
+                # the download* lists below must be made of elements of
+                # the form [key, url].
+                # Each url must return a
                 # response['Content-Disposition'] = 'attachment; filename=%s'
-                # url can also start with 'file:///' telling the frontend
-                # to simply download the data
+                # urls starting with 'file:///' tell the frontend
+                # to simply download the response data without server request
                 'downloadRequest': [
                     [
                         'json',
-                        "%s/%s.request.json" % (URLS.TRELLIS_DOWNLOAD_REQ,
-                                                KEY.TRELLIS)
+                        "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
+                                                         KEY.TRELLIS)
                     ],
                     [
                         'yaml',
-                        "%s/%s.request.yaml" % (URLS.TRELLIS_DOWNLOAD_REQ,
-                                                KEY.TRELLIS)
+                        "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
+                                                         KEY.TRELLIS)
                     ]
                 ],
                 'downloadResponse': [
@@ -184,31 +187,31 @@ def main(request, selected_menu=None):
                     ],
                     [
                         'text/csv',
-                        "%s/%s.csv" % (URLS.TRELLIS_DOWNLOAD_ASTEXT,
-                                       KEY.TRELLIS)
+                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
+                                                 KEY.TRELLIS)
                     ],
                     [
                         "text/csv, decimal comma",
-                        "%s/%s.csv" % (URLS.TRELLIS_DOWNLOAD_ASTEXT_EU,
-                                       KEY.TRELLIS)
+                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
+                                                 KEY.TRELLIS)
                     ],
                 ],
                 'downloadImage': [
                     [
                         'png (visible plots only)',
-                        "%s/%s/png" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
+                        "%s/%s.png" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
                     ],
                     [
                         'pdf (visible plots only)',
-                        "%s/%s/pdf" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
+                        "%s/%s.pdf" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
                     ],
                     [
                         'eps (visible plots only)',
-                        "%s/%s/eps" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
+                        "%s/%s.eps" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
                     ],
                     [
                         'svg (visible plots only)',
-                        "%s/%s/svg" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
+                        "%s/%s.svg" % (URLS.DOWNLOAD_ASIMG, KEY.TRELLIS)
                     ]
                 ]
             }
@@ -229,12 +232,13 @@ def main(request, selected_menu=None):
                 'downloadRequest': [
                     [
                         'json',
-                        "%s/%s.request.json" % (URLS.RESIDUALS_DOWNLOAD_REQ,
-                                                KEY.RESIDUALS)],
+                        "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
+                                                         KEY.RESIDUALS)],
                     [
                         'yaml',
-                        "%s/%s.request.yaml" % (URLS.RESIDUALS_DOWNLOAD_REQ,
-                                                KEY.RESIDUALS)],
+                        "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
+                                                         KEY.RESIDUALS)
+                    ],
                 ],
                 'downloadResponse': [
                     [
@@ -243,31 +247,31 @@ def main(request, selected_menu=None):
                     ],
                     [
                         'text/csv',
-                        "%s/%s.csv" % (URLS.RESIDUALS_DOWNLOAD_ASTEXT,
-                                       KEY.RESIDUALS)
+                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
+                                                 KEY.RESIDUALS)
                     ],
                     [
                         "text/csv, decimal comma",
-                        "%s/%s.csv" % (URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU,
-                                       KEY.RESIDUALS)
+                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
+                                                 KEY.RESIDUALS)
                     ]
                 ],
                 'downloadImage': [
                     [
                         'png (visible plots only)',
-                        "%s/%s/png" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
+                        "%s/%s.png" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
                     ],
                     [
                         'pdf (visible plots only)',
-                        "%s/%s/pdf" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
+                        "%s/%s.pdf" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
                     ],
                     [
                         'eps (visible plots only)',
-                        "%s/%s/eps" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
+                        "%s/%s.eps" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
                     ],
                     [
                         'svg (visible plots only)',
-                        "%s/%s/svg" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
+                        "%s/%s.svg" % (URLS.DOWNLOAD_ASIMG, KEY.RESIDUALS)
                     ]
                 ]
             }
@@ -284,13 +288,13 @@ def main(request, selected_menu=None):
                 'downloadRequest': [
                     [
                         'json',
-                        "%s/%s.request.json" % (URLS.TESTING_DOWNLOAD_REQ,
-                                                KEY.TESTING)
+                        "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
+                                                         KEY.TESTING)
                     ],
                     [
                         'yaml',
-                        "%s/%s.request.yaml" % (URLS.TESTING_DOWNLOAD_REQ,
-                                                KEY.TESTING)
+                        "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
+                                                         KEY.TESTING)
                     ]
                 ],
                 'downloadResponse': [
@@ -300,13 +304,13 @@ def main(request, selected_menu=None):
                     ],
                     [
                         'text/csv',
-                        "%s/%s.csv" % (URLS.TESTING_DOWNLOAD_ASTEXT,
-                                       KEY.TESTING)
+                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
+                                                 KEY.TESTING)
                     ],
                     [
                         "text/csv, decimal comma",
-                        "%s/%s.csv" % (URLS.TESTING_DOWNLOAD_ASTEXT_EU,
-                                       KEY.TESTING)
+                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
+                                                 KEY.TESTING)
                     ]
                 ]
             }
@@ -461,11 +465,14 @@ def apidoc(request):
                   )
 
 
-def download_request(request, filename, formclass):
+def download_request(request, key, filename):
     '''Returns the request re-formatted according to the syntax
     inferred from filename (*.json or *.yaml).
     Uses request.body so this method should be called from a POST request
+    
+    :param key: string in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING]
     '''
+    formclass = _key2view(key).formclass
     inputdict = yaml_load(request.body.decode('utf-8'))
     dataform = formclass(data=inputdict)  # pylint: disable=not-callable
     if not dataform.is_valid():
@@ -482,20 +489,32 @@ def download_request(request, filename, formclass):
     return response
 
 
-def download_astext(request, filename, viewclass, text_sep=',', text_dec='.'):
+def download_astext(request, key, filename, text_sep=',', text_dec='.'):
     '''Returns the request re-formatted as text/csv.
     Uses request.body so this method should be called from a POST request
+
+    :param key: string in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING]
     '''
+    viewclass = _key2view(key)
     inputdict = yaml_load(request.body.decode('utf-8'))
     response = viewclass.response_text(inputdict, text_sep, text_dec)
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response
 
 
-def download_asimage(request, filename, format):
+def _key2view(key):
+    return {
+        KEY.TRELLIS: TrellisView,
+        KEY.RESIDUALS: ResidualsView,
+        KEY.TESTING: TestingView
+    }[key]
+
+
+def download_asimage(request, filename):
     '''Returns the image from the given request built in the frontend according
     to the visible plots
     '''
+    format = os.path.splitext(filename)[1][1:]
     jsondata = json.loads(request.body.decode('utf-8'))
     data, layout, width, height = (jsondata['data'],
                                    jsondata['layout'],
@@ -511,7 +530,7 @@ def download_asimage(request, filename, format):
     else:
         response = HttpResponse(bytestr, content_type='image/png')
     response['Content-Disposition'] = \
-        'attachment; filename=%s.%s' % (filename, format)
+        'attachment; filename=%s' % filename
     response['Content-Length'] = len(bytestr)
     return response
 

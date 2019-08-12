@@ -22,36 +22,45 @@ class Test:
                              # pytest fixtures:
                              testdata, client):
         '''Test the view for downloading a request in json or yaml format'''
-        if os.path.splitext(filename) == '.json':
-            ctype = 'application/json' 
+        # testing for 'testing' and 'residuals' has the typical problem of
+        # mocking the gmdb, which is a big overhead: let's test for trellis
+        # only:
+        if os.path.splitext(filename)[1] == '.json':
+            ctype = 'application/json'
         else:
             ctype = 'application/x-yaml'
-        url = URLS.TRELLIS_DOWNLOAD_REQ
+        url = "/%s/%s" % (URLS.DOWNLOAD_CFG, KEY.TRELLIS)
         inputdic = testdata.readyaml('request_trellis.yaml')
-        result = client.post("/" + url + "/" + filename, data=inputdic,
+        result = client.post(url + "/" + filename, data=inputdic,
                              content_type=ctype)
         assert result.status_code == 200
         assert result._headers['content-disposition'][1].endswith(filename)
+        assert ctype == result._headers['content-type'][1]
         # FIXME: better assertion checks?
 
-    def test_downloadresponse_astext(self,
+    @pytest.mark.parametrize('base_url', [URLS.DOWNLOAD_ASTEXT,
+                                          URLS.DOWNLOAD_ASTEXT_EU])
+    def test_downloadresponse_astext(self, base_url,
                                      # pytest fixtures:
                                      testdata, client):
         '''Test the view for downloading data as text/csv from the broswer'''
+        # testing for 'testing' and 'residuals' has the typical problem of
+        # mocking the gmdb, which is a big overhead: let's test for trellis
+        # only:
         inputdic = testdata.readyaml('request_trellis.yaml')
         result = client.post("/" + URLS.TRELLIS_RESTAPI, data=inputdic,
                              content_type='application/json')
         outdict = result.json()
-        for url in [URLS.TRELLIS_DOWNLOAD_ASTEXT,
-                    URLS.TRELLIS_DOWNLOAD_ASTEXT_EU]:
-            inputdic = testdata.readyaml('request_trellis.yaml')
-            filename = 'prova.csv'
-            result = client.post("/" + url + "/" + filename, data=outdict,
-                                 content_type="text/csv")
-            assert result.status_code == 200
-            # stupid assert (better than nothing for the moment):
-            assert result.content
-            assert result._headers['content-disposition'][1].endswith(filename)
+        filename = 'prova.csv'
+        url = "/%s/%s/%s" % (base_url, KEY.TRELLIS, filename)
+        inputdic = testdata.readyaml('request_trellis.yaml')
+        result = client.post(url, data=outdict,
+                             content_type="text/csv")
+        assert result.status_code == 200
+        # stupid assert (better than nothing for the moment):
+        assert result.content
+        assert result._headers['content-disposition'][1].endswith(filename)
+        assert "text/csv" == result._headers['content-type'][1]
         # FIXME: better assertion checks?
 
     def test_get_tr(self,
@@ -88,7 +97,7 @@ class Test:
             jsondata['height'] = 650
 
             for format in formats:
-                result = client.post("/%s/%s" % (url, format),
+                result = client.post("/%s.%s" % (url, format),
                                      data=json.dumps(jsondata),
                                      content_type='application/json')
                 assert result.status_code == 200

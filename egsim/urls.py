@@ -38,17 +38,6 @@ urlpatterns = [  # pylint: disable=invalid-name
     url(r'^%s/?$' % URLS.DOC_PAGE, apidoc),
     url(r'^%s/?$' % URLS.GSIMS_TR, get_tr_models),
 
-    # download request urls:
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.TRELLIS_DOWNLOAD_REQ,
-        download_request,
-        {'formclass': TrellisView.formclass}),
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.TESTING_DOWNLOAD_REQ,
-        download_request,
-        {'formclass': TestingView.formclass}),
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.RESIDUALS_DOWNLOAD_REQ,
-        download_request,
-        {'formclass': ResidualsView.formclass}),
-
     # REST APIS:
     url(r'^%s/?$' % URLS.GSIMS_RESTAPI, GsimsView.as_view()),
     url(r'^%s/?$' % URLS.TRELLIS_RESTAPI, TrellisView.as_view()),
@@ -57,29 +46,16 @@ urlpatterns = [  # pylint: disable=invalid-name
     # this is not documented but used from frontend:
     url(r'^%s/?$' % URLS.GMDBPLOT_RESTAPI, GmdbPlotView.as_view()),
 
+    # download config (=request) urls:
+    url(r'^%s/(?P<key>.+?)/(?P<filename>.+)/?$' % URLS.DOWNLOAD_CFG,
+        download_request),
     # download as text:
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.TRELLIS_DOWNLOAD_ASTEXT,
-        download_astext,
-        {'viewclass': TrellisView}),
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.RESIDUALS_DOWNLOAD_ASTEXT,
-        download_astext,
-        {'viewclass': ResidualsView}),
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.TESTING_DOWNLOAD_ASTEXT,
-        download_astext,
-        {'viewclass': TestingView}),
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.TRELLIS_DOWNLOAD_ASTEXT_EU,
-        download_astext,
-        {'viewclass': TrellisView, 'text_sep': ';', 'text_dec': ','}),
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.RESIDUALS_DOWNLOAD_ASTEXT_EU,
-        download_astext,
-        {'viewclass': ResidualsView, 'text_sep': ';', 'text_dec': ','}),
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.TESTING_DOWNLOAD_ASTEXT_EU,
-        download_astext,
-        {'viewclass': TestingView, 'text_sep': ';', 'text_dec': ','}),
-
+    url(r'^%s/(?P<key>.+?)/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASTEXT,
+        download_astext),
+    url(r'^%s/(?P<key>.+?)/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASTEXT_EU,
+        download_astext, {'text_sep': ';', 'text_dec': ','}),
     # donwload as image:
-    url(r'^%s/(?P<filename>.+?)/(?P<format>.+)/?$' % URLS.DOWNLOAD_ASIMG,
-        download_asimage)
+    url(r'^%s/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASIMG, download_asimage)
 
     # test stuff: (FIXME: REMOVE)
     # url(r'_test_err', _test_err),
