@@ -45,10 +45,7 @@
 	<!-- font awesome (e.g. required by easybutton & sidebar) FIXME: CHECK LICENSE (MIT) -->
 	<!-- <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> -->
 	<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
-	{% endif %}
-
-	<!-- <link href="https://bootswatch.com/4/yeti/bootstrap.min.css" rel="stylesheet"> -->
-			
+	{% endif %}		
 			
 	<!-- material design for bootsrap (css only) COMMENT IF NOT NEEDED -->
 	<!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
@@ -56,9 +53,11 @@
 		integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous"> -->
 
 	{% if plotly %}
-	 <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
+	 	<!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md
+	 	(the fallback local script is downloaded below)
+	 	-->
 		{% if debug %}
-			<script type="text/javascript" src="/static/fallbacks/plotly-cartesian-1.49.1.js"></script>
+			<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.49.1.js"></script>
 		{% else %}
 			<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-1.49.1.min.js"></script> <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
 		{% endif %}
@@ -88,8 +87,7 @@
 		{% endif %}
 		
 		{% if plotly %}
-		document.write("<script type='text/javascript' src='/static/fallbacks/plotly-cartesian-1.43.2.js'><\/script>");
-		//document.write("<script type='text/javascript' src='/static/fallbacks/plotly.1.33.1.js'><\/script>");
+		document.write("<script type='text/javascript' src='/static/fallbacks/plotly-cartesian-1.49.1.js'><\/script>");
 		{% endif %}
 	}
 	{% endif %}
