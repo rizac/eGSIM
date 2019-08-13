@@ -411,9 +411,9 @@ def home(request):
     }
     return render(request, 'home.html', dict(_COMMON_PARAMS,
                                              egsim_data=egsim_data,
-                                             info_str=('Version 1.0.1, '
+                                             info_str=('Version 1.0.2, '
                                                        'last updated: '
-                                                       'July 2019')))
+                                                       'August 2019')))
 
 
 def apidoc(request):
@@ -466,9 +466,9 @@ def apidoc(request):
 
 
 def download_request(request, key, filename):
-    '''Returns the request re-formatted according to the syntax
-    inferred from filename (*.json or *.yaml).
-    Uses request.body so this method should be called from a POST request
+    '''Returns the request (configuration) re-formatted according to the syntax
+    inferred from filename (*.json or *.yaml) to be downloaded by the front
+    end GUI.
     
     :param key: string in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING]
     '''
@@ -490,8 +490,10 @@ def download_request(request, key, filename):
 
 
 def download_astext(request, key, filename, text_sep=',', text_dec='.'):
-    '''Returns the request re-formatted as text/csv.
-    Uses request.body so this method should be called from a POST request
+    '''Returns the text/csv data to be downloaded by the front end GUI.
+    The request's body is the JSON data resulting from a previous
+    call of the GET or POST method of any these
+    views: TrellisView, ResidualsView, TestingView.
 
     :param key: string in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING]
     '''
@@ -503,6 +505,9 @@ def download_astext(request, key, filename, text_sep=',', text_dec='.'):
 
 
 def _key2view(key):
+    '''maps a key (string) in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING] to
+    the relative :class:`RESTAPIView` subclass defined in this module
+    '''
     return {
         KEY.TRELLIS: TrellisView,
         KEY.RESIDUALS: ResidualsView,
@@ -511,8 +516,8 @@ def _key2view(key):
 
 
 def download_asimage(request, filename):
-    '''Returns the image from the given request built in the frontend according
-    to the visible plots
+    '''Returns the image from the given request built in the frontend GUI
+    according to the choosen plots
     '''
     format = os.path.splitext(filename)[1][1:]
     jsondata = json.loads(request.body.decode('utf-8'))
