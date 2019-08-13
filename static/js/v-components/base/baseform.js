@@ -86,6 +86,7 @@ var _BASE_FORM = Vue.component('baseform', {
 					:urls="urls.downloadRequest"
 					:post="post"
 					:data="formObject"
+					:helptext="'Download the current configuration as text file to fetch results in your custom code (POST request). See the API documentation for details'"
 				/>
 	            <button type="submit" class="btn btn-primary ml-2">
 	                <i class="fa fa-play"></i> Display plots
