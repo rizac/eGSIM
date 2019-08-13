@@ -24,9 +24,6 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             visible: !Vue.isEmpty(this.data),  // defined in vueutil.js
             // boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
             drawingPlots: true,
-            //callback to be passed to window.addEventListener('resize', ...).
-            // See addResizeListener and removeResizeListener:
-            resizeListener: null,
             // store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
             watchers: {},
             paramnames2showongrid: new Set(),  // parameter names to show on the grid
@@ -58,7 +55,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // defaultlayout. Note that defaultlayout.annotations, if specified here, will be copied and then
             // xaxis and grid labels will be copied to the new copied Array before passing it to Plotly as layout argument
             defaultlayout: {
-                autosize: false,  // we will handle auto size manually with window listeners
+                autosize: true,  // without this, the inner svg does not expand properly
                 paper_bgcolor: 'rgba(0,0,0,0)', //window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('background-color'),
                 // font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
                 showlegend: false,
@@ -120,22 +117,17 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 this.visible = !Vue.isEmpty(this.data);  // defined in vueutil.js
                 if (this.visible){ // see prop below
                     this.init.call(this, this.data);
-                    this.addResizeListener(); // start redrawing plots on resize, see bottom of the file
-                    // should be better added inside a this.$nextTick(() => { this.addResizeListener(); } ?
-                }else{
-                	this.removeResizeListener();  // stop redrawing plots on resize, see bottom of the file
                 }
             }
         }
     },
     activated: function(){  // when component become active
     	if (this.visible){
-    		this.addResizeListener(true); // start redrawing plots on resize, see bottom of the file
-    		// should be better added inside a this.$nextTick(() => { this.addResizeListener(); } ?
+    	    this.react();
     	}
     },
     deactivated: function(){   // when component is deactivated
-    	this.removeResizeListener(); // stop redrawing plots on resize, see bottom of the file
+    	// no op
     },
     computed: {  // https://stackoverflow.com/a/47044150
         legendNames: function(){
@@ -707,9 +699,10 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             	this.watchOff(hover, drag);
                 var [data, layout] = this.createPlotlyDataAndLayout(divElement);
                 this.execute(function(){
-	                Plotly.purge(divElement);  // Purge plot. FIXME: do actually need this?
+	                // console.log(this.getElmSize(divElement));
+                    Plotly.purge(divElement);  // Purge plot. FIXME: do actually need this?
                 	Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
-	                this.watchOn(hover, function (newval, oldval) {
+                	this.watchOn(hover, function (newval, oldval) {
 	                    this.setMouseModes(newval, undefined);  // hovermode, mousemode
 	                });
 	                this.watchOn(drag, function(newval, oldval){
@@ -729,7 +722,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             this.$nextTick(() => {
                 this.execute(function(){
                 	var [data, layout] = this.createPlotlyDataAndLayout(divElement);
-                	Plotly.react(divElement, data, layout);
+                    // console.log(this.getElmSize(divElement));
+                    Plotly.react(divElement, data, layout);
                 });
             });
         },
@@ -1082,32 +1076,6 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 		  	var m = Math;
 		  	return values.length? [m.min(...values), m.max(...values)] : [NaN, NaN];
 		},
-        addResizeListener: function(fireResizeNow){
-        	// adds (if not already added) a resize listener redrawing plots on window.resize
-        	if (!this.resizeListener){
-        		 // see prop below                    
-                // avoid refreshing continuously, wait for resizing finished (most likely):
-            	var resizeTimer;
-                var self = this;
-                this.resizeListener = function(){
-                    clearTimeout(resizeTimer);
-                    resizeTimer = setTimeout(() => {
-                        self.react();
-                    }, 300);
-                };
-                window.addEventListener('resize', this.resizeListener);
-                if (fireResizeNow){
-                	this.react();
-                }
-            }
-       	},
-       	removeResizeListener: function(){
-       		// removes (if it has been set) the resize listener redrawing plots on window.resize
-        	if (this.resizeListener){
-        		window.removeEventListener('resize', this.resizeListener);
-        		this.resizeListener = null;
-            }
-       	},
        	setMouseModes: function(hovermode, dragmode){
        		var [data, layout] = this.getPlotlyDataAndLayout();
        		var relayout = false;

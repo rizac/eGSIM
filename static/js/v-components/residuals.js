@@ -47,7 +47,7 @@ Vue.component('residuals', {
 
     <residualsplotdiv
     	:data="responseData"
-    	:downloadurls="urls.downloadResponse"
+    	:downloadurls="urls.downloadResponse.concat(urls.downloadImage)"
     	:post="post"
         class='position-absolute pos-0 m-0' style='z-index:1'
     >
