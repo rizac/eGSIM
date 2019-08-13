@@ -16,7 +16,9 @@ Vue.component('downloadselect', {
         // for a special case where `data` is actually the data to be downlaoded)
         data: [Object, Function],
         // post function to use for fetching the data to be downloaded:
-        post: Function
+        post: Function,
+        // the help text (optional)
+        helptext: {type: String, default: ''}
     },
     data: function () {
     	// find special Keys, i.e. keys not mapped to a URL string but
@@ -83,7 +85,8 @@ Vue.component('downloadselect', {
     	// no-op
     },
     template: `<div v-if='urls.length' class='d-flex flex-row text-nowrap align-items-baseline'>
-		<i class="fa fa-download"></i>
+		<i v-if="!helptext" class="fa fa-download"></i>
+		<span v-else :aria-label="helptext" data-balloon-pos="up" data-balloon-length="medium"><i class="fa fa-question-circle"></i></span>
 		<select
 			v-model='selKey'
 			class='form-control ml-2'
