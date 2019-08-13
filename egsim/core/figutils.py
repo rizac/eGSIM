@@ -184,12 +184,25 @@ def get_fig(data, layout, width, height, converter=None):
     # https://github.com/matplotlib/matplotlib/issues/11227
     # https://github.com/matplotlib/matplotlib/pull/11232
     dpi = fig.get_dpi()
-
-    # set matplotlib global properties:
-    # font:
+ 
+    # set matplotlib global properties. It can be set via matplotlib.rc(...)
+    # or plt.rc(...) (https://stackoverflow.com/a/49659327).
+    # Note that matplotlib.rc('font' ...)
+    # should set the font globally BUT it does not work (tested with
+    # backend: macosx) for the axes labels. So we set them to any object
+    # font (ref here: https://stackoverflow.com/a/39566040):
     if 'font' in layout:
-        matplotlib.rc('font',
-                      **converter.fontprops(layout['font'], dpi, prefix=''))
+        props = converter.fontprops(layout['font'], dpi, prefix='')
+        # controls default text sizes:
+        plt.rc('font', **props)
+        if 'size' in props:
+            # plt.rc('axes', titlesize=SMALL_SIZE)     # axes title
+            plt.rc('axes', labelsize=props['size'])     # x and y labels
+            plt.rc('xtick', labelsize=props['size'])    # x tick labels
+            plt.rc('ytick', labelsize=props['size'])    # y tick labels
+            plt.rc('legend', fontsize=props['size'])    # legend
+            # plt.rc('figure', titlesize=BIGGER_SIZE)  # figure title
+
     # set also the linewidth of the axes globally:
     matplotlib.rcParams['axes.linewidth'] = \
         converter.length(AXES_LINEWIDTH, dpi)
@@ -669,11 +682,11 @@ if __name__ == '__main__':
         with open(jsonf, encoding='utf-8') as fp:
             jsondata = json.load(fp)
             for frmt in ['png', 'svg', 'eps', 'pdf']:
-                val = get_img_buf(jsondata['data'], jsondata['layout'], 1295, 820,
+                val = get_img(jsondata['data'], jsondata['layout'], 1295, 820,
                                   frmt)
                 with open(os.path.join(outpath,
                                        os.path.basename(jsonf) + '.' + frmt),
                           'bw') as of:
-                    of.write(val.getvalue())
+                    of.write(val)
     print('done')
     # plt.show()  # pylint: disable=missing-final-newline
