@@ -58,7 +58,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // defaultlayout. Note that defaultlayout.annotations, if specified here, will be copied and then
             // xaxis and grid labels will be copied to the new copied Array before passing it to Plotly as layout argument
             defaultlayout: {
-                autosize: true,
+                autosize: false,  // we will handle auto size manually with window listeners
                 paper_bgcolor: 'rgba(0,0,0,0)', //window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('background-color'),
                 // font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
                 showlegend: false,
@@ -214,9 +214,8 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 				<downloadselect
 					:urls="downloadurls"
 					:post="post"
-					:data="data"
-					:plotlydivid="plotdivid"
-					 class='mt-3 border p-2 bg-white'
+					:data="getDownloadPostData"
+					class='mt-3 border p-2 bg-white'
 				/>
 	
 				<div
@@ -298,6 +297,17 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         // no-op
     },
     methods: {
+    	getDownloadPostData: function(key, url){
+    		// returns the post data to be sent when an item of the download <select> is choosen
+    		if (['png', 'eps', 'pdf', 'svg'].includes(key.substring(0,3))){
+    			var [data, layout] = this.getPlotlyDataAndLayout();
+    			var parent = document.getElementById(this.plotdivid).parentNode.parentNode.parentNode;
+    			var [width, height] = this.getElmSize(parent);
+    			data = data.filter(elm => elm.visible || !('visible' in elm));
+    			return {data:data, layout:layout, width:width, height:height};
+    		}
+    		return this.data;
+    	},
         // methods to be overridden:
         getData: function(responseObject){
             // this method needs to be implemented in order to initialize the response object into
@@ -686,22 +696,19 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             	});
             }
         },
-        newPlot: function(divId){
+        newPlot: function(){
             /**
              * Filters the plots to display according to current parameters and grid choosen, and
-             * calls Plotly.newPlot on divId (the id of the chosen <div>)
-             * divId undefined (not passed) will use the default div Id, i.e. draw on this component's plots <div>
+             * calls Plotly.newPlot on the plotly <div>
              */
-            if (divId === undefined){
-                divId = this.plotdivid;
-            }
+            var divElement = document.getElementById(this.plotdivid);
             this.$nextTick(() => {
             	var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
             	this.watchOff(hover, drag);
-                var [data, layout] = this.createPlotlyDataAndLayout(divId);
+                var [data, layout] = this.createPlotlyDataAndLayout(divElement);
                 this.execute(function(){
-	                Plotly.purge(divId);  // Purge plot. FIXME: do actually need this?
-                	Plotly.newPlot(divId, data, layout, this.defaultplotlyconfig);
+	                Plotly.purge(divElement);  // Purge plot. FIXME: do actually need this?
+                	Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
 	                this.watchOn(hover, function (newval, oldval) {
 	                    this.setMouseModes(newval, undefined);  // hovermode, mousemode
 	                });
@@ -713,18 +720,16 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 	            // sometimes not nice
             });
         },
-        react: function(divId){
+        react: function(){
             /**
              * Same as this.newPlot above, and can be used in its place to create a plot,
              * but when called again on the same <div> will update it far more efficiently
              */
-            if (divId === undefined){
-                divId = this.plotdivid;
-            }
+            var divElement = document.getElementById(this.plotdivid);
             this.$nextTick(() => {
                 this.execute(function(){
-                	var [data, layout] = this.createPlotlyDataAndLayout(divId);
-                	Plotly.react(divId, data, layout);
+                	var [data, layout] = this.createPlotlyDataAndLayout(divElement);
+                	Plotly.react(divElement, data, layout);
                 });
             });
         },
@@ -743,7 +748,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 	            self.drawingPlots=false;
 	        }, delay);
         },
-        createPlotlyDataAndLayout: function(divId){
+        createPlotlyDataAndLayout: function(divElement){
             var plots = this.plots;
             var params = this.params;
             
@@ -802,7 +807,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             var legendgroups = new Set();
             for (var i = 0; i < plots.length; i++){
                 var [plot, [gridxindex, gridyindex]] = [plots[i], plotsGridIndices[i]];
-                var [axisIndex, xaxis, yaxis, xdomain, ydomain] = this.getAxis(divId, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
+                var [axisIndex, xaxis, yaxis, xdomain, ydomain] = this.getAxis(divElement, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
                 xdomains[gridxindex] = xaxis.domain;  // used below to place correctly the x labels of the GRID
                 ydomains[gridyindex] = yaxis.domain;  // used below to place correctly the y labels of the GRID
                 // merge plot xaxis defined in getData with this.defaultxaxis, and then with xaxis.
@@ -967,12 +972,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             }
             return false;
         },
-        getAxis: function(divId, row, col, rows, cols){
+        getAxis: function(divElement, row, col, rows, cols){
             // computes the sub-plot area according to the row and col index
             // returns the array [axisIndex, xaxis, yaxis, xdomain, ydomain]
             // where xaxis and yaxis are the Objects to be passed to plotly's layout, xdomain = [x1, x2] and
             // ydomain = [y1, y2] are the two-element arrays denoting the enclosing area of the sub-plot
-            var [uwidth, uheight] = this.getEmUnits(divId, this.plotfontsize);
+            var [uwidth, uheight] = this.getElmEmUnits(divElement, this.plotfontsize);
             var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
             if (!this.displayGridLabels_('x', gridxparam)){
                 gridxparam = '';
@@ -986,7 +991,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             // rr += 0. * uwidth * Math.max(...Object.keys(this.plotTraceColors).map(elm => elm.length)) ;
             var axisIndex = 1 + row * cols + col;
             // assure the dimensions are at least a minimum, otherwise plotly complains (assuming 10px as font-minimum):
-            var [minuwidth, minuheight] = this.getEmUnits(divId, 10);
+            var [minuwidth, minuheight] = this.getElmEmUnits(divElement, 10);
             // calculate plot width and height:
             var colwidth = Math.max(minuwidth, (1-rr) / cols);
             var rowheight = Math.max(minuheight, (1-tt) / rows);
@@ -1015,12 +1020,16 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             //console.log('xdomain:' + xdomain); console.log('ydomain:' + ydomain);
             return [axisIndex, xaxis, yaxis, xdomain, ydomain];
         },
-        getEmUnits: function(divId, fontsize){
-            // returns [uwidth, uheight], the units of a 1em in percentage of the plot div, which must be shown on the browser
+        getElmEmUnits: function(domElement, fontsize){
+            // returns [uwidth, uheight], the units of a 1em in percentage of the given dom element,
+            // which must be shown on the browser
             // Both returned units should be < 1 in principle
-            var fontsize = this.plotfontsize;
-            var [width, height] = this.getPlotDivSize(divId);
+            var [width, height] = this.getElmSize(domElement);
             return [fontsize/width, fontsize/height];
+        },
+        getElmSize: function(domElement){
+            // returns the Array [width, height] of the given dom element size
+            return [domElement.offsetWidth, domElement.offsetHeight];
         },
         getAnnotation(props){
             return Object.assign({
@@ -1029,10 +1038,6 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 showarrow: false,
                 font: {size: this.plotfontsize}
           }, props || {});
-        },
-        getPlotDivSize: function(divId){
-            var elm = document.getElementById(divId);
-            return [elm.offsetWidth, elm.offsetHeight];
         },
         traceVisibilityChanged: function(traceName){
         	var indices = [];

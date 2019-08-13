@@ -162,12 +162,21 @@ def main(request, selected_menu=None):
             'form': TrellisView.formclass().to_rendering_dict(),
             'url': URLS.TRELLIS_RESTAPI,
             'urls': {
-                # the download* lists below must be made of elements of
-                # the form [key, url].
-                # Each url must return a
+                # the lists below must be made of elements of
+                # the form [key, url]. For each element the JS library (VueJS)
+                # will then create a POST data and issue a POST request
+                # at the given url (see JS code for details).
+                # Convention: If url is a JSON-serialized string representing
+                # the dict: '{"file": <str>, "mimetype": <str>}'
+                # then we will simply donwload the POST data without calling
+                # the server.
+                # Otherwise, when url denotes a Django view, remember
+                # that the function should build a response with
                 # response['Content-Disposition'] = 'attachment; filename=%s'
-                # urls starting with 'file:///' tell the frontend
-                # to simply download the response data without server request
+                # to tell the browser to download the content.
+                # (it is just for safety, remember that we do not care because
+                # we will download data in AJAX calls which do not care about
+                # content disposition
                 'downloadRequest': [
                     [
                         'json',
@@ -183,7 +192,8 @@ def main(request, selected_menu=None):
                 'downloadResponse': [
                     [
                         'json',
-                        'file:///%s.json' % KEY.TRELLIS
+                        '{"file": "%s.json", "mimetype": "application/json"}' %
+                        KEY.TRELLIS
                     ],
                     [
                         'text/csv',
@@ -243,7 +253,8 @@ def main(request, selected_menu=None):
                 'downloadResponse': [
                     [
                         'json',
-                        'file:///%s.json' % KEY.RESIDUALS
+                        '{"file": "%s.json", "mimetype": "application/json"}' %
+                        KEY.RESIDUALS
                     ],
                     [
                         'text/csv',
@@ -300,7 +311,8 @@ def main(request, selected_menu=None):
                 'downloadResponse': [
                     [
                         'json',
-                        'file:///%s.json' % KEY.TESTING
+                        '{"file": "%s.json", "mimetype": "application/json"}' %
+                        KEY.TESTING
                     ],
                     [
                         'text/csv',
@@ -526,6 +538,10 @@ def download_asimage(request, filename):
                                    jsondata['width'],
                                    jsondata['height'])
     bytestr = figutils.get_img(data, layout, width, height, format)
+    # hack REMOVE
+    with open('/Users/riccardo/Desktop/%s' % filename, 'wb') as fp:
+        fp.write(bytestr)
+    # hack end REMOVE
     if format == 'eps':
         response = HttpResponse(bytestr, content_type='application/postscript')
     elif format == 'pdf':
