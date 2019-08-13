@@ -138,17 +138,14 @@ Vue.component('downloadselect', {
         	/**
         	 * Downloads data with the given filename and mimeType
         	 * (https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types)
+        	 * data is supposed to be an ArrayBuffer (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
+        	 * issued from `fetchAndDownload`
         	 */
-
-			// first JSON.stringify data if mimeType is 'application/json'
-			// or it's empty and data === 'object'
-			if ((mimeType === 'application/json') || (!mimeType && (typeof data === 'object'))){
-				data = JSON.stringify(data);
-			}
         	// refs:
         	// https://www.bennadel.com/blog/3472-downloading-text-using-blobs-url-createobjecturl-and-the-anchor-download-attribute-in-javascript.htm
 			// https://stackoverflow.com/a/47197970
 			// https://developer.mozilla.org/en-US/docs/Web/API/Blob
+			// https://gist.github.com/javilobo8/097c30a233786be52070986d8cdb1743
         	var blob = new Blob([data], {type: mimeType});
         	var downloadUrl = window.URL.createObjectURL(blob);
         	var downloadAnchorNode = document.createElement('a');

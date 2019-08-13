@@ -494,7 +494,11 @@ def download_request(request, key, filename):
     dataform.dump(buffer, syntax=ext_nodot)
     buffer.seek(0)
     if ext_nodot == 'json':
-        response = HttpResponse(buffer, content_type='application/json')
+        # in the frontend using axios, we need to send bytes data (blob)
+        # or text in order for the download routine to work. Thus,
+        # use text/javascript in order not to convert the response data to
+        # Object:
+        response = HttpResponse(buffer, content_type='text/javascript')
     else:
         response = HttpResponse(buffer, content_type='application/x-yaml')
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
