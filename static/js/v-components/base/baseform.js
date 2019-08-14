@@ -7,7 +7,9 @@ var _BASE_FORM = Vue.component('baseform', {
         url: String,
         post: Function,
         // urls properties are passed to the downloadselect for downloading the request:
-        urls: {type: Object, default: () => {return {}}}
+        urls: {type: Object, default: () => {return {}}},
+        // additional class for the imtselect:
+        imtselectclasses: {type: String, default: "flexible"}
     },
     data: function () {
     	return {
@@ -71,43 +73,52 @@ var _BASE_FORM = Vue.component('baseform', {
 	<transition :name="mounted ? 'egsimform' : ''">
     <form novalidate v-on:submit.prevent="request"
         :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light']]"
-        class='d-flex flex-column flexible position-relative mb-3 align-self-center' style='z-index:10'
+        class='d-flex flex-column flexible position-relative pb-3 align-self-center' style='z-index:10; border-color:rgba(0,0,0,.5) !important'
     >    
-        <div class="d-flex flex-column flexible" :class="[responseDataEmpty ? '' : ['mx-4', 'mt-4', 'mb-3']]">
-            <div class="d-flex flexible flex-row mb-3">
-                <div class="d-flex flexible flex-column">
-                    <gsimselect :form="form" showfilter class="flexible" />
-                </div>
-                <slot/> <!-- << HERE CUSTOM FORM ELEMENTS IN CHILD COMPONENTS -->
-            </div>
-        
-			<div class='d-flex flex-row justify-content-center border-top pt-3'>
-	            <button type="button"
-	            	v-show='!responseDataEmpty'
-	            	@click='$emit("closebuttonclicked")'
-	            	aria-label="Close form window" data-balloon-pos="up" data-balloon-length="medium"
-	            	class="btn btn-outline-secondary ml-2"
-	            >
-	                <i class="fa fa-times"></i>
-	            </button>
+        <div class="d-flex flex-column flexible">
+            
+            <div class='d-flex flex-row justify-content-center p-1' style='background-color:rgba(5, 73, 113, .2)'>
 				<downloadselect
 					:urls="urls.downloadRequest"
 					:post="post"
 					:data="formObject"
-					data-balloon-pos="up" data-balloon-length="medium"
+					data-balloon-pos="down" data-balloon-length="medium"
 					aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"
 				/>
 	            <button type="button"
 	            	@click='resetDefaults'
-	            	aria-label="Restore default parameters" data-balloon-pos="up" data-balloon-length="medium"
-	            	class="btn btn-outline-secondary ml-2"
+	            	aria-label="Restore default parameters" data-balloon-pos="down" data-balloon-length="medium"
+	            	class="btn btn-outline-dark border-0 ml-2"
 	            >
 	                <i class="fa fa-fast-backward"></i>
 	            </button>
 	            <div class='flexible' style='flex-basis:1'></div>
-	            <button type="submit" class="btn btn-primary ml-2">
-	                <i class="fa fa-play"></i> Display plots
+	        	<button type="button"
+	            	v-show='!responseDataEmpty'
+	            	@click='$emit("closebuttonclicked")'
+	            	aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
+	            	class="btn btn-outline-dark border-0 ml-2"
+	            >
+	                <i class="fa fa-times"></i>
 	            </button>
+	        </div>
+
+            <div class="d-flex flexible flex-row mt-3" :class="[responseDataEmpty ? '' : ['mx-4']]">
+                <div class="d-flex flexible flex-column">
+                    <gsimselect :form="form" showfilter class="flexible" />
+                </div>
+                <div class="d-flex flex-column flexible ml-4">
+					<imtselect :form="form" :class="imtselectclasses"></imtselect>
+                	
+                	<slot/> <!-- << HERE CUSTOM FORM ELEMENTS IN CHILD COMPONENTS -->
+ 					
+ 					<div class='d-flex flex-row justify-content-center mt-4'>
+			            <div class='flexible' style='flex-basis:1'></div>
+			            <button type="submit" class="btn btn-primary ml-2">
+			                <i class="fa fa-play"></i> Display plots
+			            </button>
+		            </div>
+            	</div>
             </div>
         </div>
     </form>
