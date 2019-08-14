@@ -84,9 +84,10 @@ Vue.component('downloadselect', {
     computed: {
     	// no-op
     },
-    template: `<div v-if='urls.length' class='d-flex flex-row text-nowrap align-items-baseline'>
-		<i v-if="!helptext" class="fa fa-download"></i>
-		<span v-else :aria-label="helptext" data-balloon-pos="up-right" data-balloon-length="medium"><i class="fa fa-question-circle"></i></span>
+    template: `<div v-if='urls.length'
+    	:aria-label="helptext" data-balloon-pos="up" data-balloon-length="medium"
+    	class='d-flex flex-row text-nowrap align-items-baseline'
+    >
 		<select
 			v-model='selKey'
 			class='form-control ml-2'
