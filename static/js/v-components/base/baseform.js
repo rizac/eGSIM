@@ -17,7 +17,8 @@ var _BASE_FORM = Vue.component('baseform', {
             responseData: {},
             mounted: false,
             idRequestURLInput: this.url + '_requesturl_input_',
-            requestURL: ''
+            requestURL: '',
+            watchers: []
         }
     },
     methods: {
@@ -55,12 +56,30 @@ var _BASE_FORM = Vue.component('baseform', {
 		                    	retUrl += `${prefix}` + encodeURI(paramName) + '=' + encodeURI(responseData[paramName]);
 		                    	prefix = '&';
 		                    }
-		                    console.log(retUrl);
+		                    // console.log(retUrl);
 		                    this.requestURL = retUrl;
 		                } 
 		            });
         		}
         	}
+        	this.watchForValueChanges(true);
+        },
+        watchForValueChanges: function(watch){
+        	if (watch == !!this.watchers.length){
+        		return;
+        	}
+        	if (watch){
+        		for (var key of Object.keys(this.form)){
+        			this.watchers.push(this.$watch(`form.${key}.val`, (newVal, oldVal) => {
+        				this.requestURL ='';
+        				this.watchForValueChanges(false);
+        			}));
+        		}
+        		return;
+        	}
+        	// unwatch: simply call the stored callback
+        	this.watchers.forEach(wacther => wacther());
+        	this.watchers = [];
         },
         copyRequestURL: function(src){
         	var targetElement = src.currentTarget; // the button
@@ -134,7 +153,7 @@ var _BASE_FORM = Vue.component('baseform', {
 				<button type="button"
 	            	@click='resetDefaults'
 	            	aria-label="Restore default parameters" data-balloon-pos="down" data-balloon-length="medium"
-	            	class="btn btn-outline-dark border-0 ml-2"
+	            	class="btn btn-outline-dark border-0"
 	            >
 	                <i class="fa fa-fast-backward"></i>
 	            </button>
@@ -142,6 +161,7 @@ var _BASE_FORM = Vue.component('baseform', {
 					:urls="urls.downloadRequest"
 					:post="post"
 					:data="formObject"
+					class='ml-2'
 					data-balloon-pos="down" data-balloon-length="medium"
 					aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"
 				/>
@@ -153,7 +173,9 @@ var _BASE_FORM = Vue.component('baseform', {
 	                <i class="fa fa-link"></i>
 	            </button>
 	            <div class='d-flex flex-row flexible ml-2' style='flex-basis:1'>
-	            	<input :id="idRequestURLInput" v-show='requestURL' type='text' v-model='requestURL' class='flexible'>
+	            	<input :id="idRequestURLInput" v-show='requestURL' type='text' v-model='requestURL' class='flexible border-0'
+	            		style='background-color:rgba(255, 255, 255, .5)'
+	            	>
 	            	<button type="button"
 	            		@click="copyRequestURL"
 	            		v-show='requestURL'
