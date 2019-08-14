@@ -208,7 +208,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 					:post="post"
 					:data="getDownloadPostData"
 					class='mt-3 border p-2 bg-white'
-					:helptext="'Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see'"
+					title='asd'
+					data-balloon-pos='left' data-balloon-length='medium'
+                    aria-label='Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see'
 				/>
 	
 				<div
