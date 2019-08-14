@@ -66,7 +66,10 @@ Vue.component('downloadselect', {
         				var filename = this.specialKeys[key].file;
         				var mimeType = this.specialKeys[key].mimetype;
         				// stringify the data because this.download expects strings or ArrayBuffers
-        				this.download.call(this, JSON.stringify(postdata), filename, mimeType);
+        				// Also note, use tabs as indentations because the resulting file might be really really
+        				// lighter in size!
+        				// FIXME: what about non ascii characters in postdata?
+        				this.download.call(this, JSON.stringify(postdata, null, '\t'), filename, mimeType);
         			}else{
         				// fetch data and download it:
         				// the method below is the same as 'download' above
@@ -138,7 +141,7 @@ Vue.component('downloadselect', {
         	/**
         	 * Downloads data with the given filename and mimeType
         	 * (https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types)
-        	 * data is supposed to be an ArrayBuffer (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
+        	 * data is supposed to be a Byte-String ot an ArrayBuffer (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
         	 * issued from `fetchAndDownload`
         	 */
         	// refs:
