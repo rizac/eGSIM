@@ -7,7 +7,11 @@
 	<!-- includes css for form-related stuff (e.g. waitbar)  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/egsim.css' %}">
 	<!-- for tooltips https://kazzkiq.github.io/balloon.css/ -->
-	<link rel="stylesheet" href="https://unpkg.com/balloon-css/balloon.min.css">
+	{% if debug %}
+	<link rel='stylesheet' type='text/css' href='/static/fallbacks/balloon.1.0.3.css'/>
+	{% else %}
+	<link rel="stylesheet" type='text/css' href="https://unpkg.com/balloon-css/balloon.min.css">
+	{% endif %}
 {% endblock %}
 
 {% block body %}
