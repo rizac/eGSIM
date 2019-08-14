@@ -70,7 +70,7 @@ Vue.component('forminput', {
             </span>
             <span class='text-primary small ml-3 text-right'>{{ name }}</span>
             <button v-if="showhelpbutton" type="button" @click='$emit("helprequested")'
-            	:aria-label="'click for details'" data-balloon-pos="left"
+            	:aria-label="'click for details on this parameter'" data-balloon-pos="left"
     		 	class='btn btn-outline-secondary btn-sm ml-1 mb-1 py-0'
     		>
     			<i class="fa fa-question"></i>
