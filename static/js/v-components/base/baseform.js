@@ -16,12 +16,13 @@ var _BASE_FORM = Vue.component('baseform', {
         	responseDataEmpty: true,
             responseData: {},
             mounted: false,
+            idRequestURLInput: this.url + '_requesturl_input_',
+            requestURL: ''
         }
     },
     methods: {
         request: function(){
-            var form = this.form;
-            this.post(this.url, form).then(response => {
+            this.post(this.url, this.form).then(response => {
                 if (response && response.data){
                     this.responseData = response.data;
                 } 
@@ -33,6 +34,58 @@ var _BASE_FORM = Vue.component('baseform', {
     				this.form[key].val = this.form[key].initial;
     			}
     		}
+        },
+        getQueryString: function(){
+        	// little hack: get the json data of the current request.
+        	// The url is inside this.urls, we get it by inspecting the url key
+        	for(var [key, url] of this.urls.downloadRequest){
+        		if (key.startsWith('json')){
+        			this.post(url, this.form).then(response => {
+		                if (response && response.data){
+		                    var responseData = response.data;
+		                    var retUrl = window.location.origin;
+		                    if (!window.location.origin) {  // https://stackoverflow.com/a/25495161
+								retUrl = window.location.protocol + "//" 
+							    	+ window.location.hostname 
+							    	+ (window.location.port ? ':' + window.location.port : '');
+							}
+		                    retUrl += (this.url.startsWith('/') ? '' : '/') + this.url;
+		                    var prefix = '?';
+		                    for (var paramName of Object.keys(responseData)){
+		                    	retUrl += `${prefix}` + encodeURI(paramName) + '=' + encodeURI(responseData[paramName]);
+		                    	prefix = '&';
+		                    }
+		                    console.log(retUrl);
+		                    this.requestURL = retUrl;
+		                } 
+		            });
+        		}
+        	}
+        },
+        copyRequestURL: function(src){
+        	var targetElement = src.currentTarget; // the button
+        	// aria-label is used by balloon.css to display the tooltip
+			// store the current one:
+			var ariaLabel = targetElement.getAttribute('aria-label');
+  			var successful = this.copyText(document.getElementById(this.idRequestURLInput));
+  			// restore the old aria-label
+  			if (ariaLabel){
+	  			targetElement.setAttribute('aria-label', successful ? 'Copied' : 'Unable to copy');
+	  			setTimeout(() => {
+	  				targetElement.setAttribute('aria-label', ariaLabel);
+	  			}, 1000);
+        	}
+        },
+        copyText: function(element){
+        	// https://www.w3schools.com/howto/howto_js_copy_clipboard.asp
+        	element.focus();
+			element.select();
+			try {
+    			var successful = document.execCommand('copy');
+  			} catch (err) {
+    			var successful = false;
+  			}
+  			return successful;
         }
     },
     mounted: function () {
@@ -78,7 +131,14 @@ var _BASE_FORM = Vue.component('baseform', {
         <div class="d-flex flex-column flexible">
             
             <div class='d-flex flex-row justify-content-center p-1' style='background-color:rgba(5, 73, 113, .2)'>
-				<downloadselect
+				<button type="button"
+	            	@click='resetDefaults'
+	            	aria-label="Restore default parameters" data-balloon-pos="down" data-balloon-length="medium"
+	            	class="btn btn-outline-dark border-0 ml-2"
+	            >
+	                <i class="fa fa-fast-backward"></i>
+	            </button>
+	            <downloadselect
 					:urls="urls.downloadRequest"
 					:post="post"
 					:data="formObject"
@@ -86,13 +146,23 @@ var _BASE_FORM = Vue.component('baseform', {
 					aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"
 				/>
 	            <button type="button"
-	            	@click='resetDefaults'
-	            	aria-label="Restore default parameters" data-balloon-pos="down" data-balloon-length="medium"
+	            	@click='getQueryString'
+	            	aria-label="Show the URL of the current configuration. The URL can be used in your custom code to fetch data (see GET requests in the API documentation for details)" data-balloon-pos="down" data-balloon-length="medium"
 	            	class="btn btn-outline-dark border-0 ml-2"
 	            >
-	                <i class="fa fa-fast-backward"></i>
+	                <i class="fa fa-link"></i>
 	            </button>
-	            <div class='flexible' style='flex-basis:1'></div>
+	            <div class='d-flex flex-row flexible ml-2' style='flex-basis:1'>
+	            	<input :id="idRequestURLInput" v-show='requestURL' type='text' v-model='requestURL' class='flexible'>
+	            	<button type="button"
+	            		@click="copyRequestURL"
+	            		v-show='requestURL'
+		            	aria-label="Copy the URL" data-balloon-pos="down" data-balloon-length="medium"
+		            	class="btn btn-outline-dark border-0"
+		            >
+		                <i class="fa fa-copy"></i>
+		            </button>
+	            </div>
 	        	<button type="button"
 	            	v-show='!responseDataEmpty'
 	            	@click='$emit("closebuttonclicked")'
