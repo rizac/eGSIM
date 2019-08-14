@@ -82,27 +82,30 @@ var _BASE_FORM = Vue.component('baseform', {
             </div>
         
 			<div class='d-flex flex-row justify-content-center border-top pt-3'>
+	            <button type="button"
+	            	v-show='!responseDataEmpty'
+	            	@click='$emit("closebuttonclicked")'
+	            	aria-label="Close form window" data-balloon-pos="up" data-balloon-length="medium"
+	            	class="btn btn-outline-secondary ml-2"
+	            >
+	                <i class="fa fa-times"></i>
+	            </button>
 				<downloadselect
 					:urls="urls.downloadRequest"
 					:post="post"
 					:data="formObject"
 					:helptext="'Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)'"
 				/>
-	            <button type="submit" class="btn btn-primary ml-2">
-	                <i class="fa fa-play"></i> Display plots
-	            </button>
 	            <button type="button"
 	            	@click='resetDefaults'
+	            	aria-label="Restore default parameters" data-balloon-pos="up" data-balloon-length="medium"
 	            	class="btn btn-outline-secondary ml-2"
 	            >
-	                <i class="fa fa-fast-backward"></i> Reset defaults
+	                <i class="fa fa-fast-backward"></i>
 	            </button>
-	            <button type="button"
-	            	v-show='!responseDataEmpty'
-	            	@click='$emit("closebuttonclicked")'
-	            	class="btn btn-outline-secondary ml-2"
-	            >
-	                <i class="fa fa-times"></i> Close
+	            <div class='flexible' style='flex-basis:1'></div>
+	            <button type="submit" class="btn btn-primary ml-2">
+	                <i class="fa fa-play"></i> Display plots
 	            </button>
             </div>
         </div>
