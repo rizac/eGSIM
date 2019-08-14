@@ -57,28 +57,23 @@ Vue.component('trellis', {
 	<baseform
 		v-show="!formHidden"
 		v-bind="$props"
+		:imtselectclasses="''"
 		@responsereceived="responseData = arguments[0]; formHidden = true"
 		@closebuttonclicked="formHidden = true"
     >
     	<slot>
-            <div class="d-flex flex-column flexible ml-4">
+        	<div class="flexible form-control mt-4"
+            	style="flex-basis:0;background-color:transparent;overflow-y:auto">
+                <forminput
+                	v-for="(name, index) in scenarioKeys"
+                    :form='form' :name='name' :key="name"
+                    :class="{ 'mt-2': index > 0 }">
+                </forminput>
+            </div>
 
-				<imtselect :form="form"></imtselect>
-
-                <div class="flexible form-control mt-4"
-                	style="flex-basis:0;background-color:transparent;overflow-y:auto">
-                    <forminput
-                    	v-for="(name, index) in scenarioKeys"
-                        :form='form' :name='name' :key="name"
-                        :class="{ 'mt-2': index > 0 }">
-                    </forminput>
-                </div>
-
-                <div class="mt-4" style="background-color:transparent">
-                    <forminput :form='form' :name='"plot_type"'></forminput>
-                    <forminput :form='form' :name='"stdev"' class='mt-1'></forminput>
-                </div>
-
+            <div class="mt-4" style="background-color:transparent">
+                <forminput :form='form' :name='"plot_type"'></forminput>
+                <forminput :form='form' :name='"stdev"' class='mt-1'></forminput>
             </div>
         </slot>
     </baseform>
