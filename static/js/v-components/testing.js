@@ -47,23 +47,18 @@ Vue.component('testing', {
 		@closebuttonclicked="formHidden = true"
 	>
         <slot>        
-            <div class="d-flex flex-column flexible ml-4">
-            
-            	<imtselect :form="form" class='flexible'></imtselect>
-
-                <div class="mt-4 form-control" style="background-color:transparent">
-                    <forminput :form='form' :name='"gmdb"'></forminput>
-                	<forminput :form='form' :name='"selexpr"' showhelpbutton
-            			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2'>
-            		</forminput>
-                </div>
-                
-                <div class="mt-4" style="background-color:transparent">
-                	<forminput :form='form' :name='"fit_measure"'></forminput>
-                	<forminputlite :form='form' :name='"edr_bandwidth"' class='mt-1'></forminputlite>
-                	<forminputlite :form='form' :name='"edr_multiplier"' class='mt-1'></forminputlite>
-				</div>
+            <div class="mt-4 form-control" style="background-color:transparent">
+                <forminput :form='form' :name='"gmdb"'></forminput>
+            	<forminput :form='form' :name='"selexpr"' showhelpbutton
+        			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2'>
+        		</forminput>
             </div>
+            
+            <div class="mt-4" style="background-color:transparent">
+            	<forminput :form='form' :name='"fit_measure"'></forminput>
+            	<forminputlite :form='form' :name='"edr_bandwidth"' class='mt-1'></forminputlite>
+            	<forminputlite :form='form' :name='"edr_multiplier"' class='mt-1'></forminputlite>
+			</div>
     	</slot>
     </baseform>
 

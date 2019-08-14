@@ -89,7 +89,7 @@ Vue.component('downloadselect', {
     template: `<div v-if='urls.length' class='d-flex flex-row text-nowrap align-items-baseline'>
 		<select
 			v-model='selKey'
-			class='form-control ml-2'
+			class='form-control bg-transparent border-0'
 		>	
 		    <option
                 :value='emptyValue'

@@ -26,22 +26,16 @@ Vue.component('residuals', {
 		@closebuttonclicked="formHidden = true"
 	>	
 		<slot> 
-	        <div class="d-flex flex-column flexible ml-4">
-	            
-	           <imtselect :form="form" class="flexible"></imtselect>
-	        
-	            <div class="mt-4 form-control" style="background-color:transparent">
-					<forminput :form='form' :name='"gmdb"'></forminput>	
-	        		<forminput :form='form' :name='"selexpr"' showhelpbutton
-	        			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2' >
-	        		</forminput>
-	            </div>
-	
-				<div class="mt-4" style="background-color:transparent">
-	            	<forminput :form='form' :name='"plot_type"'></forminput>
-				</div>
-	
-	        </div>
+            <div class="mt-4 form-control" style="background-color:transparent">
+				<forminput :form='form' :name='"gmdb"'></forminput>	
+        		<forminput :form='form' :name='"selexpr"' showhelpbutton
+        			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2' >
+        		</forminput>
+            </div>
+
+			<div class="mt-4" style="background-color:transparent">
+            	<forminput :form='form' :name='"plot_type"'></forminput>
+			</div>
 		</slot>
 	</baseform>            
 
