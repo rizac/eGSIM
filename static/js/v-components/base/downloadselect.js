@@ -16,9 +16,7 @@ Vue.component('downloadselect', {
         // for a special case where `data` is actually the data to be downlaoded)
         data: [Object, Function],
         // post function to use for fetching the data to be downloaded:
-        post: Function,
-        // the help text (optional)
-        helptext: {type: String, default: ''}
+        post: Function
     },
     data: function () {
     	// find special Keys, i.e. keys not mapped to a URL string but
@@ -67,7 +65,8 @@ Vue.component('downloadselect', {
         			if (key in this.specialKeys){
         				var filename = this.specialKeys[key].file;
         				var mimeType = this.specialKeys[key].mimetype;
-        				this.download.call(this, postdata, filename, mimeType);
+        				// stringify the data because this.download expects strings or ArrayBuffers
+        				this.download.call(this, JSON.stringify(postdata), filename, mimeType);
         			}else{
         				// fetch data and download it:
         				// the method below is the same as 'download' above
@@ -84,10 +83,7 @@ Vue.component('downloadselect', {
     computed: {
     	// no-op
     },
-    template: `<div v-if='urls.length'
-    	:aria-label="helptext" data-balloon-pos="up" data-balloon-length="medium"
-    	class='d-flex flex-row text-nowrap align-items-baseline'
-    >
+    template: `<div v-if='urls.length' class='d-flex flex-row text-nowrap align-items-baseline'>
 		<select
 			v-model='selKey'
 			class='form-control ml-2'

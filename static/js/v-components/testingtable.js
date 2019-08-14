@@ -200,6 +200,8 @@ Vue.component('testingtable', {
 				:post="post"
 				:data="data"
 				class='mt-3 border p-2 bg-white'
+				data-balloon-pos='left' data-balloon-length='medium'
+                aria-label='Download the computed results in different formats'
 			/>
 
             <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto;  max-height:10rem'>
