@@ -101,8 +101,23 @@ var EGSIM_BASE = {
                 // allow chaining this promise from sub-components:
                 return response;  // https://github.com/axios/axios/issues/1057#issuecomment-324433430
             }).catch(response => {
-                var error = (((response.response || {}).data || {}).error || response.message) || 'Unknown error';
-                // set the data field errors:
+            	var errorMessage = response.message ||  'Unknown error';
+            	var errData = (response.response || {}).data;
+            	if (errData instanceof ArrayBuffer){
+            		// sometimes we might want to download png and json, we then
+            		// need to return an ArrayBuffer (see download.js).
+            		// The ArrayBuffer might "hide" a JSON formatted string. Thus,
+            		// try to convert to string and then json.parse:
+            		try{
+            			// copied from: https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
+            			// Uint8 because we send data as UTF8
+            			errData = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(errData)));
+            		}catch(exc){
+            			errData = {};
+            		}
+            	}
+            	var error = (errData || {}).error || {};
+            	// set the data field errors:
                 if (isFormObj){
                     var errors = error.errors || [];
                     for (var err of errors){
@@ -112,7 +127,7 @@ var EGSIM_BASE = {
                     }
                 }
                 // set the global error message:
-                this.setError(error);
+                this.setError(error.message || errorMessage);
                 // allow chaining this promise from sub-components:
                 throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
             }).finally(() => {
