@@ -16,7 +16,9 @@ Vue.component('downloadselect', {
         // for a special case where `data` is actually the data to be downlaoded)
         data: [Object, Function],
         // post function to use for fetching the data to be downloaded:
-        post: Function
+        post: Function,
+        // the classes to be added to the select element:
+        selectelementclasses: {type: String, default:""}
     },
     data: function () {
     	// find special Keys, i.e. keys not mapped to a URL string but
@@ -89,7 +91,8 @@ Vue.component('downloadselect', {
     template: `<div v-if='urls.length' class='d-flex flex-row text-nowrap align-items-baseline'>
 		<select
 			v-model='selKey'
-			class='form-control bg-transparent border-0'
+			:class="selectelementclasses"
+			class='form-control'
 		>	
 		    <option
                 :value='emptyValue'
