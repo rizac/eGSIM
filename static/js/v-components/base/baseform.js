@@ -30,6 +30,9 @@ var _BASE_FORM = Vue.component('baseform', {
             });
         },
         resetDefaults: function(){
+        	// reset the parameters to their defaults as implemented
+        	// server side.
+        	// Note that there are functions here calling this function
         	for (var key of Object.keys(this.form)){
         		if (this.form[key].initial !== undefined){
     				this.form[key].val = this.form[key].initial;
@@ -115,6 +118,37 @@ var _BASE_FORM = Vue.component('baseform', {
     			var successful = false;
   			}
   			return successful;
+        },
+        readLocalJSON: function(src){
+        	// reads a local uploaded file from src.currentTarget
+        	// copied and modified from http://researchhubs.com/post/computing/javascript/open-a-local-file-with-javascript.html
+        	var file = src.currentTarget.files[0];
+  			if (!file) {
+    			return;
+  			}
+  			var form = this.form;
+  			var self = this;
+  			var reader = new FileReader();
+			reader.onload = function(e) {
+				var contents = e.target.result;
+				// Display file content
+				var obj = JSON.parse(contents);
+				for (var key of Object.keys(obj)){
+					if (!(key in form)){
+						return;
+					}
+				}
+				self.resetDefaults.call(self);
+				for (var key of Object.keys(obj)){
+					var val = obj[key];
+					if (val !== null && val !== undefined){
+						// since we called reseltDefaults, we ignore
+						// null or undefined
+						form[key].val = val;
+					}
+				}
+			};
+			reader.readAsText(file);
         }
     },
     mounted: function () {
@@ -167,6 +201,16 @@ var _BASE_FORM = Vue.component('baseform', {
 	            >
 	                <i class="fa fa-fast-backward"></i>
 	            </button>
+	            <button type="button"
+	            	onclick='this.nextElementSibling.click()'
+	            	data-balloon-pos="down" data-balloon-length="medium"
+	            	aria-label="Load a configuration from a local JSON-formatted text file. This can be, e.g., a configuration previously saved as JSON (see 'Download as')"
+	            	class="btn btn-outline-dark border-0"
+	            >
+	                <i class="fa fa-upload"></i>
+	            </button>
+	            <!-- NOTE: the control below must be placed immediately after the control above! -->
+	            <input style='display:none' type="file" id="file-input" @change='readLocalJSON'>
 	            <downloadselect
 					:urls="urls.downloadRequest"
 					:post="post"
