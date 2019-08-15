@@ -494,8 +494,8 @@ def download_request(request, key, filename):
     dataform.dump(buffer, syntax=ext_nodot)
     buffer.seek(0)
     if ext_nodot == 'json':
-        # in the frontend using axios, we need to send bytes data (blob)
-        # or text in order for the download routine to work. Thus,
+        # in the frontend the axios library expects bytes data (blob)
+        # or bytes strings in order for the data to be correctly saved. Thus,
         # use text/javascript in order not to convert the response data to
         # Object:
         response = HttpResponse(buffer, content_type='text/javascript')
