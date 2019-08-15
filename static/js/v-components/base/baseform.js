@@ -186,8 +186,9 @@ var _BASE_FORM = Vue.component('baseform', {
 	            </button>
             	<input :id="idRequestURLInput" type='text' v-model='requestURL'
             		:style= "[requestURL ? {} : { 'visibility': 'hidden'}]"
-            		class='flexible flex-basis: 1 form-control form-control-sm ml-2 bg-transparent border-0'
-            	>
+            		class='flexible form-control form-control-sm ml-2 bg-transparent border-0'
+            		style='width:initial !important'
+            	/>
             	<button type="button"
             		@click="copyRequestURL"
             		v-show='requestURL'
@@ -218,7 +219,7 @@ var _BASE_FORM = Vue.component('baseform', {
  					<div class='d-flex flex-row justify-content-center mt-4'>
 			            <div class='flexible' style='flex-basis:1'></div>
 			            <button type="submit" class="btn btn-primary ml-2">
-			                <i class="fa fa-play"></i> Display plots
+			                <i class="fa fa-play"></i> Display results
 			            </button>
 		            </div>
             	</div>
