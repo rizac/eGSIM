@@ -542,10 +542,7 @@ def download_asimage(request, filename):
                                    jsondata['width'],
                                    jsondata['height'])
     bytestr = figutils.get_img(data, layout, width, height, format)
-    # hack REMOVE
-    with open('/Users/riccardo/Desktop/%s' % filename, 'wb') as fp:
-        fp.write(bytestr)
-    # hack end REMOVE
+
     if format == 'eps':
         response = HttpResponse(bytestr, content_type='application/postscript')
     elif format == 'pdf':
