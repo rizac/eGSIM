@@ -496,8 +496,7 @@ def download_request(request, key, filename):
     if ext_nodot == 'json':
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,
-        # use text/javascript in order not to convert the response data to
-        # Object:
+        # use text/javascript as 'application/javascript' does not work:
         response = HttpResponse(buffer, content_type='text/javascript')
     else:
         response = HttpResponse(buffer, content_type='application/x-yaml')
