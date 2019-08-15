@@ -176,14 +176,7 @@ var _BASE_FORM = Vue.component('baseform', {
         }
     },
     computed: {
-    	formObject: function(){
-    		// returns a javascript object with keys mapped to each form element value
-    		var data = {};
-    		for (var key of Object.keys(this.form)){
-    			data[key] = this.form[key].val;
-    		}
-    		return data;
-    	}	
+        // no-op
     },
     template: `
 	<transition :name="mounted ? 'egsimform' : ''">
@@ -214,7 +207,7 @@ var _BASE_FORM = Vue.component('baseform', {
 	            <downloadselect
 					:urls="urls.downloadRequest"
 					:post="post"
-					:data="formObject"
+					:data="form"
 					:selectelementclasses="'form-control-sm bg-transparent border-0'"
 					class='ml-2'
 					data-balloon-pos="down" data-balloon-length="medium"
