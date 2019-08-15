@@ -144,7 +144,7 @@ Vue.component('downloadselect', {
         	/**
         	 * Downloads data with the given filename and mimeType
         	 * (https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types)
-        	 * data is supposed to be a Byte-String ot an ArrayBuffer (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
+        	 * data is supposed to be a Byte-String or an ArrayBuffer (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
         	 * issued from `fetchAndDownload`
         	 */
         	// refs:
