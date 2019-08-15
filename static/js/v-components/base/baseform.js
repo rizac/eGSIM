@@ -36,12 +36,23 @@ var _BASE_FORM = Vue.component('baseform', {
     			}
     		}
         },
-        getQueryString: function(){
-        	// little hack: get the json data of the current request.
-        	// The url is inside this.urls, we get it by inspecting the url key
+        fetchRequestURL: function(){
+        	// Fetches
+        	// the current config (request) as dict and builsd this.requestURL
+        	// Returns an axios Promise to which a user can attach functions to
+        	// be executed when the POST returns successfully
+        	
+        	// *NOTE*: in Chrome only, after clicking on the button calling this
+        	// function, when we move out of it, the tooltip stays there: to make it disappear,
+        	// we need to focus something else. This is annoying but we could not fix it
+        	// (we tried implementing awrapper method, which was hiding the aria-label
+        	// and then restoring it later inside a `then` attached to the returned promise
+        	// below). If you want the source button, pass src as argument and access
+        	// src.currentTarget
+        	
         	for(var [key, url] of this.urls.downloadRequest){
         		if (key.startsWith('json')){
-        			this.post(url, this.form).then(response => {
+        			return this.post(url, this.form).then(response => {
 		                if (response && response.data){
 		                    var responseData = response.data;
 		                    var retUrl = window.location.origin;
@@ -56,13 +67,12 @@ var _BASE_FORM = Vue.component('baseform', {
 		                    	retUrl += `${prefix}` + encodeURI(paramName) + '=' + encodeURI(responseData[paramName]);
 		                    	prefix = '&';
 		                    }
-		                    // console.log(retUrl);
+		                    this.watchForValueChanges(true);
 		                    this.requestURL = retUrl;
 		                } 
 		            });
         		}
         	}
-        	this.watchForValueChanges(true);
         },
         watchForValueChanges: function(watch){
         	if (watch == !!this.watchers.length){
@@ -118,7 +128,7 @@ var _BASE_FORM = Vue.component('baseform', {
     		// Code that will run only after the
     		// entire view has been rendered
     		this.mounted = true;
-  		})
+  		});
 	},
     watch: {
         responseData: {
@@ -149,7 +159,7 @@ var _BASE_FORM = Vue.component('baseform', {
     >    
         <div class="d-flex flex-column flexible">
             
-            <div class='d-flex flex-row justify-content-center p-1' style='background-color:rgba(5, 73, 113, .2)'>
+            <div class='d-flex flex-row justify-content-center align-items-baseline p-1' style='background-color:rgba(5, 73, 113, .2)'>
 				<button type="button"
 	            	@click='resetDefaults'
 	            	aria-label="Restore default parameters" data-balloon-pos="down" data-balloon-length="medium"
@@ -161,31 +171,32 @@ var _BASE_FORM = Vue.component('baseform', {
 					:urls="urls.downloadRequest"
 					:post="post"
 					:data="formObject"
+					:selectelementclasses="'form-control-sm bg-transparent border-0'"
 					class='ml-2'
 					data-balloon-pos="down" data-balloon-length="medium"
 					aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"
 				/>
 	            <button type="button"
-	            	@click='getQueryString'
-	            	aria-label="Show the URL of the current configuration. The URL can be used in your custom code to fetch data (see GET requests in the API documentation for details)" data-balloon-pos="down" data-balloon-length="medium"
+	            	@click='fetchRequestURL'
+	            	data-balloon-pos="down" data-balloon-length="medium"
+	            	aria-label="Show the API URL of the current configuration. The URL can be used in your custom code to fetch data (see GET requests in the API documentation for details). You can also paste it in the browser to see the results (e.g., Firefox nicely displays JSON formatted data)"
 	            	class="btn btn-outline-dark border-0 ml-2"
 	            >
 	                <i class="fa fa-link"></i>
 	            </button>
-	            <div class='d-flex flex-row flexible ml-2' style='flex-basis:1'>
-	            	<input :id="idRequestURLInput" v-show='requestURL' type='text' v-model='requestURL' class='flexible border-0'
-	            		style='background-color:rgba(255, 255, 255, .5)'
-	            	>
-	            	<button type="button"
-	            		@click="copyRequestURL"
-	            		v-show='requestURL'
-		            	aria-label="Copy the URL" data-balloon-pos="down" data-balloon-length="medium"
-		            	class="btn btn-outline-dark border-0"
-		            >
-		                <i class="fa fa-copy"></i>
-		            </button>
-	            </div>
-	        	<button type="button"
+            	<input :id="idRequestURLInput" type='text' v-model='requestURL'
+            		:style= "[requestURL ? {} : { 'visibility': 'hidden'}]"
+            		class='flexible flex-basis: 1 form-control form-control-sm ml-2 bg-transparent border-0'
+            	>
+            	<button type="button"
+            		@click="copyRequestURL"
+            		v-show='requestURL'
+	            	aria-label="Copy the URL" data-balloon-pos="down" data-balloon-length="medium"
+	            	class="btn btn-outline-dark border-0"
+	            >
+	                <i class="fa fa-copy"></i>
+	            </button>
+	            <button type="button"
 	            	v-show='!responseDataEmpty'
 	            	@click='$emit("closebuttonclicked")'
 	            	aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
