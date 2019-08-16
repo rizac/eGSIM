@@ -138,7 +138,11 @@ var _PLOT_DIV = Vue.component('plotdiv', {
     },
     template: `<div v-show='visible' class='d-flex flex-row'>
         
-        <div class='flexible d-flex flex-column m-2'>
+        <!-- MAIN PLOT CONTAINER: upper div (with optional <select> tag),
+            waitbar div ("drawing" , "plotting") and finally
+            plotly div -->
+
+        <div class='flexible d-flex flex-column'>
             <div
             	v-if="Object.keys(selectedParams).length"
             	class='d-flex flex-row justify-content-around mb-1'
@@ -162,20 +166,24 @@ var _PLOT_DIV = Vue.component('plotdiv', {
             	<div
             		v-show='drawingPlots'
             		class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
-            		style='font-size:200%;z-index:1001;background-color:rgba(0,0,0,0.0)'
+            		style='z-index:1001;background-color:rgba(0,0,0,0.0)'
             	>
-            		<span
-            			class='p-2 shadow border rounded text-white'
-            			style="background-color:rgba(0,0,0,0.3)"
-            			v-html="waitbar.msg"
-            		>
-            		</span>
+            	    <div class='p-2 shadow border rounded text-white d-flex flex-column align-items-center'
+                        style="background-color:rgba(0,0,0,0.3)"
+                    >
+                		<span v-html="waitbar.msg" class='border-0 bg-transparent' style="font-size:200%;"></span>
+                		<span class='border-0 bg-transparent'>(It might take a while, please wait)</span>
+
+                    </div>
+            		
             	</div>
                 <div class='position-absolute pos-0' :id="plotdivid"></div>
             </div>
         </div>
     
-        <div class='d-flex flex-column my-2 mr-2 pl-3'
+        <!-- RIGHT TOOLBAR (legend, buttons, controls) -->
+
+        <div class='d-flex flex-column pl-4'
             v-show="legendNames.length || isGridCusomizable">
 
             <slot></slot> <!-- slot for custom buttons -->
