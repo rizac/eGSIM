@@ -165,7 +165,7 @@ Vue.component('testingtable', {
             </span>
 	    </div>
 	   
-	    <div class='d-flex flex-column mr-2 pl-2 border-left'>
+	    <div class='d-flex flex-column pl-4'>
 
             <slot></slot> <!-- slot for custom buttons -->
             

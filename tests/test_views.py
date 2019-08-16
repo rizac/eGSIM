@@ -26,7 +26,7 @@ class Test:
         # mocking the gmdb, which is a big overhead: let's test for trellis
         # only:
         if os.path.splitext(filename)[1] == '.json':
-            ctype = 'application/json'
+            ctype = 'text/javascript'
         else:
             ctype = 'application/x-yaml'
         url = "/%s/%s" % (URLS.DOWNLOAD_CFG, KEY.TRELLIS)
