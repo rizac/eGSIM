@@ -65,7 +65,6 @@ Vue.component('testing', {
     <testingtable
     	:data="responseData"
     	:downloadurls="urls.downloadResponse"
-    	:post="post"
     	class='position-absolute pos-0 m-0' style='z-index:1'
     >
     	<slot>

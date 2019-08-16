@@ -9,8 +9,7 @@ Vue.component('gsims', {
         url: String,
         // Additional urls Object (string key mapped to urls).
         // Note: use a function for the 'default' key to prevent sharing the same object (https://github.com/vuejs/vue/issues/1032#issuecomment-120212888)
-        urls: {type: Object, default: () => {return {}}},
-        post: Function        
+        urls: {type: Object, default: () => {return {}}}
     },
     data: function(){
         return {
@@ -60,7 +59,7 @@ Vue.component('gsims', {
         <div :id='id' class='flexible' style='font: inherit !important'></div>
         </div>`,
     created: function(){
-        this.post(this.trUrl).then(response => {
+        Vue.post(this.trUrl).then(response => {  // defined in `vueutil.js`
             if (response && response.data){
                 this.models = response.data.models;
                 this.form.model.val = response.data.selected_model || Object.keys(response.data.models)[0];
@@ -123,7 +122,7 @@ Vue.component('gsims', {
             this.form.imt.is_hidden = true;
             this.form.gsim.is_hidden = true;
             // send request:
-            this.post(this.url, this.form).then(response => {
+            Vue.post(this.url, this.form).then(response => {  // defined in `vueutil.js`
                 if(response.data && response.data.length){
                     this.openPopup(event, response.data);
                 }

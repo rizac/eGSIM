@@ -8,8 +8,7 @@ Vue.component('gmdbplot', {
     props: {
         form: Object,
         url: String,
-        response: {type: Object, default: () => {return {}}},
-        post: Function
+        response: {type: Object, default: () => {return {}}}
     },
     data: function () {
         return {
@@ -22,7 +21,7 @@ Vue.component('gmdbplot', {
     methods: {
         request: function(){
             var form = this.form;
-            this.post(this.url, form).then(response => {
+            Vue.post(this.url, form).then(response => {  // defined in `vueutil.js`
                 if (response && response.data){
                     this.responseData = response.data;
                 } 

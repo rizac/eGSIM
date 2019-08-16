@@ -5,7 +5,6 @@ var _BASE_FORM = Vue.component('baseform', {
     props: {
         form: Object,
         url: String,
-        post: Function,
         // urls properties are passed to the downloadselect for downloading the request:
         urls: {type: Object, default: () => {return {}}},
         // additional class for the imtselect:
@@ -23,7 +22,7 @@ var _BASE_FORM = Vue.component('baseform', {
     },
     methods: {
         request: function(){
-            this.post(this.url, this.form).then(response => {
+            Vue.post(this.url, this.form).then(response => {  // defined in `vueutil.js`
                 if (response && response.data){
                     this.responseData = response.data;
                 } 
@@ -43,7 +42,7 @@ var _BASE_FORM = Vue.component('baseform', {
         	// Fetches
         	// the current config (request) as dict and builsd this.requestURL
         	// Returns an axios Promise to which a user can attach functions to
-        	// be executed when the POST returns successfully
+        	// be executed when the POST request returns successfully
         	
         	// *NOTE*: in Chrome only, after clicking on the button calling this
         	// function, when we move out of it, the tooltip stays there: to make it disappear,
@@ -55,7 +54,7 @@ var _BASE_FORM = Vue.component('baseform', {
         	
         	for(var [key, url] of this.urls.downloadRequest){
         		if (key.startsWith('json')){
-        			return this.post(url, this.form).then(response => {
+        			return Vue.post(url, this.form).then(response => {  // defined in `vueutil.js`
 		                if (response && response.data){
 		                    var responseData = response.data;
 		                    var retUrl = window.location.origin;
@@ -122,7 +121,8 @@ var _BASE_FORM = Vue.component('baseform', {
         readLocalJSON: function(src){
         	// reads a local uploaded file from src.currentTarget
         	// copied and modified from http://researchhubs.com/post/computing/javascript/open-a-local-file-with-javascript.html
-        	var file = src.currentTarget.files[0];
+        	var fileInput = src.currentTarget;
+            var file = fileInput.files[0];
   			if (!file) {
     			return;
   			}
@@ -131,10 +131,23 @@ var _BASE_FORM = Vue.component('baseform', {
   			var reader = new FileReader();
 			reader.onload = function(e) {
 				var contents = e.target.result;
+				// clear the file value otherwise when clicking again on the same file
+				// we do not get the change event:
+				// setting an empty string seems not to call again the change event
+				// but in any case this method should return immediately (see if above)
+				fileInput.value = "";
 				// Display file content
-				var obj = JSON.parse(contents);
+				var obj = {};
+				try{
+				    var obj = JSON.parse(contents);
+				}catch(error){
+				    // although discouraged, this.$root is the easiest way to notify the main root
+				    // and display the error:
+				    self.$root.setError('Invalid file. Check that you loaded a JSON-formatted text file');
+				}
 				for (var key of Object.keys(obj)){
 					if (!(key in form)){
+					    self.$root.setError(`Invalid JSON. "${key}" is not a valid parameter`);
 						return;
 					}
 				}
@@ -186,7 +199,7 @@ var _BASE_FORM = Vue.component('baseform', {
     >    
         <div class="d-flex flex-column flexible">
             
-            <div class='d-flex flex-row justify-content-center align-items-baseline p-1' style='background-color:rgba(5, 73, 113, .2)'>
+            <div class='d-flex flex-row justify-content-center align-items-center p-1' style='background-color:rgba(5, 73, 113, .2)'>
 				<button type="button"
 	            	@click='resetDefaults'
 	            	aria-label="Restore default parameters" data-balloon-pos="down" data-balloon-length="medium"
@@ -206,7 +219,6 @@ var _BASE_FORM = Vue.component('baseform', {
 	            <input style='display:none' type="file" id="file-input" @change='readLocalJSON'>
 	            <downloadselect
 					:urls="urls.downloadRequest"
-					:post="post"
 					:data="form"
 					:selectelementclasses="'form-control-sm bg-transparent border-0'"
 					class='ml-2'
