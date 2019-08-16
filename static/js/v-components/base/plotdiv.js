@@ -11,8 +11,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         	default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))
        	},
        	// these two properties are passed to the downloadselect for downloading the response:
-        downloadurls: {type: Array, default: () => []},
-        post: {type: Function}
+        downloadurls: {type: Array, default: () => []}
     },
     data: function(){
     	// NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
@@ -205,7 +204,6 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 			<div>
 				<downloadselect
 					:urls="downloadurls"
-					:post="post"
 					:data="getDownloadPostData"
 					class='mt-3 border p-2 bg-white'
 					title='asd'

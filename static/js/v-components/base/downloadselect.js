@@ -15,8 +15,6 @@ Vue.component('downloadselect', {
         // sent to fetch the data to be downloaded (see comment on 'specialKeys' below
         // for a special case where `data` is actually the data to be downlaoded)
         data: [Object, Function],
-        // post function to use for fetching the data to be downloaded:
-        post: Function,
         // the classes to be added to the select element:
         selectelementclasses: {type: String, default:""}
     },
@@ -124,7 +122,7 @@ Vue.component('downloadselect', {
     		// For info see (also check there is a lot of old code to skip
     		// and comments in the answers to look at):
     		// https://stackoverflow.com/questions/8022425/getting-blob-data-from-xhr-request
-			this.post(url, postData, {responseType: 'arraybuffer'}).then(response => {
+			Vue.post(url, postData, {responseType: 'arraybuffer'}).then(response => {  // defined in `vueutil.js`
                 if (response && response.data){
                 	var filename = (response.headers || {})['content-disposition'];
                 	if (filename){

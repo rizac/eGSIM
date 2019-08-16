@@ -4,8 +4,7 @@ Vue.component('testingtable', {
         data: {type: Object, default: () => { return{} }},
         filename: {type: String},
         // these two properties are passed to the downloadselect for downloading the response:
-        downloadurls: {type: Array, default: () => []},
-        post: {type: Function}
+        downloadurls: {type: Array, default: () => []}
     },
     data: function () {
 	    var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value'];
@@ -197,7 +196,6 @@ Vue.component('testingtable', {
 	
 			<downloadselect
 				:urls="downloadurls"
-				:post="post"
 				:data="data"
 				class='mt-3 border p-2 bg-white'
 				data-balloon-pos='left' data-balloon-length='medium'
