@@ -140,6 +140,16 @@ var _BASE_FORM = Vue.component('baseform', {
 				var obj = {};
 				try{
 				    var obj = JSON.parse(contents);
+				    // parse imt in case it has 'SA' with periods (e.g. 'SA(0.2)')
+				    if (('imt' in obj) && ('sa_period' in form)){
+					    var imts = (obj.imt || []).filter(elm => !elm.startsWith('SA('));
+						var periods = (obj.imt || []).filter(elm => elm.startsWith('SA('));
+						if (periods.length && !imts.includes('SA')){
+							imts.push('SA');
+						}
+						obj.imt = imts;
+						obj.sa_period = periods.map(elm => elm.substring(3, elm.length-1)).join(' ');
+					}			    
 				}catch(error){
 				    // although discouraged, this.$root is the easiest way to notify the main root
 				    // and display the error:
@@ -151,14 +161,9 @@ var _BASE_FORM = Vue.component('baseform', {
 						return;
 					}
 				}
-				self.resetDefaults.call(self);
+				// self.resetDefaults.call(self);
 				for (var key of Object.keys(obj)){
-					var val = obj[key];
-					if (val !== null && val !== undefined){
-						// since we called reseltDefaults, we ignore
-						// null or undefined
-						form[key].val = val;
-					}
+					form[key].val = obj[key];
 				}
 			};
 			reader.readAsText(file);

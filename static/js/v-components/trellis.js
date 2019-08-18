@@ -11,22 +11,15 @@ Vue.component('trellis', {
     	// reactive properties like 'size' here (or maybe 'beforeCreate' would be
     	// a better place? https://vuejs.org/v2/api/#beforeCreate)
     	this.$set(this.form['plot_type'].attrs, 'size', 3);
-   		// set `imt` and `sa_period` inital value as undefined.
-   		// This means that we will skip setting the value
-   		// for those fields when clicking 'restore to defaults' (see baseform.js).
-   		// Their value will be set according to 'plot_type' (see 'watch' below):
-   		this.form.imt.initial = undefined;
-   		this.form.sa_period.initial = undefined;
 		// return data:
         return {
+        	predefinedSA: false,  // whether we have selected spectra as plot type
         	responseData: {},
         	formHidden: false,
             scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='sa_period' && key!='plot_type' && key!='stdev')
         }
     },
     watch: {
-        // see parent class for watchers on the form
-
         // watch additionally for the property val of plot_type in form
         // and make imt enabled if we are not choosing spectra plots
         // this is a bit hacky in that it relies on the parameter names
@@ -36,17 +29,7 @@ Vue.component('trellis', {
         	handler: function(newVal, oldVal){
         		var enabled = newVal !== 's' && newVal !== 'ss';
         		this.form.imt.attrs.disabled = !enabled;
-        		if (!enabled){
-        			this.form.imt.valTmp = this.form.imt.val;
-        			this.form.sa_period.valTmp = this.form.sa_period.val;
-        			this.form.imt.val = ['SA'];
-        			this.form.sa_period.val = '(set of pre-defined periods)';
-        		}else if('valTmp' in this.form.imt){
-        			this.form.imt.val = this.form.imt.valTmp;
-        			this.form.sa_period.val = this.form.sa_period.valTmp;
-        			delete this.form.imt.valTmp;
-        			delete this.form.sa_period.valTmp;
-        		}
+        		this.predefinedSA = !enabled;
         	}
         }
     },
@@ -62,6 +45,7 @@ Vue.component('trellis', {
 		@closebuttonclicked="formHidden = true"
     >
     	<slot>
+    		<div v-show='predefinedSA'><i class='text-warning fa fa-info-circle'></i> Intensity Measure Type will default to 'SA' with a set of pre-defined periods</div>
         	<div class="flexible form-control mt-4"
             	style="flex-basis:0;background-color:transparent;overflow-y:auto">
                 <forminput
