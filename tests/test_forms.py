@@ -243,33 +243,39 @@ def test_trellisform_invalid(areequal):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize('data, expected_yaml, expected_json',
-                         [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV'],
-                            'aspect': 1.2,
-                            'dip': 5, 'magnitude': '1:1:5',
-                            'distance': [1, 2, 3, 4, 5],
-                            'plot_type': 'm'},
-                            " '1:1:5'",
-                            '"1:1:5"'),
+@pytest.mark.parametrize('data, expected_mag_yaml, expected_mag_json',
+                         [(
+                             {
+                                 GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                                 IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV'],
+                                 'aspect': 1.2,
+                                 'dip': 5, 'magnitude': '1:1:5',
+                                 'distance': [1, 2, 3, 4, 5],
+                                 'plot_type': 'm'
+                              },
+                             " '1:1:5'",
+                             '"1:1:5"'
+                           ),
                           ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV'],
                             'aspect': 1.2,
                             'dip': 5, 'magnitude': [1, 2, 3, 4, 5],
                             'distance': [1, 2, 3, 4, 5],
                             'plot_type': 'm'}, """
-  - 1.0
-  - 2.0
-  - 3.0
-  - 4.0
-  - 5.0""", """[
-    1.0,
-    2.0,
-    3.0,
-    4.0,
-    5.0
-  ]""")])
-def test_trellisform_load_dump(data, expected_yaml, expected_json, areequal):
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5""", """[
+        1,
+        2,
+        3,
+        4,
+        5
+    ]""")])
+def test_trellisform_load_dump(data, expected_mag_yaml, expected_mag_json,
+                               # pytest fixtures:
+                               areequal):
     '''test that form serialization works for ndarray given as range and
     arrays (in the first case preserves the string with colons, and that a
     Form taking the serialized yaml has the same clean() method as the original
@@ -295,51 +301,41 @@ def test_trellisform_load_dump(data, expected_yaml, expected_json, areequal):
     assert areequal(cleaned_data, form_from_json.cleaned_data)
 
     expected_json_ = """{
-  "aspect": 1.2,
-  "backarc": false,
-  "dip": 5.0,
-  "distance": [
-    1.0,
-    2.0,
-    3.0,
-    4.0,
-    5.0
-  ],
-  "gsim": [
-    "BindiEtAl2011",
-    "BindiEtAl2014Rjb"
-  ],
-  "hypocentre_location": [
-    0.5,
-    0.5
-  ],
-  "imt": [
-    "SA(0.1)",
-    "SA(0.2)",
-    "PGA",
-    "PGV"
-  ],
-  "initial_point": [
-    0.0,
-    0.0
-  ],
-  "line_azimuth": 0.0,
-  "magnitude": %s,
-  "magnitude_scalerel": "WC1994",
-  "plot_type": "m",
-  "rake": 0.0,
-  "strike": 0.0,
-  "vs30": 760.0,
-  "vs30_measured": true,
-  "ztor": 0.0
-}""" % expected_json
+    "aspect": 1.2,
+    "backarc": false,
+    "dip": 5,
+    "distance": [
+        1,
+        2,
+        3,
+        4,
+        5
+    ],
+    "gsim": [
+        "BindiEtAl2011",
+        "BindiEtAl2014Rjb"
+    ],
+    "hypocentre_location": "0.5 0.5",
+    "imt": [
+        "SA(0.1)",
+        "SA(0.2)",
+        "PGA",
+        "PGV"
+    ],
+    "initial_point": "0 0",
+    "line_azimuth": 0.0,
+    "magnitude": %s,
+    "magnitude_scalerel": "WC1994",
+    "plot_type": "m",
+    "rake": 0.0,
+    "stdev": false,
+    "strike": 0.0,
+    "vs30": 760.0,
+    "vs30_measured": true,
+    "ztor": 0.0
+}""" % expected_mag_json
 
-    expected_json_ = json.loads(expected_json_)
-    # remove optional fields because they will not be rendered by dump:
-    for key in list(expected_json_.keys()):
-        if TrellisForm.is_optional(key):
-            expected_json_.pop(key)
-    assert areequal(json.loads(json_), expected_json_)
+    assert expected_json_ == json_
 
     expected_yaml_ = """# Ground Shaking Intensity Model(s)
 gsim:
@@ -373,12 +369,47 @@ distance:
 # Plot type
 plot_type: m
 
-""" % expected_yaml
+# Compute Standard Deviation(s)
+stdev: false
 
-    yaml_ = yaml_load(yaml_)
-    expected_yaml_ = yaml_load(expected_yaml_)
-    # remove optional fields because they will not be rendered by dump:
-    for key in list(expected_yaml_.keys()):
-        if TrellisForm.is_optional(key):
-            expected_yaml_.pop(key)
-    assert areequal(yaml_, expected_yaml_)
+# VS30 (m/s)
+vs30: 760.0
+
+# Rake
+rake: 0.0
+
+# Strike
+strike: 0.0
+
+# Top of Rupture Depth (km)
+ztor: 0.0
+
+# Magnitude Scaling Relation
+magnitude_scalerel: WC1994
+
+# Location on Earth (Longitude Latitude)
+initial_point: 0 0
+
+# Location of Hypocentre (Along-strike fraction, Down-dip fraction)
+hypocentre_location: 0.5 0.5
+
+# Is VS30 measured? (Otherwise is inferred)
+vs30_measured: true
+
+# Azimuth of Comparison Line
+line_azimuth: 0.0
+
+# Backarc Path
+backarc: false
+
+""" % expected_mag_yaml
+
+    assert expected_yaml_ == yaml_
+# 
+#     yaml_ = yaml_load(yaml_)
+#     expected_yaml_ = yaml_load(expected_yaml_)
+#     # remove optional fields because they will not be rendered by dump:
+#     for key in list(expected_yaml_.keys()):
+#         if TrellisForm.is_optional(key):
+#             expected_yaml_.pop(key)
+#     assert areequal(yaml_, expected_yaml_)
