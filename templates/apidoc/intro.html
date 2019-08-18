@@ -144,7 +144,7 @@ eGSIM supports the following parameter types in a request:
 <li>boolean (<code>true</code> or <code>false</code>)
 <li>UTC date-time (in ISO format without timezone, e.g.:
 <code>2016-01-30T23:15:11</code> or <code>2016-01-31</code>)
-<li>arrays (vectors) of the previous types
+<li>numeric arrays (vectors)
 <li>numeric ranges (i.e., equally spaced numeric arrays) in the
 <a href="https://www.mathworks.com/help/matlab/ref/colon.html#bvhfyce" target="_blank">MATLAB<sup>&reg;</sup> format</a>
 <code>start:step:end</code>
@@ -177,7 +177,7 @@ Then a user request might look like this:
 	</td>
 </tr>
 <tr>
-	<td rowspan="3">POST</td>
+	<td rowspan="3">POST<br><span class='text-muted small'>See notes 1,2</span></td>
 	<td colspan="2">http://egsim.org/example</td>
 </tr>
 <tr>
@@ -200,32 +200,39 @@ start: "2016-12-31T12:00:00"</code></pre>
 	</td>
 </tr>
 <tr>
-	<td>Web GUI components</td>
+	<td>Web GUI components<br><span class='text-muted small'>See note 3</span></td>
 	<td colspan="2">
-		<div style='white-space: nowrap'>
-			<span class='ml-2'>Dip</span>
-			<input type="number" value="45"/><br>
-			<span class='ml-2 mr-1'>Vs<sub>30</sub></span>
-			<input type="text" value="560 760"/><br>
-			<span class='ml-2 mr-1'>Mag</span>
-			<input type="text" value="3:0.5:5"/><br>
-			<span class='ml-2 mr-1'>Start</span>
-			<input type="text" value="2016-12-31T12:00:00"/>
-		</div>
+		<table style='border-width: 0px;box-shadow: initial'>
+			<tr>
+				<td style='border:none'>Dip</td><td style='border:none'><input type="number" value="45"/></td>
+			</tr>
+			<tr>
+				<td style='border:none'>Vs<sub>30</sub></td><td style='border:none'><input type="text" value="560 760"/></td>
+			</tr>
+			<tr>
+				<td style='border:none'>Mag</td><td style='border:none'><input type="text" value="3:0.5:5"/></td>
+			</tr>
+			<tr>
+				<td style='border:none'>Start</td><td style='border:none'><input type="text" value="2016-12-31T12:00:00"/></td>
+			</tr>
+		</table>
 	</td>
 </table>
 <div class='footnote'>
 Notes:
-<ul>
+<ol>
 <li>In YAML and JSON format, numeric ranges
 and date-times are not fully supported and should be
-input as strings with quotes (see example above).
-(YAML with Python seems to recognize date-times without quotes, but we suggest
-to type them as quoted strings for safety)
-<li>From within an input component of the Web GUI, 
-<b>spaces or commas</b> are both recognized as array element separators. Array can be optionally
-typed in JSON format as well, with leading and trailing square brackets '[' ']'
-</ul>
+input as strings with quotes (see <code>mag</code> and <code>start</code> in the
+examples)
+<li>In YAML and JSON format, numeric arrays can be typed also as strings with quotes using
+<b>spaces or commas</b> as delimiters. In case of commas,
+leading and trailing square brackets are optional. E.g. in the examples,
+<code>vs30</code> could have been input also as "560 760", "560,760" or "[560,760]"
+<li>From the Web GUI components, numeric ranges, numeric arrays and
+date-times are always input as strings as described in the previous note, but must <i>not</i>
+be quoted (see <code>vs30</code>, <code>mag</code> and <code>start</code> in the examples)
+</ol>
 </div>
 
 <p>

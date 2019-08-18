@@ -178,6 +178,11 @@ def get_fig(data, layout, width, height, converter=None):
     # points = pixels * 72 / dpi
     # inches = points / 72
     # inches = pixels / dpi
+    # See this post for details:
+    # https://stackoverflow.com/questions/47633546/relationship-between-dpi-and-figure-size
+    # https://stackoverflow.com/questions/10794891/getting-height-of-a-div-in-centimeter-using-jquery
+    # https://stackoverflow.com/questions/476815/how-to-access-screen-display-s-dpi-settings-via-javascript
+    # https://stackoverflow.com/questions/1341930/pixel-to-centimeter
     dpi = 300  # dpi affects the font size and lines width/length! (see below)
     fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
     # get_dpi might be not the dpi set:

@@ -53,10 +53,6 @@ class BaseForm(Form):
     # in the GUI
     __hidden_fieldnames__ = []
 
-    # this is a list of fields where the 'dump' method must return
-    # the cleaned_data and not the data passed in the constructor
-    __dump_returns_cleaneddata_for__ = []
-
     def __init__(self, *args, **kwargs):
         '''Overrides init to set custom attributes on field widgets and to set
         the initial value for fields of this class with no match in the keys
@@ -142,39 +138,35 @@ class BaseForm(Form):
         return not field.required or field.initial is not None
 
     def dump(self, stream=None, syntax='yaml'):
-        """Serialize this Form instance into a YAML stream. The result
-        collects the fields of `self.data` or self.cleaned_data
-        depending on what is in `self.__dump_returns_cleaneddata_for__`.
+        """Serialize this Form instance into a YAML or JSON stream.
+        **The form needs to be already validated via e.g. `form.is_valid()`**.
         Hidden fields in `self.__hidden_fieldnames__` are not returned.
-        Also fields which are optional (see `self.is_optional`) AND whose value
-        equals the initial default value are not returned.
-        The form needs to be validated via e.g. `form.is_valid()`
-        If stream is None, return the produced string instead.
 
-       :param stream: A stream **for text I/O** like a file-like object
-           (in general any object with a write method, e.g. StringIO) or
-           None.
-        :param syntax: string either json or yaml. Deault: yaml.
+        The result collects the fields of `self.data`, i.e., the unprocessed
+        input, with one exception: if this form subclasses
+        :class:`GsimImtForm`, as 'sa_period' is hidden,
+        the value mapped to 'imt' will be `self.cleaned_data['imt']` and not
+        `self.data['imt']`.
+
+        :param stream: A file-like object **for text I/O** (e.g. `StringIO`),
+           or None.
+        :param syntax: string either json or yaml. Deault: yaml
+
+        :return: if the passed `stream` argument is None, returns the produced
+            string. If the passed `stream` argument is a file-like object,
+            this method writes to `stream` and returns None
         """
         if syntax not in ('yaml', 'json'):
             raise ValueError("invalid `syntax` argument in `dump`: '%s' "
                              "not in ('json', 'yam')" % syntax)
 
         hidden_fn = set(self.__hidden_fieldnames__)
-        cleaneddata_fn = set(self.__dump_returns_cleaneddata_for__)
         cleaned_data = {}
         for key, val in self.data.items():
             if key in hidden_fn:
                 continue
-            if key not in cleaneddata_fn:
-                fld = self.fields[key]
-                # Handle now the cases when we can omit to add some fields
-                # to cleaned_data. This is not to make the dumped string more
-                # readable and light in bytes:
-                if self.is_optional(key) and val == fld.initial:
-                    continue
             cleaned_data[key] = self.cleaned_data[key] \
-                if key in cleaneddata_fn else val
+                if key == 'imt' and isinstance(self, GsimImtForm) else val
 
         if syntax == 'json':
             if stream is None:
@@ -182,7 +174,7 @@ class BaseForm(Form):
                                   separators=(',', ': '), sort_keys=True)
             json.dump(cleaned_data, stream, indent=4, separators=(',', ': '),
                       sort_keys=True)
-            return
+            return None
 
         class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
             '''forces indentation of lists.
@@ -350,16 +342,15 @@ class GsimSelectionForm(BaseForm):
 class GsimImtForm(BaseForm):
     '''Base abstract-like form for any form requiring Gsim+Imt selection'''
 
-    __additional_fieldnames__ = {'gmpe': 'gsim'}
+    __additional_fieldnames__ = {'gmpe': 'gsim', 'gmm': 'gsim'}
     __hidden_fieldnames__ = ['sa_period']
-    __dump_returns_cleaneddata_for__ = ['imt']
 
     gsim = GsimField(required=True)
     imt = ImtField(required=True)
     # sa_periods should not be exposed through the API, it is only used
     # from the frontend GUI. Thus required=False is necessary.
-    # We use a CharField because in principle it should never
-    # raise: If SA periods are malformed, the IMT field holds the error
+    # We use a CharField because in principle it should never raise: If SA
+    # periods are malformed, the IMT field will hold the error in the response
     sa_period = CharField(label="SA period(s)", required=False)
 
     def __init__(self, *args, **kwargs):
