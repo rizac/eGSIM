@@ -251,17 +251,23 @@ def test_trellisform_invalid(areequal):
                                  'aspect': 1.2,
                                  'dip': 5, 'magnitude': '1:1:5',
                                  'distance': [1, 2, 3, 4, 5],
+                                 'z1pt0': 34.5,
+                                 'initial_point': '0 1',
                                  'plot_type': 'm'
                               },
                              " '1:1:5'",
                              '"1:1:5"'
                            ),
-                          ({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV'],
-                            'aspect': 1.2,
-                            'dip': 5, 'magnitude': [1, 2, 3, 4, 5],
-                            'distance': [1, 2, 3, 4, 5],
-                            'plot_type': 'm'}, """
+                          (
+                              {
+                                  GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                                  IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV'],
+                                  'aspect': 1.2,
+                                  'dip': 5, 'magnitude': [1, 2, 3, 4, 5],
+                                  'distance': [1, 2, 3, 4, 5],
+                                  'z1pt0': 34.5,
+                                  'initial_point': '0 1',
+                                  'plot_type': 'm'}, """
   - 1
   - 2
   - 3
@@ -302,7 +308,6 @@ def test_trellisform_load_dump(data, expected_mag_yaml, expected_mag_json,
 
     expected_json_ = """{
     "aspect": 1.2,
-    "backarc": false,
     "dip": 5,
     "distance": [
         1,
@@ -315,24 +320,16 @@ def test_trellisform_load_dump(data, expected_mag_yaml, expected_mag_json,
         "BindiEtAl2011",
         "BindiEtAl2014Rjb"
     ],
-    "hypocentre_location": "0.5 0.5",
     "imt": [
         "SA(0.1)",
         "SA(0.2)",
         "PGA",
         "PGV"
     ],
-    "initial_point": "0 0",
-    "line_azimuth": 0.0,
+    "initial_point": "0 1",
     "magnitude": %s,
-    "magnitude_scalerel": "WC1994",
     "plot_type": "m",
-    "rake": 0.0,
-    "stdev": false,
-    "strike": 0.0,
-    "vs30": 760.0,
-    "vs30_measured": true,
-    "ztor": 0.0
+    "z1pt0": 34.5
 }""" % expected_mag_json
 
     assert expected_json_ == json_
@@ -366,50 +363,15 @@ distance:
   - 4
   - 5
 
-# Plot type
-plot_type: m
-
-# Compute Standard Deviation(s)
-stdev: false
-
-# VS30 (m/s)
-vs30: 760.0
-
-# Rake
-rake: 0.0
-
-# Strike
-strike: 0.0
-
-# Top of Rupture Depth (km)
-ztor: 0.0
-
-# Magnitude Scaling Relation
-magnitude_scalerel: WC1994
+# Depth to 1 km/s VS layer (m) (Calculated from the VS30 if not given)
+z1pt0: 34.5
 
 # Location on Earth (Longitude Latitude)
-initial_point: 0 0
+initial_point: 0 1
 
-# Location of Hypocentre (Along-strike fraction, Down-dip fraction)
-hypocentre_location: 0.5 0.5
-
-# Is VS30 measured? (Otherwise is inferred)
-vs30_measured: true
-
-# Azimuth of Comparison Line
-line_azimuth: 0.0
-
-# Backarc Path
-backarc: false
+# Plot type
+plot_type: m
 
 """ % expected_mag_yaml
 
     assert expected_yaml_ == yaml_
-# 
-#     yaml_ = yaml_load(yaml_)
-#     expected_yaml_ = yaml_load(expected_yaml_)
-#     # remove optional fields because they will not be rendered by dump:
-#     for key in list(expected_yaml_.keys()):
-#         if TrellisForm.is_optional(key):
-#             expected_yaml_.pop(key)
-#     assert areequal(yaml_, expected_yaml_)

@@ -165,6 +165,15 @@ class BaseForm(Form):
         for key, val in self.data.items():
             if key in hidden_fn:
                 continue
+            # Omit unchanged optional parameters. This is not only to make
+            # the dumped string more readable and light size, but to avoid
+            # parameters which defaults to None (e.g. z1pt0 in
+            # TrellisForm): if they were written here (e.g. `z1pt0: None`) then
+            # a routine converting the returned JSON/YAML to a query string
+            # would wrtie "...z1pt0=null...", which might be interpreted as
+            # the string "null"
+            if self.is_optional(key) and val == self.fields[key].initial:
+                continue
             cleaned_data[key] = self.cleaned_data[key] \
                 if key == 'imt' and isinstance(self, GsimImtForm) else val
 
