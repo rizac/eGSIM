@@ -141,26 +141,27 @@ eGSIM supports the following parameter types in a request:
 <ul>
 <li>numeric
 <li>text (denoted as <code>string</code>)
-<li>boolean (<code>true</code> or <code>false</code>)
-<li>UTC date-time (in ISO format without timezone, e.g.:
-<code>2016-01-30T23:15:11</code> or <code>2016-01-31</code>)
-<li>numeric arrays (vectors)
-<li>numeric ranges (i.e., equally spaced numeric arrays) in the
+<li>Numeric array (list of numbers) or String array (list of strings). Equally spaced numeric arrays 
+can be typed in the
 <a href="https://www.mathworks.com/help/matlab/ref/colon.html#bvhfyce" target="_blank">MATLAB<sup>&reg;</sup> format</a>
 <code>start:step:end</code>
 (e.g. <code>0:0.1:0.3</code> results in the sequence of values 0, 0.1, 0.2, 0.3)
+<li>boolean (<code>true</code> or <code>false</code>)
+<!-- <li>UTC date-time (in ISO format without timezone, e.g.:
+<code>2016-01-30T23:15:11</code> or <code>2016-01-31</code>) -->
 </ul>
 
 <p>
-<b>Example</b> assuming a service with endpoint <code>http://egsim.org/example</code>, requiring
-the following parameters:
+To illustrate this with an example, assuming a service with
+endpoint <code>http://egsim.org/example</code>, requiring the following parameters:
 </p>
 
 <ul>
+<li>gsim (list of strings)
 <li>dip (numeric scalar)
 <li>Vs<sub>30</sub> (numeric array)
 <li>mag (numeric array)
-<li>start (date-time)
+<!-- <li>start (date-time) -->
 </ul>
 <p>
 Then a user request might look like this:
@@ -168,41 +169,46 @@ Then a user request might look like this:
 <table>
 <tr>
 	<td>GET</td>
-	<td colspan="2">http://egsim.org/example?dip=45&vs30=560,760&mag=3:0.5:5&start=2016-12-31T12:00:00</td>
+	<td colspan="2">http://egsim.org/example?gsim=Bradley2013,Allen2012&dip=45&vs30=560,760&mag=3:0.5:5<!-- &start=2016-12-31T12:00:00 --></td>
 <tr>
 </tr>
 	<td>GET (safe)</td>
-	<td colspan="2">http://egsim.org/example?dip=45&vs30=560<span class='token string'>%2C</span>760&mag=3<span class='token string'>%3A</span>0.5<span class='token string'>%3A</span>5&start=2016-12-31T12<span class='token string'>%3A</span>00<span class='token string'>%3A</span>00
+	<td colspan="2">http://egsim.org/example?gsim=Bradley2013<span class='token string'>%2C</span>Allen2012&dip=45&vs30=560<span class='token string'>%2C</span>760&mag=3<span class='token string'>%3A</span>0.5<span class='token string'>%3A</span>5<!-- &start=2016-12-31T12<span class='token string'>%3A</span>00<span class='token string'>%3A</span>00 -->
 	<br><span class='text-muted small'>(Note <span class='token string'>percent encoded</span> characters)</span>
 	</td>
 </tr>
 <tr>
-	<td rowspan="3">POST<br><span class='text-muted small'>See notes 1,2</span></td>
+	<td rowspan="3">POST<br><span class='text-muted small'>See note</span></td>
 	<td colspan="2">http://egsim.org/example</td>
 </tr>
 <tr>
 	<td style='border-color:transparent'>data (YAML file)</td><td style='border-color:transparent'>data (JSON file)</td>
 </tr>
 <tr>
-	<td><pre><code class="language-yaml">dip: 45
+	<td><pre><code class="language-yaml">gsim:
+ - "Bradley2013"
+ - "Allen2012"
+dip: 45
 vs30:
  - 560
  - 760
-mag: "3:0.5:5"
-start: "2016-12-31T12:00:00"</code></pre>
+mag: "3:0.5:5"</code></pre> <!-- start: "2016-12-31T12:00:00" -->
 	</td>
 	<td><pre><code class="language-json">{
+  "gsim": ["Bradley2013", "Allen2012"],
   "dip": 45, 
   "vs30": [560, 760],
-  "mag": "3:0.5:5",
-  "start": "2016-12-31T12:00:00"
-}</code></pre>
+  "mag": "3:0.5:5"
+}</code></pre> <!-- "start": "2016-12-31T12:00:00" -->
 	</td>
 </tr>
 <tr>
-	<td>Web GUI components<br><span class='text-muted small'>See note 3</span></td>
+	<td>Web GUI components (example)</td>
 	<td colspan="2">
 		<table style='border-width: 0px;box-shadow: initial'>
+			<tr>
+				<td style='border:none'>Gsim</td><td style='border:none'><select size='3' multiple><option selected>Allen2012</option><option selected>Bradley2013</option><option>Campbell1997</option></select></td>
+			</tr>
 			<tr>
 				<td style='border:none'>Dip</td><td style='border:none'><input type="number" value="45"/></td>
 			</tr>
@@ -212,27 +218,29 @@ start: "2016-12-31T12:00:00"</code></pre>
 			<tr>
 				<td style='border:none'>Mag</td><td style='border:none'><input type="text" value="3:0.5:5"/></td>
 			</tr>
-			<tr>
+			<!-- <tr>
 				<td style='border:none'>Start</td><td style='border:none'><input type="text" value="2016-12-31T12:00:00"/></td>
-			</tr>
+			</tr> -->
 		</table>
 	</td>
 </table>
 <div class='footnote'>
 Notes:
-<ol>
-<li>In YAML and JSON format, numeric ranges
-and date-times are not fully supported and should be
-input as strings with quotes (see <code>mag</code> and <code>start</code> in the
-examples)
-<li>In YAML and JSON format, numeric arrays can be typed also as strings with quotes using
-<b>spaces or commas</b> as delimiters. In case of commas,
-leading and trailing square brackets are optional. E.g. in the examples,
-<code>vs30</code> could have been input also as "560 760", "560,760" or "[560,760]"
-<li>From the Web GUI components, numeric ranges, numeric arrays and
+<ul>
+<li>In YAML and JSON format:
+<ul><li>Strings should be input with quotes
+<li>Numeric ranges <!-- and date-times --> are not fully supported and should be
+input as strings  
+(see <code>mag</code> <!-- and <code>start</code> --> in the examples)
+<li>Numeric arrays can be typed also as strings with 
+<b>spaces or commas</b> as delimiters: this is for convenience the format used by the Web GUI,
+but if you create your own file we discourage it because unclear. In any case,
+in the examples, <code>vs30</code> could have been input also as <code>"560 760"</code>, <code>"560,760"</code> or <code>"[560,760]"</code>
+<!-- <li>From the Web GUI components, numeric ranges and numeric arrays  and
 date-times are always input as strings as described in the previous note, but must <i>not</i>
-be quoted (see <code>vs30</code>, <code>mag</code> and <code>start</code> in the examples)
-</ol>
+be quoted (see <code>vs30</code>, <code>mag</code> and <code>start</code> in the examples) -->
+</ul>
+</ul>
 </div>
 
 <p>
