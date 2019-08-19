@@ -161,7 +161,7 @@ var _BASE_FORM = Vue.component('baseform', {
 						return;
 					}
 				}
-				// self.resetDefaults.call(self);
+				self.resetDefaults.call(self);
 				for (var key of Object.keys(obj)){
 					form[key].val = obj[key];
 				}
