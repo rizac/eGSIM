@@ -113,8 +113,8 @@ Trellis plot data returned in JSON format will have the following structure:
             "magnitude": 5,    # see note 2
             "distance": null,  # see note 2
             "vs30": 760,
-            "stvalues": {},  # see note 3
-            "sdlabel": ""    # see note 3
+            "stdvalues": {},  # see note 3
+            "stdlabel": ""    # see note 3
         },
         {
            # same Object as above, computed for
@@ -135,10 +135,10 @@ Trellis plot data returned in JSON format will have the following structure:
 those variables are not repeated inside each nested object.
 <li>Magnitude and distance
 attributes might be null when they represent the array of x values.
-<li>stvalues is an empty object if the user did not choose to compute
+<li>stdvalues is an empty object if the user did not choose to compute
 standard deviations: Otherwise, it is an Object equal to "yvalues" but
-mapping each GSIM to the list of standard deviations. If sdvalues is empty,
-then sdlabel is the empty string
+mapping each GSIM to the list of standard deviations. If stdvalues is empty,
+then stdlabel is the empty string
 </ol>
 </div>
 
