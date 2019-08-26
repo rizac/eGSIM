@@ -59,15 +59,13 @@ def tostr(obj, none='null'):
 
 
 # Set the non-encoded characters. Sources:
-# https://perishablepress.com/stop-using-unsafe-characters-in-urls/
-# https://stackoverflow.com/a/2375597
-# https://en.wikipedia.org/wiki/Query_string#URL_encoding (using the latter
-# as ref here, although all links actually say something different).
-# Letters (A–Z and a–z), numbers (0–9) and the characters "*-.?,:_" are left
-# as they are (unencoded). Remember that eGSIM special characters might be
-# '&|><=!' (for gmdb selection), '*?[~]' (for parameters accepting wildcards)
-# and ':' (numeric range separator and time separator)
-QUERY_PARAMS_SAFE_CHARS = "*-.?,:_"
+# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#Description
+# NOTE THAT THE LAST 5 CHARACTERS ARE NOT SAFE
+# ACCORDING TO RFC 3986 EVEN THOUGH THESE CHARACTERS HAVE NOT FORMALIZED
+# URI DELIMITING USE. WE MIGHT APPEND [:-5] to QUERY_PARAMS_SAFE_CHARS BUT
+# WE SHOULD CHANGE THEN ALSO encodeURIComponent in the javascript files, to
+# make it consistent
+QUERY_PARAMS_SAFE_CHARS = "-_.~!*'()"
 
 
 def querystring(dic, baseurl=None):

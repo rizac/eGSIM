@@ -10,11 +10,11 @@
 	{% for key, field in form.items %}{% if not field.is_hidden %}
 	<tr>
 	<td>
-		{{ key }}{% for name2 in field.opt_names %}<br><span class='text-nowrap text-muted'>{{ name2 }}</span>{% endfor %}
+		<span class='pname'>{{ key }}</span>{% for name2 in field.opt_names %}<br><span class='text-nowrap text-muted'>{{ name2 }}</span>{% endfor %}
 	</td>
 	<td>
 		{% if field.is_optional %}
-			(<i>OPTIONAL</i>{% if field.initial != None %}, default: {{ field.initial }}{% endif %})
+			(<i>OPTIONAL</i>{% if field.initial != None %}, default: <span class='pval{% if field.choices %} str{% endif %}'>{% if field.initial is True %}true{% elif field.initial is False %}false{% else %}{{ field.initial }}{% endif %}</span>{% endif %})
 		{% endif %}
 		
 		{{ field.label }}{% if not field.help %}.{% endif %}
@@ -28,7 +28,7 @@
 				a list of {{ field.choices|length }} choices (too long to show)
 			{% else %}
 				{% for nme, lbl in field.choices %}
-					<span class="token string"><b>{{ nme }}</b></span>{% if lbl and lbl != nme %} ({{ lbl }}){% endif %}{% if not forloop.last %}, {% endif %}
+					<span class="pval str">{{ nme }}</span>{% if lbl and lbl != nme %} ({{ lbl }}){% endif %}{% if not forloop.last %}, {% endif %}
 				{% endfor %}
 			{% endif %}
 			{% if field.choices|length == 1 %}

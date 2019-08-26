@@ -1,4 +1,4 @@
-<p><b>Endpoint: <code>{{ baseurl }}/{{ data.path }}</code></b></p>
+<p><b>Endpoint: <span class='url'>{{ baseurl }}/{{ data.path }}</span></b></p>
 <p>
 eGSIM, through the GMPE-SMTK library, offers the ability to compare observed ground motions with
 the GMPE model predictions using the GMPE implementations found inside OpenQuake.
@@ -22,13 +22,14 @@ database (GMDB) and the desired plot type
 <div class='footnote'>
 Notes:
 <ul>
-	<li>"SA" in {{ data.form.imt.name }} must be provided
-		with the given period in parentheses, e.g. "SA(0.2)"
-	<li>{{ data.form.gsim.name }} and 
-		{{ data.form.imt.name }}
+	<li><span class='pval str'>SA</span> in <span class='pname'>{{ data.form.imt.name }}</span>
+		must be provided
+		with the given period in parentheses, e.g. <span class='pval str'>SA(0.2)</span>
+	<li><span class='pname'>{{ data.form.gsim.name }}</span> and 
+		<span class='pname'>{{ data.form.imt.name }}</span>
 		can be input as space- or comma-separated lists of values. They can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
-		eGSIM will then select all matching items (wildcards are not implemented in the GUI)
+		eGSIM will then select all matching items (wildcards are not implemented in the Web GUI)
 </ul>
 
 </div>
@@ -56,7 +57,7 @@ into three subplots:
 <tbody class='grid'>
 <tr>
 	<td>{{ data.form.plot_type.choices.0.1 }}</td>
-	<td rowspan="7">'Intra event', 'Inter event' and 'Total'</td>
+	<td rowspan="7">Intra event<br>Inter event<br>Total</td>
 	<td>Histogram of frequencies (y axis) vs residuals bins (x)</td>
 	<td>Mean, standard deviation of the distribution</td>
 </tr>
@@ -138,8 +139,13 @@ Residuals plot data returned in JSON format will have the following structure:
 <div class='footnote'>
 Notes:
 <ol>
-	<li>the parameters from slope, intercept, pvalue, median, stddev are provided (not null) depending on the
-	plot type chosen
+	<li>The parameters from
+		<span class='pname'>slope</span>,
+		<span class='pname'>intercept</span>,
+		<span class='pname'>pvalue</span>,
+		<span class='pname'>median</span>,
+		<span class='pname'>stddev</span> are provided (not null) depending on the value of
+		<span class='pname'>{{ data.form.plot_type.name }}</span>
 </ol>
 </div>
 

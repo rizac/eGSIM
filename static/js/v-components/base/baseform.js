@@ -66,7 +66,7 @@ var _BASE_FORM = Vue.component('baseform', {
 		                    retUrl += (this.url.startsWith('/') ? '' : '/') + this.url;
 		                    var prefix = '?';
 		                    for (var paramName of Object.keys(responseData)){
-		                    	retUrl += `${prefix}` + encodeURI(paramName) + '=' + encodeURI(responseData[paramName]);
+		                    	retUrl += `${prefix}` + encodeURIComponent(paramName) + '=' + encodeURIComponent(responseData[paramName]);
 		                    	prefix = '&';
 		                    }
 		                    this.watchForValueChanges(true);
