@@ -25,6 +25,7 @@ class Test:
         # variable is not found. and Django prints <VARNAME> NOT FOUND
         # in case. Thus:
         assert b" NOT FOUND" not in result.content
+        assert b"UNKNOWN_TYPE" not in result.content
 
     def test_main(self,
                   # pytest fixtures:

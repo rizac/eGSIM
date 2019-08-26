@@ -13,17 +13,20 @@
 		<span class='pname'>{{ key }}</span>{% for name2 in field.opt_names %}<br><span class='text-nowrap text-muted'>{{ name2 }}</span>{% endfor %}
 	</td>
 	<td>
-		{% if field.is_optional %}
-			(<i>OPTIONAL</i>{% if field.initial != None %}, default: <span class='pval{% if field.choices %} str{% endif %}'>{% if field.initial is True %}true{% elif field.initial is False %}false{% else %}{{ field.initial }}{% endif %}</span>{% endif %})
-		{% endif %}
 		
 		{{ field.label }}{% if not field.help %}.{% endif %}
 		{% if field.help %}
 			({{ field.help }}). 
 		{% endif %}
+
+		{{ field.typedesc }}{% if not field.is_optional and field.choices %}:{% endif %}
+		{% if field.is_optional %}
+			(<i>OPTIONAL</i>{% if field.initial != None %}, default: <span class='pval{% if field.choices %} str{% endif %}'>{% if field.initial is True %}true{% elif field.initial is False %}false{% else %}{{ field.initial }}{% endif %}</span>{% endif %}){% if field.choices %}:{% endif %}
+		{% endif %}
+		
 		{% if field.choices %}
-			{% if field.attrs.multiple %}One or more values{% else %}A value{% endif %}
-			choosable from{% if not field.choices|length > 30 %}:{% endif %}
+			{% if field.attrs.multiple %}one or more values{% else %}a value{% endif %}
+			choosable from
 			{% if field.choices|length > 30 %}
 				a list of {{ field.choices|length }} choices (too long to show)
 			{% else %}
@@ -34,13 +37,6 @@
 			{% if field.choices|length == 1 %}
 			(currently, only one choice is implemented)
 			{% endif %}
-		{% else %}
-			{% if field.attrs.min or field.attrs.min == 0 %}
-				Min: {{ field.attrs.min }}{% if field.attrs.max or field.attrs.max == 0%},{% endif %}
-			{%endif %}
-			{% if field.attrs.max or field.attrs.max == 0 %}
-				Max: {{ field.attrs.max }}
-			{%endif %}
 		{% endif %}
 	</td>
 	{% endif %}{% endfor %}
