@@ -24,7 +24,10 @@ Notes:
 <ul>
 	<li><span class='pval str'>SA</span> in <span class='pname'>{{ data.form.imt.name }}</span>
 		must be provided
-		with the given period in parentheses, e.g. <span class='pval str'>SA(0.2)</span>
+		with the given period in parentheses, e.g. <span class='pval str'>["SA(0.1)", "SA(0.2)"]</span>
+		(from the Web GUI, select <span class='pval str'>SA</span> and provide the periods
+		in the field <span class='pname'>{{ data.form.sa_period.label }}</span> separated
+		by <i>spaces</i> or <i>commas</i>, e.g. <span class='pval str'>0.1 0.2</span>).
 	<li><span class='pname'>{{ data.form.gsim.name }}</span> and 
 		<span class='pname'>{{ data.form.imt.name }}</span>
 		can be input with

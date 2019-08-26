@@ -277,6 +277,29 @@ class BaseForm(Form):
             # coerce val to [] in case val falsy and multichoice:
             if isinstance(field, MultipleChoiceField) and not val:
                 val = []
+            # type description:
+            typedesc = 'UNKNOWN_TYPE'
+            if isinstance(field, NArrayField):
+                if field.min_count is not None and field.min_count > 1:
+                    typedesc = 'Numeric array'
+                else:
+                    typedesc = 'Numeric or numeric array'
+            elif isinstance(field, MultipleChoiceField):
+                typedesc = 'String or string array'
+            elif isinstance(field, (CharField, ChoiceField)):
+                typedesc = 'String'
+            elif isinstance(field, BooleanField):
+                typedesc = 'Boolean'
+            elif isinstance(field, FloatField):
+                typedesc = 'Numeric'
+                min_, max_ = attrs.get('min', None), attrs.get('max', None)
+                if min_ is not None and max_ is None:
+                    typedesc += ' ≥ %d' % min_
+                elif min_ is None and max_ is not None:
+                    typedesc += ' ≤ %d' % max_
+                elif min_ is not None and max_ is not None:
+                    typedesc += ' in [%d, %d]' % (min_, max_)
+
             fielddata = {
                 'name': attrs['name'],
                 'opt_names': optional_names.get(name, []),
@@ -287,7 +310,8 @@ class BaseForm(Form):
                 'err': '',
                 'is_hidden': is_hidden,
                 'val': val,
-                'initial': field.initial
+                'initial': field.initial,
+                'typedesc': typedesc
             }
             fielddata['choices'] = getattr(field, 'choices', [])
             if isinstance(fielddata['choices'], CallableChoiceIterator):

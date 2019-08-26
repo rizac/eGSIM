@@ -45,7 +45,7 @@ def test_querystring():
     ddd = datetime(2016, 1, 3, 4, 5, 6, 345)
     value = {'abc': ddd}
     patt = querystring(value)
-    assert patt == "abc=2016-01-03T04:05:06.000345"
+    assert patt == "abc=2016-01-03T04%3A05%3A06.000345"
     for ddd in [date(2011, 4, 5), datetime(2011, 4, 5)]:
         assert querystring({'abc': ddd}) == "abc=2011-04-05"
     value = {'abc': [1, 'a', 1.1, '&invalid']}
@@ -54,7 +54,7 @@ def test_querystring():
 
 
 @pytest.mark.django_db
-def tst_narrayfield_get_decimals():
+def test_narrayfield_get_decimals():
     '''tests ndarrayfield get_decimals'''
     d_0 = NArrayField.get_decimals('1.3e45')
     assert d_0 == 0
