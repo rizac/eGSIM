@@ -20,8 +20,32 @@
 		background-color: initial !important;
 		box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
 	}
-	code{color: initial !important;}
 }
+
+/*
+custom classes, copied from prism.css
+USAGE:
+<span class='pval str'> ... </span>
+*/
+.pname, .pval, .pval.str, .pval.num, .pval.bool{
+	font-weight: bolder;
+}
+.pname{
+	color: #07a;
+}
+.pval.str{
+	color: #690;
+}
+.pval.num, .pval.bool, .pval{
+	color: #905;
+}
+.url{
+	/* copied from <code> with PRISM and bootstrap 4+ */
+	font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+	font-size: 87.5%;
+	color: darkgoldenrod;
+}
+code{color: initial !important;}
 
 /* counters */
 
@@ -75,10 +99,6 @@ h4::before, #toc a.ref-h4:before {
 }
 body{
 	font-family: Lato, Helvetica, "Encode Sans Condensed", Tahoma, sans-serif;
-}
-
-code {
-	color: #07a;
 }
 
 .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6{

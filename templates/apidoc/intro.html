@@ -26,20 +26,20 @@ The following base URI pattern has to be used for each request:
 </p>
 
 <p>
-<code class='pre'>{{ baseurl }}/&lt;service&gt;</code>
+<span class='url'>{{ baseurl }}/&lt;service&gt;</span>
 </p>
 
 <p>
 where {{ baseurl }} is the base eGSIM URL (if you are viewing this document online, {{ baseurl }}
 is the browser address without the last "/apidoc" part)
 
-and <code>&lt;service&gt;</code> is one of the following:
+and <span class='url'>&lt;service&gt;</span> is one of the following:
 </p>
 <ul>
-	<li><code>{{ egsim_data.GSIMS.path }}</code> for <a href="#gsimselection"> Model Selection</a> </li>
-	<li><code>{{ egsim_data.TRELLIS.path }}</code> for <a href="#trellisplots"> Model-to-Model Comparison</a> </li>
-	<li><code>{{ egsim_data.RESIDUALS.path }}</code> for <a href="#residualanalysis"> Model-to-Data Comparison</a> </li>
-	<li><code>{{ egsim_data.TESTING.path }}</code> for <a href="#testing"> Model-to-Data Testing</a> </li>
+	<li><span class='url'>{{ egsim_data.GSIMS.path }}</span> for <a href="#gsimselection"> Model Selection</a> </li>
+	<li><span class='url'>{{ egsim_data.TRELLIS.path }}</span> for <a href="#trellisplots"> Model-to-Model Comparison</a> </li>
+	<li><span class='url'>{{ egsim_data.RESIDUALS.path }}</span> for <a href="#residualanalysis"> Model-to-Data Comparison</a> </li>
+	<li><span class='url'>{{ egsim_data.TESTING.path }}</span> for <a href="#testing"> Model-to-Data Testing</a> </li>
 </ul>
 
 
@@ -58,7 +58,7 @@ values directly in the URL:
 </p>
 
 <p>
-<code>{{ baseurl }}/&lt;service&gt;?<span class="token key atrule">name1</span>=<span class="token number">value1</span>&amp;<span class="token key atrule">name2</span>=<span class="token number">value2</span></code>
+<span class='url'>{{ baseurl }}/&lt;service&gt;?<span class="pname">name1</span>=<span class="pval">value1</span>&amp;<span class="pname">name2</span>=<span class="pval">value2</span></span>
 </p>
 
 <p>
@@ -85,11 +85,10 @@ for complex parameter sets. In case,
 the user might be interested to issue POST requests instead.
 </p>
 <p class='footnote'>
-Note: These characters are <i>very likely</i> to be safe, but we cannot guarantee
-they will always be (do not encode them at your risk):
-</p>
-<p class='footnote'>
-<span class='token string' style='letter-spacing: 1rem; font-size:120%'>{{ query_params_safe_chars }}</span>
+Note: eGSIM considers safe the following characters (but we cannot guarantee
+they will always be, therefore do not encode them at your risk):
+&nbsp;
+<span class='pval str' style='letter-spacing: .25rem; font-size:120%'>{{ query_params_safe_chars }}</span>
 </p>
 
 
@@ -97,7 +96,7 @@ they will always be (do not encode them at your risk):
 <h4>POST method</h4>
 <p>
 Requests issued with the POST method should use the usual URL pattern:
-<code>{{ baseurl }}/&lt;service&gt;</code>
+<span class='url'>{{ baseurl }}/&lt;service&gt;</span>
 and provide the parameters set by means of additional data as text in
 <a target="_blank" href="https://en.wikipedia.org/wiki/JSON#Data_types.2C_syntax_and_example">JSON</a> or
 <a target="_blank" href="https://en.wikipedia.org/wiki/YAML#Example">YAML</a> format.
@@ -140,27 +139,28 @@ eGSIM supports the following parameter types in a request:
 
 <ul>
 <li>numeric
-<li>text (denoted as <code>string</code>)
+<li>text (denoted as <i>string</i>)
 <li>Numeric array (list of numbers) or String array (list of strings). Equally spaced numeric arrays 
 can be typed in the
 <a href="https://www.mathworks.com/help/matlab/ref/colon.html#bvhfyce" target="_blank">MATLAB<sup>&reg;</sup> format</a>
-<code>start:step:end</code>
-(e.g. <code>0:0.1:0.3</code> results in the sequence of values 0, 0.1, 0.2, 0.3)
-<li>boolean (<code>true</code> or <code>false</code>)
+<span class='pval str'>start:step:end</span>
+(e.g. <span class='pval str'>0:0.1:0.3</span> results in the sequence of values
+<span class='pval str'>0, 0.1, 0.2, 0.3</span>)
+<li>boolean (<span class='pval bool'>true</span> or <span class='pval bool'>false</span>)
 <!-- <li>UTC date-time (in ISO format without timezone, e.g.:
 <code>2016-01-30T23:15:11</code> or <code>2016-01-31</code>) -->
 </ul>
 
 <p>
 To illustrate this with an example, assuming a service with
-endpoint <code>http://egsim.org/example</code>, requiring the following parameters:
+endpoint <span class='url'>http://egsim.org/example</span>, requiring the following parameters:
 </p>
 
 <ul>
-<li>gsim (list of strings)
-<li>dip (numeric scalar)
-<li>Vs<sub>30</sub> (numeric array)
-<li>mag (numeric array)
+<li><span class='pname'>gsim</span> (list of strings)
+<li><span class='pname'>dip</span> (numeric scalar)
+<li><span class='pname'>Vs<sub>30</sub></span> (numeric array)
+<li><span class='pname'>mag</span> (numeric array)
 <!-- <li>start (date-time) -->
 </ul>
 <p>
@@ -169,17 +169,17 @@ Then a user request might look like this:
 <table>
 <tr>
 	<td>GET</td>
-	<td colspan="2">http://egsim.org/example?gsim=Bradley2013,Allen2012&dip=45&vs30=560,760&mag=3:0.5:5<!-- &start=2016-12-31T12:00:00 --></td>
-<tr>
+	<td colspan="2"><span class='url'>http://egsim.org/example?gsim=Bradley2013,Allen2012&dip=45&vs30=560,760&mag=3:0.5:5</span></td>
 </tr>
+<tr>
 	<td>GET (safe)</td>
-	<td colspan="2">http://egsim.org/example?gsim=Bradley2013<span class='token string'>%2C</span>Allen2012&dip=45&vs30=560<span class='token string'>%2C</span>760&mag=3<span class='token string'>%3A</span>0.5<span class='token string'>%3A</span>5<!-- &start=2016-12-31T12<span class='token string'>%3A</span>00<span class='token string'>%3A</span>00 -->
-	<br><span class='text-muted small'>(Note <span class='token string'>percent encoded</span> characters)</span>
+	<td colspan="2"><span class='url'>http://egsim.org/example?gsim=Bradley2013<b>%2C</b>Allen2012&dip=45&vs30=560<b>%2C</b>760&mag=3<b>%3A</b>0.5<b>%3A</b>5</span>
+	<br><span class='text-muted small'>(Note percent encoded characters in <b>bold</b>)</span>
 	</td>
 </tr>
 <tr>
 	<td rowspan="3">POST<br><span class='text-muted small'>See note</span></td>
-	<td colspan="2">http://egsim.org/example</td>
+	<td colspan="2"><span class='url'>http://egsim.org/example</span></td>
 </tr>
 <tr>
 	<td style='border-color:transparent'>data (YAML file)</td><td style='border-color:transparent'>data (JSON file)</td>
@@ -229,13 +229,16 @@ Notes:
 <ul>
 <li>In YAML and JSON format:
 <ul><li>Strings should be input with quotes
-<li>Numeric ranges <!-- and date-times --> are not fully supported and should be
+<li>Numeric ranges are not fully supported and should be
 input as strings  
-(see <code>mag</code> <!-- and <code>start</code> --> in the examples)
+(see <span class='pname'>mag</span> in the examples)
 <li>Numeric arrays can be typed also as strings with 
-<b>spaces or commas</b> as delimiters: this is for convenience the format used by the Web GUI,
+<i>spaces</i> or <i>commas</i> as delimiters: this is for convenience the format used by the Web GUI,
 but if you create your own file we discourage it because unclear. In any case,
-in the examples, <code>vs30</code> could have been input also as <code>"560 760"</code>, <code>"560,760"</code> or <code>"[560,760]"</code>
+in the examples, <span class='pname'>vs30</span> could have been input also as
+<span class='pval str'>"560 760"</span>,
+<span class='pval str'>"560,760"</span> or
+<span class='pval str'>"[560,760]"</span>
 <!-- <li>From the Web GUI components, numeric ranges and numeric arrays  and
 date-times are always input as strings as described in the previous note, but must <i>not</i>
 be quoted (see <code>vs30</code>, <code>mag</code> and <code>start</code> in the examples) -->
@@ -259,8 +262,8 @@ All eGSIM services can return data at the least in CSV
 and JSON formatted text (bytes sequences). 
 JSON is by far preferable in web applications
 (the eGSIM web GUI for instances requests and processes data in this format), and CSV files have
-the advantage to be easily visualizable in widely used spreadsheet softwares.
-However, for client code processing response data, both formats
+the advantage to be easily visualizable in widely used spreadsheet software.
+If you want to fetch data in your client code, both formats
 are widely supported in most languages (see e.g., the MATLAB<sup>&reg;</sup>
 <a href="https://www.mathworks.com/help/matlab/ref/jsondecode.html" target="_blank">jsonencode</a> and 
 <a href="https://www.mathworks.com/help/matlab/ref/csvread.html" target="_blank">csvread</a>
@@ -308,11 +311,14 @@ google API specification</a>. Example:
 <div class='footnote'>
 Notes:
 <ul>
-	<li>the code and the message are standard HTTP numeric status codes &ge;400 and &le; 500 and
-	text. For invalid parameters, the code is 400. In this case the parameter 'errors' might
-	be provided (in all other cases it's missing), and it is a list of objects with these
-	properties: domain (indicating the parameter name raising the error), message
-	(indicating the error message) and reason (indicating the error reason)
+	<li><span class='pname'>code</span> is the standard HTTP numeric status code &ge;400 and &le; 500, and
+	<span class='pname'>message</span> is the associated text. These two properties will be always present in
+	an error response. 
+	<span class='pname'>errors</span> is present only if the error is due to invalid parameters in the request
+	(in all other cases it's missing). If present, <span class='pname'>code</span> is 400, and <span class='pname'>errors</span>
+	is a list of objects with these
+	properties: <span class='pname'>domain</span> (indicating the parameter name raising the error), <span class='pname'>message</span>
+	(indicating the error message) and <span class='pname'>reason</span> (indicating the error reason)
 </ul>
 </div>
 

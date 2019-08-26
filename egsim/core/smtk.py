@@ -119,7 +119,7 @@ def get_trellis(params):
                     fig[DIST] = jsonserialize(fig.get(DIST, dist))
                     fig['stdvalues'] = {}
                     fig['stdlabel'] = ''
-                    # now search for the
+                    # now search for the values, if any:
                     fig_key = fig.pop('_key')
                     if stdev_data is not None:
                         std_fig = stdev_data['figures'].get(fig_key, {})
