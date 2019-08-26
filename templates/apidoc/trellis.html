@@ -36,24 +36,22 @@ Notes:
 <ul>
 	<li><span class='pval str'>SA</span> in <span class='pname'>{{ data.form.imt.name }}</span>
 		must be provided
-		with the given period in parentheses, e.g. <span class='pval str'>SA(0.1) SA(0.2)</span>.
+		with the given period in parentheses, e.g. <span class='pval str'>SA(0.2)</span>.
 		If <span class='pname'>{{ data.form.plot_type.name }}</span> is
 		<span class='pval str'>{{ data.form.plot_type.choices.2.0 }}</span>
 		({{ data.form.plot_type.choices.2.1 }}), then
 		<span class='pname'>{{ data.form.imt.name }}</span> will
 		default to <span class='pval str'>SA</span> with a set of pre-defined periods: any value
 		explicitly provided by the user will thus be ignored in case
-	<li><span class='pname'>{{ data.form.gsim.name }}</span>, 
-		<span class='pname'>{{ data.form.imt.name }}</span>,
-		<span class='pname'>{{ data.form.magnitude.name }}</span>,
+	<li><span class='pname'>{{ data.form.magnitude.name }}</span>,
 		<span class='pname'>{{ data.form.distance.name }}</span>,
 		<span class='pname'>{{ data.form.vs30.name }}</span>
 		(and, from the Web GUI, the value provided for "{{ data.form.sa_period.label }}")
-		can be input as space- or comma-separated lists of values.
-		<span class='pname'>{{ data.form.gsim.name }}</span> and 
+		can be numeric arrays: in case, they can be input as strings with values separated by <i>spaces</i> or <i>commas</i>.
+	<li><span class='pname'>{{ data.form.gsim.name }}</span> and 
 		<span class='pname'>{{ data.form.imt.name }}</span> can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
-		eGSIM will then select all matching items (wildcards are not implemented in the GUI)
+		eGSIM will then select all matching items (wildcards are not implemented in the Web GUI)
 </ul>
 </div>
 
