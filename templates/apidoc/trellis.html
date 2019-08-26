@@ -1,4 +1,4 @@
-<p><b>Endpoint: <code>{{ baseurl }}/{{ data.path }}</code></b></p>
+<p><b>Endpoint: <span class='url'>{{ baseurl }}/{{ data.path }}</span></b></p>
 <p>
 Trellis plots provide an understanding of the manner in which each GMPE characterizes the ground
 motion scaling with respect to the properties of the seismic source, and the attenuation of the
@@ -34,20 +34,24 @@ separate text data in JSON or YAML format (POST method) and are:
 <div class='footnote'>
 Notes:
 <ul>
-	<li>"SA" in {{ data.form.imt.name }} must be provided
-		with the given period in parentheses, e.g. "SA(0.2)", "SA(0.1) SA(0.2)".
-		If {{ data.form.plot_type.name }} is
-		<code>{{ data.form.plot_type.choices.2.0 }}</code>
-		(<code>{{ data.form.plot_type.choices.2.1 }}</code>), then
-		<code>{{ data.form.imt.name }}</code> will
-		default to 'SA' with a set of pre-defined periods: any value
+	<li><span class='pval str'>SA</span> in <span class='pname'>{{ data.form.imt.name }}</span>
+		must be provided
+		with the given period in parentheses, e.g. <span class='pval str'>SA(0.1) SA(0.2)</span>.
+		If <span class='pname'>{{ data.form.plot_type.name }}</span> is
+		<span class='pval str'>{{ data.form.plot_type.choices.2.0 }}</span>
+		({{ data.form.plot_type.choices.2.1 }}), then
+		<span class='pname'>{{ data.form.imt.name }}</span> will
+		default to <span class='pval str'>SA</span> with a set of pre-defined periods: any value
 		explicitly provided by the user will thus be ignored in case
-	<li>{{ data.form.gsim.name }}, 
-		{{ data.form.imt.name }}, {{ data.form.magnitude.name }},
-		{{ data.form.distance.name }}, {{ data.form.vs30.name }}
-		(and, from the gui, the value provided for "{{ data.form.sa_period.label }}")
-		can be input as space- or comma-separated lists of values. {{ data.form.gsim.name }} and 
-		{{ data.form.imt.name }} can also be input with
+	<li><span class='pname'>{{ data.form.gsim.name }}</span>, 
+		<span class='pname'>{{ data.form.imt.name }}</span>,
+		<span class='pname'>{{ data.form.magnitude.name }}</span>,
+		<span class='pname'>{{ data.form.distance.name }}</span>,
+		<span class='pname'>{{ data.form.vs30.name }}</span>
+		(and, from the Web GUI, the value provided for "{{ data.form.sa_period.label }}")
+		can be input as space- or comma-separated lists of values.
+		<span class='pname'>{{ data.form.gsim.name }}</span> and 
+		<span class='pname'>{{ data.form.imt.name }}</span> can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:
 		eGSIM will then select all matching items (wildcards are not implemented in the GUI)
 </ul>
@@ -57,9 +61,10 @@ Notes:
 <h3 id="{{ data.key }}_response">Response</h3>
 <p>
 The number of generated Trellis plots depends on the requested Intensity measure types (parameter
-{{ data.form.imt.name }}) <i>and</i> the parameters {{ data.form.magnitude.name }},
-{{ data.form.distance.name }} and
-{{ data.form.vs30.name }} (which can be given as numeric scalr or array):
+<span class='pname'>{{ data.form.imt.name }})</span> <i>and</i> the parameters
+<span class='pname'>{{ data.form.magnitude.name }}</span>,
+<span class='pname'>{{ data.form.distance.name }}</span> and
+<span class='pname'>{{ data.form.vs30.name }}</span> (which can be given as numeric scalr or array):
 </p>
 
 <table>
@@ -72,24 +77,27 @@ The number of generated Trellis plots depends on the requested Intensity measure
 <tbody>
 <tr>
 	<td>{{ data.form.plot_type.choices.0.1 }}</td>
-	<td>{{ data.form.distance.name }}</td>
-	<td>{{ data.form.imt.name }},
-	    {{ data.form.magnitude.name }},
-	    {{ data.form.vs30.name }}</td>
+	<td><span class='pname'>{{ data.form.distance.name }}</span></td>
+	<td><span class='pname'>{{ data.form.imt.name }}</span>,
+	    <span class='pname'>{{ data.form.magnitude.name }}</span>,
+	    <span class='pname'>{{ data.form.vs30.name }}</span>
+	</td>
 </tr>
 <tr>
 	<td>{{ data.form.plot_type.choices.1.1 }}</td>
-	<td>{{ data.form.magnitude.name }}</td>
-	<td>{{ data.form.imt.name }},
-	    {{ data.form.distance.name }},
-	    {{ data.form.vs30.name }}</td>
+	<td><span class='pname'>{{ data.form.magnitude.name }}</span></td>
+	<td><span class='pname'>{{ data.form.imt.name }}</span>,
+	    <span class='pname'>{{ data.form.distance.name }}</span>,
+	    <span class='pname'>{{ data.form.vs30.name }}</span>
+	</td>
 </tr>
 <tr>
 	<td>{{ data.form.plot_type.choices.2.1 }}</td>
 	<td>None: a set of pre-defined periods will be used</td>
-	<td>{{ data.form.magnitude.name }},
-	    {{ data.form.distance.name }},
-	    {{ data.form.vs30.name }}</td>
+	<td><span class='pname'>{{ data.form.magnitude.name }}</span>,
+	    <span class='pname'>{{ data.form.distance.name }}</span>,
+	    <span class='pname'>{{ data.form.vs30.name }}</span>
+	</td>
 </tbody>
 </table>
 
@@ -133,12 +141,12 @@ Trellis plot data returned in JSON format will have the following structure:
 <ol>
 <li>All plots share the same x axis and x values, thus for performance reasons
 those variables are not repeated inside each nested object.
-<li>Magnitude and distance
-attributes might be null when they represent the array of x values.
-<li>stdvalues is an empty object if the user did not choose to compute
-standard deviations: Otherwise, it is an Object equal to "yvalues" but
-mapping each GSIM to the list of standard deviations. If stdvalues is empty,
-then stdlabel is the empty string
+<li><span class='pname'>magnitude</span> and <span class='pname'>distance</span>
+might be null when they represent the array of x values.
+<li><span class='pname'>stdvalues</span> is an empty object if the user did not choose to compute
+standard deviations: Otherwise, it is an Object equal to <span class='pname'>yvalues</span> but
+mapping each GSIM to the list of standard deviations. If <span class='pname'>stdvalues</span> is empty,
+then <span class='pname'>stdlabel</span> is the empty string
 </ol>
 </div>
 
