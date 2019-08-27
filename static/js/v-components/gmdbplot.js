@@ -30,7 +30,7 @@ Vue.component('gmdbplot', {
     },
     template: `<div class='flexible d-flex flex-column'>
         <div>
-            <form novalidate v-on:submit.prevent="request" class='d-flex flex-column'>
+            <form novalidate @submit.prevent="request" class='d-flex flex-column'>
                 <div class="d-flex flex-row flexible align-items-end">
 
 					<!-- @helprequested below is actually redundant (not called) in all but one field -->

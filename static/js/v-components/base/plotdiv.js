@@ -196,9 +196,9 @@ var _PLOT_DIV = Vue.component('plotdiv', {
                 <div>Legend</div>
                 <div v-for="traceName in legendNames">
                     <label
-                    	v-bind:style="{color: legend[traceName].color}"
                     	class='my-0 mt-2 customcheckbox'
                     	:class="{'checked': legend[traceName].visible}"
+                        :style="{color: legend[traceName].color}"
                     >
                         <input
                         	type='checkbox'
@@ -228,7 +228,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
 	                	v-model='selectedgridlayout'
 	                	class='form-control mt-1'
 	                >
-	                    <option v-for='key in Object.keys(gridlayouts)' v-bind:value="key" v-html="key">
+	                    <option v-for='key in Object.keys(gridlayouts)' :value="key" v-html="key">
 	                    </option>
 	                </select>
 	

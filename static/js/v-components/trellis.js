@@ -19,6 +19,12 @@ Vue.component('trellis', {
             scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='sa_period' && key!='plot_type' && key!='stdev')
         }
     },
+    computed: {
+    	scenarioHasErrors: function(){
+    		var form = this.form;
+    		return this.scenarioKeys.some(key => !!form[key].err);
+    	}
+    },
     watch: {
         // watch additionally for the property val of plot_type in form
         // and make imt enabled if we are not choosing spectra plots
@@ -47,7 +53,9 @@ Vue.component('trellis', {
     	<slot>
     		<div v-show='predefinedSA'><i class='text-warning fa fa-info-circle'></i> Intensity Measure Type will default to 'SA' with a set of pre-defined periods</div>
         	<div class="flexible form-control mt-4"
-            	style="flex-basis:0;background-color:transparent;overflow-y:auto">
+            	style="flex-basis:0;background-color:transparent;overflow-y:auto"
+            	:class="{'border-danger': scenarioHasErrors}"
+            >
                 <forminput
                 	v-for="(name, index) in scenarioKeys"
                     :form='form' :name='name' :key="name"
