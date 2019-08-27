@@ -16,9 +16,10 @@ Vue.component('gsimselect', {
         name: {type: String, default: 'gsim'},
         // whether to show the "show filter" component on the bottom of the <select> main component
         showfilter: {type: Boolean, default: false},
-        // if true, a button shows up and this when clicked it
-        // emits a 'selection-fired' event with the list of selected GSIMs as argument:
-        selectbutton: {type: String, default: ''}
+        // if Object and the property html is not falsy, shows a button shows up and this when clicked it
+        // emits a 'selection-fired' event with the list of selected GSIMs as argument.
+        // `attrs` are the optional custom button attributes in the form key-> propery
+        selectbutton: {type: Object, default: () => { return {html:'', attrs: {}} }}
     },
     data: function () {
     	var elm = this.form[this.name]; //wlm is an Object with several component properties
@@ -158,8 +159,9 @@ Vue.component('gsimselect', {
           </select>
       </div>
       
-      <div v-if='selectbutton' class='text-center mt-2'>
-          <button @click="$emit('selection-fired', elm.val)" v-html='selectbutton' 
+      <div v-if='selectbutton.html' class='text-center mt-2'>
+          <button @click="$emit('selection-fired', elm.val)" v-html='selectbutton.html'
+           v-bind="selectbutton.attrs"
            :disabled='!(elm.val || []).length' class='btn btn-primary'>
           </button>
       </div>
