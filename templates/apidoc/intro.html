@@ -58,16 +58,17 @@ values directly in the URL:
 </p>
 
 <p>
-<span class='url'>{{ baseurl }}/&lt;service&gt;?<span class="pname">name1</span>=<span class="pval">value1</span>&amp;<span class="pname">name2</span>=<span class="pval">value2</span></span>
+<span class='url'>{{ baseurl }}/&lt;service&gt;?<span class="pname">name1</span>=<span class="pval">value1</span>&amp;<span class="pname">name2</span>=<span class="pval">value2</span>...</span>
 </p>
 
 <p>
 The portion of string after the question mark ? is called <i>query string</i>: as you can see,
 some characters are not <i>safe</i>, because they have special meanings and
 they will not be interpreted as they are (e.g. <span class='token string'>&amp;</span>)
-. The only safe characters are the alphanumeric ones (letters lower or uppercase, and numbers),
-all other characters should be
-<a href="https://en.wikipedia.org/wiki/Percent-encoding" target='_blank'>percent encoded</a>.
+. As a rule of thumb, the only safe characters are the alphanumeric ones (letters lower or uppercase, and numbers),
+and the characters <span class='pval str' style='letter-spacing: .25rem; font-size:120%'>-_.~</span>.
+All other characters should be <i>escaped</i> via  
+<a href="https://en.wikipedia.org/wiki/Percent-encoding" target='_blank'>percent encoding</a>.
 E.g., in Python you can use the <code>urllib's quote</code> function:
 </p>
 <pre><code class="language-python">from urllib.parse import quote
@@ -78,6 +79,11 @@ dips = str(dip)  # "60.5"
 vs30s = ",".join(str(_) for _ in vs30)  # "700,800"
 # build query string:
 query_str = '?' + 'dip=' + quote(dips, '') + '&amp;' + 'vs30=' + quote(vs30s, '')
+# the quote function has percent encoded the unsafe character "," into "%2C",
+# query_str has been therefore transformed from
+# "?dip=60.5&vs30=700,800"
+# to:
+# "?dip=60.5&vs30=700%2C800"
 </code></pre>
 <p>
 Percent encoding the parameters in a GET request can become quite cumbersome
@@ -85,7 +91,9 @@ for complex parameter sets. In case,
 the user might be interested to issue POST requests instead.
 </p>
 <p class='footnote'>
-Note: eGSIM considers safe the following characters (but we cannot guarantee
+Note: eGSIM considers safe the following characters according to 
+<a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#Description" target='_blank'>this specification</a>
+(but we cannot guarantee
 they will always be, therefore do not encode them at your risk):
 &nbsp;
 <span class='pval str' style='letter-spacing: .25rem; font-size:120%'>{{ query_params_safe_chars }}</span>
