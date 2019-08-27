@@ -79,7 +79,7 @@ dips = str(dip)  # "60.5"
 vs30s = ",".join(str(_) for _ in vs30)  # "700,800"
 # build query string:
 query_str = '?' + 'dip=' + quote(dips, '') + '&amp;' + 'vs30=' + quote(vs30s, '')
-# the quote function has percent encoded the unsafe character "," into "%2C",
+# the quote function has percent encoded the unsafe character "," into "%2C"
 # query_str has been therefore transformed from
 # "?dip=60.5&vs30=700,800"
 # to:
