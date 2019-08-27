@@ -158,9 +158,45 @@ def test_gsimimt_form_valid(data,
                             IMT: ['SA', 'PGA', 'PGV'],
                             'sa_period': 'r:0.1:0.2'})])
 def test_gsimimt_form_invalid_periods(data,
-                                      areequal):  # areequal: fixture in conftest.py
+                                      # pytest fixtures:
+                                      areequal):
     form = GsimImtForm(data)
     assert not form.is_valid()
+    err_json = json.loads(form.errors.as_json())
+    assert list(err_json.keys()) == ['imt']
+    assert len(err_json['imt']) == 1
+    assert err_json['imt'][0]['code'] == 'invalid_sa_period'
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('data',
+                         [({GSIM: ['AllenEtAl2012'],  # not defined for SA
+                            IMT: ['SA(r)', 'SA(0.2)', 'PGA', 'PGV']}),
+                          ({GSIM: ['AllenEtAl2012'],  # not defined for SA
+                            IMT: ['SA', 'PGA', 'PGV'],
+                            'sa_period': 'r:0.1:0.2'})])
+def test_gsimimt_form_notdefinedfor_skip_invalid_periods(data,
+                                                         # pytest fixtures:
+                                                         areequal):
+    '''tests that mismatching gsim <-> imt has the priority over bad
+    SA periods'''
+    form = GsimImtForm(data)
+    assert not form.is_valid()
+    expected_err = {
+        'gsim': [
+            {
+                'message': '1 gsim(s) not defined for all supplied imt(s)',
+                'code': 'invalid'
+            }
+        ],
+        'imt': [
+            {
+                'message': '3 imt(s) not defined for all supplied gsim(s)',
+                'code': 'invalid'
+            }
+        ]
+    }
+    assert areequal(json.loads(form.errors.as_json()), expected_err)
 
 
 @pytest.mark.django_db

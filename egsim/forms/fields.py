@@ -21,17 +21,15 @@ from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
-                                        DistanceSigmaIMTTrellis,
                                         MagnitudeIMTTrellis,
-                                        MagnitudeSigmaIMTTrellis,
-                                        MagnitudeDistanceSpectraTrellis,
-                                        MagnitudeDistanceSpectraSigmaTrellis)
+                                        MagnitudeDistanceSpectraTrellis)
 from smtk.residuals.residual_plots import (residuals_density_distribution,
                                            residuals_with_depth,
                                            residuals_with_distance,
                                            residuals_with_magnitude,
                                            residuals_with_vs30,
                                            likelihood)
+from smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS
 
 from egsim.core.utils import (vectorize, isscalar, get_gmdb_names,
                               get_gmdb_path, MOF, DISTANCE_LABEL,
@@ -41,7 +39,6 @@ from egsim.core.utils import (vectorize, isscalar, get_gmdb_names,
 # make migrations does not work! So these methods should be called inside
 # each INSTANCE creation (__init__) not in the class. But this is too late ...
 from egsim.models import aval_gsims, aval_imts, aval_trts, aval_trmodels
-from smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS
 
 
 class ArrayField(CharField):
@@ -538,7 +535,7 @@ class BaseImtField(MultipleChoiceWildcardField):
                             "be specified without period(s)" % SA),
         'sa_without_period': _("intensity measure type %s must "
                                "be specified with period(s)" % SA),
-        'invalid_sa_period': _("invalid period in %(value)s"),
+        'invalid_sa_period': _("invalid " + SA + " period in: %(value)s"),
         'invalid_sa_periods': _("error while parsing %s period(s)" % SA)
     }
 
@@ -598,8 +595,12 @@ class ImtField(BaseImtField):
         setattr(self, '_sa_periods_str', value)
 
     def valid_value(self, value):
-        """Validate the given value, ignoring the super method which compares
-        to the choices attribute if self.sa_periods_required is True
+        """Validate the given *single* value (i.e., an element of the passed
+        imt list), ignoring the super method which compares
+        to the choices attribute.
+        Remember that this method is called from within `self.clean` which in
+        turns calls first `self.to_python` and then `self.validate`. The latter
+        calls `self.valid_value` on each element of the input IMT list
         """
         if value == self.SA:
             # It is perfectly fine to raise ValidationError from here, as
@@ -624,6 +625,13 @@ class ImtField(BaseImtField):
         return valid
 
     def to_python(self, value):
+        '''Converts the given input value to a Python list of IMT strings
+        Remember that this method is called from within `self.clean` which in
+        turns calls first `self.to_python` and then `self.validate`. The latter
+        calls `self.valid_value` on each element of the input IMT list
+        '''
+        # convert strings with wildcards to matching elements
+        # (see MultipleChoiceWildcardField):
         imts = ImtclassField.to_python(self, value)
         # combine with separate SA periods, if provided
         periods_str = self.sa_periods_str
@@ -642,15 +650,28 @@ class ImtField(BaseImtField):
                 imts = ret[:saindex] + sa_periods + ret[saindex:]
             except Exception as _:
                 raise ValidationError(
-                    self.error_messages['invalid_sa_periods'],
-                    code='invalid_sa_periods'
+                    self.error_messages['invalid_sa_period'],
+                    code='invalid_sa_period',
+                    params={'value': periods_str},
                 )
 
         return imts
 
     def get_imt_classnames(self, value):
+        '''Returns a set of strings denoting the IMT class names in `value`
+        uses `self.sa_periods_str` to infer if SA is defined and should be
+        returned regardless of wether it is in `value` (list of IMT strings)
+        '''
+        # convert strings with wildcards to matching elements
+        # (see MultipleChoiceWildcardField):
+        imts = ImtclassField.to_python(self, value)
         ret = set()
-        for imt_ in self.to_python(value):
+        # check if SA is provided, and in case remove all occurrences of
+        # self.SA:
+        if self.sa_periods_str or any(_.startswith(self.SA) for _ in imts):
+            imts = [_ for _ in imts if not _.startswith(self.SA)]
+            ret = {self.SA}
+        for imt_ in imts:
             try:
                 ret.add(imt.from_string(imt_).__class__.__name__)
             except Exception:  # pylint: disable=broad-except
