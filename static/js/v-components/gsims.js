@@ -140,7 +140,14 @@ Vue.component('gsims', {
             this.form.gsim.val = [];
             propsData = {
             	form: this.form,
-            	selectbutton: 'Select globally for comparison and testing',
+            	selectbutton: {
+            		html: 'Select globally for comparison and testing',
+            		attrs: {
+            			'data-balloon-pos': "up",
+            			'data-balloon-length': "medium",
+            			'aria-label': "After choosing one or more GSIMs from the list above, clicking this button will automatically select the chosen GSIMs in: Model-to-Model Comparison, Model-to-Data Comparison and Model-to-Data Testing"
+            		}
+            	},
             	showfilter: true
             }
 

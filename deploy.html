@@ -108,7 +108,7 @@ Set the following variables (document updates on change):
             <input type='text' id='VENV_PATH' />
         </td>
         <td>
-            the Python virtual environment path: If creating the virtual environment with python3 venv (encouraged as it might solve some matplotlib issues), it is the argument of `python3 -m venv`: <pre><code class="language-bash">python3 -m venv $VENV_PATH</code></pre> (For safety, check that the directory contains, among others, bin/ lib/ pyvenv.cfg)
+            the Python virtual environment path: If creating the virtual environment with python3 venv (encouraged as it might solve some matplotlib issues), it is the argument of `python3 -m venv`: <pre><code class="language-bash">python3 -m venv $VENV_PATH</code></pre> <b>Safety check: if already created, the directory must contain, among others</b>: bin/, lib/, pyvenv.cfg
         </td>
     </tr>
 </table>
@@ -258,8 +258,10 @@ python --version
 
 <p>Install the repositories</p>
 <p class='note'>For any error in any of the 'pip install' commands below,
-the most likely cause is some System package missing: we suggest to google the error first, then check if anybody suggests to <code>apt install</code>
-missing packages and follow the instructions. <b>Ignore at first more complex solutions</b>. This doc was created by adding incrementally in the apt-install command above all packages that we discovered missing, so hopefully a fresh new installation might work fine without any new error</p>
+the most likely cause is some system package missing: we suggest to google the error first, then check if anybody suggests to <code>apt install</code>
+missing packages and follow the instructions. <b>Ignore at first complicated suggestions, they are rarely the solution to your problem</b>.
+This doc was created precisely following the pattern above. Eventually, we added in the apt-install command above all packages that we discovered missing,
+so hopefully a fresh new installation might work fine without any new error</p>
 
 <p>Install oq-engine: activate virtualenv, then</p>
 <pre><code class="language-bash">
