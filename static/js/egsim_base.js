@@ -6,7 +6,8 @@ var EGSIM_BASE = {
         errormsg: '',
         selComponent: '',
         gsims: {}, // an Object of gsim names (string) mapped to [[... imts ...], trt, oq_gsim_warning] (all elements strings)
-        componentProps: {} // an object of Objects keyed by each string denoting a component name (<=> menu tab)
+        componentProps: {}, // an object of Objects keyed by each string denoting a component name (<=> menu tab)
+        postfuncDefaultConfig: {}  // default config used in Vue.post. See egsim.html and vueutils.js
         // In case we want to use an event bus:
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
@@ -37,7 +38,9 @@ var EGSIM_BASE = {
         	}
         }
         // in `vueutils.js` we defined a POST function which emits the following events
-        // on this instance. Listen for them:
+        // on this instance. Create the POST function and event notifiers attached to this object
+        Vue.createPostFunction(this, this.postfuncDefaultConfig);
+        // and now listen for the just created event notifiers:
         this.$on('postRequestStarted', this.postRequestStarted);
         this.$on('postRequestCompleted', this.postRequestCompleted);
         this.$on('postRequestFailed', this.postRequestFailed);

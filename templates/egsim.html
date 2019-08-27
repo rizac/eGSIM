@@ -152,17 +152,14 @@
 	    mixins: [EGSIM_BASE],  /* defined in script above */
 	    data: function(){ /* FIXME: check what's the difference between returning function and dict */
 	        return {
+	            // default config for the POST function:
+	            // (csrf token stored in an <input> in the base.html. Get it here and use it for each post request):
+	        	postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value}}),
 	        	selComponent: "{{sel_component}}",
 	        	errormsg: incompatibleBrowser() || "{{ server_error_message }}",
 	        	componentProps: {{ component_props|safe }}
 	        };  
 	    }
 	});
-	
-	// create the globally available `post` function:
-	// The function Vue.createPostFunction is defined in vueutil.js
-	// csrf token stored in an <input> in the base.html. Get it here and use it for each post request:
-	Vue.createPostFunction(EGSIM, Object.freeze({headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value}}));
-
 	</script>
 {% endblock %}

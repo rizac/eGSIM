@@ -111,11 +111,11 @@ Vue.component('gsimselect', {
       <forminput :form="form" :name='name' headonly></forminput>
       <div class='flexible d-flex flex-column'>
           <select v-model="elm.val" v-bind="elm.attrs" ref="select"
-          v-bind:class="{'rounded-bottom-0': warnings.length, 'border-danger': !!elm.err}"
+          :class="{'rounded-bottom-0': warnings.length, 'border-danger': !!elm.err}"
           class="form-control flexible with-icons">
               <option v-for="gsim in elm.choices" :value="gsim" :key="gsim" v-show="visibleGsimsSet.has(gsim)"
-               v-bind:style="!selectableGsims.has(gsim) ? {'text-decoration': 'line-through'} : ''"
-               v-bind:class="{'disabled': !selectableGsims.has(gsim)}">
+               :style="!selectableGsims.has(gsim) ? {'text-decoration': 'line-through'} : ''"
+               :class="{'disabled': !selectableGsims.has(gsim)}">
                   {{ gsim }} {{ gsimManager.warningOf(gsim) ? '&#xf071;' : '' }} 
               </option>
           </select>
@@ -136,7 +136,7 @@ Vue.component('gsimselect', {
           <div class='d-flex flex-column'>
 	          <select v-model="filterType" class="form-control form-control-sm"
 	          	style='border:0px; background-color:transparent; width:initial!important'>
-    	          <option v-for="item in filterTypes" :key="item" v-bind:value="item">
+    	          <option v-for="item in filterTypes" :key="item" :value="item">
         	              Filter by {{ item }}:
               	  </option>
           	  </select>
@@ -158,9 +158,9 @@ Vue.component('gsimselect', {
           </select>
       </div>
       
-      <div v-if='selectbutton' class='mt-2'>
+      <div v-if='selectbutton' class='text-center mt-2'>
           <button @click="$emit('selection-fired', elm.val)" v-html='selectbutton' 
-           :disabled='!(elm.val || []).length' class='btn btn-primary form-control'>
+           :disabled='!(elm.val || []).length' class='btn btn-primary'>
           </button>
       </div>
     </div>`,
