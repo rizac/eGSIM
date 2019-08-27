@@ -198,7 +198,7 @@ var _BASE_FORM = Vue.component('baseform', {
     },
     template: `
 	<transition :name="mounted ? 'egsimform' : ''">
-    <form novalidate v-on:submit.prevent="request"
+    <form novalidate @submit.prevent="request"
         :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light', 'mb-1']]"
         class='d-flex flex-column flexible position-relative pb-4 align-self-center' style='z-index:10; border-color:rgba(0,0,0,.5) !important'
     >    
