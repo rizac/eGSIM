@@ -29,7 +29,7 @@ Vue.component('gmdbplot', {
         }
     },
     template: `<div class='flexible d-flex flex-column'>
-        <div class='mb-3'>
+        <div class='mx-2'>
             <form novalidate @submit.prevent="request" class='d-flex flex-column'>
                 <div class="d-flex flex-row flexible align-items-end">
 
@@ -46,6 +46,6 @@ Vue.component('gmdbplot', {
                 </div>
             </form>
         </div>
-        <gmdbplotdiv :data="responseData" class='flexible' />
+        <gmdbplotdiv :data="responseData" class='flexible m-2 mt-3' />
     </div>`
 })

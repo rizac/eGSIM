@@ -42,7 +42,7 @@ Vue.component('residuals', {
     <residualsplotdiv
     	:data="responseData"
     	:downloadurls="urls.downloadResponse.concat(urls.downloadImage)"
-        class='position-absolute pos-0 m-0' style='z-index:1'
+        class='position-absolute pos-0 mb-2 mx-2' style='z-index:1'
     >
         <slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-list-alt'></i> Configuration</button>
