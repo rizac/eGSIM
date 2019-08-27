@@ -179,7 +179,7 @@ Vue.component('testingtable', {
 			       			@click='clearFilters(filterName)' type='button'
 			       			:style="[filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}]"
 			       			style='padding-top:0.1rem; padding-bottom:0.1rem'
-			       			class='btn btn-outline-secondary btn-sm'
+			       			class='btn btn-outline-secondary btn-sm ml-2'
 			       		>
 			       			<i class="fa fa-eraser"></i> Clear filter (show all)
 			       		</button>
