@@ -8,10 +8,9 @@ Created on 2 Jun 2018
 import json
 
 import pytest
-from yaml.error import YAMLError
 from openquake.hazardlib import imt
 
-from egsim.forms.forms import TrellisForm, GsimImtForm, ResidualsForm, TestingForm
+from egsim.forms.forms import TrellisForm, GsimImtForm
 from egsim.core.utils import yaml_load
 
 
@@ -109,8 +108,7 @@ def test_gsimimt_form_invalid(areequal):  # areequal: fixture in conftest.py
     expected_dict = {
         'imt': [
             {
-                'message': ('intensity measure type SA must be specified '
-                            'with period(s)'),
+                'message': 'SA must be specified with period(s)',
                 'code': 'sa_without_period'
             }
         ]
@@ -200,6 +198,41 @@ def test_gsimimt_form_notdefinedfor_skip_invalid_periods(data,
 
 
 @pytest.mark.django_db
+def test_arrayfields_all_valid_input_types():
+    '''Tests some valid inputs in the egsim Fields accepting array of values
+    (MultipleChoiceWildcardField and NArrayField) using the trellis form
+    because it's the most heterogeneous. What we want to check is:
+    1. a MultipleChoiceWildcardField can be input as string S and will be
+        returned as the 1-element list [S] (param GSIM)
+    2. NArrayField can be input as string with space- or comma-separated
+        string chunks (or matlab range notation), but also:
+        2a. As python number (param magnitude)
+        2b. As string parsable to float (param distance)
+        2c. As list of any of the above types (param vs30)
+    3. A MultipleChoiceWildcardField expands wildcards not only if
+        the input is a string, but also, if the input is a list of strings,
+        for all list sub-elements (param imt)
+    '''
+    data = {
+        GSIM: 'BindiEtAl2011',
+        IMT: ['PG[AV]'],  # ['SA(0.1)', 'PGA', 'PGV'],
+        'magnitude': 0.5,
+        'distance': '0.1',
+        'dip': 60,
+        'vs30': [60, '76'],
+        'plot_type': 'm',
+        'aspect': 1
+    }
+    form = TrellisForm(data)
+    assert form.is_valid()
+    assert form.cleaned_data[GSIM] == ['BindiEtAl2011']  # testing 1)
+    assert form.cleaned_data['magnitude'] == 0.5  # testing 2a)
+    assert form.cleaned_data['distance'] == 0.1  # testing 2b)
+    assert form.cleaned_data['vs30'] == [60, 76]  # testing 2c)
+    assert sorted(form.cleaned_data['imt']) == ['PGA', 'PGV']  # testing 3)
+
+
+@pytest.mark.django_db
 def test_trellisform_invalid(areequal):
     '''Tests trellis form invalid.
     :param comparator: pytest fixture defined in conftest.py, it is used to
@@ -215,8 +248,7 @@ def test_trellisform_invalid(areequal):
     expected_json = {
         'imt': [
             {
-                'message': ('intensity measure type SA must be specified '
-                            'with period(s)'),
+                'message': 'SA must be specified with period(s)',
                 'code': 'sa_without_period'
             }
         ],
