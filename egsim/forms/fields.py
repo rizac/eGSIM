@@ -239,7 +239,7 @@ class NArrayField(ArrayField):
             for string in strings:
                 idx_dec = string.find('.')
                 idx_exp = string.lower().find('e')
-                if idx_dec > -1 and idx_exp > -1 and idx_exp < idx_dec:
+                if idx_dec > idx_exp > -1:
                     raise ValueError()  # stop parsing
                 dec1 = 0 if idx_dec < 0 else \
                     len(string[idx_dec+1: None if idx_exp < 0 else idx_exp])
@@ -338,11 +338,7 @@ class TrellisplottypeField(ChoiceField):
     _base_choices = {
         'd': ('IMT vs. Distance', DistanceIMTTrellis),
         'm': ('IMT vs. Magnitude', MagnitudeIMTTrellis),
-        's': ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis),
-        # 'ds': ('IMT vs. Distance (st.dev)', DistanceSigmaIMTTrellis),
-        # 'ms': ('IMT vs. Magnitude  (st.dev)', MagnitudeSigmaIMTTrellis),
-        # 'ss': ('Magnitude-Distance Spectra  (st.dev)',
-        #        MagnitudeDistanceSpectraSigmaTrellis)
+        's': ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis)
     }
 
     def __init__(self, **kwargs):
@@ -447,17 +443,18 @@ class ResidualplottypeField(ChoiceField):
 
 class MeasureOfFitField(MultipleChoiceField):
     '''MultipleChoiceField handling the possible Measures of Fit'''
-    _base_choices = {MOF.RES: ('Residuals',
-                               GSIM_MODEL_DATA_TESTS['Residuals']),
-                     MOF.LH: ("Likelihood",
-                              GSIM_MODEL_DATA_TESTS["Likelihood"]),
-                     MOF.LLH: ("Log-Likelihood",
-                               GSIM_MODEL_DATA_TESTS["LLH"]),
-                     MOF.MLLH: ("Multivariate Log-Likelihood",
-                                GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
-                     MOF.EDR: ("Euclidean Distance-Based Ranking",
-                               GSIM_MODEL_DATA_TESTS["EDR"])
-                     }
+    _base_choices = {
+        MOF.RES: ('Residuals',
+                  GSIM_MODEL_DATA_TESTS['Residuals']),
+        MOF.LH: ("Likelihood",
+                 GSIM_MODEL_DATA_TESTS["Likelihood"]),
+        MOF.LLH: ("Log-Likelihood",
+                  GSIM_MODEL_DATA_TESTS["LLH"]),
+        MOF.MLLH: ("Multivariate Log-Likelihood",
+                   GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
+        MOF.EDR: ("Euclidean Distance-Based Ranking",
+                  GSIM_MODEL_DATA_TESTS["EDR"])
+    }
 
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
@@ -472,9 +469,11 @@ class MeasureOfFitField(MultipleChoiceField):
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
-    '''MultipleChoiceField which accepts lists of values (the default) but
-    also a single string, in which case the string will be converted
-    to regex and all matching elements will be returned'''
+    '''Extension of Django MultipleChoiceField:
+     - Accepts lists of strings or a single string
+    (which will be converted to a 1-element list)
+    - Accepts wildcard in strings in order to include all matching elements
+    '''
 
     def to_python(self, value):
         '''converts strings with wildcards to matching elements, and calls the
@@ -531,10 +530,8 @@ class BaseImtField(MultipleChoiceWildcardField):
     '''Base class for the IMT selection Form Field'''
     SA = 'SA'
     default_error_messages = {
-        'sa_with_period': _("intensity measure type %s must "
-                            "be specified without period(s)" % SA),
-        'sa_without_period': _("intensity measure type %s must "
-                               "be specified with period(s)" % SA),
+        'sa_with_period': _("%s must be specified without period(s)" % SA),
+        'sa_without_period': _("%s must be specified with period(s)" % SA),
         'invalid_sa_period': _("invalid " + SA + " period in: %(value)s"),
         'invalid_sa_periods': _("error while parsing %s period(s)" % SA)
     }
@@ -648,7 +645,7 @@ class ImtField(BaseImtField):
                 sa_str = '{}(%s)'.format(self.SA)
                 sa_periods = [sa_str % _ for _ in periods]
                 imts = ret[:saindex] + sa_periods + ret[saindex:]
-            except Exception as _:
+            except Exception as _exc:
                 raise ValidationError(
                     self.error_messages['invalid_sa_period'],
                     code='invalid_sa_period',

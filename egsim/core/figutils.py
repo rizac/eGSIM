@@ -189,7 +189,7 @@ def get_fig(data, layout, width, height, converter=None):
     # https://github.com/matplotlib/matplotlib/issues/11227
     # https://github.com/matplotlib/matplotlib/pull/11232
     dpi = fig.get_dpi()
- 
+
     # set matplotlib global properties. It can be set via matplotlib.rc(...)
     # or plt.rc(...) (https://stackoverflow.com/a/49659327).
     # Note that matplotlib.rc('font' ...)
