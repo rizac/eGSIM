@@ -35,9 +35,9 @@ class MOF:  # pylint: disable=missing-docstring, too-few-public-methods
 
 
 def tostr(obj, none='null'):
-    '''Returns str(obj) to be injected into YAML or JSON variables.
+    '''Returns `str(obj)` to be injected into YAML or JSON variables,
+    with these exceptions:
 
-    Consequently, it returns `str(obj)` with these exceptions:
     - if obj is a date or datetime, returns its ISO format representation,
     either '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S' or '%Y-%m-%dT%H:%M:%S.%f'
     - if obj is boolean returns 'true' or 'false' (to lower case)

@@ -1,16 +1,17 @@
 '''
+Module handling error responses
+
 Created on 24 Jun 2018
 
 @author: riccardo
 '''
-import sys
 import json
 
 from django.http.response import JsonResponse
 
 
 def invalidform2json(form, code=400,  msg_format='Invalid input in %(names)s'):
-    '''Returns a JSOn serializable dict from the given invalid form. the dict
+    '''Returns a JSON serializable dict from the given invalid form. the dict
     is formatted according to
     https://google.github.io/styleguide/jsoncstyleguide.xml
 

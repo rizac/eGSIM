@@ -7,11 +7,7 @@ import os
 import io
 import csv
 import json
-import re
-from datetime import date
 from itertools import chain, repeat
-
-from yaml.error import YAMLError
 
 from django.http import JsonResponse
 from django.http.response import HttpResponse
@@ -123,6 +119,9 @@ class URLS:  # pylint: disable=too-few-public-methods
     # a REST API response to image (e.g., 3D grid of plots)
     DOWNLOAD_ASIMG = 'data/downloadasimage'
 
+    # url for the frontend pages to be rendered as HTML by means of the
+    # typical Django templating system: these pages are usually inside
+    # <iframe>s of the web SPA (single page application)
     HOME_PAGE = 'pages/home'
     DOC_PAGE = 'pages/apidoc'
 
@@ -332,7 +331,9 @@ def main(request, selected_menu=None):
         }
     }
 
-    # REMOVE LINES BELOW!!!
+    # Yes, what we are about to do it's really bad practice. But when in debug
+    # mode, I want to test easily the frontend with typical configurations
+    # already setup. In production, we will not enter here:
     if settings.DEBUG:
         gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
                      'CauzziEtAl2014']
@@ -359,9 +360,9 @@ def main(request, selected_menu=None):
 
         components_props['testing']['form']['fit_measure']['val'] = ['res',
                                                                      'lh',
-                                                                     #'llh',
-                                                                     #'mllh',
-                                                                     #'edr'
+                                                                     # 'llh',
+                                                                     # 'mllh',
+                                                                     # 'edr'
                                                                      ]
 
     # remove lines above!
@@ -481,7 +482,7 @@ def download_request(request, key, filename):
     '''Returns the request (configuration) re-formatted according to the syntax
     inferred from filename (*.json or *.yaml) to be downloaded by the front
     end GUI.
-    
+
     :param key: string in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING]
     '''
     formclass = _key2view(key).formclass
@@ -535,7 +536,7 @@ def download_asimage(request, filename):
     '''Returns the image from the given request built in the frontend GUI
     according to the choosen plots
     '''
-    format = os.path.splitext(filename)[1][1:]
+    format = os.path.splitext(filename)[1][1:]  # @ReservedAssignment
     jsondata = json.loads(request.body.decode('utf-8'))
     data, layout, width, height = (jsondata['data'],
                                    jsondata['layout'],
@@ -605,22 +606,23 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
                     ret[key] = values[0] if len(values) == 1 else values
             return self.response(ret)
 
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             return requestexc2json(err)
 
     def post(self, request):
         '''processes a post request'''
         try:
             return self.response(yaml_load(request.body.decode('utf-8')))
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             return requestexc2json(err)
 
     @classmethod
     def response(cls, inputdict):
         '''processes an input dict `inputdict`, returning a response object.
-        Calls `self.process` if the input is valid according to the Form's
-        class `formclass` otherwise returns an appropriate json response with
-        validation-error messages, or a json response with a gene'''
+        Calls `self.process` if the input is valid according to
+        `cls.formclass`. On error, returns an appropriate json response
+        (see `module`:core.responseerrors)
+        '''
         formatform = FormatForm(inputdict)
         if not formatform.is_valid():
             return invalidform2json(formatform)
@@ -821,6 +823,7 @@ class GmdbPlotView(RESTAPIView):  # pylint: disable=abstract-method
 
 
 class ResidualsView(RESTAPIView):
+    '''EgsimQueryView subclass for generating Residuals plot responses'''
 
     formclass = ResidualsForm
 
@@ -843,6 +846,7 @@ class ResidualsView(RESTAPIView):
 
 
 class TestingView(RESTAPIView):
+    '''EgsimQueryView subclass for generating Testing responses'''
 
     formclass = TestingForm
 

@@ -9,7 +9,6 @@ Created on 29 Jan 2018
 import re
 # import sys
 import json
-from datetime import datetime
 from collections import defaultdict
 from io import StringIO
 
@@ -26,8 +25,7 @@ from django.forms.fields import (BooleanField, CharField, FloatField,
 # from django.forms.widgets import HiddenInput
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-from egsim.core.utils import (vectorize, isscalar, yaml_load, querystring,
-                              tostr, DISTANCE_LABEL)
+from egsim.core.utils import (vectorize, isscalar, DISTANCE_LABEL)
 from egsim.forms.fields import (NArrayField, ImtclassField, ImtField,
                                 TrellisplottypeField, MsrField, PointField,
                                 TrtField, GmdbField, ResidualplottypeField,
@@ -47,7 +45,7 @@ class BaseForm(Form):
     __additional_fieldnames__ = {}
 
     # this is a list of fields that should be hidden from the doc
-    # and not used in the API. Also, the 'dump' method does not returns them.
+    # and not used in the API. Also, 'self.dump' does not returns them.
     # By specifying widget=HiddenInput in the field
     # you achieve the same result BUT also the <input> will be of type hidden
     # in the GUI
@@ -519,9 +517,9 @@ class TrellisForm(GsimImtForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # If the plot_type is 's' or 'ss', remove imt and sa_period
+        # If the plot_type is spectra, remove imt and sa_period
         # and set the field (note NOT self.base_fields or self.declared_fields!
-        # not to be required, so validation will be ok:
+        # as not required, so validation will be ok:
         if self.data.get('plot_type', '') in ('s', 'ss'):
             self.fields['imt'].sa_periods_str = ''  # see superclass __init__
             self.data.pop('imt', None)
