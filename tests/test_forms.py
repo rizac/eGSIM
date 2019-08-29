@@ -11,7 +11,9 @@ import pytest
 from openquake.hazardlib import imt
 
 from egsim.forms.forms import TrellisForm, GsimImtForm
-from egsim.core.utils import yaml_load
+from egsim.core.utils import yaml_load, MOF
+from egsim.forms.fields import MeasureOfFitField
+from django.core.exceptions import ValidationError
 
 
 GSIM, IMT = 'gsim', 'imt'
@@ -230,6 +232,18 @@ def test_arrayfields_all_valid_input_types():
     assert form.cleaned_data['distance'] == 0.1  # testing 2b)
     assert form.cleaned_data['vs30'] == [60, 76]  # testing 2c)
     assert sorted(form.cleaned_data['imt']) == ['PGA', 'PGV']  # testing 3)
+
+
+@pytest.mark.django_db
+def test_multuplechoicefield_simplestring():
+    '''Tests that a django MultipleChoiceField does NOT accept a string input
+    (whereas an egsim MultipleChoiceWildcardField does, and converts the string
+    to a 1-element list)
+    '''
+    mof = MeasureOfFitField()
+    mof.clean([MOF.RES])
+    with pytest.raises(ValidationError):
+        mof.clean(MOF.RES)
 
 
 @pytest.mark.django_db
