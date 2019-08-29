@@ -30,7 +30,8 @@ from egsim.forms.fields import (NArrayField, ImtclassField, ImtField,
                                 TrellisplottypeField, MsrField, PointField,
                                 TrtField, GmdbField, ResidualplottypeField,
                                 GsimField, TrModelField, MeasureOfFitField,
-                                SelExprField, TextDecField, TextSepField)
+                                SelExprField, TextDecField, TextSepField,
+                                MultipleChoiceWildcardField)
 from egsim.models import sharing_gsims, shared_imts
 
 
@@ -121,20 +122,6 @@ class BaseForm(Form):
         #         field.widget.attrs.update(atts)
         return
 
-    @classmethod
-    def is_optional(cls, field):
-        '''Returns True if the given field is optional.
-        A field is optional if either field.required=False OR
-        the field inital value is specified (not None). Remeber that
-        a field initial value acts as default value when missing
-
-        :param field: a Field object or a string denoting the name of one of
-            this Form's fields
-        '''
-        if isinstance(field, str):
-            field = cls.declared_fields[field]
-        return not field.required or field.initial is not None
-
     def dump(self, stream=None, syntax='yaml'):
         """Serialize this Form instance into a YAML or JSON stream.
         **The form needs to be already validated via e.g. `form.is_valid()`**.
@@ -220,6 +207,20 @@ class BaseForm(Form):
             return ret
         return None
 
+    @classmethod
+    def is_optional(cls, field):
+        '''Returns True if the given field is optional.
+        A field is optional if either field.required=False OR
+        the field inital value is specified (not None). Remeber that
+        a field initial value acts as default value when missing
+
+        :param field: a Field object or a string denoting the name of one of
+            this Form's fields
+        '''
+        if isinstance(field, str):
+            field = cls.declared_fields[field]
+        return not field.required or field.initial is not None
+
     def to_rendering_dict(self, ignore_callable_choices=True):
         '''Converts this form to a python dict for rendering the field as input
         in the frontend, allowing it to be injected into frontend libraries
@@ -234,9 +235,9 @@ class BaseForm(Form):
             defining it as CallableChoiceIterator: if True (the default) the
             function is not evluated and the choices are simply set to [].
             If False, the choices function will be evaluated.
-            Use True when the choices list is too big or too expensive and
-            there is a faster way to provide them to the frontend (e.g., later
-            via HTTP requests).
+            Use True when the choices list is too big and you do not need
+            this additional overhead (see e.g. in `view`.main`, when we create
+            the start HTML).
         '''
         hidden_fn = set(self.__hidden_fieldnames__)
         formdata = {}
@@ -276,28 +277,9 @@ class BaseForm(Form):
             if isinstance(field, MultipleChoiceField) and not val:
                 val = []
             # type description:
-            typedesc = 'UNKNOWN_TYPE'
-            if isinstance(field, NArrayField):
-                if field.min_count is not None and field.min_count > 1:
-                    typedesc = 'Numeric array'
-                else:
-                    typedesc = 'Numeric or numeric array'
-            elif isinstance(field, MultipleChoiceField):
-                typedesc = 'String or string array'
-            elif isinstance(field, (CharField, ChoiceField)):
-                typedesc = 'String'
-            elif isinstance(field, BooleanField):
-                typedesc = 'Boolean'
-            elif isinstance(field, FloatField):
-                typedesc = 'Numeric'
-                min_, max_ = attrs.get('min', None), attrs.get('max', None)
-                if min_ is not None and max_ is None:
-                    typedesc += ' ≥ %d' % min_
-                elif min_ is None and max_ is not None:
-                    typedesc += ' ≤ %d' % max_
-                elif min_ is not None and max_ is not None:
-                    typedesc += ' in [%d, %d]' % (min_, max_)
-
+            typedesc = BaseForm._type_description(field,
+                                                  attrs.get('min', None),
+                                                  attrs.get('max', None))
             fielddata = {
                 'name': attrs['name'],
                 'opt_names': optional_names.get(name, []),
@@ -319,6 +301,35 @@ class BaseForm(Form):
                     fielddata['choices'] = list(fielddata['choices'])
             formdata[name] = fielddata
         return formdata
+
+    @staticmethod
+    def _type_description(field, minval=None, maxval=None):
+        '''returns a human readable type description for the given field'''
+        # type description:
+        typedesc = 'UNKNOWN_TYPE'
+        if isinstance(field, NArrayField):
+            if field.min_count is not None and field.min_count > 1:
+                typedesc = 'Numeric array'
+            else:
+                typedesc = 'Numeric or numeric array'
+        elif isinstance(field, MultipleChoiceWildcardField):
+            typedesc = 'String or string array'
+        elif isinstance(field, MultipleChoiceField):
+            typedesc = 'String array'
+        elif isinstance(field, (CharField, ChoiceField)):
+            typedesc = 'String'
+        elif isinstance(field, BooleanField):
+            typedesc = 'Boolean'
+        elif isinstance(field, FloatField):
+            typedesc = 'Numeric'
+            if minval is not None and maxval is None:
+                typedesc += ' ≥ %d' % minval
+            elif minval is None and maxval is not None:
+                typedesc += ' ≤ %d' % maxval
+            elif minval is not None and maxval is not None:
+                typedesc += ' in [%d, %d]' % (minval, maxval)
+
+        return typedesc
 
 
 class GsimSelectionForm(BaseForm):
