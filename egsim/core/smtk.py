@@ -7,7 +7,6 @@ Created on 31 May 2018
 @author: riccardo
 '''
 from collections import defaultdict
-import json
 import re
 
 import numpy as np
@@ -28,6 +27,12 @@ RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept', 'pvalue')
 
 
 def get_trellis(params):
+    '''Core method to compute trellis plots data
+
+    :param params: dict with the request parameters
+
+    :return: json serializable dict to be passed into a Response object
+    '''
     # param names:
     MAG = 'magnitude'  # pylint: disable=invalid-name
     DIST = 'distance'  # pylint: disable=invalid-name
@@ -288,6 +293,12 @@ def records_iter(params):
 
 
 def get_residuals(params):
+    '''Core method to compute residuals plots data
+
+    :param params: dict with the request parameters
+
+    :return: json serializable dict to be passed into a Response object
+    '''
     # params:
     GMDB = 'gmdb'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
@@ -332,6 +343,12 @@ def get_residuals(params):
 
 
 def testing(params):
+    '''Core method to compute testing data
+
+    :param params: dict with the request parameters
+
+    :return: json serializable dict to be passed into a Response object
+    '''
     GMDB = 'gmdb'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
     IMT = 'imt'  # pylint: disable=invalid-name
