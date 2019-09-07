@@ -16,7 +16,7 @@ def invalidform2json(form, code=400,  msg_format='Invalid input in %(names)s'):
     https://google.github.io/styleguide/jsoncstyleguide.xml
 
     :param form: a :class:`django.forms.Form`. `form is_valid()` must have
-        been called and must return True
+        been called and must return False
     :param code: HTTP status code, defaults to 400 (client error) when missing
     :param msg_format: the main message of the error. Defaults to
         "Invalid input in %(names)s" when missing. Note that any user-defined
@@ -50,10 +50,9 @@ def errordict2jsonlist(errors):
 
 
 def requestexc2json(exception, code=400, **kwargs):
-    '''Converts the given exception or string message `exception` into a json
-    response. The difference between this function and `exc2json` is that this
-    is more specific and related to any unknown exception in a response.
-    As a consequence, the error message is more detailed and prefixed with
+    '''Converts the given exception raised upon an egsim request
+    into a json response. Returns `exc2json(err, code, **kwargs)`, where
+    `err` is a string built from `exception` and prefixed with
     "Unable to perform the request with the current parameters".
     See :func:`exc2json` for details
 

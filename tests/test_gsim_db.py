@@ -7,14 +7,22 @@ from itertools import product
 import uuid
 
 import pytest
+from openquake.hazardlib.gsim import registry
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from egsim.models import (Gsim, Trt, Imt, gsim_names, aval_gsims, aval_imts,
                           aval_trts, aval_trmodels, TectonicRegion,
-                          shared_imts, sharing_gsims, TrSelector)
-
-from openquake.hazardlib.gsim import registry
+                          shared_imts, sharing_gsims, TrSelector, empty_all)
 from egsim.core.utils import OQ
+
+
+@pytest.mark.django_db
+def test_clear_db(django_db_setup):
+    test1 = list(aval_gsims())
+    assert len(test1)
+    empty_all()
+    test1 = list(aval_gsims())
+    assert not len(test1)
 
 
 @pytest.mark.django_db
