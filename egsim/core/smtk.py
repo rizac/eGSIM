@@ -44,24 +44,20 @@ def get_trellis(params):
 
     # dip, aspect will be used below, we oparse them here because they are
     # mandatory (FIXME: are they?)
-    magnitude, distance, vs30, z1pt0, z2pt5, gsim = \
-        params.pop(MAG), params.pop(DIST), params.pop(VS30), \
-        params.pop(Z1PT0), params.pop(Z2PT5), params.pop(GSIM)
+    gsim = params.pop(GSIM)
     # imt might be None for "spectra" Trellis classes, thus provide None:
     imt = params.pop(IMT, None)
-    magnitudes = np.asarray(vectorize(magnitude))  # smtk wants numpy arrays
-    distances = np.asarray(vectorize(distance))  # smtk wants numpy arrays
-    vs30s = vectorize(vs30)
-    z1pt0s = vectorize(z1pt0)
-    z2pt5s = vectorize(z2pt5)
-
+    magnitudes = np.asarray(vectorize(params.pop(MAG)))  # smtk wants np arrays
+    distances = np.asarray(vectorize(params.pop(DIST)))  # smtk wants np arrays
     trellisclass, stdev_trellisclass = _get_trellis_classes(params)
 
     xdata = None
     isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
     ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
     figures = defaultdict(list)
-    for vs30, z1pt0, z2pt5 in zip(vs30s, z1pt0s, z2pt5s):
+    for vs30, z1pt0, z2pt5 in zip(vectorize(params.pop(VS30)),
+                                  vectorize(params.pop(Z1PT0)),
+                                  vectorize(params.pop(Z2PT5))):
         params[VS30] = vs30
         params[Z1PT0] = z1pt0
         params[Z2PT5] = z2pt5
@@ -73,10 +69,12 @@ def get_trellis(params):
         # (scalar or array) to be passed to the Trellis class:
         magiter = zip(magnitudes, magnitudes) if isdist else \
             zip([None], [magnitudes])
+
         for mag, mags in magiter:
             # same as magnitudes (see above):
             distiter = zip(distances, distances) if ismag else \
                 zip([None], [distances])
+
             for dist, dists in distiter:
                 data = _get_trellis_dict(trellisclass, params, mags, dists,
                                          gsim, imt)
@@ -87,26 +85,20 @@ def get_trellis(params):
                         'xvalues': data['xvalues']
                     }
 
-                stdev_data = None
-                if stdev_trellisclass is not None:
-                    stdev_data = _get_trellis_dict(stdev_trellisclass,
-                                                   params, mags, dists,
-                                                   gsim, imt)
-                    # convert the list to a dict with keys the imt
-                    # (each list element is mapped to a specified imt so this
-                    # is safe):
-                    stdev_data['figures'] = {_['_key']: _
-                                             for _ in stdev_data['figures']}
+                _add_stdev(data, None if stdev_trellisclass is None
+                           else _get_trellis_dict(stdev_trellisclass,
+                                                  params, mags, dists,
+                                                  gsim, imt))
 
-                src_figures = data['figures']
-                for fig in src_figures:
+                for fig in data['figures']:
                     # Now we will modify 'fig' and eventually add it to
                     # 'figures'.
                     # 'fig' is a dict of this type:
-                    # (see method `_get_trellis_dict`):
+                    # (see method `_get_trellis_dict` and `_add_stdev` above):
                     #    {
                     #        ylabel: str
-                    #        _key: int, str (depends on context) unique id
+                    #        stdvalues: {} or dict gsimname -> list of numbers
+                    #        stdlabel: str (might be empty str)
                     #        imt: str (the imt)
                     #        yvalues: dict (gsim name -> list of numbers)
                     #    }
@@ -114,29 +106,19 @@ def get_trellis(params):
                     fig[VS30] = _jsonserialize(vs30)
                     fig[MAG] = _jsonserialize(fig.get(MAG, mag))
                     fig[DIST] = _jsonserialize(fig.get(DIST, dist))
-                    fig['stdvalues'] = {}
-                    fig['stdlabel'] = ''
-                    # 2. Remove the key '_key' but store it as we might need it
-                    fig_key = fig.pop('_key')
-                    # 3. Add standard deviations, if computed (using 'fig_key')
-                    if stdev_data is not None:
-                        std_fig = stdev_data['figures'].get(fig_key, {})
-                        # ('std_fig' is of the same typ of 'fig')
-                        # Add to 'fig' the 'std_fig' values of interest
-                        # (renaming them):
-                        fig['stdvalues'] = std_fig.get('yvalues', {})
-                        fig['stdlabel'] = std_fig.get('ylabel', '')
                     # 4: Remove the imt of 'fig', and use it as key of
                     # 'figures'
-                    imt_name = fig.pop('imt')
-                    figures[imt_name].append(fig)
+                    figures[fig.pop('imt')].append(fig)
                     # 'figures' is a dict of imt names mapped to a list of
                     # dict. Each dict is one of the 'fig' just processed,
                     # their count depends on the product of the chosen vs30,
                     # mad and dist
 
-    imt_names = imt if (ismag or isdist) else ['SA']
-    return {**xdata, **{'imts': imt_names}, **figures}
+    return {
+        **xdata,
+        **{'imts': imt if (ismag or isdist) else ['SA']},
+        **figures
+    }
 
 
 def _get_trellis_classes(params):
@@ -152,7 +134,7 @@ def _get_trellis_classes(params):
     trellisclass = params.pop(PLOT_TYPE)
     # define stddev trellis class if the parameter stdev is true
     stdev_trellisclass = None  # do not compute stdev (default)
-    if params.get(STDEV, False):
+    if params.pop(STDEV, False):
         if trellisclass == DistanceIMTTrellis:
             stdev_trellisclass = DistanceSigmaIMTTrellis
         elif trellisclass == MagnitudeIMTTrellis:
@@ -265,6 +247,45 @@ def _default_periods_for_spectra():
             0.40, 0.42, 0.44, 0.46, 0.48, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75,
             0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8,
             1.9, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]
+
+
+def _add_stdev(data, stdev_data=None):
+    '''Adds to each element of data the standard deviations of
+    stdev_data.
+
+    :param data: the retuend value of `_get_trellis_dict`, called for a
+        given trellis class (no standard deviation)
+    :param data: the retuend value of `_get_trellis_dict`, called for the
+        appropriate trellis standard deviation class
+    '''
+    if stdev_data is not None:
+        # convert the list to a dict with keys the imt
+        # (each list element is mapped to a specified imt so this
+        # is safe):
+        stdev_data['figures'] = {_['_key']: _
+                                 for _ in stdev_data['figures']}
+
+    for fig in data['figures']:
+        # 'fig' is a dict of this type:
+        # (see method `_get_trellis_dict`):
+        #    {
+        #        ylabel: str
+        #        _key: hashable id (tuple, str...)
+        #        imt: str (the imt)
+        #        yvalues: dict (gsim name -> list of numbers)
+        #    }
+        fig['stdvalues'] = {}
+        fig['stdlabel'] = ''
+        # 2. Remove the key '_key' but store it as we might need it
+        fig_key = fig.pop('_key')
+        # 3. Add standard deviations, if computed (using 'fig_key')
+        if stdev_data is not None:
+            std_fig = stdev_data['figures'].get(fig_key, {})
+            # ('std_fig' is of the same typ of 'fig')
+            # Add to 'fig' the 'std_fig' values of interest
+            # (renaming them):
+            fig['stdvalues'] = std_fig.get('yvalues', {})
+            fig['stdlabel'] = std_fig.get('ylabel', '')
 
 
 def _jsonserialize(value):
