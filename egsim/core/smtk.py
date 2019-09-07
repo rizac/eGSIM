@@ -41,7 +41,6 @@ def get_trellis(params):
     Z2PT5 = 'z2pt5'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
     IMT = 'imt'  # pylint: disable=invalid-name
-    STDEV = 'stdev'  # pylint: disable=invalid-name
 
     # dip, aspect will be used below, we oparse them here because they are
     # mandatory (FIXME: are they?)
@@ -52,32 +51,13 @@ def get_trellis(params):
     imt = params.pop(IMT, None)
     magnitudes = np.asarray(vectorize(magnitude))  # smtk wants numpy arrays
     distances = np.asarray(vectorize(distance))  # smtk wants numpy arrays
-
     vs30s = vectorize(vs30)
     z1pt0s = vectorize(z1pt0)
     z2pt5s = vectorize(z2pt5)
 
-    trellisclass = params.pop('plot_type')
+    trellisclass, stdev_trellisclass = _get_trellis_classes(params)
 
-    # define stddev trellis class if the parameter stdev is true
-    stdev_trellisclass = None  # do not compute stdev (default)
-    if params.get(STDEV, False):
-        if trellisclass == DistanceIMTTrellis:
-            stdev_trellisclass = DistanceSigmaIMTTrellis
-        elif trellisclass == MagnitudeIMTTrellis:
-            stdev_trellisclass = MagnitudeSigmaIMTTrellis
-        elif trellisclass == MagnitudeDistanceSpectraTrellis:
-            stdev_trellisclass = MagnitudeDistanceSpectraSigmaTrellis
-
-    def jsonserialize(value):
-        '''serializes a numpy scalr into python scalar, no-op if value is not
-        a numpy number'''
-        try:
-            return value.item()
-        except AttributeError:
-            return value
-
-    ret = None
+    xdata = None
     isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
     ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
     figures = defaultdict(list)
@@ -100,6 +80,13 @@ def get_trellis(params):
             for dist, dists in distiter:
                 data = _get_trellis_dict(trellisclass, params, mags, dists,
                                          gsim, imt)
+
+                if xdata is None:
+                    xdata = {
+                        'xlabel': _relabel_sa(data['xlabel']),
+                        'xvalues': data['xvalues']
+                    }
+
                 stdev_data = None
                 if stdev_trellisclass is not None:
                     stdev_data = _get_trellis_dict(stdev_trellisclass,
@@ -111,31 +98,69 @@ def get_trellis(params):
                     stdev_data['figures'] = {_['_key']: _
                                              for _ in stdev_data['figures']}
 
-                if ret is None:
-                    ret = {
-                        'xlabel': _relabel_sa(data['xlabel']),
-                        'xvalues': data['xvalues']
-                    }
-
                 src_figures = data['figures']
                 for fig in src_figures:
-                    fig[VS30] = jsonserialize(vs30)
-                    fig[MAG] = jsonserialize(fig.get(MAG, mag))
-                    fig[DIST] = jsonserialize(fig.get(DIST, dist))
+                    # Now we will modify 'fig' and eventually add it to
+                    # 'figures'.
+                    # 'fig' is a dict of this type:
+                    # (see method `_get_trellis_dict`):
+                    #    {
+                    #        ylabel: str
+                    #        _key: int, str (depends on context) unique id
+                    #        imt: str (the imt)
+                    #        yvalues: dict (gsim name -> list of numbers)
+                    #    }
+                    # 1) Add some keys to 'fig':
+                    fig[VS30] = _jsonserialize(vs30)
+                    fig[MAG] = _jsonserialize(fig.get(MAG, mag))
+                    fig[DIST] = _jsonserialize(fig.get(DIST, dist))
                     fig['stdvalues'] = {}
                     fig['stdlabel'] = ''
-                    # now search for the values, if any:
+                    # 2. Remove the key '_key' but store it as we might need it
                     fig_key = fig.pop('_key')
+                    # 3. Add standard deviations, if computed (using 'fig_key')
                     if stdev_data is not None:
                         std_fig = stdev_data['figures'].get(fig_key, {})
+                        # ('std_fig' is of the same typ of 'fig')
+                        # Add to 'fig' the 'std_fig' values of interest
+                        # (renaming them):
                         fig['stdvalues'] = std_fig.get('yvalues', {})
                         fig['stdlabel'] = std_fig.get('ylabel', '')
+                    # 4: Remove the imt of 'fig', and use it as key of
+                    # 'figures'
                     imt_name = fig.pop('imt')
                     figures[imt_name].append(fig)
+                    # 'figures' is a dict of imt names mapped to a list of
+                    # dict. Each dict is one of the 'fig' just processed,
+                    # their count depends on the product of the chosen vs30,
+                    # mad and dist
 
     imt_names = imt if (ismag or isdist) else ['SA']
-    # re-arrange labels FIXME: implement it in smtk?
-    return {**ret, **{'imts': imt_names}, **figures}
+    return {**xdata, **{'imts': imt_names}, **figures}
+
+
+def _get_trellis_classes(params):
+    '''Returns a tuple of the smtk classes to build the trellis plots
+    from the given `params` dict:
+    (trellis_class, trellis_class_for_stddev)
+    where `trellis_class_for_stddev` can be None or the `trellis_class`
+    counterpart for computing the standard deviations
+    '''
+    STDEV = 'stdev'  # pylint: disable=invalid-name
+    PLOT_TYPE = 'plot_type'  # pylint: disable=invalid-name
+
+    trellisclass = params.pop(PLOT_TYPE)
+    # define stddev trellis class if the parameter stdev is true
+    stdev_trellisclass = None  # do not compute stdev (default)
+    if params.get(STDEV, False):
+        if trellisclass == DistanceIMTTrellis:
+            stdev_trellisclass = DistanceSigmaIMTTrellis
+        elif trellisclass == MagnitudeIMTTrellis:
+            stdev_trellisclass = MagnitudeSigmaIMTTrellis
+        elif trellisclass == MagnitudeDistanceSpectraTrellis:
+            stdev_trellisclass = MagnitudeDistanceSpectraSigmaTrellis
+
+    return trellisclass, stdev_trellisclass
 
 
 def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):
@@ -170,13 +195,13 @@ def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):
     #    ]
     # }
 
-    # We want to get each nested object with these proeprties:
-    #        {
-    #            ylabel: str (same as above, but delete trailing zeroes in IMT)
-    #            key: int, str (depends on context) unique id
-    #            imt: str (the imt)
-    #            yvalues: dict (same as above)
-    #        },
+    # We want to get each `figure` element to be a dict of this type:
+    #    {
+    #        ylabel: str (same as above, but delete trailing zeroes in IMT)
+    #        _key: tuple, str (depends on context): unique hashable id
+    #        imt: str (the imt)
+    #        yvalues: dict (same as above)
+    #    },
 
     # get the imt. Unfortunately, the imt is "hidden"
     # within each data.figures.ylabel, thus we have to
@@ -240,6 +265,15 @@ def _default_periods_for_spectra():
             0.40, 0.42, 0.44, 0.46, 0.48, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75,
             0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8,
             1.9, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]
+
+
+def _jsonserialize(value):
+    '''Simple serialization from numpy scalar into python scalar, no-op if
+    value is not a numpy number'''
+    try:
+        return value.item()
+    except AttributeError:
+        return value
 
 
 def get_gmdbplot(params):
