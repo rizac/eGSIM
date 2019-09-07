@@ -39,21 +39,11 @@ def get_trellis(params):
     VS30 = 'vs30'  # pylint: disable=invalid-name
     Z1PT0 = 'z1pt0'  # pylint: disable=invalid-name
     Z2PT5 = 'z2pt5'  # pylint: disable=invalid-name
-    GSIM = 'gsim'  # pylint: disable=invalid-name
-    IMT = 'imt'  # pylint: disable=invalid-name
 
-    # dip, aspect will be used below, we oparse them here because they are
-    # mandatory (FIXME: are they?)
-    gsim = params.pop(GSIM)
-    # imt might be None for "spectra" Trellis classes, thus provide None:
-    imt = params.pop(IMT, None)
-    magnitudes = np.asarray(vectorize(params.pop(MAG)))  # smtk wants np arrays
-    distances = np.asarray(vectorize(params.pop(DIST)))  # smtk wants np arrays
-    trellisclass, stdev_trellisclass = _get_trellis_classes(params)
+    gsim, imt, magnitudes, distances, trellisclass, stdev_trellisclass = \
+        _extract_params(params)
 
     xdata = None
-    isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
-    ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
     figures = defaultdict(list)
     for vs30, z1pt0, z2pt5 in zip(vectorize(params.pop(VS30)),
                                   vectorize(params.pop(Z1PT0)),
@@ -67,12 +57,12 @@ def get_trellis(params):
         # iterator which yields a two element tuple (m1, m2) where m1 is the
         # scalar value to be saved as json, and m2 is the value
         # (scalar or array) to be passed to the Trellis class:
-        magiter = zip(magnitudes, magnitudes) if isdist else \
+        magiter = zip(magnitudes, magnitudes) if _isdist(trellisclass) else \
             zip([None], [magnitudes])
 
         for mag, mags in magiter:
             # same as magnitudes (see above):
-            distiter = zip(distances, distances) if ismag else \
+            distiter = zip(distances, distances) if _ismag(trellisclass) else \
                 zip([None], [distances])
 
             for dist, dists in distiter:
@@ -116,20 +106,33 @@ def get_trellis(params):
 
     return {
         **xdata,
-        **{'imts': imt if (ismag or isdist) else ['SA']},
+        'imts':
+            imt if (_ismag(trellisclass) or _isdist(trellisclass)) else ['SA'],
         **figures
     }
 
 
-def _get_trellis_classes(params):
-    '''Returns a tuple of the smtk classes to build the trellis plots
-    from the given `params` dict:
-    (trellis_class, trellis_class_for_stddev)
+def _extract_params(params):
+    '''Returns the basic parameters from a trellis `params` dict, converting
+    them according to egsim needs. Returns the tuple:
+    (gsim, imt, magnitudes, distances, trellisclass, stdev_trellisclass)
     where `trellis_class_for_stddev` can be None or the `trellis_class`
     counterpart for computing the standard deviations
     '''
+    MAG = 'magnitude'  # pylint: disable=invalid-name
+    DIST = 'distance'  # pylint: disable=invalid-name
+    GSIM = 'gsim'  # pylint: disable=invalid-name
+    IMT = 'imt'  # pylint: disable=invalid-name
     STDEV = 'stdev'  # pylint: disable=invalid-name
     PLOT_TYPE = 'plot_type'  # pylint: disable=invalid-name
+
+    # NOTE: the `params` dict will be passed to smtk routines: we use 'pop'
+    # whenever possible to avoid passing unwanted params:
+    gsim = params.pop(GSIM)
+    # imt might be None for "spectra" Trellis classes, thus provide None:
+    imt = params.pop(IMT, None)
+    magnitudes = np.asarray(vectorize(params.pop(MAG)))  # smtk wants np arrays
+    distances = np.asarray(vectorize(params.pop(DIST)))  # smtk wants np arrays
 
     trellisclass = params.pop(PLOT_TYPE)
     # define stddev trellis class if the parameter stdev is true
@@ -142,7 +145,17 @@ def _get_trellis_classes(params):
         elif trellisclass == MagnitudeDistanceSpectraTrellis:
             stdev_trellisclass = MagnitudeDistanceSpectraSigmaTrellis
 
-    return trellisclass, stdev_trellisclass
+    return gsim, imt, magnitudes, distances, trellisclass, stdev_trellisclass
+
+
+def _isdist(trellisclass):
+    '''Returns True if trellisclass is a Distance-based Trellis class'''
+    return trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
+
+
+def _ismag(trellisclass):
+    '''Returns True if trellisclass is a Magnitude-based Trellis class'''
+    return trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
 
 
 def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):
