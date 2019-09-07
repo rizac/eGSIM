@@ -174,3 +174,15 @@ def test_dict_is_ordered():
     assert list(dict({1: 2, 3: 4, 6: 5, 3: 5, 1: 1}).keys()) == [1, 3, 6]
     assert list({11: 5, 'g': 67}) == [11, 'g']
     assert list({'11': 5, 6.05: 67}) == ['11', 6.05]
+
+
+def test_oq_dicts_are_copies():
+    '''tests that OQ entities (gsims and imts) are newly created'''
+    dic1 = OQ.gsims()
+    dic2 = OQ.gsims()
+    assert dic1 == dic2
+    assert dic1 is not dic2
+    dic1 = OQ.imts()
+    dic2 = OQ.imts()
+    assert dic1 == dic2
+    assert dic1 is not dic2

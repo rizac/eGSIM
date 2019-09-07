@@ -13,6 +13,7 @@ import json
 from django.db import models
 from django.db.models import Q
 from django.db.models.aggregates import Count
+from django.core import management
 # primary keys are auto added if not present
 
 from shapely.geometry import Point, shape, Polygon
@@ -111,19 +112,20 @@ class Gsim(models.Model):
 # utilities:
 
 def empty_all():
-    '''Emtpies all tables'''
-    Error.objects.all().delete()  # pylint: disable=no-member
-    Gsim.objects.all().delete()  # pylint: disable=no-member
-    Imt.objects.all().delete()  # pylint: disable=no-member
-    TectonicRegion.objects.all().delete()  # pylint: disable=no-member
-    Trt.objects.all().delete()  # pylint: disable=no-member
+    '''Empties all tables, without removing them'''
+    # https://stackoverflow.com/a/10606476
+    # and
+    # https://stackoverflow.com/a/2773195
+    # Basically, the command below returns the database to the state it was in
+    # immediately after 'syncdb' (deprecated, now 'migrate') was executed:
+    management.call_command('flush', interactive=False)
 
 
 def aval_gsims(asjsonlist=False):
     '''Returns a list of available gsims.
 
     If asjsonlist=False (the default), the list elements are strings denoting
-    the Gsim names (attribute gsim.key).
+    the Gsim names (Model's attribute `gsim.key`).
 
     If asjsonlist is True, the list elements are json serializable tuples:
         (gsim.key, [gsim.imt1.key, .. gsim.imtN.key], gsim.trt, gsim.warning)
@@ -249,7 +251,7 @@ def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None,
             When False (the default), any gsim defined for at least *one*
             of the provided imts will be taken. When True, any gsim defined
             for at least *all* provided imts will be taken.
-        '''
+    '''
     # trt can be a trt instance, an int denoting the trt pkey,
     # or a string denoting the trt key field (unique)
     # in the expressions .filter(imts_in=[...]) the arguments in
@@ -319,7 +321,7 @@ def or_(q_expressions):
 
 # trts OK
 # model+point OK
-# model+point+trts OK (intersection between trts and model's trts is returned) 
+# model+point+trts OK (intersection between trts and model's trts is returned)
 # point NO (which model?)
 # model NO (might be OK, but NO for simplicity)
 # trts+point NO (which model?)

@@ -146,8 +146,6 @@ def yaml_load(obj):
             raise YAMLError('Unable to load input (%s) as YAML'
                             % (obj.__class__.__name__))
         return ret
-    except YAMLError as _:
-        raise
     finally:
         if close_stream:
             stream.close()
@@ -213,7 +211,6 @@ def test_selexpr(selexpr):
         row = table.row
         row.append()  # pylint: disable=no-member
         table.flush()
-        l = list(records_where(table, ''))
 
         # execute sel expression. Remember to wrap into list otherwise it is
         # not run (a generator is returned). Use limit=1 to skip useless
@@ -261,7 +258,7 @@ def get_gmdb_column_desc(as_html=True):
                 type2str.replace('\n', '<br>')
         ret[key] = (type2str, missingval)
     return ret
-        
+
 
 class OQ:
     '''container class for OpenQuake entities'''
@@ -288,8 +285,9 @@ class OQ:
         '''Returns a (new) dict of:
             gsim_name (string) mapped to its gsim_class (class object)
             defining all Ground Shaking Intensity Models defined in OpenQuake.
+            The dict is sorted by gsim_name
         '''
-        return dict(get_available_gsims())
+        return get_available_gsims()  # already returns a new dict
 
     @classmethod
     def required_attrs(cls, gsim):
@@ -301,17 +299,18 @@ class OQ:
                      if _.startswith('REQUIRES_')])
 
 
-# dict mapping the OpenQuake's REQUIRES_* attributes defined on each Gsim,
-# and the columns of an smtk GMTable (keys of the :class:`GMTableDescription`
-# dict). All attributes available for all Gsims used in eGSIM are here.
-# If OpenQuake will be upgraded, the
-# 'initdb' command takes care to issue a WARNING for any attribute not
-# implemented here. In case, consult smtk maintainers and write the new
-# attribute as string key mapped to the tuple: (column_name, missing value).
+# dict mapping the REQUIRES_* attributes defined on each Gsim of `OpenQuake`
+# to the columns of a GMTable (:class:`smtk.sm_table.GMTableDescription`).
+# This mapping is used to enhance any selection expression by adding to the
+# expression the column(s) that need to be available (see `egsim.core.smtk`).
+# If OpenQuake will be upgraded, some Gsims might have one or more
+# REQUIRES_* attribute not implemented here: the 'initdb' command takes care
+# to issue a WARNING in case: if this happens, consult smtk maintainers and
+# write the new attribute as string key mapped to the tuple:
+# (column_name, missing value).
 # Both tuple elements are strings. If the first element is empty, the attribute
 # does not have a mapping with any GMTable column. If the second element
-# is empty, there is no missing value available for the given column.
-# For an example of the application of this dict, see egsim.core.smtk.
+# is empty, there is no missing value available for the given column
 GSIM_REQUIRED_ATTRS = {
     # attrs with a mapping to itself:
     'rjb': ('rjb', 'nan'),
@@ -342,6 +341,6 @@ GSIM_REQUIRED_ATTRS = {
     'rvolc': ('', ''),
     'rcdpp': ('', ''),
     'siteclass': ('', ''),
-    # it is handled within the smtk code:
+    # ignore (it is handled within the smtk code):
     'width': ('rupture_width', '')
 }

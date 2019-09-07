@@ -89,8 +89,8 @@ class BaseForm(Form):
         self.customize_widget_attrs()
 
     def clean(self):
-        '''Checks that if longitude is provided, also latitude is provided,
-        and vice versa (the same for longitude2 and latitude2)
+        '''Calls `super.claen()`, removes from `cleaned_data` fields that were
+        not provided as input, and returns it
         '''
         cleaned_data = super().clean()
         # django sets all values provided in self.declared_fields with a
@@ -159,17 +159,31 @@ class BaseForm(Form):
             # the string "null"
             if self.is_optional(key) and val == self.fields[key].initial:
                 continue
+            # provide tha value given as input, not the value processed
+            # by `self.clean`, which might be not JSON or YAML serializable,
+            # with one exception: imt in GsimImtForm, becasue we might have
+            # provided the parameter `sa_periods` and thus the processed
+            # imt in `cleaned_data` is the value to return:
             cleaned_data[key] = self.cleaned_data[key] \
                 if key == 'imt' and isinstance(self, GsimImtForm) else val
 
         if syntax == 'json':
-            if stream is None:
-                return json.dumps(cleaned_data, indent=4,
-                                  separators=(',', ': '), sort_keys=True)
-            json.dump(cleaned_data, stream, indent=4, separators=(',', ': '),
-                      sort_keys=True)
-            return None
+            return self._dump_json(stream, cleaned_data)
 
+        return self._dump_yaml(stream, cleaned_data)
+
+    def _dump_json(self, stream, cleaned_data):  # pylint: disable=no-self-use
+        '''Serializes to json. see self.dump'''
+        # compatibility with yaml dump if stream is None:
+        if stream is None:
+            return json.dumps(cleaned_data, indent=4,
+                              separators=(',', ': '), sort_keys=True)
+        json.dump(cleaned_data, stream, indent=4, separators=(',', ': '),
+                  sort_keys=True)
+        return None
+
+    def _dump_yaml(self, stream, cleaned_data):
+        '''Serializes to yaml. See self.dump'''
         class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
             '''forces indentation of lists.
             See https://stackoverflow.com/a/39681672'''
@@ -242,8 +256,8 @@ class BaseForm(Form):
         hidden_fn = set(self.__hidden_fieldnames__)
         formdata = {}
         optional_names = defaultdict(list)
-        for k, v in self.__additional_fieldnames__.items():
-            optional_names[v].append(k)
+        for key, val in self.__additional_fieldnames__.items():
+            optional_names[val].append(key)
         for name, field in self.declared_fields.items():  # pylint: disable=no-member
             # little spec: self.declared_fields and self.base_fields are the
             # same thing (see django.forms.forms.DeclarativeFieldsMetaclass)
@@ -261,8 +275,7 @@ class BaseForm(Form):
             val = boundfield.value()
             widget = boundfield.field.widget
             attrs = boundfield.build_widget_attrs({}, widget)
-            fielddata = widget.get_context(name, val, attrs)
-            widgetdata = fielddata['widget']
+            widgetdata = widget.get_context(name, val, attrs)['widget']
             attrs = dict(widgetdata.pop('attrs', {}))
             if 'type' in widgetdata:
                 attrs['type'] = widgetdata.pop('type')
@@ -271,15 +284,10 @@ class BaseForm(Form):
             if 'id' not in attrs:
                 attrs['id'] = boundfield.auto_id
             attrs['name'] = widgetdata.pop('name')
-            is_hidden = widgetdata.pop('is_hidden', False) or \
-                name in hidden_fn
             # coerce val to [] in case val falsy and multichoice:
             if isinstance(field, MultipleChoiceField) and not val:
                 val = []
             # type description:
-            typedesc = BaseForm._type_description(field,
-                                                  attrs.get('min', None),
-                                                  attrs.get('max', None))
             fielddata = {
                 'name': attrs['name'],
                 'opt_names': optional_names.get(name, []),
@@ -288,10 +296,13 @@ class BaseForm(Form):
                 'label': boundfield.label,
                 'attrs': attrs,
                 'err': '',
-                'is_hidden': is_hidden,
+                'is_hidden': widgetdata.pop('is_hidden', False) or
+                name in hidden_fn,
                 'val': val,
                 'initial': field.initial,
-                'typedesc': typedesc
+                'typedesc': BaseForm._type_description(field,
+                                                       attrs.get('min', None),
+                                                       attrs.get('max', None))
             }
             fielddata['choices'] = getattr(field, 'choices', [])
             if isinstance(fielddata['choices'], CallableChoiceIterator):
@@ -529,8 +540,7 @@ class TrellisForm(GsimImtForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # If the plot_type is spectra, remove imt and sa_period
-        # and set the field (note NOT self.base_fields or self.declared_fields!
-        # as not required, so validation will be ok:
+        # and set the field as not required, so validation will be ok:
         if self.data.get('plot_type', '') in ('s', 'ss'):
             self.fields['imt'].sa_periods_str = ''  # see superclass __init__
             self.data.pop('imt', None)
@@ -540,9 +550,6 @@ class TrellisForm(GsimImtForm):
 
     def clean(self):
         cleaned_data = super(TrellisForm, self).clean()
-
-        # this parameter is not used, comment out:
-        # cleaned_data['tectonic_region'] = 'Active Shallow Crust'
 
         # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
         vs30 = cleaned_data['vs30']  # surely a list with st least one element
