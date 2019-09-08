@@ -426,7 +426,7 @@ def home(request):
                                              egsim_data=egsim_data,
                                              info_str=('Version 1.0.2, '
                                                        'last updated: '
-                                                       'August 2019')))
+                                                       'September 2019')))
 
 
 def apidoc(request):
