@@ -44,7 +44,7 @@ def get_trellis(params):
         _extract_params(params)
 
     xdata = None
-    figures = defaultdict(list)
+    figures = defaultdict(list)  # imt name -> list of dicts (1 dict=1 plot)
     for vs30, z1pt0, z2pt5 in zip(vectorize(params.pop(VS30)),
                                   vectorize(params.pop(Z1PT0)),
                                   vectorize(params.pop(Z2PT5))):
@@ -318,13 +318,18 @@ def get_gmdbplot(params):
 
     dist_type = params[DIST_TYPE]
     mags, dists, nan_count = \
-        get_magnitude_distances(records_iter(params), dist_type)
-    return {'xvalues': dists, 'yvalues': mags,  # 'labels': [r.id for r in gmdb.records],
-            'xlabel': DISTANCE_LABEL[dist_type], 'ylabel': 'Magnitude',
-            'nan_count': nan_count}
+        _get_magnitude_distances(_records_iter(params), dist_type)
+    return {
+        'xvalues': dists,
+        'yvalues': mags,
+        # 'labels': [r.id for r in gmdb.records],
+        'xlabel': DISTANCE_LABEL[dist_type],
+        'ylabel': 'Magnitude',
+        'nan_count': nan_count
+    }
 
 
-def get_magnitude_distances(records, dist_type):
+def _get_magnitude_distances(records, dist_type):
     """
     From the Strong Motion database, returns lists of magnitude and distance
     pairs
@@ -347,7 +352,7 @@ def get_magnitude_distances(records, dist_type):
     return mags, dists, nan_count
 
 
-def records_iter(params):
+def _records_iter(params):
     '''Computes the selection from the given already validated params and
     returns a filtered GroundMotionDatabase object'''
     # params:
@@ -435,11 +440,11 @@ def testing(params):
     for gsim in params[GSIM]:
         try:
             residuals = Residuals([gsim], params[IMT])
-            selexpr = get_selexpr(gsim, params.get(SEL, ''))
+            selexpr = _get_selexpr(gsim, params.get(SEL, ''))
 
             # we have some record to be used, compute residuals:
             gmdb = gmdb_base.filter(selexpr)
-            numrecords = gmdb_records(residuals, gmdb)
+            numrecords = _gmdb_records(residuals, gmdb)
 
             obs_count[gsim] = numrecords
             if not numrecords:
@@ -465,7 +470,37 @@ def testing(params):
             'Gsim skipped': gsim_skipped}
 
 
-def gmdb_records(residuals, gm_table=None):
+def _get_selexpr(gsim, user_selexpr=None):
+    '''builds a selection expression from a given gsim name concatenating
+    the given `user_selexpr` (user defined selection expression with the
+    expression obtained by inspecting the required arguments of the given
+    gsim'''
+    attrs = OQ.required_attrs(gsim)
+    selexpr_chunks = []
+    strike_dip_rake_found = False
+    for att in attrs:
+        if att in ('rake', 'strike', 'dip') and not strike_dip_rake_found:
+            strike_dip_rake_found = True
+            selexpr_chunks.append('(((dip_1 != nan) & '
+                                  '(strike_1 != nan) & '
+                                  '(rake_1 != nan)) | '
+                                  '((dip_2 != nan) & '
+                                  '(strike_2 != nan) & '
+                                  '(rake_2 !=nan)))')
+            continue
+        (column, missing_val) = GSIM_REQUIRED_ATTRS.get(att, ['', ''])
+        if column and missing_val:
+            selexpr_chunks.append('(%s != %s)' % (column, missing_val))
+
+    if not selexpr_chunks:
+        return user_selexpr
+    if user_selexpr:
+        selexpr_chunks.insert(0, '(%s)' % user_selexpr)
+
+    return " & ".join(selexpr_chunks)
+
+
+def _gmdb_records(residuals, gm_table=None):
     '''Returns the number of the given GM Table records in the given
     `residuals` object.
     Example:
@@ -558,14 +593,6 @@ def _itervalues(gsim, key, name, result):
     #     }
     # }
 
-    def title(string):
-        '''Makes the string with the first letter of the first word capitalized
-        only and replaces 'std dev' with 'stddev' for consistency with
-        residuals
-        '''
-        return (string[:1].upper() + string[1:].lower()).replace('std dev',
-                                                                 'stddev')
-
     gsim_result = result[gsim]
     if key == MOF.RES:
         for imt, imt_result in gsim_result.items():
@@ -573,7 +600,7 @@ def _itervalues(gsim, key, name, result):
             for type_, type_result in imt_result.items():
                 for meas, value in type_result.items():
                     moffit = "%s %s %s" % (name, type_, meas)
-                    yield title(moffit), imt2, value
+                    yield _title(moffit), imt2, value
     elif key == MOF.LH:
         for imt, imt_result in gsim_result.items():
             imt2 = _relabel_sa(imt)
@@ -582,44 +609,23 @@ def _itervalues(gsim, key, name, result):
                 p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
                 for kkk, vvv in (('Median', p50), ('IQR', p75-p25)):
                     moffit = "%s %s %s" % (name, type_, kkk)
-                    yield title(moffit), imt2, vvv
+                    yield _title(moffit), imt2, vvv
     elif key in (MOF.LLH, MOF.MLLH):
         for imt, value in gsim_result.items():
             imt2 = _relabel_sa(imt)
             moffit = name
-            yield title(moffit), imt2, value
+            yield _title(moffit), imt2, value
     elif key == MOF.EDR:
         for type_, value in gsim_result.items():
             moffit = "%s %s" % (name, type_)
             imt = ""  # hack
-            yield title(moffit), imt, value
+            yield _title(moffit), imt, value
 
 
-def get_selexpr(gsim, user_selexpr=None):
-    '''builds a selection expression from a given gsim name concatenating
-    the given `user_selexpr` (user defined selection expression with the
-    expression obtained by inspecting the required arguments of the given
-    gsim'''
-    attrs = OQ.required_attrs(gsim)
-    selexpr_chunks = []
-    strike_dip_rake_found = False
-    for att in attrs:
-        if att in ('rake', 'strike', 'dip') and not strike_dip_rake_found:
-            strike_dip_rake_found = True
-            selexpr_chunks.append('(((dip_1 != nan) & '
-                                  '(strike_1 != nan) & '
-                                  '(rake_1 != nan)) | '
-                                  '((dip_2 != nan) & '
-                                  '(strike_2 != nan) & '
-                                  '(rake_2 !=nan)))')
-            continue
-        (column, missing_val) = GSIM_REQUIRED_ATTRS.get(att, ['', ''])
-        if column and missing_val:
-            selexpr_chunks.append('(%s != %s)' % (column, missing_val))
-
-    if not selexpr_chunks:
-        return user_selexpr
-    if user_selexpr:
-        selexpr_chunks.insert(0, '(%s)' % user_selexpr)
-
-    return " & ".join(selexpr_chunks)
+def _title(string):
+    '''Makes the string with the first letter of the first word capitalized
+    only and replaces 'std dev' with 'stddev' for consistency with
+    residuals
+    '''
+    return (string[:1].upper() + string[1:].lower()).replace('std dev',
+                                                             'stddev')
