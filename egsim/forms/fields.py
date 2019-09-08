@@ -603,9 +603,9 @@ class ImtField(BaseImtField):
             # It is perfectly fine to raise ValidationError from here, as
             # this allows us to customize the message in case of 'SA':
             raise ValidationError(
-                    self.error_messages['sa_without_period'],
-                    code='sa_without_period',
-                )
+                self.error_messages['sa_without_period'],
+                code='sa_without_period',
+            )
         valid = super(ImtField, self).valid_value(value)
         if not valid:
             try:

@@ -57,15 +57,12 @@ def get_trellis(params):
         # iterator which yields a two element tuple (m1, m2) where m1 is the
         # scalar value to be saved as json, and m2 is the value
         # (scalar or array) to be passed to the Trellis class:
-        magiter = zip(magnitudes, magnitudes) if _isdist(trellisclass) else \
-            zip([None], [magnitudes])
-
-        for mag, mags in magiter:
+        for mag, mags in zip(magnitudes, magnitudes) \
+                if _isdist(trellisclass) else zip([None], [magnitudes]):
             # same as magnitudes (see above):
-            distiter = zip(distances, distances) if _ismag(trellisclass) else \
-                zip([None], [distances])
+            for dist, dists in zip(distances, distances) \
+                    if _ismag(trellisclass) else zip([None], [distances]):
 
-            for dist, dists in distiter:
                 data = _get_trellis_dict(trellisclass, params, mags, dists,
                                          gsim, imt)
 

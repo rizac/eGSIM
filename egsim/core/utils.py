@@ -48,9 +48,8 @@ def tostr(obj, none='null'):
     if obj is True or obj is False:
         return str(obj).lower()
     if isinstance(obj, (date, datetime)):
-        if not isinstance(obj, datetime) \
-            or (obj.microsecond == obj.hour ==
-                obj.minute == obj.second == 0):
+        if not isinstance(obj, datetime) or (obj.microsecond == obj.hour ==
+                                             obj.minute == obj.second == 0):
             return obj.strftime('%Y-%m-%d')
         if obj.microsecond == 0:
             return obj.strftime('%Y-%m-%dT%H:%M:%S')
@@ -296,7 +295,7 @@ class OQ:
         instance)'''
         gsim_class = cls.gsims()[gsim] if isinstance(gsim, str) else gsim
         return chain(*[getattr(gsim_class, _) for _ in dir(gsim_class)
-                     if _.startswith('REQUIRES_')])
+                       if _.startswith('REQUIRES_')])
 
 
 # dict mapping the REQUIRES_* attributes defined on each Gsim of `OpenQuake`

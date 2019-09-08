@@ -297,7 +297,7 @@ class BaseForm(Form):
                 'attrs': attrs,
                 'err': '',
                 'is_hidden': widgetdata.pop('is_hidden', False) or
-                name in hidden_fn,
+                             name in hidden_fn,
                 'val': val,
                 'initial': field.initial,
                 'typedesc': BaseForm._type_description(field,

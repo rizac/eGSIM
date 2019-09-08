@@ -10,7 +10,7 @@ import json
 from django.http.response import JsonResponse
 
 
-def invalidform2json(form, code=400,  msg_format='Invalid input in %(names)s'):
+def invalidform2json(form, code=400, msg_format='Invalid input in %(names)s'):
     '''Returns a JSON serializable dict from the given invalid form. the dict
     is formatted according to
     https://google.github.io/styleguide/jsoncstyleguide.xml
