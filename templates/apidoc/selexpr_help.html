@@ -44,3 +44,10 @@ for logical and, <code>|</code> for logical or, and <code>~</code> for negation)
     {% endfor %}
     </tbody>
 </table>
+
+<p class='footnote'>
+Note: all GSIMs are implemented in OpenQuake with set of required columns.
+In all computations involving a gmdb, for any given GSIM the gmdb is first filtered by
+selecting only valid records, i.e. records with non missing values in all GSIM's required columns.
+Any selection expression, if provided, is then applied on valid records only.
+</p>
