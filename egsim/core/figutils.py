@@ -439,7 +439,7 @@ def readjust_positions(axes, annotations, fig, figure_area=None,
 
         # set new positions:
         axs.set_position([position[0], position[1], position[2]-position[0],
-                         position[3] - position[1]])
+                          position[3] - position[1]])
     # same for annotations:
     for annot in annotations:
         xxx, yyy = annot.get_position()
@@ -556,7 +556,7 @@ def get_draw_options(datadict, converter, dpi):
         'line': line,
         'marker': marker,
         'fillcolor': converter.color(datadict['fillcolor'])
-        if 'fillcolor' in datadict else None
+                     if 'fillcolor' in datadict else None
     }
 
 
@@ -688,7 +688,7 @@ if __name__ == '__main__':
             jsondata = json.load(fp)
             for frmt in ['png', 'svg', 'eps', 'pdf']:
                 val = get_img(jsondata['data'], jsondata['layout'], 1295, 820,
-                                  frmt)
+                              frmt)
                 with open(os.path.join(outpath,
                                        os.path.basename(jsonf) + '.' + frmt),
                           'bw') as of:
