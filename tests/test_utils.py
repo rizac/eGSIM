@@ -10,7 +10,7 @@ import pytest
 from egsim.core.utils import vectorize, querystring, get_gmdb_column_desc,\
     GSIM_REQUIRED_ATTRS, OQ
 from egsim.forms.fields import NArrayField
-from egsim.core.smtk import _relabel_sa, gmdb_records, get_selexpr
+from egsim.core.smtk import _relabel_sa, _gmdb_records, _get_selexpr
 from smtk.sm_table import GMTableDescription, GroundMotionTable
 from egsim.models import aval_gsims
 from smtk.residuals.gmpe_residuals import Residuals
@@ -160,8 +160,8 @@ def check_gsim_defined_for_current_db(testdata):
             gmdbpath = testdata.path('esm_sa_flatfile_2018.csv.hd5')
             gm_table = GroundMotionTable(gmdbpath, 'esm_sa_flatfile_2018',
                                          mode='r')
-            selexpr = get_selexpr(gsim)
-            num = gmdb_records(residuals, gm_table.filter(selexpr))
+            selexpr = _get_selexpr(gsim)
+            num = _gmdb_records(residuals, gm_table.filter(selexpr))
         except:
             pass
 
