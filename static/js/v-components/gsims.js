@@ -138,7 +138,7 @@ Vue.component('gsims', {
             // modify the current form gsim field:
             this.form.gsim.choices = Array.from(gsims);
             this.form.gsim.val = [];
-            propsData = {
+            var propsData = {
             	form: this.form,
             	selectbutton: {
             		html: 'Select globally for comparison and testing',
@@ -149,7 +149,7 @@ Vue.component('gsims', {
             		}
             	},
             	showfilter: true
-            }
+            };
 
             var instance = new ComponentClass({
                 propsData: propsData
@@ -158,6 +158,10 @@ Vue.component('gsims', {
             // forward the gsim selection fired by the <gsimselect> to the listeners of this component (if provided):
             instance.$on('selection-fired', gsims => {
                 this.$emit('emit-event', 'selectgsims', gsims);
+                // display a temporary tooltip notifying the selection:
+                var ariaLabel = propsData.selectbutton.attrs['aria-label'];
+                propsData.selectbutton.attrs['aria-label'] = `${gsims.length} gsim(s) selected`;
+                setTimeout(() => { propsData.selectbutton.attrs['aria-label'] = ariaLabel; }, 1000);
             });
 
             // mount the instance:
