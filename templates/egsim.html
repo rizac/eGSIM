@@ -31,14 +31,14 @@
 
 		<div class='flexible d-flex flex-column position-relative'>
 
-			<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0" style='z-index:100'>
+			<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0" style='z-index:99'>
 				<!-- Loading, please wait ... --> <!-- (<- text removed) -->
 				<div class="loader"></div>
 			</div>
 	
 			<div v-show='errormsg'
 				class='d-flex flex-row bg-danger text-sm-center text-white text-truncate position-absolute pos-t-0 pos-x-0 align-items-baseline'
-				style='z-index:10'>
+				style='z-index:100'>
 				<div class='flexible ml-1' v-html='errormsg' id='globalerrormessage-div'>
 					{{ invalid_browser_message | safe }}
 				</div>
@@ -108,7 +108,7 @@
 	        	selComponent: "{{sel_component}}",
 	        	// incompatibleBrowserMessage is defined in browserdetection.js:
 	        	errormsg: incompatibleBrowserMessage({{ allowed_browsers | safe }},
-	        	        							 {{ invalid_browser_message | safe }}"),
+	        	        							 "{{ invalid_browser_message | safe }}"),
 	        	componentProps: {{ component_props | safe }}
 	        };  
 	    }
