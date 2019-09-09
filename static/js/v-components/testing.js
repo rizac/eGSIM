@@ -50,7 +50,7 @@ Vue.component('testing', {
             <div class="mt-4 form-control" style="background-color:transparent">
                 <forminput :form='form' :name='"gmdb"'></forminput>
             	<forminput :form='form' :name='"selexpr"' showhelpbutton
-        			@helprequested='$emit("movetoapidoc", "selexpr")' class='mt-2'>
+        			@helprequested='$emit("emit-event", "movetoapidoc", "selexpr")' class='mt-2'>
         		</forminput>
             </div>
             

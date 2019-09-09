@@ -69,10 +69,6 @@ var EGSIM_BASE = {
             }
             return false; // in case accessed from within anchors
         },
-        moveToApidoc(fragmentName){
-        	this.componentProps['apidoc'].fragment = fragmentName.startsWith('#') ? fragmentName : '#' + fragmentName;
-        	this.setComponent('apidoc');
-        },
         /*
          * POST request listeners:
          */
@@ -114,8 +110,19 @@ var EGSIM_BASE = {
         	this.setLoading(false);
         },
         /*
-         * End of POST request listeners
+         * Components event handlers:
          */
+        handleEmittedEvent(eventName){
+        	if (eventName == 'movetoapidoc'){
+        		this.moveToApidoc(arguments[1] || '');
+        	}else if (eventName == 'selectgsims'){
+        		this.selectGsims(arguments[1] || []);
+        	} 
+        },
+        moveToApidoc(fragmentName){
+        	this.componentProps['apidoc'].fragment = fragmentName.startsWith('#') ? fragmentName : '#' + fragmentName;
+        	this.setComponent('apidoc');
+        },
         selectGsims(gsims){
         	for (var [name, form] of this.forms()){
         		if (form.gsim){
@@ -123,6 +130,7 @@ var EGSIM_BASE = {
                 }
         	}
         },
+        /* other functions: */
         clearErrors(){
         	this.setError('');
         	// clear all errors in forms:
