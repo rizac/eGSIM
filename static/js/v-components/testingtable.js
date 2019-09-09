@@ -177,7 +177,7 @@ Vue.component('testingtable', {
 			       		<span class='flexible'><i class="fa fa-filter"></i> {{ filterName }}</span>
 			       		<button
 			       			@click='clearFilters(filterName)' type='button'
-			       			:style="[filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}]"
+			       			:style="filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}"
 			       			style='padding-top:0.1rem; padding-bottom:0.1rem'
 			       			class='btn btn-outline-secondary btn-sm ml-2'
 			       		>
