@@ -52,8 +52,8 @@
 						v-bind="selComponentProps"
 						@gsim-selected='selectGsims'
 						@movetoapidoc='moveToApidoc'
-						:class="['trellis', 'residuals', 'testing', 'gmdbplot'].includes(selComponent) ? 'm-3 mt-4' : 'm-0'"
-						:style="['trellis', 'residuals', 'testing', 'gmdbplot'].includes(selComponent) ? {} : {'z-index': '101'}"
+						:class="['trellis', 'residuals', 'testing', 'gsims', 'gmdbplot'].includes(selComponent) ? 'm-3 mt-4' : 'm-0'"
+						:style="['trellis', 'residuals', 'testing', 'gsims', 'gmdbplot'].includes(selComponent) ? {} : {'z-index': '101'}"
 					></component>
 				</keep-alive>
 				</transition>
