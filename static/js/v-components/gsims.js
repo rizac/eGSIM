@@ -56,7 +56,7 @@ Vue.component('gsims', {
 	            </option>
 	        </select>
         </div>
-        <div :id='id' class='flexible' style='font: inherit !important'></div>
+        <div :id='id' class='flexible border' style='font: inherit !important'></div>
         </div>`,
     created: function(){
         Vue.post(this.trUrl).then(response => {  // defined in `vueutil.js`
