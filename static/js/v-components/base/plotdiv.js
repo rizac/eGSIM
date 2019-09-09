@@ -145,7 +145,7 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         <div class='flexible d-flex flex-column'>
             <div
             	v-if="Object.keys(selectedParams).length"
-            	class='d-flex flex-row justify-content-around mb-1'
+            	class='d-flex flex-row justify-content-around mb-2'
             >
                 <div
                 	v-for='(values, key) in selectedParams'
