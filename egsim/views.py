@@ -332,7 +332,7 @@ def main(request, selected_menu=None):
     }
 
     # Yes, what we are about to do it's really bad practice. But when in debug
-    # mode, I want to test easily the frontend with typical configurations
+    # mode, we want to easily test the frontend with typical configurations
     # already setup. In production, we will not enter here:
     if settings.DEBUG:
         gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
@@ -365,7 +365,14 @@ def main(request, selected_menu=None):
                                                                      # 'edr'
                                                                      ]
 
-    # remove lines above!
+    # setup browser detection
+    allowed_browsers = [['Chrome', 49], ['Firefox', 45], ['Safari', 10]]
+    invalid_browser_message = ('Some functionalities might not work '
+                               'correctly. In case, please use any of the '
+                               'following tested browsers: %s' %
+                               ', '.join('%s &ge; %d' % (brw, ver)
+                                         for brw, ver in allowed_browsers))
+
     gsims = json.dumps({_[0]: _[1:] for _ in aval_gsims(asjsonlist=True)})
     return render(request,
                   'egsim.html',
@@ -375,7 +382,8 @@ def main(request, selected_menu=None):
                       'components': components_tabs,
                       'component_props': json.dumps(components_props),
                       'gsims': gsims,
-                      'server_error_message': ""
+                      'allowed_browsers': allowed_browsers,
+                      'invalid_browser_message': invalid_browser_message
                   }
                   )
 
