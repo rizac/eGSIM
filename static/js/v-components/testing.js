@@ -37,7 +37,7 @@ Vue.component('testing', {
         }
     },
     template: `
-<div class='flexible d-flex flex-column'>
+<div class='flexible d-flex flex-column position-relative'>
 	<!-- $props passes all of the props on to the "parent" component -->
 	<!-- https://stackoverflow.com/a/40485023 -->
 	<baseform
@@ -65,7 +65,7 @@ Vue.component('testing', {
     <testingtable
     	:data="responseData"
     	:downloadurls="urls.downloadResponse"
-    	class='position-absolute pos-0 mb-2 mx-2' style='z-index:1'
+    	class='position-absolute pos-0' style='z-index:1'
     >
     	<slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-list-alt'></i> Configuration</button>
