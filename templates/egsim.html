@@ -39,7 +39,8 @@
 			<div v-show='errormsg'
 				class='d-flex flex-row bg-danger text-sm-center text-white text-truncate position-absolute pos-t-0 pos-x-0 align-items-baseline'
 				style='z-index:10'>
-				<div class='flexible ml-1' v-html='errormsg'>
+				<div class='flexible ml-1' v-html='errormsg' id='globalerrormessage-div'>
+					{{ invalid_browser_message | safe }}
 				</div>
 				<i class="fa fa-times mr-1" @click='clearErrors()'></i>
 			</div>
@@ -87,59 +88,9 @@
 	{% endfor %}
 	
 	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/browserdetection.js' %}"></script>
 
 	<script>
-	// functions for checking the browser version:
-	function _pInt(value){
-	    return value===undefined || value === null || isNaN(parseInt(value)) ? undefined : parseInt(value);
-	}
-	function getBrowser() {  // https://stackoverflow.com/a/16938481
-	    var ua=navigator.userAgent;
-		var tem;
-		var M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || []; 
-	    if(/trident/i.test(M[1])){
-	        tem=/\brv[ :]+(\d+)/g.exec(ua) || []; 
-	        return {
-	            name:'IE',
-	            version: _pInt(tem[1])
-	        };
-	    }   
-	    if(M[1]==='Chrome'){
-	        tem=ua.match(/\bOPR|Edge\/(\d+)/)
-	        if(tem!=null){
-	            return {
-	                name:'Opera',
-	                version: _pInt(tem[1])
-	            };
-	        }
-	    }   
-	    M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
-	    if((tem=ua.match(/version\/(\d+)/i))!=null){
-	        M.splice(1,1,tem[1]);
-	    }
-	    return {
-	      	name: M[0].toLowerCase(),
-	    	version: _pInt(M[1])
-	    };
-	}
-	function incompatibleBrowser(){
-	    var testedBrowsers = [['Chrome', 49], ['Firefox', 45], ['Safari', 10]];
-	    var testedBrowsersToString = testedBrowsers.map(elm => elm[0] + ` (v.&ge;${elm[1]})`).join(", ")
-	    var msg = `Some functionalities might not work correctly. 
-        			In case, please use any of the following tested browsers: ${testedBrowsersToString}`;
-		var browser = getBrowser();
-		for (var [testedBrowser, testedVersion] of testedBrowsers){
-		    if (browser.name.toLowerCase() === testedBrowser.toLowerCase()){
-		        if (browser.version === undefined || browser.version < testedVersion){
-		            return msg;
-		        }else{
-		            return '';
-		        }
-		    }
-		}
-		return msg;
-	}
-
 	// Create the globally available Vue.eGSIM Object:
 	// The function Vue.init is defined in vueutil.js
 	Vue.init({{ gsims|safe }});
@@ -155,8 +106,10 @@
 	            // (csrf token stored in an <input> in the base.html. Get it here and use it for each post request):
 	        	postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value}}),
 	        	selComponent: "{{sel_component}}",
-	        	errormsg: incompatibleBrowser() || "{{ server_error_message }}",
-	        	componentProps: {{ component_props|safe }}
+	        	// incompatibleBrowserMessage is defined in browserdetection.js:
+	        	errormsg: incompatibleBrowserMessage({{ allowed_browsers | safe }},
+	        	        							 {{ invalid_browser_message | safe }}"),
+	        	componentProps: {{ component_props | safe }}
 	        };  
 	    }
 	});
