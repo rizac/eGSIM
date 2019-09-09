@@ -239,7 +239,7 @@ var _BASE_FORM = Vue.component('baseform', {
 	                <i class="fa fa-link"></i>
 	            </button>
             	<input :id="idRequestURLInput" type='text' v-model='requestURL'
-            		:style= "[requestURL ? {} : { 'visibility': 'hidden'}]"
+            		:style= "requestURL ? {} : { 'visibility': 'hidden'}"
             		class='flexible form-control form-control-sm ml-2 bg-transparent border-0'
             		style='width:initial !important'
             	/>

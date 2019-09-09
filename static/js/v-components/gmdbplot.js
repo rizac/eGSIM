@@ -4,7 +4,7 @@
  * (without extension)
  */
 Vue.component('gmdbplot', {
-  //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
+    //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         form: Object,
         url: String,
