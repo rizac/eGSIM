@@ -145,11 +145,12 @@ var _PLOT_DIV = Vue.component('plotdiv', {
         <div class='flexible d-flex flex-column'>
             <div
             	v-if="Object.keys(selectedParams).length"
-            	class='d-flex flex-row justify-content-around mb-2'
+            	class='d-flex flex-row justify-content-around mb-3'
             >
                 <div
-                	v-for='(values, key) in selectedParams'
-                	class='d-flex flex-row flexible align-items-baseline ml-2'
+                	v-for='(values, key, index) in selectedParams'
+                	class='d-flex flex-row flexible align-items-baseline'
+                	:class="index > 0 ? 'ml-2' : ''"
                 >
                     <span class='text-nowrap mr-1'>{{ key }}</span>
                     <select
