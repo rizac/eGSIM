@@ -157,7 +157,7 @@ Vue.component('gsims', {
 
             // forward the gsim selection fired by the <gsimselect> to the listeners of this component (if provided):
             instance.$on('selection-fired', gsims => {
-                this.$emit('gsim-selected', gsims);
+                this.$emit('emit-event', 'selectgsims', gsims);
             });
 
             // mount the instance:

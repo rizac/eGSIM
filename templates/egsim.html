@@ -49,10 +49,12 @@
 				<transition name="fade" mode="out-in">
 				<keep-alive>
 					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
+					<!-- Further note on "@emit-event='handleEmittedEvent'": the line binds
+					components firing `$emit('emit-event', eventName, ...)` to the function
+					`handleEmittedEvent` on the main instance (implemented in egsim_base.js)  -->
 					<component v-bind:is="selComponent"
 						v-bind="selComponentProps"
-						@gsim-selected='selectGsims'
-						@movetoapidoc='moveToApidoc'
+						@emit-event='handleEmittedEvent'
 						:class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'"
 						:style="['home', 'apidoc'].includes(selComponent) ? {'z-index': '101'} : {}"
 					></component>
