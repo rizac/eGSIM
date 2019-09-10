@@ -48,7 +48,7 @@ Vue.component('gsims', {
         }
     },
     template:`<div class='flexible d-flex flex-column'>
-    	<div class='d-flex flex-row align-items-baseline m-2'>
+    	<div class='d-flex flex-row align-items-baseline mb-3'>
 	        <span class='mr-2 text-nowrap'>Tectonic regionalisation model</span>
 	        <select v-model='selectedModel' class='form-control flexible'>
 	            <option v-for='mod in modelNames' :key='mod'>
