@@ -56,7 +56,6 @@
 						v-bind="selComponentProps"
 						@emit-event='handleEmittedEvent'
 						:class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'"
-						:style="['home', 'apidoc'].includes(selComponent) ? {'z-index': '101'} : {}"
 					></component>
 				</keep-alive>
 				</transition>
