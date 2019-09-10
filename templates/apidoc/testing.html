@@ -62,6 +62,9 @@ will be six:
             
 <pre><code class="language-python">{
 	"Measure of fit": {
+		# The following properties represent the chosen measures of fit
+		# (thus, some of them might be missing depending on the user's request)
+		# and are mapped to Objects with these properties:
 		"Residuals inter event mean": {
 			"PGA": {
 				"BindiEtAl2011": 0.01,
@@ -74,8 +77,7 @@ will be six:
 			},
 			...
 		},
-		# all following Objects are of the same type as above,
-		# computed for a different MOF:
+		# same Objects types as above, computed for a different MOF:
 		"Residuals inter event stddev": { ... },
 		"Residuals intra event mean": { ... },
 		"Residuals intra event stddev": { ... },
