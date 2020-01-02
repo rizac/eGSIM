@@ -1,0 +1,138 @@
+
+.height100{
+	height: 100vh;
+}
+
+body{
+	font-family: Encode Sans Condensed, sans-serif, "Ubuntu Mono", "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+}
+
+.d-flex > .flexible, .d-flex > .flexible-half{
+	flex: 1 1 auto; /* for letting this work with grid layout the last element (flex-basis) should be zero: https://stackoverflow.com/a/48454476 */
+}
+.d-flex.flex-row > .flexible, .d-flex.flex-row > .flexible-half{
+	overflow-x: auto;
+}
+.d-flex.flex-column > .flexible, .d-flex.flex-column > .flexible-half{
+	overflow-y: auto;
+}
+.flex-center{
+	flex-direction: column;  /* make main axis vertical */
+    justify-content: center; /* center items vertically, in this case */
+    align-items: center;     /* center items horizontally, in this case */
+}
+
+/* flexible-half has the property of setting its base width/height to 50% of the container,
+used for twin panels aligned left and right (or top and bottom) which might take 100% space if alone,
+or same space of the other twin, if present: */
+.d-flex.flex-row > .flexible-half, .d-flex.flex-column > .flexible-half{
+	flex-basis: 50% !important;
+}
+iframe{
+	border:0;
+	margin:0;
+}
+
+/* style combo-boxes (select elements). For info see: https://github.com/twbs/bootstrap/issues/16201#issuecomment-260872271
+and https://stackoverflow.com/a/38187626 */
+/*select.form-control:not([multiple]) {
+     -webkit-appearance: none;
+     -moz-appearance: none;
+     appearance: none;
+     background: none right / 20px no-repeat #fff;
+     background-image: url("data:image/svg+xml,<svg version='1.1' xmlns='http://www.w3.org/2000/svg' width='28px' height='14px' viewBox='0 0 1200 1200' fill='rgb(51,51,51)'> <path d='M1100 411l-198 -199l-353 353l-353 -353l-197 199l551 551z'/> </svg>");
+	
+}*/
+
+/* absolute positioning (not in standard bootstrap), to be used with bootstrap's .position-absolute: */
+.pos-t-0, .pos-y-0, .pos-0{
+	top: 0px;
+}
+.pos-b-0, .pos-y-0, .pos-0{
+	bottom: 0px;
+}
+.pos-l-0, .pos-x-0, .pos-0{
+	left: 0px;
+}
+.pos-r-0, .pos-x-0, .pos-0{
+	right: 0px;
+}
+
+/* grid-box layout classes (bootstrap implements its own, not based on gridbox layout, which is available in all
+browsers but opera and IE11 */
+.grid-2-columns{
+	display:grid;
+	grid-template-columns:auto 1fr;
+	align-items:baseline;
+}
+.grid-3-columns{
+	display:grid;
+	grid-template-columns:auto 1fr auto;
+	align-items:baseline;
+}
+/* following bootstrap mb-1, pt-3, ... logic: */
+.grid-row-gap-0{grid-row-gap: 0px;}
+.grid-row-gap-1{grid-row-gap: 0.25rem;}
+.grid-row-gap-2{grid-row-gap: 0.5rem;}
+.grid-row-gap-3{grid-row-gap: 1rem;}
+.grid-row-gap-4{grid-row-gap: 1.5rem;}
+.grid-row-gap-5{grid-row-gap: 3rem;}
+.grid-col-gap-0{grid-column-gap: 0px;}
+.grid-col-gap-1{grid-column-gap: 0.25rem;}
+.grid-col-gap-2{grid-column-gap: 0.5rem;}
+.grid-col-gap-3{grid-column-gap: 1rem;}
+.grid-col-gap-4{grid-column-gap: 1.5rem;}
+.grid-col-gap-5{grid-column-gap: 3rem;}
+/* spans:*/
+.grid-col-span{grid-column: 1 / -1;}
+.grid-row-span{grid-row: 1 / -1;}
+
+/* h5{ 
+	font-size: 1.2rem !important;
+	margin-bottom: .5rem !important;
+	font-weight: bold !important;
+} */
+
+/* override bootstrap */
+/* .bg-light{
+	background-color: #fafafa !important;
+} */
+
+/* shadows not enabled in bootstrap, copy code here: */
+/* .shadow-sm { small
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+}
+.shadow { normal
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+.shadow-lg { large
+    box-shadow: 0 1rem 3rem rgba(0,0,0,.175)!important;
+} */
+
+
+
+/* change disabled text color to makei it lighter. Also add the class 'disabled' which renders the same text color */
+*[disabled], .disabled{ /*input[type="text"][disabled] {*/
+   color: lightgray;
+}
+/* change option selection color. NOTE: we can only set a background image on them:*/
+select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:checked:not(:disabled) {
+	background-image: linear-gradient(0deg, #a2cd7e 0%, #a2cd7e 100%);
+}
+select[multiple] option:checked:not(:disabled), select[size] option:checked:not(:disabled) {
+	background-image: linear-gradient(0deg, #d6e9c6 0%, #d6e9c6	 100%);
+}
+
+
+/* plotly */
+.js-plotly-plot .plotly .modebar--hover{
+	padding: 1rem;
+	border-radius: .5rem;
+	right: 3px !important;
+	box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+}
+
+/* leaflet*/
+.leaflet-popup-content {
+	width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
+}

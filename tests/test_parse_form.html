@@ -1,0 +1,243 @@
+<doctype html>
+
+<head>
+
+</head>
+
+<body>
+<script>
+/* valid = [["radio_req_valid": "Male"], ["radio_valid", "Female"],
+    ['select_mult_req_valid', ['val1', 'val3']], ["select_mult_valid", []],
+    ['select_req_valid', 'val3'], ["select_mult_valid", ""]];
+missing= ["radio_req_missing", "select_mult_missing", "select_missing"];
+invalid = ["radio_req_invalid", "select_mult_req_invalid", "select_req_invalid", "number_invalid"]; */
+</script>
+
+<form name='form' id='form'>
+
+  	<input type="radio" name="radio_req_valid" required value="male" checked> Male<br>
+  	<input type="radio" name="radio_req_valid" required value="female"> Female<br>
+  	<input type="radio" name="radio_req_valid" required value="other"> Other
+  	
+  	<input type="radio" name="radio_req_invalid" required value="male"> Male<br>
+  	<input type="radio" name="radio_req_invalid" required value="female"> Female<br>
+  	<input type="radio" name="radio_req_invalid" required value="other"> Other
+  	
+  	<input type="radio" name="radio_valid" value="male"> Male<br>
+  	<input type="radio" name="radio_valid" value="female" checked> Female<br>
+  	<input type="radio" name="radio_valid" value="other"> Other
+  	
+  	<input type="radio" name="radio_valid_missing" value="male"> Male<br>
+  	<input type="radio" name="radio_valid_missing" value="female">Female<br>
+  	<input type="radio" name="radio_valid_missing" value="other">Other
+	
+	<select multiple name='select_mult_req_valid' required>
+	<option value='val1' selected>1</option>
+	<option value='val2'>2</option>
+	<option value='val3' selected>3</option>
+	</select>
+	
+	<select multiple name='select_mult_req_invalid' required>
+	<option value='val1'>1</option>
+	<option value='val2'>2</option>
+	<option value='val3'>3</option>
+	</select>
+	
+	<select multiple name='select_mult_missing'>
+	<option value='val1'>1</option>
+	<option value='val2'>2</option>
+	<option value='val3'>3</option>
+	</select>
+	
+	<select name='select_req_valid' required>
+	<option value='val1'>1</option>
+	<option value='val2'>2</option>
+	<option value='val3' selected>3</option>
+	</select>
+	
+	<select name='select_req_valid_defaultsToFirstItem' required>
+	<option value='val1'>1</option>
+	<option value='val2'>2</option>
+	<option value='val3'>3</option>
+	</select>
+	
+	<select name='select_valid_defaultsToFirstItem'>
+	<option value='val1'>1</option>
+	<option value='val2'>2</option>
+	<option value='val3'>3</option>
+	</select>
+	
+	<!--  NOTE: without step='any' safari defaults the step to 1 (as should be)
+	and raises a validation error> For info see: https://stackoverflow.com/a/19012837
+	 -->
+	<input name='number_req_valid' type='number' step='any' value='1.1' required>
+	<input name='number_req_invalid' type='number' required>
+	<input name='number_req_another_invalid' type='number' required value='asd'>
+	<input name='number_missing' type='number'>
+	
+	<input name='text_req_valid' type='text' value='1.1a' required>
+	<input name='text_req_invalid' type='text' required>
+	<input name='text_missing' type='text'>
+	
+	<input type='submit' value='asd' name='submit_missing'>
+	<input type='button' value='asd' name='buttont_missing'>
+	<input type='reset' value='asd' name='reset_missing'>
+	
+</form>
+
+<div id='errors' style='font-weight:bold; color:red'></div>
+
+
+</body>
+
+<script type='text/javascript'>
+
+function parseForm(form){
+    /**
+    * Parses a given form and returns an array of two objects: [data, errors]
+    * where `data` maps form element names to their *parsed* values, and `errors` maps
+    * invalid form element names to their error messages (string). If the form is valid, then
+    * `errors` is not an object but falsy (false/undefined/null).
+    * Form elements are those returned by the `form.elements` method:
+    * <input> elements of type 'button', 'submit' and 'reset' will be ignored, as well as elements
+    * without a valid (truthy) name, or elements with no value set and no required attribute.
+    * "No value set" means generally empty string value, but it depends on the input type and tagName;
+    * in fact, values are parsed for these elements:
+    * <select multiple>  (returns an array of strings instead of a string. No value set: empty array)
+    * <input type=checkbox> (returns a boolean instead of string. No value set: false)
+    * <input type=number> (returns a float instead of string. No value set: empty string,
+    *                      which should be checked by the browser validation beforehand)
+    * For any other element, the element value attribute is returned (should be string in most, when
+    * not all, cases). For info on input types, see:
+    * 	https://www.w3schools.com/Html/html_form_input_types.asp
+    */
+    var data = {};
+    var errors = false;
+    var elms = form.elements;
+    var toNumber = parseFloat;
+    var toInt = parseInt;
+    var toDate = function(value){return new Date(value);}
+    for (var i=0; i< elms.length; i++){
+        var elm = elms[i];
+        var tagName = elm.tagName.toLowerCase();
+        var typeName = elm.type.toLowerCase();
+        var type = tagName == 'select' ? tagName : typeName;
+        var name = elm.name;
+        var value = elm.value;
+        var required = elm.required;
+        
+     	// skip stuff we do not need to include:
+        if(!name || type == 'submit' || type=='button' || type=='reset'){
+            continue;
+        }
+     	// run browser form field validation:
+        if(!elm.checkValidity()){
+            errors = errors || {};
+            errors[name] = elm.validationMessage;
+            continue;
+        }
+        // specific cases, parsing and ignoring (if no required):
+        if (type == 'radio' && !elm.checked){
+            // in case of radios, when no selection is made, value is the value of the first radio
+            // item (at least in Chrome): first continue if element is not required:
+            if(!required){
+                continue;
+            }
+            // if required, set the value to the empty string for safety:
+            value = '';
+        }else if(type == 'select'){
+            var selected = elm.querySelectorAll('option:checked');
+            value = Array.from(selected).map((el) => el.value);
+            if(!elm.multiple){
+                value = value[0] || '';
+                if(!value && !required){
+                    continue;
+                }
+            }else{
+                // "no value set" means empty array for <select multiple>s:
+                if(!value.length && !required){
+                    continue;
+                }
+            }
+        }else if(type == 'checkbox'){
+            value = elm.checked && true;
+            if(!value && !required){
+                continue;
+            }
+        }else if(type == 'number'){
+            // do check prior to conversion, otherwise !0 = true and we might discard valid values: 
+            if(!value && !required){
+                continue;
+            }
+            value == toNumber(value);
+        }else{
+            if(!value && !required){
+                continue;
+            }
+        }
+        
+        /* else if(type == 'date'){
+            value == toDate(value);
+        }else if(type == 'time'){
+            value == toDate(value);
+        }else if(type == 'datetime-local'){
+            value == toDate(value);
+        }else if(type == 'range'){
+            value == toInt(value);
+        } */
+        data[name] = value;
+    }
+    return [data, errors];
+}
+
+
+    var form = document.forms['form'];
+    var text = '';
+    var [data, errors] = parseForm(form);
+    /* for (var name in data){
+        if (!name.contains('_valid')){
+            text+=`<br>name ${name} should not be valid`; 
+        }else{
+            // test validity value
+        }
+    }
+    for (var name in data){
+        if (!name.contains('_invalid')){
+            text+=`<br>name ${name} should not be invalid`; 
+        }
+    } */
+    for (var i=0; i < form.elements.length; i++){
+        var elm = form.elements[i];
+        var name = elm.name;
+        if (name.indexOf('_missing') >-1){
+            if(name in data){
+                text+=`<br>name ${name} should be missing but is valid`; 
+            }
+            if(name in errors){
+                text+=`<br>name ${name} should be missing but is invalid`; 
+            }
+        }else if (name.indexOf('_invalid') >-1){
+            if(name in data){
+                text+=`<br>name ${name} should be invalid but is valid`; 
+            }else if(!(name in errors)){
+                text+=`<br>name ${name} should be invalid but is missing`; 
+            }
+        } else if (name.indexOf('_valid') >-1){
+            if(name in errors){
+                text+=`<br>name ${name} should be valid but is invalid`; 
+            }else if(!(name in data)){
+                text+=`<br>name ${name} should be valid but is missing`; 
+            }
+        } 
+    }
+    if(!text){
+        text = 'OK (IF YOU CAN READ THIS THEN THE TEST WAS SUCCESSFUL)';
+    }else{
+        text += '<br><br>Check validation messages:';
+        for(var k in errors){
+            text += `<br>${k} ${errors[k]}`
+        }
+    }
+	document.getElementById('errors').innerHTML = text;
+
+</script>

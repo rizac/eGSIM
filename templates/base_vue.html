@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	{% with vue=True axios=True %}
+		{{ block.super }}
+	{% endwith %}
+	
+	{% if server_error_message %}
+	<script type='text/javascript'>
+		var _SERVER_ERROR_MESSAGE = "{{ server_error_message }}";
+	</script>
+	{% endif %}
+
+	<!-- includes css for form-related stuff (e.g. waitbar)  -->
+	<link rel="stylesheet" type="text/css" href="{% static 'css/base_vue.css' %}">
+{% endblock %}
+
+{% block body %}
+	<div class='flexible d-flex flex-column position-relative' id='egsim-vue'>
+		<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0">
+			<!-- Loading, please wait ... --> <!-- (<- text removed) -->
+			<div class="loader"></div>
+		</div>
+
+		<div v-show='errormsg' class='bg-danger text-sm-center text-white text-truncate'>
+			&#123;&#123; errormsg &#125;&#125;
+		</div>
+
+		<div class='flexible position-relative'>
+			{% block main %}{% endblock %}
+		</div>
+
+	</div>
+{% endblock %}
+
+{% block after-body %}
+	{{ block.super }}
+	<script type='text/javascript' src = "{% static 'js/egsim.js' %}"></script>
+	<script>
+	var EGSIM = new Vue({
+	    el: '#egsim-vue',
+	    mixins: [EGSIM_BASE],  /* defined in script above */
+	    data: function(){ /* FIXME: check what's the difference between returning function and dict */
+	        return {errormsg: "{{ server_error_message }}", initdata: {{ gsims|safe }}};  
+	    }
+	});
+
+	
+	</script>
+{% endblock %}

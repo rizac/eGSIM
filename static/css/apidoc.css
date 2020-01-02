@@ -1,0 +1,129 @@
+@page{
+	margin: 25mm 25mm 25mm 25mm; /*top right bottom left*/
+}
+
+@media print {  /* https://stackoverflow.com/a/28441659 */
+	div { float: initial !important; position: initial !important; display: initial !important; 
+          box-sizing: initial !important; width: initial !important; max-width: initial !important;
+          /*padding: initial !important; margin: initial !important;*/ background-color: unset !important;
+    }
+    body {
+    	height: initial !important;
+        font-size: 26px !important;
+    }
+    h2:not(:first-of-type) {page-break-before: always !important;}
+
+    /* set no background on body: */
+    body, body.bg-light{  /* body.bg-light works here, adding body in case we
+    	remove the class in the future. Also note that pre equal signs are rendered
+    	with white background in the page. In HTML it's hardly visible but in the pdf better
+    	no background */
+    	background-color: initial !important;
+    }
+    table, pre[class*=language-]{font-size:80% !important;}
+    table.csv{font-size:65% !important;}
+    pre[class*=language-], table.csv, .nopagebreak, ul {page-break-inside: avoid !important;}
+    pre[class*=language-] > code{white-space: pre-wrap !important;}
+    div#toc{display: none !important;}
+    /* these must be repeated here with important to work:*/
+    a, a:hover{text-decoration:none !important;}
+    table{box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;}
+    
+    .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {font-weight: 600 !important;}
+    .h1, h1 {font-size: 3rem;} /* instead of 2.5rem, margin-bottom: .5rem */
+	.h2, h2 {font-size: 2.5rem;} /* instead of 2rem, margin-bottom: .5rem */
+	.h3, h3 {font-size: 2rem;} /* instead of 1.75rem, margin-bottom: .5rem */
+	.h4, h4 {font-size: 1.75rem;} /* instead of 1.5rem, margin-bottom: .5rem */
+	.h5, h5 {font-size: 1.5rem;} /* instead of 1.25rem, margin-bottom: .5rem */
+	.h6, h6 {font-size: 1.25rem;} /* instead of 1rem, margin-bottom: .5rem */
+}
+
+/* override bootstrap for h* tags: */
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {line-height: 1.5;}
+.h1, h1 {margin:0rem 0px 1rem} /* instead of 2.5rem, margin-bottom: .5rem */
+.h2, h2 {margin:3.5rem 0px .75rem} /* instead of 2rem, margin-bottom: .5rem */
+.h3, h3 {margin:3rem 0px .75rem} /* instead of 1.75rem, margin-bottom: .5rem */
+.h4, h4 {margin:2rem 0px .5rem} /* instead of 1.5rem, margin-bottom: .5rem */
+.h5, h5 {margin:1.5rem 0px .5rem} /* instead of 1.25rem, margin-bottom: .5rem */
+.h6, h6 {margin:1rem 0px .5rem} /* instead of 1rem, margin-bottom: .5rem */
+
+
+p, ul, table{font-family: Lato, Helvetica, Arial, Tahoma, sans-serif;}
+ul:not(:last-child), table:not(:last-child), pre:not(:last-child){
+	margin-bottom: 1rem; /*same margin bottom as <p> */
+}
+
+div.content{max-width: 48em;}
+
+code{color: initial;}
+
+pre[class*=language-]{
+	background-color: initial !important;
+	/* border: none; */
+	padding:.5rem;
+	/* padding-left: 0px; */
+	box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+}
+
+table{
+	box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); /*(copied from shadow-sm of bootstrap.css) */
+	background-color: initial !important;
+}
+
+h2{
+	background-color: #ececec !important;
+}
+
+table td{padding: .3rem; vertical-align:middle;text-align:initial;}
+table > thead{font-weight: bold;}
+
+/* table borders: */
+table{width:100%;}
+table td{border-top: 1px solid #ddd;border-bottom: 1px solid #ddd;}  /* lightgray is #ccc */
+table.csv td{white-space: nowrap;}
+
+table.csv td, table.grid td, thead.grid td,
+tbody.grid td, tfoot.grid.td,
+table{
+	border: 1px solid #ddd;
+}
+
+table, pre[class*=language-]{font-size:90%;}
+/*make pre inside table as we expect and not too small: */
+table pre[class*=language-]{font-size:100% !important;}
+table.csv{font-size:75%;}
+
+/* backgrounds for  x and y labels */
+table.csv td.xvalues, span.xvalues{
+	background-color:#f1f3d4;
+}
+table.csv td.yvalues, span.yvalues{
+	background-color:#e6f0f8;
+}
+span.xvalues, span.yvalues{
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	border: 1px solid lightgray;
+	vertical-align:text-bottom;
+}
+
+a, a:hover{
+	text-decoration:none;
+}
+
+table.egsim-form-parameters .param-notes,
+table.egsim-form-parameters .param-alternative-name,
+.footnote{
+	color: gray;
+	font-size: 87%;
+}
+
+/* override string key colors in JSON objects: */
+.language-json .token.property {
+    color: #690; /*same as strings */
+}
+/* colon in dicts with no background: */
+.language-css .token.string, .style .token.string, .token.entity, .token.operator, .token.url {
+    background: initial; /*hsla(0,0%,100%,.5);*/
+}
