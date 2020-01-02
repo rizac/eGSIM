@@ -1,0 +1,50 @@
+# indentation in yaml: https://stackoverflow.com/a/39681672
+# semicolons in yaml: https://stackoverflow.com/a/31007425
+# WHY YAML AIN't THAT GOOD AND YOU SHOULD NOT READ THE LAST LINK AFTER THE NEXT ONE :) : 
+# yaml not so great: https://arp242.net/weblog/yaml_probably_not_so_great_after_all.html
+# yaml spec: http://yaml.org/spec/1.0/#id2560933
+
+# yaml.safe_dump(dict(a=9, b=[1,2]), default_flow_style=False) returns this:
+#
+# a: 9
+# b:
+# - 1
+# - 2
+#
+# Instead of this:
+#
+# a: 9
+# b:
+#   - 1
+#   - 2
+#
+# # This the eGSIM Trellis plot configuration file written in YAML, a human-readable data serialization language, which is basically a sequence of parameter names and values, separated by a colon:
+# param_name: param_value
+
+
+
+# YAML syntax (super) short tutorial:
+#
+# 1. String values do not need to quote, thus the followings are equivalent:
+# tectonic_region: Active Shallow Crust
+# tectonic_region: "Active Shallow Crust"
+#
+# However, the text 'true' and 'false', if not quoted, is recognised as boolean:
+# vs30_measured: true
+#
+# 2. Lists have to be indented (note indentation and the '-' symbol before each list item):
+# distance:
+#  - 1.0
+#  - 1.1
+#  - 1.2
+#  - 1.3
+#  - 1.4
+#
+# Lists can be input also in JSON syntax. Thus the 'distance' parameter above can be input also as:
+# distance: [1.0, 1.1, 1.2, 1.3, 1.4]
+#
+# 2b. Numeric lists can be input also as ranges, in Matlab (c) syntax. Please QUOTE the value, as this type is an eGSIM type and not YAML standard, where the colon might be uncorrectly recognized as time separator. Thus the 'distance' parameter above is equivalent to:
+# distance: '1:1.1:1.4'
+
+# eGSIM (super) short tutorial:
+# Three parameters can be either scalar or arrays and are 'distance', 'magnitude' and 'vs30'. The number of generated plots depends on the combination of those parameter values, plus the value of the plot_type parameter.
