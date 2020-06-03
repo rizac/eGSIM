@@ -55,7 +55,14 @@ class Command(BaseCommand):
         return get_gmdb_names(self.outpath)
 
     def add_arguments(self, parser):
+        '''Adds arguments to the command'''
+        # https://docs.python.org/3/library/argparse.html#nargs
         parser.add_argument('flatfile', nargs='+', help='Flatfile path')
+        parser.add_argument('--sep', nargs='?', default='semicolon',
+                            help=('The csv separator. '
+                                  'Can be (without quotes): '
+                                  'semicolon, comma, space, tab. '
+                                  'Defaults to semicolon'))
 
     def handle(self, *args, **options):
         '''parses each passed flatfile (as simple command line argument):
@@ -111,10 +118,18 @@ class Command(BaseCommand):
             if not flatfiles:
                 raise Exception('No flatfile to parse')
 
+            delimiter = {
+                'semicolon': ';',
+                'comma': ',',
+                'space': ' ',
+                'tab': '\t'
+            }[options['sep']]
+
             for dbname, fle in flatfiles.items():
                 self.stdout.write('Parsing "%s"' % fle)
                 outpath = os.path.join(outdir, dbname + ".hdf5")
-                stats = self.parserclass.parse(fle, outpath, dbname)
+                stats = self.parserclass.parse(fle, outpath, dbname,
+                                               delimiter=delimiter)
                 self.stdout.write(self.style.SUCCESS('Created "%s" in "%s"'
                                                      % (dbname, outpath)))
                 self.stdout.write(self.style.SUCCESS('Stats: "%s"'
