@@ -43,14 +43,18 @@ def test_initdb_gsim_required_attrs_not_defined(capsys):
     assert "rjb" not in capout
 
 
+@pytest.mark.parametrize('input_flatfile_name, sep',
+                         [('egsim_flatfile_marmara_event_26092019.csv', 'comma'),
+                          ('esm_sa_flatfile_2018.csv', None)])
 @patch('egsim.management.commands.gmdb.get_gmdb_path')
 @patch('egsim.management.commands.gmdb.input')
 def test_gmdb_esm(mock_input,
                   mock_get_gmdb_path,
+                  input_flatfile_name, sep,
                   # pytest fixtures:
                   testdata, capsys):
     '''Test gmdb_esm command (and consequently, also gmbd command)'''
-    ffname = 'esm_sa_flatfile_2018.csv'
+    ffname = input_flatfile_name
     ffpath = testdata.path(ffname)
     outdir = testdata.path('gmdb')
     outpath = os.path.join(outdir, os.path.splitext(ffname)[0] + '.hdf5')
@@ -79,7 +83,10 @@ def test_gmdb_esm(mock_input,
             str(cerr)
 
         # ok, normal case:
-        _ = call_command('gmdb_esm',  ffpath)
+        if sep is None:
+            _ = call_command('gmdb_esm',  ffpath)
+        else:
+            _ = call_command('gmdb_esm', ffpath, sep=sep)
         assert os.path.isfile(outpath)
         captured = capsys.readouterr()
         assert not captured.err
