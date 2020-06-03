@@ -7,7 +7,7 @@ in the framework of the  Thematic Core Services for Seismology of EPOS-IP
 
 Disclaimer: this is a temporary tutorial tested with MacOS (El Capitan) and Ubuntu 16.04. 
 
-### Requirements (Ubuntu specific, in Mac should not be an issue, otherwise `brew isntall` instead of `apt-get install`):
+### Requirements (Ubuntu specific, in Mac should not be an issue, otherwise `brew install` instead of `apt-get install`):
 ```bash
 brew doctor  # pre-requisite
 brew update # pre-requisite
@@ -38,14 +38,8 @@ Then, to install:
 ```
 
 *IMPORTANT* for details on `installme`, just open the file and read the comments.
-What is important here is that it installs `requirements.txt` first
-and then `requirements.pipfreeze.txt`. **Thus, `requirements.pipfreeze.txt`
-should contain an updated list of all packages and relative dependencies.
-Example: after a github security alert, modify `requirements.pipfreeze.txt`.**
-(note that `gmpe-smtk` is in not `requirements.txt` because it needs to be installed after openquake)
-This approach is prone to errors like this during pip install:
-`ERROR: openquake-engine 3.5.0 has requirement django<2.1,>=1.10, but you'll have django 2.2.10 which is incompatible.`
-If you spot them, they might not necessarily be critical. As always, run tests and see.
+Also, please refer to [Package Maintenance](#package-maintenance) for updating package versions
+
 
 ### Test
 
@@ -96,3 +90,44 @@ and pen your browser (or use the API) at the URL address on the console
 ## Installation (production)
 
 Please refer to 'deploy.html' (dynamic web page, open it in your browser of choice)
+
+## Package Maintenance
+
+[The script `installme`](#clone-and-install-this-repository) installs `requirements.txt` first
+and then `requirements.pipfreeze.txt`.
+
+- `requirements.txt` is the file with the only necessary packages (with the exception of gmpe-smtk which is
+  moved to `requirements.pipfreeze.txt` because it has to be installed **after** OpenQuake), whereas
+
+- **`requirements.pipfreeze.txt` is the file with all required packages and dependencies, and
+  is intended to contain an updated list of all packages and relative dependencies.**.
+
+`requirements.pipfreeze.txt` will also be used by Github to warn us for potential security alerts.
+
+### Github packages security issues / dependencies alert:
+
+Either ignore security alerts as in 99% of the cases a package is a OpenQuake dependency, so live with that
+and upgrade OpenQuake when necessary (see below)
+
+or, if really necessary:
+
+Open `requirements.pipfreeze.txt` and change the version of the package to be upgraded.
+Run `installme`
+Run [tests](#test)
+
+Note: because in most of the cases an installed package is an OpenQuake dependency, errors like this might be issued during pip install:
+```ERROR: openquake-engine 3.5.0 has requirement django<2.1,>=1.10, but you'll have django 2.2.10 which is incompatible.```
+If you spot them, they might not necessarily be critical. As always, run tests and see.
+
+
+### OpenQuake (smtk) upgrade
+
+An OpenQuake upgrade should be done when really necessary, as it usually requires several fixes in both smtk and egsim.
+In case:
+
+Open `requirements.txt`and change OpenQuake version (commit hash)
+Open `requirements.pipfreeze.txt`and change gmpe-smtk version (commit hash)
+run `installme`
+Run [tests](#test)
+Good luck
+
