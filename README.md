@@ -96,11 +96,12 @@ Please refer to 'deploy.html' (dynamic web page, open it in your browser of choi
 [The script `installme`](#clone-and-install-this-repository) installs `requirements.txt` first
 and then `requirements.pipfreeze.txt`.
 
-- `requirements.txt` is the file with the only necessary packages (with the exception of gmpe-smtk which is
+- `requirements.txt` is the file with the only necessary packages (with the exception of `gmpe-smtk` which is
   moved to `requirements.pipfreeze.txt` because it has to be installed **after** OpenQuake), whereas
 
-- **`requirements.pipfreeze.txt` is the file with all required packages and dependencies, and
-  is intended to contain an updated list of all packages and relative dependencies.**.
+- `requirements.pipfreeze.txt` is the file with *all* necessary packages after running `requirements.txt`
+  
+`requirements.pipfreeze.txt` **is intended to contain an updated list of all packages and relative dependencies.**.
 
 `requirements.pipfreeze.txt` will also be used by Github to warn us for potential security alerts.
 
