@@ -27,19 +27,25 @@ From now on, each `python` command refers to the path of the Python3.7 distribut
 
 *FROM NOW ON virtualenv MUST be activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton with no conflicts with the OS python distribution*
 
-### Upgrade pip and setuptools:
+
+### Clone and install this repository
+
+`git clone` and so on (see Github). From now on we assume you are inside the git repo (the local folder you clone the project into).
+Then, to install:
+
 ```bash
-pip install -U pip setuptools
+./installme
 ```
 
-### Clone this repository
-`git clone` and so on (see Github). From now on we assume you are inside the git repo (the local folder you clone the project into)
-
-
-### Install
-```bash
-pip install -r ./requirements.dev.txt
-```
+*IMPORTANT* for details on `installme`, just open the file and read the comments.
+What is important here is that it installs `requirements.txt` first
+and then `requirements.pipfreeze.txt`. **Thus, `requirements.pipfreeze.txt`
+should contain an updated list of all packages and relative dependencies.
+Example: after a github security alert, modify `requirements.pipfreeze.txt`.**
+(note that `gmpe-smtk` is in not `requirements.txt` because it needs to be installed after openquake)
+This approach is prone to errors like this during pip install:
+`ERROR: openquake-engine 3.5.0 has requirement django<2.1,>=1.10, but you'll have django 2.2.10 which is incompatible.`
+If you spot them, they might not necessarily be critical. As always, run tests and see.
 
 ### Test
 

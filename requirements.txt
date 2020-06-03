@@ -1,3 +1,4 @@
+-e git+https://github.com/gem/oq-engine.git@570cf1f620d1ba830b9d922f461de293bc79ca39#egg=openquake.engine
 pylint==2.3.1
 pytest-django==3.4.8
 pytest-cov==2.6.1
