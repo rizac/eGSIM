@@ -18,22 +18,37 @@ sudo apt-get install git python3-venv python3-pip python3-dev
 Please use Python 3.7+. Check with ```python --version```: If it's Python2, then use ```python3 --version```. If it's not 3.7+, then you need to install Python3.7 **along with** (i.e., not replacing) the current default python3 installed on your computer.
 From now on, each `python` command refers to the path of the Python3.7 distribution you have (i.e., you might need to type e.g. `/opt/lib/python3.7` or something similar, instead of `python` or `python3`)
 
-
-### Activate virtualenv (links TBD).
-[Pending: doc TBD] Three options:
-  1. python-venv (for python>=3.5): Please use this option as it does not issues the 'matplotlib installed as a framework ...' problem
-  2. python-virtualenv
-  3. virtualenvwrapper (our choice)
-
-*FROM NOW ON virtualenv MUST be activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton with no conflicts with the OS python distribution*
-
-
 ### Clone repository
+
+Select a root directory (e.g. `/path/to/egsim`), and then:
+
 
 ```bash
 git clone https://github.com/rizac/eGSIM.git
 git clone https://github.com/rizac/gmpe-smtk.git
 ```
+
+Why creating a root directory and cloning therein `eGSIM` and `gmpe-smtk`?
+Because by later installing `gmpe-smtk` in editable mode (see below)
+we can fix bugs immediately and also issue pull requests (PR) to the upstream branch.
+
+In production mode could we simply clone `eGSIM`? yes. But in many cases
+we follow the procedure above also in production, to allow fast bug fixes on smtk,
+if needed.
+
+
+### Activate virtualenv (links TBD).
+
+Activate the virtual environment, ususally inside the egsim root directory (see above)
+or in its usb-directory where the egsim repository has been cloned.
+
+[Pending: doc TBD] Three options:
+  1. python-venv (for python>=3.5): Please use this option as it does not issues the 'matplotlib installed as a framework ...' problem
+  2. python-virtualenv
+  3. virtualenvwrapper (our choice)
+
+*FROM NOW ON virtualenv MUST be activated! EVERYTHING WILL BE INSTALLED ON YOUR
+"copy" of pyhton with no conflicts with the OS python distribution*
 
 
 ### Install
