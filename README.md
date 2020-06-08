@@ -43,7 +43,7 @@ Move to egsim directory and type:
 ```bash
 pip install --upgrade pip setuptools && pip install -r ./requirements.txt
 cd ../gmpe-smtk  # or wherever smtk is cloned to, see above
-pip install -e .
+pip install -e .  # -e necessary only in dev mode
 cd ../egsim  # or wherever egsim is cloned to, see above
 ```
 
@@ -98,30 +98,13 @@ and pen your browser (or use the API) at the URL address on the console
 
 Please refer to 'deploy.html' (dynamic web page, open it in your browser of choice)
 
+
 ## Maintenance
-
-<!--
-
-[The script `installme`](#clone-and-install-this-repository) installs `requirements.txt` first
-and then `requirements.pipfreeze.txt`.
-
-- `requirements.txt` is the file with the only necessary packages (with the exception of `gmpe-smtk` which is
-  moved to `requirements.pipfreeze.txt` because it has to be installed **after** OpenQuake), whereas
-
-- `requirements.pipfreeze.txt` is the file with *all* necessary packages after running `requirements.txt`
-  
-`requirements.pipfreeze.txt` **is intended to contain an updated list of all packages and relative dependencies.**.
-
-`requirements.pipfreeze.txt` will also be used by Github to warn us for potential security alerts.
-
--->
 
 ### Github packages security issues / dependencies alert:
 
-Security alerts on Githib should be solved by upgrading the dependencies, as
-most of the require packages are OpenQuake dependency. Thus, simply upgrading a package and installing it might lead to errors such as:
-```ERROR: openquake-engine 3.5.0 has requirement django<2.1,>=1.10, but you'll have django 2.2.10 which is incompatible.```
-which **does not mean it is critical** (the installation still works) might not be critical but .
+Security alerts on Githib should be solved by [upgrading the dependencies](#dependencies-upgrade), as
+most of the require packages are OpenQuake dependency and thus it's safer to keep everything consistent.
 However, if a security alert has to be fixed:
 
 Open `requirements.txt` and change the version of the package to be upgraded.
@@ -132,21 +115,33 @@ Run [tests](#test)
 
 And proceed also on the server, if you have an installed version.
 
-### OpenQuake or smtk upgrade
+Note that you might get errors such as:
 
-An OpenQuake upgrade should be done when really necessary, as it usually requires several fixes in both smtk and egsim.
-But from times to times, it must be done. Thus:
+```bash
+ERROR: openquake-engine 3.5.0 has requirement django<2.1,>=1.10, but you'll have django 2.2.10 which is incompatible.
+```
 
-Create a new virtual environment.
+which is the reason why it's safer to upgrade everything consistently. However, those messages seem to be
+more warnings than errors (the installation seems not to be interrupted): in case, as always, run tests and check
+if everything works.
+
+
+### Dependencies upgrade
+
+Dependencies upgrade should be done when really necessary, as it usually requires several fixes in egsim
+and sometime in smtk, too. To upgrade dependencies, create a new virtual environment, and then:
 
 ```bash
 pip install --upgrade pip setuptools && pip install openquake-engine
-# Move to the smtk directory (see (#clone-repository))
+
+# Move to the smtk directory (see section Clone-repository)
 git pull && pip install -e .
-run tests
+
+# Run tests
 pip freeze > ./requirements.txt
 ```
 
-Open `requirements.txt` and **comment the line with gmpe-smtk** (which must be installed AFTER openquake, see installation)
+*Important*: open `requirements.txt` and **comment the line with gmpe-smtk**,
+because it must be installed AFTER openquake (see (#installation))
 
 
