@@ -28,17 +28,36 @@ From now on, each `python` command refers to the path of the Python3.7 distribut
 *FROM NOW ON virtualenv MUST be activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton with no conflicts with the OS python distribution*
 
 
-### Clone and install this repository
-
-`git clone` and so on (see Github). From now on we assume you are inside the git repo (the local folder you clone the project into).
-Then, to install:
+### Clone this repository
 
 ```bash
-./installme
+git clone https://github.com/rizac/eGSIM.git
 ```
 
-*IMPORTANT* for details on `installme`, just open the file and read the comments.
-Also, please refer to [Package Maintenance](#package-maintenance) for updating package versions
+Or, if you want to have the possibility to issue PR (pull requests), i.e.
+to modify gmpe-smtk, and do not have permission to contribute to it, either request
+contributor status or create your own fork of https://github.com/GEMScienceTools/gmpe-smtk.git.
+Let's assume it is https://github.com/<myself>/gmpe-smtk.git
+Then:
+
+```bash
+git clone https://github.com/<myself>/gmpe-smtk.git
+```
+
+### Install
+
+Move to egsim directory and type:
+
+```bash
+pip install --upgrade pip setuptools && pip install -r ./requirements.txt
+cd ../gmpe-smtk  # or wherever smtk is cloned, see above
+pip install -e .
+cd ../egsim  # or wherever egsim is cloned, see above
+```
+
+The second command installs gmpe-smtk for development usage (or editable, flag -e):
+for any smtk enhancement or bug, you can modify the package directly, test the
+modifications in egsim, and then issue a PR (pull request) 
 
 
 ### Test
@@ -91,7 +110,9 @@ and pen your browser (or use the API) at the URL address on the console
 
 Please refer to 'deploy.html' (dynamic web page, open it in your browser of choice)
 
-## Package Maintenance
+## Maintenance
+
+<!--
 
 [The script `installme`](#clone-and-install-this-repository) installs `requirements.txt` first
 and then `requirements.pipfreeze.txt`.
@@ -105,30 +126,39 @@ and then `requirements.pipfreeze.txt`.
 
 `requirements.pipfreeze.txt` will also be used by Github to warn us for potential security alerts.
 
+-->
+
 ### Github packages security issues / dependencies alert:
 
-Either ignore security alerts as in 99% of the cases a package is a OpenQuake dependency, so live with that
-and upgrade OpenQuake when necessary (see below)
+Security alerts on Githib should be solved by upgrading the dependencies, as
+most of the require packages are OpenQuake dependency. Thus, simply upgrading a package and installing it might lead to errors such as:
+```ERROR: openquake-engine 3.5.0 has requirement django<2.1,>=1.10, but you'll have django 2.2.10 which is incompatible.```
+which **does not mean it is critical** (the installation still works) might not be critical but .
+However, if a security alert has to be fixed:
 
-or, if really necessary:
+Open `requirements.txt` and change the version of the package to be upgraded.
 
-Open `requirements.pipfreeze.txt` and change the version of the package to be upgraded.
-Run `installme`
+Run `pip install -r requirements.txt`
+
 Run [tests](#test)
 
-Note: because in most of the cases an installed package is an OpenQuake dependency, errors like this might be issued during pip install:
-```ERROR: openquake-engine 3.5.0 has requirement django<2.1,>=1.10, but you'll have django 2.2.10 which is incompatible.```
-If you spot them, they might not necessarily be critical. As always, run tests and see.
+And proceed also on the server, if you have an installed version.
 
-
-### OpenQuake (smtk) upgrade
+### OpenQuake or smtk upgrade
 
 An OpenQuake upgrade should be done when really necessary, as it usually requires several fixes in both smtk and egsim.
-In case:
+But from times to times, it must be done. Thus:
 
-Open `requirements.txt`and change OpenQuake version (commit hash)
-Open `requirements.pipfreeze.txt`and change gmpe-smtk version (commit hash)
-run `installme`
-Run [tests](#test)
-Good luck
+Create a new virtual environment.
+
+```bash
+pip install --upgrade pip setuptools && pip install openquake-engine
+# Move to the smtk directory (see ())
+git pull && pip install -e .
+run tests
+pip freeze > ./requirements.txt
+```
+
+Open `requirements.txt` and **comment the line with gmpe-smtk** (which must be installed AFTER openquake, see installation)
+
 
