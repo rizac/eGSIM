@@ -188,4 +188,4 @@ pip freeze > ./requirements.txt
 ```
 
 **Important**: open `requirements.txt` and **comment the line with gmpe-smtk**,
-because it must be installed *after* openquake (see (#install))
+because it must be installed *after* openquake (see [Install](#install))
