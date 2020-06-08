@@ -104,7 +104,7 @@ Please refer to 'deploy.html' (dynamic web page, open it in your browser of choi
 ### Github packages security issues / dependencies alert:
 
 Security alerts on Githib should be solved by [upgrading the dependencies](#dependencies-upgrade), as
-most of the require packages are OpenQuake dependency and thus it's safer to keep everything consistent.
+most of the required packages are OpenQuake dependencies and thus it's safer to keep everything consistent.
 However, if a security alert has to be fixed:
 
 Open `requirements.txt` and change the version of the package to be upgraded.
@@ -122,14 +122,15 @@ ERROR: openquake-engine 3.5.0 has requirement django<2.1,>=1.10, but you'll have
 ```
 
 which is the reason why it's safer to upgrade everything consistently. However, those messages seem to be
-more warnings than errors (the installation seems not to be interrupted): in case, as always, run tests and check
+more warning-like than errors (they do not break the installation process): in any case, as always, run tests and check
 if everything works.
 
 
 ### Dependencies upgrade
 
-Dependencies upgrade should be done when really necessary, as it usually requires several fixes in egsim
-and sometime in smtk, too. To upgrade dependencies, create a new virtual environment, and then:
+From time to time dependencies must be upgraded to incorporate bug fixes and also to implement the latest GSIMs
+of OpenQuake, Note that this operation will most likely require additional time-consuming work
+to fix bugs in egsim and sometime in smtk, too.
 
 ```bash
 pip install --upgrade pip setuptools && pip install openquake-engine
