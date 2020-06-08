@@ -28,21 +28,13 @@ From now on, each `python` command refers to the path of the Python3.7 distribut
 *FROM NOW ON virtualenv MUST be activated! EVERYTHING WILL BE INSTALLED ON YOUR "copy" of pyhton with no conflicts with the OS python distribution*
 
 
-### Clone this repository
+### Clone repository
 
 ```bash
 git clone https://github.com/rizac/eGSIM.git
+git clone https://github.com/rizac/gmpe-smtk.git
 ```
 
-Or, if you want to have the possibility to issue PR (pull requests), i.e.
-to modify gmpe-smtk, and do not have permission to contribute to it, either request
-contributor status or create your own fork of https://github.com/GEMScienceTools/gmpe-smtk.git.
-Let's assume it is https://github.com/<myself>/gmpe-smtk.git
-Then:
-
-```bash
-git clone https://github.com/<myself>/gmpe-smtk.git
-```
 
 ### Install
 
@@ -50,14 +42,10 @@ Move to egsim directory and type:
 
 ```bash
 pip install --upgrade pip setuptools && pip install -r ./requirements.txt
-cd ../gmpe-smtk  # or wherever smtk is cloned, see above
+cd ../gmpe-smtk  # or wherever smtk is cloned to, see above
 pip install -e .
-cd ../egsim  # or wherever egsim is cloned, see above
+cd ../egsim  # or wherever egsim is cloned to, see above
 ```
-
-The second command installs gmpe-smtk for development usage (or editable, flag -e):
-for any smtk enhancement or bug, you can modify the package directly, test the
-modifications in egsim, and then issue a PR (pull request) 
 
 
 ### Test
@@ -153,7 +141,7 @@ Create a new virtual environment.
 
 ```bash
 pip install --upgrade pip setuptools && pip install openquake-engine
-# Move to the smtk directory (see ())
+# Move to the smtk directory (see (#clone-repository))
 git pull && pip install -e .
 run tests
 pip freeze > ./requirements.txt
