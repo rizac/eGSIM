@@ -8,10 +8,48 @@ import os
 from stat import S_IREAD, S_IRGRP, S_IROTH
 
 from django.core.management.base import BaseCommand, CommandError
-from django.conf import settings
+# from django.conf import settings
 
 from smtk.sm_table import GMTableParser
 from egsim.core.utils import get_gmdb_path, get_gmdb_names
+
+
+# define here the default user defined GMTableParser
+# (must be on the top of this module).
+# FIXME: should be implemented in smtk
+class UserDefinedTableParser(GMTableParser):
+    '''defines the standard default table parser'''
+
+    @classmethod
+    def get_sa_columns(cls, csv_fieldnames):
+        """
+        Checks for all column names in `csv_fieldnames` with the format
+        "SA_<period>" and returns a dict of them mapped to their numeric
+        period.
+
+        (from super-doc):
+
+        This class will then sort and save SA periods accordingly.
+        You can also implement here operations which should be executed once
+        at the beginning of the flatfile parsing, such as e.g.
+        creating objects and storing them as class attributes later accessible
+        in :method:`parse_row`
+
+        :param csv_fieldnames: an iterable of strings representing the
+            header of the persed csv file
+        """
+        vals = {}
+        for _ in csv_fieldnames:
+            if _[:3].upper() == 'SA_':
+                try:
+                    vals[_] = float(_[3:])
+                except (TypeError, ValueError):
+                    raise ValueError(f'column name error "{_}": '
+                                     f'"{_[3:]}" must be numeric')
+        if not vals:
+            raise ValueError('No "SA" column found (format must be: '
+                             'SA_<period>, e.g. SA_0.1)')
+        return vals
 
 
 class Command(BaseCommand):
@@ -19,10 +57,10 @@ class Command(BaseCommand):
     '''
     help = ('Creates a Ground Motion Database from a provided CSV flatfile(s). '
             'as arguments. The fields of the flatfile(s) must match those '
-            'provided in smtk.GMTableParser, and be separated by ";"'
+            'provided in smtk.GMTableParser. '
             'The database name will be the file name, without extension')
 
-    parserclass = GMTableParser
+    parserclass = UserDefinedTableParser  # see below
 
     @property
     def outpath(self):
@@ -97,8 +135,9 @@ class Command(BaseCommand):
             input_paths = options['flatfile']
             # check that all files exist HERE because it is annoying raising
             # e.g., at the 3rd flatfile after several minutes of processing
-            if any(not os.path.isfile(_) for _ in input_paths):
-                raise ValueError('"%s" is not an existing file')
+            for _ in input_paths:
+                if not os.path.isfile(_):
+                    raise ValueError(f'"{_}" is not an existing file')
             # do not allow duplicate names (maybe typos?)
             if len(set(input_paths)) < len(input_paths):
                 raise ValueError('Duplicated arguments: looks like some '
@@ -142,4 +181,4 @@ class Command(BaseCommand):
         except CommandError:
             raise
         except Exception as exc:
-            raise CommandError(exc)
+            raise CommandError(f'{str(type(exc))}: {str(exc)}')

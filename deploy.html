@@ -14,10 +14,10 @@
         integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
         crossorigin="anonymous">-->
     
-    <!-- font awesome (e.g. required by easybutton & sidebar) FIXME: CHECK LICENSE (MIT) -->
+    <!-- font awesome (e.g. required by easybutton & sidebar)-->
     <!-- <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> 
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
-     -->
+	-->
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
 
     <!-- syntax highlighings library (scroll to the bottom for specific syntaxes): -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/themes/prism.min.css">
@@ -175,20 +175,24 @@ server installation, scroll down
 
 <table>
     <tr>
+    	<td><i class="fa fa-folder-o"></i></td>
         <td>/opt/$DJANGO_PROJECT/eGSIM</td><td>where the cloned eGSIM project
         and (usually) the Python virtual environment resides.
         This is the place to go to perform <code>git</code> operations and
         activate the virtual environment</td>
     </tr>
     <tr>
+        <td><i class="fa fa-folder-o"></i></td>
         <td>/etc/opt/$DJANGO_PROJECT/settings.py</td>
         <td>the settings, keep confidential, root access needed</td>
     </tr>
     <tr>
+        <td><i class="fa fa-folder-o"></i></td>
         <td>/etc/nginx/sites-available/$DJANGO_PROJECT</td>
         <td>the nginx config for the egsim site</td>
     </tr>
     <tr>
+        <td><i class="fa fa-folder-o"></i></td>
         <td>/etc/nginx/sites-available/default</td>
         <td>
         the default nginx config. It should be the "fallback" when all
@@ -197,22 +201,7 @@ server installation, scroll down
         </td>
     </tr>
     <tr>
-        <td>/etc/systemd/system/$DJANGO_PROJECT.service</td>
-        <td>the Gunicorn script to start the django production server</td>
-    </tr>
-    <tr>
-        <td>sudo tail -30 /var/log/nginx/access.log</td>
-        <td>inspects the nginx log (access infos)</td>
-    </tr>
-    <tr>
-        <td>sudo tail -30 /var/log/nginx/error.log</td>
-        <td>inspects the nginx log (error infos)</td>
-    </tr>
-    <tr>
-        <td>sudo tail -30 /var/log/$DJANGO_PROJECT/gunicorn.log</td>
-        <td>inspects the django server log</td>
-    </tr>
-    <tr>
+        <td><i class="fa fa-folder-o"></i></td>
         <td>/etc/nginx/nginx.conf</td>
         <td>
         the main nginx configuration (should not be modified frequently
@@ -220,12 +209,36 @@ server installation, scroll down
         </td>
     </tr>
     <tr>
+        <td><i class="fa fa-folder-o"></i></td>
         <td>/etc/hosts</td>
         <td>
         where the maching hosts are written: should not be modified
         frequently, we did it only once to add the domain name
         (line "127.0.0.1  $DOMAIN", without quotes)
         </td>
+    </tr>
+    <tr>
+        <td><i class="fa fa-folder-o"></i></td>
+        <td>/etc/systemd/system/$DJANGO_PROJECT.service</td>
+        <td>the Gunicorn script to start the django production server</td>
+    </tr>
+    <tr>
+        <td><i class="fa fa-folder-o"></i></td>
+        <td>/var/log/nginx/access.log</td>
+        <td>inspects the nginx log (access infos).<br>
+        	Example: sudo tail -30 /var/log/nginx/access.log</td>
+    </tr>
+    <tr>
+        <td><i class="fa fa-folder-o"></i></td>
+        <td>/var/log/nginx/error.log</td>
+        <td>inspects the nginx log (error infos)<br>
+        	Example: sudo tail -30 /var/log/nginx/error.log</td>
+    </tr>
+    <tr>
+        <td><i class="fa fa-folder-o"></i></td>
+        <td>/var/log/$DJANGO_PROJECT/gunicorn.log</td>
+        <td>inspects the django server log<br>
+        	Example: sudo tail -30 /var/log/$DJANGO_PROJECT/gunicorn.log</td>
     </tr>
 </table>
 
