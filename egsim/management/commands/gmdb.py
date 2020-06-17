@@ -6,6 +6,7 @@ Created on 11 Apr 2019
 
 import os
 from stat import S_IREAD, S_IRGRP, S_IROTH
+from tempfile import NamedTemporaryFile
 
 from django.core.management.base import BaseCommand, CommandError
 # from django.conf import settings
@@ -18,7 +19,10 @@ from egsim.core.utils import get_gmdb_path, get_gmdb_names
 # (must be on the top of this module).
 # FIXME: should be implemented in smtk
 class UserDefinedTableParser(GMTableParser):
-    '''defines the standard default table parser'''
+    '''defines the standard default table parser.
+    FIXME: should be probably done in smtk. Just implement the method
+    below in GMTableParser (why wasn't it done?)
+    '''
 
     @classmethod
     def get_sa_columns(cls, csv_fieldnames):
@@ -166,19 +170,54 @@ class Command(BaseCommand):
 
             for dbname, fle in flatfiles.items():
                 self.stdout.write('Parsing "%s"' % fle)
-                outpath = os.path.join(outdir, dbname + ".hdf5")
-                stats = self.parserclass.parse(fle, outpath, dbname,
-                                               delimiter=delimiter)
-                self.stdout.write(self.style.SUCCESS('Created "%s" in "%s"'
-                                                     % (dbname, outpath)))
-                self.stdout.write(self.style.SUCCESS('Stats: "%s"'
-                                                     % str(stats)))
-                # set HDF5 file write protected
-                # (https://stackoverflow.com/a/28492823):
-                os.chmod(outpath, S_IREAD | S_IRGRP | S_IROTH)
-                self.stdout.write('')
-
+                # FIXME: remove this 'trycatch' statement, see _create_bom_free
+                fle2 = None
+                try:
+                    fle2 = _create_bom_free_flatfile(fle)
+                    outpath = os.path.join(outdir, dbname + ".hdf5")
+                    stats = self.parserclass.parse(fle2, outpath, dbname,
+                                                   delimiter=delimiter)
+                    self.stdout.write(self.style.SUCCESS('Created "%s" in "%s"'
+                                                         % (dbname, outpath)))
+                    self.stdout.write(self.style.SUCCESS('Stats: "%s"'
+                                                         % str(stats)))
+                    # set HDF5 file write protected
+                    # (https://stackoverflow.com/a/28492823):
+                    os.chmod(outpath, S_IREAD | S_IRGRP | S_IROTH)
+                    self.stdout.write('')
+                finally:
+                    if fle2 is not None and os.path.isfile(fle2):
+                        os.unlink(fle2)
+                    if fle2 is not None and os.path.isfile(fle2):
+                        self.style.WARNING(f'WARNING: Unable to delete '
+                                           f'temporary file "{fle2}"')
         except CommandError:
             raise
         except Exception as exc:
             raise CommandError(f'{str(type(exc))}: {str(exc)}')
+
+
+def _create_bom_free_flatfile(flatfile_path):
+    """Creates a BOM free copy of the given flatfile and returns it.
+    If the flatfile content has no BOM, an exact copy of it is returned.
+    A BOM is a character (which
+    might be put there by softwares like Excel when exporting) that dictates
+    the CSV encoding and should not be read as part of the CSV data.
+
+    For info see:
+    https://stackoverflow.com/a/49150749
+
+    FIXME: The solution here is quite hacky as a new file is created.
+    A cleaner and simpler fix would be getting rid of this
+    function (using a normal 'open') and setting
+    kwargs['encoding']= 'utf-8-sig' in the method
+    `GMTableParser._get_csv_reader` of the smtk package
+
+    Returns:
+        the path of the copy of the flatfile, without BOM
+    """
+    with NamedTemporaryFile(mode='w', suffix='.csv', encoding='utf-8',
+                            delete=False) as _out_:
+        with open(flatfile_path, mode='r', encoding='utf-8-sig') as _in_:
+            _out_.write(_in_.read())
+        return _out_.name

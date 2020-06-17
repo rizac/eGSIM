@@ -44,7 +44,8 @@ def test_initdb_gsim_required_attrs_not_defined(capsys):
 
 
 @pytest.mark.parametrize('input_flatfile_name, sep',
-                         [('egsim_flatfile_marmara_event_26092019.csv', 'comma'),
+                         [('egsim_flatfile_marmara_event_26092019_nobom.csv', 'comma'),
+                          ('egsim_flatfile_marmara_event_26092019.csv', 'comma'),
                           ('esm_sa_flatfile_2018.csv', None)])
 @patch('egsim.management.commands.gmdb.get_gmdb_path')
 @patch('egsim.management.commands.gmdb.input')
