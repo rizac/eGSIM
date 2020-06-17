@@ -4,7 +4,7 @@ Created on 29 Jan 2018
 @author: riccardo
 '''
 from os import listdir
-from os.path import join, isfile, isdir, abspath
+from os.path import join, isfile, isdir, abspath, getmtime
 from io import StringIO
 from urllib.parse import quote
 from datetime import date, datetime
@@ -175,20 +175,25 @@ def get_gmdb_path():
     return join(settings.MEDIA_ROOT, 'gmdb')
 
 
-def get_gmdb_names(fpath):
+def get_gmdb_names(fpath, sort_by_mtime=True):
     '''Returns a dict of Ground motion database names mapped to the relative
-    HDF5 file path (absolute)'''
-    # Although smtk supports several gmdb tables in a single HDF5 file,
-    # egsim stores a single database per file. The database name is
-    # the one stored therein
-    gmdbases = {}
+    HDF5 file path (absolute)
+
+    :param sort_by_mtime: boolean (default True), self explanatory: each
+        gmdb will be returned in the dict from oldest to newest
+    '''
+    gmdbases = []  # first use a list of tuples (to easily sort them if needed)
     for fle in listdir(fpath) if isdir(fpath) else []:
         flepath = abspath(join(fpath, fle))
         try:
-            gmdbases.update({k: flepath for k in get_dbnames(flepath)})
+            # note that in egsim we will never write more than one gmdb per
+            # HDF (but let's keep compatibility with smtk implementation):
+            gmdbases.extend((k, flepath) for k in get_dbnames(flepath))
         except:  # @IgnorePep8 pylint: disable=bare-except
             pass
-    return gmdbases
+    if sort_by_mtime:
+        gmdbases = sorted(gmdbases, key=lambda _: getmtime(_[1]))
+    return dict(gmdbases)
 
 
 def test_selexpr(selexpr):
