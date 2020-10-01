@@ -15,7 +15,7 @@ setup(
     # Minimal requirements, for a complete list see requirements-*.txt
     install_requires=[
         'openquake.engine>3.5.0',
-        '-e git+https://github.com/rizac/gmpe-smtk.git'
+        'git+https://github.com/rizac/gmpe-smtk.git'
     ],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -32,7 +32,7 @@ setup(
     author_email='',  # FIXME: what to provide?
     maintainer='Section 2.6 (Seismic Hazard and Risk Dynamics), GFZ Potsdam',  # FIXME
     maintainer_email='',
-    classifiers=(
+    classifiers=[
         'Development Status :: 1 - Beta',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
@@ -40,7 +40,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering',
-    ),
+    ],
     keywords=[
         "seismic hazard",
         "ground shaking intensity model",
