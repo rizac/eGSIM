@@ -185,7 +185,8 @@ so better be safe.
 Note that this operation will most likely require additional time-consuming work
 to fix bugs in egsim and sometime in smtk, too.
 
-You create a new Python venv and then:
+You create a new Python venv, you move into the `egsim directory` and then:
+
 
 ```zsh
 pip install openquake.engine
@@ -197,17 +198,14 @@ pip install pylint pytest-django pytest-cov
 pip freeze > requirements.dev.txt
 ```
 
-<!--
-```bash
-pip install --upgrade pip setuptools && pip install openquake-engine
-
-# Move to the smtk directory (see section Clone-repository)
-git pull && pip install -e .
-
-# Run tests
-pip freeze > ./requirements.txt
+Alternative shorter way (SHOULD WORK< NOT TESTED yet):
 ```
--->
+pip install .
+pip freeze > requirements.txt
+pip install .[test]
+pip freeze > requirements.dev.txt
+```
+
 
 **Important**: open the two `requirements.*` files and **comment the line with gmpe-smtk**,
 because it must be installed *after* openquake (see [Install](#install))
