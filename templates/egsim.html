@@ -27,6 +27,15 @@
 						<i class="fa {{ component.2 }}"></i> <span>{{ component.1 }}</span>
 					</a>
 				{% endfor %}
+				<!-- imprint adn data protection: -->
+				<table style='font-szie:small'>
+					<tr><td><a class='menu-item' :class="selComponent == 'imprint' ? 'active' : ''"
+							@click="setComponent('imprint')" title="imprint">Imprint
+					</a></td></tr>
+					<tr><td><a class='menu-item' href='https://www.gfz-potsdam.de/en/data-protection/'
+							target="_blank" title="Data Protection">Data Protection
+					</a></td></tr>
+				</table>
 		</nav>
 
 		<div class='flexible d-flex flex-column position-relative'>
@@ -79,7 +88,7 @@
 	<script type='text/javascript' src = "{% static 'js/v-components/base/plotdiv.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/v-components/base/downloadselect.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/v-components/base/baseform.js' %}"></script>
-
+	
 	<script type='text/javascript' src = "{% static 'js/v-components/trellisplotdiv.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/v-components/gmdbplotdiv.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/v-components/residualsplotdiv.js' %}"></script>
@@ -87,6 +96,7 @@
 	{% for component in components %}
 	<script type='text/javascript' src = "{% static 'js/v-components/' %}{{ component.0 }}.js"></script>
 	{% endfor %}
+	<script type='text/javascript' src = "{% static 'js/v-components/imprint.js' %}"></script>
 	
 	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/browserdetection.js' %}"></script>
