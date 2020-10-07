@@ -70,7 +70,7 @@ class TectonicRegion(models.Model):
 
     def __str__(self):
         return "Tr %d (model: %s, type: %s)" \
-            % (self.id, self.model, self.trt.key)  # pylint: disable=no-member
+            % (self.id, self.model, self.type.key)  # pylint: disable=no-member
 
 
 class Imt(models.Model):
