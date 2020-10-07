@@ -143,6 +143,7 @@ class Command(BaseCommand):
         except CommandError:
             raise
         except Exception as exc:
+            raise
             raise CommandError(exc)
 
 
@@ -202,6 +203,7 @@ def get_gsims(trts, imts):
                 continue
             warning = ''
             needs_args = False
+
             try:
                 gsim_inst = gsim()
             except TypeError:
@@ -224,6 +226,14 @@ def get_gsims(trts, imts):
 #                 warning = str(warn)
             except Warning as warn:
                 warning = str(warn)
+            except Exception as general_exc:
+                # some general exception (Openquake 3.10 raises a KeyError for instance)
+                create_err(type=general_exc.__class__.__name__,
+                           message=str(general_exc),
+                           entity_type=entity_type,
+                           entity_key=key)
+                continue
+
             try:
                 gsim_imts = gsim_inst.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             except AttributeError as exc:
@@ -232,12 +242,14 @@ def get_gsims(trts, imts):
                            entity_type=entity_type,
                            entity_key=key)
                 continue
+
             if not gsim_imts and hasattr(gsim_imts, '__iter__'):
                 create_err(type=Exception.__name__,
                            message='No IMT defined',
                            entity_type=entity_type,
                            entity_key=key)
                 continue
+
             try:
                 trt = trts_d[gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE]
             except KeyError:
@@ -253,6 +265,7 @@ def get_gsims(trts, imts):
                            entity_type=entity_type,
                            entity_key=key)
                 continue
+
             # convert gsim imts (classes) into strings:
             gsim_imts = [_.__name__ for _ in gsim_imts]
             # and not convert to Imt model instances:
