@@ -18,7 +18,7 @@ from django.contrib import admin  # added by default by django
 from django.views.generic.base import RedirectView
 # from django.shortcuts import render
 
-from egsim.views import (URLS, main, home, apidoc, get_tr_models,
+from egsim.views import (URLS, KEY, main, home, apidoc, get_tr_models,
                          download_request, download_astext, download_asimage,
                          TrellisView, GsimsView, ResidualsView, GmdbPlotView,
                          TestingView, imprint)
@@ -31,10 +31,12 @@ urlpatterns = [  # pylint: disable=invalid-name
     url(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                     permanent=False)),
 
+    # main page entry point, valid for all urls implemented in views.KEY:
+    url(r'^(?P<selected_menu>%s)/?$' %
+        "|".join(getattr(KEY, _) for _ in dir(KEY) if _[:1] != '_'), main),
+
     # Imprint. TO BE PUT BEFORE THE main page entry point below!
     url(r'imprint', imprint),
-    # main page entry point:
-    url(r'^(?P<selected_menu>[a-zA-Z]+)/?$', main),
 
     # other urls called from within the page:
     url(r'^%s/?$' % URLS.HOME_PAGE, home),

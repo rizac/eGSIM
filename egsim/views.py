@@ -30,19 +30,25 @@ from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
 _COMMON_PARAMS = {
     'project_name': 'eGSIM',
     'debug': settings.DEBUG,
+    'data_protection_url': 'https://www.gfz-potsdam.de/en/data-protection/'
 }
 
 
 class KEY:  # pylint: disable=too-few-public-methods
     '''Container class (Enum-like) defining the string keys for the
-    program urls/services.
-    Not all keys might be associated to a REST API
-    service/URL, but when they do (e.g. KEY.GSIMS, KEY.TRELLIS, KEY.RESIDUALS)
-    the key value is currently used as part of the URL (see URLS below): this
-    is not mandatory and can be changed anytime.
-    Currently, 1) each key represents a menu in the front end
-    (see `main`) AND 2) a javascript file named <KEY>.js implements the
-    relative VueJS component (see javascript directory)
+    program urls/services. **Basically, each key (class attribute) [K] defines
+    a menu in the web GUI navigation bar** and consequently must also have an
+    associated VueJS component implemented in the directory `static/js/[k].js`.
+
+    Each key must return an HTML reponse implemented in :func:`main`: their
+    urls are implemented, as usual, in :module:`urls`.
+
+    Additionally, some keys might be used also for defining REST API services
+    (e.g., `KEY.GSIM`S, `KEY.TRELLIS`, `KEY.RESIDUALS`): their urls in this
+    case are implemented **here** in the :class:URLS` because sometimes they
+    must be passed in the HTML responses, too. The urls are then used in
+    :module:`urls` (as usual) to call the relative :class:`RESTAPIView`
+    (see below)
     '''
     HOME = 'home'
     GSIMS = 'gsims'  # pylint: disable=invalid-name
@@ -487,9 +493,9 @@ def apidoc(request):
 
 
 def imprint(request):
-    return render(request, 'imprint.html',
-                  {'data_protection_url':
-                   'https://www.gfz-potsdam.de/en/data-protection/'})
+    return render(request, 'imprint.html', {
+        'data_protection_url': _COMMON_PARAMS['data_protection_url']
+    })
 
 
 def download_request(request, key, filename):
