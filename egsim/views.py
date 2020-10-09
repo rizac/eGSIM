@@ -486,6 +486,12 @@ def apidoc(request):
                   )
 
 
+def imprint(request):
+    return render(request, 'imprint.html',
+                  {'data_protection_url':
+                   'https://www.gfz-potsdam.de/en/data-protection/'})
+
+
 def download_request(request, key, filename):
     '''Returns the request (configuration) re-formatted according to the syntax
     inferred from filename (*.json or *.yaml) to be downloaded by the front
