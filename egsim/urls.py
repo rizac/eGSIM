@@ -16,12 +16,12 @@ Including another URLconf
 from django.conf.urls import url  # added by default by django
 from django.contrib import admin  # added by default by django
 from django.views.generic.base import RedirectView
-from django.shortcuts import render
+# from django.shortcuts import render
 
 from egsim.views import (URLS, main, home, apidoc, get_tr_models,
                          download_request, download_astext, download_asimage,
                          TrellisView, GsimsView, ResidualsView, GmdbPlotView,
-                         TestingView)
+                         TestingView, imprint)
 
 # for infor with trailing slashes:
 # https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
@@ -30,6 +30,9 @@ urlpatterns = [  # pylint: disable=invalid-name
     url(r'^admin/', admin.site.urls),  # added by default by django
     url(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                     permanent=False)),
+
+    # Imprint. TO BE PUT BEFORE THE main page entry point below!
+    url(r'imprint', imprint),
     # main page entry point:
     url(r'^(?P<selected_menu>[a-zA-Z]+)/?$', main),
 
@@ -37,9 +40,6 @@ urlpatterns = [  # pylint: disable=invalid-name
     url(r'^%s/?$' % URLS.HOME_PAGE, home),
     url(r'^%s/?$' % URLS.DOC_PAGE, apidoc),
     url(r'^%s/?$' % URLS.GSIMS_TR, get_tr_models),
-
-    # Imprint and Data Protection:
-    url(r'imprint', lambda r: render(r, 'imprint.html')),
 
     # REST APIS:
     url(r'^%s/?$' % URLS.GSIMS_RESTAPI, GsimsView.as_view()),

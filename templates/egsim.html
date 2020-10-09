@@ -17,7 +17,7 @@
 {% block body %}
 	<div class="d-flex flex-column height100" id='egsim-vue'>
 
-		<nav class="d-flex flex-row navbar-dark bg-dark" id='egsim-nav'>
+		<nav class="d-flex flex-row navbar-dark bg-dark align-items-center" id='egsim-nav'>
 				{% for component in components %}
                     {% if forloop.last %}
                         <div class='flexible'></div>
@@ -28,13 +28,21 @@
 					</a>
 				{% endfor %}
 				<!-- imprint adn data protection: -->
-				<table style='font-szie:small'>
-					<tr><td><a class='menu-item' :class="selComponent == 'imprint' ? 'active' : ''"
-							@click="setComponent('imprint')" title="imprint">Imprint
-					</a></td></tr>
-					<tr><td><a class='menu-item' href='https://www.gfz-potsdam.de/en/data-protection/'
-							target="_blank" title="Data Protection">Data Protection
-					</a></td></tr>
+				<table style='font-size:small'>
+					<tr><td>
+						<a style='padding-top:0;padding-bottom:0' class='menu-item'
+							href='/imprint'
+							 title="imprint">
+							Imprint
+						</a>
+					</td></tr>
+					<tr><td>
+						<a style='padding-top:0;padding-bottom:0' class='menu-item'
+							href='https://www.gfz-potsdam.de/en/data-protection/'
+							target="_blank" title="Data Protection">
+							Data Protection
+						</a>
+					</td></tr>
 				</table>
 		</nav>
 
@@ -96,7 +104,6 @@
 	{% for component in components %}
 	<script type='text/javascript' src = "{% static 'js/v-components/' %}{{ component.0 }}.js"></script>
 	{% endfor %}
-	<script type='text/javascript' src = "{% static 'js/v-components/imprint.js' %}"></script>
 	
 	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 	<script type='text/javascript' src = "{% static 'js/browserdetection.js' %}"></script>
