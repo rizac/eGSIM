@@ -4,6 +4,7 @@ Created on 17 Jan 2018
 @author: riccardo
 '''
 import os
+from os.path import join, dirname
 import io
 import csv
 import json
@@ -496,6 +497,12 @@ def imprint(request):
     return render(request, 'imprint.html', {
         'data_protection_url': _COMMON_PARAMS['data_protection_url']
     })
+
+
+def refs(request):
+    with open(join(dirname(__file__), 'references.json')) as fpt:
+        dic = json.loads("\n".join(l for l in fpt if l.strip()[:1] != '#'))
+    return render(request, 'references.html', {'data': dic})
 
 
 def download_request(request, key, filename):

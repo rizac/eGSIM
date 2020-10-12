@@ -1,0 +1,28 @@
+# This is a JSON-like file with line comments
+# (any line whose first non space character is '#', as this line)
+# To open this file in your Python code and get the JSON dict, write:
+# with open(this_file,) as fpt:
+#        dic = json.loads("\n".join(l for l in fpt if l.strip()[:1] != '#'))
+
+# This file contains any data needed by this program. The keys are the data names
+# as used in the API / Web portal, the associated dicts (values) should contain
+# data information (description license and source_url should be mandatory,
+# as long as source_url provides citation and licenses information (otherwise,
+# you should provide them here)
+
+{
+	"SHARE": {
+		"description": "a model providing tectonic regionalisation and relative GMPEs",
+		"source_url": "http://www.efehr.org/en/Documentation/specific-hazard-models/europe/seismogenic-sources/",
+		"license": "CC BY-SA 3.0 (unported) [http://creativecommons.org/licenses/by-sa/3.0/]",
+		"cite_as": "D. Giardini, J. Woessner, L. Danciu, H. Crowley, F. Cotton, G. Grünthal, R. Pinho, G. Valensise, S. Akkar, R. Arvidsson, R. Basili, T. Cameelbeeck, A. Campos-Costa, J. Douglas, M. B. Demircioglu, M. Erdik, J. Fonseca, B. Glavatovic, C. Lindholm, K. Makropoulos, C. Meletti, R. Musson, K. Pitilakis, K. Sesetyan,  D. Stromeyer,  M. Stucchi, A. Rovida, Seismic Hazard Harmonization in Europe (SHARE): Online Data Resource, doi: 10.12686/SED-00000001-SHARE, 2013.",
+		"doi": "10.12686/SED-00000001-SHARE"
+	},
+	"ESM_flatfile_2018_SA": {
+		"description": "Engineering strong motion flatfile containing spectral acceleration ordinates calculated assuming 5% damping in the range 0.01-10s",
+		"source_url": "https://esm-db.eu/#/products/flat_file",
+		"license": "Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) [https://creativecommons.org/licenses/by-nc/4.0/]",
+		"cite_as": "Lanzano G., Luzi L., Russo E., Felicetta C., D’Amico M. C., Sgobba S., Pacor F. (2018). Engineering Strong Motion Database (ESM) flatfile [Data set]. Istituto Nazionale di Geofisica e Vulcanologia (INGV). https://doi.org/10.13127/esm/flatfile.1.0",
+		"doi": "10.13127/esm/flatfile.1.0"
+	}
+}
