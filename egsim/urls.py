@@ -21,7 +21,7 @@ from django.views.generic.base import RedirectView
 from egsim.views import (URLS, KEY, main, home, apidoc, get_tr_models,
                          download_request, download_astext, download_asimage,
                          TrellisView, GsimsView, ResidualsView, GmdbPlotView,
-                         TestingView, imprint)
+                         TestingView, imprint, refs)
 
 # for infor with trailing slashes:
 # https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
@@ -35,8 +35,9 @@ urlpatterns = [  # pylint: disable=invalid-name
     url(r'^(?P<selected_menu>%s)/?$' %
         "|".join(getattr(KEY, _) for _ in dir(KEY) if _[:1] != '_'), main),
 
-    # Imprint. TO BE PUT BEFORE THE main page entry point below!
+    # Imprint, refs (pages with a "normal" static django template associated):
     url(r'imprint', imprint),
+    url(r'references', refs),
 
     # other urls called from within the page:
     url(r'^%s/?$' % URLS.HOME_PAGE, home),
