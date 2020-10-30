@@ -35,7 +35,7 @@ instead of `python` or `python3`)
 ### Clone repository
 
 Select a `root directory` (e.g. `/path/to/egsim`), and closne egsim and gmpe-smtk
-into two subdirectories (we call them `egsim directory` and `smtk directory`):
+into two subdirectories (we call them `egsim directory` and `smtk directory`).
 
 
 ```bash
@@ -44,12 +44,17 @@ git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
 
 Why creating a `root directory` and cloning therein `eGSIM` and `gmpe-smtk`?
-Because by later installing `gmpe-smtk` in editable mode (see below)
+Because by installing `gmpe-smtk` in editable mode (see below)
 we can fix bugs immediately and also issue pull requests (PR) to the upstream branch.
 
 In production mode could we simply clone `eGSIM`? yes. But in many cases
 we follow the procedure above also in production, to allow the same procedure also
 from the server.
+
+Also note that this is a client program but a server web app,
+there is no need to install this program:
+what happens under the hoods when doing `pip install .`
+is probably harmless, but was not tested.
 
 
 ### Install
@@ -58,14 +63,27 @@ from the server.
 python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
 source .env/<ENVNAME>/bin/activate  # activate venv
 pip install --upgrade pip setuptools
-pip install openquake.engine
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-pip install -e .
+pip install -e . # (also installs openquake and django)
 cd ../egsim. # (or wherever egsim is)
-pip freeze > requirements.txt  # (OPTIONAL, IF YOU ARE UPGRADING)
-pip install pylint pytest-django pytest-cov. # (OPTIONAL IF YOU WQNT TO RUN TESTS, which should be the case in dev mode)
-pip freeze > requirements.dev.txt. # (optional if you are upgrading)
+pip freeze > requirements.txt  # (OPTIONAL: DO IT ONLY IF UPGRADING)
+pip install pylint pytest-django pytest-cov. # (OPTIONAL but recommended, running tests might be needed sometime)
+pip freeze > requirements.dev.txt. # (OPTIONAL: DO IT ONLY IF UPGRADING)
 ```
+
+There are also two shorter options **not recommended** (see previous section):
+
+Without smtk cloned directory, do not `cd` and issue:
+```bash
+pip install smtk@git+https://github.com/rizac/gmpe-smtk.git
+```
+
+With usual pip install, the whole installation could be performed in two lines:
+```bash
+pip install .[test]
+pip freeze > requirements.dev.txt. # (OPTIONAL: DO IT ONLY IF UPGRADING)
+``
+
 
 ### Activate virtualenv
 
