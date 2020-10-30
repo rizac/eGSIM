@@ -34,17 +34,18 @@ instead of `python` or `python3`)
 
 ### Clone repository
 
-Select a `root directory` (e.g. `/path/to/egsim`), and clone egsim and gmpe-smtk
-into two subdirectories (we call them `egsim directory` and `smtk directory`).
-
+Select a `root directory` (e.g. `/path/to/egsim`), and clone egsim into the
+so-called egsim directory:
 
 ```bash
 git clone https://github.com/rizac/eGSIM.git egsim
-git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
 
-
 ### Create and activate Python virtual env
+
+Move to whatever directory you want (usually the egsim directory) and then:
+
+`egsim`
 ```bash
 python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
 source .env/<ENVNAME>/bin/activate  # activate venv
@@ -55,7 +56,51 @@ pip install --upgrade pip setuptools
 
 ### Install
 
-*(note: you can replace `requirements.dev.txt` with `requirements.txt`
+#### Quick
+
+Note: in this case you can not modify `smtk`, if needed, and you must
+**not** update or push `requirement`s file (e.g., you can **not** perform any
+[dependency upgrade](#dependencies-upgrade))
+
+Open `requirements.txt` and check the line where smtk is installed
+(it should be commented). Remove the comment (and the initial -e if any) and
+copy the rest of the line. Then:
+
+```bash
+pip install <smtk_line>
+```
+
+Then, if you want to run tests (the usual case in dev mode):
+
+```bash
+pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk
+```
+
+<details> 
+  <summary>Why can't we upgrade dependencies this way?</summary>
+
+Because as of end 2020, pip installing from git repositories does not seems to
+   work with `requirements.txt` afterwards. E.g. both these options work:
+   `pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk` or 
+   `pip install smtk@git+https://github.com/rizac/gmpe-smtk`
+   but they store `smtk` in `pip` with a format (something like `smtk<version>#<commit_hash>`)
+   that will not work with `pip install -r requirements.txt`
+
+</details>
+
+#### Longer
+
+If on the other hand you want to have the possibility to update,
+modify, and push from `smtk`, then
+
+Clone gmpe-smtk, usually on the same level of the `egsim directory` into
+the so-called `smtk directory`:
+
+```bash
+git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
+```
+
+*(note: from now on you can replace `requirements.dev.txt` with `requirements.txt`
 in the commands below to skip installing packages used for testing,
 but we don't see how this should be useful in dev mode)*
 
@@ -75,17 +120,7 @@ cd ../egsim. # (or wherever egsim is)
 ```
 
 <details> 
-  <summary>Why creating a `root directory` and cloning therein `eGSIM` and `gmpe-smtk`?</summary>
-
-1. Because by installing `gmpe-smtk` in editable mode (`-e`)
-   we can fix bugs immediately and also issue pull requests (PR) to the upstream branch
-
-2. Because as of end 2020, pip installing from git repositories does not seems to
-   work with `requirements.txt` afterwards. E.g. both these option work:
-   `pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk` or 
-   `pip install smtk@git+https://github.com/rizac/gmpe-smtk`
-   but they store `smtk` in `pip` with a format (something like `smtk<version>#<commit_hash>`)
-   that will not work with `pip install -r requirements.txt`
+  <summary>Is this "double" directory needed in production?</summary>
 
 In production mode could we simply clone `eGSIM`? yes. But we suggest to
 follow the procedure above in any case, to allow the same flexibility.
