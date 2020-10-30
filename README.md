@@ -43,14 +43,6 @@ git clone https://github.com/rizac/eGSIM.git egsim
 git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
 
-<!-- In production mode could we simply clone `eGSIM`? yes. But in many cases
-we follow the procedure above also in production, to allow the same procedure also
-from the server.
-
-Also note that this is a client program but a server web app,
-there is no need to install this program:
-what happens under the hoods when doing `pip install .`
-is probably harmless, but was not tested.  -->
 
 ### Create and activate Python virtual env
 ```bash
@@ -70,7 +62,15 @@ but we don't see how this should be useful in dev mode)*
 ```bash
 pip install -r requirements.dev.txt
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-pip install -e . # (also installs openquake and django)
+```
+
+Now check that the current commit hash is the same in `requirements.txt`.
+If not, either `git checkout egsim` (the branch `egsim` *should* be kept at the
+desired commit) or `git checkout <commit_hash>` (the commit hah is 
+the string portion of `smtk` between '@' and '#' in any `requirements.*` file)
+
+```
+pip install -e .
 cd ../egsim. # (or wherever egsim is)
 ```
 
@@ -81,12 +81,18 @@ cd ../egsim. # (or wherever egsim is)
    we can fix bugs immediately and also issue pull requests (PR) to the upstream branch
 
 2. Because as of end 2020, pip installing from git repositories does not seems to
-   work. E.g. both these option work:
+   work with `requirements.txt` afterwards. E.g. both these option work:
    `pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk` or 
    `pip install smtk@git+https://github.com/rizac/gmpe-smtk`
-   but, instead of to the recommended installation procedure, they store `smtk` in
-   `pip` with a format (something like `smtk<version>#<commit_hash>`)
+   but they store `smtk` in `pip` with a format (something like `smtk<version>#<commit_hash>`)
    that will not work with `pip install -r requirements.txt`
+
+In production mode could we simply clone `eGSIM`? yes. But we suggest to
+follow the procedure above in any case, to allow the same flexibility.
+
+Also note that this is a client program but a web app in Django,
+there is no need to install this program via `pip install .`, but only its
+dependencies
 </details>
 
 For the maintenance (e.g., upgrading dependencies to newer versions) see
@@ -191,4 +197,6 @@ pip freeze > requirements.dev.txt
 Open `requirements.dev.txt` and comment the line with "-e ... gmpe-smtk"
 
 (then, proceed with the normal workflow:
-run tests, fix new bugs and then `git push`, an so on)
+run tests, fix new bugs and then `git push`, an so on).
+When done, move to `smtk` and "fix" the "egsim" branch to point to the
+current commit: `git checkout egsim && git merge master`.
