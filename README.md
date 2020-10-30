@@ -6,7 +6,8 @@ in the framework of the  Thematic Core Services for Seismology of EPOS-IP
 
 ## Installation (development)
 
-Disclaimer: this is a temporary tutorial tested with MacOS (El Capitan) and Ubuntu 16.04. 
+This is a tutorial tested with MacOS (El Capitan and Catalina)
+and Ubuntu 18.04. 
 
 
 ### Requirements
@@ -22,7 +23,6 @@ sudo apt-get install git python3-venv python3-pip python3-dev
 exist on macOS*).
 
 
-[FIXME: CHANGE]:
 Please use Python 3.7+. Check with ```python --version```:
 if it's Python2, then use ```python3 --version```.
 If it's not 3.7+, then you need to install Python3.7 **along with**
@@ -34,7 +34,7 @@ instead of `python` or `python3`)
 
 ### Clone repository
 
-Select a `root directory` (e.g. `/path/to/egsim`), and closne egsim and gmpe-smtk
+Select a `root directory` (e.g. `/path/to/egsim`), and clone egsim and gmpe-smtk
 into two subdirectories (we call them `egsim directory` and `smtk directory`).
 
 
@@ -43,89 +43,53 @@ git clone https://github.com/rizac/eGSIM.git egsim
 git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
 
-Why creating a `root directory` and cloning therein `eGSIM` and `gmpe-smtk`?
-Because by installing `gmpe-smtk` in editable mode (see below)
-we can fix bugs immediately and also issue pull requests (PR) to the upstream branch.
-
-In production mode could we simply clone `eGSIM`? yes. But in many cases
+<!-- In production mode could we simply clone `eGSIM`? yes. But in many cases
 we follow the procedure above also in production, to allow the same procedure also
 from the server.
 
 Also note that this is a client program but a server web app,
 there is no need to install this program:
 what happens under the hoods when doing `pip install .`
-is probably harmless, but was not tested.
+is probably harmless, but was not tested.  -->
 
-
-### Install
-
+### Create and activate Python virtual env
 ```bash
 python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
 source .env/<ENVNAME>/bin/activate  # activate venv
 pip install --upgrade pip setuptools
-cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-pip install -e . # (also installs openquake and django)
-cd ../egsim. # (or wherever egsim is)
-pip freeze > requirements.txt  # (OPTIONAL: DO IT ONLY IF UPGRADING)
-pip install pylint pytest-django pytest-cov. # (OPTIONAL but recommended, running tests might be needed sometime)
-pip freeze > requirements.dev.txt. # (OPTIONAL: DO IT ONLY IF UPGRADING)
 ```
 
-There are also two shorter options **not recommended** (see previous section):
-
-Without smtk cloned directory, do not `cd` and issue:
-```bash
-pip install smtk@git+https://github.com/rizac/gmpe-smtk.git
-```
-
-With usual pip install, the whole installation could be performed in two lines:
-```bash
-pip install .[test]
-pip freeze > requirements.dev.txt. # (OPTIONAL: DO IT ONLY IF UPGRADING)
-``
-
-
-### Activate virtualenv
-
-Create the virtual environment. Move into the `root directory`
-(you can also move into another directory, but it does not make much sense), and type: 
-
-```bash
-python3 -m venv ./env  # create venv
-source ./env/bin/activate  # activate venv
-```
-
-(to deactivate the virtual environment, type `deactivate` on the terminal)
-
-**IMPORTANT: from now on the venv must be activated If not, type**
-**`source ./env/bin/activate` as shown above. This way,**
-**everything will be installed in your "copy" of**
-**Pyhton with no conflicts with the OS Python distribution**
-
+**NOTE: From now on, all following operations must have the virtualenv activated FIRST**
 
 ### Install
 
-Move to `egsim directory`, open `requirements.dev.txt` and make
-sure that the line starting with "gmpe-smtk" is commented (with a leading '#')
-because gmpe-smtk must be installed *after* openquake (see
-[Dependencies upgrade](#dependencies_upgrade))
-
- and type:
+*(note: you can replace `requirements.dev.txt` with `requirements.txt`
+in the commands below to skip installing packages used for testing,
+but we don't see how this should be useful in dev mode)*
 
 ```bash
-pip install --upgrade pip setuptools && pip install -r ./requirements.dev.txt
-cd ../gmpe-smtk  # or wherever smtk is cloned to, see above
-pip install -e .  # -e necessary only in dev mode
-cd ../egsim  # or wherever egsim is cloned to, see above
+cd ../gmpe-smtk # (or whatever you cloned the forked branch)
+pip install -e . # (also installs openquake and django)
+cd ../egsim. # (or wherever egsim is)
+pip install -r requirements.dev.txt
 ```
+<details> 
+  <summary>Why creating a `root directory` and cloning therein `eGSIM` and `gmpe-smtk`?</summary>
 
-<small>
-(Note: you could have opened and used the file `requirements.txt`: it is the
-same as `requirements.txt` but without the packages required for running tests.
-Those packages are not strictly mandatory, but there is actually no reason to avoid
-running tests in both dev and prod mode for a web service like this one)
-</small>
+1. Because by installing `gmpe-smtk` in editable mode (`-e`)
+   we can fix bugs immediately and also issue pull requests (PR) to the upstream branch
 
+2. Because as of end 2020, pip installing from git repositories does not seems to
+   work. We tried e.g.
+   `pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk` or 
+   `pip install smtk@git+https://github.com/rizac/gmpe-smtk`  (what it looks has to be put in setup.py)
+   makes `pip freeze` show the installed package in a form (something like `smtk<version>#<commit_hash>`)
+   that will not work with `pip install -r requirements.txt`, whereas `pip install`ing
+   as indicated above works
+</details>
+
+For the maintenance (e.g., upgrading dependencies to newer versions) see
+at the document bottom the relative section.
 
 ### Test
 
@@ -200,30 +164,30 @@ so better be safe.
 
 ### Dependencies upgrade
 
-Note that this operation will most likely require additional time-consuming work
-to fix bugs in egsim and sometime in smtk, too.
+Create and activate a new virtualenv:
 
-You create a new Python venv, you move into the `egsim directory` and then:
+```bash
+python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
+source .env/<ENVNAME>/bin/activate  # activate venv
+pip install --upgrade pip setuptools
+```
 
-
-```zsh
-pip install openquake.engine
-cd gmpe-smtk # (or 'cd' wherever you cloned gmpe-smtk)
-pip install -e .  # install gmpe-smtk
+```bash
+cd ../gmpe-smtk # (or whatever you cloned the forked branch)
+git pull && git checkout master
+pip install -e . # (also installs openquake and django)
 cd ../egsim. # (or wherever egsim is)
 pip freeze > requirements.txt
+```
+
+Open `requirements.txt` and comment the line with "-e ... gmpe-smtk"
+
+```
 pip install pylint pytest-django pytest-cov
 pip freeze > requirements.dev.txt
 ```
 
-Alternative shorter way (SHOULD WORK< NOT TESTED yet):
-```
-pip install .
-pip freeze > requirements.txt
-pip install .[test]
-pip freeze > requirements.dev.txt
-```
+Open `requirements.dev.txt` and comment the line with "-e ... gmpe-smtk"
 
-
-**Important**: open the two `requirements.*` files and **comment the line with gmpe-smtk**,
-because it must be installed *after* openquake (see [Install](#install))
+(then, proceed with the normal workflow:
+run tests, fix new bugs and then `git push`, an so on)
