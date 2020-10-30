@@ -34,7 +34,7 @@ instead of `python` or `python3`)
 
 ### Clone repository
 
-Select a `root directory` (e.g. `/path/to/egsim`), and clone egsim into the
+Select a `root directory` (e.g. `/root/path/to/egsim`), and clone egsim into the
 so-called egsim directory:
 
 ```bash
@@ -43,9 +43,8 @@ git clone https://github.com/rizac/eGSIM.git egsim
 
 ### Create and activate Python virtual env
 
-Move to whatever directory you want (usually the egsim directory) and then:
+Move to whatever directory you want (usually the egsim directory above) and then:
 
-`egsim`
 ```bash
 python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
 source .env/<ENVNAME>/bin/activate  # activate venv
@@ -73,7 +72,7 @@ pip install <smtk_line>
 Then, if you want to run tests (the usual case in dev mode):
 
 ```bash
-pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk
+pip install pylint pytest-django pytest-cov
 ```
 
 <details> 
@@ -100,6 +99,12 @@ the so-called `smtk directory`:
 git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
 
+And move back to egsim directory:
+
+```bash
+cd ../egsim
+```
+
 *(note: from now on you can replace `requirements.dev.txt` with `requirements.txt`
 in the commands below to skip installing packages used for testing,
 but we don't see how this should be useful in dev mode)*
@@ -120,7 +125,7 @@ cd ../egsim. # (or wherever egsim is)
 ```
 
 <details> 
-  <summary>Is this "double" directory needed in production?</summary>
+  <summary>Is this longer installation needed in production?</summary>
 
 In production mode could we simply clone `eGSIM`? yes. But we suggest to
 follow the procedure above in any case, to allow the same flexibility.
