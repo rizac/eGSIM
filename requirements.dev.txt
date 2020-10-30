@@ -37,7 +37,7 @@ requests==2.23.0
 scipy==1.4.1
 Shapely==1.7.1
 six==1.15.0
-# -e git+https://github.com/rizac/gmpe-smtk.git@e2e537dada1cb120040b08ed12f1db2109c9fd0d#egg=smtk
+-e git+https://github.com/rizac/gmpe-smtk.git@48142f3e9c71ddfa8d7d66a50886b385fcd47aea#egg=smtk
 sqlparse==0.4.1
 tables==3.6.1
 toml==0.10.1
