@@ -80,16 +80,16 @@ pip install -r requirements.dev.txt
    we can fix bugs immediately and also issue pull requests (PR) to the upstream branch
 
 2. Because as of end 2020, pip installing from git repositories does not seems to
-   work. We tried e.g.
+   work. E.g. both these option work:
    `pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk` or 
-   `pip install smtk@git+https://github.com/rizac/gmpe-smtk`  (what it looks has to be put in setup.py)
-   makes `pip freeze` show the installed package in a form (something like `smtk<version>#<commit_hash>`)
-   that will not work with `pip install -r requirements.txt`, whereas `pip install`ing
-   as indicated above works
+   `pip install smtk@git+https://github.com/rizac/gmpe-smtk`
+   but, instead of to the recommended installation procedure, they store `smtk` in
+   `pip` with a format (something like `smtk<version>#<commit_hash>`)
+   that will not work with `pip install -r requirements.txt`
 </details>
 
 For the maintenance (e.g., upgrading dependencies to newer versions) see
-at the document bottom the relative section.
+[upgrading the dependencies](#dependencies-upgrade).
 
 ### Test
 
