@@ -68,11 +68,12 @@ in the commands below to skip installing packages used for testing,
 but we don't see how this should be useful in dev mode)*
 
 ```bash
+pip install -r requirements.dev.txt
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 pip install -e . # (also installs openquake and django)
 cd ../egsim. # (or wherever egsim is)
-pip install -r requirements.dev.txt
 ```
+
 <details> 
   <summary>Why creating a `root directory` and cloning therein `eGSIM` and `gmpe-smtk`?</summary>
 
