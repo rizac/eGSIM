@@ -10,7 +10,7 @@ kiwisolver==1.2.0
 matplotlib==3.1.3
 numexpr==2.7.1
 numpy==1.18.5
-openquake.engine==3.10.0
+openquake.engine==3.10.1
 pandas==1.0.5
 psutil==5.6.7
 pyparsing==2.4.7
@@ -23,8 +23,8 @@ requests==2.23.0
 scipy==1.4.1
 Shapely==1.7.1
 six==1.15.0
--e git+https://github.com/rizac/gmpe-smtk.git@b611e3e66bd958e6b03b54583bd6296c42d7c23b#egg=smtk
-sqlparse==0.3.1
+# -e git+https://github.com/rizac/gmpe-smtk.git@e2e537dada1cb120040b08ed12f1db2109c9fd0d#egg=smtk
+sqlparse==0.4.1
 tables==3.6.1
 toml==0.10.1
-urllib3==1.25.10
+urllib3==1.25.11

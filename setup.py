@@ -14,8 +14,8 @@ setup(
     python_requires='>=3.7.0',
     # Minimal requirements, for a complete list see requirements-*.txt
     install_requires=[
-        'openquake.engine>3.5.0',
-        'git+https://github.com/rizac/gmpe-smtk.git'
+        # 'openquake.engine>3.5.0',
+        'smtk @ git+https://github.com/rizac/gmpe-smtk.git'
     ],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -28,7 +28,7 @@ setup(
             'pytest-cov>=2.6.1'
         ],
     },
-    author='riccardo zaccarelli',
+    author='r. zaccarelli',
     author_email='',  # FIXME: what to provide?
     maintainer='Section 2.6 (Seismic Hazard and Risk Dynamics), GFZ Potsdam',  # FIXME
     maintainer_email='',

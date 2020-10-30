@@ -9,15 +9,15 @@ Django==2.2.16
 docutils==0.14
 h5py==2.10.0
 idna==2.10
-iniconfig==1.0.1
-isort==5.5.4
-kiwisolver==1.2.0
+iniconfig==1.1.1
+isort==5.6.4
+kiwisolver==1.3.0
 lazy-object-proxy==1.4.3
 matplotlib==3.1.3
 mccabe==0.6.1
 numexpr==2.7.1
 numpy==1.18.5
-openquake.engine==3.10.0
+openquake.engine==3.10.1
 packaging==20.4
 pandas==1.0.5
 pluggy==0.13.1
@@ -26,9 +26,9 @@ py==1.9.0
 pylint==2.6.0
 pyparsing==2.4.7
 pyshp==1.2.3
-pytest==6.1.0
+pytest==6.1.2
 pytest-cov==2.10.1
-pytest-django==3.10.0
+pytest-django==4.1.0
 python-dateutil==2.8.1
 pytz==2020.1
 PyYAML==5.3.1
@@ -37,9 +37,9 @@ requests==2.23.0
 scipy==1.4.1
 Shapely==1.7.1
 six==1.15.0
--e git+https://github.com/rizac/gmpe-smtk.git@b611e3e66bd958e6b03b54583bd6296c42d7c23b#egg=smtk
-sqlparse==0.3.1
+# -e git+https://github.com/rizac/gmpe-smtk.git@e2e537dada1cb120040b08ed12f1db2109c9fd0d#egg=smtk
+sqlparse==0.4.1
 tables==3.6.1
 toml==0.10.1
-urllib3==1.25.10
+urllib3==1.25.11
 wrapt==1.12.1
