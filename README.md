@@ -110,7 +110,7 @@ cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 	<summary>What is requirements.txt?</summary>
 	It is the list of dependencies without those required for running
 	tests. It is to be used optionally only in production
-<details>
+</details>
 
 Now check that the current commit hash is the same in `requirements.txt`.
 If not, either `git checkout egsim` (the branch `egsim` *should* be kept at the
