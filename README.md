@@ -219,7 +219,7 @@ pip install --upgrade pip setuptools
 
 ```bash
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-git pull && git checkout master
+git checkout master && git pull
 pip install -e . # (also installs openquake and django)
 cd ../egsim. # (or wherever egsim is)
 pip freeze > requirements.txt
@@ -236,5 +236,5 @@ Open `requirements.dev.txt` and comment the line with "-e ... gmpe-smtk"
 
 (then, proceed with the normal workflow:
 run tests, fix new bugs and then `git push`, an so on).
-When done, move to `smtk` and "fix" the "egsim" branch to point to the
-current commit: `git checkout egsim && git merge master`.
+When done, if the "egsim" branch of `smtk` has been left behing "master":
+`git checkout egsim && git merge master && git push`.
