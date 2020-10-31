@@ -99,24 +99,22 @@ the so-called `smtk directory`:
 git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
 
-And move back to egsim directory:
-
-```bash
-cd ../egsim
-```
-
-*(note: from now on you can replace `requirements.dev.txt` with `requirements.txt`
-in the commands below to skip installing packages used for testing,
-but we don't see how this should be useful in dev mode)*
+**move back into the the `egsim directory`** and then:
 
 ```bash
 pip install -r requirements.dev.txt
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 ```
 
+<details>
+	<summary>What is requirements.txt?</summary>
+	It is the list of dependencies without those required for running
+	tests. It is to be used optionally only in production
+<details>
+
 Now check that the current commit hash is the same in `requirements.txt`.
 If not, either `git checkout egsim` (the branch `egsim` *should* be kept at the
-desired commit) or `git checkout <commit_hash>` (the commit hah is 
+desired commit) or `git checkout <commit_hash>` (the commit hash is 
 the string portion of `smtk` between '@' and '#' in any `requirements.*` file)
 
 ```
