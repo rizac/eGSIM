@@ -106,8 +106,7 @@ def get_trellis(params):
     # of a single key 'SA')
     return {
         **xdata,
-        'imts':
-            imt if (_ismag(trellisclass) or _isdist(trellisclass)) else ['SA'],
+        'imts': imt or list(figures.keys()),
         **figures
     }
 
