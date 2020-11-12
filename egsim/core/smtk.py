@@ -16,7 +16,7 @@ from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeSigmaIMTTrellis,
                                         MagnitudeDistanceSpectraTrellis,
                                         MagnitudeDistanceSpectraSigmaTrellis)
-from smtk.sm_table import GroundMotionTable, records_where
+from smtk.sm_table import GroundMotionTable
 from smtk.residuals.gmpe_residuals import Residuals
 
 from egsim.core.utils import (vectorize, DISTANCE_LABEL, MOF, OQ,
@@ -315,7 +315,7 @@ def get_gmdbplot(params):
 
     dist_type = params[DIST_TYPE]
     mags, dists, nan_count = \
-        _get_magnitude_distances(_records_iter(params), dist_type)
+        _get_magnitude_distances(get_gmdb(params).records, dist_type)
     return {
         'xvalues': dists,
         'yvalues': mags,
@@ -349,17 +349,34 @@ def _get_magnitude_distances(records, dist_type):
     return mags, dists, nan_count
 
 
-def _records_iter(params):
-    '''Computes the selection from the given already validated params and
-    returns a filtered GroundMotionDatabase object'''
-    # params:
-    GMDB = 'gmdb'  # pylint: disable=invalid-name
-    SEL = 'selexpr'  # pylint: disable=invalid-name
-
+def get_gmdb(params):
+    '''returns a GrounMotionTable from the given params dict, which must
+    have specific keys. Currently, they are:
+    'gmdb': the tuple (hdf file name, table name), and
+    'selexpr': str
+    (`selexpr` is OPTIONAL)
+    '''
     # params[GMDB] is the tuple (hdf file name, table name):
-    with GroundMotionTable(*params[GMDB], mode='r') as gmdb:
-        for rec in records_where(gmdb.table, params.get(SEL)):
-            yield rec
+    GMDB = 'gmdb'  # pylint: disable=invalid-name
+    # params[SEL] (optional) is the selection expression:
+    SEL = 'selexpr'  # pylint: disable=invalid-name
+    gmdb = GroundMotionTable(*params[GMDB])
+    if params.get(SEL, None):
+        gmdb = gmdb.filter(params[SEL])
+    return gmdb
+
+
+# def _records_iter(params):
+#     '''Computes the selection from the given already validated params and
+#     returns a filtered GroundMotionDatabase object'''
+#     # params:
+#     GMDB = 'gmdb'  # pylint: disable=invalid-name
+#     SEL = 'selexpr'  # pylint: disable=invalid-name
+# 
+#     # params[GMDB] is the tuple (hdf file name, table name):
+#     with GroundMotionTable(*params[GMDB], mode='r') as gmdb:
+#         for rec in records_where(gmdb.table, params.get(SEL)):
+#             yield rec
 
 
 def get_residuals(params):
@@ -381,9 +398,7 @@ def get_residuals(params):
 
     # Compute residuals.
     # params[GMDB] is the tuple (hdf file name, table name):
-    gmdb = GroundMotionTable(*params[GMDB], mode='r')
-    if params.get(SEL):
-        gmdb = gmdb.filter(params[SEL])
+    gmdb = get_gmdb(params)
     residuals.get_residuals(gmdb)
 
     # statistics = residuals.get_residual_statistics()
@@ -427,7 +442,7 @@ def testing(params):
     SEL = 'selexpr'  # pylint: disable=invalid-name
 
     # params[GMDB] is the tuple (hdf file name, table name):
-    gmdb_base = GroundMotionTable(*params[GMDB], mode='r')
+    gmdb_base = gmdb = get_gmdb(params)
 
     ret = {}
     obs_count = defaultdict(int)
@@ -437,10 +452,8 @@ def testing(params):
     for gsim in params[GSIM]:
         try:
             residuals = Residuals([gsim], params[IMT])
-            selexpr = _get_selexpr(gsim, params.get(SEL, ''))
 
-            # we have some record to be used, compute residuals:
-            gmdb = gmdb_base.filter(selexpr)
+            gmdb = gmdb_base.filter(_get_selexpr(gsim, params.get(SEL, '')))
             numrecords = _gmdb_records(residuals, gmdb)
 
             obs_count[gsim] = numrecords
@@ -524,7 +537,7 @@ def _gmdb_records(residuals, gm_table=None):
     # each context element of residuals.contexts:
     numrecords = 0
     for context in residuals.contexts:
-        numrecords += len(context.get('EventIndex', []))
+        numrecords += context.get('Num. Sites', 0)
     return numrecords
 
 

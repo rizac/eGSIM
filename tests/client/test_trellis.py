@@ -7,7 +7,10 @@ Created on 2 Jun 2018
 '''
 import re
 import pytest
-from mock import patch
+try:  # https://stackoverflow.com/questions/44441929
+    from unittest.mock import patch  # ok in py3.8  # noqa
+except ImportError:
+    from mock import patch  # ok in py3.7  # noqa
 
 from egsim.core.utils import querystring
 from egsim.forms.forms import TrellisForm
@@ -25,7 +28,7 @@ class Test:
     csv_expected_text = b'^imt,gsim,magnitude,distance,vs30(,+)\r\n,,,,'
     GSIM, IMT = 'gsim', 'imt'
 
-    def get_figures(self, result):
+    def get_figures(self, result):  # noqa
         '''Returns a list of dicts scanning recursively `result` (the json
         output of a trellis request), where each dict represents
         a trellis plot and has the keys:
@@ -36,8 +39,25 @@ class Test:
             ret.extend(result[imt_])
         return ret
 
+    def assert_gims_equal(self, input_gsims, output_gsims):  # noqa
+        '''checks that `input_gsims` and `output gsims` are the same.
+        This function accounts for the fact that a gsim name in `output_gsims`
+        might be built by concatenating the input gsim name and its optional
+        parameters (see :func:`smtk.trellis.trellis_plots._get_gmpe_name`).
+        Accounting on that, basically we check here that
+        `output_gsim.startswith(input_gsim)` for any element ofg the two
+        iterables
+        '''
+        iii, ooo = sorted(input_gsims), sorted(output_gsims)
+        if len(iii) != len(ooo):
+            raise AssertionError('gsims count differs (%d != %d)' % 
+                                 (len(iii), len(ooo)))
+        for src, dst in zip(iii, ooo):
+            if not dst.startswith(src):
+                raise AssertionError('gsims differ: %s != %s' % (src, dst))
+
     @pytest.mark.parametrize('st_dev', [False, True])
-    def tst_trellis_dist(self,
+    def test_trellis_dist(self,
                           # pytest fixtures:
                           client, testdata, areequal,
                           # parametrized argument:
@@ -71,7 +91,7 @@ class Test:
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
-            assert sorted(yvalues.keys()) == sorted(input_['gsim'])
+            self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
         resp2 = client.post(self.url, data=dict(inputdic, format='text'),
@@ -114,7 +134,7 @@ class Test:
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
-            assert sorted(yvalues.keys()) == sorted(input_['gsim'])
+            self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
         resp2 = client.post(self.url, data=dict(inputdic, format='text'),
@@ -216,7 +236,7 @@ class Test:
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
-            assert sorted(yvalues.keys()) == sorted(input_['gsim'])
+            self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
         resp2 = client.post(self.url, data=dict(inputdic, format='text'),
@@ -294,9 +314,9 @@ class Test:
         inputdic = {
             "gsim": [
                 "AbrahamsonEtAl2014",
-                "AbrahamsonEtAl2014NSHMPLower",
-                "AbrahamsonEtAl2014NSHMPMean",
-                "AbrahamsonEtAl2014NSHMPUpper",
+                # "AbrahamsonEtAl2014NSHMPLower",
+                # "AbrahamsonEtAl2014NSHMPMean",
+                # "AbrahamsonEtAl2014NSHMPUpper",
                 "AbrahamsonEtAl2014RegCHN",
                 "AbrahamsonEtAl2014RegJPN",
                 "AbrahamsonEtAl2014RegTWN",
@@ -461,8 +481,10 @@ class Test:
                                         # pytest fixtures:
                                         testdata, client, areequal):
         '''tests the not implemented error'''
+
         def seff(*a, **v):
             raise NotImplementedError()
+
         mock_trellis_to_rows.side_effect = seff
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot_type='m')

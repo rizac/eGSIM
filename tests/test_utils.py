@@ -158,8 +158,7 @@ def check_gsim_defined_for_current_db(testdata):
         try:
             residuals = Residuals([gsim], ['PGA', 'PGV', 'SA(0.1)'])
             gmdbpath = testdata.path('esm_sa_flatfile_2018.csv.hd5')
-            gm_table = GroundMotionTable(gmdbpath, 'esm_sa_flatfile_2018',
-                                         mode='r')
+            gm_table = GroundMotionTable(gmdbpath, 'esm_sa_flatfile_2018')
             selexpr = _get_selexpr(gsim)
             num = _gmdb_records(residuals, gm_table.filter(selexpr))
         except:

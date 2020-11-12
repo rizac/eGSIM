@@ -20,9 +20,12 @@ from smtk.sm_table import get_dbnames, GMTableDescription, records_where
 from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
 from smtk.sm_utils import MECHANISM_TYPE
 
-DISTANCE_LABEL = dict(**{k: v for k, v in SMTK_DISTANCE_LABEL.items()
-                         if k != 'r_x'},
-                      rx=SMTK_DISTANCE_LABEL['r_x'])
+
+# Copy SMTK_DISTANCE_LABELS replacing the key 'r_x' with 'rx':
+DISTANCE_LABEL = dict(
+    **{k: v for k, v in SMTK_DISTANCE_LABEL.items() if k != 'r_x'},
+    rx=SMTK_DISTANCE_LABEL['r_x']
+)
 
 
 class MOF:  # pylint: disable=missing-docstring, too-few-public-methods
