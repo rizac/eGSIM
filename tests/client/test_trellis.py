@@ -100,7 +100,7 @@ class Test:
         assert re.search(self.csv_expected_text, resp2.content)
 
     @pytest.mark.parametrize('st_dev', [False, True])
-    def tst_trellis_mag(self,
+    def test_trellis_mag(self,
                          # pytest fixtures:
                          client, testdata, areequal,
                          # parametrized argument:
@@ -223,10 +223,12 @@ class Test:
         xvalues = result['xvalues']
         assert len(xvalues) == len(_default_periods_for_spectra())
         figures = self.get_figures(result)
+        assert all(_['ylabel'] == 'Sa (g)' for _ in figures)
         if st_dev:
             # assert we wrtoe the stdevs:
             assert all(_['stdvalues'] for _ in figures)
             assert all(_['stdlabel'] for _ in figures)
+            assert all(_['stdlabel'] == 'Total Std. Dev.' for _ in figures)
         else:
             # assert we did NOT write stdevs:
             assert not any(_['stdvalues'] for _ in figures)
