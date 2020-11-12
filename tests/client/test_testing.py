@@ -128,5 +128,3 @@ class Test:
                            '?gsim=BindiEtAl2014Rjb&imt=PGA&fit_measure=res',
                            content_type='application/json')
         assert resp1.status_code == 200
-        
-        

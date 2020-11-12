@@ -23,6 +23,27 @@ from egsim.core.utils import (vectorize, DISTANCE_LABEL, MOF, OQ,
                               GSIM_REQUIRED_ATTRS)
 
 
+
+class P:  # noqa
+    '''container class for input param names (avoid typos trhoughout the code)
+    '''
+    # (I do not like enums, and it's an overkill for such  a simple case)
+    GSIM = 'gsim'
+    IMT = 'imt'
+    MAG = 'magnitude'
+    DIST = 'distance'
+    STDEV = 'stdev'
+    PLOT_TYPE = 'plot_type'
+    FIT_M = 'fit_measure'
+    CONFIG = 'config'
+    SELEXP = 'selexpr'
+    GMDB = 'gmdb'
+    VS30 = 'vs30'
+    Z1PT0 = 'z1pt0'
+    Z2PT5 = 'z2pt5'
+    DIST_TYPE = 'distance_type'
+
+
 RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept', 'pvalue')
 
 
@@ -33,13 +54,6 @@ def get_trellis(params):
 
     :return: json serializable dict to be passed into a Response object
     '''
-    # param names:
-    MAG = 'magnitude'  # pylint: disable=invalid-name
-    DIST = 'distance'  # pylint: disable=invalid-name
-    VS30 = 'vs30'  # pylint: disable=invalid-name
-    Z1PT0 = 'z1pt0'  # pylint: disable=invalid-name
-    Z2PT5 = 'z2pt5'  # pylint: disable=invalid-name
-
     gsim, imt, magnitudes, distances, trellisclass, stdev_trellisclass = \
         _extract_params(params)
 
@@ -50,12 +64,12 @@ def get_trellis(params):
 
     xdata = None
     figures = defaultdict(list)  # imt name -> list of dicts (1 dict=1 plot)
-    for vs30, z1pt0, z2pt5 in zip(vectorize(params.pop(VS30)),
-                                  vectorize(params.pop(Z1PT0)),
-                                  vectorize(params.pop(Z2PT5))):
-        params[VS30] = vs30
-        params[Z1PT0] = z1pt0
-        params[Z2PT5] = z2pt5
+    for vs30, z1pt0, z2pt5 in zip(vectorize(params.pop(P.VS30)),
+                                  vectorize(params.pop(P.Z1PT0)),
+                                  vectorize(params.pop(P.Z2PT5))):
+        params[P.VS30] = vs30
+        params[P.Z1PT0] = z1pt0
+        params[P.Z2PT5] = z2pt5
         # Depending on `trellisclass` we might need to iterate over
         # `magnitudes`, or use `magnitudes` once (the same holds for
         # `distances`). In order to make code cleaner we define a magnitude
@@ -93,9 +107,9 @@ def get_trellis(params):
                     #        yvalues: dict (gsim name -> list of numbers)
                     #    }
                     # Add some keys to 'fig':
-                    fig[VS30] = _jsonserialize(vs30)
-                    fig[MAG] = _jsonserialize(fig.get(MAG, mag))
-                    fig[DIST] = _jsonserialize(fig.get(DIST, dist))
+                    fig[P.VS30] = _jsonserialize(vs30)
+                    fig[P.MAG] = _jsonserialize(fig.get(P.MAG, mag))
+                    fig[P.DIST] = _jsonserialize(fig.get(P.DIST, dist))
                     # And add `fig` to `figures`, which is a dict of this type:
                     #    {
                     #        <imt:str>: [<plot:dict>, ..., <plot:ditc>],
@@ -123,25 +137,18 @@ def _extract_params(params):
     where `trellis_class_for_stddev` can be None or the `trellis_class`
     counterpart for computing the standard deviations
     '''
-    MAG = 'magnitude'  # pylint: disable=invalid-name
-    DIST = 'distance'  # pylint: disable=invalid-name
-    GSIM = 'gsim'  # pylint: disable=invalid-name
-    IMT = 'imt'  # pylint: disable=invalid-name
-    STDEV = 'stdev'  # pylint: disable=invalid-name
-    PLOT_TYPE = 'plot_type'  # pylint: disable=invalid-name
-
     # NOTE: the `params` dict will be passed to smtk routines: we use 'pop'
     # whenever possible to avoid passing unwanted params:
-    gsim = params.pop(GSIM)
+    gsim = params.pop(P.GSIM)
     # imt might be None for "spectra" Trellis classes, thus provide None:
-    imt = params.pop(IMT, None)
-    magnitudes = np.asarray(vectorize(params.pop(MAG)))  # smtk wants np arrays
-    distances = np.asarray(vectorize(params.pop(DIST)))  # smtk wants np arrays
+    imt = params.pop(P.IMT, None)
+    magnitudes = np.asarray(vectorize(params.pop(P.MAG)))  # smtk wants np arrays
+    distances = np.asarray(vectorize(params.pop(P.DIST)))  # smtk wants np arrays
 
-    trellisclass = params.pop(PLOT_TYPE)
+    trellisclass = params.pop(P.PLOT_TYPE)
     # define stddev trellis class if the parameter stdev is true
     stdev_trellisclass = None  # do not compute stdev (default)
-    if params.pop(STDEV, False):
+    if params.pop(P.STDEV, False):
         if trellisclass == DistanceIMTTrellis:
             stdev_trellisclass = DistanceSigmaIMTTrellis
         elif trellisclass == MagnitudeIMTTrellis:
@@ -285,9 +292,7 @@ def get_gmdbplot(params):
     '''returns a dict of a ground motion database plot (distances vs
     magnitudes)'''
     # params:
-    DIST_TYPE = 'distance_type'  # pylint: disable=invalid-name
-
-    dist_type = params[DIST_TYPE]
+    dist_type = params[P.DIST_TYPE]
     mags, dists, nan_count = \
         _get_magnitude_distances(get_gmdb(params).records, dist_type)
     return {
@@ -330,13 +335,9 @@ def get_gmdb(params):
     'selexpr': str
     (`selexpr` is OPTIONAL)
     '''
-    # params[GMDB] is the tuple (hdf file name, table name):
-    GMDB = 'gmdb'  # pylint: disable=invalid-name
-    # params[SEL] (optional) is the selection expression:
-    SEL = 'selexpr'  # pylint: disable=invalid-name
-    gmdb = GroundMotionTable(*params[GMDB])
-    if params.get(SEL, None):
-        gmdb = gmdb.filter(params[SEL])
+    gmdb = GroundMotionTable(*params[P.GMDB])
+    if params.get(P.SELEXP, None):
+        gmdb = gmdb.filter(params[P.SELEXP])
     return gmdb
 
 
@@ -347,13 +348,8 @@ def get_residuals(params):
 
     :return: json serializable dict to be passed into a Response object
     '''
-    # params:
-    GSIM = 'gsim'  # pylint: disable=invalid-name
-    IMT = 'imt'  # pylint: disable=invalid-name
-    PLOTTYPE = 'plot_type'  # pylint: disable=invalid-name
-
-    func, kwargs = params[PLOTTYPE]
-    residuals = Residuals(params[GSIM], params[IMT])
+    func, kwargs = params[P.PLOT_TYPE]
+    residuals = Residuals(params[P.GSIM], params[P.IMT])
 
     # Compute residuals.
     # params[GMDB] is the tuple (hdf file name, table name):
@@ -393,11 +389,6 @@ def testing(params):
 
     :return: json serializable dict to be passed into a Response object
     '''
-    GSIM = 'gsim'  # pylint: disable=invalid-name
-    IMT = 'imt'  # pylint: disable=invalid-name
-    FIT_M = 'fit_measure'  # pylint: disable=invalid-name
-    CONFIG = 'config'  # pylint: disable=invalid-name
-    SEL = 'selexpr'  # pylint: disable=invalid-name
 
     # params[GMDB] is the tuple (hdf file name, table name):
     gmdb_base = gmdb = get_gmdb(params)
@@ -405,13 +396,14 @@ def testing(params):
     ret = {}
     obs_count = defaultdict(int)
     gsim_skipped = {}
-    config = params.get(CONFIG, {})
+    config = params.get(P.CONFIG, {})
     # columns: "Measure of fit" "imt" "gsim" "value(s)"
-    for gsim in params[GSIM]:
+    for gsim in params[P.GSIM]:
         try:
-            residuals = Residuals([gsim], params[IMT])
+            residuals = Residuals([gsim], params[P.IMT])
 
-            gmdb = gmdb_base.filter(_get_selexpr(gsim, params.get(SEL, '')))
+            gmdb = gmdb_base.filter(_get_selexpr(gsim,
+                                                 params.get(P.SELEXP, '')))
             numrecords = _gmdb_records(residuals, gmdb)
 
             obs_count[gsim] = numrecords
@@ -421,7 +413,7 @@ def testing(params):
 
             gsim_values = []
 
-            for key, name, func in params[FIT_M]:
+            for key, name, func in params[P.FIT_M]:
                 result = func(residuals, config)
                 gsim_values.extend(_itervalues(gsim, key, name, result))
 
