@@ -43,6 +43,11 @@ def get_trellis(params):
     gsim, imt, magnitudes, distances, trellisclass, stdev_trellisclass = \
         _extract_params(params)
 
+    # Returns True if trellisclass is a Distance-based Trellis class:
+    _isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
+    # Returns True if trellisclass is a Magnitude-based Trellis class:
+    _ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
+
     xdata = None
     figures = defaultdict(list)  # imt name -> list of dicts (1 dict=1 plot)
     for vs30, z1pt0, z2pt5 in zip(vectorize(params.pop(VS30)),
@@ -58,10 +63,10 @@ def get_trellis(params):
         # scalar value to be saved as json, and m2 is the value
         # (scalar or array) to be passed to the Trellis class:
         for mag, mags in zip(magnitudes, magnitudes) \
-                if _isdist(trellisclass) else zip([None], [magnitudes]):
+                if _isdist else zip([None], [magnitudes]):
             # same as magnitudes (see above):
             for dist, dists in zip(distances, distances) \
-                    if _ismag(trellisclass) else zip([None], [distances]):
+                    if _ismag else zip([None], [distances]):
 
                 data = _get_trellis_dict(trellisclass, params, mags, dists,
                                          gsim, imt)
@@ -78,9 +83,7 @@ def get_trellis(params):
                                                   gsim, imt))
 
                 for fig in data['figures']:
-                    # Now we will modify 'fig' and eventually add it to
-                    # 'figures'.
-                    # 'fig' is a dict of this type:
+                    # 'fig' represents a plot. It is a dict of this type:
                     # (see method `_get_trellis_dict` and `_add_stdev` above):
                     #    {
                     #        ylabel: str
@@ -89,17 +92,19 @@ def get_trellis(params):
                     #        imt: str (the imt)
                     #        yvalues: dict (gsim name -> list of numbers)
                     #    }
-                    # 1) Add some keys to 'fig':
+                    # Add some keys to 'fig':
                     fig[VS30] = _jsonserialize(vs30)
                     fig[MAG] = _jsonserialize(fig.get(MAG, mag))
                     fig[DIST] = _jsonserialize(fig.get(DIST, dist))
-                    # 4: Remove the imt of 'fig', and use it as key of
-                    # 'figures'
+                    # And add `fig` to `figures`, which is a dict of this type:
+                    #    {
+                    #        <imt:str>: [<plot:dict>, ..., <plot:ditc>],
+                    #        ...
+                    #        <imt:str>: [<plot:dict>, ..., <plot:ditc>],
+                    #    }
+                    # (The plot-dicts count mapped to each imt will depend on
+                    # the product of the chosen vs30, mag and dist):
                     figures[fig.pop('imt')].append(fig)
-                    # 'figures' is a dict of imt names mapped to a list of
-                    # dict. Each dict is one of the 'fig' just processed,
-                    # their count depends on the product of the chosen vs30,
-                    # mad and dist
 
     # imt is a list of the imts given as input, or None for "spectra" Trellis
     # (in this latter case just get the figures keys, which should be populated
@@ -145,16 +150,6 @@ def _extract_params(params):
             stdev_trellisclass = MagnitudeDistanceSpectraSigmaTrellis
 
     return gsim, imt, magnitudes, distances, trellisclass, stdev_trellisclass
-
-
-def _isdist(trellisclass):
-    '''Returns True if trellisclass is a Distance-based Trellis class'''
-    return trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
-
-
-def _ismag(trellisclass):
-    '''Returns True if trellisclass is a Magnitude-based Trellis class'''
-    return trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
 
 
 def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):  # noqa
@@ -345,19 +340,6 @@ def get_gmdb(params):
     return gmdb
 
 
-# def _records_iter(params):
-#     '''Computes the selection from the given already validated params and
-#     returns a filtered GroundMotionDatabase object'''
-#     # params:
-#     GMDB = 'gmdb'  # pylint: disable=invalid-name
-#     SEL = 'selexpr'  # pylint: disable=invalid-name
-# 
-#     # params[GMDB] is the tuple (hdf file name, table name):
-#     with GroundMotionTable(*params[GMDB], mode='r') as gmdb:
-#         for rec in records_where(gmdb.table, params.get(SEL)):
-#             yield rec
-
-
 def get_residuals(params):
     '''Core method to compute residuals plots data
 
@@ -366,11 +348,9 @@ def get_residuals(params):
     :return: json serializable dict to be passed into a Response object
     '''
     # params:
-    GMDB = 'gmdb'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
     IMT = 'imt'  # pylint: disable=invalid-name
     PLOTTYPE = 'plot_type'  # pylint: disable=invalid-name
-    SEL = 'selexpr'  # pylint: disable=invalid-name
 
     func, kwargs = params[PLOTTYPE]
     residuals = Residuals(params[GSIM], params[IMT])
@@ -413,7 +393,6 @@ def testing(params):
 
     :return: json serializable dict to be passed into a Response object
     '''
-    GMDB = 'gmdb'  # pylint: disable=invalid-name
     GSIM = 'gsim'  # pylint: disable=invalid-name
     IMT = 'imt'  # pylint: disable=invalid-name
     FIT_M = 'fit_measure'  # pylint: disable=invalid-name
