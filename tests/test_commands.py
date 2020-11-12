@@ -9,11 +9,10 @@ import os
 from stat import S_IWUSR, S_IWGRP, S_IWOTH
 import pytest
 
-try:
-    from mock import patch  # this worked in py3.7, not in 3.8
+try:  # https://stackoverflow.com/questions/44441929
+    from unittest.mock import patch  # ok in py3.8  # noqa
 except ImportError:
-    from unittest.mock import patch   # this should work for py3+
-    # (although curiously we fallback here in py3.8, not 3.7)
+    from mock import patch  # ok in py3.7  # noqa
 
 from django.core.management.base import CommandError
 from django.core.management import call_command

@@ -7,7 +7,11 @@ Created on 22 Oct 2018
 '''
 import re
 import pytest
-from mock import patch, PropertyMock
+
+try:  # https://stackoverflow.com/questions/44441929
+    from unittest.mock import patch, PropertyMock  # ok in py3.8  # noqa
+except ImportError:
+    from mock import patch, PropertyMock  # ok in py3.7  # noqa
 
 from egsim.core.utils import querystring
 from egsim.forms.fields import ResidualplottypeField

@@ -9,7 +9,11 @@ Created on 6 Apr 2019
 import os
 import json
 import pytest
-from mock import patch
+
+try:  # https://stackoverflow.com/questions/44441929
+    from unittest.mock import patch  # ok in py3.8  # noqa
+except ImportError:
+    from mock import patch  # ok in py3.7  # noqa
 
 from egsim.views import URLS, KEY
 

@@ -6,7 +6,10 @@ Created on 22 Oct 2018
 @author: riccardo
 '''
 import pytest
-from mock import patch, PropertyMock
+try:  # https://stackoverflow.com/questions/44441929
+    from unittest.mock import patch, PropertyMock  # ok in py3.8  # noqa
+except ImportError:
+    from mock import patch, PropertyMock  # ok in py3.7  # noqa
 
 from egsim.core.utils import querystring
 from egsim.forms.forms import TestingForm
@@ -66,7 +69,7 @@ class Test:
     def test_testing_service(self,
                              # pytest fixtures:
                              testdata, areequal, client):
-        '''tests the gmdbplot API service.'''
+        '''tests the "testing" API service.'''
         inputdic = testdata.readyaml(self.request_filename)
         # pass two gsims that have records with the current test gmdb:
         inputdic['gsim'] = ['Atkinson2015', 'BindiEtAl2014RhypEC8NoSOF']
@@ -91,7 +94,7 @@ class Test:
     def test_testing_service_zero_records(self,
                                           # pytest fixtures:
                                           testdata, areequal, client):
-        '''tests the gmdbplot API service.'''
+        '''tests the "testing" API service.'''
         inputdic = testdata.readyaml(self.request_filename)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
