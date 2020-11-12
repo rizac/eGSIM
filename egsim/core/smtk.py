@@ -101,6 +101,9 @@ def get_trellis(params):
                     # their count depends on the product of the chosen vs30,
                     # mad and dist
 
+    # imt is a list of the imts given as input, or None for "spectra" Trellis
+    # (in this latter case just get the figures keys, which should be populated
+    # of a single key 'SA')
     return {
         **xdata,
         'imts':
@@ -155,7 +158,7 @@ def _ismag(trellisclass):
     return trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
 
 
-def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):
+def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):  # noqa
     '''Compute the Trellis plot for a single set of eGSIM parameters
     '''
     isspectra = trellis_class in (MagnitudeDistanceSpectraTrellis,
@@ -177,6 +180,7 @@ def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):
     #            ylabel: str
     #            row: ? (will be removed)
     #            column: ? (will be removed)
+    #            imt: str,
     #            yvalues: {
     #                gsim1 : numeric_list,
     #                ...
@@ -193,42 +197,18 @@ def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):
     #        _key: tuple, str (depends on context): unique hashable id
     #        imt: str (the imt)
     #        yvalues: dict (same as above)
-    #    },
-
-    # get the imt. Unfortunately, the imt is "hidden"
-    # within each data.figures.ylabel, thus we have to
-    # re-evaluate them using trellis_obj._get_ylabel,
-    # which is what smtk uses.
-    ylabel2imt = {} if isspectra else \
-        {trellis_obj._get_ylabel(_): _ for _ in imt}
-    # ylabel2imt is NOT used if `isspectra=True`, because the plot ylabel
-    # is always the same and does not have information about the imt
-    # (which is by the way always 'SA').
-
-    # Fast bug in smtk
-    # whereby the figures 'ylabel' is 'Sa (g)' instead of 'Total Std Dev'
-    # for MagnitudeDistanceSpectraSigmaTrellis. FIX here:
-    fix_spectra_stdev_label = ''
-    if isinstance(trellis_obj, MagnitudeDistanceSpectraSigmaTrellis):
-        # the argument is not used so provide whatever (we use ''):
-        fix_spectra_stdev_label = trellis_obj._get_ylabel('')
+    #    }
 
     src_figures = data['figures']
     for fig in src_figures:
         fig.pop('column', None)
         fig.pop('row', None)
-        fig['imt'] = ylabel2imt[fig['ylabel']] if not isspectra else 'SA'
         # set a key to uniquely identify the figure: in case os spectra,
         # we trust the (magnitude, distance) pair. Otherwise, the IMT:
         fig['_key'] = (fig['magnitude'], fig['distance']) if isspectra else \
             fig['imt']
-        # fix for the MagnitudeDistanceSpectraSigmaTrellis bug:
-        ylabel = fix_spectra_stdev_label if fix_spectra_stdev_label else \
-            fig['ylabel']
-        # change labels SA(1.0000) into SA(1.0) but at the end
-        # because the ylabel might have been used
-        # as key (see line above)
-        fig['ylabel'] = _relabel_sa(ylabel)
+        # change labels SA(1.0000) into SA(1.0)
+        fig['ylabel'] = _relabel_sa(fig['ylabel'])
 
     return data
 
