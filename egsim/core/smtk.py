@@ -27,7 +27,7 @@ from egsim.core.utils import (vectorize, DISTANCE_LABEL, MOF, OQ,
 class P:  # noqa
     '''container class for input param names (avoid typos trhoughout the code)
     '''
-    # (I do not like enums, and it's an overkill for such  a simple case)
+    # (enums are an overkill for such  a simple case)
     GSIM = 'gsim'
     IMT = 'imt'
     MAG = 'magnitude'
@@ -42,9 +42,6 @@ class P:  # noqa
     Z1PT0 = 'z1pt0'
     Z2PT5 = 'z2pt5'
     DIST_TYPE = 'distance_type'
-
-
-RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept', 'pvalue')
 
 
 def get_trellis(params):
@@ -358,6 +355,9 @@ def get_residuals(params):
 
     # statistics = residuals.get_residual_statistics()
     ret = defaultdict(lambda: defaultdict(lambda: {}))
+
+    RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
+                       'pvalue')
 
     # extend keyword arguments:
     kwargs = dict(kwargs, residuals=residuals, as_json=True)
