@@ -12,6 +12,10 @@
 <link rel="stylesheet" type="text/css" href="{% static 'css/apidoc.css' %}">
 {% endblock %}
 
+<!--  IMPORTANT NOTE WHEN ADDING NEW CONTENT: every <h2> <h3> or <h4> element WITH AN ID
+WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bottom of the page) -->
+
+
 {% block body %}
 <div class='flexible d-flex flex-row' style='overflow-y:auto;'>
 	<div id='toc' class='shadow px-2 pt-3' style='overflow-y:auto;z-index:10'></div>
@@ -60,7 +64,9 @@
 			<h2 id="testing">{{ egsim_data.TESTING.title }}</h2>
 			{% include "apidoc/testing.html" with data=egsim_data.TESTING %}
 		
-		
+			<h2 id="legalinfo">Legal information</h2>
+			{% include "apidoc/legalinfo.html" with data=egsim_data.REFERENCES %}
+
 		</div>	
 	</div>
 </div>
