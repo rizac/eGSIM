@@ -70,7 +70,7 @@ class TITLES:  # pylint: disable=too-few-public-methods
     GMDBPLOT = 'Ground Motion Database'
     RESIDUALS = 'Model-to-Data Comparison'
     TESTING = 'Model-to-Data Testing'
-    DOC = 'API Documentation'
+    DOC = 'API Doc / Legal Info'
 
 
 class ICONS:  # pylint: disable=too-few-public-methods
@@ -483,6 +483,11 @@ def apidoc(request):
         }
     }
 
+    # add references:
+    with open(join(dirname(__file__), 'references.json')) as fpt:
+        dic = json.loads("\n".join(l for l in fpt if l.strip()[:1] != '#'))
+    egsim_data['REFERENCES'] = dic
+
     return render(request, filename,
                   dict(_COMMON_PARAMS,
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
@@ -497,12 +502,6 @@ def imprint(request):
     return render(request, 'imprint.html', {
         'data_protection_url': _COMMON_PARAMS['data_protection_url']
     })
-
-
-def refs(request):
-    with open(join(dirname(__file__), 'references.json')) as fpt:
-        dic = json.loads("\n".join(l for l in fpt if l.strip()[:1] != '#'))
-    return render(request, 'references.html', {'data': dic})
 
 
 def download_request(request, key, filename):
