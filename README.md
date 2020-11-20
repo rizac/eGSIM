@@ -116,10 +116,10 @@ cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 **Note** that the current commit hash (`git log -1`) **should be the same** as
 in `requirements.txt` [^].
 If not, please report this to the eGSIM maintainers (e.g. open an issue on the githiub page).
-If you can not wait the reply, `git checkout <commit_hash>` [**§**].
+If you can not wait the reply, `git checkout <commit_hash>` [§].
 
 <details>
-	<summary>[**§**]</summary>
+	<summary>[§]</summary>
 	The commit hash in any `requirements.*.txt` file is the string portion of `smtk`
 	between '@' and '#'
 </details>
@@ -238,14 +238,14 @@ upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (fetch)
 upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (push)
 ```
 
-Then you are done (skip the line below), otherwise, add the upstream branch by typing:
+skip the line below. Otherwise, add the upstream branch by typing:
 
 ```bash
 git remote add upstream https://github.com/GEMScienceTools/gmpe-smtk.git
 ```
 </details>
 
-Then:
+Then merge:
 
 ```bash
 # Fetch all the branches of that remote into remote-tracking branches, such as upstream/master:
