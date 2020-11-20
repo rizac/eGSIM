@@ -23,11 +23,12 @@ sudo apt-get install git python3-venv python3-pip python3-dev
 exist on macOS*).
 
 
-Please use Python 3.7+. Check with ```python --version```:
-if it's Python2, then use ```python3 --version```.
-If it's not 3.7+, then you need to install Python3.7 **along with**
+Please use Python versions>=3.7, referred here for simplicity as
+Python3.7+ (as of start 2021, the last tested version is 3.9).
+Check with ```python --version```: if it's Python2, then use ```python3 --version```.
+If it's not 3.7+, then you need to install Python3.7+ **along with**
 (i.e., not replacing) the current default python3 installed on your computer.
-From now on, each `python` command refers to the path of the Python3.7 distribution you have
+From now on, each `python` command refers to the path of the Python3.7+ distribution you have
 (i.e., you might need to type e.g. `/opt/lib/python3.7` or something similar,
 instead of `python` or `python3`)
 
@@ -62,8 +63,8 @@ Note: in this case you can not modify `smtk`, if needed, and you must
 [dependency upgrade](#dependencies-upgrade))
 
 Open `requirements.txt` and check the line where smtk is installed
-(it should be commented). Remove the comment (and the initial -e if any) and
-copy the rest of the line. Then:
+(it should be commented). Avoid the initial comment '#' (and the following "-e",
+if any) and copy the rest of the line. Then:
 
 ```bash
 pip install <smtk_line>
@@ -112,10 +113,16 @@ cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 	tests. It is to be used optionally only in production
 </details>
 
-Now check that the current commit hash is the same in `requirements.txt`.
-If not, either `git checkout egsim` (the branch `egsim` *should* be kept at the
-desired commit) or `git checkout <commit_hash>` (the commit hash is 
-the string portion of `smtk` between '@' and '#' in any `requirements.*` file)
+**Note** that the current commit hash (`git log -1`) **should be the same** as
+in `requirements.txt` [^].
+If not, please report this to the eGSIM maintainers (e.g. open an issue on the githiub page).
+If you can not wait the reply, `git checkout <commit_hash>` [**§**].
+
+<details>
+	<summary>[**§**]</summary>
+	The commit hash in any `requirements.*.txt` file is the string portion of `smtk`
+	between '@' and '#'
+</details>
 
 ```
 pip install -e .
@@ -197,6 +204,61 @@ Please refer to 'deploy.html' (dynamic web page, open it in your browser of choi
 
 ## Maintenance
 
+### Fixing / Adding features to gmpe-smtk
+
+We will refer to smtk as the [forked branch](https://github.com/rizac/gmpe-smtk)
+used by eGSIM. As we have seen during installation, it is a forked repository from the
+[upstream branch](https://github.com/GEMScienceTools/gmpe-smtk.git).
+
+By convention **the branch `master` of smtk must always point to the latest
+tested commit used in production**. Therefore, when fixing an smtk issue or implementing
+a new feature, switch to a dev branch (we usually use the branch called ... "dev").
+
+Then simply implement your changes, tests and issue a PR, as usual.
+Once done, you now can get back to eGSIM by simply staying in the "dev" branch (or whatever):
+because in dev mode smtk is usually installed as editable ('-e' flag),
+you immediately have the new features/fixes available in eGSIM locally.
+
+Then, **once the PR is merged in the upstream branch**, you can switch to
+"master" in smtk, and merge from the upstream branch.
+
+<details>
+	<summary>First make sure you added the upstream branch (once-only operation)</summary>
+
+	Type:
+	```bash
+	git remote -v
+	```
+	
+	if you see these lines
+	
+	```bash
+	upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (fetch)
+	upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (push)
+	```
+	
+	Then you are done (skip the line below), otherwise, add the upstream branch by typing:
+	
+	```bash
+	git remote add upstream https://github.com/GEMScienceTools/gmpe-smtk.git
+	```
+</details>
+
+Then:
+
+```bash
+# Fetch all the branches of that remote into remote-tracking branches, such as upstream/master:
+git fetch upstream
+
+# Make sure that you're on your master branch, and then:
+git merge upstream/master
+```
+
+Finally, update the requirements file: issue a `git log -1` and copy the commit
+hash into `requirements.*.txt` in the line of `gmpe-smtk` between '@' and '#'
+(the whole line should be commented, see below), and issue a `git push` 
+
+
 
 ### Github packages security issues / dependencies alert:
 
@@ -236,5 +298,3 @@ Open `requirements.dev.txt` and comment the line with "-e ... gmpe-smtk"
 
 (then, proceed with the normal workflow:
 run tests, fix new bugs and then `git push`, an so on).
-When done, if the "egsim" branch of `smtk` has been left behing "master":
-`git checkout egsim && git merge master && git push`.
