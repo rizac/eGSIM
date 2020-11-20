@@ -126,7 +126,7 @@ cd ../egsim. # (or wherever egsim is)
 In production mode could we simply clone `eGSIM`? yes. But we suggest to
 follow the procedure above in any case, to allow the same flexibility.
 
-Also note that this is a client program but a web app in Django,
+Also note that this is not a client program but a web app in Django,
 there is no need to install this program via `pip install .`, but only its
 dependencies
 </details>
