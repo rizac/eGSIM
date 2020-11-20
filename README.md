@@ -54,11 +54,9 @@ pip install --upgrade pip setuptools
 
 **NOTE: From now on, all following operations must have the virtualenv activated FIRST**
 
-### Install
+### Install (quick)
 
-#### Quick
-
-Note: in this case you can not modify `smtk`, if needed, and you must
+**Note**: in this case you can not modify `smtk`, if needed, and you must
 **not** update or push `requirement`s file (e.g., you can **not** perform any
 [dependency upgrade](#dependencies-upgrade))
 
@@ -88,7 +86,7 @@ Because as of end 2020, pip installing from git repositories does not seems to
 
 </details>
 
-#### Longer
+### Install (long)
 
 If on the other hand you want to have the possibility to update,
 modify, and push from `smtk`, then
@@ -104,7 +102,6 @@ git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 
 ```bash
 pip install -r requirements.dev.txt
-cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 ```
 
 <details>
@@ -114,17 +111,11 @@ cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 </details>
 
 **Note** that the current commit hash (`git log -1`) **should be the same** as
-in `requirements.txt` [^].
-If not, please report this to the eGSIM maintainers (e.g. open an issue on the githiub page).
-If you can not wait the reply, `git checkout <commit_hash>` [§].
-
-<details>
-	<summary>[§]</summary>
-	The commit hash in any `requirements.*.txt` file is the string portion of `smtk`
-	between '@' and '#'
-</details>
+in `requirements.txt` (i.e., the string portion between '@' and '#' of the text line containing "smtk").
+Then install smtk and move back to egsim directory:
 
 ```
+cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 pip install -e .
 cd ../egsim. # (or wherever egsim is)
 ```
