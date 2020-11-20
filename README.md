@@ -225,23 +225,24 @@ Then, **once the PR is merged in the upstream branch**, you can switch to
 <details>
 	<summary>First make sure you added the upstream branch (once-only operation)</summary>
 
-	Type:
-	```bash
-	git remote -v
-	```
-	
-	if you see these lines
-	
-	```bash
-	upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (fetch)
-	upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (push)
-	```
-	
-	Then you are done (skip the line below), otherwise, add the upstream branch by typing:
-	
-	```bash
-	git remote add upstream https://github.com/GEMScienceTools/gmpe-smtk.git
-	```
+Type:
+
+```bash
+git remote -v
+```
+
+if you see these lines
+
+```bash
+upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (fetch)
+upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (push)
+```
+
+Then you are done (skip the line below), otherwise, add the upstream branch by typing:
+
+```bash
+git remote add upstream https://github.com/GEMScienceTools/gmpe-smtk.git
+```
 </details>
 
 Then:
