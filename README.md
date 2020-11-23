@@ -24,7 +24,7 @@ exist on macOS*).
 
 
 Please use Python versions>=3.7, referred here for simplicity as
-Python3.7+ (as of start 2021, the last tested version is 3.9).
+Python3.7+ (as of start 2021, the last tested version is 3.8.6).
 Check with ```python --version```: if it's Python2, then use ```python3 --version```.
 If it's not 3.7+, then you need to install Python3.7+ **along with**
 (i.e., not replacing) the current default python3 installed on your computer.
@@ -49,36 +49,51 @@ Move to whatever directory you want (usually the egsim directory above) and then
 ```bash
 python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
 source .env/<ENVNAME>/bin/activate  # activate venv
-pip install --upgrade pip setuptools
 ```
 
 **NOTE: From now on, all following operations must have the virtualenv activated FIRST**
 
-### Install (quick)
+### Install
 
-**Note**: in this case you can not modify `smtk`, if needed, and you must
-**not** update or push `requirement`s file (e.g., you can **not** perform any
-[dependency upgrade](#dependencies-upgrade))
-
-Open `requirements.txt` and check the line where smtk is installed
-(it should be commented). Avoid the initial comment '#' (and the following "-e",
-if any) and copy the rest of the line. Then:
-
+On the terminal, execute:
 ```bash
-pip install <smtk_line>
+pip install --upgrade pip setuptools && pip install -r requirements.dev.txt
 ```
 
-Then, if you want to run tests (the usual case in dev mode):
+If you want also to be able to modify `gmpe-smtk` (fix bug, implement new features
+and issue Pull Requests to the master branch), then clone gmpe-smtk, usually on the same level
+of the `egsim directory` into the so-called `smtk directory`:
 
 ```bash
-pip install pylint pytest-django pytest-cov
+git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
+
+**Note** that the current commit hash (`git log -1`) **should be the same** as
+in `requirements.txt` (i.e., the string portion between '@' and '#' of the text line containing "smtk").
+Then (re)install smtk to point to this directory:
+
+```
+cd ../gmpe-smtk # (or whatever you cloned the forked branch)
+pip install -e .
+```
+
+and move back to the egsim directory if needed (e.g., `cd ../egsim`).
+
+**Note: In case the installation is for the maintenance,
+e.g. upgrade all dependencies, see [dependency upgrade](#dependencies-upgrade)**
+
 
 <details> 
-  <summary>Why can't we upgrade dependencies this way?</summary>
+  <summary>Notes</summary>
 
-Because as of end 2020, pip installing from git repositories does not seems to
-   work with `requirements.txt` afterwards. E.g. both these options work:
+1. Thre is also a `requirements.txt` file available, which lists a subset of `requirements.dev.txt`:
+   it lacks only the dependencies required for running tests, and it is supposed to be used optionally
+   in production only (although for simplicity we suggest to use `requirements.dev.txt` in any case
+   and  be able to run tests also on the server).
+
+3. This is not a client program but a web app in Django, there is no need to install this
+   program via `pip install .`, but only its dependencies. Also note that this way we have to list dependencies
+   in `setup.py`, which is not straightforward with github packages. As of end 2020, both these options work:
    `pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk` or 
    `pip install smtk@git+https://github.com/rizac/gmpe-smtk`
    but they store `smtk` in `pip` with a format (something like `smtk<version>#<commit_hash>`)
@@ -86,53 +101,6 @@ Because as of end 2020, pip installing from git repositories does not seems to
 
 </details>
 
-### Install (long)
-
-If on the other hand you want to have the possibility to update,
-modify, and push from `smtk`, then
-
-Clone gmpe-smtk, usually on the same level of the `egsim directory` into
-the so-called `smtk directory`:
-
-```bash
-git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
-```
-
-**move back into the the `egsim directory`** and then:
-
-```bash
-pip install -r requirements.dev.txt
-```
-
-<details>
-	<summary>What is requirements.txt?</summary>
-	It is the list of dependencies without those required for running
-	tests. It is to be used optionally only in production
-</details>
-
-**Note** that the current commit hash (`git log -1`) **should be the same** as
-in `requirements.txt` (i.e., the string portion between '@' and '#' of the text line containing "smtk").
-Then install smtk and move back to egsim directory:
-
-```
-cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-pip install -e .
-cd ../egsim. # (or wherever egsim is)
-```
-
-<details> 
-  <summary>Is this longer installation needed in production?</summary>
-
-In production mode could we simply clone `eGSIM`? yes. But we suggest to
-follow the procedure above in any case, to allow the same flexibility.
-
-Also note that this is not a client program but a web app in Django,
-there is no need to install this program via `pip install .`, but only its
-dependencies
-</details>
-
-For the maintenance (e.g., upgrading dependencies to newer versions) see
-[upgrading the dependencies](#dependencies-upgrade).
 
 ### Test
 
@@ -279,14 +247,10 @@ cd ../egsim. # (or wherever egsim is)
 pip freeze > requirements.txt
 ```
 
-Open `requirements.txt` and comment the line with "-e ... gmpe-smtk"
-
 ```
 pip install pylint pytest-django pytest-cov
 pip freeze > requirements.dev.txt
 ```
-
-Open `requirements.dev.txt` and comment the line with "-e ... gmpe-smtk"
 
 (then, proceed with the normal workflow:
 run tests, fix new bugs and then `git push`, an so on).
