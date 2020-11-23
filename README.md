@@ -55,8 +55,8 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 
 ### Install
 
-**Note: if you are planning to install the program for for upgrading all dependencies, please go to
-[dependency upgrade](#dependencies-upgrade)**
+*Note: if you the installation is done for upgrading all dependencies and push new requirements*.txt files,
+please go to [dependency upgrade](#dependencies-upgrade)* 
 
 
 On the terminal, execute:
