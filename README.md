@@ -55,7 +55,7 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 
 ### Install
 
-*Note: if you the installation is done for upgrading all dependencies and push new requirements*.txt files,
+*Note: if you the installation is done for upgrading all dependencies and `pip freeze` into new requirements files,
 please go to [dependency upgrade](#dependencies-upgrade)* 
 
 
