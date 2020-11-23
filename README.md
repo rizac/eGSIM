@@ -55,6 +55,10 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 
 ### Install
 
+**Note: if you are planning to install the program for for upgrading all dependencies, please go to
+[dependency upgrade](#dependencies-upgrade)**
+
+
 On the terminal, execute:
 ```bash
 pip install --upgrade pip setuptools && pip install -r requirements.dev.txt
@@ -77,10 +81,8 @@ cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 pip install -e .
 ```
 
-and move back to the egsim directory if needed (e.g., `cd ../egsim`).
-
-**Note: In case the installation is for the maintenance,
-e.g. upgrade all dependencies, see [dependency upgrade](#dependencies-upgrade)**
+and have a look at [Fixing/adding features to gmpe-smtk](#fixing--adding-features-to-gmpe-smtk)
+for the suggested workflow.
 
 
 <details> 
