@@ -1,17 +1,17 @@
 astroid==2.4.2
-attrs==20.2.0
-certifi==2020.6.20
+attrs==20.3.0
+certifi==2020.11.8
 chardet==3.0.4
 coverage==5.3
 cycler==0.10.0
 decorator==4.4.2
-Django==2.2.16
+Django==2.2.17
 docutils==0.14
 h5py==2.10.0
 idna==2.10
 iniconfig==1.1.1
 isort==5.6.4
-kiwisolver==1.3.0
+kiwisolver==1.3.1
 lazy-object-proxy==1.4.3
 matplotlib==3.1.3
 mccabe==0.6.1
@@ -30,16 +30,16 @@ pytest==6.1.2
 pytest-cov==2.10.1
 pytest-django==4.1.0
 python-dateutil==2.8.1
-pytz==2020.1
+pytz==2020.4
 PyYAML==5.3.1
 pyzmq==19.0.2
 requests==2.23.0
 scipy==1.4.1
 Shapely==1.7.1
 six==1.15.0
-# -e git+https://github.com/rizac/gmpe-smtk.git@48142f3e9c71ddfa8d7d66a50886b385fcd47aea#egg=smtk
+-e git+https://github.com/rizac/gmpe-smtk.git@211c6090fbadb4f95efe81d2fcf44b4cf9730b98#egg=smtk
 sqlparse==0.4.1
 tables==3.6.1
-toml==0.10.1
+toml==0.10.2
 urllib3==1.25.11
 wrapt==1.12.1
