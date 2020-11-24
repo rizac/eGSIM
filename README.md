@@ -212,7 +212,10 @@ Then merge:
 # Fetch all the branches of that remote into remote-tracking branches, such as upstream/master:
 git fetch upstream
 
-# Make sure that you're on your master branch, and then:
+# Switch to master branch if you are not already there
+git checkout master
+
+# Merge:
 git merge upstream/master
 ```
 
