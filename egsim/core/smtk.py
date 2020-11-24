@@ -338,6 +338,11 @@ def get_gmdb(params):
     return gmdb
 
 
+# keep this variable global as it is accessed also from within views.py:
+RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
+                   'pvalue')
+
+
 def get_residuals(params):
     '''Core method to compute residuals plots data
 
@@ -355,9 +360,6 @@ def get_residuals(params):
 
     # statistics = residuals.get_residual_statistics()
     ret = defaultdict(lambda: defaultdict(lambda: {}))
-
-    RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
-                       'pvalue')
 
     # extend keyword arguments:
     kwargs = dict(kwargs, residuals=residuals, as_json=True)
