@@ -6,7 +6,7 @@ in the framework of the  Thematic Core Services for Seismology of EPOS-IP
 
 ## Installation (development)
 
-This is a tutorial tested with MacOS (El Capitan and Catalina)
+This is a tutorial tested with MacOS (El Capitan, Catalina, Big Sur)
 and Ubuntu 18.04. 
 
 
@@ -29,7 +29,7 @@ Check with ```python --version```: if it's Python2, then use ```python3 --versio
 If it's not 3.7+, then you need to install Python3.7+ **along with**
 (i.e., not replacing) the current default python3 installed on your computer.
 From now on, each `python` command refers to the path of the Python3.7+ distribution you have
-(i.e., you might need to type e.g. `/opt/lib/python3.7` or something similar,
+(i.e., you might need to type e.g. `/opt/lib/python3.7` or similar,
 instead of `python` or `python3`)
 
 
@@ -74,7 +74,8 @@ git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 
 **Note** that the current commit hash (`git log -1`) **should be the same** as
 in `requirements.txt` (i.e., the string portion between '@' and '#' of the text line containing "smtk").
-Then (re)install smtk to point to this directory:
+
+Then, (re)install smtk from the cloned directory:
 
 ```
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
@@ -88,10 +89,10 @@ for the suggested workflow.
 <details> 
   <summary>Notes</summary>
 
-1. Thre is also a `requirements.txt` file available, which lists a subset of `requirements.dev.txt`:
-   it lacks only the dependencies required for running tests, and it is supposed to be used optionally
-   in production only (although for simplicity we suggest to use `requirements.dev.txt` in any case
-   and  be able to run tests also on the server).
+1. Thre is also a `requirements.txt` file available, which is the same as `requirements.dev.txt` but
+   without the dependencies required for running tests. In general, `requirements.txt` is supposed to be used
+   in production only. In our case, we suggest to use `requirements.dev.txt` in any case
+   and be able to run tests also on the server.
 
 3. This is not a client program but a web app in Django, there is no need to install this
    program via `pip install .`, but only its dependencies. Also note that this way we have to list dependencies
@@ -171,17 +172,16 @@ We will refer to smtk as the [forked branch](https://github.com/rizac/gmpe-smtk)
 used by eGSIM. As we have seen during installation, it is a forked repository from the
 [upstream branch](https://github.com/GEMScienceTools/gmpe-smtk.git).
 
-By convention **the branch `master` of smtk must always point to the latest
-tested commit used in production**. Therefore, when fixing an smtk issue or implementing
+By convention **the last commit of the `master` branch of smtk is the updated one which
+can be used in production** (basically, the one written in the `requirements` text files).
+Therefore, when fixing an smtk issue or implementing
 a new feature, switch to a dev branch (we usually use the branch called ... "dev").
 
 Then simply implement your changes, tests and issue a PR, as usual.
-Once done, you now can get back to eGSIM by simply staying in the "dev" branch (or whatever):
-because in dev mode smtk is usually installed as editable ('-e' flag),
-you immediately have the new features/fixes available in eGSIM locally.
-
-Then, **once the PR is merged in the upstream branch**, you can switch to
-"master" in smtk, and merge from the upstream branch.
+Meanwhile, because in dev mode smtk is usually installed as editable ('-e' flag),
+you don't need to change anything locally, as the new features/fixes are already available in eGSIM.
+Then, *once the PR is merged in the upstream branch*, you can switch back to the
+"master" branch in smtk, and merge from the upstream branch, as follows:
 
 <details>
 	<summary>First make sure you added the upstream branch (once-only operation)</summary>
@@ -216,9 +216,10 @@ git fetch upstream
 git merge upstream/master
 ```
 
-Finally, update the requirements file: issue a `git log -1` and copy the commit
-hash into `requirements.*.txt` in the line of `gmpe-smtk` between '@' and '#'
-(the whole line should be commented, see below), and issue a `git push` 
+Finally, update the smtk version: issue a `git log -1` and copy the commit
+hash into the two `requirements` text files.
+Open them, find the line where `gmpe-smtk` is listed and replace the commit hash in
+the portion of the line between '@' and '#'. Eventually, issue a `git push`
 
 
 
