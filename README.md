@@ -24,7 +24,7 @@ exist on macOS*).
 
 
 Please use Python versions>=3.7, referred here for simplicity as
-Python3.7+ (as of start 2021, the last tested version is 3.8.6).
+Python3.7+ (as of end 2020, we are testing with 3.8.6).
 Check with ```python --version```: if it's Python2, then use ```python3 --version```.
 If it's not 3.7+, then you need to install Python3.7+ **along with**
 (i.e., not replacing) the current default python3 installed on your computer.
@@ -55,7 +55,7 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 
 ### Install
 
-*Note: if you the installation is done for upgrading all dependencies and `pip freeze` into new requirements files,
+*Note: if the installation is done for upgrading all dependencies and `pip freeze` into new requirements files,
 please go to [dependency upgrade](#dependencies-upgrade)* 
 
 
