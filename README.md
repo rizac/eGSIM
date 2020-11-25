@@ -137,6 +137,49 @@ inside the /media/ directory of the egsim repository (git ignores that directory
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py gmdb_esm $FLATFILE_PATH
 ```
 
+<details> 
+  <summary>Implementation note (for future planning)</summary>
+In the current implementation parsed flatfiles (GroundMotionTables) are stored
+as HDF files using pytables (see `smtk`
+package). These HDF files (which are *not* readable through `pandas.read_hdf` by the way)
+are stored in the "media" directory (see [installation for production](#Installation_(production))
+for further details).
+
+This is due to several legacy reasons but also has several drawbacks:
+
+1. It makes the data handling process more complex with several management
+   commands and storages (db + HDF)
+   
+2. It has to be redone if new flatfile columns (GSIM required attributes) are added
+   in OpenQuake
+
+It might be probably safer to store data using the database, to use a single storage
+point for all, exploit Django migration features (e.g., make the addition of new
+columns easier). Also, we could implement in the command `initdb` a way to populate
+once all eGSIM data. The idea is to keep a 'data' directory (maybe separated from the
+project if too big) and then for any new data in the 'data' directory, add code
+to the 'initdb' command
+
+This is probably the best way to go if in the future we will have several
+flatfiles but note some caveats:
+
+1. Implement array types for IMT components (or better, orientations. See e.g.
+   https://ds.iris.edu/ds/nodes/dmc/data/formats/seed-channel-naming/).
+   Currently, we have IMT which can be stored
+   with components or as scalars. A database should store all IMT as 3x1
+   float arrays, the frist two elements being the horizontal components. For scalars,
+   only the first element shoiuld be given (the other two being Null or NaN). For SA,
+   the float arrays would be 3xN, where N is the number of periods, and the periods
+   should be stored probably in a separate table 'sa_periods' to avoid redundant data)
+
+2. Implement the selection expression. Currently, HDF are stored using the pytables
+   package, which allows selection expressions such as '(PGA != nan) & ... ()".
+   A database storage has not natively such a feature unless we implement it.
+   Note that this would not be hard to implement - at last in a very naive way -
+   currently we already parse the selection expression to cast some types
+   so some work is already in place (see package `smtk` package)
+
+</details>
 
 #### Migrate (setup django db)
 From within the egsim folder (check that manage.py is therein):
