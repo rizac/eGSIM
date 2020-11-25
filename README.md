@@ -89,7 +89,7 @@ for the suggested workflow.
 <details> 
   <summary>Notes</summary>
 
-1. Thre is also a `requirements.txt` file available, which is the same as `requirements.dev.txt` but
+1. There is also a `requirements.txt` file available, which is the same as `requirements.dev.txt` but
    without the dependencies required for running tests. In general, `requirements.txt` is supposed to be used
    in production only. In our case, we suggest to use `requirements.dev.txt` in any case
    and be able to run tests also on the server.
@@ -139,29 +139,23 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py gmdb_esm $
 
 <details> 
   <summary>Implementation note (for future planning)</summary>
-In the current implementation parsed flatfiles (GroundMotionTables) are stored
-as HDF files using pytables (see `smtk`
+	
+In the current implementation, each parsed flatfile is stored as HDF file using pytables (see `smtk`
 package). These HDF files (which are *not* readable through `pandas.read_hdf` by the way)
-are stored in the "media" directory (see [installation for production](#Installation_(production))
-for further details).
+are stored in the "media" directory (see [installation for production](#Installation-(production))
+for details).
 
-This is due to several legacy reasons but also has several drawbacks:
+This method, which is due to several legacy reasons, has also some drawbacks:
 
-1. It makes the data handling process more complex with several management
-   commands and storages (db + HDF)
+1. It makes the data handling more complex with several management
+   commands and storages (flatfile vs. database, as you can see here)
    
-2. It has to be redone if new flatfile columns (GSIM required attributes) are added
+2. It has to be re-done if new flatfile columns (GSIM "required" attributes) are added
    in OpenQuake
 
-It might be probably safer to store data using the database, to use a single storage
-point for all, exploit Django migration features (e.g., make the addition of new
-columns easier). Also, we could implement in the command `initdb` a way to populate
-once all eGSIM data. The idea is to keep a 'data' directory (maybe separated from the
-project if too big) and then for any new data in the 'data' directory, add code
-to the 'initdb' command
-
-This is probably the best way to go if in the future we will have several
-flatfiles but note some caveats:
+Therefore, it might be probably safer to store all eGSIM data in the database, using a single storage
+point, exploit Django migration features (e.g., make the addition of new
+columns easier). Note however that storing a flatfile in the database has some caveats:
 
 1. Implement array types for IMT components (or better, orientations. See e.g.
    https://ds.iris.edu/ds/nodes/dmc/data/formats/seed-channel-naming/).
@@ -178,6 +172,18 @@ flatfiles but note some caveats:
    Note that this would not be hard to implement - at last in a very naive way -
    currently we already parse the selection expression to cast some types
    so some work is already in place (see package `smtk` package)
+
+If we go for this solution in the future, we could implement in the command `initdb`
+all operations needed to have the required eGSIM input data (SAHRE, ESM + other tectonic regionalisations + other flatfiles).
+The idea would be to keep a 'input_data' directory (maybe separated from the
+project if too big) and then for any new data in 'input_data' directory, add code
+to the 'initdb' command to populate the db, and eventually on the server pull the
+new 'input_data' and re-execute 'initdb' on the server.
+
+Final note: the user-defined flatfile should not be considered here, as it turned out to be
+more easily menageable by simply reading a CSV via `pandas.read_csv`, which is
+extremely fast (providing a limited amount of rows - maybe up to 5000, only required columns,
+and no selection possible).
 
 </details>
 
