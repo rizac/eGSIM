@@ -47,28 +47,36 @@ def pytest_generate_tests(metafunc):
 def areequal(request):
     '''This fixture allows to *deeply* compare python numbers, lists, dicts,
     numpy arrays for equality. Numeric arrays can be compared, when found,
-    using numpy's `allclose`'''
+    using numpy's `allclose`. str and bytes are not considered equal
+    (b"whatever" != "whatever")
+    '''
     class Comparator:
 
         def __call__(self, obj1, obj2, rtol=1e-05, atol=1e-08, equal_nan=True):
             if obj1 == obj2:
                 return True
 
-            isiter1, isiter2 = \
-                hasattr(obj1, '__iter__'), hasattr(obj2, '__iter__')
-            # if at least one is not iterable, orat least one is string,
-            # return False: no other comparison possible
-            if any(_ is False for _ in [isiter1, isiter2]) \
-                    or any(isinstance(_, (str, bytes)) for _ in [obj1, obj2]):
-                # if both are not iterable, they might be numbers, try
-                # with numpy:
-                if not isiter1 and not isiter2:
-                    try:
-                        if np.allclose([obj1], [obj2], rtol=rtol, atol=atol,
-                                       equal_nan=equal_nan):
-                            return True
-                    except:
-                        pass
+            # if any of the two is str, return False:
+            s_b = (str, bytes)
+            if isinstance(obj1, s_b) or isinstance(obj2, s_b):
+                return False
+
+            # from now on, if they are iterables they are lists, tuples etc
+            # but not strings:
+            both_iter = hasattr(obj1, '__iter__') + hasattr(obj2, '__iter__')
+
+            # if both are not iterable, they might be numbers, try
+            # with numpy:
+            if both_iter == 0:
+                try:
+                    if np.allclose([obj1], [obj2], rtol=rtol, atol=atol,
+                                   equal_nan=equal_nan):
+                        return True
+                except:  #noqa
+                    pass
+
+            # now, if not both are iterables, return False:
+            if both_iter < 2:
                 return False
 
             # both obj1 and obj2 are iterables and not strings
@@ -103,6 +111,10 @@ def areequal(request):
                     return False
                     # any other exception raises False: objects are not equal
 
+                # now try to comnpare equality of each element in obj1
+                # with any element of obj2. The for loop takes into account
+                # that their element do not need to be equal element-wise
+                # (e.g. [1, 'a'] and ['a', 1] are equal)
                 while obj1:
                     item1 = obj1.pop(0)
                     for i, item2 in enumerate(obj2):
@@ -110,7 +122,7 @@ def areequal(request):
                                          equal_nan=equal_nan):
                             obj2.pop(i)
                             break
-                    if len(obj1) != len(obj2):
+                    else:  # no "break" hit above (i.e. no element found equal)
                         return False
 
             return True
@@ -120,8 +132,9 @@ def areequal(request):
 
 @pytest.fixture(scope="session")
 def testdata(request):  # pylint: disable=unused-argument
-    '''Fixture handling all data to be used for testing. It points to the testing 'data' folder
-    allowing to just get files / read file contents by file name.
+    '''Fixture handling all data to be used for testing. It points to the
+    testing 'data' directory allowing to just get files / read file contents
+    by file name.
     Pass it as argument to a test function
     ```
         def test_bla(..., data,...)
@@ -136,18 +149,21 @@ def testdata(request):  # pylint: disable=unused-argument
         '''class handling common read operations on files in the 'data' folder'''
 
         def __init__(self, root=None):
-            self.root = root or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+            thisdir = os.path.dirname(os.path.abspath(__file__))
+            self.root = root or os.path.join(thisdir, 'data')
 
         def path(self, filename):
             '''returns the full path (string) of the given data file name
-            :param filename: a string denoting the file name inside the test data directory'''
+            :param filename: a string denoting the file name inside the test
+                data directory'''
             filepath = os.path.join(self.root, filename)
             # assert os.path.isfile(filepath)
             return filepath
 
         def read(self, filename, decode=None):
             '''reads the data (byte mode, with encoding) and returns it
-            :param filename: a string denoting the file name inside the test data directory
+            :param filename: a string denoting the file name inside the test
+                data directory
             '''
             with open(self.path(filename), 'rb') as opn:
                 return opn.read().decode(decode) if decode else opn.read()
@@ -155,7 +171,7 @@ def testdata(request):  # pylint: disable=unused-argument
         def readjson(self, filename):
             with open(self.path(filename), 'r') as opn:
                 return json.load(opn)
-        
+
         def readyaml(self, filename):
             return yaml_load(self.path(filename))
 
