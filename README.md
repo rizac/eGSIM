@@ -209,6 +209,65 @@ Please refer to 'deploy.html' (dynamic web page, open it in your browser of choi
 
 ## Maintenance
 
+Please note before proceeding that Django projects have two fundamental
+organization structures:
+	
+	1. the Django project itself (basically, what you created via the
+	   `django-admin startproject egsim` command once), that created the base
+	   working directory
+	
+	2. the app(s), usually organized in sub-directories, which are used to break
+	   a project's functionality down into logical units (For details, see
+	   https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
+
+**In eGSIM we have a project named "egsim" with a single user-defined app (sub-directory)
+called also "egsim"**. As there are no other user defined apps, the directory structure
+might look redundant (but as we saw, it isn't). Also note (see `INSTALLED_APPS` in
+the settings file) that "egsim is not the only used app, as we installed several
+other builtin apps for our project (e.g. the "admin" app in order to visualize and
+easily edit on the browser the database content).
+
+
+### Aliasing the `$ python` command for typing on the terminal (small fixes tests)
+
+```bash
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
+```
+
+### Check database data on the web browser
+
+(for further admin relateed stuff information,
+see https://docs.djangoproject.com/en/3.1/ref/django-admin/)
+
+Run the program, open the browser and go to:
+
+Create a super user (to be done **once only**)
+
+```bash
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py createsuperuser
+```
+and follow the instructions.
+
+Then:
+
+```bash
+http://127.0.0.1:8000/admin/
+```
+
+### Modify database models (make migrations)
+
+See here: https://realpython.com/django-migrations-a-primer/#changing-models
+(the rest of the page is a clear tutorial on Django database management)
+
+In a nutshell:
+
+1. modify the code
+2. ```export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>```
+3. ```export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim```
+
+("egsim" above is the app name. If you omit the app, all apps will be migrated. The command
+migrate does nothing if it detects that there is nothing to migrate)
+
 ### Fixing / Adding features to gmpe-smtk
 
 We will refer to smtk as the [forked branch](https://github.com/rizac/gmpe-smtk)
