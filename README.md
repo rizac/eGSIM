@@ -218,13 +218,13 @@ Please refer to 'deploy.html' (dynamic web page, open it in your browser of choi
 Please note before proceeding that Django projects have two fundamental
 organization structures:
 	
-	1. the Django project itself (basically, what you created via the
-	   `django-admin startproject egsim` command once), that created the base
-	   working directory
+1. the Django project itself (basically, what you created via the
+   `django-admin startproject egsim` command once), that created the base
+   working directory
 	
-	2. the app(s), usually organized in sub-directories, which are used to break
-	   a project's functionality down into logical units (For details, see
-	   https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
+2. the app(s), usually organized in sub-directories, which are used to break
+   a project's functionality down into logical units (For details, see
+   https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
 
 **In eGSIM we have a project named "egsim" with a single user-defined app (sub-directory)
 called also "egsim"**. As there are no other user defined apps, the directory structure
@@ -234,7 +234,10 @@ other builtin apps for our project (e.g. the "admin" app in order to visualize a
 easily edit on the browser the database content).
 
 
-### Aliasing the `$ python` command for typing on the terminal (small fixes tests)
+### Starting a `python` terminal shell
+
+Tyiping `python` on the terminal does not work if you need to import django stuff, as
+there are things to be initialized beforehand. The Django `shell` command does this:
 
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
@@ -247,18 +250,16 @@ see https://docs.djangoproject.com/en/3.1/ref/django-admin/)
 
 Run the program, open the browser and go to:
 
-Create a super user (to be done **once only**)
+<details>
+	<summary>Create a super user (to be done **once only**)</summary>
 
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py createsuperuser
 ```
 and follow the instructions.
+</details>
 
-Then:
-
-```bash
-http://127.0.0.1:8000/admin/
-```
+Then navigate in the browser to: http://127.0.0.1:8000/admin/
 
 ### Modify database models (make migrations)
 
