@@ -264,7 +264,8 @@ Then navigate in the browser to: http://127.0.0.1:8000/admin/
 ### Modify database models (make migrations)
 
 See here: https://realpython.com/django-migrations-a-primer/#changing-models
-(the rest of the page is a clear tutorial on Django database management)
+or here:
+https://docs.djangoproject.com/en/2.2/topics/migrations/#workflow
 
 In a nutshell:
 
@@ -273,7 +274,7 @@ In a nutshell:
 3. ```export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim```
 
 ("egsim" above is the app name. If you omit the app, all apps will be migrated. The command
-migrate does nothing if it detects that there is nothing to migrate)
+`migrate` does nothing if it detects that there is nothing to migrate)
 
 ### Fixing / Adding features to gmpe-smtk
 
