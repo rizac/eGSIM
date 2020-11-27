@@ -25,7 +25,7 @@ from egsim.core.utils import (vectorize, DISTANCE_LABEL, MOF, OQ,
 
 
 class P:  # noqa
-    '''container class for input param names (avoid typos trhoughout the code)
+    '''container class for input param names (avoid typos throughout the code)
     '''
     # (enums are an overkill for such  a simple case)
     GSIM = 'gsim'
