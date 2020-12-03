@@ -51,103 +51,99 @@ class Command(BaseCommand):
 #         parser.add_argument('poll_id', nargs='+', type=int)
 
     def handle(self, *args, **options):
+        # some shorthands for printing
+        def printinfo(msg):
+            self.stdout.write(msg)
+
+        def printerr(msg):
+            self.stdout.write(self.style.ERROR(msg))
+
+        def printok(msg):
+            self.stdout.write(self.style.SUCCESS(msg))
+
+        # (for info on CommandError below, it is an Exception just handled by
+        # Django to print nicely the error on the terminal)
 
         # delete db:
-        self.stdout.write('Emptying DB Tables')
         try:
-            try:
-                empty_all()
-            except OperationalError as no_db:
-                raise CommandError('%s.\nDid you create the db first?\n(for '
-                                   'info see: https://docs.djangoproject.'
-                                   'com/en/2.2/topics/migrations/#workflow)' %
-                                   str(no_db))
+            printinfo('Emptying DB Tables')
+            empty_all()
+        except OperationalError as no_db:
+            raise CommandError('%s.\nDid you create the db first?\n(for '
+                               'info see: https://docs.djangoproject.'
+                               'com/en/2.2/topics/migrations/#workflow)' %
+                               str(no_db))
 
-            # set data:
-            self.stdout.write('Writing OQ data (Trt, IMT, GSIMs)')
-            trts, imts = get_trts(), get_imts()
-            get_gsims(trts, imts)
+        # populate db:
+        printinfo('Populating DB with OpenQuake data:')
 
-            self.stdout.write('Writing Tectonic regions from provided models')
-            self.stdout.write('Found %d model(s): %s' %
-                              (len(TECREG_FUNCTIONS),
-                               list(TECREG_FUNCTIONS.keys())))
+        printinfo(' Tectonic region types (Trt)')
+        trts = populate_trts()
 
-            for model, func in TECREG_FUNCTIONS.items():
-                tecregions = func(trts)
-                for trg in tecregions:
-                    trg.model = model
-                    trg.save()
+        printinfo(' Intensity measure types (Imt)')
+        imts = populate_imts()
 
-            trts = Trt.objects.count()  # pylint: disable=no-member
-            imts = Imt.objects.count()  # pylint: disable=no-member
-            gsims = Gsim.objects.count()  # pylint: disable=no-member
+        printinfo(' Ground shaking intensity models (Gsim)')
+        populate_gsims(trts, imts)
 
-            errors = Error.objects  # pylint: disable=no-member
-            gsims_errs = errors.filter(entity_type=ENTITIES[0][0]).count()
-            imts_errs = errors.filter(entity_type=ENTITIES[1][0]).count()
-            trts_errs = errors.filter(entity_type=ENTITIES[2][0]).count()
+        printinfo('Writing Tectonic regions (Tr) from provided Tr models')
+        printinfo('Found %d model(s): %s' %
+                  (len(TECREG_FUNCTIONS),
+                   list(TECREG_FUNCTIONS.keys())))
+        for model, func in TECREG_FUNCTIONS.items():
+            tecregions = func(trts)
+            for trg in tecregions:
+                trg.model = model
+                trg.save()
 
-            self.stdout.write(self.style.SUCCESS('Successfully initialized '
-                                                 'the db:'))
-            self.stdout.write(self.style.SUCCESS('  %d Trt(s) written '
-                                                 '(%d skipped due to '
-                                                 'errors)' % (trts,
-                                                              trts_errs)))
-            self.stdout.write(self.style.SUCCESS('  %d Imt(s) written '
-                                                 '(%d skipped due to '
-                                                 'errors)' % (imts,
-                                                              imts_errs)))
-            self.stdout.write(self.style.SUCCESS('  %d Gsim(s) written '
-                                                 '(%d skipped due to '
-                                                 'errors)' % (gsims,
-                                                              gsims_errs)))
-            trs = TectonicRegion.objects  # pylint: disable=no-member
-            for key in TECREG_FUNCTIONS:
-                count = trs.filter(model=key).count()
-                self.stdout.write(self.style.SUCCESS('%d Tectonic region(s) '
-                                                     'written (model: %s)' %
-                                                     (count, key)))
+        # summary:
+        trts = Trt.objects.count()  # pylint: disable=no-member
+        imts = Imt.objects.count()  # pylint: disable=no-member
+        gsims = Gsim.objects.count()  # pylint: disable=no-member
 
-            # Scan the required Gsims attributes and their
-            # mapping in the Flatfile (GmTable) columns, checking if some
-            # attribute is not handled (this might happen in case OpenQuake
-            # is upgraded and has some newly implemented Gsims):
-            # In case of warnings, talk with G.W. and add the mappings in
-            # GSIM_REQUIRED_ATTRS
-            gsim_names = Gsim.objects  # pylint: disable=no-member
-            gsim_names = gsim_names.values_list('key', flat=True)
-            unknown_attrs = check_gsims_required_attrs(gsim_names)
-            if unknown_attrs:
-                self.stdout.write(self.style.ERROR('WARNING: %d attributes '
-                                                   'are defined as required '
-                                                   'for some '
-                                                   'OpenQuake '
-                                                   'Gsims, but are not handled '
-                                                   'in egsim.core.utils.'
-                                                   'GSIM_REQUIRED_ATTRS. '
-                                                   'This is not critical but '
-                                                   'might result in faling '
-                                                   '"measures of fit" '
-                                                   'computations due to NaNs' %
-                                                   len(unknown_attrs)))
-                self.stdout.write(self.style.ERROR('List of attributes:'))
-                for att, gsims in unknown_attrs.items():
-                    gsim_str = '(defined for "%s"' % str(gsims[0])
-                    if len(gsims) > 1:
-                        gsim_str += ' and other %d Gsims)' % (len(gsims)-1)
-                    else:
-                        gsim_str += ')'
-                    self.stdout.write(self.style.ERROR('%s %s' %
-                                                       (att, gsim_str)))
-        except CommandError:
-            raise
-        except Exception as exc:
-            raise
-            raise CommandError(exc)
+        errors = Error.objects  # pylint: disable=no-member
+        g_errs = errors.filter(entity_type=ENTITIES[0][0]).count()
+        i_errs = errors.filter(entity_type=ENTITIES[1][0]).count()
+        t_errs = errors.filter(entity_type=ENTITIES[2][0]).count()
+
+        printok('\nSuccessfully populated the db:')
+        printok('OpenQuake data written:')
+        printok('  %d Trt(s) (%d skipped due to errors)' % (trts, t_errs))
+        printok('  %d Imt(s) (%d skipped due to errors)' % (imts, i_errs))
+        printok('  %d Gsim(s) (%d skipped due to errors)' % (gsims, g_errs))
+        trs = TectonicRegion.objects  # pylint: disable=no-member
+        for key in TECREG_FUNCTIONS:
+            printok('%d Tectonic region(s) written (model: %s)' %
+                    (trs.filter(model=key).count(), key))
+
+        # Scan the required Gsims attributes and their
+        # mapping in the Flatfile (GmTable) columns, checking if some
+        # attribute is not handled (this might happen in case OpenQuake
+        # is upgraded and has some newly implemented Gsims):
+        # In case of warnings, talk with G.W. and add the mappings in
+        # GSIM_REQUIRED_ATTRS
+        # FIXME: this will be a Model to be implemented as abstract DB table
+        gsim_names = Gsim.objects  # pylint: disable=no-member
+        gsim_names = gsim_names.values_list('key', flat=True)
+        unknown_attrs = check_gsims_required_attrs(gsim_names)
+        if unknown_attrs:
+            printerr('\nWARNING: %d attributes are defined as required '
+                     'for some OpenQuake Gsims, but are not handled in '
+                     'egsim.core.utils.GSIM_REQUIRED_ATTRS. '
+                     'This is not critical but might result in faling '
+                     '"measures of fit" computations due to NaNs' %
+                     len(unknown_attrs))
+            printerr('List of attributes:')
+            for att, gsims in unknown_attrs.items():
+                gsim_str = '(defined for "%s"' % str(gsims[0])
+                if len(gsims) > 1:
+                    gsim_str += ' and other %d Gsims)' % (len(gsims)-1)
+                else:
+                    gsim_str += ')'
+                printerr('%s %s' % (att, gsim_str))
 
 
-def get_trts():
+def populate_trts():
     '''Writes all Tectonic region types from OpenQuake into the db,
         and returns the written instances'''
     trts = []
@@ -160,9 +156,14 @@ def get_trts():
     return trts
 
 
-def get_imts():
+def populate_imts():
     '''Writes all IMTs from OpenQuake to the db, skipping IMTs which need
-    arguments as we do not know how to handle them (except SA)'''
+    arguments as we do not know how to handle them (except SA)
+    and I know that (asd iuasd) for a moment ( an
+    d no other way) ()   () ()
+    (
+     ())()()
+    '''
     entity_type = ENTITIES[1][0]
     create_err = Error.objects.create  # pylint: disable=no-member
     create_imt = Imt.objects.create  # pylint: disable=no-member
@@ -186,7 +187,7 @@ def get_imts():
     return imts
 
 
-def get_gsims(trts, imts):
+def populate_gsims(trts, imts):
     '''Writes all Gsims from OpenQuake to the db'''
     entity_type = ENTITIES[0][0]
     trts_d = {_.oq_name: _ for _ in trts}

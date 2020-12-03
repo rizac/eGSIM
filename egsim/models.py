@@ -26,8 +26,8 @@ ENTITIES = (('gsim', 'Ground Shaking Intensity Model'),
 
 class Error(models.Model):
     '''Model representing the Errors table. The table stores information
-    during the creation of the database for diagnistic purposes only'''
-
+    during the creation of the database for diagnistic purposes only
+    '''
     entity_key = models.TextField(unique=True)
     entity_type = models.CharField(max_length=4, choices=ENTITIES)
     type = models.TextField()
@@ -63,56 +63,79 @@ class TectonicRegion(models.Model):
     '''Model representing the db table of Tectonic regions used for gsim
     selection
     '''
-
-    model = models.TextField(null=False)
-    geojson = models.TextField(blank=True)
-    type = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False)
+    source = models.TextField(null=False,
+                              help_text="string ID of this data source "
+                                        "(e.g., research project, model name)")
+    geojson = models.TextField(null=False)
+    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False,
+                            help_text="tectonic region type (trt)")
 
     def __str__(self):
-        return "Tr %d (model: %s, type: %s)" \
-            % (self.id, self.model, self.type.key)  # pylint: disable=no-member
+        return "Region %d (trt: %s, source: %s)" \
+            % (self.id, self.source, self.type.key)  # pylint: disable=no-member
 
 
 class Imt(models.Model):
     '''Model representing the db table of the (OpenQuake) Intensity Measure
     Types
     '''
-
     key = models.CharField(max_length=100, unique=True)
     needs_args = models.BooleanField(default=False, null=False)
 
     def __str__(self):
-        return self.key
+        return str(self.key)
 
 
 class Gsim(models.Model):
     '''Model representing the db table of the (OpenQuake) Ground Shaking
     Intensity Models, or GMPE
     '''
-
     # currently, the max length of the OQ gsims is 43 ...
-    key = models.TextField(null=False, unique=True)
-    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False)
-    imts = models.ManyToManyField(Imt, related_name='gsims')
-    needs_args = models.BooleanField(default=False, null=False)
-    warning = models.TextField(default=None, null=True)
+    key = models.TextField(null=False, unique=True,
+                           help_text='OpenQuake class name')
+    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False,
+                            help_text='Tectonic Region type')
+    imts = models.ManyToManyField(Imt, related_name='gsims',
+                                  help_text='Intensity Measure Type(s)')
+    needs_args = models.BooleanField(default=False, null=False,
+                                     help_text=('Whether __init__ method needs '
+                                                'argument(s) in OpenQuake'))
+    warning = models.TextField(default=None, null=True,
+                               help_text='Optional OpenQuake usage warning')
 
     def asjson(self):
-        '''Converts this object as a json-serializable tuple of strings:
+        """Converts this object as a json-serializable tuple of strings:
         (gsim, imts, tectonic_region_type, warning) where arguments are all
-        strings except 'imts' which is a tuple of strings'''
+        strings except 'imts' which is a tuple of strings
+        """
         trt = self.trt.key  # pylint: disable=no-member
         imts = (_.key for _ in self.imts.all())  # pylint: disable=no-member
         return self.key, tuple(imts), trt, self.warning or ''
 
     def __str__(self):
-        return self.key
+        return str(self.key)
+
+
+class GsimTrtRelation(models.Model):
+    """Model representing the Gsim(s) <-> Tectonic
+     region type (trt) relation
+    """
+    # currently, the max length of the OQ gsims is 43 ...
+    gsim = models.ForeignKey(Gsim, on_delete=models.CASCADE, null=False)
+    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False)
+    source = models.TextField(null=False,
+                              help_text="string ID of this data source "
+                                        "(e.g., research project, model name)")
+
+    def __str__(self):
+        return "%s selected on %s (%s)" % (str(self.gsim), str(self.trt),
+                                           str(self.source))
 
 
 # utilities:
 
 def empty_all():
-    '''Empties all tables, without removing them'''
+    """Empties all tables, without removing them"""
     # https://stackoverflow.com/a/10606476
     # and
     # https://stackoverflow.com/a/2773195
@@ -122,7 +145,7 @@ def empty_all():
 
 
 def aval_gsims(asjsonlist=False):
-    '''Returns a list of available gsims.
+    """Returns a list of available gsims.
 
     If asjsonlist=False (the default), the list elements are strings denoting
     the Gsim names (Model's attribute `gsim.key`).
@@ -132,7 +155,7 @@ def aval_gsims(asjsonlist=False):
     where all tuple elements are strings.
 
     The gsims are returned sorted alphabetically
-    '''
+    """
     if not asjsonlist:
         return list(gsim_names())
 
@@ -144,7 +167,7 @@ def aval_gsims(asjsonlist=False):
 
 
 def aval_imts():
-    '''Returns a QuerySet of strings denoting the available imts'''
+    """Returns a QuerySet of strings denoting the available imts"""
 #     imtobjects = Imt.objects  # pylint: disable=no-member
 #     # return imts mapped to at least one gsim
 #     # (https://stackoverflow.com/a/12101599)
@@ -155,8 +178,8 @@ def aval_imts():
 
 
 def aval_trts(include_oq_name=False):
-    '''Returns a QuerySet of strings denoting the available Trts
-    The Trts are returned sorted alphabetically by their keys'''
+    """Returns a QuerySet of strings denoting the available Trts
+    The Trts are returned sorted alphabetically by their keys"""
     trtobjects = Trt.objects  # pylint: disable=no-member
     if include_oq_name:
         return trtobjects.order_by('key').values_list('key', 'oq_name')
@@ -164,13 +187,13 @@ def aval_trts(include_oq_name=False):
 
 
 def aval_trmodels(asjsonlist=False):
-    '''Returns the QueryList of models (strings) if asjsonlist is missing or
+    """Returns the QueryList of models (strings) if asjsonlist is missing or
     False. Otherwise, returns QueryList of sub-lists:
         [model, type, geojson]
     where all list elements are strings (type is the associated Trt key.
     Geojson can be converted to a dict by calling as usual:
     `json.dumps(geojson)`)
-    '''
+    """
     trobjects = TectonicRegion.objects  # pylint: disable=no-member
     if asjsonlist is True:
         return trobjects.values_list('model', 'type__key', 'geojson')
@@ -178,12 +201,12 @@ def aval_trmodels(asjsonlist=False):
 
 
 def shared_imts(gsims):
-    '''Returns a QuerySet of strings with the the keys (=unique names) of the
+    """Returns a QuerySet of strings with the the keys (=unique names) of the
     imts shared by all supplied gsims
 
     :param gsims: list of integers (gsim id), gsims instances, or
         strings denoting a Gsim key
-    '''
+    """
     # Do not expose pubicly the fact that passing None returns all imts
     # defined for at least one gsim, as the user shopuld use `aval_imts()`
     # instead
