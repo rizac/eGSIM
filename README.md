@@ -218,18 +218,19 @@ Please refer to 'deploy.html' (dynamic web page, open it in your browser of choi
 Please note before proceeding that Django projects have two fundamental
 organization structures:
 	
-1. the Django project itself (basically, what you created via the
-   `django-admin startproject egsim` command once), that created the base
-   working directory
+1. the Django project itself in the base
+   working directory (created with the command
+   `django-admin startproject egsim`)
 	
 2. the app(s), usually organized in sub-directories, which are used to break
    a project's functionality down into logical units (For details, see
    https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
 
-**In eGSIM we have a project named "egsim" with a single user-defined app (sub-directory)
-called also "egsim"**. As there are no other user defined apps, the directory structure
-might look redundant (but as we saw, it isn't). Also note (see `INSTALLED_APPS` in
-the settings file) that "egsim is not the only used app, as we installed several
+**In eGSIM we have a project (root directory) named "egsim" with a single
+user-defined app (sub-directory) called also "egsim"**. Hence, the
+the directory structure might look redundant (but as we saw, it isn't).
+Also note (see `INSTALLED_APPS` in
+the settings file) that egsim is not the only used app, as we installed several
 other builtin apps for our project (e.g. the "admin" app in order to visualize and
 easily edit on the browser the database content).
 
