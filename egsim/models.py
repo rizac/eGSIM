@@ -118,7 +118,7 @@ class Gsim(models.Model):
 
 class GsimTrtRelation(models.Model):
     """Model representing the Gsim(s) <-> Tectonic
-     region type (trt) relation
+     region type (trt) bindings
     """
     # currently, the max length of the OQ gsims is 43 ...
     gsim = models.ForeignKey(Gsim, on_delete=models.CASCADE, null=False)
@@ -232,12 +232,12 @@ def shared_imts(gsims):
 
 
 def sharing_gsims(imts):
-    '''Returns a QuerySet of strings with the keys (=unique names)
+    """Returns a QuerySet of strings with the keys (=unique names)
     of the gsims defined for all supplied imts
 
     :param imts: list of integers (imt id), imts instances, or
         strings denoting an Imt key
-    '''
+    """
     return gsim_names(imts=imts, imts_match_all=True)
 
 
