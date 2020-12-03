@@ -228,7 +228,7 @@ organization structures:
 
 **In eGSIM we have a project (root directory) named "egsim" with a single
 user-defined app (sub-directory) called also "egsim"**. Hence, the
-the directory structure might look redundant (but as we saw, it isn't).
+directory structure might look redundant (but as we saw, it isn't).
 Also note (see `INSTALLED_APPS` in
 the settings file) that egsim is not the only used app, as we installed several
 other builtin apps for our project (e.g. the "admin" app in order to visualize and
@@ -268,14 +268,14 @@ See here: https://realpython.com/django-migrations-a-primer/#changing-models
 or here:
 https://docs.djangoproject.com/en/2.2/topics/migrations/#workflow
 
-In a nutshell:
+In a nutshell (DJANGO_SETTINGS_MODULE below must be changed in production):
 
 1. modify the code
 2. ```export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>```
 3. ```export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim```
 
-("egsim" above is the app name. If you omit the app, all apps will be migrated. The command
-`migrate` does nothing if it detects that there is nothing to migrate)
+("egsim" above is the app name. If you omit the app, all apps will be migrated.
+The command `migrate` does nothing if it detects that there is nothing to migrate)
 
 ### Fixing / Adding features to gmpe-smtk
 
