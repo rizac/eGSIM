@@ -236,21 +236,24 @@ easily edit on the browser the database content).
 
 <details>
 
-<summary>In case of confusion between the two command-line utilities `django-admin`
-and `manage.py` used in the examples below</summary>
+<summary>In case of confusion between the two command-line utilities
+`django-admin` and `manage.py` (used in the examples below)</summary>
 
 `manage.py` (invokable via `python manage.py`) does the same thing as
-django-admin but also sets the `DJANGO_SETTINGS_MODULE` environment variable
+`django-admin` but also sets the `DJANGO_SETTINGS_MODULE` environment variable
 so that it points to your project’s settings.py file (probably searching in the
-directory where `manage.py` is. No mention in the
+directory where `manage.py` is? no mention in the
 [official documentation](https://docs.djangoproject.com/en/3.1/ref/django-admin/#django-admin-and-manage-py])).
 As most of the examples in internet, we will also use `manage.py`,
 but always providing the `DJANGO_SETTINGS_MODULE` environment
-variable explicitly, **because so has to be given in
-production, where the settings file must be given explicitly as it can not be
-the git-committed file `egsim/settings_debug.py`  in the examples below.**
+variable to get used to the way we should invoke the command in production.
 
 </details>
+
+Remember: **The DJANGO_SETTINGS_MODULE environment variable in the examples
+below is not the value to be given in production**, where a new settings file
+has to be created with production specific settings such as, e.g. `debug=False`
+and a new `SECRET_KEY` (which needs to be secret and not git committed).
 
 ### Starting a `python` terminal shell
 
