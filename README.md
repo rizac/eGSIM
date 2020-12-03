@@ -268,7 +268,8 @@ See here: https://realpython.com/django-migrations-a-primer/#changing-models
 or here:
 https://docs.djangoproject.com/en/2.2/topics/migrations/#workflow
 
-In a nutshell (DJANGO_SETTINGS_MODULE below must be changed in production):
+In a nutshell (in production, replace 1. with the command `git pull` and
+execute 2. and 3. with a different DJANGO_SETTINGS_MODULE value):
 
 1. modify the code
 2. ```export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>```
