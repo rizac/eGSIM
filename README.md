@@ -238,9 +238,9 @@ easily edit on the browser the database content).
 
 <details>
 
-<summary>In case of confusion between the two command-line utilities
-
-`django-admin` and `manage.py` (used in the examples below)
+<summary>
+In case of confusion between the two command-line utilities
+django-admin and manage.py (used in the examples below)
 </summary>
 
 `manage.py` (invokable via `python manage.py`) does the same thing as
