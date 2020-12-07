@@ -360,18 +360,7 @@ Open them, find the line where `gmpe-smtk` is listed and replace the commit hash
 the portion of the line between '@' and '#'. Eventually, issue a `git push`
 
 
-
-### Github packages security issues / dependencies alert:
-
-Security alerts on Github should be solved by upgrading the dependencies
-[see section Dependencies  Upgrade](#dependencies-upgrade),
-because most of the required packages
-are OpenQuake dependencies and thus it's safer to keep everything consistent.
-Also, the new pip will be
-[more strict](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
-so better be safe.
-
-### Dependencies upgrade (including Github alerts)
+### Dependencies upgrade (including Github alerts fix)
 
 Please note that it is safer (from now even 
 [mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
