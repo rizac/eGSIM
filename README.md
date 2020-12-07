@@ -210,7 +210,9 @@ and pen your browser (or use the API) at the URL address on the console
 
 ## Installation (production)
 
-Please refer to 'deploy.html' (dynamic web page, open it in your browser of choice)
+Please refer to 'deploy.html'
+(dynamic web page, open it in your browser and fill in the
+server paths)
 
 
 ## Maintenance
@@ -227,8 +229,8 @@ organization structures:
    https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
 
 **In eGSIM we have a project (root directory) named "egsim" with a single
-user-defined app (sub-directory) called also "egsim"**. Hence, the
-directory structure might look redundant (but as we saw, it isn't).
+user-defined app (sub-directory) called also "egsim"**. Hence,
+the directory structure might look redundant.
 Also note (see `INSTALLED_APPS` in
 the settings file) that egsim is not the only used app, as we installed several
 other builtin apps for our project (e.g. the "admin" app in order to visualize and
@@ -237,7 +239,9 @@ easily edit on the browser the database content).
 <details>
 
 <summary>In case of confusion between the two command-line utilities
-`django-admin` and `manage.py` (used in the examples below)</summary>
+
+`django-admin` and `manage.py` (used in the examples below)
+</summary>
 
 `manage.py` (invokable via `python manage.py`) does the same thing as
 `django-admin` but also sets the `DJANGO_SETTINGS_MODULE` environment variable
@@ -257,8 +261,9 @@ and a new `SECRET_KEY` (which needs to be secret and not git committed).
 
 ### Starting a `python` terminal shell
 
-Tyiping `python` on the terminal does not work if you need to import django stuff, as
-there are things to be initialized beforehand. The Django `shell` command does this:
+Tyiping `python` on the terminal does not work if you need to import django
+stuff, as there are things to be initialized beforehand. The Django `shell`
+command does this:
 
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
@@ -266,10 +271,8 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell
 
 ### Check database data on the web browser
 
-(for further admin relateed stuff information,
+(for further admin related stuff information,
 see https://docs.djangoproject.com/en/3.1/ref/django-admin/)
-
-Run the program, open the browser and go to:
 
 <details>
 	<summary>Create a super user (to be done **once only**)</summary>
@@ -286,7 +289,7 @@ Then navigate in the browser to: http://127.0.0.1:8000/admin/
 
 See here: https://realpython.com/django-migrations-a-primer/#changing-models
 or here:
-https://docs.djangoproject.com/en/2.2/topics/migrations/#workflow
+https://docs.djangoproject.com/en/2.3/topics/migrations/#workflow
 
 In a nutshell (in production, replace 1. with the command `git pull` and
 execute 2. and 3. with a different DJANGO_SETTINGS_MODULE value):
