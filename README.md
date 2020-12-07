@@ -363,8 +363,9 @@ the portion of the line between '@' and '#'. Eventually, issue a `git push`
 
 ### Github packages security issues / dependencies alert:
 
-Security alerts on Github should be solved by
-[upgrading the dependencies](#dependencies-upgrade), as most of the required packages
+Security alerts on Github should be solved by upgrading the dependencies
+[see section Dependencies  Upgrade](#dependencies-upgrade),
+because most of the required packages
 are OpenQuake dependencies and thus it's safer to keep everything consistent.
 Also, the new pip will be
 [more strict](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
