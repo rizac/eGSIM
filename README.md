@@ -371,15 +371,28 @@ Also, the new pip will be
 [more strict](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
 so better be safe.
 
-### Dependencies upgrade
+### Dependencies upgrade (including Github alerts)
 
-Create and activate a new virtualenv:
+Please note that it is safer (from now even 
+[mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
+with `pip`) to upgrade all dependencies
+instead of single packages in order to avoid conflicts.
+Consequently, **follow the procedure below also in case of
+Github single packages security issues or dependencies alert**.
+
+To upgrade all dependencies, we just need to `pull` the newest version
+of `smtk` and relaunch an installation from there (this will fetch
+also OpenQuake newest version and all dependencies automatically)
+
+First create and activate a new virtualenv:
 
 ```bash
 python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
 source .env/<ENVNAME>/bin/activate  # activate venv
 pip install --upgrade pip setuptools
 ```
+
+Then install smtk and all dependencies:
 
 ```bash
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
@@ -389,10 +402,12 @@ cd ../egsim. # (or wherever egsim is)
 pip freeze > requirements.txt
 ```
 
+And finally install the newset version of the test packages:
+
 ```
 pip install pylint pytest-django pytest-cov
 pip freeze > requirements.dev.txt
 ```
 
-(then, proceed with the normal workflow:
-run tests, fix new bugs and then `git push`, an so on).
+Finally, proceed with the normal workflow:
+run tests, fix new bugs and eventually `git push`, as always.
