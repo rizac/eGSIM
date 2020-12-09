@@ -41,8 +41,8 @@ class Error(models.Model):
 
 
 class Trt(models.Model):
-    '''Model representing the db table of the (OpenQuake) Tectonic region types
-    '''
+    """Model representing the db table of the (OpenQuake) Tectonic region types
+    """
     key = models.TextField(unique=True)  # no need to set it (see below)
     oq_att = models.CharField(max_length=100, unique=True)
     oq_name = models.TextField(unique=True)
@@ -50,7 +50,7 @@ class Trt(models.Model):
     def save(self, *args, **kwargs):  # pylint: disable=arguments-differ
         # Django does not have hybrid attributes. Workaround is to set the key
         # from the oq_name (https://stackoverflow.com/a/7558665)
-        if not self.key:  # it might be empty string (the def.)
+        if not self.key:  # it might be empty string (the default)
             self.key = self.oq_att
             # self.key = self.oq_name.replace(' ', '_').lower()  # pylint: disable=no-member
         super(Trt, self).save(*args, **kwargs)
@@ -60,25 +60,25 @@ class Trt(models.Model):
 
 
 class TectonicRegion(models.Model):
-    '''Model representing the db table of Tectonic regions used for gsim
-    selection
-    '''
-    source = models.TextField(null=False,
-                              help_text="string ID of this data source "
-                                        "(e.g., research project, model name)")
+    """Model representing the db table of Tectonic regions, i.e.
+    geographic regions with associated Tectonic Region Type (TRT)
+    """
+    source_id = models.TextField(null=False,
+                                 help_text="string ID of this data source "
+                                           "(e.g., research project, model name)")
     geojson = models.TextField(null=False)
     trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False,
                             help_text="tectonic region type (trt)")
 
     def __str__(self):
-        return "Region %d (trt: %s, source: %s)" \
-            % (self.id, self.source, self.type.key)  # pylint: disable=no-member
+        return "Region %d (trt: %s, source_id: %s)" \
+            % (self.id, self.source_id, self.type.key)  # pylint: disable=no-member
 
 
 class Imt(models.Model):
-    '''Model representing the db table of the (OpenQuake) Intensity Measure
+    """Model representing the db table of the (OpenQuake) Intensity Measure
     Types
-    '''
+    """
     key = models.CharField(max_length=100, unique=True)
     needs_args = models.BooleanField(default=False, null=False)
 
@@ -87,9 +87,9 @@ class Imt(models.Model):
 
 
 class Gsim(models.Model):
-    '''Model representing the db table of the (OpenQuake) Ground Shaking
+    """Model representing the db table of the (OpenQuake) Ground Shaking
     Intensity Models, or GMPE
-    '''
+    """
     # currently, the max length of the OQ gsims is 43 ...
     key = models.TextField(null=False, unique=True,
                            help_text='OpenQuake class name')
@@ -123,13 +123,13 @@ class GsimTrtRelation(models.Model):
     # currently, the max length of the OQ gsims is 43 ...
     gsim = models.ForeignKey(Gsim, on_delete=models.CASCADE, null=False)
     trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False)
-    source = models.TextField(null=False,
-                              help_text="string ID of this data source "
-                                        "(e.g., research project, model name)")
+    source_id = models.TextField(null=False,
+                                 help_text="string ID of this data source "
+                                           "(e.g., research project, model name)")
 
     def __str__(self):
-        return "%s selected on %s (%s)" % (str(self.gsim), str(self.trt),
-                                           str(self.source))
+        return "%s selected on %s (source_id: %s)" % (str(self.gsim), str(self.trt),
+                                                      str(self.source_id))
 
 
 # utilities:
