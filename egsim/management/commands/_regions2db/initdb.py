@@ -36,9 +36,9 @@ TECREG_FUNCTIONS = {'SHARE': share.create}
 
 
 class Command(BaseCommand):
-    '''Command to initialize the db:
+    """Command to initialize the db:
         python manage.py initdb
-    '''
+    """
     help = ('Initializes and  populates the database with all GSIMs, IMTs and '
             'TRTs (Tectonic region types) of OpenQuake. Additionally, if any '
             'tectonic regionalisation is implemented, (see '
@@ -159,10 +159,6 @@ def populate_trts():
 def populate_imts():
     '''Writes all IMTs from OpenQuake to the db, skipping IMTs which need
     arguments as we do not know how to handle them (except SA)
-    and I know that (asd iuasd) for a moment ( an
-    d no other way) ()   () ()
-    (
-     ())()()
     '''
     entity_type = ENTITIES[1][0]
     create_err = Error.objects.create  # pylint: disable=no-member
