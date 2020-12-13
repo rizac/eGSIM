@@ -12,7 +12,7 @@ For details see the [Django documentation](https://docs.djangoproject.com/en/2.2
 ### How to execute the commands
 
 Any command can be executed via `python manage.py <command_name>`. One command,
-`initdb`, wraps them all, and is supposed to be used for all
+`initdb`, wraps them all, and is supposed to be used for simplicity in all
 management operation (at the cost of some potential redundancy) as follows:
 ```
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py initdb
