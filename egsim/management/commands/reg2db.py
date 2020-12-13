@@ -3,7 +3,6 @@ Module for initializing the database with regionalizations provided from
 external sources, to be used in the API and shown on the GUI map
 (as of 2020, there is only one regionalization implemented: SHARE)
 
-
 WORKFLOW for any new regionalization to be added
 ================================================
 
@@ -11,7 +10,7 @@ Choose a <source_id> name (e.g. research project name, area source model,
 see e.g. "SHARE") and:
 
 1. If needed for the regionalization, add external input data to the directory
-    "./_data/reg2db/<source_id>"
+    "./data/reg2db/<source_id>"
 2. implement in this module the regionalization as a subclass of
    :class:`Regionalization`. The subclass must:
        2a. implement the `get_regions` method (see docstring for details), and
@@ -38,47 +37,64 @@ from ._utils import EgsimBaseCommand, get_command_datadir, get_filepaths
 
 
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
-    """Class defining the custom command to create a regionalization:
+    """Class defining the custom command to write all available
+    regionalization(s) to db:
     ```
     export DJANGO_SETTINGS_MODULE="..."; python manage.py reg2db
     ```
     A regionalization is a set of Tectonic regions, i.e. geographic regions
-    with an associated a Tectonic region type (Trt).
+    with an associated Tectonic region type (Trt).
     The regionalization usually comes from a data source (e.g., research
     project, area source model) in form of shapefiles or anything describing
     a set of Polygon areas and their trt.
 
-    See this module docstring for info on how to add new regionalizations from
-    future research projects and the :class:`SHARE` for a concrete subclass of
-    :class:`Regionalization` where geographic regions from the SHARE project
-    data are created in order to be stored on the eGSIM database.
+    See this module docstring for info on how to add a new regionalization in
+    the future and the :class:`SHARE` for a concrete subclass of
+    :class:`Regionalization`.
     """
-    help = ('Fetches all regionalization(s) provided in the package input data '
-            'and writes them on the database (one geographic region per table '
-            'row). A regionalization is a set of Tectonic regions, i.e. '
-            'geographic regions with an associated Tectonic Region Type (TRT)')
+
+    # The formatting of the help text below (e.g. newlines) will be preserved
+    # in the terminal output. All text after "Note:" will be skipped from the
+    # help of the wrapper/main command 'initdb'
+    help = ('Fetches all regionalization(s) provided in the package input data\n'
+            'and writes them on the database (a regionalization is a set of\n'
+            'Tectonic regions, i.e. geographic regions with an associated \n'
+            'Tectonic Region Type, or TRT. Each region will correspond to a\n'
+            'database table row).\n'
+            'Note: All existing regionalization will be deleted from the '
+            'database and overwritten.')
 
     def handle(self, *args, **options):
+        """Executes the command
+
+        :param args: positional arguments (?). Unclear what should be given
+            here. Django doc and Google did not provide much help, source code
+            inspection suggests it is here for legacy code (OptParse)
+        :param options: any argument (optional or positional), accessible
+            as options[<paramname>]. For info see:
+            https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
+        """
         try:
-            trts = {_.oq_name: _ for _ in Trt.objects}
+            trts = {_.oq_name: _ for _ in Trt.objects}  # noqa
             if not len(trts):
                 raise ValueError('No Tectonic region type found')
         except Exception as _exc:
             raise CommandError('%s.\nDid you create the db first?\n(for '
                                'info see: https://docs.djangoproject.'
-                               'com/en/2.3/topics/migrations/#workflow)' %
+                               'com/en/2.2/topics/migrations/#workflow)' %
                                str(_exc))
 
         self.printinfo('Deleting existing regions (AND REFERENCED DATA, TOO) '
-                       'from db ')
+                       'from db')
         try:
-            TectonicRegion.objects.all().delete()
+            TectonicRegion.objects.all().delete()  # noqa
         except Exception as _exc:
             raise CommandError('Unable to delete existing regions: %s' %
                                str(_exc))
 
         for source_id, regionalization in get_regionalizations():
             self.handle_regionalization(source_id, regionalization, trts)
+            self.printinfo('')
 
     def handle_regionalization(self,
                                source_id: str,
@@ -88,21 +104,33 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
         self.printinfo("Creating and saving to db '%s' regionalization" %
                        source_id)
 
-        count = 0
-        for count, region_dict in enumerate(regionalization.get_regions(), 1):
+        count, saved = 0, 0
+        for region_dict in regionalization.get_regions(self):
+            count += 1
             region_dict.setdefault("source_id", source_id)
-            trt_ = region_dict.get('trt', None)
-            if trt_ in trts:
-                region = TectonicRegion(**region_dict)
-            else:
-                self.printerr("skipping Region: "
-                              "'%s' is not a valid TRT name" % trt_)
-            region.save()
+            # region_dict['trt'] is a str, replace it with the associated
+            # Trt db object (if a mapping is found in `trts`):
+            trt = region_dict.get('trt', None)
+            if trt not in trts:
+                msg = 'No TRT found' if not trt else ("'%s' is not a known "
+                                                      "TRT in OpenQuake" % trt)
+                self.collect_warning("Skipping region: %s" % msg)
+                continue
+            try:
+                region_dict[trt] = trts[trt]  # replace str with Model instance
+                region_dict['geojson'] = json.dumps(region_dict['geojson'])
+                region = TectonicRegion({**region_dict, 'trt': trts[trt]})
+                region.save()
+                saved += 1
+            except Exception as exc:
+                self.collect_warning("Skipping region, error while saving: "
+                                     "%s" % str(exc))
 
-        if count:
-            self.printsuccess("Saved %d regions" % count)
+        self.print_collected_warnings()
+        if saved:
+            self.printsuccess("Done: %d of %d regions saved" % (saved, count))
         else:
-            self.printwarn('No region found')
+            self.printwarn('Error: no region found')
 
 
 ######################################
@@ -115,32 +143,36 @@ class Regionalization:
     Geographic regions with associated Tectonic Region Type (TRT)
     """
 
-    source_id = None  # source_id of this regionalization.
-    # By default is falsy (e.g. None or ""), meaning that if it's not overwritten
-    # in subclasses it will default to the (sub)class name (see e.g. SHARE below)
+    _source_id = None  # Overwrite this in subclasses providing a non empty str
+    # if the the source_id you want to use is not the (sub)class name (e.g.,
+    # it's an invalid Python class name). See source_id below
+
+    @property
+    def source_id(self):
+        """Returns this instance source_id"""
+        return self._source_id or self.__class__.__name__
 
     @property
     def datadir(self):
         """Returns the given Regionalization data directory, currently at
-        "./_data/<module_name>/<classname>". Raises FileNotFoundError (with a
+        "./data/<module_name>/<source_id>". Raises FileNotFoundError (with a
         meaningful message for users executing a command from the terminal) if
-        the returned value is not a valid existing directory on the OS"""
+        the returned value is not a valid existing directory"""
         return self._get_datadir()
 
-    @classmethod
-    def _get_datadir(cls, check_isdir: bool = True):
+    def _get_datadir(self, check_isdir: bool = True):
         """Private method returning the given Regionalization data directory
         with optional flag to turn off directory check"""
         cmd_path = get_command_datadir(__name__)
-        regionalization_name = cls.source_id or cls.__name__
-        path = os.path.join(cmd_path, regionalization_name)
+        source_id = self.source_id
+        path = os.path.join(cmd_path, source_id)
         if check_isdir and not os.path.isdir(path):
             raise FileNotFoundError('No data directory found for '
                                     'Regionalization "%s" in "%s"' %
-                                    (regionalization_name, cmd_path))
+                                    (source_id, cmd_path))
         return path
 
-    def get_regions(self):
+    def get_regions(self, calling_cmd: EgsimBaseCommand):
         """Yields an iterable (e.g. tuple, list, generator expression) of
         dicts representing a geographic region with associated Tectonic Region
         Type (TRT). Each dict must have the following fields:
@@ -153,9 +185,9 @@ class Regionalization:
 
 
 class SHARE(Regionalization):
-    """Implements the 'SHARE' RegionsCollection"""
+    """Implements the 'SHARE' Regionalization"""
 
-    # maps a SHARE Tectonic region name to the OpenQuake equivalent
+    # maps a SHARE Tectonic region type to the OpenQuake equivalent:
     mappings = {
         'active shallow crust': TRT.ACTIVE_SHALLOW_CRUST,  # 'Active Shallow Crust',
         'stable shallow crust': TRT.STABLE_CONTINENTAL,  # 'Stable Shallow Crust',
@@ -171,7 +203,7 @@ class SHARE(Regionalization):
         "subduciton inslab": TRT.SUBDUCTION_INTRASLAB  # typo ...
     }
 
-    def get_regions(self):
+    def get_regions(self, calling_cmd: EgsimBaseCommand):
         """Yields an iterable (e.g. tuple, list, generator expression) of
         dicts representing a geographic region with associated Tectonic Region
         Type (TRT). Each dict must have the following fields:
@@ -180,43 +212,41 @@ class SHARE(Regionalization):
         "trt": str  # one of the attributes of openquake.hazardlib.const.TRT
         }
         """
-        for shppath in get_filepaths(self.datadir, pattern='*.shp'):
-            geojsonfeatures = to_geojson_features(shppath)
-            for feat in geojsonfeatures:
+        for shp_path in get_filepaths(self.datadir, pattern='*.shp'):
+            for feat in to_geojson_features(shp_path):
                 props = feat['properties']
-                key_ = props.get('TECTONICS', None) or \
-                    props.get('TECREG', None)
-                try:
-                    trt_oq_name = self.mappings[(props.get('TECTONICS', '') or
-                                            props.get('TECREG', '')).lower()]
-
-                    # feat['properties'] can have whatever we might need to be
-                    # accessible in the frontend. Here we remove all properties
-                    # (save space):
-                    feat['properties'] = {}
-                    # Note: the model attribute will be set in the caller
-                    # if not present:
-                    yield {
-                        'geojson': json.dumps(feat),
-                        'trt': trt_oq_name
+                trt = props.get('TECTONICS', None) or props.get('TECREG', None)
+                if trt is not None and trt.lower() in self.mappings:
+                    # try to get the Openquake tectonic region name from
+                    # self.mappings, if not found move on, `calling_cmd` will skip
+                    # teh region if the trt is invalid (and collect the warning)
+                    trt = self.mappings[trt]
+                # feat['properties'] can have whatever we might need to be
+                # accessible in the frontend. Here we remove all properties
+                # (save space):
+                feat['properties'] = {}
+                # Note: the model attribute will be set in the caller
+                # if not present:
+                yield {
+                        'geojson': feat,
+                        'trt': trt
                     }
-                except KeyError:
-                    continue
-
 
 #############
 # Utilities #
 #############
 
+
 def get_regionalizations():
     """Returns a list of source_id names (str) mapped to the relative
-    Regionalization instance"""
+    Regionalization instance
+    """
     # we could write this as one-line expression but let's be explicit:
     ret = {}
-    for classname, class_ in inspect.getmembers(sys.module[__name__],
+    for classname, class_ in inspect.getmembers(sys.modules[__name__],
                                                 _is_regionalization_class):
-        source_id = class_.source_id or class_.__name__
-        ret[source_id] = class_()
+        regionalization_instance = class_()
+        ret[regionalization_instance.source_id] = regionalization_instance
     return ret
 
 
@@ -272,7 +302,7 @@ def to_geojson_features(shapefilepath):
                 "coordinates": [125.6, 10.1]
                 },
             "properties": {
-                "name": "Dinagat Islands"
+                "name": "whatever"
             }
         }
     ```

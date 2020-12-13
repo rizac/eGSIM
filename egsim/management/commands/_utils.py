@@ -10,70 +10,91 @@ Created on 7 Dec 2020
 @author: riccardo
 '''
 import fnmatch
+import inspect
 import os
 import sys
+from argparse import RawTextHelpFormatter
 from collections import defaultdict
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
 
 class EgsimBaseCommand(BaseCommand):
-    """Simple subclass of Django BaseCommand providing some shorthand
+    """Simple abstract subclass of Django BaseCommand providing some shorthand
     utilities"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.process_warning = defaultdict(int)
+        self._warnings_and_count = defaultdict(int)
+
+    def create_parser(self, *args, **kwargs):
+        """Make help on the terminal retains formatting of all help text
+        (class `help` attribute)
+        """
+        parser = super(EgsimBaseCommand, self).create_parser(*args, **kwargs)
+        parser.formatter_class = RawTextHelpFormatter
+        return parser
 
     def printinfo(self, msg):
-        """prints a message from a custom Command with no formatting"""
+        """print a message from a custom Command with no formatting"""
         self.stdout.write(msg)
 
     def printwarn(self, msg):
-        """prints a message from a custom Command formatted as warning"""
+        """print a message from a custom Command formatted as warning
+        (Django error style)"""
         # show Django formatting for error:
         self.stdout.write(self.style.ERROR(msg))
+
+    def printsoftwarn(self, msg):
+        """print a message from a custom Command formatted as soft warning
+        (Django warning style)"""
+        # show Django formatting for error:
+        self.stdout.write(self.style.WARNING(msg))
 
     def printsuccess(self, msg):
         """prints a message from a custom Command formatted as success"""
         self.stdout.write(self.style.SUCCESS(msg))
 
-    def add_count_warn(self, message):
-        """Adds a warning message whose purpose is to be printed only once.
-        Call this method with often occurring messages (e.g. within a loop
-        for database rows unsuccessfully written) that you want to print
-        without polluting the terminal with redundant information.
-        At the end of the process, you can then call
-        :meth:`self.print_count_warns()` to show all distinct messages and
-        their occurrences in brackets"""
-        self._warnings[message] += 1
+    def collect_warning(self, message):
+        """Collect the given warning message and the number of times it has
+        been issued.
 
-    def print_count_warns(self):
-        try:
-            print_header = True
-            for msg, count in self._warnings.items():
-                if print_header:
-                    print_header = False
-                    self.printwarn('Additional warnings '
-                                   '(their occurrences in brackets):')
-                self.printwarn('%s (%d)' % (count, msg))
-        except AttributeError:
-            pass
+        During the command execution (typically within loops), it might happen
+        that the same warning message(s) are issued many times. To avoid making
+        the output unreadable whilst still notifying the user, you should call
+        this method instead of printing the message, and then
+        :meth:`self.print_collected_warnings()` at the end of the command
+        execution.
+        This way, each distinct message will be printed only once (with its
+        count in brackets).
+        """
+        self._warnings_and_count[message] += 1
+
+    def print_collected_warnings(self, empty_warnings=True):
+        """Prints the collected warnings and empties the internal counter.
+        Does nothing if there are no collected warnings
+        """
+        if not self._warnings_and_count:
+            return
+        self.printsoftwarn('Summary of collected warnings:')
+        for msg, count in self._warnings_and_count.items():
+            num_times = " (issued %d times)" % count if count > 1 else ""
+            self.printsoftwarn('   %s%s' % (msg, num_times))
+        if empty_warnings:
+            self._warnings_and_count.clear()
 
 
 def get_command_datadir(command_module_name: str):
     """Returns the absolute path of the command data directory (CDD) of the
     given command module. A command module is a Python module implementing a
-    Django custom command invokable via 'python manage.py <command>'.
+    Django custom command invokable via 'python manage.py <command>'
     (for info see https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/).
-
-    Example:
-    **From within a command module** call:
+    Typical usage **from within a command module**:
     ```
-    datadir=`get_cmd_datadir(__name__)`
+    datadir = get_cmd_datadir(__name__)
     ```
-    This function also provides meaningful messages to help the user invoking
-    the commands from the terminal.
+    This function also provides meaningful messages to help the user when
+    invoking the commands from the terminal.
 
     :param command_module_name: The `__name__` attribute of a given
         command module (str)
@@ -100,8 +121,8 @@ def get_command_datadir(command_module_name: str):
 
 
 def get_filepaths(directory,
-                  pattern:str = None,
-                  raise_on_emptylist:bool = True):
+                  pattern: str = None,
+                  raise_on_emptylist: bool = True):
     """Returns a list of file absolute paths inside `directory`, optionally
     filtered by `pattern`
 
@@ -117,8 +138,9 @@ def get_filepaths(directory,
 
     files = []
     for file in os.listdir(directory):
-        if True if not pattern else fnmatch.fnmatch(file, pattern):
-            files.append(os.path.abspath(os.path.join(directory, file)))
+        if pattern and not fnmatch.fnmatch(file, pattern):
+            continue
+        files.append(os.path.abspath(os.path.join(directory, file)))
 
     if not files and raise_on_emptylist:
         nofilemsg = 'No file' if not pattern else 'No %s file' % pattern
@@ -127,72 +149,34 @@ def get_filepaths(directory,
     return files
 
 
-# def get_datafile_paths(command_module_name: str,
-#                        *subdirs: str,
-#                        pattern: str = None):
-#     """Returns the file absolute paths inside the command data directory (CDD)
-#     of the given command module, optionally searching in the provided
-#     subdirectories and with the given file pattern.
-#     A command module is a Python module implementing a Django custom command
-#     invokable via 'python manage.py <command>'.
-#     (for info see https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/).
-#
-#     This function builds the CDD (for details see the tree structure
-#     inside the `management/commands/_data` directory), and searches therein. In
-#     addition, it provides meaningful messages to help the user invoking the
-#     commands from the terminal.
-#
-#     **Examples**:
-#
-#     To search all "shp" files in the subdirectory "SHARE" of the CDD associated
-#     to the command `reg2db` ("management/commands/_data/_data/reg2db/SHARE"),
-#     from within 'reg2db.py' type `get_datafile_path(__name__, 'SHARE', '*.shp')`
-#
-#     :param command_module_name: The `__name__` attribute of a given
-#         command module (str)
-#     :param subdirs: (optional) sub-directories denoting the path
-#         inside the command data directory (all strings)
-#     :param pattern: an optional matching pattern (str). See
-#         https://docs.python.org/3/library/fnmatch.html#fnmatch.fnmatch
-#         for details. Falsy value ('' or None) means: accept all files
-#     """
-#     try:
-#         modfile = sys.modules[command_module_name].__file__
-#         if not os.path.isfile(modfile):
-#             raise FileNotFoundError()
-#     except (AttributeError, KeyError, FileNotFoundError):
-#         raise ValueError('Invalid command module name "%s" in '
-#                          '`get_datafile_paths`' % command_module_name)
-#
-#     thisdir = os.path.abspath(os.path.dirname(__file__))
-#     if os.path.abspath(os.path.dirname(modfile)) != thisdir:
-#         raise ValueError('Error in "%s": you can not invoke `get_datafile_paths` '
-#                          '(no command associated)' % modfile)
-#
-#     datadir = os.path.join(thisdir, '_data', command_module_name.split('.')[-1])
-#     if not os.path.isdir(datadir):
-#         raise FileNotFoundError('No data directory "%s" defined in "%s"' %
-#                                 (os.path.basename(datadir), os.path.dirname(datadir)))
-#
-#     if subdirs:
-#         datadir2 = os.path.join(datadir, *subdirs)
-#         if not os.path.isdir(datadir2):
-#             raise FileNotFoundError('"%s" not found in "%s" (typo in "%s"?)' %
-#                                     (os.path.join(*subdirs), datadir,
-#                                      modfile))
-#         datadir = datadir2
-#
-#     pattern = pattern or ''
-#
-#     files = []
-#     for file in os.listdir(datadir):
-#         if True if not pattern else fnmatch.fnmatch(file, pattern):
-#             files.append(os.path.abspath(os.path.join(datadir, file)))
-#
-#     if not files:
-#         nofilemsg = 'No file' if not pattern else 'No %s file' % pattern
-#         raise FileNotFoundError('%s in %s' % (nofilemsg, datadir))
-#
-#     return files
+def get_classes(module_name,
+                class_or_tuple: 'tuple or class' = None,
+                ignore_imported_classes=True) -> dict:
+    """Returns the class(es) available in the given module as a dict of
+    class names (str) mapped to the relative class, according to the optional
+    filtering criteria.
+
+    :param module_name: (str) the module name, usually accessible through the
+        variable `__name__`
+    :param class_or_tuple: (type/class or tuple of types/classes) return only
+        classes that are the same of, or a subclass of the given class(es). If
+        tuple, return the classes that match any of the given classes (logical
+        "or"). See builtin function `issubclass` for details
+    :param ignore_imported_classes: bool (default True): return only those
+        classes directly implemented in the module, and not imported from some
+        other module
+    """
+    def _filter(obj):
+        return _is_class(obj, module_name if ignore_imported_classes else None,
+                         class_or_tuple)
+    return {cls_name: cls for (cls_name, cls) in
+            inspect.getmembers(sys.modules[module_name], _filter)}
 
 
+def _is_class(obj, module_name: 'module' = None,
+              class_or_tuple: 'tuple or class' = None):
+    if inspect.isclass(obj):
+        if module_name is None or obj.__module__ == module_name:
+            if class_or_tuple is None or issubclass(obj, class_or_tuple):
+                return True
+    return False
