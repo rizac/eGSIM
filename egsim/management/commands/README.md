@@ -17,10 +17,9 @@ management operation (at the cost of some potential redundancy) as follows:
 ```
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py initdb
 ```
-(`DJANGO_SETTINGS_MODULE` value must be changed in production)
-
-(for details, type `python manage.py initdb --help`. To list all
-commands, type `python manage.py --help`)
+(`DJANGO_SETTINGS_MODULE` value must be changed in production.
+For `initdb` subcommand details, type `python manage.py initdb --help`.
+To list all commands, type `python manage.py --help`)
 
 ### When to execute the commands
 
@@ -29,10 +28,10 @@ in a while in these circumstances:
 
 When we have | command
 --- | ---
-Upgraded OpenQuake (that is, e.g. new models) | `oq2db`
-New regionalization (e.g. SHARE) | `reg2db`<br/>([details here](#Extending-existing-commands))
-New Gsim selection (e.g. SHARE, ESHM) | `gsimsel2db`<br/>([details here](#Extending-existing-commands))
-~~New Flatfile(s) (e.g. ESM_2018_SA)~~ | ~~not yet implemented~~
+upgraded OpenQuake<br/>(and thus the list of GSIMs, IMTs and so on) | `oq2db`
+New regionalization<br/>(e.g. SHARE) | `reg2db`<br/>([details here](#Extending-existing-commands))
+New Gsim selection<br/>(e.g. SHARE, ESHM) | `gsimsel2db`<br/>([details here](#Extending-existing-commands))
+~~New Flatfile(s)<br/>(e.g. ESM_2018_SA)~~ | ~~not yet implemented~~
 Any of the above cases | `initdb`
 
 As said, **we strongly recommend for simplicity to always execute
@@ -44,10 +43,10 @@ to be called afterwards)
 ### How to extend / create custom commands
 
 #### Extending existing commands
- 
-The two commands `reg2db` and `gsimsel2db` can be extended when new
-input data is available (new regionalizations and gsim selections, respectively)
-in order to include it in the database and make it available in eGSIM.
+
+The two commands `reg2db` and `gsimsel2db` are specifically designed to handle
+easily the addition in the eGSIM database of new input data in the
+future (new regionalizations and gsim selections, respectively).
 See the documentation in the two modules (`reg2db.py` and
 `gsimsel2db.py`) for details
 
