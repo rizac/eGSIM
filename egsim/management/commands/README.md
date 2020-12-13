@@ -11,17 +11,16 @@ For details see the [Django documentation](https://docs.djangoproject.com/en/2.2
 ### How to execute the commands
 
 Any command can be executed via `python manage.py <command_name>`. 
-Currently, there is basically only one main management
-command of eGSIM, `initdb`, which can be executed
-on the terminal as follows:
+For all common maintenance operation, there is basically only one management
+command to call `initdb`, which can be executed on the terminal as follows:
 ```
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py initdb
 ```
 (`DJANGO_SETTINGS_MODULE` value must be changed in production)
 
-`initdb` is composed of several management subcommands
-which are described below (for details, type
-`python manage.py initdb --help`. To list all
+`initdb` is composed of several subcommands covering specific
+management tasks described below
+(for details, type `python manage.py initdb --help`. To list all
 commands, type `python manage.py --help`)
 
 ### When to execute the commands
@@ -33,8 +32,8 @@ e.g.:
 When we have | (sub)command
 --- | ---
 Upgraded OpenQuake (i.e. new models, IMTs, and so on) | `oq2db`
-New regionalization (e.g. SHARE) | `reg2db`<br/>([to be execute after code modification](#Extending-existing-commands))
-New Gsim selection (e.g. SHARE, ESHM) | `gsimsel2db`<br/>([to be execute after code modification](#Extending-existing-commands))
+New regionalization (e.g. SHARE) | `reg2db`<br/>([details here](#Extending-existing-commands))
+New Gsim selection (e.g. SHARE, ESHM) | `gsimsel2db`<br/>([details here](#Extending-existing-commands))
 ~~New Flatfile(s) (e.g. ESM_2018_SA)~~ | ~~not yet implemented~~
 
 As many of these commands might be related
@@ -47,10 +46,11 @@ to simply execute `initdb` and be always safe**
 
 #### Extending existing commands
  
- The two commands `reg2db` and `gsimsel2db` can be extended with new
- input data (new regionalizations and gsim selections, respectively).
- See the documentation of the two modules (`reg2db.py` and
- `gsimsel2db.py`) for details in case
+The two commands `reg2db` and `gsimsel2db` can be extended when new
+input data is available (new regionalizations and gsim selections, respectively)
+in order to inlcude it in the database and make it available in eGSIM.
+See the documentation of the two modules (`reg2db.py` and
+`gsimsel2db.py`) for details
 
 #### Creating new custom commands
 
