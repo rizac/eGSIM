@@ -66,16 +66,16 @@ you have to:
 2. Implement in the module a subclass of `_utils.EgsimBaseCommand`.
    `EgsimBaseCommand` is just a subclass of Django `BaseCommand`
    with some shorthand utilities (see implementation in `_utils.py` for details).
-   To implement a `EgsimBaseCommand` or `BaseCommand` subclass see the
-   other examples here or the [Django documentation](
+   To implement a `EgsimBaseCommand`/`BaseCommand` subclass see the
+   other commands in this directory or the [Django documentation](
    https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/)
 
 3. (optional) If the command requires external data, create the
    directory `./data/<command_name>` and put therein whatever you
    need (organized in any tree structure you want) for the functionality of
    your command (*Note: Avoid committing large data files.
-   Think about providing URLs in case and document how to download
-   the data during in the installation README*)
+   Think about providing URLs in case and document how to download the data
+   during installation*)
 
 4. (optional) If the command has to be added to the chain of
    subcommand issued by the main command `initdb`, add it
