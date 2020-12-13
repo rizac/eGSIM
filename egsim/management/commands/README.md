@@ -45,7 +45,7 @@ to be called afterwards)
 #### Extending existing commands
 
 The two commands `reg2db` and `gsimsel2db` are specifically designed to handle
-easily the addition in the eGSIM database of new input data in the
+easily the addition of new input data in the
 future (new regionalizations and gsim selections, respectively).
 See the documentation in the two modules (`reg2db.py` and
 `gsimsel2db.py`) for details
