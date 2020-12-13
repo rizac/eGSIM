@@ -1,0 +1,38 @@
+{
+  "Active Shallow Crust": [
+    "AkkarBommer2010",
+    "CauzziFaccioli2008",
+    "ChiouYoungs2008",
+    "ZhaoEtAl2006Asc"
+  ],
+ "Stable Shallow Crust": [
+   "AkkarBommer2010",
+   "CauzziFaccioli2008",
+   "ChiouYoungs2008",
+   "ToroEtAl2002SHARE",
+   "Campbell2003SHARE"
+  ],
+  "Shield": [
+    "ToroEtAl2002SHARE",
+    "Campbell2003SHARE",
+  ],
+  "Subduction Interface": [
+    "AtkinsonBoore2003SInter",
+    "LinLee2008SInter",
+    "YoungsEtAl1997SInter",
+    "ZhaoEtAl2006SInter"
+  ],
+  "Subduction Inslab": [
+    "AtkinsonBoore2003SSlab",
+    "LinLee2008SSlab",
+    "YoungsEtAl1997SSlab",
+    "ZhaoEtAl2006SSlab"
+  ],
+  "Volcanic": [
+    "FaccioliEtAl2010"
+  ],
+  "Subduction Deep": [
+    "LinLee2008SSlab",
+    "YoungsEtAl1997SSlab"
+  ]
+}

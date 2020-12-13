@@ -9,6 +9,7 @@ Created on 5 Apr 2019
 @author: riccardo
 '''
 import json
+from enum import Enum
 
 from django.db import models
 from django.db.models import Q
@@ -19,19 +20,40 @@ from django.core import management
 from shapely.geometry import Point, shape, Polygon
 
 
-ENTITIES = (('gsim', 'Ground Shaking Intensity Model'),
-            ('imt', 'Intensity Measure Type'),
-            ('trt', 'Tectonic Region Type'))
+class DB_ENTITY(Enum):
+    """Defines the database entities which might raise Errors to be reported
+    in the Error Table"""
+
+    # Access element as, e.g.: DB_ENTITY.GSIM
+    # Or in loop:
+    # for _ in DB_ENTITY:
+    #   _.name  # e.g. "GSIM"
+    #   _.value  # e.g. 'Ground Shaking Intensity Model'
+    # For further customizations (not needed here) see Python enum doc
+
+    GSIM = 'Ground Shaking Intensity Model'
+    IMT = 'Intensity Measure Type'
+    TRT = 'Tectonic Region Type'
+
+
+# ENTITIES = (('gsim', 'Ground Shaking Intensity Model'),
+#             ('imt', 'Intensity Measure Type'),
+#             ('trt', 'Tectonic Region Type'))
 
 
 class Error(models.Model):
-    '''Model representing the Errors table. The table stores information
+    """Model representing the Errors table. The table stores information
     during the creation of the database for diagnistic purposes only
-    '''
-    entity_key = models.TextField(unique=True)
-    entity_type = models.CharField(max_length=4, choices=ENTITIES)
-    type = models.TextField()
-    message = models.TextField()
+    """
+    entity_key = models.TextField(unique=True,
+                                  help_text="The key uniquely identifying the "
+                                            "entity, e.g. the Gsim name")
+    entity_type = models.CharField(max_length=max(len(_.name) for _ in DB_ENTITY),
+                                   choices=tuple((_.name, _.value) for _ in DB_ENTITY),
+                                   help_text="The entity type"
+                                   )
+    type = models.TextField(help_text="Error type")
+    message = models.TextField(help_text="Error message")
 
     def __str__(self):
         return '%s "%s": %s (%s)' % (self.entity_type,
@@ -120,7 +142,6 @@ class GsimTrtRelation(models.Model):
     """Model representing the Gsim(s) <-> Tectonic
      region type (trt) bindings
     """
-    # currently, the max length of the OQ gsims is 43 ...
     gsim = models.ForeignKey(Gsim, on_delete=models.CASCADE, null=False)
     trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False)
     source_id = models.TextField(null=False,
@@ -243,38 +264,35 @@ def sharing_gsims(imts):
 
 def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None,
                imts_match_all=False):
-    '''
-        Returns a QuerySet
-        (https://docs.djangoproject.com/en/2.2/ref/models/querysets/)
-        of Gsim names (strings) matching the given criteria.
-        A Gsim name is the OpenQuake name and actually acts as a
-        unique key for that Gsim (this is why it is referred as key in the
-        Model).
-        A gsim is returned when it matches ALL the conditions
-        specified by the provided arguments (missing arguments are skipped),
-        which are:
-
-        :param gsims: iterable of strings (Gsim.key) or Gsim instances, or
-            both. If None (the default), no filter is applied. Otherwise,
-            return Gsims whose name matches any of the provided Gsim(s)
-        :param imts: iterable of strings (Imt.key) or Imt instances, or both.
-            If None (the default), no filter is applied. Otherwise, return
-            Gsims whose imts match any of the provided imt(s). If
-            `imts_match_all`=True, return Gsims defined for (at least) all
-            the provided imt(s)
-        :param trts: iterable of strings (Trt.key) or Trt instances, or both.
-            If None (the default), no filter is applied. Otherwise, return
-            only Gsims defined for any of the provided trt(s)
-        :param tr_selector: a Tectonic region selector (see class
-            `TrSelector`) based on any tectonic regionalisation defined on the
-            database (see 'TectonicRegion' model) for filtering the search to
-            a specific geographical point or rectangle. If None, nothing
-            is filtered
-        :param imts_match_all: boolean, ignored if `imts` is None or missing.
-            When False (the default), any gsim defined for at least *one*
-            of the provided imts will be taken. When True, any gsim defined
-            for at least *all* provided imts will be taken.
-    '''
+    """Returns a QuerySet
+    (https://docs.djangoproject.com/en/2.2/ref/models/querysets/)
+    of strings denoting the Gsim names matching the given criteria.
+    A Gsim name is the OpenQuake unique name (attribute `Gsim.key` in the
+    associated ORM Model).
+    A gsim is returned when it matches ALL the conditions
+    specified by the provided arguments (missing arguments are skipped),
+    which are:
+    :param gsims: iterable of strings (Gsim.key) or Gsim instances, or
+        both. If None (the default), no filter is applied. Otherwise,
+        return Gsims whose name matches any of the provided Gsim(s)
+    :param imts: iterable of strings (Imt.key) or Imt instances, or both.
+        If None (the default), no filter is applied. Otherwise, return
+        Gsims whose imts match any of the provided imt(s). If
+        `imts_match_all`=True, return Gsims defined for (at least) all
+        the provided imt(s)
+    :param trts: iterable of strings (Trt.key) or Trt instances, or both.
+        If None (the default), no filter is applied. Otherwise, return
+        only Gsims defined for any of the provided trt(s)
+    :param tr_selector: a Tectonic region selector (see class
+        `TrSelector`) based on any tectonic regionalization defined on the
+        database (see 'TectonicRegion' model) for filtering the search to
+        a specific geographical point or rectangle. If None, nothing
+        is filtered
+    :param imts_match_all: boolean, ignored if `imts` is None or missing.
+        When False (the default), any gsim defined for at least *one*
+        of the provided imts will be taken. When True, any gsim defined
+        for *all* provided imts will be taken.
+    """
     # trt can be a trt instance, an int denoting the trt pkey,
     # or a string denoting the trt key field (unique)
     # in the expressions .filter(imts_in=[...]) the arguments in

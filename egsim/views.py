@@ -484,7 +484,7 @@ def apidoc(request):
     }
 
     # add references:
-    with open(join(dirname(__file__), 'references.json')) as fpt:
+    with open(join(dirname(__file__), 'references.yaml')) as fpt:
         dic = json.loads("\n".join(l for l in fpt if l.strip()[:1] != '#'))
     egsim_data['REFERENCES'] = dic
 

@@ -1,22 +1,31 @@
-'''
+"""
 Tests the eGSIM Django commands
 
 Created on 6 Apr 2019
 
 @author: riccardo
-'''
+"""
 import os
 from stat import S_IWUSR, S_IWGRP, S_IWOTH
 import pytest
 
+from egsim.management.commands._utils import get_classes, EgsimBaseCommand
+
 try:  # https://stackoverflow.com/questions/44441929
-    from unittest.mock import patch  # ok in py3.8  # noqa
+    from unittest.mock import patch  # noqa (ok in py3.8)
 except ImportError:
-    from mock import patch  # ok in py3.7  # noqa
+    from mock import patch  # noqa (ok in py3.7)
 
 from django.core.management.base import CommandError
 from django.core.management import call_command
 
+
+# def test_get_classes():
+    # commands = ['oq2db', 'gsimsel2db', 'reg2db']
+    # commands =  ['egsim.management.commands.' + _ for _ in commands]
+    # for _ in commands:
+    #     cls = get_classes(_, EgsimBaseCommand)
+    # clz = get_classes('egsim.models')
 
 @pytest.mark.django_db
 def test_initdb(capsys):
