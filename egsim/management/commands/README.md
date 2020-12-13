@@ -12,7 +12,8 @@ For details see the [Django documentation](https://docs.djangoproject.com/en/2.2
 
 Any command can be executed via `python manage.py <command_name>`. 
 For all common maintenance operation, there is basically only one management
-command to call `initdb`, which can be executed on the terminal as follows:
+command handling all tasks automatically, `initdb`,
+which can be executed on the terminal as follows:
 ```
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py initdb
 ```
