@@ -33,8 +33,8 @@ e.g.:
 When we have | (sub)command
 --- | ---
 Upgraded OpenQuake (i.e. new models, IMTs, and so on) | `oq2db`
-New regionalization (e.g. SHARE) | `reg2db` 
-New Gsim selection (e.g. SHARE, ESHM) | `gsimsel2db`
+New regionalization (e.g. SHARE) | `reg2db`<br/>([to be execute after code modification](#Extending-existing-commands))
+New Gsim selection (e.g. SHARE, ESHM) | `gsimsel2db`<br/>([to be execute after code modification](#Extending-existing-commands))
 ~~New Flatfile(s) (e.g. ESM_2018_SA)~~ | ~~not yet implemented~~
 
 As many of these commands might be related
@@ -43,7 +43,16 @@ requires the other two commands to be called afterwards)
 **we suggest in any case 
 to simply execute `initdb` and be always safe**
 
-### Implementation details for new custom commands
+### How to extend / create custom commands
+
+#### Extending existing commands
+ 
+ The two commands `reg2db` and `gsimsel2db` can be extended with new
+ input data (new regionalizations and gsim selections, respectively).
+ See the documentation of the two modules (`reg2db.py` and
+ `gsimsel2db.py`) for details in case
+
+#### Creating new custom commands
 
 To create a new command invokable via
 ```
@@ -77,11 +86,4 @@ you have to:
     scan of the commands directory: first you want to have control over the
     execution order, second you might want to implement some command
     that is not part of the main initialization chain -->
- 
- 
- ### Implementation details for extending existing commands
- 
- The two commands `reg2db` and `gsimsel2db` can be extended with new
- input data (new regionalizations and gsim selections, respectively).
- See the documentation of the two modules (`reg2db.py` and
- `gsimsel2db.py`) for details in case
+
