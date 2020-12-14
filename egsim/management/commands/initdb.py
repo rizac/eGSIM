@@ -46,15 +46,20 @@ class Command(EgsimBaseCommand):
     export DJANGO_SETTINGS_MODULE="..."; python manage.py initdb
     ```
     """
-    help = ('Initializes and populates the database with all eGSIM required '
-            'data.\nCalls in series all the following (sub)commands:\n') +\
-            "\n\n".join("\n%s\n%s\n%s" % (_['name'], '='*len(_['name']), _['help'])
-                        for _ in SUBCOMMANDS) + \
-           ('\nNotes:\n'
-            ' - GSIM: Ground Shaking Intensity Model\n'
-            ' - IMT: Intensity Measure Type\n'
-            ' - TRT: Tectonic Region Type\n'
-            ' - All database tables will be emptied and rewritten')
+    help = "\n". join([
+        'Initializes and populates the database with all eGSIM required data.',
+        'This is also the RECOMMENDED command to be executed every time eGSIM',
+        'should be updated with new external source data or a new OpenQuake ',
+        'version. See the README file in this directory for details.',
+        'This command calls in series all the following (sub)commands:',
+        "\n\n".join("\n%s\n%s\n%s" % (_['name'], '='*len(_['name']), _['help'])
+                    for _ in SUBCOMMANDS),
+        '\nNotes:',
+        ' - GSIM: Ground Shaking Intensity Model',
+        ' - IMT: Intensity Measure Type',
+        ' - TRT: Tectonic Region Type',
+        ' - All database tables will be emptied and rewritten'
+    ])
 
     #     def add_arguments(self, parser):
     #         parser.add_argument('poll_id', nargs='+', type=int)
