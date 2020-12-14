@@ -61,6 +61,9 @@ class Command(EgsimBaseCommand):
         ' - All database tables will be emptied and rewritten'
     ])
 
+    def __init__(self, *args, **kwargs):
+
+
     #     def add_arguments(self, parser):
     #         parser.add_argument('poll_id', nargs='+', type=int)
 
@@ -84,6 +87,5 @@ class Command(EgsimBaseCommand):
             # thus we call the lateter (also to import explicitly the used
             # commands
             cmd_obj = cmd['cmd_class'](stdout=self.stdout, stderr=self.stderr)
-            # cmd_obj arguments like no_color and force_color are set as default
-            # meaning that
+            # cmd_obj arguments like no_color and force_color are left as default:
             cmd_obj.execute(*args, **options)

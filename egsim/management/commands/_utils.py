@@ -1,4 +1,4 @@
-'''
+"""
 Utilities for the eGSIM custom commands (note the leading underscore
  to skip this module from the Django command collecting function)
 
@@ -8,7 +8,7 @@ https://django.readthedocs.io/en/2.0.x/howto/custom-management-commands.html
 Created on 7 Dec 2020
 
 @author: riccardo
-'''
+"""
 import fnmatch
 import inspect
 import os
@@ -21,7 +21,7 @@ from django.core.management.base import BaseCommand
 
 class EgsimBaseCommand(BaseCommand):
     """Simple abstract subclass of Django BaseCommand providing some shorthand
-    utilities"""
+    utilities. All eGSIM commands should inherit from this class"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,23 +36,26 @@ class EgsimBaseCommand(BaseCommand):
         return parser
 
     def printinfo(self, msg):
-        """print a message from a custom Command with no formatting"""
+        """Print a message from a custom Command with no formatting"""
         self.stdout.write(msg)
 
     def printwarn(self, msg):
-        """print a message from a custom Command formatted as warning
-        (Django error style)"""
+        """Print a message from a custom Command formatted as warning
+        (Django error style. Printing errors is not contemplated as one should
+        probably raise `CommandError`, se Django doc or examples here)
+        """
         # show Django formatting for error:
         self.stdout.write(self.style.ERROR(msg))
 
     def printsoftwarn(self, msg):
-        """print a message from a custom Command formatted as soft warning
-        (Django warning style)"""
+        """Print a message from a custom Command formatted as soft warning
+        (Django warning style)
+        """
         # show Django formatting for error:
         self.stdout.write(self.style.WARNING(msg))
 
     def printsuccess(self, msg):
-        """prints a message from a custom Command formatted as success"""
+        """print a message from a custom Command formatted as success"""
         self.stdout.write(self.style.SUCCESS(msg))
 
     def collect_warning(self, message):
@@ -91,7 +94,7 @@ def get_command_datadir(command_module_name: str):
     (for info see https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/).
     Typical usage **from within a command module**:
     ```
-    datadir = get_cmd_datadir(__name__)
+    datadir = get_command_datadir(__name__)
     ```
     This function also provides meaningful messages to help the user when
     invoking the commands from the terminal.
@@ -109,10 +112,10 @@ def get_command_datadir(command_module_name: str):
 
     thisdir = os.path.abspath(os.path.dirname(__file__))
     if os.path.abspath(os.path.dirname(modfile)) != thisdir:
-        raise ValueError('Error in "%s": you can not invoke `get_datafile_paths` '
+        raise ValueError('Error in "%s": you cannot invoke `get_datafile_paths` '
                          '(no command associated)' % modfile)
 
-    datadir = os.path.join(thisdir, '_data', command_module_name.split('.')[-1])
+    datadir = os.path.join(thisdir, 'data', command_module_name.split('.')[-1])
     if not os.path.isdir(datadir):
         raise FileNotFoundError('No data directory "%s" defined in "%s"' %
                                 (os.path.basename(datadir), os.path.dirname(datadir)))
