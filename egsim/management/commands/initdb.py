@@ -30,7 +30,7 @@ def _get_cmd_and_help(cmd_module):
                          (cmd_module, len(cmd_class)))
     cmd_class = list(cmd_class.values())[0]
     help_ = getattr(cmd_class, 'help', 'No doc available')
-    idx = help_.find('Note:')
+    idx = help_.find('Notes:')
     if idx > -1:
         help_ = help_[:idx]
     cmd_name = cmd_module.__name__.split('.')[-1]  # the module name (no path)
@@ -48,8 +48,13 @@ class Command(EgsimBaseCommand):
     """
     help = ('Initializes and populates the database with all eGSIM required '
             'data.\nCalls in series all the following (sub)commands:\n') +\
-            "\n\n".join("\n%s\n%s" % (_['name'], _['help'])
-                        for _ in SUBCOMMANDS)
+            "\n\n".join("\n%s\n%s\n%s" % (_['name'], '='*len(_['name']), _['help'])
+                        for _ in SUBCOMMANDS) + \
+           ('\nNotes:\n'
+            ' - GSIM: Ground Shaking Intensity Model\n'
+            ' - IMT: Intensity Measure Type\n'
+            ' - TRT: Tectonic Region Type\n'
+            ' - All database tables will be emptied and rewritten')
 
     #     def add_arguments(self, parser):
     #         parser.add_argument('poll_id', nargs='+', type=int)

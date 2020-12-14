@@ -3,13 +3,15 @@ Module for writing to db the Gsim selections (by tectonic region type, or TRT).
 A Gsim selection is a set of relations between a TRT and a list of
 associated Gsims
 
-WORKFLOW for any new gsim selection to be added
-================================================
+WORKFLOW TO ADD A NEW GSIM SELECTION
+====================================
 
 Choose a <source_id> name (e.g. research project name, area source model,
 see e.g. "SHARE") and add <source_id>.json to the data directory
-"./data/gsimsel2db". The JSON file must be a dict where each key is a TRT (str)
-mapped to a list of Gsims (str)
+"./data/gsimsel2db". The JSON file must be a dict[str, List[str]] where each
+key is a Tectonic Region Type (one of the attribute values of
+`openquake.hazardlib.const.TRT) mapped to a list of Gsims (class names of
+OpenQuake Gsims)
 
 Created on 9 Dec 2020
 
@@ -35,12 +37,16 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
     # The formatting of the help text below (e.g. newlines) will be preserved
     # in the terminal output. All text after "Note:" will be skipped from the
     # help of the wrapper/main command 'initdb'
-    help = ('Fetches all Gsims selection(s) (by Tectonic region type, or TRT)\n'
-            'provided in the package input data and writes them on the database\n'
-            '(a Gsim selection is a set of relations between a TRT and a list\n'
-            'of associated Gsims).\n'
-            'Note: all existing selections will be deleted from the database\n'
-            'and overwritten.')
+    help = ('Fetches all GSIMs selection(s) by TRT from external data sources\n'
+            '(\'commands/data\' directory) and writes them on the database. \n'
+            'A GSIM selection is a set of relations between a TRT and a list\n'
+            'of associated GSIMs.\n'
+            'Notes:\n'
+            '- GSIM: Ground Shaking Intensity Model\n'
+            '- TRT: Tectonic Region Type\n'
+            '- Each GSIM-TRT relation will be written as a database table row\n'
+            '  with the associated source id (e.g. SHARE). All existing rows\n'
+            '  will be deleted from the database and overwritten.')
 
     def handle(self, *args, **options):
         """Executes the command
