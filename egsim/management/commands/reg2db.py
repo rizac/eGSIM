@@ -54,16 +54,19 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
     """
 
     # The formatting of the help text below (e.g. newlines) will be preserved
-    # in the terminal output. All text after "Note:" will be skipped from the
+    # in the terminal output. All text after "Notes:" will be skipped from the
     # help of the wrapper/main command 'initdb'
-    help = ('Fetches all regionalization(s) from external data sources\n'
-            '(\'commands/data\' directory) and writes them on the database.\n'
-            'A regionalization is a set of Tectonic regions, i.e. geographic\n'
-            'regions with an associated TRT.\n'
-            'Notes:\n'
-            '- TRT: Tectonic Region Type\n'
-            '- Each region will correspond to a database table row. All\n'
-            '  existing rows will be deleted from the database and overwritten')
+    help = "\n".join([
+        'Fetches all regionalization(s) from external data sources',
+        '(\'commands/data\' directory) and writes them on the database.',
+        'A regionalization is a set of Tectonic regions, i.e. geographic',
+        'regions with an associated TRT.',
+        'Notes:',
+        '- TRT: Tectonic Region Type',
+        '- Each region will correspond to a database table row. All',
+        '  existing rows will be deleted from the database and overwritten'
+    ])
+
 
     def handle(self, *args, **options):
         """Executes the command

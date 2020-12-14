@@ -35,18 +35,20 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
     """
 
     # The formatting of the help text below (e.g. newlines) will be preserved
-    # in the terminal output. All text after "Note:" will be skipped from the
+    # in the terminal output. All text after "Notes:" will be skipped from the
     # help of the wrapper/main command 'initdb'
-    help = ('Fetches all GSIMs selection(s) by TRT from external data sources\n'
-            '(\'commands/data\' directory) and writes them on the database. \n'
-            'A GSIM selection is a set of relations between a TRT and a list\n'
-            'of associated GSIMs.\n'
-            'Notes:\n'
-            '- GSIM: Ground Shaking Intensity Model\n'
-            '- TRT: Tectonic Region Type\n'
-            '- Each GSIM-TRT relation will be written as a database table row\n'
-            '  with the associated source id (e.g. SHARE). All existing rows\n'
-            '  will be deleted from the database and overwritten.')
+    help = "\n".join([
+        'Fetches all GSIMs selection(s) by TRT from external data sources',
+        '(\'commands/data\' directory) and writes them on the database.',
+        'A GSIM selection is a set of relations between a TRT and a list',
+        'of associated GSIMs.',
+        'Notes:',
+        '- GSIM: Ground Shaking Intensity Model',
+        '- TRT: Tectonic Region Type',
+        '- Each GSIM-TRT relation will be written as a database table row',
+        '  with the associated source id (e.g. SHARE). All existing rows',
+        '  will be deleted from the database and overwritten.'
+    ])
 
     def handle(self, *args, **options):
         """Executes the command
