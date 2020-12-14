@@ -35,9 +35,13 @@ class Command(EgsimBaseCommand):
     # The formatting of the help text below (e.g. newlines) will be preserved
     # in the terminal output. All text after "Note:" will be skipped from the
     # help of the wrapper/main command 'initdb'
-    help = ('Initializes and populates eGSIM database with OpenQuake data\n'
-            '(e.g., Gsim, Imt, Trt).\n'
-            'Note: all related database tables will be emptied and rewritten')
+    help = ('Initializes and populates eGSIM database with all GSIMs, IMTs and TRTs\n'
+            'implemented in version of OpenQuake used by the program.\n'
+            'Notes:\n'
+            ' - GSIM: Ground Shaking Intensity Model\n'
+            ' - IMT: Intensity Measure Type\n'
+            ' - TRT: Tectonic Region Type\n'
+            ' - All database tables will be emptied and rewritten')
 
     def handle(self, *args, **options):
         """Executes the command

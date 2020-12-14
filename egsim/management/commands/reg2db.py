@@ -15,7 +15,7 @@ see e.g. "SHARE") and:
    :class:`Regionalization`. The subclass must:
        2a. implement the `get_regions` method (see docstring for details), and
        2b. have name <source_id> (you can name the class differently, but then
-           you must write the class attribute `source_id="<source_id>"`).
+           you must write the class attribute `_source_id="<source_id>"`).
 See :class:`SHARE` for an example
 
 Created on 7 Dec 2020
@@ -56,13 +56,14 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
     # The formatting of the help text below (e.g. newlines) will be preserved
     # in the terminal output. All text after "Note:" will be skipped from the
     # help of the wrapper/main command 'initdb'
-    help = ('Fetches all regionalization(s) provided in the package input data\n'
-            'and writes them on the database (a regionalization is a set of\n'
-            'Tectonic regions, i.e. geographic regions with an associated \n'
-            'Tectonic Region Type, or TRT. Each region will correspond to a\n'
-            'database table row).\n'
-            'Note: All existing regionalization will be deleted from the '
-            'database and overwritten.')
+    help = ('Fetches all regionalization(s) from external data sources\n'
+            '(\'commands/data\' directory) and writes them on the database.\n'
+            'A regionalization is a set of Tectonic regions, i.e. geographic\n'
+            'regions with an associated TRT.\n'
+            'Notes:\n'
+            '- TRT: Tectonic Region Type\n'
+            '- Each region will correspond to a database table row. All\n'
+            '  existing rows will be deleted from the database and overwritten')
 
     def handle(self, *args, **options):
         """Executes the command
@@ -144,7 +145,7 @@ class Regionalization:
     """
 
     _source_id = None  # Overwrite this in subclasses providing a non empty str
-    # if the the source_id you want to use is not the (sub)class name (e.g.,
+    # if the the source_id you want to use is not the class name (e.g.,
     # it's an invalid Python class name). See source_id below
 
     @property
@@ -257,7 +258,7 @@ def _is_regionalization_class(obj):
 
 def to_geojson(*shapefiles):
     """Reads the given shape files ('.shp') and return them joined in a
-    'FeatureCollection' geojson dict:
+    'FeatureCollection' geojson dict. Example:
     ```
     {
        "type": "FeatureCollection",
