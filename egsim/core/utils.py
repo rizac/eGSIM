@@ -6,6 +6,7 @@ Created on 29 Jan 2018
 from os import listdir
 from os.path import join, isfile, isdir, abspath, getmtime
 from io import StringIO
+from typing import Union, Iterable
 from urllib.parse import quote
 from datetime import date, datetime
 from itertools import chain
@@ -37,29 +38,6 @@ class MOF:  # pylint: disable=missing-docstring, too-few-public-methods
     EDR = "edr"
 
 
-def tostr(obj, none='null'):
-    '''Returns `str(obj)` to be injected into YAML or JSON variables,
-    with these exceptions:
-
-    - if obj is a date or datetime, returns its ISO format representation,
-    either '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S' or '%Y-%m-%dT%H:%M:%S.%f'
-    - if obj is boolean returns 'true' or 'false' (to lower case)
-    - if obj is None, returns the `none` argument (defaults to 'null')
-    '''
-    if obj is None:
-        return none
-    if obj is True or obj is False:
-        return str(obj).lower()
-    if isinstance(obj, (date, datetime)):
-        if not isinstance(obj, datetime) or (obj.microsecond == obj.hour ==
-                                             obj.minute == obj.second == 0):
-            return obj.strftime('%Y-%m-%d')
-        if obj.microsecond == 0:
-            return obj.strftime('%Y-%m-%dT%H:%M:%S')
-        return obj.strftime('%Y-%m-%dT%H:%M:%S.%f')
-    return str(obj)
-
-
 # Set the non-encoded characters. Sources:
 # https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#Description
 # NOTE THAT THE LAST 5 CHARACTERS ARE NOT SAFE
@@ -70,39 +48,76 @@ def tostr(obj, none='null'):
 QUERY_PARAMS_SAFE_CHARS = "-_.~!*'()"
 
 
-def querystring(dic, baseurl=None):
-    '''Converts dic to a query string to be used in URLs. It escapes all
-    unsafe characters (as defined in `QUERY_PARAMS_SAFE_CHARS`) and converts
-    lists to comma- separated encoded strings
+def querystring(query_args: dict, baseurl: str = None):
+    """Convert `query_args` to a query string to be used in URLs. It escapes all
+    unsafe characters (as defined in `QUERY_PARAMS_SAFE_CHARS`) from
+    `query_args` keys (str) and values, which can be any "scalar" type: bool, str,
+    date, datetime, numeric, and iterables of those elements (which will be
+    converted to comma-separated encoded strings), with the exception of `dict`:
+    values of type `dict` are not easily representable and will raise
+    `ValueError` in case
 
-    :param dic: a dictionary of values, as returned e.g., from JSON or YAML
-        parsed content. The dictionary CAN NOT have nested dictionaries, as
-        they can not be represented in a URL query string
+    :param query_args: a dictionary of query arguments (strings) mapped to
+        their values and to be encoded as "<key>=<value>" portions of the query
+        string
     :param baseurl: if provided, it is the base url which will be prefixed in
         the returned url string. It does not matter if it ends or not with a
         '?' character
-    '''
-
-    def escape(value):
-        '''escapes a scalar or array'''
-        if isinstance(value, dict):
-            raise ValueError('Can not represent nested dictionaries '
-                             'in a query string')
-        return quote(tostr(value), safe=QUERY_PARAMS_SAFE_CHARS) \
-            if isscalar(value) else \
-            ','.join(quote(tostr(_), safe=QUERY_PARAMS_SAFE_CHARS)
-                     for _ in value)
-
+    """
     baseurl = baseurl or ''
     if baseurl and baseurl[-1:] != '?':
         baseurl += '?'
 
     return "%s%s" % (baseurl, "&".join("%s=%s" % (key, escape(val))
-                                       for key, val in dic.items()))
+                                       for key, val in query_args.items()))
+
+
+def escape(value: Union[bool, None, str, date, datetime, int, float, Iterable]) -> str:
+    """Percent-escapes `value` with support for iterables and `None`s
+
+    :param value: bool, str, date, datetime, numeric, `None`s
+        (encoded as "null", with no quotes) and any iterables of those elements
+        (which will be converted to comma-separated encoded strings), but not
+        `dict` (raise ValueError in case)
+    """
+    if isinstance(value, dict):
+        raise ValueError('Can not represent nested dictionaries '
+                         'in a query string')
+    return quote(tostr(value), safe=QUERY_PARAMS_SAFE_CHARS) \
+        if isscalar(value) else \
+        ','.join(quote(tostr(_), safe=QUERY_PARAMS_SAFE_CHARS)
+                 for _ in value)
+
+
+def tostr(obj: Union[bool, None, str, date, datetime, int, float], none='null') -> str:
+    """Return a string representation of `obj` for injection into URL query
+    strings. No character is escaped, use :func:`urllib.parse.quote` or
+    :func:`querystring` for that.
+    Return `str(obj)` with these exceptions:
+
+    - `obj` is a `datetime.date` or `datetime.datetime`, return its ISO format
+      representation, either '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S' or
+      '%Y-%m-%dT%H:%M:%S.%f'
+    - `obj` is boolean: return 'true' or 'false' (to lower case)
+    - `obj` is None, return the `none` argument which defaults to "null"
+      (with no leading and trailing quotation character)
+    """
+    if obj is None:
+        return none
+    if obj is True or obj is False:
+        return str(obj).lower()
+    if isinstance(obj, (date, datetime)):
+        if isinstance(obj, date) or (obj.microsecond == obj.hour ==
+                                     obj.minute == obj.second == 0):
+            return obj.strftime('%Y-%m-%d')
+        if obj.microsecond == 0:
+            return obj.strftime('%Y-%m-%dT%H:%M:%S')
+        return obj.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    return str(obj)
 
 
 def yaml_load(obj):
-    '''Safely loads the YAML-formatted object `obj` into a dict and returns
+    """Safely loads the YAML-formatted object `obj` into a dict and returns
     that dict. Note that being YAML a superset of json, all properly
     json-formatted strings are also correctly loaded and the quote character
     ' is also allowed (in pure json, only " is allowed).
@@ -118,7 +133,7 @@ def yaml_load(obj):
         a YAMLError is thrown
 
     :raises: YAMLError
-    '''
+    """
     if isinstance(obj, dict):
         return obj
 
