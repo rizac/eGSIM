@@ -14,7 +14,7 @@
   ],
   "Shield": [
     "ToroEtAl2002SHARE",
-    "Campbell2003SHARE",
+    "Campbell2003SHARE"
   ],
   "Subduction Interface": [
     "AtkinsonBoore2003SInter",
@@ -22,7 +22,7 @@
     "YoungsEtAl1997SInter",
     "ZhaoEtAl2006SInter"
   ],
-  "Subduction Inslab": [
+  "Subduction Inslab": [  # 'Subduction IntraSlab'
     "AtkinsonBoore2003SSlab",
     "LinLee2008SSlab",
     "YoungsEtAl1997SSlab",
@@ -31,7 +31,7 @@
   "Volcanic": [
     "FaccioliEtAl2010"
   ],
-  "Subduction Deep": [
+  "Subduction Deep": [  # or 'Nonsubduction IntraSlab'
     "LinLee2008SSlab",
     "YoungsEtAl1997SSlab"
   ]
