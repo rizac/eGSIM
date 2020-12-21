@@ -9,7 +9,8 @@ import os
 from stat import S_IWUSR, S_IWGRP, S_IWOTH
 import pytest
 
-from egsim.management.commands._utils import get_classes, EgsimBaseCommand
+from egsim.management.commands._utils import EgsimBaseCommand
+from egsim.core.utils import get_classes
 
 try:  # https://stackoverflow.com/questions/44441929
     from unittest.mock import patch  # noqa (ok in py3.8)

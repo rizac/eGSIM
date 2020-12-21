@@ -22,7 +22,7 @@
     "YoungsEtAl1997SInter",
     "ZhaoEtAl2006SInter"
   ],
-  "Subduction Inslab": [  # 'Subduction IntraSlab'
+  "Subduction Inslab": [
     "AtkinsonBoore2003SSlab",
     "LinLee2008SSlab",
     "YoungsEtAl1997SSlab",
@@ -31,7 +31,7 @@
   "Volcanic": [
     "FaccioliEtAl2010"
   ],
-  "Subduction Deep": [  # or 'Nonsubduction IntraSlab'
+  "Subduction Deep": [
     "LinLee2008SSlab",
     "YoungsEtAl1997SSlab"
   ]

@@ -10,13 +10,16 @@ Created on 7 Dec 2020
 @author: riccardo
 """
 import fnmatch
-import inspect
+import json
 import os
 import sys
 from argparse import RawTextHelpFormatter
 from collections import defaultdict
+from typing import Dict
 
 from django.core.management.base import BaseCommand
+
+from egsim.models import Trt
 
 
 class EgsimBaseCommand(BaseCommand):
@@ -55,7 +58,7 @@ class EgsimBaseCommand(BaseCommand):
         self.stdout.write(self.style.WARNING(msg))
 
     def printsuccess(self, msg):
-        """print a message from a custom Command formatted as success"""
+        """Print a message from a custom Command formatted as success"""
         self.stdout.write(self.style.SUCCESS(msg))
 
     def collect_warning(self, message):
@@ -152,34 +155,18 @@ def get_filepaths(directory,
     return files
 
 
-def get_classes(module_name,
-                class_or_tuple: 'tuple or class' = None,
-                ignore_imported_classes=True) -> dict:
-    """Returns the class(es) available in the given module as a dict of
-    class names (str) mapped to the relative class, according to the optional
-    filtering criteria.
-
-    :param module_name: (str) the module name, usually accessible through the
-        variable `__name__`
-    :param class_or_tuple: (type/class or tuple of types/classes) return only
-        classes that are the same of, or a subclass of the given class(es). If
-        tuple, return the classes that match any of the given classes (logical
-        "or"). See builtin function `issubclass` for details
-    :param ignore_imported_classes: bool (default True): return only those
-        classes directly implemented in the module, and not imported from some
-        other module
-    """
-    def _filter(obj):
-        return _is_class(obj, module_name if ignore_imported_classes else None,
-                         class_or_tuple)
-    return {cls_name: cls for (cls_name, cls) in
-            inspect.getmembers(sys.modules[module_name], _filter)}
-
-
-def _is_class(obj, module_name: 'module' = None,
-              class_or_tuple: 'tuple or class' = None):
-    if inspect.isclass(obj):
-        if module_name is None or obj.__module__ == module_name:
-            if class_or_tuple is None or issubclass(obj, class_or_tuple):
-                return True
-    return False
+def get_trts() -> Dict[str, Trt]:
+    """Return a list of Trt names mapped to the given Trt model instance"""
+    try:
+        trts = {}
+        for trt in Trt.objects:  # noqa
+            for name in json.loads(trt.aliases_jsonlist):
+                trts[name] = trt
+        if not len(trts):
+            raise ValueError('No Tectonic region type found')
+        return trts
+    except Exception as _exc:
+        raise ValueError('%s.\nDid you create the db first?\n(for '
+                         'info see: https://docs.djangoproject.'
+                         'com/en/2.2/topics/migrations/#workflow)' %
+                         str(_exc))

@@ -1,4 +1,4 @@
-'''
+"""
 Models for the django app
 
 Currently they represent only read-only data from Tectonic Regionalisations
@@ -7,7 +7,7 @@ Currently they represent only read-only data from Tectonic Regionalisations
 Created on 5 Apr 2019
 
 @author: riccardo
-'''
+"""
 import json
 from enum import Enum
 
@@ -22,37 +22,33 @@ from shapely.geometry import Point, shape, Polygon
 
 class DB_ENTITY(Enum):
     """Defines the database entities which might raise Errors to be reported
-    in the Error Table"""
-
-    # Access element as, e.g.: DB_ENTITY.GSIM
-    # Or in loop:
-    # for _ in DB_ENTITY:
-    #   _.name  # e.g. "GSIM"
-    #   _.value  # e.g. 'Ground Shaking Intensity Model'
-    # For further customizations (not needed here) see Python enum doc
+    in the Error Table, e.g. `Error(entity_key=GSIM.name, ...)`
+    """
 
     GSIM = 'Ground Shaking Intensity Model'
     IMT = 'Intensity Measure Type'
     TRT = 'Tectonic Region Type'
 
-
-# ENTITIES = (('gsim', 'Ground Shaking Intensity Model'),
-#             ('imt', 'Intensity Measure Type'),
-#             ('trt', 'Tectonic Region Type'))
+    # Quick example in loops (details in the Python doc)
+    # for _ in DB_ENTITY:
+    #   _.name  # e.g. "GSIM". THIS IS THE VALUE EXCEPTED BY Error TABLE BELOW
+    #   _.value  # e.g. 'Ground Shaking Intensity Model'
 
 
 class Error(models.Model):
     """Model representing the Errors table. The table stores information
-    during the creation of the database for diagnistic purposes only
+    during the creation of the database for diagnostic purposes
+    (at the <URL>/admin address). Example: `Error(entity_key=GSIM.name, ...)`
     """
-    entity_key = models.TextField(unique=True,
-                                  help_text="The key uniquely identifying the "
-                                            "entity, e.g. the Gsim name")
     entity_type = models.CharField(max_length=max(len(_.name) for _ in DB_ENTITY),
                                    choices=tuple((_.name, _.value) for _ in DB_ENTITY),
-                                   help_text="The entity type"
+                                   help_text="The entity type. e.g. \"GSIM\""
                                    )
-    type = models.TextField(help_text="Error type")
+    entity_key = models.TextField(unique=True,
+                                  help_text="The key uniquely identifying the "
+                                            "entity, e.g. \"BindiEtAl2011\"")
+    type = models.TextField(help_text="Error type, usually the class name of "
+                                      "the Exception raised")
     message = models.TextField(help_text="Error message")
 
     def __str__(self):
@@ -63,38 +59,27 @@ class Error(models.Model):
 
 
 class Trt(models.Model):
-    """Model representing the db table of the (OpenQuake) Tectonic region types
+    """Model representing the db table of the Tectonic Region Type(s)
     """
-    key = models.TextField(unique=True)  # no need to set it (see below)
-    oq_att = models.CharField(max_length=100, unique=True)
-    oq_name = models.TextField(unique=True)
-
-    def save(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        # Django does not have hybrid attributes. Workaround is to set the key
-        # from the oq_name (https://stackoverflow.com/a/7558665)
-        if not self.key:  # it might be empty string (the default)
-            self.key = self.oq_att
-            # self.key = self.oq_name.replace(' ', '_').lower()  # pylint: disable=no-member
-        super(Trt, self).save(*args, **kwargs)
+    key = models.TextField(unique=True)
+    oq_attname = models.CharField(max_length=100, unique=True, default=None,
+                                  null=True,
+                                  help_text='corresponding TRT of OpenQuake '
+                                            '(attribute name of the class '
+                                            'openquake.hazardlib.const.TRT. '
+                                            'NULL if not match is found)')
+    # Instead of the JSON-like field below we should put the relationships
+    # [Trt,  Trt alias(es)] in a dedicated `Model` class, but as aliases are supposed
+    # to be used only in management commands, a class just for that (thus not
+    # actually used in the API) seems an overhead and might also be confusing
+    aliases_jsonlist = models.TextField(unique=True,
+                                        help_text='Aliases/Pseudonyms of the '
+                                                  'given Trt. Hidden-like field'
+                                                  'that should be used in '
+                                                  'management commands only')
 
     def __str__(self):
         return self.key
-
-
-class TectonicRegion(models.Model):
-    """Model representing the db table of Tectonic regions, i.e.
-    geographic regions with associated Tectonic Region Type (TRT)
-    """
-    source_id = models.TextField(null=False,
-                                 help_text="string ID of this data source "
-                                           "(e.g., research project, model name)")
-    geojson = models.TextField(null=False)
-    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False,
-                            help_text="tectonic region type (trt)")
-
-    def __str__(self):
-        return "Region %d (trt: %s, source_id: %s)" \
-            % (self.id, self.source_id, self.type.key)  # pylint: disable=no-member
 
 
 class Imt(models.Model):
@@ -115,8 +100,9 @@ class Gsim(models.Model):
     # currently, the max length of the OQ gsims is 43 ...
     key = models.TextField(null=False, unique=True,
                            help_text='OpenQuake class name')
-    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False,
-                            help_text='Tectonic Region type')
+    oq_trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=True,
+                               help_text='Tectonic Region type defined in '
+                                         'OpenQuake')
     imts = models.ManyToManyField(Imt, related_name='gsims',
                                   help_text='Intensity Measure Type(s)')
     needs_args = models.BooleanField(default=False, null=False,
@@ -138,15 +124,36 @@ class Gsim(models.Model):
         return str(self.key)
 
 
+class GeographicRegion(models.Model):
+    """Model representing the db table of Geographic regions with associated
+    Tectonic Region Type (TRT)
+    """
+    source_id = models.TextField(null=False,
+                                 help_text="string ID of this data source "
+                                           "(e.g., research project, model name)")
+    geojson = models.TextField(null=False)
+    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False,
+                            help_text="tectonic region type (trt)")
+
+    def __str__(self):
+        return "Region %d (trt: %s, source_id: %s)" \
+            % (self.id, self.source_id, self.type.key)  # pylint: disable=no-member
+
+
 class GsimTrtRelation(models.Model):
-    """Model representing the Gsim(s) <-> Tectonic
-     region type (trt) bindings
+    """Model representing the relationships between Trt and Gsim(s)
     """
     gsim = models.ForeignKey(Gsim, on_delete=models.CASCADE, null=False)
     trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False)
     source_id = models.TextField(null=False,
                                  help_text="string ID of this data source "
                                            "(e.g., research project, model name)")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['gsim', 'trt', 'source_id'],
+                                    name='unique(gsim,trt,source_id)')
+        ]
 
     def __str__(self):
         return "%s selected on %s (source_id: %s)" % (str(self.gsim), str(self.trt),
@@ -215,7 +222,7 @@ def aval_trmodels(asjsonlist=False):
     Geojson can be converted to a dict by calling as usual:
     `json.dumps(geojson)`)
     """
-    trobjects = TectonicRegion.objects  # pylint: disable=no-member
+    trobjects = GeographicRegion.objects  # pylint: disable=no-member
     if asjsonlist is True:
         return trobjects.values_list('model', 'type__key', 'geojson')
     return trobjects.order_by('model').values_list('model', flat=True).distinct()
@@ -397,7 +404,7 @@ class TrSelector:
                                   (lon1, lat1), (lon1, lat0)])
 
     def get_trt_names(self, trts=None):
-        tecregobjects = TectonicRegion.objects  # pylint: disable=no-member
+        tecregobjects = GeographicRegion.objects  # pylint: disable=no-member
         geojsons = tecregobjects.filter(model=self.tr_model)
         if trts is not None:
             if not any(isinstance(_, str) for _ in trts):

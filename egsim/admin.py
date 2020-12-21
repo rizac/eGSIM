@@ -14,15 +14,10 @@ from django.db.models import Model
 
 # from .models import (Gsim, Imt, Trt, TectonicRegion, Error)
 from . import models as egsim_models_module
-
-
-def _filter_func(obj):
-    """filter function used below"""
-    return inspect.isclass(obj) and issubclass(obj, Model) \
-        and obj.__module__ == egsim_models_module.__name__
+from .core.utils import get_classes
 
 
 # register for admin app all Model instances in the egsim models module:
-for name, cls in inspect.getmembers(egsim_models_module, _filter_func):
+for name, cls in get_classes(egsim_models_module, Model):
     # print(cls)
     admin.site.register(cls)

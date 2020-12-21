@@ -8,7 +8,9 @@ Created on 6 Apr 2019
 
 @author: riccardo
 """
+import json
 import os
+import re
 import warnings
 import inspect
 from collections import defaultdict
@@ -23,9 +25,9 @@ from openquake.hazardlib.imt import registry as hazardlib_imt_registry, IMT
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib import imt
 
-from egsim.management.commands._utils import EgsimBaseCommand
+from egsim.management.commands._utils import EgsimBaseCommand, get_command_datadir
 from egsim.models import Gsim, Imt, Trt, Error, empty_all, DB_ENTITY
-from egsim.core.utils import OQ, GSIM_REQUIRED_ATTRS
+from egsim.core.utils import OQ, GSIM_REQUIRED_ATTRS, yaml_load
 
 
 class Command(EgsimBaseCommand):
@@ -34,7 +36,7 @@ class Command(EgsimBaseCommand):
 
     # The formatting of the help text below (e.g. newlines) will be preserved
     # in the terminal output. All text after "Notes:" will be skipped from the
-    # help of the wrapper/main command 'initdb'
+    # help of the wrapper/main command `initdb`
     help = "\n". join([
         'Initializes and populates eGSIM database with all GSIMs, IMTs and TRTs',
         'implemented in version of OpenQuake used by the program.',
@@ -121,36 +123,81 @@ class Command(EgsimBaseCommand):
 
 
 def populate_trts() -> Dict[str, Trt]:
-    """Writes all Tectonic region types from OpenQuake into the db,
-        and returns the written instances"""
+    """Write all Tectonic region types found in the associated YAML file
+    and returns a dict of names mapped to the associated Trt (many to one
+    relationship: the same Trt might be keyed by many names)
+    """
+    def normalize(string):
+        """normalize two trt strings for comparison"""
+        return re.sub(r'\s+', ' ', string.strip().lower())
+
+    # get all OQ TRTs, by name:
+    oq_trts = {n: normalize(v) for n, v in OQ.trts().items()}
+    # define the keys as the attribute values (lower case and no underscore)
+    egsim_trt_file = os.path.join(get_command_datadir(__name__), 'trt.yaml')
+    egsim_trts = yaml_load(egsim_trt_file)
+    if not all(re.match('^[a-z_]+$', _) for _ in egsim_trts):
+        raise CommandError('Trt key(s) invalid (allowed lower case a to z, or '
+                           'underscore)')
+    # No duplicated name in `egsim_trts`:
+    already_processed_names = set()
+    # all OpenQuake TRT must have a match in `egsim_trts`:
+    oq_attname_unmatched = set(oq_trts.keys())
     trts = []
+    for key, values in egsim_trts:
+        # create the Trt object. The names attribute is basically the `values`
+        # variable space-separated, using json.dumps to escape quotes in case
+        trt = Trt(key=key, aliases_jsonlist=json.dumps(values), oq_attname=None)
+        trts.append(trt)
+        values = set(normalize(_) for _ in values)
+        # check uniqueness of names:
+        for _ in values:
+            if _ in already_processed_names:
+                raise CommandError('Trt "%s" not unique in "%s" (after '
+                                   'normalization)' % (_, egsim_trt_file))
+            already_processed_names.add(_)
+
+        # find associated OpenQuake TRT (if any):
+        for oq_attname in oq_attname_unmatched:
+            oq_attvalue = oq_trts[oq_attname]
+            if oq_attvalue in values:
+                trt.oq_attname = oq_attname
+                oq_attname_unmatched.remove(oq_attname)
+                break
+
+    if oq_attname_unmatched:
+        names = ', '.join(sorted(oq_trts[_] for _ in oq_attname_unmatched))
+        raise CommandError('No match found for the following OpenQuake '
+                           'TRT(s): %s.\n'
+                           'Please add them in "%s"' %
+                           (names, egsim_trt_file))
+
+    ret_trts = {}  # Trt name (str) -> Trt (Trt object). It's a many to one relationship
     # `create` below creates and saves an object
     # https://docs.djangoproject.com/en/3.1/ref/models/querysets/#django.db.models.query.QuerySet.create
     create_trt = Trt.objects.create  # noqa
-    for attname in dir(TRT):
-        if attname[:1] != '_' and isinstance(getattr(TRT, attname), str):
-            # the key is set automatically from the oq_name (see models.py):
-            try:
-                trts.append(create_trt(oq_name=getattr(TRT, attname),
-                                       oq_att=attname))
-            except Exception as exc:
-                # provide more meaningful message
-                raise CommandError('Can not create db entry for TRT.%s: %s\n'
-                                   '(check eGSIM code and the uniqueness of all '
-                                   'attributes of openquake.hazardlib.const.TRT)' %
-                                    (attname, str(exc)))
+    for trt in trts:
+        try:
+            trt.save()
+            for name in egsim_trts[trt.key]:  # Trt names as in the YAML
+                ret_trts[name] = Trt
+        except Exception as exc:
+            # provide more meaningful message
+            raise CommandError('Can not create db entry for TRT "%s": %s\n'
+                               '(check file "%s" and eGSIM code)' %
+                               (trt, egsim_trt_file))
 
-    return trts
+    return ret_trts
 
 
 def populate_imts() -> Dict[str, Imt]:
-    """Writes all IMTs from OpenQuake to the db, skipping IMTs which need
+    """Write all IMTs from OpenQuake to the db, skipping IMTs which need
     arguments as we do not know how to handle them (except SA)
     """
     # `create` below creates and saves an object
     # https://docs.djangoproject.com/en/3.1/ref/models/querysets/#django.db.models.query.QuerySet.create
     create_imt = Imt.objects.create  # noqa
-    imts = []
+    imts = {}
     for imt_name, imt_class in hazardlib_imt_registry.items():
         if inspect.isabstract(imt_class):
             continue
@@ -163,19 +210,17 @@ def populate_imts() -> Dict[str, Imt]:
             except Exception as exc:  # pylint: disable=broad-except
                 create_error(DB_ENTITY.IMT, imt_name, exc)
                 continue
-        imts.append(create_imt(key=imt_name, needs_args=imt_class == imt.SA))
+        imts[imt_name] = create_imt(key=imt_name, needs_args=imt_class == imt.SA)
     return imts
 
 
-def populate_gsims(trts, imts) -> Dict[str, Gsim]:
-    """Writes all Gsims from OpenQuake to the db"""
-    # entity_type = DB_ENTITY.GSIM
-    trts_d = {_.oq_name: _ for _ in trts}
-    imts_d = {_.key: _ for _ in imts}
+def populate_gsims(trts: Dict[str, Trt], imts: Dict[str, Imt]) -> Dict[str, Gsim]:
+    """Write all Gsims from OpenQuake to the db"""
     # `create` below creates and saves an object
     # https://docs.djangoproject.com/en/3.1/ref/models/querysets/#django.db.models.query.QuerySet.create
     create_gsim = Gsim.objects.create  # noqa
     gsims = []
+
     with warnings.catch_warnings():
         # Catch warnings as if they were exceptions, and skip deprecation w.
         # https://stackoverflow.com/a/30368735
@@ -183,7 +228,7 @@ def populate_gsims(trts, imts) -> Dict[str, Gsim]:
         for key, gsim in get_available_gsims().items():
             if inspect.isabstract(gsim):
                 continue
-            warning = ''
+            gsim_warnings = []
             needs_args = False
 
             try:
@@ -194,7 +239,7 @@ def populate_gsims(trts, imts) -> Dict[str, Gsim]:
                 create_error(DB_ENTITY.GSIM, key, exc)
                 continue
             except Warning as warn:
-                warning = str(warn)
+                gsim_warnings.append(str(warn))
             except TypeError:
                 gsim_inst = gsim
                 needs_args = True
@@ -228,23 +273,33 @@ def populate_gsims(trts, imts) -> Dict[str, Gsim]:
                 create_error(DB_ENTITY.GSIM, key, exc)
                 continue
 
+            trt = None
             try:
-                trt = trts_d[gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE]
-            except Exception as exc:
-                create_error(DB_ENTITY.GSIM, key,
-                             "Invalid TRT: %s" % str(exc),
-                             exc.__class__.__name__)
-                continue
+                defined_trt = str(gsim_inst.DEFINED_FOR_TECTONIC_REGION_TYPE)
+                trt = trts[defined_trt]
+            except AttributeError:
+                gsim_warnings.append('No Trt defined')
+            except KeyError:
+                gsim_warnings.append('Trt "%s" invalid' % defined_trt)
 
             # convert gsim imts (classes) into strings:
             gsim_imts = [_.__name__ for _ in gsim_imts]
             # and then convert to Imt model instances:
-            gsim_imts = [imts_d[_] for _ in gsim_imts if _ in imts_d]
+            gsim_imts = [imts[_] for _ in gsim_imts if _ in imts]
             if not gsim_imts:
                 create_error(DB_ENTITY.GSIM, key, "No IMT found")
                 continue
 
-            gsim = create_gsim(key=key, trt=trt, warning=warning,
+            # pack the N>=0 warning messages into a single msg.
+            # If N > 1, prepend each msg with  "1) ...", "2) ...", ...
+            gsim_warning = ''
+            if len(gsim_warnings) == 1:
+                gsim_warning = gsim_warnings[0].strip()
+            elif len(gsim_warnings) > 1:
+                gsim_warning = " ".join('%d) %s' % (i, _.strip())
+                                        for (i, _) in enumerate(gsim_warnings, 1))
+
+            gsim = create_gsim(key=key, trt=trt, warning=gsim_warning or None,
                                needs_args=needs_args)
             gsim.imts.set(gsim_imts)
             gsims.append(gsim)
@@ -258,9 +313,9 @@ def create_error(entity_type: DB_ENTITY,
                  error_type: str = None):
     """Creates an error from the given entity type (e.g. `DB_ENTITY.GSIM`) and
     key (e.g., the Gsim class name) and saves it to the database.
-    Note: if error_type is missing or None it is set as:
-        `error.__class__.__name__` if `error` is an `Exception`
-        "Error" otherwise
+    Note: if `error_type` is missing or None it is set as:
+        1. `error.__class__.__name__` if `error` is an `Exception`
+        2. "Error" otherwise
     """
     assert isinstance(entity_type, DB_ENTITY)
     if not error_type:
