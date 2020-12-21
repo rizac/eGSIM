@@ -1,7 +1,7 @@
 """
 Models for the django app
 
-Currently they represent only read-only data from Tectonic Regionalisations
+Currently they represent only read-only data from Tectonic Regionalizations
 (provided by custom input files) and OpenQuake Imts, Gsims and Trt
 
 Created on 5 Apr 2019
@@ -116,8 +116,8 @@ class Gsim(models.Model):
         (gsim, imts, tectonic_region_type, warning) where arguments are all
         strings except 'imts' which is a tuple of strings
         """
-        trt = self.trt.key  # pylint: disable=no-member
-        imts = (_.key for _ in self.imts.all())  # pylint: disable=no-member
+        trt = self.oq_trt.key  # noqa
+        imts = (_.key for _ in self.imts.all())  # noqa
         return self.key, tuple(imts), trt, self.warning or ''
 
     def __str__(self):
@@ -137,7 +137,7 @@ class GeographicRegion(models.Model):
 
     def __str__(self):
         return "Region %d (trt: %s, source_id: %s)" \
-            % (self.id, self.source_id, self.type.key)  # pylint: disable=no-member
+            % (self.id, self.source_id, self.trt.key)  # noqa
 
 
 class GsimTrtRelation(models.Model):
@@ -187,7 +187,7 @@ def aval_gsims(asjsonlist=False):
     if not asjsonlist:
         return list(gsim_names())
 
-    manager = Gsim.objects  # pylint: disable=no-member
+    manager = Gsim.objects  # noqa
     # https://docs.djangoproject.com/en/2.2/ref/models/querysets/#select-related:
     queryset = manager.prefetch_related('imts').select_related('trt').\
         order_by('key')
@@ -208,7 +208,7 @@ def aval_imts():
 def aval_trts(include_oq_name=False):
     """Returns a QuerySet of strings denoting the available Trts
     The Trts are returned sorted alphabetically by their keys"""
-    trtobjects = Trt.objects  # pylint: disable=no-member
+    trtobjects = Trt.objects  # noqa
     if include_oq_name:
         return trtobjects.order_by('key').values_list('key', 'oq_name')
     return trtobjects.order_by('key').values_list('key', flat=True)
@@ -222,7 +222,7 @@ def aval_trmodels(asjsonlist=False):
     Geojson can be converted to a dict by calling as usual:
     `json.dumps(geojson)`)
     """
-    trobjects = GeographicRegion.objects  # pylint: disable=no-member
+    trobjects = GeographicRegion.objects  # noqa
     if asjsonlist is True:
         return trobjects.values_list('model', 'type__key', 'geojson')
     return trobjects.order_by('model').values_list('model', flat=True).distinct()
@@ -235,10 +235,10 @@ def shared_imts(gsims):
     :param gsims: list of integers (gsim id), gsims instances, or
         strings denoting a Gsim key
     """
-    # Do not expose pubicly the fact that passing None returns all imts
-    # defined for at least one gsim, as the user shopuld use `aval_imts()`
+    # Do not expose publicly the fact that passing None returns all imts
+    # defined for at least one gsim, as the user should use `aval_imts()`
     # instead
-    imtobjects = Imt.objects  # pylint: disable=no-member
+    imtobjects = Imt.objects  # noqa
     min_required_gsims = 1
     if gsims is not None:
         min_required_gsims = len(gsims)
@@ -309,7 +309,7 @@ def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None,
     # https://docs.djangoproject.com/en/2.2/topics/db/examples/many_to_one/
     # https://docs.djangoproject.com/en/2.2/topics/db/queries/
 
-    gsimobjects = Gsim.objects  # pylint: disable=no-member
+    gsimobjects = Gsim.objects  # noqa
 
     if gsims is not None:
         # For each gsim in gsims, gsim can be a string (the gsim key),
@@ -354,8 +354,8 @@ def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None,
 
 
 def or_(q_expressions):
-    '''Concatenates the given Q expression with an 'OR'. Returns None if
-    `q_expressions` (iterable) has no items'''
+    """Concatenates the given Q expression with an 'OR'. Returns None if
+    `q_expressions` (iterable) has no items"""
     expr = None
     for expr_chunk in q_expressions:
         if expr is None:
@@ -376,26 +376,26 @@ def or_(q_expressions):
 # trts+model NO (might be OK, but NO for simplicity)
 
 class TrSelector:
-    '''This object allows selection of Trt (tectonic region types
-    from a given tectonic regionalisation (TR) and a specified point
+    """This object allows selection of Trt (tectonic region types
+    from a given tectonic regionalization (TR) and a specified point
     (or rectangle) defined on TR. The method get_trt_names will return all
     Trt(s) matching the given criteria
-    '''
+    """
 
     def __init__(self, tr_model, lon0, lat0, lon1=None, lat1=None):
-        '''Initializes this object. Call the method `get_trt_names` to return
+        """Initializes this object. Call the method `get_trt_names` to return
         the Trt(s) matching this object.
 
-        If specifiec, lon1 and lat1 will take the same values as lon0 and lat0,
+        If specified, lon1 and lat1 will take the same values as lon0 and lat0,
         and will define a rectangle and all Trt(s) *intersecting* it will be
         returned. Otherwise, all Trt(s) *including* the point specified by
         lon0 and lat0 will be returned.
 
-        :param tr_model: string. a tectonic regionalisation model, must be
+        :param tr_model: string. a tectonic regionalization model, must be
             present int the table 'TectonicRegions' under the 'model' column
-        :param lon0: float, the latitude (in degreees) of the point
+        :param lon0: float, the latitude (in degrees) of the point
         :param lon0: float, the longitude (in degrees) of the point
-        '''
+        """
         self.tr_model = tr_model
         if lon1 is None or lat1 is None:
             self.shape = Point([lon0, lat0])
@@ -404,7 +404,7 @@ class TrSelector:
                                   (lon1, lat1), (lon1, lat0)])
 
     def get_trt_names(self, trts=None):
-        tecregobjects = GeographicRegion.objects  # pylint: disable=no-member
+        tecregobjects = GeographicRegion.objects  # noqa
         geojsons = tecregobjects.filter(model=self.tr_model)
         if trts is not None:
             if not any(isinstance(_, str) for _ in trts):
