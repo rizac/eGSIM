@@ -1,10 +1,10 @@
-'''
+"""
 Django form fields for eGSIM
 
 Created on 16 Sep 2018
 
 @author: riccardo
-'''
+"""
 import re
 from fnmatch import translate
 import json
@@ -42,22 +42,20 @@ from egsim.models import aval_gsims, aval_imts, aval_trts, aval_trmodels
 
 
 class ArrayField(CharField):
-    '''
-        Implements a django CharField which parses and validates the input
-        expecting an array of elements in JSON or Unix shell (space separated
-        variables) formatted strings. Note that in both syntaxes leading and
-        trailing square brackets are optional.
-        The type of the parsed elements depends on `self.parse(token)`
-        which by default returns `token` but might be overridden by subclasses
-        (see. :class:`NArrayField`).
-        As Form fields act also as validators, an object of this class can
-        deal also with already parsed arrays (e.g., after inputing Yaml POST
-        data in yaml format which would return an array of python objects and
-        not their string representation).
-    '''
+    """Django CharField subclass which parses and validates string inputs given
+    as array of elements in JSON (comma separated variables, with optional
+    square brackets) or Unix shell (space separated variables) syntax.
+    The type of the parsed elements depends on `self.parse(token)` which by
+    default returns `token` but might be overridden by subclasses (see
+    :class:`NArrayField`).
+    As Form fields act also as validators, an object of this class can deal
+    also with already parsed arrays (e.g., after inputing Yaml POST data in
+    YAML format which would return an array of python objects and not their
+    string representation).
+    """
     def __init__(self, *, min_count=None, max_count=None,
                  min_value=None, max_value=None, **kwargs):
-        '''Initializes a new ArrayField
+        """Initialize a new ArrayField
          :param min_count: numeric or None. The minimum required count of the
              elements of the parsed array. Note that `min_length` is already
              defined in the super-class. If None (the default), parsed array
@@ -74,7 +72,7 @@ class ArrayField(CharField):
          :param max_value: object. Self-explanatory. Behaves the same as
              `min_value`
          :param kwargs: keyword arguments forwarded to the Django super-class.
-        '''
+        """
         # Parameters after “*” or “*identifier” are keyword-only parameters
         # and may only be passed used keyword arguments.
         super(ArrayField, self).__init__(**kwargs)
@@ -98,7 +96,7 @@ class ArrayField(CharField):
                     raise ValidationError('unbalanced brackets')
                 try:
                     value = json.loads(value if is_vector else "[%s]" % value)
-                except Exception:  # pylint: disable=broad-except
+                except Exception:  # noqa
                     try:
                         value = shlex.split(value[1:-1].strip() if is_vector
                                             else value)
@@ -143,16 +141,18 @@ class ArrayField(CharField):
 
     @classmethod
     def parse(cls, token):  # pylint: disable=no-self-use
-        '''Parses token and returns either an object or an iterable of objects.
+        """Parse token and returns either an object or an iterable of objects.
         This method can safely raise any exception, if not ValidationError
-        it will be wrapped into a suitable ValidationError'''
+        it will be wrapped into a suitable ValidationError
+        """
         return token
 
     @staticmethod
     def isinragne(value, minval=None, maxval=None):
-        '''Returns True if the given value is in the range defined by minval
+        """Return True if the given value is in the range defined by minval
         and maxval (endpoints are included). None's in minval and maxval
-        mean: do not check'''
+        mean: do not check
+        """
         try:
             ArrayField.checkrange(value, minval, maxval)
             return True
@@ -161,10 +161,11 @@ class ArrayField(CharField):
 
     @staticmethod
     def checkrange(value, minval=None, maxval=None):
-        '''checks that the given value is in the range defined by minval and
+        """check that the given value is in the range defined by minval and
         maxval (endpoints are included). None's in minval and maxval mean:
         do not check. This method does not return any value but raises
-        ValueError if value is not in the given range'''
+        ValueError if value is not in the given range
+        """
         toolow = (minval is not None and value < minval)
         toohigh = (maxval is not None and value > maxval)
         if toolow and toohigh:
@@ -177,12 +178,12 @@ class ArrayField(CharField):
 
 
 class NArrayField(ArrayField):
-    '''ArrayField for sequences of numbers'''
+    """ArrayField for sequences of numbers"""
 
     @staticmethod
     def float(val):
-        '''wrapper around the built-in `float` function.
-        Raises ValidationError in case of errors'''
+        """Wrapper around the built-in `float` function.
+        Raises ValidationError in case of errors"""
         try:
             return float(val)
         except ValueError:
@@ -193,16 +194,19 @@ class NArrayField(ArrayField):
 
     @classmethod
     def parse(cls, token):
-        '''Parses `token` into float.
+        """Parse `token` into float.
         :param token: A python object denoting a token to be pared
-        '''
+        """
+        # maybe already a number? try adn return
         try:
             return cls.float(token)
         except ValidationError:
+            # raise if the input was not string: we surely can not deal it:
             if not isinstance(token, str):
                 raise
 
-        # parse semicolon as in matlab: 1:3 = [1,2,3],  1:2:3 = [1,3]
+        # Let's try the only option left, i.e. token is a range in matlab
+        # syntax, e.g.: "1:3" = [1,2,3],  "1:2:3" = [1,3]
         spl = [_.strip() for _ in token.split(':')]
         if len(spl) < 2 or len(spl) > 3:
             if ':' in token:
@@ -229,11 +233,11 @@ class NArrayField(ArrayField):
 
     @classmethod
     def get_decimals(cls, *strings):
-        '''parses each string and returns the maximum number of decimals
+        """parse each string and returns the maximum number of decimals
         :param strings: a sequence of strings. Note that they do not need to
         be parsable as floats, this method searches for the dot and the
         letter 'E' (ignoring case)
-        '''
+        """
         decimals = 0
         try:
             for string in strings:
@@ -245,7 +249,7 @@ class NArrayField(ArrayField):
                     len(string[idx_dec+1: None if idx_exp < 0 else idx_exp])
                 dec2 = 0 if idx_exp < 0 else -int(string[idx_exp+1:])
                 decimals = max([decimals, dec1 + dec2])
-            # reutrn 0 as we do not care for big numbers (they are int anyway)
+            # return 0 as we do not care for big numbers (they are int anyway)
             return decimals
         except ValueError:
             return None
@@ -253,18 +257,19 @@ class NArrayField(ArrayField):
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 class PointField(NArrayField):
-    '''NArrayField which validates a 2-element iterable and returns an
-    openquake Point'''
+    """NArrayField which validates a 2-element iterable and returns an
+    OpenQuake Point"""
 
     def __init__(self, **kwargs):  # FIXME: depth? should be >0 in case ?
         super(PointField, self).__init__(min_count=2, max_count=2, **kwargs)
 
     def clean(self, value):
-        '''Converts the given value to a
-        :class:` openquake.hazardlib.geo.point.Point` object.
+        """Converts the given value to a
+        :class:`openquake.hazardlib.geo.point.Point` object.
         It is usually better to perform these types of conversions
         subclassing `clean`, as the latter is called at the end of the
-        validation workflow'''
+        validation workflow
+        """
         value = NArrayField.clean(self, value)
         try:
             return Point(*value)
@@ -273,17 +278,17 @@ class PointField(NArrayField):
 
 
 class SelExprField(CharField):
-    '''Field implementing a selection expression on a Ground Motion Database
+    """Field implementing a selection expression on a Ground Motion Database
     (gmdb). It is a CharField with custom validation performed by testing the
-    selection expression on an in-memory Gmdb'''
+    selection expression on an in-memory Gmdb"""
 
     def __init__(self, **kwargs):
         kwargs.setdefault('label', 'Selection expression')
         super(SelExprField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''Converts the given value (string) into the OpenQuake instance
-        and returns the latter'''
+        """Convert the given value (string) into the OpenQuake instance
+        and returns the latter"""
         value = super(SelExprField, self).clean(value)
         if value:
             try:
@@ -298,11 +303,11 @@ class SelExprField(CharField):
 
 
 class _DictChoiceField(ChoiceField):
-    '''ChoiceField where the choices are supplied via a class dict:
+    """ChoiceField where the choices are supplied via a class dict:
     the dict keys will be the values to be accepted as input, the dict
     value will be the value returned from clean().
     As Django form input, the <select> will display the dict keys
-    as both value and text'''
+    as both value and text"""
     _base_choices = {}
 
     def __init__(self, **kwargs):
@@ -310,31 +315,31 @@ class _DictChoiceField(ChoiceField):
         super(_DictChoiceField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''Converts the given value (string) into the OpenQuake instance
-        and returns the latter'''
+        """Convert the given value (string) into the OpenQuake instance
+        and return the latter"""
         value = super(_DictChoiceField, self).clean(value)
         return self._base_choices[value]
 
 
 class MsrField(_DictChoiceField):
-    '''A ChoiceField handling the selected Magnitude Scaling Relation object'''
+    """A ChoiceField handling the selected Magnitude Scaling Relation object"""
     _base_choices = get_available_magnitude_scalerel()
 
 
 class TextSepField(_DictChoiceField):
-    '''A ChoiceField handling the text separators in the text response'''
+    """A ChoiceField handling the text separators in the text response"""
     _base_choices = dict([('comma', ','), ('semicolon', ';'),
                           ('space', ' '), ('tab', '\t')])
 
 
 class TextDecField(_DictChoiceField):
-    '''A ChoiceField handling the text decimal in the text response'''
+    """A ChoiceField handling the text decimal in the text response"""
     _base_choices = dict([('period', '.'), ('comma', ',')])
 
 
 class TrellisplottypeField(ChoiceField):
-    '''A ChoiceField returning the selected `BaseTrellis` class for
-    computing the Trellis plots'''
+    """A ChoiceField returning the selected `BaseTrellis` class for
+    computing the Trellis plots"""
     _base_choices = {
         'd': ('IMT vs. Distance', DistanceIMTTrellis),
         'm': ('IMT vs. Magnitude', MagnitudeIMTTrellis),
@@ -347,14 +352,14 @@ class TrellisplottypeField(ChoiceField):
         super(TrellisplottypeField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''Converts the given value (string) into the OpenQuake instance
-        and returns the latter'''
+        """Convert the given value (string) into the OpenQuake instance
+        and return the latter"""
         value = super(TrellisplottypeField, self).clean(value)
         return self._base_choices[value][1]
 
 
 class LazyCached:
-    '''A callable returning a cached (i.e., evaluated only once) iterable.
+    """A callable returning a cached (i.e., evaluated only once) iterable.
     Used in the keyword argument 'choices' to lazily create the list of
     choices. E.g.:
     ```
@@ -362,12 +367,11 @@ class LazyCached:
     ```
     The rationale is to avoid costly operations or DB access at module import
     / initialization time which are messy with tests (for an introduction of
-    the problem, see:
-    https://stackoverflow.com/questions/43326132/how-to-avoid-import-time-database-access-in-django).
+    the problem, see https://stackoverflow.com/q/43326132).
     The solution is to pass a callable to the 'choices' argument (see Django
     ChoiceField), but the callable is re-evaluated each time. If you want to
     cache the result and evaluate it only once, use this class as callable
-    '''
+    """
     def __init__(self, callable_returning_iterator):
         self._callable_returning_iterator = callable_returning_iterator
         self._data = None
@@ -379,7 +383,7 @@ class LazyCached:
 
 
 class TrModelField(ChoiceField):
-    '''EgsimChoiceField for Tectonic regionalisation models'''
+    """EgsimChoiceField for Tectonic regionalisation models"""
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
                           LazyCached(lambda: [(_, _)
@@ -388,10 +392,10 @@ class TrModelField(ChoiceField):
 
 
 class GmdbField(ChoiceField):
-    '''EgsimChoiceField for Ground motion databases
+    """EgsimChoiceField for Ground motion databases
     It accepts an optional argument gmdbpath which defaults to the Django
     app db path
-    '''
+    """
     _base_choices = get_gmdb_names(get_gmdb_path())
 
     def __init__(self, **kwargs):
@@ -402,15 +406,15 @@ class GmdbField(ChoiceField):
         super(GmdbField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''Converts the given value (string) into the tuple
-        hf5 path, database name (both strings)'''
+        """Converts the given value (string) into the tuple
+        hf5 path, database name (both strings)"""
         value = super(GmdbField, self).clean(value)
-        return (self._base_choices[value], value)
+        return self._base_choices[value], value
 
 
 class ResidualplottypeField(ChoiceField):
-    '''An EgsimChoiceField which returns the selected function to compute
-    residual plots'''
+    """An EgsimChoiceField which returns the selected function to compute
+    residual plots"""
     # _base_choices maps the REST key to the tuple:
     # (GUI label, [function, dict_of_functon_kwargs])
     _base_choices = {
@@ -434,15 +438,15 @@ class ResidualplottypeField(ChoiceField):
         super(ResidualplottypeField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''Takes the given value (string) and returns the tuple
+        """Take the given value (string) and returns the tuple
         (smtk_function, function_kwargs)
-        '''
+        """
         value = super(ResidualplottypeField, self).clean(value)
         return self._base_choices[value][1:]
 
 
 class MeasureOfFitField(MultipleChoiceField):
-    '''MultipleChoiceField handling the possible Measures of Fit'''
+    """MultipleChoiceField handling the possible Measures of Fit"""
     _base_choices = {
         MOF.RES: ('Residuals',
                   GSIM_MODEL_DATA_TESTS['Residuals']),
@@ -462,23 +466,23 @@ class MeasureOfFitField(MultipleChoiceField):
         super(MeasureOfFitField, self).__init__(**kwargs)
 
     def clean(self, value):
-        '''Converts the given value (string) into the smtk function'''
+        """Convert the given value (string) into the smtk function"""
         value = super(MeasureOfFitField, self).clean(value)
         # returns list of sub-lists [key, label, function]:
         return [[_] + list(self._base_choices[_]) for _ in value]
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
-    '''Extension of Django MultipleChoiceField:
+    """Extension of Django MultipleChoiceField:
      - Accepts lists of strings or a single string
     (which will be converted to a 1-element list)
     - Accepts wildcard in strings in order to include all matching elements
-    '''
+    """
 
     def to_python(self, value):
-        '''converts strings with wildcards to matching elements, and calls the
+        """convert strings with wildcards to matching elements, and calls the
         super method with the converted value. For valid wilcard characters,
-        see https://docs.python.org/3.4/library/fnmatch.html'''
+        see https://docs.python.org/3.4/library/fnmatch.html"""
         # value might be None, string, list. Call FIRST the super method
         # which raises if value is truthy AND is not a (list, tuple), otherwise
         # assures that value is a list of strings
@@ -509,16 +513,16 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
 
     @staticmethod
     def to_regex(value):
-        '''converts string (a unix shell string, see
+        """Convert string (a unix shell string, see
         https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
         will match accounting for the case (ignore case off)
-        '''
+        """
         return re.compile(translate(value))
 
 
 class GsimField(MultipleChoiceWildcardField):
-    '''MultipleChoiceWildcardField with default `choices` argument,
-    if not provided'''
+    """MultipleChoiceWildcardField with default `choices` argument,
+    if not provided"""
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
                           LazyCached(lambda: [(_, _) for _ in aval_gsims()]))
@@ -527,7 +531,7 @@ class GsimField(MultipleChoiceWildcardField):
 
 
 class BaseImtField(MultipleChoiceWildcardField):
-    '''Base class for the IMT selection Form Field'''
+    """Base class for the IMT selection Form Field"""
     SA = 'SA'
     default_error_messages = {
         'sa_with_period': _("%s must be specified without period(s)" % SA),
@@ -544,10 +548,10 @@ class BaseImtField(MultipleChoiceWildcardField):
 
 
 class ImtclassField(BaseImtField):
-    '''Field for IMT class selection. Inherits from `BaseImtField` (thus
+    """Field for IMT class selection. Inherits from `BaseImtField` (thus
     `MultipleChoiceWildcardField`): Imts should be provided as
     class names (strings) with no arguments.
-    '''
+    """
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
                           LazyCached(lambda: [(_, _) for _ in aval_imts()]))
@@ -572,19 +576,19 @@ class ImtclassField(BaseImtField):
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 class ImtField(BaseImtField):
-    '''Field for IMT class selection. Inherits from `BaseImtField` (thus
-    `MultipleChoiceWildcardField`):  Imts should be provided as
-    class names (strings) with arguments, if needed.
-    This class has also the property `sa_periods_str` that can be set
-    with the string value of SA periods provided separately
-    '''
+    """Field for IMT class selection. Inherits from `BaseImtField` (thus
+    `MultipleChoiceWildcardField`): Imts should be provided as class names
+    (str) with arguments, if needed. This class has also the property
+    `sa_periods_str` that can be set with the string value of SA periods
+    provided separately
+    """
     @property
     def sa_periods_str(self):
-        '''Sets the SA periods as string. The periods must be formatted
-        according to a `NArrayField` input (bascially, shlex or json
+        """Sets the SA periods as string. The periods must be formatted
+        according to a `NArrayField` input (basically, shlex or json
         compatible). If provided, the `to_python` method will merge all
         provided IMTs with all string chunks `SA(P)` built from the periods
-        chunks parsed from this string'''
+        chunks parsed from this string"""
         return getattr(self, '_sa_periods_str', '')
 
     @sa_periods_str.setter
@@ -611,7 +615,7 @@ class ImtField(BaseImtField):
             try:
                 imt.from_string(value)
                 valid = True
-            except Exception:  # pylint: disable=broad-except
+            except Exception:  # noqa
                 if value.startswith('%s(' % self.SA):
                     raise ValidationError(
                         self.error_messages['invalid_sa_period'],
@@ -622,11 +626,11 @@ class ImtField(BaseImtField):
         return valid
 
     def to_python(self, value):
-        '''Converts the given input value to a Python list of IMT strings
+        """Converts the given input value to a Python list of IMT strings
         Remember that this method is called from within `self.clean` which in
         turns calls first `self.to_python` and then `self.validate`. The latter
         calls `self.valid_value` on each element of the input IMT list
-        '''
+        """
         # convert strings with wildcards to matching elements
         # (see MultipleChoiceWildcardField):
         imts = ImtclassField.to_python(self, value)
@@ -655,10 +659,10 @@ class ImtField(BaseImtField):
         return imts
 
     def get_imt_classnames(self, value):
-        '''Returns a set of strings denoting the IMT class names in `value`
+        """Returns a set of strings denoting the IMT class names in `value`
         uses `self.sa_periods_str` to infer if SA is defined and should be
-        returned regardless of wether it is in `value` (list of IMT strings)
-        '''
+        returned regardless of whether it is in `value` (list of IMT strings)
+        """
         # convert strings with wildcards to matching elements
         # (see MultipleChoiceWildcardField):
         imts = ImtclassField.to_python(self, value)
@@ -671,14 +675,14 @@ class ImtField(BaseImtField):
         for imt_ in imts:
             try:
                 ret.add(imt.from_string(imt_).__class__.__name__)
-            except Exception:  # pylint: disable=broad-except
+            except Exception:  # noqa
                 pass
         return ret
 
 
 class TrtField(MultipleChoiceWildcardField):
-    '''MultipleChoiceWildcardField field which also bahaves as kind of
-    EgsimChoiceField'''
+    """MultipleChoiceWildcardField field which also behaves as kind of
+    EgsimChoiceField"""
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
                           LazyCached(lambda: [_ for _ in
