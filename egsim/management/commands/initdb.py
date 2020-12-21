@@ -14,7 +14,8 @@ from django.db.utils import OperationalError
 from django.core.management.base import BaseCommand, CommandError
 
 from egsim.models import empty_all
-from ._utils import EgsimBaseCommand, get_classes
+from ._utils import EgsimBaseCommand
+from ...core.utils import get_classes
 from egsim.management.commands import oq2db, reg2db, gsimsel2db
 
 

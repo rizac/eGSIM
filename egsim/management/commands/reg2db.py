@@ -11,29 +11,26 @@ see e.g. "SHARE") and:
 
 1. If needed for the regionalization, add external input data to the directory
     "./data/reg2db/<source_id>"
-2. implement in this module the regionalization as a subclass of
+2. Implement in this module the regionalization as a subclass of
    :class:`Regionalization`. The subclass must:
-       2a. implement the `get_regions` method (see docstring for details), and
-       2b. have name <source_id> (you can name the class differently, but then
-           you must write the class attribute `_source_id="<source_id>"`).
+       2a. Implement the `get_regions` method (see docstring for details), and
+       2b. Have name <source_id> (you can name the class differently, but then
+           you must write the class attribute `_source_id="<source_id>"`)
+
 See :class:`SHARE` for an example
 
 Created on 7 Dec 2020
 
 @author: riccardo
 """
-import json
 import os
-import sys
-import inspect
+import json
 
 from django.core.management.base import CommandError
-from openquake.hazardlib.const import TRT
-from shapefile import Reader
-from shapely.geometry import shape, mapping
 
-from egsim.models import Trt, TectonicRegion
-from ._utils import EgsimBaseCommand, get_command_datadir, get_filepaths
+from egsim.models import GeographicRegion
+from egsim.core.utils import yaml_load, get_classes
+from ._utils import EgsimBaseCommand, get_command_datadir, get_filepaths, get_trts
 
 
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
@@ -42,8 +39,8 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
     ```
     export DJANGO_SETTINGS_MODULE="..."; python manage.py reg2db
     ```
-    A regionalization is a set of Tectonic regions, i.e. geographic regions
-    with an associated Tectonic region type (Trt).
+    A regionalization is a set of Geographic regions with an associated
+    Tectonic region type (Trt).
     The regionalization usually comes from a data source (e.g., research
     project, area source model) in form of shapefiles or anything describing
     a set of Polygon areas and their trt.
@@ -59,8 +56,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
     help = "\n".join([
         'Fetches all regionalization(s) from external data sources',
         '(\'commands/data\' directory) and writes them on the database.',
-        'A regionalization is a set of Tectonic regions, i.e. geographic',
-        'regions with an associated TRT.',
+        'A regionalization is a set of Geographic regions with an associated TRT.',
         'Notes:',
         '- TRT: Tectonic Region Type',
         '- Each region will correspond to a database table row. All',
@@ -79,24 +75,21 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         try:
-            trts = {_.oq_name: _ for _ in Trt.objects}  # noqa
-            if not len(trts):
-                raise ValueError('No Tectonic region type found')
+            trts = get_trts()  # noqa
         except Exception as _exc:
-            raise CommandError('%s.\nDid you create the db first?\n(for '
-                               'info see: https://docs.djangoproject.'
-                               'com/en/2.2/topics/migrations/#workflow)' %
-                               str(_exc))
+            raise CommandError(str(_exc))
 
         self.printinfo('Deleting existing regions (AND REFERENCED DATA, TOO) '
                        'from db')
         try:
-            TectonicRegion.objects.all().delete()  # noqa
+            GeographicRegion.objects.all().delete()  # noqa
         except Exception as _exc:
             raise CommandError('Unable to delete existing regions: %s' %
                                str(_exc))
 
-        for source_id, regionalization in get_regionalizations():
+        for source_id, regionalization in get_classes(__name__, Regionalization):
+            if regionalization is Regionalization:  # abstract class, skip:
+                continue
             self.handle_regionalization(source_id, regionalization, trts)
             self.printinfo('')
 
@@ -109,21 +102,20 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                        source_id)
 
         count, saved = 0, 0
-        for region_dict in regionalization.get_regions(self):
-            count += 1
+        for count, region_dict in enumerate(regionalization.get_regions(self), 1):
             region_dict.setdefault("source_id", source_id)
             # region_dict['trt'] is a str, replace it with the associated
             # Trt db object (if a mapping is found in `trts`):
             trt = region_dict.get('trt', None)
             if trt not in trts:
-                msg = 'No TRT found' if not trt else ("'%s' is not a known "
-                                                      "TRT in OpenQuake" % trt)
-                self.collect_warning("Skipping region: %s" % msg)
-                continue
+                msg = 'No TRT found' if not trt \
+                    else ('TRT name "%s"" unknown' % trt)
+                # OLD: self.collect_warning("Skipping region: %s" % msg). NOW:
+                raise CommandError("Region #%d: %s" % (count, msg))
             try:
                 region_dict[trt] = trts[trt]  # replace str with Model instance
                 region_dict['geojson'] = json.dumps(region_dict['geojson'])
-                region = TectonicRegion({**region_dict, 'trt': trts[trt]})
+                region = GeographicRegion({**region_dict, 'trt': trts[trt]})
                 region.save()
                 saved += 1
             except Exception as exc:
@@ -181,8 +173,8 @@ class Regionalization:
         dicts representing a geographic region with associated Tectonic Region
         Type (TRT). Each dict must have the following fields:
         {
-        "geojson": dict  # for info see https://geojson.org/
-        "trt": str  # one of the attributes of openquake.hazardlib.const.TRT
+        "geojson": dict  # for the dict format info see https://geojson.org/
+        "trt": str  # a valid Trt name (see `oq2db` cmd and oq2db/trt.yaml file)
         }
         """
         raise NotImplementedError('You must implement `get_regions`')
@@ -191,40 +183,34 @@ class Regionalization:
 class SHARE(Regionalization):
     """Implements the 'SHARE' Regionalization"""
 
-    # maps a SHARE Tectonic region type to the OpenQuake equivalent:
-    mappings = {
-        'active shallow crust': TRT.ACTIVE_SHALLOW_CRUST,  # 'Active Shallow Crust',
-        'stable shallow crust': TRT.STABLE_CONTINENTAL,  # 'Stable Shallow Crust',
-        'subduction interface': TRT.SUBDUCTION_INTERFACE,  # 'Subduction Interface',
-        'subduction intraslab': TRT.SUBDUCTION_INTRASLAB,  # 'Subduction IntraSlab',
-        "upper mantle": TRT.UPPER_MANTLE,  # "Upper Mantle",
-        'volcanic': TRT.VOLCANIC,  # 'Volcanic',
-        'geothermal': TRT.GEOTHERMAL,  # 'Geothermal',
-        'induced': TRT.INDUCED,  # 'Induced',
-        "subduction inslab": TRT.SUBDUCTION_INTRASLAB,  # "Subduction IntraSlab",
-        "stable continental crust": TRT.STABLE_CONTINENTAL,  # 'Stable Shallow Crust',
-        "inslab": TRT.SUBDUCTION_INTRASLAB,  # "Subduction IntraSlab",
-        "subduciton inslab": TRT.SUBDUCTION_INTRASLAB  # typo ...
-    }
-
     def get_regions(self, calling_cmd: EgsimBaseCommand):
         """Yields an iterable (e.g. tuple, list, generator expression) of
         dicts representing a geographic region with associated Tectonic Region
         Type (TRT). Each dict must have the following fields:
         {
-        "geojson": dict  # for info see https://geojson.org/
-        "trt": str  # one of the attributes of openquake.hazardlib.const.TRT
+        "geojson": dict  # for the dict format info see https://geojson.org/
+        "trt": str  # a valid Trt name (see `oq2db` cmd and oq2db/trt.yaml file)
         }
         """
-        for shp_path in get_filepaths(self.datadir, pattern='*.shp'):
-            for feat in to_geojson_features(shp_path):
+        for shp_path in get_filepaths(self.datadir, pattern='*.geojson'):
+            shp_name = os.path.basename(shp_path)
+            try:
+                # find the Trt attribute:
+                trt_attname = {
+                    'share_subduction_interface': 'TECREG',
+                    'share_model_area_regions': 'trt'
+                }[os.path.splitext(shp_name)[0]]
+            except KeyError:
+                raise CommandError('"%s" has no associated Trt attribute in "%s"' %
+                                   (shp_name, __file__))
+
+            feat_collection = yaml_load(shp_path)  # dict of this type:
+            # https://rdrr.io/cran/geoops/man/FeatureCollection.html
+            for feat in feat_collection['features']:
                 props = feat['properties']
-                trt = props.get('TECTONICS', None) or props.get('TECREG', None)
-                if trt is not None and trt.lower() in self.mappings:
-                    # try to get the Openquake tectonic region name from
-                    # self.mappings, if not found move on, `calling_cmd` will skip
-                    # teh region if the trt is invalid (and collect the warning)
-                    trt = self.mappings[trt]
+                # Get the Trt name. if not found move on, `calling_cmd` will
+                # raise (or print a warning, depending on the implementation)
+                trt_name = props.get(trt_attname, None)
                 # feat['properties'] can have whatever we might need to be
                 # accessible in the frontend. Here we remove all properties
                 # (save space):
@@ -232,96 +218,6 @@ class SHARE(Regionalization):
                 # Note: the model attribute will be set in the caller
                 # if not present:
                 yield {
-                        'geojson': feat,
-                        'trt': trt
-                    }
-
-#############
-# Utilities #
-#############
-
-
-def get_regionalizations():
-    """Returns a list of source_id names (str) mapped to the relative
-    Regionalization instance
-    """
-    # we could write this as one-line expression but let's be explicit:
-    ret = {}
-    for classname, class_ in inspect.getmembers(sys.modules[__name__],
-                                                _is_regionalization_class):
-        regionalization_instance = class_()
-        ret[regionalization_instance.source_id] = regionalization_instance
-    return ret
-
-
-def _is_regionalization_class(obj):
-    return inspect.isclass(obj) and obj.__module__ == __name__ \
-        and obj is not Regionalization and issubclass(obj, Regionalization)
-
-
-def to_geojson(*shapefiles):
-    """Reads the given shape files ('.shp') and return them joined in a
-    'FeatureCollection' geojson dict. Example:
-    ```
-    {
-       "type": "FeatureCollection",
-       "features": [
-           {
-               "type": "Feature",
-               "geometry": {
-                   "type": "Polygon",
-                   "coordinates": [
-                       [
-                           [100.0, 0.0],
-                           [101.0, 0.0],
-                           ...
-                       ]
-                   ]
-               },
-               "properties": {
-                   "prop0": "value0",
-                   "prop1": {
-                       "this": "that"
-                   }
-               }
-           },
-           ...
-       ]
-    }
-    ```
-    """
-    features = [feat for shapefile in shapefiles
-                for feat in to_geojson_features(shapefile)]
-    return {"type": "FeatureCollection", 'features': features}
-
-
-def to_geojson_features(shapefilepath):
-    """Reads the given shape file ('.shp') and returns it as a list of geojson
-    features of the form:
-    ```
-        {
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [125.6, 10.1]
-                },
-            "properties": {
-                "name": "whatever"
-            }
-        }
-    ```
-    """
-    shp = Reader(shapefilepath)  # open the shapefile
-    shapes = shp.shapes()  # get all the polygons (class shapefile._Shape)
-    records = shp.records()
-    fields = [field[0] for field in shp.fields[1:]]
-    if len(shapes) != len(records):
-        raise ValueError('Number of shapefile shapes and dbf file records '
-                         'mismatch (file: %s)' % shapefilepath)
-    # Reminder: geojson syntax: http://geojson.org/:
-    for shp, rec in zip(shapes, records):
-        yield {
-            "type": "Feature",
-            'geometry': mapping(shape(shp)),  # https://stackoverflow.com/a/40631091
-            'properties': dict(zip(fields, rec))
-        }
+                    'geojson': feat,
+                    'trt': trt_name
+                }

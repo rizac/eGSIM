@@ -1,19 +1,21 @@
-'''
+"""
 Created on 29 Jan 2018
 
 @author: riccardo
-'''
+"""
+import inspect
+import sys
 from os import listdir
 from os.path import join, isfile, isdir, abspath, getmtime
 from io import StringIO
-from typing import Union, Iterable
+from typing import Union, Iterable, TextIO, Dict, Tuple
 from urllib.parse import quote
 from datetime import date, datetime
 from itertools import chain
-
-import tables
-from django.conf import settings
 from yaml import safe_load, YAMLError
+import tables
+
+from django.conf import settings
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import registry as hazardlib_imt_registry
 from openquake.hazardlib.const import TRT
@@ -116,8 +118,8 @@ def tostr(obj: Union[bool, None, str, date, datetime, int, float], none='null') 
     return str(obj)
 
 
-def yaml_load(obj):
-    """Safely loads the YAML-formatted object `obj` into a dict and returns
+def yaml_load(obj: Union[str, TextIO, dict]) -> dict:
+    """Safely load the YAML-formatted object `obj` into a dict and returns
     that dict. Note that being YAML a superset of json, all properly
     json-formatted strings are also correctly loaded and the quote character
     ' is also allowed (in pure json, only " is allowed).
@@ -169,37 +171,40 @@ def yaml_load(obj):
 
 
 def vectorize(value):
-    '''Returns value if it is an iterable, otherwise [value]. Note that
-    strings and bytes sequences (bytes) are considered scalars:
+    """Return `value` if it is already an iterable, otherwise `[value]`.
+    Note that :class:`str` and :class:`bytes` are considered scalars:
     ```
-        vectorize([3]) = vectorize(3) = [3]
+        vectorize(3) = vectorize([3]) = [3]
         vectorize('a') = vectorize(['a']) = ['a']
     ```
-    '''
+    """
     return [value] if isscalar(value) else value
 
 
 def isscalar(value):
-    '''Returns True if value is a scalr object, i.e. not having the attribute
-    '__iter__' Note that strings and bytes are the only exceptions as they
-    are considered scalars: isscalar([1]) = isscalar('a') = True
-    '''
+    """Return True if `value` is a scalar object, i.e. a :class:`str`, a
+    :class:`bytes` or without the attribute '__iter__'. Example:
+    ```
+        isscalar(1) == isscalar('a') == True
+        isscalar([1]) == isscalar(['a']) == False
+    ```
+    """
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
 
 
 def get_gmdb_path():
-    '''Returns the path to the directory housing all eGSIM Ground Motion
-    Databases (HDF5 files)'''
+    """Return the path to the directory housing all eGSIM Ground Motion
+    Databases (HDF5 files)"""
     return join(settings.MEDIA_ROOT, 'gmdb')
 
 
 def get_gmdb_names(fpath, sort_by_mtime=True):
-    '''Returns a dict of Ground motion database names mapped to the relative
+    """Return a dict of Ground motion database names mapped to the relative
     HDF5 file path (absolute)
 
     :param sort_by_mtime: boolean (default True), self explanatory: each
         gmdb will be returned in the dict from oldest to newest
-    '''
+    """
     gmdbases = []  # first use a list of tuples (to easily sort them if needed)
     for fle in listdir(fpath) if isdir(fpath) else []:
         flepath = abspath(join(fpath, fle))
@@ -214,9 +219,9 @@ def get_gmdb_names(fpath, sort_by_mtime=True):
     return dict(gmdbases)
 
 
-def test_selexpr(selexpr):
-    '''tests the given selection expression on an in-memory hdf5 file that
-    will be closed. Raises in case of failure'''
+def test_selexpr(selexpr: str):
+    """tests the given selection expression on an in-memory hdf5 file that
+    will be closed. Raises in case of failure"""
     # create an in-memory file with no save upon close:
     # https://www.pytables.org/cookbook/inmemory_hdf5_files.html#backing-store
     h5file = None
@@ -283,39 +288,43 @@ def get_gmdb_column_desc(as_html=True):
 
 
 class OQ:
-    '''container class for OpenQuake entities'''
+    """container class for OpenQuake entities"""
+
+    # Type hinting below are enclosed in quotes to still help the reader while
+    # avoiding several imports (e.g. IMT, GMPE, typing.Dict. Note that at least
+    # `dict[str, str]` should be valid without quotes from Python 3.9+)
 
     @classmethod
-    def trts(cls):
-        '''Returns a (new) dictionary of:
-            att_name (string) mapped to its att_value (string)
-            defining all Tectonic Region Types defined in OpenQuake
-        '''
+    def trts(cls) -> "dict[str, str]":
+        """Returns a (new) dictionary of:
+        att_name (string) mapped to its att_value (string)
+        defining all Tectonic Region Types defined in OpenQuake
+        """
         return {a: getattr(TRT, a) for a in dir(TRT)
                 if a[:1] != '_' and isinstance(getattr(TRT, a), str)}
 
     @classmethod
-    def imts(cls):
-        '''Returns a (new) dictionary of:
-            imt_name (string) mapped to its imt_class (class object)
-            defining all Intensity Measure Types defined in OpenQuake
-        '''
+    def imts(cls) -> "dict[str, IMT]":
+        """Returns a (new) dictionary of:
+        imt_name (string) mapped to its imt_class (class object)
+        defining all Intensity Measure Types defined in OpenQuake
+        """
         return dict(hazardlib_imt_registry)
 
     @classmethod
-    def gsims(cls):
-        '''Returns a (new) dict of:
-            gsim_name (string) mapped to its gsim_class (class object)
-            defining all Ground Shaking Intensity Models defined in OpenQuake.
-            The dict is sorted by gsim_name
-        '''
+    def gsims(cls) -> "dict[str, GMPE]":
+        """Returns a (new) dict of:
+        gsim_name (string) mapped to its gsim_class (class object)
+        defining all Ground Shaking Intensity Models defined in OpenQuake.
+        The dict is sorted by gsim_name
+        """
         return get_available_gsims()  # already returns a new dict
 
     @classmethod
-    def required_attrs(cls, gsim):
-        '''Returns an iterator yielding all the required attributes (strings)
+    def required_attrs(cls, gsim) -> "Iterable[str]":
+        """Returns an iterable yielding all the required attributes (strings)
         from the given Gsim (either string denoting the Gsim name, or class
-        instance)'''
+        instance)"""
         gsim_class = cls.gsims()[gsim] if isinstance(gsim, str) else gsim
         return chain(*[getattr(gsim_class, _) for _ in dir(gsim_class)
                        if _.startswith('REQUIRES_')])
@@ -366,3 +375,36 @@ GSIM_REQUIRED_ATTRS = {
     # ignore (it is handled within the smtk code):
     'width': ('rupture_width', '')
 }
+
+
+def get_classes(module_name: str,
+                class_or_tuple: Union[type, Tuple[type]] = None,
+                ignore_imported_classes: bool = True) -> Dict[str, type]:
+    """Return all class(es) in a given module, matching the given criteria.
+    The returned object is a `dict[str, class]`, where values are the given
+    classes keyed by their name.
+
+    :param module_name: (str) the module name, usually accessible through the
+        variable `__name__`
+    :param class_or_tuple: (type/class or tuple of types/classes) return only
+        classes that are the same as, or a subclass of any of the given
+        class(es). See builtin function `issubclass` for details.
+        None (the default when missing) means: no filter (take all classes)
+    :param ignore_imported_classes: bool (default True): return only those
+        classes directly implemented in the module, and not imported from some
+        other module
+    """
+    def _filter(obj):
+        return _is_class(obj, module_name if ignore_imported_classes else None,
+                         class_or_tuple)
+    return {cls_name: cls for (cls_name, cls) in
+            inspect.getmembers(sys.modules[module_name], _filter)}
+
+
+def _is_class(obj, module_name: str = None,
+              class_or_tuple: Union[type, Tuple[type]] = None):
+    if inspect.isclass(obj):
+        if module_name is None or obj.__module__ == module_name:
+            if class_or_tuple is None or issubclass(obj, class_or_tuple):
+                return True
+    return False
