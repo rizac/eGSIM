@@ -42,15 +42,14 @@ class BaseForm(Form):
     # any of the form field names (*values*). You can also merge two parent
     # classes additional field names with the py3 notation:
     # __additional_fieldnames__ = {**ParentForm1.__additional_fieldnames__,
-    #                              **ParentForm2.__additional_fieldnames__}
+    #                              **ParentForm2.__additional_fieldnames__, ...}
     __additional_fieldnames__ = {}
 
     # Field names (str) included in the list below: 1. will be hidden from the
     # doc as they should not be exposed in the API, 2. will not returned by
-    # `self.dump` (which converts this form to json or YAML object).
-    # Hidden Fields are usually set via the argument `widget=HiddenInput`, but
-    # in this latter case the <input> will be of type hidden in the GUI, and
-    # this is something we might not need to be automatically set
+    # `self.dump` (which converts this form to json or YAML object). To merge
+    # with a parent class:
+    # __hidden_fieldnames__ = [*ParentForm1.__hidden_fieldnames__, '<field>', ...]
     __hidden_fieldnames__ = []
 
     def __init__(self, *args, **kwargs):
@@ -62,6 +61,7 @@ class BaseForm(Form):
         kwargs.setdefault('label_suffix', '')
         # call super:
         super(BaseForm, self).__init__(*args, **kwargs)
+
         # now we want to re-name potential parameter names (e.g., 'mag' into
         # 'magnitude'). To do this, define a dict __additional_fieldnames__ as
         # class attribute (see sub-classes) of name (string) mapped to its
@@ -92,17 +92,24 @@ class BaseForm(Form):
 
     def clean(self):
         """Call `super.clean()`, removes from `cleaned_data` fields that were
-        not provided as input, and returns it
+        not provided as input and had no default given, and returns it
         """
         cleaned_data = super().clean()
-        # django sets all values provided in self.declared_fields with a
-        # default if the field is not provided, usually falsy (e.g. []
-        # for MultipleChoiceField. See django.forms.Form._clean_fields)
-        # This behaviour should not be changed as it allows to raise the
-        # 'missing' ValidationError (see e.g. MultipleChoiceField.validate)
-        # if the field is required, but prevents subclasses to know if the
-        # field was explicitly provided or not. To achieve the latter, remove
-        # fields not in self.data:
+        # `cleaned_data` is a `dict[str, Any]`: each key is the name of a Field
+        # implemented in this class (`self.declared_fields`) mapped to its value
+        # which is validated and parsed from the user input data (`self.data`).
+        # What about Fields not given by the user?
+        # 1. Those with an initial/default value explicitly set, were added to
+        #    `self.data` in `__init__` (see above)
+        # 2. Those without an initial/default value, might be initialized with
+        #    a hard coded default, usually "falsy" before validation (e.g. [] in
+        #    `MultipleChoiceField.to_python`). If the validation does not raise
+        #    (e.g., the field is not required, see `MultipleChoiceField.validate`)
+        #    we might have in `cleaned_data` field values not input by the user
+        #    and with an "unknown" default (i.e. not explicitly provided)
+        # Consequently, optional Fields without an initial/default value and
+        # not provided as input (i.e., not in `self.data`) are removed here
+        # below from `cleaned_data`:
         for key in list(_ for _ in cleaned_data if _ not in self.data):
             cleaned_data.pop(key)
 

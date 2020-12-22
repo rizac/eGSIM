@@ -18,6 +18,6 @@ from .core.utils import get_classes
 
 
 # register for admin app all Model instances in the egsim models module:
-for name, cls in get_classes(egsim_models_module, Model):
+for name, cls in get_classes(egsim_models_module.__name__, Model).items():
     # print(cls)
     admin.site.register(cls)
