@@ -1,10 +1,10 @@
-'''
+"""
 Django Forms for eGSIM
 
 Created on 29 Jan 2018
 
 @author: riccardo
-'''
+"""
 
 import re
 # import sys
@@ -36,26 +36,28 @@ from egsim.models import sharing_gsims, shared_imts
 
 
 class BaseForm(Form):
-    '''Base eGSIM form'''
+    """Base eGSIM form"""
 
-    # Subclass this attribute to write optional field names mapped to any of
-    # the form field names. You can also merge two parent classes additional
-    # field names with the py3 notation:
+    # Subclass this attribute to write optional field names (*keys*) mapped to
+    # any of the form field names (*values*). You can also merge two parent
+    # classes additional field names with the py3 notation:
     # __additional_fieldnames__ = {**ParentForm1.__additional_fieldnames__,
     #                              **ParentForm2.__additional_fieldnames__}
     __additional_fieldnames__ = {}
 
-    # this is a list of fields that should be hidden from the doc
-    # and not used in the API. Also, 'self.dump' does not returns them.
-    # By specifying widget=HiddenInput in the field
-    # you achieve the same result BUT also the <input> will be of type hidden
-    # in the GUI
+    # Field names (str) included in the list below: 1. will be hidden from the
+    # doc as they should not be exposed in the API, 2. will not returned by
+    # `self.dump` (which converts this form to json or YAML object).
+    # Hidden Fields are usually set via the argument `widget=HiddenInput`, but
+    # in this latter case the <input> will be of type hidden in the GUI, and
+    # this is something we might not need to be automatically set
     __hidden_fieldnames__ = []
 
     def __init__(self, *args, **kwargs):
-        '''Overrides init to set custom attributes on field widgets and to set
+        """Override init to set custom attributes on field widgets and to set
         the initial value for fields of this class with no match in the keys
-        of self.data'''
+        of `self.data`
+        """
         # remove colon in labels by default in templates:
         kwargs.setdefault('label_suffix', '')
         # call super:
@@ -89,9 +91,9 @@ class BaseForm(Form):
         self.customize_widget_attrs()
 
     def clean(self):
-        '''Calls `super.claen()`, removes from `cleaned_data` fields that were
+        """Call `super.clean()`, removes from `cleaned_data` fields that were
         not provided as input, and returns it
-        '''
+        """
         cleaned_data = super().clean()
         # django sets all values provided in self.declared_fields with a
         # default if the field is not provided, usually falsy (e.g. []
@@ -107,10 +109,10 @@ class BaseForm(Form):
         return cleaned_data
 
     def customize_widget_attrs(self):  # pylint: disable=no-self-use
-        '''customizes the widget attributes. This method is no-op and might be
+        """Customize the widget attributes. This method is no-op and might be
         overwritten in subclasses. Check however `self.to_rendering_dict`
         which is currently the method to be used in order to inject data in
-        the frontend'''
+        the frontend"""
         # this method is no-op, as we delegate the view (frontend)
         # to set the custom attributes. Example in case subclassed:
         #
@@ -173,7 +175,7 @@ class BaseForm(Form):
         return self._dump_yaml(stream, cleaned_data)
 
     def _dump_json(self, stream, cleaned_data):  # pylint: disable=no-self-use
-        '''Serializes to json. see self.dump'''
+        """Serialize to JSON. See `self.dump`"""
         # compatibility with yaml dump if stream is None:
         if stream is None:
             return json.dumps(cleaned_data, indent=4,
@@ -183,10 +185,11 @@ class BaseForm(Form):
         return None
 
     def _dump_yaml(self, stream, cleaned_data):
-        '''Serializes to yaml. See self.dump'''
+        """Serialize to YAML. See `self.dump`"""
+
         class MyDumper(yaml.SafeDumper):  # pylint: disable=too-many-ancestors
-            '''forces indentation of lists.
-            See https://stackoverflow.com/a/39681672'''
+            """Force indentation of lists"""
+            # For info see: https://stackoverflow.com/a/39681672
             def increase_indent(self, flow=False, indentless=False):
                 return super(MyDumper, self).increase_indent(flow, False)
 
@@ -223,20 +226,19 @@ class BaseForm(Form):
 
     @classmethod
     def is_optional(cls, field):
-        '''Returns True if the given field is optional.
-        A field is optional if either field.required=False OR
-        the field inital value is specified (not None). Remeber that
-        a field initial value acts as default value when missing
+        """Return True if the given Field is optional, i.e. if it is not
+        required or its initial value is given (i.e., not None. A field initial
+        value acts as default value when missing)
 
         :param field: a Field object or a string denoting the name of one of
             this Form's fields
-        '''
+        """
         if isinstance(field, str):
             field = cls.declared_fields[field]
         return not field.required or field.initial is not None
 
-    def to_rendering_dict(self, ignore_callable_choices=True):
-        '''Converts this form to a python dict for rendering the field as input
+    def to_rendering_dict(self, ignore_callable_choices=True) -> dict:
+        """Convert this form to a Python dict for rendering the field as input
         in the frontend, allowing it to be injected into frontend libraries
         like VueJS (the currently used library) or AngularJS: each
         Field name is mapped to a dict of keys such as 'val' (the value),
@@ -252,25 +254,24 @@ class BaseForm(Form):
             Use True when the choices list is too big and you do not need
             this additional overhead (see e.g. in `view`.main`, when we create
             the start HTML).
-        '''
+        """
         hidden_fn = set(self.__hidden_fieldnames__)
         formdata = {}
         optional_names = defaultdict(list)
         for key, val in self.__additional_fieldnames__.items():
             optional_names[val].append(key)
         for name, field in self.declared_fields.items():  # pylint: disable=no-member
-            # little spec: self.declared_fields and self.base_fields are the
-            # same thing (see django.forms.forms.DeclarativeFieldsMetaclass)
-            # and are declared AT CLASS level: modifying them applies changes
-            # to all instances, thus avoid. On the other hand,
-            # self.fields[name] returns the fields on the instance level and
-            # it's where specific instance-level changes have to be made
+            # little spec needed before proceeding:
+            # `self.declared_fields` and `self.base_fields` are the same thing
+            # (see django.forms.forms.DeclarativeFieldsMetaclass) and are
+            # declared at CLASS level: modifying them applies changes to all
+            # instances, thus avoid. Conversely, `self.fields[name]` is where
+            # specific instance-level changes have to be made:
             # https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form
-            # Finally, self[name] creates a BoundField from self.fields[name]:
-            # A BoundField deals with displaying the field and populating it
-            # with any values. So for returning *all* field data (also that
-            # set automatically by django on our init parameter, as in this
-            # case) it should be used.
+            # Finally, `self[name]` creates a `BoundField` from
+            # `self.fields[name]` i.e. "a Field plus data" (e.g., its initial
+            # value, if given. See `__init__`). `BoundField`s is what we want
+            # to use here
             boundfield = self[name]
             val = boundfield.value()
             widget = boundfield.field.widget
@@ -288,7 +289,7 @@ class BaseForm(Form):
             if isinstance(field, MultipleChoiceField) and not val:
                 val = []
             # type description:
-            fielddata = {
+            fielddata = {  # noqa
                 'name': attrs['name'],
                 'opt_names': optional_names.get(name, []),
                 'is_optional': self.is_optional(name),
@@ -296,8 +297,8 @@ class BaseForm(Form):
                 'label': boundfield.label,
                 'attrs': attrs,
                 'err': '',
-                'is_hidden': widgetdata.pop('is_hidden', False) or
-                             name in hidden_fn,
+                'is_hidden': widgetdata.pop('is_hidden',
+                                            False) or name in hidden_fn,
                 'val': val,
                 'initial': field.initial,
                 'typedesc': BaseForm._type_description(field,
@@ -315,7 +316,7 @@ class BaseForm(Form):
 
     @staticmethod
     def _type_description(field, minval=None, maxval=None):
-        '''returns a human readable type description for the given field'''
+        """Return a human readable type description for the given field"""
         # type description:
         typedesc = 'UNKNOWN_TYPE'
         if isinstance(field, NArrayField):
@@ -344,10 +345,11 @@ class BaseForm(Form):
 
 
 class GsimSelectionForm(BaseForm):
-    '''Form for (t)ectonic (r)egion gsim selection from a point or rectangle.
-    This form is currently only used as validator as the HTML page renderes
-    a custom map.
-    '''
+    """Form for GSIM selection (by tectonic region) from a given geographic
+    point or rectangle.
+    NOTE: this form is currently only used as validator as the HTML page
+    renders a custom map.
+    """
 
     __additional_fieldnames__ = {'lat': 'latitude', 'lon': 'longitude',
                                  'lat2': 'latitude2', 'lon2': 'longitude2',
@@ -369,8 +371,8 @@ class GsimSelectionForm(BaseForm):
     trt = TrtField(label='Tectonic region type(s)', required=False)
 
     def clean(self):
-        '''Checks that if longitude is provided, also latitude is provided,
-        and vice versa (the same for longitude2 and latitude2)'''
+        """Check that if longitude is provided, also latitude is provided,
+        and vice versa (the same for longitude2 and latitude2)"""
         cleaned_data = super().clean()
 
         # check that params combinations are ok:
@@ -393,7 +395,7 @@ class GsimSelectionForm(BaseForm):
 
 
 class GsimImtForm(BaseForm):
-    '''Base abstract-like form for any form requiring Gsim+Imt selection'''
+    """Base abstract-like form for any form requiring Gsim+Imt selection"""
 
     __additional_fieldnames__ = {'gmpe': 'gsim', 'gmm': 'gsim'}
     __hidden_fieldnames__ = ['sa_period']
@@ -412,11 +414,11 @@ class GsimImtForm(BaseForm):
         self.fields['imt'].sa_periods_str = self.data.pop('sa_period', '')
 
     def clean(self):
-        '''runs validation where we must validate selected gsim(s) based on
+        """Run validation where we must validate selected gsim(s) based on
         selected intensity measure type. For info see:
         https://docs.djangoproject.com/en/1.11/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-        '''
-        # UNCOMMENT THE BLOCK BELOW IF YOU WHISH TO BE STRICT with unkwnown params
+        """
+        # UNCOMMENT THE BLOCK BELOW IF YOU WISH TO BE STRICT with unknown params
         # # check that we did not provide unknown parameters. This might not be necessary
         # # but it might help warning the user for typos in case
         # unknown_params = set(self.data) - set(self.fields)
@@ -431,10 +433,11 @@ class GsimImtForm(BaseForm):
         return self.cleaned_data
 
     def validate_gsim_and_imt(self):
-        '''Validates gsim and imt assuring that all gsims are defined for all
+        """Validate gsim and imt assuring that all gsims are defined for all
         supplied imts, and all imts are defined for all supplied gsim.
         This method calls self.add_error and works on self.cleaned_data, thus
-        it should be called after super().clean()'''
+        it should be called after super().clean()
+        """
         # the check here is to replace potential imt errors with
         # the more relevant mismatch with the supplied gsim.
         # E.g., if the user supplied imt = 'SA(abc)' (error) and
@@ -472,7 +475,7 @@ class GsimImtForm(BaseForm):
 
 
 class TrellisForm(GsimImtForm):
-    '''Form for Trellis plot generation'''
+    """Form for Trellis plot generation"""
 
     # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {'mag': 'magnitude', 'dist': 'distance',
@@ -581,7 +584,7 @@ class TrellisForm(GsimImtForm):
 
 
 class GmdbForm(BaseForm):
-    '''Abstract-like class for handling gmdb (GroundMotionDatabase)'''
+    """Abstract-like class for handling gmdb (GroundMotionDatabase)"""
 
     __additional_fieldnames__ = {'sel': 'selexpr', 'dist': 'distance_type'}
 
@@ -590,7 +593,7 @@ class GmdbForm(BaseForm):
 
 
 class GmdbPlotForm(GmdbForm):
-    '''Form for the Gmdb plot (currently undocumented API, frontend only)'''
+    """Form for the Gmdb plot (currently undocumented API, frontend only)"""
 
     __additional_fieldnames__ = {**GmdbForm.__additional_fieldnames__,
                                  'dist': 'distance_type'}
@@ -601,7 +604,7 @@ class GmdbPlotForm(GmdbForm):
 
 
 class ResidualsForm(GsimImtForm, GmdbForm):
-    '''Form for residual analysis'''
+    """Form for residual analysis"""
 
     # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
@@ -616,7 +619,7 @@ class ResidualsForm(GsimImtForm, GmdbForm):
 
 
 class TestingForm(GsimImtForm, GmdbForm):
-    '''Form for testing Gsims via Measures of Fit'''
+    """Form for testing Gsims via Measures of Fit"""
 
     # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {**GsimImtForm.__additional_fieldnames__,
@@ -645,8 +648,8 @@ class TestingForm(GsimImtForm, GmdbForm):
 
 
 class FormatForm(BaseForm):
-    '''Form handling the validation of the format related argument in
-    a request'''
+    """Form handling the validation of the format related argument in
+    a request"""
     # py3 dict merge (see https://stackoverflow.com/a/26853961/3526777):
     __additional_fieldnames__ = {}
 
