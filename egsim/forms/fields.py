@@ -36,8 +36,8 @@ from egsim.core.utils import (vectorize, isscalar, get_gmdb_names,
                               test_selexpr)
 
 # IMPORTANT: do not access the database at module import, as otherwise
-# make migrations does not work! So these methods should be called inside
-# each INSTANCE creation (__init__) not in the class. But this is too late ...
+# make migrations does not work! So the functions below should be called inside
+# each INSTANCE creation (__init__) not in the class.
 from egsim.models import aval_gsims, aval_imts, aval_trts, aval_trmodels
 
 
@@ -49,9 +49,7 @@ class ArrayField(CharField):
     default returns `token` but might be overridden by subclasses (see
     :class:`NArrayField`).
     As Form fields act also as validators, an object of this class can deal
-    also with already parsed arrays (e.g., after inputing Yaml POST data in
-    YAML format which would return an array of python objects and not their
-    string representation).
+    also with already parsed (e.g. via YAML) arrays
     """
     def __init__(self, *, min_count=None, max_count=None,
                  min_value=None, max_value=None, **kwargs):
@@ -122,7 +120,7 @@ class ArrayField(CharField):
             try:
                 self.checkrange(len(values), self.min_count, self.max_count)
             except ValidationError as verr:
-                # just re-format exception stringand raise:
+                # just re-format exception string and raise:
                 # msg should be in the form '% not in ...', remove first '%s'
                 msg = verr.message[verr.message.find(' '):]
                 raise ValidationError('number of elements (%d) %s' %
@@ -141,30 +139,18 @@ class ArrayField(CharField):
 
     @classmethod
     def parse(cls, token):  # pylint: disable=no-self-use
-        """Parse token and returns either an object or an iterable of objects.
+        """Parse token and return either an object or an iterable of objects.
         This method can safely raise any exception, if not ValidationError
         it will be wrapped into a suitable ValidationError
         """
         return token
 
     @staticmethod
-    def isinragne(value, minval=None, maxval=None):
-        """Return True if the given value is in the range defined by minval
-        and maxval (endpoints are included). None's in minval and maxval
-        mean: do not check
-        """
-        try:
-            ArrayField.checkrange(value, minval, maxval)
-            return True
-        except ValidationError:
-            return False
-
-    @staticmethod
     def checkrange(value, minval=None, maxval=None):
-        """check that the given value is in the range defined by minval and
-        maxval (endpoints are included). None's in minval and maxval mean:
+        """Check that the given value is in the range defined by minval and
+        maxval (endpoints are included). None in minval and maxval mean:
         do not check. This method does not return any value but raises
-        ValueError if value is not in the given range
+        `ValidationError`` if value is not in the given range
         """
         toolow = (minval is not None and value < minval)
         toohigh = (maxval is not None and value > maxval)
@@ -175,6 +161,19 @@ class ArrayField(CharField):
             raise ValidationError('%s < %s' % (str(value), str(minval)))
         if toohigh:
             raise ValidationError('%s > %s' % (str(value), str(maxval)))
+
+    # @staticmethod
+    # def isinragne(value, minval=None, maxval=None):
+    #     """Return True if the given value is in the range defined by minval
+    #     and maxval (endpoints are included). None's in minval and maxval
+    #     mean: do not check
+    #     """
+    #     try:
+    #         ArrayField.checkrange(value, minval, maxval)
+    #         return True
+    #     except ValidationError:
+    #         return False
+
 
 
 class NArrayField(ArrayField):
