@@ -100,16 +100,16 @@ class Gsim(models.Model):
     # currently, the max length of the OQ gsims is 43 ...
     key = models.TextField(null=False, unique=True,
                            help_text='OpenQuake class name')
+    imts = models.ManyToManyField(Imt, related_name='gsims',
+                                  help_text='Intensity Measure Type(s)')
     oq_trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=True,
                                help_text='Tectonic Region type defined in '
                                          'OpenQuake')
-    imts = models.ManyToManyField(Imt, related_name='gsims',
-                                  help_text='Intensity Measure Type(s)')
     needs_args = models.BooleanField(default=False, null=False,
                                      help_text=('Whether __init__ method needs '
                                                 'argument(s) in OpenQuake'))
     warning = models.TextField(default=None, null=True,
-                               help_text='Optional OpenQuake usage warning')
+                               help_text='Optional usage warning(s)')
 
     def asjson(self):
         """Converts this object as a json-serializable tuple of strings:
