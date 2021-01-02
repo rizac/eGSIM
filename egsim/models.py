@@ -9,8 +9,9 @@ Created on 5 Apr 2019
 @author: riccardo
 """
 import json
-from enum import Enum
+from enum import IntEnum
 
+from django.core.management.commands import flush
 from django.db import models
 from django.db.models import Q
 from django.db.models.aggregates import Count
@@ -20,19 +21,54 @@ from django.core import management
 from shapely.geometry import Point, shape, Polygon
 
 
-class DB_ENTITY(Enum):
-    """Defines the database entities which might raise Errors to be reported
-    in the Error Table, e.g. `Error(entity_key=GSIM.name, ...)`
+class FlagEnum(IntEnum):
+    """Flag-like enum **where all members are int** (e.g., they can be passed
+    as int arguments to function, or combined using the the bitwise operators).
+
+    Unlike the class:`enum.IntFlag`, this class automatically sets to each member
+    value (1, 2, 4, ... see :meth:`FlagEnum.__new__`) and thus allows subclasses
+    to configure each member with any tuple of additional values, usually set as
+    attributes in the `__init__` method.
     """
 
+    # Note: The builtin IntFlag enum does not entirely fit our requirements. Our
+    # implementation follows https://stackoverflow.com/a/64040739
+    # For further details how to access the Enum properties, see Python Enum doc
+
+    def __new__(cls, *args):
+        """Creates a new IntEnum member as int subclass with an automatic value"""
+        value = 2 ** len(cls.__members__)  # create value with this member index
+        member = int.__new__(cls, value)
+        member._value_ = value  # mandatory otherwise superclass tries to set it
+        return member
+
+    @classmethod
+    def choices(cls) -> tuple:
+        """Return the `choices` argument for the associated
+        :class:`models.IntegerField` (see below for applications)
+        """
+        return tuple((_, str(getattr(_, 'label', _.name))) for _ in cls)
+
+    @classmethod
+    def help_text(cls) -> str:
+        """Return the `help_text` argument for the associated
+        :class:`models.IntegerField` (see below for applications)
+        """
+        return " ".join("{:d} {:s}".format(*_) for _ in cls.choices())
+
+
+class EntityType(FlagEnum):
+    """Defines the database entities which might raise Errors to be reported
+    in the :class:`Error` Model, e.g. `Error(entity_key=DbEntity.GSIM, ...)`
+    """
+
+    # Define FlagEnum members associated to a '<label>' str (see __init__):
     GSIM = 'Ground Shaking Intensity Model'
     IMT = 'Intensity Measure Type'
     TRT = 'Tectonic Region Type'
 
-    # Quick example in loops (details in the Python doc)
-    # for _ in DB_ENTITY:
-    #   _.name  # e.g. "GSIM". THIS IS THE VALUE EXCEPTED BY Error TABLE BELOW
-    #   _.value  # e.g. 'Ground Shaking Intensity Model'
+    def __init__(self, label):
+        self.label = label
 
 
 class Error(models.Model):
@@ -40,10 +76,9 @@ class Error(models.Model):
     during the creation of the database for diagnostic purposes
     (at the <URL>/admin address). Example: `Error(entity_key=GSIM.name, ...)`
     """
-    entity_type = models.CharField(max_length=max(len(_.name) for _ in DB_ENTITY),
-                                   choices=tuple((_.name, _.value) for _ in DB_ENTITY),
-                                   help_text="The entity type. e.g. \"GSIM\""
-                                   )
+    entity_type = models.IntegerField(choices=tuple(EntityType.choices()),
+                                      help_text=("The entity type. e.g. %s" %
+                                                 EntityType.help_text()))
     entity_key = models.TextField(unique=True,
                                   help_text="The key uniquely identifying the "
                                             "entity, e.g. \"BindiEtAl2011\"")
@@ -52,7 +87,7 @@ class Error(models.Model):
     message = models.TextField(help_text="Error message")
 
     def __str__(self):
-        return '%s "%s": %s (%s)' % (self.entity_type,
+        return '%s "%s": %s (%s)' % (DbEntity(self.entity_type).name,
                                      self.entity_key,
                                      self.type,
                                      self.message)
@@ -93,6 +128,57 @@ class Imt(models.Model):
         return str(self.key)
 
 
+#     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0', 'vs30measured'}
+#
+#     #: Required rupture parameters are magnitude, rake, dip, ztor, and width
+#     #: (see table 2, page 1031)
+#     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip', 'ztor', 'width'}
+#
+#     #: Required distance measures are Rrup, Rjb, Ry0 and Rx (see Table 2,
+#     #: page 1031).
+#     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx', 'ry0'}
+
+
+class GsimParamType(FlagEnum):
+    """Gsim parameter types (rupture, sites, distances)"""
+
+    # Define FlagEnum members associated to a '<label>', <oq_attribute> (see __init__):
+    SITE = 'Sites parameter', 'REQUIRES_SITES_PARAMETERS'
+    RUPT = 'Rupture parameter', 'REQUIRES_RUPTURE_PARAMETERS'
+    DIST = 'Distance measure', 'REQUIRES_DISTANCES'
+
+    def __init__(self, label, oq_attname):
+        self.label = label
+        self.oq_attname = oq_attname
+
+
+class GsimParameter(models.Model):
+    key = models.TextField(null=False,
+                           help_text="The parameter name (unique id)")
+    type = models.IntegerField(choices=GsimParamType.choices(),
+                               help_text=("The parameter type: " +
+                                          GsimParamType.help_text()))
+
+    def __str__(self):
+        enum_member = GsimParamType(self.type)
+        return '%s \"%s\"' % (enum_member.label, str(self.key))
+
+    @staticmethod
+    def gsim_params(gsim, *param_type: 'GsimParamType'):
+        """Yield :class:`GsimParameter`s denoting the
+        required parameters of  `gsim` (a GMPE instance or class).
+
+        :param gsim: GMPE (instance or class)
+        :param param_type: a list of members of :class:`GsimParamType`.
+            This will return parameters of the provided types only.
+            When not given, return Gsim parameters of all types
+        """
+        for member in param_type or GsimParamType:
+            for prop_name in getattr(gsim, member.oq_attname, []):
+                # (type should be int but members of this enum are also ints):
+                yield GsimParameter(key=prop_name, type=member)
+
+
 class Gsim(models.Model):
     """Model representing the db table of the (OpenQuake) Ground Shaking
     Intensity Models, or GMPE
@@ -105,6 +191,8 @@ class Gsim(models.Model):
     oq_trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=True,
                                help_text='Tectonic Region type defined in '
                                          'OpenQuake')
+    params = models.ManyToManyField(GsimParameter, related_name='gsims',
+                                    help_text='Required parameter(s)')
     needs_args = models.BooleanField(default=False, null=False,
                                      help_text=('Whether __init__ method needs '
                                                 'argument(s) in OpenQuake'))
@@ -112,7 +200,7 @@ class Gsim(models.Model):
                                help_text='Optional usage warning(s)')
 
     def asjson(self):
-        """Converts this object as a json-serializable tuple of strings:
+        """Converts this object as a JSON-serializable tuple of strings:
         (gsim, imts, tectonic_region_type, warning) where arguments are all
         strings except 'imts' which is a tuple of strings
         """
@@ -164,6 +252,7 @@ class GsimTrtRelation(models.Model):
 
 def empty_all():
     """Empties all tables, without removing them"""
+    flush
     # https://stackoverflow.com/a/10606476
     # and
     # https://stackoverflow.com/a/2773195

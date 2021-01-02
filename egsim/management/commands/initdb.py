@@ -16,18 +16,20 @@ from django.core.management.base import BaseCommand, CommandError
 from egsim.models import empty_all
 from ._utils import EgsimBaseCommand
 from ...core.utils import get_classes
-from egsim.management.commands import oq2db, reg2db, gsimsel2db
+from egsim.management.commands import oq2db, reg2db, gsimsel2db, emptydb
 
-
+# ============================================================================#
+# !!IMPORTANT !!!
 # TO ADD NEW SUBCOMMANDS import the command module and add it to this list:
-_SUBCOMMAND_MODULES = [oq2db, reg2db, gsimsel2db]
+# ============================================================================#
+_SUBCOMMAND_MODULES = [emptydb, oq2db, reg2db, gsimsel2db]
 
 
 def _get_cmd_and_help(cmd_module):
     cmd_class = get_classes(cmd_module.__name__, EgsimBaseCommand)
     if len(cmd_class) != 1:
         raise ValueError("Module %s implements %d EgsimBaseCommand class(es),"
-                         "exepcted 1 implementation (only)" %
+                         "expected 1 implementation (only)" %
                          (cmd_module, len(cmd_class)))
     cmd_class = list(cmd_class.values())[0]
     help_ = getattr(cmd_class, 'help', 'No doc available')
@@ -62,30 +64,21 @@ class Command(EgsimBaseCommand):
         ' - All database tables will be emptied and rewritten'
     ])
 
-    def __init__(self, *args, **kwargs):
-
-
     #     def add_arguments(self, parser):
     #         parser.add_argument('poll_id', nargs='+', type=int)
 
     def handle(self, *args, **options):
+        """executes the command"""
 
-        # delete db:
-        try:
-            self.printinfo('Emptying DB Tables')
-            empty_all()
-        except OperationalError as no_db:
-            raise CommandError('%s.\nDid you create the db first?\n(for '
-                               'info see: https://docs.djangoproject.'
-                               'com/en/2.2/topics/migrations/#workflow)' %
-                               str(no_db))
+        # set options['interactive'] as True by default (see `emptydb` command)
+        options.setdefault('interactive', True)
 
         for cmd in SUBCOMMANDS:
             # The function below (from django.core.management):
             # call_command(cmd, stdout=self.stdout, stderr=self.stderr,
             #             **options)
             # is a wrapper around Command.execute(*args, **options)
-            # thus we call the lateter (also to import explicitly the used
+            # thus we call the latter (also to import explicitly the used
             # commands
             cmd_obj = cmd['cmd_class'](stdout=self.stdout, stderr=self.stderr)
             # cmd_obj arguments like no_color and force_color are left as default:

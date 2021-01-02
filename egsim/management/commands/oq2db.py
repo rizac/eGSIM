@@ -26,7 +26,8 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib import imt
 
 from egsim.management.commands._utils import EgsimBaseCommand, get_command_datadir
-from egsim.models import Gsim, Imt, Trt, Error, empty_all, DB_ENTITY
+from egsim.management.commands import emptydb
+from egsim.models import Gsim, Imt, Trt, Error, EntityType
 from egsim.core.utils import OQ, GSIM_REQUIRED_ATTRS, yaml_load
 
 
@@ -58,6 +59,7 @@ class Command(EgsimBaseCommand):
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         # delete db:
+        emptydb.Command().handle()
         try:
             self.printinfo("Emptying DB Tables")
             empty_all()
@@ -78,19 +80,19 @@ class Command(EgsimBaseCommand):
         # elements in a separate `errors` table above for debugging/inspection,
         # tectonic regions can not fail:
         trts = populate_trts()
-        skipped = errors.filter(entity_type=DB_ENTITY.TRT.name).count()
+        skipped = errors.filter(entity_type=EntityType.TRT).count()
         self.printsuccess('   %d written, %d skipped due to errors' %
                           (Trt.objects.count(), skipped))  # noqa
 
         self.printinfo(' > Intensity measure types (Imt)')
         imts = populate_imts()
-        skipped = errors.filter(entity_type=DB_ENTITY.IMT.name).count()
+        skipped = errors.filter(entity_type=EntityType.IMT).count()
         self.printsuccess('   %d written, %d skipped due to errors' %
                           (Imt.objects.count(), skipped))  # noqa
 
         self.printinfo(' > Ground shaking intensity models (Gsim)')
         populate_gsims(trts, imts)
-        skipped = errors.filter(entity_type=DB_ENTITY.GSIM.name).count()
+        skipped = errors.filter(entity_type=EntityType.GSIM).count()
         self.printsuccess('   %d written, %d skipped due to errors' %
                           (Gsim.objects.count(), skipped))  # noqa
 
@@ -208,7 +210,7 @@ def populate_imts() -> Dict[str, Imt]:
                 # needs argument, it fails (except below)
                 imt.from_string(imt_name)
             except Exception as exc:  # pylint: disable=broad-except
-                create_error(DB_ENTITY.IMT, imt_name, exc)
+                create_error(EntityType.IMT, imt_name, exc)
                 continue
         imts[imt_name] = create_imt(key=imt_name, needs_args=imt_class == imt.SA)
     return imts
@@ -236,7 +238,7 @@ def populate_gsims(trts: Dict[str, Trt], imts: Dict[str, Imt]) -> Dict[str, Gsim
             except OQDeprecationWarning as warn:
                 # treat OpenQuake (OQ) deprecation warnings as errors. Note that
                 # the builtin DeprecationWarning is silenced, OQ uses it's own
-                create_error(DB_ENTITY.GSIM, key, exc)
+                create_error(EntityType.GSIM, key, exc)
                 continue
             except Warning as warn:
                 gsim_warnings.append(str(warn))
@@ -245,7 +247,7 @@ def populate_gsims(trts: Dict[str, Trt], imts: Dict[str, Imt]) -> Dict[str, Gsim
                 needs_args = True
             except (OSError, NotImplementedError, KeyError) as exc:
                 # NOTE: ADD HERE THE EXCEPTIONS THAT YOU WANT TO JUST REPORT.
-                create_error(DB_ENTITY.GSIM, key, exc)
+                create_error(EntityType.GSIM, key, exc)
                 continue
             except Exception as _ex:
                 # The most likely solution here is to add this exception to the
@@ -270,7 +272,7 @@ def populate_gsims(trts: Dict[str, Trt], imts: Dict[str, Imt]) -> Dict[str, Gsim
                     raise TypeError('No IMT defined')  # caught here below
 
             except (AttributeError, TypeError) as exc:
-                create_error(DB_ENTITY.GSIM, key, exc)
+                create_error(EntityType.GSIM, key, exc)
                 continue
 
             trt = None
@@ -287,7 +289,7 @@ def populate_gsims(trts: Dict[str, Trt], imts: Dict[str, Imt]) -> Dict[str, Gsim
             # and then convert to Imt model instances:
             gsim_imts = [imts[_] for _ in gsim_imts if _ in imts]
             if not gsim_imts:
-                create_error(DB_ENTITY.GSIM, key, "No IMT found")
+                create_error(EntityType.GSIM, key, "No IMT found")
                 continue
 
             # pack the N>=0 warning messages into a single msg.
@@ -307,7 +309,7 @@ def populate_gsims(trts: Dict[str, Trt], imts: Dict[str, Imt]) -> Dict[str, Gsim
     return gsims
 
 
-def create_error(entity_type: DB_ENTITY,
+def create_error(entity_type: EntityType,
                  entity_key: str,
                  error: Union[str, Exception],
                  error_type: str = None):
@@ -317,12 +319,12 @@ def create_error(entity_type: DB_ENTITY,
         1. `error.__class__.__name__` if `error` is an `Exception`
         2. "Error" otherwise
     """
-    assert isinstance(entity_type, DB_ENTITY)
+    assert isinstance(entity_type, EntityType)
     if not error_type:
         error_type = error.__class__.__name__ \
             if isinstance(error, Exception) else 'Error'
 
-    Error.objects.create(type=error_type.name,  # <- enum name (e.g. "GSIM")
+    Error.objects.create(type=error_type,
                          message=str(error),
                          entity_type=entity_type,
                          entity_key=entity_key)
