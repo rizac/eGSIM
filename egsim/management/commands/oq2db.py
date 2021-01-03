@@ -1,8 +1,6 @@
 """
-Module for initializing the database with OpenQuake data
-
-For info see:
-https://django.readthedocs.io/en/2.0.x/howto/custom-management-commands.html
+Command to initialize and populate the eGSIM database with all GSIMs, IMTs
+(and their relations) implemented in the currently used version of OpenQuake
 
 Created on 6 Apr 2019
 
@@ -32,21 +30,10 @@ from egsim.core.utils import OQ, GSIM_REQUIRED_ATTRS, yaml_load
 
 
 class Command(EgsimBaseCommand):
-    """Command to initialize the db: python manage.py oq2db
-    """
+    """Class implementing the command functionality"""
 
-    # The formatting of the help text below (e.g. newlines) will be preserved
-    # in the terminal output. All text after "Notes:" will be skipped from the
-    # help of the wrapper/main command `initdb`
-    help = "\n". join([
-        'Initializes and populates eGSIM database with all GSIMs, IMTs and TRTs',
-        'implemented in version of OpenQuake used by the program.',
-        'Notes:',
-        ' - GSIM: Ground Shaking Intensity Model',
-        ' - IMT: Intensity Measure Type',
-        ' - TRT: Tectonic Region Type',
-        ' - All database tables will be emptied and rewritten'
-    ])
+    # As help, use the module docstring (until the first empty line):
+    help = globals()['__doc__'].split("\n\n")[0]
 
     def handle(self, *args, **options):
         """Executes the command
