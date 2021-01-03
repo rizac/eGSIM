@@ -1,7 +1,8 @@
 """
-Module for initializing the database with regionalizations provided from
-external sources, to be used in the API and shown on the GUI map
-(as of 2020, there is only one regionalization implemented: SHARE)
+Command to populate the database with regionalizations provided from
+external sources (as of 2020, there is only one regionalization implemented: SHARE)
+A regionalization is a set of Geographic regions with an associated Tectonic
+region type (TRT). Each (region, TRT) tuple will correspond to a new database table row
 
 WORKFLOW for any new regionalization to be added
 ================================================
@@ -34,35 +35,10 @@ from ._utils import EgsimBaseCommand, get_command_datadir, get_filepaths, get_tr
 
 
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
-    """Class defining the custom command to write all available
-    regionalization(s) to db:
-    ```
-    export DJANGO_SETTINGS_MODULE="..."; python manage.py reg2db
-    ```
-    A regionalization is a set of Geographic regions with an associated
-    Tectonic region type (Trt).
-    The regionalization usually comes from a data source (e.g., research
-    project, area source model) in form of shapefiles or anything describing
-    a set of Polygon areas and their trt.
+    """Class implementing the command functionality"""
 
-    See this module docstring for info on how to add a new regionalization in
-    the future and the :class:`SHARE` for a concrete subclass of
-    :class:`Regionalization`.
-    """
-
-    # The formatting of the help text below (e.g. newlines) will be preserved
-    # in the terminal output. All text after "Notes:" will be skipped from the
-    # help of the wrapper/main command 'initdb'
-    help = "\n".join([
-        'Fetches all regionalization(s) from external data sources',
-        '(\'commands/data\' directory) and writes them on the database.',
-        'A regionalization is a set of Geographic regions with an associated TRT.',
-        'Notes:',
-        '- TRT: Tectonic Region Type',
-        '- Each region will correspond to a database table row. All',
-        '  existing rows will be deleted from the database and overwritten'
-    ])
-
+    # As help, use the module docstring (until the first empty line):
+    help = globals()['__doc__'].split("\n\n")[0]
 
     def handle(self, *args, **options):
         """Executes the command

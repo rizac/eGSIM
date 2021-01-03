@@ -1,9 +1,9 @@
 # This YAML file defines the Tectonic Region types (TRT) of eGSIM in the form
 # of a YAML dictionary:
-# - Keys MUST be unique name of TRTs and are the values which are supposed
-#   to be exposed to the user's requests (see Note [1] for details)
+# - Keys MUST be unique name of TRTs and are the values exposed to the user's
+#   requests (see Note [1] for details)
 # - Values are YAML sequences (indented lines of text starting with "- ") of
-#   name(s) that will be used to identify a TRT in the management commands
+#   name aliases that will be used to identify a TRT in the management commands
 #   reg2db and gsimsel2db (see Note [2] for details)
 
 # Additional notes:

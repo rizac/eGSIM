@@ -159,6 +159,12 @@ class GsimParameter(models.Model):
                                help_text=("The parameter type: " +
                                           GsimParamType.help_text()))
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['key', 'type'],
+                                    name='unique(key,type)')
+        ]
+
     def __str__(self):
         enum_member = GsimParamType(self.type)
         return '%s \"%s\"' % (enum_member.label, str(self.key))

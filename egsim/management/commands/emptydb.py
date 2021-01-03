@@ -1,9 +1,15 @@
-"""Command to empty the database. Modified from the `flush` command to:
+"""
+Command to empty the database. Modified from the `flush` command to:
 1. Empty only the Tables of the "egsim" app (i.e., those used by the API)
 2. Empty tables found on the database and not necessarily backed by a model.
    This should allow to successfully empty a database also in circumstances
    where `flush` would fail (i.e. after the models have been modified and
    before creating the relative migration file)
+
+Usage:
+```
+export DJANGO_SETTINGS_MODULE="..."; python manage.py emptydb
+```
 """
 from importlib import import_module
 from itertools import chain
@@ -22,8 +28,10 @@ from egsim.management.commands._utils import EgsimBaseCommand
 
 
 class Command(EgsimBaseCommand):
+    """Class implementing the command functionality"""
 
-    help = __doc__
+    # As help, use the module docstring (until the first empty line):
+    help = globals()['__doc__'].split("\n\n")[0]
 
     # Command-specific options not defined by the argument parser:
     stealth_options = ('reset_sequences', 'allow_cascade', 'inhibit_post_migrate')
@@ -40,7 +48,16 @@ class Command(EgsimBaseCommand):
             help='Nominates a database to flush. Defaults to the "default" database.',
         )
 
-    def handle(self, **options):
+    def handle(self, *args, **options):
+        """Executes the command
+
+        :param args: positional arguments (?). Unclear what should be given
+            here. Django doc and Google did not provide much help, source code
+            inspection suggests it is here for legacy code (OptParse)
+        :param options: any argument (optional or positional), accessible
+            as options[<paramname>]. For info see:
+            https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
+        """
         database = options['database']
         connection = connections[database]
         verbosity = options['verbosity']

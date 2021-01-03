@@ -1,16 +1,23 @@
 """
-Module for writing to db the Gsim selections (by tectonic region type, or TRT).
-A Gsim selection is a set of relations between a TRT and a list of
-associated Gsims
+Command to fetch all GSIMs selection(s) by TRT from external data sources
+('commands/data' directory) and write them on the database (one row per
+(GSIM, TRT) tuple). A GSIM selection is a set of relations between a TRT and a
+list of associated GSIMs
 
+Usage:
+```
+export DJANGO_SETTINGS_MODULE="..."; python manage.py gsimsel2db
+```
+
+====================================
 WORKFLOW TO ADD A NEW GSIM SELECTION
 ====================================
 
 Choose a <source_id> name (e.g. research project name, area source model,
 see e.g. "SHARE") and add <source_id>.json to the data directory
 "./data/gsimsel2db". The JSON file must be a dict[str, List[str]] where each
-key is a Tectonic Region Type (one of the attribute values of
-`openquake.hazardlib.const.TRT`) mapped to a list of Gsims (class names of
+key is a Tectonic Region Type (one of the key or values of
+"./data/oq2db/trt.yaml") mapped to a list of Gsims (class names of
 OpenQuake Gsims)
 
 Created on 9 Dec 2020
@@ -27,28 +34,10 @@ from ._utils import EgsimBaseCommand, get_command_datadir, get_filepaths, get_tr
 
 
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
-    """Class defining the custom command to write all available
-    Gsim selections (by tectonic region type, or TRT) to the database:
-    ```
-    export DJANGO_SETTINGS_MODULE="..."; python manage.py gsimsel2db
-    ```
-    """
+    """Class implementing the command functionality"""
 
-    # The formatting of the help text below (e.g. newlines) will be preserved
-    # in the terminal output. All text after "Notes:" will be skipped from the
-    # help of the wrapper/main command 'initdb'
-    help = "\n".join([
-        'Fetches all GSIMs selection(s) by TRT from external data sources',
-        '(\'commands/data\' directory) and writes them on the database.',
-        'A GSIM selection is a set of relations between a TRT and a list',
-        'of associated GSIMs.',
-        'Notes:',
-        '- GSIM: Ground Shaking Intensity Model',
-        '- TRT: Tectonic Region Type',
-        '- Each GSIM-TRT relation will be written as a database table row',
-        '  with the associated source id (e.g. SHARE). All existing rows',
-        '  will be deleted from the database and overwritten.'
-    ])
+    # As help, use the module docstring (until the first empty line):
+    help = globals()['__doc__'].split("\n\n")[0]
 
     def handle(self, *args, **options):
         """Executes the command

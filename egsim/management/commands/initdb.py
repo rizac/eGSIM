@@ -1,8 +1,15 @@
 """
-Module for initalizing the databse with all required input data from external
-sources
+Command to initialize and populate the database with all eGSIM required data.
+This is also the RECOMMENDED command to be executed every time eGSIM
+dependencies are upgraded, or new external source data is added.
+See the README file in the "egsim/management/commands" directory for details
 
-For info see:
+Usage:
+```
+export DJANGO_SETTINGS_MODULE="..."; python manage.py initdb
+```
+
+For further info see:
 https://django.readthedocs.io/en/2.0.x/howto/custom-management-commands.html
 
 Created on 6 Apr 2019
@@ -44,25 +51,31 @@ SUBCOMMANDS = [_get_cmd_and_help(_) for _ in _SUBCOMMAND_MODULES]
 
 
 class Command(EgsimBaseCommand):
-    """Command to initialize the db:
-    ```
-    export DJANGO_SETTINGS_MODULE="..."; python manage.py initdb
-    ```
-    """
-    help = "\n". join([
-        'Initializes and populates the database with all eGSIM required data.',
-        'This is also the RECOMMENDED command to be executed every time eGSIM',
-        'should be updated with new external source data or a new OpenQuake ',
-        'version. See the README file in this directory for details.',
-        'This command calls in series all the following (sub)commands:',
+    """Class implementing the command functionality"""
+
+    # As help, use the module docstring (until the first empty line):
+    help = globals()['__doc__'].split("\n\n")[0]
+    # then add the subcommands help
+    help += "\n".join([
+        '\nThis command calls in series all the following (sub)commands:',
         "\n\n".join("\n%s\n%s\n%s" % (_['name'], '='*len(_['name']), _['help'])
-                    for _ in SUBCOMMANDS),
-        '\nNotes:',
-        ' - GSIM: Ground Shaking Intensity Model',
-        ' - IMT: Intensity Measure Type',
-        ' - TRT: Tectonic Region Type',
-        ' - All database tables will be emptied and rewritten'
+                    for _ in SUBCOMMANDS)
     ])
+
+    # help = "\n". join([
+    #     'Initializes and populates the database with all eGSIM required data.',
+    #     'This is also the RECOMMENDED command to be executed every time eGSIM',
+    #     'should be updated with new external source data or a new OpenQuake ',
+    #     'version. See the README file in this directory for details.',
+    #     'This command calls in series all the following (sub)commands:',
+    #     "\n\n".join("\n%s\n%s\n%s" % (_['name'], '='*len(_['name']), _['help'])
+    #                 for _ in SUBCOMMANDS),
+    #     '\nNotes:',
+    #     ' - GSIM: Ground Shaking Intensity Model',
+    #     ' - IMT: Intensity Measure Type',
+    #     ' - TRT: Tectonic Region Type',
+    #     ' - All database tables will be emptied and rewritten'
+    # ])
 
     #     def add_arguments(self, parser):
     #         parser.add_argument('poll_id', nargs='+', type=int)

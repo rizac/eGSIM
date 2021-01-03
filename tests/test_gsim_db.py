@@ -1,8 +1,8 @@
-'''
+"""
 Created on 5 Apr 2019
 
 @author: riccardo
-'''
+"""
 from itertools import product
 import uuid
 
@@ -10,8 +10,8 @@ import pytest
 from openquake.hazardlib.gsim import registry
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
-from egsim.models import (Gsim, Trt, Imt, gsim_names, aval_gsims, aval_imts,
-                          aval_trts, aval_trmodels, TectonicRegion,
+from egsim.models import (Gsim, Imt, gsim_names, aval_gsims, aval_imts,
+                          aval_trts,
                           shared_imts, sharing_gsims, TrSelector, empty_all)
 from egsim.core.utils import OQ
 
