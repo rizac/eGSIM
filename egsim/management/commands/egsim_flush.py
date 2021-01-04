@@ -8,12 +8,13 @@ Modified from the `flush` command in order to:
 2. Empty tables found on the database and not necessarily backed by a model.
    This should allow to successfully empty a database also in circumstances
    where `flush` would fail, i.e. after the models have been modified and
-   before creating the relative migration file. Consider e.g. this case:
-   Modify the models, adding a new non-nullable column C with no default. When
-   creating the migration file (`manage.py makemigrations`), Django will asks
+   before creating the relative migration file. Knowing that we should run
+   `egsim_init` (thus, empty and re-populating all tables) after each migration.
+   Consider this case: we add to a eGSIM Model a new non-nullable column C with no default.
+   We then create the migration file (`manage.py makemigrations`): Django will ask
    how to fill C. No big deal, but why filling something that we are up to delete?
-   (we will need to run `manage.py egsim_init` anyway after any migration)
-   A better solution might be to run `egsim_flush` before making the migration
+   A better solution might be to run `egsim_flush` before making the migration,
+   and then eventually `egsim_init`
 
 Usage:
 ```
