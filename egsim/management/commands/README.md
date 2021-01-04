@@ -10,26 +10,21 @@ To list all commands, type `python manage.py --help`. For further details
 see the [Django documentation](https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/).
 The convention for eGSIM is to start any command with "egsim_" to avoid conflicts.
 
+Any management command (including eGSIM commands) can be executed via
+`python manage.py <command_name>` and its documentation shown via
+`python manage.py <command_name> --help`.
 
 ### Executing eGSIM commands
 
-Any management command (including eGSIM commands) can be executed via
-```
-python manage.py <command_name>
-```
-and its documentation shown via `python manage.py <command_name> --help`.
-
-**TL/DR: in all management operations where you want to (re)populate
-the whole eGSIM database from scratch just run** `egsim_init`:
+**In a nutshell, all management operations can be performed via a single "main"
+command** `egsim_init`:
 ```
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py egsim_init
 ```
-NOTE: `DJANGO_SETTINGS_MODULE` value must be changed in production
+(NOTE: `DJANGO_SETTINGS_MODULE` value must be changed in production!)
 
-#### Detailed commands description 
-
-Below a description of all eGSIM management commands run automatically
-by `egsim_init`:
+Here a more detailed description of all eGSIM management commands (for further
+details, see the relative Python modules):
 
 Command | When we want to | E.g.
 --- | --- | ---
@@ -39,8 +34,8 @@ Command | When we want to | E.g.
 `egsim_sel` | Update the db Gsim selection | A new selection model (e.g. SHARE, ESHM) is available<br/>([see below how to add it in eGSIM](#Extending-existing-commands))
 ~~Not implemented yet~~ | ~~Update the ESM Ground motion DB for residuals computation~~ | ~~A new flatfile (ESM_2018_SA) is available~~
 
-Note that, albeit rare, there might be cases where we want to run only a subset
-of these (sub)commands. See e.g. `egsim_flush` in 
+There is seldom the need to run these commands separately (that's why we recommend
+`egsim_init` which wraps them all), however, one scenario is described  for `egsim_flush` in 
 [how modify a model and repopulate the db](#Modifying-a-Model-class-and-repopulating-the-database)
 
 ### Common workflows
