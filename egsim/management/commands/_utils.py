@@ -17,18 +17,46 @@ from argparse import RawTextHelpFormatter
 from collections import defaultdict
 from typing import Dict
 
+from django.core.management import call_command, CommandError
 from django.core.management.base import BaseCommand
+from django.db import DatabaseError
+from django import VERSION
 
 from egsim.models import Trt
+
+djangomigrationsworkflowdoc = "".join(["https://docs.djangoproject.com/en/",
+                                       "{:d}.{:d}".format(*VERSION[:2]),
+                                       "/topics/migrations/#workflow)"])
 
 
 class EgsimBaseCommand(BaseCommand):
     """Simple abstract subclass of Django BaseCommand providing some shorthand
-    utilities. All eGSIM commands should inherit from this class"""
-
+    utilities. All eGSIM commands should inherit from this class
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._warnings_and_count = defaultdict(int)
+
+    @staticmethod
+    def flush(self, *args, **options):
+        """Empties all egsim tables. This is the recommended way to call the
+        `egsim_flush` command (e.g. from within the `handle` function of
+        another command).
+        To filter on specific tables, use the keyword argument `tables`
+        (regular expression string to search - with `re.search` - for matching
+        tables).
+        To avoid prompting the user, pass `interactive=False` (True by default).
+        This function might raise CommandError
+        """
+        options.setdefault('interactive', True)
+        try:
+            call_command('egsim_flush', *args, **options)
+        except DatabaseError as db_err:
+            # (CommandError is an Exception just handled by
+            # Django to print nicely the error on the terminal)
+            raise CommandError('%s.\nDid you create the db first?\n(for '
+                               'info see: %s)' %
+                               (str(db_err), djangomigrationsworkflowdoc))
 
     def create_parser(self, *args, **kwargs):
         """Make help on the terminal retains formatting of all help text

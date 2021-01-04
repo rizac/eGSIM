@@ -1,6 +1,11 @@
 """
-Command to initialize and populate the eGSIM database with all GSIMs, IMTs
-(and their relations) implemented in the currently used version of OpenQuake
+(Re)populate the eGSIM database with all GSIMs, IMTs (and their relations)
+implemented in the currently used version of OpenQuake.
+
+Note: All existing data will be deleted and overwritten. As its name suggests
+(leading "_") this is a hidden command that can not be invoked directly.
+Either use :func:`_utils.EgsimBaseCommand.flush` or invoke the command `egsim_init`
+(see :class:`egsim.management.commands.egsim_init.Command` for details)
 
 Created on 6 Apr 2019
 
@@ -14,6 +19,7 @@ import inspect
 from collections import defaultdict
 from typing import Dict, Union
 
+from django.core.management import call_command
 from django.db.utils import OperationalError
 from django.core.management.base import BaseCommand, CommandError
 from openquake.baselib.general import (DeprecationWarning as
@@ -24,7 +30,7 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib import imt
 
 from egsim.management.commands._utils import EgsimBaseCommand, get_command_datadir
-from egsim.management.commands import emptydb
+from egsim.management.commands import egsim_flush
 from egsim.models import Gsim, Imt, Trt, Error, EntityType
 from egsim.core.utils import OQ, GSIM_REQUIRED_ATTRS, yaml_load
 
@@ -45,6 +51,8 @@ class Command(EgsimBaseCommand):
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
+        options.setdefault('interactive', True)
+        call_command()
         # delete db:
         emptydb.Command().handle()
         try:

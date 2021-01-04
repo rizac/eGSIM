@@ -1,19 +1,29 @@
 """
-Command to empty the database. Modified from the `flush` command to:
-1. Empty only the Tables of the "egsim" app (i.e., those used by the API)
+Flush the "egsim" database tables, i.e. empty all tables removing all rows.
+Any other database structure is not affected.
+
+Modified from the `flush` command in order to:
+1. Empty only the Tables of the "egsim" app (i.e., those used by the API.
+   See INSTALLED_APPS in the provided settings file)
 2. Empty tables found on the database and not necessarily backed by a model.
    This should allow to successfully empty a database also in circumstances
-   where `flush` would fail (i.e. after the models have been modified and
-   before creating the relative migration file)
+   where `flush` would fail, i.e. after the models have been modified and
+   before creating the relative migration file. Consider e.g. this case:
+   Modify the models, adding a new non-nullable column C with no default. When
+   creating the migration file (`manage.py makemigrations`), Django will asks
+   how to fill C. No big deal, but why filling something that we are up to delete?
+   (we will need to run `manage.py egsim_init` anyway after any migration)
+   A better solution might be to run `egsim_flush` before making the migration
 
 Usage:
 ```
-export DJANGO_SETTINGS_MODULE="..."; python manage.py emptydb
+export DJANGO_SETTINGS_MODULE="..."; python manage.py egsim_flush
 ```
 """
+import re
 from importlib import import_module
 from itertools import chain
-from typing import List, Sequence
+from typing import List, Sequence, Pattern
 
 from django.apps import apps
 from django.core.management.base import CommandError
@@ -47,6 +57,10 @@ class Command(EgsimBaseCommand):
             '--database', default=DEFAULT_DB_ALIAS,
             help='Nominates a database to flush. Defaults to the "default" database.',
         )
+        parser.add_argument(
+            '--tables', default='',
+            help='Tables to flush (regular expression). Default "" (empty all tables)',
+        )
 
     def handle(self, *args, **options):
         """Executes the command
@@ -60,6 +74,7 @@ class Command(EgsimBaseCommand):
         """
         database = options['database']
         connection = connections[database]
+        tables_re = options['tables']
         verbosity = options['verbosity']
         interactive = options['interactive']
         # The following are stealth options used by Django's internals.
@@ -86,16 +101,22 @@ class Command(EgsimBaseCommand):
             raise CommandError(("\"%s\" is not a registered app, check "
                                 "settings file") % appname)
 
+        tnames = table_names(connection, only_django=False, app_names=[appname],
+                             tbl_names=re.compile(tables_re) if tables_re else None)
+
+        if not tnames:
+            raise CommandError(('No table(s) found for app(s) %s. '
+                                'Check the `tables` argument (if provided) and '
+                                'that you created the database with '
+                                'migration file(s)?') % str(appname))
+
         # Return a list of the SQL statements used to flush the database. Note:
         # If `only_django` is True, only include the table names that have
         # associated Django models and are in INSTALLED_APPS (we do NOT want
         # this:inspect the db - i.e. what is there - not the models)
-        sql_list = sql_flush(self.style, connection, only_django=False,
+        sql_list = sql_flush(self.style, connection, tnames,
                              reset_sequences=reset_sequences,
-                             allow_cascade=allow_cascade,
-                             app_names=[appname])
-
-        _tbls = table_names(connection, only_django=False, app_names=[appname])
+                             allow_cascade=allow_cascade)
 
         msg = "\n".join([
             "",
@@ -104,7 +125,7 @@ class Command(EgsimBaseCommand):
             "will be IRREVERSIBLY returned to an empty state (all rows removed):",
             ""
         ])
-        t_info = self.tables_info(connection, _tbls)
+        t_info = self.tables_info(connection, tnames)
         mxl = max(len(_) for _ in t_info)
         for tbl, row_count in t_info.items():
             msg += " %s (%s)\n" % (tbl.ljust(mxl), str(row_count))
@@ -145,28 +166,52 @@ class Command(EgsimBaseCommand):
                 emit_post_migrate_signal(verbosity, interactive, database)
 
             # print summary:
-            self.printsuccess('Deleted tables:')
-            for tbl, row_count in self.tables_info(connection, _tbls).items():
+            self.printsuccess('Truncated tables:')
+            for tbl, row_count in self.tables_info(connection, tnames).items():
                 self.printsuccess(' %s (%s)' % (tbl, str(row_count)))
 
         else:
-            self.stdout.write("Flush cancelled.\n")
+            self.stdout.write("Command cancelled.\n")
+
+
+def table_names(connection, only_django=False,
+                app_names: Sequence[str] = None,
+                tbl_names: Pattern = None) -> List[str]:
+    """Returns a list of table names
+
+    :param connection: a database connection. E.g.
+        ```
+        from django.db import DEFAULT_DB_ALIAS, connections
+        connection = connections[DEFAULT_DB_ALIAS]
+        ```
+    :param only_django: if True, only include the table names that have
+        associated Django models
+    :param app_names: list of strings of the apps (see INSTALLED_APPS)
+        to search. None means: no filter (search all apps)
+    :param tbl_names: regular expression to filter: matchin table names (using
+        re.search) will be returned. None means no filter (all tables)
+    """
+    if only_django:
+        tables = connection.introspection.django_table_names(only_existing=True,
+                                                             include_views=False)
+    else:
+        tables = connection.introspection.table_names(include_views=False)
+
+    if app_names is not None:
+        tables = [t for t in tables if any(t.startswith(n+'_') for n in app_names)]
+
+    if tbl_names is not None:
+        tables = [t for t in tables if tbl_names.search(t)]
+
+    return tables
 
 
 # copied and modified from django.core.management.sql.sql_flush, with an optional
 # app_names list of strings to filter tables from specific apps (Django names
 # the tables as "<appname>_<modelname>")
-def sql_flush(style, connection, only_django=False, reset_sequences=True,
-              allow_cascade=False, app_names: Sequence[str] = None) -> List[str]:
-    """Return a list of the SQL statements used to flush the database.
-
-    If only_django is True, only include the table names that have associated
-    Django models and are in INSTALLED_APPS .
-    """
-    tables = table_names(connection, only_django, app_names)
-
-    if not tables:
-        raise CommandError('No table(s) found for apps: %s' % str(app_names))
+def sql_flush(style, connection, tables: Sequence[str], reset_sequences=True,
+              allow_cascade=False) -> List[str]:
+    """Return a list of the SQL statements used to flush the database"""
 
     db_op = connection.ops  # db_op is a :class:`BaseDatabaseOperations`
     # (e.g. `django.db.backends.sqlite.operations.BaseDatabaseOperations`)
@@ -193,23 +238,6 @@ def sql_flush(style, connection, only_django=False, reset_sequences=True,
                                  reset_sequences=reset_sequences,
                                  allow_cascade=allow_cascade)
     return statements
-
-
-def table_names(connection, only_django=False,
-                app_names: Sequence[str] = None) -> List[str]:
-    """Returns a list of table names. If only_django is True, only include the
-    table names that have associated Django models and are in INSTALLED_APPS.
-    """
-    if only_django:
-        tables = connection.introspection.django_table_names(only_existing=True,
-                                                             include_views=False)
-    else:
-        tables = connection.introspection.table_names(include_views=False)
-
-    if app_names is not None:
-        tables = [t for t in tables if any(t.startswith(n+'_') for n in app_names)]
-
-    return tables
 
 
 def tables_info(connection, tables):

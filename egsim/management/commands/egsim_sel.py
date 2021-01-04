@@ -1,12 +1,13 @@
 """
-Command to fetch all GSIMs selection(s) by TRT from external data sources
-('commands/data' directory) and write them on the database (one row per
-(GSIM, TRT) tuple). A GSIM selection is a set of relations between a TRT and a
-list of associated GSIMs
+Populate the database with all GSIMs selection(s) from external data sources
+('commands/data' directory), one row per (GSIM, TRT) tuple.
+A GSIM selection is a set of relations between a TRT and a list of associated GSIMs.
+
+All existing rows will be deleted and overwritten.
 
 Usage:
 ```
-export DJANGO_SETTINGS_MODULE="..."; python manage.py gsimsel2db
+export DJANGO_SETTINGS_MODULE="..."; python manage.py egsim_sel
 ```
 
 ====================================
@@ -64,12 +65,8 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                                'com/en/2.2/topics/migrations/#workflow)' %
                                str(_exc))
 
-        self.printinfo('Deleting existing Gsim selections from db')
-        try:
-            GsimTrtRelation.objects.all().delete()  # noqa
-        except Exception as _exc:
-            raise CommandError('Unable to delete existing Gsim selections: %s' %
-                               str(_exc))
+        # clear existing data (_meta.db_table is the model table name on the db):
+        self.flush(*args, **{**options, 'tables': GsimTrtRelation._meta.db_table})
 
         for json_file in get_filepaths(get_command_datadir(__name__), '*.json'):
             self.printinfo('Processing %s' % json_file)

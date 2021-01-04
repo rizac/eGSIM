@@ -1,8 +1,19 @@
 """
-Command to populate the database with regionalizations provided from
-external sources (as of 2020, there is only one regionalization implemented: SHARE)
-A regionalization is a set of Geographic regions with an associated Tectonic
-region type (TRT). Each (region, TRT) tuple will correspond to a new database table row
+Populate the database with regionalizations provided from external sources
+(commands 'data' directory. As of 2020, there is only one regionalization
+implemented: SHARE).
+A regionalization is a set of Geographic regions with an associated
+Tectonic region type (TRT). Each (region, TRT) tuple will correspond to a
+new database table row
+
+All existing rows will be deleted and overwritten.
+
+Usage:
+```
+export DJANGO_SETTINGS_MODULE="..."; python manage.py egsim_sel
+```
+
+
 
 WORKFLOW for any new regionalization to be added
 ================================================
@@ -55,13 +66,8 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
         except Exception as _exc:
             raise CommandError(str(_exc))
 
-        self.printinfo('Deleting existing regions (AND REFERENCED DATA, TOO) '
-                       'from db')
-        try:
-            GeographicRegion.objects.all().delete()  # noqa
-        except Exception as _exc:
-            raise CommandError('Unable to delete existing regions: %s' %
-                               str(_exc))
+        # clear existing data (_meta.db_table is the model table name on the db)
+        self.flush(*args, **{**options, 'tables': GeographicRegion._meta.db_table})
 
         for source_id, regionalization in get_classes(__name__, Regionalization):
             if regionalization is Regionalization:  # abstract class, skip:

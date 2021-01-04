@@ -1,54 +1,55 @@
-## egsim commands readme
+## eGSIM commands README
 
-This directory contains Django custom management commands
-for the eGSIM application, in most cases for initializing and populating the
-eGSIM database. Django will register a manage.py
-command for each Python module in this directory
-("management/commands") whose name doesn't begin with an
-underscore.
-For details see the [Django documentation](https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/)
+This directory contains eGSIM-specific management commands to (re)populate
+the backend database tables storing the API data (GSIM, IMTs,
+Regionalizations, GSIM selections and, soon, flatfiles data).
+
+Django will register a manage.py command for each Python module in this
+directory ("management/commands") whose name doesn't begin with an underscore.
+To list all commands, type `python manage.py --help`. For further details
+see the [Django documentation](https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/).
+The convention for eGSIM is to start any command with "egsim_" to avoid conflicts.
 
 
-### How to execute the commands
+### Executing eGSIM commands
 
-Any command can be executed via `python manage.py <command_name>`. One command,
-`initdb`, wraps them all, and is supposed to be used for simplicity in all
-management operation (at the cost of some potential redundancy) as follows:
+Any management command (including eGSIM commands) can be executed via
+`python manage.py <command_name>`, and its documentation shown via
+`python manage.py <command_name> --help`.
+
+**TL/DR: in all management operations where you want to (re)populate
+the whole eGSIM database from scratch** (e.g. after running new migrations files,
+after upgrading OpenQuake with new GSIMs, after adding new external data needed
+by the API) run `egsim_init`:
 ```
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py initdb
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py egsim_init
 ```
-(`DJANGO_SETTINGS_MODULE` value must be changed in production.
-For `initdb` subcommand details, type `python manage.py initdb --help`.
-To list all commands, type `python manage.py --help`)
+NOTE: `DJANGO_SETTINGS_MODULE` value must be changed in production
 
-### When to execute the commands
+#### Detailed commands description 
 
-Management commands are supposed to be executed once
-in a while in these circumstances:
+`egsim_init` is a wrapper command that executes in series several (sub)commands.
+Albeit rare, there might be cases (e.g. `egsim_flush`) where we want to run only
+a subset of those subcommands.
 
-When we have | command
---- | ---
-upgraded OpenQuake<br/>(and thus the list of GSIMs, IMTs and so on) | `oq2db`
-New regionalization<br/>(e.g. SHARE) | `reg2db`<br/>([details here](#Extending-existing-commands))
-New Gsim selection<br/>(e.g. SHARE, ESHM) | `gsimsel2db`<br/>([details here](#Extending-existing-commands))
-~~New Flatfile(s)<br/>(e.g. ESM_2018_SA)~~ | ~~not yet implemented~~
-Any of the above cases | `initdb`
+Command | When we want to | E.g.
+--- | --- | ---
+`egsim_init` | (Re)populate from scratch all eGSIM tables:<br/>call `egsim_flush`, add OpenQuake data (GSIMs, IMTs ...) and call all remaining commands below in series | We upgraded OpenQuake, we performed a db a migration, we have new external data (see any of the cases below)
+`egsim_flush` | Empty all rows in all tables | After modifying the models, to run smoothly `makemigrations` afterwards
+`egsim_reg` | Update the db regionalizations | A new regionalization model (e.g. SHARE) are available<br/>([implementation details here](#Extending-existing-commands))
+`egsim_sel` | Update the db Gsim selection | A new selection model (e.g. SHARE, ESHM) are available<br/>([implementation details here](#Extending-existing-commands))
+~~Not implemented yet~~ | ~~Update the ESM Ground motion DB for residuals computation~~ | ~~A new flatfile (ESM_2018_SA) is available~~
 
-As said, **we strongly recommend for simplicity to always execute
-`initdb` after any change above** (sometimes it is not safe
-to execute the other commands alone. E.g., `oq2db` empties all
-tables and thus requires the other sub-commands
-to be called afterwards)
 
 ### How to extend / create custom commands
 
 #### Extending existing commands
 
-The two commands `reg2db` and `gsimsel2db` are specifically designed to handle
-easily the addition of new input data in the
-future (new regionalizations and gsim selections, respectively).
-See the documentation in the two modules (`reg2db.py` and
-`gsimsel2db.py`) for details
+The two commands `egsim_reg` and `egsim_sel` are specifically designed to handle
+easily the addition of new input data in the future (new regionalizations and
+gsim selections, respectively).
+
+See the documentation in the two modules (`<command_name>.py`) for details
 
 #### Creating new custom commands
 
@@ -66,8 +67,8 @@ you have to:
 2. Implement in the module a subclass of `_utils.EgsimBaseCommand`.
    `EgsimBaseCommand` is just a subclass of Django `BaseCommand`
    with some shorthand utilities (see implementation in `_utils.py` for details).
-   To implement a `EgsimBaseCommand`/`BaseCommand` subclass see the
-   other commands in this directory or the [Django documentation](
+   To implement a `EgsimBaseCommand`/`BaseCommand` you can simply copy and
+   modify one of the other commands in this directory or see the [Django documentation](
    https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/)
 
 3. (optional) If the command requires external data, create the
@@ -78,12 +79,8 @@ you have to:
    during installation*)
 
 4. (optional) If the command has to be added to the chain of
-   subcommand issued by the main command `initdb`, add it
-   in the `initdb.py` module (see the module implementation) 
-   <!-- Avoid trying to add (sub)commands automatically based on e.g., a
-    scan of the commands directory: first you want to have control over the
-    execution order, second you might want to implement some command
-    that is not part of the main initialization chain -->
+   subcommand issued by the main command `egsim_init`, add it
+   in the `egsim_init.py` module (see the module implementation) 
     
 5. List the command in this README
 
