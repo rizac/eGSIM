@@ -17,14 +17,11 @@ Created on 6 Apr 2019
 @author: riccardo
 """
 from django.core.management import call_command, load_command_class
-from django.db.utils import OperationalError
-from django.core.management.base import BaseCommand, CommandError
 
 from ._utils import EgsimBaseCommand
 
-# ============================================================================#
-# !!IMPORTANT !!!
-# TO ADD NEW SUBCOMMANDS import the command module and add it to this list:
+# ===============#============================================================#
+# !!IMPORTANT !!! TO ADD NEW SUBCOMMANDS add its name here below:
 # ============================================================================#
 _SUBCOMMAND_MODULES = ['egsim_flush', '_egsim_oq', 'egsim_reg', 'egsim_sel']
 

@@ -2,10 +2,12 @@
 (Re)populate the eGSIM database with all GSIMs, IMTs (and their relations)
 implemented in the currently used version of OpenQuake.
 
-Note: All existing data will be deleted and overwritten. As its name suggests
-(leading "_") this is a hidden command that can not be invoked directly.
-Either use :func:`_utils.EgsimBaseCommand.flush` or invoke the command `egsim_init`
-(see :class:`egsim.management.commands.egsim_init.Command` for details)
+This command is invoked by `egsim_init.py` and exists only because of legacy code:
+as there is no point in executing this command alone (all existing data must be
+deleted beforehand, and thus some deleted data must be recreated afterwards),
+for simplicity it has been turned it into a hidden command via the lading "_"
+in its name: we can call this command via Django `call_command` but we can not
+see it or invoke from the terminal
 
 Created on 6 Apr 2019
 
@@ -51,21 +53,6 @@ class Command(EgsimBaseCommand):
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
-        options.setdefault('interactive', True)
-        call_command()
-        # delete db:
-        emptydb.Command().handle()
-        try:
-            self.printinfo("Emptying DB Tables")
-            empty_all()
-        except OperationalError as no_db:
-            # (CommandError is an Exception just handled by
-            # Django to print nicely the error on the terminal)
-            raise CommandError('%s.\nDid you create the db first?\n(for '
-                               'info see: https://docs.djangoproject.'
-                               'com/en/2.3/topics/migrations/#workflow)' %
-                               str(no_db))
-
         # populate db:
         self.printinfo('Populating DB with OpenQuake data:')
         errors = Error.objects  # noqa
