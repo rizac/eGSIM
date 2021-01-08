@@ -1,0 +1,252 @@
+# These are flatfile fields (excluding IMTs), i.e. the columns for any tabular data
+# structure in the code (e.g., Django Model, pandas DataFrame, PyTables tables)
+# representing a Flatfile. Each field name is mapped to a sub-dictionary of its
+# (optional) properties:
+#
+# <field_name>:
+#   type:    The field type (default: float): float, int, str, datetime64[ns], bool.
+#            (we use numpy/pandas dtypes but applications might use type aliases, as long
+#            as they are serializable. E.g. pandas 'string', 'boolean', 'Int*' are not)
+#   bounds:  The bounds [min, max] (default [null, null], where null means: don't check).
+#            Applications should accept values only within the specified bound
+#   default: The default value when nothing is provided. Applications needs to treat
+#            the case where no default is given, depending on the field type and storage:
+#            In RDBMS, NULL is valid for all types, whereas in pandas the default is
+#            type dependent (NaN, '', pandas.NaT, 0, false) and can not always be used
+#            unambiguously to denote a missing value (0 for `int` and false for `bool`)
+#   help:    The field description (default: '')
+#   choices: Sub-dict of possible `(value, string_label)` pairs (default: {}).
+#            Applications should accept values only within the specified `choices` values
+#
+# Note that empty fields, e.g. "magnitude:" equals as "magnitude: null" in YAML and
+# should be mapped in applications to a dict of all defaults above
+
+FLATIFLE_FIELDS:
+  event_name:
+    type: str
+  event_country:
+    type: str
+  event_time:
+    type: datetime64[ns]
+  event_latitude:
+    help: event latitude (deg)
+    bounds: [-90, 90]
+  event_longitude:
+    help: event longitude (deg)
+    bounds: [-180, 180]
+  hypocenter_depth:
+    help: Hypocentral depth (in Km?)
+  magnitude:
+  magnitude_type:
+    typer: str
+  magnitude_uncertainty:
+  tectonic_environment:
+    type: str
+  strike_1:
+  strike_2:
+  dip_1:
+  dip_2:
+  rake_1:
+  rake_2:
+  style_of_faulting:
+    type: str
+    choices:  # Mechanism type to Rake conversion:
+      Normal: -90.0
+      Strike-Slip: 0.0
+      Reverse: 90.0
+      Oblique: 0.0
+      Unknown: 0.0
+      N: -90.0  # Flatfile conventions
+      S: 0.0
+      R: 90.0
+      U: 0.0
+      NF: -90.  # ESM flatfile conventions
+      SS: 0.
+      TF: 90.
+      NS: -45.  # Normal with strike-slip component
+      TS: 45.  # Reverse with strike-slip component
+      O: 0.0
+  depth_top_of_rupture:
+    help: Top of Rupture Depth (km)
+  rupture_length:
+  rupture_width:
+  station_name:
+    type: str
+  station_country:
+    type: str
+  station_latitude:
+    help: station latitude (deg)
+    bounds: [-90, 90]
+  station_longitude:
+    help: station longitude (deg)
+    bounds: [-180, 180]
+  station_elevation:
+    help: station elevation (Km?)
+  vs30:
+    help: Average shear wave velocity in the top 30 m, in m/s
+  vs30_measured:
+    help: whether or not the Vs30 is measured (default true)
+    type: bool
+    default: true
+  vs30_sigma:
+  depth_to_basement:
+  z1:
+    help: depth of the layer where seismic waves start to propagate with a speed above 1.0 km/sec, in meters
+  z2pt5:
+    help: depth of the layer where seismic waves start to propagate with a speed above 2.5 km/sec, in km
+  repi:
+    help: epicentral distance (in Km?)
+  rrup:
+    help: rupture_distance (in Km?)
+  rjb:
+    help: Joyner-Boore distance (in Km?)
+  rhypo:
+    help: hypocentral distance (in Km?)
+  rx:
+  ry0:
+  azimuth:
+  digital_recording:
+    type: bool
+    default: true
+  type_of_filter:
+    type: str
+  npass:
+    type: int
+  nroll:
+  hp_h1:
+  hp_h2:
+  lp_h1:
+  lp_h2:
+  factor:
+  lowest_usable_frequency_h1:
+  lowest_usable_frequency_h2:
+  lowest_usable_frequency_avg:
+  highest_usable_frequency_h1:
+  highest_usable_frequency_h2:
+  highest_usable_frequency_avg:
+  backarc:
+    type: bool
+    default: false
+
+
+# These are all distinct parameters found in the REQUIRES* attributes of all Gsims
+# (REQUIRES_SITES_PARAMETERS, REQUIRES_RUPTURE_PARAMETERS and REQUIRES_DISTANCES):
+# when populating the DB (admin operation to be done after each eGSIM update or
+# upgrade), for any new Gsim parameter found, the user is warned, so that the
+# parameter can be added here. It is then up to the user to decide to map it to
+# nothing (or null) to ignore the parameter, or to a flatfile column name above.
+# In the latter case, in all applications involving a predicted (Gsim) and observed
+# (Flatfile) data, eGSIM will remove flatfile rows that have missing data under the
+# columns that are mapped to the Gsim required parameters. Consequently, sometimes
+# you might want to skip writing the mapping even if there is one, either because
+# useless (int and bool columns do not have a missing value in pandas) or dangerous (some
+# missing data - in particular for distances - is handled in the code afterwards and
+# cannot to be automatically removed. See smtk and eGSIM source code for details)
+GSIM_REQUIRED_ATTRS:
+  # attrs with a mapping to itself:
+  rjb: rjb
+  rhypo: rhypo
+  azimuth: azimuth
+  rrup: rrup
+  ry0: ry0
+  backarc: # backarc (commented because it's a boolean: there is no "missing" value possible)
+  z2pt5: z2pt5
+  vs30: vs30
+  rx: rx
+  repi: repi
+  # attrs with a 1-1 mapping to another name:
+  z1pt0: z1
+  mag: magnitude
+  lat: event_latitude
+  lon: event_longitude
+  vs30measured: # vs30_measured (commented because it's a boolean: there is no "missing" value possible)
+  hypo_depth: hypocenter_depth
+  ztor: depth_top_of_rupture
+  # ignored (mapped to null) because handled differently than a 1-1 mapping:
+  rake:
+  dip:
+  strike:
+  width:  # should be rupture_width in flatfiles
+  # ignored (mapped to null)  because not used in smtk:
+  rvolc:
+  rcdpp:
+  siteclass:
+  # new attrs in openquake 3.10.1 (all null, waiting to be implemented in flatfiles)
+  xvf: # float (default 0)
+  backarc_distance: # should be xvf: https://github.com/gem/oq-engine/issues/6135
+  geology:  # str? (default UNKNOWN) should be added as a configurable parameter but should default to "UNKNOWN"
+  slope: # float (default 0.1 m/m) affects 2 moidels relevant ones for Europe. This should be added as a configurable property, defaulting to 0.1 m/m
+  z1pt4:  # used by models using a different basin depth definition from the global standards. Honestly, I can't identify a default, but from a "geophysical" perspective I would suggest to take it as equivalent to z1pt0. Perhaps this can be configured by the user but default to z1pt0 if not set.
+
+
+
+REQUIRES_DISTANCES:
+ azimuth: [azimuth, float]
+ rcdpp: null
+ repi: [repi, float]
+ rhypo: [rhypo, float]
+ rjb: [rjb, float]
+ rrup: [rrup, float]
+ rvolc: null
+ rx: [rx, float]
+ ry0: [ry0, float]
+
+REQUIRES_RUPTURE_PARAMETERS:
+ dip: null
+ hypo_depth: hypocenter_depth
+ mag: magnitude
+ rake: null
+ width: null  # it would be rupture_width, but it's handled in the code
+ ztor: depth_top_of_rupture
+
+REQUIRES_SITES_PARAMETERS:
+ backarc: [backarc, bool]
+ backarc_distance: [backarc_distance, float]
+ ec8: [ec8, float]
+ ec8_p18: [ec8_p18, float]
+ geology: [geology, float]
+ h800: [h800, float]
+ lat: event_latitude
+ lon: event_longitude
+ siteclass: null
+ slope: [slope, float]
+ vs30: [vs30, float]
+ vs30measured: [vs30_measured, bool]
+ xvf: [xvf, float]
+ z1pt0: z1
+ z1pt4: [z1pt4, float]
+ z2pt5: [z2pt5, float]
+
+
+
+
+
+
+
+
+
+   # Parameters a required parameter found for any Gsim. Run this code show to see them:
+   #
+   # from collections import defaultdict
+   # gsimparam = defaultdictset
+   # for _ in get_available_gsims.values:
+   #     for attname in [__ for __ in dir_ if __.startswithREQUIRE]:
+   #         for attval in getattr_, attname, []:
+   #             gsimparam[attname].addattval
+   # for key in sortedgsimparam:
+   #     printf"\n{key}:"
+   #         for val in sortedgsimparam[key]:
+   #             printf" {val}: [{val}, float]"
+   #
+   # Rules: each top-level key is one of the three types of Gsim parameters
+   #  (rupture params, sites params, and distance measures. We use the OpenQuake's
+   #  attribute name defined on each Gsim).
+   #  Each param type is then mapped to a sub-dict of parameter names (collecting
+   #  all distinct parameter names of all Gsims). Each param name is then mapped to
+   #  the corresponding column that we expect in a flatfile, or null/empty if there
+   #  is no match. Parameter not found here are printed each time we execute `egsim_init`
+  #  to force the user to know that we should consider the parameter
+
+
+
+
