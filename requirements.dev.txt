@@ -22,7 +22,7 @@ packaging==20.4
 pandas==1.0.5
 pluggy==0.13.1
 psutil==5.6.7
-py==1.9.0
+py==1.10.0
 pylint==2.6.0
 pyparsing==2.4.7
 pyshp==1.2.3
