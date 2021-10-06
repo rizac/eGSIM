@@ -129,8 +129,8 @@ FLATIFLE_FIELDS:
     default: false
 
 
-# GSIM required parameters (Gsim attributes REQUIRES_SITES_PARAMETERS,
-# REQUIRES_RUPTURE_PARAMETERS and REQUIRES_DISTANCES) found in all OpenQuake GSIMs.
+# GSIM parameters (collected from the attributes REQUIRES_SITES_PARAMETERS,
+# REQUIRES_RUPTURE_PARAMETERS and REQUIRES_DISTANCES of all OpenQuake GSIMs).
 # Map a parameter to a corresponding flatfile column ONLY if you want GSIMs requiring
 # the parameter to ignore flatfile records with missing values (under the column).
 # This is beneficial to avoid computational errors but consider that a mapping
@@ -139,10 +139,10 @@ FLATIFLE_FIELDS:
 # data should not be removed because filled with defaults later in the code. See smtk
 # and eGSIM source code for details, in particular for distances). In case of doubts,
 # or if no matching column exists, map the parameter to null (or nothing).
-# When running eGSIM admin command such as `egsim_init` (which should be done after
-# each package update or upgrade) the mapping below will be stored in the DB for later
-# usage, and any new <P> will issue a warning that can be fixed by adding <P> in the
-# lists below (with or without the corresponding flatfile column)
+# When running eGSIM admin command such as `egsim_init` after a package update or upgrade,
+# the mapping below will be stored in the DB for later usage, and any new parameter
+# will issue a warning that can be fixed by adding the parameter in the lists below
+# (with or without the corresponding flatfile column)
 
 REQUIRES_DISTANCES:
   azimuth: azimuth
@@ -171,7 +171,7 @@ REQUIRES_SITES_PARAMETERS:
   ec8_p18:
   geology: # str? (default UNKNOWN) should be added as a configurable parameter but should default to "UNKNOWN"
   h800:
-  lat: event_latitude
+  lat: event_latit ude
   lon: event_longitude
   siteclass: # not used in flatfiles
   slope: # float (default 0.1 m/m) affects 2 models relevant ones for Europe. This should be added as a configurable property, defaulting to 0.1 m/m
