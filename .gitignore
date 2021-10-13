@@ -6,6 +6,8 @@ __pycache__/
 # added by me:
 tmp/
 media/
+.DS_Store
+.idea/
 
 # C extensions
 *.so
