@@ -23,7 +23,7 @@ from openquake.baselib.general import (DeprecationWarning as
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
-from egsim.management.commands._utils import EgsimBaseCommand, get_command_datadir
+from egsim.management.commands._utils import EgsimBaseCommand
 import egsim.models as models
 
 
@@ -119,7 +119,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt]) -> list[models.Gsim]:
             if inspect.isabstract(gsim):
                 continue
             gsim_warnings = []
-            needs_args = False
+            # needs_args = False
 
             try:
                 gsim_inst = gsim()
@@ -130,10 +130,10 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt]) -> list[models.Gsim]:
                 continue
             except Warning as warn:
                 gsim_warnings.append(str(warn))
-            except TypeError:
-                gsim_inst = gsim
-                needs_args = True
-            except (OSError, NotImplementedError, KeyError, IndexError) as exc:
+            # except TypeError:
+            #     gsim_inst = gsim
+            #     needs_args = True
+            except (OSError, NotImplementedError, KeyError, IndexError, TypeError) as exc:
                 # NOTE: ADD HERE THE EXCEPTIONS THAT YOU WANT TO JUST REPORT.
                 store_gsim_error(gsim_name, exc)
                 continue
@@ -183,8 +183,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt]) -> list[models.Gsim]:
 
             # Save Gsim:
             gsim = models.Gsim.objects.create(name=gsim_name, trt=gsim_trt,
-                                              warning=gsim_warning or None,
-                                              needs_args=needs_args)
+                                              warning=gsim_warning or None)
             # Seet IMTs:
             gsim.imts.set(gsim_imts)
 

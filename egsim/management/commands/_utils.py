@@ -95,67 +95,70 @@ class EgsimBaseCommand(BaseCommand):
         if empty_warnings:
             self._warnings_and_count.clear()
 
-
-def get_command_datadir(command_module_name: str):
-    """Returns the absolute path of the command data directory (CDD) of the
-    given command module. A command module is a Python module implementing a
-    Django custom command invokable via 'python manage.py <command>'
-    (for info see https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/).
-    Typical usage **from within a command module**:
-    ```
-    datadir = get_command_datadir(__name__)
-    ```
-    This function also provides meaningful messages to help the user when
-    invoking the commands from the terminal.
-
-    :param command_module_name: The `__name__` attribute of a given
-        command module (str)
-    """
-    try:
-        modfile = sys.modules[command_module_name].__file__
-        if not os.path.isfile(modfile):
-            raise FileNotFoundError()
-    except (AttributeError, KeyError, FileNotFoundError):
-        raise ValueError('Invalid command module name "%s" in '
-                         '`get_datafile_paths`' % command_module_name)
-
-    thisdir = os.path.abspath(os.path.dirname(__file__))
-    if os.path.abspath(os.path.dirname(modfile)) != thisdir:
-        raise ValueError('Error in "%s": you cannot invoke `get_datafile_paths` '
-                         '(no command associated)' % modfile)
-
-    datadir = os.path.join(thisdir, 'data', command_module_name.split('.')[-1])
-    if not os.path.isdir(datadir):
-        raise FileNotFoundError('No data directory "%s" defined in "%s"' %
-                                (os.path.basename(datadir), os.path.dirname(datadir)))
-
-    return datadir
+    def data_dir(self, *paths):
+        return os.path.join(os.path.dirname(__file__), 'data', *paths)
 
 
-def get_filepaths(directory,
-                  pattern: str = None,
-                  raise_on_emptylist: bool = True):
-    """Returns a list of file absolute paths inside `directory`, optionally
-    filtered by `pattern`
-
-    :param directory: a directory (str)
-    :param pattern: an optional matching pattern (str). See
-        https://docs.python.org/3/library/fnmatch.html#fnmatch.fnmatch
-        for details. Falsy value ('' or None) means: accept all files
-    :param raise_on_emptylist: if True (the default) raises a FileNotFound
-        exception if no file is found according to the given criteria. If
-        False, no check is performed and empty lists can be returned
-    """
-    pattern = pattern or ''
-
-    files = []
-    for file in os.listdir(directory):
-        if pattern and not fnmatch.fnmatch(file, pattern):
-            continue
-        files.append(os.path.abspath(os.path.join(directory, file)))
-
-    if not files and raise_on_emptylist:
-        nofilemsg = 'No file' if not pattern else 'No %s file' % pattern
-        raise FileNotFoundError('%s in %s' % (nofilemsg, directory))
-
-    return files
+# def get_command_datadir(command_module_name: str):
+#     """Returns the absolute path of the command data directory (CDD) of the
+#     given command module. A command module is a Python module implementing a
+#     Django custom command invokable via 'python manage.py <command>'
+#     (for info see https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/).
+#     Typical usage **from within a command module**:
+#     ```
+#     datadir = get_command_datadir(__name__)
+#     ```
+#     This function also provides meaningful messages to help the user when
+#     invoking the commands from the terminal.
+#
+#     :param command_module_name: The `__name__` attribute of a given
+#         command module (str)
+#     """
+#     try:
+#         modfile = sys.modules[command_module_name].__file__
+#         if not os.path.isfile(modfile):
+#             raise FileNotFoundError()
+#     except (AttributeError, KeyError, FileNotFoundError):
+#         raise ValueError('Invalid command module name "%s" in '
+#                          '`get_datafile_paths`' % command_module_name)
+#
+#     thisdir = os.path.abspath(os.path.dirname(__file__))
+#     if os.path.abspath(os.path.dirname(modfile)) != thisdir:
+#         raise ValueError('Error in "%s": you cannot invoke `get_datafile_paths` '
+#                          '(no command associated)' % modfile)
+#
+#     datadir = os.path.join(thisdir, 'data', command_module_name.split('.')[-1])
+#     if not os.path.isdir(datadir):
+#         raise FileNotFoundError('No data directory "%s" defined in "%s"' %
+#                                 (os.path.basename(datadir), os.path.dirname(datadir)))
+#
+#     return datadir
+#
+#
+# def get_filepaths(directory,
+#                   pattern: str = None,
+#                   raise_on_emptylist: bool = True):
+#     """Returns a list of file absolute paths inside `directory`, optionally
+#     filtered by `pattern`
+#
+#     :param directory: a directory (str)
+#     :param pattern: an optional matching pattern (str). See
+#         https://docs.python.org/3/library/fnmatch.html#fnmatch.fnmatch
+#         for details. Falsy value ('' or None) means: accept all files
+#     :param raise_on_emptylist: if True (the default) raises a FileNotFound
+#         exception if no file is found according to the given criteria. If
+#         False, no check is performed and empty lists can be returned
+#     """
+#     pattern = pattern or ''
+#
+#     files = []
+#     for file in os.listdir(directory):
+#         if pattern and not fnmatch.fnmatch(file, pattern):
+#             continue
+#         files.append(os.path.abspath(os.path.join(directory, file)))
+#
+#     if not files and raise_on_emptylist:
+#         nofilemsg = 'No file' if not pattern else 'No %s file' % pattern
+#         raise FileNotFoundError('%s in %s' % (nofilemsg, directory))
+#
+#     return files
