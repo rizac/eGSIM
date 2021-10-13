@@ -17,7 +17,7 @@ import tables
 
 from django.conf import settings
 from openquake.hazardlib.gsim import get_available_gsims
-from openquake.hazardlib.imt import registry as hazardlib_imt_registry
+from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.const import TRT
 from smtk.sm_table import get_dbnames, GMTableDescription, records_where
 from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
@@ -31,7 +31,7 @@ DISTANCE_LABEL = dict(
 )
 
 
-class MOF:  # pylint: disable=missing-docstring, too-few-public-methods
+class MOF:  # noqa
     # simple class emulating an Enum
     RES = 'res'
     LH = 'lh'
@@ -163,7 +163,7 @@ def yaml_load(obj: Union[str, TextIO, dict]) -> dict:
                                 'YAML content nor the path of an existing '
                                 'YAML file')
             raise YAMLError('Unable to load input (%s) as YAML'
-                            % (obj.__class__.__name__))
+                            % str(obj.__class__.__name__))
         return ret
     finally:
         if close_stream:
@@ -287,8 +287,10 @@ def get_gmdb_column_desc(as_html=True):
     return ret
 
 
-class OQ:
+class OQ:  # FIXME: get rid of this right? WE have the db for this
     """container class for OpenQuake entities"""
+
+    SUPPORTED_IMT_NAMES = ('PGA', 'PGV', 'SA', 'PGD', 'IA', 'CAV')
 
     # Type hinting below are enclosed in quotes to still help the reader while
     # avoiding several imports (e.g. IMT, GMPE, typing.Dict. Note that at least
@@ -309,7 +311,7 @@ class OQ:
         imt_name (string) mapped to its imt_class (class object)
         defining all Intensity Measure Types defined in OpenQuake
         """
-        return dict(hazardlib_imt_registry)
+        return {_: IMT(_) for _ in cls.SUPPORTED_IMT_NAMES}
 
     @classmethod
     def gsims(cls) -> "dict[str, GMPE]":
@@ -342,7 +344,7 @@ class OQ:
 # Both tuple elements are strings. If the first element is empty, the attribute
 # does not have a mapping with any GMTable column. If the second element
 # is empty, there is no missing value available for the given column
-GSIM_REQUIRED_ATTRS = {
+GSIM_REQUIRED_ATTRS = {  # FIXME: get rid of this, we have a json file we load with the init command
     # attrs with a mapping to itself:
     'rjb': ('rjb', 'nan'),
     'rhypo': ('rhypo', 'nan'),

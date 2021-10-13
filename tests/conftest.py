@@ -1,10 +1,10 @@
-'''
+"""
 Basic conftest.py defining fixtures to be accessed during tests
 
 Created on 3 May 2018
 
 @author: riccardo
-'''
+"""
 
 import os
 from io import StringIO, BytesIO
@@ -19,7 +19,6 @@ from django.test.client import Client
 from egsim.core.utils import yaml_load, get_dbnames
 from egsim.core.utils import querystring
 import json
-from egsim.models import Trt
 from egsim.forms.fields import GmdbField
 
 
@@ -45,11 +44,11 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture(scope="function")
 def areequal(request):
-    '''This fixture allows to *deeply* compare python numbers, lists, dicts,
+    """This fixture allows to *deeply* compare python numbers, lists, dicts,
     numpy arrays for equality. Numeric arrays can be compared, when found,
     using numpy's `allclose`. str and bytes are not considered equal
     (b"whatever" != "whatever")
-    '''
+    """
     class Comparator:
 
         def __call__(self, obj1, obj2, rtol=1e-05, atol=1e-08, equal_nan=True):
@@ -132,7 +131,7 @@ def areequal(request):
 
 @pytest.fixture(scope="session")
 def testdata(request):  # pylint: disable=unused-argument
-    '''Fixture handling all data to be used for testing. It points to the
+    """Fixture handling all data to be used for testing. It points to the
     testing 'data' directory allowing to just get files / read file contents
     by file name.
     Pass it as argument to a test function
@@ -144,27 +143,27 @@ def testdata(request):  # pylint: disable=unused-argument
         testdata.path('myfilename')
         testdata.read('myfilename')
     ```
-    '''
+    """
     class Data():
-        '''class handling common read operations on files in the 'data' folder'''
+        """class handling common read operations on files in the 'data' folder"""
 
         def __init__(self, root=None):
             thisdir = os.path.dirname(os.path.abspath(__file__))
             self.root = root or os.path.join(thisdir, 'data')
 
         def path(self, filename):
-            '''returns the full path (string) of the given data file name
+            """returns the full path (string) of the given data file name
             :param filename: a string denoting the file name inside the test
-                data directory'''
+                data directory"""
             filepath = os.path.join(self.root, filename)
             # assert os.path.isfile(filepath)
             return filepath
 
         def read(self, filename, decode=None):
-            '''reads the data (byte mode, with encoding) and returns it
+            """reads the data (byte mode, with encoding) and returns it
             :param filename: a string denoting the file name inside the test
                 data directory
-            '''
+            """
             with open(self.path(filename), 'rb') as opn:
                 return opn.read().decode(decode) if decode else opn.read()
 
@@ -181,13 +180,13 @@ def testdata(request):  # pylint: disable=unused-argument
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
-        call_command('initdb')
+        call_command('egsim_init', interactive=False)  # '--noinput')
 
 
 @pytest.fixture(scope="session")
 def mocked_gmdbfield(request, testdata):  # pylint: disable=unused-argument
-    '''Fixture returning a mock class for the GmdbField.
-    '''
+    """Fixture returning a mock class for the GmdbField.
+    """
     def func(tetdata_filename):
         gmdbpath = testdata.path(tetdata_filename)
 

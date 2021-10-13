@@ -285,18 +285,30 @@ and follow the instructions.
 
 Then navigate in the browser to: http://127.0.0.1:8000/admin/
 
-### Modify database models (make migrations)
+### Modify database models (make migrations)  VERIFIED OCt 2021
 
 See here: https://realpython.com/django-migrations-a-primer/#changing-models
 or here:
-https://docs.djangoproject.com/en/2.3/topics/migrations/#workflow
+https://docs.djangoproject.com/en/3.2/topics/migrations/#workflow
 
 In a nutshell (in production, replace 1. with the command `git pull` and
 execute 2. and 3. with a different DJANGO_SETTINGS_MODULE value):
 
-1. modify the code
-2. ```export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>```
-3. ```export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim```
+1. Modify the code
+
+2. Make migrations (generate migration file in the "migrations" directory):
+
+   ```console
+   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>
+   ```
+   (<migration_name> will be a suffix appended to the migration file, use it
+   like you would use a commit message in `git`)
+
+3. Migrate:
+   
+   ```console
+   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim
+   ```
 
 ("egsim" above is the app name. If you omit the app, all apps will be migrated.
 The command `migrate` does nothing if it detects that there is nothing to migrate)

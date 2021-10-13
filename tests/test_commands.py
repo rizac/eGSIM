@@ -29,10 +29,10 @@ from django.core.management import call_command
     # clz = get_classes('egsim.models')
 
 @pytest.mark.django_db
-def test_initdb(capsys):
-    " Test initdb command."
-    call_command('initdb')
-    captured = capsys.readouterr()
+def test_initdb(capfd):
+    """Test initdb command."""
+    call_command('egsim_init', interactive=False)
+    captured = capfd.readouterr()
     assert not captured.err
     # sout = captured.out
 

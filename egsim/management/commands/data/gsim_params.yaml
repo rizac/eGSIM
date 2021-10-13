@@ -1,25 +1,25 @@
-# Flatfile fields (excluding IMTs), i.e. the columns of any tabular data structure
-# (e.g., Django Model, pandas DataFrame, PyTables Table) representing a Flatfile.
-# Each field name is mapped to a sub-dictionary of its (optional) properties:
+# Flat file scalar fields (i.e., excluding IMTs fields). Fields are basically
+# columns of any tabular data structure representing a flatfile
+# (e.g., Django Model, pandas DataFrame, PyTables Table).
+# Each field name is mapped to a sub-dictionary of OPTIONAL properties:
 #
 # <field_name>:
-#   type:    The field type (default: float): float, int, str, datetime64[ns], bool.
-#            (we use numpy/pandas dtypes but applications might use type aliases, as long
-#            as they are serializable. E.g. pandas 'string', 'boolean', 'Int*' are not)
+#   type:    The field type; default when missing: float. Possible values: float, int,
+#            str, datetime, bool. You can use any data type that is serializable (e.g.,
+#            pandas 'string', 'boolean', 'Int*' are not)
 #   bounds:  The bounds [min, max] (default [null, null], where null means: don't check).
 #            Applications should accept values only within the specified bound
-#   default: The default value when nothing is provided. Applications needs to treat
-#            the case where no default is given depending on the field type and storage:
-#            In RDBMS, NULL is valid for all types, whereas in pandas the default is
-#            type dependent (NaN, '', pandas.NaT, 0, false) and can not always be used
-#            unambiguously to denote a missing value (e.g., 0 for `int` and false for `bool`)
+#   default: The default value when nothing is provided (default when missing:
+#            storage dependent: in RDBMS, you can use NULL NULL as it is valid
+#            for all data types, whereas in pandas the default is type dependent (NaN,
+#            '', pandas.NaT, 0, false) and can not always be used unambiguously to
+#            denote a missing value (e.g., 0 for `int` and false for `bool`)
 #   help:    The field description (default: '')
 #   choices: Sub-dict of possible `(value, string_label)` pairs (default: {}).
 #            Applications should accept values only within the specified `choices` values
 #
-# Note that empty fields, e.g. "magnitude:" equals as "magnitude: null" in this syntax (YAML)
-# and should be mapped in applications to a dict of all defaults above. Also, strings don't
-# need to be quoted unless containing characters that could be mistaken with YAML syntax
+# Note that empty fields, e.g. "magnitude:" equals as "magnitude: null" in YAML syntax,
+# but parsing applications should ,ap the property to a dict of all defaults above.
 
 FLATIFLE_FIELDS:
   event_name:
@@ -105,6 +105,7 @@ FLATIFLE_FIELDS:
   rx:
   ry0:
   azimuth:
+    alias: REQUIRES_DISTANCES.azimuth
   digital_recording:
     type: bool
     default: true
@@ -128,21 +129,6 @@ FLATIFLE_FIELDS:
     type: bool
     default: false
 
-
-# GSIM parameters (collected from the attributes REQUIRES_SITES_PARAMETERS,
-# REQUIRES_RUPTURE_PARAMETERS and REQUIRES_DISTANCES of all OpenQuake GSIMs).
-# Map a parameter to a corresponding flatfile column ONLY if you want GSIMs requiring
-# the parameter to ignore flatfile records with missing values (under the column).
-# This is beneficial to avoid computational errors but consider that a mapping
-# might be useless (e.g. when the column type doesn't support a distinctive missing
-# value such as `int` and `bool` columns in pandas) or dangerous (e.g., when missing
-# data should not be removed because filled with defaults later in the code. See smtk
-# and eGSIM source code for details, in particular for distances). In case of doubts,
-# or if no matching column exists, map the parameter to null (or nothing).
-# When running eGSIM admin command such as `egsim_init` after a package update or upgrade,
-# the mapping below will be stored in the DB for later usage, and any new parameter
-# will issue a warning that can be fixed by adding the parameter in the lists below
-# (with or without the corresponding flatfile column)
 
 REQUIRES_DISTANCES:
   azimuth: azimuth
@@ -171,7 +157,7 @@ REQUIRES_SITES_PARAMETERS:
   ec8_p18:
   geology: # str? (default UNKNOWN) should be added as a configurable parameter but should default to "UNKNOWN"
   h800:
-  lat: event_latit ude
+  lat: event_latitude
   lon: event_longitude
   siteclass: # not used in flatfiles
   slope: # float (default 0.1 m/m) affects 2 models relevant ones for Europe. This should be added as a configurable property, defaulting to 0.1 m/m
@@ -181,3 +167,57 @@ REQUIRES_SITES_PARAMETERS:
   z1pt0: z1
   z1pt4: # used by models using a different basin depth definition from the global standards. Honestly, I can't identify a default, but from a "geophysical" perspective I would suggest to take it as equivalent to z1pt0. Perhaps this can be configured by the user but default to z1pt0 if not set.
   z2pt5: z2pt5
+
+
+# GSIM parameters (collected from the attributes REQUIRES_SITES_PARAMETERS,
+# REQUIRES_RUPTURE_PARAMETERS and REQUIRES_DISTANCES of all OpenQuake GSIMs).
+# Map a parameter to a corresponding flatfile column ONLY if you want GSIMs requiring
+# the parameter to ignore flatfile records with missing values (under the column).
+# This is beneficial to avoid computational errors but consider that a mapping
+# might be useless (e.g. when the column type doesn't support a distinctive missing
+# value such as `int` and `bool` columns in pandas) or dangerous (e.g., when missing
+# data should not be removed because filled with defaults later in the code. See smtk
+# and eGSIM source code for details, in particular for distances). In case of doubts,
+# or if no matching column exists, map the parameter to null (or nothing).
+# When running eGSIM admin command such as `egsim_init` after a package update or upgrade,
+# the mapping below will be stored in the DB for later usage, and any new parameter
+# will issue a warning that can be fixed by adding the parameter in the lists below
+# (with or without the corresponding flatfile column)
+
+#REQUIRES_DISTANCES:
+#  azimuth: azimuth
+#  rcdpp: # not used in flatfiles
+#  repi: repi
+#  rhypo: rhypo
+#  rjb: rjb
+#  rrup: rrup
+#  rvolc: # not used in flatfiles
+#  rx: rx
+#  ry0: ry0
+#
+#REQUIRES_RUPTURE_PARAMETERS:
+#  dip: # no 1-1-mapping in flatfiles
+#  hypo_depth: hypocenter_depth
+#  mag: magnitude
+#  rake: # no 1-1-mapping in flatfiles
+#  # strike: # no 1-1-mapping in flatfiles
+#  width: # rupture_width in flatfiles, but missing values are handled in the code
+#  ztor: depth_top_of_rupture
+#
+#REQUIRES_SITES_PARAMETERS:
+#  backarc: # backarc in flatfiles (this is a boolean field)
+#  backarc_distance: # should be xvf: https://github.com/gem/oq-engine/issues/6135
+#  ec8:
+#  ec8_p18:
+#  geology: # str? (default UNKNOWN) should be added as a configurable parameter but should default to "UNKNOWN"
+#  h800:
+#  lat: event_latitude
+#  lon: event_longitude
+#  siteclass: # not used in flatfiles
+#  slope: # float (default 0.1 m/m) affects 2 models relevant ones for Europe. This should be added as a configurable property, defaulting to 0.1 m/m
+#  vs30: vs30
+#  vs30measured: # vs30_measured in flatfiles (this is a boolean field)
+#  xvf: # float (default 0)
+#  z1pt0: z1
+#  z1pt4: # used by models using a different basin depth definition from the global standards. Honestly, I can't identify a default, but from a "geophysical" perspective I would suggest to take it as equivalent to z1pt0. Perhaps this can be configured by the user but default to z1pt0 if not set.
+#  z2pt5: z2pt5
