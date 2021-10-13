@@ -14,16 +14,20 @@ https://django.readthedocs.io/en/2.0.x/howto/custom-management-commands.html
 
 Created on 6 Apr 2019
 
-@author: riccardo
+@author: rizac <at> gfz-potsdam.de
 """
-from django.core.management import call_command, load_command_class
+
+
+from django.core.management import call_command, load_command_class, CommandError
+from django.db import DatabaseError
 
 from ._utils import EgsimBaseCommand
+
 
 # ===============#============================================================#
 # !!IMPORTANT !!! TO ADD NEW SUBCOMMANDS add its name here below:
 # ============================================================================#
-_SUBCOMMAND_MODULES = ['egsim_flush', '_egsim_oq', 'egsim_reg', 'egsim_sel']
+_SUBCOMMAND_MODULES = ['_egsim_oq']  #, 'egsim_reg', 'egsim_sel']
 
 APPNAME = 'egsim'
 SUBCOMMANDS = [load_command_class(APPNAME, _) for _ in _SUBCOMMAND_MODULES]
@@ -46,8 +50,14 @@ class Command(EgsimBaseCommand):
     def handle(self, *args, **options):
         """executes the command"""
 
-        # set options['interactive'] as True by default (see `emptydb` command)
-        options.setdefault('interactive', True)
+        try:
+            call_command('flush', *args, **options)
+        except DatabaseError as db_err:
+            # This might be due to the fact that the migration workflow has
+            # not been performed. Append a hint to the error message:
+            url = "https://docs.djangoproject.com/en/stable/topics/migrations/"
+            raise CommandError('%s.\nDid you create the db first?\n(for '
+                               'info see: %s)' % (str(db_err), url))
 
         for cmd in SUBCOMMANDS:
             call_command(cmd, *args, **options)

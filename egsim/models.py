@@ -9,196 +9,188 @@ Created on 5 Apr 2019
 @author: riccardo
 """
 import json
-from enum import IntEnum
+import re
 
 from django.core.management.commands import flush
 from django.db import models
 from django.db.models import Q
 from django.db.models.aggregates import Count
 from django.core import management
-# primary keys are auto added if not present
 
 from shapely.geometry import Point, shape, Polygon
 
-
-class FlagEnum(IntEnum):
-    """Flag-like enum **where all members are int** (e.g., they can be passed
-    as int arguments to function, or combined using the the bitwise operators).
-
-    Unlike the class:`enum.IntFlag`, this class automatically sets to each member
-    value (1, 2, 4, ... see :meth:`FlagEnum.__new__`) and thus allows subclasses
-    to configure each member with any tuple of additional values, usually set as
-    attributes in the `__init__` method.
-    """
-
-    # Note: The builtin IntFlag enum does not entirely fit our requirements. Our
-    # implementation follows https://stackoverflow.com/a/64040739
-    # For further details how to access the Enum properties, see Python Enum doc
-
-    def __new__(cls, *args):
-        """Creates a new IntEnum member as int subclass with an automatic value"""
-        value = 2 ** len(cls.__members__)  # create value with this member index
-        member = int.__new__(cls, value)
-        member._value_ = value  # mandatory otherwise superclass tries to set it
-        return member
-
-    @classmethod
-    def choices(cls) -> tuple:
-        """Return the `choices` argument for the associated
-        :class:`models.IntegerField` (see below for applications)
-        """
-        return tuple((_, str(getattr(_, 'label', _.name))) for _ in cls)
-
-    @classmethod
-    def help_text(cls) -> str:
-        """Return the `help_text` argument for the associated
-        :class:`models.IntegerField` (see below for applications)
-        """
-        return " ".join("{:d} {:s}".format(*_) for _ in cls.choices())
+from smtk import sm_utils
 
 
-class EntityType(FlagEnum):
-    """Defines the database entities which might raise Errors to be reported
-    in the :class:`Error` Model, e.g. `Error(entity_key=DbEntity.GSIM, ...)`
-    """
-
-    # Define FlagEnum members associated to a '<label>' str (see __init__):
-    GSIM = 'Ground Shaking Intensity Model'
-    IMT = 'Intensity Measure Type'
-    TRT = 'Tectonic Region Type'
-
-    def __init__(self, label):
-        self.label = label
+# (Note below: primary keys are auto added if not present)
+# All models here that are not abstract will be available porefixed with 'egsim_'
+# in the admin panel
 
 
-class Error(models.Model):
-    """Model representing the Errors table. The table stores information
-    during the creation of the database for diagnostic purposes
-    (at the <URL>/admin address). Example: `Error(entity_key=GSIM.name, ...)`
-    """
-    entity_type = models.IntegerField(choices=tuple(EntityType.choices()),
-                                      help_text=("The entity type. e.g. %s" %
-                                                 EntityType.help_text()))
-    entity_key = models.TextField(unique=True,
-                                  help_text="The key uniquely identifying the "
-                                            "entity, e.g. \"BindiEtAl2011\"")
-    type = models.TextField(help_text="Error type, usually the class name of "
-                                      "the Exception raised")
-    message = models.TextField(help_text="Error message")
+class _SingleFieldModel(models.Model):
+    """abstract class for models identified by a single unique name"""
 
-    def __str__(self):
-        return '%s "%s": %s (%s)' % (DbEntity(self.entity_type).name,
-                                     self.entity_key,
-                                     self.type,
-                                     self.message)
-
-
-class Trt(models.Model):
-    """Model representing the db table of the Tectonic Region Type(s)
-    """
-    key = models.TextField(unique=True)
-    oq_attname = models.CharField(max_length=100, unique=True, default=None,
-                                  null=True,
-                                  help_text='corresponding TRT of OpenQuake '
-                                            '(attribute name of the class '
-                                            'openquake.hazardlib.const.TRT. '
-                                            'NULL if not match is found)')
-    # Instead of the JSON-like field below we should put the relationships
-    # [Trt,  Trt alias(es)] in a dedicated `Model` class, but as aliases are supposed
-    # to be used only in management commands, a class just for that (thus not
-    # actually used in the API) seems an overhead and might also be confusing
-    aliases_jsonlist = models.TextField(unique=True,
-                                        help_text='Aliases/Pseudonyms of the '
-                                                  'given Trt. Hidden-like field'
-                                                  'that should be used in '
-                                                  'management commands only')
-
-    def __str__(self):
-        return self.key
-
-
-class Imt(models.Model):
-    """Model representing the db table of the (OpenQuake) Intensity Measure
-    Types
-    """
-    key = models.CharField(max_length=100, unique=True)
-    needs_args = models.BooleanField(default=False, null=False)
-
-    def __str__(self):
-        return str(self.key)
-
-
-#     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0', 'vs30measured'}
-#
-#     #: Required rupture parameters are magnitude, rake, dip, ztor, and width
-#     #: (see table 2, page 1031)
-#     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'dip', 'ztor', 'width'}
-#
-#     #: Required distance measures are Rrup, Rjb, Ry0 and Rx (see Table 2,
-#     #: page 1031).
-#     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx', 'ry0'}
-
-
-class GsimParamType(FlagEnum):
-    """Gsim parameter types (rupture, sites, distances)"""
-
-    # Define FlagEnum members associated to a '<label>', <oq_attribute> (see __init__):
-    SITE = 'Sites parameter', 'REQUIRES_SITES_PARAMETERS'
-    RUPT = 'Rupture parameter', 'REQUIRES_RUPTURE_PARAMETERS'
-    DIST = 'Distance measure', 'REQUIRES_DISTANCES'
-
-    def __init__(self, label, oq_attname):
-        self.label = label
-        self.oq_attname = oq_attname
-
-
-class GsimParameter(models.Model):
-    key = models.TextField(null=False,
-                           help_text="The parameter name (unique id)")
-    type = models.IntegerField(choices=GsimParamType.choices(),
-                               help_text=("The parameter type: " +
-                                          GsimParamType.help_text()))
+    name = models.TextField(null=False, unique=True, help_text="Unique name")
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['key', 'type'],
-                                    name='unique(key,type)')
-        ]
+        abstract = True
 
     def __str__(self):
-        enum_member = GsimParamType(self.type)
-        return '%s \"%s\"' % (enum_member.label, str(self.key))
-
-    @staticmethod
-    def gsim_params(gsim, *param_type: 'GsimParamType'):
-        """Yield :class:`GsimParameter`s denoting the
-        required parameters of  `gsim` (a GMPE instance or class).
-
-        :param gsim: GMPE (instance or class)
-        :param param_type: a list of members of :class:`GsimParamType`.
-            This will return parameters of the provided types only.
-            When not given, return Gsim parameters of all types
-        """
-        for member in param_type or GsimParamType:
-            for prop_name in getattr(gsim, member.oq_attname, []):
-                # (type should be int but members of this enum are also ints):
-                yield GsimParameter(key=prop_name, type=member)
+        return self.name
 
 
-class Gsim(models.Model):
+class Imt(_SingleFieldModel):
+    """The intensity measure types defined in OpenQuake and supported in eGSIM"""
+    needs_args = models.BooleanField(default=False, null=False)
+
+    # OpenQuake's Gsim attribute used to populate this table during db init:
+    OQ_ATTNAME = 'DEFINED_FOR_INTENSITY_MEASURE_TYPES'
+
+
+class _ModelWithFlatfileMapping(_SingleFieldModel):
+    """Abstract :class:`_SingleFieldModel` class for models with a mapping to
+    some flat file column (the mapping is optional in that instances can also
+    have no corresponding flat file column)
+    """
+
+    # NOTE: Any flat file mapping is intended to be used for informative purpose
+    # only, and not to filter data pre computation, as this is too complex and
+    # error prone
+
+    flatfile_column = models.TextField(null=True, unique=True,
+                                       help_text="the corresponding flat file "
+                                                 "column name (Null: no mapping)")
+
+    # The dict below will be subclassed and maps model
+    # instances (using their name attribute) to the relative flat file column, or
+    # None, when the instance has no flat file counterpart. __flatfile_mapping__ is
+    # assumed to be used only as hint, e.g. 1. to warn the user during custom flat
+    # file upload, about columns that should be required for a sopecific Gsim or 2.
+    # to warn the admin during DB init for missing keys, i.e. new OpenQuake names
+    # that might require specific handling (e.g. new flat file columns)
+    __flatfile_mapping__ = {}
+
+    class Meta:
+        abstract = True
+
+
+class GsimSitesParam(_ModelWithFlatfileMapping):
+    """Sites parameters defined for all OpenQuake's
+    Ground shaking intensity models (Gsim)"""
+
+    # OpenQuake's Gsim attribute used to populate this table during db init:
+    OQ_ATTNAME = 'REQUIRES_SITES_PARAMETERS'
+
+    # model field name -> flatfile column:
+    __flatfile_mapping__ = {
+        "backarc": 'backarc',
+        # "backarc_distance":  # now xvf:  https://github.com/gem/oq-engine/issues/6135
+        "ec8": None,
+        "ec8_p18": None,
+        "geology": None,  # (default "UNKNOWN") should be added as a configurable param.
+        "h800": None,
+        "lat": "event_latitude",
+        "lon": "event_longitude",
+        "siteclass": None,  # not used in flatfiles
+        "slope":  None,  # float (default 0.1 m/m) affects 2 models for Europe
+        "vs30": "vs30",
+        "vs30measured": "vs30_measured",
+        "xvf": None,  # float (default 0)
+        "z1pt0": "z1",
+        "z1pt4": None,  # used by models with a different basin depth definition
+        # from the global standards (default equal to z1pt0?)
+        "z2pt5": "z2pt5"
+    }
+
+
+class GsimRuptureParam(_ModelWithFlatfileMapping):
+    """Rupture parameters defined for all OpenQuake's
+    Ground shaking intensity models (Gsim)"""
+
+    # OpenQuake's Gsim attribute used to populate this table during db init:
+    OQ_ATTNAME = 'REQUIRES_RUPTURE_PARAMETERS'
+
+    # model field name -> flatfile column:
+    __flatfile_mapping__ = {
+        "dip": None,  # no 1-1-mapping in flatfiles
+        "hypo_depth": "hypocenter_depth",
+        "mag": "magnitude",
+        "rake": None,  # no 1-1-mapping in flatfiles
+        "strike": None,  # no 1-1-mapping in flatfiles
+        "width": "rupture_width",
+        # NOTE: in flatfiles, missing values are handled in the code
+        "ztor": "depth_top_of_rupture"
+    }
+
+
+class GsimDistance(_ModelWithFlatfileMapping):
+    """Distances defined for all OpenQuake's
+    Ground shaking intensity models (Gsim)"""
+
+    # OpenQuake's Gsim attribute used to populate this table during db init:
+    OQ_ATTNAME = 'REQUIRES_DISTANCES'
+
+    # model field name -> flatfile column:
+    __flatfile_mapping__ = {
+        "azimuth":  "azimuth",
+        "rcdpp": None,  # not used in flatfiles
+        "repi":  "repi",
+        "rhypo":  "rhypo",
+        "rjb": "rjb",
+        "rrup": "rrup",
+        "rvolc": None,  # not used in flatfiles
+        "rx": "rx",
+        "ry0": "ry0"
+    }
+
+
+class GsimAttribute(_SingleFieldModel):
+    """Attributes defined for all OpenQuake's
+    Ground shaking intensity models (Gsim)"""
+
+    # OpenQuake's Gsim attribute used to populate this table during db init:
+    OQ_ATTNAME = 'REQUIRES_ATTRIBUTES'
+
+
+class GsimTrt(_SingleFieldModel):
+    """Tectonic Region Types (Trt) defined for all OpenQuake's
+    Ground shaking intensity models (Gsim)"""
+
+    # OpenQuake's Gsim attribute used to populate this table during db init:
+    OQ_ATTNAME = 'DEFINED_FOR_TECTONIC_REGION_TYPE'
+
+
+class GsimWithError(_SingleFieldModel):
+    """Model representing the Gsim with errors that could not be loaded in eGSIM"""
+
+    error_type = models.TextField(help_text="Error type, usually the class name of "
+                                            "the Exception raised")
+    error_message = models.TextField(help_text="Error message")
+
+    def __str__(self):
+        return '%s. %s: %s' % (self.name, self.error_type, self.error_message)
+
+
+class Gsim(_SingleFieldModel):
     """Model representing the db table of the (OpenQuake) Ground Shaking
     Intensity Models, or GMPE
     """
     # currently, the max length of the OQ gsims is 43 ...
-    key = models.TextField(null=False, unique=True,
-                           help_text='OpenQuake class name')
+    # name = models.TextField(null=False, unique=True,
+    #                         help_text='OpenQuake class name')
     imts = models.ManyToManyField(Imt, related_name='gsims',
                                   help_text='Intensity Measure Type(s)')
-    oq_trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=True,
-                               help_text='Tectonic Region type defined in '
-                                         'OpenQuake')
-    params = models.ManyToManyField(GsimParameter, related_name='gsims',
-                                    help_text='Required parameter(s)')
+    trt = models.ForeignKey(GsimTrt, on_delete=models.CASCADE, null=True,
+                            help_text='Tectonic Region type')
+    attributes = models.ManyToManyField(GsimAttribute, related_name='gsims',
+                                        help_text='Required attribute(s)')
+    distances = models.ManyToManyField(GsimDistance, related_name='gsims',
+                                        help_text='Required distance(s)')
+    sites_parameters = models.ManyToManyField(GsimSitesParam, related_name='gsims',
+                                             help_text='Required site parameter(s)')
+    rupture_parameters = models.ManyToManyField(GsimRuptureParam, related_name='gsims',
+                                       help_text='Required rupture parameter(s)')
+    # FIXME: make this below a method using len(self.attributes)?
     needs_args = models.BooleanField(default=False, null=False,
                                      help_text=('Whether __init__ method needs '
                                                 'argument(s) in OpenQuake'))
@@ -210,55 +202,84 @@ class Gsim(models.Model):
         (gsim, imts, tectonic_region_type, warning) where arguments are all
         strings except 'imts' which is a tuple of strings
         """
-        trt = self.oq_trt.key  # noqa
-        imts = (_.key for _ in self.imts.all())  # noqa
-        return self.key, tuple(imts), trt, self.warning or ''
+        # FIXME: remove trt from the json, not needed anymore!
+        trt = self.oq_trt.name  # noqa
+        imts = (_.name for _ in self.imts.all())  # noqa
+        return self.name, tuple(imts), trt, self.warning or ''
+
+
+class Region(models.Model):
+    """A Region is a specific subset of a given regionalization. It is identified by
+    the tuple `(name:str, region:str)`, e.g. ("SHARE", "Active shallow Crust").
+    It is identified by one or more geographic regions (polygons) and associated
+    to one or more Gsim (see :class:`GeoPolygon` and :class:`GsimMapping` for details)
+    """
+
+    # NOTE: This model does not represent a single geojson file, but the distinct
+    # REGIONS within the file
+
+    def __init__(self, regionalization, name):
+        self.regionalization = re.sub(r"\s", "_",  regionalization.strip().lower())
+        self.name = re.sub(r"\s", "_", name.strip().lower())
+        if self.regionalization != self.name:
+            prefix = self.regionalization + '_'
+            if self.name.startswith(prefix):
+                self.name = self.name[len(prefix):]
+
+    regionalization = models.TextField(null=False,
+                                       help_text="the name of the regionalization "
+                                                 "(e.g., SHARE, ESHM20, germany)"
+                                      )
+    name = models.TextField(null=False, help_text="region name. Can be equal to "
+                                                  "`self.regionalization` if the "
+                                                  "latter defines a single region")
 
     def __str__(self):
-        return str(self.key)
-
-
-class GeographicRegion(models.Model):
-    """Model representing the db table of Geographic regions with associated
-    Tectonic Region Type (TRT)
-    """
-    source_id = models.TextField(null=False,
-                                 help_text="string ID of this data source "
-                                           "(e.g., research project, model name)")
-    geojson = models.TextField(null=False)
-    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False,
-                            help_text="tectonic region type (trt)")
-
-    def __str__(self):
-        return "Region %d (trt: %s, source_id: %s)" \
-            % (self.id, self.source_id, self.trt.key)  # noqa
-
-
-class GsimTrtRelation(models.Model):
-    """Model representing the relationships between Trt and Gsim(s)
-    """
-    gsim = models.ForeignKey(Gsim, on_delete=models.CASCADE, null=False)
-    trt = models.ForeignKey(Trt, on_delete=models.CASCADE, null=False)
-    source_id = models.TextField(null=False,
-                                 help_text="string ID of this data source "
-                                           "(e.g., research project, model name)")
+        return self.name if self.reionalization == self.name else \
+            self.regionalization + '_' + self.name
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['gsim', 'trt', 'source_id'],
-                                    name='unique(gsim,trt,source_id)')
+            models.UniqueConstraint(fields=['regionalization', 'name'],
+                                    name='unique(regionalization,name)')
+        ]
+
+
+class GeoPolygon(models.Model):
+    """A GeoPolygon is a geographic area belonging to a specific region"""
+
+    geojson = models.JSONField(null=False)
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, null=False,
+                               help_text="regionalization id")
+
+    def __str__(self):
+        return "GeoPolygon %d of %s" % (self.id,  str(self.region))
+
+
+class GsimMapping(models.Model):
+    """Model representing the relationships between Gsim(s) and Region(s)"""
+
+    gsim = models.ForeignKey(Gsim, on_delete=models.CASCADE, null=False)
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, null=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['gsim', 'region'],
+                                    name='unique(gsim,region)')
         ]
 
     def __str__(self):
-        return "%s selected on %s (source_id: %s)" % (str(self.gsim), str(self.trt),
-                                                      str(self.source_id))
+        return "(%s, %s)" % (str(self.gsim), str(self.region))
 
 
-# utilities:
+# =============================================================================
+# Utilities:
+# =============================================================================
+
 
 def empty_all():
     """Empties all tables, without removing them"""
-    flush
+    flush  # FIXME: what is this statement here? is this method used at all?
     # https://stackoverflow.com/a/10606476
     # and
     # https://stackoverflow.com/a/2773195
@@ -520,3 +541,140 @@ class TrSelector:
                 matched_trts[trt] = None
 
         return list(matched_trts.keys())
+
+
+# Flatfile model (test) =====================================================
+
+
+class FlatfileField:
+
+    @property
+    def dtype(self):
+        dtyp = None
+        if isinstance(self, models.IntegerField):
+            dtyp = int
+        if isinstance(self, models.BooleanField):
+            dtyp = bool
+        if isinstance(self, models.FloatField):
+            dtyp = float
+        if isinstance(self, models.DateTimeField):
+            dtyp = 'datetime64[ns]'
+        if isinstance(self, (models.CharField, models.TextField)):
+            dtyp = str
+        if dtyp is None:
+            raise ValueError('Cannot infer dtype for ' + str(self.__class__))
+        if self.choices is not None:
+            import pandas as pd
+            return pd.DategoricalDtype([_[0] for _ in self.choices])
+        return dtyp
+
+
+class TextCol(models.TextField, FlatfileField):
+   pass
+
+
+class IntCol(models.IntegerField, FlatfileField):
+
+    def __init__(self, **kwargs):
+        # compatibility with pandas, which cannot handle Null/NaN with ints:
+        kwargs.setdefault('default', 0)
+        kwargs.setdefault('null', False)
+        models.IntegerField.__init__(self, **kwargs)
+
+
+class FloatCol(models.FloatField, FlatfileField):
+    pass
+
+
+class DateTimeCol(models.DateTimeField, FlatfileField):
+    pass
+
+
+class BoolCol(models.BooleanField, FlatfileField):
+    pass
+
+
+class Flatfile(models.Model):
+    """Abstract :class:`_SingleFieldModel` class for models with a mapping to
+    some flat file column (the mapping is optional in that instances can also
+    have no corresponding flat file column)
+    """
+    event_name = TextCol()
+    event_country = TextCol()
+    event_time = DateTimeCol()
+    event_latitude = FloatCol(help_text='event latitude (deg)')  # bounds: [-90, 90]
+    event_longitude = FloatCol(help_text='event longitude (deg)')  # bounds: [-180, 180]
+    hypocenter_depth = FloatCol(help_text='Hypocentral depth (Km)')  # FIXME unit
+    magnitude = FloatCol()
+    magnitude_type = TextCol()
+    magnitude_uncertainty = FloatCol()
+    tectonic_environment = TextCol()
+    strike_1 = FloatCol()
+    strike_2 = FloatCol()
+    dip_1 = FloatCol()
+    dip_2 = FloatCol()
+    rake_1 = FloatCol()
+    rake_2 = FloatCol()
+    style_of_faulting = TextCol(choices=[(_, _) for _ in sm_utils.MECHANISM_TYPE.keys()])
+    depth_top_of_rupture = FloatCol(help_text='Top of Rupture Depth (km)')
+    rupture_length = FloatCol()
+    rupture_width = FloatCol()
+    station_name = TextCol()
+    station_country = TextCol()
+    station_latitude = FloatCol(help_text="station latitude (deg)")  # bounds: [-90, 90]
+    station_longitude = FloatCol(help_text="station longitude (deg)")  # bounds: [-180, 180]
+    station_elevation = FloatCol(help_text="station elevation (Km)")  # FIXME unit
+    vs30 = FloatCol(help_text="Average shear wave velocity in the top 30 "
+                              "meters, in m/s")
+    vs30_measured = BoolCol(help_text="whether or not the Vs30 is measured "
+                                      "(default true)", default=True)
+    vs30_sigma = FloatCol()
+    depth_to_basement = FloatCol()
+    z1 = FloatCol(help_text="Depth of the layer where seismic waves start to "
+                            "propagate with a speed above 1.0 km/s, in meters")
+    z2pt5 = FloatCol(help_text="Depth of the layer where seismic waves start "
+                               "to propagate with a speed above 2.5 km/s, in km")
+    repi = FloatCol(help_text="Epicentral distance (Km)")  # FIXME: unit
+    rrup = FloatCol(help_text="Rupture_distance (Km)")  # FIXME: unit
+    rjb = FloatCol(help_text="Joyner - Boore distance (Km)")  # FIXME: unit
+    rhypo = FloatCol(help_text="Hypocentral distance (Km)")  # FIXME: unit
+    rx = FloatCol()
+    ry0 = FloatCol()
+    azimuth = FloatCol()
+    digital_recording = BoolCol(default=True)
+    type_of_filter = TextCol()
+    npass = IntCol(default=0)
+    nroll = FloatCol()
+    hp_h1 = FloatCol()
+    hp_h2 = FloatCol()
+    lp_h1 = FloatCol()
+    lp_h2 = FloatCol()
+    factor = FloatCol()
+    lowest_usable_frequency_h1 = FloatCol()
+    lowest_usable_frequency_h2 = FloatCol()
+    lowest_usable_frequency_avg = FloatCol()
+    highest_usable_frequency_h1 = FloatCol()
+    highest_usable_frequency_h2 = FloatCol()
+    highest_usable_frequency_avg = FloatCol()
+    backarc = BoolCol(default=False)
+
+    @classmethod
+    def dtypes(cls) -> dict[str, "dtype"]:
+        """"dict of all columns data types (pandas compatible)"""
+        return {_: cls.fields[_].dtype for _ in cls.fields}
+
+    @classmethod
+    def to_dataframe(cls):
+        import pandas as pd
+        return pd.DataFrame({k: pd.Series(dtype=v) for k, v in cls.dtypes().items()})
+
+    @classmethod
+    def normalize_dataframe(cls, dataframe) -> "pd.DataFrame":
+        dtypes = cls.dtypes()
+        import pandas as pd
+        return pd.DataFrame({c: dataframe[c].astype(dtypes[c], copy=True)
+                             for c in dataframe.columns if c in dtypes})
+
+    class Meta:
+        abstract = True
+

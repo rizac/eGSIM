@@ -68,7 +68,8 @@ TEMPLATES = [
             'string_if_invalid': '"%s" NOT FOUND',
             # https://stackoverflow.com/a/35837135:
             'builtins': [
-                'django.contrib.staticfiles.templatetags.staticfiles',
+                'django.templatetags.static',  # FIXME: change this in production
+                # 'django.contrib.staticfiles.templatetags.staticfiles',
             ],
         },
     },
@@ -179,3 +180,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 CSRF_USE_SESSIONS = True
+
+# Update to Django 3.2 FIXME: change this in production
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

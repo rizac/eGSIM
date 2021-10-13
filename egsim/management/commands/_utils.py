@@ -10,23 +10,12 @@ Created on 7 Dec 2020
 @author: riccardo
 """
 import fnmatch
-import json
 import os
 import sys
 from argparse import RawTextHelpFormatter
 from collections import defaultdict
-from typing import Dict
 
-from django.core.management import call_command, CommandError
 from django.core.management.base import BaseCommand
-from django.db import DatabaseError
-from django import VERSION
-
-from egsim.models import Trt
-
-djangomigrationsworkflowdoc = "".join(["https://docs.djangoproject.com/en/",
-                                       "{:d}.{:d}".format(*VERSION[:2]),
-                                       "/topics/migrations/#workflow)"])
 
 
 class EgsimBaseCommand(BaseCommand):
@@ -37,26 +26,15 @@ class EgsimBaseCommand(BaseCommand):
         super().__init__(*args, **kwargs)
         self._warnings_and_count = defaultdict(int)
 
-    @staticmethod
-    def flush(self, *args, **options):
-        """Empties all egsim tables. This is the recommended way to call the
-        `egsim_flush` command (e.g. from within the `handle` function of
-        another command).
-        To filter on specific tables, use the keyword argument `tables`
-        (regular expression string to search - with `re.search` - for matching
-        tables).
-        To avoid prompting the user, pass `interactive=False` (True by default).
-        This function might raise CommandError
-        """
-        options.setdefault('interactive', True)
-        try:
-            call_command('egsim_flush', *args, **options)
-        except DatabaseError as db_err:
-            # (CommandError is an Exception just handled by
-            # Django to print nicely the error on the terminal)
-            raise CommandError('%s.\nDid you create the db first?\n(for '
-                               'info see: %s)' %
-                               (str(db_err), djangomigrationsworkflowdoc))
+    def add_arguments(self, parser):
+        # This option can be typed as '--noinput' or '--no-input' from the
+        # command line, or passed as `call_command(..., interactive=[True|False]).
+        # 'store_false' means that when the flag is passed then `interactive`
+        # is set to False ('store_true' would do the opposite)
+        parser.add_argument(
+            '--noinput', '--no-input', action='store_false', dest='interactive',
+            help='Tells Django to NOT prompt the user for input of any kind.',
+        )
 
     def create_parser(self, *args, **kwargs):
         """Make help on the terminal retains formatting of all help text
@@ -181,20 +159,3 @@ def get_filepaths(directory,
         raise FileNotFoundError('%s in %s' % (nofilemsg, directory))
 
     return files
-
-
-def get_trts() -> Dict[str, Trt]:
-    """Return a list of Trt names mapped to the given Trt model instance"""
-    try:
-        trts = {}
-        for trt in Trt.objects:  # noqa
-            for name in json.loads(trt.aliases_jsonlist):
-                trts[name] = trt
-        if not len(trts):
-            raise ValueError('No Tectonic region type found')
-        return trts
-    except Exception as _exc:
-        raise ValueError('%s.\nDid you create the db first?\n(for '
-                         'info see: https://docs.djangoproject.'
-                         'com/en/2.2/topics/migrations/#workflow)' %
-                         str(_exc))

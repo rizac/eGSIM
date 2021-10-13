@@ -349,18 +349,30 @@ apt install vim
 </code></pre>
 
 <p>Install python 3.7</p>
+
+[UPDATE 10/2021]: the last line is commented and replaced with a working solution for more recent
+Python versions, e.g. 3.10
+
 <pre><code class="language-bash">
 sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt-get update
-sudo apt-get install python3.7 python3.7-dev
+# sudo apt-get install python3.7 python3.7-dev
+sudo apt-get install python3.10 python3.10-dev python3.10-distutils python3.10-venv
 </code></pre>
 
 
-<p>add django user (It's good practice)</p>
+<p>Add django user (It's good practice)</p>
 
 <pre><code class="language-bash">
 adduser --system --home=/var/opt/$DJANGO_PROJECT --no-create-home --disabled-password --group --shell=/bin/bash $DJANGO_USER
 </code></pre>
+
+
+<p>Final note: as always, proceed installing
+Python packages being aware that in case of problems, the solution after googling is to
+<code>apt-get install</code> missing packages. For instance, in case of Python 3.9
+installation we had to:
+<code>sudo apt-get install gfortran libopenblas-dev liblapack-dev libfreetype6-dev libgeos-dev</code>
 
 
 <h2>Program requirements</h2>
@@ -415,6 +427,10 @@ the activated virtualenv in parentheses):</p>
 source $VENV_PATH/bin/activate
 </code></pre>
 
+[UPDATE 10/2021] IMPORTANT: you need to have python-venv installed
+(e.g. <code>apt-get install python3.10-venv</code>, see above).
+
+<div STYLE="text-decoration:line-through">
 <p>Installation #1 (separated pip install) due to a <a href='https://stackoverflow.com/a/26314477' target='_blank'>pip bug (experienced with Ubuntu MATE)</a></p>
 <pre><code class="language-bash">
 python3.7 -m venv --without-pip $VENV_PATH
@@ -424,6 +440,8 @@ python3.7 -m venv --without-pip $VENV_PATH
 curl https://bootstrap.pypa.io/get-pip.py | python
 deactivate
 </code></pre>
+</div>
+
 
 <p>Installation #2 (standard)</p>
 <pre><code class="language-bash">
