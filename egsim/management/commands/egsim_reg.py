@@ -40,9 +40,10 @@ import json
 
 from django.core.management.base import CommandError
 
-from egsim.models import GeographicRegion
 from egsim.core.utils import yaml_load, get_classes
-from ._utils import EgsimBaseCommand, get_command_datadir, get_filepaths, get_trts
+from ._utils import EgsimBaseCommand
+
+import  egsim.models as models
 
 
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
@@ -61,19 +62,52 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
+
+        datadir = self.get_datadir('regionalization_files')
+        regionalizations = []
+        for file in os.listdir(datadir):
+            name, ext = os.path.splitext(file)
+            if ext.lower() not in {'.json', '.geojson'}:
+                continue
+            path = os.path.join(datadir, name)
+            if path not in regionalizations:
+                regionalizations.append(path)
+
+        confirm = 'yes'
+        interactive = options['interactive']
+        count = sum(_.objects.count() for _ in
+                    (models.Region, models.GeoPolygon, models.GsimMapping))
+        if count and interactive:
+            confirm = input("The affected tables have already data stored. "
+                            "Type 'yes' if you want to add data on top of that. "
+                            "Otherwise, exit and run `egsim_init` which "
+                            "empties all tables and eventually runs this command")
+        if confirm != 'yes':
+            self.stdout.write('Operation cancelled.')
+            return
+
         try:
             trts = get_trts()  # noqa
         except Exception as _exc:
             raise CommandError(str(_exc))
 
-        # clear existing data (_meta.db_table is the model table name on the db)
-        self.flush(*args, **{**options, 'tables': GeographicRegion._meta.db_table})
+        for filepath in regionalizations:
+            geojson_file = filepath + '.geojson'
+            json_file = filepath + '.json'
+            self.populate_regionalizations(geojson_file, json_file)
 
-        for source_id, regionalization in get_classes(__name__, Regionalization):
-            if regionalization is Regionalization:  # abstract class, skip:
-                continue
-            self.handle_regionalization(source_id, regionalization, trts)
-            self.printinfo('')
+    def populate_regionalizations(self, geojson_file: str, json_file: str):
+        try:
+            file = os.path.basename(geojson_file)
+            with open(geojson_file, 'r') as _:
+                geojson_obj = json.load(_)
+            file = os.path.basename(json_file)
+            with open(json_file, 'r') as _:
+                json_obj = json.load(_)
+        except Exception as exc:
+            self.printwarn('Skipping regionalization "%s": %s' % (file, str(exc)))
+            return 0
+
 
     def handle_regionalization(self,
                                source_id: str,

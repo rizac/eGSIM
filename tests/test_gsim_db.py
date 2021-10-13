@@ -11,23 +11,22 @@ from openquake.hazardlib.gsim import registry
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from egsim.models import (Gsim, Imt, gsim_names, aval_gsims, aval_imts,
-                          aval_trts,
-                          shared_imts, sharing_gsims, TrSelector, empty_all)
+                          aval_trts, shared_imts, sharing_gsims, TrSelector)
 from egsim.core.utils import OQ
 
 
-@pytest.mark.django_db
-def test_clear_db(django_db_setup):
-    test1 = list(aval_gsims())
-    assert len(test1)
-    empty_all()
-    test1 = list(aval_gsims())
-    assert not len(test1)
+# @pytest.mark.django_db
+# def test_clear_db(django_db_setup):
+#     test1 = list(aval_gsims())
+#     assert len(test1)
+#     empty_all()
+#     test1 = list(aval_gsims())
+#     assert not len(test1)
 
 
 @pytest.mark.django_db
 def test_db_0(django_db_setup):
-    '''Tests the egsim db'''
+    """Tests the egsim db"""
     with pytest.raises(MultipleObjectsReturned):  # @UndefinedVariable
         Gsim.objects.get()  # pylint: disable=no-member
 
