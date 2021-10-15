@@ -186,8 +186,18 @@ class Gsim(_SingleFieldModel):
                                        help_text='Required site parameter(s)')
     rupture_parameters = ManyToManyField(GsimRuptureParam, related_name='gsims',
                                          help_text='Required rupture parameter(s)')
+    init_parameters = JSONField(null=True, help_text="The parameters used to "
+                                                     "initialize this GSIM in "
+                                                     "Python, as JSON object of "
+                                                     "names mapped to their "
+                                                     "default value. Included "
+                                                     "here are only parameters "
+                                                     "whose default value type "
+                                                     "is a Python int, float, "
+                                                     "bool or str")
     warning = TextField(default=None, null=True,
-                        help_text='Optional usage warning(s)')
+                        help_text='Optional usage warning(s) to be reported'
+                                  'before usage (e.g., in GUIs)')
 
     def asjson(self):
         """Converts this object as a JSON-serializable tuple of strings:
@@ -195,9 +205,8 @@ class Gsim(_SingleFieldModel):
         strings except 'imts' which is a tuple of strings
         """
         # FIXME: remove trt from the json, not needed anymore!
-        trt = self.oq_trt.name  # noqa
         imts = (_.name for _ in self.imts.all())  # noqa
-        return self.name, tuple(imts), trt, self.warning or ''
+        return self.name, tuple(imts), self.warning or ''
 
 
 class Region(Model):
@@ -594,12 +603,12 @@ class Flatfile(models.Model):
     rupture_width = FloatCol()
     station_name = TextCol()
     station_country = TextCol()
-    station_latitude = FloatCol(help_text="station latitude (deg)")  # bounds: [-90, 90]
-    station_longitude = FloatCol(help_text="station longitude (deg)")  # bounds: [-180, 180]
-    station_elevation = FloatCol(help_text="station elevation (Km)")  # FIXME unit
+    station_latitude = FloatCol(help_text="Station latitude (deg)")  # bounds: [-90, 90]
+    station_longitude = FloatCol(help_text="Station longitude (deg)")  # bounds: [-180, 180]
+    station_elevation = FloatCol(help_text="Station elevation (Km)")  # FIXME unit
     vs30 = FloatCol(help_text="Average shear wave velocity in the top 30 "
                               "meters, in m/s")
-    vs30_measured = BoolCol(help_text="whether or not the Vs30 is measured "
+    vs30_measured = BoolCol(help_text="Whether or not the Vs30 is measured "
                                       "(default true)", default=True)
     vs30_sigma = FloatCol()
     depth_to_basement = FloatCol()

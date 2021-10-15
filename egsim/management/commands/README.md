@@ -2,7 +2,7 @@
 
 This directory contains eGSIM-specific management commands to (re)populate
 the backend database tables storing the API data (GSIMs, IMTs,
-Regionalizations, GSIM selections and, soon, flatfiles data).
+Regionalizations + GSIM mappings and, maybe in the future, flatfiles data).
 
 Django will register a manage.py command for each Python module in this
 directory ("management/commands") whose name doesn't begin with an underscore.
@@ -26,65 +26,38 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py egsim_ini
 Here a more detailed description of all eGSIM management commands (for further
 details, see the relative Python modules):
 
-Command | When we want to | E.g.
---- | --- | ---
-`egsim_init` | (Re)populate from scratch all eGSIM tables:<br/>call `egsim_flush`, add OpenQuake data (GSIMs, IMTs ...) and call all remaining commands below in series | We upgraded OpenQuake, we performed a db a migration, we have new external data (see any of the cases below)
-`egsim_flush` | Empty all rows in all tables | After modifying the models, to run smoothly `makemigrations` afterwards
-`egsim_reg` | Update the db regionalizations | A new regionalization model (e.g. SHARE) is available<br/>([see below how to add it in eGSIM](#Extending-existing-commands))
-`egsim_sel` | Update the db Gsim selection | A new selection model (e.g. SHARE, ESHM) is available<br/>([see below how to add it in eGSIM](#Extending-existing-commands))
-~~Not implemented yet~~ | ~~Update the ESM Ground motion DB for residuals computation~~ | ~~A new flatfile (ESM_2018_SA) is available~~
+ - `egsim_init`: Empties (`fluah` command) and repopulate from scratch all eGSIM 
+   tables by calling all egsim commands in series. Useful after :
+   - An OpenQuake upgrade
+   - A database migration 
+   - New external data (e.g., new regionalizations)
+ - `egsim_reg`: Updates the db regionalizations and the associated GSIMs
 
-There is seldom the need to run these commands separately (that's why we recommend
-`egsim_init` which wraps them all), however, one scenario is described  for `egsim_flush` in 
-[how modify a model and repopulate the db](#Modifying-a-Model-class-and-repopulating-the-database)
-
-### Common workflows
-
-#### Modifying a Model and repopulating the database
-
-- [a] Edit the eGSIM model(s) (module `egsim.models.py`)
-- [b] Implement in `egsim_init` (or some subcommand) how to populate the model(s).
-- [c] (optional) Empty the eGSIM tables (command `egsim-flush`) [see Note below]
-- [d] Make a migration (command `makemigrations`)
-- [e] Run migration (command `migrate`)
-- [f] Repopulate all eGSIM tables (command `egsim_init`)
-
-Note: the step [c] makes migrations smoother in [d]. E.g. it prevents Django to ask
-how to fill missing values of existing rows, if any, avoiding an unnecessary operation
-because all tables rows are eventually deleted and recreated in `egsim_init` ([f])
-
-#### Extending existing commands
-
-The two commands `egsim_reg` and `egsim_sel` are specifically designed to handle
-easily the addition of new input data in the future (new regionalizations and
-gsim selections, respectively).
-
-See the documentation in the two modules (`<command_name>.py`) for details
-
-#### Creating a new custom command
+### Creating a new custom command
 
 1. Create a new Python module `<command_name>.py`
    in this directory ("management/commands") with no leading
    underscore. For details see  the [Django documentation](
-   https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/)
+   https://docs.djangoproject.com/en/stable/howto/custom-management-commands/)
    
-2. Implement in the module a subclass of `_utils.EgsimBaseCommand`.
-   `EgsimBaseCommand` is just a subclass of Django `BaseCommand`
-   with some shorthand utilities (see implementation in `_utils.py` for details).
+2. (optional) If the command requires external data, put it in 
+   the directory `.management/commands/data/`. E.g., if you have a bunch 
+   of files inside `.management/commands/data/abc`, you can get the
+   direcotry path from within the command using `self.data_dir('abc')`
+   (see `EgsimBaseCommand.data_dir` for details. *Note: Avoid committing large 
+   data files. Think about providing URLs in case and document how to download 
+   the data during installation*)
+
+3. Implement in the module a subclass of `management.commands.EgsimBaseCommand`,
+   which is just a subclass of Django `BaseCommand`
+   with some shorthand utilities (see source code for details).
    To implement a `EgsimBaseCommand`/`BaseCommand` you can simply copy and
-   modify one of the other commands in this directory or see the [Django documentation](
-   https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/)
-
-3. (optional) If the command requires external data, create the
-   directory `./data/<command_name>` and put therein whatever you
-   need (organized in any tree structure you want) for the functionality of
-   your command (*Note: Avoid committing large data files.
-   Think about providing URLs in case and document how to download the data
-   during installation*)
-
-4. (optional) If the command has to be added to the chain of
-   subcommand issued by the main command `egsim_init`, add it
-   in the `egsim_init.py` module (see the module implementation) 
+   modify one of the other egsim commands in this directory or consult the 
+   [Django documentation](https://docs.djangoproject.com/en/stable/howto/custom-management-commands/)
+   
+4. (optional, but very likely) If the command has to be added to the chain of
+   subcommand issued by the main command `egsim_init`, add the module
+   name in the `egsim_init.py` module (see the module implementation) 
     
-5. List the command in this README
+5. Update this README with the new command description
 
