@@ -1,5 +1,5 @@
 """
-Empties and (re)populate the database with all eGSIM required data.
+Empty and (re)populate the database with all eGSIM required data.
 This is also the RECOMMENDED command to be executed every time eGSIM
 dependencies are upgraded, or new external source data is added.
 See the README file in the "egsim/management/commands" directory for details
@@ -16,39 +16,47 @@ Created on 6 Apr 2019
 
 @author: rizac <at> gfz-potsdam.de
 """
-
-
 from django.core.management import call_command, load_command_class, CommandError
 from django.db import DatabaseError
 
-from ._utils import EgsimBaseCommand
+from egsim.management.commands import EgsimBaseCommand
+
+# check JSON1 extension (it should be enabled in all newest OSs and Python versions):
+from django.conf import settings
+if any(_['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.values()):
+    # sqlite is used, check JSON1 extension:
+    try:
+        import sqlite3
+        conn = sqlite3.connect(':memory:')
+        cursor = conn.cursor()
+        cursor.execute('SELECT JSON(\'{"a": "b"}\')')
+    except Exception:
+        raise ValueError('JSON1 not supported in this SQLite version. To fix it, visit: '
+                         'https://code.djangoproject.com/wiki/JSON1Extension')
 
 
-# ===============#============================================================#
-# !!IMPORTANT !!! TO ADD NEW SUBCOMMANDS add its name here below:
-# ============================================================================#
-_SUBCOMMAND_MODULES = ['_egsim_oq']  #, 'egsim_reg', 'egsim_sel']
-
+# Define sub commands to be executed typing their module name:
 APPNAME = 'egsim'
-SUBCOMMANDS = [load_command_class(APPNAME, _) for _ in _SUBCOMMAND_MODULES]
+SUBCOMMANDS = [load_command_class(APPNAME, _) for _ in
+               # ====================================================
+               # IMPORTANT: TO AD NEW COMMANDS UPDATE THE LIST BELOW:
+               # ====================================================
+               ['_egsim_oq', 'egsim_reg']]
 
 
 class Command(EgsimBaseCommand):
     """Class implementing the command functionality"""
 
-    # As help, use the module docstring (until the first empty line):
+    # As help, use the module docstring (until the first empty line),
+    # then add the subcommands help:
     help = globals()['__doc__'].split("\n\n")[0]
-    # then add the subcommands help
     help += "\n".join([
         '\nThis command performs in series the following operations:',
         "\n\n".join(cmd.help for cmd in SUBCOMMANDS)
     ])
 
-    #     def add_arguments(self, parser):
-    #         parser.add_argument('poll_id', nargs='+', type=int)
-
     def handle(self, *args, **options):
-        """executes the command"""
+        """Execute the command"""
 
         try:
             call_command('flush', *args, **options)

@@ -1,13 +1,8 @@
 """
-(Re)populate the eGSIM database with all GSIMs, IMTs (and their relations)
-implemented in the currently used version of OpenQuake.
+(Re)populate the eGSIM database with all OpenQuake data
 
-This command is invoked by `egsim_init.py` and exists only because of legacy code:
-as there is no point in executing this command alone (all existing data must be
-deleted beforehand, and thus some deleted data must be recreated afterwards),
-for simplicity it has been turned it into a hidden command via the lading "_"
-in its name: we can call this command via Django `call_command` but we can not
-see it or invoke from the terminal
+This command is invoked by `egsim_init.py` and is currently hidden from Django
+(beacuse of the leading underscore in the module name)
 
 Created on 6 Apr 2019
 
@@ -23,7 +18,7 @@ from openquake.baselib.general import (DeprecationWarning as
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
-from egsim.management.commands._utils import EgsimBaseCommand
+from egsim.management.commands import EgsimBaseCommand
 import egsim.models as models
 
 
@@ -45,33 +40,29 @@ class Command(EgsimBaseCommand):
         """
         # populate db:
         self.printinfo('Populating DB with OpenQuake data:')
-
-        self.printinfo(' > Intensity measure types (Imt)')
         imts = populate_imts()
-
-        self.printinfo(' > Ground shaking intensity models (Gsim)')
         populate_gsims(imts)
-        self.printsuccess('   %d written, %d skipped due to errors' %
+        self.printsuccess('%d Gsim(s) written, %d skipped due to errors' %
                           (models.Gsim.objects.count(),
                            models.GsimWithError.objects.count()))  # noqa
+        self.printsuccess('%d Imt(s) written' % models.Imt.objects.count())  # noqa
 
         unknown_instances = set_flatfile_columns()
         # gsim_names = Gsim.objects.all()  # noqa
         # gsim_names = gsim_names.values_list('name', flat=True)
         if unknown_instances:
             self.printwarn(
-                '\nWARNING: %d attributes are required for some Gsim in '
-                'OpenQuake code, but do not have a mapping to any flatfile '
-                'column. This is not critical for the program it is just for '
-                'your information in case there is something to fix due to new '
-                'attributes (e.g., new flatfile column definition)' %
+                '\nWARNING: %d Gsim attributes (sites, rupture or distance) '
+                'have no flat file column match.\nThis is not critical but '
+                'please check anyway the list below\n(see `egsim.models.py` to '
+                'add new mapping and suppress this warning).' %
                 len(unknown_instances))
             self.printwarn('List of attributes:')
             for instance in unknown_instances:
                 gsims = [_.name for _ in instance.gsims.all()]
                 gsim_str = (str(_) for _ in gsims) if len(gsims) <= 2 else \
                     [str(gsims[0]), "other %d Gsims" % (len(gsims) - 1)]
-                gsim_str = '(defined for "%s")' % (" and ".join(gsim_str))
+                gsim_str = '(defined for %s)' % (" and ".join(gsim_str))
                 attname = instance.OQ_ATTNAME + '.' + instance.name
                 self.printwarn('%s %s' % (attname, gsim_str))
 
@@ -157,7 +148,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt]) -> list[models.Gsim]:
                     raise AttributeError('%s.%s not iterable' %
                                          (gsim_name, attname))
                 # convert `gsim_imts` from a sequence of OpenQuake imt (Python
-                # functions) to the relative db model object:
+                # entity) to the relative db model object:
                 gsim_imts = [imts[_] for _ in gsim_imts if _ in imts]
                 # ... and that we have imts:
                 if not gsim_imts:
@@ -181,10 +172,25 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt]) -> list[models.Gsim]:
             gsim_trt = trt if trt is None else \
                 models.GsimTrt.objects.get_or_create(name=str(trt))[0]  # noqa
 
+            # get parameters:
+            init_params = {}
+            for pn_, pv_ in inspect.signature(gsim_inst.__init__).parameters.items():
+                if pv_.kind in (pv_.POSITIONAL_OR_KEYWORD, pv_.KEYWORD_ONLY):
+                    # exclude *args, **kwargs and positional-only params
+                    if type(pv_.default) in (int, float, bool, str):
+                        init_params[pn_] = pv_.default
+                    elif pv_.default is not None:
+                        pass  # FIXME: warning?
+                    # Note: if the default is None, but the annotation says int, we
+                    # might add the parameter anyway, but this it's too
+                    # complex to manage
+
             # Save Gsim:
             gsim = models.Gsim.objects.create(name=gsim_name, trt=gsim_trt,
+                                              init_parameters=init_params or None,
                                               warning=gsim_warning or None)
-            # Seet IMTs:
+
+            # set IMTs:
             gsim.imts.set(gsim_imts)
 
             # Other secondary gsim attributes (should silently fail in case):
@@ -226,6 +232,10 @@ def store_gsim_error(gsim_name: str, error: Union[str, Exception]):
 
 
 def set_flatfile_columns():
+    """Populates the field `flatfile_column` for models subclassing
+    :class:`models._ModelWithFlatfileMapping` reading the flat file aliases
+    from their class attribute `__flatfile_mapping__`
+    """
     not_found = []
     for mod_name in dir(models):
         model = getattr(models, mod_name)

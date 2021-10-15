@@ -285,33 +285,62 @@ and follow the instructions.
 
 Then navigate in the browser to: http://127.0.0.1:8000/admin/
 
-### Modify database models (make migrations)  VERIFIED OCt 2021
+### Modify database schema, make migrations, re-populate the db (VERIFIED OCt 2021)
 
-See here: https://realpython.com/django-migrations-a-primer/#changing-models
-or here:
-https://docs.djangoproject.com/en/3.2/topics/migrations/#workflow
+Before reading, remember:
 
-In a nutshell (in production, replace 1. with the command `git pull` and
-execute 2. and 3. with a different DJANGO_SETTINGS_MODULE value):
+ - `DJANGO_SETTINGS_MODULE` value in the examples below must be changed 
+   in production!
+ - `make_migration` just generates a migration file, does not change the db
+ - `migrate` does change the db, and uses the migration files to do that 
+ - For details on Django migrations, see:
+   - https://realpython.com/django-migrations-a-primer/#changing-models
+   - https://docs.djangoproject.com/en/3.2/topics/migrations/#workflow
 
-1. Modify the code
+   
+#### Steps:   
 
-2. Make migrations (generate migration file in the "migrations" directory):
-
+1. Edit the eGSIM models (module `egsim.models.py`. **In production,
+   just run** `git pull`)
+2. Make a migration (**This does not run a migration, see note above**):
+   
    ```console
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>
    ```
    (<migration_name> will be a suffix appended to the migration file, use it
-   like you would use a commit message in `git`)
+   like you would use a commit message in `git`).
+   
+   **NOTE**: Django might ask you how to fill non-nullable 
+   fields (db columns), if added. Just provide whatever default, because a 
+   migration is supposed to be followed by a `egsim_init` execution that will
+   re-populate all egsim tables. However, you might need to empty
+   the database manually before running `migrate` (see below), otherwise
+   the migration might not work if e.g., the field is unique
+   
+3. Should the db be repopulated differently in account of the new 
+   changes (probably yes)?
+   Then implement these changes in the existing 
+   commands, or create a new one, see `README.md` in 
+   `egsim/management/commands`
+   
+4. Run `test_initdb` in `/tests/test_commands.py` (it re-creates
+   from scratch a test db, runs all migrations and `egsim_init`)
 
-3. Migrate:
+4. (optional) Make a backup of the database
+   
+5. Run migration (command `migrate`). **Note**: if the migration 
+   will introduce new non-nullable fields, maybe better to run 
+   `manage.py flush` first to empty all tables, to avoid conflicts
    
    ```console
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim
    ```
 
-("egsim" above is the app name. If you omit the app, all apps will be migrated.
-The command `migrate` does nothing if it detects that there is nothing to migrate)
+   ("egsim" above is the app name. If you omit the app, all apps will be migrated.
+   The command `migrate` does nothing if it detects that there is nothing to migrate)
+   
+6. Repopulate all eGSIM tables (command `egsim_init`)
+
 
 ### Fixing / Adding features to gmpe-smtk
 
