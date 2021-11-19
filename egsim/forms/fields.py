@@ -18,6 +18,7 @@ from django.utils.translation import ugettext as _
 from django.forms.fields import CharField, MultipleChoiceField, ChoiceField
 
 from openquake.hazardlib import imt
+from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
@@ -38,7 +39,7 @@ from egsim.core.utils import (vectorize, isscalar, get_gmdb_names,
 # IMPORTANT: do not access the database at module import, as otherwise
 # make migrations does not work! So the functions below should be called inside
 # each INSTANCE creation (__init__) not in the class.
-from egsim.models import aval_gsims, aval_imts, aval_trts, aval_trmodels
+from egsim.models import aval_gsims, aval_imts, aval_trmodels
 
 
 class ArrayField(CharField):
@@ -684,7 +685,6 @@ class TrtField(MultipleChoiceWildcardField):
     EgsimChoiceField"""
     def __init__(self, **kwargs):
         kwargs.setdefault('choices',
-                          LazyCached(lambda: [_ for _ in
-                                              aval_trts(include_oq_name=True)])
+                          LazyCached(lambda: [_.value for _ in TRT])
                           )
         super(TrtField, self).__init__(**kwargs)

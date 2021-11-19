@@ -8,8 +8,8 @@ from .gmdb import Command as BaseC
 
 
 class Command(BaseC):
-    '''Command to create a standard Ground Motion Database
-    '''
+    """Command to create a standard Ground Motion Database
+    """
     help = ('Creates a Ground Motion Database from a provided ESM flatfile(s). '
             'as arguments')
 

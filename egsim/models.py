@@ -6,36 +6,37 @@ Created on 5 Apr 2019
 @author: riccardo
 """
 import json
-import re
+from enum import IntEnum
 
 from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
                               ManyToManyField, JSONField, UniqueConstraint,
-                              CASCADE, SET_NULL)
+                              CASCADE, SET_NULL, Index, SmallIntegerField)
 from django.db.models.aggregates import Count
+from django.db.utils import IntegrityError
 
 from shapely.geometry import Point, shape, Polygon
 
-from smtk import sm_utils
 
-
-# (Note below: primary keys are auto added if not present)
+# Notes: primary keys are auto added if not present ('id' of type BigInt or so).
 # All models here that are not abstract will be available prefixed with 'egsim_'
 # in the admin panel (https://<site_url>/admin)
 
 
-class _SingleFieldModel(Model):
+class _UniqueNameModel(Model):
     """Abstract class for models identified by a single unique name"""
 
     name = TextField(null=False, unique=True, help_text="Unique name")
 
     class Meta:
+        # In subclasses, `abstract` is (re)set to False. Everything else is copied
+        # (https://docs.djangoproject.com/en/3.2/topics/db/models/#meta-inheritance)
         abstract = True
 
     def __str__(self):
         return self.name
 
 
-class Imt(_SingleFieldModel):
+class Imt(_UniqueNameModel):
     """The :mod:`intensity measure types <openquake.hazardlib.imt>` that
     OpenQuake's GSIMs can calculate and that are supported in eGSIM
     """
@@ -45,111 +46,74 @@ class Imt(_SingleFieldModel):
     OQ_ATTNAME = 'DEFINED_FOR_INTENSITY_MEASURE_TYPES'
 
 
-class _ModelWithFlatfileMapping(_SingleFieldModel):
-    """Extend :class:`_SingleFieldModel` for models with a mapping to
-    some flat file column. The mapping is between an instance field `name`
-    and the column name
-    """
+# JSON encoders/ decoders (see JSONFields):
 
-    flatfile_column = TextField(null=True, unique=True,
-                                help_text="The corresponding flat file "
-                                          "column name (Null: no mapping)")
-
-    # model `name` field name -> flatfile column. Mapping a field name to None
-    # means: no corresponding flat file column. NOTE for developers: the
-    # mapping below is intended to be used for informative purpose only, and
-    # not in computation (e.g. to filter data), as this is too complex and
-    # error prone. Two typical usages might be to warn the user on required flat
-    # file columns for a selected Gsim, or to warn the admin during DB init for
-    # new field names not in `__flatfile_mapping__.keys()`, as this might
-    # require particular actions such as defining new flat file columns
-    __flatfile_mapping__ = {}
-
-    class Meta:
-        abstract = True
+class CompactEncoder(json.JSONEncoder):
+    """JSON encoder that saves space"""
+    def __init__(self, **kwargs):
+        kwargs['separators'] = (',', ':')
+        super(CompactEncoder, self).__init__(**kwargs)
 
 
-class GsimSitesParam(_ModelWithFlatfileMapping):
-    """The site parameters names that OpenQuake's GSIM need"""
-
-    # OpenQuake's Gsim attribute used to populate this table during db init:
-    OQ_ATTNAME = 'REQUIRES_SITES_PARAMETERS'
-
-    # model field name -> flatfile column
-    __flatfile_mapping__ = {
-        "backarc": 'backarc',
-        # "backarc_distance":  # now xvf:  https://github.com/gem/oq-engine/issues/6135
-        "ec8": None,
-        "ec8_p18": None,
-        "geology": None,  # (default "UNKNOWN") should be added as a configurable param.
-        "h800": None,
-        "lat": "station_latitude",
-        "lon": "station_longitude",
-        "siteclass": None,  # not used in flatfiles
-        "slope":  None,  # float (default 0.1 m/m) affects 2 models for Europe
-        "vs30": "vs30",
-        "vs30measured": "vs30_measured",
-        "xvf": None,  # float (default 0)
-        "z1pt0": "z1",
-        "z1pt4": None,  # used by models with a different basin depth definition
-        # from the global standards (default equal to z1pt0?)
-        "z2pt5": "z2pt5"
-    }
+class DateTimeEncoder(CompactEncoder):
+    """Encode date times as ISO formatted strings"""
+    # There is no `json.DateTimeEncoder` because the same functionality can be
+    # achieved more easily and efficiently with numpy or pandas. Therefore, users
+    # should deal with that in custom code, keeping in mind that `JSONField`s
+    # with custom `DateTimeEncoder`s can save datetime objects to DB, but
+    # will return datetime strings
+    def default(self, obj):
+        try:
+            return obj.isoformat(sep='T')  # specify 'sep' for safety
+        except Exception:  # noqa
+            return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
 
 
-class GsimRuptureParam(_ModelWithFlatfileMapping):
-    """The rupture parameters names (excluding distance information) required
-    by OpenQuake's GSIMs
-    """
+class FlatfileField(_UniqueNameModel):
+    """Flat file field (column)"""
 
-    # OpenQuake's Gsim attribute used to populate this table during db init:
-    OQ_ATTNAME = 'REQUIRES_RUPTURE_PARAMETERS'
+    class CATEGORY(IntEnum):
+        DISTANCE_MEASURE = 0  # Gsim attr: REQUIRES_DISTANCES
+        RUPTURE_PARAMETER = 1  # Gsim attr: REQUIRES_RUPTURE_PARAMETERS
+        SITE_PARAMETER = 2  # Gsim attr: REQUIRES_SITES_PARAMETERS
 
-    # model field name -> flatfile column:
-    __flatfile_mapping__ = {
-        "dip": None,  # no 1-1-mapping in flatfiles
-        "hypo_depth": "hypocenter_depth",
-        "mag": "magnitude",
-        "rake": None,  # no 1-1-mapping in flatfiles
-        "strike": None,  # no 1-1-mapping in flatfiles
-        "width": "rupture_width",
-        # NOTE: in flatfiles, missing values are handled in the code
-        "ztor": "depth_top_of_rupture",
-        "ev_lat": "event_latitude",
-        "ev_lon": "event_longitude",
-    }
+    category = SmallIntegerField(null=True,
+                                 choices=[(c, c.name.replace('_', ' ').capitalize())
+                                          for c in CATEGORY],
+                                 help_text="The field category")
+    oq_name = TextField(null=False, help_text='The OpenQuake name (e.g., as used '
+                                              'in Contexts during residuals '
+                                              'computation)')
+    help = TextField(null=False, default='', help_text="Field help text")
+    properties = JSONField(null=True, encoder=DateTimeEncoder,
+                           help_text=('data properties as JSON (null: no '
+                                      'properties). Optional keys: "dtype" '
+                                      '("int", "bool", "datetime", "str" or '
+                                      '"float"), "bounds": [min or null, max '
+                                      'or null] (null means: unbounded), '
+                                      '"default" (the default when missing) '
+                                      'and "choices" (list of possible values '
+                                      'the field can have)'))
 
+    class Meta(_UniqueNameModel.Meta):
+        constraints = [
+            # unique constraint name must be unique across ALL db tables:
+            # use `app_label` and `class` to achieve that:
+            UniqueConstraint(fields=['oq_name', 'category'],
+                             name='%(app_label)s_%(class)s_unique_oq_name_and_'
+                                  'category'),
+        ]
+        indexes = [Index(fields=['name']), ]
 
-class GsimDistance(_ModelWithFlatfileMapping):
-    """The types of distance measures between rupture and sites required by
-    OpenQuake's GSIMs
-    """
-
-    # OpenQuake's Gsim attribute used to populate this table during db init:
-    OQ_ATTNAME = 'REQUIRES_DISTANCES'
-
-    # model field name -> flatfile column:
-    __flatfile_mapping__ = {
-        "azimuth":  "azimuth",
-        "rcdpp": None,  # not used in flatfiles
-        "repi":  "repi",
-        "rhypo":  "rhypo",
-        "rjb": "rjb",
-        "rrup": "rrup",
-        "rvolc": None,  # not used in flatfiles
-        "rx": "rx",
-        "ry0": "ry0"
-    }
-
-
-class GsimAttribute(_SingleFieldModel):
-    """The attributes required by OpenQuake's GSIMs"""
-
-    # OpenQuake's Gsim attribute used to populate this table during db init:
-    OQ_ATTNAME = 'REQUIRES_ATTRIBUTES'
+    def __str__(self):
+        categ = 'N/A' if self.category is None else \
+            self.get_category_display()  # noqa
+        # `get_[field]_display` is added by Django for those fields with choices
+        return '%s (OpenQuake name: %s). %s required by %d Gsims' % \
+               (self.name, self.oq_name, categ, self.gsims.count())  # noqa
 
 
-class GsimTrt(_SingleFieldModel):
+class GsimTrt(_UniqueNameModel):
     """The :class:`tectonic region types <openquake.hazardlib.const.TRT>` that
     OpenQuake's GSIMs are defined for"""
 
@@ -157,8 +121,8 @@ class GsimTrt(_SingleFieldModel):
     OQ_ATTNAME = 'DEFINED_FOR_TECTONIC_REGION_TYPE'
 
 
-class GsimWithError(_SingleFieldModel):
-    """TThe Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake
+class GsimWithError(_UniqueNameModel):
+    """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake
     that could not be available in eGSIM due errors
     """
 
@@ -170,7 +134,7 @@ class GsimWithError(_SingleFieldModel):
         return '%s. %s: %s' % (self.name, self.error_type, self.error_message)
 
 
-class Gsim(_SingleFieldModel):
+class Gsim(_UniqueNameModel):
     """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake and
     available in eGSIM
     """
@@ -178,29 +142,26 @@ class Gsim(_SingleFieldModel):
                            help_text='Intensity Measure Type(s)')
     trt = ForeignKey(GsimTrt, on_delete=SET_NULL, null=True,
                      related_name='gsims', help_text='Tectonic Region type')
-    attributes = ManyToManyField(GsimAttribute, related_name='gsims',
-                                 help_text='Required attribute(s)')
-    distances = ManyToManyField(GsimDistance, related_name='gsims',
-                                help_text='Required distance(s)')
-    sites_parameters = ManyToManyField(GsimSitesParam, related_name='gsims',
-                                       help_text='Required site parameter(s)')
-    rupture_parameters = ManyToManyField(GsimRuptureParam, related_name='gsims',
-                                         help_text='Required rupture parameter(s)')
-    init_parameters = JSONField(null=True, help_text="The parameters used to "
-                                                     "initialize this GSIM in "
-                                                     "Python, as JSON object of "
-                                                     "names mapped to their "
-                                                     "default value. Included "
-                                                     "here are only parameters "
-                                                     "whose default value type "
-                                                     "is a Python int, float, "
-                                                     "bool or str")
+    required_flatfile_fields = ManyToManyField(FlatfileField,
+                                               related_name='gsims',
+                                               help_text='Required flatfile '
+                                                         'field(s)')
+    init_parameters = JSONField(null=True, encoder=CompactEncoder,
+                                help_text="The parameters used to "
+                                          "initialize this GSIM in "
+                                          "Python, as JSON object of "
+                                          "names mapped to their "
+                                          "default value. Included "
+                                          "here are only parameters "
+                                          "whose default value type "
+                                          "is a Python int, float, "
+                                          "bool or str")
     warning = TextField(default=None, null=True,
-                        help_text='Optional usage warning(s) to be reported'
+                        help_text='Optional usage warning(s) to be reported '
                                   'before usage (e.g., in GUIs)')
 
     def asjson(self):
-        """Converts this object as a JSON-serializable tuple of strings:
+        """Convert this object as a JSON-serializable tuple of strings:
         (gsim, imts, tectonic_region_type, warning) where arguments are all
         strings except 'imts' which is a tuple of strings
         """
@@ -209,57 +170,60 @@ class Gsim(_SingleFieldModel):
         return self.name, tuple(imts), self.warning or ''
 
 
-class Region(Model):
-    """Geographic region uniquely identified by a two element
-    tuple of strings: the parent regionalization and a the region name,
-    e.g.: ("share", "active_shallow_crust"). A region geometry is given
-    by a geoJSON Geometry object with at least two required fields "type"
-    and "coordinates" (https://en.wikipedia.org/wiki/GeoJSON#Geometries.
-    Consequently, if "type" is "MultiPolygon" a region can be composed by
-    several polygons not necessarily connected)
-    """
-
-    def __init__(self, regionalization, name):
-        super().__init__(regionalization=regionalization.strip().lower(),
-                         name=name.strip().lower())
-        self.regionalization = re.sub(r"\s", "_",  self.regionalization)
-        self.name = re.sub(r"\s", "_", self.name)
-        if self.regionalization != self.name:
-            prefix = self.regionalization + '_'
-            if self.name.startswith(prefix):
-                self.name = self.name[len(prefix):]
-
-    regionalization = TextField(null=False, help_text="The name of the parent "
-                                                      "regionalization (e.g., "
-                                                      "SHARE, ESHM20, germany)")
-    name = TextField(null=False, help_text="The region name")
-    geometry = JSONField(null=False,
-                         help_text="The region coordinates as geoJSON Geometry "
-                                   "object, i.e. with at least the \"type'\" "
-                                   "and \"coordinates\" fields "
-                                   "(https://en.wikipedia.org/wiki/GeoJSON#Geometries)")
-
-    def __str__(self):
-        return self.name if self.regionalization == self.name else \
-            self.regionalization + '_' + self.name
-
-    class Meta:
-        constraints = [UniqueConstraint(fields=['regionalization', 'name'],
-                                        name='unique(regionalization,name)')]
-
-
-class RegionGsimMapping(Model):
+class GsimRegion(Model):
     """Model representing the relationships between Gsim(s) and Region(s)"""
 
     gsim = ForeignKey(Gsim, on_delete=CASCADE, null=False, related_name='regions')
-    region = ForeignKey(Region, on_delete=CASCADE, null=False, related_name='gsims')
+    regionalization = TextField(null=False, help_text="The name of the "
+                                                      "regionalization defining "
+                                                      "the mapping Gsim <-> "
+                                                      "Geographic region")
+
+    GEOM_TYPES = ('Polygon', 'MultiPolygon')
+
+    geometry = JSONField(null=False, encoder=CompactEncoder,
+                         help_text="The region as geoJSON Geometry object, "
+                                   "with at least the keys \"coordinates\""
+                                   "and \"type'\" in %s only. For details see: "
+                                   "https://en.wikipedia.org/wiki/GeoJSON"
+                                   "#Geometries)" % str(GEOM_TYPES))
 
     class Meta:
-        constraints = [UniqueConstraint(fields=['gsim', 'region'],
-                                        name='unique(gsim,region)')]
+        constraints = [UniqueConstraint(fields=['gsim', 'regionalization'],
+                                        name='%(app_label)s_%(class)s_unique_'
+                                             'gsim_and_regionalization')]
+
+    def save(self, *args, **kwargs):
+        """Overrides save and checks if the flat file name is unique or NULL"""
+        # WARNING: DO NOT set Breakpoints in PyCharm 2021.1.1 and Python 3.9
+        # as it seems that the program crashes in debug mode (but it works actually)
+        key = 'geometry'
+        val = getattr(self, key)
+        if val is not None:
+            if not val:  # force empty fields to be NULL:
+                setattr(self, key, None)
+            else:
+                key2 = 'type'
+                val2 = val.get(key2, '')
+                if val2 not in self.GEOM_TYPES:
+                    raise IntegrityError('%s["%s"]="%s" must be in %s' %
+                                         (key, key2, val2, self.GEOM_TYPES))
+
+        super(GsimRegion, self).save(*args, **kwargs)
+
+    @staticmethod
+    def num_polygons(geometry: dict):
+        """Return the number of Polygons from the given geometry goJSON geometry"""
+        geom_type = geometry['type']
+        if geom_type != GsimRegion.GEOM_TYPES[0]:
+            return len(geometry['coordinates'])
+        return 1
 
     def __str__(self):
-        return "(%s, %s)" % (str(self.gsim), str(self.region))
+        npoly = self.num_polygons(self.geometry)  # noqa
+        poly = 'polygon' if npoly == 1 else 'polygons'
+        return 'Region "%s", %d %s, regionalization: %s' % \
+               (str(self.gsim), npoly, poly, self.regionalization)
 
 
 # =============================================================================
@@ -300,13 +264,13 @@ def aval_imts():
     return shared_imts(None)
 
 
-def aval_trts(include_oq_name=False):
-    """Returns a QuerySet of strings denoting the available Trts
-    The Trts are returned sorted alphabetically by their keys"""
-    trtobjects = Trt.objects  # noqa
-    if include_oq_name:
-        return trtobjects.order_by('key').values_list('key', 'oq_name')
-    return trtobjects.order_by('key').values_list('key', flat=True)
+# def aval_trts(include_oq_name=False):
+#     """Returns a QuerySet of strings denoting the available Trts
+#     The Trts are returned sorted alphabetically by their keys"""
+#     trtobjects = Trt.objects  # noqa
+#     if include_oq_name:
+#         return trtobjects.order_by('key').values_list('key', 'oq_name')
+#     return trtobjects.order_by('key').values_list('key', flat=True)
 
 
 def aval_trmodels(asjsonlist=False):
@@ -374,7 +338,7 @@ def gsim_names(gsims=None, imts=None, trts=None, tr_selector=None,
     A gsim is returned when it matches ALL the conditions
     specified by the provided arguments (missing arguments are skipped),
     which are:
-    :param gsims: iterable of strings (Gsim.key) or Gsim instances, or
+    :param gsims: iterable of strings (Gsim.name) or Gsim instances, or
         both. If None (the default), no filter is applied. Otherwise,
         return Gsims whose name matches any of the provided Gsim(s)
     :param imts: iterable of strings (Imt.key) or Imt instances, or both.
@@ -522,141 +486,23 @@ class TrSelector:  # FIXME: buggy, models have been renamed and geoJSON added. f
         return list(matched_trts.keys())
 
 
-# Flatfile model (test) =====================================================
+# UNUSED Legacy functions ====================================================
 
 
-from django.db import models  # noqa
+def _is_field_value_unique(instance: Model, field_name: str, ignore_nulls=True):
+    """Return True if the instance field value is unique by querying the db table
 
-
-class FlatfileField:
-
-    @property
-    def dtype(self):
-        dtyp = None
-        if isinstance(self, models.IntegerField):
-            dtyp = int
-        if isinstance(self, models.BooleanField):
-            dtyp = bool
-        if isinstance(self, models.FloatField):
-            dtyp = float
-        if isinstance(self, models.DateTimeField):
-            dtyp = 'datetime64[ns]'
-        if isinstance(self, (models.CharField, models.TextField)):
-            dtyp = str
-        if dtyp is None:
-            raise ValueError('Cannot infer dtype for ' + str(self.__class__))
-        if self.choices is not None:
-            import pandas as pd
-            return pd.DategoricalDtype([_[0] for _ in self.choices])
-        return dtyp
-
-
-class TextCol(models.TextField, FlatfileField):
-   pass
-
-
-class IntCol(models.IntegerField, FlatfileField):
-
-    def __init__(self, **kwargs):
-        # compatibility with pandas, which cannot handle Null/NaN with ints:
-        kwargs.setdefault('default', 0)
-        kwargs.setdefault('null', False)
-        models.IntegerField.__init__(self, **kwargs)
-
-
-class FloatCol(models.FloatField, FlatfileField):
-    pass
-
-
-class DateTimeCol(models.DateTimeField, FlatfileField):
-    pass
-
-
-class BoolCol(models.BooleanField, FlatfileField):
-    pass
-
-
-class Flatfile(models.Model):
-    """Abstract :class:`_SingleFieldModel` class for models with a mapping to
-    some flat file column (the mapping is optional in that instances can also
-    have no corresponding flat file column)
+    :param instance: a Model instance
+    :param field_name: the instance field name to check
+    :param ignore_nulls: boolean (default True): ignore null. I.e., allow
+        multiple null values
     """
-    event_name = TextCol()
-    event_country = TextCol()
-    event_time = DateTimeCol()
-    event_latitude = FloatCol(help_text='event latitude (deg)')  # bounds: [-90, 90]
-    event_longitude = FloatCol(help_text='event longitude (deg)')  # bounds: [-180, 180]
-    hypocenter_depth = FloatCol(help_text='Hypocentral depth (Km)')  # FIXME unit
-    magnitude = FloatCol()
-    magnitude_type = TextCol()
-    magnitude_uncertainty = FloatCol()
-    tectonic_environment = TextCol()
-    strike_1 = FloatCol()
-    strike_2 = FloatCol()
-    dip_1 = FloatCol()
-    dip_2 = FloatCol()
-    rake_1 = FloatCol()
-    rake_2 = FloatCol()
-    style_of_faulting = TextCol(choices=[(_, _) for _ in sm_utils.MECHANISM_TYPE.keys()])
-    depth_top_of_rupture = FloatCol(help_text='Top of Rupture Depth (km)')
-    rupture_length = FloatCol()
-    rupture_width = FloatCol()
-    station_name = TextCol()
-    station_country = TextCol()
-    station_latitude = FloatCol(help_text="Station latitude (deg)")  # bounds: [-90, 90]
-    station_longitude = FloatCol(help_text="Station longitude (deg)")  # bounds: [-180, 180]
-    station_elevation = FloatCol(help_text="Station elevation (Km)")  # FIXME unit
-    vs30 = FloatCol(help_text="Average shear wave velocity in the top 30 "
-                              "meters, in m/s")
-    vs30_measured = BoolCol(help_text="Whether or not the Vs30 is measured "
-                                      "(default true)", default=True)
-    vs30_sigma = FloatCol()
-    depth_to_basement = FloatCol()
-    z1 = FloatCol(help_text="Depth of the layer where seismic waves start to "
-                            "propagate with a speed above 1.0 km/s, in meters")
-    z2pt5 = FloatCol(help_text="Depth of the layer where seismic waves start "
-                               "to propagate with a speed above 2.5 km/s, in km")
-    repi = FloatCol(help_text="Epicentral distance (Km)")  # FIXME: unit
-    rrup = FloatCol(help_text="Rupture_distance (Km)")  # FIXME: unit
-    rjb = FloatCol(help_text="Joyner - Boore distance (Km)")  # FIXME: unit
-    rhypo = FloatCol(help_text="Hypocentral distance (Km)")  # FIXME: unit
-    rx = FloatCol()
-    ry0 = FloatCol()
-    azimuth = FloatCol()
-    digital_recording = BoolCol(default=True)
-    type_of_filter = TextCol()
-    npass = IntCol(default=0)
-    nroll = FloatCol()
-    hp_h1 = FloatCol()
-    hp_h2 = FloatCol()
-    lp_h1 = FloatCol()
-    lp_h2 = FloatCol()
-    factor = FloatCol()
-    lowest_usable_frequency_h1 = FloatCol()
-    lowest_usable_frequency_h2 = FloatCol()
-    lowest_usable_frequency_avg = FloatCol()
-    highest_usable_frequency_h1 = FloatCol()
-    highest_usable_frequency_h2 = FloatCol()
-    highest_usable_frequency_avg = FloatCol()
-    backarc = BoolCol(default=False)
-
-    @classmethod
-    def dtypes(cls) -> dict[str, "dtype"]:
-        """"dict of all columns data types (pandas compatible)"""
-        return {_: cls.fields[_].dtype for _ in cls.fields}
-
-    @classmethod
-    def to_dataframe(cls):
-        import pandas as pd
-        return pd.DataFrame({k: pd.Series(dtype=v) for k, v in cls.dtypes().items()})
-
-    @classmethod
-    def normalize_dataframe(cls, dataframe) -> "pd.DataFrame":
-        dtypes = cls.dtypes()
-        import pandas as pd
-        return pd.DataFrame({c: dataframe[c].astype(dtypes[c], copy=True)
-                             for c in dataframe.columns if c in dtypes})
-
-    class Meta:
-        abstract = True
-
+    # Rationale: apparently a Django Field(... unique=True, null=True,...) will
+    # force also uniqueness on NULLs (only one NULL can be saved). This is
+    # probably because not all DBs support unique with multiple NULLs
+    # (postgres does). Implement here a function that allows that
+    field_val = getattr(instance, field_name)
+    if field_val is None and ignore_nulls:
+        return True
+    filter_cond = {field_name + '__exact': field_val}  # works for None as well
+    return not instance.__class__.objects.filter(**filter_cond).exists()  # noqa

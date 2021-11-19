@@ -1,0 +1,244 @@
+# This YAML document collects and describes all OpenQuake GSIMs parameters and
+# how they should be represented as fields (columns) of user-defined flat files.
+
+# YAML implementation (PLEASE READ):
+# (Implementation in Python at the bottom of this document)
+
+# All parameters should be added inside one of the following top-level YAML
+# properties: REQUIRES_DISTANCES (distance measure), REQUIRES_RUPTURE_PARAMETERS
+# (rupture parameter), REQUIRES_SITES_PARAMETERS (site parameter) in form of a YAML
+# mapping as follows:
+#
+# <parameter_name>:
+#   flatfile_name: the flat file column name. Defaults to null, i.e. no
+#              associated flat file column: in this case, the parameter only
+#              purpose is to be ignored in applications, as well as any Gsim(s)
+#              requiring it (as such, any other property below is useless)
+#   dtype:     The data type (default: float). Supported values are: float, int,
+#              str, datetime, bool
+#   bounds:    The bounds [min, max] (default [null, null]), endpoints included.
+#              Null means: don't check. E.g. for non-negative numbers, provide
+#              [0, null] (not [0, inf])
+#   default:   The default value when nothing is provided. If missing, and dtype
+#              is "int", it should be set to 0. If dtype is bool, it should be
+#              set to False. If `choices` is given and `default` is given, it
+#              must be in `choices`. In any other case, missing data should be
+#              left as it is
+#   help:      The field help, or description (default: '')
+#   choices:   List or dict for fields taking on only a limited, and usually fixed,
+#              number of possible values (categories, or choices). If dict, it
+#              is supposed to map every category value to its human-readable name
+
+# All properties above are optional and take the provided default when missing.
+# The top-level YAML properties are the names of the corresponding Gsim attributes
+# in OpenQuake
+
+# YAML notes:
+# Unless required, strings do not need to be quoted. YAML is a superset of JSON,
+# so you can type lists as JSON Arrays: [...], Mappings as JSON Objects: {...}.
+# If you want to type over multiple lines for readability, prefix the text with >-
+# (see examples here below or https://stackoverflow.com/a/3790497)
+
+
+REQUIRES_DISTANCES:  # Distance parameters
+  azimuth:
+    flatfile_name: azimuth
+  repi:
+    flatfile_name: repi
+    help: epicentral distance (in km)
+  rrup:
+    flatfile_name: rrup
+    help: rupture_distance (in km)
+  rjb:
+    flatfile_name: rjb
+    help: Joyner-Boore distance (in km)
+  rhypo:
+    flatfile_name: rhypo
+    help: hypocentral distance (in km)
+  rx:
+    flatfile_name: rx
+    help: >-
+      Horizontal distance (in km) from the top of the rupture measured
+      perpendicular to strike
+  ry0:
+    flatfile_name: ry0
+    help: >-
+      Horizontal distance (in km) from the top of the rupture measured parallel
+      to strike
+  rvolc:
+    flatfile_name: rvolc
+    default: 0
+    help: Distance through volcanic zone (km)
+  # Parameters wit no flatfile mapping:
+  rcdpp:
+
+
+REQUIRES_RUPTURE_PARAMETERS:  # Rupture parameters
+  ev_lat:
+    flatfile_name: event_latitude
+    help: event latitude (deg)
+    bounds: [ -90, 90 ]
+  ev_lon :
+    flatfile_name: event_longitude
+    help: event longitude (deg)
+    bounds: [ -180, 180 ]
+  mag:
+    flatfile_name: magnitude
+  hypo_depth:
+    flatfile_name: hypocenter_depth
+    help: Hypocentral depth (km)
+  ztor:
+    flatfile_name: depth_top_of_rupture
+    help: Top of Rupture Depth (km)
+    bounds: [ 0, null ]
+  width:
+    flatfile_name: rupture_width
+    help: Down-dip width of the rupture (km)
+    bounds: [ 0, null ]
+  dip:
+    flatfile_name: dip
+    bounds: [ 0, 90 ]
+    help: >-
+      the angle of the fault relative to the horizontal (deg).
+      Hint: in case of more components available (e.g. from web services), the
+      correct one should be inferred by the user from the rupture, or can be chosen
+      randomly if no information is available
+  rake:
+    flatfile_name: rake
+    bounds: [ -180, 180 ]
+    help: >-
+      the direction the hanging wall moves, relative to the fault strike (deg).
+      Hint: in case of more components available (e.g. from
+      web services), the correct one should be inferred by the user from the rupture,
+      or can be chosen randomly if no information is available
+
+REQUIRES_SITES_PARAMETERS:  # Site parameters
+  z1pt0:
+    flatfile_name: z1
+    help: >-
+      depth of the layer where seismic waves start to propagate with a
+      speed above 1.0 km/sec, in meters
+  z2pt5:
+    flatfile_name: z2pt5
+    help: >-
+      depth of the layer where seismic waves start to propagate with a speed
+      above 2.5 km/sec, in km
+  vs30:
+    flatfile_name: vs30
+    help: Average shear wave velocity in the top 30 m, in m/s
+    bounds: [ 0, null ]
+  backarc:
+    flatfile_name: backarc
+    dtype: bool
+    default: false
+  lat:
+    flatfile_name: station_latitude
+    help: station latitude (deg)
+    bounds: [ -90, 90 ]
+  lon:
+    flatfile_name: station_longitude
+    help: station longitude (deg)
+    bounds: [ -180, 180 ]
+  vs30measured:
+    flatfile_name: vs30measured  # vs30_measured
+    help: whether or not the Vs30 is measured (default true)
+    dtype: bool
+    default: true
+  xvf:
+    flatfile_name: xvf
+    help: distance to the volcanic front (km)
+  fpeak:
+    flatfile_name: fpeak
+    help: >-
+      Frequency that corresponds to the peak of the horizontal to vertical
+      spectral ratio (Hz)
+    bounds: [ 0, null ]
+  region:
+    flatfile_name: region
+    dtype: int
+    bounds: [ 0, 5 ]
+    help: The ESHM2020 cluster region to which the site belongs
+    default: 0
+  geology:
+    flatfile_name: geology
+    help: geological classification of the site
+    dtype: str
+    default: UNKNOWN
+    choices: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC", "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
+  slope:
+    flatfile_name: slope
+    help: The local slope of the station
+    bounds: [ 1.0e-100, null ]  # 1.0e-100 is a workaround to tell: >0
+  # Parameters wit no flatfile mapping:
+  f0:
+  z1pt4:
+  ec8_p18:
+  bas:
+  siteclass:
+  h800:
+  ec8:
+  soiltype:
+
+
+# Properties implementation details (for Python developers only)
+# ==============================================================
+#
+# This document in read and used in the eGSIM management commands `egsim_init`
+# or by executing the Python module named as this file name in order to scan for
+# new Gsim parameters that should be added as flat file columns.
+#
+# Residuals computation in smtk requires an event identifier (id) for each record.
+# As of end 2021, a station id is not mandatory but foreseen in future developments.
+# An id is a value (usually int, or str) uniquely identifying an object, i.e. the
+# same id must denote the same object, and vice versa.
+# Users are required to provide flatfiles with at least an 'event_id' column
+# or alternatively with the fields necessary to infer it, i.e. the 3 spatial
+# coordinates ['event_latitude', 'event_longitude', 'hypocenter_depth'] and
+# optionally a temporal one (e.g., 'event_time').
+# If needed, a `station_id` could be inferred from either the 2 spatial coordinates
+# ['station_latitude', station_longitude'] or by the FDSN codes for network,
+# station, and location, if provided.
+# To infer IDs in pd, where flat file fields are DataFrame columns, consider
+# using `groupby`: https://stackoverflow.com/a/45685390
+#
+# Applications might deal with different flat files storage. Below, we will provide
+# hints for two common cases: a classical filesystem, where flat files are stored
+# as e.g. CSV or HDF files, and a relational database management systems (RDBMS),
+# where flat files are stored as database tables. As such, we will mention the following
+# Python libraries: for RDBMS, django (dj) and sqlalchemy (sa), and for file systems
+# pandas (pd) and numpy (np).
+#
+# Parameters properties implementation
+# ------------------------------------
+# (see functions `flatfile.py` for practical examples)
+#
+# `dtype` should be used to cast or validate data (including `bounds` and
+#  `default`, when provided). The data types here are compatible with the `dtype`
+#   argument of many np and pd functions (see e.g. `pd.read_csv`), note however
+#   that "datetime" is "datetime64" in np, and "datetime64[<unit>]" in pd, e.g.
+#   "datetime64[ns]"). In RDBMS, each type should be converted to the appropriate
+#   subclass of, e.g., `dj.Field` or `sa.Column`.
+#   For details on the data type when `choices` is provided, see below
+# `bounds` should be used to check the validity of the data. If non-null,
+#   endpoints should be considered valid (closed interval). Bounds should not be
+#   given if both endpoints are null.
+# `default`should be used to provide a value when data is missing.
+#   When a default is missing, applications should CAREFULLY consider what
+#   to provide as value for missing data. If the goal is:
+#   1. To replace a missing value with a valid one (e.g., to use the data anyway),
+#      then any value with a valid type is ok, e.g. 0 for int, 0 or NaN for
+#      floats or '' for strings.
+#   2. To "mark" the element as missing (e.g., to discard the data), then
+#      null/None is a preferable default for all data types: it can be easily
+#      implemented in RDBMS, but can be done in pd/np only for str, float (where
+#      None is converted to NaN) and date-times (where None is converted to NaT),
+#      but not for `int` or `bool`. For details, see
+#      https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+# `choices` should be used to check the validity of the data. In pd, it can be
+#   used to set the data type as "categorical" via `dtype=pd.CategoricalDtype(choices)`
+#   and save memory. In fact, categorical data type can be set on data type via
+#   `dtype='category'`, even when `choices` is not specified, as long as the number
+#   of distinct categories is known to be limited (e.g. a country code). For RDBMS,
+#   the type "category" is not supported and can be either ignored by using a general
+#   type (e.g. `dj.TextField`), or emulated Python-side. E.g., for dj see:
+#   https://docs.djangoproject.com/en/stable/ref/models/fields/#choices

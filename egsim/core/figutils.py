@@ -1,10 +1,10 @@
-'''
+"""
 Module converting plotly data to matplotlib figure
 
 Created on 8 Aug 2019
 
 @author: riccardo
-'''
+"""
 import os
 import json
 from io import BytesIO
@@ -22,7 +22,7 @@ FIG_PADDING = 0.01  # in fig units (in [0.1])
 
 
 def rgba2rgb(color, background=None):
-    '''Converts the transparent color `color` into its opaque
+    """Convert the transparent color `color` into its opaque
     equivalent. That is, the returned color is what you see when `color`
     is rendered on the given `background`
 
@@ -39,7 +39,7 @@ def rgba2rgb(color, background=None):
     :return: a 3-element list with numeric elements ([0 1] or [0 255]
         depending on the input) defining the opaque color that results from
         `color` when rendered on `background`.
-    '''
+    """
     # this function is modified from: https://stackoverflow.com/a/48359835
     alpha = color[3]
     color = color[:-1]
@@ -62,17 +62,17 @@ def rgba2rgb(color, background=None):
 
 
 class Converter:  # pylint: disable=invalid-name
-    '''Class for functions converting plotly values to matplotlib values'''
+    """Class for functions converting plotly values to matplotlib values"""
 
     def __init__(self, opaque_colors=False):
         self.opaque_colors = opaque_colors
 
     def color(self, plotlycolor):
-        '''
-        converts plotly color to matplotlib color
+        """
+        Convert plotly color to matplotlib color
         :param plotlycolor: is a string denoting a plotly color,
                 e.g. rgba(...)
-        '''
+        """
         clr = plotlycolor.lower()
         # convert strings 'rgb(...' or 'rgba(...' into tuples for matplotlib:
         colors = (clr[4:-1] if clr[:4] == 'rgb(' and clr[-1:] == ')' else
@@ -90,7 +90,7 @@ class Converter:  # pylint: disable=invalid-name
 
     @staticmethod
     def angle(plotlyangle):
-        '''converts plotly angle to matplotlib rotation'''
+        """converts plotly angle to matplotlib rotation"""
         angle = float(plotlyangle)
         if angle < 0:
             # plotly goes counter-clockwise, wird behaviour, so:
@@ -99,15 +99,15 @@ class Converter:  # pylint: disable=invalid-name
 
     @staticmethod
     def alignment(plotlyalign):
-        '''converts plotly alignment to matplotlib alignment'''
+        """converts plotly alignment to matplotlib alignment"""
         return 'center' if plotlyalign == 'middle' else plotlyalign
 
     @staticmethod
     def fontprops(plotlyfontdict, dpi, prefix='font'):
-        '''converts plotly font dict / object into a dict of matplotlib
+        """converts plotly font dict / object into a dict of matplotlib
         font arguments. Only 'fontfamily' and 'fontsize' are currently
         supported
-        '''
+        """
         ret = {}
         # for default properties, see:
         # https://matplotlib.org/api/font_manager_api.html#matplotlib.font_manager.FontProperties
@@ -128,10 +128,10 @@ class Converter:  # pylint: disable=invalid-name
 
     @staticmethod
     def length(pixels, dpi):
-        '''converts a length (in pixels) to the required matplotlib length
+        """converts a length (in pixels) to the required matplotlib length
         according to the given dpi. This method should be used for all
         lengths, widths and font sizes given in plotly
-        '''
+        """
         if isinstance(pixels, (int, float)):
             return pixels * 72 / dpi
         return pixels
@@ -233,14 +233,14 @@ def get_fig(data, layout, width, height, converter=None):
 
 
 def setup_axes(layout, fig, converter):
-    '''
+    """
     Sets up the axes on the given figure according to the plotly layout
     and returns a dict of axes mapped to the key they are referred to in each
     plotly `data` item
 
     :param layout: the plotly layout (dict)
     :param fig: the matplotlib figure
-    '''
+    """
     axesdict = {}
     for key, layout_x in layout.items():
         if key.startswith('xaxis'):
@@ -325,7 +325,7 @@ def setup_axes(layout, fig, converter):
 
 
 def draw_plotly_data(data, axes, converter):
-    '''
+    """
     Draws the plotly data on the given figure
 
     :param data: the plotly data (dict)
@@ -336,7 +336,7 @@ def draw_plotly_data(data, axes, converter):
     :return: the dict `legend_objects` of string (legend caption) mapped to the
         matplotlib object drawn (in case of multiple objects mapped to the
         same legend, the first object is set in this dict)
-    '''
+    """
     legend_objs = {}
     for prev_datadict, datadict, next_datadict in zip([{}] + data[:-1],
                                                       data,
@@ -364,7 +364,7 @@ def draw_plotly_data(data, axes, converter):
 
 
 def draw_plotly_annotations(layout, fig, converter):
-    '''
+    """
     Draws the plotly annotations on the given figure as matplotlib
         Text elements
 
@@ -373,7 +373,7 @@ def draw_plotly_annotations(layout, fig, converter):
 
     :return: the list of matplotlib text Objects drawn. This usually includes
         also the axis labels
-    '''
+    """
     dpi = fig.get_dpi()
     # write annotations (note that this includes xlabels and ylabels)
     annotations = []
@@ -392,7 +392,7 @@ def draw_plotly_annotations(layout, fig, converter):
 
 def readjust_positions(axes, annotations, fig, figure_area=None,
                        legend=None):
-    '''
+    """
     Readjusts the position of axes and texts (annotations) according to
     figure_area and legend
 
@@ -406,7 +406,7 @@ def readjust_positions(axes, annotations, fig, figure_area=None,
         have been added in the 'upper right' position of the figure
     :param legend: None or the legend added to the figure. It must be added
         in the 'upper right' position of the figure
-    '''
+    """
     if figure_area is None:
         figure_area = [0, 0, 1, 1]
 
@@ -451,13 +451,13 @@ def readjust_positions(axes, annotations, fig, figure_area=None,
 
 
 def dimensions(obj, fig):
-    '''
+    """
     Gets the size of an 'em' in display units and returns it
 
     :param obj: any matplotlib object, e.g. plt.text(0.5, 0.5, 'text')
 
     :return: a BBox object with the object window coordinates
-    '''
+    """
     # we need to draw the canvas to make the obj.get_window_extent() work
     # This work only in non interactive backends
     # (for info, see https://matplotlib.org/3.1.1/tutorials/introductory/usage.html#backends)
@@ -474,12 +474,12 @@ def dimensions(obj, fig):
 
 
 def draw_data(datadict, axes, converter):
-    '''
+    """
     Draws plotly data (`datadict`) on the given matplotlib axes.
     Supports bar, filled areas, lines and scatter points (or both)
 
     :return: the drawn object, or None
-    '''
+    """
     dpi = axes.get_figure().get_dpi()
 
     # set recognized options. These are dicts reflecting plotly Objects BUT
@@ -502,13 +502,13 @@ def draw_data(datadict, axes, converter):
 
 
 def get_draw_options(datadict, converter, dpi):
-    '''
+    """
     Returns a dict representing the plotly options for the objects to be
     drawn. Each key represents a plotly property, but its mapped to the
     matplotlib equivalent, or None to mean: no value set.
     Function using these options might need to rename some keys according to
     matplotlib functions arguments
-    '''
+    """
     # we might use defaultdicts(lambda: None), but we prefer to write them
     # as dicts so that it is clear which arguments are expected to be supported
     # Also, we want to raise if we access some key not defined here for easy
@@ -561,7 +561,7 @@ def get_draw_options(datadict, converter, dpi):
 
 
 def draw_bar(datadict, axes, options):
-    '''
+    """
     Draws plotly data (`datadict`) as bars on the given matplotlib axes
 
     :param datadict: plotly data dict representing the data to be drawn
@@ -571,7 +571,7 @@ def draw_bar(datadict, axes, options):
         See :func:`get_draw_options`
 
     :return: the drawn object
-    '''
+    """
     zipx = zip(datadict['x'][:-1], datadict['x'][1:])
     binw = np.min(np.abs([(first-second)
                           for first, second in zipx]))
@@ -589,7 +589,7 @@ def draw_bar(datadict, axes, options):
 
 
 def draw_filled_area(datadict, axes, options):
-    '''
+    """
     Draws plotly data (`datadict`) as filled area on the given matplotlib axes
 
     :param datadict: plotly data dict representing the data to be drawn
@@ -599,7 +599,7 @@ def draw_filled_area(datadict, axes, options):
         See :func:`get_draw_options`
 
     :return: the drawn object
-    '''
+    """
     # setup matplotlib kwargs:
     line = options['line']
     kwargs = {}
@@ -621,7 +621,7 @@ def draw_filled_area(datadict, axes, options):
 
 
 def draw_line(datadict, axes, options):
-    '''
+    """
     Draws plotly data (`datadict`) as line or scatter points (or both)
     on the given matplotlib axes
 
@@ -632,7 +632,7 @@ def draw_line(datadict, axes, options):
         See :func:`get_draw_options`
 
     :return: the drawn object
-    '''
+    """
     # setup matplotlib kwargs:
     line, marker = options['line'], options['marker']
     kwargs = {}

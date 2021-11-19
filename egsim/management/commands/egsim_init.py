@@ -31,7 +31,7 @@ if any(_['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.v
         cursor = conn.cursor()
         cursor.execute('SELECT JSON(\'{"a": "b"}\')')
     except Exception:
-        raise ValueError('JSON1 not supported in this SQLite version. To fix it, visit: '
+        raise ValueError('JSON not supported in this SQLite version. To fix it, visit: '
                          'https://code.djangoproject.com/wiki/JSON1Extension')
 
 
@@ -41,7 +41,7 @@ SUBCOMMANDS = [load_command_class(APPNAME, _) for _ in
                # ====================================================
                # IMPORTANT: TO AD NEW COMMANDS UPDATE THE LIST BELOW:
                # ====================================================
-               ['_egsim_oq', 'egsim_reg']]
+               ['_egsim_oq', '_egsim_reg']]
 
 
 class Command(EgsimBaseCommand):
@@ -55,9 +55,35 @@ class Command(EgsimBaseCommand):
         "\n\n".join(cmd.help for cmd in SUBCOMMANDS)
     ])
 
+    def add_arguments(self, parser):
+        """Implement here specific command options (this method is called
+        automatically by the superclass)
+        :param parser: :class:`argparse.ArgumentParser` instance
+        """
+        # For compatibility with the `flush` command (=empty db tables) which
+        # is called first, add the flag(s) '--noinput' (or '--no-input'), and
+        # store it in the variable `interactive`. This means that the flag
+        # value will be accessible in `self.handle(... options)` via
+        # `options["interactive"]`. `action='store_false'` means that the flag
+        # value is False when *present*, and thus `options["interactive"]` is
+        # True by default.
+        parser.add_argument(
+            '--noinput', '--no-input', action='store_false', dest='interactive',
+            help='Do NOT prompt the user for input of any kind.',
+        )
+
     def handle(self, *args, **options):
         """Execute the command"""
 
+        # if options.get('interactive', False):
+        #     confirm = input('This command will empty and re-populate all tables '
+        #                     'with OpenQuake and external data. Type yes to proceed')
+        #     if confirm != 'yes':
+        #         return
+        #     options['interactive'] = False  # for subcommands: do not ask
+
+        self.printinfo('')
+        self.printinfo('Emptying and re-populating database tables')
         try:
             call_command('flush', *args, **options)
         except DatabaseError as db_err:
@@ -67,5 +93,7 @@ class Command(EgsimBaseCommand):
             raise CommandError('%s.\nDid you create the db first?\n(for '
                                'info see: %s)' % (str(db_err), url))
 
+        options.pop('interactive', None)
         for cmd in SUBCOMMANDS:
+            self.printinfo('')
             call_command(cmd, *args, **options)

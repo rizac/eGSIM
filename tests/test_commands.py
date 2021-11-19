@@ -6,8 +6,13 @@ Created on 6 Apr 2019
 @author: riccardo
 """
 import os
+from json import JSONEncoder
+
 from stat import S_IWUSR, S_IWGRP, S_IWOTH
 import pytest
+
+from egsim import models
+from egsim.models import FlatfileField, GsimRegion, Gsim
 
 try:  # https://stackoverflow.com/questions/44441929
     from unittest.mock import patch  # noqa (ok in py3.8)
@@ -16,22 +21,81 @@ except ImportError:
 
 from django.core.management.base import CommandError
 from django.core.management import call_command
+from django.db import IntegrityError
 
 
-# def test_get_classes():
-    # commands = ['oq2db', 'gsimsel2db', 'reg2db']
-    # commands =  ['egsim.management.commands.' + _ for _ in commands]
-    # for _ in commands:
-    #     cls = get_classes(_, EgsimBaseCommand)
-    # clz = get_classes('egsim.models')
-
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
 def test_initdb(capfd):
     """Test initdb command."""
-    call_command('egsim_init', interactive=False)
-    captured = capfd.readouterr()
-    assert not captured.err
+    # @pytest.mark.django_db makes already all operations we need. We anyway check that
+    # all __str__ method of our classes work. The __str__ methods are shown in the dmin
+    # panel but not used elsewhere
+
+    for _name in dir(models):
+        _ = getattr(models, _name)
+        try:
+            is_class = issubclass(_, models.Model) and not _._meta.abstract and \
+                _ not in (models.Model, models._UniqueNameModel)
+        except:
+            is_class = False
+        if is_class:
+            print()
+            print(str(_) + ' 1st Instance to string:')
+            inst = _.objects.all().first()
+            print(str(inst))
+
+    # Note: not specifying category means that the category is null
+    f = FlatfileField(name='rx_1', oq_name='ert').save()
+
+    with pytest.raises(Exception) as ierr:
+        FlatfileField(name='rx', oq_name='ert').save()  # name not unique
+    assert 'name' in str(ierr.value)
+
+    with pytest.raises(Exception) as ierr:
+        FlatfileField(name='bla', oq_name='rx',
+                      category=FlatfileField.CATEGORY.DISTANCE_MEASURE).save()  # oq_name + category not unique
+    assert 'oq_name' in str(ierr.value)
+
+    akkarbommer = Gsim.objects.filter(name__exact='AkkarBommer2010').first()
+    geom = {'type': 'Polygon', 'coordinates': [[[]]]}
+    with pytest.raises(IntegrityError) as ierr:
+        # already exist:
+        GsimRegion(gsim=akkarbommer, geometry=geom,
+                   regionalization='share').save()
+    assert 'unique constraint' in str(ierr.value).lower()
+
+    with pytest.raises(IntegrityError) as ierr:
+        # ageom type false:
+        geom['type'] = 'invalid'
+        GsimRegion(gsim=akkarbommer, geometry=geom,
+                   regionalization='share2').save()
+    assert str(GsimRegion.GEOM_TYPES) in str(ierr.value)
+
+    # captured = capfd.readouterr()
+    # assert not captured.err
     # sout = captured.out
+
+
+def testJSONEncoder():
+    class DTEncoder(JSONEncoder):
+
+        def default(self, d):
+            return d.isoformat(sep='T')
+
+    val = JSONEncoder(default=lambda d: d.isoformat('T')).encode('a')
+    val = DTEncoder().encode('a')
+
+    class MyObj:
+        pass
+
+    a = MyObj()
+    with pytest.raises(Exception) as exc:
+        val = JSONEncoder(default=lambda d: d.isoformat('T')).encode(a)
+
+    with pytest.raises(Exception) as exc:
+        val = DTEncoder().encode(a)
+
+    asd = 9
 
 
 @pytest.mark.django_db
@@ -65,7 +129,7 @@ def test_gmdb_esm(mock_input,
                   input_flatfile_name, sep,
                   # pytest fixtures:
                   testdata, capsys):
-    '''Test gmdb_esm command (and consequently, also gmbd command)'''
+    """Test gmdb_esm command (and consequently, also gmbd command)"""
     ffname = input_flatfile_name
     ffpath = testdata.path(ffname)
     outdir = testdata.path('gmdb')
