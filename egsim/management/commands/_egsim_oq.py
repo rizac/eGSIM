@@ -10,7 +10,6 @@ Created on 6 Apr 2019
 """
 import warnings
 import inspect
-import os
 from collections import defaultdict
 from typing import Union
 from enum import Enum
@@ -20,7 +19,8 @@ from openquake.baselib.general import (DeprecationWarning as
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
-from egsim.core.modelparams import read_param_props
+from egsim.core.modelparams import (read_model_params,
+                                    DEFAULT_FILE_PATH as model_params_filepath)
 from egsim.management.commands import EgsimBaseCommand
 import egsim.models as models
 
@@ -44,10 +44,10 @@ class Command(EgsimBaseCommand):
         # populate db:
         self.printinfo('Populating DB with OpenQuake data:')
         imts = populate_imts()
-        gsim_param_props_path = os.path.join(os.path.dirname(
-            os.path.dirname(os.path.dirname(__file__))), 'core', 'modelparams.yaml')
-        gsims_params_props = read_param_props(gsim_param_props_path)
-        _, missing_params, unused_params = populate_gsims(imts, gsims_params_props)
+        # gsim_param_props_path = os.path.join(os.path.dirname(
+        #     os.path.dirname(os.path.dirname(__file__))), 'core', 'modelparams.yaml')
+        model_params = read_model_params()  # gsim_param_props_path)
+        _, missing_params, unused_params = populate_gsims(imts, model_params)
 
         _imtc = models.Imt.objects.count()  # noqa
         _imt = 'Imt' if _imtc == 1 else 'Imts'
@@ -60,10 +60,10 @@ class Command(EgsimBaseCommand):
                            models.GsimWithError.objects.count()))  # noqa
 
         self.printinfo('A Gsim might be skipped for various reasons, e.g.:')
-        self.printinfo(' - Gsims raising initialization errors')
-        self.printinfo(' - Gsims not defined for any supported Imt')
-        self.printinfo(' - Gsims requiring parameters that have no '
-                       'associated flatfile name in ' + gsim_param_props_path)
+        self.printinfo(' - initialization errors')
+        self.printinfo(' - not defined for any supported Imt')
+        self.printinfo(' - requiring parameters that have no '
+                       'associated flatfile name in ' + model_params_filepath)
 
         if unused_params:
             _prm = 'parameter' if len(unused_params) == 1 else 'parameters'
@@ -110,20 +110,18 @@ def populate_imts() -> dict[type(_SUPPORTED_IMTS[0]), models.Imt]:
     return imts
 
 
-def populate_gsims(imts: dict[imt.IMT, models.Imt], param_props: dict[str, dict])\
+def populate_gsims(imts: dict[imt.IMT, models.Imt], model_params: dict[str, dict])\
         -> tuple[list[models.Gsim], dict[str, list[str]], set[str]]:
     """Write all Gsims from OpenQuake to the db
 
     :param imts: a dict of imt names mapped to the relative db model instance
-    :param param_props: the dict of Gsim parameters mapped to their properties,
+    :param model_params: the dict of Gsim parameters mapped to their properties,
         as registered in the internal YAML file
     """
     gsims = []
 
     saved_params = {}  # paramname -> flatfilename
     missing_params = defaultdict(list)
-    nonflatfile_params = set(k for k in param_props
-                             if not param_props[k].get('flatfile_name', None))
 
     with warnings.catch_warnings():
         warnings.filterwarnings('error')  # raise on warnings
@@ -149,7 +147,8 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], param_props: dict[str, dict]
                     except Exception as _exc:  # noqa
                         store_gsim_error(gsim_name, warn)
                         continue
-            except (OSError, NotImplementedError, KeyError, IndexError, TypeError) as exc:
+            except (OSError, NotImplementedError, KeyError, IndexError,
+                    TypeError) as exc:
                 # NOTE: ADD HERE THE EXCEPTIONS THAT YOU WANT TO JUST REPORT.
                 store_gsim_error(gsim_name, exc)
                 continue
@@ -196,12 +195,12 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], param_props: dict[str, dict]
                     for pname in getattr(gsim_inst, attname, []):
 
                         key = "%s.%s" % (attname, pname)
-                        if key not in param_props:
+                        if key not in model_params:
                             missing_params[key].append(gsim_name)
                             raise ValueError('%s is unknown' % _param2str(key))
 
                         if key not in saved_params:
-                            props = param_props[key] or {}
+                            props = model_params[key] or {}
                             ffname = props.pop('flatfile_name', None)
                             if ffname is None:
                                 raise ValueError('%s has no matching '
@@ -257,21 +256,19 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], param_props: dict[str, dict]
 
             # create (and save) Gsim:
             gsim = models.Gsim.objects.create(name=gsim_name, trt=gsim_trt,  # noqa
-                                              # imts=gsim_imts,
                                               init_parameters=init_params or None,
-                                              # parameters=gsim_db_params,
                                               warning=gsim_warning or None)
 
             # Many-to-many relationships cannot be set in the __init__, but like this:
-            # set IMTs:
+            # 1. Set IMTs:
             gsim.imts.set(gsim_imts)
-
-            # set Gsim parameters:
+            # 2. Set Gsim parameters:
             gsim.required_flatfile_fields.set(gsim_db_params)
 
             gsims.append(gsim)
 
-    return gsims, missing_params, set(param_props) - set(saved_params)  # <- unused params
+    unused_params = set(model_params) - set(saved_params)
+    return gsims, missing_params, unused_params
 
 
 def store_gsim_error(gsim_name: str, error: Union[str, Exception]):

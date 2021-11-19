@@ -27,9 +27,9 @@ from django.db import IntegrityError
 @pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
 def test_initdb(capfd):
     """Test initdb command."""
-    # @pytest.mark.django_db makes already all operations we need. We anyway check that
-    # all __str__ method of our classes work. The __str__ methods are shown in the dmin
-    # panel but not used elsewhere
+    # @pytest.mark.django_db makes already all operations we need. We anyway check
+    # that all __str__ method of our classes work. The __str__ methods are shown in
+    # the admin panel but not used elsewhere
 
     for _name in dir(models):
         _ = getattr(models, _name)
@@ -52,8 +52,9 @@ def test_initdb(capfd):
     assert 'name' in str(ierr.value)
 
     with pytest.raises(Exception) as ierr:
+        # oq_name + category not unique:
         FlatfileField(name='bla', oq_name='rx',
-                      category=FlatfileField.CATEGORY.DISTANCE_MEASURE).save()  # oq_name + category not unique
+                      category=FlatfileField.CATEGORY.DISTANCE_MEASURE).save()
     assert 'oq_name' in str(ierr.value)
 
     akkarbommer = Gsim.objects.filter(name__exact='AkkarBommer2010').first()
