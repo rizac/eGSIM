@@ -1,5 +1,6 @@
+from itertools import chain, repeat
 from os.path import dirname, join
-from typing import Union, Any
+from typing import Union, Any, Callable, Sequence
 
 import pandas as pd
 import time
@@ -146,72 +147,151 @@ def _get_yaml_mappins() -> tuple[dict[str, str], list[str], dict[str, str]]:
 
 
 def read_flatfile(filepath: str,
-                  sep: Union[None, str] = None,
-                  col_mapping: Union[None, dict[str, str]] = None,
-                  usecols: Union[None, list, "callable"] = None,
-                  dtype: Union[None, dict[str, str]] = None,
-                  parse_dates: Union[None, list[str]] = None,
+                  sep: str = None,
+                  col_mapping: dict[str, str] = None,
+                  usecols: Union[list[str], Callable[[str], bool]] = None,
+                  dtype: dict[str, str] = None,
+                  parse_dates:  list[str] = None,
+                  categories: dict[str, Sequence[Any]] = None,
+                  defaults: dict[str, Any] = None,
                   **kwargs):
     """
+    Read a flat file into pandas DataFrame from a given CSV file
 
     :param filepath: the CSV file path. Compressed files are also supported
         and inferred from the extension (e.g. 'gzip', 'zip')
-    :param sep: the separator (or delimiter). None means 'infer'
-    :param dtype: dict of flatfile column names mapped to the data type
-        ('int' 'bool'). For date-times, use `parse_dates`.
-    :param parse_dates: list of flatfile column names denoting date time
+    :param sep: the separator (or delimiter). None means 'infer' (it might
+        take more time)
+    :param col_mapping: dict mapping CSV column names to Flat file column names.
+        If provided, the CSV column names found in `col_mapping` keys will be
+        renamed with the associated `col_mapping` value. **THE REPLACEMENT IS
+        PERFORMED AS FIRST STEP SO ALL ARGUMENTS BELOW MUST WORK ON FLAT FILE
+        COLUMN NAMES, NOT CSV "ORIGINAL" NAMES**
+    :param dtype: dict of *flat file column names* mapped
+        to the data type ('int', 'bool', 'float', 'str'). For date-times, use
+        `parse_dates`. None means: no dtype, i.e. pandas will try to infer the
+        data type of each column (as reference, a three rows column with values
+        ['3.5', '', '1'] is read as [3.5, nan, 1] with data type: float). Columns
+        of type 'int' and 'bool' do not support NA/missing data and must have a
+        default in `defaults`, otherwise NA data will be replaced with 0 for
+        int and False for bool
+    :param parse_dates: list of flat file column names denoting date time
         columns
-    :param usecols: flatfile column names to load, list or callable accepting
-        a column name and returning True/False
-    :param col_mapping: dict mapping flatfile names to OpenQuake Gsim
-        parameter names. The dict will be used to rename the dataframe column
-        after all other operations, just before returning
+    :param categories: a dict of flat file column names mapped to a list of
+        categories, i.e. the limited number of possible values that the column
+        can have.
+        Categorical data is mostly set on string columns with relatively few
+        values in order to save memory. Dataframe values not in the provided
+        categories are set to NA (missing) and replaced by the value found in
+        `defaults`, if given. Note: Artifacts might happen if the categories are
+        not of the same type: e.g., the data  [1, 'X'] with categories [1, 'X']
+        is converted to [NaN, 'X'], as if 1 was missing (NaN is just how pandas
+        visualizes NA/missing data)
+    :param usecols: flat file column names to load, as list or callable accepting
+        a flat file column name and returning True/False
+    :param defaults: a dict of flat file column names mapped to the default
+        value for missing/NA data. Defaults will be set AFTER the underlying
+        `pandas.read_csv` is called, on the returned dataframe before returning
+        it. None means: do not replace NA data. Note however that if int and bool
+        columns are specified in `dtype`, then a default is set for those columns
+        if not provided (0 for int, False for bool), because bool and int data
+        do not support NA in numpy/pandas
+    :param kwargs: additional keyword arguments not provided above that can be
+        passed to `pandas.read_csv`. 'header', 'delim_whitespace' and 'names'
+        should not be provided as they might be overwritten by this function
+
+    :return: pandas DataFrame representing a Flat file
     """
-    params = _infer_csv_sep(filepath) if sep is None else {'sep': sep}
+    params = _infer_csv_sep(filepath, sep, col_mapping is not None)
 
-    if (dtype or parse_dates or usecols) and col_mapping:
-        newcol2oldcol = dict(zip(col_mapping.values(), col_mapping.keys()))
+    if col_mapping is not None:
+        # replace names with the new names of the mapping (if found) or leave
+        # the name as it is if a mapping is not found:
+        params['names'] = [col_mapping.get(n, n) for n in params['names']]
 
-        if dtype:
-            # map new names to old names
-            # replace old names in dtype:
-            dtype = {newcol2oldcol.get(k, k): v for k, v in dtype.items()}
+    # Check which column is an int or bool, as those columns do not support NA
+    # (e.g. a empty CSV cell for a boolean column raises)
+    dtype_ib = {}
+    if dtype:
+        for col, dtyp in dtype.items():
+            if dtyp in ('bool', 'int'):
+                # Move the dtype to dtypes2:
+                dtype_ib[col] = dtyp
+                # Replace dtype with float in order to safely read NA:
+                dtype[col] = 'float'
+                # initialize the defaults dict if None and needs to be populated:
+                if defaults is None:
+                    defaults = {}
+                # Check that a default is set and is of type float, otherwise pandas
+                # might perform useless data conversions to object. As such, when a
+                # default is unset provide 0, as eventually float(0) = float(False)
+                defaults[col] = float(defaults.get(col, 0))
 
-        if parse_dates:
-            parse_dates = [newcol2oldcol.get(k, k) for k in parse_dates]
+    for col, categories in categories:
+        dtype[col] = pd.CategoricalDtype(categories)  # noqa
 
     dfr = pd.read_csv(filepath, dtype=dtype, parse_dates=parse_dates,
                       usecols=usecols, **{**kwargs, **params})
 
-    if col_mapping:
-        dfr.rename(columns=col_mapping, inplace=True)
+    colnames = set(dfr.columns) if defaults or dtype_ib else set()
+
+    # Replace missing data with provided defaults:
+    for col, def_val in defaults.items():
+        if col in colnames:
+            dfr.loc[dfr[col].isna(), col] = def_val
+
+    # Cast back int and bool cols (now it's safe, they do not have NA)
+    for col, dtyp in dtype_ib.items():
+        if col in colnames:
+            dfr[col] = dfr[col].astype(dtyp)
 
     return dfr
 
 
-def _infer_csv_sep(filepath: str) -> dict[str, Any]:
-    """Infer the CSV separator from `filepath`, return the arguments needed
-    for pd.read_csv as dict (e.g. `{'sep': ','}`)"""
-    # pandas suggests to use the engine='python' argument to infer `sep`,
-    # but this takes approx 4.5 seconds with the ESM flatfile 2018
-    # whereas the method below is around 1.5 (load headers and count).
-    # So, try to read the headers only with comma and semicolon, and chose the
-    # one producing more columns:
-    comma_col_len = len(pd.read_csv(filepath, nrows=0, sep=',').columns)
-    semicolon_col_len = len(pd.read_csv(filepath, nrows=0, sep=';').columns)
-    if comma_col_len > 1 and comma_col_len >= semicolon_col_len:
-        return {'sep': ','}
-    if semicolon_col_len > 1:
-        return {'sep': ';'}
-    # try with spaces:
-    params = {'sep': None, 'delim_whitespace': True}
-    space_col_len = len(pd.read_csv(filepath, nrows=0, **params,).columns)
-    if space_col_len > max(comma_col_len, semicolon_col_len):
-        return params
+def _infer_csv_sep(filepath: str, sep: Union[str, None] = None,
+                   return_col_names=False) -> dict[str, Any]:
+    """Prepares the CSV for reading by inspecting the header and inferring the
+    separator `sep`, if the latter is None.
 
-    raise ValueError('CSV separator could not be inferred. Please re-edit and '
-                     'provide either comma (preferred choice) semicolon or '
-                     'and whitespace')
+    :return: the arguments needed for pd.read_csv as dict (e.g. `{'sep': ','}`).
+        if `return_colnames` is True, the dict also contains the key 'names'
+        with the CSV column header names
+    """
+    params = {'sep': sep}
+    names = None
+
+    if sep is None:
+        # infer separator: pandas suggests to use the engine='python' argument,
+        # but this takes approx 4.5 seconds with the ESM flatfile 2018
+        # whereas the method below is around 1.5 (load headers and count).
+        # So, try to read the headers only with comma and semicolon, and chose the
+        # one producing more columns:
+        comma_cols = pd.read_csv(filepath, nrows=0, sep=',').columns
+        semicolon_cols = pd.read_csv(filepath, nrows=0, sep=';').columns
+        if len(comma_cols) > 1 and len(comma_cols) >= len(semicolon_cols):
+            params['sep'] = ','
+            names = comma_cols.tolist()
+        elif len(semicolon_cols) > 1:
+            params['sep'] = ';'
+            names = semicolon_cols.tolist()
+        else:
+            # try with spaces:
+            space_cols = pd.read_csv(filepath, nrows=0, sep=None,
+                                     delim_whitespaces=True).columns
+            if len(space_cols) > max(len(comma_cols), len(semicolon_cols)):
+                params['sep'] = r'\s+'
+                names = space_cols.tolist()
+            else:
+                raise ValueError('CSV separator could not be inferred. Please '
+                                 're-edit and provide either comma (preferred '
+                                 'choice) semicolon or whitespaces')
+
+    if return_col_names:
+        if names is None:
+            names = pd.read_csv(filepath, nrows=0, sep=sep).columns.tolist()
+        params['names'] = names
+
+    return params
 
 
 def read_userdefined_flatfile(filepath):
