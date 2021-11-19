@@ -36,7 +36,7 @@ _COMMON_PARAMS = {
 
 
 class KEY:  # pylint: disable=too-few-public-methods
-    '''Container class (Enum-like) defining the string keys for the
+    """Container class (Enum-like) defining the string keys for the
     program urls/services. **Basically, each key (class attribute) [K] defines
     a menu in the web GUI navigation bar** and consequently must also have an
     associated VueJS component implemented in the directory `static/js/[k].js`.
@@ -50,7 +50,7 @@ class KEY:  # pylint: disable=too-few-public-methods
     must be passed in the HTML responses, too. The urls are then used in
     :module:`urls` (as usual) to call the relative :class:`RESTAPIView`
     (see below)
-    '''
+    """
     HOME = 'home'
     GSIMS = 'gsims'  # pylint: disable=invalid-name
     TRELLIS = 'trellis'  # pylint: disable=invalid-name
@@ -61,9 +61,9 @@ class KEY:  # pylint: disable=too-few-public-methods
 
 
 class TITLES:  # pylint: disable=too-few-public-methods
-    '''Container class (Enum-like) of titles to be shown in the front end and
+    """Container class (Enum-like) of titles to be shown in the front end and
     in the documentation when talking about a service (member of the KEY class
-    above)'''
+    above)"""
     HOME = 'Home'
     GSIMS = 'Model Selection'
     TRELLIS = 'Model-to-Model Comparison'
@@ -74,10 +74,10 @@ class TITLES:  # pylint: disable=too-few-public-methods
 
 
 class ICONS:  # pylint: disable=too-few-public-methods
-    '''Container class (Enum-like) of icons to be shown in the front end and
+    """Container class (Enum-like) of icons to be shown in the front end and
     in the Home page. Strings denote the fontawesome icon name (for info see:
     https://fontawesome.bootstrapcheatsheets.com/)
-    '''
+    """
     HOME = 'fa-home'
     GSIMS = 'fa-map-marker'
     TRELLIS = 'fa-area-chart'
@@ -88,11 +88,11 @@ class ICONS:  # pylint: disable=too-few-public-methods
 
 
 class URLS:  # pylint: disable=too-few-public-methods
-    '''Container class (Enum-like) defining the URLS which should be injected
+    """Container class (Enum-like) defining the URLS which should be injected
     into the web page (via Django) AND used in :module:`urls` for defining
     the urls and relative views.
     All URLS MUST **NOT** END WITH THE SLASH CHARACTER "/"
-    '''
+    """
 
     # REST API URLS:
     GSIMS_RESTAPI = 'query/%s' % KEY.GSIMS
@@ -134,7 +134,7 @@ class URLS:  # pylint: disable=too-few-public-methods
 
 
 def main(request, selected_menu=None):
-    '''view for the main page'''
+    """view for the main page"""
 
     # Tab components (one per tab, one per activated vue component)
     # (key, label and icon) (the last is bootstrap fontawesome name)
@@ -396,7 +396,7 @@ def main(request, selected_menu=None):
 
 
 def get_tr_models(request):  # pylint: disable=unused-argument
-    '''Returns a JsonResponse with the data for the '''
+    """Return a JsonResponse with the data for the """
     models = {}
     selected_model = None
 
@@ -414,7 +414,7 @@ def get_tr_models(request):  # pylint: disable=unused-argument
 
 
 def home(request):
-    '''view for the home page (iframe in browser)'''
+    """view for the home page (iframe in browser)"""
     egsim_data = {
         'GSIMS': {
             'title': TITLES.GSIMS,
@@ -445,7 +445,7 @@ def home(request):
 
 
 def apidoc(request):
-    '''view for the home page (iframe in browser)'''
+    """view for the home page (iframe in browser)"""
     filename = 'apidoc.html'
     # baseurl is the base URL for the services explained in the tutorial
     # It is the request.META['HTTP_HOST'] key. But during testing, this
@@ -506,12 +506,12 @@ def imprint(request):
 
 
 def download_request(request, key, filename):
-    '''Returns the request (configuration) re-formatted according to the syntax
+    """Return the request (configuration) re-formatted according to the syntax
     inferred from filename (*.json or *.yaml) to be downloaded by the front
     end GUI.
 
     :param key: string in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING]
-    '''
+    """
     formclass = _key2view(key).formclass
     inputdict = yaml_load(request.body.decode('utf-8'))
     dataform = formclass(data=inputdict)  # pylint: disable=not-callable
@@ -534,13 +534,13 @@ def download_request(request, key, filename):
 
 
 def download_astext(request, key, filename, text_sep=',', text_dec='.'):
-    '''Returns the text/csv data to be downloaded by the front end GUI.
+    """Return the text/csv data to be downloaded by the front end GUI.
     The request's body is the JSON data resulting from a previous
     call of the GET or POST method of any these
     views: TrellisView, ResidualsView, TestingView.
 
     :param key: string in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING]
-    '''
+    """
     viewclass = _key2view(key)
     inputdict = yaml_load(request.body.decode('utf-8'))
     response = viewclass.response_text(inputdict, text_sep, text_dec)
@@ -549,9 +549,9 @@ def download_astext(request, key, filename, text_sep=',', text_dec='.'):
 
 
 def _key2view(key):
-    '''maps a key (string) in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING] to
+    """Map a key (string) in [KEY.TRELLIS, KEY.RESIDUALS, KEY.TESTING] to
     the relative :class:`RESTAPIView` subclass defined in this module
-    '''
+    """
     return {
         KEY.TRELLIS: TrellisView,
         KEY.RESIDUALS: ResidualsView,
@@ -560,9 +560,9 @@ def _key2view(key):
 
 
 def download_asimage(request, filename):
-    '''Returns the image from the given request built in the frontend GUI
+    """Return the image from the given request built in the frontend GUI
     according to the choosen plots
-    '''
+    """
     format = os.path.splitext(filename)[1][1:]  # @ReservedAssignment
     jsondata = json.loads(request.body.decode('utf-8'))
     data, layout, width, height = (jsondata['data'],
@@ -586,8 +586,8 @@ def download_asimage(request, filename):
 
 
 def _test_err(request):
-    '''Stupid function raiseing for front end test purposes. Might be removed
-    soon'''
+    """Dummy function raising for front end test purposes. Might be removed
+    soon"""
     raise ValueError('this is a test error!')
 
 
@@ -597,10 +597,10 @@ def _test_err(request):
 
 
 class EgsimQueryViewMeta(type):
-    '''metaclass for EgsimChoiceField subclasses. Populates the class attribute
+    """metaclass for EgsimChoiceField subclasses. Populates the class attribute
     arrayfields with fields which accept array-like values. If the formclass
     is not defined, this metaclass is no-op
-    '''
+    """
     def __init__(cls, name, bases, nmspc):
         super(EgsimQueryViewMeta, cls).__init__(name, bases, nmspc)
         if cls.formclass is not None:
@@ -611,13 +611,12 @@ class EgsimQueryViewMeta(type):
 
 
 class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
-    '''base view for every eGSIM REST API endpoint
-    '''
+    """base view for every eGSIM REST API endpoint"""
     formclass = None
     arrayfields = set()
 
     def get(self, request):
-        '''processes a get request'''
+        """processes a get request"""
         try:
             #  get to dict:
             #  Note that percent-encoded characters are decoded automatiically
@@ -637,7 +636,7 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
             return requestexc2json(err)
 
     def post(self, request):
-        '''processes a post request'''
+        """processes a post request"""
         try:
             return self.response(yaml_load(request.body.decode('utf-8')))
         except Exception as err:  # pylint: disable=broad-except
@@ -645,11 +644,11 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
 
     @classmethod
     def response(cls, inputdict):
-        '''processes an input dict `inputdict`, returning a response object.
+        """process an input dict `inputdict`, returning a response object.
         Calls `self.process` if the input is valid according to
         `cls.formclass`. On error, returns an appropriate json response
         (see `module`:core.responseerrors)
-        '''
+        """
         formatform = FormatForm(inputdict)
         if not formatform.is_valid():
             return invalidform2json(formatform)
@@ -677,18 +676,18 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
 
     @classmethod
     def response_json(cls, process_result):
-        '''Returns a JSON response
+        """Return a JSON response
 
         :param process_result: the output of `self.process`
-        '''
+        """
         return JsonResponse(process_result, safe=False)
 
     @classmethod
     def response_text(cls, process_result, text_sep=',', text_dec='.'):
-        '''Returns a text/csv response
+        """Return a text/csv response
 
         :param process_result: the output of `self.process`
-        '''
+        """
         # code copied from: https://stackoverflow.com/a/41706831
         buffer = io.StringIO()  # python 2 needs io.BytesIO() instead
         wrt = csv.writer(buffer,
@@ -725,12 +724,12 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
 
     @classmethod
     def convert_to_comma_as_decimal(cls, row):
-        '''Creates a generator yielding each element of row where numeric
+        """Create a generator yielding each element of row where numeric
         values are converted to strings with comma as decimal separator.
         For non-float values, each row element is yielded as it is
 
-        @param rows: a list of lists
-        '''
+        @param row: a list of lists
+        """
         for cell in row:
             if isinstance(cell, float):
                 yield str(cell).replace('.', ',')
@@ -739,19 +738,19 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
 
     @classmethod
     def process(cls, inputdict):
-        ''' core (abstract) method to be implemented in subclasses
+        """core (abstract) method to be implemented in subclasses
 
         :param inputdict: a dict of key-value pairs of input parameters, which
             **is assumed to have been already validated via this.formclass()**
             (thus no check is needed)
 
         :return: a json-serializable object to be sent as successful response
-        '''
+        """
         raise NotImplementedError()
 
     @classmethod
     def to_rows(cls, process_result):
-        '''Abstract-like optional method to be implemented in subclasses.
+        """Abstract-like optional method to be implemented in subclasses.
         Converts the input argument into an iterable of rows, where each
         row is in turn an iterable of strings representing "cell" values:
         the resulting output is in fact intended to be the input for
@@ -761,12 +760,12 @@ class RESTAPIView(View, metaclass=EgsimQueryViewMeta):
         `self.response_text` where rows are padded with empty values).
 
         :param process_result: the output of `self.process`
-        '''
+        """
         raise NotImplementedError()
 
 
 class GsimsView(RESTAPIView):
-    '''EgsimQueryView subclass for generating Gsim selection responses'''
+    """EgsimQueryView subclass for generating Gsim selection responses"""
 
     formclass = GsimSelectionForm
 
@@ -803,7 +802,7 @@ class GsimsView(RESTAPIView):
 
 
 class TrellisView(RESTAPIView):
-    '''EgsimQueryView subclass for generating Trellis plots responses'''
+    """EgsimQueryView subclass for generating Trellis plots responses"""
 
     formclass = TrellisForm
 
@@ -839,8 +838,8 @@ class TrellisView(RESTAPIView):
 
 
 class GmdbPlotView(RESTAPIView):  # pylint: disable=abstract-method
-    '''EgsimQueryView subclass for generating Gmdb's
-       magnitude vs distance plots responses'''
+    """EgsimQueryView subclass for generating Gmdb's
+       magnitude vs distance plots responses"""
 
     formclass = GmdbPlotForm
 
@@ -850,7 +849,7 @@ class GmdbPlotView(RESTAPIView):  # pylint: disable=abstract-method
 
 
 class ResidualsView(RESTAPIView):
-    '''EgsimQueryView subclass for generating Residuals plot responses'''
+    """EgsimQueryView subclass for generating Residuals plot responses"""
 
     formclass = ResidualsForm
 
@@ -873,7 +872,7 @@ class ResidualsView(RESTAPIView):
 
 
 class TestingView(RESTAPIView):
-    '''EgsimQueryView subclass for generating Testing responses'''
+    """EgsimQueryView subclass for generating Testing responses"""
 
     formclass = TestingForm
 

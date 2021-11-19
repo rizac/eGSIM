@@ -1,8 +1,8 @@
-'''
+"""
 Created on 11 Apr 2019
 
 @author: riccardo
-'''
+"""
 
 import os
 from stat import S_IREAD, S_IRGRP, S_IROTH
@@ -19,10 +19,10 @@ from egsim.core.utils import get_gmdb_path, get_gmdb_names
 # (must be on the top of this module).
 # FIXME: should be implemented in smtk
 class UserDefinedTableParser(GMTableParser):
-    '''defines the standard default table parser.
+    """defines the standard default table parser.
     FIXME: should be probably done in smtk. Just implement the method
     below in GMTableParser (why wasn't it done?)
-    '''
+    """
 
     @classmethod
     def get_sa_columns(cls, csv_fieldnames):
@@ -57,8 +57,7 @@ class UserDefinedTableParser(GMTableParser):
 
 
 class Command(BaseCommand):
-    '''Command to create a standard Ground Motion Database
-    '''
+    """Command to create a standard Ground Motion Database"""
     help = ('Creates a Ground Motion Database from a provided CSV flatfile(s). '
             'as arguments. The fields of the flatfile(s) must match those '
             'provided in smtk.GMTableParser. '
@@ -68,7 +67,7 @@ class Command(BaseCommand):
 
     @property
     def outpath(self):
-        '''Returns the directory where to write all HDF files'''
+        """Return the directory where to write all HDF files"""
         return get_gmdb_path()
 
     @staticmethod
@@ -92,12 +91,12 @@ class Command(BaseCommand):
 
     @property
     def dbnames(self):
-        '''returns the database (table) names in the HDF file pointed by
-        self.outpath'''
+        """Return the database (table) names in the HDF file pointed by
+        self.outpath"""
         return get_gmdb_names(self.outpath)
 
     def add_arguments(self, parser):
-        '''Adds arguments to the command'''
+        """Add arguments to the command"""
         # https://docs.python.org/3/library/argparse.html#nargs
         parser.add_argument('flatfile', nargs='+', help='Flatfile path')
         parser.add_argument('--sep', nargs='?', default='semicolon',
@@ -107,7 +106,7 @@ class Command(BaseCommand):
                                   'Defaults to semicolon'))
 
     def handle(self, *args, **options):
-        '''parses each passed flatfile (as simple command line argument):
+        """Parse each passed flatfile (as simple command line argument):
             ```
             python manage.py gmdb file1.csv file2.csv
             ```
@@ -131,7 +130,7 @@ class Command(BaseCommand):
             one, we have to change the code here only: egsim is not expecting
             a single table per HDF5 file. See `get_gmdb_names`
             and `get_gmdb_path` in `utils.py` for details
-        '''
+        """
         try:
             # assure outdir exists, raises if unable to create the dir
             # (the user will be prompted in case):
@@ -198,7 +197,7 @@ class Command(BaseCommand):
 
 
 def _create_bom_free_flatfile(flatfile_path):
-    """Creates a BOM free copy of the given flatfile and returns it.
+    """Create a BOM free copy of the given flatfile and returns it.
     If the flatfile content has no BOM, an exact copy of it is returned.
     A BOM is a character (which
     might be put there by softwares like Excel when exporting) that dictates

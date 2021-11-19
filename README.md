@@ -187,7 +187,9 @@ and no selection possible).
 
 </details>
 
-#### Migrate (setup django db)
+<!--
+
+#### Migrate (setup django db)  
 From within the egsim folder (check that manage.py is therein):
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
@@ -214,6 +216,7 @@ Please refer to 'deploy.html'
 (dynamic web page, open it in your browser and fill in the
 server paths)
 
+-->
 
 ## Maintenance
 
@@ -285,15 +288,15 @@ and follow the instructions.
 
 Then navigate in the browser to: http://127.0.0.1:8000/admin/
 
-### Modify database schema, make migrations, re-populate the db (VERIFIED OCt 2021)
+### Migrate and populate the db (VERIFIED OCt 2021)
 
 Before reading, remember:
 
  - `DJANGO_SETTINGS_MODULE` value in the examples below must be changed 
    in production!
- - `make_migration` just generates a migration file, does not change the db
- - `migrate` does change the db, and uses the migration files to do that 
- - For details on Django migrations, see:
+ - The `make_migration` command just generates a migration file, it doesn't 
+   change the db. The `migrate` command does that, by means of the migration files
+   generated. For details on Django migrations, see:
    - https://realpython.com/django-migrations-a-primer/#changing-models
    - https://docs.djangoproject.com/en/3.2/topics/migrations/#workflow
 
