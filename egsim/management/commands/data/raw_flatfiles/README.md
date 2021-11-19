@@ -11,6 +11,12 @@ NOTES:
   ```buildoutcfg
   zip -d <filename>.zip __MACOSX/\*
   ```
+  
+  OR ZIP like this (-9 is optional is the compression level):
+
+  ```buildoutcfg
+  zip ZIPFILE_PATH  CSV_FILEPATH -9 -x ".*" -x "__MACOSX"
+  ```
 
 ## ESM 2018 flatfile
 
