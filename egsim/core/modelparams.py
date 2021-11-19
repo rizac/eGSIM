@@ -1,20 +1,26 @@
 from datetime import datetime
+import os
+from enum import Enum
 from typing import Union, Any
 import yaml
 
-# def dtypes_defaults_parse_dates() -> tuple[dict, dict, list]:
-#     dtypes, parse_dates, defaults = {}, [], {}
-#     # query all params with flatfile_name not null:
-#     # if dtype = datetime, add the flatfile name to parse_dates,
-#     # otherwise, add name -> dtype to dtypes
-#     # if the field has a default, add name -> default to defaults
-#     return tuple({}, {}, [])
+
+class Prop(str, Enum):
+    """Properties implemented in the YAML. NOTE: each item is also a `str`
+    (i.e., properties.ffname == "flatfile_name")
+    """
+    dtype = 'dtype'
+    bounds = 'bounds'
+    default = 'default'
+    choices = 'choices'
+    help = 'help'
+    ffname = 'flatfile_name'
 
 
-default_type = 'float'
+default_dtype = 'float'
 
 dtype_cast_function = {
-    default_type: float,
+    default_dtype: float,
     # datetime: use ISO formatted strings (for JSON):
     'datetime': lambda _: (_ if isinstance(_, datetime) else
                            datetime.fromisoformat(_)).isoformat(),
@@ -24,15 +30,16 @@ dtype_cast_function = {
 }
 
 
-# Possible property names defined for each Parameter (ORDER IS IMPORTANT DO NOT CHANGE):
-prop_names = ('dtype', 'bounds', 'default', 'choices', 'help', 'flatfile_name',)
+DEFAULT_FILE_PATH = os.path.splitext(__file__)[0] + ".yaml"
 
 
-def read_param_props(yaml_file_path: str) -> dict[str, dict]:
+def read_model_params(yaml_file_path: str = DEFAULT_FILE_PATH) -> dict[str, dict]:
     """Return the all models parameter names and their properties from the given
-    YAML file. The keys of the dict will be strings in the form:
+    YAML file. The keys of the dict will be "flattened" to strings of the form:
     <PARAMETER_TYPE>.<PARAMETER_NAME>
-    You can use `key.split(".", 1)` to get property type and name separately
+    whereas the values are the model properties as implemented in the YAML file
+    (after some validation routine).
+    You can use `key.split(".", 1)` to get property type and name separately:
     The parameter type is the OpenQuake Attribute name denoting the property
     type (e.g. "REQUIRES_DISTANCE")
     """
@@ -43,12 +50,11 @@ def read_param_props(yaml_file_path: str) -> dict[str, dict]:
         for param_type, params in root_dict.items():
             for param_name, props in params.items():
                 try:
-                    help_s, ffname_s = prop_names[4], prop_names[5]
-                    props = validate_properties(props)
-                    ffname = props.get(ffname_s, None)
+                    props = _validate_properties(props)
+                    ffname = props.get(Prop.ffname, None)
                     if ffname is not None:
                         assert ffname not in done_ff_names, "%s not unique: %s " % \
-                                                            (ffname_s, ffname)
+                                                            (Prop.ffname, ffname)
                         done_ff_names.add(ffname)
 
                     all_params[param_type + "." + param_name] = props
@@ -59,18 +65,17 @@ def read_param_props(yaml_file_path: str) -> dict[str, dict]:
     return all_params
 
 
-def validate_properties(props: Union[dict[str, Any], None]) -> dict:
+def _validate_properties(props: Union[dict[str, Any], None]) -> dict:
 
     props = props or {}
 
-    unknown_keys = set(props) - set(prop_names)
+    unknown_keys = set(props) - set(Prop)
     assert not unknown_keys, 'Unknown property/ies: %s' % str(unknown_keys)
 
-    key = prop_names[0]  # data_type
-    dtype = props.get(key, default_type)
+    dtype = props.get(Prop.dtype, default_dtype)
     assert dtype in dtype_cast_function.keys(), 'Unrecognized type "%s"' % dtype
 
-    key = prop_names[1]  # bounds
+    key = Prop.bounds  # bounds
     if key in props:
         bounds = props[key]
         assert isinstance(bounds, list) and len(bounds) == 2, \
@@ -90,16 +95,16 @@ def validate_properties(props: Union[dict[str, Any], None]) -> dict:
             assert bounds[0] < bounds[1], '"%s" error: %s must be < %s' % \
                                           (key, str(bounds[0]), str(bounds[1]))
 
-    key_d = prop_names[2]  # default
-    if key_d in props:
-        props[key_d] = dtype_cast_function[dtype](props[key_d])
+    key = Prop.default
+    if key in props:
+        props[key] = dtype_cast_function[dtype](props[key])
 
-    key_c = prop_names[3]  # choices
-    if key_c in props:
-        props[key_c] = [dtype_cast_function[dtype](_) for _ in props[key_c]]
-        if key_d in props:
-            assert props[key_d] in props[key_c], \
-                '"%s" value not in "%s"' % (key_d, key_c)
+    key = Prop.choices  # choices
+    if key in props:
+        props[key] = [dtype_cast_function[dtype](_) for _ in props[key]]
+        if Prop.default in props:
+            assert props[Prop.default] in props[key], \
+                '"%s" value not in "%s"' % (Prop.default, key)
 
     return props
 
@@ -115,8 +120,7 @@ def _check_registered_file():
     # from itertools import chain
     # from collections import defaultdict
 
-    fle = os.path.join(os.path.dirname(__file__), 'modelparams.yaml')
-    registered_params = read_param_props(fle)
+    registered_params = read_model_params()
     oq_atts = set(_.split('.', 1)[0] for _ in registered_params)
     already_done = set()
     ret = 0
@@ -145,6 +149,7 @@ def _check_registered_file():
 
     if ret == 0:
         print('YAML file is ok')
+
     sys.exit(ret)
 
 
