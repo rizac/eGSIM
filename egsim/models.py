@@ -7,6 +7,7 @@ Created on 5 Apr 2019
 """
 import json
 from enum import IntEnum
+from datetime import datetime
 
 from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
                               ManyToManyField, JSONField, UniqueConstraint,
@@ -22,6 +23,50 @@ from shapely.geometry import Point, shape, Polygon
 # in the admin panel (https://<site_url>/admin)
 
 
+# ============================================
+# JSON encoders/ decoders (used in JSONFields)
+# ============================================
+
+
+class CompactEncoder(json.JSONEncoder):
+    """JSON encoder that saves space"""
+    def __init__(self, **kwargs):
+        kwargs['separators'] = (',', ':')
+        super(CompactEncoder, self).__init__(**kwargs)
+
+
+class DateTimeEncoder(CompactEncoder):
+    """Encode date times as ISO formatted strings"""
+
+    _KEY = '__iso8601datetime__'  # DO NOT CHANGE!
+
+    def default(self, obj):
+        try:
+            # Note: from timestamp is not faster, so let's use isoformat to speed up:
+            return {self._KEY: obj.isoformat()}
+        except Exception:  # noqa
+            return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
+
+
+class DateTimeDecoder(json.JSONDecoder):
+
+    def __init__(self, **kwargs):
+        super(DateTimeDecoder, self).__init__(object_hook=DateTimeDecoder.object_hook,
+                                              **kwargs)
+
+    @staticmethod
+    def object_hook(dct):
+        key = DateTimeEncoder._KEY  # noqa
+        if key in dct:
+            return datetime.fromisoformat(dct[key])
+        # return dict "normally":
+        return dct
+
+
+# ======
+# Models
+# ======
+
 class _UniqueNameModel(Model):
     """Abstract class for models identified by a single unique name"""
 
@@ -36,43 +81,11 @@ class _UniqueNameModel(Model):
         return self.name
 
 
-class Imt(_UniqueNameModel):
-    """The :mod:`intensity measure types <openquake.hazardlib.imt>` that
-    OpenQuake's GSIMs can calculate and that are supported in eGSIM
-    """
-    needs_args = BooleanField(default=False, null=False)
-
-    # OpenQuake's Gsim attribute used to populate this table during db init:
-    OQ_ATTNAME = 'DEFINED_FOR_INTENSITY_MEASURE_TYPES'
-
-
-# JSON encoders/ decoders (see JSONFields):
-
-class CompactEncoder(json.JSONEncoder):
-    """JSON encoder that saves space"""
-    def __init__(self, **kwargs):
-        kwargs['separators'] = (',', ':')
-        super(CompactEncoder, self).__init__(**kwargs)
-
-
-class DateTimeEncoder(CompactEncoder):
-    """Encode date times as ISO formatted strings"""
-    # There is no `json.DateTimeEncoder` because the same functionality can be
-    # achieved more easily and efficiently with numpy or pandas. Therefore, users
-    # should deal with that in custom code, keeping in mind that `JSONField`s
-    # with custom `DateTimeEncoder`s can save datetime objects to DB, but
-    # will return datetime strings
-    def default(self, obj):
-        try:
-            return obj.isoformat(sep='T')  # specify 'sep' for safety
-        except Exception:  # noqa
-            return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
-
-
 class FlatfileField(_UniqueNameModel):
-    """Flat file field (column)"""
+    """Flat file field (column of tabular CSV / HDF file)"""
 
     class CATEGORY(IntEnum):
+        """Flat file category inferred from the relative Gsim attribute(s)"""
         DISTANCE_MEASURE = 0  # Gsim attr: REQUIRES_DISTANCES
         RUPTURE_PARAMETER = 1  # Gsim attr: REQUIRES_RUPTURE_PARAMETERS
         SITE_PARAMETER = 2  # Gsim attr: REQUIRES_SITES_PARAMETERS
@@ -86,6 +99,7 @@ class FlatfileField(_UniqueNameModel):
                                               'computation)')
     help = TextField(null=False, default='', help_text="Field help text")
     properties = JSONField(null=True, encoder=DateTimeEncoder,
+                           decoder=DateTimeDecoder,
                            help_text=('data properties as JSON (null: no '
                                       'properties). Optional keys: "dtype" '
                                       '("int", "bool", "datetime", "str" or '
@@ -111,6 +125,16 @@ class FlatfileField(_UniqueNameModel):
         # `get_[field]_display` is added by Django for those fields with choices
         return '%s (OpenQuake name: %s). %s required by %d Gsims' % \
                (self.name, self.oq_name, categ, self.gsims.count())  # noqa
+
+
+class Imt(_UniqueNameModel):
+    """The :mod:`intensity measure types <openquake.hazardlib.imt>` that
+    OpenQuake's GSIMs can calculate and that are supported in eGSIM
+    """
+    needs_args = BooleanField(default=False, null=False)
+
+    # OpenQuake's Gsim attribute used to populate this table during db init:
+    OQ_ATTNAME = 'DEFINED_FOR_INTENSITY_MEASURE_TYPES'
 
 
 class GsimTrt(_UniqueNameModel):
