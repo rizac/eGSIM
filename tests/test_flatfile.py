@@ -1,3 +1,4 @@
+from collections import defaultdict
 from itertools import chain, repeat
 from os.path import dirname, join
 from typing import Union, Any, Callable, Sequence
@@ -119,40 +120,11 @@ def _get_db_mappings() -> tuple[dict[str, str], list[str], dict[str, str]]:
     return dtype or None, parse_dates or None, col_mapping or None
 
 
-def _get_yaml_mappins() -> tuple[dict[str, str], list[str], dict[str, str]]:
-    """
-    Return the tuple:
-    ```
-    dtype, parse_dates, col_mapping
-    ```
-    i.e. the arguments needed by
-    `read_flatfile`. The data is read from the eGSIM database
-    """
-    dtype, parse_dates, defaults, col_mappings = {}, [], {}, {}
-    for (key, props) in read_model_params():
-        ffname = props.get(Prop.ffname, None)
-        if not ffname:
-            continue
-        dtyp = props.get(Prop.dtype, default_dtype)
-        if dtyp == 'datetime':
-            parse_dates.append(ffname)
-        else:
-            dtype[ffname] = dtyp
-        if Prop.default in props:
-            defaults[ffname] = props[Prop.default]
-
-        col_mappings[ffname] = key.split('.', 1)[1]
-
-    return dtypes, parse_dates, defaults, col_mappings
-
-
 def read_flatfile(filepath: str,
                   sep: str = None,
                   col_mapping: dict[str, str] = None,
                   usecols: Union[list[str], Callable[[str], bool]] = None,
-                  dtype: dict[str, str] = None,
-                  parse_dates:  list[str] = None,
-                  categories: dict[str, Sequence[Any]] = None,
+                  dtype: dict[str, Union[str, list, tuple]] = None,
                   defaults: dict[str, Any] = None,
                   **kwargs):
     """
@@ -167,26 +139,21 @@ def read_flatfile(filepath: str,
         renamed with the associated `col_mapping` value. **THE REPLACEMENT IS
         PERFORMED AS FIRST STEP SO ALL ARGUMENTS BELOW MUST WORK ON FLAT FILE
         COLUMN NAMES, NOT CSV "ORIGINAL" NAMES**
-    :param dtype: dict of *flat file column names* mapped
-        to the data type ('int', 'bool', 'float', 'str'). For date-times, use
-        `parse_dates`. None means: no dtype, i.e. pandas will try to infer the
-        data type of each column (as reference, a three rows column with values
-        ['3.5', '', '1'] is read as [3.5, nan, 1] with data type: float). Columns
-        of type 'int' and 'bool' do not support NA/missing data and must have a
-        default in `defaults`, otherwise NA data will be replaced with 0 for
-        int and False for bool
-    :param parse_dates: list of flat file column names denoting date time
-        columns
-    :param categories: a dict of flat file column names mapped to a list of
-        categories, i.e. the limited number of possible values that the column
-        can have.
-        Categorical data is mostly set on string columns with relatively few
-        values in order to save memory. Dataframe values not in the provided
-        categories are set to NA (missing) and replaced by the value found in
-        `defaults`, if given. Note: Artifacts might happen if the categories are
-        not of the same type: e.g., the data  [1, 'X'] with categories [1, 'X']
-        is converted to [NaN, 'X'], as if 1 was missing (NaN is just how pandas
-        visualizes NA/missing data)
+    :param dtype: dict of *flat file column names* mapped to the data type:
+        either 'int', 'bool', 'float', 'str', 'datetime', 'category'` or list/tuple.
+        'category', list or tuples are for data that can take only a limited amount
+        of possible values (data type "categorical"), and should be used mostly
+        with string data as it might save a lot of memory. "category" lets pandas
+        infer the number of categories from the data, whereas a list/tuple defines
+        the possible categories, if known beforehand: in this case data values not
+        in the given categories are converted to missing values (NA) and then
+        replaced by a default, if set in `defaults` for the given column.
+        Columns of type 'int' and 'bool' do not support NA data and must have a
+        default in `defaults`, otherwise NA data will be replaced with 0 for int
+        and False for bool.
+        `dtype`=None means that pandas will try to infer the data type of each
+        column (see `read_csv` documentation and `na_values` to see what is
+        considered NA).
     :param usecols: flat file column names to load, as list or callable accepting
         a flat file column name and returning True/False
     :param defaults: a dict of flat file column names mapped to the default
@@ -202,48 +169,47 @@ def read_flatfile(filepath: str,
 
     :return: pandas DataFrame representing a Flat file
     """
-    params = _infer_csv_sep(filepath, sep, col_mapping is not None)
+    kwargs |= _infer_csv_sep(filepath, sep, col_mapping is not None)
 
     if col_mapping is not None:
+        kwargs['header'] = 0
         # replace names with the new names of the mapping (if found) or leave
         # the name as it is if a mapping is not found:
-        params['names'] = [col_mapping.get(n, n) for n in params['names']]
+        kwargs['names'] = [col_mapping.get(n, n) for n in kwargs['names']]
+
+    # initialize the defaults dict if None and needs to be populated:
+    if defaults is None:
+        defaults = {}
 
     # Check which column is an int or bool, as those columns do not support NA
     # (e.g. a empty CSV cell for a boolean column raises)
-    dtype_ib = {}
-    if dtype:
-        for col, dtyp in dtype.items():
-            if dtyp in ('bool', 'int'):
-                # Move the dtype to dtypes2:
-                dtype_ib[col] = dtyp
-                # Replace dtype with float in order to safely read NA:
-                dtype[col] = 'float'
-                # initialize the defaults dict if None and needs to be populated:
-                if defaults is None:
-                    defaults = {}
-                # Check that a default is set and is of type float, otherwise pandas
-                # might perform useless data conversions to object. As such, when a
-                # default is unset provide 0, as eventually float(0) = float(False)
-                defaults[col] = float(defaults.get(col, 0))
+    dtype_, dtype_ib, datetime_cols = {}, {}, []
+    for col, dtyp in dtype.items():
+        if dtyp in ('bool', 'int'):
+            # Move the dtype to dtype_ib:
+            dtype_ib[col] = dtyp
+            # Replace dtype with float in order to safely read NA:
+            dtype_[col] = 'float'
+            # Check that a default is set and is of type float, otherwise pandas
+            # might perform useless data conversions to object. As such, when a
+            # default is unset, provide 0, as eventually float(0) = float(False)
+            defaults[col] = float(defaults.get(col, 0))
+        elif dtyp == 'datetime':
+            datetime_cols.append(col)
+        elif isinstance(dtyp, (list, tuple)):
+            dtype_[col] = pd.CategoricalDtype(categories)  # noqa
+        else:
+            dtype_[col] = dtyp
 
-    for col, categories in categories:
-        dtype[col] = pd.CategoricalDtype(categories)  # noqa
+    dfr = pd.read_csv(filepath, dtype=dtype_, parse_dates=datetime_cols or None,
+                      usecols=usecols, **kwargs)
 
-    dfr = pd.read_csv(filepath, dtype=dtype, parse_dates=parse_dates,
-                      usecols=usecols, **{**kwargs, **params})
-
-    colnames = set(dfr.columns) if defaults or dtype_ib else set()
-
-    # Replace missing data with provided defaults:
     for col, def_val in defaults.items():
-        if col in colnames:
-            dfr.loc[dfr[col].isna(), col] = def_val
-
-    # Cast back int and bool cols (now it's safe, they do not have NA)
-    for col, dtyp in dtype_ib.items():
-        if col in colnames:
-            dfr[col] = dfr[col].astype(dtyp)
+        if col not in dfr.columns:
+            continue
+        dfr.loc[dfr[col].isna(), col] = def_val
+        if col in dtype_ib:
+            dfr[col] = dfr[col].astype(dtype_ib[col])
 
     return dfr
 
@@ -294,14 +260,14 @@ def _infer_csv_sep(filepath: str, sep: Union[str, None] = None,
     return params
 
 
-def read_userdefined_flatfile(filepath):
-    dtype, parse_dates, col_mapping = _get_db_mappings()
-    return read_flatfile(filepath, dtype=dtype, parse_dates=parse_dates,
-                         col_mapping=col_mapping)
-    # FIXME: todo : check IDs!!!
-    if 'event_id' not in dfr:
-        if 'event_time' not in dfr:
-            raise ValueError('event_id')
+# def read_userdefined_flatfile(filepath):
+#     dtype, parse_dates, col_mapping = _get_db_mappings()
+#     return read_flatfile(filepath, dtype=dtype, parse_dates=parse_dates,
+#                          col_mapping=col_mapping)
+#     # FIXME: todo : check IDs!!!
+#     if 'event_id' not in dfr:
+#         if 'event_time' not in dfr:
+#             raise ValueError('event_id')
 
 
 def esm_usecols(colname):
@@ -351,15 +317,27 @@ esm_col_mapping = {
 }
 
 esm_dtypes = {
-    'event_id': 'category'
+    'event_id': 'category',
+    'event_country': 'category',
+    'event_time': 'datetime',
+    'network_code': 'category',
+    'station_code': 'category',
+    'location_code': 'category',
+    'station_country': 'category',
+    'housing_code': 'category',
+    'ec8_code': 'category'
 }
 
 
 def read_esm(filepath):
+    dtype, defaults= _get_yaml_dtype_defaults()
+    dtype |= esm_dtypes
+
+    # dfr = check_flatfile(filepath, col_mapping=esm_col_mapping, sep=';',
+    #                     dtype=dtype, defaults=defaults, usecols=esm_usecols)
 
     dfr = read_flatfile(filepath, col_mapping=esm_col_mapping, sep=';',
-                        parse_dates=['event_time'],
-                        usecols=esm_usecols)
+                        dtype=dtype, defaults=defaults, usecols=esm_usecols)
 
     # Post process:
 
@@ -370,6 +348,7 @@ def read_esm(filepath):
     # convert to categorical (save space):
     dfr['magnitude_type'] = dfr['magnitude_type'].astype(
         pd.CategoricalDtype(mag_types))
+
     # Set Mw where magnitude is na:
     mag_na = pd.isna(dfr['magnitude'])
     new_mag = dfr.pop('Mw')
@@ -378,12 +357,12 @@ def read_esm(filepath):
     mag_na = pd.isna(dfr['magnitude'])
     new_mag = dfr.pop('Ms')
     dfr.loc[mag_na, 'magnitude'] = new_mag
-    dfr.loc[mag_na, 'magnitude'] = 'Ms'
+    dfr.loc[mag_na, 'magnitude_type'] = 'Ms'
     # Set Ml where magnitude is na:
     mag_na = pd.isna(dfr['magnitude'])
     new_mag = dfr.pop('ML')
     dfr.loc[mag_na, 'magnitude'] = new_mag
-    dfr.loc[mag_na, 'magnitude'] = 'Ml'
+    dfr.loc[mag_na, 'magnitude_type'] = 'ML'
 
     # Use focal mechanism for those cases where All strike dip rake is NaN
     # (see smtk.sm_table.update_rupture_context)
@@ -479,7 +458,7 @@ def read_esm(filepath):
 def test_esm_read():
     dfr = read_esm('/Users/rizac/work/gfz/projects/sources/python/egsim/egsim/'
                    'management/commands/data/raw_flatfiles/ESM_flatfile_2018_SA.csv.zip')
-    params = read_param_props('/Users/rizac/work/gfz/projects/sources/python'
+    params = read_model_params('/Users/rizac/work/gfz/projects/sources/python'
                               '/egsim/egsim/core/modelparams.yaml')
 
     rename = {v['flatfile_name']: k for k, v in params.items() if v.get('flatfile_name', None)}
@@ -487,13 +466,71 @@ def test_esm_read():
     # dfr2 = dfr.reanme(columns=rename)
     extra_cols = set(dfr.columns) - set(rename)
     asd = 9
+    dfr2 = dfr.copy()
     catagorical_cols = []
     for _ in dfr.columns:
-        if len(pd.unique(dfr[_])) < len(dfr) /5:
+        if isinstance(dfr[_].dtype, pd.CategoricalDtype):
+            continue
+        ratio = 0.1
+        if dfr[_].dtype == 'object':
+            ratio = 0.5
+        if len(pd.unique(dfr[_])) < len(dfr) * ratio:
             catagorical_cols.append(_)
+            dfr2[_] = dfr2[_].astype('category')
     asd = 9
 
 
-def test_gain():
-    N = 1000000
-    dfr = pd.DataFrame(N)
+def _get_yaml_dtype_defaults() -> tuple[dict[str, str], dict[str, str]]:
+    """
+    Return the tuple:
+    ```
+    dtype, parse_dates, col_mapping
+    ```
+    i.e. the arguments needed by
+    `read_flatfile`. The data is read from the eGSIM database
+    """
+    dtype, defaults = {}, {}
+    for (key, props) in read_model_params().items():
+        ffname = props.get(Prop.ffname, None)
+        if not ffname:
+            continue
+        dtype[ffname] = props.get(Prop.dtype, default_dtype)
+        if Prop.default in props:
+            defaults[ffname] = props[Prop.default]
+
+        # col_mappings[ffname] = key.split('.', 1)[1]
+
+    return dtype, defaults
+
+
+def check_flatfile(filepath: str,
+                   sep: str = None,
+                   col_mapping: dict[str, str] = None,
+                   usecols: Union[list[str], Callable[[str], bool]] = None,
+                   dtype: dict[str, Union[str, list, tuple]] = None,
+                   defaults: dict[str, Any] = None,
+                   **kwargs):
+    """
+    """
+    numeric_cols = {
+        c: v
+        for c, v in dtype.items() if v in ('datetime', 'float', 'int', 'bool')
+    }
+    dtyp_ = {c: dtype[c] for c in dtype if c not in numeric_cols}
+    dfr = read_flatfile(filepath, sep, col_mapping, usecols, dtyp_, defaults)
+    errors = defaultdict(list)  # dataframe index -> list of columns with errors
+
+    for col, dtyp in numeric_cols.items():
+        if col not in dfr.columns:
+            continue
+        na = dfr[col].isna()
+        if dtyp == 'datetime':
+            val = pd.to_datetime(dfr[col], errors='coerce')
+        else:
+            val = pd.to_numeric(dfr[col], errors='coerce')
+
+        idxs = dfr.index[pd.isna(val) & (~na)]
+        for idx in idxs:
+            errors[idx].append(col)
+
+    return errors
