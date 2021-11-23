@@ -6,42 +6,19 @@ import numpy as np
 from smtk.sm_utils import MECHANISM_TYPE, DIP_TYPE, SCALAR_XY
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-from egsim.management.commands import EgsimBaseCommand
 from egsim.core.flatfile import get_db_flatfile_dtype_defaults, read_flatfile
-
-
-FLATFILES_SRC_DIR = 'predefined_flatfiles'
 
 
 class FlatfileParser:
     """Base class for Flatfile parser (CSV -> HDF conversion)"""
 
-    # Source file name (usually a CSV file in FLATFILES_SRC_DIR)
-    SRC_FILE_NAME: str = ''
-
-    # Fields that will be stored on the DB as flat file metadata:
-
-    # Flat file name to be used in users requests and as destination file name
-    # (HDF extension excluded):  provide alphanumeric characters only, no spaces
-    NAME: str = ''
+    # Flat file name to be used in users requests and as file name (HDF extension
+    # excluded): provide alphanumeric characters only or underscore "_"
+    NAME: str
     # Flat file name to be used for visualization (any character allowed)
-    DESCRIPTION: str = ''
-    # url for references, description, citation, and so on
-    URL: str = ''
-
-    @classmethod
-    def get_dataframe(cls):
-        attr = 'SRC_FILE_NAME'
-        src_file_name = getattr(cls, attr, '')
-        if src_file_name:
-            root = EgsimBaseCommand.data_dir(FLATFILES_SRC_DIR)
-            src_file = join(root, src_file_name)
-            if not isfile(src_file):
-                raise ValueError(f'{cls.__name__}.{attr} "{src_file_name}" '
-                                 f'does not exist in directory "{root}"')
-            return cls.parse(src_file)
-        else:
-            raise ValueError(f'`{cls.__name__}.{attr}` undefined or empty')
+    DESCRIPTION: str
+    # url for references, detailed description, citation(s), and so on
+    URL: str
 
     @classmethod
     def parse(cls, filepath) -> pd.DataFrame:
@@ -51,7 +28,6 @@ class FlatfileParser:
 class EsmFlatfileParser(FlatfileParser):
     """ESM flatfile parser"""
 
-    SRC_FILE_NAME = 'ESM_flatfile_2018_SA.csv.zip'
     NAME = 'esm_2018'
     DESCRIPTION = 'European Strong Motion Flatfile (2018)'
     URL = 'https://esm-db.eu/#/products/flat_file'

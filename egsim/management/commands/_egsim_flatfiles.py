@@ -3,15 +3,15 @@ Created on 11 Apr 2019
 
 @author: riccardo
 """
-import inspect
 import os
-from os.path import join, isdir, abspath, dirname
+from os.path import join, isdir, abspath, dirname, isfile
 
 from django.core.management.base import CommandError
 from django.conf import settings
 
 from egsim import models
-from egsim.management.commands import EgsimBaseCommand, _flatfile_parsers
+from egsim.management.commands import EgsimBaseCommand
+from egsim.management.flatfile_parsers import EsmFlatfileParser
 
 
 class Command(EgsimBaseCommand):
@@ -19,15 +19,34 @@ class Command(EgsimBaseCommand):
     files suitable for the eGSIM API
     """
 
-    dest_dir_name = 'predefined_flatfiles'  # where flatfiles (HDF) will be stored
+    # dict of source file names (CSV , zip) and relative :class:`FlatfileParser`
+    # (see :meth:`src_dir` for details)
+    PARSERS = {
+        "ESM_flatfile_2018_SA.csv.zip": EsmFlatfileParser
+    }
+
+    # Source and destination directory name (see `src_dir` and `dest_dir` for details)
+    dir_name = 'predefined_flatfiles'
+
+    @classmethod
+    def src_dir(cls):
+        """Return the source directory by joining the commands `data` directory
+        (:meth:`EgsimBasecommand.data_dir`) and  `dir_name`. All keys of PARSERS
+        must be files in the returned directory
+        """
+        return cls.data_dir(cls.dir_name)
 
     @classmethod
     def dest_dir(cls):
-        return abspath(join(settings.MEDIA_ROOT, cls.dest_dir_name))
+        """Return the source directory by joining the [media] directory configured
+         in the current settings and  `dir_name`. All flatfiles in HDF format will be
+         stored in the in the returned directory
+        """
+        return abspath(join(settings.MEDIA_ROOT, cls.dir_name))
 
     help = ('Convert predefined flatfile(s) inside the "commands/data" directory '
             'into HDF tables for usage within eGSIM. The tables will be stored in the '
-            f'directory "[media]/{dest_dir_name}", where [media] is the media '
+            f'directory "[media]/{dir_name}", where [media] is the media '
             'directory configured in the current Django settings')
 
     def handle(self, *args, **options):
@@ -37,7 +56,7 @@ class Command(EgsimBaseCommand):
                        'metadata to DB:')
         self.empty_db_table(models.Flatfile)
 
-        destdir = abspath(join(settings.MEDIA_ROOT, self.dest_dir_name))
+        destdir = self.dest_dir()
         if not isdir(destdir):
             if isdir(dirname(destdir)):
                 self.printinfo(f'Creating directory {destdir}')
@@ -50,11 +69,17 @@ class Command(EgsimBaseCommand):
             raise CommandError(f"'{destdir}' is not empty: remove all its content "
                                f"manually and restart the process")
 
-        parsers = find_subclasses(_flatfile_parsers, _flatfile_parsers.FlatfileParser)
+        parsers = {}
+        for filename, parser in self.PARSERS.items():
+            fullpath = join(self.src_dir(), filename)
+            if not isfile(fullpath):
+                raise CommandError(f'File does not exist: "{fullpath}".\nPlease '
+                                   f'check `{__name__}.{__class__.__name__}.PARSERS`')
+            parsers[fullpath] = parser
 
         numfiles = 0
-        for parser in parsers:
-            dfr = parser.get_dataframe()
+        for filepath, parser in parsers.items():
+            dfr = parser.parse(filepath)
             destfile = join(destdir, parser.NAME + '.hdf')
             self.printinfo(f' - Saving flatfile to "{destfile}"')
             dfr.to_hdf(destfile, key=parser.NAME, format='table', mode='a')
@@ -65,11 +90,3 @@ class Command(EgsimBaseCommand):
                                            path=destfile)
 
         self.printsuccess(f'{numfiles} models created in "{destdir}"')
-
-
-def find_subclasses(module, base_class, include_base=False):
-    return [
-        cls for name, cls in inspect.getmembers(module)
-        if inspect.isclass(cls) and issubclass(cls, base_class) and
-               (include_base or cls != base_class)
-    ]

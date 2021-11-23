@@ -7,7 +7,6 @@ from egsim.core.modelparams import read_model_params, Prop, default_dtype
 from egsim.models import FlatfileField
 
 
-
 def read_flatfile(filepath: str,
                   sep: str = None,
                   col_mapping: dict[str, str] = None,
