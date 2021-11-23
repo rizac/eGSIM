@@ -127,6 +127,14 @@ class FlatfileField(_UniqueNameModel):
                (self.name, self.oq_name, categ, self.gsims.count())  # noqa
 
 
+class Flatfile(_UniqueNameModel):
+
+    path = TextField(unique=True, null=False)
+    # src_path = TextField(unique=True, null=False)
+    url = TextField(null=False, default='')
+    description = TextField(null=False, default='')
+
+
 class Imt(_UniqueNameModel):
     """The :mod:`intensity measure types <openquake.hazardlib.imt>` that
     OpenQuake's GSIMs can calculate and that are supported in eGSIM

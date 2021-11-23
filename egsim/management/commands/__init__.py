@@ -2,7 +2,7 @@ import os
 
 from argparse import RawTextHelpFormatter, SUPPRESS
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 
 class EgsimBaseCommand(BaseCommand):  # noqa
@@ -17,6 +17,23 @@ class EgsimBaseCommand(BaseCommand):  # noqa
         `os.path.join(*paths)` prefixed with the "./data" directory path
         """
         return os.path.join(os.path.dirname(__file__), 'data', *paths)
+
+    @staticmethod
+    def empty_db_table(*models):
+        """Delete all rows of the given database table(s).
+
+        :param models: the Django model(s) representing the db tables to empty
+
+        :raise: CommandError if any model have some row
+        """
+        items2delete = sum(_.objects.count() for _ in models)  # noqa
+
+        if items2delete:
+            for model in models:
+                model.objects.all().delete()  # noqa
+                if model.objects.count() > 0:  # noqa
+                    raise CommandError('Could not delete all rows in table "%s"' %
+                                       str(model))
 
     def printinfo(self, msg):
         """Shortcut for `self.stdout.write(msg)`"""

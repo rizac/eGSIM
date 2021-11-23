@@ -23,8 +23,11 @@ from egsim.management.commands import EgsimBaseCommand
 
 # check JSON1 extension (it should be enabled in all newest OSs and Python versions):
 from django.conf import settings
+
+
 if any(_['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.values()):
-    # sqlite is used, check JSON1 extension:
+    # sqlite is used, check JSON1 extension. Note that Django does also this
+    # (JSONField) but for safety we perform the test again
     try:
         import sqlite3
         conn = sqlite3.connect(':memory:')
@@ -41,7 +44,7 @@ SUBCOMMANDS = [load_command_class(APPNAME, _) for _ in
                # ====================================================
                # IMPORTANT: TO AD NEW COMMANDS UPDATE THE LIST BELOW:
                # ====================================================
-               ['_egsim_oq', '_egsim_reg']]
+               ['_egsim_oq', '_egsim_reg', '_egsim_flatfiles']]
 
 
 class Command(EgsimBaseCommand):

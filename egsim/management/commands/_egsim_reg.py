@@ -40,17 +40,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         self.printinfo('Populating DB with Regionalization data:')
-
-        models2empty = [models.GsimRegion]
-        items2delete = sum(_.objects.count() for _ in models2empty)  # noqa
-
-        if items2delete:
-            for model in models2empty:
-                model.objects.all().delete()  # noqa
-                if model.object.count() > 0:  # noqa
-                    raise CommandError('Could not delete all data in table %s' %
-                                       str(model))
-
+        self.empty_db_table(models.GsimRegion)
         datadir = self.data_dir('regionalization_files')
         done = set()
         skipped = defaultdict(list)  # regionalization name -> list of warnings
