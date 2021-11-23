@@ -30,12 +30,12 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py egsim_ini
 To list all commands:
 
 ```buildoutcfg
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; `python manage.py --help`. 
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; `python manage.py --help
 ```
 
 To test the commands:
 ```buildoutcfg
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; pytest tests/test_commands.py`
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; pytest tests/test_commands.py
 ```
 
 (**NOTE**: `DJANGO_SETTINGS_MODULE` **value must be changed in production!**)
@@ -84,7 +84,7 @@ That said, in order to add a new command:
    the directory "management/commands/data/". E.g., if your data files are 
    inside "management/commands/data/abc", your code would read:
    ```python
-   def handle(self, *args, **klwargs):
+   def handle(self, *args, **kwargs):
         data_dir = self.data_dir('abc')
    ```
    (see `EgsimBaseCommand.data_dir` for details). 
