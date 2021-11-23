@@ -250,7 +250,7 @@ def _infer_csv_sep(filepath: str, sep: Union[str, None] = None,
             else:
                 raise ValueError('CSV separator could not be inferred. Please '
                                  're-edit and provide either comma (preferred '
-                                 'choice) semicolon or whitespaces')
+                                 'choice) semicolon or \\s+ (whitespaces)')
 
     if return_col_names:
         if names is None:
@@ -456,8 +456,8 @@ def read_esm(filepath):
 
 
 def test_esm_read():
-    dfr = read_esm('/Users/rizac/work/gfz/projects/sources/python/egsim/egsim/'
-                   'management/commands/data/raw_flatfiles/ESM_flatfile_2018_SA.csv.zip')
+    dfr = read_esm(
+        '/egsim/management/commands/data/predefined_flatfiles/ESM_flatfile_2018_SA.csv.zip')
     params = read_model_params('/Users/rizac/work/gfz/projects/sources/python'
                               '/egsim/egsim/core/modelparams.yaml')
 

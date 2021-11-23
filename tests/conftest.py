@@ -7,7 +7,9 @@ Created on 3 May 2018
 """
 
 import os
+import shutil
 from io import StringIO, BytesIO
+from os.path import isdir
 
 import pytest
 from pytest_django import fixtures as pytest_django_fixtures
@@ -180,6 +182,13 @@ def testdata(request):  # pylint: disable=unused-argument
 @pytest.fixture(scope='session')
 def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
+        # delete flatfile subdirectory (no, we do not prompt the user too much
+        # work and it's safe he/she deletes the dir in case)
+        from egsim.management.commands._egsim_flatfiles import Command as FlatfileCommand
+        ff_path = FlatfileCommand.dest_dir()
+        if isdir(ff_path):
+            shutil.rmtree(ff_path)
+        # run command:
         call_command('egsim_init', interactive=False)  # '--noinput')
 
 

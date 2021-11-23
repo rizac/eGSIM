@@ -7,8 +7,11 @@ Created on 6 Apr 2019
 """
 import os
 from json import JSONEncoder
+from os.path import join
 
 from stat import S_IWUSR, S_IWGRP, S_IWOTH
+import pandas as pd
+
 import pytest
 
 from egsim import models
@@ -21,22 +24,28 @@ except ImportError:
 
 from django.core.management.base import CommandError
 from django.core.management import call_command
+from egsim.management.commands._egsim_flatfiles import Command as FlatfileCommand
 from django.db import IntegrityError
 
 
 @pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
-def test_initdb(capfd):
+def test_initdb(capfd, tmpdir):
     """Test initdb command."""
     # @pytest.mark.django_db makes already all operations we need. We anyway check
     # that all __str__ method of our classes work. The __str__ methods are shown in
     # the admin panel but not used elsewhere
+
+    # load ESM flatfile to see it's there:
+    dfr = pd.read_hdf(join(FlatfileCommand.dest_dir(), 'esm_2018.hdf'))
+    assert len(dfr.columns) > 90
+    assert len(dfr) > 23000
 
     for _name in dir(models):
         _ = getattr(models, _name)
         try:
             is_class = issubclass(_, models.Model) and not _._meta.abstract and \
                 _ not in (models.Model, models._UniqueNameModel)
-        except:
+        except:  # noqa
             is_class = False
         if is_class:
             print()
