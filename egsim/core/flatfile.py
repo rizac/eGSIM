@@ -147,9 +147,8 @@ def _infer_csv_sep(filepath: str, return_col_names=False) -> dict[str, Any]:
             params['sep'] = r'\s+'
             names = space_cols.tolist()
         else:
-            raise ValueError('CSV separator could not be inferred. Please '
-                             're-edit and provide either comma (preferred '
-                             'choice) semicolon or \\s+ (whitespaces)')
+            raise ValueError('CSV separator could not be inferred by trying '
+                             '",", ";" and "\\s+" (whitespaces)')
 
     if return_col_names:
         params['names'] = names
