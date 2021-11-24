@@ -28,8 +28,8 @@ class FlatfileParser:
 class EsmFlatfileParser(FlatfileParser):
     """ESM flatfile parser"""
 
-    NAME = 'esm_2018'
-    DESCRIPTION = 'European Strong Motion Flatfile (2018)'
+    NAME = 'esm2018'
+    DESCRIPTION = 'European Strong Motion Flat file (2018)'
     URL = 'https://esm-db.eu/#/products/flat_file'
 
     @classmethod
