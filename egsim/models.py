@@ -119,6 +119,26 @@ class FlatfileField(_UniqueNameModel):
         ]
         indexes = [Index(fields=['name']), ]
 
+    @classmethod
+    def get_dtype_and_defaults(cls) -> tuple[dict[str, str], dict[str, str]]:
+        """
+        Return the tuple:
+        ```
+        dtype: dict, defaults: dict
+        ```
+        where each dict maps flatfile field names to its type ('float', 'int',
+        'datetime') and its default. If no dtype is provided, it defaults to
+        'float'. If no default is given, it is not inserted in `defaults`
+        """
+        dtype_str, def_str, default_dtype = 'dtype', 'default', 'float'
+        dtype, defaults = {}, {}
+        for name, props in cls.objects.filter().values_list('name', 'properties'):
+            dtype[name] = props.get(dtype_str, default_dtype)
+            if def_str in props:
+                defaults[name] = props[def_str]
+
+        return dtype, defaults
+
     def __str__(self):
         categ = 'N/A' if self.category is None else \
             self.get_category_display()  # noqa

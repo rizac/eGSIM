@@ -4,7 +4,7 @@ from typing import Union, Any, Callable
 import pandas as pd
 
 from egsim.core.modelparams import read_model_params, Prop, default_dtype
-from egsim.models import FlatfileField
+# from egsim.models import FlatfileField
 
 
 def read_flatfile(filepath: str,
@@ -159,25 +159,6 @@ def _infer_csv_sep(filepath: str, return_col_names=False) -> dict[str, Any]:
 def _read_csv_header(filepath, sep: str) -> pd.Index:
     return pd.read_csv(filepath, nrows=0, sep=sep).columns
 
-
-def get_db_flatfile_dtype_defaults() -> tuple[dict[str, str], dict[str, str]]:
-    """
-    Return the tuple:
-    ```
-    dtype, parse_dates, col_mapping
-    ```
-    i.e. the arguments needed by
-    `read_flatfile`. The data is read from the eGSIM database
-    """
-
-    dtype, defaults = {}, {}
-    for (ffname, props) in FlatfileField.objects.filter().values_list('name',
-                                                                      'properties'):
-        dtype[ffname] = props.get(Prop.dtype, default_dtype)
-        if Prop.default in props:
-            defaults[ffname] = props[Prop.default]
-
-    return dtype, defaults
 
 # def read_userdefined_flatfile(filepath):
 #     dtype, parse_dates, col_mapping = _get_db_mappings()
