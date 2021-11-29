@@ -36,9 +36,9 @@ def test_initdb(capfd, tmpdir):
     # the admin panel but not used elsewhere
 
     # load ESM flatfile to see it's there:
-    dfr = pd.read_hdf(join(FlatfileCommand.dest_dir(), 'esm_2018.hdf'))
-    assert len(dfr.columns) > 90
-    assert len(dfr) > 23000
+    dfr = pd.read_hdf(join(FlatfileCommand.dest_dir(), 'esm2018.hdf'))
+    assert len(dfr.columns) == 83
+    assert len(dfr) == 23014
 
     for _name in dir(models):
         _ = getattr(models, _name)

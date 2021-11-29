@@ -22,6 +22,7 @@ from openquake.hazardlib import imt
 from egsim.core.modelparams import (read_model_params,
                                     DEFAULT_FILE_PATH as model_params_filepath)
 from egsim.management.commands import EgsimBaseCommand
+from egsim.core.residuals import _SUPPORTED_IMTS  # noqa
 import egsim.models as models
 
 
@@ -83,9 +84,6 @@ class Command(EgsimBaseCommand):
                 gsim_ = 'Gsim' if len(gsims) == 1 else 'Gsims'
                 self.printwarn(" - %s required by %d skipped %s" %
                                (_param2str(param), len(gsims), gsim_))
-
-
-_SUPPORTED_IMTS = (imt.PGA, imt.PGV, imt.SA, imt.PGD, imt.IA, imt.CAV)
 
 
 def populate_imts() -> dict[type(_SUPPORTED_IMTS[0]), models.Imt]:

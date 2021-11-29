@@ -2,6 +2,7 @@ from os.path import join, isfile
 
 import pandas as pd
 import numpy as np
+from openquake.hazardlib import imt
 
 from smtk.sm_utils import MECHANISM_TYPE, DIP_TYPE, SCALAR_XY
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
@@ -35,14 +36,16 @@ class EsmFlatfileParser(FlatfileParser):
     @classmethod
     def esm_usecols(cls, colname):
         """Function used to define which columns should be loaded"""
-        if colname.endswith('_ref'):
+        if colname.endswith('_ref') or colname.endswith("_housner"):
             return False
-        if colname.startswith('rotD'):  # FIXME: check
-            return False
+        if colname.startswith('rotD'):
+            return colname in cls.esm_col_mapping
         if colname in ("instrument_code", "U_channel_code",
                        "V_channel_code", "W_channel_code", "ec8_code_method",
                        "ec8_code_ref", "U_azimuth_deg", "V_azimuth_deg",
-                       "EMEC_Mw_type", "installation_code"):
+                       "EMEC_Mw_type", "installation_code", "proximity_code",
+                       "late_triggered_flag_01", "W_hp", "W_lp",
+                       "vs30_calc_method"):
             return False
         if colname.endswith('_id'):
             return colname == "event_id"
@@ -73,10 +76,17 @@ class EsmFlatfileParser(FlatfileParser):
         'es_z_top': 'depth_top_of_rupture',
         'es_length': 'rupture_length',
         'es_width': 'rupture_width',
-        'U_hp': 'hp_h1',
-        'V_hp': 'hp_h2',
-        'U_lp': 'lp_h1',
-        'V_lp': 'lp_h2'
+        'U_hp': 'highpass_h1',
+        'V_hp': 'highpass_h2',
+        'U_lp': 'lowpass_h1',
+        'V_lp': 'lowpass_h2',
+        # IMTS:
+        'rotD50_pga': 'PGA',
+        'rotD50_pgv': 'PGV',
+        'rotD50_pgd': 'PGD',
+        'rotD50_CAV': 'CAV',
+        'rotD50_ia': 'IA',
+        'rotD50_T90': 'duration_5_95_components',  # FIXME: IMT???
     }
 
     esm_dtypes = {
@@ -133,7 +143,7 @@ class EsmFlatfileParser(FlatfileParser):
         # FIXME: before we replaced if ANY was NaN, but it makes no sense to me
         # (why replacing  dip, strike and rake if e.g. only the latter is NaN?)
         sofs = dfr.pop('style_of_faulting')
-        is_na = dfr[['strike', 'dip', 'rake']].isna().all(axis=1)
+        is_na = dfr[['strike', 'dip', 'rake']].isna().any(axis=1)
         if is_na.any():
             for sof in pd.unique(sofs):
                 rake = MECHANISM_TYPE.get(sof, 0.0)
@@ -178,25 +188,21 @@ class EsmFlatfileParser(FlatfileParser):
         # Note: ESM not reporting correctly some values: PGA, PGV, PGD and SA
         # should always be positive (absolute value)
 
-        # U_pga    V_pga    W_pga are the three components of pga
-        # IT IS SUPPOSED TO BE ALREADY IN CM/S/S
-        imt_components = dfr.pop('U_pga'), dfr.pop('V_pga'), dfr.pop('W_pga')
-        dfr['pga'] = geom_mean(imt_components[0], imt_components[1])
-
-        imt_components = dfr.pop('U_pgv'), dfr.pop('V_pgv'), dfr.pop('W_pgv')
-        dfr['pgv'] = geom_mean(imt_components[0], imt_components[1])
-
-        imt_components = dfr.pop('U_pgd'), dfr.pop('V_pgd'), dfr.pop('W_pgd')
-        dfr['pgd'] = geom_mean(imt_components[0], imt_components[1])
-
-        imt_components = dfr.pop('U_T90'), dfr.pop('V_T90'), dfr.pop('W_T90')
-        dfr['duration_5_95_components'] = geom_mean(imt_components[0], imt_components[1])
-
-        imt_components = dfr.pop('U_CAV'), dfr.pop('V_CAV'), dfr.pop('W_CAV')
-        dfr['cav'] = geom_mean(imt_components[0], imt_components[1])
-
-        imt_components = dfr.pop('U_ia'), dfr.pop('V_ia'), dfr.pop('W_ia')
-        dfr['arias_intensity'] = geom_mean(imt_components[0], imt_components[1])
+        # Scalar IMTs should be there ('pga' from "rot50D_pga", 'pgv' from
+        # "rot50D_pgv" and so on, see `cls.esm_col_mapping`): if not, compute
+        # the geometric mean of `U_*` and `V_*` columns (e.g. 'U_pga', 'V_pga')
+        # FIXME: IT IS SUPPOSED TO BE ALREADY IN CM/S/S
+        for col in (_ for _ in cls.esm_col_mapping if _.startswith('rotD50_')):
+            esm_imt_name = col.split('_', 1)[-1]
+            imt_components = dfr.pop('U_' + esm_imt_name), \
+                dfr.pop('V_' + esm_imt_name), dfr.pop('W_' + esm_imt_name)
+            try:
+                imt_name = imt.from_string(cls.esm_col_mapping[col]).__class__.__name__
+            except Exception:
+                raise ValueError('%s.esm_col_mapping["%s"]="%s" is not a valid IMT' %
+                                 (cls.__name__, col, cls.esm_col_mapping[col]))
+            if imt_name not in dfr.columns:
+                dfr[imt_name] = geom_mean(imt_components[0], imt_components[1])
 
         # SA
         sa_suffixes = ('_T0_010', '_T0_025', '_T0_040', '_T0_050',
@@ -214,6 +220,6 @@ class EsmFlatfileParser(FlatfileParser):
                 dfr.pop('U' + sa_sfx), dfr.pop('V' + sa_sfx), dfr.pop('W' + sa_sfx)
             period = sa_sfx[2:].replace('_', '.')
             float(period)  # just a check
-            dfr['sa(%s)' % period] = geom_mean(imt_components[0], imt_components[1])
+            dfr['SA(%s)' % period] = geom_mean(imt_components[0], imt_components[1])
 
         return dfr

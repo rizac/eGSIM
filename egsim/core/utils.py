@@ -19,7 +19,7 @@ from django.conf import settings
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.const import TRT
-from smtk.sm_table import get_dbnames, GMTableDescription, records_where
+# from smtk.sm_table import get_dbnames, GMTableDescription, records_where
 from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
 from smtk.sm_utils import MECHANISM_TYPE
 

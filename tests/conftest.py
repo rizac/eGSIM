@@ -18,7 +18,7 @@ import numpy as np
 from django.core.management import call_command
 from django.test.client import Client
 
-from egsim.core.utils import yaml_load, get_dbnames
+# from egsim.core.utils import yaml_load, get_dbnames
 from egsim.core.utils import querystring
 import json
 from egsim.forms.fields import GmdbField
