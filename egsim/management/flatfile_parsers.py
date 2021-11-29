@@ -7,7 +7,8 @@ from openquake.hazardlib import imt
 from smtk.sm_utils import MECHANISM_TYPE, DIP_TYPE, SCALAR_XY
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-from egsim.core.flatfile import get_db_flatfile_dtype_defaults, read_flatfile
+from egsim.core.flatfile import read_flatfile
+from egsim.models import FlatfileField, Imt
 
 
 class FlatfileParser:
@@ -104,7 +105,7 @@ class EsmFlatfileParser(FlatfileParser):
     @classmethod
     def parse(cls, filepath: str) -> pd.DataFrame:
         """Parse ESM flatfile (CSV) and return the pandas DataFrame"""
-        dtype, defaults = get_db_flatfile_dtype_defaults()
+        dtype, defaults = FlatfileField.get_dtype_and_defaults()
         dtype |= cls.esm_dtypes
 
         # dfr = check_flatfile(filepath, col_mapping=esm_col_mapping, sep=';',
@@ -192,15 +193,16 @@ class EsmFlatfileParser(FlatfileParser):
         # "rot50D_pgv" and so on, see `cls.esm_col_mapping`): if not, compute
         # the geometric mean of `U_*` and `V_*` columns (e.g. 'U_pga', 'V_pga')
         # FIXME: IT IS SUPPOSED TO BE ALREADY IN CM/S/S
+
+        # _supported_imts = set(Imt.objects.values_list('name', flat=True))
         for col in (_ for _ in cls.esm_col_mapping if _.startswith('rotD50_')):
             esm_imt_name = col.split('_', 1)[-1]
             imt_components = dfr.pop('U_' + esm_imt_name), \
                 dfr.pop('V_' + esm_imt_name), dfr.pop('W_' + esm_imt_name)
-            try:
-                imt_name = imt.from_string(cls.esm_col_mapping[col]).__class__.__name__
-            except Exception:
-                raise ValueError('%s.esm_col_mapping["%s"]="%s" is not a valid IMT' %
-                                 (cls.__name__, col, cls.esm_col_mapping[col]))
+            imt_name = cls.esm_col_mapping[col]
+            # if imt_name not in _supported_imts:
+            #     raise ValueError('%s.esm_col_mapping["%s"]="%s" is not a valid IMT' %
+            #                      (cls.__name__, col, cls.esm_col_mapping[col]))
             if imt_name not in dfr.columns:
                 dfr[imt_name] = geom_mean(imt_components[0], imt_components[1])
 
