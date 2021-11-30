@@ -459,7 +459,7 @@ def test_esm_read():
     dfr = read_esm(
         '/egsim/management/commands/data/predefined_flatfiles/ESM_flatfile_2018_SA.csv.zip')
     params = read_model_params('/Users/rizac/work/gfz/projects/sources/python'
-                              '/egsim/egsim/core/modelparams.yaml')
+                              '/egsim/egsim/core/gsim_params.yaml')
 
     rename = {v['flatfile_name']: k for k, v in params.items() if v.get('flatfile_name', None)}
     unknown_cols = set(rename) - set(dfr.columns)

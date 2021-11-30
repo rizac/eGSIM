@@ -124,18 +124,18 @@ class FlatfileField(_UniqueNameModel):
         """
         Return the tuple:
         ```
-        dtype: dict, defaults: dict
+        (dtype: dict, defaults: dict)
         ```
         where each dict maps flatfile field names to its type ('float', 'int',
-        'datetime') and its default. If no dtype is provided, it defaults to
-        'float'. If no default is given, it is not inserted in `defaults`
+        'datetime') and its default. If no dtype is stored in the database, it
+        defaults to 'float'. If no default is given, it is not inserted in
+        `defaults`
         """
-        dtype_str, def_str, default_dtype = 'dtype', 'default', 'float'
         dtype, defaults = {}, {}
         for name, props in cls.objects.filter().values_list('name', 'properties'):
-            dtype[name] = props.get(dtype_str, default_dtype)
-            if def_str in props:
-                defaults[name] = props[def_str]
+            dtype[name] = props['dtype']
+            if 'default' in props:
+                defaults[name] = props['default']
 
         return dtype, defaults
 

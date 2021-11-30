@@ -19,8 +19,8 @@ from openquake.baselib.general import (DeprecationWarning as
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
-from egsim.core.modelparams import (read_model_params,
-                                    DEFAULT_FILE_PATH as model_params_filepath)
+from egsim.management.gsim_params import (read_gsim_params,
+                                          DEFAULT_FILE_PATH as model_params_filepath)
 from egsim.management.commands import EgsimBaseCommand
 from egsim.core.residuals import _SUPPORTED_IMTS  # noqa
 import egsim.models as models
@@ -45,9 +45,7 @@ class Command(EgsimBaseCommand):
         # populate db:
         self.printinfo('Populating DB with OpenQuake data:')
         imts = populate_imts()
-        # gsim_param_props_path = os.path.join(os.path.dirname(
-        #     os.path.dirname(os.path.dirname(__file__))), 'core', 'modelparams.yaml')
-        model_params = read_model_params()  # gsim_param_props_path)
+        model_params = read_gsim_params()
         _, missing_params, unused_params = populate_gsims(imts, model_params)
 
         _imtc = models.Imt.objects.count()  # noqa

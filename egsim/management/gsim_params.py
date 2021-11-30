@@ -1,39 +1,48 @@
-from datetime import datetime
+"""This module handles registered Gsim parameters, some of which correspond to
+a flatfile field. See the associated YAML file for details
+"""
+from datetime import date as py_date, datetime as py_datetime
 import os
 from enum import Enum
 from typing import Union, Any
 import yaml
 
 
-class Prop(str, Enum):
-    """Properties implemented in the YAML. NOTE: each item is also a `str`
-    (i.e., properties.ffname == "flatfile_name")
+class propname(str, Enum):  # noqa
+    """property names implemented in the YAML. NOTE: each item is also a `str`
+    (i.e., propname.ffname == "flatfile_name")
     """
     dtype = 'dtype'
     bounds = 'bounds'
     default = 'default'
-    choices = 'choices'
     help = 'help'
     ffname = 'flatfile_name'
 
 
-default_dtype = 'float'
+# Provide a class that is callable like Python builtin types for datetime objects:
+# `datetime(obj) -> python datetime`, where `obj` is a datetime, date or iso formatted
+# string. IMPORTANT: Any custom tye class like this one must have the name equals
+# one of the supported dtypes documented in the YAML (so, e.g., `class dtime` would be
+# wrong)
+class datetime:  # noqa
 
-dtype_cast_function = {
-    default_dtype: float,
-    # datetime: use ISO formatted strings (for JSON):
-    'datetime': lambda _: (_ if isinstance(_, datetime) else
-                           datetime.fromisoformat(_)).isoformat(),
-    'int': int,
-    'bool': bool,
-    'str': str,
-}
+    def __call__(self, obj):
+        if isinstance(obj, py_datetime):
+            return obj
+        if isinstance(obj, py_date):
+            return py_datetime(year=obj.year, month=obj.month, day=obj.day)
+        return py_datetime.fromisoformat(str(obj))
+
+
+# SUPPORTED DATA TYPES. Each element must be a callable class producing elements
+# of the desired data type. The first element must be considered the default dtye
+dtypes = [float, int, str, bool, datetime]
 
 
 DEFAULT_FILE_PATH = os.path.splitext(__file__)[0] + ".yaml"
 
 
-def read_model_params(yaml_file_path: str = DEFAULT_FILE_PATH) -> dict[str, dict]:
+def read_gsim_params(yaml_file_path: str = DEFAULT_FILE_PATH) -> dict[str, dict]:
     """Return the all models parameter names and their properties from the given
     YAML file. The keys of the dict will be "flattened" to strings of the form:
     <PARAMETER_TYPE>.<PARAMETER_NAME>
@@ -51,10 +60,10 @@ def read_model_params(yaml_file_path: str = DEFAULT_FILE_PATH) -> dict[str, dict
             for param_name, props in params.items():
                 try:
                     props = _validate_properties(props)
-                    ffname = props.get(Prop.ffname, None)
+                    ffname = props.get(propname.ffname, None)
                     if ffname is not None:
                         assert ffname not in done_ff_names, "%s not unique: %s " % \
-                                                            (Prop.ffname, ffname)
+                                                            (propname.ffname, ffname)
                         done_ff_names.add(ffname)
 
                     all_params[param_type + "." + param_name] = props
@@ -69,13 +78,24 @@ def _validate_properties(props: Union[dict[str, Any], None]) -> dict:
 
     props = props or {}
 
-    unknown_keys = set(props) - set(Prop)
+    unknown_keys = set(props) - set(propname)
     assert not unknown_keys, 'Unknown property/ies: %s' % str(unknown_keys)
 
-    dtype = props.get(Prop.dtype, default_dtype)
-    assert dtype in dtype_cast_function.keys(), 'Unrecognized type "%s"' % dtype
+    dtype = props.get(propname.dtype, dtypes[0].__name__)
+    categories = None
+    if not isinstance(dtype, (list, tuple)):
+        for dtyp in dtypes:
+            if dtyp.__name__ == dtype:
+                dtype = dtyp
+                break
+        else:
+            raise AssertionError('Unrecognized `dtype` "%s"' % dtype)
+    else:
+        dtype, categories = _check_dtype_categorical(dtype)
 
-    key = Prop.bounds  # bounds
+    props.setdefault(propname.dtype, dtype.__name__)
+
+    key = propname.bounds  # bounds
     if key in props:
         bounds = props[key]
         assert isinstance(bounds, list) and len(bounds) == 2, \
@@ -83,7 +103,7 @@ def _validate_properties(props: Union[dict[str, Any], None]) -> dict:
         nonfinite = -float('inf'), float('nan'), float('inf')
         for i, val in enumerate(bounds):
             if val is not None:
-                val = dtype_cast_function[dtype](val)
+                val = dtype(val)
                 invalid = nonfinite[-1] if i == 0 else nonfinite[0]
                 assert val != invalid, '%s[%d] must be != %s' % (key, i, str(invalid))
                 if val in nonfinite:
@@ -95,18 +115,39 @@ def _validate_properties(props: Union[dict[str, Any], None]) -> dict:
             assert bounds[0] < bounds[1], '"%s" error: %s must be < %s' % \
                                           (key, str(bounds[0]), str(bounds[1]))
 
-    key = Prop.default
+    key = propname.default
     if key in props:
-        props[key] = dtype_cast_function[dtype](props[key])
-
-    key = Prop.choices  # choices
-    if key in props:
-        props[key] = [dtype_cast_function[dtype](_) for _ in props[key]]
-        if Prop.default in props:
-            assert props[Prop.default] in props[key], \
-                '"%s" value not in "%s"' % (Prop.default, key)
+        props[key] = dtype(props[key])
+        if categories is not None and props[key] not in categories:
+            assert props[propname.default] in props[key], \
+                '"%s" value not in "%s"' % (propname.default, key)
 
     return props
+
+
+def _check_dtype_categorical(categories):
+    assert isinstance(categories, (list, tuple)), '`dtype` must be given as ' \
+                                                  'string or list/tuple, not ' \
+                                                  '%s' % type(categories).__name__
+    pyclasses = set(type(_) for _ in categories)
+    assert len(pyclasses) == 1, '`dtype` categories are not of the same class: ' \
+                                '%s' % ', '.join(_.__name__ for _ in dtypes)
+    pyclass = next(iter(pyclasses))
+    # Check that the Python class is supported. Note that we cannot simply cast
+    # because it is not 1-1: eg. bool('abc') works whereas 'abc' should be 'str'.
+    # Also, data is usually already casted (YAML and JSON do it)
+    for dtype in dtypes:
+        if pyclass.__name__ == dtype.__name__:
+            try:
+                categories = [dtype(_) for _ in categories]
+            except Exception as exc:
+                raise AssertionError("unable to cast all `dtype` categories to "
+                                     "%s: %s" % (dtype.__name__, str(exc)))
+            return dtype, categories
+
+    raise AssertionError('`dtype` categories class (%s) could not be inferred '
+                         'from %s' % (str(pyclass),
+                                      ', '.join(_.__name__ for _ in dtypes)))
 
 
 # script for checking the parameters implemented in the YAML file:
@@ -120,7 +161,7 @@ def _check_registered_file():
     # from itertools import chain
     # from collections import defaultdict
 
-    registered_params = read_model_params()
+    registered_params = read_gsim_params()
     oq_atts = set(_.split('.', 1)[0] for _ in registered_params)
     already_done = set()
     ret = 0

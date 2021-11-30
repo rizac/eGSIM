@@ -15,19 +15,17 @@
 #              purpose is to be ignored in applications, as well as any Gsim(s)
 #              requiring it (as such, any other property below is useless)
 #   dtype:     The data type (default: float). Supported values are: float, int,
-#              str, datetime, bool
+#              str, datetime, bool, or the list of the possible values that the
+#              field can have (categorical data). Each category in the list should
+#              be of the same data type (e.g., all int, all bools, etcetera)
 #   bounds:    The bounds [min, max] (default [null, null]), endpoints included.
 #              Null means: don't check. E.g. for non-negative numbers, provide
 #              [0, null] (not [0, inf])
-#   default:   The default value when nothing is provided. If missing, and dtype
-#              is "int", it should be set to 0. If dtype is bool, it should be
-#              set to False. If `choices` is given and `default` is given, it
-#              must be in `choices`. In any other case, missing data should be
-#              left as it is
-#   help:      The field help, or description (default: '')
-#   choices:   List or dict for fields taking on only a limited, and usually fixed,
-#              number of possible values (categories, or choices). If dict, it
-#              is supposed to map every category value to its human-readable name
+#   default:   The default value when nothing is provided. When not specified,
+#              the default value depends on dtype or storage (e.g. pandas vs sql).
+#              E.g., with pandas: NaN (float), NaT (datetime), None/null
+#              (str or categorical), 0 (int), False (bool)
+#   help:      The field help or description (default: '')
 
 # All properties above are optional and take the provided default when missing.
 # The top-level YAML properties are the names of the corresponding Gsim attributes
@@ -162,9 +160,8 @@ REQUIRES_SITES_PARAMETERS:  # Site parameters
   geology:
     flatfile_name: geology
     help: geological classification of the site
-    dtype: str
+    dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC", "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
     default: UNKNOWN
-    choices: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC", "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
   slope:
     flatfile_name: slope
     help: The local slope of the station
