@@ -24,7 +24,8 @@ from egsim.forms.forms import (TrellisForm, GsimSelectionForm, ResidualsForm,
 from egsim.core.utils import (QUERY_PARAMS_SAFE_CHARS, get_gmdb_column_desc,
                               yaml_load)
 from egsim.core import smtk as egsim_smtk, figutils
-from egsim.models import aval_gsims, gsim_names, TrSelector, aval_trmodels
+from egsim.models import (aval_gsims, gsim_names, TrSelector, aval_trmodels, \
+                          FlatfileField)
 
 
 # common parameters to be passed to any Django template:
@@ -494,9 +495,28 @@ def apidoc(request):
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
                        egsim_data=egsim_data,
                        baseurl=baseurl,
-                       gmt=get_gmdb_column_desc(),
+                       gmt=_get_gmdb_column_desc(),
                        )
                   )
+
+
+def _get_gmdb_column_desc(as_html=True):
+    ret = {}
+    for ff_field in FlatfileField.objects.all():
+        name = ff_field.name
+        props = ff_field.properties
+        dtype = props['dtype']
+        if isinstance(dtype, (list, tuple)):
+            type2str = 'categorical. Possible values:\n' + \
+                       "\n".join(str(_) for _ in dtype)
+        else:
+            type2str = str(dtype)
+        default = str(props.get('default', ''))
+        if as_html:
+            type2str = "<span style='white-space: nowrap'>%s</span>" % \
+                type2str.replace('\n', '<br>')
+        ret[name] = (type2str, default)
+    return ret
 
 
 def imprint(request):

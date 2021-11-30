@@ -10,13 +10,15 @@ from collections import defaultdict
 import re
 
 import numpy as np
+
+from egsim.core import residuals
 from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeIMTTrellis,
                                         DistanceSigmaIMTTrellis,
                                         MagnitudeSigmaIMTTrellis,
                                         MagnitudeDistanceSpectraTrellis,
                                         MagnitudeDistanceSpectraSigmaTrellis)
-from smtk.sm_table import GroundMotionTable
+# from smtk.sm_table import GroundMotionTable
 from smtk.residuals.gmpe_residuals import Residuals
 
 from egsim.core.utils import (vectorize, DISTANCE_LABEL, MOF, OQ,
@@ -325,13 +327,14 @@ def _get_magnitude_distances(records, dist_type):
     return mags, dists, nan_count
 
 
-def get_gmdb(params):
+def get_flatfile(params) -> residuals.Flatfile:
     '''returns a GrounMotionTable from the given params dict, which must
     have specific keys. Currently, they are:
     'gmdb': the tuple (hdf file name, table name), and
     'selexpr': str
     (`selexpr` is OPTIONAL)
     '''
+    if params['']
     gmdb = GroundMotionTable(*params[P.GMDB])
     if params.get(P.SELEXP, None):
         gmdb = gmdb.filter(params[P.SELEXP])
@@ -430,36 +433,6 @@ def testing(params):
 
     return {'Measure of fit': ret, 'Db records': obs_count,
             'Gsim skipped': gsim_skipped}
-
-
-def _get_selexpr(gsim, user_selexpr=None):
-    '''builds a selection expression from a given gsim name concatenating
-    the given `user_selexpr` (user defined selection expression with the
-    expression obtained by inspecting the required arguments of the given
-    gsim'''
-    attrs = OQ.required_attrs(gsim)
-    selexpr_chunks = []
-    strike_dip_rake_found = False
-    for att in attrs:
-        if att in ('rake', 'strike', 'dip') and not strike_dip_rake_found:
-            strike_dip_rake_found = True
-            selexpr_chunks.append('(((dip_1 != nan) & '
-                                  '(strike_1 != nan) & '
-                                  '(rake_1 != nan)) | '
-                                  '((dip_2 != nan) & '
-                                  '(strike_2 != nan) & '
-                                  '(rake_2 !=nan)))')
-            continue
-        (column, missing_val) = GSIM_REQUIRED_ATTRS.get(att, ['', ''])
-        if column and missing_val:
-            selexpr_chunks.append('(%s != %s)' % (column, missing_val))
-
-    if not selexpr_chunks:
-        return user_selexpr
-    if user_selexpr:
-        selexpr_chunks.insert(0, '(%s)' % user_selexpr)
-
-    return " & ".join(selexpr_chunks)
 
 
 def _gmdb_records(residuals, gm_table=None):

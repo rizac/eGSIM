@@ -191,8 +191,8 @@ def _check_registered_file():
     if ret == 0:
         print('YAML file is ok')
 
-    sys.exit(ret)
+    return ret
 
 
 if __name__ == "__main__":
-    _check_registered_file()
+    sys.exit(_check_registered_file())
