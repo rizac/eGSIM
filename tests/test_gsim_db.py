@@ -12,7 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 from egsim.models import (Gsim, Imt, gsim_names, aval_gsims, aval_imts,
                           aval_trts, shared_imts, sharing_gsims, TrSelector)
-from egsim.core.utils import OQ
+# from egsim.core.utils import OQ
 
 
 # @pytest.mark.django_db

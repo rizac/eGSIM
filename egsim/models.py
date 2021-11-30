@@ -152,7 +152,13 @@ class Flatfile(_UniqueNameModel):
     path = TextField(unique=True, null=False)
     # src_path = TextField(unique=True, null=False)
     url = TextField(null=False, default='')
-    description = TextField(null=False, default='')
+    display_name = TextField(null=True, default='')
+
+    def __str__(self):
+        """string representation of this object"""
+        name = self.display_name or self.name
+        url = " (%s)" % self.url if self.url else ""
+        return name + url
 
 
 class Imt(_UniqueNameModel):

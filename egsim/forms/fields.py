@@ -14,6 +14,7 @@ from itertools import chain, repeat
 import numpy as np
 
 from django.core.exceptions import ValidationError
+from django.forms import ModelChoiceField
 from django.utils.translation import ugettext as _
 from django.forms.fields import CharField, MultipleChoiceField, ChoiceField
 
@@ -21,6 +22,8 @@ from openquake.hazardlib import imt
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
+
+from egsim import models
 from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeIMTTrellis,
                                         MagnitudeDistanceSpectraTrellis)
@@ -163,19 +166,6 @@ class ArrayField(CharField):
         if toohigh:
             raise ValidationError('%s > %s' % (str(value), str(maxval)))
 
-    # @staticmethod
-    # def isinragne(value, minval=None, maxval=None):
-    #     """Return True if the given value is in the range defined by minval
-    #     and maxval (endpoints are included). None's in minval and maxval
-    #     mean: do not check
-    #     """
-    #     try:
-    #         ArrayField.checkrange(value, minval, maxval)
-    #         return True
-    #     except ValidationError:
-    #         return False
-
-
 
 class NArrayField(ArrayField):
     """ArrayField for sequences of numbers"""
@@ -292,7 +282,7 @@ class SelExprField(CharField):
         value = super(SelExprField, self).clean(value)
         if value:
             try:
-                test_selexpr(value)
+                self.test_selexpr(value)  # FIXME: see below, remove?
             except SyntaxError as serr:
                 raise ValidationError('%s: "%s"' %
                                       (serr.msg, serr.text[:serr.offset]),
@@ -300,6 +290,10 @@ class SelExprField(CharField):
             except Exception as exc:
                 raise ValidationError(str(exc), code='invalid')
         return value
+
+    def test_selexpr(self, value):
+        ### FIXME: should we still test selexpr? Or simply remove this method and the call above
+        raise NotImplementedError('Remove or implement a test??')
 
 
 class _DictChoiceField(ChoiceField):
@@ -410,6 +404,21 @@ class GmdbField(ChoiceField):
         hf5 path, database name (both strings)"""
         value = super(GmdbField, self).clean(value)
         return self._base_choices[value], value
+
+
+class Flatfile(ModelChoiceField):
+    """Form field returning instances of models.Flatfile"""
+    # https://docs.djangoproject.com/en/3.2/ref/forms/fields/#fields-which-handle-relationships
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('label', 'Flatfile')
+        kwargs.setdefault('choices', [(_, _) for _ in self._base_choices])
+        kwargs['queryset'] = models.Flatfile.objects.all()
+        kwargs['to_field_name'] = "name"
+
+        # if kwargs['choices']:
+        #     kwargs.setdefault('initial', kwargs['choices'][0][0])
+        # super(GmdbField, self).__init__(**kwargs)
 
 
 class ResidualplottypeField(ChoiceField):

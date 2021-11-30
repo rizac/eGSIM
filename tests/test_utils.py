@@ -12,6 +12,8 @@ from egsim.core.utils import vectorize, querystring, get_gmdb_column_desc,\
 from egsim.forms.fields import NArrayField
 from egsim.core.smtk import _relabel_sa, _gmdb_records, _get_selexpr
 from smtk.sm_table import GMTableDescription, GroundMotionTable
+
+from egsim.management.gsim_params import _check_registered_file
 from egsim.models import aval_gsims
 from smtk.residuals.gmpe_residuals import Residuals
 
@@ -129,26 +131,10 @@ def test_areequal(areequal):
     assert areequal(1.0000000000001, 1)
 
 
-def test_gsim_required_attrs_mappings_are_in_gmtable():
-    '''self explanatory'''
-    columns = set(GMTableDescription.keys())
-    for (column, nanval) in GSIM_REQUIRED_ATTRS.values():
-        if column:
-            assert column in columns
-
-
-@pytest.mark.django_db
-def test_gsim_required_attrs_mappings_are_in_gsims():
-    # now test that all keys are in Gsims required attrs:
-    gsims_attrs = set()
-    for gsim in aval_gsims():
-        gsims_attrs |= set(OQ.required_attrs(gsim))
-    # exlude some attributes not currently in any gsim but that we
-    # be included in future OpenQuake releases:
-    exclude = set(['strike'])
-    for att in GSIM_REQUIRED_ATTRS:
-        if att not in exclude:
-            assert att in gsims_attrs
+def gsim_params_yaml_and_openquake():
+    """self explanatory"""
+    ret = _check_registered_file()
+    assert ret == 0
 
 
 def check_gsim_defined_for_current_db(testdata):
