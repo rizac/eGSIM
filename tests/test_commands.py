@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 
 from egsim import models
+from egsim.core.residuals import PredefinedFlatfile
 from egsim.models import FlatfileField, GsimRegion, Gsim
 
 try:  # https://stackoverflow.com/questions/44441929
@@ -36,7 +37,7 @@ def test_initdb(capfd, tmpdir):
     # the admin panel but not used elsewhere
 
     # load ESM flatfile to see it's there:
-    dfr = pd.read_hdf(join(FlatfileCommand.dest_dir(), 'esm2018.hdf'))
+    dfr = PredefinedFlatfile(join(FlatfileCommand.dest_dir(), 'esm2018.hdf'))._data
     assert len(dfr.columns) == 83
     assert len(dfr) == 23014
 

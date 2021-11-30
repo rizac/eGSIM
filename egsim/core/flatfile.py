@@ -3,9 +3,6 @@ from typing import Union, Any, Callable
 
 import pandas as pd
 
-from egsim.core.modelparams import read_model_params, Prop, default_dtype
-# from egsim.models import FlatfileField
-
 
 def read_flatfile(filepath: str,
                   sep: str = None,
@@ -101,7 +98,7 @@ def read_flatfile(filepath: str,
         elif dtyp == 'datetime':
             datetime_cols.append(col)
         elif isinstance(dtyp, (list, tuple)):
-            dtype_[col] = pd.CategoricalDtype(categories)  # noqa
+            dtype_[col] = pd.CategoricalDtype(dtyp)  # noqa
         else:
             dtype_[col] = dtyp
 
@@ -174,7 +171,7 @@ def _read_csv_header(filepath, sep: str) -> pd.Index:
 #     dfr = read_esm('/Users/rizac/work/gfz/projects/sources/python/egsim/egsim/'
 #                    'management/commands/data/raw_flatfiles/ESM_flatfile_2018_SA.csv.zip')
 #     params = read_model_params('/Users/rizac/work/gfz/projects/sources/python'
-#                               '/egsim/egsim/core/modelparams.yaml')
+#                               '/egsim/egsim/core/gsim_params.yaml')
 #
 #     rename = {v['flatfile_name']: k for k, v in params.items() if v.get('flatfile_name', None)}
 #     unknown_cols = set(rename) - set(dfr.columns)
