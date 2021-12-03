@@ -1,11 +1,8 @@
 """
-Django Forms for eGSIM
-
-Created on 29 Jan 2018
-
-@author: riccardo
+Django Forms for eGSIM model-to-model comparison (Trellis plots)
 """
 from collections import defaultdict
+from enum import Enum
 from itertools import chain, repeat
 from typing import Iterable
 
@@ -54,30 +51,18 @@ class PointField(NArrayField):
             raise ValidationError(_(str(exc)), code='invalid')
 
 
-class PlotTypeField(ChoiceField):
-    """A ChoiceField returning the selected `BaseTrellis` class for
-    computing the Trellis plots"""
-    _base_choices = {
-        'd': ('IMT vs. Distance', DistanceIMTTrellis),
-        'm': ('IMT vs. Magnitude', MagnitudeIMTTrellis),
-        's': ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis)
-    }
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('choices',
-                          [(k, v[0]) for k, v in self._base_choices.items()])
-        super(PlotTypeField, self).__init__(**kwargs)
-
-    def clean(self, value):
-        """Convert the given value (string) into the OpenQuake instance
-        and return the latter"""
-        value = super(PlotTypeField, self).clean(value)
-        return self._base_choices[value][1]
-
-
 class MsrField(DictChoiceField):
     """A ChoiceField handling the selected Magnitude Scaling Relation object"""
     _base_choices = get_available_magnitude_scalerel()
+
+
+PLOTTYPE = {
+    # key: (trellis class, stddev trellis class, display label)
+    'd': (DistanceIMTTrellis, DistanceSigmaIMTTrellis, 'IMT vs. Distance'),
+    'm': (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, 'IMT vs. Magnitude'),
+    's': (MagnitudeDistanceSpectraTrellis, MagnitudeDistanceSpectraSigmaTrellis,
+          'Magnitude-Distance Spectra')
+}
 
 
 #########
@@ -104,7 +89,8 @@ class TrellisForm(GsimImtForm, APIForm):
         mapping['hyploc'] = 'hypocentre_location'
         mapping['vs30measured'] = 'vs30_measured'
 
-    plot_type = PlotTypeField(label='Plot type')
+    plot_type = ChoiceField(label='Plot type',
+                            choices=[(k, v[-1]) for k, v in PLOTTYPE.items()])
     stdev = BooleanField(label='Compute Standard Deviation(s)', required=False,
                          initial=False)
 
@@ -115,11 +101,6 @@ class TrellisForm(GsimImtForm, APIForm):
                        min_count=1, initial=760.0)
     aspect = FloatField(label='Rupture Length / Width', min_value=0.)
     dip = FloatField(label='Dip', min_value=0., max_value=90.)
-    # FIXME: removed field below, it is not used. Should we add it
-    # in clean (see below)?
-    #  tectonic_region = CharField(label='Tectonic Region Type',
-    #                              initial='Active Shallow Crust',
-    #                              widget=HiddenInput)
     rake = FloatField(label='Rake', min_value=-180., max_value=180.,
                       initial=0.)
     strike = FloatField(label='Strike', min_value=0., max_value=360.,
@@ -246,16 +227,12 @@ class TrellisForm(GsimImtForm, APIForm):
         magnitudes = np.asarray(vectorize(params.pop(mag_s)))  # smtk wants np arrays
         distances = np.asarray(vectorize(params.pop(dist_s)))  # smtk wants np arrays
 
-        trellisclass = params.pop("plot_type")
+        plottype_key = params.pop("plot_type")
+        trellisclass = PLOTTYPE[plottype_key][0]
         # define stddev trellis class if the parameter stdev is true
         stdev_trellisclass = None  # do not compute stdev (default)
         if params.pop("stdev", False):
-            if trellisclass == DistanceIMTTrellis:
-                stdev_trellisclass = DistanceSigmaIMTTrellis
-            elif trellisclass == MagnitudeIMTTrellis:
-                stdev_trellisclass = MagnitudeSigmaIMTTrellis
-            elif trellisclass == MagnitudeDistanceSpectraTrellis:
-                stdev_trellisclass = MagnitudeDistanceSpectraSigmaTrellis
+            stdev_trellisclass = PLOTTYPE[plottype_key][1]
 
         # Returns True if trellisclass is a Distance-based Trellis class:
         _isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)

@@ -26,10 +26,6 @@ COMMON_PARAMS = {
 }
 
 
-# from egsim.views import TrellisView, ResidualsView, TestingView, \
-#     QUERY_PARAMS_SAFE_CHARS
-
-
 def query_gims() -> QuerySet:
     """Return a QuerySet of Gsims instances from the database, with the
     necessary information (field 'warning' and associated Imts in the `imtz`
@@ -42,13 +38,6 @@ def query_gims() -> QuerySet:
                              to_attr='imtz')
 
     return Gsim.objects.only('name', 'warning').prefetch_related(prefetch_imts)
-
-    # gsims = Gsim.objects.all().prefetch_related(prefetch_imts).only('name',
-    #                                                                 'imts',
-    #                                                                 'warning')
-    # for g in gsims:
-    #     pass
-    # return {g.name: [[i.name for i in g.imts], g.warning] for g in gsims}
 
 
 def main(request, selected_menu=None):
@@ -262,22 +251,3 @@ def _test_err(request):
     """Dummy function raising for front end test purposes. Might be removed
     soon"""
     raise ValueError('this is a test error!')
-
-
-# FIXME: REMOVE:
-# def get_tr_models(request):  # pylint: disable=unused-argument
-#     """Return a JsonResponse with the data for the """
-#     models = {}
-#     selected_model = None
-#
-#     for (model, trt, geojson) in aval_trmodels(asjsonlist=True):
-#         if selected_model is None:
-#             selected_model = model
-#         if model not in models:
-#             models[model] = {}
-#         if trt not in models[model]:
-#             models[model][trt] = {'type': "FeatureCollection", 'features': []}
-#         models[model][trt]['features'].append(json.loads(geojson))
-#
-#     return JsonResponse({'models': models, 'selected_model': selected_model},
-#                         safe=False)

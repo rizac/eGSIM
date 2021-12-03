@@ -1,5 +1,5 @@
 """
-Django Forms for eGSIM residuals FIXME doc
+Django Forms for eGSIM model-to-data testing
 
 @author: riccardo
 """

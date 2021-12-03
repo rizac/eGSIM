@@ -10,8 +10,6 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-# from egsim.core.responseerrors import (exc2json, invalidform2json,
-#                                        requestexc2json)
 from .forms.model_to_model.trellis import TrellisForm
 from .forms.model_to_data.residuals import ResidualsForm
 from .forms.model_to_data.testing import TestingForm
@@ -170,18 +168,3 @@ def error_response(exception: Union[str, Exception], code=400, **kwargs) -> Json
     """
     err_body = {**kwargs, 'message': str(exception), 'code': code}
     return JsonResponse({'error': err_body}, safe=False, status=code)
-
-# FIXME REMOVE
-# class EgsimQueryViewMeta(type):
-#     """metaclass for EgsimChoiceField subclasses. Populates the class attribute
-#     `multichoice_params` with fields which accept array-like values
-#     """
-#     def __init__(cls, name, bases, nmspc):
-#         super(EgsimQueryViewMeta, cls).__init__(name, bases, nmspc)
-#         formclass = cls.formclass  # noqa
-#         cls.multichoice_params = set()
-#         fields = {} if formclass is None else formclass.declared_fields
-#         for name, field in fields.items():
-#             if isinstance(field, (MultipleChoiceField,)):
-#                 cls.multichoice_params.add(name)
-#

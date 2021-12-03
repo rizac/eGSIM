@@ -3,8 +3,6 @@
 from django.conf.urls import url  # added by default by django
 from django.contrib import admin  # added by default by django
 from django.views.generic.base import RedirectView
-# from django.shortcuts import render
-# import re
 
 from . import URLS, TABS
 from .views import (main, home, apidoc, download_request,
@@ -15,13 +13,6 @@ from .views import (main, home, apidoc, download_request,
 
 
 urlpatterns = [
-    # # API URLs:  # FIXME REMOVE
-    # *[
-    #     url(r'^%s/?$' % re.escape(url), cls.as_view())
-    #     for cls in (TrellisView, ResidualsView, TestingView) for url in cls.urls
-    # ],
-
-    # GUI URLs:
     url(r'^admin/', admin.site.urls),  # added by default by django
     url(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                     permanent=False)),
