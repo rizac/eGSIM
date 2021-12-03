@@ -509,12 +509,6 @@ class EgsimBaseForm(Form):
             real_name = repl_dict[alias]
             self.data[real_name] = self.data.pop(alias)
 
-        # if repl_dict:  FIXME: REMOVE BLOCK COMMENT
-        #     for key in list(self.data.keys()):
-        #         repl_key = repl_dict.get(key, None)
-        #         if repl_key is not None:
-        #             self.data[repl_key] = self.data.pop(key)
-
         # Make fields initial value the default when missing.
         # From https://stackoverflow.com/a/20309754 and other posts therein:
         # initial isn't really meant to be used to set default values for form
@@ -1109,15 +1103,6 @@ def isscalar(value):
     ```
     """
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
-
-
-# FIXME: WHEN USED this, maybe replace in some other module:
-from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
-# Copy SMTK_DISTANCE_LABELS replacing the key 'r_x' with 'rx':
-DISTANCE_LABEL = dict(
-    **{k: v for k, v in SMTK_DISTANCE_LABEL.items() if k != 'r_x'},
-    rx=SMTK_DISTANCE_LABEL['r_x']
-)
 
 
 def relabel_sa(string):

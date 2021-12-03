@@ -1,5 +1,5 @@
 """
-Django Forms for eGSIM residuals FIXME doc
+Django Forms for eGSIM model-to-data comparison (residuals computation)
 
 @author: riccardo
 """
@@ -15,14 +15,22 @@ from smtk.residuals.residual_plots import (residuals_density_distribution,
                                            residuals_with_vs30,
                                            likelihood)
 from smtk.residuals.gmpe_residuals import Residuals
+from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
 
 from . import FlatfileForm, MOF
-from .. import GsimImtForm, DISTANCE_LABEL, relabel_sa, APIForm
+from .. import GsimImtForm, relabel_sa, APIForm
 
 
 ##########
 # Fields #
 ##########
+
+
+# Copy SMTK_DISTANCE_LABELS replacing the key 'r_x' with 'rx':
+DISTANCE_LABEL = dict(
+    **{k: v for k, v in SMTK_DISTANCE_LABEL.items() if k != 'r_x'},
+    rx=SMTK_DISTANCE_LABEL['r_x']
+)
 
 
 class PlotTypeField(ChoiceField):

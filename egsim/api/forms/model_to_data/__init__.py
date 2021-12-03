@@ -3,7 +3,7 @@ involving flatfiles
 """
 from io import BytesIO
 
-from django.core.exceptions import ValidationError
+# from django.core.exceptions import ValidationError
 from django.forms import CharField, ModelChoiceField, FileField
 
 from ...flatfile import (PredefinedFlatfile, Flatfile, UserFlatfile)
@@ -13,36 +13,6 @@ from ... import models
 ##########
 # Fields #
 ##########
-
-
-class SelExprField(CharField):
-    """Field implementing a selection expression on a Ground Motion Database
-    (gmdb). It is a CharField with custom validation performed by testing the
-    selection expression on an in-memory Gmdb
-    """
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('label', 'Selection expression')
-        super(SelExprField, self).__init__(**kwargs)
-
-    def clean(self, value):
-        """Convert the given value (string) into the OpenQuake instance
-        and returns the latter"""
-        value = super(SelExprField, self).clean(value)
-        if value:
-            try:
-                self.test_selexpr(value)  # FIXME: see below, remove?
-            except SyntaxError as serr:
-                raise ValidationError('%s: "%s"' %
-                                      (serr.msg, serr.text[:serr.offset]),
-                                      code='invalid')
-            except Exception as exc:
-                raise ValidationError(str(exc), code='invalid')
-        return value
-
-    def test_selexpr(self, value):
-        ### FIXME: should we still test selexpr? Or simply remove this method and the call above
-        raise NotImplementedError('Remove or implement a test??')
 
 
 class PredefinedFlatfileField(ModelChoiceField):
@@ -61,20 +31,6 @@ class PredefinedFlatfileField(ModelChoiceField):
         hf5 path, database name (both strings)"""
         value = super(PredefinedFlatfileField, self).clean(value)
         return PredefinedFlatfile(value.path)
-
-# FIXME: REMOVE commented lines below
-# class UserFlatfileField(FileField):
-#     """FileField returning `UserFlatfile`s"""
-#     pass
-
-    # def __init__(self, **kwargs):
-    #     kwargs.setdefault('label', 'User Flatfile')
-    #     kwargs['queryset'] = models.Flatfile.objects.all()  # noqa
-    #     kwargs['to_field_name'] = "name"
-
-        # if kwargs['choices']:
-        #     kwargs.setdefault('initial', kwargs['choices'][0][0])
-        # super(GmdbField, self).__init__(**kwargs)
 
 
 #########
@@ -95,7 +51,7 @@ class FlatfileForm(EgsimBaseForm):
         mapping['dist'] = 'distance_type'
 
     predefined_flatfile = PredefinedFlatfileField(required=False)
-    selexpr = SelExprField(required=False)
+    selexpr = CharField(required=False, label='Selection expression')
     user_flatfile = FileField(required=False)
 
     def clean(self):

@@ -17,13 +17,6 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         TABS.home.name: {
             'src': URLS.HOME_PAGE
         },
-        # KEY.GSIMS: {  # FIXME REMOVE
-        #     'form': GsimsView.formclass().to_rendering_dict(),
-        #     'url': URLS.GSIMS_RESTAPI,
-        #     'urls': {
-        #         'getTectonicRegionalisations': URLS.GSIMS_TR
-        #     }
-        # },
         TABS.trellis.name: {
             'form': TABS.trellis.formclass().to_rendering_dict(),
             'url': TABS.trellis.urls[0],
