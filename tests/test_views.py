@@ -33,7 +33,7 @@ class Test:
             ctype = 'text/javascript'
         else:
             ctype = 'application/x-yaml'
-        url = "/%s/%s" % (URLS.DOWNLOAD_CFG, KEY.TRELLIS)
+        url = "/%s/%s" % (URLS.DOWNLOAD_CFG, KEY.trellis)
         inputdic = testdata.readyaml('request_trellis.yaml')
         result = client.post(url + "/" + filename, data=inputdic,
                              content_type=ctype)
@@ -56,7 +56,7 @@ class Test:
                              content_type='application/json')
         outdict = result.json()
         filename = 'prova.csv'
-        url = "/%s/%s/%s" % (base_url, KEY.TRELLIS, filename)
+        url = "/%s/%s/%s" % (base_url, KEY.trellis, filename)
         inputdic = testdata.readyaml('request_trellis.yaml')
         result = client.post(url, data=outdict,
                              content_type="text/csv")
@@ -76,8 +76,8 @@ class Test:
         assert result.status_code == 200
 
     @pytest.mark.parametrize('fileprefix, urlkey',
-                             [('trellis', KEY.TRELLIS),
-                              ('residuals', KEY.RESIDUALS)])
+                             [('trellis', KEY.trellis),
+                              ('residuals', KEY.residuals)])
     def test_downloadimage(self, fileprefix, urlkey,
                            # pytest fixtures:
                            testdata, client):

@@ -9,9 +9,12 @@ from os.path import join, isdir, abspath, dirname, isfile
 from django.core.management.base import CommandError
 from django.conf import settings
 
-from egsim import models
-from egsim.management.commands import EgsimBaseCommand
-from egsim.management.flatfile_parsers import EsmFlatfileParser
+# from egsim import models
+# from egsim.management.commands import EgsimBaseCommand
+# from egsim.management.flatfile_parsers import EsmFlatfileParser
+from . import EgsimBaseCommand
+from ..flatfile_parsers import EsmFlatfileParser
+from ... import models
 
 
 class Command(EgsimBaseCommand):
@@ -54,7 +57,7 @@ class Command(EgsimBaseCommand):
 
         self.printinfo('Creating pre-defined Flatfiles and storing their '
                        'metadata to DB:')
-        self.empty_db_table(models.Flatfile)
+        self.empty_db_table(models.PredefinedFlatfile)
 
         destdir = self.dest_dir()
         if not isdir(destdir):
@@ -84,9 +87,9 @@ class Command(EgsimBaseCommand):
             self.printinfo(f' - Saving flatfile to "{destfile}"')
             dfr.to_hdf(destfile, key=parser.NAME, format='table', mode='a')
             numfiles += 1
-            models.Flatfile.objects.create(name=parser.NAME,
-                                           url=parser.URL,
-                                           description=parser.DESCRIPTION,
-                                           path=destfile)
+            models.PredefinedFlatfile.objects.create(name=parser.NAME,
+                                                     url=parser.URL,
+                                                     display_name=parser.DISPLAY_NAME,
+                                                     path=destfile)
 
         self.printsuccess(f'{numfiles} models created in "{destdir}"')

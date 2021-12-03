@@ -14,7 +14,7 @@ from inspect import getmembers, isclass
 from django.contrib import admin
 from django.db.models import Model
 
-from . import models
+from ..api import models
 
 
 def get_classes(module: Union[str, "module"],

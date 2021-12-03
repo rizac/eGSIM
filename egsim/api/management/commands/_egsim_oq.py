@@ -19,11 +19,12 @@ from openquake.baselib.general import (DeprecationWarning as
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
-from egsim.management.gsim_params import (read_gsim_params,
-                                          DEFAULT_FILE_PATH as model_params_filepath)
-from egsim.management.commands import EgsimBaseCommand
-from egsim.core.residuals import _SUPPORTED_IMTS  # noqa
-import egsim.models as models
+from ..gsim_params import (read_gsim_params, DEFAULT_FILE_PATH as model_params_filepath)
+from . import EgsimBaseCommand
+from ... import models
+
+
+SUPPORTED_IMTS = (imt.PGA, imt.PGV, imt.SA, imt.PGD, imt.IA, imt.CAV)
 
 
 class Command(EgsimBaseCommand):
@@ -84,12 +85,12 @@ class Command(EgsimBaseCommand):
                                (_param2str(param), len(gsims), gsim_))
 
 
-def populate_imts() -> dict[type(_SUPPORTED_IMTS[0]), models.Imt]:
+def populate_imts() -> dict[imt.IMT, models.Imt]:
     """Write all IMTs from OpenQuake to the db, skipping IMTs which need
     arguments as we do not know how to handle them (except SA)
     """
     imts = {}
-    for imt_func in _SUPPORTED_IMTS:
+    for imt_func in SUPPORTED_IMTS:
         needs_args = False
         try:
             imt_func()
@@ -99,7 +100,7 @@ def populate_imts() -> dict[type(_SUPPORTED_IMTS[0]), models.Imt]:
         imts[imt_func] = models.Imt.objects.create(name=imt_func.__name__,  # noqa
                                                    needs_args=needs_args)
     # last check that everything was written:
-    not_written = set(_SUPPORTED_IMTS) - set(imts)
+    not_written = set(SUPPORTED_IMTS) - set(imts)
     if not_written:
         raise ValueError('Could not store %d IMT(s) on the database: %s' %
                          (len(not_written), not_written))
@@ -205,14 +206,15 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], model_params: dict[str, dict
                             help_ = props.pop('help', '')
                             category = attname2category[attname]
                             # create (and save) object:
-                            models.FlatfileField.objects.create(name=ffname,
-                                                                help=help_,
-                                                                properties=props,
-                                                                category=category,
-                                                                oq_name=pname)
+                            models.FlatfileColumn.objects.create(name=ffname,
+                                                                 help=help_,
+                                                                 properties=props,
+                                                                 category=category,
+                                                                 oq_name=pname)
                             saved_params[key] = ffname
 
-                        db_p = models.FlatfileField.objects.get(name=saved_params[key])
+                        db_p = models.FlatfileColumn.objects.\
+                            get(name=saved_params[key])
                         gsim_db_params.append(db_p)
 
                 if not gsim_db_params:
@@ -259,7 +261,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], model_params: dict[str, dict
             # 1. Set IMTs:
             gsim.imts.set(gsim_imts)
             # 2. Set Gsim parameters:
-            gsim.required_flatfile_fields.set(gsim_db_params)
+            gsim.required_flatfile_columns.set(gsim_db_params)
 
             gsims.append(gsim)
 
@@ -285,9 +287,9 @@ def store_gsim_error(gsim_name: str, error: Union[str, Exception]):
 
 # Maps Gsim attribute names to the relative Flatfile category (IntEnum):
 attname2category = {
-    'REQUIRES_DISTANCES' : models.FlatfileField.CATEGORY.DISTANCE_MEASURE,
-    'REQUIRES_RUPTURE_PARAMETERS': models.FlatfileField.CATEGORY.RUPTURE_PARAMETER,
-    'REQUIRES_SITES_PARAMETERS': models.FlatfileField.CATEGORY.SITE_PARAMETER
+    'REQUIRES_DISTANCES' : models.FlatfileColumn.CATEGORY.DISTANCE_MEASURE,
+    'REQUIRES_RUPTURE_PARAMETERS': models.FlatfileColumn.CATEGORY.RUPTURE_PARAMETER,
+    'REQUIRES_SITES_PARAMETERS': models.FlatfileColumn.CATEGORY.SITE_PARAMETER
 }
 
 
