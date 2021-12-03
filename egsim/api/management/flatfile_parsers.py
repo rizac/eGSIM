@@ -1,14 +1,11 @@
-from os.path import join, isfile
-
 import pandas as pd
 import numpy as np
-from openquake.hazardlib import imt
 
 from smtk.sm_utils import MECHANISM_TYPE, DIP_TYPE, SCALAR_XY
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-from egsim.core.flatfile import read_flatfile
-from egsim.models import FlatfileField, Imt
+from egsim.api.flatfile import read_flatfile
+from ..models import FlatfileColumn
 
 
 class FlatfileParser:
@@ -18,7 +15,7 @@ class FlatfileParser:
     # excluded): provide alphanumeric characters only or underscore "_"
     NAME: str
     # Flat file name to be used for visualization (any character allowed)
-    DESCRIPTION: str
+    DISPLAY_NAME: str
     # url for references, detailed description, citation(s), and so on
     URL: str
 
@@ -31,7 +28,7 @@ class EsmFlatfileParser(FlatfileParser):
     """ESM flatfile parser"""
 
     NAME = 'esm2018'
-    DESCRIPTION = 'European Strong Motion Flat file (2018)'
+    DISPLAY_NAME = 'European Strong Motion Flat file (2018)'
     URL = 'https://esm-db.eu/#/products/flat_file'
 
     @classmethod
@@ -105,7 +102,7 @@ class EsmFlatfileParser(FlatfileParser):
     @classmethod
     def parse(cls, filepath: str) -> pd.DataFrame:
         """Parse ESM flatfile (CSV) and return the pandas DataFrame"""
-        dtype, defaults = FlatfileField.get_dtype_and_defaults()
+        dtype, defaults = FlatfileColumn.get_dtype_and_defaults()
         dtype |= cls.esm_dtypes
 
         # dfr = check_flatfile(filepath, col_mapping=esm_col_mapping, sep=';',

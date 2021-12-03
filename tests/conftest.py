@@ -8,29 +8,29 @@ Created on 3 May 2018
 
 import os
 import shutil
-from io import StringIO, BytesIO
 from os.path import isdir
+import json
 
 import pytest
-from pytest_django import fixtures as pytest_django_fixtures
 import yaml
 import numpy as np
+
 from django.core.management import call_command
 from django.test.client import Client
 
+# from io import StringIO, BytesIO
 # from egsim.core.utils import yaml_load, get_dbnames
-from egsim.core.utils import querystring
-import json
-from egsim.forms.fields import GmdbField
-
+# from egsim.core.utils import querystring
+# from pytest_django import fixtures as pytest_django_fixtures
+# from egsim.forms.fields import GmdbField
 
 # https://docs.pytest.org/en/3.0.0/parametrize.html#basic-pytest-generate-tests-example
 
 
 # make all test functions having 'db' in their argument use the passed databases
 def pytest_generate_tests(metafunc):
-    '''This function is called before generating all tests and parametrizes
-    all tests with the argument 'client' (which is a fixture defined below)'''
+    """This function is called before generating all tests and parametrizes
+    all tests with the argument 'client' (which is a fixture defined below)"""
     # note August 2019: There is apparently no need to run the test twice
     # with two different USER AGENTs. We leave the code below and return:
     return
@@ -174,7 +174,8 @@ def testdata(request):  # pylint: disable=unused-argument
                 return json.load(opn)
 
         def readyaml(self, filename):
-            return yaml_load(self.path(filename))
+            with open(self.path(filename)) as _:
+                return yaml.safe_load(_)
 
     return Data()
 
@@ -184,35 +185,112 @@ def django_db_setup(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         # delete flatfile subdirectory (no, we do not prompt the user too much
         # work and it's safe he/she deletes the dir in case)
-        from egsim.management.commands._egsim_flatfiles import Command as FlatfileCommand
+        from egsim.api.management.commands._egsim_flatfiles import Command as FlatfileCommand
         ff_path = FlatfileCommand.dest_dir()
         if isdir(ff_path):
             shutil.rmtree(ff_path)
         # run command:
         call_command('egsim_init', interactive=False)  # '--noinput')
 
+# FIXME :REMOVE
+# @pytest.fixture(scope="session")
+# def mocked_gmdbfield(request, testdata):  # pylint: disable=unused-argument
+#     """Fixture returning a mock class for the GmdbField.
+#     """
+#     def func(tetdata_filename):
+#         gmdbpath = testdata.path(tetdata_filename)
+#
+#         class MockedGmdbField(GmdbField):
+#             '''Mocks GmdbField'''
+#             _base_choices = {k: gmdbpath for k in get_dbnames(gmdbpath)}
+#
+# #             def __init__(self, *a, **v):
+# #                 v['choices'] = [(_, _) for _ in get_dbnames(gmdbpath)]
+# #                 super(MockedGmdbField, self).__init__(*a, **v)
+#
+# #             def clean(self, value):
+# #                 '''Converts the given value (string) into the tuple
+# #                 hf5 path, database name (both strings)'''
+# #                 (_, value) = super(MockedGmdbField, self).clean(value)
+# #                 return (gmdbpath, value)
+#
+#         return MockedGmdbField()
+#
+#     return func
 
-@pytest.fixture(scope="session")
-def mocked_gmdbfield(request, testdata):  # pylint: disable=unused-argument
-    """Fixture returning a mock class for the GmdbField.
+
+## utlitity functions:
+
+from datetime import date, datetime
+from urllib.parse import quote
+from typing import Union, Iterable
+from egsim.api.views import QUERY_PARAMS_SAFE_CHARS
+from egsim.api.forms import isscalar
+
+
+def querystring(query_args: dict, baseurl: str = None):
+    """Convert `query_args` to a query string to be used in URLs. It escapes all
+    unsafe characters (as defined in `QUERY_PARAMS_SAFE_CHARS`) from
+    `query_args` keys (str) and values, which can be any "scalar" type: bool, str,
+    date, datetime, numeric, and iterables of those elements (which will be
+    converted to comma-separated encoded strings), with the exception of `dict`:
+    values of type `dict` are not easily representable and will raise
+    `ValueError` in case
+
+    :param query_args: a dictionary of query arguments (strings) mapped to
+        their values and to be encoded as "<key>=<value>" portions of the query
+        string
+    :param baseurl: if provided, it is the base url which will be prefixed in
+        the returned url string. It does not matter if it ends or not with a
+        '?' character
     """
-    def func(tetdata_filename):
-        gmdbpath = testdata.path(tetdata_filename)
+    baseurl = baseurl or ''
+    if baseurl and baseurl[-1:] != '?':
+        baseurl += '?'
 
-        class MockedGmdbField(GmdbField):
-            '''Mocks GmdbField'''
-            _base_choices = {k: gmdbpath for k in get_dbnames(gmdbpath)}
+    return "%s%s" % (baseurl, "&".join("%s=%s" % (key, escape(val))
+                                       for key, val in query_args.items()))
 
-#             def __init__(self, *a, **v):
-#                 v['choices'] = [(_, _) for _ in get_dbnames(gmdbpath)]
-#                 super(MockedGmdbField, self).__init__(*a, **v)
 
-#             def clean(self, value):
-#                 '''Converts the given value (string) into the tuple
-#                 hf5 path, database name (both strings)'''
-#                 (_, value) = super(MockedGmdbField, self).clean(value)
-#                 return (gmdbpath, value)
+def escape(value: Union[bool, None, str, date, datetime, int, float, Iterable]) -> str:
+    """Percent-escapes `value` with support for iterables and `None`s
 
-        return MockedGmdbField()
+    :param value: bool, str, date, datetime, numeric, `None`s
+        (encoded as "null", with no quotes) and any iterables of those elements
+        (which will be converted to comma-separated encoded strings), but not
+        `dict` (raise ValueError in case)
+    """
+    if isinstance(value, dict):
+        raise ValueError('Can not represent nested dictionaries '
+                         'in a query string')
+    return quote(tostr(value), safe=QUERY_PARAMS_SAFE_CHARS) \
+        if isscalar(value) else \
+        ','.join(quote(tostr(_), safe=QUERY_PARAMS_SAFE_CHARS)
+                 for _ in value)
 
-    return func
+
+def tostr(obj: Union[bool, None, str, date, datetime, int, float], none='null') -> str:
+    """Return a string representation of `obj` for injection into URL query
+    strings. No character is escaped, use :func:`urllib.parse.quote` or
+    :func:`querystring` for that.
+    Return `str(obj)` with these exceptions:
+
+    - `obj` is a `datetime.date` or `datetime.datetime`, return its ISO format
+      representation, either '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S' or
+      '%Y-%m-%dT%H:%M:%S.%f'
+    - `obj` is boolean: return 'true' or 'false' (to lower case)
+    - `obj` is None, return the `none` argument which defaults to "null"
+      (with no leading and trailing quotation character)
+    """
+    if obj is None:
+        return none
+    if obj is True or obj is False:
+        return str(obj).lower()
+    if isinstance(obj, (date, datetime)):
+        if isinstance(obj, date) or (obj.microsecond == obj.hour ==
+                                     obj.minute == obj.second == 0):
+            return obj.strftime('%Y-%m-%d')
+        if obj.microsecond == 0:
+            return obj.strftime('%Y-%m-%dT%H:%M:%S')
+        return obj.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    return str(obj)

@@ -19,7 +19,7 @@ Created on 6 Apr 2019
 from django.core.management import call_command, load_command_class, CommandError
 from django.db import DatabaseError
 
-from egsim.management.commands import EgsimBaseCommand
+from . import EgsimBaseCommand
 
 # check JSON1 extension (it should be enabled in all newest OSs and Python versions):
 from django.conf import settings
@@ -39,7 +39,7 @@ if any(_['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.v
 
 
 # Define sub commands to be executed typing their module name:
-APPNAME = 'egsim'
+APPNAME = 'egsim.api'
 SUBCOMMANDS = [load_command_class(APPNAME, _) for _ in
                # ====================================================
                # IMPORTANT: TO AD NEW COMMANDS UPDATE THE LIST BELOW:

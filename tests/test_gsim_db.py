@@ -10,8 +10,8 @@ import pytest
 from openquake.hazardlib.gsim import registry
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
-from egsim.models import (Gsim, Imt, gsim_names, aval_gsims, aval_imts,
-                          aval_trts, shared_imts, sharing_gsims, TrSelector)
+from egsim.api.models import (Gsim, Imt)
+
 # from egsim.core.utils import OQ
 
 
@@ -22,6 +22,21 @@ from egsim.models import (Gsim, Imt, gsim_names, aval_gsims, aval_imts,
 #     empty_all()
 #     test1 = list(aval_gsims())
 #     assert not len(test1)
+from egsim.gui.views import query_gims
+
+
+@pytest.mark.django_db
+def test_db_0t(django_db_setup):
+    data = query_gims()
+    gsim = next(iter(data))
+    # check fields not loaded:
+    deferred = gsim.get_deferred_fields()
+    assert len(deferred) > 0 and not {'name', 'warning'} & set(deferred)
+    deferred = gsim.imtz[0].get_deferred_fields()
+    assert len(deferred) > 0 and not {'name'} & set(deferred)
+    # check that the dict injected in the fronted works:
+    gsims = {g.name: [[i.name for i in g.imtz], g.warning] for g in query_gims()}
+    asd = 9
 
 
 @pytest.mark.django_db

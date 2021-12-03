@@ -19,8 +19,8 @@ from itertools import chain
 
 from django.core.management.base import CommandError
 
-from egsim.management.commands import EgsimBaseCommand
-import egsim.models as models
+from . import EgsimBaseCommand
+from ... import models
 
 
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details

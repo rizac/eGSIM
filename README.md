@@ -288,7 +288,24 @@ and follow the instructions.
 
 Then navigate in the browser to: http://127.0.0.1:8000/admin/
 
-### Migrate and populate the db (VERIFIED OCt 2021)
+### Complete DB reset (remove all migrations and db. VERIFIED DEC 2021)
+
+As eGSIM does not need to store user data in the database, it might be
+easier to throw everything away and regenerate all db schema and data 
+(e.g., after changing the directory structure of the project).
+
+To do this:
+ - delete db.sqlite (or wherever the database is)
+ - delete all migrations (currently under "egsim/api/migrations"), i.e.
+   all all .py files except `__init__.py`
+ - execute (change `DJANGO_SETTINGS_MODULE` value in production!):
+   ```console
+      export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
+      export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
+   ```
+
+
+### Migrate and populate the db (VERIFIED OCT 2021)
 
 Before reading, remember:
 
