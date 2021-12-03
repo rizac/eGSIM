@@ -25,11 +25,6 @@ from .. import (vectorize, isscalar, GsimImtForm, NArrayField, relabel_sa,
                 DictChoiceField, APIForm)
 
 
-##########
-# Fields #
-##########
-
-
 class PointField(NArrayField):
     """NArrayField which validates a 2-element iterable and returns an
     OpenQuake Point"""
@@ -56,18 +51,13 @@ class MsrField(DictChoiceField):
     _base_choices = get_available_magnitude_scalerel()
 
 
-PLOTTYPE = {
-    # key: (trellis class, stddev trellis class, display label)
-    'd': (DistanceIMTTrellis, DistanceSigmaIMTTrellis, 'IMT vs. Distance'),
-    'm': (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis, 'IMT vs. Magnitude'),
-    's': (MagnitudeDistanceSpectraTrellis, MagnitudeDistanceSpectraSigmaTrellis,
-          'Magnitude-Distance Spectra')
+PLOT_TYPE = {
+    # key: (display label, trellis class, stddev trellis class)
+    'd': ('IMT vs. Distance', DistanceIMTTrellis, DistanceSigmaIMTTrellis),
+    'm': ('IMT vs. Magnitude', MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis),
+    's': ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis,
+          MagnitudeDistanceSpectraSigmaTrellis)
 }
-
-
-#########
-# Forms #
-#########
 
 
 class TrellisForm(GsimImtForm, APIForm):
@@ -90,7 +80,7 @@ class TrellisForm(GsimImtForm, APIForm):
         mapping['vs30measured'] = 'vs30_measured'
 
     plot_type = ChoiceField(label='Plot type',
-                            choices=[(k, v[-1]) for k, v in PLOTTYPE.items()])
+                            choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
     stdev = BooleanField(label='Compute Standard Deviation(s)', required=False,
                          initial=False)
 
@@ -228,11 +218,11 @@ class TrellisForm(GsimImtForm, APIForm):
         distances = np.asarray(vectorize(params.pop(dist_s)))  # smtk wants np arrays
 
         plottype_key = params.pop("plot_type")
-        trellisclass = PLOTTYPE[plottype_key][0]
+        trellisclass = PLOT_TYPE[plottype_key][1]
         # define stddev trellis class if the parameter stdev is true
         stdev_trellisclass = None  # do not compute stdev (default)
         if params.pop("stdev", False):
-            stdev_trellisclass = PLOTTYPE[plottype_key][1]
+            stdev_trellisclass = PLOT_TYPE[plottype_key][2]
 
         # Returns True if trellisclass is a Distance-based Trellis class:
         _isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
