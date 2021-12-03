@@ -14,38 +14,17 @@ from django.forms import FloatField, MultipleChoiceField
 from . import FlatfileForm, MOF
 from .. import GsimImtForm, relabel_sa, APIForm
 
-##########
-# Fields #
-##########
 
-
-class MeasureOfFitField(MultipleChoiceField):
-    """MultipleChoiceField handling the possible Measures of Fit"""
-    _base_choices = {
-        MOF.RES: ('Residuals', GSIM_MODEL_DATA_TESTS['Residuals']),
-        MOF.LH: ("Likelihood", GSIM_MODEL_DATA_TESTS["Likelihood"]),
-        MOF.LLH: ("Log-Likelihood", GSIM_MODEL_DATA_TESTS["LLH"]),
-        MOF.MLLH: ("Multivariate Log-Likelihood",
-                   GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
-        MOF.EDR: ("Euclidean Distance-Based Ranking",
-                  GSIM_MODEL_DATA_TESTS["EDR"])
-    }
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('choices',
-                          [(k, v[0]) for k, v in self._base_choices.items()])
-        super(MeasureOfFitField, self).__init__(**kwargs)
-
-    def clean(self, value):
-        """Convert the given value (string) into the smtk function"""
-        value = super(MeasureOfFitField, self).clean(value)
-        # returns list of sub-lists [key, label, function]:
-        return [[_] + list(self._base_choices[_]) for _ in value]
-
-
-#########
-# Forms #
-#########
+MOF_TYPE = {
+    # key: display name, test function (residuals, config)
+    MOF.RES: ('Residuals', GSIM_MODEL_DATA_TESTS['Residuals']),
+    MOF.LH: ("Likelihood", GSIM_MODEL_DATA_TESTS["Likelihood"]),
+    MOF.LLH: ("Log-Likelihood", GSIM_MODEL_DATA_TESTS["LLH"]),
+    MOF.MLLH: ("Multivariate Log-Likelihood",
+               GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
+    MOF.EDR: ("Euclidean Distance-Based Ranking",
+              GSIM_MODEL_DATA_TESTS["EDR"])
+}
 
 
 class TestingForm(GsimImtForm, FlatfileForm, APIForm):
@@ -59,8 +38,8 @@ class TestingForm(GsimImtForm, FlatfileForm, APIForm):
         super().fieldname_aliases(mapping)
         mapping['fitm'] = 'fit_measure'
 
-    fit_measure = MeasureOfFitField(required=True, label="Measure(s) of fit")
-
+    fit_measure = MultipleChoiceField(required=True, label="Measure(s) of fit",
+                                      choices=[(k, v[0]) for k, v in MOF_TYPE.items()])
     edr_bandwidth = FloatField(required=False, initial=0.01,
                                help_text=('Ignored if EDR is not a '
                                           'selected measure of fit'))
@@ -111,7 +90,8 @@ class TestingForm(GsimImtForm, FlatfileForm, APIForm):
 
                 gsim_values = []
 
-                for key, name, func in params["fit_measure"]:
+                for key in params["fit_measure"]:
+                    name, func = MOF_TYPE[key]
                     result = func(residuals, config)
                     gsim_values.extend(_itervalues(gsim, key, name, result))
 

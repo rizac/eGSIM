@@ -21,67 +21,38 @@ from . import FlatfileForm, MOF
 from .. import GsimImtForm, relabel_sa, APIForm
 
 
-##########
-# Fields #
-##########
-
-
 # Copy SMTK_DISTANCE_LABELS replacing the key 'r_x' with 'rx':
 DISTANCE_LABEL = dict(
     **{k: v for k, v in SMTK_DISTANCE_LABEL.items() if k != 'r_x'},
     rx=SMTK_DISTANCE_LABEL['r_x']
 )
 
-
-class PlotTypeField(ChoiceField):
-    """An EgsimChoiceField which returns the selected function to compute
-    residual plots"""
-    # _base_choices maps the REST key to the tuple:
-    # (GUI label, [function, dict_of_functon_kwargs])
-    _base_choices = {
-        MOF.RES: ('Residuals (density distribution)',
-                  residuals_density_distribution, {}),
-        MOF.LH: ('Likelihood', likelihood, {}),
-        'mag': ('Residuals vs. Magnitude', residuals_with_magnitude, {}),
-        'vs30': ('Residuals vs. Vs30', residuals_with_vs30, {}),
-        'depth': ('Residuals vs. Depth', residuals_with_depth, {}),
-        # insert distances related residuals:
-        **{'dist_%s' % n: ("Residuals vs. %s" % l, residuals_with_distance,
-                           {'distance_type': n})
-           for n, l in DISTANCE_LABEL.items()}
-        # 'site': ('Residuals vs. Site', None),
-        # 'intra': ('Intra Event Residuals vs. Site', None),
-    }
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('choices',
-                          [(k, v[0]) for k, v in self._base_choices.items()])
-        super(PlotTypeField, self).__init__(**kwargs)
-
-    def clean(self, value):
-        """Take the given value (string) and returns the tuple
-        (smtk_function, function_kwargs)
-        """
-        value = super(PlotTypeField, self).clean(value)
-        return self._base_choices[value][1:]
-
-
-#########
-# Forms #
-#########
+PLOT_TYPE = {
+    # key: display name, residuals function, function kwargs
+    MOF.RES: ('Residuals (density distribution)',
+              residuals_density_distribution, {}),
+    MOF.LH: ('Likelihood', likelihood, {}),
+    'mag': ('Residuals vs. Magnitude', residuals_with_magnitude, {}),
+    'vs30': ('Residuals vs. Vs30', residuals_with_vs30, {}),
+    'depth': ('Residuals vs. Depth', residuals_with_depth, {}),
+    # insert distances related residuals:
+    **{'dist_%s' % n: ("Residuals vs. %s" % l, residuals_with_distance,
+                       {'distance_type': n}) for n, l in DISTANCE_LABEL.items()}
+}
 
 
 class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
     """Form for residual analysis"""
 
-    plot_type = PlotTypeField(required=True)
+    plot_type = ChoiceField(required=True,
+                            choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
 
     def clean(self):
         cleaned_data = super(ResidualsForm, self).clean()
         return cleaned_data
-        # # Note: the call below calls GmdbForm.clean(self) BUT we should
-        # # check why and how:
-        # return GsimImtForm.clean(self)
+
+    RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
+                       'pvalue')
 
     @classmethod
     def process_data(cls, cleaned_data: dict) -> dict:
@@ -92,7 +63,7 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
         :param cleaned_data: the result of `self.cleaned_data`
         """
         params = cleaned_data  # FIXME: legacy code remove?
-        func, kwargs = params["plot_type"]
+        _, func, kwargs = PLOT_TYPE[params["plot_type"]]
         residuals = Residuals(params["gsim"], params["imt"])
 
         # Compute residuals.
@@ -112,7 +83,7 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                 imt2 = relabel_sa(imt)
                 res_plots = func(**kwargs)
                 for res_type, res_plot in res_plots.items():
-                    for stat in self.RESIDUALS_STATS:
+                    for stat in cls.RESIDUALS_STATS:
                         res_plot.setdefault(stat, None)
                     if imt2 != imt:
                         res_plot['xlabel'] = relabel_sa(res_plot['xlabel'])
@@ -123,9 +94,6 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                     ret[imt2][res_type][gsim] = res_plot
 
         return ret
-
-    RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
-                       'pvalue')
 
     @classmethod
     def csv_rows(cls, processed_data: dict) -> Iterable[list[str]]:
