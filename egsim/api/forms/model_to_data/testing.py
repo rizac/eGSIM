@@ -8,7 +8,8 @@ from typing import Iterable
 
 import numpy as np
 
-from smtk.residuals.gmpe_residuals import Residuals, GSIM_MODEL_DATA_TESTS
+from smtk.residuals.gmpe_residuals import (Residuals,
+                                           GSIM_MODEL_DATA_TESTS as TEST)
 from django.forms import FloatField, MultipleChoiceField
 
 from . import FlatfileForm, MOF
@@ -16,14 +17,12 @@ from .. import GsimImtForm, relabel_sa, APIForm
 
 
 MOF_TYPE = {
-    # key: display name, test function (residuals, config)
-    MOF.RES: ('Residuals', GSIM_MODEL_DATA_TESTS['Residuals']),
-    MOF.LH: ("Likelihood", GSIM_MODEL_DATA_TESTS["Likelihood"]),
-    MOF.LLH: ("Log-Likelihood", GSIM_MODEL_DATA_TESTS["LLH"]),
-    MOF.MLLH: ("Multivariate Log-Likelihood",
-               GSIM_MODEL_DATA_TESTS["MultivariateLLH"]),
-    MOF.EDR: ("Euclidean Distance-Based Ranking",
-              GSIM_MODEL_DATA_TESTS["EDR"])
+    # key -> display name, test_function(residuals, config)
+    MOF.RES: ('Residuals', TEST['Residuals']),
+    MOF.LH: ("Likelihood", TEST["Likelihood"]),
+    MOF.LLH: ("Log-Likelihood", TEST["LLH"]),
+    MOF.MLLH: ("Multivariate Log-Likelihood", TEST["MultivariateLLH"]),
+    MOF.EDR: ("Euclidean Distance-Based Ranking", TEST["EDR"])
 }
 
 

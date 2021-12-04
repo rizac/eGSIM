@@ -484,13 +484,6 @@ class EgsimBaseForm(Form):
         """
         pass
 
-    # Field names (str) included in the list below: 1. will be hidden from the
-    # doc as they should not be exposed in the API, 2. will not returned by
-    # `self.dump` (which converts this form to json or YAML object). To merge
-    # with a parent class:
-    # __hidden_fieldnames__ = [*ParentForm1.__hidden_fieldnames__, '<field>', ...]
-    __hidden_fieldnames__ = []
-
     def __init__(self, *args, **kwargs):
         """Override init to set custom attributes on field widgets and to set
         the initial value for fields of this class with no match in the keys
@@ -567,230 +560,6 @@ class EgsimBaseForm(Form):
         #         field.widget.attrs.update(atts)
         return
 
-    def dump(self, stream=None, syntax='yaml'):
-        """Serialize this Form instance into a YAML or JSON stream.
-        **The form needs to be already validated via e.g. `form.is_valid()`**.
-        Hidden fields in `self.__hidden_fieldnames__` are not returned.
-
-        The result collects the fields of `self.data`, i.e., the unprocessed
-        input, with one exception: if this form subclasses
-        :class:`GsimImtForm`, as 'sa_period' is hidden,
-        the value mapped to 'imt' will be `self.cleaned_data['imt']` and not
-        `self.data['imt']`.
-
-        :param stream: A file-like object **for text I/O** (e.g. `StringIO`),
-           or None.
-        :param syntax: string either json or yaml. Default: yaml
-
-        :return: if the passed `stream` argument is None, returns the produced
-            string. If the passed `stream` argument is a file-like object,
-            this method writes to `stream` and returns None
-        """
-        if syntax not in ('yaml', 'json'):
-            raise ValueError("invalid `syntax` argument in `dump`: '%s' "
-                             "not in ('json', 'yam')" % syntax)
-
-        hidden_fn = set(self.__hidden_fieldnames__)
-        cleaned_data = {}
-        for key, val in self.data.items():
-            if key in hidden_fn:
-                continue
-            # Omit unchanged optional parameters. This is not only to make
-            # the dumped string more readable and light size, but to avoid
-            # parameters which defaults to None (e.g. z1pt0 in
-            # TrellisForm): if they were written here (e.g. `z1pt0: None`) then
-            # a routine converting the returned JSON/YAML to a query string
-            # would wrtie "...z1pt0=null...", which might be interpreted as
-            # the string "null"
-            if self.is_optional(key) and val == self.fields[key].initial:
-                continue
-            # provide tha value given as input, not the value processed
-            # by `self.clean`, which might be not JSON or YAML serializable,
-            # with one exception: imt in GsimImtForm, becasue we might have
-            # provided the parameter `sa_periods` and thus the processed
-            # imt in `cleaned_data` is the value to return:
-            cleaned_data[key] = self.cleaned_data[key] \
-                if key == 'imt' and isinstance(self, GsimImtForm) else val
-
-        if syntax == 'json':
-            return self._dump_json(stream, cleaned_data)
-
-        return self._dump_yaml(stream, cleaned_data)
-
-    def _dump_json(self, stream, cleaned_data):  # pylint: disable=no-self-use
-        """Serialize to JSON. See `self.dump`"""
-        # compatibility with yaml dump if stream is None:
-        if stream is None:
-            return json.dumps(cleaned_data, indent=4,
-                              separators=(',', ': '), sort_keys=True)
-        json.dump(cleaned_data, stream, indent=4, separators=(',', ': '),
-                  sort_keys=True)
-        return None
-
-    def _dump_yaml(self, stream, cleaned_data):
-        """Serialize to YAML. See `self.dump`"""
-
-        class MyDumper(yaml.SafeDumper):  # noqa
-            """Force indentation of lists"""
-            # For info see: https://stackoverflow.com/a/39681672
-            def increase_indent(self, flow=False, indentless=False):
-                return super(MyDumper, self).increase_indent(flow, False)
-
-        # regexp to replace html entities with their content, i.e.:
-        # <a href='#'>bla</a> -> bla
-        # V<sub>s30</sub> -> Vs30
-        # ... and so on ...
-        html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)<\\/\\1>')
-
-        # inject comments in yaml by using the field label and its help:
-        stringio = StringIO() if stream is None else stream
-        fields = self.to_rendering_dict(ignore_callable_choices=False)
-        for name, value in cleaned_data.items():
-            field = fields[name]
-            label = (field['label'] or '') + \
-                ('' if not field['help'] else ' (%s)' % field['help'])
-            if label:
-                # replace html characters with their content
-                # (or empty str if no content):
-                label = html_tags_re.sub(r'\2', label)
-                # replace newlines for safety:
-                label = '# %s\n' % (label.replace('\n', ' ').
-                                    replace('\r', ' '))
-                stringio.write(label)
-            yaml.dump({name: value}, stream=stringio, Dumper=MyDumper,
-                      default_flow_style=False)
-            stringio.write('\n')
-        # compatibility with yaml dump if stream is None:
-        if stream is None:
-            ret = stringio.getvalue()
-            stringio.close()
-            return ret
-        return None
-
-    @classmethod
-    def is_optional(cls, field):
-        """Return True if the given Field is optional, i.e. if it is not
-        required or its initial value is given (i.e., not None. A field initial
-        value acts as default value when missing)
-
-        :param field: a Field object or a string denoting the name of one of
-            this Form's fields
-        """
-        if isinstance(field, str):
-            field = cls.declared_fields[field]
-        return not field.required or field.initial is not None
-
-    def to_rendering_dict(self, ignore_callable_choices=True) -> dict:
-        """Convert this form to a Python dict for rendering the field as input
-        in the frontend, allowing it to be injected into frontend libraries
-        like VueJS (the currently used library) or AngularJS: each
-        Field name is mapped to a dict of keys such as 'val' (the value),
-        'help' (the help text), 'label' (the label text), 'err':
-        (the error text), 'attrs' (a dict of HTML element attributes),
-        'choices' (the list of available choices, see argument
-        `ignore_callable_choices`).
-
-        :param ignore_callable_choices: handles the 'choices' for fields
-            defining it as CallableChoiceIterator: if True (the default) the
-            function is not evluated and the choices are simply set to [].
-            If False, the choices function will be evaluated.
-            Use True when the choices list is too big and you do not need
-            this additional overhead (see e.g. in `view`.main`, when we create
-            the start HTML).
-        """
-        # import here stuff used only in this method:
-        from collections import defaultdict
-
-        hidden_fn = set(self.__hidden_fieldnames__)
-        formdata = {}
-        aliases = {}
-        self.fieldname_aliases(aliases)
-        optional_names = defaultdict(list)
-        for key, val in aliases.items():
-            optional_names[val].append(key)
-        for name, field in self.declared_fields.items():  # pylint: disable=no-member
-            # little spec needed before proceeding:
-            # `self.declared_fields` and `self.base_fields` are the same thing
-            # (see django.forms.forms.DeclarativeFieldsMetaclass) and are
-            # declared at CLASS level: modifying them applies changes to all
-            # instances, thus avoid. Conversely, `self.fields[name]` is where
-            # specific instance-level changes have to be made:
-            # https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form
-            # Finally, `self[name]` creates a `BoundField` from
-            # `self.fields[name]` i.e. "a Field plus data" (e.g., its initial
-            # value, if given. See `__init__`). `BoundField`s is what we want
-            # to use here
-            boundfield = self[name]
-            val = boundfield.value()
-            widget = boundfield.field.widget
-            attrs = boundfield.build_widget_attrs({}, widget)
-            widgetdata = widget.get_context(name, val, attrs)['widget']
-            attrs = dict(widgetdata.pop('attrs', {}))
-            if 'type' in widgetdata:
-                attrs['type'] = widgetdata.pop('type')
-            if 'required' in widgetdata:
-                attrs['required'] = widgetdata.pop('required')
-            if 'id' not in attrs:
-                attrs['id'] = boundfield.auto_id
-            attrs['name'] = widgetdata.pop('name')
-            # coerce val to [] in case val falsy and multichoice:
-            if isinstance(field, MultipleChoiceField) and not val:
-                val = []
-            # type description:
-            fielddata = {  # noqa
-                'name': attrs['name'],
-                'opt_names': optional_names.get(name, []),
-                'is_optional': self.is_optional(name),
-                'help': boundfield.help_text,
-                'label': boundfield.label,
-                'attrs': attrs,
-                'err': '',
-                'is_hidden': widgetdata.pop('is_hidden',
-                                            False) or name in hidden_fn,
-                'val': val,
-                'initial': field.initial,
-                'typedesc': EgsimBaseForm._type_description(field,
-                                                            attrs.get('min', None),
-                                                            attrs.get('max', None))
-            }
-            fielddata['choices'] = getattr(field, 'choices', [])
-            if isinstance(fielddata['choices'], CallableChoiceIterator):
-                if ignore_callable_choices:
-                    fielddata['choices'] = []
-                else:
-                    fielddata['choices'] = list(fielddata['choices'])
-            formdata[name] = fielddata
-        return formdata
-
-    @staticmethod
-    def _type_description(field, minval=None, maxval=None):
-        """Return a human readable type description for the given field"""
-        # type description:
-        typedesc = 'UNKNOWN_TYPE'
-        if isinstance(field, NArrayField):
-            if field.min_count is not None and field.min_count > 1:
-                typedesc = 'Numeric array'
-            else:
-                typedesc = 'Numeric or numeric array'
-        elif isinstance(field, MultipleChoiceWildcardField):
-            typedesc = 'String or string array'
-        elif isinstance(field, MultipleChoiceField):
-            typedesc = 'String array'
-        elif isinstance(field, (CharField, ChoiceField)):
-            typedesc = 'String'
-        elif isinstance(field, BooleanField):
-            typedesc = 'Boolean'
-        elif isinstance(field, FloatField):
-            typedesc = 'Numeric'
-            if minval is not None and maxval is None:
-                typedesc += ' ≥ %d' % minval
-            elif minval is None and maxval is not None:
-                typedesc += ' ≤ %d' % maxval
-            elif minval is not None and maxval is not None:
-                typedesc += ' in [%d, %d]' % (minval, maxval)
-
-        return typedesc
-
     def validation_errors(self, code=400,
                           msg_format='Invalid input in %(names)s') -> dict:
         """Convert `self.errors.as_json()` into a list of dicts
@@ -837,8 +606,6 @@ class GsimImtForm(EgsimBaseForm):
         super().fieldname_aliases(mapping)
         mapping['gmpe'] = 'gsim'
         mapping['gmm'] = 'gsim'
-
-    __hidden_fieldnames__ = ['sa_period']
 
     gsim = GsimField(required=True)
     imt = ImtField(required=True)
@@ -952,7 +719,7 @@ class APIForm(Form):
     def get_data_format(self):
         return self.data['data_format']
 
-    data_format = ChoiceField(required=False, initial=DATA_FORMAT_JSON,
+    data_format = ChoiceField(required=False, initial=DATA_FORMAT_JSON, disabled=True,
                               label='The format of the data returned',
                               choices=[(DATA_FORMAT_JSON, 'json'),
                                        (DATA_FORMAT_TEXT, 'text/csv')])

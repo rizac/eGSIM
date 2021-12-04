@@ -10,14 +10,20 @@ import json
 import pytest
 from openquake.hazardlib import imt
 
-from egsim.forms.forms import TrellisForm, GsimImtForm
-from egsim.core.utils import yaml_load, MOF
-from egsim.forms.fields import MeasureOfFitField
+from egsim.api.forms import GsimImtForm
+from egsim.api.forms.model_to_model.trellis import TrellisForm
+# from egsim.api.core.utils import yaml_load, MOF
+# from egsim.api.forms.fields import MeasureOfFitField
 from django.core.exceptions import ValidationError
 
+from egsim.gui.vuejs import to_help_dict
 
 GSIM, IMT = 'gsim', 'imt'
 
+@pytest.mark.django_db
+def test_form_rendering_dict():
+    a = list(to_help_dict(TrellisForm()))
+    asd = 9
 
 @pytest.mark.django_db
 def test_gsimimt_form_invalid(areequal):  # areequal: fixture in conftest.py
