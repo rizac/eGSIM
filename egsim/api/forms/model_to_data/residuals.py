@@ -15,17 +15,17 @@ from smtk.residuals.residual_plots import (residuals_density_distribution,
                                            residuals_with_vs30,
                                            likelihood)
 from smtk.residuals.gmpe_residuals import Residuals
-from smtk.database_visualiser import DISTANCE_LABEL as SMTK_DISTANCE_LABEL
+from smtk.database_visualiser import DISTANCE_LABEL
 
 from . import FlatfileForm, MOF
 from .. import GsimImtForm, relabel_sa, APIForm
 
 
-# Copy SMTK_DISTANCE_LABELS replacing the key 'r_x' with 'rx':
-DISTANCE_LABEL = dict(
-    **{k: v for k, v in SMTK_DISTANCE_LABEL.items() if k != 'r_x'},
-    rx=SMTK_DISTANCE_LABEL['r_x']
-)
+# For residuals with distance, use labels coded in smtk DISTANCE_LABEL dict:
+_DIST_LABEL = dict(DISTANCE_LABEL)
+# But replace 'r_x' with 'rx' (residuals with distance expects the latter as arg):
+_DIST_LABEL['rx'] = _DIST_LABEL.pop('r_x')
+
 
 PLOT_TYPE = {
     # key: display name, residuals function, function kwargs
@@ -37,7 +37,7 @@ PLOT_TYPE = {
     'depth': ('Residuals vs. Depth', residuals_with_depth, {}),
     # insert distances related residuals:
     **{'dist_%s' % n: ("Residuals vs. %s" % l, residuals_with_distance,
-                       {'distance_type': n}) for n, l in DISTANCE_LABEL.items()}
+                       {'distance_type': n}) for n, l in _DIST_LABEL.items()}
 }
 
 

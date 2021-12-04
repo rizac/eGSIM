@@ -14,7 +14,8 @@ from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.conf import settings
 
-from . import figutils, vuejs, TABS, QUERY_PARAMS_SAFE_CHARS, error_response
+from . import figutils, guiutils, TABS, QUERY_PARAMS_SAFE_CHARS, error_response
+from .guiutils import to_help_dict, dump_request_data
 from ..api.models import Gsim, Imt
 
 
@@ -50,8 +51,6 @@ def main(request, selected_menu=None):
     # this can be changed if needed:
     sel_component = TABS.home.name if not selected_menu else selected_menu
 
-    components_props = vuejs.get_components_properties(settings.DEBUG)
-
     # setup browser detection
     allowed_browsers = [['Chrome', 49], ['Firefox', 45], ['Safari', 10]]
     allowed_browsers_msg = ', '.join('%s &ge; %d' % (brw, ver)
@@ -62,6 +61,8 @@ def main(request, selected_menu=None):
                                allowed_browsers_msg)
 
     gsims = {g.name: [[i.name for i in g.imtz], g.warning] for g in query_gims()}
+
+    components_props = guiutils.get_components_properties(settings.DEBUG)
 
     context = {
         **COMMON_PARAMS,
@@ -103,29 +104,29 @@ def apidoc(request):
         # 'GSIMS': {
         #     'title': TITLES.GSIMS,
         #     'path': URLS.GSIMS_RESTAPI,
-        #     'form': GsimsView.formclass().to_rendering_dict(False),
+        #     'form': to_help_dict(GsimsView.formclass()),
         #     'key': KEY.GSIMS
         # },
         'trellis': {
             'title': TABS.trellis.title,
             'path': " or ".join(TABS.trellis.viewclass.urls),
-            'form': TABS.trellis.formclass().to_rendering_dict(False),
+            'form': to_help_dict(TABS.trellis.formclass()),
             'key': TABS.trellis.name
         },
         'residuals': {
             'title': TABS.residuals.title,
             'path': " or ".join(TABS.residuals.viewclass.urls),
-            'form': TABS.residuals.formclass().to_rendering_dict(False),
+            'form': to_help_dict(TABS.residuals.formclass()),
             'key': TABS.residuals.name
         },
         'testing': {
             'title': TABS.testing.title,
             'path': " or ".join(TABS.testing.viewclass.urls),
-            'form': TABS.testing.formclass().to_rendering_dict(False),
+            'form': to_help_dict(TABS.testing.formclass()),
             'key': TABS.testing.name
         },
         # 'FORMAT': {
-        #     'form': FormatForm().to_rendering_dict(False)
+        #     'form': to_help_dict(FormatForm())
         # }
     }
 
@@ -189,7 +190,7 @@ def download_request(request, tab_name, filename):
                               errors=verr['errors'])
     buffer = StringIO()
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
-    dataform.dump(buffer, syntax=ext_nodot)
+    dump_request_data(dataform, buffer, syntax=ext_nodot)
     buffer.seek(0)
     if ext_nodot == 'json':
         # in the frontend the axios library expects bytes data (blob)
