@@ -7,7 +7,7 @@ from io import BytesIO
 from django.forms import CharField, ModelChoiceField, FileField
 
 from ...flatfile import (PredefinedFlatfile, Flatfile, UserFlatfile)
-from .. import EgsimBaseForm
+from .. import GsimImtForm
 from ... import models
 
 ##########
@@ -38,7 +38,7 @@ class PredefinedFlatfileField(ModelChoiceField):
 #########
 
 
-class FlatfileForm(EgsimBaseForm):
+class FlatfileForm(GsimImtForm):
     """Abstract-like class for handling gmdb (GroundMotionDatabase)"""
 
     def fieldname_aliases(self, mapping):
@@ -57,12 +57,12 @@ class FlatfileForm(EgsimBaseForm):
     def clean(self):
         """Call `super.clean()` and handles the flatfile
         """
-        cleaned_data = super().clean()
+        cleaned_data = GsimImtForm.clean(self)
         flatfile_obj: Flatfile = None
 
         key_u, key_p = 'user_flatfile', 'predefined_flatfile'
         if cleaned_data[key_u]:
-            dtype, defaults = models.FlatfileField.get_dtype_and_defaults()
+            dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
             flatfile_obj = UserFlatfile(BytesIO(cleaned_data[key_u]),
                                         dtype=dtype, defaults=defaults)
         else:
@@ -70,7 +70,7 @@ class FlatfileForm(EgsimBaseForm):
 
         selexpr = cleaned_data['sleexpr']
         if selexpr:
-            flatfile_obj = flatfile_obj.query(selexpr)
+            flatfile_obj = flatfile_obj.filter(selexpr)
 
         cleaned_data['flatfile'] = flatfile_obj
 

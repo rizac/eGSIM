@@ -47,9 +47,9 @@ class TestingForm(GsimImtForm, FlatfileForm, APIForm):
                                            'selected measure of fit'))
 
     def clean(self):
-        # Note: the call below calls GmdbPlot.clean(self) BUT we should
-        # check why and how:
-        cleaned_data = GsimImtForm.clean(self)
+        FlatfileForm.clean(self)
+        APIForm.clean(self)
+        cleaned_data = self.cleaned_data
         config = {}
         for parname in ['edr_bandwidth', 'edr_multiplier']:
             if parname in cleaned_data:
