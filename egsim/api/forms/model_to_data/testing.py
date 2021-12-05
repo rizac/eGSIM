@@ -13,7 +13,7 @@ from smtk.residuals.gmpe_residuals import (Residuals,
 from django.forms import FloatField, MultipleChoiceField
 
 from . import FlatfileForm, MOF
-from .. import GsimImtForm, relabel_sa, APIForm
+from .. import relabel_sa, APIForm
 
 
 MOF_TYPE = {
@@ -26,7 +26,7 @@ MOF_TYPE = {
 }
 
 
-class TestingForm(GsimImtForm, FlatfileForm, APIForm):
+class TestingForm(APIForm, FlatfileForm):
     """Form for testing Gsims via Measures of Fit"""
 
     def fieldname_aliases(self, mapping):
@@ -47,8 +47,8 @@ class TestingForm(GsimImtForm, FlatfileForm, APIForm):
                                            'selected measure of fit'))
 
     def clean(self):
-        FlatfileForm.clean(self)
         APIForm.clean(self)
+        FlatfileForm.clean(self)
         cleaned_data = self.cleaned_data
         config = {}
         for parname in ['edr_bandwidth', 'edr_multiplier']:

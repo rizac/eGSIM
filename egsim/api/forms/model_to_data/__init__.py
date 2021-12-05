@@ -3,43 +3,17 @@ involving flatfiles
 """
 from io import BytesIO
 
-# from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError
 from django.forms import CharField, ModelChoiceField, FileField
+from django.utils.translation import gettext
 
-from ...flatfile import (PredefinedFlatfile, Flatfile, UserFlatfile)
-from .. import GsimImtForm
+from ...flatfile import (PredefinedFlatfile, UserFlatfile)
+from .. import EgsimBaseForm
 from ... import models
 
-##########
-# Fields #
-##########
 
-
-class PredefinedFlatfileField(ModelChoiceField):
-    """ModelChoiceField returning `PredefinedFlatfile`s"""
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('queryset', models.PredefinedFlatfile.objects.all())
-        kwargs.setdefault('empty_label', None)
-        kwargs.setdefault('label', 'Predefined Flatfile')
-        kwargs.setdefault('to_field_name', "name")
-        # note: the <select> name will be set as the instance __str__ value
-        super(PredefinedFlatfileField, self).__init__(**kwargs)
-
-    def clean(self, value):
-        """Converts the given value (string) into the tuple
-        hf5 path, database name (both strings)"""
-        value = super(PredefinedFlatfileField, self).clean(value)
-        return PredefinedFlatfile(value.path)
-
-
-#########
-# Forms #
-#########
-
-
-class FlatfileForm(GsimImtForm):
-    """Abstract-like class for handling gmdb (GroundMotionDatabase)"""
+class FlatfileForm(EgsimBaseForm):
+    """Abstract-like class for handling Flatfiles (either pre- or user-defined)"""
 
     def fieldname_aliases(self, mapping):
         """Set field name aliases (exposed to the user as API parameter aliases):
@@ -50,29 +24,48 @@ class FlatfileForm(GsimImtForm):
         mapping['sel'] = 'selexpr'
         mapping['dist'] = 'distance_type'
 
-    predefined_flatfile = PredefinedFlatfileField(required=False)
+    predefined_flatfile = ModelChoiceField(queryset=models.PredefinedFlatfile.objects.all(),
+                                           empty_label=None, label='Predefined Flatfile',
+                                           to_field_name="name", required=False)
     selexpr = CharField(required=False, label='Selection expression')
     user_flatfile = FileField(required=False)
 
     def clean(self):
         """Call `super.clean()` and handles the flatfile
         """
-        cleaned_data = GsimImtForm.clean(self)
-        flatfile_obj: Flatfile = None
+        cleaned_data = EgsimBaseForm.clean(self)
 
         key_u, key_p = 'user_flatfile', 'predefined_flatfile'
-        if cleaned_data[key_u]:
-            dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
-            flatfile_obj = UserFlatfile(BytesIO(cleaned_data[key_u]),
-                                        dtype=dtype, defaults=defaults)
-        else:
-            flatfile_obj = PredefinedFlatfile(cleaned_data[key_p].path)
+        u_ff = cleaned_data.get(key_u, None)
+        p_ff = cleaned_data.get(key_p, None)
+        if bool(p_ff) == bool(u_ff):
+            # instead of raising ValidationError, which is keyed with
+            # '__all__' we add the error keyed to the given field name
+            # `name` via `self.add_error`:
+            err_ff = ValidationError(gettext("%(key_u)s and %(key_p)s are both "
+                                             "missing or both given, only one "
+                                             "is required and allowed"),
+                                             params={'key_u': key_u,
+                                                     "key_p": key_p},
+                                             code='invalid')
+            # add_error removes also the field from self.cleaned_data:
+            self.add_error(key_p, err_ff)
+            self.add_error(key_u, err_ff)
+            return cleaned_data
 
-        selexpr = cleaned_data['sleexpr']
+        if u_ff:
+            dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
+            flatfile_obj = UserFlatfile(BytesIO(u_ff), dtype=dtype,
+                                        defaults=defaults)
+        else:
+            flatfile_obj = PredefinedFlatfile(p_ff.path)
+
+        selexpr = cleaned_data['selexpr']
         if selexpr:
             flatfile_obj = flatfile_obj.filter(selexpr)
 
         cleaned_data['flatfile'] = flatfile_obj
+        return cleaned_data
 
 
 #############
