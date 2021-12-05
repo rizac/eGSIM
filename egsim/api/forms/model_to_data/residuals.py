@@ -18,7 +18,7 @@ from smtk.residuals.gmpe_residuals import Residuals
 from smtk.database_visualiser import DISTANCE_LABEL
 
 from . import FlatfileForm, MOF
-from .. import GsimImtForm, relabel_sa, APIForm
+from .. import relabel_sa, APIForm
 
 
 # For residuals with distance, use labels coded in smtk DISTANCE_LABEL dict:
@@ -41,7 +41,7 @@ PLOT_TYPE = {
 }
 
 
-class ResidualsForm(FlatfileForm, APIForm):
+class ResidualsForm(APIForm, FlatfileForm):
     """Form for residual analysis"""
 
     plot_type = ChoiceField(required=True,
@@ -50,8 +50,8 @@ class ResidualsForm(FlatfileForm, APIForm):
     def clean(self):
         # call programmatically superclass `clean` to avoid multiple inheritance
         # confusion:
-        FlatfileForm.clean(self)
         APIForm.clean(self)
+        FlatfileForm.clean(self)
         return self.cleaned_data
 
     RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',

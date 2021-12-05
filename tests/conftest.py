@@ -192,31 +192,10 @@ def django_db_setup(django_db_setup, django_db_blocker):
         # run command:
         call_command('egsim_init', interactive=False)  # '--noinput')
 
-# FIXME :REMOVE
-# @pytest.fixture(scope="session")
-# def mocked_gmdbfield(request, testdata):  # pylint: disable=unused-argument
-#     """Fixture returning a mock class for the GmdbField.
-#     """
-#     def func(tetdata_filename):
-#         gmdbpath = testdata.path(tetdata_filename)
-#
-#         class MockedGmdbField(GmdbField):
-#             '''Mocks GmdbField'''
-#             _base_choices = {k: gmdbpath for k in get_dbnames(gmdbpath)}
-#
-# #             def __init__(self, *a, **v):
-# #                 v['choices'] = [(_, _) for _ in get_dbnames(gmdbpath)]
-# #                 super(MockedGmdbField, self).__init__(*a, **v)
-#
-# #             def clean(self, value):
-# #                 '''Converts the given value (string) into the tuple
-# #                 hf5 path, database name (both strings)'''
-# #                 (_, value) = super(MockedGmdbField, self).clean(value)
-# #                 return (gmdbpath, value)
-#
-#         return MockedGmdbField()
-#
-#     return func
+
+@pytest.fixture(scope='session')
+def querystring():
+    return get_querystring
 
 
 ## utlitity functions:
@@ -228,7 +207,7 @@ from egsim.api.views import QUERY_PARAMS_SAFE_CHARS
 from egsim.api.forms import isscalar
 
 
-def querystring(query_args: dict, baseurl: str = None):
+def get_querystring(query_args: dict, baseurl: str = None):
     """Convert `query_args` to a query string to be used in URLs. It escapes all
     unsafe characters (as defined in `QUERY_PARAMS_SAFE_CHARS`) from
     `query_args` keys (str) and values, which can be any "scalar" type: bool, str,
@@ -294,3 +273,30 @@ def tostr(obj: Union[bool, None, str, date, datetime, int, float], none='null') 
             return obj.strftime('%Y-%m-%dT%H:%M:%S')
         return obj.strftime('%Y-%m-%dT%H:%M:%S.%f')
     return str(obj)
+
+
+# FIXME :REMOVE
+# @pytest.fixture(scope="session")
+# def mocked_gmdbfield(request, testdata):  # pylint: disable=unused-argument
+#     """Fixture returning a mock class for the GmdbField.
+#     """
+#     def func(tetdata_filename):
+#         gmdbpath = testdata.path(tetdata_filename)
+#
+#         class MockedGmdbField(GmdbField):
+#             '''Mocks GmdbField'''
+#             _base_choices = {k: gmdbpath for k in get_dbnames(gmdbpath)}
+#
+# #             def __init__(self, *a, **v):
+# #                 v['choices'] = [(_, _) for _ in get_dbnames(gmdbpath)]
+# #                 super(MockedGmdbField, self).__init__(*a, **v)
+#
+# #             def clean(self, value):
+# #                 '''Converts the given value (string) into the tuple
+# #                 hf5 path, database name (both strings)'''
+# #                 (_, value) = super(MockedGmdbField, self).clean(value)
+# #                 return (gmdbpath, value)
+#
+#         return MockedGmdbField()
+#
+#     return func

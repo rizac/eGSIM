@@ -6,41 +6,20 @@ import shlex
 from itertools import chain, repeat
 from io import StringIO
 import csv
-import yaml
 
 import numpy as np
-from django.db.models import Q  #, Exists
+from django.db.models import Q
 from openquake.hazardlib import imt
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext
 from django.forms import Form
-from django.forms.fields import (BooleanField, CharField, FloatField,
-                                 ChoiceField, CallableChoiceIterator,
-                                 MultipleChoiceField, TypedChoiceField)
+from django.forms.fields import (CharField, ChoiceField, MultipleChoiceField)
 
 from .. import models
 
 ##########
 # Fields #
 ##########
-
-# FIXME REMOVE
-# class DictChoiceField(ChoiceField):
-#     """ChoiceField where the choices are supplied via a class attribute
-#     `_base_choices` (`dict`): the dict keys are both used as form and HTML-displayed
-#     values, the dict values are the objects returned by `clean`
-#     """
-#     _base_choices = {}
-#
-#     def __init__(self, **kwargs):
-#         kwargs.setdefault('choices', ((_, _) for _ in self._base_choices))
-#         super(DictChoiceField, self).__init__(**kwargs)
-#
-#     def clean(self, value):
-#         """Convert the given value (string) into the OpenQuake instance
-#         and return the latter"""
-#         value = super(DictChoiceField, self).clean(value)
-#         return self._base_choices[value]
 
 
 class ArrayField(CharField):
@@ -140,7 +119,7 @@ class ArrayField(CharField):
         return values[0] if (len(values) == 1 and not is_vector) else values
 
     @classmethod
-    def parse(cls, token):  # pylint: disable=no-self-use
+    def parse(cls, token):
         """Parse token and return either an object or an iterable of objects.
         This method can safely raise any exception, if not ValidationError
         it will be wrapped into a suitable ValidationError
@@ -149,8 +128,8 @@ class ArrayField(CharField):
 
     @staticmethod
     def checkrange(value, minval=None, maxval=None):
-        """Check that the given value is in the range defined by minval and
-        maxval (endpoints are included). None in minval and maxval mean:
+        """Check that the given value is in the range defined by `minval` and
+        `maxval` (endpoints are included). None in `minval` and `maxval` mean:
         do not check. This method does not return any value but raises
         `ValidationError`` if value is not in the given range
         """
@@ -293,77 +272,11 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         return re.compile(translate(value))
 
 
-
-# FIXME REMOVE
-# class GsimField(MultipleChoiceWildcardField):
-#     """MultipleChoiceWildcardField with default `choices` argument,
-#     if not provided"""
-#
-#     def __init__(self, **kwargs):
-#         kwargs.setdefault('choices', get_gsim_choices)
-#         kwargs.setdefault('label', 'Ground Shaking Intensity Model(s)')
-#         super(GsimField, self).__init__(**kwargs)
-
-
-# class BaseImtField(MultipleChoiceWildcardField):
-#     """Base class for the IMT selection Form Field"""
-#     SA = 'SA'
-#     default_error_messages = {
-#         'sa_with_period': _("%s must be specified without period(s)" % SA),
-#         'sa_without_period': _("%s must be specified with period(s)" % SA),
-#         'invalid_sa_period': _("invalid " + SA + " period in: %(value)s"),
-#         'invalid_sa_periods': _("error while parsing %s period(s)" % SA)
-#     }
-#
-#     def __init__(self, **kwargs):
-#         kwargs.setdefault('choices', get_imt_choices)
-#         kwargs.setdefault('label', 'Intensity Measure Type(s)')
-#         super(BaseImtField, self).__init__(**kwargs)
-
-
-# class ImtclassField(BaseImtField):
-#     """Field for IMT class selection. Inherits from `BaseImtField` (thus
-#     `MultipleChoiceWildcardField`): Imts should be provided as
-#     class names (strings) with no arguments.
-#     """
-#     def __init__(self, **kwargs):
-#         kwargs.setdefault('label', 'Intensity Measure Type(s)')
-#         super(ImtclassField, self).__init__(**kwargs)
-#
-#     def valid_value(self, value):
-#         """Validate the given value, simply issues a more explicit warning
-#         message if 'SA' is provided with periods
-#         """
-#         valid = super(ImtclassField, self).valid_value(value)
-#         if not valid and value.startswith('%s(' % self.SA):  # not in the list
-#             # It is perfectly fine to raise ValidationError from here, as
-#             # this allows us to customize the message in case of 'SA':
-#             raise ValidationError(
-#                 self.error_messages['sa_with_period'],
-#                 code='sa_with_period',
-#             )
-#
-#         return valid
-
-
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 class ImtField(MultipleChoiceWildcardField):
     """Field for IMT class selection. Provides a further validation for
     SA which is provided as (or with) periods (se meth:`valid_value`)
     """
-    # FIXME REMOVE
-    # @property
-    # def sa_periods_str(self):
-    #     """Sets the SA periods as string. The periods must be formatted
-    #     according to a `NArrayField` input (basically, shlex or json
-    #     compatible). If provided, the `to_python` method will merge all
-    #     provided IMTs with all string chunks `SA(P)` built from the periods
-    #     chunks parsed from this string"""
-    #     return getattr(self, '_sa_periods_str', '')
-    #
-    # @sa_periods_str.setter
-    # def sa_periods_str(self, value):
-    #     setattr(self, '_sa_periods_str', value)
 
     def valid_value(self, value):
         """Validate the given *single* imt `value`"""
@@ -376,94 +289,6 @@ class ImtField(MultipleChoiceWildcardField):
             return False
 
         return super().valid_value(value)
-
-        # if value == self.SA:
-        #     # It is perfectly fine to raise ValidationError from here, as
-        #     # this allows us to customize the message in case of 'SA':
-        #     raise ValidationError(
-        #         self.error_messages['sa_without_period'],
-        #         code='sa_without_period',
-        #     )
-        # valid = super(ImtField, self).valid_value(value)
-        # if not valid:  # value not in choices (basically, 'SA([period])')
-        #     try:
-        #         imt.from_string(value)
-        #         valid = True
-        #     except Exception:  # noqa
-        #         valid = False  # Django will raise ValidationError
-        #         if value.startswith('%s(' % self.SA):
-        #             raise ValidationError(
-        #                 self.error_messages['invalid_sa_period'],
-        #                 code='invalid_sa_period',
-        #                 params={'value': value},
-        #             )
-        #
-        # return valid
-
-    # def to_python(self, value):
-    #     """Converts the given input value to a Python list of IMT strings
-    #     Remember that this method is called from within `self.clean` which in
-    #     turns calls first `self.to_python` and then `self.validate`. The latter
-    #     calls `self.valid_value` on each element of the input IMT list
-    #     """
-    #     # convert strings with wildcards to matching elements
-    #     # (see MultipleChoiceWildcardField):
-    #     imts = ImtclassField.to_python(self, value)
-    #     # combine with separate SA periods, if provided
-    #     periods_str = self.sa_periods_str
-    #     if periods_str:
-    #         try:
-    #             saindex = imts.index(self.SA)
-    #         except ValueError:
-    #             saindex = len(imts)
-    #
-    #         try:
-    #             periods = \
-    #                 vectorize(NArrayField(required=False).clean(periods_str))
-    #             ret = [_ for _ in imts if _ != self.SA]
-    #             sa_str = '{}(%s)'.format(self.SA)
-    #             sa_periods = [sa_str % _ for _ in periods]
-    #             imts = ret[:saindex] + sa_periods + ret[saindex:]
-    #         except Exception as _exc:
-    #             raise ValidationError(
-    #                 self.error_messages['invalid_sa_period'],
-    #                 code='invalid_sa_period',
-    #                 params={'value': periods_str},
-    #             )
-    #
-    #     return imts
-    #
-    # def get_imt_classnames(self, value):
-    #     """Returns a set of strings denoting the IMT class names in `value`
-    #     uses `self.sa_periods_str` to infer if SA is defined and should be
-    #     returned regardless of whether it is in `value` (list of IMT strings)
-    #     """
-    #     # convert strings with wildcards to matching elements
-    #     # (see MultipleChoiceWildcardField):
-    #     imts = ImtclassField.to_python(self, value)
-    #     ret = set()
-    #     # check if SA is provided, and in case remove all occurrences of
-    #     # self.SA:
-    #     if self.sa_periods_str or any(_.startswith(self.SA) for _ in imts):
-    #         imts = [_ for _ in imts if not _.startswith(self.SA)]
-    #         ret = {self.SA}
-    #     for imt_ in imts:
-    #         try:
-    #             ret.add(imt.from_string(imt_).__class__.__name__)
-    #         except Exception:  # noqa
-    #             pass
-    #     return ret
-
-# FIXME REMOVE
-# class TextSepField(DictChoiceField):
-#     """A ChoiceField handling the text separators in the text response"""
-#     _base_choices = dict([('comma', ','), ('semicolon', ';'),
-#                           ('space', ' '), ('tab', '\t')])
-#
-#
-# class TextDecField(DictChoiceField):
-#     """A ChoiceField handling the text decimal in the text response"""
-#     _base_choices = dict([('period', '.'), ('comma', ',')])
 
 
 #########
@@ -499,43 +324,16 @@ class EgsimBaseForm(Form):
             real_name = repl_dict[alias]
             self.data[real_name] = self.data.pop(alias)
 
-        # Make fields initial value the default when missing.
-        # From https://stackoverflow.com/a/20309754 and other posts therein:
-        # initial isn't really meant to be used to set default values for form
-        # fields. Instead, it's really more a placeholder utility when
-        # displaying forms to the user, and won't work well if the field isn't
-        # required (see also the class method is_optional):
+        # Make fields initial value the default (for details see discussion and
+        # code exmple at https://stackoverflow.com/a/20309754):
         for name in self.fields:
-            if not self[name].html_name in self.data and \
-                    self.fields[name].initial is not None:
+            if name not in self.data and  self.fields[name].initial is not None:
                 self.data[name] = self.fields[name].initial
-
-        # Custom attributes for js libraries (e.,g. bootstrap, angular...)?
-        # All solutions (widget_tweaks, django-angular) are too much overhead
-        # in our simple scenario. This is the best solution but not that
-        # after refactoring it is no-op:
-        self.customize_widget_attrs()
 
     def clean(self):
         """Same as super().clean(), overridden only to make subclasses
         implementation easier to discover in PyCharm"""
         return super().clean()
-
-    def customize_widget_attrs(self):  # pylint: disable=no-self-use
-        """Customize the widget attributes. This method is no-op and might be
-        overwritten in subclasses. Check however `self.to_rendering_dict`
-        which is currently the method to be used in order to inject data in
-        the frontend"""
-        # this method is no-op, as we delegate the view (frontend)
-        # to set the custom attributes. Example in case subclassed:
-        #
-        # atts = {'class': 'form-control'}  # for bootstrap
-        # for name, field in self.fields.items():  # @UnusedVariable
-        #     if not isinstance(field.widget,
-        #                       (CheckboxInput, CheckboxSelectMultiple,
-        #                        RadioSelect)) and not field.widget.is_hidden:
-        #         field.widget.attrs.update(atts)
-        return
 
     def validation_errors(self, code=400,
                           msg_format='Invalid input in %(names)s') -> dict:
@@ -597,33 +395,10 @@ class GsimImtForm(EgsimBaseForm):
     imt = ImtField(required=True, choices=get_imt_choices,
                    label='Intensity Measure Type(s)')
 
-    # FIXME: REMOVE
-    # # sa_periods should not be exposed through the API, it is only used
-    # # from the frontend GUI. Thus required=False is necessary.
-    # # We use a CharField because in principle it should never raise: If SA
-    # # periods are malformed, the IMT field will hold the error in the response
-    # sa_period = CharField(label="SA period(s)", required=False)
-    #
-    # def __init__(self, *args, **kwargs):
-    #     super(GsimImtForm, self).__init__(*args, **kwargs)
-    #     # remove sa_periods and put them in imt field:
-    #     self.fields['imt'].sa_periods_str = self.data.pop('sa_period', '')
-
     def clean(self):
         """Run validation where we must validate selected gsim(s) based on
-        selected intensity measure type. For info see:
-        https://docs.djangoproject.com/en/1.11/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+        selected intensity measure type
         """
-        # UNCOMMENT THE BLOCK BELOW IF YOU WISH TO BE STRICT with unknown params
-        # # check that we did not provide unknown parameters. This might not be necessary
-        # # but it might help warning the user for typos in case
-        # unknown_params = set(self.data) - set(self.fields)
-        # if unknown_params:
-        #     raise ValidationError([
-        #         ValidationError(_("unknown parameter '%(param)s'"),
-        #                         params={'param': p}, code='unknown')
-        #         for p in unknown_params])
-
         cleaned_data = super().clean()
         if 'gsim' in cleaned_data and 'imt' in cleaned_data:
             # both gsim and imt have "survived" the validation and are valid
@@ -650,16 +425,17 @@ class GsimImtForm(EgsimBaseForm):
             # instead of raising ValidationError, which is keyed with
             # '__all__' we add the error keyed to the given field name
             # `name` via `self.add_error`:
-            # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+            # https://docs.djangoproject.com/en/stable/ref/forms/validation/
+            # #cleaning-and-validating-fields-that-depend-on-each-other
             # note: pass only invalid_gsims as the result would be equal
             # than passing all gsims but the loop is faster:
-            invalid_imts = imts - set(self.shared_imts(gsims))
-            err_gsim = ValidationError(_("%(num)d gsim(s) not defined "
-                                         "for all supplied imt(s)"),
+            invalid_imts = set(imts) - set(self.shared_imts(gsims))
+            err_gsim = ValidationError(gettext("%(num)d gsim(s) not defined "
+                                               "for all supplied imt(s)"),
                                        params={'num': len(invalid_gsims)},
                                        code='invalid')
-            err_imt = ValidationError(_("%(num)d imt(s) not defined for "
-                                        "all supplied gsim(s)"),
+            err_imt = ValidationError(gettext("%(num)d imt(s) not defined for "
+                                              "all supplied gsim(s)"),
                                       params={'num': len(invalid_imts)},
                                       code='invalid')
             # add_error removes also the field from self.cleaned_data:
@@ -697,7 +473,7 @@ class GsimImtForm(EgsimBaseForm):
             values_list('name', flat=True).distinct()
 
 
-class APIForm(EgsimBaseForm):
+class MediaTypeForm(EgsimBaseForm):
     """Form handling the validation of the format related argument in a request"""
 
     DATA_FORMAT_TEXT = 'text'
@@ -720,7 +496,7 @@ class APIForm(EgsimBaseForm):
         return self.data['data_format']
 
     data_format = ChoiceField(required=False, initial=DATA_FORMAT_JSON, disabled=True,
-                              label='The format of the data returned',
+                              label='The format of the response data',
                               choices=[(DATA_FORMAT_JSON, 'json'),
                                        (DATA_FORMAT_TEXT, 'text/csv')])
 
@@ -742,8 +518,8 @@ class APIForm(EgsimBaseForm):
         # convert to symbols:
         if cleaned_data[tsep] == cleaned_data[tdec] and \
                 cleaned_data['format'] == 'text':
-            msg = _("'%s' must differ from '%s' in 'text' format" %
-                    (tsep, tdec))
+            msg = gettext("'%s' must differ from '%s' in 'text' format" %
+                          (tsep, tdec))
             err_ = ValidationError(msg, code='conflicting values')
             # add_error removes also the field from self.cleaned_data:
             self.add_error(tsep, err_)
@@ -753,6 +529,15 @@ class APIForm(EgsimBaseForm):
             cleaned_data[tdec] = self._dec_sep[cleaned_data[tdec]]
 
         return cleaned_data
+
+
+class APIForm(GsimImtForm, MediaTypeForm):
+    """GsimImtForm + MediaTypeForm"""
+
+    def clean(self):
+        GsimImtForm.clean(self)
+        MediaTypeForm.clean(self)
+        return self.cleaned_data
 
     @property
     def response_data(self) -> Union[dict, StringIO, None]:
@@ -764,8 +549,8 @@ class APIForm(EgsimBaseForm):
 
         # Use `self.cleaned_data` as input for `process-data`, but remove those
         # parameters (Field names) not given by the user and with no `initial`
-        # set (`initial` acts as a default, see `EgsimBaseForm.__init__`). E.g.
-        # Django `MultiplechoiceField`s with `required=False` default to `[]` in
+        # (`initial` acts as a default, see `EgsimBaseForm.__init__`). E.g.
+        # Django `MultiplechoiceField`s with `required=False` defaults to `[]` in
         # `cleaned_data`, and this might not be the value `process_data` expects
         c_data = {k: v for k, v in self.cleaned_data.items() if k in self.data}
 
@@ -799,9 +584,7 @@ class APIForm(EgsimBaseForm):
         """
         # code copied from: https://stackoverflow.com/a/41706831
         buffer = StringIO()  # python 2 needs io.BytesIO() instead
-        wrt = csv.writer(buffer,
-                         delimiter=sep,
-                         quotechar='"',
+        wrt = csv.writer(buffer, delimiter=sep, quotechar='"',
                          quoting=csv.QUOTE_MINIMAL)
 
         # first build a list to get the maximum number of columns (for safety):
@@ -823,16 +606,6 @@ class APIForm(EgsimBaseForm):
         wrt.writerows(chain(r, repeat(None, maxcollen - len(r)))
                       for r in rowsaslist)
 
-        # # calculate the content length. This has to be done before creating
-        # # the response as it might be that the latter closes the buffer. It
-        # # is questionable then to use a buffer (we might use getvalue() on it
-        # # but we pospone this check ...
-        # buffer.seek(0, os.SEEK_END)
-        # contentlength = buffer.tell()
-        # buffer.seek(0)
-        # # response = HttpResponse(buffer, content_type='text/csv')
-        # # response['Content-Length'] = str(contentlength)
-        # # return response
         return buffer
 
     @classmethod
@@ -843,19 +616,6 @@ class APIForm(EgsimBaseForm):
         """
         raise NotImplementedError(":meth:%s.csv_rows" % cls.__name__)
 
-    # @classmethod
-    # def convert_to_comma_as_decimal(cls, row):
-    #     """Create a generator yielding each element of row where numeric
-    #     values are converted to strings with comma as decimal separator.
-    #     For non-float values, each row element is yielded as it is
-    #
-    #     @param row: a list of lists
-    #     """
-    #     for cell in row:
-    #         if isinstance(cell, float):
-    #             yield str(cell).replace('.', ',')
-    #         else:
-    #             yield cell
 
 #############
 # Utilities #

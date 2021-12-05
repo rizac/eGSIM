@@ -7,47 +7,46 @@ Created on 2 Jun 2018
 '''
 import re
 import pytest
+
+from egsim.api.views import TrellisView
+from egsim.api.forms.model_to_model.trellis import TrellisForm
+from egsim.api.forms import MediaTypeForm
+
 try:  # https://stackoverflow.com/questions/44441929
     from unittest.mock import patch  # ok in py3.8  # noqa
 except ImportError:
     from mock import patch  # ok in py3.7  # noqa
 
-from egsim.core.utils import querystring
-from egsim.forms.forms import TrellisForm
-from egsim.core.smtk import _default_periods_for_spectra
-from egsim.forms.fields import TextSepField
-from egsim.views import URLS
-
 
 @pytest.mark.django_db
 class Test:
-    '''tests the gsim service'''
+    """tests the gsim service"""
 
-    url = "/" + URLS.TRELLIS_RESTAPI  # '/query/trellis'
+    url = "/" + TrellisView.urls[0]  # '/query/trellis'
     request_filename = 'request_trellis.yaml'
     csv_expected_text = b'^imt,gsim,magnitude,distance,vs30(,+)\r\n,,,,'
     GSIM, IMT = 'gsim', 'imt'
 
     def get_figures(self, result):  # noqa
-        '''Returns a list of dicts scanning recursively `result` (the json
+        """Returns a list of dicts scanning recursively `result` (the json
         output of a trellis request), where each dict represents
         a trellis plot and has the keys:
         ylabel, yvalues, vs30, magnitude, distance, stdevs
-        '''
+        """
         ret = []
         for imt_ in result['imts']:
             ret.extend(result[imt_])
         return ret
 
     def assert_gims_equal(self, input_gsims, output_gsims):  # noqa
-        '''checks that `input_gsims` and `output gsims` are the same.
+        """checks that `input_gsims` and `output gsims` are the same.
         This function accounts for the fact that a gsim name in `output_gsims`
         might be built by concatenating the input gsim name and its optional
         parameters (see :func:`smtk.trellis.trellis_plots._get_gmpe_name`).
         Accounting on that, basically we check here that
         `output_gsim.startswith(input_gsim)` for any element ofg the two
         iterables
-        '''
+        """
         iii, ooo = sorted(input_gsims), sorted(output_gsims)
         if len(iii) != len(ooo):
             raise AssertionError('gsims count differs (%d != %d)' % 
@@ -59,10 +58,10 @@ class Test:
     @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis_dist(self,
                           # pytest fixtures:
-                          client, testdata, areequal,
+                          client, testdata, areequal, querystring,
                           # parametrized argument:
                           st_dev):
-        '''test trellis distance and distance stdev'''
+        """test trellis distance and distance stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot_type='d', stdev=st_dev)
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
@@ -102,10 +101,10 @@ class Test:
     @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis_mag(self,
                          # pytest fixtures:
-                         client, testdata, areequal,
+                         client, testdata, areequal, querystring,
                          # parametrized argument:
                          st_dev):
-        '''test trellis magnitude and magnitude stdev'''
+        """test trellis magnitude and magnitude stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot_type='m', stdev=st_dev)
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
@@ -143,7 +142,7 @@ class Test:
         assert re.search(self.csv_expected_text, resp2.content)
         ref_resp = resp2.content
         # test different text formats
-        for text_sep, symbol in TextSepField._base_choices.items():
+        for text_sep, symbol in MediaTypeForm._text_sep.items():
             resp3 = client.post(self.url, data=dict(inputdic, format='text',
                                                     text_sep=text_sep),
                                 content_type='text/csv')
@@ -203,11 +202,11 @@ class Test:
     @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis_spectra(self,
                              # pytest fixtures:
-                             client, testdata, areequal,
+                             client, testdata, areequal, querystring,
                              # parametrized argument:
                              st_dev):
-        '''test trellis magnitude-distance spectra and magnitude-distance
-        stdev'''
+        """test trellis magnitude-distance spectra and magnitude-distance
+        stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot_type='s', stdev=st_dev)
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
@@ -221,7 +220,7 @@ class Test:
         input_ = form.cleaned_data
         assert sorted(result.keys()) == ['SA', 'imts', 'xlabel', 'xvalues']
         xvalues = result['xvalues']
-        assert len(xvalues) == len(_default_periods_for_spectra())
+        assert len(xvalues) == len(TrellisForm._default_periods_for_spectra())
         figures = self.get_figures(result)
         assert all(_['ylabel'] == 'Sa (g)' for _ in figures)
         if st_dev:
@@ -262,9 +261,9 @@ class Test:
 
     def test_error(self,
                    # pytest fixtures:
-                   client, areequal):
-        '''tests a special case where we supply a deprecated gsim (not in
-        EGSIM list)'''
+                   client, areequal, querystring):
+        """tests a special case where we supply a deprecated gsim (not in
+        EGSIM list)"""
         inputdic = {
             "gsim": ["AkkarEtAl2013", "AkkarEtAlRepi2014"],
             "imt": ["PGA", "PGV"],
@@ -310,9 +309,9 @@ class Test:
 
     def test_empty_gsim(self,
                         # pytest fixtures:
-                        areequal, client):
-        '''tests a special case whereby a GSIM is empty (this case raised
-        before a PR to smtk repository)'''
+                        areequal, client, querystring):
+        """tests a special case whereby a GSIM is empty (this case raised
+        before a PR to smtk repository)"""
         inputdic = {
             "gsim": [
                 "AbrahamsonEtAl2014",
@@ -366,7 +365,7 @@ class Test:
                                   areequal, client,
                                   # parametrized arguments:
                                   vs30, z1pt0, z2pt5):
-        '''tests mismatches between vs30 and related parameters'''
+        """tests mismatches between vs30 and related parameters"""
         inputdic = {
             "gsim": [
                 "AbrahamsonEtAl2014",
@@ -426,9 +425,9 @@ class Test:
 
     def test_mismatching_imt_gsim(self,
                                   # pytest fixtures:
-                                  areequal, client):
-        '''tests a special case whereby a GSIM is empty (this case raised
-        before a PR to smtk repository)'''
+                                  areequal, client, querystring):
+        """tests a special case whereby a GSIM is empty (this case raised
+        before a PR to smtk repository)"""
         inputdic = {
             "gsim": [
                 "AkkarEtAlRjb2014"
@@ -482,7 +481,7 @@ class Test:
     def test_notimplemented_text_format(self, mock_trellis_to_rows,
                                         # pytest fixtures:
                                         testdata, client, areequal):
-        '''tests the not implemented error'''
+        """tests the not implemented error"""
 
         def seff(*a, **v):
             raise NotImplementedError()

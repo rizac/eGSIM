@@ -2,7 +2,6 @@
 Django Forms for eGSIM model-to-model comparison (Trellis plots)
 """
 from collections import defaultdict
-from enum import Enum
 from itertools import chain, repeat
 from typing import Iterable
 
@@ -21,34 +20,7 @@ from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeDistanceSpectraTrellis,
                                         MagnitudeDistanceSpectraSigmaTrellis)
 
-from .. import (vectorize, isscalar, GsimImtForm, NArrayField, relabel_sa,
-                APIForm)
-
-
-class PointField(NArrayField):
-    """NArrayField which validates a 2-element iterable and returns an
-    OpenQuake Point"""
-
-    def __init__(self, **kwargs):  # FIXME: depth? should be >0 in case ?
-        super(PointField, self).__init__(min_count=2, max_count=2, **kwargs)
-
-    def clean(self, value):
-        """Converts the given value to a
-        :class:`openquake.hazardlib.geo.point.Point` object.
-        It is usually better to perform these types of conversions
-        subclassing `clean`, as the latter is called at the end of the
-        validation workflow
-        """
-        value = NArrayField.clean(self, value)
-        try:
-            return Point(*value)
-        except Exception as exc:
-            raise ValidationError(_(str(exc)), code='invalid')
-
-# FIXME REMOVE
-# class MsrField(DictChoiceField):
-#     """A ChoiceField handling the selected Magnitude Scaling Relation object"""
-#     _base_choices = get_available_magnitude_scalerel()
+from .. import (vectorize, isscalar, NArrayField, relabel_sa, APIForm)
 
 
 PLOT_TYPE = {
@@ -60,7 +32,7 @@ PLOT_TYPE = {
 }
 
 
-class TrellisForm(GsimImtForm, APIForm):
+class TrellisForm(APIForm):
     """Form for Trellis plot generation"""
 
     _mag_scalerel = get_available_magnitude_scalerel()
@@ -74,7 +46,6 @@ class TrellisForm(GsimImtForm, APIForm):
         mapping['mag'] = 'magnitude'
         mapping['dist'] = 'distance'
         mapping['stddev'] = 'stdev'
-        mapping['tr'] = 'tectonic_region'
         mapping['msr'] = 'magnitude_scalerel'
         mapping['lineazi'] = 'line_azimuth'
         mapping['vs30m'] = 'vs30_measured'
@@ -102,9 +73,11 @@ class TrellisForm(GsimImtForm, APIForm):
     magnitude_scalerel = ChoiceField(label='Magnitude Scaling Relation',
                                      choices=[(_,_) for _ in _mag_scalerel],
                                      initial="WC1994")
-    initial_point = PointField(label="Location on Earth",
-                               help_text='Longitude Latitude', initial="0 0",
-                               min_value=[-180, -90], max_value=[180, 90])
+    initial_point = NArrayField(label="Location on Earth",
+                                min_count=2, max_count=2,
+                                help_text='Longitude Latitude', initial="0 0",
+                                min_value=[-180, -90], max_value=[180, 90])
+    # see `clean_initial_point` below
     hypocentre_location = NArrayField(label="Location of Hypocentre",
                                       initial='0.5 0.5',
                                       help_text=('Along-strike fraction, '
@@ -141,10 +114,20 @@ class TrellisForm(GsimImtForm, APIForm):
             self.fields['imt'].required = False
             self.fields['sa_period'].required = False  # for safety
 
+    def clean_initial_point(self, value):
+        """Converts the given value to a object of typpe
+         :class:`openquake.hazardlib.geo.point.Point` object.
+        """
+        # https://docs.djangoproject.com/en/3.2/ref/forms/validation/
+        # #cleaning-a-specific-field-attribute
+        value = NArrayField.clean(self, value)
+        try:
+            return Point(*value)
+        except Exception as exc:
+            raise ValidationError(_(str(exc)), code='invalid')
+
     def clean(self):
-        GsimImtForm.clean(self)
-        APIForm.clean(self)
-        cleaned_data = self.cleaned_data
+        cleaned_data = super().clean()
 
         # Convert MSR to associated class:
         cleaned_data['magnitude_scalerel'] = \
