@@ -41,15 +41,18 @@ PLOT_TYPE = {
 }
 
 
-class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
+class ResidualsForm(FlatfileForm, APIForm):
     """Form for residual analysis"""
 
     plot_type = ChoiceField(required=True,
                             choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
 
     def clean(self):
-        cleaned_data = super(ResidualsForm, self).clean()
-        return cleaned_data
+        # call programmatically superclass `clean` to avoid multiple inheritance
+        # confusion:
+        FlatfileForm.clean(self)
+        APIForm.clean(self)
+        return self.cleaned_data
 
     RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
                        'pvalue')

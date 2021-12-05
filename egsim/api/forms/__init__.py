@@ -24,23 +24,23 @@ from .. import models
 # Fields #
 ##########
 
-
-class DictChoiceField(ChoiceField):
-    """ChoiceField where the choices are supplied via a class attribute
-    `_base_choices` (`dict`): the dict keys are both used as form and HTML-displayed
-    values, the dict values are the objects returned by `clean`
-    """
-    _base_choices = {}
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('choices', ((_, _) for _ in self._base_choices))
-        super(DictChoiceField, self).__init__(**kwargs)
-
-    def clean(self, value):
-        """Convert the given value (string) into the OpenQuake instance
-        and return the latter"""
-        value = super(DictChoiceField, self).clean(value)
-        return self._base_choices[value]
+# FIXME REMOVE
+# class DictChoiceField(ChoiceField):
+#     """ChoiceField where the choices are supplied via a class attribute
+#     `_base_choices` (`dict`): the dict keys are both used as form and HTML-displayed
+#     values, the dict values are the objects returned by `clean`
+#     """
+#     _base_choices = {}
+#
+#     def __init__(self, **kwargs):
+#         kwargs.setdefault('choices', ((_, _) for _ in self._base_choices))
+#         super(DictChoiceField, self).__init__(**kwargs)
+#
+#     def clean(self, value):
+#         """Convert the given value (string) into the OpenQuake instance
+#         and return the latter"""
+#         value = super(DictChoiceField, self).clean(value)
+#         return self._base_choices[value]
 
 
 class ArrayField(CharField):
@@ -293,180 +293,177 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         return re.compile(translate(value))
 
 
-def get_gsim_choices(): # https://stackoverflow.com/a/57809521
-    return [(_, _) for _ in models.Gsim.objects.values_list('name', flat=True)]
+
+# FIXME REMOVE
+# class GsimField(MultipleChoiceWildcardField):
+#     """MultipleChoiceWildcardField with default `choices` argument,
+#     if not provided"""
+#
+#     def __init__(self, **kwargs):
+#         kwargs.setdefault('choices', get_gsim_choices)
+#         kwargs.setdefault('label', 'Ground Shaking Intensity Model(s)')
+#         super(GsimField, self).__init__(**kwargs)
 
 
-class GsimField(MultipleChoiceWildcardField):
-    """MultipleChoiceWildcardField with default `choices` argument,
-    if not provided"""
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('choices', get_gsim_choices)
-        kwargs.setdefault('label', 'Ground Shaking Intensity Model(s)')
-        super(GsimField, self).__init__(**kwargs)
-
-
-def get_imt_choices(): # https://stackoverflow.com/a/57809521
-    return [(_, _) for _ in models.Imt.objects.values_list('name', flat=True)]
-
-
-class BaseImtField(MultipleChoiceWildcardField):
-    """Base class for the IMT selection Form Field"""
-    SA = 'SA'
-    default_error_messages = {
-        'sa_with_period': _("%s must be specified without period(s)" % SA),
-        'sa_without_period': _("%s must be specified with period(s)" % SA),
-        'invalid_sa_period': _("invalid " + SA + " period in: %(value)s"),
-        'invalid_sa_periods': _("error while parsing %s period(s)" % SA)
-    }
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault('choices', get_imt_choices)
-        kwargs.setdefault('label', 'Intensity Measure Type(s)')
-        super(BaseImtField, self).__init__(**kwargs)
+# class BaseImtField(MultipleChoiceWildcardField):
+#     """Base class for the IMT selection Form Field"""
+#     SA = 'SA'
+#     default_error_messages = {
+#         'sa_with_period': _("%s must be specified without period(s)" % SA),
+#         'sa_without_period': _("%s must be specified with period(s)" % SA),
+#         'invalid_sa_period': _("invalid " + SA + " period in: %(value)s"),
+#         'invalid_sa_periods': _("error while parsing %s period(s)" % SA)
+#     }
+#
+#     def __init__(self, **kwargs):
+#         kwargs.setdefault('choices', get_imt_choices)
+#         kwargs.setdefault('label', 'Intensity Measure Type(s)')
+#         super(BaseImtField, self).__init__(**kwargs)
 
 
-class ImtclassField(BaseImtField):
-    """Field for IMT class selection. Inherits from `BaseImtField` (thus
-    `MultipleChoiceWildcardField`): Imts should be provided as
-    class names (strings) with no arguments.
-    """
-    def __init__(self, **kwargs):
-        kwargs.setdefault('label', 'Intensity Measure Type(s)')
-        super(ImtclassField, self).__init__(**kwargs)
-
-    def valid_value(self, value):
-        """Validate the given value, simply issues a more explicit warning
-        message if 'SA' is provided with periods
-        """
-        valid = super(ImtclassField, self).valid_value(value)
-        if not valid and value.startswith('%s(' % self.SA):  # not in the list
-            # It is perfectly fine to raise ValidationError from here, as
-            # this allows us to customize the message in case of 'SA':
-            raise ValidationError(
-                self.error_messages['sa_with_period'],
-                code='sa_with_period',
-            )
-
-        return valid
+# class ImtclassField(BaseImtField):
+#     """Field for IMT class selection. Inherits from `BaseImtField` (thus
+#     `MultipleChoiceWildcardField`): Imts should be provided as
+#     class names (strings) with no arguments.
+#     """
+#     def __init__(self, **kwargs):
+#         kwargs.setdefault('label', 'Intensity Measure Type(s)')
+#         super(ImtclassField, self).__init__(**kwargs)
+#
+#     def valid_value(self, value):
+#         """Validate the given value, simply issues a more explicit warning
+#         message if 'SA' is provided with periods
+#         """
+#         valid = super(ImtclassField, self).valid_value(value)
+#         if not valid and value.startswith('%s(' % self.SA):  # not in the list
+#             # It is perfectly fine to raise ValidationError from here, as
+#             # this allows us to customize the message in case of 'SA':
+#             raise ValidationError(
+#                 self.error_messages['sa_with_period'],
+#                 code='sa_with_period',
+#             )
+#
+#         return valid
 
 
 # https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
-class ImtField(BaseImtField):
-    """Field for IMT class selection. Inherits from `BaseImtField` (thus
-    `MultipleChoiceWildcardField`): Imts should be provided as class names
-    (str) with arguments, if needed. This class has also the property
-    `sa_periods_str` that can be set with the string value of SA periods
-    provided separately
+class ImtField(MultipleChoiceWildcardField):
+    """Field for IMT class selection. Provides a further validation for
+    SA which is provided as (or with) periods (se meth:`valid_value`)
     """
-    @property
-    def sa_periods_str(self):
-        """Sets the SA periods as string. The periods must be formatted
-        according to a `NArrayField` input (basically, shlex or json
-        compatible). If provided, the `to_python` method will merge all
-        provided IMTs with all string chunks `SA(P)` built from the periods
-        chunks parsed from this string"""
-        return getattr(self, '_sa_periods_str', '')
-
-    @sa_periods_str.setter
-    def sa_periods_str(self, value):
-        setattr(self, '_sa_periods_str', value)
+    # FIXME REMOVE
+    # @property
+    # def sa_periods_str(self):
+    #     """Sets the SA periods as string. The periods must be formatted
+    #     according to a `NArrayField` input (basically, shlex or json
+    #     compatible). If provided, the `to_python` method will merge all
+    #     provided IMTs with all string chunks `SA(P)` built from the periods
+    #     chunks parsed from this string"""
+    #     return getattr(self, '_sa_periods_str', '')
+    #
+    # @sa_periods_str.setter
+    # def sa_periods_str(self, value):
+    #     setattr(self, '_sa_periods_str', value)
 
     def valid_value(self, value):
-        """Validate the given *single* value (i.e., an element of the passed
-        imt list), ignoring the super method which compares
-        to the choices attribute.
-        Remember that this method is called from within `self.clean` which in
-        turns calls first `self.to_python` and then `self.validate`. The latter
-        calls `self.valid_value` on each element of the input IMT list
-        """
-        if value == self.SA:
-            # It is perfectly fine to raise ValidationError from here, as
-            # this allows us to customize the message in case of 'SA':
-            raise ValidationError(
-                self.error_messages['sa_without_period'],
-                code='sa_without_period',
-            )
-        valid = super(ImtField, self).valid_value(value)
-        if not valid:
-            try:
-                imt.from_string(value)
-                valid = True
-            except Exception:  # noqa
-                if value.startswith('%s(' % self.SA):
-                    raise ValidationError(
-                        self.error_messages['invalid_sa_period'],
-                        code='invalid_sa_period',
-                        params={'value': value},
-                    )
+        """Validate the given *single* imt `value`"""
+        try:
+            # use openquake first (e.g.  '0.2' -> 'SA(0.2)')
+            value = imt.from_string(value).string
+            # get function name (handle "SA(" case):
+            value = value[:None if '(' not in value else value.index('(')]
+        except Exception:  # noqa
+            return False
 
-        return valid
+        return super().valid_value(value)
 
-    def to_python(self, value):
-        """Converts the given input value to a Python list of IMT strings
-        Remember that this method is called from within `self.clean` which in
-        turns calls first `self.to_python` and then `self.validate`. The latter
-        calls `self.valid_value` on each element of the input IMT list
-        """
-        # convert strings with wildcards to matching elements
-        # (see MultipleChoiceWildcardField):
-        imts = ImtclassField.to_python(self, value)
-        # combine with separate SA periods, if provided
-        periods_str = self.sa_periods_str
-        if periods_str:
-            try:
-                saindex = imts.index(self.SA)
-            except ValueError:
-                saindex = len(imts)
+        # if value == self.SA:
+        #     # It is perfectly fine to raise ValidationError from here, as
+        #     # this allows us to customize the message in case of 'SA':
+        #     raise ValidationError(
+        #         self.error_messages['sa_without_period'],
+        #         code='sa_without_period',
+        #     )
+        # valid = super(ImtField, self).valid_value(value)
+        # if not valid:  # value not in choices (basically, 'SA([period])')
+        #     try:
+        #         imt.from_string(value)
+        #         valid = True
+        #     except Exception:  # noqa
+        #         valid = False  # Django will raise ValidationError
+        #         if value.startswith('%s(' % self.SA):
+        #             raise ValidationError(
+        #                 self.error_messages['invalid_sa_period'],
+        #                 code='invalid_sa_period',
+        #                 params={'value': value},
+        #             )
+        #
+        # return valid
 
-            try:
-                periods = \
-                    vectorize(NArrayField(required=False).clean(periods_str))
-                ret = [_ for _ in imts if _ != self.SA]
-                sa_str = '{}(%s)'.format(self.SA)
-                sa_periods = [sa_str % _ for _ in periods]
-                imts = ret[:saindex] + sa_periods + ret[saindex:]
-            except Exception as _exc:
-                raise ValidationError(
-                    self.error_messages['invalid_sa_period'],
-                    code='invalid_sa_period',
-                    params={'value': periods_str},
-                )
+    # def to_python(self, value):
+    #     """Converts the given input value to a Python list of IMT strings
+    #     Remember that this method is called from within `self.clean` which in
+    #     turns calls first `self.to_python` and then `self.validate`. The latter
+    #     calls `self.valid_value` on each element of the input IMT list
+    #     """
+    #     # convert strings with wildcards to matching elements
+    #     # (see MultipleChoiceWildcardField):
+    #     imts = ImtclassField.to_python(self, value)
+    #     # combine with separate SA periods, if provided
+    #     periods_str = self.sa_periods_str
+    #     if periods_str:
+    #         try:
+    #             saindex = imts.index(self.SA)
+    #         except ValueError:
+    #             saindex = len(imts)
+    #
+    #         try:
+    #             periods = \
+    #                 vectorize(NArrayField(required=False).clean(periods_str))
+    #             ret = [_ for _ in imts if _ != self.SA]
+    #             sa_str = '{}(%s)'.format(self.SA)
+    #             sa_periods = [sa_str % _ for _ in periods]
+    #             imts = ret[:saindex] + sa_periods + ret[saindex:]
+    #         except Exception as _exc:
+    #             raise ValidationError(
+    #                 self.error_messages['invalid_sa_period'],
+    #                 code='invalid_sa_period',
+    #                 params={'value': periods_str},
+    #             )
+    #
+    #     return imts
+    #
+    # def get_imt_classnames(self, value):
+    #     """Returns a set of strings denoting the IMT class names in `value`
+    #     uses `self.sa_periods_str` to infer if SA is defined and should be
+    #     returned regardless of whether it is in `value` (list of IMT strings)
+    #     """
+    #     # convert strings with wildcards to matching elements
+    #     # (see MultipleChoiceWildcardField):
+    #     imts = ImtclassField.to_python(self, value)
+    #     ret = set()
+    #     # check if SA is provided, and in case remove all occurrences of
+    #     # self.SA:
+    #     if self.sa_periods_str or any(_.startswith(self.SA) for _ in imts):
+    #         imts = [_ for _ in imts if not _.startswith(self.SA)]
+    #         ret = {self.SA}
+    #     for imt_ in imts:
+    #         try:
+    #             ret.add(imt.from_string(imt_).__class__.__name__)
+    #         except Exception:  # noqa
+    #             pass
+    #     return ret
 
-        return imts
-
-    def get_imt_classnames(self, value):
-        """Returns a set of strings denoting the IMT class names in `value`
-        uses `self.sa_periods_str` to infer if SA is defined and should be
-        returned regardless of whether it is in `value` (list of IMT strings)
-        """
-        # convert strings with wildcards to matching elements
-        # (see MultipleChoiceWildcardField):
-        imts = ImtclassField.to_python(self, value)
-        ret = set()
-        # check if SA is provided, and in case remove all occurrences of
-        # self.SA:
-        if self.sa_periods_str or any(_.startswith(self.SA) for _ in imts):
-            imts = [_ for _ in imts if not _.startswith(self.SA)]
-            ret = {self.SA}
-        for imt_ in imts:
-            try:
-                ret.add(imt.from_string(imt_).__class__.__name__)
-            except Exception:  # noqa
-                pass
-        return ret
-
-
-class TextSepField(DictChoiceField):
-    """A ChoiceField handling the text separators in the text response"""
-    _base_choices = dict([('comma', ','), ('semicolon', ';'),
-                          ('space', ' '), ('tab', '\t')])
-
-
-class TextDecField(DictChoiceField):
-    """A ChoiceField handling the text decimal in the text response"""
-    _base_choices = dict([('period', '.'), ('comma', ',')])
+# FIXME REMOVE
+# class TextSepField(DictChoiceField):
+#     """A ChoiceField handling the text separators in the text response"""
+#     _base_choices = dict([('comma', ','), ('semicolon', ';'),
+#                           ('space', ' '), ('tab', '\t')])
+#
+#
+# class TextDecField(DictChoiceField):
+#     """A ChoiceField handling the text decimal in the text response"""
+#     _base_choices = dict([('period', '.'), ('comma', ',')])
 
 
 #########
@@ -520,29 +517,9 @@ class EgsimBaseForm(Form):
         self.customize_widget_attrs()
 
     def clean(self):
-        """Call `super.clean()`, removes from `cleaned_data` fields that were
-        not provided as input and had no default given, and returns it
-        """
-        cleaned_data = super().clean()
-        # `cleaned_data` is a `dict[str, Any]`: each key is the name of a Field
-        # implemented in this class (`self.declared_fields`) mapped to its value
-        # which is validated and parsed from the user input data (`self.data`).
-        # What about Fields not given by the user?
-        # 1. Those with an initial/default value explicitly set, were added to
-        #    `self.data` in `__init__` (see above)
-        # 2. Those without an initial/default value, might be initialized with
-        #    a hard coded default, usually "falsy" before validation (e.g. [] in
-        #    `MultipleChoiceField.to_python`). If the validation does not raise
-        #    (e.g., the field is not required, see `MultipleChoiceField.validate`)
-        #    we might have in `cleaned_data` field values not input by the user
-        #    and with an "unknown" default (i.e. not explicitly provided)
-        # Consequently, optional Fields without an initial/default value and
-        # not provided as input (i.e., not in `self.data`) are removed here
-        # below from `cleaned_data`:
-        for key in list(_ for _ in cleaned_data if _ not in self.data):
-            cleaned_data.pop(key)
-
-        return cleaned_data
+        """Same as super().clean(), overridden only to make subclasses
+        implementation easier to discover in PyCharm"""
+        return super().clean()
 
     def customize_widget_attrs(self):  # pylint: disable=no-self-use
         """Customize the widget attributes. This method is no-op and might be
@@ -595,6 +572,14 @@ class EgsimBaseForm(Form):
         }
 
 
+def get_gsim_choices():  # https://stackoverflow.com/a/57809521
+    return [(_, _) for _ in models.Gsim.objects.values_list('name', flat=True)]
+
+
+def get_imt_choices():  # https://stackoverflow.com/a/57809521
+    return [(_, _) for _ in models.Imt.objects.values_list('name', flat=True)]
+
+
 class GsimImtForm(EgsimBaseForm):
     """Base abstract-like form for any form requiring Gsim+Imt selection"""
 
@@ -607,18 +592,22 @@ class GsimImtForm(EgsimBaseForm):
         mapping['gmpe'] = 'gsim'
         mapping['gmm'] = 'gsim'
 
-    gsim = GsimField(required=True)
-    imt = ImtField(required=True)
-    # sa_periods should not be exposed through the API, it is only used
-    # from the frontend GUI. Thus required=False is necessary.
-    # We use a CharField because in principle it should never raise: If SA
-    # periods are malformed, the IMT field will hold the error in the response
-    sa_period = CharField(label="SA period(s)", required=False)
+    gsim = MultipleChoiceWildcardField(required=True, choices=get_gsim_choices,
+                                       label='Ground Shaking Intensity Model(s)')
+    imt = ImtField(required=True, choices=get_imt_choices,
+                   label='Intensity Measure Type(s)')
 
-    def __init__(self, *args, **kwargs):
-        super(GsimImtForm, self).__init__(*args, **kwargs)
-        # remove sa_periods and put them in imt field:
-        self.fields['imt'].sa_periods_str = self.data.pop('sa_period', '')
+    # FIXME: REMOVE
+    # # sa_periods should not be exposed through the API, it is only used
+    # # from the frontend GUI. Thus required=False is necessary.
+    # # We use a CharField because in principle it should never raise: If SA
+    # # periods are malformed, the IMT field will hold the error in the response
+    # sa_period = CharField(label="SA period(s)", required=False)
+    #
+    # def __init__(self, *args, **kwargs):
+    #     super(GsimImtForm, self).__init__(*args, **kwargs)
+    #     # remove sa_periods and put them in imt field:
+    #     self.fields['imt'].sa_periods_str = self.data.pop('sa_period', '')
 
     def clean(self):
         """Run validation where we must validate selected gsim(s) based on
@@ -635,50 +624,49 @@ class GsimImtForm(EgsimBaseForm):
         #                         params={'param': p}, code='unknown')
         #         for p in unknown_params])
 
-        super().clean()
-        self.validate_gsim_and_imt()
+        cleaned_data = super().clean()
+        if 'gsim' in cleaned_data and 'imt' in cleaned_data:
+            # both gsim and imt have "survived" the validation and are valid
+            # check their relative validity:
+            self.validate_gsim_and_imt(cleaned_data['gsim'], cleaned_data['imt'])
         return self.cleaned_data
 
-    def validate_gsim_and_imt(self):
+    def validate_gsim_and_imt(self, gsims, imts):
         """Validate gsim and imt assuring that all gsims are defined for all
         supplied imts, and all imts are defined for all supplied gsim.
         This method calls self.add_error and works on self.cleaned_data, thus
         it should be called after super().clean()
         """
-        # the check here is to replace potential imt errors with
-        # the more relevant mismatch with the supplied gsim.
-        # E.g., if the user supplied imt = 'SA(abc)' (error) and
-        # a gsim='SomeGsimNotDefinedForSA', the error dict should replace
-        # the SA error with 'Imt not defined for supplied Gsim':
-        gsims = self.cleaned_data.get("gsim", [])
-        # return the class names of the supplied Imts. Thus 'Sa(...), Sa(...)'
-        # is counted once as 'SA':
-        imts = self.fields['imt'].get_imt_classnames(self.data.get('imt', ''))
+        # (gsims and imts are both validated, non empty lists)
+        # we want imt class names merge all SA(...) as one single 'SA'
+        len_ = len(imts)
+        imts = [i for i in imts if not i.startswith('SA')]
+        if len(imts) < len_:
+            imts += ['SA']
 
-        if gsims and imts:
-            invalid_gsims = set(gsims) - set(self.sharing_gsims(imts))
+        invalid_gsims = set(gsims) - set(self.sharing_gsims(imts))
 
-            if invalid_gsims:
-                # instead of raising ValidationError, which is keyed with
-                # '__all__' we add the error keyed to the given field name
-                # `name` via `self.add_error`:
-                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-                # note: pass only invalid_gsims as the result would be equal
-                # than passing all gsims but the loop is faster:
-                invalid_imts = imts - set(self.shared_imts(gsims))
-                err_gsim = ValidationError(_("%(num)d gsim(s) not defined "
-                                             "for all supplied imt(s)"),
-                                           params={'num': len(invalid_gsims)},
-                                           code='invalid')
-                err_imt = ValidationError(_("%(num)d imt(s) not defined for "
-                                            "all supplied gsim(s)"),
-                                          params={'num': len(invalid_imts)},
-                                          code='invalid')
-                # add_error removes also the field from self.cleaned_data:
-                self.add_error('gsim', err_gsim)
-                if 'imt' in self.errors:
-                    self.errors.pop('imt', None)
-                self.add_error('imt', err_imt)
+        if invalid_gsims:
+            # instead of raising ValidationError, which is keyed with
+            # '__all__' we add the error keyed to the given field name
+            # `name` via `self.add_error`:
+            # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+            # note: pass only invalid_gsims as the result would be equal
+            # than passing all gsims but the loop is faster:
+            invalid_imts = imts - set(self.shared_imts(gsims))
+            err_gsim = ValidationError(_("%(num)d gsim(s) not defined "
+                                         "for all supplied imt(s)"),
+                                       params={'num': len(invalid_gsims)},
+                                       code='invalid')
+            err_imt = ValidationError(_("%(num)d imt(s) not defined for "
+                                        "all supplied gsim(s)"),
+                                      params={'num': len(invalid_imts)},
+                                      code='invalid')
+            # add_error removes also the field from self.cleaned_data:
+            self.add_error('gsim', err_gsim)
+            if 'imt' in self.errors:
+                self.errors.pop('imt', None)
+            self.add_error('imt', err_imt)
 
     @staticmethod
     def shared_imts(gsim_names):
@@ -709,11 +697,23 @@ class GsimImtForm(EgsimBaseForm):
             values_list('name', flat=True).distinct()
 
 
-class APIForm(Form):
+class APIForm(EgsimBaseForm):
     """Form handling the validation of the format related argument in a request"""
 
     DATA_FORMAT_TEXT = 'text'
     DATA_FORMAT_JSON = 'json'
+
+    _text_sep = {
+        'comma': ',',
+        'semicolon': ';',
+        'space': ' ',
+        'tab': '\t'
+    }
+
+    _dec_sep = {
+        'period': '.',
+        'comma': ','
+    }
 
     @property
     def get_data_format(self):
@@ -724,30 +724,35 @@ class APIForm(Form):
                               choices=[(DATA_FORMAT_JSON, 'json'),
                                        (DATA_FORMAT_TEXT, 'text/csv')])
 
-    csv_sep = TextSepField(required=False, initial='comma',
-                           label='The (column) separator character',
-                           help_text=('Ignored if the requested '
-                                      'format is not text'))
+    csv_sep = ChoiceField(required=False, initial='comma',
+                          choices=[(_, _) for _ in _text_sep],
+                          label='The (column) separator character',
+                          help_text=('Ignored if the requested '
+                                     'format is not text'))
 
-    csv_dec = TextDecField(required=False, initial='period',
-                           label='The decimal separator character',
-                           help_text=('Ignored if the requested '
-                                      'format is not text'))
+    csv_dec = ChoiceField(required=False, initial='period',
+                          choices=[(_, _) for _ in _dec_sep],
+                          label='The decimal separator character',
+                          help_text=('Ignored if the requested '
+                                     'format is not text'))
 
     def clean(self):
-        super().clean()
+        cleaned_data = super().clean()
         tsep, tdec = 'text_sep', 'text_dec'
         # convert to symbols:
-        if self.cleaned_data[tsep] == self.cleaned_data[tdec] and \
-                self.cleaned_data['format'] == 'text':
+        if cleaned_data[tsep] == cleaned_data[tdec] and \
+                cleaned_data['format'] == 'text':
             msg = _("'%s' must differ from '%s' in 'text' format" %
                     (tsep, tdec))
             err_ = ValidationError(msg, code='conflicting values')
             # add_error removes also the field from self.cleaned_data:
             self.add_error(tsep, err_)
             self.add_error(tdec, err_)
+        else:
+            cleaned_data[tsep] = self._text_sep[cleaned_data[tsep]]
+            cleaned_data[tdec] = self._dec_sep[cleaned_data[tdec]]
 
-        return self.cleaned_data
+        return cleaned_data
 
     @property
     def response_data(self) -> Union[dict, StringIO, None]:
@@ -756,7 +761,14 @@ class APIForm(Form):
         """
         if not self.is_valid():
             return None
-        c_data = self.cleaned_data
+
+        # Use `self.cleaned_data` as input for `process-data`, but remove those
+        # parameters (Field names) not given by the user and with no `initial`
+        # set (`initial` acts as a default, see `EgsimBaseForm.__init__`). E.g.
+        # Django `MultiplechoiceField`s with `required=False` default to `[]` in
+        # `cleaned_data`, and this might not be the value `process_data` expects
+        c_data = {k: v for k, v in self.cleaned_data.items() if k in self.data}
+
         obj = self.process_data(c_data) or {}
         if self.cleaned_data['format'] == 'text':
             obj = self.to_csv_buffer(obj, c_data['text_sep'], c_data['text_dec'])

@@ -22,7 +22,7 @@ from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeDistanceSpectraSigmaTrellis)
 
 from .. import (vectorize, isscalar, GsimImtForm, NArrayField, relabel_sa,
-                DictChoiceField, APIForm)
+                APIForm)
 
 
 class PointField(NArrayField):
@@ -45,10 +45,10 @@ class PointField(NArrayField):
         except Exception as exc:
             raise ValidationError(_(str(exc)), code='invalid')
 
-
-class MsrField(DictChoiceField):
-    """A ChoiceField handling the selected Magnitude Scaling Relation object"""
-    _base_choices = get_available_magnitude_scalerel()
+# FIXME REMOVE
+# class MsrField(DictChoiceField):
+#     """A ChoiceField handling the selected Magnitude Scaling Relation object"""
+#     _base_choices = get_available_magnitude_scalerel()
 
 
 PLOT_TYPE = {
@@ -62,6 +62,8 @@ PLOT_TYPE = {
 
 class TrellisForm(GsimImtForm, APIForm):
     """Form for Trellis plot generation"""
+
+    _mag_scalerel = get_available_magnitude_scalerel()
 
     def fieldname_aliases(self, mapping):
         """Set field name aliases (exposed to the user as API parameter aliases):
@@ -97,8 +99,9 @@ class TrellisForm(GsimImtForm, APIForm):
                         initial=0.)
     ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0.,
                       initial=0.)
-    magnitude_scalerel = MsrField(label='Magnitude Scaling Relation',
-                                  initial="WC1994")
+    magnitude_scalerel = ChoiceField(label='Magnitude Scaling Relation',
+                                     choices=[(_,_) for _ in _mag_scalerel],
+                                     initial="WC1994")
     initial_point = PointField(label="Location on Earth",
                                help_text='Longitude Latitude', initial="0 0",
                                min_value=[-180, -90], max_value=[180, 90])
@@ -139,7 +142,13 @@ class TrellisForm(GsimImtForm, APIForm):
             self.fields['sa_period'].required = False  # for safety
 
     def clean(self):
-        cleaned_data = super(TrellisForm, self).clean()
+        GsimImtForm.clean(self)
+        APIForm.clean(self)
+        cleaned_data = self.cleaned_data
+
+        # Convert MSR to associated class:
+        cleaned_data['magnitude_scalerel'] = \
+            self._mag_scalerel[cleaned_data['magnitude_scalerel']]
 
         # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
         vs30 = cleaned_data['vs30']  # surely a list with st least one element
