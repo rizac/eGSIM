@@ -1,5 +1,5 @@
 from fnmatch import translate
-from typing import Union, Iterable
+from typing import Union, Iterable, Any
 import re
 import json
 import shlex
@@ -453,10 +453,12 @@ class GsimImtForm(EgsimBaseForm):
         if not gsim_names:
             return []
 
-        filter_exprs = (Q(imts__contains=imt_name) for imt_name in gsim_names)
-        # multiple Q arguments to a lookup function (e.g. .filter) => AND:
-        return models.Imt.objects.filter(*filter_exprs).\
-            values_list('name', flat=True).distinct()
+        # https://stackoverflow.com/a/8637972
+        objs = models.Imt.objects
+        for gsim in gsim_names:
+            objs = objs.filter(gsims__name=gsim)
+
+        return objs.values_list('name', flat=True).distinct()
 
     @staticmethod
     def sharing_gsims(imt_names):
@@ -467,19 +469,21 @@ class GsimImtForm(EgsimBaseForm):
         if not imt_names:
             return []
 
-        filter_exprs = (Q(imts__contains=imt_name) for imt_name in imt_names)
-        # multiple Q arguments to a lookup function (e.g. .filter) => AND:
-        return models.Gsim.objects.filter(*filter_exprs).\
-            values_list('name', flat=True).distinct()
+        # https://stackoverflow.com/a/8637972
+        objs = models.Gsim.objects
+        for imtx in imt_names:
+            objs = objs.filter(imts__name=imtx)
+
+        return objs.values_list('name', flat=True).distinct()
 
 
 class MediaTypeForm(EgsimBaseForm):
     """Form handling the validation of the format related argument in a request"""
 
-    DATA_FORMAT_TEXT = 'text'
+    DATA_FORMAT_CSV = 'csv'
     DATA_FORMAT_JSON = 'json'
 
-    _text_sep = {
+    _textcsv_sep = {
         'comma': ',',
         'semicolon': ';',
         'space': ' ',
@@ -495,13 +499,13 @@ class MediaTypeForm(EgsimBaseForm):
     def get_data_format(self):
         return self.data['data_format']
 
-    data_format = ChoiceField(required=False, initial=DATA_FORMAT_JSON, disabled=True,
+    data_format = ChoiceField(required=False, initial=DATA_FORMAT_JSON,
                               label='The format of the response data',
                               choices=[(DATA_FORMAT_JSON, 'json'),
-                                       (DATA_FORMAT_TEXT, 'text/csv')])
+                                       (DATA_FORMAT_CSV, 'text/csv')])
 
     csv_sep = ChoiceField(required=False, initial='comma',
-                          choices=[(_, _) for _ in _text_sep],
+                          choices=[(_, _) for _ in _textcsv_sep],
                           label='The (column) separator character',
                           help_text=('Ignored if the requested '
                                      'format is not text'))
@@ -514,18 +518,18 @@ class MediaTypeForm(EgsimBaseForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        tsep, tdec = 'text_sep', 'text_dec'
+        tsep, tdec = 'csv_sep', 'csv_dec'
         # convert to symbols:
-        if cleaned_data[tsep] == cleaned_data[tdec] and \
-                cleaned_data['format'] == 'text':
-            msg = gettext("'%s' must differ from '%s' in 'text' format" %
+        if cleaned_data['data_format'] == self.DATA_FORMAT_CSV \
+                and cleaned_data[tsep] == cleaned_data[tdec]:
+            msg = gettext("'%s' must differ from '%s' in 'csv' format" %
                           (tsep, tdec))
             err_ = ValidationError(msg, code='conflicting values')
             # add_error removes also the field from self.cleaned_data:
             self.add_error(tsep, err_)
             self.add_error(tdec, err_)
         else:
-            cleaned_data[tsep] = self._text_sep[cleaned_data[tsep]]
+            cleaned_data[tsep] = self._textcsv_sep[cleaned_data[tsep]]
             cleaned_data[tdec] = self._dec_sep[cleaned_data[tdec]]
 
         return cleaned_data
@@ -534,10 +538,11 @@ class MediaTypeForm(EgsimBaseForm):
 class APIForm(GsimImtForm, MediaTypeForm):
     """GsimImtForm + MediaTypeForm"""
 
-    def clean(self):
-        GsimImtForm.clean(self)
-        MediaTypeForm.clean(self)
-        return self.cleaned_data
+    # FIXME REMOVE
+    # def clean(self):
+    #     GsimImtForm.clean(self)
+    #     MediaTypeForm.clean(self)
+    #     return self.cleaned_data
 
     @property
     def response_data(self) -> Union[dict, StringIO, None]:
@@ -547,17 +552,19 @@ class APIForm(GsimImtForm, MediaTypeForm):
         if not self.is_valid():
             return None
 
+        # FIXME REMOVE COMMENT HERE
         # Use `self.cleaned_data` as input for `process-data`, but remove those
         # parameters (Field names) not given by the user and with no `initial`
         # (`initial` acts as a default, see `EgsimBaseForm.__init__`). E.g.
         # Django `MultiplechoiceField`s with `required=False` defaults to `[]` in
         # `cleaned_data`, and this might not be the value `process_data` expects
-        c_data = {k: v for k, v in self.cleaned_data.items() if k in self.data}
+        # c_data = {k: v for k, v in self.cleaned_data.items() if k in self.data}
+        c_data = self.cleaned_data
 
         obj = self.process_data(c_data) or {}
-        if self.cleaned_data['format'] == 'text':
-            obj = self.to_csv_buffer(obj, c_data['text_sep'], c_data['text_dec'])
-            return obj
+        if self.cleaned_data['data_format'] == MediaTypeForm.DATA_FORMAT_CSV:
+            obj = self.to_csv_buffer(obj, c_data['csv_sep'], c_data['csv_dec'])
+        return obj
 
     @classmethod
     def process_data(cls, cleaned_data: dict) -> dict:
@@ -592,6 +599,8 @@ class APIForm(GsimImtForm, MediaTypeForm):
         maxcollen = 0
         comma_decimal = dec == ','
         for row in cls.csv_rows(processed_data):
+            if not isinstance(row, list):
+                row = list(row)
             if comma_decimal:
                 # convert dot to comma in floats:
                 for i, cell in enumerate(row):
@@ -609,10 +618,14 @@ class APIForm(GsimImtForm, MediaTypeForm):
         return buffer
 
     @classmethod
-    def csv_rows(cls, process_result) -> Iterable[list[str]]:
-        """Yield lists of strings representing a csv row from the given
-        process_result. the number of columns can be arbitrary and will be
-        padded by `self.to_csv_buffer`
+    def csv_rows(cls, processed_data) -> Iterable[Iterable[Any]]:
+        """Yield CSV rows, where each row is an iterables of Python objects
+        representing a cell value. Each row doesn't need to contain the same
+        number of elements, the caller function `self.to_csv_buffer` will pad
+        columns with Nones, in case (note that None is rendered as "", any other
+        value using its string representation).
+
+        :param processed_data: dict resulting from `self.process_data`
         """
         raise NotImplementedError(":meth:%s.csv_rows" % cls.__name__)
 

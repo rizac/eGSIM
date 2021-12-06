@@ -8,7 +8,7 @@ Created on 3 May 2018
 
 import os
 import shutil
-from os.path import isdir
+from os.path import isdir, abspath, dirname
 import json
 
 import pytest
@@ -181,13 +181,13 @@ def testdata(request):  # pylint: disable=unused-argument
 
 
 @pytest.fixture(scope='session')
-def django_db_setup(django_db_setup, django_db_blocker):
+def django_db_setup(django_db_blocker):
     with django_db_blocker.unblock():
         # delete flatfile subdirectory (no, we do not prompt the user too much
         # work and it's safe he/she deletes the dir in case)
         from egsim.api.management.commands._egsim_flatfiles import Command as FlatfileCommand
-        ff_path = FlatfileCommand.dest_dir()
-        if isdir(ff_path):
+        ff_path = abspath(FlatfileCommand.dest_dir())
+        if isdir(ff_path) and ff_path.startswith(abspath(dirname(dirname(__file__)))):
             shutil.rmtree(ff_path)
         # run command:
         call_command('egsim_init', interactive=False)  # '--noinput')

@@ -12,10 +12,7 @@ from egsim.api.views import TrellisView
 from egsim.api.forms.model_to_model.trellis import TrellisForm
 from egsim.api.forms import MediaTypeForm
 
-try:  # https://stackoverflow.com/questions/44441929
-    from unittest.mock import patch  # ok in py3.8  # noqa
-except ImportError:
-    from mock import patch  # ok in py3.7  # noqa
+from unittest.mock import patch  # ok in py3.8  # noqa
 
 
 @pytest.mark.django_db
@@ -93,7 +90,7 @@ class Test:
             self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
-        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+        resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         assert re.search(self.csv_expected_text, resp2.content)
@@ -136,15 +133,15 @@ class Test:
             self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
-        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+        resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         assert re.search(self.csv_expected_text, resp2.content)
         ref_resp = resp2.content
         # test different text formats
-        for text_sep, symbol in MediaTypeForm._text_sep.items():
-            resp3 = client.post(self.url, data=dict(inputdic, format='text',
-                                                    text_sep=text_sep),
+        for text_sep, symbol in MediaTypeForm._textcsv_sep.items():
+            resp3 = client.post(self.url, data=dict(inputdic, data_format='csv',
+                                                    csv_sep=text_sep),
                                 content_type='text/csv')
             assert resp3.status_code == 200
             real_content = sorted(_ for _ in resp3.content.split(b'\r\n'))
@@ -158,9 +155,9 @@ class Test:
                 # We should read it with csv...
                 assert real_content == expected_content
 
-        resp3 = client.post(self.url, data=dict(inputdic, format='text',
-                                                text_sep='semicolon',
-                                                text_dec='comma'),
+        resp3 = client.post(self.url, data=dict(inputdic, data_format='csv',
+                                                csv_sep='semicolon',
+                                                csv_dec='comma'),
                             content_type='text/csv')
         assert resp3.status_code == 200
         real_content = sorted(_ for _ in resp3.content.split(b'\r\n'))
@@ -173,25 +170,25 @@ class Test:
         # but better than nothing
         assert real_content[0] == expected_content[0]
 
-        resp3 = client.post(self.url, data=dict(inputdic, format='text',
-                                                text_dec='comma'),
+        resp3 = client.post(self.url, data=dict(inputdic, data_format='csv',
+                                                csv_dec='comma'),
                             content_type='text/csv')
         assert resp3.status_code == 400
         expected_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid input in text_sep, text_dec',
+                'message': 'Invalid input in csv_sep, csv_dec',
                 'errors': [
                     {
-                        'domain': 'text_sep',
-                        'message': ("'text_sep' must differ from"
-                                    " 'text_dec' in 'text' format"),
+                        'domain': 'csv_sep',
+                        'message': ("'csv_sep' must differ from"
+                                    " 'csv_dec' in 'csv' format"),
                         'reason': 'conflicting values'
                     },
                     {
-                        'domain': 'text_dec',
-                        'message': ("'text_sep' must differ from"
-                                    " 'text_dec' in 'text' format"),
+                        'domain': 'csv_dec',
+                        'message': ("'csv_sep' must differ from"
+                                    " 'csv_dec' in 'csv' format"),
                         'reason': 'conflicting values'
                     }
                 ]
@@ -209,6 +206,7 @@ class Test:
         stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot_type='s', stdev=st_dev)
+        inputdic.pop('imt')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -240,24 +238,26 @@ class Test:
             self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
-        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+        resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         assert re.search(self.csv_expected_text, resp2.content)
 
-        # test for the frontend: supply SA incorrectly but check that it's
-        # ignored
-        resp1 = client.post(self.url, data=dict(inputdic, imt='SA',
-                                                sa_period='(set'),
+        # test for the frontend: supply SA and check that the plots have one
+        # element
+        resp1 = client.post(self.url, data=dict(inputdic, imt='SA(0.1)'),
+                            content_type='application/json')
+        assert resp1.status_code == 200
+        result = resp1.json()
+        # check that plots have only one point (one SA only provided):
+        assert all(len(_) == 1 for _ in result['SA'][0]['yvalues'].values())
+
+        # supply also wrong imt and check the errors:
+        resp1 = client.post(self.url, data=dict(inputdic, imt='PGV'),
                             content_type='application/json')
         result = resp1.json()
-        assert resp1.status_code == 200
-        # supply also wrong imt (ignored, SA is used):
-        resp1 = client.post(self.url, data=dict(inputdic, imt='PGV',
-                                                sa_period='(set'),
-                            content_type='application/json')
-        result = resp1.json()
-        assert resp1.status_code == 200
+        assert 'imt' in result['error']['message']
+        assert resp1.status_code == 400
 
     def test_error(self,
                    # pytest fixtures:
@@ -477,26 +477,26 @@ class Test:
         }
         assert areequal(resp1.json(), expected_json)
 
-    @patch('egsim.views.TrellisView.to_rows')
-    def test_notimplemented_text_format(self, mock_trellis_to_rows,
-                                        # pytest fixtures:
-                                        testdata, client, areequal):
-        """tests the not implemented error"""
-
-        def seff(*a, **v):
-            raise NotImplementedError()
-
-        mock_trellis_to_rows.side_effect = seff
-        inputdic = dict(testdata.readyaml(self.request_filename),
-                        plot_type='m')
-        # test the text response:
-        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
-                            content_type='text/csv')
-        assert resp2.status_code == 400
-        expected_json = {
-            "error": {
-                "code": 400,
-                "message": "format \"text\" is not currently implemented"
-            }
-        }
-        assert areequal(resp2.json(), expected_json)
+    # @patch('egsim.views.TrellisView.to_rows')
+    # def test_notimplemented_text_format(self, mock_trellis_to_rows,
+    #                                     # pytest fixtures:
+    #                                     testdata, client, areequal):
+    #     """tests the not implemented error"""
+    #
+    #     def seff(*a, **v):
+    #         raise NotImplementedError()
+    #
+    #     mock_trellis_to_rows.side_effect = seff
+    #     inputdic = dict(testdata.readyaml(self.request_filename),
+    #                     plot_type='m')
+    #     # test the text response:
+    #     resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
+    #                         content_type='text/csv')
+    #     assert resp2.status_code == 400
+    #     expected_json = {
+    #         "error": {
+    #             "code": 400,
+    #             "message": "format \"text\" is not currently implemented"
+    #         }
+    #     }
+    #     assert areequal(resp2.json(), expected_json)

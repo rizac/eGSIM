@@ -55,7 +55,7 @@ class RESTAPIView(View):  #, metaclass=EgsimQueryViewMeta):
             return self.response(ret)
 
         except Exception as err:
-            msg = f'Error in GET request (f{str(err) or err.__class__.__name__})'
+            msg = f'request error ({err.__class__.__name__}: {str(err)})'
             return error_response(msg, 500)
 
     def post(self, request):
@@ -64,7 +64,7 @@ class RESTAPIView(View):  #, metaclass=EgsimQueryViewMeta):
             stream = StringIO(request.body.decode('utf-8'))
             return self.response(yaml.safe_load(stream))
         except Exception as err:
-            msg = f'Error in POST request (f{str(err) or err.__class__.__name__})'
+            msg = f'request error ({err.__class__.__name__}: {str(err)})'
             return error_response(msg, 500)
 
     @classmethod
@@ -80,8 +80,8 @@ class RESTAPIView(View):  #, metaclass=EgsimQueryViewMeta):
             return error_response(verr['message'], verr['code'],
                                   errors=verr['errors'])
 
-        response_data = form.response_data()
-        if form.get_data_format == form.DATA_FORMAT_TEXT:
+        response_data = form.response_data
+        if form.get_data_format == form.DATA_FORMAT_CSV:
             return cls.response_text(response_data)
         elif form.get_data_format == form.DATA_FORMAT_JSON:
             return cls.response_json(response_data)

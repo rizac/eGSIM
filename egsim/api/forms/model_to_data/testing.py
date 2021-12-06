@@ -4,7 +4,7 @@ Django Forms for eGSIM model-to-data testing
 @author: riccardo
 """
 from collections import defaultdict
-from typing import Iterable
+from typing import Iterable, Any
 
 import numpy as np
 
@@ -47,9 +47,11 @@ class TestingForm(APIForm, FlatfileForm):
                                            'selected measure of fit'))
 
     def clean(self):
-        APIForm.clean(self)
-        FlatfileForm.clean(self)
-        cleaned_data = self.cleaned_data
+        # FIXME REMOVE
+        # APIForm.clean(self)
+        # FlatfileForm.clean(self)
+        # cleaned_data = self.cleaned_data
+        cleaned_data = super().clean()
         config = {}
         for parname in ['edr_bandwidth', 'edr_multiplier']:
             if parname in cleaned_data:
@@ -110,10 +112,12 @@ class TestingForm(APIForm, FlatfileForm):
         }
 
     @classmethod
-    def csv_rows(cls, processed_data: dict) -> Iterable[list[str]]:
-        """Yield lists of strings representing a csv row from the given
-        process_result. the number of columns can be arbitrary and will be
-        padded by `self.to_csv_buffer`
+    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
+        """Yield CSV rows, where each row is an iterables of Python objects
+        representing a cell value. Each row doesn't need to contain the same
+        number of elements, the caller function `self.to_csv_buffer` will pad
+        columns with Nones, in case (note that None is rendered as "", any other
+        value using its string representation).
 
         :param processed_data: dict resulting from `self.process_data`
         """
