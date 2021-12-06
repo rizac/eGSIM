@@ -6,7 +6,7 @@ from django.views.generic.base import RedirectView
 
 from . import URLS, TABS
 from .views import (main, home, apidoc, download_request,
-                    download_astext, download_asimage, imprint)
+                    download_ascsv, download_asimage, imprint)
 
 # Watch out trailing slashes:
 # https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
@@ -32,9 +32,9 @@ urlpatterns = [
         download_request),
     # download as text:
     url(r'^%s/(?P<key>.+?)/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASTEXT,
-        download_astext),
+        download_ascsv),
     url(r'^%s/(?P<key>.+?)/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASTEXT_EU,
-        download_astext, {'text_sep': ';', 'text_dec': ','}),
+        download_ascsv, {'csv_sep': ';', 'csv_dec': ','}),
     # donwload as image:
     url(r'^%s/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASIMG, download_asimage)
 

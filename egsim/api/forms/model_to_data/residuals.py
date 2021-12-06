@@ -5,7 +5,7 @@ Django Forms for eGSIM model-to-data comparison (residuals computation)
 """
 from collections import defaultdict
 from itertools import chain, repeat
-from typing import Iterable
+from typing import Iterable, Any
 
 from django.forms import ChoiceField
 from smtk.residuals.residual_plots import (residuals_density_distribution,
@@ -47,12 +47,13 @@ class ResidualsForm(APIForm, FlatfileForm):
     plot_type = ChoiceField(required=True,
                             choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
 
-    def clean(self):
-        # call programmatically superclass `clean` to avoid multiple inheritance
-        # confusion:
-        APIForm.clean(self)
-        FlatfileForm.clean(self)
-        return self.cleaned_data
+    # FIXME REMOVE
+    # def clean(self):
+    #     # call programmatically superclass `clean` to avoid multiple inheritance
+    #     # confusion:
+    #     APIForm.clean(self)
+    #     FlatfileForm.clean(self)
+    #     return self.cleaned_data
 
     RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
                        'pvalue')
@@ -99,10 +100,12 @@ class ResidualsForm(APIForm, FlatfileForm):
         return ret
 
     @classmethod
-    def csv_rows(cls, processed_data: dict) -> Iterable[list[str]]:
-        """Yield lists of strings representing a csv row from the given
-        process_result. the number of columns can be arbitrary and will be
-        padded by `self.to_csv_buffer`
+    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
+        """Yield CSV rows, where each row is an iterables of Python objects
+        representing a cell value. Each row doesn't need to contain the same
+        number of elements, the caller function `self.to_csv_buffer` will pad
+        columns with Nones, in case (note that None is rendered as "", any other
+        value using its string representation).
 
         :param processed_data: dict resulting from `self.process_data`
         """

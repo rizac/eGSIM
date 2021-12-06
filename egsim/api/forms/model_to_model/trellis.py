@@ -3,13 +3,14 @@ Django Forms for eGSIM model-to-model comparison (Trellis plots)
 """
 from collections import defaultdict
 from itertools import chain, repeat
-from typing import Iterable
+from typing import Iterable, Any
 
 import numpy as np
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext
 from django.utils.safestring import mark_safe
 from django.forms.fields import (BooleanField, FloatField, ChoiceField)
+from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
@@ -105,30 +106,42 @@ class TrellisForm(APIForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # If the plot_type is spectra, remove imt and sa_period
-        # and set the field as not required, so validation will be ok:
-        if self.data.get('plot_type', '') in ('s', 'ss'):
-            self.fields['imt'].sa_periods_str = ''  # see superclass __init__
-            self.data.pop('imt', None)
-            self.data.pop('sa_period', None)
-            self.fields['imt'].required = False
-            self.fields['sa_period'].required = False  # for safety
+        # If the plot_type is spectra, provide default values for imt (which
+        # is optional) and set the field['imt'] as accepting only SA:
+        self._replace_sa_periods_with_default = False
+        if self._is_input_plottype_spectra():
+            self.fields['imt'].choices = [('SA', 'SA')]
+            if 'imt' not in self.data:
+                self._replace_sa_periods_with_default = True
+                # provide a dummy period that will pass ImtField validation
+                self.data['imt'] = 'SA(1)'
 
-    def clean_initial_point(self, value):
+    def clean_initial_point(self):
         """Converts the given value to a object of typpe
          :class:`openquake.hazardlib.geo.point.Point` object.
         """
+        value = self.cleaned_data['initial_point']
         # https://docs.djangoproject.com/en/3.2/ref/forms/validation/
         # #cleaning-a-specific-field-attribute
-        value = NArrayField.clean(self, value)
         try:
             return Point(*value)
         except Exception as exc:
-            raise ValidationError(_(str(exc)), code='invalid')
+            raise ValidationError(gettext(str(exc)), code='invalid')
+
+    def _is_input_plottype_spectra(self):
+        return self.data.get('plot_type', '') in ('s', 'ss')
 
     def clean(self):
         cleaned_data = super().clean()
-
+        # Handle spectra plot type (see __init__), but only if 'imt' is valid
+        # (i.e., 'imt' in cleaned_data):
+        if self._is_input_plottype_spectra() and 'imt' in cleaned_data:
+            if self._replace_sa_periods_with_default:
+                self.data.pop('imt')  # just for safety (data not used again)
+                cleaned_data['imt'] = self._default_periods_for_spectra()
+            else:
+                cleaned_data['imt'] = sorted(imt.from_string(_).period
+                                             for _ in cleaned_data['imt'])
         # Convert MSR to associated class:
         cleaned_data['magnitude_scalerel'] = \
             self._mag_scalerel[cleaned_data['magnitude_scalerel']]
@@ -154,24 +167,28 @@ class TrellisForm(APIForm):
                 # '__all__' we add the error keyed to the given field name
                 # `name` via `self.add_error`:
                 # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
-                error = ValidationError(_("value must be consistent with vs30 "
-                                          "(%s)" % str_),
+                error = ValidationError(gettext("value must be consistent with "
+                                                "vs30 (%s)" % str_),
                                         code='invalid')
                 self.add_error(name, error)
 
         return cleaned_data
 
     @classmethod
-    def csv_rows(cls, process_result) -> Iterable[list[str]]:
-        """Yield lists of strings representing a csv row from the given
-        process_result. the number of columns can be arbitrary and will be
-        padded by `self.to_csv_buffer`
+    def csv_rows(cls, processed_data) -> Iterable[Iterable[Any]]:
+        """Yield CSV rows, where each row is an iterables of Python objects
+        representing a cell value. Each row doesn't need to contain the same
+        number of elements, the caller function `self.to_csv_buffer` will pad
+        columns with Nones, in case (note that None is rendered as "", any other
+        value using its string representation).
+
+        :param processed_data: dict resulting from `self.process_data`
         """
         yield ['imt', 'gsim', 'magnitude', 'distance', 'vs30']
-        yield chain(repeat('', 5), [process_result['xlabel']],
-                    process_result['xvalues'])
-        for imt in process_result['imts']:
-            imt_objs = process_result[imt]
+        yield chain(repeat('', 5), [processed_data['xlabel']],
+                    processed_data['xvalues'])
+        for imt in processed_data['imts']:
+            imt_objs = processed_data[imt]
             for obj in imt_objs:
                 mag, dist, vs30, ylabel = obj['magnitude'], obj['distance'], \
                                           obj['vs30'], obj['ylabel']
@@ -180,8 +197,8 @@ class TrellisForm(APIForm):
         # print standard deviations. Do it once for all at the end as we think
         # it might be easier for a user using Excel or LibreOffice, than having
         # each gsim with 'yvalues and 'stdvalues' next to each other
-        for imt in process_result['imts']:
-            imt_objs = process_result[imt]
+        for imt in processed_data['imts']:
+            imt_objs = processed_data[imt]
             for obj in imt_objs:
                 mag, dist, vs30, ylabel = obj['magnitude'], obj['distance'], \
                                           obj['vs30'], obj['stdlabel']
@@ -216,10 +233,14 @@ class TrellisForm(APIForm):
         if params.pop("stdev", False):
             stdev_trellisclass = PLOT_TYPE[plottype_key][2]
 
-        # Returns True if trellisclass is a Distance-based Trellis class:
-        _isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
-        # Returns True if trellisclass is a Magnitude-based Trellis class:
-        _ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
+        is_spectra_class = trellisclass in (MagnitudeDistanceSpectraTrellis,
+                                            MagnitudeDistanceSpectraSigmaTrellis)
+        _isdist, _ismag = False, False
+        if not is_spectra_class:
+            # Returns True if trellisclass is a Distance-based Trellis class:
+            _isdist = trellisclass in (DistanceIMTTrellis, DistanceSigmaIMTTrellis)
+            # Returns True if trellisclass is a Magnitude-based Trellis class:
+            _ismag = trellisclass in (MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis)
 
         xdata = None
         vs30_s, z1pt0_s, z2pt5_s = "vs30", "z1pt0", "z2pt5"
@@ -243,7 +264,8 @@ class TrellisForm(APIForm):
                         if _ismag else zip([None], [distances]):
 
                     data = cls._get_trellis_dict(trellisclass, params, mags,
-                                                  dists, gsim, imt)
+                                                  dists, gsim, imt,
+                                                 is_spectra_class)
 
                     if xdata is None:
                         xdata = {
@@ -253,7 +275,8 @@ class TrellisForm(APIForm):
 
                     _stdev_data = None if stdev_trellisclass is None \
                         else cls._get_trellis_dict(stdev_trellisclass, params,
-                                                    mags, dists, gsim, imt)
+                                                    mags, dists, gsim, imt,
+                                                   is_spectra_class)
                     cls._add_stdev(data, _stdev_data)
 
                     for fig in data['figures']:
@@ -270,7 +293,7 @@ class TrellisForm(APIForm):
                         # convert to None/float to make them json serializable:
                         for key, val in {vs30_s: vs30,
                                          mag_s: fig.get(mag_s, mag),
-                                         dist_s: fig.get(dist_s, dist)}:
+                                         dist_s: fig.get(dist_s, dist)}.items():
                             fig[key] = None if val is None or np.isnan(val) \
                                 else float(val)
                         # And add `fig` to `figures`, which is a dict of this type:
@@ -283,26 +306,30 @@ class TrellisForm(APIForm):
                         # the product of the chosen vs30, mag and dist):
                         figures[fig.pop('imt')].append(fig)
 
-        # imt is a list of the imts given as input, or None for "spectra" Trellis
-        # (in this latter case just get the figures keys, which should be populated
-        # of a single key 'SA')
         return {
             **xdata,
-            'imts': imt or list(figures.keys()),
+            # imt is a list of the imts given as input, or a numeric list of periods
+            # for "spectra" Trellis (in the latter case just get the figures keys,
+            # which should be populated of a single key 'SA'):
+            'imts': imt if not is_spectra_class else list(figures.keys()),
             **figures
         }
 
     @staticmethod
-    def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt):  # noqa
+    def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt,
+                          is_trelliclass_spectra):  # noqa
         """Compute the Trellis plot for a single set of eGSIM parameters"""
 
-        isspectra = trellis_class in (MagnitudeDistanceSpectraTrellis,
-                                      MagnitudeDistanceSpectraSigmaTrellis)
+        # FIXME: REMOVE
+        # isspectra = trellis_class in (MagnitudeDistanceSpectraTrellis,
+        #                               MagnitudeDistanceSpectraSigmaTrellis)
+        # periods = TrellisForm._default_periods_for_spectra() if isspectra else imt
 
-        periods = TrellisForm._default_periods_for_spectra() if isspectra else imt
-
+        # imt is a list of the imts given as input, or a numeric list of periods
+        # for "spectra" Trellis (in the latter case just get the figures keys,
+        # which should be populated of a single key 'SA'):
         trellis_obj = trellis_class.from_rupture_properties(params, mags, dists,
-                                                            gsim, periods)
+                                                            gsim, imt)
         data = trellis_obj.to_dict()
         # NOTE:
         # data = {
@@ -336,10 +363,11 @@ class TrellisForm(APIForm):
         for fig in src_figures:
             fig.pop('column', None)
             fig.pop('row', None)
-            # set a key to uniquely identify the figure: in case os spectra,
-            # we trust the (magnitude, distance) pair. Otherwise, the IMT:
-            fig['_key'] = (fig['magnitude'], fig['distance']) if isspectra else \
-                fig['imt']
+            # set a key to uniquely identify the figure (see `process_data`).
+            # Use the IMT except for trellis spectra, where imt is always SA:
+            # use (mag, dist) pair in this case:
+            fig['_key'] = (fig['magnitude'], fig['distance']) \
+                if is_trelliclass_spectra else fig['imt']
             # change labels SA(1.0000) into SA(1.0)
             fig['ylabel'] = relabel_sa(fig['ylabel'])
 

@@ -204,7 +204,7 @@ def download_request(request, tab_name, filename):
     return response
 
 
-def download_astext(request, tab_name, filename, text_sep=',', text_dec='.'):
+def download_ascsv(request, tab_name, filename, sep=',', dec='.'):
     """Return the processed data as text/CSV. This method is used from within
     the browser when users want to get processed data as text/csv: as the
     browser stores the processed data dict, we just need to convert it as
@@ -217,7 +217,7 @@ def download_astext(request, tab_name, filename, text_sep=',', text_dec='.'):
     """
     formclass = TABS[tab_name].formclass
     inputdict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
-    response = formclass.processed_data_as_csv(inputdict, text_sep, text_dec)
+    response = formclass.processed_data_as_csv(inputdict, sep, dec)
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response
 
