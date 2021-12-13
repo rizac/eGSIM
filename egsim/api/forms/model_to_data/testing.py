@@ -7,12 +7,12 @@ from collections import defaultdict
 from typing import Iterable, Any
 
 import numpy as np
+from django.core.exceptions import ValidationError
 
-from smtk.residuals.gmpe_residuals import (Residuals,
-                                           GSIM_MODEL_DATA_TESTS as TEST)
+from smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
 from django.forms import FloatField, MultipleChoiceField
 
-from . import FlatfileForm, MOF
+from . import FlatfileForm, MOF, get_residuals
 from .. import relabel_sa, APIForm
 
 
@@ -47,10 +47,6 @@ class TestingForm(APIForm, FlatfileForm):
                                            'selected measure of fit'))
 
     def clean(self):
-        # FIXME REMOVE
-        # APIForm.clean(self)
-        # FlatfileForm.clean(self)
-        # cleaned_data = self.cleaned_data
         cleaned_data = super().clean()
         config = {}
         for parname in ['edr_bandwidth', 'edr_multiplier']:
@@ -70,7 +66,7 @@ class TestingForm(APIForm, FlatfileForm):
 
         params = cleaned_data  # FIXME: legacy code, remove/rename?
 
-        flatfile = params['flatfile']  # it's already filtered, in case)
+        flatfile = params['flatfile']  # already filtered dataframe, in case
 
         ret = {}
         obs_count = defaultdict(int)
@@ -79,8 +75,7 @@ class TestingForm(APIForm, FlatfileForm):
         # columns: "Measure of fit" "imt" "gsim" "value(s)"
         for gsim in params['gsim']:
             try:
-                residuals = Residuals([gsim], params['imt'])
-                residuals.get_residuals(flatfile)
+                residuals = get_residuals(flatfile, [gsim], params['imt'])
 
                 numrecords = sum(c.get('Num. Sites', 0) for c in residuals.contexts)
 
@@ -102,6 +97,9 @@ class TestingForm(APIForm, FlatfileForm):
                     ret.setdefault(moffit, {}). \
                         setdefault(imt, {})[gsim] = value.item()
 
+            except ValidationError as verr:
+                # this exception must be raised and wrapped into a 4xx response:
+                raise verr
             except Exception as exc:  # pylint: disable=broad-except
                 gsim_skipped[gsim] = str(exc)
 

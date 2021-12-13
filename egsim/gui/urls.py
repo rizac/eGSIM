@@ -1,7 +1,6 @@
 """eGSIM URL Configuration for the Graphical User Interface (GUI)"""
 
 from django.conf.urls import url  # added by default by django
-from django.contrib import admin  # added by default by django
 from django.views.generic.base import RedirectView
 
 from . import URLS, TABS
@@ -13,7 +12,6 @@ from .views import (main, home, apidoc, download_request,
 
 
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),  # added by default by django
     url(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                     permanent=False)),
 

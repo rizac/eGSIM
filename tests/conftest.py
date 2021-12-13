@@ -18,30 +18,11 @@ import numpy as np
 from django.core.management import call_command
 from django.test.client import Client
 
-# from io import StringIO, BytesIO
-# from egsim.core.utils import yaml_load, get_dbnames
-# from egsim.core.utils import querystring
-# from pytest_django import fixtures as pytest_django_fixtures
-# from egsim.forms.fields import GmdbField
-
-# https://docs.pytest.org/en/3.0.0/parametrize.html#basic-pytest-generate-tests-example
-
-
-# make all test functions having 'db' in their argument use the passed databases
-def pytest_generate_tests(metafunc):
-    """This function is called before generating all tests and parametrizes
-    all tests with the argument 'client' (which is a fixture defined below)"""
-    # note August 2019: There is apparently no need to run the test twice
-    # with two different USER AGENTs. We leave the code below and return:
-    return
-    if 'client' in metafunc.fixturenames:
-        client_args = [{'HTTP_USER_AGENT': 'Mozilla/5.0'}, {}]
-        # dburls = [_ for _ in client_args if _]
-        ids = ["Django Test Client(%s)" % str(_) for _ in client_args]
-        # metafunc.parametrize("db", dburls)
-        metafunc.parametrize('client', [Client(**_) for _ in client_args],
-                             ids=ids,
-                             indirect=True, scope='module')
+from datetime import date, datetime
+from urllib.parse import quote
+from typing import Union, Iterable
+from egsim.api.views import QUERY_PARAMS_SAFE_CHARS
+from egsim.api.forms import isscalar
 
 
 @pytest.fixture(scope="function")
@@ -112,7 +93,7 @@ def areequal(request):
                     return False
                     # any other exception raises False: objects are not equal
 
-                # now try to comnpare equality of each element in obj1
+                # now try to compare equality of each element in obj1
                 # with any element of obj2. The for loop takes into account
                 # that their element do not need to be equal element-wise
                 # (e.g. [1, 'a'] and ['a', 1] are equal)
@@ -132,7 +113,7 @@ def areequal(request):
 
 
 @pytest.fixture(scope="session")
-def testdata(request):  # pylint: disable=unused-argument
+def testdata(request):  # noqa
     """Fixture handling all data to be used for testing. It points to the
     testing 'data' directory allowing to just get files / read file contents
     by file name.
@@ -185,26 +166,21 @@ def django_db_setup(django_db_blocker):
     with django_db_blocker.unblock():
         # delete flatfile subdirectory (no, we do not prompt the user too much
         # work and it's safe he/she deletes the dir in case)
-        from egsim.api.management.commands._egsim_flatfiles import Command as FlatfileCommand
-        ff_path = abspath(FlatfileCommand.dest_dir())
-        if isdir(ff_path) and ff_path.startswith(abspath(dirname(dirname(__file__)))):
-            shutil.rmtree(ff_path)
+        # from egsim.api.management.commands._egsim_flatfiles import Command as FlatfileCommand
+        # ff_path = abspath(FlatfileCommand.dest_dir())
+        # if isdir(ff_path) and ff_path.startswith(abspath(dirname(dirname(__file__)))):
+        #     shutil.rmtree(ff_path)
         # run command:
         call_command('egsim_init', interactive=False)  # '--noinput')
 
 
 @pytest.fixture(scope='session')
 def querystring():
+    """Returns a query string from a given dict and a base_url"""
     return get_querystring
 
 
-## utlitity functions:
-
-from datetime import date, datetime
-from urllib.parse import quote
-from typing import Union, Iterable
-from egsim.api.views import QUERY_PARAMS_SAFE_CHARS
-from egsim.api.forms import isscalar
+# utility functions for `querystring`:
 
 
 def get_querystring(query_args: dict, baseurl: str = None):
@@ -273,30 +249,3 @@ def tostr(obj: Union[bool, None, str, date, datetime, int, float], none='null') 
             return obj.strftime('%Y-%m-%dT%H:%M:%S')
         return obj.strftime('%Y-%m-%dT%H:%M:%S.%f')
     return str(obj)
-
-
-# FIXME :REMOVE
-# @pytest.fixture(scope="session")
-# def mocked_gmdbfield(request, testdata):  # pylint: disable=unused-argument
-#     """Fixture returning a mock class for the GmdbField.
-#     """
-#     def func(tetdata_filename):
-#         gmdbpath = testdata.path(tetdata_filename)
-#
-#         class MockedGmdbField(GmdbField):
-#             '''Mocks GmdbField'''
-#             _base_choices = {k: gmdbpath for k in get_dbnames(gmdbpath)}
-#
-# #             def __init__(self, *a, **v):
-# #                 v['choices'] = [(_, _) for _ in get_dbnames(gmdbpath)]
-# #                 super(MockedGmdbField, self).__init__(*a, **v)
-#
-# #             def clean(self, value):
-# #                 '''Converts the given value (string) into the tuple
-# #                 hf5 path, database name (both strings)'''
-# #                 (_, value) = super(MockedGmdbField, self).clean(value)
-# #                 return (gmdbpath, value)
-#
-#         return MockedGmdbField()
-#
-#     return func

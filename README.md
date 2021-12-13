@@ -1,14 +1,18 @@
 # eGSIM
-A web service for selecting and testing  ground shaking models in Europe (eGSIM), developed
-in the framework of the  Thematic Core Services for Seismology of EPOS-IP
-(European Plate Observing  System-Implementation Phase)
+A web service for selecting and testing  ground shaking models (GSIM) 
+in Europe, developed in the framework of the Thematic Core Services for 
+Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of 
+[EFEHR](http://www.efehr.org/en/home/)
 
 
 ## Installation (development)
 
-This is a tutorial tested with MacOS (El Capitan, Catalina, Big Sur)
-and Ubuntu 18.04. 
+DISCLAIMER: As web service, eGSIM is conceived to be installed on a 
+remote publicly https-available server: this usage, called 
+*production* or *deploy* mode is covered in `deploy.html`.
 
+This document deals with *development* or *debug* mode, i.e. the deployment
+of the program locally, usually for testing, fixing bug or adding features.
 
 ### Requirements
 
@@ -22,15 +26,10 @@ sudo apt-get install git python3-venv python3-pip python3-dev
 `brew install` instead of `apt-get install`. *Remove python3-dev as it does not
 exist on macOS*).
 
-
-Please use Python versions>=3.7, referred here for simplicity as
-Python3.7+ (as of end 2020, we are testing with 3.8.6).
-Check with ```python --version```: if it's Python2, then use ```python3 --version```.
-If it's not 3.7+, then you need to install Python3.7+ **along with**
-(i.e., not replacing) the current default python3 installed on your computer.
-From now on, each `python` command refers to the path of the Python3.7+ distribution you have
-(i.e., you might need to type e.g. `/opt/lib/python3.7` or similar,
-instead of `python` or `python3`)
+This web service uses a *specific* version of Python (Open `setup.py` and 
+check `python_requires=`. As of January 2022, it's 3.9.7) which you must 
+install in addition to the Python version required by your system, and use
+it. Any command `python3` hereafter will refer to the required Python version.
 
 
 ### Clone repository
@@ -63,9 +62,18 @@ On the terminal, execute:
 ```bash
 pip install --upgrade pip setuptools && pip install -r requirements.dev.txt
 ```
+(use `requirements.txt` if you don't need to run tests, e.g. you are not 
+installing as developer).
 
-If you want also to be able to modify `gmpe-smtk` (fix bug, implement new features
-and issue Pull Requests to the master branch), then clone gmpe-smtk, usually on the same level
+<details>
+
+<summary>
+If you want also to be able to modify `gmpe-smtk`, e.g. 
+fix bug, implement new features and issue Pull Requests to the master branch 
+(click to expand): 
+</summary>
+
+Clone gmpe-smtk, usually on the same level
 of the `egsim directory` into the so-called `smtk directory`:
 
 ```bash
@@ -83,142 +91,62 @@ pip install -e .
 ```
 
 and have a look at [Fixing/adding features to gmpe-smtk](#fixing--adding-features-to-gmpe-smtk)
-for the suggested workflow.
-
-
-<details> 
-  <summary>Notes</summary>
-
-1. There is also a `requirements.txt` file available, which is the same as `requirements.dev.txt` but
-   without the dependencies required for running tests. In general, `requirements.txt` is supposed to be used
-   in production only. In our case, we suggest to use `requirements.dev.txt` in any case
-   and be able to run tests also on the server.
-
-3. This is not a client program but a web app in Django, there is no need to install this
-   program via `pip install .`, but only its dependencies. Also note that this way we have to list dependencies
-   in `setup.py`, which is not straightforward with github packages. As of end 2020, both these options work:
-   `pip install git+https://github.com/rizac/gmpe-smtk#egg=smtk` or 
-   `pip install smtk@git+https://github.com/rizac/gmpe-smtk`
-   but they store `smtk` in `pip` with a format (something like `smtk<version>#<commit_hash>`)
-   that will not work with `pip install -r requirements.txt`
+for the suggested workflow
 
 </details>
 
 
-### Test
+### Run Test (for developers)
 
-Move into the `egsim directory` and type:
+Move in the `egsim directory` and type:
 
-Normal test (x=stop at first error, v*=increase verbosity):
 ```bash
-pytest -xvvv --ds=egsim.settings_debug ./tests/
+export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv --ds=egsim.settings_debug ./tests/
+```
+(x=stop at first error, v*=increase verbosity). 
+
+Test with code coverage, i.e.
+showing the amount of code hit by tests:
+
+```bash
+export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv --cov=./egsim/ --cov-report=html ./tests/
 ```
 
-Test with coverage
-```bash
-pytest -xvvv --ds=egsim.settings_debug --cov=./egsim/ --cov-report=html ./tests/
-```
+(you can also invoke the commands without `export ...` but 
+using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
+
+
+## Usage
 
 ### Setup project data
 
+(*NOTE: the settings module MUST be changed in production*!)
 
-#### Flatfile (ESM):
-This procedure should be executed for all flatfiles to be included in the application.
-For testing purposes, we will use ESM flatfile (2018) only.
-Download ESM flatfile from https://esm.mi.ingv.it//flatfile-2018/flatfile.php (ESM_flatfile_2018)
-Unzip it and from within the same directory, copy the file:
-```bash
-cp ESM_flatfile_2018/ESM_flatfile_SA.csv ./ESM_flatfile_2018_SA.csv
-```
-Called $FLATFILE_PATH the full path of the CSV file just copied,
-now parse it into the ESM database, the database will be a HDF5 file
-inside the /media/ directory of the egsim repository (git ignores that directory):
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py gmdb_esm $FLATFILE_PATH
-```
+- Create db:
 
-<details> 
-  <summary>Implementation note (for future planning)</summary>
-	
-In the current implementation, each parsed flatfile is stored as HDF file using pytables (see `smtk`
-package). These HDF files (which are *not* readable through `pandas.read_hdf` by the way)
-are stored in the "media" directory (see [installation for production](#Installation-(production))
-for details).
+  ```console
+  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
+  ```
 
-This method, which is due to several legacy reasons, has also some drawbacks:
+- Populate db:
 
-1. It makes the data handling more complex with several management
-   commands and storages (flatfile vs. database, as you can see here)
-   
-2. It has to be re-done if new flatfile columns (GSIM "required" attributes) are added
-   in OpenQuake
+  ```console
+  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
+  ``` 
 
-Therefore, it might be probably safer to store all eGSIM data in the database, using a single storage
-point, exploit Django migration features (e.g., make the addition of new
-columns easier). Note however that storing a flatfile in the database has some caveats:
+- If you want to access the admin panel, see [the admin panel](#admin-panel-check-or-modify-database-data-from-the-web-browser)
+  
+- Run server and navigate in the browser:
+  ```console
+  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver 
+  ```
 
-1. Implement array types for IMT components (or better, orientations. See e.g.
-   https://ds.iris.edu/ds/nodes/dmc/data/formats/seed-channel-naming/).
-   Currently, we have IMT which can be stored
-   with components or as scalars. A database should store all IMT as 3x1
-   float arrays, the frist two elements being the horizontal components. For scalars,
-   only the first element shoiuld be given (the other two being Null or NaN). For SA,
-   the float arrays would be 3xN, where N is the number of periods, and the periods
-   should be stored probably in a separate table 'sa_periods' to avoid redundant data)
-
-2. Implement the selection expression. Currently, HDF are stored using the pytables
-   package, which allows selection expressions such as '(PGA != nan) & ... ()".
-   A database storage has not natively such a feature unless we implement it.
-   Note that this would not be hard to implement - at last in a very naive way -
-   currently we already parse the selection expression to cast some types
-   so some work is already in place (see package `smtk` package)
-
-If we go for this solution in the future, we could implement in the command `initdb`
-all operations needed to have the required eGSIM input data (SAHRE, ESM + other tectonic regionalisations + other flatfiles).
-The idea would be to keep a 'input_data' directory (maybe separated from the
-project if too big) and then for any new data in 'input_data' directory, add code
-to the 'initdb' command to populate the db, and eventually on the server pull the
-new 'input_data' and re-execute 'initdb' on the server.
-
-Final note: the user-defined flatfile should not be considered here, as it turned out to be
-more easily menageable by simply reading a CSV via `pandas.read_csv`, which is
-extremely fast (providing a limited amount of rows - maybe up to 5000, only required columns,
-and no selection possible).
-
-</details>
-
-<!--
-
-#### Migrate (setup django db)  
-From within the egsim folder (check that manage.py is therein):
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
-```
+(you can also invoke the commands without `export ...` but using the 
+`--settings` option: 
+`python manage.py --settings=egsim.settings_debug [command]`)
 
 
-#### Create db  (setup egsim tables inside django db)
-From within the egsim folder (check that manage.py is therein):
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py initdb
-```
-
-
-## Run:
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver
-```
-and pen your browser (or use the API) at the URL address on the console 
-
-
-## Installation (production)
-
-Please refer to 'deploy.html'
-(dynamic web page, open it in your browser and fill in the
-server paths)
-
--->
-
-## Maintenance
+## Maintenance / Common operations
 
 Please note before proceeding that Django projects have two fundamental
 organization structures:
@@ -232,7 +160,7 @@ organization structures:
    https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
 
 **In eGSIM we have a project (root directory) named "egsim" with a single
-user-defined app (sub-directory) called also "egsim"**. Hence,
+user-defined app (sub-directory) called also "api"**. Hence,
 the directory structure might look redundant.
 Also note (see `INSTALLED_APPS` in
 the settings file) that egsim is not the only used app, as we installed several
@@ -264,7 +192,7 @@ and a new `SECRET_KEY` (which needs to be secret and not git committed).
 
 ### Starting a `python` terminal shell
 
-Tyiping `python` on the terminal does not work if you need to import django
+Typing `python` on the terminal does not work if you need to import django
 stuff, as there are things to be initialized beforehand. The Django `shell`
 command does this:
 
@@ -272,23 +200,21 @@ command does this:
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
 ```
 
-### Check database data on the web browser
+### Admin panel (check or modify database data from the web browser)
 
-(for further admin related stuff information,
-see https://docs.djangoproject.com/en/3.1/ref/django-admin/)
+The dtabase must have been created and populated (see [Usage](#usage)). 
+For further details: check [Django docs](https://docs.djangoproject.com/en/stable/ref/django-admin/))
 
-<details>
-	<summary>Create a super user (to be done **once only**)</summary>
-
+Create a super user (to be done **once only** ):
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py createsuperuser
 ```
 and follow the instructions.
-</details>
 
-Then navigate in the browser to: http://127.0.0.1:8000/admin/
+Then navigate in the browser to `[SITE_URL]/admin` (in development mode,
+http://127.0.0.1:8000/admin/)
 
-### Complete DB reset (remove all migrations and db. VERIFIED DEC 2021)
+### Complete DB reset (remove all migrations and db)
 
 As eGSIM does not need to store user data in the database, it might be
 easier to throw everything away and regenerate all db schema and data 
@@ -303,9 +229,12 @@ To do this:
       export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
       export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
    ```
+ - Re-add if needed the Django admin superuser(s) as explained in the
+   [admin panel](#admin-panel-check-or-modify-database-data-from-the-web-browser)
+   above
+   
 
-
-### Migrate and populate the db (VERIFIED OCT 2021)
+### Migrate and populate the db
 
 Before reading, remember:
 
@@ -391,8 +320,8 @@ git remote -v
 if you see these lines
 
 ```bash
-upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (fetch)
-upstream	https://github.com/GEMScienceTools/gmpe-smtk.git (push)
+upstream https://github.com/GEMScienceTools/gmpe-smtk.git (fetch)
+upstream https://github.com/GEMScienceTools/gmpe-smtk.git (push)
 ```
 
 skip the line below. Otherwise, add the upstream branch by typing:

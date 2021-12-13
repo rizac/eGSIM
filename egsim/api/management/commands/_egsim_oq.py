@@ -233,12 +233,6 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], model_params: dict[str, dict
                 gsim_warning = " ".join('%d) %s' % (i, _.strip())
                                         for (i, _) in enumerate(gsim_warnings, 1))
 
-            # Get Trt attribute (should silently fail in case):
-            trt = getattr(gsim_inst, models.GsimTrt.OQ_ATTNAME, None)
-            trt_s = trt.name if isinstance(trt, Enum) else str(trt)
-            gsim_trt = trt if trt is None else \
-                models.GsimTrt.objects.get_or_create(name=trt_s)[0]  # noqa
-
             # get parameters:
             init_params = {}
             for pn_, pv_ in inspect.signature(gsim_inst.__init__).parameters.items():
@@ -253,7 +247,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], model_params: dict[str, dict
                     # complex to manage
 
             # create (and save) Gsim:
-            gsim = models.Gsim.objects.create(name=gsim_name, trt=gsim_trt,  # noqa
+            gsim = models.Gsim.objects.create(name=gsim_name, # noqa
                                               init_parameters=init_params or None,
                                               warning=gsim_warning or None)
 

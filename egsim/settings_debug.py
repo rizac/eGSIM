@@ -123,7 +123,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False  # FIXME changed in egsim 2.0
 
 
 # static files (CSS JavaScript, Images). The managing of static files

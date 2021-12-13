@@ -137,7 +137,8 @@ class TrellisForm(APIForm):
         # (i.e., 'imt' in cleaned_data):
         if self._is_input_plottype_spectra() and 'imt' in cleaned_data:
             if self._replace_sa_periods_with_default:
-                self.data.pop('imt')  # just for safety (data not used again)
+                # imt was not in data, for safety, remove it:
+                self.data.pop('imt')
                 cleaned_data['imt'] = self._default_periods_for_spectra()
             else:
                 cleaned_data['imt'] = sorted(imt.from_string(_).period
