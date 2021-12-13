@@ -195,4 +195,5 @@ def _check_registered_file():
 
 
 if __name__ == "__main__":
+    import sys
     sys.exit(_check_registered_file())

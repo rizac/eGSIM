@@ -14,14 +14,15 @@ from smtk.residuals.residual_plots import (residuals_density_distribution,
                                            residuals_with_magnitude,
                                            residuals_with_vs30,
                                            likelihood)
-from smtk.residuals.gmpe_residuals import Residuals
 from smtk.database_visualiser import DISTANCE_LABEL
 
-from . import FlatfileForm, MOF
+from . import FlatfileForm, MOF, get_residuals
 from .. import relabel_sa, APIForm
 
 
 # For residuals with distance, use labels coded in smtk DISTANCE_LABEL dict:
+from ...flatfile import EgsimContextDB
+
 _DIST_LABEL = dict(DISTANCE_LABEL)
 # But replace 'r_x' with 'rx' (residuals with distance expects the latter as arg):
 _DIST_LABEL['rx'] = _DIST_LABEL.pop('r_x')
@@ -47,13 +48,10 @@ class ResidualsForm(APIForm, FlatfileForm):
     plot_type = ChoiceField(required=True,
                             choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
 
-    # FIXME REMOVE
-    # def clean(self):
-    #     # call programmatically superclass `clean` to avoid multiple inheritance
-    #     # confusion:
-    #     APIForm.clean(self)
-    #     FlatfileForm.clean(self)
-    #     return self.cleaned_data
+    def clean(self):
+        # call programmatically superclass `clean` to avoid multiple inheritance
+        # confusion:
+        return super().clean()
 
     RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
                        'pvalue')
@@ -68,11 +66,9 @@ class ResidualsForm(APIForm, FlatfileForm):
         """
         params = cleaned_data  # FIXME: legacy code remove?
         _, func, kwargs = PLOT_TYPE[params["plot_type"]]
-        residuals = Residuals(params["gsim"], params["imt"])
 
         # Compute residuals.
-        flatfile = params['flatfile']  # it's already filtered, in case)
-        residuals.get_residuals(flatfile)
+        residuals = get_residuals(params['flatfile'], params["gsim"], params["imt"])
 
         # statistics = residuals.get_residual_statistics()
         ret = defaultdict(lambda: defaultdict(lambda: {}))

@@ -1,15 +1,21 @@
 """Module with the views for the web API (no GUI)"""
 import os
-from io import StringIO
-from typing import Union
+from io import StringIO, BytesIO
+from typing import Union, Type
 
 import yaml
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import UploadedFile
+from django.forms import Form
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpRequest
+from django.http.multipartparser import MultiPartParser
 from django.http.response import HttpResponse
+from django.utils.datastructures import MultiValueDict
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
+from .forms.model_to_data import FlatfileForm
 from .forms.model_to_model.trellis import TrellisForm
 from .forms.model_to_data.residuals import ResidualsForm
 from .forms.model_to_data.testing import TestingForm
@@ -26,68 +32,75 @@ from .forms import APIForm
 QUERY_PARAMS_SAFE_CHARS = "-_.~!*'()"
 
 
-class RESTAPIView(View):  #, metaclass=EgsimQueryViewMeta):
+class RESTAPIView(View):
     """Base view for every eGSIM REST API endpoint"""
     # The form class:
-    formclass: APIForm = None
+    formclass: Type[APIForm] = None
     # the URL(s) endpoints of the API (no paths, no slashes, just the name)
     urls: list[str] = []
+    # error codes for general client and server errors:
+    CLIENT_ERR_CODE, SERVER_ERR_CODE= 400, 500
 
-    def get(self, request):
+    def get(self, request: HttpRequest):
         """processes a get request"""
-        try:
-            # get param names with multiple choices allowed, which might be
-            # typed with commas and thus splitted:
-            mval_params = set(n for n, f in self.formclass.declared_fields.items()
-                              if isinstance(f, (MultipleChoiceField,)))
-            #  get to dict:
-            #  Note that percent-encoded characters are decoded automatically
-            ret = {}
-            # https://docs.djangoproject.com/en/2.2/ref/request-response/#django.http.QueryDict.lists
-            for param_name, values in request.GET.lists():
-                if param_name in mval_params:
-                    newvalues = []
-                    for val in values:
-                        newvalues.extend(val.split(','))
-                    ret[param_name] = newvalues
-                else:
-                    ret[param_name] = values[0] if len(values) == 1 else values
-            return self.response(ret)
 
-        except Exception as err:
-            msg = f'request error ({err.__class__.__name__}: {str(err)})'
-            return error_response(msg, 500)
+        # get param names with multiple choices allowed, which might be
+        # typed with commas and thus split:
+        mval_params = set(n for n, f in self.formclass.declared_fields.items()
+                          if isinstance(f, (MultipleChoiceField,)))
+        #  get to dict:
+        #  Note that percent-encoded characters are decoded automatically
+        ret = {}
+        # https://docs.djangoproject.com/en/2.2/ref/request-response/#django.http.QueryDict.lists
+        for param_name, values in request.GET.lists():
+            if param_name in mval_params:
+                newvalues = []
+                for val in values:
+                    newvalues.extend(val.split(','))
+                ret[param_name] = newvalues
+            else:
+                ret[param_name] = values[0] if len(values) == 1 else values
+        return self.response(self.formclass(ret))
 
-    def post(self, request):
+    def post(self, request: HttpRequest):
         """processes a post request"""
-        try:
+        if request.FILES:
+            if not issubclass(self.formclass, FlatfileForm):
+                return error_response("The given URL does not support "
+                                      "uploaded files", self.CLIENT_ERR_CODE)
+            # the parameter is exposed to the user as "flatfile", but
+            # internally we use "uploaded_flatfile". Create a new object
+            # the same type of request.FILES with key renamed:
+            files = MultiValueDict([('uploaded_flatfile',
+                                     request.FILES.getlist('flatfile'))])
+            return self.response(self.formclass(request.POST, files))
+        else:
             stream = StringIO(request.body.decode('utf-8'))
-            return self.response(yaml.safe_load(stream))
-        except Exception as err:
-            msg = f'request error ({err.__class__.__name__}: {str(err)})'
-            return error_response(msg, 500)
+            inputdict = yaml.safe_load(stream)
+            return self.response(self.formclass(data=inputdict))
 
     @classmethod
-    def response(cls, inputdict):
-        """process an input dict `inputdict`, returning a response object.
+    def response(cls, form: Form):
+        """process an input Form `form`, returning a response object.
         Calls `self.process` if the input is valid according to
         `cls.formclass`. On error, returns an appropriate json response
-        (see `module`:core.responseerrors)
         """
-        form = cls.formclass(data=inputdict)  # noqa
-        if not form.is_valid():
-            verr = form.validation_errors()
-            return error_response(verr['message'], verr['code'],
-                                  errors=verr['errors'])
+        try:
+            if not form.is_valid():
+                err = form.validation_errors()
+                return error_response(err['message'], cls.CLIENT_ERR_CODE,
+                                      errors=err['errors'])
 
-        response_data = form.response_data
-        if form.get_data_format == form.DATA_FORMAT_CSV:
-            return cls.response_text(response_data)
-        elif form.get_data_format == form.DATA_FORMAT_JSON:
-            return cls.response_json(response_data)
-        else:
-            return error_response('data format "%s" not implemented' %
-                                  form.get_data_format)
+            response_data = form.response_data
+            if form.get_data_format == form.DATA_FORMAT_CSV:
+                return cls.response_text(response_data)
+            else:
+                return cls.response_json(response_data)
+        except ValidationError as cerr:
+            return error_response(cerr, cls.CLIENT_ERR_CODE)
+        except Exception as err:
+            msg = f'Server error ({err.__class__.__name__}): {str(err)}'
+            return error_response(msg, cls.SERVER_ERR_CODE)
 
     @classmethod
     def response_json(cls, response_data: dict):
@@ -139,22 +152,15 @@ class TestingView(RESTAPIView):
     urls = (f'{API_PATH}/testing', f'{API_PATH}/model-data-test')
 
 
-# class GmdbPlotView(RESTAPIView):
-#     """EgsimQueryView subclass for generating Gmdb's
-#        magnitude vs distance plots responses"""
-#
-#     formclass = GmdbPlotForm
-
-
-def error_response(exception: Union[str, Exception], code=400, **kwargs) -> JsonResponse:
+def error_response(exception: Union[str, Exception], code=500, **kwargs) -> JsonResponse:
     """Convert the given exception or string message `exception` into a json
     response. the response data will be the dict:
     ```
     {
-     'error':{
-              'message': exception,
-              'code': code,
-              **kwargs
+    "error": {
+            "message": exception,
+            "code": code,
+            **kwargs
         }
     }
     ```

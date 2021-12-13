@@ -6,43 +6,31 @@ Created on 22 Oct 2018
 @author: riccardo
 '''
 import pytest
+
+from egsim.api.views import TestingView
+
 try:  # https://stackoverflow.com/questions/44441929
     from unittest.mock import patch, PropertyMock  # ok in py3.8  # noqa
 except ImportError:
     from mock import patch, PropertyMock  # ok in py3.7  # noqa
 
-from egsim.core.utils import querystring
-from egsim.forms.forms import TestingForm
-from egsim.views import URLS
+# from egsim.core.utils import querystring
+# from egsim.forms.forms import TestingForm
+# from egsim.views import URLS
 
 
 @pytest.mark.django_db
 class Test:
-    '''tests the gsim service'''
+    """tests the testing service"""
 
-    url = "/" + URLS.TESTING_RESTAPI  # '/query/testing'
+    url = "/" + TestingView.urls[0]  # '/query/residuals'
     request_filename = 'request_testing.yaml'
     gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
-    @pytest.fixture(autouse=True)
-    def setup_gmdb(self,
-                   # pytest fixtures:
-                   mocked_gmdbfield):
-        '''This fixtures mocks the gmdb and it's called before each test
-        of this class'''
-        class MockedTestingForm(TestingForm):
-            '''mocks GmdbPlot'''
-            gmdb = mocked_gmdbfield(self.gmdb_fname)
-
-        with patch('egsim.views.TestingView.formclass',
-                   new_callable=PropertyMock) as mock_gmdb_field:
-            mock_gmdb_field.return_value = MockedTestingForm
-            yield
-
     def test_residuals_service_err(self,
                                    # pytest fixtures:
-                                   testdata, areequal, client):
-        '''tests errors in the testing API service.'''
+                                   testdata, areequal, client, querystring):
+        """test errors in the testing API service."""
         inputdic = testdata.readyaml(self.request_filename)
         inputdic.pop('fit_measure')
         resp2 = client.post(self.url, data=inputdic,
@@ -68,8 +56,8 @@ class Test:
 
     def test_testing_service(self,
                              # pytest fixtures:
-                             testdata, areequal, client):
-        '''tests the "testing" API service.'''
+                             testdata, areequal, client, querystring):
+        """tests the "testing" API service."""
         inputdic = testdata.readyaml(self.request_filename)
         # pass two gsims that have records with the current test gmdb:
         inputdic['gsim'] = ['Atkinson2015', 'BindiEtAl2014RhypEC8NoSOF']
@@ -93,8 +81,8 @@ class Test:
 
     def test_testing_service_zero_records(self,
                                           # pytest fixtures:
-                                          testdata, areequal, client):
-        '''tests the "testing" API service.'''
+                                          testdata, areequal, client, querystring):
+        """tests the "testing" API service."""
         inputdic = testdata.readyaml(self.request_filename)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -123,7 +111,7 @@ class Test:
     def test_tesing_bug(self,
                         # pytest fixtures:
                         testdata, areequal, client):
-        '''Tests a bug we spotted by testing the API from an external query'''
+        """Tests a bug we spotted by testing the API from an external query"""
         resp1 = client.get(self.url +
                            '?gsim=BindiEtAl2014Rjb&imt=PGA&fit_measure=res',
                            content_type='application/json')

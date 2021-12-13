@@ -183,12 +183,12 @@ def _read_csv_header(filepath_or_buffer, sep: str, reset_if_stream=True) -> pd.I
     return columns
 
 
-############################################
-# GroundMotionTable/ Residuals calculation #
-############################################
+#######################################
+# ContextDB for Residuals calculation #
+#######################################
 
 
-class Flatfile(context_db.ContextDB):
+class EgsimContextDB(context_db.ContextDB):
     """This abstract-like class represents a Database (DB) of data capable of
     yielding Contexts and Observations suitable for Residual analysis (see
     argument `ctx_database` of :meth:`gmpe_residuals.Residuals.get_residuals`)
@@ -203,18 +203,26 @@ class Flatfile(context_db.ContextDB):
     Please refer to the functions docstring for further details
     """
 
-    def __init__(self, filepath_buffer_or_dfr, **kwargs):
+    def __init__(self, dataframe: pd.DataFrame,
+                 rupture_columns: dict[str, str] = None,
+                 site_columns: dict[str, str] = None,
+                 distance_columns: dict[str, str] = None):
         """
-        Initializes a new GroundMotionTable.
+        Initializes a new EgsimContextDB.
 
-        :param filepath_buffer_or_dfr: str, path object, file-like object or
-            pandas DataFrame.
-        :param filepath: string denoting the HDF file path or a BytesIO
+        :param dataframe: a dataframe representing a flatfile
+        :param rupture_columns: dataframe column names mapped to the relative
+            Rupture parameter in the Context
+        :param site_columns: dataframe column names mapped to the relative
+            Site parameter in the Context
+        :param distance_columns: dataframe column names mapped to the relative
+            Distance measure in the Context
         """
-        if isinstance(filepath_buffer_or_dfr, pd.DataFrame):
-            self._data = filepath_buffer_or_dfr
-        else:
-            self._data = self.read_data(filepath_buffer_or_dfr, **kwargs)
+        self._data = dataframe
+        self._rup_columns = rupture_columns
+        self._site_columns = site_columns
+        self._dist_columns = distance_columns
+        self.flatfile_columns = rupture_columns | site_columns | distance_columns
         sa_columns_and_periods = ((col, imt.from_string(col.upper()).period)
                                   for col in self._data.columns
                                   if col.upper().startswith("SA("))
@@ -223,49 +231,16 @@ class Flatfile(context_db.ContextDB):
         self.sa_periods = [_[1] for _ in sa_columns_and_periods]
         self.filter_expression = None
 
-    def read_data(self, filepath_or_buffer, **kwargs):
-        """
-        :param filepath_or_buffer: str, path object or file-like object
-        """
-        raise NotImplementedError('')
-
-    def filter(self, expression: str):
-        """Filters this Flatfile via a selection expression on the columns.
-        E.g.
-        """
-        self.filter_expression = self._format_filter_expression
-        return self
-        # new_dfr = self._data.query(condition)
-        # return self.__class__(new_dfr)
-        # gmdb = GroundMotionTable(self.filepath, self.dbname)
-        # gmdb._condition = condition  # pylint: disable=protected-access
-        # return gmdb
-
-    @staticmethod
-    def _format_filter_expression(filter_expression):
-        """Reformat the filter expression by changing notna(column) to
-        column == column, and isna(column) into column != column. Also change
-        true/false to True/False. Equality must be given as ==
-        """
-        filter_expression = re.sub(r'isna\((.*?)\)', r"\1!=\1",
-                                   filter_expression, re.IGNORECASE)
-        filter_expression = re.sub(r'notna\((.*?)\)', r"\1==\1",
-                                   filter_expression, re.IGNORECASE)
-        filter_expression = re.sub(r'\btrue\b', "true", filter_expression,
-                                   re.IGNORECASE)
-        filter_expression = re.sub(r'\bfalse\b', "false", filter_expression,
-                                   re.IGNORECASE)
-        return filter_expression
-
     #########################################
     # IMPLEMENTS ContextDB ABSTRACT METHODS #
     #########################################
 
     def get_event_and_records(self):
-        dfr = self._data
-        if self.filter_expression:
-            dfr = dfr.query(self.filter_expression)
-        return dfr.groupby(['event_id'])
+        # FIXME: pandas bug? flatfile bug?
+        # `return self._data.groupby(['event_id'])` should be sufficient, but
+        # sometimes in the yielded `(ev_id, dfr)` tuple, `dfr` is empty and
+        # `ev_id` is actually not in the dataframe (???). So:
+        yield from (_ for _ in self._data.groupby(['event_id']) if not _[1].empty)
 
     def get_observations(self, imtx, records, component="Geometric"):
 
@@ -300,10 +275,16 @@ class Flatfile(context_db.ContextDB):
         self._update_rupture_context(ctx, records, nodal_plane_index)
         self._update_distances_context(ctx, records)
         self._update_sites_context(ctx, records)
+        # add remaining ctx attributes:
+        for ff_colname, ctx_attname in self.flatfile_columns.items():
+            if hasattr(ctx, ctx_attname) or ff_colname not in records.columns:
+                continue
+            val = records[ff_colname].values
+            val = val[0] if ff_colname in self._rup_columns else val.copy()
+            setattr(ctx, ctx_attname, val)
 
     def _update_rupture_context(self, ctx, records, nodal_plane_index=1):
         """see `self.update_context`"""
-
         record = records.iloc[0]  # pandas Series
         ctx.mag = record['magnitude']
         ctx.strike = record['strike']
@@ -311,16 +292,16 @@ class Flatfile(context_db.ContextDB):
         ctx.rake = record['rake']
         ctx.hypo_depth = record['hypocenter_depth']
 
-        ztor = record['depth_top_of_rupture'].values.copy()
-        isna = pd.isna(ztor)
-        if isna.any():
-            ztor[isna] = ctx.hypo_depth[isna]
+        ztor = record['depth_top_of_rupture']
+        if pd.isna(ztor):
+            ztor = ctx.hypo_depth
         ctx.ztor = ztor
 
-        rup_width = record['rupture_width'].values.copy()
-        isna = pd.isna(rup_width)
-        if isna.any():
-            rup_width[isna] = np.sqrt(DEFAULT_MSR.get_median_area(ctx.mag[isna], 0))
+        rup_width = record['rupture_width']
+        if pd.isna(rup_width):
+            # Use the PeerMSR to define the area and assuming an aspect ratio
+            # of 1 get the width
+            rup_width = np.sqrt(DEFAULT_MSR.get_median_area(ctx.mag, 0))
         ctx.width = rup_width
 
         ctx.hypo_lat = record['event_latitude']
@@ -332,12 +313,12 @@ class Flatfile(context_db.ContextDB):
 
         # TODO Setting Rjb == Repi and Rrup == Rhypo when missing value
         # is a hack! Need feedback on how to fix
-        ctx.repi = records['repi']
-        ctx.rhypo = records['rhypo']
+        ctx.repi = records['repi'].values.copy()
+        ctx.rhypo = records['rhypo'].values.copy()
 
         ctx.rcdpp = np.full((len(records),), 0.0)
         ctx.rvolc = np.full((len(records),), 0.0)
-        ctx.azimuth = records['azimuth']
+        ctx.azimuth = records['azimuth'].values.copy()
 
         dists = records['rjb'].values.copy()
         isna = pd.isna(dists)
@@ -365,44 +346,20 @@ class Flatfile(context_db.ContextDB):
 
     def _update_sites_context(self, ctx, records):
         """see `self.update_context`"""
-
-        ctx.lons = records['station_longitude'].values
-        ctx.lats = records['station_latitude'].values
-        ctx.depths = records['station_elevation'].values * -1.0E-3 if \
-            'station_elevation' in records.columns else np.full((len(records),), 0.0)
-        vs30 = records['vs30'].values
+        # Legacy code not used please check in the future:
+        # ------------------------------------------------
+        # ctx.lons = records['station_longitude'].values.copy()
+        # ctx.lats = records['station_latitude'].values.copy()
+        # ctx.depths = records['station_elevation'].values * -1.0E-3 if \
+        #     'station_elevation' in records.columns else np.full((len(records),), 0.0)
+        vs30 = records['vs30'].values.copy()
         ctx.vs30 = vs30
-        ctx.vs30measured = records['vs30measured']
-        ctx.z1pt0 = records['z1'].values if 'z1' in records.columns else \
+        ctx.vs30measured = records['vs30measured'].values.copy()
+        ctx.z1pt0 = records['z1'].values.copy() if 'z1' in records.columns else \
             vs30_to_z1pt0_cy14(vs30)
-        ctx.z2pt5 = records['z2pt5'].values if 'z2pt5' in records.columns else \
+        ctx.z2pt5 = records['z2pt5'].values.copy() if 'z2pt5' in records.columns else \
             vs30_to_z2pt5_cb14(vs30)
-        ctx.backarc = records['backarc']
-
-
-class UserFlatfile(Flatfile):
-
-    def __init__(self, filepath_or_buffer, sep=None,
-                 dtype: dict[str, Union[str, list, tuple]] = None,
-                 defaults: dict[str, Any] = None):
-        Flatfile. __init__(self, filepath_or_buffer, sep=sep, dtype=dtype,
-                           defaults=defaults)
-
-    def read_data(self, filepath_or_buffer, *, sep=None,
-                  dtype: dict[str, Union[str, list, tuple]] = None,
-                  defaults: dict[str, Any] = None):
-        return read_flatfile(filepath_or_buffer, sep=sep, dtype=dtype,
-                             defaults=defaults)
-
-
-class PredefinedFlatfile(Flatfile):
-
-    def __init__(self, filepath_or_buffer, dbname=None):
-        """
-        :param dbname: string denoting the database name. If None, the HDF file
-            must contain a single database
-        """
-        Flatfile. __init__(self, filepath_or_buffer, dbname=dbname)
-
-    def read_data(self, filepath_buffer, *, dbname=None):
-        return pd.read_hdf(filepath_buffer, key=dbname)
+        if 'backarc' in records.columns:
+            ctx.backarc = records['backarc'].values.copy()
+        else:
+            ctx.backarc = np.full(shape=ctx.vs30.shape, fill_value=False)

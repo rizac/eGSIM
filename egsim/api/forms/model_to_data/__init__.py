@@ -2,14 +2,19 @@
 involving flatfiles
 """
 from io import BytesIO
+import re
 
+import pandas as pd
 from django.core.exceptions import ValidationError
 from django.forms import CharField, ModelChoiceField, FileField
 from django.utils.translation import gettext
+from pandas.core.computation.ops import UndefinedVariableError
+from smtk.residuals.gmpe_residuals import Residuals
 
-from ...flatfile import (PredefinedFlatfile, UserFlatfile)
+from ...flatfile import read_flatfile, EgsimContextDB
 from .. import EgsimBaseForm
 from ... import models
+from ...models import FlatfileColumn
 
 
 class FlatfileForm(EgsimBaseForm):
@@ -24,47 +29,75 @@ class FlatfileForm(EgsimBaseForm):
         mapping['sel'] = 'selexpr'
         mapping['dist'] = 'distance_type'
 
-    predefined_flatfile = ModelChoiceField(queryset=models.PredefinedFlatfile.objects.all(),
-                                           empty_label=None, label='Predefined Flatfile',
-                                           to_field_name="name", required=False)
+    flatfile = ModelChoiceField(queryset=models.Flatfile.get_flatfiles(),
+                                empty_label=None, label='Flatfile',
+                                to_field_name="name", required=False)
     selexpr = CharField(required=False, label='Selection expression')
-    user_flatfile = FileField(required=False)
+    # this is the Django field should NOT be a REST API parameter, as the files
+    # are provided via a separate argument (https://stackoverflow.com/a/22567429)
+    uploaded_flatfile = FileField(required=False, label='Flatfile upload')
 
     def clean(self):
-        """Call `super.clean()` and handles the flatfile
-        """
-        cleaned_data = EgsimBaseForm.clean(self)
+        """Call `super.clean()` and handles the flatfile"""
 
-        key_u, key_p = 'user_flatfile', 'predefined_flatfile'
-        u_ff = cleaned_data.get(key_u, None)
-        p_ff = cleaned_data.get(key_p, None)
-        if bool(p_ff) == bool(u_ff):
-            # instead of raising ValidationError, which is keyed with
-            # '__all__' we add the error keyed to the given field name
-            # `name` via `self.add_error`:
-            err_ff = ValidationError(gettext("%(key_u)s and %(key_p)s are both "
-                                             "missing or both given, only one "
-                                             "is required and allowed"),
-                                             params={'key_u': key_u,
-                                                     "key_p": key_p},
-                                             code='invalid')
-            # add_error removes also the field from self.cleaned_data:
-            self.add_error(key_p, err_ff)
-            self.add_error(key_u, err_ff)
+        cleaned_data = super().clean()
+        # check flatfiles. Note that missing flatfiles will be None in cleaned_data
+        key_u, key_p = 'uploaded_flatfile', 'flatfile'
+        # add an error message if both flatfile and uploaded flatfile
+        # are provided, regardless of whether they are valid or not:
+        flatfile_given = cleaned_data.get(key_p, None) or key_p in self.errors
+        u_flatfile_given = cleaned_data.get(key_u, None) or key_u in self.errors
+
+        if bool(flatfile_given) == bool(u_flatfile_given):
+            # first check when the flatfile is given, and raise
+            err_msg = "Please select an existing flatfile or upload one"
+            code = 'required'
+            if flatfile_given:
+                code = 'conflict'
+                err_msg = "Please select an existing flatfile or " \
+                          "upload one, not both"
+            self.add_error(key_p, ValidationError(gettext(err_msg), code=code))
+            # Should we add an error also with key 'uploaded_flatfile'? No, because
+            # the parameter should not be exposed publicly (we can not send a
+            # flatfile in JSON, we need to send a form-multipart request).So:
+            # self.add_error(key_u, ValidationError(gettext(err_msg), code=code))
+            return cleaned_data  # noo need to further process
+
+        # if no flatfile (name or uploaded) is given in cleaned_data, then the
+        # parameter name has been added to errors and we don't need further
+        # processing
+        if not cleaned_data.get(key_p, None) and not cleaned_data.get(key_u, None):
             return cleaned_data
 
-        if u_ff:
-            dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
-            flatfile_obj = UserFlatfile(BytesIO(u_ff), dtype=dtype,
-                                        defaults=defaults)
+        if flatfile_given:
+            # exception should be raised and sent as 500: don't catch
+            p_ff = cleaned_data[key_p]
+            dataframe = pd.read_hdf(p_ff.path, key=p_ff.name)
         else:
-            flatfile_obj = PredefinedFlatfile(p_ff.path)
+            u_ff = cleaned_data[key_u]
+            try:
+                dataframe = read_flatfilefrom_csv_bytes(BytesIO(u_ff))
+            except Exception as exc:
+                msg = str(exc)
+                # provide as key the flatfile param name, becasue so it is
+                # exposed to the public:
+                self.add_error(key_p, ValidationError(gettext(msg),
+                                                      code='invalid'))
+                return cleaned_data  # noo need to further process
 
-        selexpr = cleaned_data['selexpr']
+        key = 'selexpr'
+        selexpr = cleaned_data.get(key, None)
         if selexpr:
-            flatfile_obj = flatfile_obj.filter(selexpr)
+            try:
+                selexpr = reformat_selection_expression(dataframe, selexpr)
+                dataframe = dataframe.query(selexpr).copy()
+            except Exception as exc:
+                # add_error removes also the field from self.cleaned_data:
+                self.add_error(key, ValidationError(str(exc), code='invalid'))
+                return cleaned_data  # no need to further processing
 
-        cleaned_data['flatfile'] = flatfile_obj
+        # replace the flatfile parameter with the pandas dataframe:
+        cleaned_data['flatfile'] = dataframe
         return cleaned_data
 
 
@@ -80,3 +113,69 @@ class MOF:  # noqa
     LLH = "llh"
     MLLH = "mllh"
     EDR = "edr"
+
+
+def read_flatfilefrom_csv_bytes(buffer, *, sep=None):
+    dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
+    return read_flatfile(buffer, sep=sep, dtype=dtype,
+                         defaults=defaults)
+
+
+def reformat_selection_expression(dataframe, sel_expr):
+    """Reformat the filter expression by changing `notna(column)` to
+    column == column. Also change true/false to True/False
+    """
+    # `col == col` is the pandas query expression to filter rows that are not NA.
+    # We implement a `notna(col)` expression which is more edible for the users.
+    # Before replacing `notna`, first check that the argument is a column:
+    notna_expr = r'\bnotna\((.*?)\)'
+    for match in re.finditer(notna_expr, sel_expr):
+        if match.group(1) not in dataframe.olumns:
+            # raise the same pandas excpetion:
+            raise UndefinedVariableError(match.group(1))
+    # now replace `notna(x)` with `x == x` (`isna` can be typed as `~notna`):
+    sel_expr = re.sub(notna_expr, r"(\1==\1)", sel_expr, re.IGNORECASE)
+    # be relaxed about booleans: accept any case (lower, upper, mixed):
+    sel_expr = re.sub(r'\btrue\b', "True", sel_expr, re.IGNORECASE)
+    sel_expr = re.sub(r'\bfalse\b', "False", sel_expr, re.IGNORECASE)
+    return sel_expr
+
+
+def get_residuals(flatfile: pd.DataFrame, gsim: list[str], imt: list[str]) -> Residuals:
+    """Instantiate a Residuals object with computed residuals. Wrap missing
+    flatfile columns into a ValidationError so that it can be returned as
+    "client error" (4xx) response
+    """
+    context_db = EgsimContextDB(flatfile, *flatfile_colnames())
+    residuals = Residuals(gsim, imt)
+    try:
+        residuals.get_residuals(context_db)
+        return residuals
+    except KeyError as kerr:
+        # A key error usually involves a missing column. If yes, raise
+        # ValidationError
+        col = str(kerr.args[0]) if kerr.args else ''
+        if col in context_db.flatfile_columns:
+            raise ValidationError('Missing column "%(col)s" in flatfile',
+                                  code='invalid',
+                                  params={'col': col})
+        # raise "normally", as any other exception not caught here
+        raise kerr
+
+
+def flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    """Return rupture, site distance parameters as three dicts of
+    flatfile column names mapped to the relative Context attribute used
+    for residuals computation
+    """
+    qry = models.FlatfileColumn.objects  # noqa
+    qry = qry.filter(name__isnull=False, oq_name__isnull=False)
+    rup, site, dist = {}, {}, {}
+    for ffname, attname, categ in qry.values_list('name', 'oq_name', 'category'):
+        if categ == FlatfileColumn.CATEGORY.RUPTURE_PARAMETER:
+            rup[ffname] = attname
+        elif categ == FlatfileColumn.CATEGORY.SITE_PARAMETER:
+            site[ffname] = attname
+        elif categ == FlatfileColumn.CATEGORY.DISTANCE_MEASURE:
+            dist[ffname] = attname
+    return rup, site, dist

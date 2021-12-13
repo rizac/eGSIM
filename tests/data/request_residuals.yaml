@@ -3,7 +3,7 @@
 gsim: ['BindiEtAl2011', 'BindiEtAl2014Rjb']
 imt: ['SA(0.2)', 'PGA', 'PGV']
 
-gmdb: 'esm_sa_flatfile_2018'  # 'stable_shallow_crust'
+flatfile: 'esm2018'  # 'stable_shallow_crust'
 
 # selexpr: '(vs30 >= 730) & ((magnitude <=4) | (magnitude>=7))'
 

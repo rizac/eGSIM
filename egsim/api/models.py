@@ -5,17 +5,17 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
+from os.path import abspath, join
 import json
 from enum import IntEnum
 from datetime import datetime
 
 from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
                               ManyToManyField, JSONField, UniqueConstraint,
-                              CASCADE, SET_NULL, Index, SmallIntegerField)
-from django.db.models.aggregates import Count
+                              CASCADE, SET_NULL, Index, SmallIntegerField,
+                              DateTimeField)
+from django.conf import settings
 from django.db.utils import IntegrityError
-
-from shapely.geometry import Point, shape, Polygon
 
 
 # Notes: primary keys are auto added if not present ('id' of type BigInt or so).
@@ -104,14 +104,14 @@ class FlatfileColumn(_UniqueNameModel):
     help = TextField(null=False, default='', help_text="Field help text")
     properties = JSONField(null=True, encoder=DateTimeEncoder,
                            decoder=DateTimeDecoder,
-                           help_text=('data properties as JSON (null: no '
+                           help_text=('column data properties as JSON (null: no '
                                       'properties). Optional keys: "dtype" '
                                       '("int", "bool", "datetime", "str" or '
-                                      '"float"), "bounds": [min or null, max '
-                                      'or null] (null means: unbounded), '
-                                      '"default" (the default when missing) '
-                                      'and "choices" (list of possible values '
-                                      'the column can have)'))
+                                      '"float", or list of possible values '
+                                      'the column can have), "bounds": [min or '
+                                      'null, max or null] (null means: '
+                                      'unbounded), "default" (the default when '
+                                      'missing)'))
 
     class Meta(_UniqueNameModel.Meta):
         constraints = [
@@ -137,6 +137,8 @@ class FlatfileColumn(_UniqueNameModel):
         """
         dtype, defaults = {}, {}
         for name, props in cls.objects.filter().values_list('name', 'properties'):
+            if not props:
+                continue
             dtype[name] = props['dtype']
             if 'default' in props:
                 defaults[name] = props['default']
@@ -151,12 +153,32 @@ class FlatfileColumn(_UniqueNameModel):
                (self.name, self.oq_name, categ, self.gsims.count())  # noqa
 
 
-class PredefinedFlatfile(_UniqueNameModel):
+class Flatfile(_UniqueNameModel):
 
     path = TextField(unique=True, null=False)
-    # src_path = TextField(unique=True, null=False)
     url = TextField(null=False, default='')
     display_name = TextField(null=True, default='')
+    hidden_in_browser = BooleanField(null=False, default=False,
+                                     help_text="if true, the flatfile is hidden "
+                                               "in browsers (users can still "
+                                               "access it via API requests, if "
+                                               "not expired)")
+    expires_at = DateTimeField(null=True, default=None,
+                               help_text="expiration date(time) after which the "
+                                         "flatfile is not visible or accessible "
+                                         "to any request. If null, the flatfile "
+                                         "has no expiration date")
+
+    # base directory for any uploaded or created flat file:
+    BASEDIR_PATH = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
+
+    @classmethod
+    def get_flatfiles(cls, for_browser=False):
+        qry = cls.objects.filter(Q(expires_at__isnull=True) |
+                                 Q(expires_at__lt=datetime.utcnow()))
+        if for_browser:
+            qry = qry.filter(hidden_in_browser=False)
+        return qry
 
     def __str__(self):
         """string representation of this object"""
@@ -178,12 +200,12 @@ class Imt(_UniqueNameModel):
         indexes = [Index(fields=['name']), ]
 
 
-class GsimTrt(_UniqueNameModel):
-    """The :class:`tectonic region types <openquake.hazardlib.const.TRT>` that
-    OpenQuake's GSIMs are defined for"""
-
-    # OpenQuake's Gsim attribute used to populate this table during db init:
-    OQ_ATTNAME = 'DEFINED_FOR_TECTONIC_REGION_TYPE'
+# class GsimTrt(_UniqueNameModel):
+#     """The :class:`tectonic region types <openquake.hazardlib.const.TRT>` that
+#     OpenQuake's GSIMs are defined for"""
+#
+#     # OpenQuake's Gsim attribute used to populate this table during db init:
+#     OQ_ATTNAME = 'DEFINED_FOR_TECTONIC_REGION_TYPE'
 
 
 class GsimWithError(_UniqueNameModel):
@@ -205,8 +227,8 @@ class Gsim(_UniqueNameModel):
     """
     imts = ManyToManyField(Imt, related_name='gsims',
                            help_text='Intensity Measure Type(s)')
-    trt = ForeignKey(GsimTrt, on_delete=SET_NULL, null=True,
-                     related_name='gsims', help_text='Tectonic Region type')
+    # trt = ForeignKey(GsimTrt, on_delete=SET_NULL, null=True,
+    #                  related_name='gsims', help_text='Tectonic Region type')
     required_flatfile_columns = ManyToManyField(FlatfileColumn,
                                                 related_name='gsims',
                                                 help_text='Required flatfile '

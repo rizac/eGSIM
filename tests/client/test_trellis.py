@@ -177,16 +177,16 @@ class Test:
         expected_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid input in csv_sep, csv_dec',
+                'message': 'Invalid parameters: csv_sep, csv_dec',
                 'errors': [
                     {
-                        'domain': 'csv_sep',
+                        'location': 'csv_sep',
                         'message': ("'csv_sep' must differ from"
                                     " 'csv_dec' in 'csv' format"),
                         'reason': 'conflicting values'
                     },
                     {
-                        'domain': 'csv_dec',
+                        'location': 'csv_dec',
                         'message': ("'csv_sep' must differ from"
                                     " 'csv_dec' in 'csv' format"),
                         'reason': 'conflicting values'
@@ -294,10 +294,10 @@ class Test:
         expected_err_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid input in gsim',
+                'message': 'Invalid parameters: gsim',
                 'errors': [
                     {
-                        'domain': 'gsim',
+                        'location': 'gsim',
                         'message': ('Select a valid choice. AkkarEtAl2013 is '
                                     'not one of the available choices.'),
                         'reason': 'invalid_choice'
@@ -397,16 +397,16 @@ class Test:
         expected_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid input in z1pt0, z2pt5',
+                'message': 'Invalid parameters: z1pt0, z2pt5',
                 'errors': [
                     {
-                        'domain': 'z1pt0',
+                        'location': 'z1pt0',
                         'message': ('value must be consistent with '
                                     'vs30 (%s)' % expected_str),
                         'reason': 'invalid'
                     },
                     {
-                        'domain': 'z2pt5',
+                        'location': 'z2pt5',
                         'message': ('value must be consistent with '
                                     'vs30 (%s)' % expected_str),
                         'reason': 'invalid'
@@ -458,16 +458,16 @@ class Test:
         expected_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid input in gsim, imt',
+                'message': 'Invalid parameters: gsim, imt',
                 'errors': [
                     {
-                        'domain': 'gsim',
+                        'location': 'gsim',
                         'message': ('1 gsim(s) not defined for '
                                     'all supplied imt(s)'),
                         'reason': 'invalid'
                     },
                     {
-                        'domain': 'imt',
+                        'location': 'imt',
                         'message': ('1 imt(s) not defined for all '
                                     'supplied gsim(s)'),
                         'reason': 'invalid'

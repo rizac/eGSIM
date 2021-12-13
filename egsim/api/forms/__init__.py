@@ -8,7 +8,6 @@ from io import StringIO
 import csv
 
 import numpy as np
-from django.db.models import Q
 from openquake.hazardlib import imt
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext
@@ -180,14 +179,15 @@ class NArrayField(ArrayField):
                 raise ValidationError("Expected format '<start>:<end>' or "
                                       "'<start>:<step>:<end>', found: '%s'"
                                       % token)
-            raise ValidationError("Unparsable string '%s'" % token)
+            raise ValidationError("Unable to parse '%s'" % token)
 
         start, step, stop = \
             cls.float(spl[0]), 1 if len(spl) == 2 else \
             cls.float(spl[1]), cls.float(spl[-1])
-        decimals = cls.get_decimals(*spl)
-
         arange = np.arange(start, stop, step, dtype=float)
+
+        # round numbers to max number of decimals input:
+        decimals = cls.get_decimals(*spl)
         if decimals is not None:
             if round(arange[-1].item() + step, decimals) == \
                     round(stop, decimals):
@@ -196,6 +196,7 @@ class NArrayField(ArrayField):
             arange = np.round(arange, decimals=decimals)
             if decimals == 0:
                 arange = arange.astype(int)
+
         return arange.tolist()
 
     @classmethod
@@ -212,9 +213,13 @@ class NArrayField(ArrayField):
                 idx_exp = string.lower().find('e')
                 if idx_dec > idx_exp > -1:
                     raise ValueError()  # stop parsing
+                # decimal digits after the period and until 'e' or end of string:
                 dec1 = 0 if idx_dec < 0 else \
                     len(string[idx_dec+1: None if idx_exp < 0 else idx_exp])
+                # decimal digits inferred from exponent:
                 dec2 = 0 if idx_exp < 0 else -int(string[idx_exp+1:])
+                # this string decimals are dec1 + dec2 (dec2 might be<0). Use
+                # this string decimals if they are the maximum of all decimals:
                 decimals = max([decimals, dec1 + dec2])
             # return 0 as we do not care for big numbers (they are int anyway)
             return decimals
@@ -232,7 +237,8 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
     def to_python(self, value):
         """convert strings with wildcards to matching elements, and calls the
         super method with the converted value. For valid wildcard characters,
-        see https://docs.python.org/3.4/library/fnmatch.html"""
+        see https://docs.python.org/3.4/library/fnmatch.html
+        """
         # value might be None, string, list
         if value and isinstance(value, str):
             value = [value]  # no need to call super
@@ -330,42 +336,46 @@ class EgsimBaseForm(Form):
             if name not in self.data and  self.fields[name].initial is not None:
                 self.data[name] = self.fields[name].initial
 
-    def clean(self):
-        """Same as super().clean(), overridden only to make subclasses
-        implementation easier to discover in PyCharm"""
-        return super().clean()
-
-    def validation_errors(self, code=400,
-                          msg_format='Invalid input in %(names)s') -> dict:
-        """Convert `self.errors.as_json()` into a list of dicts
-        formatted according to the Google format
-        (https://google.github.io/styleguide/jsoncstyleguide.xml):
+    def validation_errors(self,
+                          msg: str = None) -> dict:
+        """Reformat `self.errors.as_json()` into the following dict:
         ```
         {
-            'message': str,
-            'code': int,
-            'errors': [
-                {'domain': <str>, 'message': <str>, 'reason': <str>}
+            "message": `msg` or, if None, "Invalid parameter(s) " + param. list
+            "errors": [
+                {
+                    "location": param. name (str),
+                    "message": error message (str),
+                    "reason": error code, e.g. 'invalid', 'required', 'conflict' (str)
+                }
                 ...
             ]
         }
         ```
-        This method should be called if `self.is_valid()` returns False
+
+        NOTE: This method should be called if `self.is_valid()` returns False
+
+        :param msg: the global error message. If None, it defaults to
+            "Invalid parameter" + param_name or
+            "Invalid parameters " + comma separated list of param names
+
+        For details see:
+        https://cloud.google.com/storage/docs/json_api/v1/status-codes
+        https://google.github.io/styleguide/jsoncstyleguide.xml
         """
         dic = json.loads(self.errors.as_json())
         errors = []
-        fields = []
         for key, values in dic.items():
-            fields.append(key)
             for value in values:
-                errors.append({'domain': key,
+                errors.append({'location': key,
                                'message': value.get('message', ''),
                                'reason': value.get('code', '')})
 
-        msg = msg_format % {'names': ', '.join(fields)}
+        if not msg:
+            msg = f'Invalid parameter{"" if len(dic) == 1 else "s"}: {", ".join(dic)}'
+
         return {
             'message': msg,
-            'code': code,
             'errors': errors
         }
 
@@ -400,9 +410,16 @@ class GsimImtForm(EgsimBaseForm):
         selected intensity measure type
         """
         cleaned_data = super().clean()
-        if 'gsim' in cleaned_data and 'imt' in cleaned_data:
-            # both gsim and imt have "survived" the validation and are valid
-            # check their relative validity:
+        gsim, imt = 'gsim', 'imt'
+        # for safety, check both are provided (with some field settings Django
+        # might append a falsy value if missing, e.g. [], which we do not want):
+        if gsim in cleaned_data and not cleaned_data[gsim]:
+            self.add_error(gsim, ValidationError('Missing gsim(s)', code='required'))
+        if imt in cleaned_data and not cleaned_data[imt]:
+            self.add_error(imt, ValidationError('Missing imt(s)', code='required'))
+        # if any of the if above was true, then the parameter has been removed from
+        # cleaned_data. If both are provided, check gsims and imts match:
+        if gsim in cleaned_data and imt in cleaned_data:
             self.validate_gsim_and_imt(cleaned_data['gsim'], cleaned_data['imt'])
         return self.cleaned_data
 
@@ -499,7 +516,7 @@ class MediaTypeForm(EgsimBaseForm):
     def get_data_format(self):
         return self.data['data_format']
 
-    data_format = ChoiceField(required=False, initial=DATA_FORMAT_JSON,
+    data_format = ChoiceField(required=True, initial=DATA_FORMAT_JSON,
                               label='The format of the response data',
                               choices=[(DATA_FORMAT_JSON, 'json'),
                                        (DATA_FORMAT_CSV, 'text/csv')])
@@ -518,19 +535,21 @@ class MediaTypeForm(EgsimBaseForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        tsep, tdec = 'csv_sep', 'csv_dec'
-        # convert to symbols:
-        if cleaned_data['data_format'] == self.DATA_FORMAT_CSV \
-                and cleaned_data[tsep] == cleaned_data[tdec]:
-            msg = gettext("'%s' must differ from '%s' in 'csv' format" %
-                          (tsep, tdec))
-            err_ = ValidationError(msg, code='conflicting values')
-            # add_error removes also the field from self.cleaned_data:
-            self.add_error(tsep, err_)
-            self.add_error(tdec, err_)
-        else:
-            cleaned_data[tsep] = self._textcsv_sep[cleaned_data[tsep]]
-            cleaned_data[tdec] = self._dec_sep[cleaned_data[tdec]]
+        keys = 'data_format', 'csv_sep', 'csv_dec'
+        if all(_ in cleaned_data for _ in keys):
+            key, tsep, tdec = keys
+            # convert to symbols:
+            if cleaned_data[key] == self.DATA_FORMAT_CSV \
+                    and cleaned_data[tsep] == cleaned_data[tdec]:
+                msg = gettext("'%s' must differ from '%s' in 'csv' format" %
+                              (tsep, tdec))
+                err_ = ValidationError(msg, code='conflicting values')
+                # add_error removes also the field from self.cleaned_data:
+                self.add_error(tsep, err_)
+                self.add_error(tdec, err_)
+            else:
+                cleaned_data[tsep] = self._textcsv_sep[cleaned_data[tsep]]
+                cleaned_data[tdec] = self._dec_sep[cleaned_data[tdec]]
 
         return cleaned_data
 
@@ -538,11 +557,10 @@ class MediaTypeForm(EgsimBaseForm):
 class APIForm(GsimImtForm, MediaTypeForm):
     """GsimImtForm + MediaTypeForm"""
 
-    # FIXME REMOVE
-    # def clean(self):
-    #     GsimImtForm.clean(self)
-    #     MediaTypeForm.clean(self)
-    #     return self.cleaned_data
+    def clean(self):
+        """Calls GsimImtForm and MediaTypeForm, useful in subclasses to avoid
+        calling twice the same super method?"""
+        return super().clean()
 
     @property
     def response_data(self) -> Union[dict, StringIO, None]:
