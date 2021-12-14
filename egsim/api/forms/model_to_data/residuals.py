@@ -7,7 +7,6 @@ from collections import defaultdict
 from itertools import chain, repeat
 from typing import Iterable, Any
 
-from django.forms import ChoiceField
 from smtk.residuals.residual_plots import (residuals_density_distribution,
                                            residuals_with_depth,
                                            residuals_with_distance,
@@ -17,7 +16,9 @@ from smtk.residuals.residual_plots import (residuals_density_distribution,
 from smtk.database_visualiser import DISTANCE_LABEL
 
 from . import FlatfileForm, MOF, get_residuals
-from .. import relabel_sa, APIForm
+from .. import relabel_sa
+from ..fields import ChoiceField
+from ..forms import APIForm
 
 
 # For residuals with distance, use labels coded in smtk DISTANCE_LABEL dict:
@@ -45,7 +46,11 @@ PLOT_TYPE = {
 class ResidualsForm(APIForm, FlatfileForm):
     """Form for residual analysis"""
 
-    plot_type = ChoiceField(required=True,
+    # For each Field of this Form: the attribute name MUST NOT CHANGE, because
+    # code relies on it (see e.g. keys of `cleaned_data`). The attribute value
+    # can change as long as it inherits from `egsim.forms.fields.ParameterField`
+
+    plot_type = ChoiceField('plottype', 'plot_type', required=True,
                             choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
 
     def clean(self):

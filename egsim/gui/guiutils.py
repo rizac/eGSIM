@@ -8,7 +8,7 @@ from io import StringIO
 from django.forms import (MultipleChoiceField, Form, Field, CharField,
                           ChoiceField, BooleanField, FloatField, IntegerField)
 
-from egsim.api.forms import MultipleChoiceWildcardField, NArrayField
+from egsim.api.forms.fields import MultipleChoiceWildcardField, NArrayField
 
 from . import TABS, URLS
 

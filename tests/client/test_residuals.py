@@ -6,15 +6,11 @@ Created on 22 Oct 2018
 @author: riccardo
 """
 import re
-from io import BytesIO
 
 import pytest
 
-from unittest.mock import patch, PropertyMock  # ok in py3.8  # noqa
-
-from django.core.files import File
+from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.utils.datastructures import MultiValueDict
 
 from egsim.api.forms.model_to_data.residuals import ResidualsForm
 from egsim.api.views import ResidualsView, RESTAPIView
@@ -26,7 +22,6 @@ class Test:
 
     url = "/" + ResidualsView.urls[0]  # '/query/residuals'
     request_filename = 'request_residuals.yaml'
-    gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
     def test_residuals_service_err(self,
                                    # pytest fixtures:
@@ -39,13 +34,14 @@ class Test:
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
+        ptype_s = 'plottype'
         exp_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid parameter: plot_type',
+                'message': f'Invalid parameter: {ptype_s}',
                 'errors': [
                     {
-                        'location': 'plot_type',
+                        'location': f'{ptype_s}',
                         'message': 'This field is required.',
                         'reason': 'required'
                     }

@@ -3,11 +3,12 @@
 gsim: ['BindiEtAl2011', 'BindiEtAl2014Rjb']
 imt: ['SA(0.2)', 'PGA', 'PGV']
 
-gmdb: 'esm_sa_flatfile_2018'
+flatfile: 'esm2018'
 
-selexpr: '(vs30 >= 730) & ((magnitude <=4) | (magnitude>=7))'
+# selexpr: '(vs30 >= 730) & ((magnitude <=4) | (magnitude>=7))'
+selexpr: '(magnitude >= 6) & ((vs30 <=1050) | (vs30>=1000))'
 
-fit_measure:
+mof:
  - "res"
  - "lh"
  - "llh"
