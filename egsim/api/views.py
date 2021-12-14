@@ -19,7 +19,7 @@ from .forms.model_to_data import FlatfileForm
 from .forms.model_to_model.trellis import TrellisForm
 from .forms.model_to_data.residuals import ResidualsForm
 from .forms.model_to_data.testing import TestingForm
-from .forms import APIForm
+from .forms.forms import APIForm
 
 
 # Set the non-encoded characters. Sources:
@@ -44,23 +44,25 @@ class RESTAPIView(View):
     def get(self, request: HttpRequest):
         """processes a get request"""
 
-        # get param names with multiple choices allowed, which might be
-        # typed with commas and thus split:
-        mval_params = set(n for n, f in self.formclass.declared_fields.items()
-                          if isinstance(f, (MultipleChoiceField,)))
-        #  get to dict:
-        #  Note that percent-encoded characters are decoded automatically
+        form_cls = self.formclass
+        # get param names with multiple choices  allowed. For these parameters
+        # we'll treat commas as element separators (see below):
+        mval_params = set(n for n, f in form_cls.parameter_names().items()
+                          if isinstance(form_cls.declared_fields[f],
+                                        (MultipleChoiceField,)))
+
         ret = {}
-        # https://docs.djangoproject.com/en/2.2/ref/request-response/#django.http.QueryDict.lists
+        # request.GET is a QueryDict object (see doc for details in `lists`):
+        #  Note that percent-encoded characters are decoded automatically
         for param_name, values in request.GET.lists():
-            if param_name in mval_params:
+            if param_name in mval_params:  # treat commas as element separators:
                 newvalues = []
                 for val in values:
                     newvalues.extend(val.split(','))
                 ret[param_name] = newvalues
             else:
                 ret[param_name] = values[0] if len(values) == 1 else values
-        return self.response(self.formclass(ret))
+        return self.response(form_cls(ret))
 
     def post(self, request: HttpRequest):
         """processes a post request"""
@@ -92,7 +94,7 @@ class RESTAPIView(View):
                                       errors=err['errors'])
 
             response_data = form.response_data
-            if form.get_data_format == form.DATA_FORMAT_CSV:
+            if form.data_format == form.DATA_FORMAT_CSV:
                 return cls.response_text(response_data)
             else:
                 return cls.response_json(response_data)

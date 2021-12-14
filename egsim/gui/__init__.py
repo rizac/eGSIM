@@ -1,8 +1,7 @@
 from enum import Enum
 
 # import here once all api modules (also those used in other modules of this package)
-from ..api.views import (ResidualsView, TestingView, TrellisView,
-                         QUERY_PARAMS_SAFE_CHARS, error_response)
+from ..api.views import ResidualsView, TestingView, TrellisView
 
 
 class URLS:  # noqa

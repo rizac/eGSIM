@@ -6,39 +6,38 @@ import re
 
 import pandas as pd
 from django.core.exceptions import ValidationError
-from django.forms import CharField, ModelChoiceField, FileField
 from django.utils.translation import gettext
 from pandas.core.computation.ops import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
 
-from ...flatfile import read_flatfile, EgsimContextDB
-from .. import EgsimBaseForm
 from ... import models
-from ...models import FlatfileColumn
+from ...flatfile import read_flatfile, EgsimContextDB
+from ..fields import ModelChoiceField, CharField, FileField
+from ..forms import EgsimBaseForm
 
 
 class FlatfileForm(EgsimBaseForm):
     """Abstract-like class for handling Flatfiles (either pre- or user-defined)"""
 
-    def fieldname_aliases(self, mapping):
-        """Set field name aliases (exposed to the user as API parameter aliases):
-        call `super()` and then for any field alias: `mapping[new_name]=name`
-        See `EgsimBaseForm.__init__` for details
-        """
-        super().fieldname_aliases(mapping)
-        mapping['sel'] = 'selexpr'
-        mapping['dist'] = 'distance_type'
+    # For each Field of this Form: the attribute name MUST NOT CHANGE, because
+    # code relies on it (see e.g. keys of `cleaned_data`). The attribute value
+    # can change as long as it inherits from `egsim.forms.fields.ParameterField`
 
-    flatfile = ModelChoiceField(queryset=models.Flatfile.get_flatfiles(),
+    flatfile = ModelChoiceField('flatfile',
+                                queryset=models.Flatfile.get_flatfiles(),
                                 empty_label=None, label='Flatfile',
                                 to_field_name="name", required=False)
-    selexpr = CharField(required=False, label='Selection expression')
+    selexpr = CharField('selexpr',
+                        required=False, label='Selection expression')
     # this is the Django field should NOT be a REST API parameter, as the files
     # are provided via a separate argument (https://stackoverflow.com/a/22567429)
-    uploaded_flatfile = FileField(required=False, label='Flatfile upload')
+    # As such, its parameter name (flatfile) can be shared with the flatifle
+    # field attribute above
+    uploaded_flatfile = FileField('flatfile',
+                                  required=False, label='Flatfile upload')
 
     def clean(self):
-        """Call `super.clean()` and handles the flatfile"""
+        """Call `super.clean()` and handle the flatfile"""
 
         cleaned_data = super().clean()
         # check flatfiles. Note that missing flatfiles will be None in cleaned_data
@@ -81,7 +80,7 @@ class FlatfileForm(EgsimBaseForm):
                 msg = str(exc)
                 # provide as key the flatfile param name, becasue so it is
                 # exposed to the public:
-                self.add_error(key_p, ValidationError(gettext(msg),
+                self.add_error(key_u, ValidationError(gettext(msg),
                                                       code='invalid'))
                 return cleaned_data  # noo need to further process
 
@@ -172,10 +171,10 @@ def flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]
     qry = qry.filter(name__isnull=False, oq_name__isnull=False)
     rup, site, dist = {}, {}, {}
     for ffname, attname, categ in qry.values_list('name', 'oq_name', 'category'):
-        if categ == FlatfileColumn.CATEGORY.RUPTURE_PARAMETER:
+        if categ == models.FlatfileColumn.CATEGORY.RUPTURE_PARAMETER:
             rup[ffname] = attname
-        elif categ == FlatfileColumn.CATEGORY.SITE_PARAMETER:
+        elif categ == models.FlatfileColumn.CATEGORY.SITE_PARAMETER:
             site[ffname] = attname
-        elif categ == FlatfileColumn.CATEGORY.DISTANCE_MEASURE:
+        elif categ == models.FlatfileColumn.CATEGORY.DISTANCE_MEASURE:
             dist[ffname] = attname
     return rup, site, dist

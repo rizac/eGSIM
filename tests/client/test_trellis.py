@@ -1,16 +1,16 @@
-'''
+"""
 Tests the client for the trellis service API
 
 Created on 2 Jun 2018
 
 @author: riccardo
-'''
+"""
 import re
 import pytest
 
 from egsim.api.views import TrellisView
 from egsim.api.forms.model_to_model.trellis import TrellisForm
-from egsim.api.forms import MediaTypeForm
+from egsim.api.forms.forms import MediaTypeForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa
 
@@ -73,7 +73,7 @@ class Test:
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
                                          'xlabel', 'xvalues']
         xvalues = result['xvalues']
-        assert len(xvalues) == len(input_['distance']) + 1  # FIXME: should be len(distance)!!!
+        assert len(xvalues) == len(input_['dist']) + 1  # FIXME: should be len(distance)!!!
         figures = self.get_figures(result)
         if st_dev:
             # assert we wrtoe the stdevs:
@@ -83,14 +83,14 @@ class Test:
             # assert we did NOT write stdevs:
             assert not any(_['stdvalues'] for _ in figures)
             assert not any(_['stdlabel'] for _ in figures)
-        assert len(figures) == len(input_['magnitude']) * len(input_['imt'])
+        assert len(figures) == len(input_['mag']) * len(input_['imt'])
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
             self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
-        resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
+        resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         assert re.search(self.csv_expected_text, resp2.content)
@@ -116,7 +116,7 @@ class Test:
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
                                          'xlabel', 'xvalues']
         xvalues = result['xvalues']
-        assert len(xvalues) == len(input_['magnitude'])
+        assert len(xvalues) == len(input_['mag'])
         figures = self.get_figures(result)
         if st_dev:
             # assert we wrtoe the stdevs:
@@ -126,21 +126,21 @@ class Test:
             # assert we did NOT write stdevs:
             assert not any(_['stdvalues'] for _ in figures)
             assert not any(_['stdlabel'] for _ in figures)
-        assert len(figures) == len(input_['distance']) * len(input_['imt'])
+        assert len(figures) == len(input_['dist']) * len(input_['imt'])
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
             self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
-        resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
+        resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         assert re.search(self.csv_expected_text, resp2.content)
         ref_resp = resp2.content
         # test different text formats
         for text_sep, symbol in MediaTypeForm._textcsv_sep.items():
-            resp3 = client.post(self.url, data=dict(inputdic, data_format='csv',
+            resp3 = client.post(self.url, data=dict(inputdic, format='csv',
                                                     csv_sep=text_sep),
                                 content_type='text/csv')
             assert resp3.status_code == 200
@@ -155,7 +155,7 @@ class Test:
                 # We should read it with csv...
                 assert real_content == expected_content
 
-        resp3 = client.post(self.url, data=dict(inputdic, data_format='csv',
+        resp3 = client.post(self.url, data=dict(inputdic, format='csv',
                                                 csv_sep='semicolon',
                                                 csv_dec='comma'),
                             content_type='text/csv')
@@ -170,7 +170,7 @@ class Test:
         # but better than nothing
         assert real_content[0] == expected_content[0]
 
-        resp3 = client.post(self.url, data=dict(inputdic, data_format='csv',
+        resp3 = client.post(self.url, data=dict(inputdic, format='csv',
                                                 csv_dec='comma'),
                             content_type='text/csv')
         assert resp3.status_code == 400
@@ -230,15 +230,14 @@ class Test:
             # assert we did NOT write stdevs:
             assert not any(_['stdvalues'] for _ in figures)
             assert not any(_['stdlabel'] for _ in figures)
-        assert len(figures) == \
-            len(input_['distance']) * len(input_['magnitude'])
+        assert len(figures) == len(input_['dist']) * len(input_['mag'])
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
             self.assert_gims_equal(input_['gsim'], yvalues)
 
         # test the text response:
-        resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
+        resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         assert re.search(self.csv_expected_text, resp2.content)
@@ -294,7 +293,7 @@ class Test:
         expected_err_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid parameters: gsim',
+                'message': 'Invalid parameter: gsim',
                 'errors': [
                     {
                         'location': 'gsim',
@@ -490,7 +489,7 @@ class Test:
     #     inputdic = dict(testdata.readyaml(self.request_filename),
     #                     plot_type='m')
     #     # test the text response:
-    #     resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
+    #     resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
     #                         content_type='text/csv')
     #     assert resp2.status_code == 400
     #     expected_json = {

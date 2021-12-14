@@ -9,7 +9,6 @@ import numpy as np
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext
 from django.utils.safestring import mark_safe
-from django.forms.fields import (BooleanField, FloatField, ChoiceField)
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -21,8 +20,9 @@ from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeDistanceSpectraTrellis,
                                         MagnitudeDistanceSpectraSigmaTrellis)
 
-from .. import (vectorize, isscalar, NArrayField, relabel_sa, APIForm)
-
+from .. import relabel_sa, vectorize, isscalar
+from ..fields import BooleanField, FloatField, ChoiceField, NArrayField
+from ..forms import APIForm
 
 PLOT_TYPE = {
     # key: (display label, trellis class, stddev trellis class)
@@ -32,77 +32,73 @@ PLOT_TYPE = {
           MagnitudeDistanceSpectraSigmaTrellis)
 }
 
+_mag_scalerel = get_available_magnitude_scalerel()
+
 
 class TrellisForm(APIForm):
     """Form for Trellis plot generation"""
 
-    _mag_scalerel = get_available_magnitude_scalerel()
+    # For each Field of this Form: the attribute name MUST NOT CHANGE, because
+    # code relies on it (see e.g. keys of `cleaned_data`). The attribute value
+    # can change as long as it inherits from `egsim.forms.fields.ParameterField`
 
-    def fieldname_aliases(self, mapping):
-        """Set field name aliases (exposed to the user as API parameter aliases):
-        call `super()` and then for any field alias: `mapping[new_name]=name`
-        See `EgsimBaseForm.__init__` for details
-        """
-        super().fieldname_aliases(mapping)
-        mapping['mag'] = 'magnitude'
-        mapping['dist'] = 'distance'
-        mapping['stddev'] = 'stdev'
-        mapping['msr'] = 'magnitude_scalerel'
-        mapping['lineazi'] = 'line_azimuth'
-        mapping['vs30m'] = 'vs30_measured'
-        mapping['hyploc'] = 'hypocentre_location'
-        mapping['vs30measured'] = 'vs30_measured'
-
-    plot_type = ChoiceField(label='Plot type',
+    plot_type = ChoiceField('plottype', 'plot_type',
+                            label='Plot type',
                             choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
-    stdev = BooleanField(label='Compute Standard Deviation(s)', required=False,
+    stdev = BooleanField('stdev', 'stddev',
+                         label='Compute Standard Deviation(s)', required=False,
                          initial=False)
 
     # GSIM RUPTURE PARAMS:
-    magnitude = NArrayField(label='Magnitude(s)', min_count=1)
-    distance = NArrayField(label='Distance(s)', min_count=1)
-    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'), min_value=0.,
-                       min_count=1, initial=760.0)
-    aspect = FloatField(label='Rupture Length / Width', min_value=0.)
-    dip = FloatField(label='Dip', min_value=0., max_value=90.)
-    rake = FloatField(label='Rake', min_value=-180., max_value=180.,
+    mag = NArrayField('mag', 'magnitude', label='Magnitude(s)', min_count=1)
+    dist = NArrayField('dist', 'distance', label='Distance(s)', min_count=1)
+    vs30 = NArrayField('vs30', label=mark_safe('V<sub>S30</sub> (m/s)'),
+                       min_value=0., min_count=1, initial=760.0)
+    aspect = FloatField('aspect', label='Rupture Length / Width', min_value=0.)
+    dip = FloatField('dip', label='Dip', min_value=0., max_value=90.)
+    rake = FloatField('rake', label='Rake', min_value=-180., max_value=180.,
                       initial=0.)
-    strike = FloatField(label='Strike', min_value=0., max_value=360.,
+    strike = FloatField('strike', label='Strike', min_value=0., max_value=360.,
                         initial=0.)
-    ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0.,
+    ztor = FloatField('ztor', label='Top of Rupture Depth (km)', min_value=0.,
                       initial=0.)
-    magnitude_scalerel = ChoiceField(label='Magnitude Scaling Relation',
-                                     choices=[(_,_) for _ in _mag_scalerel],
-                                     initial="WC1994")
-    initial_point = NArrayField(label="Location on Earth",
-                                min_count=2, max_count=2,
+    # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_msr`
+    msr = ChoiceField('msr', 'magnitude_scalerel',
+                      label='Magnitude-Area Scaling Relationship',
+                      choices=[(_, _) for _ in _mag_scalerel],
+                      initial="WC1994")
+    # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_location`
+    initial_point = NArrayField('location', 'initial_point',
+                                label="Location on Earth", min_count=2, max_count=2,
                                 help_text='Longitude Latitude', initial="0 0",
                                 min_value=[-180, -90], max_value=[180, 90])
-    # see `clean_initial_point` below
-    hypocentre_location = NArrayField(label="Location of Hypocentre",
+    hypocenter_location = NArrayField('hypoloc', 'hypocenter_location',
+                                      label="Location of Hypocentre",
                                       initial='0.5 0.5',
-                                      help_text=('Along-strike fraction, '
-                                                 'Down-dip fraction'),
-                                      min_count=2, max_count=2,
-                                      min_value=[0, 0], max_value=[1, 1])
+                                      help_text='Along-strike fraction, '
+                                                'Down-dip fraction',
+                                      min_count=2, max_count=2, min_value=[0, 0],
+                                      max_value=[1, 1])
     # END OF RUPTURE PARAMS
-    vs30_measured = BooleanField(label=mark_safe('Is V<sub>S30</sub> '
-                                                 'measured?'),
+    vs30measured = BooleanField('vs30measured', 'vs30m', 'vs30_measured',
+                                label=mark_safe('Whether V<sub>S30</sub> is measured?'),
                                  help_text='Otherwise is inferred',
                                  initial=True, required=False)
-    line_azimuth = FloatField(label='Azimuth of Comparison Line',
+    line_azimuth = FloatField('lineazimuth', 'line_azimuth',
+                              label='Azimuth of Comparison Line',
                               min_value=0., max_value=360., initial=0.)
-    z1pt0 = NArrayField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> '
-                                        'layer (m)'),
+    z1pt0 = NArrayField('z1pt0', 'z1',
+                        label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
                         min_value=0., required=False,
                         help_text=mark_safe("Calculated from the "
                                             "V<sub>S30</sub> if not given"))
-    z2pt5 = NArrayField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> '
-                                        'layer (km)'),
+    z2pt5 = NArrayField('z2pt5',
+                        label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
                         min_value=0., required=False,
                         help_text=mark_safe("Calculated from the  "
                                             "V<sub>S30</sub> if not given"))
-    backarc = BooleanField(label='Backarc Path', initial=False, required=False)
+    backarc = BooleanField('backarc', label='Backarc Path', initial=False,
+                           required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,15 +106,28 @@ class TrellisForm(APIForm):
         # is optional) and set the field['imt'] as accepting only SA:
         self._replace_sa_periods_with_default = False
         if self._is_input_plottype_spectra():
-            self.fields['imt'].choices = [('SA', 'SA')]
-            if 'imt' not in self.data:
+            imt = 'imt'
+            self.fields[imt].choices = [('SA', 'SA')]
+            if imt not in self.data:
                 self._replace_sa_periods_with_default = True
                 # provide a dummy period that will pass ImtField validation
-                self.data['imt'] = 'SA(1)'
+                self.data[imt] = 'SA(1)'
+
+    def clean_msr(self):
+        """Cleans the "msr" field by converting the given value to a
+        object of type :class:`openquake.hazardlib.scalerel.base.BaseMSR`.
+        """
+        value = self.cleaned_data['msr']
+        # https://docs.djangoproject.com/en/3.2/ref/forms/validation/
+        # #cleaning-a-specific-field-attribute
+        try:
+            return _mag_scalerel[value]()
+        except Exception as exc:
+            raise ValidationError(gettext(str(exc)), code='invalid')
 
     def clean_initial_point(self):
-        """Converts the given value to a object of typpe
-         :class:`openquake.hazardlib.geo.point.Point` object.
+        """Cleans the "location" field by converting the given value to a
+        object of type :class:`openquake.hazardlib.geo.point.Point`.
         """
         value = self.cleaned_data['initial_point']
         # https://docs.djangoproject.com/en/3.2/ref/forms/validation/
@@ -143,9 +152,6 @@ class TrellisForm(APIForm):
             else:
                 cleaned_data['imt'] = sorted(imt.from_string(_).period
                                              for _ in cleaned_data['imt'])
-        # Convert MSR to associated class:
-        cleaned_data['magnitude_scalerel'] = \
-            self._mag_scalerel[cleaned_data['magnitude_scalerel']]
 
         # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
         vs30 = cleaned_data['vs30']  # surely a list with st least one element
@@ -166,8 +172,8 @@ class TrellisForm(APIForm):
                     '%d-elements vector' % len(vs30)
                 # instead of raising ValidationError, which is keyed with
                 # '__all__' we add the error keyed to the given field name
-                # `name` via `self.add_error`:
-                # https://docs.djangoproject.com/en/2.0/ref/forms/validation/#cleaning-and-validating-fields-that-depend-on-each-other
+                # `name` via `self.add_error` (see cleaning and validating data
+                # on django docs):
                 error = ValidationError(gettext("value must be consistent with "
                                                 "vs30 (%s)" % str_),
                                         code='invalid')
@@ -185,13 +191,14 @@ class TrellisForm(APIForm):
 
         :param processed_data: dict resulting from `self.process_data`
         """
-        yield ['imt', 'gsim', 'magnitude', 'distance', 'vs30']
+        mag_s, dist_s = 'magnitude', 'distance'
+        yield ['imt', 'gsim', f'{mag_s}', f'{dist_s}', 'vs30']
         yield chain(repeat('', 5), [processed_data['xlabel']],
                     processed_data['xvalues'])
         for imt in processed_data['imts']:
             imt_objs = processed_data[imt]
             for obj in imt_objs:
-                mag, dist, vs30, ylabel = obj['magnitude'], obj['distance'], \
+                mag, dist, vs30, ylabel = obj[mag_s], obj[dist_s], \
                                           obj['vs30'], obj['ylabel']
                 for gsim, values in obj['yvalues'].items():
                     yield chain([imt, gsim, mag, dist, vs30, ylabel], values)
@@ -201,7 +208,7 @@ class TrellisForm(APIForm):
         for imt in processed_data['imts']:
             imt_objs = processed_data[imt]
             for obj in imt_objs:
-                mag, dist, vs30, ylabel = obj['magnitude'], obj['distance'], \
+                mag, dist, vs30, ylabel = obj[mag_s], obj[dist_s], \
                                           obj['vs30'], obj['stdlabel']
                 for gsim, values in obj['stdvalues'].items():
                     # the dict we are iterating might be empty: in case
@@ -223,9 +230,10 @@ class TrellisForm(APIForm):
         gsim = params.pop("gsim")
         # imt might be None for "spectra" Trellis classes, thus provide None:
         imt = params.pop("imt", None)
+        magnitudes = np.asarray(vectorize(params.pop("mag")))  # smtk wants np arrays
+        distances = np.asarray(vectorize(params.pop("dist")))  # smtk wants np arrays
+        # from now on, labels for mag and dist as "magnitude" and "distance"
         mag_s, dist_s = "magnitude", "distance"
-        magnitudes = np.asarray(vectorize(params.pop(mag_s)))  # smtk wants np arrays
-        distances = np.asarray(vectorize(params.pop(dist_s)))  # smtk wants np arrays
 
         plottype_key = params.pop("plot_type")
         trellisclass = PLOT_TYPE[plottype_key][1]
@@ -265,7 +273,7 @@ class TrellisForm(APIForm):
                         if _ismag else zip([None], [distances]):
 
                     data = cls._get_trellis_dict(trellisclass, params, mags,
-                                                  dists, gsim, imt,
+                                                 dists, gsim, imt,
                                                  is_spectra_class)
 
                     if xdata is None:
@@ -276,7 +284,7 @@ class TrellisForm(APIForm):
 
                     _stdev_data = None if stdev_trellisclass is None \
                         else cls._get_trellis_dict(stdev_trellisclass, params,
-                                                    mags, dists, gsim, imt,
+                                                   mags, dists, gsim, imt,
                                                    is_spectra_class)
                     cls._add_stdev(data, _stdev_data)
 
@@ -320,11 +328,6 @@ class TrellisForm(APIForm):
     def _get_trellis_dict(trellis_class, params, mags, dists, gsim, imt,
                           is_trelliclass_spectra):  # noqa
         """Compute the Trellis plot for a single set of eGSIM parameters"""
-
-        # FIXME: REMOVE
-        # isspectra = trellis_class in (MagnitudeDistanceSpectraTrellis,
-        #                               MagnitudeDistanceSpectraSigmaTrellis)
-        # periods = TrellisForm._default_periods_for_spectra() if isspectra else imt
 
         # imt is a list of the imts given as input, or a numeric list of periods
         # for "spectra" Trellis (in the latter case just get the figures keys,

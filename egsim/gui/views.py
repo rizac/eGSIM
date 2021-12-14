@@ -14,9 +14,10 @@ from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.conf import settings
 
-from . import figutils, guiutils, TABS, QUERY_PARAMS_SAFE_CHARS, error_response
+from . import figutils, guiutils, TABS
 from .guiutils import to_help_dict, dump_request_data
 from ..api.models import Gsim, Imt
+from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS
 
 
 # common parameters to be passed to any Django template:

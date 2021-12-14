@@ -1,22 +1,13 @@
-'''
+"""
 Tests the client for the testing service API
 
 Created on 22 Oct 2018
 
 @author: riccardo
-'''
+"""
 import pytest
 
 from egsim.api.views import TestingView
-
-try:  # https://stackoverflow.com/questions/44441929
-    from unittest.mock import patch, PropertyMock  # ok in py3.8  # noqa
-except ImportError:
-    from mock import patch, PropertyMock  # ok in py3.7  # noqa
-
-# from egsim.core.utils import querystring
-# from egsim.forms.forms import TestingForm
-# from egsim.views import URLS
 
 
 @pytest.mark.django_db
@@ -25,14 +16,13 @@ class Test:
 
     url = "/" + TestingView.urls[0]  # '/query/residuals'
     request_filename = 'request_testing.yaml'
-    gmdb_fname = 'esm_sa_flatfile_2018.csv.hd5'
 
     def test_residuals_service_err(self,
                                    # pytest fixtures:
                                    testdata, areequal, client, querystring):
         """test errors in the testing API service."""
         inputdic = testdata.readyaml(self.request_filename)
-        inputdic.pop('fit_measure')
+        inputdic.pop('mof')
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
@@ -42,10 +32,10 @@ class Test:
         exp_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid input in fit_measure',
+                'message': 'Invalid parameter: mof',
                 'errors': [
                     {
-                        'domain': 'fit_measure',
+                        'location': 'mof',
                         'message': 'This field is required.',
                         'reason': 'required'
                     }
@@ -60,8 +50,8 @@ class Test:
         """tests the "testing" API service."""
         inputdic = testdata.readyaml(self.request_filename)
         # pass two gsims that have records with the current test gmdb:
-        inputdic['gsim'] = ['Atkinson2015', 'BindiEtAl2014RhypEC8NoSOF']
-        inputdic['selexpr'] = ''
+        # inputdic['gsim'] = ['Atkinson2015', 'BindiEtAl2014RhypEC8NoSOF']
+        # inputdic['selexpr'] = ''
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
@@ -72,7 +62,7 @@ class Test:
             all(isinstance(_, dict) for _ in json_.values())
 
         # test text format:
-        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
+        resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         exp_str = b'measure of fit,imt,gsim,value,db records used\r\n'
@@ -84,6 +74,7 @@ class Test:
                                           testdata, areequal, client, querystring):
         """tests the "testing" API service."""
         inputdic = testdata.readyaml(self.request_filename)
+        inputdic['selexpr'] = 'magnitude>10'
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
@@ -94,15 +85,7 @@ class Test:
             all(isinstance(_, dict) for _ in json_.values())
 
         # test text format:
-        resp2 = client.post(self.url, data=dict(inputdic, format='text'),
-                            content_type='text/csv')
-        assert resp2.status_code == 200
-        assert resp2.content == (b'measure of fit,imt,gsim,value,'
-                                 b'db records used\r\n')
-        # test with no selexpr. Unfortunately, no matching db rows
-        # found. FIXME: try with some other gsim?
-        resp2 = client.post(self.url, data=dict(inputdic, format='text',
-                                                selexpr=''),
+        resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         assert resp2.content == (b'measure of fit,imt,gsim,value,'
@@ -111,8 +94,10 @@ class Test:
     def test_tesing_bug(self,
                         # pytest fixtures:
                         testdata, areequal, client):
-        """Tests a bug we spotted by testing the API from an external query"""
+        """Tests a bug we spotted by testing the API from an external query
+        that should be fixed"""
+        # FIXME: this was a 1.0 version bug. Does it make sense to keep the test?
         resp1 = client.get(self.url +
-                           '?gsim=BindiEtAl2014Rjb&imt=PGA&fit_measure=res',
+                           '?flatfile=esm2018&gsim=BindiEtAl2014Rjb&imt=PGA&fit_measure=res',
                            content_type='application/json')
         assert resp1.status_code == 200
