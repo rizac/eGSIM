@@ -76,7 +76,7 @@ class Test:
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
-        ptype_s = 'plot_type'
+        ptype_s = 'plot'
         exp_json = {
             'error': {
                 'code': 400,

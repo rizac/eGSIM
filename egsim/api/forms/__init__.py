@@ -9,7 +9,7 @@ from io import StringIO
 import csv
 
 from django.core.exceptions import ValidationError
-from django.forms.forms import DeclarativeFieldsMetaclass
+from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.utils.translation import gettext
 from django.forms import Form
 from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField)
@@ -82,9 +82,8 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     public_field_names = {}
 
     def __init__(self, *args, **kwargs):
-        """Override init to set custom attributes on field widgets and to set
-        the initial value for fields of this class with no match in the keys
-        of `self.data`
+        """Override init: re-arrange `self.data` and set the initial value for
+        missing fields
         """
         # remove colon in labels by default in templates:
         kwargs.setdefault('label_suffix', '')
@@ -93,24 +92,24 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
         # setup `self.data`: its keys must be form field attribute names, but
         # they might be provided in whatever key of `self.public_field_names`.
-        # Keep track of any change in `_inputparam_name` so that validation err.
+        # Keep track of any change in `_input_field_name` so that validation err.
         # messages are displayed relative to the original user input field name
-        self._inputparam_name = {}
+        self._input_field_name = {}
         param_conflicts = defaultdict(list)  # in case of conflicts (see below)
         for field_name in self.data.keys():
             field_att_name = self.public_field_names[field_name]
             param_conflicts[field_att_name].append(field_name)
-            if field_att_name != field_name:
-                self._inputparam_name[field_att_name] = field_name
+            self._input_field_name[field_att_name] = field_name
         # check conflicts:
         param_conflicts = [v for v in param_conflicts.values() if len(v) > 1]
         if param_conflicts:
             param_conflicts_str = ", ".join("/".join(_) for _ in param_conflicts)
             raise ValidationError('Multiple parameter provided (name conflict): '
                                   f'{param_conflicts_str}')
-        # Now rename self.data:
-        for field_att_name, field_name in self._inputparam_name.items():
-            self.data[field_att_name] = self.data.pop(field_name)
+        # Now rename self.data keys if needed:
+        for field_att_name, field_name in self._input_field_name.items():
+            if field_att_name != field_name:
+                self.data[field_att_name] = self.data.pop(field_name)
 
         # Make fields initial value the default (for details see discussion and
         # code example at https://stackoverflow.com/a/20309754):
@@ -147,21 +146,31 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         if not dic:
             return {}
         errors = []
-        pnames = []
-        for key, values in dic.items():
-            # get the param name as input by the user:
-            input_param_name = self._inputparam_name.get(key, key)
-            # add the name to be displayed in the global msg (see below):
-            pnames.append(input_param_name)
+        # build dict of: field attr. name -> field. name to be displayed:
+        field_names = {}
+        for field_attrname in dic:
+            if field_attrname in self._input_field_name:
+                # the field name to be displayed is that input by the user:
+                field_names[field_attrname] = self._input_field_name[field_attrname]
+            else:
+                # the field name to be displayed is its first public name:
+                for p_name, a_name in self.public_field_names.items():
+                    if a_name == field_attrname:
+                        field_names[field_attrname] = p_name
+                        break
+        # build errors dict:
+        for field_attrname, errs in dic.items():
+            field_name = field_names[field_attrname]  # field display name
             # compose dict for detailed error messages:
-            for value in values:
-                errors.append({'location': input_param_name,
-                               'message': value.get('message', ''),
-                               'reason': value.get('code', '')})
+            for err in errs:
+                errors.append({'location': field_name,
+                               'message': err.get('message', ''),
+                               'reason': err.get('code', '')})
 
         if not msg:
-            msg = f'Invalid parameter{"" if len(pnames) == 1 else "s"}: ' \
-                  f'{", ".join(pnames)}'
+            invalid_p_names = list(field_names.values())
+            msg = f'Invalid parameter{"" if len(invalid_p_names) == 1 else "s"}: ' \
+                  f'{", ".join(invalid_p_names)}'
 
         return {
             'message': msg,
