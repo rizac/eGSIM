@@ -19,7 +19,7 @@ from django.db.utils import IntegrityError
 
 
 # Notes: primary keys are auto added if not present ('id' of type BigInt or so).
-# All models here that are not abstract will be available prefixed with 'egsim_'
+# All models here that are not abstract will be available prefixed with 'api_'
 # in the admin panel (https://<site_url>/admin)
 
 

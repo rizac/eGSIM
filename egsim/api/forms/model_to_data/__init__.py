@@ -1,87 +1,93 @@
-"""Common utilities for forms related to model-to-data operations, i.e.
-involving flatfiles
+"""
+Base Form for to model-to-data operations i.e. flatfile handling
 """
 from io import BytesIO
 import re
 
 import pandas as pd
 from django.core.exceptions import ValidationError
+from django.forms import Form
 from django.utils.translation import gettext
 from pandas.core.computation.ops import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
 from ...flatfile import read_flatfile, EgsimContextDB
+from .. import EgsimBaseForm
 from ..fields import ModelChoiceField, CharField, FileField
-from ..forms import EgsimBaseForm
+
+
+# Let's provide uploaded flatfile Field in a separate Form as the Field is not
+# strictly JSON-encodable (info here: https://stackoverflow.com/a/4083908) and
+# should be kept private/hidden by default:
+class _UploadedFlatfile(Form):
+    flatfile = FileField(required=False)  # keep same name as flatfile below
 
 
 class FlatfileForm(EgsimBaseForm):
-    """Abstract-like class for handling Flatfiles (either pre- or user-defined)"""
+    """Base Form for handling Flatfiles"""
 
-    # For each Field of this Form: the attribute name MUST NOT CHANGE, because
-    # code relies on it (see e.g. keys of `cleaned_data`). The attribute value
-    # can change as long as it inherits from `egsim.forms.fields.ParameterField`
+    # Set the public names of this Form Fields as `public_name: attribute_name`
+    # mappings. Superclass mappings are merged into this one. An attribute name
+    # can be keyed by several names, and will be keyed by itself anyway if not
+    # done here (see `egsim.forms.EgsimFormMeta` for details)
+    public_field_names = {
+        'flatfile': 'flatfile', 'gmdb': 'flatfile',
+        'selexpr': 'selexpr', 'sel': 'selexpr',
+    }
 
-    flatfile = ModelChoiceField('flatfile',
-                                queryset=models.Flatfile.get_flatfiles(),
+    flatfile = ModelChoiceField(queryset=models.Flatfile.get_flatfiles(),
                                 empty_label=None, label='Flatfile',
+                                help_text='The name of a preloaded flatfile (or '
+                                          'Ground Motion Database) with the observed '
+                                          'data to be used for comparison. Flatfiles '
+                                          'can also be user defined and uploaded in '
+                                          'the GUI or from your Python code',
                                 to_field_name="name", required=False)
-    selexpr = CharField('selexpr',
-                        required=False, label='Selection expression')
-    # this is the Django field should NOT be a REST API parameter, as the files
-    # are provided via a separate argument (https://stackoverflow.com/a/22567429)
-    # As such, its parameter name (flatfile) can be shared with the flatifle
-    # field attribute above
-    uploaded_flatfile = FileField('flatfile',
-                                  required=False, label='Flatfile upload')
+    selexpr = CharField(required=False, label='Selection expression')
+
+    def __init__(self, data, files=None, **kwargs):
+        super().__init__(data=data, **kwargs)  # <- normalizes data keys
+        self._u_ff = None if files is None else _UploadedFlatfile(files=files)
+        # handle conflicts here for simplicity. eGSIM Views will catch
+        # ValidationErrors and send a 4xx response
+        if files is not None and 'flatfile' in self.data:
+            raise ValidationError('Please select an existing flatfile or '
+                                  'upload one, not both', code='conflict')
+        elif files is None and not 'flatfile' in self.data:
+            raise ValidationError('Please select an existing flatfile or upload '
+                                  'one', code='required')
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
-
         cleaned_data = super().clean()
-        # check flatfiles. Note that missing flatfiles will be None in cleaned_data
-        key_u, key_p = 'uploaded_flatfile', 'flatfile'
-        # add an error message if both flatfile and uploaded flatfile
-        # are provided, regardless of whether they are valid or not:
-        flatfile_given = cleaned_data.get(key_p, None) or key_p in self.errors
-        u_flatfile_given = cleaned_data.get(key_u, None) or key_u in self.errors
 
-        if bool(flatfile_given) == bool(u_flatfile_given):
-            # first check when the flatfile is given, and raise
-            err_msg = "Please select an existing flatfile or upload one"
-            code = 'required'
-            if flatfile_given:
-                code = 'conflict'
-                err_msg = "Please select an existing flatfile or " \
-                          "upload one, not both"
-            self.add_error(key_p, ValidationError(gettext(err_msg), code=code))
-            # Should we add an error also with key 'uploaded_flatfile'? No, because
-            # the parameter should not be exposed publicly (we can not send a
-            # flatfile in JSON, we need to send a form-multipart request).So:
-            # self.add_error(key_u, ValidationError(gettext(err_msg), code=code))
-            return cleaned_data  # noo need to further process
-
-        # if no flatfile (name or uploaded) is given in cleaned_data, then the
-        # parameter name has been added to errors and we don't need further
-        # processing
-        if not cleaned_data.get(key_p, None) and not cleaned_data.get(key_u, None):
+        u_flatfile = None  # None or bytes object
+        u_form = self._u_ff
+        if u_form is not None:
+            if not u_form.is_valid():
+                self._errors = u_form._errors
+                return cleaned_data
+            u_flatfile = u_form.cleaned_data['flatfile']
+        elif 'flatfile' not in cleaned_data:
+            # ok, flatfile is landed in self.errors. Form i invalid no need to proceed
             return cleaned_data
 
-        if flatfile_given:
+        if u_flatfile is None:
             # exception should be raised and sent as 500: don't catch
-            p_ff = cleaned_data[key_p]
+            p_ff = cleaned_data["flatfile"]
             dataframe = pd.read_hdf(p_ff.path, key=p_ff.name)
         else:
-            u_ff = cleaned_data[key_u]
+            # u_ff = cleaned_data[key_u]
             try:
-                dataframe = read_flatfilefrom_csv_bytes(BytesIO(u_ff))
+                dataframe = read_flatfilefrom_csv_bytes(BytesIO(u_flatfile))
             except Exception as exc:
                 msg = str(exc)
-                # provide as key the flatfile param name, becasue so it is
-                # exposed to the public:
-                self.add_error(key_u, ValidationError(gettext(msg),
-                                                      code='invalid'))
+                # Use 'flatfile' as error key: users can not be confused
+                # (see __init__), and also 'flatfile' is also the exposed key
+                # for the `files` argument in requests
+                self.add_error("flatfile", ValidationError(gettext(msg),
+                                                           code='invalid'))
                 return cleaned_data  # noo need to further process
 
         key = 'selexpr'

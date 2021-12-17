@@ -12,9 +12,8 @@ from django.core.exceptions import ValidationError
 from smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
 
 from . import FlatfileForm, MOF, get_residuals
-from .. import relabel_sa
+from .. import APIForm, relabel_sa
 from ..fields import MultipleChoiceField, FloatField
-from ..forms import APIForm
 
 
 MOF_TYPE = {
@@ -30,19 +29,20 @@ MOF_TYPE = {
 class TestingForm(APIForm, FlatfileForm):
     """Form for testing Gsims via Measures of Fit"""
 
-    # For each Field of this Form: the attribute name MUST NOT CHANGE, because
-    # code relies on it (see e.g. keys of `cleaned_data`). The attribute value
-    # can change as long as it inherits from `egsim.forms.fields.ParameterField`
+    # Set the public names of this Form Fields as `public_name: attribute_name`
+    # mappings. Superclass mappings are merged into this one. An attribute name
+    # can be keyed by several names, and will be keyed by itself anyway if not
+    # done here (see `egsim.forms.EgsimFormMeta` for details)
+    public_field_names = {
+        'mof': 'fit_measure', 'measure_of_fit': 'fit_measure'
+    }
 
-    fit_measure = MultipleChoiceField('mof', 'measure_of_fit', 'fit_measure',
-                                      required=True, label="Measure(s) of fit",
+    fit_measure = MultipleChoiceField(required=True, label="Measure(s) of fit",
                                       choices=[(k, v[0]) for k, v in MOF_TYPE.items()])
-    edr_bandwidth = FloatField('edr_bandwidth',
-                               required=False, initial=0.01,
+    edr_bandwidth = FloatField(required=False, initial=0.01,
                                help_text=('Ignored if EDR is not a '
                                           'selected measure of fit'))
-    edr_multiplier = FloatField('edr_multiplier',
-                                required=False, initial=3.0,
+    edr_multiplier = FloatField(required=False, initial=3.0,
                                 help_text=('Ignored if EDR is not a '
                                            'selected measure of fit'))
 

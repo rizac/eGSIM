@@ -22,7 +22,7 @@ from datetime import date, datetime
 from urllib.parse import quote
 from typing import Union, Iterable
 from egsim.api.views import QUERY_PARAMS_SAFE_CHARS
-from egsim.api.forms import isscalar
+from egsim.api.forms.fields import isscalar
 
 
 @pytest.fixture(scope="function")

@@ -1,3 +1,5 @@
+"""eGSIM Django Fields"""
+
 from fnmatch import translate
 import re
 import json
@@ -7,65 +9,33 @@ from itertools import chain, repeat
 import numpy as np
 from openquake.hazardlib import imt
 from django.core.exceptions import ValidationError
-from django.forms import fields
-from django.forms import models
 
-from . import isscalar, vectorize
+# import here all Fields used in this project to have a common namespace:
+from django.forms.fields import (ChoiceField, FloatField, BooleanField,
+                                 CharField, MultipleChoiceField, FileField)
+from django.forms.models import ModelChoiceField
 
 
-class ParameterField(fields.Field):
-    """Subclassed django Field by adding the `names` attributes denoting the
-    restAPI parameter names associated to this Field
+def vectorize(value):
+    """Return `value` if it is already an iterable, otherwise `[value]`.
+    Note that :class:`str` and :class:`bytes` are considered scalars:
+    ```
+        vectorize(3) = vectorize([3]) = [3]
+        vectorize('a') = vectorize(['a']) = ['a']
+    ```
     """
-    def __init__(self, *names: str, **kwargs):
-        """
-        :param names: The parameter name(s) of this field in user requests
-        :param kwargs: arguments for this Django field `__init__`
-        """
-        self.names = [_.strip() for _ in names if _.strip()]
-        if not self.names:
-            raise ValueError('The Field needs at least a Parameter name provided')
-        super().__init__(**kwargs)
+    return [value] if isscalar(value) else value
 
 
-# note: by subclassing each Field below with ParameterField first, we are not
-# forced to call __init__ with kwargs only (see django Field.__init__) but can
-# pass `names` also as positional arguments (see __init__ above)
-
-
-class BooleanField(ParameterField, fields.BooleanField):
-    """Django BooleanField with the attribute `names:list[str]`"""
-    pass
-
-
-class FloatField(ParameterField, fields.FloatField):
-    """Django FloatField with the attribute `names:list[str]`"""
-    pass
-
-
-class CharField(ParameterField, fields.CharField):
-    """Django CharField with the attribute `names:list[str]`"""
-    pass
-
-
-class ChoiceField(ParameterField, fields.ChoiceField):
-    """Django ChoiceField with the attribute `names:list[str]`"""
-    pass
-
-
-class MultipleChoiceField(ParameterField, fields.MultipleChoiceField):
-    """Django MultipleChoiceField with the attribute `names:list[str]`"""
-    pass
-
-
-class ModelChoiceField(ParameterField, models.ModelChoiceField):
-    """Django ModelChoiceField with the attribute `names:list[str]`"""
-    pass
-
-
-class FileField(ParameterField, fields.FileField):
-    """Django FileField with the attribute `names:list[str]`"""
-    pass
+def isscalar(value):
+    """Return True if `value` is a scalar object, i.e. a :class:`str`, a
+    :class:`bytes` or without the attribute '__iter__'. Example:
+    ```
+        isscalar(1) == isscalar('a') == True
+        isscalar([1]) == isscalar(['a']) == False
+    ```
+    """
+    return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
 
 
 class ArrayField(CharField):
@@ -78,7 +48,7 @@ class ArrayField(CharField):
     As Form fields act also as validators, an object of this class can deal
     also with already parsed (e.g. via YAML) arrays
     """
-    def __init__(self, *names, min_count=None, max_count=None,
+    def __init__(self, *, min_count=None, max_count=None,
                  min_value=None, max_value=None, **kwargs):
         """Initialize a new ArrayField
          :param min_count: numeric or None. The minimum required count of the
@@ -100,7 +70,7 @@ class ArrayField(CharField):
         """
         # Parameters after “*” or “*identifier” are keyword-only parameters
         # and may only be passed used keyword arguments.
-        super(ArrayField, self).__init__(*names, **kwargs)
+        super(ArrayField, self).__init__(**kwargs)
         self.min_count = min_count
         self.max_count = max_count
         self.min_value = min_value
@@ -290,27 +260,25 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         if value and isinstance(value, str):
             value = [value]  # no need to call super
         else:
-            # `super.to_python` basically checks that `value` is not some weird
-            # object, and returns a list of strings. It DOES NOT check yet if
-            # any item in `value` in the possible choices (`self.validate` will
-            # do that, later)
+            # assure that value is a list/tuple:
             value = super(MultipleChoiceWildcardField, self).to_python(value)
 
-        if not any(MultipleChoiceWildcardField.has_wildcards(_) for _ in value):
+        have_wildcard = {_: self.has_wildcards(_) for _ in value}
+        if not any(have_wildcard.values()):
             return value
 
-        # Convert wildcard strings. Put them in a dict keys first, to avoid
-        # duplicates and preserve the original list order (we are in py>=3.7)
-        new_value = {}
-        for val in value:
-            if MultipleChoiceWildcardField.has_wildcards(val):
-                reg = MultipleChoiceWildcardField.to_regex(val)
-                for choice, _ in self.choices:
-                    if reg.match(str(choice)):
-                        new_value[choice] = None  # None or whatever, it's irrelevant
-            else:
-                new_value[val] = None   # None or whatever, it's irrelevant
-        return list(new_value)
+        # Convert wildcard strings:
+        choices = [_[0] for _ in self.choices if _[0] not in value]
+        new_value = []
+        for val, has_wildcard in have_wildcard.items():
+            if not has_wildcard:
+                new_value.append(val)
+                continue
+            reg = self.to_regex(val)
+            new_val = [c for c in choices if reg.match(c) and c not in new_value]
+            new_value += new_val
+
+        return new_value
 
     @staticmethod
     def has_wildcards(string):
@@ -325,20 +293,29 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         return re.compile(translate(value))
 
 
-# https://docs.djangoproject.com/en/2.0/ref/forms/fields/#creating-custom-fields
 class ImtField(MultipleChoiceWildcardField):
     """Field for IMT class selection. Provides a further validation for
     SA which is provided as (or with) periods (se meth:`valid_value`)
     """
 
-    def valid_value(self, value):
-        """Validate the given *single* imt `value`"""
-        try:
-            # use openquake first (e.g.  '0.2' -> 'SA(0.2)')
-            value = imt.from_string(value).string
-            # get function name (handle "SA(" case):
-            value = value[:None if '(' not in value else value.index('(')]
-        except Exception:  # noqa
-            return False
+    def to_python(self, value: list):
+        """Coerce value to a valid IMT string"""
+        value = super().to_python(value)  # assure is a list without regexp(s)
+        for i, val in enumerate(value):
+            # normalize val (e.g.  '0.2' -> 'SA(0.2)'):
+            try:
+                _ = imt.from_string(val.strip()).string
+                if val != _:
+                    value[i] = _
+            except KeyError as kerr:
+                # raised if `val` a non-imt string, e.g. 'abc'. Provide a better
+                # message than simply "abc":
+                raise ValidationError(f'invalid {str(kerr)}')
+            except Exception as exc:
+                raise ValidationError(str(exc))  # => register error in the form
+        return value
 
-        return super().valid_value(value)
+    def valid_value(self, value: str):
+        """Checks that value is in the choices"""
+        # if we have 'SA(...)' we must validate 'SA':
+        return super().valid_value('SA' if value.startswith('SA(') else value)

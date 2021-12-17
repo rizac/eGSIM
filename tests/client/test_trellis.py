@@ -10,7 +10,7 @@ import pytest
 
 from egsim.api.views import TrellisView
 from egsim.api.forms.model_to_model.trellis import TrellisForm
-from egsim.api.forms.forms import MediaTypeForm
+from egsim.api.forms import MediaTypeForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa
 
@@ -73,7 +73,7 @@ class Test:
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
                                          'xlabel', 'xvalues']
         xvalues = result['xvalues']
-        assert len(xvalues) == len(input_['dist']) + 1  # FIXME: should be len(distance)!!!
+        assert len(xvalues) == len(input_['distance']) + 1  # FIXME: should be len(distance)!!!
         figures = self.get_figures(result)
         if st_dev:
             # assert we wrtoe the stdevs:
@@ -83,7 +83,7 @@ class Test:
             # assert we did NOT write stdevs:
             assert not any(_['stdvalues'] for _ in figures)
             assert not any(_['stdlabel'] for _ in figures)
-        assert len(figures) == len(input_['mag']) * len(input_['imt'])
+        assert len(figures) == len(input_['magnitude']) * len(input_['imt'])
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
@@ -116,7 +116,7 @@ class Test:
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
                                          'xlabel', 'xvalues']
         xvalues = result['xvalues']
-        assert len(xvalues) == len(input_['mag'])
+        assert len(xvalues) == len(input_['magnitude'])
         figures = self.get_figures(result)
         if st_dev:
             # assert we wrtoe the stdevs:
@@ -126,7 +126,7 @@ class Test:
             # assert we did NOT write stdevs:
             assert not any(_['stdvalues'] for _ in figures)
             assert not any(_['stdlabel'] for _ in figures)
-        assert len(figures) == len(input_['dist']) * len(input_['imt'])
+        assert len(figures) == len(input_['distance']) * len(input_['imt'])
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())
@@ -230,7 +230,7 @@ class Test:
             # assert we did NOT write stdevs:
             assert not any(_['stdvalues'] for _ in figures)
             assert not any(_['stdlabel'] for _ in figures)
-        assert len(figures) == len(input_['dist']) * len(input_['mag'])
+        assert len(figures) == len(input_['distance']) * len(input_['magnitude'])
         for fig in figures:
             yvalues = fig['yvalues']
             assert all(len(yval) == len(xvalues) for yval in yvalues.values())

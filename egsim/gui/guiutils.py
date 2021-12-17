@@ -6,11 +6,14 @@ import re
 from io import StringIO
 
 from django.forms import (MultipleChoiceField, Form, Field, CharField,
-                          ChoiceField, BooleanField, FloatField, IntegerField)
+                          ChoiceField, BooleanField, FloatField, IntegerField,
+                          DecimalField)
+from django.forms.widgets import ChoiceWidget, Input
 
 from egsim.api.forms.fields import MultipleChoiceWildcardField, NArrayField
 
 from . import TABS, URLS
+from ..api.forms import APIForm, EgsimBaseForm
 
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
@@ -21,6 +24,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         with default values so that the frontend FORMS will be ready to
         test click buttons
     """
+
     # properties to be passed to vuejs components.
     # If you change THE KEYS of the dict here you should change also the
     # javascript:
@@ -241,90 +245,73 @@ def _configure_values_for_testing(components_props: dict[str, dict[str, Any]]):
                                                                  ]
 
 
-def get_widgetdata(form: Form) -> Iterable[tuple[str, Field, dict]]:  # FIXME DOCSTRING
-    for name in form.declared_fields:
-        # little spec needed before proceeding:
-        # `self.declared_fields` and `self.base_fields` are the same thing
-        # (see django.forms.forms.DeclarativeFieldsMetaclass) and are
-        # declared at CLASS level: modifying them applies changes to all
-        # instances, thus avoid. Conversely, `self.fields[name]` is where
-        # specific instance-level changes have to be made:
-        # https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form
-        # Finally, `self[name]` creates a `BoundField` from
-        # `self.fields[name]` i.e. "a Field plus data" (e.g., its initial
-        # value, if given. See `__init__`). `BoundField`s is what we want
-        # to use here
-        boundfield = form[name]
-        val = boundfield.value()
-        widget = boundfield.field.widget
-        attrs = boundfield.build_widget_attrs({}, widget)
-        widgetdata = widget.get_context(name, val, attrs)['widget']
-        yield name, widgetdata
+def to_request_data(form: APIForm, syntax='yaml') -> StringIO:
+    """Serialize this Form input (uncleaned) data into a YAML or JSON stream to
+    be used as custom Request data.
 
-
-def dump_request_data(form: Form, stream=None, syntax='yaml'):
-    """Serialize this Form instance into a YAML or JSON stream.
-    **The form needs to be already validated via e.g. `form.is_valid()`**.
-
-    The result collects the fields of `self.data`, i.e., the unprocessed
-    input, with one exception: if this form subclasses
-    :class:`GsimImtForm`, as 'sa_period' is hidden,
-    the value mapped to 'imt' will be `self.cleaned_data['imt']` and not
-    `self.data['imt']`.
-
-    :param stream: A file-like object **for text I/O** (e.g. `StringIO`),
-       or None.
     :param syntax: string either json or yaml. Default: yaml
 
-    :return: if the passed `stream` argument is None, returns the produced
-        string. If the passed `stream` argument is a file-like object,
-        this method writes to `stream` and returns None
+    :return: a StringIO with the Form input data
     """
     if syntax not in ('yaml', 'json'):
         raise ValueError("invalid `syntax` argument in `dump`: '%s' "
                          "not in ('json', 'yam')" % syntax)
 
-    cleaned_data = {}
+    data, docstrings = {}, {}
     for key, val in form.data.items():
         # Omit unchanged optional parameters. This is not only to make
         # the dumped string more readable and light size, but to avoid
         # parameters which defaults to None (e.g. z1pt0 in
         # TrellisForm): if they were written here (e.g. `z1pt0: None`) then
         # a routine converting the returned JSON/YAML to a query string
-        # would wrtie "...z1pt0=null...", which might be interpreted as
+        # would write "...z1pt0=null...", which might be interpreted as
         # the string "null"
         field = form.fields[key]
         is_optional = not field.required or field.initial is not None
         if is_optional and val == field.initial:
             continue
-        # FIXME REMOVE THIS COMMENT BELOW
-        # # provide tha value given as input, not the value processed
-        # # by `self.clean`, which might be not JSON or YAML serializable,
-        # # with one exception: imt in GsimImtForm, becasue we might have
-        # # provided the parameter `sa_periods` and thus the processed
-        # # imt in `cleaned_data` is the value to return:
-        # cleaned_data[key] = form.cleaned_data[key] \
-        #     if key == 'imt' and isinstance(form, GsimImtForm) else val
+        param_name = field.names[0]
+        data[param_name] = val
+        if syntax == 'yaml':
+            docstrings[param_name] = get_docstring(field)
 
     if syntax == 'json':
-        return _dump_json(form, stream, cleaned_data)
-
-    return _dump_yaml(form, stream, cleaned_data)
-
-
-def _dump_json(form: Form, stream, cleaned_data: dict):  # pylint: disable=no-self-use
-    """Serialize to JSON. See `self.dump`"""
-    # compatibility with yaml dump if stream is None:
-    if stream is None:
-        return json.dumps(cleaned_data, indent=4,
-                          separators=(',', ': '), sort_keys=True)
-    json.dump(cleaned_data, stream, indent=4, separators=(',', ': '),
-              sort_keys=True)
-    return None
+        stream = _dump_json(data)
+    else:
+        stream = _dump_yaml(data, docstrings)
+    stream.seek(0)
+    return stream
 
 
-def _dump_yaml(form: Form, stream, cleaned_data: dict):
-    """Serialize to YAML. See `self.dump`"""
+# replace html tags, e.g.: "<a href='#'>X</a>" -> "X", "V<sub>s30</sub>" -> "Vs30"
+_html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)</\\1>')
+
+
+def get_docstring(field: Field):
+    """Return a docstring from the given Form field by parsing its attributes
+    `label` and `help_text`. The returned string will have no newlines
+    """
+    label = (field.label or '') + \
+            ('' if not field.help_text else ' (%s)' % field.help_text)
+    if label:
+        # replace html characters with their content
+        # (or empty str if no content):
+        label = _html_tags_re.sub(r'\2', label)
+        # replace newlines for safety:
+        label = label.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+
+    return label
+
+
+def _dump_json(data: dict) -> StringIO:
+    """Serialize to JSON. See `self.dump` or return the produced string"""
+    stream = StringIO()
+    json.dump(data, stream, indent=4, separators=(',', ': '), sort_keys=True)
+    return stream
+
+
+def _dump_yaml(data: dict, docs: dict = None) -> StringIO:
+    """Serialize to YAML. See `self.dump` or return the produced string"""
 
     class MyDumper(yaml.SafeDumper):  # noqa
         """Force indentation of lists"""
@@ -333,60 +320,40 @@ def _dump_yaml(form: Form, stream, cleaned_data: dict):
         def increase_indent(self, flow=False, indentless=False):
             return super(MyDumper, self).increase_indent(flow, False)
 
-    # regexp to replace html entities with their content, i.e.:
-    # <a href='#'>bla</a> -> bla
-    # V<sub>s30</sub> -> Vs30
-    # ... and so on ...
-    html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)<\\/\\1>')
+    stream = StringIO()
 
-    # inject comments in yaml by using the field label and its help:
-    stringio = StringIO() if stream is None else stream
-    for name, value in cleaned_data.items():
-        field = form.declared_fields[name]
-        label = (field.label or '') + \
-                ('' if not field.help_text else ' (%s)' % field.help_text)
-        if label:
-            # replace html characters with their content
-            # (or empty str if no content):
-            label = html_tags_re.sub(r'\2', label)
-            # replace newlines for safety:
-            label = '# %s\n' % (label.replace('\n', ' ').
-                                replace('\r', ' '))
-            stringio.write(label)
-        yaml.dump({name: value}, stream=stringio, Dumper=MyDumper,
+    docstrings = docs or {}
+    for name, value in data.items():
+        docstring = docstrings.get(name, None)
+        if docstring:
+            stream.write(f'# {docstring}')
+            stream.write('\n')
+
+        yaml.dump({name: value}, stream=stream, Dumper=MyDumper,
                   default_flow_style=False)
-        stringio.write('\n')
-    # compatibility with yaml dump if stream is None:
-    if stream is None:
-        ret = stringio.getvalue()
-        stringio.close()
-        return ret
-    return None
+        stream.write('\n')
+
+    return stream
 
 
-def to_vuejs_dict(form) -> dict:
-    return to_json_dict(form, ignore_choices=lambda _: _ in ('gsim', 'imt'))
+# def to_vuejs_dict(form) -> dict:
+#     return to_json_dict(form, ignore_choices=lambda _: _ in ('gsim', 'imt'))
 
 
-def to_json_dict(form: Form,
-                 skip: Callable[[str], bool] = None,
-                 ignore_choices: Callable[[str], bool] = None) -> dict:
-    """Convert this form to a Python dict which can be injected in the HTML and
-    processed via JavaScript: each Field name is mapped to a dict of keys such
-    as 'val' (the value), 'help' (the help text), 'label' (the label text),
-    'err': (the error text), 'attrs' (a dict of HTML element attributes),
-    'choices' (the list of available choices, see argument
-    `ignore_callable_choices`).
+def to_vuejs(form: EgsimBaseForm, skip: Callable[[str], bool] = None,
+             ignore_choices: Callable[[str], bool] = None) -> dict:
+    """Return a dictionary of field names mapped to their widget context.
+     A widget context is in turn a dict with key and value pairs used to render
+     the Field as HTML component.
 
-    :param skip: iterable of strings denoting the field names to be skipped
-    :param aliases: dict of field name aliases mapped to a form field name
+    :param: a Django Form or Form class
+    :param skip: callable accapting a string (field name) and returning True
+        or False. If False, the field will not be processed and returned
 
-    :param ignore_callable_choices: handles the 'choices' for fields
-        defining it as CallableChoiceIterator: if True (the default) the
-        function is not evaluated and the choices are simply set to [].
-        If False, the choices function will be evaluated.
-        Use True when the choices list is too big and you do not need
-        this additional overhead
+    :param ignore_choices: callable accepting a string (field name) and returning
+        True or False. If False, the Field choices will not be loaded and the
+        returned dict 'choices' key will be `[]`. Useful for avoiding time
+        consuming long list loading
     """
 
     if skip is None:
@@ -394,48 +361,88 @@ def to_json_dict(form: Form,
     if ignore_choices is None:
         ignore_choices = lambda _: False
 
+    fieldattname2fieldname = defaultdict(list)
+    for field_name, field_attname in form.public_field_names.items():
+        fieldattname2fieldname[field_attname].append(field_name)
+
     formdata = {}
-    for name, widgetdata in get_widgetdata(form):
-        if skip(name):
+    for field_attname, field in form.declared_fields():
+        field = form[field_attname]
+        names = fieldattname2fieldname[field_attname]
+
+        if any(skip(_) for _ in names):
             continue
-        field = form[name]
 
-        val = field.value()
-        if isinstance(field, MultipleChoiceField) and not val:
-            val = []
+        ret = {
+            # 'name': names[0],
+            'attrs': dict(get_html_element_attrs(field), name=names[0]),
+            'val': None,
+            'err': '',
+            'initial': field.initial,
+            'help': field.help_text.strip(),
+            'label': field.label.strip(),
+            'is_hidden': False,
+            'choices': []
+        }
 
-        if ignore_choices(name):
-            choices = []
-        else:
+        if not ignore_choices(names[0]):
             choices = getattr(field, 'choices', [])
+            # if choices is not list (generator or other Django element)
+            # then expand it to list:
             if not isinstance(choices, (list, tuple)):
                 choices = list(choices)
+            ret['choices'] = choices
 
-        formdata[name] = {
-            'name': name,
-            'val': val,
-            'err': '',
-            'help': field.help_text,
-            'label': field.label,
-            'initial': field.initial,
-            'is_hidden': widgetdata.get('is_hidden', False),
-            'attrs': {
-                'type': widgetdata.get('type', field.widget_type),
-                'id': field.auto_id,
-                'required': widgetdata.get('required', False),
-                'disabled': False,
-                **widgetdata.get('attrs', {}),
-                'name': name,  # at last: it must override widgetdata's
-            },
-            'choices': choices
-        }
+        formdata[names[0]] = ret
 
     return formdata
 
 
-def to_help_dict(form: Form,
-                 skip: Callable[[str], bool] = None,
-                 aliases: dict[str, str] = None) -> dict:
+def get_html_element_attrs(field: Field) -> dict:
+    """Return the HTML attributes of the HTMl element associated to the given
+    Field. The returned dict can be used to render the field as HTML component
+    client-side via JavaScript libraries.
+
+    :param field: a Django Field
+    """
+    # Note: we could return the dict `field.widget.get_context` but  the patches
+    # are so many that building our own dict is largely more convenient. For
+    # instance, in our app we:
+    # 1. Avoid loading all <option>s for Gsim and Imt (we could subclass
+    #    `optgroups` in `widgets.SelectMultiple` and return [], but is clumsy)
+    # 2. Remove some attributes (e.g. checkbox with the 'checked' attribute are
+    #    not compatible with VueJS v-model or v-checked)
+    # 3. Some Select with single choice set their initial value as list  (e.g.
+    #    ['value'] instead of 'value') and I guess VueJs prefers strings.
+
+    # All in all, instead of complex patching we provide our code here:
+    widget = field.widget
+    attrs = {
+        # 'hidden': widget.is_hidden,
+        'required': field.required,
+        'disabled': False
+    }
+    if isinstance(field, IntegerField):  # note: FloatField inherits from IntegerField
+        if field.min_value is not None:
+            attrs['min'] = field.min_value
+        if field.max_value is not None:
+            attrs['max'] = field.max_value
+        if isinstance(field, (FloatField, DecimalField)):
+            attrs['step'] = 'any'  # this seems to be needed by some browsers?
+        else:  # FloatField, DecimalField
+            attrs['step'] = '1'
+
+    if isinstance(widget, ChoiceWidget):
+        if widget.allow_multiple_selected:
+            attrs['multiple'] = True
+    elif isinstance(widget, Input):
+        attrs['type'] = widget.input_type
+
+    return attrs
+
+
+def to_help_dict(form: EgsimBaseForm,
+                 skip: Callable[[str], bool] = None) -> dict:
     """Convert this form to a Python dict which can be injected in the HTML and
     processed via JavaScript: each Field name is mapped to a dict of keys such
     as 'val' (the value), 'help' (the help text), 'label' (the label text),
@@ -445,19 +452,13 @@ def to_help_dict(form: Form,
 
     :param skip: iterable of strings denoting the field names to be skipped
     :param aliases: dict of field name aliases mapped to a form field name
-
-    :param ignore_callable_choices: handles the 'choices' for fields
-        defining it as CallableChoiceIterator: if True (the default) the
-        function is not evaluated and the choices are simply set to [].
-        If False, the choices function will be evaluated.
-        Use True when the choices list is too big and you do not need
-        this additional overhead
     """
+
     aliases = aliases or {}
     optional_names = defaultdict(list)
     for key, val in aliases.items():
         optional_names[val].append(key)
-    formdata = to_json_dict(form, skip)
+    formdata = to_vuejs(form, skip)
     for name, data in formdata.items():
         data['opt_names'] = optional_names.get(name, [])
         field = form.declared_fields[name]
@@ -509,88 +510,3 @@ def _type_description(field):
 #     if isinstance(field, str):
 #         field = cls.declared_fields[field]
 #     return not field.required or field.initial is not None
-
-
-# def to_vuejs_dict(form: Form, ignore_callable_choices=True,
-#                   skip: Iterable[str] = None, aliases: dict[str, str] = None) -> dict:
-#     """Convert this form to a Python dict which can be injected in the HTML and
-#     processed via JavaScript: each Field name is mapped to a dict of keys such
-#     as 'val' (the value), 'help' (the help text), 'label' (the label text),
-#     'err': (the error text), 'attrs' (a dict of HTML element attributes),
-#     'choices' (the list of available choices, see argument
-#     `ignore_callable_choices`).
-#
-#     :param skip: iterable of strings denoting the field names to be skipped
-#     :param aliases: dict of field name aliases mapped to a form field name
-#
-#     :param ignore_callable_choices: handles the 'choices' for fields
-#         defining it as CallableChoiceIterator: if True (the default) the
-#         function is not evaluated and the choices are simply set to [].
-#         If False, the choices function will be evaluated.
-#         Use True when the choices list is too big and you do not need
-#         this additional overhead
-#     """
-#     # import here stuff used only in this method:
-#     from collections import defaultdict
-#
-#     hidden_fn = set(skip or [])
-#     aliases = aliases or {}
-#     formdata = {}
-#     # aliases = {}
-#     # self.fieldname_aliases(aliases)
-#     optional_names = defaultdict(list)
-#     for key, val in aliases.items():
-#         optional_names[val].append(key)
-#     for name, field in form.declared_fields.items():  # pylint: disable=no-member
-#         # little spec needed before proceeding:
-#         # `self.declared_fields` and `self.base_fields` are the same thing
-#         # (see django.forms.forms.DeclarativeFieldsMetaclass) and are
-#         # declared at CLASS level: modifying them applies changes to all
-#         # instances, thus avoid. Conversely, `self.fields[name]` is where
-#         # specific instance-level changes have to be made:
-#         # https://docs.djangoproject.com/en/2.2/ref/forms/api/#accessing-the-fields-from-the-form
-#         # Finally, `self[name]` creates a `BoundField` from
-#         # `self.fields[name]` i.e. "a Field plus data" (e.g., its initial
-#         # value, if given. See `__init__`). `BoundField`s is what we want
-#         # to use here
-#         boundfield = form[name]
-#         val = boundfield.value()
-#         widget = boundfield.field.widget
-#         attrs = boundfield.build_widget_attrs({}, widget)
-#         widgetdata = widget.get_context(name, val, attrs)['widget']
-#         attrs = dict(widgetdata.pop('attrs', {}))
-#         if 'type' in widgetdata:
-#             attrs['type'] = widgetdata.pop('type')
-#         if 'required' in widgetdata:
-#             attrs['required'] = widgetdata.pop('required')
-#         if 'id' not in attrs:
-#             attrs['id'] = boundfield.auto_id
-#         attrs['name'] = widgetdata.pop('name')
-#         # coerce val to [] in case val falsy and multichoice:
-#         if isinstance(field, MultipleChoiceField) and not val:
-#             val = []
-#         # type description:
-#         fielddata = {  # noqa
-#             'name': attrs['name'],
-#             'opt_names': optional_names.get(name, []),
-#             # 'is_optional': self.is_optional(name),
-#             'help': boundfield.help_text,
-#             'label': boundfield.label,
-#             'attrs': attrs,
-#             'err': '',
-#             'is_hidden': widgetdata.pop('is_hidden',
-#                                         False) or name in hidden_fn,
-#             'val': val,
-#             'initial': field.initial,
-#             'typedesc': EgsimBaseForm._type_description(field,
-#                                                         attrs.get('min', None),
-#                                                         attrs.get('max', None))
-#         }
-#         fielddata['choices'] = getattr(field, 'choices', [])
-#         if isinstance(fielddata['choices'], CallableChoiceIterator):
-#             if ignore_callable_choices:
-#                 fielddata['choices'] = []
-#             else:
-#                 fielddata['choices'] = list(fielddata['choices'])
-#         formdata[name] = fielddata
-#     return formdata
