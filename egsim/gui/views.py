@@ -15,8 +15,8 @@ from django.shortcuts import render
 from django.conf import settings
 
 from . import figutils, guiutils, TABS
-from .guiutils import to_help_dict, dump_request_data
-from ..api.models import Gsim, Imt
+from .guiutils import to_help_dict, to_request_data
+from ..api.models import Gsim, Imt, FlatfileColumn
 from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS
 
 
@@ -143,28 +143,27 @@ def apidoc(request):
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
                        egsim_data=egsim_data,
                        baseurl=baseurl,
-                       gmt=_get_gmdb_column_desc(),
+                       gmt=get_flatfile_column_desc(),
                        )
                   )
 
 
-def _get_gmdb_column_desc(as_html=True):
+def get_flatfile_column_desc(as_html=True):
     ret = {}
-    # # FIXME CHECK
-    # for ff_field in FlatfileField.objects.all():
-    #     name = ff_field.name
-    #     props = ff_field.properties
-    #     dtype = props['dtype']
-    #     if isinstance(dtype, (list, tuple)):
-    #         type2str = 'categorical. Possible values:\n' + \
-    #                    "\n".join(str(_) for _ in dtype)
-    #     else:
-    #         type2str = str(dtype)
-    #     default = str(props.get('default', ''))
-    #     if as_html:
-    #         type2str = "<span style='white-space: nowrap'>%s</span>" % \
-    #             type2str.replace('\n', '<br>')
-    #     ret[name] = (type2str, default)
+    for ff_field in FlatfileColumn.objects.all():
+        name = ff_field.name
+        props = ff_field.properties
+        dtype = props['dtype']
+        if isinstance(dtype, (list, tuple)):
+            type2str = 'categorical. Possible values:\n' + \
+                       "\n".join(str(_) for _ in dtype)
+        else:
+            type2str = str(dtype)
+        default = str(props.get('default', ''))
+        if as_html:
+            type2str = "<span style='white-space: nowrap'>%s</span>" % \
+                type2str.replace('\n', '<br>')
+        ret[name] = (type2str, default)
     return ret
 
 
@@ -189,10 +188,8 @@ def download_request(request, tab_name, filename):
         verr = dataform.validation_errors()
         return error_response(verr['message'], verr['code'],
                               errors=verr['errors'])
-    buffer = StringIO()
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
-    dump_request_data(dataform, buffer, syntax=ext_nodot)
-    buffer.seek(0)
+    buffer = to_request_data(dataform, syntax=ext_nodot)
     if ext_nodot == 'json':
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,

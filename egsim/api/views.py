@@ -19,7 +19,7 @@ from .forms.model_to_data import FlatfileForm
 from .forms.model_to_model.trellis import TrellisForm
 from .forms.model_to_data.residuals import ResidualsForm
 from .forms.model_to_data.testing import TestingForm
-from .forms.forms import APIForm
+from .forms import APIForm
 
 
 # Set the non-encoded characters. Sources:
@@ -47,13 +47,13 @@ class RESTAPIView(View):
         form_cls = self.formclass
         # get param names with multiple choices  allowed. For these parameters
         # we'll treat commas as element separators (see below):
-        mval_params = set(n for n, f in form_cls.parameter_names().items()
+        mval_params = set(f for f in form_cls.public_field_names.values()
                           if isinstance(form_cls.declared_fields[f],
                                         (MultipleChoiceField,)))
 
         ret = {}
-        # request.GET is a QueryDict object (see doc for details in `lists`):
-        #  Note that percent-encoded characters are decoded automatically
+        # request.GET is a QueryDict object (see Django doc for details)
+        # with percent-encoded characters already decoded
         for param_name, values in request.GET.lists():
             if param_name in mval_params:  # treat commas as element separators:
                 newvalues = []
@@ -62,7 +62,7 @@ class RESTAPIView(View):
                 ret[param_name] = newvalues
             else:
                 ret[param_name] = values[0] if len(values) == 1 else values
-        return self.response(form_cls(ret))
+        return self.response(data=ret)
 
     def post(self, request: HttpRequest):
         """processes a post request"""
@@ -73,21 +73,24 @@ class RESTAPIView(View):
             # the parameter is exposed to the user as "flatfile", but
             # internally we use "uploaded_flatfile". Create a new object
             # the same type of request.FILES with key renamed:
-            files = MultiValueDict([('uploaded_flatfile',
-                                     request.FILES.getlist('flatfile'))])
-            return self.response(self.formclass(request.POST, files))
+            # files = MultiValueDict([('uploaded_flatfile',
+            #                          request.FILES.getlist('flatfile'))])
+            return self.response(data=request.POST, files=request.FILES)
         else:
             stream = StringIO(request.body.decode('utf-8'))
             inputdict = yaml.safe_load(stream)
-            return self.response(self.formclass(data=inputdict))
+            return self.response(data=inputdict)
 
     @classmethod
-    def response(cls, form: Form):
-        """process an input Form `form`, returning a response object.
-        Calls `self.process` if the input is valid according to
-        `cls.formclass`. On error, returns an appropriate json response
+    def response(cls, **form_kwargs):
+        """process an input Response by calling `self.process` if the input is
+        valid according to this class Form (`cls.formclass`). On error, return
+        an appropriate JSON response
+
+        :param form_kwargs: keyword arguments to be passed to this class Form
         """
         try:
+            form = cls.formclass(**form_kwargs)
             if not form.is_valid():
                 err = form.validation_errors()
                 return error_response(err['message'], cls.CLIENT_ERR_CODE,

@@ -11,6 +11,7 @@ import pytest
 
 from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils.datastructures import MultiValueDict
 
 from egsim.api.forms.model_to_data.residuals import ResidualsForm
 from egsim.api.views import ResidualsView, RESTAPIView
@@ -23,18 +24,59 @@ class Test:
     url = "/" + ResidualsView.urls[0]  # '/query/residuals'
     request_filename = 'request_residuals.yaml'
 
+    def test_uploaded_flatfile(self,
+                               # pytest fixtures:
+                               testdata, areequal, client, querystring):
+        inputdic = testdata.readyaml(self.request_filename)
+        # no flatfile, uploaded flatfile:
+        inputdic['plot_type'] = 'res'
+        inputdic2 = dict(inputdic)
+        inputdic2.pop('flatfile')
+        resp2 = client.post(self.url, data=inputdic2,
+                            content_type='application/json')
+        resp1 = client.get(querystring(inputdic2, baseurl=self.url))
+        assert resp1.status_code == resp2.status_code == 400
+        assert 'flatfile' in resp1.json()['error']['message']
+
+        # both flatfile and uploaded flatfile. In Python, this would be when the
+        # user submits a json data with 'flatfile' and additionally a 'flatfile'
+        # argument in the posted file. Because the Django testing class `client`
+        # does not allow this, we first need to patch the view post method:
+        def fake_post(self, request):
+            # this method simply bypasses the files renaming (from the user provided
+            # flatfile into 'uploaded_flatfile' in the Form) and calls directly :
+            mvd = MultiValueDict({'flatfile': request.FILES['uploaded_flatfile']})
+            return ResidualsView.response(data=request.POST.copy(),files=mvd)
+
+        with patch.object(RESTAPIView, 'post', fake_post):
+            inputdic['plot_type'] = 'res'
+            csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
+            inputdic2 = dict(inputdic, flatfile='esm2018', uploaded_flatfile=csv)
+            resp2 = client.post(self.url, data=inputdic2)
+            assert resp2.status_code == 400
+            assert 'flatfile' in resp2.json()['error']['message']
+
     def test_residuals_service_err(self,
                                    # pytest fixtures:
                                    testdata, areequal, client, querystring):
         """tests errors in the residuals API service."""
         inputdic = testdata.readyaml(self.request_filename)
+
+        # test conflicting values:
+        resp1 = client.get(querystring(dict(inputdic, plot_type='res',
+                                            # sel='(vs30 > 800) & (vs30 < 1200)')
+                                            sel='(vs30 > 1000) & (vs30 < 1010)'),
+                                       baseurl=self.url))
+        assert resp1.status_code == resp1.status_code == 400
+        assert 'selexpr/sel' in resp1.json()['error']['message']
+
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
-        ptype_s = 'plottype'
+        ptype_s = 'plot_type'
         exp_json = {
             'error': {
                 'code': 400,
@@ -59,34 +101,6 @@ class Test:
         assert resp1.status_code == resp2.status_code == 400
         assert 'plot_type' in resp1.json()['error']['message']
         assert 'plot_type' in resp2.json()['error']['message']
-
-        # no flatfile, uploaded flatfile:
-        inputdic['plot_type'] = 'res'
-        inputdic2 = dict(inputdic)
-        inputdic2.pop('flatfile')
-        resp2 = client.post(self.url, data=inputdic2,
-                            content_type='application/json')
-        resp1 = client.get(querystring(inputdic2, baseurl=self.url))
-        assert resp1.status_code == resp2.status_code == 400
-        assert 'flatfile' in resp1.json()['error']['message']
-
-        # both flatfile and uploaded flatfile. In Python, this would be when the
-        # user submits a json data with 'flatfile' and additionally a 'flatfile'
-        # argument in the posted file. Because the Django testing class `client`
-        # does not allow this, we first need to patch the view post method:
-        def fake_post(self, request):
-            # this method simply bypasses the files renaming (from the user provided
-            # flatfile into 'uploaded_flatfile' in the Form) and calls directly :
-            return ResidualsView.response(ResidualsView.formclass(request.POST.copy(),
-                                                                  request.FILES))
-
-        with patch.object(RESTAPIView, 'post', fake_post):
-            inputdic['plot_type'] = 'res'
-            csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
-            inputdic2 = dict(inputdic, flatfile='esm2018', uploaded_flatfile=csv)
-            resp2 = client.post(self.url, data=inputdic2)
-            assert resp2.status_code == 400
-            assert 'flatfile' in resp2.json()['error']['message']
 
         # test selexpr errors:
         inputdic['selexpr'] = '(magnitude >5'
@@ -118,7 +132,7 @@ class Test:
         # for restype, _ in ResidualsForm.declared_fields['plot_type'].choices:
         inputdic = dict(base_inputdic, plot_type=restype,
                         # sel='(vs30 > 800) & (vs30 < 1200)')
-                        sel='(vs30 > 1000) & (vs30 < 1010)')
+                        selexpr='(vs30 > 1000) & (vs30 < 1010)')
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         assert resp2.status_code == 200

@@ -20,9 +20,9 @@ from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeDistanceSpectraTrellis,
                                         MagnitudeDistanceSpectraSigmaTrellis)
 
-from .. import relabel_sa, vectorize, isscalar
-from ..fields import BooleanField, FloatField, ChoiceField, NArrayField
-from ..forms import APIForm
+from ..fields import (BooleanField, FloatField, ChoiceField, NArrayField,
+                      vectorize, isscalar)
+from .. import APIForm, relabel_sa
 
 PLOT_TYPE = {
     # key: (display label, trellis class, stddev trellis class)
@@ -38,66 +38,70 @@ _mag_scalerel = get_available_magnitude_scalerel()
 class TrellisForm(APIForm):
     """Form for Trellis plot generation"""
 
-    # For each Field of this Form: the attribute name MUST NOT CHANGE, because
-    # code relies on it (see e.g. keys of `cleaned_data`). The attribute value
-    # can change as long as it inherits from `egsim.forms.fields.ParameterField`
+    # Set the public names of this Form Fields as `public_name: attribute_name`
+    # mappings. Superclass mappings are merged into this one. An attribute name
+    # can be keyed by several names, and will be keyed by itself anyway if not
+    # done here (see `egsim.forms.EgsimFormMeta` for details)
+    public_field_names = {
+        'plot': 'plot_type',
+        'stdev': 'stdev', 'stddev': 'stdev',
+        'magnitude': 'magnitude', 'mag': 'magnitude',
+        'distance': 'distance', 'dist': 'distance',
+        'msr': 'msr', 'magnitude_scalerel': 'msr',
+        'location': 'initial_point',
+        'hypoloc': 'hypocentre_location',
+        'vs30measured': 'vs30measured', 'vs30_measured': 'vs30measured',
+        'lineazimuth': 'line_azimuth',
+        'z1': 'z1pt0'
+    }
 
-    plot_type = ChoiceField('plottype', 'plot_type',
-                            label='Plot type',
+    plot_type = ChoiceField(label='Plot type',
                             choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
-    stdev = BooleanField('stdev', 'stddev',
-                         label='Compute Standard Deviation(s)', required=False,
+    stdev = BooleanField(label='Compute Standard Deviation(s)', required=False,
                          initial=False)
 
     # GSIM RUPTURE PARAMS:
-    mag = NArrayField('mag', 'magnitude', label='Magnitude(s)', min_count=1)
-    dist = NArrayField('dist', 'distance', label='Distance(s)', min_count=1)
-    vs30 = NArrayField('vs30', label=mark_safe('V<sub>S30</sub> (m/s)'),
+    magnitude = NArrayField(label='Magnitude(s)', min_count=1)
+    distance = NArrayField(label='Distance(s)', min_count=1)
+    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'),
                        min_value=0., min_count=1, initial=760.0)
-    aspect = FloatField('aspect', label='Rupture Length / Width', min_value=0.)
-    dip = FloatField('dip', label='Dip', min_value=0., max_value=90.)
-    rake = FloatField('rake', label='Rake', min_value=-180., max_value=180.,
+    aspect = FloatField(label='Rupture Length / Width', min_value=0.)
+    dip = FloatField(label='Dip', min_value=0., max_value=90.)
+    rake = FloatField(label='Rake', min_value=-180., max_value=180.,
                       initial=0.)
-    strike = FloatField('strike', label='Strike', min_value=0., max_value=360.,
+    strike = FloatField(label='Strike', min_value=0., max_value=360.,
                         initial=0.)
-    ztor = FloatField('ztor', label='Top of Rupture Depth (km)', min_value=0.,
+    ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0.,
                       initial=0.)
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_msr`
-    msr = ChoiceField('msr', 'magnitude_scalerel',
-                      label='Magnitude-Area Scaling Relationship',
+    msr = ChoiceField(label='Magnitude-Area Scaling Relationship',
                       choices=[(_, _) for _ in _mag_scalerel],
                       initial="WC1994")
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_location`
-    initial_point = NArrayField('location', 'initial_point',
-                                label="Location on Earth", min_count=2, max_count=2,
+    initial_point = NArrayField(label="Location on Earth", min_count=2, max_count=2,
                                 help_text='Longitude Latitude', initial="0 0",
                                 min_value=[-180, -90], max_value=[180, 90])
-    hypocenter_location = NArrayField('hypoloc', 'hypocenter_location',
-                                      label="Location of Hypocentre",
+    hypocentre_location = NArrayField(label="Location of Hypocentre",
                                       initial='0.5 0.5',
                                       help_text='Along-strike fraction, '
                                                 'Down-dip fraction',
                                       min_count=2, max_count=2, min_value=[0, 0],
                                       max_value=[1, 1])
     # END OF RUPTURE PARAMS
-    vs30measured = BooleanField('vs30measured', 'vs30m', 'vs30_measured',
-                                label=mark_safe('Whether V<sub>S30</sub> is measured?'),
-                                 help_text='Otherwise is inferred',
-                                 initial=True, required=False)
-    line_azimuth = FloatField('lineazimuth', 'line_azimuth',
-                              label='Azimuth of Comparison Line',
+    vs30measured = BooleanField(label=mark_safe('Whether V<sub>S30</sub> is measured?'),
+                                help_text='Otherwise is inferred',
+                                initial=True, required=False)
+    line_azimuth = FloatField(label='Azimuth of Comparison Line',
                               min_value=0., max_value=360., initial=0.)
-    z1pt0 = NArrayField('z1pt0', 'z1',
-                        label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
+    z1pt0 = NArrayField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
                         min_value=0., required=False,
                         help_text=mark_safe("Calculated from the "
                                             "V<sub>S30</sub> if not given"))
-    z2pt5 = NArrayField('z2pt5',
-                        label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
+    z2pt5 = NArrayField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
                         min_value=0., required=False,
                         help_text=mark_safe("Calculated from the  "
                                             "V<sub>S30</sub> if not given"))
-    backarc = BooleanField('backarc', label='Backarc Path', initial=False,
+    backarc = BooleanField(label='Backarc Path', initial=False,
                            required=False)
 
     def __init__(self, *args, **kwargs):
@@ -230,9 +234,10 @@ class TrellisForm(APIForm):
         gsim = params.pop("gsim")
         # imt might be None for "spectra" Trellis classes, thus provide None:
         imt = params.pop("imt", None)
-        magnitudes = np.asarray(vectorize(params.pop("mag")))  # smtk wants np arrays
-        distances = np.asarray(vectorize(params.pop("dist")))  # smtk wants np arrays
-        # from now on, labels for mag and dist as "magnitude" and "distance"
+        # get magnitudes and distances (smtk wants np arrays):
+        magnitudes = np.asarray(vectorize(params.pop("magnitude")))
+        distances = np.asarray(vectorize(params.pop("distance")))
+        # Set labels for mag and dist shown in *outputs dictionaries* :
         mag_s, dist_s = "magnitude", "distance"
 
         plottype_key = params.pop("plot_type")
