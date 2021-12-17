@@ -47,9 +47,9 @@ class RESTAPIView(View):
         form_cls = self.formclass
         # get param names with multiple choices  allowed. For these parameters
         # we'll treat commas as element separators (see below):
-        mval_params = set(f for f in form_cls.public_field_names.values()
-                          if isinstance(form_cls.declared_fields[f],
-                                        (MultipleChoiceField,)))
+        mval_params = set(n for n, a in form_cls.public_field_names.items()
+                          if isinstance(form_cls.declared_fields[a],
+                                        MultipleChoiceField))
 
         ret = {}
         # request.GET is a QueryDict object (see Django doc for details)
