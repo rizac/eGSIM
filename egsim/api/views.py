@@ -39,7 +39,7 @@ class RESTAPIView(View):
     # the URL(s) endpoints of the API (no paths, no slashes, just the name)
     urls: list[str] = []
     # error codes for general client and server errors:
-    CLIENT_ERR_CODE, SERVER_ERR_CODE= 400, 500
+    CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
     def get(self, request: HttpRequest):
         """processes a get request"""
@@ -96,8 +96,9 @@ class RESTAPIView(View):
                 return cls.response_text(response_data)
             else:
                 return cls.response_json(response_data)
-        except ValidationError as cerr:
-            return error_response(cerr, cls.CLIENT_ERR_CODE)
+        except ValidationError as v_err:
+            # str(ValidationError) is a list[str] (why???), use `message`:
+            return error_response(v_err.message, cls.CLIENT_ERR_CODE)
         except Exception as err:
             msg = f'Server error ({err.__class__.__name__}): {str(err)}'
             return error_response(msg, cls.SERVER_ERR_CODE)

@@ -52,10 +52,10 @@ class FlatfileForm(EgsimBaseForm):
         # handle conflicts here for simplicity. eGSIM Views will catch
         # ValidationErrors and send a 4xx response
         if files is not None and 'flatfile' in self.data:
-            raise ValidationError('Please select an existing flatfile or '
-                                  'upload one, not both', code='conflict')
+            raise ValidationError('Please either select a flatfile, or '
+                                  'upload one', code='conflict')
         elif files is None and not 'flatfile' in self.data:
-            raise ValidationError('Please select an existing flatfile or upload '
+            raise ValidationError('Please select a flatfile or upload '
                                   'one', code='required')
 
     def clean(self):
