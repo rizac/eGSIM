@@ -244,8 +244,8 @@ class Test:
         data = {
             GSIM: 'BindiEtAl2011',
             IMT: ['PG[AV]'],  # ['SA(0.1)', 'PGA', 'PGV'],
-            'magnitude': 0.5,
-            'distance': '0.1',
+            'mag': 0.5,
+            'dist': '0.1',
             'dip': 60,
             'vs30': [60, '76'],
             'plot_type': 'm',
@@ -254,8 +254,8 @@ class Test:
         form = TrellisForm(data)
         assert form.is_valid()
         assert form.cleaned_data[GSIM] == ['BindiEtAl2011']  # testing 1)
-        assert form.cleaned_data['mag'] == 0.5  # testing 2a)
-        assert form.cleaned_data['dist'] == 0.1  # testing 2b)
+        assert form.cleaned_data['magnitude'] == 0.5  # testing 2a)
+        assert form.cleaned_data['distance'] == 0.1  # testing 2b)
         assert form.cleaned_data['vs30'] == [60, 76]  # testing 2c)
         assert sorted(form.cleaned_data['imt']) == ['PGA', 'PGV']  # testing 3)
 
@@ -263,12 +263,12 @@ class Test:
         """Tests trellis form invalid"""
         data = {GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                 IMT: ['SA', 'PGA', 'PGV'],
-                'magnitude': 'a'}
+                'mag': 'a'}
 
         form = TrellisForm(data)
         assert not form.is_valid()
         expected_json = {
-            'message': 'Invalid parameters: imt, plottype, magnitude, dist, aspect, dip',
+            'message': 'Invalid parameters: imt, plot, mag, distance, aspect, dip',
             'errors': [
                 {
                     'location': 'imt',
@@ -276,17 +276,17 @@ class Test:
                     'reason': ''
                 },
                 {
-                    'location': 'plottype',
+                    'location': 'plot',
                     'message': 'This field is required.',
                     'reason': 'required'
                 },
                 {
-                    'location': 'magnitude',
+                    'location': 'mag',
                     'message': "Unable to parse 'a'",
                     'reason': ''
                 },
                 {
-                    'location': 'dist',
+                    'location': 'distance',
                     'message': 'This field is required.',
                     'reason': 'required'
                 },

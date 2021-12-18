@@ -88,7 +88,7 @@ class TrellisForm(APIForm):
                                       min_count=2, max_count=2, min_value=[0, 0],
                                       max_value=[1, 1])
     # END OF RUPTURE PARAMS
-    vs30measured = BooleanField(label=mark_safe('Whether V<sub>S30</sub> is measured?'),
+    vs30measured = BooleanField(label=mark_safe('V<sub>S30</sub> is measured'),
                                 help_text='Otherwise is inferred',
                                 initial=True, required=False)
     line_azimuth = FloatField(label='Azimuth of Comparison Line',
