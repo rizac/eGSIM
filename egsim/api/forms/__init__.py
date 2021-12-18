@@ -90,13 +90,14 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         # call super:
         super(EgsimBaseForm, self).__init__(*args, **kwargs)
 
-        # setup `self.data`: its keys must be form field attribute names, but
-        # they might be provided in whatever key of `self.public_field_names`.
-        # Keep track of any change in `_input_field_name` so that validation err.
-        # messages are displayed relative to the original user input field name
+        # rename `self.data` keys from `self.public_field_names` keys to
+        # this form fields attribute names. Keep track of any change in
+        # `_input_field_name` (see `self.validation_errors`)
         self._input_field_name = {}
         param_conflicts = defaultdict(list)  # in case of conflicts (see below)
         for field_name in self.data.keys():
+            if field_name not in self.public_field_names:
+                continue
             field_att_name = self.public_field_names[field_name]
             param_conflicts[field_att_name].append(field_name)
             self._input_field_name[field_att_name] = field_name

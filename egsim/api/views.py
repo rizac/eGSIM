@@ -70,11 +70,6 @@ class RESTAPIView(View):
             if not issubclass(self.formclass, FlatfileForm):
                 return error_response("The given URL does not support "
                                       "uploaded files", self.CLIENT_ERR_CODE)
-            # the parameter is exposed to the user as "flatfile", but
-            # internally we use "uploaded_flatfile". Create a new object
-            # the same type of request.FILES with key renamed:
-            # files = MultiValueDict([('uploaded_flatfile',
-            #                          request.FILES.getlist('flatfile'))])
             return self.response(data=request.POST, files=request.FILES)
         else:
             stream = StringIO(request.body.decode('utf-8'))
