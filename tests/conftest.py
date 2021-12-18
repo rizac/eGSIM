@@ -242,8 +242,9 @@ def tostr(obj: Union[bool, None, str, date, datetime, int, float], none='null') 
     if obj is True or obj is False:
         return str(obj).lower()
     if isinstance(obj, (date, datetime)):
-        if isinstance(obj, date) or (obj.microsecond == obj.hour ==
-                                     obj.minute == obj.second == 0):
+        # note that datetimes are dates. Avoid isinstance, just simpler check:
+        is_date = not hasattr(obj, 'hour')  # or seconds, so on
+        if is_date or (obj.microsecond == obj.hour == obj.minute == obj.second == 0):
             return obj.strftime('%Y-%m-%d')
         if obj.microsecond == 0:
             return obj.strftime('%Y-%m-%dT%H:%M:%S')
