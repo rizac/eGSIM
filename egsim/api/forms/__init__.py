@@ -2,7 +2,7 @@
 
 import re
 from collections import defaultdict
-from typing import Union, Iterable, Any
+from typing import Union, Iterable, Any, Collection
 import json
 from itertools import chain, repeat
 from io import StringIO
@@ -81,42 +81,77 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     # here (see `egsim.forms.EgsimFormMeta` for details)
     public_field_names = {}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, data=None, files=None, unknown_fields_strict=True, **kwargs):
         """Override init: re-arrange `self.data` and set the initial value for
         missing fields
         """
         # remove colon in labels by default in templates:
         kwargs.setdefault('label_suffix', '')
         # call super:
-        super(EgsimBaseForm, self).__init__(*args, **kwargs)
+        super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
-        # rename `self.data` keys from `self.public_field_names` keys to
-        # this form fields attribute names. Keep track of any change in
-        # `_input_field_name` (see `self.validation_errors`)
-        self._input_field_name = {}
-        param_conflicts = defaultdict(list)  # in case of conflicts (see below)
-        for field_name in self.data.keys():
-            if field_name not in self.public_field_names:
-                continue
-            field_att_name = self.public_field_names[field_name]
-            param_conflicts[field_att_name].append(field_name)
-            self._input_field_name[field_att_name] = field_name
-        # check conflicts:
-        param_conflicts = [v for v in param_conflicts.values() if len(v) > 1]
-        if param_conflicts:
-            param_conflicts_str = ", ".join("/".join(_) for _ in param_conflicts)
-            raise ValidationError('Multiple parameter provided (name conflict): '
-                                  f'{param_conflicts_str}')
+        in_f_names = set(self.data)  # field names as input by the user
+        f_names = in_f_names & set(self.public_field_names)
+        self._input_field_name = {self.public_field_names[n]: n for n in f_names}
+
+        # check conflicts (parameters mapped to the same field):
+        if len(self._input_field_name) < len(f_names):  # conflicts
+            self._raise_conflicting_fieldnames(f_names)
+
+        # check unknown parameters (field names):
+        if unknown_fields_strict and (in_f_names - f_names):
+            self._raise_unknown_fieldnames(in_f_names - f_names)
+
         # Now rename self.data keys if needed:
-        for field_att_name, field_name in self._input_field_name.items():
-            if field_att_name != field_name:
-                self.data[field_att_name] = self.data.pop(field_name)
+        for att_name, name in self._input_field_name.items():
+            if att_name != name:
+                self.data[att_name] = self.data.pop(name)
+
+        # FIXME REMOVE
+        # # rename `self.data` keys from `self.public_field_names` keys to
+        # # this form fields attribute names. Keep track of any change in
+        # # `_input_field_name` (see `self.validation_errors`)
+        # self._input_field_name = {}
+        # param_conflicts = defaultdict(list)  # in case of conflicts (see below)
+        # for field_name in self.data.keys():
+        #     if field_name not in self.public_field_names:
+        #         continue
+        #     field_att_name = self.public_field_names[field_name]
+        #     param_conflicts[field_att_name].append(field_name)
+        #     self._input_field_name[field_att_name] = field_name
+        # # check conflicts:
+        # param_conflicts = [v for v in param_conflicts.values() if len(v) > 1]
+        # if param_conflicts:
+        #     param_conflicts_str = ", ".join("/".join(_) for _ in param_conflicts)
+        #     raise ValidationError('Multiple parameter provided (name conflict): '
+        #                           f'{param_conflicts_str}')
+        # # Now rename self.data keys if needed:
+        # for field_att_name, field_name in self._input_field_name.items():
+        #     if field_att_name != field_name:
+        #         self.data[field_att_name] = self.data.pop(field_name)
 
         # Make fields initial value the default (for details see discussion and
         # code example at https://stackoverflow.com/a/20309754):
         for name, field in self.fields.items():
             if name not in self.data and field.initial is not None:
                 self.data[name] = field.initial
+
+    @classmethod
+    def _raise_unknown_fieldnames(cls, names: Collection[str]):
+        raise ValidationError(f'Unknown parameter'
+                              f'{"s" if len(names) != 1 else ""}'
+                              f': {", ".join(names)}')
+
+    @classmethod
+    def _raise_conflicting_fieldnames(cls, names):
+        conflicts = defaultdict(list)  # in case of conflicts (see below)
+        for fnm in names:
+            conflicts[cls.public_field_names[fnm]].append(fnm)
+        param_conflicts_str = ", ".join("/".join(conflicts[c])
+                                        for c in conflicts
+                                        if len(conflicts[c]) > 1)
+        raise ValidationError('Multiple parameter provided (name conflict): '
+                              f'{param_conflicts_str}')
 
     def validation_errors(self, msg: str = None) -> dict:
         """Reformat `self.errors.as_json()` into the following dict:

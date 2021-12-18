@@ -8,6 +8,7 @@ Created on 2 Jun 2018
 import json
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
@@ -116,20 +117,30 @@ class Test:
         assert areequal(err, expected_err)
 
     def test_flatifle_form(self):
-        csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
-        form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
-        form.is_valid()
-        asd = 9
+        with pytest.raises(ValidationError) as verr:
+            csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
+            form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
+            form.is_valid()
+        assert verr.value.message == 'Please either select a flatfile, or upload one'
 
     def test_provide_unknown_params(self):
         """Test that unknown parameters are ignored"""
-        form = GsimImtForm({
-            'unknown_param': 5,
-            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
-        })
-        assert form.is_valid()
-        assert not form.validation_errors()
+        with pytest.raises(ValidationError) as verr:
+            form = GsimImtForm({
+                'unknown_param': 5,
+                GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
+            })
+        assert verr.value.message == 'Unknown parameter: unknown_param'
+
+        with pytest.raises(ValidationError) as verr:
+            form = GsimImtForm({
+                'gmm': ['BindiEtAl2011'],
+                GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
+            })
+        assert verr.value.message == 'Multiple parameter provided ' \
+                                     '(name conflict): gsim/gmm'
 
     @pytest.mark.parametrize('data',
                              [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],

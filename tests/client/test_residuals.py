@@ -68,7 +68,8 @@ class Test:
                                             sel='(vs30 > 1000) & (vs30 < 1010)'),
                                        baseurl=self.url))
         assert resp1.status_code == resp1.status_code == 400
-        assert 'selexpr/sel' in resp1.json()['error']['message']
+        assert 'selexpr/sel' in resp1.json()['error']['message'] or \
+               'sel/selexpr' in resp1.json()['error']['message']
 
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
