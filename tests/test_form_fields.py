@@ -55,7 +55,7 @@ from egsim.api.forms.fields import NArrayField, isscalar
      [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
     ("0.274:0.137:0.959,  5,  6.67", ValidationError),  # json invalid with ":"
     # this should work (quote):
-    ('"0.274:0.137:0.959", 5 ,  6.67',ValidationError),
+    ('"0.274:0.137:0.959", 5 ,  6.67', ValidationError),
     ("0.274:0.137:0.959, 5 6.67", ValidationError),
     ("", []),
     ("", []),
@@ -96,26 +96,23 @@ def test_narrayfield_to_python(input, expected):
             assert val2 == expected
 
 
-# @pytest.mark.django_db
-def test_narrayfield_get_decimals():
-    """tests ndarrayfield get_decimals"""
-    d_0 = NArrayField.get_decimals('1.3e45')
-    assert d_0 == 0
-    d_0 = NArrayField.get_decimals('1.3e1')
-    assert d_0 == 0
-    d_0 = NArrayField.get_decimals('1.3e0')
-    assert d_0 == 1
-    d_1 = NArrayField.get_decimals('1e-45')
-    assert d_1 == 45
-    d_2 = NArrayField.get_decimals('-5.005601')
-    assert d_2 == 6
-    d_2 = NArrayField.get_decimals('-5.0')
-    assert d_2 == 1
-    d_3 = NArrayField.get_decimals('-6')
-    assert d_3 == 0
-    d_4 = NArrayField.get_decimals('1.3E-6')
-    assert d_4 == 7
-    d_5 = NArrayField.get_decimals('1.3e45', '1.3E-6', '-6', '-5.005601',
-                                   '1e-45')
-    assert d_5 == 45
-
+@pytest.mark.parametrize("val,decimals", [
+    ('1.3e45', 0),
+    ('1.3e1', 0),
+    ('1.3e0', 1),
+    ('1e-45', 45),
+    ('10e-45', 45),  # <- same as above: digits before '.' or 'e/E' are ignored
+    ('10.1e-45', 46),
+    ('-5.005601', 6),
+    ('-5.0', 1),
+    ('-6', 0),
+    ('1.3E-6', 7),
+    ('abc', 0),  # <- this is 0 because 'abc' has no '.' or 'e/E'
+    ('1ef-45', None)  # <- this is None because int('f-45') fails
+])
+def test_narrayfield_get_decimals(val, decimals):
+    """tests ndarrayfield decimals"""
+    expected = None if decimals is None else decimals
+    # add 1, which has decimals = 0 and thus should not change the number
+    # of decimals required by val
+    assert NArrayField.max_decimals([val, '1']) == expected

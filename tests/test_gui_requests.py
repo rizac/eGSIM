@@ -11,9 +11,12 @@ import yaml
 import json
 import pytest
 
+from egsim.api.forms.model_to_data.residuals import ResidualsForm
+from egsim.api.forms.model_to_data.testing import TestingForm
 from egsim.api.forms.model_to_model.trellis import TrellisForm
 
-from egsim.gui.guiutils import to_help_dict, to_request_data
+from egsim.gui.guiutils import to_help_dict, to_request_data, to_vuejs, \
+    get_components_properties
 
 GSIM, IMT = 'gsim', 'imt'
 
@@ -170,8 +173,13 @@ class Test:
         yaml_dict_expected = yaml.safe_load(StringIO(yaml_str_expected))
         assert areequal(yaml_dict_expected, yaml_dict)
 
+
 @pytest.mark.django_db
-def test_get_widgetdata():
-    from egsim.gui.guiutils import get_widgetdata
-    d = [get_widgetdata(f) for f in TrellisForm.declared_fields.values()]
+def test_to_vuejs():
+    val = [to_vuejs(_) for _ in (TrellisForm, ResidualsForm, TestingForm)]
+    data = json.dumps(val)
+    asd = 9
+
+    data = get_components_properties(debugging=False)
+    json.dumps(data)
     asd = 9
