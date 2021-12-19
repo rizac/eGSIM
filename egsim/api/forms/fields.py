@@ -5,7 +5,7 @@ import re
 import json
 import shlex
 from itertools import chain, repeat
-from typing import Collection, Any
+from typing import Collection, Any, Union
 
 import numpy as np
 from openquake.hazardlib import imt
@@ -40,34 +40,27 @@ def isscalar(value):
 
 
 class ArrayField(CharField):
-    """Django CharField subclass which parses and validates string inputs given
-    as array of elements in JSON or Unix shell (space separated variables) syntax.
-    The type of the parsed elements depends on `self.parse(token)` which by
-    default returns `token` but might be overridden by subclasses (see
-    :class:`NArrayField`).
-    As Form fields act also as validators, an object of this class can deal
-    also with already parsed (e.g. via YAML) arrays
+    """Django CharField subclass which parses and validates arrays given as
+    string of text in JSON or Unix shell syntax (i.e., with space separated
+    variables). An object of this class also accepts arrays given in the native
+    Python type (e.g. `["a", 1]` instead of the string '["a", 1]')
     """
     def __init__(self, *, min_count=None, max_count=None,
                  min_value=None, max_value=None, **kwargs):
         """Initialize a new ArrayField
 
-         :param min_count: numeric or None. The minimum required count of the
-             elements of the parsed array. Note that `min_length` is already
-             defined in the super-class. If None (the default), parsed array
-             can have any minimum length >=0
-         :param max_count: numeric or None. The maximum required count of the
-             elements of the parsed array. Note that `max_length` is already
-             defined in the super-class. If None (the default), parsed array
-             can have any maximum length >=0
-         :param min_value: object. The minimum possible value for the
-             elements of the parsed array. If None (the default) do not impose
-             any minimum value. If iterable, sets the minimum required value
-             element-wise (padding with None or slicing in case of lengths
-             mismatch)
-         :param max_value: object. Self-explanatory. Behaves the same as
-             `min_value`
-         :param kwargs: keyword arguments forwarded to the Django super-class.
+         :param min_count: numeric or None. The minimum number of elements of
+            the parsed array. Raises ValueError if the array has less elements.
+            None means ignore/do not check
+         :param max_count: numeric or None. The maximum number of elements of
+            the parsed array. See `min_count` for details
+         :param min_value: object. The minimum value for the elements of the
+            parsed array. If iterable, sets the minimum required value
+            element-wise (padding with None or slicing in case of lengths
+            mismatch). None means ignore/do not check
+         :param max_value: object. The maximum value for the elements of the
+            parsed array. See `min_value` for details
+         :param kwargs: keyword arguments forwarded to the Django super-class
         """
         # Parameters after “*” or “*identifier” are keyword-only parameters
         # and may only be passed used keyword arguments.
@@ -81,7 +74,7 @@ class ArrayField(CharField):
         if value is None:
             return None
 
-        tokens = self._split(value) if isinstance(value, str) else value
+        tokens = self.split(value) if isinstance(value, str) else value
         is_vector = not isscalar(tokens)
 
         values = []
@@ -89,8 +82,7 @@ class ArrayField(CharField):
             if isscalar(val):
                 values.append(val)
             else:
-                # force the return value to be list:
-                is_vector = True
+                is_vector = True  # force the return value to be list
                 values.extend(val)
 
         # check lengths:
@@ -112,7 +104,7 @@ class ArrayField(CharField):
 
         return values[0] if (len(values) == 1 and not is_vector) else values
 
-    def _split(self, value: str):
+    def split(self, value: str):
         """Split the given value (str) into tokens according to json or shlex,
         in this order (json accepts arrays without brackets)
         """
@@ -138,7 +130,7 @@ class ArrayField(CharField):
                 raise ValidationError("%s: %s" % (str(val), str(exc)))
 
     @classmethod
-    def parse(cls, token:str) -> Any:
+    def parse(cls, token: str) -> Any:
         """Parse token and return either an object or an iterable of objects.
         This method can safely raise any exception, if not ValidationError
         it will be wrapped into a suitable ValidationError
@@ -173,10 +165,10 @@ class NArrayField(ArrayField):
         try:
             return float(val)
         except ValueError:
-            raise ValidationError("Not a number: '%s'" % val)
+            raise ValidationError(f"Not a number: {val}")
         except TypeError:
-            raise ValidationError(("input must be string(s) or number(s), "
-                                   "not '%s'") % str(val))
+            raise ValidationError(f"Expected string(s) or number(s), "
+                                  f"not {val.__class__}")
 
     @classmethod
     def parse(cls, token):
@@ -192,61 +184,77 @@ class NArrayField(ArrayField):
                 raise
 
         # token is a str with ':' in it. Let's try to parse it as matlab range:
-        spl = [_.strip() for _ in token.split(':')]
-        if len(spl) < 2 or len(spl) > 3:
+        tokens = [_.strip() for _ in token.split(':')]
+        if len(tokens) < 2 or len(tokens) > 3:
             raise ValidationError(f"Expected format '<start>:<end>' or "
                                   f"'<start>:<step>:<end>', found: {token}")
 
-        start = cls.float(spl[0])
-        step = 1 if len(spl) == 2 else cls.float(spl[1])
-        stop = cls.float(spl[-1])
-        arange = np.arange(start, stop, step, dtype=float)
+        start = cls.float(tokens[0])
+        step = 1 if len(tokens) == 2 else cls.float(tokens[1])
+        stop = cls.float(tokens[-1])
+        rng = np.arange(start, stop, step, dtype=float)
 
         # round numbers to max number of decimals input:
-        decimals = cls.get_decimals(*spl)
+        decimals = cls.max_decimals(tokens)
         if decimals is not None:
-            if round(arange[-1].item() + step, decimals) == \
-                    round(stop, decimals):
-                arange = np.append(arange, stop)
+            if round(rng[-1].item() + step, decimals) == round(stop, decimals):
+                rng = np.append(rng, stop)
 
-            arange = np.round(arange, decimals=decimals)
+            rng = np.round(rng, decimals=decimals)
+
             if decimals == 0:
-                arange = arange.astype(int)
+                rng = rng.astype(int)
 
-        return arange.tolist()
+        return rng.tolist()
 
     @classmethod
-    def get_decimals(cls, *strings):
-        """parse each string and returns the maximum number of decimals
-        :param strings: a sequence of strings. Note that they do not need to
-        be parsable as floats, this method searches for the dot and the
-        letter 'E' (ignoring case)
+    def max_decimals(cls, tokens: Collection[str]):
+        """Return the maximum number of decimal digits necessary and sufficient
+         to represent each token string without precision loss.
+         Return None if the number could not be inferred.
+
+        :param tokens: a sequence of strings representing numbers
         """
         decimals = 0
-        try:
-            for string in strings:
-                idx_dec = string.find('.')
-                idx_exp = string.lower().find('e')
-                if idx_dec > idx_exp > -1:
-                    raise ValueError()  # stop parsing
-                # decimal digits after the period and until 'e' or end of string:
-                dec1 = 0 if idx_dec < 0 else \
-                    len(string[idx_dec+1: None if idx_exp < 0 else idx_exp])
-                # decimal digits inferred from exponent:
-                dec2 = 0 if idx_exp < 0 else -int(string[idx_exp+1:])
-                # this string decimals are dec1 + dec2 (dec2 might be<0). Use
-                # this string decimals if they are the maximum of all decimals:
-                decimals = max([decimals, dec1 + dec2])
-            # return 0 as we do not care for big numbers (they are int anyway)
-            return decimals
-        except ValueError:
+        for token in tokens:
+            _decimals = cls.decimals(token)
+            if _decimals is None:
+                return None
+            decimals = max(decimals, _decimals)
+        # return 0 as we do not care for big numbers (they are int anyway)
+        return decimals
+
+    @classmethod
+    def decimals(cls, token: str) -> Union[int, None]:
+        """Return the number of decimal digits necessary and sufficient
+         to represent the token string without precision loss.
+         Return None if the number could not be inferred.
+
+        :param token: a string representing a number,  e.g. '1', '11.5', '0.8e-11'
+        """
+        idx_dot = token.rfind('.')
+        idx_exp = token.lower().find('e')
+        if idx_dot > idx_exp > -1:
             return None
+        # decimal digits inferred from exponent:
+        dec_exp = 0
+        if idx_exp > -1:
+            try:
+                dec_exp = -int(token[idx_exp+1:])
+            except ValueError:
+                return None
+            token = token[:idx_exp]
+        # decimal digits after the period and until 'e' or end of string:
+        dec_dot = 0
+        if idx_dot > -1:
+            dec_dot = len(token[idx_dot+1:])
+        return max(0, dec_dot + dec_exp)
 
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
     """Extension of Django MultipleChoiceField:
      - Accepts lists of strings or a single string
-    (which will be converted to a 1-element list)
+       (which will be converted to a 1-element list)
     - Accepts wildcard in strings in order to include all matching elements
     """
 

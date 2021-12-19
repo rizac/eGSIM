@@ -7,7 +7,7 @@ from io import StringIO
 
 from django.forms import (MultipleChoiceField, Field, CharField,
                           ChoiceField, BooleanField, FloatField, IntegerField,
-                          DecimalField)
+                          DecimalField, ModelChoiceField)
 from django.forms.widgets import ChoiceWidget, Input
 
 from egsim.api.forms.fields import MultipleChoiceWildcardField, NArrayField
@@ -35,7 +35,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             'src': URLS.HOME_PAGE
         },
         TABS.trellis.name: {
-            'form': to_vuejs(TABS.trellis.formclass(), ignore_choices),
+            'form': to_vuejs(TABS.trellis.formclass, ignore_choices),
             'url': TABS.trellis.urls[0],
             'urls': {
                 # the lists below must be made of elements of
@@ -107,7 +107,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         #     'url': URLS.GMDBPLOT_RESTAPI
         # },
         TABS.residuals.name: {
-            'form': to_vuejs(TABS.residuals.formclass(), ignore_choices),
+            'form': to_vuejs(TABS.residuals.formclass, ignore_choices),
             'url': TABS.residuals.urls[0],
             'urls': {
                 # download* below must be pairs of [key, url]. Each url
@@ -164,7 +164,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             }
         },
         TABS.testing.name: {
-            'form': to_vuejs(TABS.testing.formclass(), ignore_choices),
+            'form': to_vuejs(TABS.testing.formclass, ignore_choices),
             'url': TABS.testing.urls[0],
             'urls': {
                 # download* below must be pairs of [key, url]. Each url
@@ -225,22 +225,21 @@ def _configure_values_for_testing(components_props: dict[str, dict[str, Any]]):
     trellisformdict['distance']['val'] = "10 50 100"
     trellisformdict['aspect']['val'] = 1
     trellisformdict['dip']['val'] = 60
-    trellisformdict['plot_type']['val'] = 's'
+    trellisformdict['plot']['val'] = 's'
 
     residualsformdict = components_props['residuals']['form']
     residualsformdict['gsim']['val'] = gsimnames
-    residualsformdict['imt']['val'] = ['PGA', 'SA']
-    residualsformdict['sa_period']['val'] = "0.2 1.0 2.0"
+    residualsformdict['imt']['val'] = ['PGA', "SA(0.2)", "SA(1.0)", "SA(2.0)"]
+    # residualsformdict['sa_period']['val'] = "0.2 1.0 2.0"
     residualsformdict['selexpr']['val'] = "magnitude > 5"
-    residualsformdict['plot_type']['val'] = 'res'
+    residualsformdict['plot']['val'] = 'res'
 
     testingformdict = components_props['testing']['form']
     testingformdict['gsim']['val'] = gsimnames + ['AbrahamsonSilva2008']
-    testingformdict['imt']['val'] = ['PGA', 'PGV']
-    testingformdict['sa_period']['val'] = "0.2 1.0 2.0"
+    testingformdict['imt']['val'] = ['PGA', 'PGV', "0.2", "1.0","2.0"]
+    # testingformdict['sa_period']['val'] = "0.2 1.0 2.0"
 
-    components_props['testing']['form']['fit_measure']['val'] = ['res',
-                                                                 'lh',
+    components_props['testing']['form']['mof']['val'] = ['res', 'lh',
                                                                  # 'llh',
                                                                  # 'mllh',
                                                                  # 'edr'
@@ -369,24 +368,26 @@ def to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
             continue
         field_done.add(field_attname)
 
-        field = form[field_attname]
+        field = form.declared_fields[field_attname]
         ret = {
-            # 'name': field_name,
             'attrs': dict(get_html_element_attrs(field), name=field_name),
             'val': None,
             'err': '',
             'initial': field.initial,
-            'help': field.help_text.strip(),
-            'label': field.label.strip(),
+            'help': (field.help_text or "").strip(),
+            'label': (field.label or "").strip(),
             'is_hidden': False,
             'choices': []
         }
 
         if not ignore_choices(field_attname):
             choices = getattr(field, 'choices', [])
-            # if choices is not list (generator or other Django element)
-            # then expand it to list:
-            if not isinstance(choices, (list, tuple)):
+            if isinstance(field, ModelChoiceField):
+                # choices are ModeChoiceIteratorValue instances and are not
+                # JSON serializable. Let's take their `value` attribute:
+                choices = [(val.value, label) for (val, label) in choices]
+            elif not isinstance(choices, (list, tuple)):
+                # if generator or other Django element, then expand it to list:
                 choices = list(choices)
             ret['choices'] = choices
 
@@ -453,6 +454,9 @@ def to_help_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
     formdata = to_vuejs(form, skip)
     for f_name, data in formdata.items():
         a_name = form.public_field_names[f_name]
+        # remove unused keys for the help page:
+        for key in ('attrs', 'val', 'err'):
+            data.pop(key, None)
         data['name'] = f_name
         data['opt_names'] = [_ for _ in names_of[a_name] if _ != f_name]
         field = form.declared_fields[a_name]
