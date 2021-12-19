@@ -1,11 +1,11 @@
-from typing import Any, Iterable, Callable
+from typing import Any, Type, Callable, Union
 from collections import defaultdict
 import json
 import yaml
 import re
 from io import StringIO
 
-from django.forms import (MultipleChoiceField, Form, Field, CharField,
+from django.forms import (MultipleChoiceField, Field, CharField,
                           ChoiceField, BooleanField, FloatField, IntegerField,
                           DecimalField)
 from django.forms.widgets import ChoiceWidget, Input
@@ -24,6 +24,8 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         with default values so that the frontend FORMS will be ready to
         test click buttons
     """
+    def ignore_choices(field_att_name):
+        return field_att_name in ('gsim', 'imt')
 
     # properties to be passed to vuejs components.
     # If you change THE KEYS of the dict here you should change also the
@@ -33,7 +35,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             'src': URLS.HOME_PAGE
         },
         TABS.trellis.name: {
-            'form': to_vuejs_dict(TABS.trellis.formclass()),
+            'form': to_vuejs(TABS.trellis.formclass(), ignore_choices),
             'url': TABS.trellis.urls[0],
             'urls': {
                 # the lists below must be made of elements of
@@ -105,7 +107,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         #     'url': URLS.GMDBPLOT_RESTAPI
         # },
         TABS.residuals.name: {
-            'form': to_vuejs_dict(TABS.residuals.formclass()),
+            'form': to_vuejs(TABS.residuals.formclass(), ignore_choices),
             'url': TABS.residuals.urls[0],
             'urls': {
                 # download* below must be pairs of [key, url]. Each url
@@ -162,7 +164,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             }
         },
         TABS.testing.name: {
-            'form': to_vuejs_dict(TABS.testing.formclass()),
+            'form': to_vuejs(TABS.testing.formclass(), ignore_choices),
             'url': TABS.testing.urls[0],
             'urls': {
                 # download* below must be pairs of [key, url]. Each url
@@ -340,24 +342,19 @@ def _dump_yaml(data: dict, docs: dict = None) -> StringIO:
 #     return to_json_dict(form, ignore_choices=lambda _: _ in ('gsim', 'imt'))
 
 
-def to_vuejs(form: EgsimBaseForm, skip: Callable[[str], bool] = None,
+def to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
              ignore_choices: Callable[[str], bool] = None) -> dict:
     """Return a dictionary of field names mapped to their widget context.
      A widget context is in turn a dict with key and value pairs used to render
      the Field as HTML component.
 
-    :param: a Django Form or Form class
-    :param skip: callable accapting a string (field name) and returning True
-        or False. If False, the field will not be processed and returned
-
-    :param ignore_choices: callable accepting a string (field name) and returning
-        True or False. If False, the Field choices will not be loaded and the
-        returned dict 'choices' key will be `[]`. Useful for avoiding time
-        consuming long list loading
+    :param form: EgsimBaseForm class or object (class instance)
+    :param ignore_choices: callable accepting a string (field attribute name)
+        and returning True or False. If False, the Field choices will not be
+        loaded and the returned dict 'choices' key will be `[]`. Useful for
+        avoiding time consuming long list loading
     """
 
-    if skip is None:
-        skip = lambda _: False
     if ignore_choices is None:
         ignore_choices = lambda _: False
 
@@ -366,16 +363,16 @@ def to_vuejs(form: EgsimBaseForm, skip: Callable[[str], bool] = None,
         fieldattname2fieldname[field_attname].append(field_name)
 
     formdata = {}
-    for field_attname, field in form.declared_fields():
-        field = form[field_attname]
-        names = fieldattname2fieldname[field_attname]
-
-        if any(skip(_) for _ in names):
+    field_done = set()  # keep track of Field done using their attribute name
+    for field_name, field_attname in form.public_field_names.items():
+        if field_attname in field_done:
             continue
+        field_done.add(field_attname)
 
+        field = form[field_attname]
         ret = {
-            # 'name': names[0],
-            'attrs': dict(get_html_element_attrs(field), name=names[0]),
+            # 'name': field_name,
+            'attrs': dict(get_html_element_attrs(field), name=field_name),
             'val': None,
             'err': '',
             'initial': field.initial,
@@ -385,7 +382,7 @@ def to_vuejs(form: EgsimBaseForm, skip: Callable[[str], bool] = None,
             'choices': []
         }
 
-        if not ignore_choices(names[0]):
+        if not ignore_choices(field_attname):
             choices = getattr(field, 'choices', [])
             # if choices is not list (generator or other Django element)
             # then expand it to list:
@@ -393,7 +390,7 @@ def to_vuejs(form: EgsimBaseForm, skip: Callable[[str], bool] = None,
                 choices = list(choices)
             ret['choices'] = choices
 
-        formdata[names[0]] = ret
+        formdata[field_name] = ret
 
     return formdata
 
@@ -441,33 +438,30 @@ def get_html_element_attrs(field: Field) -> dict:
     return attrs
 
 
-def to_help_dict(form: EgsimBaseForm,
+def to_help_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
                  skip: Callable[[str], bool] = None) -> dict:
-    """Convert this form to a Python dict which can be injected in the HTML and
-    processed via JavaScript: each Field name is mapped to a dict of keys such
-    as 'val' (the value), 'help' (the help text), 'label' (the label text),
-    'err': (the error text), 'attrs' (a dict of HTML element attributes),
-    'choices' (the list of available choices, see argument
-    `ignore_callable_choices`).
+    """Convert this form to a Python dict of information to be displayed as
+    help/description. Each dict key is a field name, mapped to a sub-dict
+    with several field properties:
 
+    :param form: EgsimBaseForm class or object (class instance)
     :param skip: iterable of strings denoting the field names to be skipped
-    :param aliases: dict of field name aliases mapped to a form field name
     """
-
-    aliases = aliases or {}
-    optional_names = defaultdict(list)
-    for key, val in aliases.items():
-        optional_names[val].append(key)
+    names_of = defaultdict(list)
+    for f_name, a_name in form.public_field_names.items():
+        names_of[a_name].append(f_name)
     formdata = to_vuejs(form, skip)
-    for name, data in formdata.items():
-        data['opt_names'] = optional_names.get(name, [])
-        field = form.declared_fields[name]
-        data['typedesc'] = _type_description(field)
+    for f_name, data in formdata.items():
+        a_name = form.public_field_names[f_name]
+        data['name'] = f_name
+        data['opt_names'] = [_ for _ in names_of[a_name] if _ != f_name]
+        field = form.declared_fields[a_name]
+        data['typedesc'] = field_type_description(field)
         data['is_optional'] = not field.required or field.initial is not None
     return formdata
 
 
-def _type_description(field):
+def field_type_description(field: Field) -> str:
     """Return a human readable type description for the given field"""
     if isinstance(field, NArrayField):
         if field.min_count is not None and field.min_count > 1:
@@ -478,8 +472,21 @@ def _type_description(field):
         typedesc = 'String or string array'
     elif isinstance(field, MultipleChoiceField):
         typedesc = 'String array'
-    elif isinstance(field, (CharField, ChoiceField)):
+    elif isinstance(field, CharField):
         typedesc = 'String'
+    elif isinstance(field, ChoiceField):
+        typ = set(type(_[0] for _ in field.choices))
+        if len(typ) != 1:
+            raise ValueError(f'ChoiceField choices must be all of the same '
+                             f'Python type, found: {typ}')
+        if typ == str:
+            typedesc = 'String'
+        elif typ in (int, float):
+            typedesc = 'Numeric'
+        elif typ == bool:
+            typedesc = 'Boolean'
+        else:
+            raise ValueError(f'ChoiceField choices type ({typ}) not supported')
     elif isinstance(field, BooleanField):
         typedesc = 'Boolean'
     elif isinstance(field, (IntegerField, FloatField)):
@@ -493,8 +500,7 @@ def _type_description(field):
         elif minval is not None and maxval is not None:
             typedesc += ' in [%d, %d]' % (minval, maxval)
     else:
-        raise ValueError(f'Specify the Field data type in module {__name__} '
-                         f'(Field: {field})')
+        raise ValueError(f'No data type specified for Field {field}')
     return typedesc
 
 

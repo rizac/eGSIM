@@ -42,32 +42,8 @@ def test_querystring(querystring):
     assert patt == 'abc=1,a,1.1,%26invalid'
 
 
-# @pytest.mark.django_db
-def test_narrayfield_get_decimals():
-    """tests ndarrayfield get_decimals"""
-    d_0 = NArrayField.get_decimals('1.3e45')
-    assert d_0 == 0
-    d_0 = NArrayField.get_decimals('1.3e1')
-    assert d_0 == 0
-    d_0 = NArrayField.get_decimals('1.3e0')
-    assert d_0 == 1
-    d_1 = NArrayField.get_decimals('1e-45')
-    assert d_1 == 45
-    d_2 = NArrayField.get_decimals('-5.005601')
-    assert d_2 == 6
-    d_2 = NArrayField.get_decimals('-5.0')
-    assert d_2 == 1
-    d_3 = NArrayField.get_decimals('-6')
-    assert d_3 == 0
-    d_4 = NArrayField.get_decimals('1.3E-6')
-    assert d_4 == 7
-    d_5 = NArrayField.get_decimals('1.3e45', '1.3E-6', '-6', '-5.005601',
-                                   '1e-45')
-    assert d_5 == 45
-
-
 def test_relabel_sa():
-    '''tests _relabel_sa, which removes redundant trailing zeroes'''
+    """tests _relabel_sa, which removes redundant trailing zeroes"""
     inputs = ['SA(1)', 'SA(1.133)', 'SA(10000)',
               ' SA(1)', ' SA(1.133)', ' SA(10000)',
               'SA(1) ', 'SA(1.133) ', 'SA(10000) ',
