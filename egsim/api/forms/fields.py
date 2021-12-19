@@ -5,6 +5,7 @@ import re
 import json
 import shlex
 from itertools import chain, repeat
+from typing import Collection, Any
 
 import numpy as np
 from openquake.hazardlib import imt
@@ -40,8 +41,7 @@ def isscalar(value):
 
 class ArrayField(CharField):
     """Django CharField subclass which parses and validates string inputs given
-    as array of elements in JSON (comma separated variables, with optional
-    square brackets) or Unix shell (space separated variables) syntax.
+    as array of elements in JSON or Unix shell (space separated variables) syntax.
     The type of the parsed elements depends on `self.parse(token)` which by
     default returns `token` but might be overridden by subclasses (see
     :class:`NArrayField`).
@@ -51,14 +51,15 @@ class ArrayField(CharField):
     def __init__(self, *, min_count=None, max_count=None,
                  min_value=None, max_value=None, **kwargs):
         """Initialize a new ArrayField
+
          :param min_count: numeric or None. The minimum required count of the
              elements of the parsed array. Note that `min_length` is already
              defined in the super-class. If None (the default), parsed array
-             can have any minimum length >=0.
+             can have any minimum length >=0
          :param max_count: numeric or None. The maximum required count of the
              elements of the parsed array. Note that `max_length` is already
              defined in the super-class. If None (the default), parsed array
-             can have any maximum length >=0.
+             can have any maximum length >=0
          :param min_value: object. The minimum possible value for the
              elements of the parsed array. If None (the default) do not impose
              any minimum value. If iterable, sets the minimum required value
@@ -77,65 +78,67 @@ class ArrayField(CharField):
         self.max_value = max_value
 
     def to_python(self, value):
-        # three scenarios: iterable: take iterable
-        # non iterable: parse [value]
-        # string: split value into iterable
+        if value is None:
+            return None
+
+        tokens = self._split(value) if isinstance(value, str) else value
+        is_vector = not isscalar(tokens)
+
         values = []
-        is_vector = not isscalar(value)
+        for val in self.parse_tokens(tokens if is_vector else [tokens]):
+            if isscalar(val):
+                values.append(val)
+            else:
+                # force the return value to be list:
+                is_vector = True
+                values.extend(val)
 
-        if value is not None:
-            if not is_vector and isinstance(value, str):
-                value = value.strip()
-                is_vector = value[:1] == '['
-                if is_vector != (value[-1:] == ']'):
-                    raise ValidationError('unbalanced brackets')
-                try:
-                    value = json.loads(value if is_vector else "[%s]" % value)
-                except Exception:  # noqa
-                    try:
-                        value = shlex.split(value[1:-1].strip() if is_vector
-                                            else value)
-                    except Exception:
-                        raise ValidationError('Input syntax error')
+        # check lengths:
+        try:
+            self.checkrange(len(values), self.min_count, self.max_count)
+        except ValidationError as verr:
+            # just re-format exception string and raise:
+            # msg should be in the form '% not in ...', remove first '%s'
+            msg = verr.message[verr.message.find(' '):]
+            raise ValidationError('number of elements (%d) %s' %
+                                  (len(values), msg))
 
-            for val in vectorize(value):
-                try:
-                    vls = self.parse(val)
-                except ValidationError:
-                    raise
-                except Exception as exc:
-                    raise ValidationError("%s: %s" % (str(val), str(exc)))
-
-                if isscalar(vls):
-                    values.append(vls)
-                else:
-                    # force the return value to be list even if we have 1 elm:
-                    is_vector = True
-                    values.extend(vls)
-
-            # check lengths:
-            try:
-                self.checkrange(len(values), self.min_count, self.max_count)
-            except ValidationError as verr:
-                # just re-format exception string and raise:
-                # msg should be in the form '% not in ...', remove first '%s'
-                msg = verr.message[verr.message.find(' '):]
-                raise ValidationError('number of elements (%d) %s' %
-                                      (len(values), msg))
-
-            # check bounds:
-            minval, maxval = self.min_value, self.max_value
-            minval = [minval] * len(values) if isscalar(minval) else minval
-            maxval = [maxval] * len(values) if isscalar(maxval) else maxval
-            for numval, mnval, mxval in zip(values,
-                                            chain(minval, repeat(None)),
-                                            chain(maxval, repeat(None))):
-                self.checkrange(numval, mnval, mxval)
+        # check bounds:
+        minv, maxv = self.min_value, self.max_value
+        min_val = repeat(minv) if isscalar(minv) else chain(minv, repeat(None))
+        max_val = repeat(maxv) if isscalar(maxv) else chain(maxv, repeat(None))
+        for numval, minv, maxv in zip(values, min_val, max_val):
+            self.checkrange(numval, minv, maxv)
 
         return values[0] if (len(values) == 1 and not is_vector) else values
 
+    def _split(self, value: str):
+        """Split the given value (str) into tokens according to json or shlex,
+        in this order (json accepts arrays without brackets)
+        """
+        try:
+            return json.loads(value)
+        except Exception:  # noqa
+            try:
+                return shlex.split(value.strip())
+            except Exception:
+                raise ValidationError('Input syntax error')
+
     @classmethod
-    def parse(cls, token):
+    def parse_tokens(cls, tokens: Collection[str]) -> Any:
+        """Parse each token in `tokens` (calling self.parse(token) and yield the
+        parsed token, which can be ANY value (also lists/tuples)
+        """
+        for val in tokens:
+            try:
+                yield cls.parse(val)
+            except ValidationError:
+                raise
+            except Exception as exc:
+                raise ValidationError("%s: %s" % (str(val), str(exc)))
+
+    @classmethod
+    def parse(cls, token:str) -> Any:
         """Parse token and return either an object or an iterable of objects.
         This method can safely raise any exception, if not ValidationError
         it will be wrapped into a suitable ValidationError
@@ -185,22 +188,18 @@ class NArrayField(ArrayField):
             return cls.float(token)
         except ValidationError:
             # raise if the input was not string: we surely can not deal it:
-            if not isinstance(token, str):
+            if not isinstance(token, str) or (':' not in token):
                 raise
 
-        # Let's try the only option left, i.e. token is a range in matlab
-        # syntax, e.g.: "1:3" = [1,2,3],  "1:2:3" = [1,3]
+        # token is a str with ':' in it. Let's try to parse it as matlab range:
         spl = [_.strip() for _ in token.split(':')]
         if len(spl) < 2 or len(spl) > 3:
-            if ':' in token:
-                raise ValidationError("Expected format '<start>:<end>' or "
-                                      "'<start>:<step>:<end>', found: '%s'"
-                                      % token)
-            raise ValidationError("Unable to parse '%s'" % token)
+            raise ValidationError(f"Expected format '<start>:<end>' or "
+                                  f"'<start>:<step>:<end>', found: {token}")
 
-        start, step, stop = \
-            cls.float(spl[0]), 1 if len(spl) == 2 else \
-            cls.float(spl[1]), cls.float(spl[-1])
+        start = cls.float(spl[0])
+        step = 1 if len(spl) == 2 else cls.float(spl[1])
+        stop = cls.float(spl[-1])
         arange = np.arange(start, stop, step, dtype=float)
 
         # round numbers to max number of decimals input:
