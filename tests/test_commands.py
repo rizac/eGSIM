@@ -5,27 +5,14 @@ Created on 6 Apr 2019
 
 @author: riccardo
 """
-import os
 from json import JSONEncoder
-from os.path import join
-
-from stat import S_IWUSR, S_IWGRP, S_IWOTH
-import pandas as pd
-
 import pytest
+from unittest.mock import patch
 
-from egsim import models
-from egsim.core.residuals import PredefinedFlatfile
-from egsim.models import FlatfileField, GsimRegion, Gsim
+from egsim.api import models
+from egsim.api.flatfile import read_flatfile
 
-try:  # https://stackoverflow.com/questions/44441929
-    from unittest.mock import patch  # noqa (ok in py3.8)
-except ImportError:
-    from mock import patch  # noqa (ok in py3.7)
-
-from django.core.management.base import CommandError
 from django.core.management import call_command
-from egsim.management.commands._egsim_flatfiles import Command as FlatfileCommand
 from django.db import IntegrityError
 
 
@@ -37,9 +24,9 @@ def test_initdb(capfd, tmpdir):
     # the admin panel but not used elsewhere
 
     # load ESM flatfile to see it's there:
-    dfr = PredefinedFlatfile(join(FlatfileCommand.dest_dir(), 'esm2018.hdf'))._data
-    assert len(dfr.columns) == 83
-    assert len(dfr) == 23014
+    # dfr = read_flatfile(join(FlatfileCommand.dest_dir(), 'esm2018.hdf'))
+    # assert len(dfr.columns) == 83
+    # assert len(dfr) == 23014
 
     for _name in dir(models):
         _ = getattr(models, _name)
@@ -55,32 +42,32 @@ def test_initdb(capfd, tmpdir):
             print(str(inst))
 
     # Note: not specifying category means that the category is null
-    f = FlatfileField(name='rx_1', oq_name='ert').save()
+    f = models.FlatfileColumn(name='rx_1', oq_name='ert').save()
 
     with pytest.raises(Exception) as ierr:
-        FlatfileField(name='rx', oq_name='ert').save()  # name not unique
+        models.FlatfileColumn(name='rx', oq_name='ert').save()  # name not unique
     assert 'name' in str(ierr.value)
 
     with pytest.raises(Exception) as ierr:
         # oq_name + category not unique:
-        FlatfileField(name='bla', oq_name='rx',
-                      category=FlatfileField.CATEGORY.DISTANCE_MEASURE).save()
+        models.FlatfileColumn(name='bla', oq_name='rx',
+                      category=models.FlatfileColumn.CATEGORY.DISTANCE_MEASURE).save()
     assert 'oq_name' in str(ierr.value)
 
-    akkarbommer = Gsim.objects.filter(name__exact='AkkarBommer2010').first()
+    akkarbommer = models.Gsim.objects.filter(name__exact='AkkarBommer2010').first()
     geom = {'type': 'Polygon', 'coordinates': [[[]]]}
     with pytest.raises(IntegrityError) as ierr:
         # already exist:
-        GsimRegion(gsim=akkarbommer, geometry=geom,
+        models.GsimRegion(gsim=akkarbommer, geometry=geom,
                    regionalization='share').save()
     assert 'unique constraint' in str(ierr.value).lower()
 
     with pytest.raises(IntegrityError) as ierr:
         # ageom type false:
         geom['type'] = 'invalid'
-        GsimRegion(gsim=akkarbommer, geometry=geom,
+        models.GsimRegion(gsim=akkarbommer, geometry=geom,
                    regionalization='share2').save()
-    assert str(GsimRegion.GEOM_TYPES) in str(ierr.value)
+    assert str(models.GsimRegion.GEOM_TYPES) in str(ierr.value)
 
     # captured = capfd.readouterr()
     # assert not captured.err

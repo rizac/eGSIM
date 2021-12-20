@@ -1,4 +1,3 @@
-import re
 from typing import Union, Callable, Any
 
 import numpy as np
@@ -20,7 +19,7 @@ def read_flatfile(filepath_or_buffer: str,
                   usecols: Union[list[str], Callable[[str], bool]] = None,
                   dtype: dict[str, Union[str, list, tuple]] = None,
                   defaults: dict[str, Any] = None,
-                  **kwargs):
+                  **kwargs) -> pd.DataFrame:
     """
     Read a flat file into pandas DataFrame from a given CSV file
 

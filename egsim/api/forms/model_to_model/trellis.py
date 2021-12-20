@@ -165,7 +165,7 @@ class TrellisForm(APIForm):
         # check vs30-dependent values:
         for name, func in (['z1pt0', vs30_to_z1pt0_cy14],
                            ['z2pt5', vs30_to_z2pt5_cb14]):
-            if name not in cleaned_data or cleaned_data[name] == []:
+            if cleaned_data.get(name, None) in (None, []):
                 values = func(vs30s)  # numpy-function
                 cleaned_data[name] = \
                     float(values[0]) if vs30scalar else values.tolist()

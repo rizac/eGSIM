@@ -293,7 +293,7 @@ class Test:
                 },
                 {
                     'location': 'mag',
-                    'message': "Unable to parse 'a'",
+                    'message': "Not a number: a",
                     'reason': ''
                 },
                 {
