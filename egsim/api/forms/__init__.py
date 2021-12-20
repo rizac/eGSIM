@@ -90,6 +90,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         # call super:
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
+        # Set self._input_field_name (field attribute name -> input field name)
         in_f_names = set(self.data)  # field names as input by the user
         f_names = in_f_names & set(self.public_field_names)
         self._input_field_name = {self.public_field_names[n]: n for n in f_names}
@@ -106,29 +107,6 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         for att_name, name in self._input_field_name.items():
             if att_name != name:
                 self.data[att_name] = self.data.pop(name)
-
-        # FIXME REMOVE
-        # # rename `self.data` keys from `self.public_field_names` keys to
-        # # this form fields attribute names. Keep track of any change in
-        # # `_input_field_name` (see `self.validation_errors`)
-        # self._input_field_name = {}
-        # param_conflicts = defaultdict(list)  # in case of conflicts (see below)
-        # for field_name in self.data.keys():
-        #     if field_name not in self.public_field_names:
-        #         continue
-        #     field_att_name = self.public_field_names[field_name]
-        #     param_conflicts[field_att_name].append(field_name)
-        #     self._input_field_name[field_att_name] = field_name
-        # # check conflicts:
-        # param_conflicts = [v for v in param_conflicts.values() if len(v) > 1]
-        # if param_conflicts:
-        #     param_conflicts_str = ", ".join("/".join(_) for _ in param_conflicts)
-        #     raise ValidationError('Multiple parameter provided (name conflict): '
-        #                           f'{param_conflicts_str}')
-        # # Now rename self.data keys if needed:
-        # for field_att_name, field_name in self._input_field_name.items():
-        #     if field_att_name != field_name:
-        #         self.data[field_att_name] = self.data.pop(field_name)
 
         # Make fields initial value the default (for details see discussion and
         # code example at https://stackoverflow.com/a/20309754):

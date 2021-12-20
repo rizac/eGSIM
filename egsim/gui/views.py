@@ -143,12 +143,12 @@ def apidoc(request):
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
                        egsim_data=egsim_data,
                        baseurl=baseurl,
-                       gmt=get_flatfile_column_desc(),
+                       gmt=_get_flatfile_column_desc(),
                        )
                   )
 
 
-def get_flatfile_column_desc(as_html=True):
+def _get_flatfile_column_desc(as_html=True):
     ret = {}
     for ff_field in FlatfileColumn.objects.all():
         name = ff_field.name
