@@ -55,9 +55,7 @@ class ArrayField(CharField):
          :param max_count: numeric or None. The maximum number of elements of
             the parsed array. See `min_count` for details
          :param min_value: object. The minimum value for the elements of the
-            parsed array. If iterable, sets the minimum required value
-            element-wise (padding with None or slicing in case of lengths
-            mismatch). None means ignore/do not check
+            parsed array. None means ignore/do not check
          :param max_value: object. The maximum value for the elements of the
             parsed array. See `min_value` for details
          :param kwargs: keyword arguments forwarded to the Django super-class
@@ -96,11 +94,9 @@ class ArrayField(CharField):
                                   (len(values), msg))
 
         # check bounds:
-        minv, maxv = self.min_value, self.max_value
-        min_val = repeat(minv) if isscalar(minv) else chain(minv, repeat(None))
-        max_val = repeat(maxv) if isscalar(maxv) else chain(maxv, repeat(None))
-        for numval, minv, maxv in zip(values, min_val, max_val):
-            self.checkrange(numval, minv, maxv)
+        for val, min_v, max_v in zip(values, repeat(self.min_value),
+                                     repeat(self.max_value)):
+            self.checkrange(val, min_v, max_v)
 
         return values[0] if (len(values) == 1 and not is_vector) else values
 
@@ -158,18 +154,6 @@ class ArrayField(CharField):
 class NArrayField(ArrayField):
     """ArrayField for sequences of numbers"""
 
-    @staticmethod
-    def float(val):
-        """Wrapper around the built-in `float` function.
-        Raises ValidationError in case of errors"""
-        try:
-            return float(val)
-        except ValueError:
-            raise ValidationError(f"Not a number: {val}")
-        except TypeError:
-            raise ValidationError(f"Expected string(s) or number(s), "
-                                  f"not {val.__class__}")
-
     @classmethod
     def parse(cls, token):
         """Parse `token` into float.
@@ -207,6 +191,18 @@ class NArrayField(ArrayField):
 
         return rng.tolist()
 
+    @staticmethod
+    def float(val):
+        """Wrapper around the built-in `float` function.
+        Raises ValidationError in case of errors"""
+        try:
+            return float(val)
+        except ValueError:
+            raise ValidationError(f"Not a number: {val}")
+        except TypeError:
+            raise ValidationError(f"Expected string(s) or number(s), "
+                                  f"not {val.__class__}")
+
     @classmethod
     def max_decimals(cls, tokens: Collection[str]):
         """Return the maximum number of decimal digits necessary and sufficient
@@ -227,7 +223,7 @@ class NArrayField(ArrayField):
     @classmethod
     def decimals(cls, token: str) -> Union[int, None]:
         """Return the number of decimal digits necessary and sufficient
-         to represent the token string without precision loss.
+         to represent the token string as float without precision loss.
          Return None if the number could not be inferred.
 
         :param token: a string representing a number,  e.g. '1', '11.5', '0.8e-11'
@@ -309,8 +305,8 @@ class ImtField(MultipleChoiceWildcardField):
         """Coerce value to a valid IMT string"""
         value = super().to_python(value)  # assure is a list without regexp(s)
         for i, val in enumerate(value):
-            # normalize val (e.g.  '0.2' -> 'SA(0.2)'):
             try:
+                # normalize val (e.g.  '0.2' -> 'SA(0.2)'):
                 _ = imt.from_string(val.strip()).string
                 if val != _:
                     value[i] = _
