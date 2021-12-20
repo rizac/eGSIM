@@ -250,7 +250,7 @@ def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
     if ignore_choices is None:
         ignore_choices = lambda _: False
 
-    formdata = {}
+    form_data = {}
     field_done = set()  # keep track of Field done using their attribute name
     for field_name, field_attname in form.public_field_names.items():
         if field_attname in field_done:
@@ -261,6 +261,6 @@ def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
         field_dict['attrs'] = dict(field_to_htmlelement_attrs(field), name=field_name)
         field_dict['val'] = None,
         field_dict['err'] = ''
-        formdata[field_name] = field_dict
+        form_data[field_name] = field_dict
 
-    return formdata
+    return form_data
