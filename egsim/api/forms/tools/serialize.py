@@ -1,4 +1,6 @@
-from typing import Union, Type
+"""Form input data serialization into YAML or JSON"""
+
+from typing import Type
 import json
 import yaml
 
@@ -8,8 +10,7 @@ from . import get_docstring
 from .. import EgsimBaseForm
 
 
-def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='yaml') -> \
-        Union[StringIO, None]:
+def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> StringIO:
     """Serialize `data` into a YAML or JSON stream that can be saved to file
     in order to perform POST Requests from client code.
     NOTE: This method should b executed only if `form_class(data).is_valid()`
@@ -26,7 +27,6 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='yaml') -> \
                          "not in ('json', 'yam')" % syntax)
 
     docstrings = {}
-    stream = None
     field_names = {k: form_class.public_field_names[k] for k in data}
     fields = form_class.declared_fields
     for f_name, a_name in field_names.items():
@@ -44,11 +44,11 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='yaml') -> \
         if syntax == 'yaml':
             docstrings[f_name] = get_docstring(field.label, field.help_text, True)
 
-        if syntax == 'json':
-            stream = _dump_json(data)
-        else:
-            stream = _dump_yaml(data, docstrings)
-        stream.seek(0)
+    if syntax == 'json':
+        stream = _dump_json(data)
+    else:
+        stream = _dump_yaml(data, docstrings)
+    stream.seek(0)
 
     return stream
 

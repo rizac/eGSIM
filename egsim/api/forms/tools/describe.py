@@ -1,6 +1,5 @@
-"""Forms description functions for usage in e.g. tutorial or human readable
-templates
-"""
+"""Form field description: function returning form and fields properties
+describing the input to be converted to human readable text in tutorials"""
 
 from typing import Type, Union
 from collections import defaultdict
@@ -109,7 +108,7 @@ def get_field_dtype(field: Field) -> Type:
         # (isinstance(ChoiceField) should be sufficient, but let's be explicit)
         _types = set(type(_[0]) for _ in get_choices(field))
         if len(_types) != 1:
-            raise ValueError(f'ChoiceField choices must be all of the same '
+            raise ValueError(f'Field choices must be all of the same '
                              f'Python type, found: {_types}')
         field_dtype = next(iter(_types))
         if isinstance(field, (MultipleChoiceWildcardField,
@@ -120,7 +119,7 @@ def get_field_dtype(field: Field) -> Type:
         return bool
     elif isinstance(field, (IntegerField, FloatField)):
         # (isinstance(IntegerField) should be sufficient, but let's be explicit)
-        return int if isinstance(field, IntegerField) else float
+        return float if isinstance(field, FloatField) else int
     else:
         raise ValueError(f'No data type specified for Field {field}')
 
