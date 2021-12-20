@@ -1,5 +1,4 @@
-"""Form field description: function returning form and fields properties
-describing the input to be converted to human readable text in tutorials"""
+"""Forms description to be used in API tutorials"""
 
 from typing import Type, Union
 from collections import defaultdict
@@ -15,8 +14,8 @@ from . import field_to_dict, get_choices, get_docstring
 
 def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
     """Convert this form to to a JSON serializable dict of information to be
-    displayed as help/description. Each dict key is a field name, mapped to a
-    sub-dict with several field properties
+    displayed as parameter help in user requests. Each dict key is a field
+    name, mapped to a sub-dict with several field properties
 
     :param form: EgsimBaseForm class or object (class instance)
     """
@@ -24,7 +23,7 @@ def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
     for f_name, a_name in form.public_field_names.items():
         names_of[a_name].append(f_name)
 
-    formdata = {}
+    form_data = {}
     for a_name, field in form.declared_fields.items():
         field_dict = field_to_dict(field)
         f_name = names_of[a_name][0]
@@ -37,9 +36,9 @@ def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
         type_desc = get_field_dtype_description(field)
         field_dict['description'] = f'{desc}{". " if desc else ""}{type_desc}'
         field_dict['is_optional'] = not field.required or field.initial is not None
-        formdata[f_name] = field_dict
+        form_data[f_name] = field_dict
 
-    return formdata
+    return form_data
 
 
 def get_field_dtype_description(field: Field) -> str:
