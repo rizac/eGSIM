@@ -14,8 +14,8 @@ from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.conf import settings
 
-from . import figutils, guiutils, TABS
-from .guiutils import to_help_dict, to_request_data
+from . import figutils, vuejs, TABS
+from ..api.forms.tools import describe, serialize
 from ..api.models import Gsim, Imt, FlatfileColumn
 from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS
 
@@ -63,7 +63,7 @@ def main(request, selected_menu=None):
 
     gsims = {g.name: [[i.name for i in g.imtz], g.warning] for g in query_gims()}
 
-    components_props = guiutils.get_components_properties(settings.DEBUG)
+    components_props = vuejs.get_components_properties(settings.DEBUG)
 
     context = {
         **COMMON_PARAMS,
@@ -111,19 +111,19 @@ def apidoc(request):
         'trellis': {
             'title': TABS.trellis.title,
             'path': " or ".join(TABS.trellis.viewclass.urls),
-            'form': to_help_dict(TABS.trellis.formclass()),
+            'form': describe.as_dict(TABS.trellis.formclass()),
             'key': TABS.trellis.name
         },
         'residuals': {
             'title': TABS.residuals.title,
             'path': " or ".join(TABS.residuals.viewclass.urls),
-            'form': to_help_dict(TABS.residuals.formclass()),
+            'form': describe.as_dict(TABS.residuals.formclass()),
             'key': TABS.residuals.name
         },
         'testing': {
             'title': TABS.testing.title,
             'path': " or ".join(TABS.testing.viewclass.urls),
-            'form': to_help_dict(TABS.testing.formclass()),
+            'form': describe.as_dict(TABS.testing.formclass()),
             'key': TABS.testing.name
         },
         # 'FORMAT': {
@@ -181,15 +181,15 @@ def download_request(request, tab_name, filename):
     :param tab_name: a :class:`TAB` name associated to a REST API TAB (i.e.,
         with an associated Form class)
     """
-    formclass = TABS[tab_name].formclass
-    inputdict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
-    dataform = formclass(data=inputdict)  # pylint: disable=not-callable
-    if not dataform.is_valid():
-        verr = dataform.validation_errors()
-        return error_response(verr['message'], verr['code'],
-                              errors=verr['errors'])
+    form_class = TABS[tab_name].formclass
+    input_dict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
+    form = form_class(data=input_dict)  # pylint: disable=not-callable
+    if not form.is_valid():
+        errs = form.validation_errors()
+        return error_response(errs['message'], errs['code'],
+                              errors=errs['errors'])
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
-    buffer = to_request_data(dataform, syntax=ext_nodot)
+    buffer = serialize.as_text(input_dict, form_class, syntax=ext_nodot)
     if ext_nodot == 'json':
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,
