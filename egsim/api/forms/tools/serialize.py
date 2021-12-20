@@ -1,4 +1,4 @@
-"""Form input data serialization into YAML or JSON"""
+"""Forms input data serialization into YAML or JSON"""
 
 from typing import Type
 import json
