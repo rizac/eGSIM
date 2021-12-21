@@ -7,8 +7,8 @@ from django.forms.widgets import ChoiceWidget, Input
 
 
 def get_docstring(field_label: str, field_help_text: str, remove_html_tags=False):
-    """Return a docstring from the given Form field by parsing its attributes
-    `label` and `help_text`. The returned string will have no newlines
+    """Return a docstring from the given Form field `label` and `help_text`
+    attributes. The returned string will have newlines replaced by spaces
     """
     label = (field_label or '') + \
             ('' if not field_help_text else f' ({field_help_text})')
@@ -75,7 +75,7 @@ def field_to_htmlelement_attrs(field: Field) -> dict:
     :param field: a Django Field
     """
     # Note: we could return the dict `field.widget.get_context` but we build our
-    # own for several reaaons, e.g.:
+    # own for several reasons, e.g.:
     # 1. Avoid loading all <option>s for Gsim and Imt (we could subclass
     #    `optgroups` in `widgets.SelectMultiple` and return [], but it's clumsy)
     # 2. Remove some attributes (e.g. checkbox with the 'checked' attribute are

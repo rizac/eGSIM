@@ -83,17 +83,15 @@ def test_narrayfield_to_python(input, expected):
             min_ = val if isscalar(val) else min(val)
             max_ = val if isscalar(val) else max(val)
             with pytest.raises(ValidationError):  # @UndefinedVariable
-                NArrayField(min_value=min_+1).to_python(val)
+                NArrayField(min_value=min_+.1, max_value=max_-.1).to_python(val)
             with pytest.raises(ValidationError):  # @UndefinedVariable
-                NArrayField(max_value=max_-1).to_python(val)
+                NArrayField(min_value=min_+.1).to_python(val)
+            with pytest.raises(ValidationError):  # @UndefinedVariable
+                NArrayField(max_value=max_-.1).to_python(val)
             with pytest.raises(ValidationError):  # @UndefinedVariable
                 NArrayField(min_count=len_+1).to_python(val)
             with pytest.raises(ValidationError):  # @UndefinedVariable
                 NArrayField(max_count=len_-1).to_python(val)
-            # test ok case by providing boundary conditions as arrays (val):
-            val2 = NArrayField(max_count=len_+1, min_count=len_-1,
-                               min_value=val, max_value=val).to_python(val)
-            assert val2 == expected
 
 
 @pytest.mark.parametrize("val,decimals", [
