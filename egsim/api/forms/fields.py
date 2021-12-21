@@ -86,12 +86,9 @@ class ArrayField(CharField):
         # check lengths:
         try:
             self.checkrange(len(values), self.min_count, self.max_count)
-        except ValidationError as verr:
-            # just re-format exception string and raise:
-            # msg should be in the form '% not in ...', remove first '%s'
-            msg = verr.message[verr.message.find(' '):]
-            raise ValidationError('number of elements (%d) %s' %
-                                  (len(values), msg))
+        except ValidationError as v_err:
+            # verr message starts with len(values), reformat it:
+            raise ValidationError(f'number of elements {v_err.message}')
 
         # check bounds:
         for val, min_v, max_v in zip(values, repeat(self.min_value),
@@ -143,12 +140,18 @@ class ArrayField(CharField):
         toolow = (minval is not None and value < minval)
         toohigh = (maxval is not None and value > maxval)
         if toolow and toohigh:
-            raise ValidationError('%s not in [%s, %s]' %
-                                  (str(value), str(minval), str(maxval)))
+            raise ValidationError(f'{value} not in [{minval}, {maxval}]')
         if toolow:
-            raise ValidationError('%s < %s' % (str(value), str(minval)))
+            raise ValidationError(f'{value} < {minval}')
         if toohigh:
-            raise ValidationError('%s > %s' % (str(value), str(maxval)))
+            raise ValidationError(f'{value} > {maxval}')
+        # if toolow and toohigh:
+        #     raise ValidationError('%s not in [%s, %s]' %
+        #                           (str(value), str(minval), str(maxval)))
+        # if toolow:
+        #     raise ValidationError('%s < %s' % (str(value), str(minval)))
+        # if toohigh:
+        #     raise ValidationError('%s > %s' % (str(value), str(maxval)))
 
 
 class NArrayField(ArrayField):
