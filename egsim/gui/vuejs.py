@@ -191,7 +191,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                 ]
             }
         },
-        TABS.doc.name: {
+        TABS.apidoc.name: {
             'src': URLS.DOC_PAGE
         }
     }
@@ -213,25 +213,21 @@ def _configure_values_for_testing(components_props: dict[str, dict[str, Any]]):
     trellisformdict['distance']['val'] = "10 50 100"
     trellisformdict['aspect']['val'] = 1
     trellisformdict['dip']['val'] = 60
-    trellisformdict['plot']['val'] = 's'
+    trellisformdict['plot_type']['val'] = 's'
 
     residualsformdict = components_props['residuals']['form']
     residualsformdict['gsim']['val'] = gsimnames
     residualsformdict['imt']['val'] = ['PGA', "SA(0.2)", "SA(1.0)", "SA(2.0)"]
     # residualsformdict['sa_period']['val'] = "0.2 1.0 2.0"
     residualsformdict['selexpr']['val'] = "magnitude > 5"
-    residualsformdict['plot']['val'] = 'res'
+    residualsformdict['plot_type']['val'] = 'res'
 
     testingformdict = components_props['testing']['form']
     testingformdict['gsim']['val'] = gsimnames + ['AbrahamsonSilva2008']
-    testingformdict['imt']['val'] = ['PGA', 'PGV', "0.2", "1.0","2.0"]
+    testingformdict['imt']['val'] = ['PGA', 'PGV', "0.2", "1.0", "2.0"]
     # testingformdict['sa_period']['val'] = "0.2 1.0 2.0"
 
-    components_props['testing']['form']['mof']['val'] = ['res', 'lh',
-                                                                 # 'llh',
-                                                                 # 'mllh',
-                                                                 # 'edr'
-                                                                 ]
+    components_props['testing']['form']['fit_measure']['val'] = ['res', 'lh']
 
 
 def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
@@ -261,6 +257,6 @@ def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
         field_dict['attrs'] = dict(field_to_htmlelement_attrs(field), name=field_name)
         field_dict['val'] = None,
         field_dict['err'] = ''
-        form_data[field_name] = field_dict
+        form_data[field_attname] = field_dict
 
     return form_data

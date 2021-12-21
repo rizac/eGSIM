@@ -13,6 +13,7 @@ from django.db.models import Prefetch, QuerySet
 from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.conf import settings
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import figutils, vuejs, TABS
 from ..api.forms.tools import describe, serialize
@@ -78,11 +79,12 @@ def main(request, selected_menu=None):
     return render(request, 'egsim.html', context)
 
 
+@xframe_options_sameorigin
 def home(request):
     """view for the home page (iframe in browser)"""
     egsim_data = {
         _.name: {'title': _.title, 'icon': _.icon} for _ in TABS
-        if TABS not in (TABS.doc,)
+        if _ not in (TABS.apidoc,)
     }
     return render(request, 'home.html', dict(COMMON_PARAMS,
                                              debug=settings.DEBUG,
@@ -91,7 +93,7 @@ def home(request):
                                                        'last updated: '
                                                        'January 2022')))
 
-
+@xframe_options_sameorigin
 def apidoc(request):
     """view for the home page (iframe in browser)"""
     filename = 'apidoc.html'
@@ -167,6 +169,7 @@ def _get_flatfile_column_desc(as_html=True):
     return ret
 
 
+@xframe_options_sameorigin
 def imprint(request):
     return render(request, 'imprint.html', {
         'data_protection_url': COMMON_PARAMS['data_protection_url']

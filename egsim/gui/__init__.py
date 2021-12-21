@@ -48,7 +48,7 @@ class TABS(Enum):
     trellis = 'Model-to-Model Comparison', 'fa-area-chart', TrellisView
     residuals = 'Model-to-Data Comparison', 'fa-bar-chart', ResidualsView
     testing = 'Model-to-Data Testing', 'fa-list', TestingView
-    doc = 'API Doc / Legal Info', 'fa-info-circle'
+    apidoc = 'API Doc / Legal Info', 'fa-info-circle'
 
     # GMDBPLOT = 'gmbdplot', 'Ground Motion Database', 'fa-database'
     # GSIMS = 'Model Selection', 'fa-map-marker'

@@ -78,21 +78,17 @@ Vue.use({
         	// Vue.eGSIM Object via the data passed from the server via Django (see egsim.html)
 	        var gsims = data;
 	        // data is an Array of Arrays: each Array element represents a GSIM:
-	        // [gsimName, [imtName1, ... imtNameN], TrtName, gsimOpenQuakeWarning] 
+	        // [gsimName, [imtName1, ... imtNameN], gsimOpenQuakeWarning]
 	        var gsimNames = Object.keys(gsims).sort();
 	        var imtNames = new Set();
-	        var trtNames = new Set();
 	        gsimNames.forEach(gsimName => {
 	        	gsims[gsimName][0].forEach(imt => imtNames.add(imt));
-	        	trtNames.add(gsims[gsimName][1]);
 	        });
 	        // create the globally available Vue.eGSIM variable:
 	        Vue.eGSIM = {
 	        	gsims: gsimNames,
 	            imts: Array.from(imtNames),
-	            trts: Array.from(trtNames),
 	        	imtsOf: function(gsim){ return gsims[gsim][0]; },
-				trtOf: function(gsim){ return gsims[gsim][1]; },
 				warningOf: function(gsim){ return gsims[gsim][2]; }
 	        }
 	    };
@@ -125,7 +121,8 @@ Vue.use({
 	                for (var key of Object.keys(data)){
 	                	data[key].err = '';  // initialize error
 	    	            if (!data[key].is_hidden){
-		                    jsonData[key] = data[key].val;  // assign value to object up to be sent
+    	    	            jsonData[data[key].attrs.name] = data[key].val;  // assign value to object up to be sent
+//		                    jsonData[key] = data[key].val;  // assign value to object up to be sent
 	    	            }
 	                }
 	            }

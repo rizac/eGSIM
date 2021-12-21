@@ -27,8 +27,8 @@ Vue.component('imtselect', {
             gsimField: this.form.gsim,
             // define the Set of the selectable IMTs (see watchers below):
             selectableImts: new Set(),
-            // Vue.eGSIM is created in vueutil.js: it's an Object storing gsims, imts, trts,
-            // and their relations via custom methods (e.g., imtsOf(gsim), trtOf(gsim), warningOf(gsim)...)
+            // Vue.eGSIM is created in vueutil.js: it's an Object storing gsims, imts,
+            // and their relations via custom methods (e.g., imtsOf(gsim), warningOf(gsim)...)
             // make it available here as `this.gsimManager`:
             gsimManager: Vue.eGSIM
         }
@@ -77,6 +77,7 @@ Vue.component('imtselect', {
               </option>
           </select>
         </div>
+        <input type=text v-model=
         <forminputlite :form="form" :name='saPeriodName' class='mt-1'></forminputlite>
     </div>`,
     methods: {
