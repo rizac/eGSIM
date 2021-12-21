@@ -71,7 +71,7 @@ def main(request, selected_menu=None):
         'sel_component': sel_component,
         'components': components_tabs,
         'component_props': json.dumps(components_props),
-        'gsims': gsims,
+        'gsims': json.dumps(gsims),
         'allowed_browsers': allowed_browsers,
         'invalid_browser_message': invalid_browser_message
     }
