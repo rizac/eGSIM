@@ -16,7 +16,7 @@ Vue.component('trellis', {
         	predefinedSA: false,  // whether we have selected spectra as plot type
         	responseData: {},
         	formHidden: false,
-            scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='sa_period' && key!='plot_type' && key!='stdev')
+            scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='plot_type' && key!='stdev')
         }
     },
     computed: {

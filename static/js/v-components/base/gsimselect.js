@@ -27,10 +27,10 @@ Vue.component('gsimselect', {
         	elm: elm,
             filterValue: '',
             filterType: 'GSIM name',
-            filterTypes: ['GSIM name', 'IMT', 'Tectonic Region Type'],
+            filterTypes: ['GSIM name', 'IMT'],  // , 'Geographic location (click on map)'],
             filterFunc: elm => true,
-            // Vue.eGSIM is created in vueutil.js: it's an Object storing gsims, imts, trts,
-            // and their relations via custom methods (e.g., imtsOf(gsim), trtOf(gsim), warningOf(gsim)...)
+            // Vue.eGSIM is created in vueutil.js: it's an Object storing gsims, imts,
+            // and their relations via custom methods (e.g., imtsOf(gsim), warningOf(gsim)...)
             // make it available here as `this.gsimManager`:
             gsimManager: Vue.eGSIM,
             selectableGsims: new Set(),  // updated in wathcer below
@@ -154,9 +154,7 @@ Vue.component('gsimselect', {
           <select v-else-if="filterType === filterTypes[1]" v-model="filterValue" multiple size='3' class="form-control form-control-sm flexible" style='flex-basis:0;'>
           	  <option v-for='imt in gsimManager.imts' :value="imt">{{ imt }}</option>
           </select>
-          <select v-else-if="filterType === filterTypes[2]" v-model="filterValue" multiple size='3' class="form-control form-control-sm flexible" style='flex-basis:0;'>
-          	  <option v-for='trt in gsimManager.trts' :value="trt">{{ trt }}</option>
-          </select>
+          <!-- here was the tectoinic region type -->
       </div>
       
       <div v-if='selectbutton.html' class='text-center mt-2'>
@@ -180,9 +178,6 @@ Vue.component('gsimselect', {
             }else if (this.filterType == this.filterTypes[1] && filterValue.length){
             	filterValue = new Set(filterValue);
                 var filterFunc = gsimName => gsimManager.imtsOf(gsimName).some(imt => filterValue.has(imt));
-            }else if (this.filterType == this.filterTypes[2] && filterValue.length){
-            	filterValue = new Set(filterValue);
-            	var filterFunc = gsimName => filterValue.has(gsimManager.trtOf(gsimName));
             }
             this.filterFunc = filterFunc;
         },
