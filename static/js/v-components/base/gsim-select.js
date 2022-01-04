@@ -7,7 +7,7 @@ Vue.component('gsim-select', {
         field: {type: Object}, // see field-input
         imtField: {type: Object, default: null}, // field of IMTs (can be null)
         regionalizations: {type: Array, default: []},
-        urlGeoLocationQuery: {type: String}
+        regionalizationQueryURL: {type: String}
     },
     data: function () {
     	return {
@@ -51,14 +51,14 @@ Vue.component('gsim-select', {
         filterBy: function(value, oldValue){
             deep: true,
         	handler: function(newVal, oldVal){
-        		this.updateFilter();
+        		this.filterUpdated();
         	}
         }
         // listen for changes in the selected imts:
         'imtField.value': {  // even if it should not happen: if we change the imt param name, change it also here ...
         	immediate: true,
         	handler: function(newVal, oldVal){
-        	    this.updateFilter();
+        	    this.filterUpdated();
 //        		var selectableGsims = this.field.choices;
 //	            var selectedimts = newVal;
 //	            if (selectedimts.length){
@@ -70,7 +70,7 @@ Vue.component('gsim-select', {
 //	            this.selectableGsims = new Set(selectableGsims);
         	}
         },
-        // listen for changes in gsim selection FIXME: why this???
+        // listen for changes in gsim selection FIXME: REMOVE?? why this???
         'field.val': {
         	immediate: true,
         	handler: function(newVal, oldVal){
@@ -105,7 +105,7 @@ Vue.component('gsim-select', {
         	// return this.field.value.reduce((accumulator, gsim) => accumulator + !this.visibleGsimsSet.has(gsim), 0);
         }
     },
-    template: `<div class='d-flex flex-column'>
+    template: `<div>
         <field-input :field="field"></field-input>
 
 
@@ -194,26 +194,26 @@ Vue.component('gsim-select', {
             this.filterBy.geolocation = [event.latlng.lat, event.latlng.lng];
             // Add marker
             this.mapMarker = L.marker(this.filterBy.geolocation).addTo(this.map);
-
-            // this.form.gsim.val = []; // force server to take all gsims by default
-            // this.form.imt.val = []; // force server to take all gsims by default
-            var overlays = this.overlays;
-            // perform query only on visible layers selected. Get visible layers:
-            this.form.trt.val = Object.keys(overlays).filter(layerName => {
-               return overlays[layerName]._map ? true : false;
-            });
-            // make imt and gsim hidden, this will NOT send the parameter to the
-            // client (=> do not filter by IMTs)
-            this.form.imt.is_hidden = true;
-            this.form.gsim.is_hidden = true;
-            // send request:
-            Vue.post(this.urlGeoLocationQuery, this.regionalizations).then(response => {  // defined in `vueutil.js`
-                if(response.data && response.data.length){
-                    this.updateFilter(response.data);
-                }
-            });
+            this.filterUpdated();
+//            // this.form.gsim.val = []; // force server to take all gsims by default
+//            // this.form.imt.val = []; // force server to take all gsims by default
+//            var overlays = this.overlays;
+//            // perform query only on visible layers selected. Get visible layers:
+//            this.form.trt.val = Object.keys(overlays).filter(layerName => {
+//               return overlays[layerName]._map ? true : false;
+//            });
+//            // make imt and gsim hidden, this will NOT send the parameter to the
+//            // client (=> do not filter by IMTs)
+//            this.form.imt.is_hidden = true;
+//            this.form.gsim.is_hidden = true;
+//            // send request:
+//            Vue.post(this.regionalizationQueryURL, this.regionalizations).then(response => {  // defined in `vueutil.js`
+//                if(response.data && response.data.length){
+//                    this.filterUpdated(response.data);
+//                }
+//            });
         },
-        updateFilter(){
+        filterUpdated(){
             var defFilterFunc = elm => true;
             var filterFuncs = [];
             if (this.filterBy.name){
@@ -222,31 +222,38 @@ Vue.component('gsim-select', {
                 filterFuncs.push(gsim => gsim.value.search(regexp) > -1);
             }
             if (this.filterBy.imt && this.imtField.value && this.imtField.value.length){
-                var imts = new Set(this.imtField.value);
-                filterFuncs.push(gsim => gsim.imts.some(imt => imts.has(imt)));
+                var imtClassNames = new Set(this.imtField.value.map(elm => elm.startsWith('SA(') ? 'SA' : elm));
+                filterFuncs.push(gsim => gsim.imts.some(imt => imtClassNames.has(imt)));
             }
             if (this.filterBy.geolocation){
-                Vue.post(this.urlGeoLocationQuery, this.form).then(response => {  // defined in `vueutil.js`
+                Vue.post(this.regionalizationQueryURL, this.regionalizations).then(response => {  // defined in `vueutil.js`
                     if(response.data && response.data.length){
                         var regionGsims = new Set(response.data);
                         filterFuncs.push(elm =>regionGsims.has(elm));
-                        this._updateFilter(filterFuncss);
+                        this.field.choices = this.filterChoices(filterFuncs);
                     }
                 });
             }else if (filterFuncs.length){
-                this._updateFilter(filterFuncs);
+                this.field.choices = this.filterChoices(filterFuncs);
+            }else{
+                this.field.choices = this.choices;
             }
         },
-        _updateFilter(filterFuncs){  // filters => callable, Set, Array
+        filterChoices(filterFuncs){  // filters => callable, Set, Array
             var okGsim = new Array();
             var noGsim = new Array();
 
             for (var gsim of this.choices){
+                // Provide strikethrough for filtered out <option>s but note that
+                // styling does not work in Safari. As such , set also those options
+                // disabled for cross browser compatibility:
                 if (filterFuncs.every(filterFunc => filterFunc(gsim.value))){
                     gsim.disabled = false;
+                    gsim.style = '';
                     okGsims.push(gsim);
                 }else{
                     gsim.disabled = true;
+                    gsim.style = 'text-decoration: line-through;';
                     noGsim.push(gsim);
                 }
             }
@@ -271,4 +278,107 @@ Vue.component('gsim-select', {
     deactivated: function(){
         // no-op
     }
-});
+})
+
+
+/**
+ * HTML component representing the form element of IMTs and SA periods
+ */
+Vue.component('imt-select', {
+    //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
+    props: {
+    	field: {type: Object},
+    	// (optional) name of the SA periods input component. form[saPeriodName] must be an Object
+        // of the same type of 'elm' described above:
+        // saPeriodName: {type: String, default: 'sa_period'},
+    },
+    data: function () {
+    	return {
+    	    selectedIMTClassnames = [],  // copy choices
+    	    selectedSAPeriods = ''
+//        	// define the Object whose data is associated to this component:
+//            elm: this.form[this.name],
+//            // define the Object whose data is associated to the selected gsims:
+//            gsimField: this.form.gsim,
+//            // define the Set of the selectable IMTs (see watchers below):
+//            selectableImts: new Set(),
+//            // Vue.eGSIM is created in vueutil.js: it's an Object storing gsims, imts,
+//            // and their relations via custom methods (e.g., imtsOf(gsim), warningOf(gsim)...)
+//            // make it available here as `this.gsimManager`:
+//            gsimManager: Vue.eGSIM
+        }
+    },
+    created: function(){
+    	// no-op
+    },
+    watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
+        'selectedIMTClassNames': function(newVal, oldVal){
+            this.updateSelectedImts();
+        },
+        'selectedSAPeriods': function(newVal, oldVal){
+            this.updateSelectedImts();
+        }
+//    	'gsimField.val': function(newVal, oldVal){
+//    		// watch for changes in selected gsims
+//    		this.computeSelectableImts();
+//    	},
+//    	'elm.attrs.disabled': function(newVal, oldVal){
+//    		// watch for changes in disabled state of the imt
+//    		this.updateSaPeriodsEnabledState();
+//    	},
+//    	'elm.val': {
+//    		// watch for changes in selected imts. Immediate=true: call handler immediately
+//    		immediate: true,
+//    		handler: function(newVal, oldVal){
+//    			this.computeSelectableImts();
+//    		}
+//    	}
+    },
+    computed: {
+        // no-op
+    },
+    template: `<div class='d-flex flex-column'>
+        <base-input v-model="selectedIMTClassNames" :choices="field.choices" :disabled="field.disabled" multiple></base-input>
+        <base-input v-model="selectedSAPeriods" :disabled="field.disabled || !selectedIMTClassnames.includes('SA')"
+                    placeholder="SA periods (space-separated numbers)">
+    </div>`,
+    methods: {
+        updateSelectedImts(){
+            this.field.value = this.getSelectedImts();
+        },
+        getSelectedImts(){
+            var imts = Array.from(this.selectedIMTClassNames);
+            if (this.selectedIMTClassNames.includes('SA')){
+                var periods = this.selectedSAPeriods.trim().split(/\s+/).map(p => `SA(${p})`);
+                imts = imts.concat(periods);
+            }
+            return imts;
+        }
+//        ;: function(){
+//        	var disabled = !!this.elm.attrs.disabled || !this.selectableImts.has('SA');
+//        	this.form[this.saPeriodName].attrs.disabled = disabled;
+//        	this.form[this.saPeriodName].is_hidden = !this.elm.val.includes('SA');
+//        },
+//        computeSelectableImts: function(){
+//        	var gsimManager = this.gsimManager;
+//            var selectedgsims = this.gsimField.val || [];
+//            var selectableImts = [];
+//            for (var gsim of selectedgsims){
+//            	if (!selectableImts.length){ // first gsim element
+//            		selectableImts = Array.from(gsimManager.imtsOf(gsim));  // make a copy
+//            	}else{
+//            		for (var i=selectableImts.length-1; i>=0; i--){
+//            			if (!gsimManager.imtsOf(gsim).includes(selectableImts[i])){
+//            				selectableImts.splice(i, 1);
+//            			}
+//            		}
+//            	}
+//            	if (!selectableImts.length){
+//            		break;
+//            	}
+//            }
+//            this.selectableImts = new Set(selectableImts);
+//            this.updateSaPeriodsEnabledState();
+//        }
+    }
+})
