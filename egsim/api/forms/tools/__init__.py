@@ -47,10 +47,10 @@ def field_to_dict(field: Field, ignore_choices: bool = False) -> dict:
         choices = list(get_choices(field))
 
     return {
-        'initial': field.initial,
+        'value': field.initial,
         'help': (field.help_text or "").strip(),
         'label': (field.label or "").strip(),
-        'is_hidden': False,
+        # 'is_hidden': False,
         'choices': choices
     }
 

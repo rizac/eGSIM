@@ -206,28 +206,29 @@ def _configure_values_for_testing(components_props: dict[str, dict[str, Any]]):
     """
     gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
                  'CauzziEtAl2014']
+    val = 'value'
     trellisformdict = components_props['trellis']['form']
-    trellisformdict['gsim']['val'] = gsimnames
-    trellisformdict['imt']['val'] = ['PGA']
-    trellisformdict['magnitude']['val'] = "5:7"
-    trellisformdict['distance']['val'] = "10 50 100"
-    trellisformdict['aspect']['val'] = 1
-    trellisformdict['dip']['val'] = 60
-    trellisformdict['plot_type']['val'] = 's'
+    trellisformdict['gsim'][val] = gsimnames
+    trellisformdict['imt'][val] = ['PGA']
+    trellisformdict['magnitude'][val] = "5:7"
+    trellisformdict['distance'][val] = "10 50 100"
+    trellisformdict['aspect'][val] = 1
+    trellisformdict['dip'][val] = 60
+    trellisformdict['plot_type'][val] = 's'
 
     residualsformdict = components_props['residuals']['form']
-    residualsformdict['gsim']['val'] = gsimnames
-    residualsformdict['imt']['val'] = ['PGA', "SA(0.2)", "SA(1.0)", "SA(2.0)"]
-    # residualsformdict['sa_period']['val'] = "0.2 1.0 2.0"
-    residualsformdict['selexpr']['val'] = "magnitude > 5"
-    residualsformdict['plot_type']['val'] = 'res'
+    residualsformdict['gsim'][val] = gsimnames
+    residualsformdict['imt'][val] = ['PGA', "SA(0.2)", "SA(1.0)", "SA(2.0)"]
+    # residualsformdict['sa_period'][val] = "0.2 1.0 2.0"
+    residualsformdict['selexpr'][val] = "magnitude > 5"
+    residualsformdict['plot_type'][val] = 'res'
 
     testingformdict = components_props['testing']['form']
-    testingformdict['gsim']['val'] = gsimnames + ['AbrahamsonSilva2008']
-    testingformdict['imt']['val'] = ['PGA', 'PGV', "0.2", "1.0", "2.0"]
-    # testingformdict['sa_period']['val'] = "0.2 1.0 2.0"
+    testingformdict['gsim'][val] = gsimnames + ['AbrahamsonSilva2008']
+    testingformdict['imt'][val] = ['PGA', 'PGV', "0.2", "1.0", "2.0"]
+    # testingformdict['sa_period'][val] = "0.2 1.0 2.0"
 
-    components_props['testing']['form']['fit_measure']['val'] = ['res', 'lh']
+    components_props['testing']['form']['fit_measure'][val] = ['res', 'lh']
 
 
 def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
@@ -244,19 +245,25 @@ def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
     """
 
     if ignore_choices is None:
-        ignore_choices = lambda _: False
+        def ignore_choices(*a, **k):
+            return False
 
     form_data = {}
-    field_done = set()  # keep track of Field done using their attribute name
+    # keep track of Field done. Initialize the set below with the ignored fields:
+    field_done = {'format', 'csv_sep', 'csv_dec'}
+    # iterate over the field (public) names because we also have the attribute
+    # name immediately available:
     for field_name, field_attname in form.public_field_names.items():
         if field_attname in field_done:
             continue
         field_done.add(field_attname)
         field = form.declared_fields[field_attname]
         field_dict = field_to_dict(field, ignore_choices=ignore_choices(field_attname))
-        field_dict['attrs'] = dict(field_to_htmlelement_attrs(field), name=field_name)
-        field_dict['val'] = None,
-        field_dict['err'] = ''
+        field_dict |= dict(field_to_htmlelement_attrs(field), name=field_name)
+        field_dict['error'] = ''
+        # field_dict['attrs'] = dict(field_to_htmlelement_attrs(field), name=field_name)
+        # field_dict['val'] = None,
+        # field_dict['err'] = ''
         form_data[field_attname] = field_dict
 
     return form_data

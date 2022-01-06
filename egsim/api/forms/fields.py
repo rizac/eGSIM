@@ -91,9 +91,11 @@ class ArrayField(CharField):
             raise ValidationError(f'number of elements {v_err.message}')
 
         # check bounds:
-        for val, min_v, max_v in zip(values, repeat(self.min_value),
-                                     repeat(self.max_value)):
-            self.checkrange(val, min_v, max_v)
+        min_v, max_v = self.min_value, self.max_value
+        min_v = repeat(min_v) if isscalar(min_v) else chain(min_v, repeat(None))
+        max_v = repeat(max_v) if isscalar(max_v) else chain(max_v, repeat(None))
+        for val, min_val, max_val in zip(values, min_v, max_v):
+            self.checkrange(val, min_val, max_val)
 
         return values[0] if (len(values) == 1 and not is_vector) else values
 

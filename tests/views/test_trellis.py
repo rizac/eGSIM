@@ -258,6 +258,36 @@ class Test:
         assert 'imt' in result['error']['message']
         assert resp1.status_code == 400
 
+
+    def test_ok_request(self,
+                        # pytest fixtures:
+                        client, areequal, querystring):
+        data = {
+            'aspect': 1,
+            'backarc': False,
+            'dip': 60,
+            'distance': "10 50 100",
+            'gsim': ["AkkarEtAlRjb2014", "BindiEtAl2014Rjb", "BooreEtAl2014"],
+            'hypoloc': "0.5 0.5",
+            'lineazimuth': 0,
+            'location': "0 0",
+            "magnitude": "5:7",
+            "msr": "WC1994",
+            "plot": "s",
+            "rake": 0,
+            "stdev": False,
+            "strike": 0,
+            "vs30": 760,
+            "vs30measured": True,
+            "z1": None,
+            "z2pt5": None,
+            "ztor": 0
+        }
+        resp = client.post(self.url, data=data,
+                            content_type='application/json')
+        result = resp.json()
+        assert resp.status_code == 400
+
     def test_error(self,
                    # pytest fixtures:
                    client, areequal, querystring):
