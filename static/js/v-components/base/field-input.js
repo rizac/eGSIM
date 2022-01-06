@@ -114,9 +114,9 @@ Vue.component('base-input', {
 
         // get if a label is specified:
         try {
-            hasLabel = !!this.$slots.default[0].text.trim();
+            label = !!this.$slots.default[0].text.trim();
         }catch(error){
-            hasLabel = false;
+            label = "";
         }
 
         // setup the style classes:
@@ -129,7 +129,7 @@ Vue.component('base-input', {
         };
         // change some classes according to current configuration:
         var twoRows = (isSelect && (attrs.multiple || parseInt(attrs.size || 0) > 1));
-        if (!hasLabel){
+        if (!label){
             cls.rootDiv = '';
         }else if(twoRows){
             cls.rootDiv = 'text-nowrap';
@@ -143,7 +143,7 @@ Vue.component('base-input', {
             isSelect: isSelect,
             isBool: isBool,
             attrs: attrs,
-            hasLabel: hasLabel,
+            label: label,
             cls: cls,
             options: [],  // will be set in watch.choices (because immediate=true)
         };
@@ -155,6 +155,11 @@ Vue.component('base-input', {
             immediate: true,
             handler(newArray) {
                 this.options = this.makeOptions(newArray);
+                // if some element is disabled, scroll to top. Note that some
+                // browsers (e.g. Firefox) seem to scroll to the first selected
+                if (this.isSelect && this.attrs.multiple && this.options.some(elm => elm.disabled)){
+                    this.scrollSelectToTop();
+                }
             }
         }
     },
@@ -171,12 +176,12 @@ Vue.component('base-input', {
     template: `<div :class="cls.rootDiv">
         <input v-if="isBool" v-model="val" v-bind="attrs" :disabled='disabled'
                :class="cls.boolInput">
-        <label v-if="hasLabel" :for="attrs.id" :disabled='disabled' :class="cls.label">
+        <label v-if="!!label" :for="attrs.id" :disabled='disabled' :class="cls.label">
             <slot></slot>
         </label>
-        <select v-if="isSelect" v-model="val" v-bind="attrs" :disabled='disabled' :class="cls.select" :style="inputComponentStyle">
-	        <option	v-for='opt in options' :value="opt.value" :disabled="opt.disabled" :class="opt.class" :style="opt.style">
-	            {{ opt.innerHTML }}
+        <select v-if="isSelect" v-model="val" v-bind="attrs" :disabled='disabled' :class="cls.select" :style="inputComponentStyle" ref='selectComponent'>
+	        <option	v-for='opt in options' :value="opt.value" :disabled="opt.disabled"
+	                :class="opt.class" :style="opt.style" v-html="opt.innerHTML">
 	        </option>
 	    </select>
 	    <input v-else-if="!isBool"  v-model="val" v-bind="attrs" :disabled='disabled' :class="cls.input" :style="inputComponentStyle">
@@ -187,7 +192,7 @@ Vue.component('base-input', {
             return choices.map(elm => {
                 var [cls, style, disabled] = ["", "", false];
                 if (!Array.isArray(elm)){
-                    if ((typeof elm === "object") && elm.value){
+                    if ((typeof elm === "object") && ('value' in elm)){
                         elm.innerHTML || (elm.innerHTML = elm.value.toString());
                         elm.class || (elm.class = cls);
                         elm.style || (elm.style = style);
@@ -210,6 +215,12 @@ Vue.component('base-input', {
                     style: elm[4] || style
                 }
             });
+        },
+        scrollSelectToTop(){
+            var selComp = this.$refs.selectComponent;
+            this.$nextTick(() => {
+                selComp.scrollTop = 0;
+            });
         }
     }
 });
@@ -227,6 +238,7 @@ Vue.component('base-input', {
 * label: the text of the label before Cmp
 */
 Vue.component('field-input', {
+    inheritAttrs: false,  // https://vuejs.org/v2/guide/components-props.html#Disabling-Attribute-Inheritance
     mixins: [baseComponentMixin],
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
@@ -286,11 +298,11 @@ Vue.component('field-input', {
                         :disabled='field.disabled' class='me-1'>
             {{ field.label }}
             </base-input>
-            <label v-else :for="attrs.id" class='mb-1 text-nowrap' :disabled='field.disabled'>
-                {{ field.label }}
+            <label v-else :for="attrs.id" class='mb-1 text-nowrap'
+                          :disabled='field.disabled' v-html="field.label">
             </label>
             <span class="small ms-2 text-muted text-nowrap" :style="infoMessageStyle">
-                {{ info }}
+                <span v-html="info"></span>
                 <i v-if="!!selectedInfo && field.value.length" class="fa fa-times-circle"
                    @click="field.value=[]" style="cursor: pointer;" title="Clear selection"></i>
             </span>

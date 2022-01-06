@@ -62,7 +62,7 @@ def main(request, selected_menu=None):
                                'following tested browsers: %s' %
                                allowed_browsers_msg)
 
-    gsims = {g.name: [[i.name for i in g.imtz], g.warning] for g in query_gims()}
+    gsims = [[g.name, [i.name for i in g.imtz], g.warning or ""] for g in query_gims()]
 
     components_props = vuejs.get_components_properties(settings.DEBUG)
 
@@ -71,8 +71,8 @@ def main(request, selected_menu=None):
         'debug': settings.DEBUG,
         'sel_component': sel_component,
         'components': components_tabs,
-        'component_props': json.dumps(components_props),
-        'gsims': json.dumps(gsims),
+        'component_props': json.dumps(components_props, separators=(',', ':')),
+        'gsims': json.dumps(gsims, separators=(',', ':')),
         'allowed_browsers': allowed_browsers,
         'invalid_browser_message': invalid_browser_message
     }

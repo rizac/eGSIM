@@ -264,10 +264,10 @@ var _BASE_FORM = Vue.component('baseform', {
 
             <div class="d-flex flexible flex-row mt-3" :class="[responseDataEmpty ? '' : ['mx-4']]">
                 <div class="d-flex flexible flex-column">
-                    <gsimselect :form="form" showfilter class="flexible" />
+                    <gsim-select :field="form['gsim']" :imtField="form['imt']" class="flexible" />
                 </div>
                 <div class="d-flex flex-column flexible ml-4">
-					<imtselect :form="form" :class="imtselectclasses"></imtselect>
+					<imt-select :field="form['imt']" :class="imtselectclasses"></imt-select>
                 	
                 	<slot/> <!-- << HERE CUSTOM FORM ELEMENTS IN CHILD COMPONENTS -->
  					

@@ -12,29 +12,44 @@ var EGSIM_BASE = {
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
     created: function(){
-        var gsimNames = Vue.eGSIM.gsims;  // defined in vueutil.js
-        var imtNames = Vue.eGSIM.imts;  // defined in vueutil.js
+        // Use regular expression to convert Gsim names to readable names by
+        // splitting into space-separated tokens (in the following order of importance):
+        // [A-Z]+[a-z]+ e.g. "Akkar" "BNCLower"
+        // (?<!_)[0-9]+(?!_)  e.g. "2006" but not "2006_"
+        // [A-Z_]+ or [a-z_]+ e.g. "ABC" "abc"
+        // .* anything else returned as single token, e.g., "b2006_g"
+        var reg = /[A-Z]+[a-z]+|(?<!_)[0-9]+(?!_)|[A-Z_]+|[a-z_]+|.+/g;
+        // converts the gsims received from server from an Array of Arrays to an
+        // Array of Objects:
+        var imts = [];
+        var gsimObjects = this.gsims.map(elm => {
+            var [gsimName, imts_, warning] = elm;
+            // add imt:
+            imts_.map(imt => {
+                if (!imts.includes(imt)){
+                    imts.push(imt);
+                }
+            });
+            return {
+                value: gsimName,
+                disabled: false,
+                // innerHTML (the display name) is gsimName with spaces: split
+                // according to Camel Case words, or numbers, the rest (.*)
+                // keep it together:
+                innerHTML: gsimName.match(reg).join(" "),
+                imts: imts_,
+                warning: warning || ""
+            }
+        });
         // set processed data:
         for (var [name, form] of this.forms()){
         	if (form.gsim){
-               	form.gsim.choices = gsimNames;
+        	    // set form.gsim.choices as a deep copy of gsimObjects:
+               	form.gsim.choices = gsimObjects.map(elm => Object.assign({}, elm));
            	}
            	if (form.imt){
-            	form.imt.choices = imtNames;
-        	}
-        	// set disabled element in attrs if not present:
-        	// (use $set to make the property reactive)
-        	// and the initial value
-        	for (var key of Object.keys(form)){
-        		if (form[key].attrs && !('disabled' in form[key].attrs)){
-        			this.$set(form[key].attrs, 'disabled', false);
-        		}
-        		// set the initial value as the current value of the field.
-        		// The 'initial' value (`form[key].initial`) is the Django initial value, which
-        		// might be None/null (which means "initial value not set"). As null might be invalid
-        		// (e.g. <select multiple> need an empty Array instead) we write here the initial value
-        		// as the value currently hold in the field:
-        		form[key].initial = form[key].val;
+           	    // set form.imt as a deep copy of imts:
+            	form.imt.choices = Array.from(imts);
         	}
         }
         // in `vueutils.js` we defined a POST function which emits the following events

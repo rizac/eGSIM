@@ -70,28 +70,9 @@ Vue.use({
             // but the two above are essential)
             return Object.keys(obj).every(key => {
                 var elm = obj[key];
-                return (typeof elm === 'object') && ('val' in elm) && ('err' in elm);
+                return (typeof elm === 'object') && ('value' in elm) && ('error' in elm);
             });
         };
-        Vue.init = function(data){
-        	// Creates the globally available
-        	// Vue.eGSIM Object via the data passed from the server via Django (see egsim.html)
-	        var gsims = data;
-	        // data is an Array of Arrays: each Array element represents a GSIM:
-	        // [gsimName, [imtName1, ... imtNameN], gsimOpenQuakeWarning]
-	        var gsimNames = Object.keys(gsims).sort();
-	        var imtNames = new Set();
-	        gsimNames.forEach(gsimName => {
-	        	gsims[gsimName][0].forEach(imt => imtNames.add(imt));
-	        });
-	        // create the globally available Vue.eGSIM variable:
-	        Vue.eGSIM = {
-	        	gsims: gsimNames,
-	            imts: Array.from(imtNames),
-	        	imtsOf: function(gsim){ return gsims[gsim][0]; },
-				warningOf: function(gsim){ return gsims[gsim][2]; }
-	        }
-	    };
 	    Vue.createPostFunction = function(root, defaultAxiosConfig){
 	    	// creates a globally available POST function using axios, and notifying the
 	    	// root instance. This function is called from egsim.html after creation of the main Vue instance
@@ -116,13 +97,12 @@ Vue.use({
 	            // guess if we passed a form data object, and in case convert it to a JSONizable Object:
 	            var jsonData = data || {};
 	            var isFormObj = Vue.isFormObject(data);  // see above
-	            if (isFormObj){ // data is a Form Object, convert jsonData  to dict of scalars:
+	            if (isFormObj){  // data is a Form Object, convert jsonData  to dict of scalars:
 	                jsonData = {};
 	                for (var key of Object.keys(data)){
-	                	data[key].err = '';  // initialize error
-	    	            if (!data[key].is_hidden){
-    	    	            jsonData[data[key].attrs.name] = data[key].val;  // assign value to object up to be sent
-//		                    jsonData[key] = data[key].val;  // assign value to object up to be sent
+	                	data[key].error = '';  // initialize error
+	    	            if (!data[key].disabled){
+    	    	            jsonData[data[key].name] = data[key].value;  // assign value to object up to be sent
 	    	            }
 	                }
 	            }

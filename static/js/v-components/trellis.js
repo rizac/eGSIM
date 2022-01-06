@@ -10,7 +10,7 @@ Vue.component('trellis', {
     	// that 'created' is executed after the template is created, so we add
     	// reactive properties like 'size' here (or maybe 'beforeCreate' would be
     	// a better place? https://vuejs.org/v2/api/#beforeCreate)
-    	this.$set(this.form['plot_type'].attrs, 'size', 3);
+    	this.$set(this.form['plot_type'], 'size', 3);
 		// return data:
         return {
         	predefinedSA: false,  // whether we have selected spectra as plot type
@@ -30,12 +30,17 @@ Vue.component('trellis', {
         // and make imt enabled if we are not choosing spectra plots
         // this is a bit hacky in that it relies on the parameter names
         // plot_type and imt:
-        'form.plot_type.val': {
+        'form.plot_type.value': {
         	immediate: true,
         	handler: function(newVal, oldVal){
         		var enabled = newVal !== 's' && newVal !== 'ss';
-        		this.form.imt.attrs.disabled = !enabled;
+        		this.form.imt.disabled = !enabled;
         		this.predefinedSA = !enabled;
+        		if (!enabled){
+        		    // Spectra plots ignore the passed IMT, but <gsim-select>s might need
+        		    // to be updated. What to set as selected IMTs then? simply nothing:
+        		    this.form.imt.value = [];
+        		}
         	}
         }
     },
@@ -56,16 +61,16 @@ Vue.component('trellis', {
             	style="flex-basis:0;background-color:transparent;overflow-y:auto"
             	:class="{'border-danger': scenarioHasErrors}"
             >
-                <forminput
+                <field-input
                 	v-for="(name, index) in scenarioKeys"
-                    :form='form' :name='name' :key="name"
+                    :field='form[name]' :key="name"
                     :class="{ 'mt-2': index > 0 }">
-                </forminput>
+                </field-input>
             </div>
 
             <div class="mt-4" style="background-color:transparent">
-                <forminput :form='form' :name='"plot_type"'></forminput>
-                <forminput :form='form' :name='"stdev"' class='mt-1'></forminput>
+                <field-input :field='form["plot_type"]'></field-input>
+                <field-input :field='form["stdev"]' class='mt-1'></field-input>
             </div>
         </slot>
     </baseform>
