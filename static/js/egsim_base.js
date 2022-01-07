@@ -113,8 +113,9 @@ var EGSIM_BASE = {
             if (Vue.isFormObject(data)){  // defined in vueutils.js
                 var errors = error.errors || [];
                 for (var err of errors){
-                    if (err.domain && (err.domain in data)){
-                        data[err.domain].err = err.message || 'invalid: unknown error';
+                    var paramName = err.location;
+                    if (paramName && (paramName in data)){
+                        data[paramName].error = err.message || 'invalid: unknown error';
                     }
                 }
             }

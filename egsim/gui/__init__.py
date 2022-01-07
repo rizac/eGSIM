@@ -8,6 +8,10 @@ class URLS:  # noqa
     """Define URLs to be used in :module:`urls.py` and in GUI views (injected in
     web pages via dicts or templates). NO URL MUST END WITH THE SLASH CHARACTER "/"
     """
+
+    # Url for getting the gsim list from a given geographic location:
+    GET_GSIMS_FROM_LATLON = 'data/getgsimfromlatlon'
+
     # url(s) for downloading the requests (configuration params) in json or
     # yaml. Example of a complete url:
     # DOWNLOAD_CFG/trellis/filename.json
