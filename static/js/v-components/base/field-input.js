@@ -12,7 +12,7 @@ const baseComponentMixin = {
     },
     computed: {
         inputComponentStyle(){
-            return !!this.err ? `border-color: ${this.errorColor} !important` : "";
+            return !!this.error ? `border-color: ${this.errorColor} !important` : "";
         }
     },
     methods: {
@@ -65,7 +65,7 @@ const baseComponentMixin = {
 * Example
 * -------
 *
-* <base-input v-model=... :choices=... :err=... :disabled=... ...attrs...>label</base-input>
+* <base-input v-model=... :choices=... :error=... :disabled=... ...attrs...>label</base-input>
 *
 * Notes
 * -----
@@ -94,7 +94,7 @@ const baseComponentMixin = {
 *   @input: listens for changes in the <input> or <select> value. It is a function of
 *     one argument (the new value). The argument can be accessed inline with the Vue
 *     variable $event or the JS variable `arguments[0]`, e.g.: @input="my_value=$event"
-* err: boolean telling if the component should be rendered in error mode. By default,
+* error: boolean telling if the component should be rendered in error mode. By default,
 *   this sets a red border on the inner <input> or <select>
 * disabled: boolean telling if the component is disabled
 */
@@ -103,7 +103,7 @@ Vue.component('base-input', {
     mixins: [baseComponentMixin],
     props: {
         value: {type: [String, Number, Array, Boolean]},
-        err: {type: Boolean, default: false},
+        error: {type: Boolean, default: false},
         choices: {type:Array, default: () => ([])},  // defaults to empty Array
         disabled: {type: Boolean, default: false}
     },
@@ -262,15 +262,15 @@ Vue.component('field-input', {
     },
     computed: {
         infoMessageStyle(){
-            var color = !!this.field.err ? `color: ${this.errorColor} !important` : "";
+            var color = !!this.field.error ? `color: ${this.errorColor} !important` : "";
             return 'flex: 1 1 auto;' + color;
         },
     	info: function(){
     	    var field = this.field;
 
     		// if the element value has error, the info is the error, thus return it:
-    		if (field.err){
-    			return field.err;
+    		if (field.error){
+    			return field.error;
     		}
     		// return the element html help
     		var info = this.field.help || '';
@@ -293,7 +293,7 @@ Vue.component('field-input', {
     },
     template: `<div>
         <div class="d-flex flex-row mb-0 align-items-baseline">
-            <base-input v-if="isBool" v-model="field.value" :err="!!field.error"
+            <base-input v-if="isBool" v-model="field.value" :error="!!field.error"
                         v-bind="attrs" :choices="field.choices"
                         :disabled='field.disabled' class='me-1'>
             {{ field.label }}
@@ -309,7 +309,7 @@ Vue.component('field-input', {
             <span class='text-primary small ms-3 text-right'>{{ attrs.name }}</span>
             <slot></slot>
         </div>
-        <base-input v-if="!isBool" v-model="field.value" :err="!!field.error"
+        <base-input v-if="!isBool" v-model="field.value" :error="!!field.error"
                     v-bind="attrs" :choices="field.choices"
                     :disabled='field.disabled'>
         </base-input>

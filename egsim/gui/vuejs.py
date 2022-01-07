@@ -15,6 +15,10 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     def ignore_choices(field_att_name):
         return field_att_name in ('gsim', 'imt')
 
+    'urls': {
+        'getGsimFromLatLon': URLS.GSIMS_TR
+    }
+
     # properties to be passed to vuejs components.
     # If you change THE KEYS of the dict here you should change also the
     # javascript:
@@ -196,39 +200,36 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         }
     }
     if debugging:
-        _configure_values_for_testing(components_props)
+        _setup_default_values(components_props)
     return components_props
 
 
-def _configure_values_for_testing(components_props: dict[str, dict[str, Any]]):
-    """Set up some dict keys and subkeys so that the frontend FORM is already
-    filled with test values
+def _setup_default_values(components_props: dict[str, dict[str, Any]]):
+    """Set up some dict keys and sub-keys so that the frontend FORM is already
+    filled with default values for easy testing
     """
     gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
                  'CauzziEtAl2014']
     val = 'value'
-    trellisformdict = components_props['trellis']['form']
-    trellisformdict['gsim'][val] = gsimnames
-    trellisformdict['imt'][val] = ['PGA']
-    trellisformdict['magnitude'][val] = "5:7"
-    trellisformdict['distance'][val] = "10 50 100"
-    trellisformdict['aspect'][val] = 1
-    trellisformdict['dip'][val] = 60
-    trellisformdict['plot_type'][val] = 's'
+    trellis_form = components_props['trellis']['form']
+    trellis_form['gsim'][val] = gsimnames
+    trellis_form['imt'][val] = ['PGA']
+    trellis_form['magnitude'][val] = "5:7"
+    trellis_form['distance'][val] = "10 50 100"
+    trellis_form['aspect'][val] = 1
+    trellis_form['dip'][val] = 60
+    trellis_form['plot_type'][val] = 's'
 
-    residualsformdict = components_props['residuals']['form']
-    residualsformdict['gsim'][val] = gsimnames
-    residualsformdict['imt'][val] = ['PGA', "SA(0.2)", "SA(1.0)", "SA(2.0)"]
-    # residualsformdict['sa_period'][val] = "0.2 1.0 2.0"
-    residualsformdict['selexpr'][val] = "magnitude > 5"
-    residualsformdict['plot_type'][val] = 'res'
+    residuals_form = components_props['residuals']['form']
+    residuals_form['gsim'][val] = gsimnames
+    residuals_form['imt'][val] = ['PGA', "SA(0.2)", "SA(1.0)", "SA(2.0)"]
+    residuals_form['selexpr'][val] = "magnitude > 5"
+    residuals_form['plot_type'][val] = 'res'
 
-    testingformdict = components_props['testing']['form']
-    testingformdict['gsim'][val] = gsimnames + ['AbrahamsonSilva2008']
-    testingformdict['imt'][val] = ['PGA', 'PGV', "0.2", "1.0", "2.0"]
-    # testingformdict['sa_period'][val] = "0.2 1.0 2.0"
-
-    components_props['testing']['form']['fit_measure'][val] = ['res', 'lh']
+    testing_form = components_props['testing']['form']
+    testing_form['gsim'][val] = gsimnames + ['AbrahamsonSilva2008']
+    testing_form['imt'][val] = ['PGA', 'PGV', "0.2", "1.0", "2.0"]
+    testing_form['fit_measure'][val] = ['res', 'lh']
 
 
 def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
@@ -261,9 +262,6 @@ def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
         field_dict = field_to_dict(field, ignore_choices=ignore_choices(field_attname))
         field_dict |= dict(field_to_htmlelement_attrs(field), name=field_name)
         field_dict['error'] = ''
-        # field_dict['attrs'] = dict(field_to_htmlelement_attrs(field), name=field_name)
-        # field_dict['val'] = None,
-        # field_dict['err'] = ''
         form_data[field_attname] = field_dict
 
     return form_data

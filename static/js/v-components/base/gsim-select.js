@@ -51,7 +51,7 @@ Vue.component('gsim-select', {
             <div class="flexible">
                 <field-input :field="field" size="15"></field-input>
             </div>
-            <div v-show='warnings.length' style='position:relative;width:10rem;overflow:auto'>
+            <div v-show='warnings.length' style='position:relative;width:10rem;overflow:auto' ref='warningsDiv'>
                 <div class='small position-absolute ps-3' style='left:0;right:0;word-break: break-word;'>
                     <div v-for='warn in warnings'>
                         <span class='text-warning'><i class="fa fa-exclamation-triangle"></i></span> {{ warn }}
@@ -204,9 +204,12 @@ Vue.component('gsim-select', {
             var selGsimNames = new Set(this.field.value);
             var selFilteredOut = [];
             var warnings = [];
+            var disabledCount = 0;
             this.choices.forEach(elm => {
+                var disabled = elm.disabled;
+                disabledCount += !!disabled;
                 if (selGsimNames.has(elm.value)){
-                    if (elm.disabled){
+                    if (disabled){
                         selFilteredOut.push(elm.value);
                     }
                     if(elm.warning){
@@ -214,8 +217,16 @@ Vue.component('gsim-select', {
                     }
                 }
             });
+            var allDisabled = disabledCount == this.choices.length ? ['No GSIM matches current filters (all models filtered out)'] : [];
             selFilteredOut = selFilteredOut.map(elm => `${elm} is selected but filtered out`);
-            this.warnings = selFilteredOut.concat(warnings);
+            this.warnings = allDisabled.concat(selFilteredOut.concat(warnings));
+            // scroll warnings to top:
+            var selComp = this.$refs.warningsDiv;
+            if (selComp){
+                this.$nextTick(() => {
+                    selComp.scrollTop = 0;
+                });
+            }
         },
     },
     deactivated: function(){
