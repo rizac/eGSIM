@@ -1,4 +1,5 @@
-import os
+from os.path import abspath, join, dirname
+import yaml
 
 from argparse import RawTextHelpFormatter, SUPPRESS
 
@@ -12,11 +13,24 @@ class EgsimBaseCommand(BaseCommand):  # noqa
     """
 
     @staticmethod
-    def data_dir(*paths):
+    def data_dir(*paths) -> str:
         """Return a data directory path. The result will be the same as
         `os.path.join(*paths)` prefixed with the "./data" directory path
         """
-        return os.path.join(os.path.dirname(__file__), 'data', *paths)
+        return join(dirname(__file__), 'data', *paths)
+
+    @staticmethod
+    def data_source(datafile_path) -> dict:
+        """Return a data source information from the given data file"""
+        base_dir = EgsimBaseCommand.data_dir()
+        with open(join(base_dir, 'data_sources.yaml')) as _:
+            data_sources = yaml.safe_load(_)
+
+        datafile_abspath = abspath(datafile_path)
+        for path, data_source in data_sources.items():
+            if datafile_abspath == abspath(join(base_dir, path)):
+                return data_source
+        return {}
 
     @staticmethod
     def empty_db_table(*models):

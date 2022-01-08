@@ -13,7 +13,7 @@ from datetime import datetime
 from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
                               ManyToManyField, JSONField, UniqueConstraint,
                               CASCADE, SET_NULL, Index, SmallIntegerField,
-                              DateTimeField)
+                              DateTimeField, URLField)
 from django.conf import settings
 from django.db.utils import IntegrityError
 
@@ -63,12 +63,13 @@ class DateTimeDecoder(json.JSONDecoder):
         return dct
 
 
-# ======
-# Models
-# ======
+# =======================================================
+# Models (abstract, i.e. not represented by any db table)
+# =======================================================
+
 
 class _UniqueNameModel(Model):
-    """Abstract class for models identified by a single unique name"""
+    """Abstract class for Table entries identified by a single unique name"""
 
     name = TextField(null=False, unique=True, help_text="Unique name")
 
@@ -79,6 +80,27 @@ class _UniqueNameModel(Model):
 
     def __str__(self):
         return self.name
+
+
+class _DataSource(_UniqueNameModel):
+    """Abstract class for entries describing data used in this program"""
+
+    display_name = TextField(default=None, null=True)
+    url = URLField(default=None, null=True)
+    license = TextField(default=None, null=True)
+    citation = TextField(default=None, null=True,
+                         help_text="Bibliographic citation, as text")
+    doi = TextField(default=None, null=True)
+
+    class Meta:
+        # In subclasses, `abstract` is (re)set to False. Everything else is copied
+        # (https://docs.djangoproject.com/en/3.2/topics/db/models/#meta-inheritance)
+        abstract = True
+
+
+# =================================================
+# Models (concrete, i.e. represented by a db table)
+# =================================================
 
 
 class FlatfileColumn(_UniqueNameModel):
@@ -153,17 +175,15 @@ class FlatfileColumn(_UniqueNameModel):
                (self.name, self.oq_name, categ, self.gsims.count())  # noqa
 
 
-class Flatfile(_UniqueNameModel):
+class Flatfile(_DataSource):
 
-    path = TextField(unique=True, null=False)
-    url = TextField(null=False, default='')
-    display_name = TextField(null=True, default='')
-    hidden_in_browser = BooleanField(null=False, default=False,
+    filepath = TextField(unique=True, null=False)
+    hidden = BooleanField(null=False, default=False,
                                      help_text="if true, the flatfile is hidden "
                                                "in browsers (users can still "
                                                "access it via API requests, if "
                                                "not expired)")
-    expires_at = DateTimeField(null=True, default=None,
+    expiration = DateTimeField(null=True, default=None,
                                help_text="expiration date(time) after which the "
                                          "flatfile is not visible or accessible "
                                          "to any request. If null, the flatfile "
@@ -173,11 +193,11 @@ class Flatfile(_UniqueNameModel):
     BASEDIR_PATH = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
 
     @classmethod
-    def get_flatfiles(cls, for_browser=False):
-        qry = cls.objects.filter(Q(expires_at__isnull=True) |
-                                 Q(expires_at__lt=datetime.utcnow()))
-        if for_browser:
-            qry = qry.filter(hidden_in_browser=False)
+    def get_flatfiles(cls, hidden=False):
+        qry = cls.objects.filter(Q(expiration__isnull=True) |
+                                 Q(expiration__lt=datetime.utcnow()))
+        if hidden:
+            qry = qry.filter(hidden=False)
         return qry
 
     def __str__(self):
@@ -200,14 +220,6 @@ class Imt(_UniqueNameModel):
         indexes = [Index(fields=['name']), ]
 
 
-# class GsimTrt(_UniqueNameModel):
-#     """The :class:`tectonic region types <openquake.hazardlib.const.TRT>` that
-#     OpenQuake's GSIMs are defined for"""
-#
-#     # OpenQuake's Gsim attribute used to populate this table during db init:
-#     OQ_ATTNAME = 'DEFINED_FOR_TECTONIC_REGION_TYPE'
-
-
 class GsimWithError(_UniqueNameModel):
     """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake
     that could not be available in eGSIM due errors
@@ -227,8 +239,6 @@ class Gsim(_UniqueNameModel):
     """
     imts = ManyToManyField(Imt, related_name='gsims',
                            help_text='Intensity Measure Type(s)')
-    # trt = ForeignKey(GsimTrt, on_delete=SET_NULL, null=True,
-    #                  related_name='gsims', help_text='Tectonic Region type')
     required_flatfile_columns = ManyToManyField(FlatfileColumn,
                                                 related_name='gsims',
                                                 help_text='Required flatfile '
@@ -252,13 +262,13 @@ class Gsim(_UniqueNameModel):
 
 
 class GsimRegion(Model):
-    """Model representing the relationships between Gsim(s) and Region(s)"""
+    """Model representing a GSIM Region"""
 
     gsim = ForeignKey(Gsim, on_delete=CASCADE, null=False, related_name='regions')
-    regionalization = TextField(null=False, help_text="The name of the "
-                                                      "regionalization defining "
-                                                      "the mapping Gsim <-> "
-                                                      "Geographic region")
+    regionalization = ForeignKey("RegionalizationDataSource", to_field='name',
+                                 on_delete=SET_NULL, null=True,
+                                 help_text="The name of the regionalization "
+                                           "this region derives from")
 
     GEOM_TYPES = ('Polygon', 'MultiPolygon')
 
@@ -305,6 +315,11 @@ class GsimRegion(Model):
         poly = 'polygon' if npoly == 1 else 'polygons'
         return 'Region "%s", %d %s, regionalization: %s' % \
                (str(self.gsim), npoly, poly, self.regionalization)
+
+
+class RegionalizationDataSource(_DataSource):
+    """Model representing the data source of a given Regionalization"""
+    pass
 
 
 # UNUSED Legacy functions ====================================================

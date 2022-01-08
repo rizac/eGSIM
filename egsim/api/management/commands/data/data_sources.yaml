@@ -1,0 +1,19 @@
+# Data sources in YAML format. None of the fields here is essential
+# for the API functioning: only `name` is used but will default to the file
+# name (with no extension) for all data files missing here.
+
+"regionalization_files/share.json":
+  name: "share"
+  display_name: "Seismic Hazard Harmonization in Europe (SHARE)"
+  url: "http://hazard.efehr.org/en/Documentation/specific-hazard-models/europe/seismogenic-sources/index.html"
+  license: "CC BY-SA 3.0 (unported) [http://creativecommons.org/licenses/by-sa/3.0/]"
+  citation: "D. Giardini, J. Woessner, L. Danciu, H. Crowley, F. Cotton, G. Grünthal, R. Pinho, G. Valensise, S. Akkar, R. Arvidsson, R. Basili, T. Cameelbeeck, A. Campos-Costa, J. Douglas, M. B. Demircioglu, M. Erdik, J. Fonseca, B. Glavatovic, C. Lindholm, K. Makropoulos, C. Meletti, R. Musson, K. Pitilakis, K. Sesetyan,  D. Stromeyer,  M. Stucchi, A. Rovida, Seismic Hazard Harmonization in Europe (SHARE): Online Data Resource, doi: 10.12686/SED-00000001-SHARE, 2013."
+  doi: "10.12686/SED-00000001-SHARE"
+
+"predefined_flatfiles/ESM_flatfile_2018_SA.csv.zip":
+  name: "esm2018"
+  display_name: "Engineering strong-motion flat-file 2018"
+  url: "https://esm-db.eu/#/products/flat_file"
+  license: "Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) [https://creativecommons.org/licenses/by-nc/4.0/]"
+  citation: "Lanzano G., Luzi L., Russo E., Felicetta C., D’Amico M. C., Sgobba S., Pacor F. (2018). Engineering Strong Motion Database (ESM) flatfile [Data set]. Istituto Nazionale di Geofisica e Vulcanologia (INGV). https://doi.org/10.13127/esm/flatfile.1.0"
+  doi: "10.13127/esm/flatfile.1.0"

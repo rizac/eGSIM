@@ -37,13 +37,13 @@ class FlatfileForm(EgsimBaseForm):
     }
 
     flatfile = ModelChoiceField(queryset=models.Flatfile.get_flatfiles(),
-                                empty_label=None, label='Flatfile',
+                                to_field_name="name", label='Flatfile',
                                 help_text='The name of a preloaded flatfile (or '
                                           'Ground Motion Database) with the observed '
                                           'data to be used for comparison. Flatfiles '
                                           'can also be user defined and uploaded in '
                                           'the GUI or from your Python code',
-                                to_field_name="name", required=False)
+                                empty_label=None, required=False)
     selexpr = CharField(required=False, label='Selection expression')
 
     def __init__(self, data, files=None, **kwargs):
@@ -76,7 +76,7 @@ class FlatfileForm(EgsimBaseForm):
         if u_flatfile is None:
             # exception should be raised and sent as 500: don't catch
             p_ff = cleaned_data["flatfile"]
-            dataframe = pd.read_hdf(p_ff.path, key=p_ff.name)
+            dataframe = pd.read_hdf(p_ff.filepath, key=p_ff.name)
         else:
             # u_ff = cleaned_data[key_u]
             try:

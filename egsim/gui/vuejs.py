@@ -1,7 +1,64 @@
 from typing import Any, Type, Callable, Union
+import json
+
+from django.db.models import Prefetch, QuerySet
 from . import TABS, URLS
+from ..api import models
 from ..api.forms import EgsimBaseForm
 from ..api.forms.tools import field_to_dict, field_to_htmlelement_attrs
+
+
+def get_context(selected_menu=None, debug=True) -> dict:
+    """The context to be injected in the template of the main HTML page"""
+
+    # Tab components (one per tab, one per activated vue component)
+    # (key, label and icon) (the last is bootstrap fontawesome name)
+    components_tabs = [[_.name, _.title, _.icon] for _ in TABS]
+
+    # this can be changed if needed:
+    sel_component = TABS.home.name if not selected_menu else selected_menu
+
+    # setup browser detection
+    allowed_browsers = [['Chrome', 49], ['Firefox', 45], ['Safari', 10]]
+    allowed_browsers_msg = ', '.join('%s &ge; %d' % (brw, ver)
+                                     for brw, ver in allowed_browsers)
+    invalid_browser_message = ('Some functionalities might not work '
+                               'correctly. In case, please use any of the '
+                               'following tested browsers: %s' %
+                               allowed_browsers_msg)
+
+    gsims = [[g.name, [i.name for i in g.imtz], g.warning or ""] for g in query_gims()]
+
+    components_props = get_components_properties(debug)
+
+    return {
+        'debug': debug,
+        'sel_component': sel_component,
+        'components': components_tabs,
+        'component_props': json.dumps(components_props, separators=(',', ':')),
+        'gsims': json.dumps(gsims, separators=(',', ':')),
+        'flatfiles': [(f.name, str(f)) for f in query_flatfiles()],
+        'allowed_browsers': allowed_browsers,
+        'invalid_browser_message': invalid_browser_message
+    }
+
+
+def query_gims() -> QuerySet:
+    """Return a QuerySet of Gsims instances from the database, with the
+    necessary information (field 'warning' and associated Imts in the `imtz`
+    attribute)
+    """
+    # Try to perform everything in a single more efficient query. Use
+    # prefetch_related for this. It Looks like we need to assign the imts to a
+    # new attribute, the attribute "Gsim.imts" does not work as expected
+    imts = Prefetch('imts', queryset=models.Imt.objects.only('name'),
+                    to_attr='imtz')
+
+    return models.Gsim.objects.only('name', 'warning').prefetch_related(imts)
+
+
+def query_flatfiles() -> QuerySet:
+    return models.Flatfile.get_flatfiles(hidden=False)
 
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
@@ -13,9 +70,9 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         test click buttons
     """
     def ignore_choices(field_att_name):
-        return field_att_name in ('gsim', 'imt')
+        return field_att_name in ('gsim', 'imt', 'flatfile')
 
-    'urls': {
+    urls = {  # FIXME
         'getGsimFromLatLon': URLS.GSIMS_TR
     }
 
@@ -27,7 +84,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             'src': URLS.HOME_PAGE
         },
         TABS.trellis.name: {
-            'form': form_to_vuejs(TABS.trellis.formclass, ignore_choices),
+            'form': form_to_json(TABS.trellis.formclass, ignore_choices),
             'url': TABS.trellis.urls[0],
             'urls': {
                 # the lists below must be made of elements of
@@ -99,7 +156,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         #     'url': URLS.GMDBPLOT_RESTAPI
         # },
         TABS.residuals.name: {
-            'form': form_to_vuejs(TABS.residuals.formclass, ignore_choices),
+            'form': form_to_json(TABS.residuals.formclass, ignore_choices),
             'url': TABS.residuals.urls[0],
             'urls': {
                 # download* below must be pairs of [key, url]. Each url
@@ -156,7 +213,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             }
         },
         TABS.testing.name: {
-            'form': form_to_vuejs(TABS.testing.formclass, ignore_choices),
+            'form': form_to_json(TABS.testing.formclass, ignore_choices),
             'url': TABS.testing.urls[0],
             'urls': {
                 # download* below must be pairs of [key, url]. Each url
@@ -232,11 +289,11 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
     testing_form['fit_measure'][val] = ['res', 'lh']
 
 
-def form_to_vuejs(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
-                  ignore_choices: Callable[[str], bool] = None) -> dict:
-    """Return a dictionary of field names mapped to their widget context.
-     A widget context is in turn a dict with key and value pairs used to render
-     the Field as HTML component.
+def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
+                 ignore_choices: Callable[[str], bool] = None) -> dict[str, dict[Any]]:
+    """Return a JSON-serializable dictionary of the Form Field names mapped to
+    their properties, in order e.g. to be injected in HTML templates in order
+    to render the Field as HTML component.
 
     :param form: EgsimBaseForm class or object (class instance)
     :param ignore_choices: callable accepting a string (field attribute name)
