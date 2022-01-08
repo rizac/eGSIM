@@ -58,15 +58,18 @@ def test_initdb(capfd, tmpdir):
     geom = {'type': 'Polygon', 'coordinates': [[[]]]}
     with pytest.raises(IntegrityError) as ierr:
         # already exist:
+        regio = models.RegionalizationDataSource.objects.filter(name='share').get()
         models.GsimRegion(gsim=akkarbommer, geometry=geom,
-                   regionalization='share').save()
+                          regionalization=regio).save()
     assert 'unique constraint' in str(ierr.value).lower()
 
     with pytest.raises(IntegrityError) as ierr:
-        # ageom type false:
+        # geom type false:
         geom['type'] = 'invalid'
+        # create a valid and new RegionalizationDataSource to avoid Unique Constraints:
+        regio2, _ = models.RegionalizationDataSource.objects.get_or_create(name='share2')
         models.GsimRegion(gsim=akkarbommer, geometry=geom,
-                   regionalization='share2').save()
+                          regionalization=regio2).save()
     assert str(models.GsimRegion.GEOM_TYPES) in str(ierr.value)
 
     # captured = capfd.readouterr()

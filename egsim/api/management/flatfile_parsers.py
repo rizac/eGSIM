@@ -11,14 +11,6 @@ from ..models import FlatfileColumn
 class FlatfileParser:
     """Base class for Flatfile parser (CSV -> HDF conversion)"""
 
-    # Flat file name to be used in users requests and as file name (HDF extension
-    # excluded): provide alphanumeric characters only or underscore "_"
-    NAME: str
-    # Flat file name to be used for visualization (any character allowed)
-    DISPLAY_NAME: str
-    # url for references, detailed description, citation(s), and so on
-    URL: str
-
     @classmethod
     def parse(cls, filepath) -> pd.DataFrame:
         raise NotImplementedError('parse not implemented')
@@ -26,10 +18,6 @@ class FlatfileParser:
 
 class EsmFlatfileParser(FlatfileParser):
     """ESM flatfile parser"""
-
-    NAME = 'esm2018'
-    DISPLAY_NAME = 'European Strong Motion Flat file (2018)'
-    URL = 'https://esm-db.eu/#/products/flat_file'
 
     @classmethod
     def esm_usecols(cls, colname):

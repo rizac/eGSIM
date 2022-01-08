@@ -12,12 +12,11 @@ Created on 7 Dec 2020
 
 @author: riccardo
 """
-import os
+from os import listdir
+from os.path import abspath, dirname, splitext, join, basename, isfile
 import json
 from collections import defaultdict
 from itertools import chain
-
-from django.core.management.base import CommandError
 
 from . import EgsimBaseCommand
 from ... import models
@@ -40,38 +39,26 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         self.printinfo('Populating DB with Regionalization data:')
-        self.empty_db_table(models.GsimRegion)
-        datadir = self.data_dir('regionalization_files')
-        done = set()
+        self.empty_db_table(models.GsimRegion, models.RegionalizationDataSource)
+
         skipped = defaultdict(list)  # regionalization name -> list of warnings
-        for filename in os.listdir(datadir):
-            name, ext = os.path.splitext(filename)
-            if name in done:
-                continue
-            done.add(name)
-
+        for name, mapping_file, regionalization_file in self.get_data_files():
             try:
-                if ext.lower() not in ('.json', '.geojson'):
-                    raise ValueError('invalid file extension "%s"' % ext)
-                    # self.printwarn('Skipping regionalization "%s" (invalid file '
-                    #                'extension "%s")' % (name, ext))
-                    # continue
-
-                regionalization_file = os.path.join(datadir, name + '.geojson')
-                mapping_file = os.path.join(datadir, name + '.json')
+                data_source = self.data_source(mapping_file) or \
+                    self.data_source(regionalization_file)
+                data_source.setdefault('name', name)
 
                 with open(regionalization_file, 'r') as _:
                     regionalization = json.load(_)
                 with open(mapping_file, 'r') as _:
                     mapping = json.load(_)
-                _skipped = self.populate_from_regionalization(name, regionalization,
+                _skipped = self.populate_from_regionalization(data_source,
+                                                              regionalization,
                                                               mapping)
                 if _skipped:
                     skipped[name].extend(_skipped)
             except Exception as exc:
                 skipped[name].append('Skipping regionalization "%s": %s' % (name, str(exc)))
-                # self.printwarn('Skipping regionalization "%s": %s' % (name, str(exc)))
-                # continue
 
         if skipped:
             self.printwarn('WARNING:')
@@ -80,7 +67,28 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                 for err in errs:
                     self.printwarn(err)
 
-    def populate_from_regionalization(self, name: str, regionalization: dict,
+    def get_data_files(self) -> dict[str, list[str]]:
+        datadir = self.data_dir('regionalization_files')
+        ret = set()
+        for filename in listdir(datadir):
+            name, ext = splitext(filename)
+            if name in ret:
+                continue
+            ret.add(name)
+
+            is_json = ext.lower() == '.json'
+            mapping_file = abspath(join(datadir, name + '.json'))
+            isfile1 = is_json or isfile(mapping_file)
+
+            is_geojson = ext.lower() == '.geojson'
+            regionalization_file = abspath(join(datadir, name + '.geojson'))
+            isfile2 = is_geojson or isfile(regionalization_file)
+
+            if isfile1 and isfile2:
+                yield [name, mapping_file, regionalization_file]
+
+    def populate_from_regionalization(self, regionalization_data_source: dict,
+                                      regionalization: dict,
                                       mapping: dict):
         """"""
         geometries = defaultdict(list)
@@ -112,13 +120,17 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                                % (_nump, _poly, gsim))
                 continue
 
-            models.GsimRegion.objects.create(regionalization=name, gsim=db_gsim,  # noqa
+            rds, _ = models.RegionalizationDataSource.objects.\
+                get_or_create(**regionalization_data_source)  # noqa
+            models.GsimRegion.objects.create(regionalization=rds,
+                                             gsim=db_gsim,  # noqa
                                              geometry=geom)
             # Print to screen:
             printinfo.append('%s (%s)' % (gsim, models.GsimRegion.num_polygons(geom)))
 
         if printinfo:
             _gsim = "Gsim" if len(printinfo) == 1 else "Gsims"
+            name = rds.name
             self.printinfo(' - Regionalization "%s"; %d %s written '
                            '(number of associated GeoPolygons in brackets):\n'
                            '   %s' % (name, len(printinfo), _gsim, ", ".join(printinfo)))
