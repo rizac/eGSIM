@@ -10,14 +10,14 @@ Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of
    * [Installation](#installation)
    * [Usage](#usage)
    * [Maintenance](#maintenance)
-     * [Starting a Python terminal shell](#starting_a_python_terminal_shell)
-     * [Admin panel](#admin_panel)
-     * [Complete DB reset](#Complete_DB_reset)
-     * [Migrate and populate the db](#Migrate_and_populate_the_db)
-     * [Add new predefined flatfiles](#Add_new_predefined_flatfiles)
-     * [Add new regionalization](#Add_new_regionalization)
-     * [Dependencies upgrade](#Dependencies_upgrade)
-     * [Fix gmpe-smtk](#Fix_gmpe-smtk)
+     * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
+     * [Admin panel](#admin-panel)
+     * [Complete DB reset](#Complete-DB-reset)
+     * [Migrate and populate the db](#Migrate-and-populate-the_db)
+     * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
+     * [Add new regionalization](#Add-new-regionalization)
+     * [Dependencies upgrade](#Dependencies-upgrade)
+     * [Fix gmpe-smtk](#Fix-gmpe-smtk)
 
      
 ## Installation
