@@ -22,7 +22,7 @@ from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
 
 from ..fields import (BooleanField, FloatField, ChoiceField, NArrayField,
                       vectorize, isscalar)
-from .. import APIForm, relabel_sa
+from .. import APIForm, GsimImtForm, relabel_sa
 
 PLOT_TYPE = {
     # key: (display label, trellis class, stddev trellis class)
@@ -35,7 +35,7 @@ PLOT_TYPE = {
 _mag_scalerel = get_available_magnitude_scalerel()
 
 
-class TrellisForm(APIForm):
+class TrellisForm(GsimImtForm, APIForm):
     """Form for Trellis plot generation"""
 
     # Set the public names of this Form Fields as `public_name: attribute_name`
