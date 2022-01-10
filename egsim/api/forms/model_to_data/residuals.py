@@ -16,7 +16,7 @@ from smtk.residuals.residual_plots import (residuals_density_distribution,
 from smtk.database_visualiser import DISTANCE_LABEL
 
 from . import FlatfileForm, MOF, get_residuals
-from .. import APIForm, relabel_sa
+from .. import APIForm, GsimImtForm, relabel_sa
 from ..fields import ChoiceField
 
 
@@ -42,7 +42,7 @@ PLOT_TYPE = {
 }
 
 
-class ResidualsForm(APIForm, FlatfileForm):
+class ResidualsForm(GsimImtForm, APIForm, FlatfileForm):
     """Form for residual analysis"""
 
     # Set the public names of this Form Fields as `public_name: attribute_name`

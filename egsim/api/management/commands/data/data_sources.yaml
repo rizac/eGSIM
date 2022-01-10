@@ -1,6 +1,6 @@
-# Data sources in YAML format. None of the fields here is essential
-# for the API functioning: only `name` is used but will default to the file
-# name (with no extension) for all data files missing here.
+# Data sources in YAML format. None of the fields here is essential for the API
+# functioning: only `name` is used but will be inferred (usually from the file name)
+# when not found
 
 "regionalization_files/share.json":
   name: "share"
