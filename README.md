@@ -350,6 +350,54 @@ Open them, find the line where `gmpe-smtk` is listed and replace the commit hash
 the portion of the line between '@' and '#'. Eventually, issue a `git push`
 
 
+### New predefined flatfiles
+
+- Add the file (CSV or zipped CSV) in
+  `managements/commands/data/predefined_flatfiles`
+  
+- Implement a new `FlatfileParser` class in 
+  `management/commands/flatfile_parsers.py`
+  The parser goal is to read the file and convert it into a harmonized HDF 
+  table (see ESM parser in the Python file)
+
+- Add binding file -> parser in the Python `dict`:
+  `management.commands._egsim_flatfiles.Command.PARSER`
+
+- (Optional) Add the file data source 
+  in `management/commands/data/data_sources.yaml`, e.g. data reference, url, 
+  (see examples in the YAML file). 
+
+  *NOTE: In the data source you can also set the 
+  data name, i.e. a unique, usually short alphanumeric string that will 
+  identify the flatfile in user requests. If no 
+  data source or name is provided, the public name will be the file name 
+  before the first ".".*
+
+- Repopulate all eGSIM tables (command `egsim_init`)
+
+### New regionalization
+
+- Add two files *with the same basename* and extensions 
+  - .geojson (regionalization, aka regions collection) and
+  - .json (region -> gsim mapping)
+  
+  in `managements/commands/data/regionalization_files`. Usually, these files are
+  copied and pasted from the `shakyground2` project (see GFZ gitlab), but if
+  you neeed to implement your own see examples in the given directory 
+  or ask the developers
+
+- (Optional) Add the file data source 
+  in `management/commands/data/data_sources.yaml`, e.g. data reference, url, 
+  (see examples in the YAML file). 
+
+  *NOTE: In the data source you can also set the 
+  data name, i.e. a unique, usually short alphanumeric string that will 
+  identify the regionalization in user requests. If no 
+  data source or name is provided, the public name will be the file name 
+  before the first ".".*
+
+- Repopulate all eGSIM tables (command `egsim_init`)
+
 ### Dependencies upgrade (including Github alerts fix)
 
 Please note that it is safer (from now even 

@@ -372,13 +372,14 @@ class MediaTypeForm(EgsimBaseForm):
         return cleaned_data
 
 
-class APIForm(GsimImtForm, MediaTypeForm):
+class APIForm(MediaTypeForm):
     """GsimImtForm + MediaTypeForm"""
 
-    def clean(self):
-        """Calls GsimImtForm and MediaTypeForm, useful in subclasses to avoid
-        calling twice the same super method?"""
-        return super().clean()
+    # FIXME: REMOVE
+    # def clean(self):
+    #     """Calls GsimImtForm and MediaTypeForm, useful in subclasses to avoid
+    #     calling twice the same super method?"""
+    #     return super().clean()
 
     @property
     def response_data(self) -> Union[dict, StringIO, None]:
