@@ -5,14 +5,30 @@ Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of
 [EFEHR](http://www.efehr.org/en/home/)
 
 
-## Installation (development)
+# Table of contents
 
-DISCLAIMER: As web service, eGSIM is conceived to be installed on a 
-remote publicly https-available server: this usage, called 
-*production* or *deploy* mode is covered in `deploy.html`.
+   * [Installation](#installation)
+   * [Usage](#usage)
+   * [Maintenance](#maintenance)
+     * [Starting a Python terminal shell](#Starting_a_Python_terminal_shell)
+     * [Admin panel](#Admin_panel)
+     * [Complete DB reset](#Complete_DB_reset)
+     * [Migrate and populate the db](#Migrate_and_populate_the_db)
+     * [Add new predefined flatfiles](#Add_new_predefined_flatfiles)
+     * [Add new regionalization](#Add_new_regionalization)
+     * [Dependencies upgrade](#Dependencies_upgrade)
+     * [Fix gmpe-smtk](#Fix_gmpe-smtk)
 
-This document deals with *development* or *debug* mode, i.e. the deployment
-of the program locally, usually for testing, fixing bug or adding features.
+     
+## Installation
+
+DISCLAIMER: **This document covers installation in development (or debug) 
+mode, i.e. when the program is deployed locally, usually for testing, 
+fixing bug or adding features.**
+
+The "formal" installation of eGSIM as web service (*production* or *deploy* 
+mode) on a remote, publicly available server is covered in `deploy.html`.
+
 
 ### Requirements
 
@@ -146,7 +162,7 @@ using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
 `python manage.py --settings=egsim.settings_debug [command]`)
 
 
-## Maintenance / Common operations
+## Maintenance
 
 Please note before proceeding that Django projects have two fundamental
 organization structures:
@@ -190,7 +206,9 @@ below is not the value to be given in production**, where a new settings file
 has to be created with production specific settings such as, e.g. `debug=False`
 and a new `SECRET_KEY` (which needs to be secret and not git committed).
 
-### Starting a `python` terminal shell
+
+### Starting a Python terminal shell
+
 
 Typing `python` on the terminal does not work if you need to import django
 stuff, as there are things to be initialized beforehand. The Django `shell`
@@ -200,9 +218,11 @@ command does this:
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
 ```
 
-### Admin panel (check or modify database data from the web browser)
+### Admin panel
 
-The dtabase must have been created and populated (see [Usage](#usage)). 
+(check or modify database data from the web browser)
+
+The database must have been created and populated (see [Usage](#usage)). 
 For further details: check [Django docs](https://docs.djangoproject.com/en/stable/ref/django-admin/))
 
 Create a super user (to be done **once only** ):
@@ -214,7 +234,8 @@ and follow the instructions.
 Then navigate in the browser to `[SITE_URL]/admin` (in development mode,
 http://127.0.0.1:8000/admin/)
 
-### Complete DB reset (remove all migrations and db)
+
+### Complete DB reset
 
 As eGSIM does not need to store user data in the database, it might be
 easier to throw everything away and regenerate all db schema and data 
@@ -291,7 +312,99 @@ Before reading, remember:
 6. Repopulate all eGSIM tables (command `egsim_init`)
 
 
-### Fixing / Adding features to gmpe-smtk
+### Add new predefined flatfiles
+
+- Add the file (CSV or zipped CSV) in
+  `managements/commands/data/predefined_flatfiles`
+  
+- Implement a new `FlatfileParser` class in 
+  `management/commands/flatfile_parsers.py`
+  The parser goal is to read the file and convert it into a harmonized HDF 
+  table (see ESM parser in the Python file)
+
+- Add binding file -> parser in the Python `dict`:
+  `management.commands._egsim_flatfiles.Command.PARSER`
+
+- (Optional) Add the file data source 
+  in `management/commands/data/data_sources.yaml`, e.g. data reference, url, 
+  (see examples in the YAML file). 
+
+  *NOTE: In the data source you can also set the 
+  data name, i.e. a unique, usually short alphanumeric string that will 
+  identify the flatfile in user requests. If no 
+  data source or name is provided, the public name will be the file name 
+  before the first ".".*
+
+- Repopulate all eGSIM tables (command `egsim_init`)
+
+
+### Add new regionalization
+
+- Add two files *with the same basename* and extensions 
+  - .geojson (regionalization, aka regions collection) and
+  - .json (region -> gsim mapping)
+  
+  in `managements/commands/data/regionalization_files`. Usually, these files are
+  copied and pasted from the `shakyground2` project (see GFZ gitlab), but if
+  you neeed to implement your own see examples in the given directory 
+  or ask the developers
+
+- (Optional) Add the file data source 
+  in `management/commands/data/data_sources.yaml`, e.g. data reference, url, 
+  (see examples in the YAML file). 
+
+  *NOTE: In the data source you can also set the 
+  data name, i.e. a unique, usually short alphanumeric string that will 
+  identify the regionalization in user requests. If no 
+  data source or name is provided, the public name will be the file name 
+  before the first ".".*
+
+- Repopulate all eGSIM tables (command `egsim_init`)
+
+
+### Dependencies upgrade
+
+Please note that it is safer (from now even 
+[mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
+with `pip`) to upgrade all dependencies
+instead of single packages in order to avoid conflicts.
+Consequently, **follow the procedure below also in case of
+Github single packages security issues or dependencies alert**.
+
+To upgrade all dependencies, we just need to `pull` the newest version
+of `smtk` and relaunch an installation from there (this will fetch
+also OpenQuake newest version and all dependencies automatically)
+
+First create and activate a new virtualenv:
+
+```bash
+python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
+source .env/<ENVNAME>/bin/activate  # activate venv
+pip install --upgrade pip setuptools
+```
+
+Then install smtk and all dependencies:
+
+```bash
+cd ../gmpe-smtk # (or whatever you cloned the forked branch)
+git checkout master && git pull
+pip install -e . # (also installs openquake and django)
+cd ../egsim. # (or wherever egsim is)
+pip freeze > requirements.txt
+```
+
+And finally install the newset version of the test packages:
+
+```
+pip install pylint pytest-django pytest-cov
+pip freeze > requirements.dev.txt
+```
+
+Finally, proceed with the normal workflow:
+run tests, fix new bugs and eventually `git push`, as always.
+
+
+### Fix gmpe-smtk
 
 We will refer to smtk as the [forked branch](https://github.com/rizac/gmpe-smtk)
 used by eGSIM. As we have seen during installation, it is a forked repository from the
@@ -348,93 +461,3 @@ Finally, update the smtk version: issue a `git log -1` and copy the commit
 hash into the two `requirements` text files.
 Open them, find the line where `gmpe-smtk` is listed and replace the commit hash in
 the portion of the line between '@' and '#'. Eventually, issue a `git push`
-
-
-### New predefined flatfiles
-
-- Add the file (CSV or zipped CSV) in
-  `managements/commands/data/predefined_flatfiles`
-  
-- Implement a new `FlatfileParser` class in 
-  `management/commands/flatfile_parsers.py`
-  The parser goal is to read the file and convert it into a harmonized HDF 
-  table (see ESM parser in the Python file)
-
-- Add binding file -> parser in the Python `dict`:
-  `management.commands._egsim_flatfiles.Command.PARSER`
-
-- (Optional) Add the file data source 
-  in `management/commands/data/data_sources.yaml`, e.g. data reference, url, 
-  (see examples in the YAML file). 
-
-  *NOTE: In the data source you can also set the 
-  data name, i.e. a unique, usually short alphanumeric string that will 
-  identify the flatfile in user requests. If no 
-  data source or name is provided, the public name will be the file name 
-  before the first ".".*
-
-- Repopulate all eGSIM tables (command `egsim_init`)
-
-### New regionalization
-
-- Add two files *with the same basename* and extensions 
-  - .geojson (regionalization, aka regions collection) and
-  - .json (region -> gsim mapping)
-  
-  in `managements/commands/data/regionalization_files`. Usually, these files are
-  copied and pasted from the `shakyground2` project (see GFZ gitlab), but if
-  you neeed to implement your own see examples in the given directory 
-  or ask the developers
-
-- (Optional) Add the file data source 
-  in `management/commands/data/data_sources.yaml`, e.g. data reference, url, 
-  (see examples in the YAML file). 
-
-  *NOTE: In the data source you can also set the 
-  data name, i.e. a unique, usually short alphanumeric string that will 
-  identify the regionalization in user requests. If no 
-  data source or name is provided, the public name will be the file name 
-  before the first ".".*
-
-- Repopulate all eGSIM tables (command `egsim_init`)
-
-### Dependencies upgrade (including Github alerts fix)
-
-Please note that it is safer (from now even 
-[mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
-with `pip`) to upgrade all dependencies
-instead of single packages in order to avoid conflicts.
-Consequently, **follow the procedure below also in case of
-Github single packages security issues or dependencies alert**.
-
-To upgrade all dependencies, we just need to `pull` the newest version
-of `smtk` and relaunch an installation from there (this will fetch
-also OpenQuake newest version and all dependencies automatically)
-
-First create and activate a new virtualenv:
-
-```bash
-python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
-source .env/<ENVNAME>/bin/activate  # activate venv
-pip install --upgrade pip setuptools
-```
-
-Then install smtk and all dependencies:
-
-```bash
-cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-git checkout master && git pull
-pip install -e . # (also installs openquake and django)
-cd ../egsim. # (or wherever egsim is)
-pip freeze > requirements.txt
-```
-
-And finally install the newset version of the test packages:
-
-```
-pip install pylint pytest-django pytest-cov
-pip freeze > requirements.dev.txt
-```
-
-Finally, proceed with the normal workflow:
-run tests, fix new bugs and eventually `git push`, as always.
