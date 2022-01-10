@@ -13,7 +13,7 @@ Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of
      * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
      * [Admin panel](#admin-panel)
      * [Complete DB reset](#Complete-DB-reset)
-     * [Migrate and populate the db](#Migrate-and-populate-the_db)
+     * [Migrate and populate the db](#Migrate-and-populate-the-db)
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
      * [Add new regionalization](#Add-new-regionalization)
      * [Dependencies upgrade](#Dependencies-upgrade)
