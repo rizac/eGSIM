@@ -211,8 +211,8 @@ var _BASE_FORM = Vue.component('base-form', {
 	            <!-- NOTE: the control below must be placed immediately after the control above! -->
 	            <input style='display:none' type="file" id="file-input" @change='readLocalJSON'>
 
-	            <downloadselect :urls="urls.downloadRequest" :data="form" class='ml-2'
-					            :selectelementclasses="'form-control-sm bg-transparent border-0'"
+	            <download-select :urls="urls.downloadRequest" :data="form" class='ml-2'
+					            :cclass="'form-control form-control-sm bg-transparent border-0'"
 					            data-balloon-pos="down" data-balloon-length="medium"
 					            aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"/>
 

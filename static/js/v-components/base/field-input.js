@@ -109,11 +109,12 @@ Vue.component('base-input', {
         const {attrs, isBool, isSelect} = this.createData(this.$attrs, this.choices, this.value);
 
         // get if a label is specified:
-        try {
-            label = !!this.$slots.default[0].text.trim();
-        }catch(error){
-            label = "";
-        }
+//        try {
+//            label = !!this.$slots.default[0].text.trim();
+//        }catch(error){
+//            label = "";
+//        }
+        label = !!this.$slots.default || !!this.$scopedSlots.default;
 
         // setup the style classes:
         var cls = {
@@ -297,7 +298,7 @@ Vue.component('field-input', {
             <base-input v-if="isBool" v-model="field.value" :error="!!field.error"
                         v-bind="attrs" :choices="field.choices" :cclass="field.cclass || ''"
                         :disabled='field.disabled' class='me-1'>
-                {{ field.label }}
+                <span v-html="field.label"></span>
             </base-input>
             <label v-else :for="attrs.id" class='mb-1 text-nowrap'
                           :disabled='field.disabled' v-html="field.label">
