@@ -36,11 +36,6 @@ Vue.component('trellis', {
         		var enabled = newVal !== 's' && newVal !== 'ss';
         		this.form.imt.disabled = !enabled;
         		this.predefinedSA = !enabled;
-        		if (!enabled){
-        		    // Spectra plots ignore the passed IMT, but <gsim-select>s might need
-        		    // to be updated. What to set as selected IMTs then? simply nothing:
-        		    this.form.imt.value = [];
-        		}
         	}
         }
     },
@@ -57,7 +52,7 @@ Vue.component('trellis', {
         </template>
 
         <template v-slot:right-column>
-    	    <imt-select v-show='!predefinedSA' :field="form['imt']"></imt-select>
+    	    <imt-select :field="form['imt']"></imt-select>
     		<div v-show='predefinedSA'>
     		    <i class='text-warning fa fa-info-circle'></i>
     		    Intensity Measure will default to 'SA' with a set of pre-defined periods

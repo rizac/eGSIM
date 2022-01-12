@@ -28,6 +28,12 @@ Vue.component('gsim-select', {
         		this.filterUpdated();
         	}
         },
+        'imtField.disabled': function(newVal, oldVal){
+            // if we disabled the imt field, uncheck the checkbox, too, if checked:
+            if (newVal && this.filterBy.imt){
+                this.filterBy.imt = false;
+            }
+        },
         // listen for changes in the selected imts:
         'imtField.value': {  // even if it should not happen: if we change the imt param name, change it also here ...
         	// immediate: true,
@@ -75,8 +81,8 @@ Vue.component('gsim-select', {
                                type="text" class="form-control form-control-sm">
                         </td>
                         <td v-if="imtField" class='text-nowrap ps-3'>
-                            <input v-model="filterBy.imt" :id="this.field.id + '_imt'" type="checkbox">
-                            <label :for="this.field.id + '_imt'" class='small'>&hellip; defined for selected IMTs</label>
+                            <input v-model="filterBy.imt" :id="this.field.id + '_imt'" type="checkbox" :disabled='imtField.disabled'>
+                            <label :for="this.field.id + '_imt'" class='small' :disabled='imtField.disabled'>&hellip; defined for selected IMTs</label>
                         </td>
                         <td class='text-nowrap ps-3' style='text-align: right;'>
                         <span :style="[!!filterBy.geolocation ? {'visibility': 'hidden'} : {}]" class='small'>
@@ -201,7 +207,7 @@ Vue.component('gsim-select', {
                 var regexp = new RegExp(val.replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
                 filterFuncs.push(gsim => gsim.value.search(regexp) > -1);
             }
-            if (this.filterBy.imt && this.imtField.value && this.imtField.value.length){
+            if (this.filterBy.imt && this.imtField.value && this.imtField.value.length && !this.imtField.disabled){
                 var imtClassNames = new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm));
                 filterFuncs.push(gsim => gsim.imts.some(imt => imtClassNames.has(imt)));
             }

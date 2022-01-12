@@ -1,7 +1,8 @@
 /**
  * Implements a component for downloading data
  */
-Vue.component('downloadselect', {
+Vue.component('download-select', {
+    inheritAttrs: false, // https://vuejs.org/v2/guide/components-props.html#Disabling-Attribute-Inheritance
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
     	// urls is an Array of [key, url] elements (both strings)
@@ -15,8 +16,9 @@ Vue.component('downloadselect', {
         // sent to fetch the data to be downloaded (see comment on 'specialKeys' below
         // for a special case where `data` is actually the data to be downlaoded)
         data: [Object, Function],
+        noIcon: {type: Boolean, default: false},
         // the classes to be added to the select element:
-        selectelementclasses: {type: String, default:""}
+        cclass: {type: String, default: "form-control"}
     },
     data: function () {
     	// find special Keys, i.e. keys not mapped to a URL string but
@@ -49,7 +51,7 @@ Vue.component('downloadselect', {
     },
     watch: {
     	'selKey': function (newVal, oldVal){
-    		// wacth for changes in the <select> and download
+    		// watch for changes in the <select> and download
     		// note: we might have attached an onchange on the <select> tag,
     		// but: https://github.com/vuejs/vue/issues/293
  
@@ -86,22 +88,13 @@ Vue.component('downloadselect', {
     computed: {
     	// no-op
     },
-    template: `<div v-if='urls.length' class='d-flex flex-row text-nowrap align-items-baseline'>
-		<select
-			v-model='selKey'
-			:class="selectelementclasses"
-			class='form-control'
-		>	
-		    <option
-                :value='emptyValue'
-                :disabled="true"
-            >
+    template: `<div class='d-flex flex-row text-nowrap align-items-baseline'>
+        <i v-show="!noIcon" class="fa fa-download"></i>
+		<select v-model='selKey' :class="cclass">
+		    <option :value='emptyValue' :disabled="true">
                 Download as:
             </option>
-            <option
-            	v-for='[key, _] in urls'
-            	:value='key'
-            >
+            <option v-for='[key, _] in urls' :value='key'>
             	{{ key }}
             </option>
         </select>
@@ -113,7 +106,7 @@ Vue.component('downloadselect', {
     		 * Note that if we redirected to the result url in the browser
     		 * (new tab or page) the browser would download the content
     		 * automatically as long as the response content disposition is
-    		 * set accordingly. But since we retreieve the response in an ajax
+    		 * set accordingly. But since we retrieve the response in an ajax
     		 * call, we have to download the content manually (see this.download)
     		 */
     		 
@@ -158,7 +151,7 @@ Vue.component('downloadselect', {
 		    document.body.appendChild(downloadAnchorNode); // required for firefox
 		    downloadAnchorNode.click();
 		    downloadAnchorNode.remove();
-		    // as we removed the node, we should have freed up memopry,
+		    // as we removed the node, we should have freed up memory,
 		    // but let's be safe:
 		    URL.revokeObjectURL( downloadUrl );
         }

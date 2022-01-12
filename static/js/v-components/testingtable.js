@@ -193,14 +193,15 @@ Vue.component('testingtable', {
 		       		</label>
 		       	</div>
 	       	</div>
-	
-			<downloadselect
-				:urls="downloadurls"
-				:data="data"
-				class='mt-3 border p-2 bg-white'
-				data-balloon-pos='left' data-balloon-length='medium'
-                aria-label='Download the computed results in different formats'
-			/>
+
+	        <div cclass='mt-3 border p-2 bg-white'>
+                <download-select
+                    :urls="downloadurls"
+                    :data="data"
+                    data-balloon-pos='left' data-balloon-length='medium'
+                    aria-label='Download the computed results in different formats'
+                />
+			</div>
 
             <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto;  max-height:10rem'>
                 <div><i class="fa fa-info-circle"></i> Database records used:</div>

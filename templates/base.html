@@ -68,6 +68,7 @@
 	<!--  THESE ARE FALLBACKS, COMMENT OUT IF YOU WORK OFFLINE -->
 	<script type='text/javascript'>
 	{% if debug %}
+
 	if (!navigator.onLine){
 	    {% if vue %}
 		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.js'><\/script>");
