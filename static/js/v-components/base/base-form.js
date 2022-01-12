@@ -1,14 +1,12 @@
 /**
  * Represents a base form used in trellis, residuals, testing
  */
-var _BASE_FORM = Vue.component('baseform', {
+var _BASE_FORM = Vue.component('base-form', {
     props: {
         form: Object,
         url: String,
         // urls properties are passed to the downloadselect for downloading the request:
         urls: {type: Object, default: () => {return {}}},
-        // additional class for the imtselect:
-        imtselectclasses: {type: String, default: "flexible"}
     },
     data: function () {
     	return {
@@ -40,14 +38,14 @@ var _BASE_FORM = Vue.component('baseform', {
         },
         fetchRequestURL: function(){
         	// Fetches
-        	// the current config (request) as dict and builsd this.requestURL
+        	// the current config (request) as dict and builds this.requestURL
         	// Returns an axios Promise to which a user can attach functions to
         	// be executed when the POST request returns successfully
         	
-        	// *NOTE*: in Chrome only, after clicking on the button calling this
-        	// function, when we move out of it, the tooltip stays there: to make it disappear,
+        	// *NOTE*: in Chrome, after clicking on the button calling this function,
+        	// when we move out of it, the tooltip stays there: to make it disappear,
         	// we need to focus something else. This is annoying but we could not fix it
-        	// (we tried implementing awrapper method, which was hiding the aria-label
+        	// (we tried implementing a wrapper method, which was hiding the aria-label
         	// and then restoring it later inside a `then` attached to the returned promise
         	// below). If you want the source button, pass src as argument and access
         	// src.currentTarget
@@ -246,14 +244,13 @@ var _BASE_FORM = Vue.component('baseform', {
 
             <div class="d-flex flexible flex-row mt-3" :class="[responseDataEmpty ? '' : ['mx-4']]">
                 <div class="d-flex flexible flex-column">
-                    <gsim-select :field="form['gsim']" :imtField="form['imt']" class="flexible" />
+                    <slot name="left-column"></slot>
                 </div>
 
                 <div class="d-flex flex-column flexible ml-4">
-					<imt-select :field="form['imt']" :class="imtselectclasses"></imt-select>
-                	
-                	<slot/> <!-- << HERE CUSTOM FORM ELEMENTS IN CHILD COMPONENTS -->
- 					
+
+                	<slot name="right-column"></slot>
+
  					<div class='d-flex flex-row justify-content-center mt-4'>
 			            <div class='flexible' style='flex-basis:1'></div>
 			            <button type="submit" class="btn btn-primary ml-2">
