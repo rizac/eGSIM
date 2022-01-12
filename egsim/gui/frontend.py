@@ -31,6 +31,12 @@ def get_context(selected_menu=None, debug=True) -> dict:
 
     components_props = get_components_properties(debug)
 
+    regionalization = {
+        'url': URLS.GET_GSIMS_FROM_REGION,
+        'names': list(models.RegionalizationDataSource.objects.
+                      values_list('name', flat=True))
+    }
+
     return {
         'debug': debug,
         'sel_component': sel_component,
@@ -38,6 +44,7 @@ def get_context(selected_menu=None, debug=True) -> dict:
         'component_props': json.dumps(components_props, separators=(',', ':')),
         'gsims': json.dumps(gsims, separators=(',', ':')),
         'flatfiles': [(f.name, str(f)) for f in query_flatfiles()],
+        'regionalization': regionalization,
         'allowed_browsers': allowed_browsers,
         'invalid_browser_message': invalid_browser_message
     }
@@ -71,10 +78,6 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     """
     def ignore_choices(field_att_name):
         return field_att_name in ('gsim', 'imt', 'flatfile')
-
-    urls = {  # FIXME
-        'getGsimFromLatLon': URLS.GSIMS_TR
-    }
 
     # properties to be passed to vuejs components.
     # If you change THE KEYS of the dict here you should change also the

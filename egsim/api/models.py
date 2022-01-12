@@ -83,7 +83,8 @@ class _UniqueNameModel(Model):
 
 
 class _DataSource(_UniqueNameModel):
-    """Abstract class for entries describing data used in this program"""
+    """Abstract class for Table entries describing the source of data used in
+    this program"""
 
     display_name = TextField(default=None, null=True)
     url = URLField(default=None, null=True)
@@ -91,6 +92,12 @@ class _DataSource(_UniqueNameModel):
     citation = TextField(default=None, null=True,
                          help_text="Bibliographic citation, as text")
     doi = TextField(default=None, null=True)
+
+    def __str__(self):
+        """string representation of this object"""
+        name = self.display_name or self.name
+        url = " (%s)" % self.url if self.url else ""
+        return name + url  # noqa
 
     class Meta:
         # In subclasses, `abstract` is (re)set to False. Everything else is copied
@@ -101,6 +108,32 @@ class _DataSource(_UniqueNameModel):
 # =================================================
 # Models (concrete, i.e. represented by a db table)
 # =================================================
+
+
+class Flatfile(_DataSource):
+
+    filepath = TextField(unique=True, null=False)
+    hidden = BooleanField(null=False, default=False,
+                                     help_text="if true, the flatfile is hidden "
+                                               "in browsers (users can still "
+                                               "access it via API requests, if "
+                                               "not expired)")
+    expiration = DateTimeField(null=True, default=None,
+                               help_text="expiration date(time) after which the "
+                                         "flatfile is not visible or accessible "
+                                         "to any request. If null, the flatfile "
+                                         "has no expiration date")
+
+    # base directory for any uploaded or created flat file:
+    BASEDIR_PATH = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
+
+    @classmethod
+    def get_flatfiles(cls, hidden=False):
+        qry = cls.objects.filter(Q(expiration__isnull=True) |
+                                 Q(expiration__lt=datetime.utcnow()))
+        if hidden:
+            qry = qry.filter(hidden=False)
+        return qry
 
 
 class FlatfileColumn(_UniqueNameModel):
@@ -173,38 +206,6 @@ class FlatfileColumn(_UniqueNameModel):
         # `get_[field]_display` is added by Django for those fields with choices
         return '%s (OpenQuake name: %s). %s required by %d Gsims' % \
                (self.name, self.oq_name, categ, self.gsims.count())  # noqa
-
-
-class Flatfile(_DataSource):
-
-    filepath = TextField(unique=True, null=False)
-    hidden = BooleanField(null=False, default=False,
-                                     help_text="if true, the flatfile is hidden "
-                                               "in browsers (users can still "
-                                               "access it via API requests, if "
-                                               "not expired)")
-    expiration = DateTimeField(null=True, default=None,
-                               help_text="expiration date(time) after which the "
-                                         "flatfile is not visible or accessible "
-                                         "to any request. If null, the flatfile "
-                                         "has no expiration date")
-
-    # base directory for any uploaded or created flat file:
-    BASEDIR_PATH = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
-
-    @classmethod
-    def get_flatfiles(cls, hidden=False):
-        qry = cls.objects.filter(Q(expiration__isnull=True) |
-                                 Q(expiration__lt=datetime.utcnow()))
-        if hidden:
-            qry = qry.filter(hidden=False)
-        return qry
-
-    def __str__(self):
-        """string representation of this object"""
-        name = self.display_name or self.name
-        url = " (%s)" % self.url if self.url else ""
-        return name + url
 
 
 class Imt(_UniqueNameModel):

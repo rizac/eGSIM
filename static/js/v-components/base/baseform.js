@@ -140,17 +140,6 @@ var _BASE_FORM = Vue.component('baseform', {
 				var obj = {};
 				try{
 				    var obj = JSON.parse(contents);
-				    // FIXME remove
-				    // parse imt in case it has 'SA' with periods (e.g. 'SA(0.2)')
-//				    if (('imt' in obj) && ('sa_period' in form)){
-//					    var imts = (obj.imt || []).filter(elm => !elm.startsWith('SA('));
-//						var periods = (obj.imt || []).filter(elm => elm.startsWith('SA('));
-//						if (periods.length && !imts.includes('SA')){
-//							imts.push('SA');
-//						}
-//						obj.imt = imts;
-//						obj.sa_period = periods.map(elm => elm.substring(3, elm.length-1)).join(' ');
-//					}
 				}catch(error){
 				    // although discouraged, this.$root is the easiest way to notify the main root
 				    // and display the error:
@@ -200,72 +189,66 @@ var _BASE_FORM = Vue.component('baseform', {
     template: `
 	<transition :name="mounted ? 'egsimform' : ''">
     <form novalidate @submit.prevent="request"
-        :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light', 'mb-2']]"
-        class='d-flex flex-column flexible position-relative pb-4 align-self-center' style='z-index:10; border-color:rgba(0,0,0,.5) !important'
-    >    
+          :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light', 'mb-2']]"
+          class='d-flex flex-column flexible position-relative pb-4 align-self-center'
+          style='z-index:10; border-color:rgba(0,0,0,.5) !important'>
+
         <div class="d-flex flex-column flexible">
             
-            <div class='d-flex flex-row justify-content-center align-items-center p-1' style='background-color:rgba(5, 73, 113, .2)'>
-				<button type="button"
-	            	@click='resetDefaults'
-	            	aria-label="Restore default parameters" data-balloon-pos="down" data-balloon-length="medium"
-	            	class="btn btn-outline-dark border-0"
-	            >
+            <div class='d-flex flex-row justify-content-center align-items-center p-1'
+                 style='background-color:rgba(5, 73, 113, .2)'>
+
+				<button type="button" @click='resetDefaults' aria-label="Restore default parameters"
+				        data-balloon-pos="down" data-balloon-length="medium"
+	            	    class="btn btn-outline-dark border-0">
 	                <i class="fa fa-fast-backward"></i>
 	            </button>
-	            <button type="button"
-	            	onclick='this.nextElementSibling.click()'
-	            	data-balloon-pos="down" data-balloon-length="medium"
-	            	aria-label="Load a configuration from a local JSON-formatted text file. This can be, e.g., a configuration previously saved as JSON (see 'Download as')"
-	            	class="btn btn-outline-dark border-0"
-	            >
+
+	            <button type="button" onclick='this.nextElementSibling.click()'
+	            	    data-balloon-pos="down" data-balloon-length="medium"
+	            	    aria-label="Load a configuration from a local JSON-formatted text file. This can be, e.g., a configuration previously saved as JSON (see 'Download as')"
+	            	    class="btn btn-outline-dark border-0">
 	                <i class="fa fa-upload"></i>
 	            </button>
 	            <!-- NOTE: the control below must be placed immediately after the control above! -->
 	            <input style='display:none' type="file" id="file-input" @change='readLocalJSON'>
-	            <downloadselect
-					:urls="urls.downloadRequest"
-					:data="form"
-					:selectelementclasses="'form-control-sm bg-transparent border-0'"
-					class='ml-2'
-					data-balloon-pos="down" data-balloon-length="medium"
-					aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"
-				/>
-	            <button type="button"
-	            	@click='fetchRequestURL'
-	            	data-balloon-pos="down" data-balloon-length="medium"
-	            	aria-label="Show the API URL of the current configuration. The URL can be used in your custom code to fetch data (see GET requests in the API documentation for details). You can also paste it in the browser to see the results (e.g., Firefox nicely displays JSON formatted data)"
-	            	class="btn btn-outline-dark border-0 ml-2"
-	            >
+
+	            <downloadselect :urls="urls.downloadRequest" :data="form" class='ml-2'
+					            :selectelementclasses="'form-control-sm bg-transparent border-0'"
+					            data-balloon-pos="down" data-balloon-length="medium"
+					            aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"/>
+
+	            <button type="button" @click='fetchRequestURL'
+	            	    data-balloon-pos="down" data-balloon-length="medium"
+	            	    aria-label="Show the API URL of the current configuration. The URL can be used in your custom code to fetch data (see GET requests in the API documentation for details). You can also paste it in the browser to see the results (e.g., Firefox nicely displays JSON formatted data)"
+	            	    class="btn btn-outline-dark border-0 ml-2">
 	                <i class="fa fa-link"></i>
 	            </button>
+
             	<input :id="idRequestURLInput" type='text' v-model='requestURL'
-            		:style= "requestURL ? {} : { 'visibility': 'hidden'}"
-            		class='flexible form-control form-control-sm ml-2 bg-transparent border-0'
-            		style='width:initial !important'
-            	/>
-            	<button type="button"
-            		@click="copyRequestURL"
-            		v-show='requestURL'
-	            	aria-label="Copy the URL" data-balloon-pos="down" data-balloon-length="medium"
-	            	class="btn btn-outline-dark border-0"
-	            >
+            		   :style= "requestURL ? {} : { 'visibility': 'hidden'}"
+            		   class='flexible form-control form-control-sm ml-2 bg-transparent border-0'
+            		   style='width:initial !important'/>
+
+            	<button type="button" v-show='requestURL' @click="copyRequestURL"
+            		    aria-label="Copy the URL" data-balloon-pos="down" data-balloon-length="medium"
+	            	    class="btn btn-outline-dark border-0">
 	                <i class="fa fa-copy"></i>
 	            </button>
-	            <button type="button"
-	            	v-show='!responseDataEmpty'
-	            	@click='$emit("closebuttonclicked")'
-	            	aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
-	            	class="btn btn-outline-dark border-0 ml-2"
-	            >
+
+	            <button type="button" v-show='!responseDataEmpty' @click='$emit("closebuttonclicked")'
+	            	    aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
+	            	    class="btn btn-outline-dark border-0 ml-2">
 	                <i class="fa fa-times"></i>
 	            </button>
+
 	        </div>
 
             <div class="d-flex flexible flex-row mt-3" :class="[responseDataEmpty ? '' : ['mx-4']]">
                 <div class="d-flex flexible flex-column">
                     <gsim-select :field="form['gsim']" :imtField="form['imt']" class="flexible" />
                 </div>
+
                 <div class="d-flex flex-column flexible ml-4">
 					<imt-select :field="form['imt']" :class="imtselectclasses"></imt-select>
                 	

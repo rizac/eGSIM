@@ -10,7 +10,7 @@ class URLS:  # noqa
     """
 
     # Url for getting the gsim list from a given geographic location:
-    GET_GSIMS_FROM_LATLON = 'data/getgsimfromlatlon'
+    GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
 
     # url(s) for downloading the requests (configuration params) in json or
     # yaml. Example of a complete url:

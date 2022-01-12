@@ -4,7 +4,6 @@ in Europe, developed in the framework of the Thematic Core Services for
 Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of 
 [EFEHR](http://www.efehr.org/en/home/)
 
-
 # Table of contents
 
    * [Installation](#installation)
@@ -28,7 +27,6 @@ fixing bug or adding features.**
 
 The "formal" installation of eGSIM as web service (*production* or *deploy* 
 mode) on a remote, publicly available server is covered in `deploy.html`.
-
 
 ### Requirements
 
@@ -106,13 +104,13 @@ cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 pip install -e .
 ```
 
-and have a look at [Fixing/adding features to gmpe-smtk](#fixing--adding-features-to-gmpe-smtk)
+and have a look at [Fixing gmpe-smtk](#Fix gmpe-smtk)
 for the suggested workflow
 
 </details>
 
 
-### Run Test (for developers)
+### Run Test
 
 Move in the `egsim directory` and type:
 
@@ -150,7 +148,7 @@ using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
   ``` 
 
-- If you want to access the admin panel, see [the admin panel](#admin-panel-check-or-modify-database-data-from-the-web-browser)
+- If you want to access the admin panel, see [the admin panel](#admin-panel)
   
 - Run server and navigate in the browser:
   ```console
@@ -164,7 +162,7 @@ using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
 
 ## Maintenance
 
-Please note before proceeding that Django projects have two fundamental
+Few remarks before proceeding: Django projects have two fundamental
 organization structures:
 	
 1. the Django project itself in the base
@@ -175,36 +173,20 @@ organization structures:
    a project's functionality down into logical units (For details, see
    https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
 
-**In eGSIM we have a project (root directory) named "egsim" with a single
-user-defined app (sub-directory) called also "api"**. Hence,
-the directory structure might look redundant.
-Also note (see `INSTALLED_APPS` in
-the settings file) that egsim is not the only used app, as we installed several
-other builtin apps for our project (e.g. the "admin" app in order to visualize and
-easily edit on the browser the database content).
+In eGSIM we have a project (root directory) named "egsim" two apps: "api" and
+"gui". Whereas the latter is simply a package housing frontedn code, urls
+and view, the former also housed databse models and it is thus technically
+speaking the only app of the project. Note that "api" is not the only used 
+app (see `INSTALLED_APPS` in the settings file, among which we enabled the 
+`admin` app visualizable through the [Admin panel](#admin-panel)).
 
-<details>
-
-<summary>
-In case of confusion between the two command-line utilities
-django-admin and manage.py (used in the examples below)
-</summary>
-
-`manage.py` (invokable via `python manage.py`) does the same thing as
-`django-admin` but also sets the `DJANGO_SETTINGS_MODULE` environment variable
-so that it points to your project’s settings.py file (probably searching in the
-directory where `manage.py` is? no mention in the
-[official documentation](https://docs.djangoproject.com/en/3.1/ref/django-admin/#django-admin-and-manage-py])).
-As most of the examples in internet, we will also use `manage.py`,
-but always providing the `DJANGO_SETTINGS_MODULE` environment
-variable to get used to the way we should invoke the command in production.
-
-</details>
-
-Remember: **The DJANGO_SETTINGS_MODULE environment variable in the examples
-below is not the value to be given in production**, where a new settings file
-has to be created with production specific settings such as, e.g. `debug=False`
-and a new `SECRET_KEY` (which needs to be secret and not git committed).
+Most ofthe management commands we are about to see are command line 
+applications invokable from the terminal: remember that 
+**The DJANGO_SETTINGS_MODULE environment variable 
+in the examples below is not the value to be given in production**, where a 
+new settings file has to be created with production specific settings such as, 
+e.g. `debug=False` and a new `SECRET_KEY` (which needs to be secret and not 
+git committed).
 
 
 ### Starting a Python terminal shell
@@ -247,12 +229,11 @@ To do this:
    all all .py files except `__init__.py`
  - execute (change `DJANGO_SETTINGS_MODULE` value in production!):
    ```console
-      export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
-      export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
+   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
+   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
    ```
  - Re-add if needed the Django admin superuser(s) as explained in the
-   [admin panel](#admin-panel-check-or-modify-database-data-from-the-web-browser)
-   above
+   [admin panel](#admin-panel) above
    
 
 ### Migrate and populate the db

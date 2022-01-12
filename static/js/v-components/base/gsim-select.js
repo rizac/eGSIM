@@ -10,6 +10,7 @@ Vue.component('gsim-select', {
         regionalizationQueryURL: {type: String}
     },
     data: function () {
+        this.field.cclass = "form-control rounded-bottom-0 border-bottom-0";  // add custom class
     	return {
             filterBy: {  // DO NOT CHANGE KEYS!
                 name: "",
@@ -54,33 +55,41 @@ Vue.component('gsim-select', {
             <div v-show='warnings.length' style='position:relative;width:10rem;overflow:auto' ref='warningsDiv'>
                 <div class='small position-absolute ps-3' style='left:0;right:0;word-break: break-word;'>
                     <div v-for='warn in warnings'>
-                        <span class='text-warning'><i class="fa fa-exclamation-triangle"></i></span> {{ warn }}
+                        <span class='text-warning'><i class="fa fa-exclamation-triangle"></i></span><br/>{{ warn }}
                     </div>
                 </div>
             </div>
         </div>
     
         <!-- GSIM FILTER CONTROLS: -->
-        <div class="mt-1 d-flex flex-column" style='flex: 1 1 auto'>
+        <div class="pt-2 d-flex flex-column border rounded rounded-top-0" style='flex: 1 1 auto'>
             <div class="d-flex flex-column" style='flex: 1 1 auto'>
-                <div><i class="fa fa-filter mb-1"></i> Filter GSIMs &hellip;</div>
-                <table class='mb-1'>
-                    <tr>
-                    <td class='text-nowrap'>
-                    <input v-model="filterBy.name" :id="this.field.id + '_name'"
-                           placeholder="... by name (ignoring case and spaces)"
-                           style='min-width:15rem;display:inline-block;width:initial'
-                           type="text" class="form-control form-control-sm">
-                    </td>
-                    <td v-if="imtField" class='text-nowrap ps-3'>
-                        <input v-model="filterBy.imt" :id="this.field.id + '_imt'" type="checkbox" class='me-1'>
-                        <label :for="this.field.id + '_imt'" class='small'>&hellip; defined for selected IMTs</label>
-                    </td>
-                    <td class='text-nowrap ps-3' style='text-align: right;'>
-                    <span class='small'>&hellip; selected for a specific location (click on map):</span>
-                    </td>
-                    </tr>
-                </table>
+                <div class='mx-2 mb-1' style='position:relative'>
+                    <div class='mb-1'><i class="fa fa-filter"></i> Filter GSIMs &hellip;</div>
+                    <table>
+                        <tr>
+                        <td class='text-nowrap'>
+                        <input v-model="filterBy.name" :id="this.field.id + '_name'"
+                               placeholder="... by name (ignoring case and spaces)"
+                               style='min-width:15rem;display:inline-block;width:initial'
+                               type="text" class="form-control form-control-sm">
+                        </td>
+                        <td v-if="imtField" class='text-nowrap ps-3'>
+                            <input v-model="filterBy.imt" :id="this.field.id + '_imt'" type="checkbox">
+                            <label :for="this.field.id + '_imt'" class='small'>&hellip; defined for selected IMTs</label>
+                        </td>
+                        <td class='text-nowrap ps-3' style='text-align: right;'>
+                        <span :style="[!!filterBy.geolocation ? {'visibility': 'hidden'} : {}]" class='small'>
+                            &hellip; selected for a specific region (click on map):
+                        </span>
+                        </td>
+                        </tr>
+                    </table>
+                    <button v-if="!!filterBy.geolocation" type='button' class="btn btn-sm btn-outline-dark" @click="clearMapFilter"
+                            style="position:absolute; right:0; bottom:0">
+                        Clear map filter
+                    </button>
+                </div>
                 <div :id="this.field.id + '_geolocation'" style='flex: 1 1 auto'></div>
            </div>
         </div>
@@ -103,14 +112,18 @@ Vue.component('gsim-select', {
             // provide two base layers. Keep it simple as many base layers are just to shof off
             // and they do not need to be the main map concern
             // 1 MapBox Outdorrs (if you want more, sign in to mapbox. FIXME: why is it working with the token then?)
-            var bl2 = L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
-                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://www.mapbox.com/about/maps/">MapBox</a> <a href="https://www.mapbox.com/map-feedback/#/-74.5/40/10">Improve this Map</a>' ,
-                maxZoom: 18,
-                id: 'mapbox.outdoors'  //  'mapbox.streets'
-              });
+            var geoportailLayer = L.tileLayer('https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+                attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
+                bounds: [[-75, -180], [81, 180]],
+                minZoom: 2,
+                maxZoom: 19,
+                apikey: 'choisirgeoportail',
+                format: 'image/jpeg',
+                style: 'normal'
+            }).addTo(map);
             // 2 CartoDB gray scale map (very good with overlays, as in our case)
             // the added base layer added is set selected by default (do not add the others then)
-            var bl1 = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            var cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
                 subdomains: 'abcd',
                 maxZoom: 19
@@ -118,24 +131,67 @@ Vue.component('gsim-select', {
 
             // instantiate a layer control (the button on the top-right corner for showing/hiding overlays
             // overlays will be added when setting the tr model
-            this.layersControl = L.control.layers({
-                'base layer 1': bl1,
-                'base layer 2': bl2
-            }, {}, {collapsed: false}).addTo(map);  // https://gis.stackexchange.com/a/68243
+            var layersControl = L.control.layers({
+                'Map: Geoportail': geoportailLayer, 'Map: Carto': cartoLayer
+            }, {}, {collapsed: false, position: 'bottomleft'}).addTo(map);  // https://gis.stackexchange.com/a/68243
+            this.addRegionalizationControl(map);
             this.map = map;
             map.on("click", this.mapClicked);
         },
-        mapClicked: function(event) {
-            // destroy current vue popup component to free memory and all bound props
-            // which might throw useless errors when changed afterwards:
-            if(this.mapMarker){
-                this.mapMarker.$destroy();
-            }
-            // build a new one:
+        addRegionalizationControl(map){
+            var field = this.field;
+
+            var control = L.control({position: 'topright'});
+            control.onAdd = function (map) {
+                var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded leaflet-control');
+                // prevent click on anything on the div to propagate on the map:
+                L.DomEvent.disableClickPropagation(div);
+                // Add title:
+                var title = L.DomUtil.create('span', '', div);
+                title.innerHTML = '<h6>Regionalization:</h6>';
+                for (var [val, name] of field.regionalization.choices){
+                    var label = L.DomUtil.create('label', 'd-flex flex-row align-items-baseline', div);
+                    var input = L.DomUtil.create('input',
+                                                 "leaflet-control-layers-selector",
+                                                 label);
+                    var span = L.DomUtil.create('span', 'ms-2', label);
+                    span.innerHTML = name;
+                    input.setAttribute('type', 'checkbox');
+                    input.setAttribute('value', val);
+                    input.checked = field.regionalization.value.includes(val);
+                    input.addEventListener('input', function (evt) {
+                        var val = evt.target.value;
+                        var idx = field.regionalization.value.indexOf(val);
+                        if (idx == -1){
+                            field.regionalization.value.push(val);
+                        }else{
+                            field.regionalization.value.splice(idx, 1);
+                        }
+                    });
+                }
+                return div;
+            };
+            control.addTo(map);
+        },
+        mapClicked(event) {
             this.filterBy.geolocation = [event.latlng.lat, event.latlng.lng];
-            // Add marker
-            this.mapMarker = L.marker(this.filterBy.geolocation).addTo(this.map);
+            // Destroy existing markers marker (or move existing one):
+            this.removeMarkersFromMap();
+            // ad new marker:
+            L.marker(this.filterBy.geolocation).addTo(this.map);
             this.filterUpdated();
+        },
+        clearMapFilter(){
+            // Destroy existing markers marker (or move existing one):
+            this.removeMarkersFromMap();
+            this.filterBy.geolocation = null;
+        },
+        removeMarkersFromMap(){
+            this.map.eachLayer(function (layer) {
+                if (layer instanceof L.Marker){
+                    layer.remove();
+                }
+            });
         },
         filterUpdated(){
             var defFilterFunc = elm => true;
@@ -150,11 +206,17 @@ Vue.component('gsim-select', {
                 filterFuncs.push(gsim => gsim.imts.some(imt => imtClassNames.has(imt)));
             }
             if (this.filterBy.geolocation){
-                Vue.post(this.regionalizationQueryURL, this.filterBy.geolocation, this.regionalizations).then(response => {  // defined in `vueutil.js`
-                    if(response.data && response.data.length){
-                        var regionGsims = new Set(response.data);
+                var data = {
+                    'lat': this.filterBy.geolocation[0],
+                    'lon': this.filterBy.geolocation[1],
+                    'reg': this.field.regionalization.value
+                };
+                Vue.post(this.field.regionalization.url, data).then(response => {  // defined in `vueutil.js`
+                    var gsims = Array.isArray(response.data) ? response.data : Object.keys(response.data);
+                    if(gsims && gsims.length){
+                        var regionGsims = new Set(gsims);
                         // create filterFunc from list og Gsims:
-                        filterFuncs.push(elm => regionGsims.has(elm));
+                        filterFuncs.push(gsim => regionGsims.has(gsim.value));
                         this.field.choices = this.filterChoices(filterFuncs);
                         this.updateWarnings();
                     }
@@ -164,14 +226,14 @@ Vue.component('gsim-select', {
                 this.updateWarnings();
             }
         },
-        filterChoices(filterFuncs){  // filters => callable, Set, Array
+        filterChoices(filterFuncs){  // filterFuncs: callable(gsimName) -> bool
             var okGsims = new Array();
             var noGsims = new Array();
 
             for (var gsim of this.choices){
-                // Provide strikethrough for filtered out <option>s but note that
-                // styling does not work in Safari. As such , set also those options
-                // disabled for cross browser compatibility:
+                // Provide strikethrough for filtered out GSIMs but this won't be
+                // rendered in Safari, as <option>s cannot be styled. As such, set also
+                // those <option>s disabled for cross browser compatibility:
                 if (filterFuncs.every(filterFunc => filterFunc(gsim))){
                     // Note: if no filterFuncs provided we land here (`[].every` => true)
                     gsim.disabled = false;
@@ -244,6 +306,7 @@ Vue.component('imt-select', {
     	field: {type: Object},
     },
     data: function () {
+        this.field.cclass = "form-control rounded-bottom-0 border-bottom-0";  // add custom class
     	return {
     	    fieldCopy: Object.assign({}, this.field),
     	    SAPeriods: ''
@@ -270,9 +333,11 @@ Vue.component('imt-select', {
         // no-op
     },
     template: `<div class='d-flex flex-column'>
-        <field-input :field="fieldCopy" class="mb-1"></field-input>
+        <field-input :field="fieldCopy"></field-input>
         <base-input v-model="SAPeriods" :disabled="field.disabled || !fieldCopy.value.includes('SA')"
-                    placeholder="SA periods (space-separated)"></base-input>
+                    placeholder="SA periods (space-separated)"
+                    :cclass="'form-control rounded-top-0'">
+        </base-input>
     </div>`,
     methods: {
         updateSelectedImts(){
