@@ -40,8 +40,12 @@ class Test:
         # test it is json serializable:
         data = json.dumps(val)
 
-    def test_get_gsim_from_region(self):
+    def test_get_gsim_from_region(self, areequal):
         form = ModelFromRegionForm({'lat': 50, 'lon': 7})
         assert form.is_valid()
         resp = form.response_data
+        for res, reg in resp.items():
+            dict_test = {k: v for k, v in resp.items() if v == reg}
+            resp_ = ModelFromRegionForm({'lat': 50, 'lon': 7, 'reg': reg}).response_data
+            assert resp_ == dict_test
         asd = 9

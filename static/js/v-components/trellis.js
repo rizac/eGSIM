@@ -56,7 +56,7 @@ Vue.component('trellis', {
 		@closebuttonclicked="formHidden = true"
     >
     	<slot>
-    		<div v-show='predefinedSA'><i class='text-warning fa fa-info-circle'></i> Intensity Measure Type will default to 'SA' with a set of pre-defined periods</div>
+    		<div v-show='predefinedSA'><i class='text-warning fa fa-info-circle'></i> Intensity Measure will default to 'SA' with a set of pre-defined periods</div>
         	<div class="flexible form-control mt-4"
             	style="flex-basis:0;background-color:transparent;overflow-y:auto"
             	:class="{'border-danger': scenarioHasErrors}"

@@ -5,7 +5,8 @@ var EGSIM_BASE = {
         loading: false,
         errormsg: '',
         selComponent: '',
-        gsims: {}, // an Object of gsim names (string) mapped to [[... imts ...], trt, oq_gsim_warning] (all elements strings)
+        // FIXME: IMPLEMENT PROPS FOR DEFAULT VARIABLES?
+        // gsims: {}, // an Object of gsim names (string) mapped to [[... imts ...], trt, oq_gsim_warning] (all elements strings)
         componentProps: {}, // an object of Objects keyed by each string denoting a component name (<=> menu tab)
         postfuncDefaultConfig: {}  // default config used in Vue.post. See egsim.html and vueutils.js
         // In case we want to use an event bus:
@@ -38,14 +39,20 @@ var EGSIM_BASE = {
                 // keep it together:
                 innerHTML: gsimName.match(reg).join(" "),
                 imts: imts_,
-                warning: warning || ""
+                warning: warning || "",
             }
         });
+        var regionalization = this.regionalization;
         // set processed data:
         for (var [name, form] of this.forms()){
         	if (form.gsim){
         	    // set form.gsim.choices as a deep copy of gsimObjects:
                	form.gsim.choices = gsimObjects.map(elm => Object.assign({}, elm));
+               	form.gsim.regionalization = {
+                    url: regionalization.url,
+                    choices: regionalization.names.map(elm => [elm, elm]),
+                    value: Array.from(regionalization.names)
+                }
            	}
            	if (form.imt){
            	    // set form.imt as a deep copy of imts:

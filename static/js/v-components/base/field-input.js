@@ -10,11 +10,6 @@ const baseComponentMixin = {
             errorColor: "#dc3545"
         }
     },
-    computed: {
-        inputComponentStyle(){
-            return !!this.error ? `border-color: ${this.errorColor} !important` : "";
-        }
-    },
     methods: {
         createData(attrs, choices, value){
             // Complete the Object of HTML attributes `attrs` with missing values
@@ -105,7 +100,8 @@ Vue.component('base-input', {
         value: {type: [String, Number, Array, Boolean]},
         error: {type: Boolean, default: false},
         choices: {type:Array, default: () => ([])},  // defaults to empty Array
-        disabled: {type: Boolean, default: false}
+        disabled: {type: Boolean, default: false},
+        cclass: {type: String, default: ""}  // custom <input>/<select> component class. In Vue3, class is ok (Vue2 does not pas it)
     },
     data: function () {
         // Complete the HTML attributes of this component with values that can
@@ -121,9 +117,6 @@ Vue.component('base-input', {
 
         // setup the style classes:
         var cls = {
-            boolInput : '',
-            input: 'form-control',
-            select: 'form-control',
             label: 'text-nowrap me-1',
             rootDiv: 'd-flex flex-row align-items-baseline'
         };
@@ -164,6 +157,12 @@ Vue.component('base-input', {
         }
     },
     computed: {
+        mainComponentClass(){
+            return this.cclass ? this.cclass : (this.isBool ? '' : 'form-control');
+        },
+        mainComponentStyle(){
+            return !!this.error ? `border-color: ${this.errorColor} !important` : "";
+        },
         val: {  // https://stackoverflow.com/questions/47311936/v-model-and-child-components
             get() {
                 return this.value;
@@ -175,16 +174,18 @@ Vue.component('base-input', {
     },
     template: `<div :class="cls.rootDiv">
         <input v-if="isBool" v-model="val" v-bind="attrs" :disabled='disabled'
-               :class="cls.boolInput">
+               :class="mainComponentClass">
         <label v-if="!!label" :for="attrs.id" :disabled='disabled' :class="cls.label">
             <slot></slot>
         </label>
-        <select v-if="isSelect" v-model="val" v-bind="attrs" :disabled='disabled' :class="cls.select" :style="inputComponentStyle" ref='selectComponent'>
+        <select v-if="isSelect" v-model="val" v-bind="attrs" :disabled='disabled'
+                :class="mainComponentClass" :style="mainComponentStyle" ref='selectComponent'>
 	        <option	v-for='opt in options' :value="opt.value" :disabled="opt.disabled"
 	                :class="opt.class" :style="opt.style" v-html="opt.innerHTML">
 	        </option>
 	    </select>
-	    <input v-else-if="!isBool"  v-model="val" v-bind="attrs" :disabled='disabled' :class="cls.input" :style="inputComponentStyle">
+	    <input v-else-if="!isBool"  v-model="val" v-bind="attrs" :disabled='disabled'
+	           :class="mainComponentClass" :style="mainComponentStyle">
         </div>`,
     methods: {
         makeOptions: function(choices) {
@@ -294,9 +295,9 @@ Vue.component('field-input', {
     template: `<div>
         <div class="d-flex flex-row mb-0 align-items-baseline">
             <base-input v-if="isBool" v-model="field.value" :error="!!field.error"
-                        v-bind="attrs" :choices="field.choices"
+                        v-bind="attrs" :choices="field.choices" :cclass="field.cclass || ''"
                         :disabled='field.disabled' class='me-1'>
-            {{ field.label }}
+                {{ field.label }}
             </base-input>
             <label v-else :for="attrs.id" class='mb-1 text-nowrap'
                           :disabled='field.disabled' v-html="field.label">
@@ -310,7 +311,7 @@ Vue.component('field-input', {
             <slot></slot>
         </div>
         <base-input v-if="!isBool" v-model="field.value" :error="!!field.error"
-                    v-bind="attrs" :choices="field.choices"
+                    v-bind="attrs" :choices="field.choices" :cclass="field.cclass || ''"
                     :disabled='field.disabled'>
         </base-input>
     </div>`,

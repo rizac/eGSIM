@@ -11,9 +11,8 @@ from .. import APIForm
 from ... import models
 
 
-def get_regionalization_names():
-    return [(_,_) for _ in
-            models.RegionalizationDataSource.objects.values_list('name')]
+def get_regionalizations() -> Iterable[tuple[str, str]]:
+    return [(_.name, str(_)) for _ in models.RegionalizationDataSource.objects.all()]
 
 
 class ModelFromRegionForm(APIForm):
@@ -33,34 +32,36 @@ class ModelFromRegionForm(APIForm):
 
     lat = FloatField(label='Strike', min_value=-90., max_value=90.)
     lon = FloatField(label='Strike', min_value=-180., max_value=180.)
-    regionalization = MultipleChoiceWildcardField(choices=get_regionalization_names,
+    regionalization = MultipleChoiceWildcardField(choices=get_regionalizations,
                                                   label='Regionalization name',
                                                   required=False)
 
     @classmethod
-    def process_data(cls, cleaned_data: dict) -> dict:
+    def process_data(cls, cleaned_data: dict) -> dict[str, str]:
         """Process the input data `cleaned_data` returning the response data
-        of this form upon user request.
+        of this form upon user request, ie.e a dict of gsim name mapped to its
+        regionalization name.
         This method is called by `self.response_data` only if the form is valid.
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
-        qry = models.GsimRegion.objects  # noqa
-        rgnz = [_.name for _ in cleaned_data['regionalization']]
+        fields = ('gsim__name', 'regionalization__name', 'geometry')
+        qry = models.GsimRegion.objects.\
+            select_related('gsim', 'regionalization').\
+            only(*fields).values_list(*fields)
+        rgnz = cleaned_data['regionalization'] or []
         if rgnz:
-            qry = qry.filter(reionalization_in=rgnz)
-        gsims = defaultdict(list)
+            qry = qry.filter(regionalization__name__in=rgnz)
+        gsims = {}
         point = Point(cleaned_data['lon'], cleaned_data['lat'])
-        for gsim_region in qry.all():
-            gsim_name = gsim_region.gsim.name
+        for gsim_name, regionalization_name, geometry in qry.all():
             if gsim_name in gsims:
                 continue
-            geojson = gsim_region.geometry
-            type, coords = geojson['type'], geojson['coordinates']
+            type, coords = geometry['type'], geometry['coordinates']
             for coord in coords if type == 'MultiPolygon' else [coords]:
-                polygon = Polygon([tuple(l) for l in coord[0]])
+                polygon = Polygon((tuple(l) for l in coord[0]))
                 if polygon.contains(point):
-                    gsims[gsim_name].append(gsim_region.regionalization.name)
+                    gsims[gsim_name] = regionalization_name
                     break
 
         return gsims

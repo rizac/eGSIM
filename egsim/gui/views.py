@@ -8,6 +8,7 @@ from io import StringIO
 from os.path import join, dirname
 import json
 import yaml
+from django.http import JsonResponse
 
 from django.http.response import HttpResponse
 from django.shortcuts import render
@@ -15,7 +16,8 @@ from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import figutils, TABS
-from .vuejs import get_context
+from .frontend import get_context
+from ..api.forms.model_from_region.model_from_region import ModelFromRegionForm
 from ..api.forms.tools import describe, serialize
 from ..api.models import FlatfileColumn
 from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS
@@ -203,6 +205,15 @@ def download_asimage(request, filename):
         'attachment; filename=%s' % filename
     response['Content-Length'] = len(bytestr)
     return response
+
+
+def get_gsims_from_region(request):
+    jsondata = json.loads(request.body.decode('utf-8'))
+    form = ModelFromRegionForm(jsondata)
+    if not form.is_valid():
+        return JsonResponse(form.validation_errors())
+    else:
+        return JsonResponse(form.response_data)
 
 
 def _test_err(request):
