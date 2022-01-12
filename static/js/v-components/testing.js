@@ -6,67 +6,64 @@
 Vue.component('testing', {
 	extends: _BASE_FORM,  // defined in baseform.js
     data: function () {
-    	// set the size of the plot_type <select>. Maybe this is not the right place
-    	// (maybe the 'created' method would be better:
-    	// https://vuejs.org/v2/api/#created) but it works:
-    	this.$set(this.form['fit_measure'].attrs, 'size', 5);
-    	// set `edr_bandwidth` and `edr_multiplier` inital value as undefined.
-    	// This means that we will skip setting the value
-   		// for those fields when clicking 'restore to defaults' (see baseform.js).
-   		// Their value will be set according to 'plot_type' (see 'watch' below):
-   		this.form.edr_bandwidth.initial = undefined;
-   		this.form.edr_multiplier.initial = undefined;
-   		// return data:
         return {
         	responseData: {},
             formHidden: false
         }
     },
     watch: {
-        // see parent class for watchers on the form
-        
-        // watch additionally for this field and set other fields visible/disabled accordingly:
-        'form.fit_measure.val': {
-        	// watch for changes in the fit_measure (<select> element):
-        	immediate: true,
-        	handler: function(newVal, oldVal){
-        		var enabled = newVal && newVal.length && newVal.some(val => val.toLowerCase() == 'edr');
-        		this.form.edr_bandwidth.is_hidden = !enabled;
-        		this.form.edr_multiplier.is_hidden = !enabled;
-        	}
+    },
+    computed: {
+        isEDRSelected(){
+            var val = this.form.fit_measure.value;
+            edr = val && val.length && val.some(v => v.toLowerCase() == 'edr');
+            // if disabled, data is not sent to the server (for safety):
+            this.form.edr_bandwidth.disabled = !edr;
+            this.form.edr_multiplier.disabled = !edr;
+            return edr;
         }
     },
     template: `
 <div class='flexible d-flex flex-column position-relative'>
 	<!-- $props passes all of the props on to the "parent" component -->
 	<!-- https://stackoverflow.com/a/40485023 -->
-	<baseform
-		v-show="!formHidden"
-		v-bind="$props"
-		@responsereceived="responseData = arguments[0]; formHidden = true"
-		@closebuttonclicked="formHidden = true"
-	>
-        <slot>        
+	<base-form v-show="!formHidden" v-bind="$props"
+		       @responsereceived="responseData = arguments[0]; formHidden = true"
+		       @closebuttonclicked="formHidden = true">
+
+		<template v-slot:left-column>
+            <gsim-select :field="form.gsim" :imtField="form.imt" class="flexible" />
+        </template>
+
+        <template v-slot:right-column>
+            <imt-select :field="form.imt" class='flexible' size="7"></imt-select>
+
             <div class="mt-4 form-control" style="background-color:transparent">
-                <forminput :form='form' :name='"gmdb"'></forminput>
-            	<forminput :form='form' :name='"selexpr"' showhelpbutton
-        			@helprequested='$emit("emit-event", "movetoapidoc", "selexpr")' class='mt-2'>
-        		</forminput>
+                <field-input :field='form.flatfile'></field-input>
+            	<field-input :field='form.selexpr' class='mt-2'></field-input>
+            	<!-- showhelpbutton	@helprequested='$emit("emit-event", "movetoapidoc", "selexpr")' -->
             </div>
             
             <div class="mt-4" style="background-color:transparent">
-            	<forminput :form='form' :name='"fit_measure"'></forminput>
-            	<forminputlite :form='form' :name='"edr_bandwidth"' class='mt-1'></forminputlite>
-            	<forminputlite :form='form' :name='"edr_multiplier"' class='mt-1'></forminputlite>
+            	<field-input :field='form.fit_measure' size="5"></field-input>
+            	<base-input v-show="isEDRSelected" class='mt-1'
+            	            v-model="form.edr_bandwidth.value"
+            	            :disabled="form.edr_bandwidth.disabled"
+            	            :error="!!form.edr_bandwidth.error">
+            	    {{ form.edr_bandwidth.name }}
+            	</base-input>
+            	<base-input v-show="isEDRSelected" class='mt-1'
+            	            v-model="form.edr_multiplier.value"
+            	            :disabled="form.edr_multiplier.disabled"
+            	            :error="!!form.edr_multiplier.error">
+            	    {{ form.edr_multiplier.name }}
+            	</base-input>
 			</div>
-    	</slot>
-    </baseform>
+    	</template>
+    </base-form>
 
-    <testingtable
-    	:data="responseData"
-    	:downloadurls="urls.downloadResponse"
-    	class='position-absolute pos-0' style='z-index:1'
-    >
+    <testingtable :data="responseData" :downloadurls="urls.downloadResponse"
+    	          class='position-absolute pos-0' style='z-index:1'>
     	<slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-list-alt'></i> Configuration</button>
         </slot>

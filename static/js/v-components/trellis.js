@@ -48,23 +48,26 @@ Vue.component('trellis', {
 <div class='flexible d-flex flex-column position-relative'>
 	<!-- v-bind="$props" passes all of the props on to the "parent" component -->
 	<!-- https://stackoverflow.com/a/40485023 -->
-	<baseform
-		v-show="!formHidden"
-		v-bind="$props"
-		:imtselectclasses="''"
-		@responsereceived="responseData = arguments[0]; formHidden = true"
-		@closebuttonclicked="formHidden = true"
-    >
-    	<slot>
-    		<div v-show='predefinedSA'><i class='text-warning fa fa-info-circle'></i> Intensity Measure will default to 'SA' with a set of pre-defined periods</div>
+	<base-form v-show="!formHidden" v-bind="$props"
+		      @responsereceived="responseData = arguments[0]; formHidden = true"
+		      @closebuttonclicked="formHidden = true">
+
+        <template v-slot:left-column>
+            <gsim-select :field="form['gsim']" :imtField="form['imt']" class="flexible" />
+        </template>
+
+        <template v-slot:right-column>
+    	    <imt-select v-show='!predefinedSA' :field="form['imt']"></imt-select>
+    		<div v-show='predefinedSA'>
+    		    <i class='text-warning fa fa-info-circle'></i>
+    		    Intensity Measure will default to 'SA' with a set of pre-defined periods
+    		</div>
         	<div class="flexible form-control mt-4"
-            	style="flex-basis:0;background-color:transparent;overflow-y:auto"
-            	:class="{'border-danger': scenarioHasErrors}"
-            >
-                <field-input
-                	v-for="(name, index) in scenarioKeys"
-                    :field='form[name]' :key="name"
-                    :class="{ 'mt-2': index > 0 }">
+        	     :class="{'border-danger': scenarioHasErrors}"
+            	 style="flex-basis:0;background-color:transparent;overflow-y:auto">
+
+                <field-input v-for="(name, index) in scenarioKeys" :key="name"
+                             :field='form[name]' :class="{ 'mt-2': index > 0 }">
                 </field-input>
             </div>
 
@@ -72,16 +75,16 @@ Vue.component('trellis', {
                 <field-input :field='form["plot_type"]'></field-input>
                 <field-input :field='form["stdev"]' class='mt-1'></field-input>
             </div>
-        </slot>
-    </baseform>
+        </template>
+    </base-form>
 
-    <trellisplotdiv
-    	:data="responseData"
-    	:downloadurls="urls.downloadResponse.concat(urls.downloadImage)"
-        class='position-absolute pos-0' style='z-index:1'
-    >
+    <trellisplotdiv	:data="responseData"
+    	            :downloadurls="urls.downloadResponse.concat(urls.downloadImage)"
+                    class='position-absolute pos-0' style='z-index:1'>
         <slot>
-            <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-list-alt'></i> Configuration</button>
+            <button @click='formHidden=false' class='btn btn-sm btn-primary'>
+                <i class='fa fa-list-alt'></i> Configuration
+            </button>
         </slot>
     </trellisplotdiv>
 </div>`
