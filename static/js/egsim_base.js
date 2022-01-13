@@ -19,7 +19,8 @@ var EGSIM_BASE = {
         // (?<!_)[0-9]+(?!_)  e.g. "2006" but not "2006_"
         // [A-Z_]+ or [a-z_]+ e.g. "ABC" "abc"
         // .* anything else returned as single token, e.g., "b2006_g"
-        var reg = /[A-Z]+[a-z]+|(?<!_)[0-9]+(?!_)|[A-Z_]+|[a-z_]+|.+/g;
+        //var reg = /[A-Z]+[a-z]+|(?<!_)[0-9]+(?!_)|[A-Z_]+|[a-z_]+|.+/g;
+        var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g;
         // converts the gsims received from server from an Array of Arrays to an
         // Array of Objects:
         var imts = [];

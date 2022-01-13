@@ -10,7 +10,7 @@ Vue.component('gsim-select', {
         regionalizationQueryURL: {type: String}
     },
     data: function () {
-        this.field.cclass = "form-control rounded-bottom-0 border-bottom-0";  // add custom class
+        this.field.cclass = "";  // see `mso` property below
     	return {
             filterBy: {  // DO NOT CHANGE KEYS!
                 name: "",
@@ -51,24 +51,43 @@ Vue.component('gsim-select', {
         }
     },
     computed: {
+        mso(){  //multi select options (setup right <div> with warnings):
+            var opts =  {'top-info': true};
+            this.field.cclass = "form-control rounded-bottom-0 border-bottom-0";
+            if (this.warnings && this.warnings.length){
+                this.field.cclass += ' rounded-right-0'
+                var warn = this.warnings.map(elm => `<div class="small text-muted pt-2 px-3"><span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>${elm}</div>`).join("");
+                opts = Object.assign(opts, {
+                    'right-info': warn,
+                    'right-info-style': {
+                        'width': '33%',
+                        'border': '1px solid #ced4da',
+                        'border-top-right-radius': '0.25rem',
+                        'border-bottom': '0',
+                        'border-left': '0'
+                    }
+                });
+            }
+            return opts;
+        }
     },
     template: `<div class='d-flex flex-column'>
 
         <div class='d-flex flex-row'>
             <div class="flexible">
-                <field-input :field="field" size="15"></field-input>
+                <field-input :field="field" size="15" :multiselect-opts="mso"></field-input>
             </div>
-            <div v-show='warnings.length' style='position:relative;width:10rem;overflow:auto' ref='warningsDiv'>
+            <!-- <div v-show='warnings.length' style='position:relative;width:10rem;overflow:auto' ref='warningsDiv'>
                 <div class='small position-absolute ps-3' style='left:0;right:0;word-break: break-word;'>
                     <div v-for='warn in warnings'>
                         <span class='text-warning'><i class="fa fa-exclamation-triangle"></i></span><br/>{{ warn }}
                     </div>
                 </div>
-            </div>
+            </div> -->
         </div>
     
         <!-- GSIM FILTER CONTROLS: -->
-        <div class="pt-2 d-flex flex-column border rounded rounded-top-0" style='flex: 1 1 auto'>
+        <div class="pt-2 d-flex flex-column rounded rounded-top-0" style='flex: 1 1 auto; border: 1px solid #ced4da'>
             <div class="d-flex flex-column" style='flex: 1 1 auto'>
                 <div class='mx-2 mb-1' style='position:relative'>
                     <div class='mb-1'><i class="fa fa-filter"></i> Filter GSIMs &hellip;</div>
