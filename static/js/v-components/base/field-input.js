@@ -101,19 +101,14 @@ Vue.component('base-input', {
         error: {type: Boolean, default: false},
         choices: {type:Array, default: () => ([])},  // defaults to empty Array
         disabled: {type: Boolean, default: false},
-        cclass: {type: String, default: ""}  // custom <input>/<select> component class. In Vue3, class is ok (Vue2 does not pas it)
+        // custom <input>/<select> component class. In Vue3, 'class' would be enough:
+        cclass: {type: String, default: ""}
     },
     data: function () {
         // Complete the HTML attributes of this component with values that can
         // be inferred if missing:
         const {attrs, isBool, isSelect} = this.createData(this.$attrs, this.choices, this.value);
 
-        // get if a label is specified:
-//        try {
-//            label = !!this.$slots.default[0].text.trim();
-//        }catch(error){
-//            label = "";
-//        }
         label = !!this.$slots.default || !!this.$scopedSlots.default;
 
         // setup the style classes:
@@ -159,7 +154,7 @@ Vue.component('base-input', {
     },
     computed: {
         mainComponentClass(){
-            return this.cclass ? this.cclass : (this.isBool ? '' : 'form-control');
+            return !!this.cclass ? this.cclass : (this.isBool ? '' : 'form-control');
         },
         mainComponentStyle(){
             return !!this.error ? `border-color: ${this.errorColor} !important` : "";
@@ -244,7 +239,16 @@ Vue.component('field-input', {
     mixins: [baseComponentMixin],
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
-        field: {type: Object}
+        field: {type: Object},
+        // options for <select multiple> (right/top margin <div> with info, warnings):
+        multiselectOpts: {type: Object, default: () => {
+                return {
+                    'top-info': false, // bool or string. If true: display default info
+                    'right-info': "",
+                    'right-info-style': {"width": "5rem"}
+                }
+            }
+        },
     },
     data: function () {
         var field = this.field;
@@ -276,7 +280,7 @@ Vue.component('field-input', {
     		}
     		// return the element html help
     		var info = this.field.help || '';
-    		var sel = this.selectedInfo;
+    		var sel = this.multiselectTopInfo;
     		if (!info && !sel){
     		    return "";
     		}else if (info && sel){
@@ -284,13 +288,33 @@ Vue.component('field-input', {
     		}
     		return info || sel;
     	},
-    	selectedInfo: function(){
+    	multiselectTopInfo(){  // location: "top", "right"
     	    // for select[multiple], return the string with the number of selected items
     	    var field = this.field;
     	    if (Array.isArray(field.value) && this.isSelect && this.attrs.multiple){
-    			return `${field.value.length || 0} of ${field.choices.length} selected`;
+    	        var val = this.multiselectOpts['top-info'];
+    	        if (val && typeof val !== 'string'){
+    	            var count = field.choices.filter(e => !e.disabled).length;
+    	            var sel = field.value.length || 0;
+    			    val = `${count} model${count != 1 ? 's' : ''}, ${sel} selected`;  // `${field.value.length || 0} of ${count} selected`;
+    			}
+    			return val;
     		}
     		return "";
+    	},
+    	multiselectRightInfo(){
+        	var field = this.field;
+    	    if (Array.isArray(field.value) && this.isSelect && this.attrs.multiple){
+        	    return this.multiselectOpts['right-info'] || "";
+        	}
+        	return "";
+    	},
+    	multiselectRightInfoStyle(){
+    	    var field = this.field;
+        	if (Array.isArray(field.value) && this.isSelect && this.attrs.multiple){
+        	    return this.multiselectOpts['right-info-style'] || "";
+    	    }
+    	    return "";
     	}
     },
     template: `<div>
@@ -305,16 +329,24 @@ Vue.component('field-input', {
             </label>
             <span class="small ms-2 text-muted text-nowrap" :style="infoMessageStyle">
                 <span v-html="info"></span>
-                <i v-if="!!selectedInfo && field.value.length" class="fa fa-times-circle"
+                <i v-if="multiselectTopInfo && (multiselectOpts['top-info'] === true)" class="fa fa-times-circle"
                    @click="field.value=[]" style="cursor: pointer;" title="Clear selection"></i>
             </span>
             <span class='text-primary small ms-3 text-right'>{{ attrs.name }}</span>
             <slot></slot>
         </div>
-        <base-input v-if="!isBool" v-model="field.value" :error="!!field.error"
+        <div class='d-flex flex-row'>
+            <base-input v-if="!isBool" v-model="field.value" :error="!!field.error"
                     v-bind="attrs" :choices="field.choices" :cclass="field.cclass || ''"
-                    :disabled='field.disabled'>
-        </base-input>
+                    :disabled='field.disabled' style='flex: 1 1 auto'>
+            </base-input>
+            <div v-show="!!multiselectRightInfo" :style="multiselectRightInfoStyle"
+                 style='position:relative;padding:0;margin:0'>
+                <div v-html="multiselectRightInfo"
+                     style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:auto">
+                </div>
+            </div>
+        </div>
     </div>`,
     methods: {
 
