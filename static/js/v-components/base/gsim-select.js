@@ -286,7 +286,7 @@ Vue.component('gsim-select', {
                 }
             });
             var allDisabled = disabledCount == this.choices.length ? ['No GSIM matches current filters (all models filtered out)'] : [];
-            selFilteredOut = selFilteredOut.map(elm => `${elm} is selected but filtered out`);
+            selFilteredOut = selFilteredOut.map(elm => `${elm} is filtered out but still selected`);
             this.warnings = allDisabled.concat(selFilteredOut.concat(warnings));
             // scroll warnings to top:
             var selComp = this.$refs.warningsDiv;
