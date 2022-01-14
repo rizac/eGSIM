@@ -105,13 +105,48 @@
 	<script type='text/javascript' src = "{% static 'js/browserdetection.js' %}"></script>
 
 	<script>
-	// FIXME REMOVE
-	// Create the globally available Vue.eGSIM Object:
-	// The function Vue.init is defined in vueutil.js
-	// Vue.init({{ gsims|safe }});
+	/* browser version detection and warning */
+	function getBrowser() {
+		// returns the Array [browsername:String, version:number]. The heuristic used
+		// (https://stackoverflow.com/a/16938481) should not be considered completely
+		// reliable. We use it only to display a warning message
 
-	// instantiate the EGSIM Vue Instance with content injected from the server and the
-	// browser version check just implemented:
+		var ua=navigator.userAgent;
+		var tem;
+		var M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
+		if(/trident/i.test(M[1])){
+			tem=/\brv[ :]+(\d+)/g.exec(ua) || [];
+			return { name:'IE', version: parseInt(tem[1]) };
+		}
+		if(M[1]==='Chrome'){
+			tem=ua.match(/\bOPR|Edge\/(\d+)/)
+			if(tem!=null){
+				return { name:'Opera', version: parseInt(tem[1]) };
+			}
+		}
+		M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
+		if((tem=ua.match(/version\/(\d+)/i))!=null){
+			M.splice(1,1,tem[1]);
+		}
+		return { name: M[0].toLowerCase(), version: parseInt(M[1]) };
+	};
+	var _UNSUPPORTED_BROWSER_MSG = function(){
+		try {
+			var browser = getBrowser();
+			for (var [testedBrowser, testedVersion] of {{ allowed_browsers | safe }}){
+				if (browser.name.toLowerCase() === testedBrowser.toLowerCase()){
+					if (browser.version === undefined || browser.version < testedVersion){
+						return "{{ invalid_browser_message | safe }}";
+					}
+				}
+			}
+		} catch (error) {}
+		return "";
+	}();
+
+	/* instantiate the EGSIM Vue Instance with content injected from the server and the
+	   browser version check just implemented
+	*/
 	var EGSIM = new Vue({
 	    el: '#egsim-vue',
 	    mixins: [EGSIM_BASE],  /* defined in script above */
@@ -124,8 +159,7 @@
 	        	selComponent: "{{sel_component}}",
 	        	regionalization: {{ regionalization|safe }},
 	        	// incompatibleBrowserMessage is defined in browserdetection.js:
-	        	errormsg: incompatibleBrowserMessage({{ allowed_browsers | safe }},
-	        	        							 "{{ invalid_browser_message | safe }}"),
+	        	errormsg: _UNSUPPORTED_BROWSER_MSG,
 	        	componentProps: {{ component_props | safe }}
 	        };  
 	    }
