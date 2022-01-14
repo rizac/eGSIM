@@ -1,7 +1,7 @@
 /**
  * Base "class" for any component showing plots as a result of a response Object sent from the server
  */
-var _PLOT_DIV = Vue.component('plotdiv', {
+var _PLOT_DIV = Vue.component('plot-div', {
     props: {
         data: {type: Object, default: () => { return{} }},
         // this is used to calculate plot areas and set it in the default layout
