@@ -15,7 +15,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from . import figutils, TABS
+from . import figutils, TAB
 from .frontend import get_context
 from ..api.forms.model_from_region.model_from_region import ModelFromRegionForm
 from ..api.forms.tools import describe, serialize
@@ -41,8 +41,8 @@ def main(request, selected_menu=None):
 def home(request):
     """view for the home page (iframe in browser)"""
     egsim_data = {
-        _.name: {'title': _.title, 'icon': _.icon} for _ in TABS
-        if _ not in (TABS.apidoc,)
+        _.name: {'title': _.title, 'icon': _.icon} for _ in TAB
+        if _ not in (TAB.apidoc,)
     }
     return render(request, 'home.html', dict(COMMON_PARAMS,
                                              debug=settings.DEBUG,
@@ -70,22 +70,22 @@ def apidoc(request):
         #     'key': KEY.GSIMS
         # },
         'trellis': {
-            'title': TABS.trellis.title,
-            'path': " or ".join(TABS.trellis.urls),
-            'form': describe.as_dict(TABS.trellis.formclass),
-            'key': TABS.trellis.name
+            'title': TAB.trellis.title,
+            'path': " or ".join(TAB.trellis.urls),
+            'form': describe.as_dict(TAB.trellis.formclass),
+            'key': TAB.trellis.name
         },
         'residuals': {
-            'title': TABS.residuals.title,
-            'path': " or ".join(TABS.residuals.urls),
-            'form': describe.as_dict(TABS.residuals.formclass),
-            'key': TABS.residuals.name
+            'title': TAB.residuals.title,
+            'path': " or ".join(TAB.residuals.urls),
+            'form': describe.as_dict(TAB.residuals.formclass),
+            'key': TAB.residuals.name
         },
         'testing': {
-            'title': TABS.testing.title,
-            'path': " or ".join(TABS.testing.urls),
-            'form': describe.as_dict(TABS.testing.formclass),
-            'key': TABS.testing.name
+            'title': TAB.testing.title,
+            'path': " or ".join(TAB.testing.urls),
+            'form': describe.as_dict(TAB.testing.formclass),
+            'key': TAB.testing.name
         },
         # 'FORMAT': {
         #     'form': to_help_dict(FormatForm())
@@ -143,7 +143,7 @@ def download_request(request, key, filename):
     :param key: a :class:`TAB` name associated to a REST API TAB (i.e.,
         with an associated Form class)
     """
-    form_class = TABS[key].formclass
+    form_class = TAB[key].formclass
     input_dict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
     form = form_class(data=input_dict)  # pylint: disable=not-callable
     if not form.is_valid():
@@ -175,7 +175,7 @@ def download_ascsv(request, tab_name, filename, sep=',', dec='.'):
     :param tab_name: a :class:`TAB` name associated to a REST API TAB (i.e.,
     with an associated Form class)
     """
-    formclass = TABS[tab_name].formclass
+    formclass = TAB[tab_name].formclass
     inputdict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
     response = formclass.processed_data_as_csv(inputdict, sep, dec)
     response['Content-Disposition'] = 'attachment; filename=%s' % filename

@@ -41,11 +41,15 @@ class URLS:  # noqa
     DOC_PAGE = 'pages/apidoc'
 
 
-class TABS(Enum):
-    """Define web page tabs as Enum with custom attributes:
-    (title:str, icon:str, formclass:`forms.APIForm | None`)
-    Use Enum name (e.g. TABS.home) as Tab string ID. Conversely,
-    given a name (e.g. 'home') you can get the TABS element via TABS[name]
+class TAB(Enum):
+    """Define web page tabs properties as Enum. A TAB T has  attributes:
+    `T.title:str, T.icon:str, T.formclass:`forms.APIForm | None`
+
+    **DO NOT CHANGE THIS ENUM names** (home, trellis, and so on),
+
+    as they are used as ID (also in JavaScript).
+    Note: given a name as string variable, you can get the
+    TAB element via square brackets notation, e.g. TAB["trellis"]
     """
     # icons (2nd element) are fontawesome bootsrap icons FIXME REF
     home = 'Home', 'fa-home'
