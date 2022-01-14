@@ -2,7 +2,7 @@ from typing import Any, Type, Callable, Union
 import json
 
 from django.db.models import Prefetch, QuerySet
-from . import TABS, URLS
+from . import TAB, URLS
 from ..api import models
 from ..api.forms import EgsimBaseForm
 from ..api.forms.tools import field_to_dict, field_to_htmlelement_attrs
@@ -13,10 +13,10 @@ def get_context(selected_menu=None, debug=True) -> dict:
 
     # Tab components (one per tab, one per activated vue component)
     # (key, label and icon) (the last is bootstrap fontawesome name)
-    components_tabs = [[_.name, _.title, _.icon] for _ in TABS]
+    components_tabs = [[_.name, _.title, _.icon] for _ in TAB]
 
     # this can be changed if needed:
-    sel_component = TABS.home.name if not selected_menu else selected_menu
+    sel_component = TAB.home.name if not selected_menu else selected_menu
 
     # setup browser detection:
     allowed_browsers = {'Chrome': 49, 'Firefox': 45, 'Safari': 10}
@@ -83,12 +83,12 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     # If you change THE KEYS of the dict here you should change also the
     # javascript:
     components_props = {
-        TABS.home.name: {
+        TAB.home.name: {
             'src': URLS.HOME_PAGE
         },
-        TABS.trellis.name: {
-            'form': form_to_json(TABS.trellis.formclass, ignore_choices),
-            'url': TABS.trellis.urls[0],
+        TAB.trellis.name: {
+            'form': form_to_json(TAB.trellis.formclass, ignore_choices),
+            'url': TAB.trellis.urls[0],
             'urls': {
                 # the lists below must be made of elements of
                 # the form [key, url]. For each element the JS library (VueJS)
@@ -109,47 +109,47 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                     [
                         'json',
                         "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
-                                                         TABS.trellis.name)
+                                                         TAB.trellis.name)
                     ],
                     [
                         'yaml',
                         "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
-                                                         TABS.trellis.name)
+                                                         TAB.trellis.name)
                     ]
                 ],
                 'downloadResponse': [
                     [
                         'json',
                         '{"file": "%s.json", "mimetype": "application/json"}' %
-                        TABS.trellis.name
+                        TAB.trellis.name
                     ],
                     [
                         'text/csv',
                         "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
-                                                 TABS.trellis.name)
+                                                 TAB.trellis.name)
                     ],
                     [
                         "text/csv, decimal comma",
                         "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
-                                                 TABS.trellis.name)
+                                                 TAB.trellis.name)
                     ],
                 ],
                 'downloadImage': [
                     [
                         'png (visible plots only)',
-                        "%s/%s.png" % (URLS.DOWNLOAD_ASIMG, TABS.trellis.name)
+                        "%s/%s.png" % (URLS.DOWNLOAD_ASIMG, TAB.trellis.name)
                     ],
                     [
                         'pdf (visible plots only)',
-                        "%s/%s.pdf" % (URLS.DOWNLOAD_ASIMG, TABS.trellis.name)
+                        "%s/%s.pdf" % (URLS.DOWNLOAD_ASIMG, TAB.trellis.name)
                     ],
                     [
                         'eps (visible plots only)',
-                        "%s/%s.eps" % (URLS.DOWNLOAD_ASIMG, TABS.trellis.name)
+                        "%s/%s.eps" % (URLS.DOWNLOAD_ASIMG, TAB.trellis.name)
                     ],
                     [
                         'svg (visible plots only)',
-                        "%s/%s.svg" % (URLS.DOWNLOAD_ASIMG, TABS.trellis.name)
+                        "%s/%s.svg" % (URLS.DOWNLOAD_ASIMG, TAB.trellis.name)
                     ]
                 ]
             }
@@ -158,9 +158,9 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         #     'form': to_vuejs_dict(GmdbPlotView.formclass()),
         #     'url': URLS.GMDBPLOT_RESTAPI
         # },
-        TABS.residuals.name: {
-            'form': form_to_json(TABS.residuals.formclass, ignore_choices),
-            'url': TABS.residuals.urls[0],
+        TAB.residuals.name: {
+            'form': form_to_json(TAB.residuals.formclass, ignore_choices),
+            'url': TAB.residuals.urls[0],
             'urls': {
                 # download* below must be pairs of [key, url]. Each url
                 # must return a
@@ -171,53 +171,53 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                     [
                         'json',
                         "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
-                                                         TABS.residuals.name)],
+                                                         TAB.residuals.name)],
                     [
                         'yaml',
                         "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
-                                                         TABS.residuals.name)
+                                                         TAB.residuals.name)
                     ],
                 ],
                 'downloadResponse': [
                     [
                         'json',
                         '{"file": "%s.json", "mimetype": "application/json"}' %
-                        TABS.residuals.name
+                        TAB.residuals.name
                     ],
                     [
                         'text/csv',
                         "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
-                                                 TABS.residuals.name)
+                                                 TAB.residuals.name)
                     ],
                     [
                         "text/csv, decimal comma",
                         "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
-                                                 TABS.residuals.name)
+                                                 TAB.residuals.name)
                     ]
                 ],
                 'downloadImage': [
                     [
                         'png (visible plots only)',
-                        "%s/%s.png" % (URLS.DOWNLOAD_ASIMG, TABS.residuals.name)
+                        "%s/%s.png" % (URLS.DOWNLOAD_ASIMG, TAB.residuals.name)
                     ],
                     [
                         'pdf (visible plots only)',
-                        "%s/%s.pdf" % (URLS.DOWNLOAD_ASIMG, TABS.residuals.name)
+                        "%s/%s.pdf" % (URLS.DOWNLOAD_ASIMG, TAB.residuals.name)
                     ],
                     [
                         'eps (visible plots only)',
-                        "%s/%s.eps" % (URLS.DOWNLOAD_ASIMG, TABS.residuals.name)
+                        "%s/%s.eps" % (URLS.DOWNLOAD_ASIMG, TAB.residuals.name)
                     ],
                     [
                         'svg (visible plots only)',
-                        "%s/%s.svg" % (URLS.DOWNLOAD_ASIMG, TABS.residuals.name)
+                        "%s/%s.svg" % (URLS.DOWNLOAD_ASIMG, TAB.residuals.name)
                     ]
                 ]
             }
         },
-        TABS.testing.name: {
-            'form': form_to_json(TABS.testing.formclass, ignore_choices),
-            'url': TABS.testing.urls[0],
+        TAB.testing.name: {
+            'form': form_to_json(TAB.testing.formclass, ignore_choices),
+            'url': TAB.testing.urls[0],
             'urls': {
                 # download* below must be pairs of [key, url]. Each url
                 # must return a
@@ -228,34 +228,34 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                     [
                         'json',
                         "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
-                                                         TABS.testing.name)
+                                                         TAB.testing.name)
                     ],
                     [
                         'yaml',
                         "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
-                                                         TABS.testing.name)
+                                                         TAB.testing.name)
                     ]
                 ],
                 'downloadResponse': [
                     [
                         'json',
                         '{"file": "%s.json", "mimetype": "application/json"}' %
-                        TABS.testing.name
+                        TAB.testing.name
                     ],
                     [
                         'text/csv',
                         "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
-                                                 TABS.testing.name)
+                                                 TAB.testing.name)
                     ],
                     [
                         "text/csv, decimal comma",
                         "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
-                                                 TABS.testing.name)
+                                                 TAB.testing.name)
                     ]
                 ]
             }
         },
-        TABS.apidoc.name: {
+        TAB.apidoc.name: {
             'src': URLS.DOC_PAGE
         }
     }

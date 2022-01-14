@@ -51,7 +51,7 @@ function which issues a POST request, takes care of showing a waitbar and sets
 up the error code, or returns the data.
 
 
-TABS MENUS in egsim.html
+TAB MENUS in egsim.html
 ------------------------
 
 In egsim.html, inside <div ... id='egsim-vue'> we first create the navigation

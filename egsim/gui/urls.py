@@ -3,7 +3,7 @@
 from django.conf.urls import url  # added by default by django
 from django.views.generic.base import RedirectView
 
-from . import URLS, TABS
+from . import URLS, TAB
 from .views import (main, home, apidoc, download_request,
                     download_ascsv, download_asimage, imprint, get_gsims_from_region)
 
@@ -16,7 +16,7 @@ urlpatterns = [
                                     permanent=False)),
 
     # main page entry point, valid for all urls implemented in views.KEY:
-    url(r'^(?P<selected_menu>%s)/?$' % "|".join(_.name for _ in TABS), main),
+    url(r'^(?P<selected_menu>%s)/?$' % "|".join(_.name for _ in TAB), main),
 
     # Imprint, refs (pages with a "normal" static django template associated):
     url(r'imprint', imprint),

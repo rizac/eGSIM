@@ -87,24 +87,11 @@
 {% block after-body %}
 	{{ block.super }}
 
-	<script type='text/javascript' src = "{% static 'js/v-components/base/field-input.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/v-components/base/gsim-select.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/v-components/base/plot-div.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/v-components/base/download-select.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/v-components/base/base-form.js' %}"></script>
-	
-	<script type='text/javascript' src = "{% static 'js/v-components/trellisplotdiv.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/v-components/gmdbplotdiv.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/v-components/residualsplotdiv.js' %}"></script>
-	<script type='text/javascript' src = "{% static 'js/v-components/testingtable.js' %}"></script>
-	{% for component in components %}
-	<script type='text/javascript' src = "{% static 'js/v-components/' %}{{ component.0 }}.js"></script>
-	{% endfor %}
-	
-	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
-
 	<script>
-	/* Before app init, Check browser compatibility and create warning */
+	/**
+	 * Before initializing all Vue stuff, check browser compatibility and, in negative case,
+	 * create global var message that will be passed to the Vue instance
+	 */
 	function getBrowser() {
 		// Return the Array [browser, version] e.g. (examples tested locally):
 		// ["Firefox", 97], ["Chrome": 97], ["Safari", 15]. The version might be NaN.
@@ -143,9 +130,42 @@
 		}
 		return "";
 	}();
+	</script>
 
-	/* instantiate the EGSIM Vue Instance with content injected from the server and the
-	   browser version check just implemented
+
+	<!-- VueJS stuff -->
+	<script type='text/javascript' src = "{% static 'js/v-components/base/field-input.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/gsim-select.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/plot-div.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/download-select.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/base/base-form.js' %}"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/' %}trellis.js"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/' %}residuals.js"></script>
+	<script type='text/javascript' src = "{% static 'js/v-components/' %}testing.js"></script>
+	<script>
+	/**
+	 * Registers globally "apidoc" and "home" Vue components here in order to avoid further JS
+	 * requests for just few lines of code. Remember, the component names must be a name of a TAB
+	 * Enum in egsim.gui.__init__.py
+	 */
+	Vue.component('home', {
+		props: {src: String},
+		template: `<iframe class='flexible' :src='src'></iframe>`
+	});
+	Vue.component('apidoc', {
+		props: {
+			src: String,
+			id: {String, default: '__apidoc__iframe__'},
+			fragment: {String, default: ''}
+		},
+		template: `<iframe :id='id' class='flexible' :src='src + fragment'></iframe>`
+	});
+	</script>
+	<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
+	<script>
+	/**
+	 * Init the EGSIM Vue Instance with content injected from the server and the
+	 * browser version check just implemented
 	*/
 	var EGSIM = new Vue({
 		el: '#egsim-vue',
