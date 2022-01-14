@@ -9,15 +9,15 @@
 
 
 "SHARE":
-	"description": "Seismic Hazard Harmonization in Europe"
-	"source_url": "http://hazard.efehr.org/en/Documentation/specific-hazard-models/europe/seismogenic-sources/index.html"
-	"license": "CC BY-SA 3.0 (unported) [http://creativecommons.org/licenses/by-sa/3.0/]"
-	"cite_as": "D. Giardini, J. Woessner, L. Danciu, H. Crowley, F. Cotton, G. Grünthal, R. Pinho, G. Valensise, S. Akkar, R. Arvidsson, R. Basili, T. Cameelbeeck, A. Campos-Costa, J. Douglas, M. B. Demircioglu, M. Erdik, J. Fonseca, B. Glavatovic, C. Lindholm, K. Makropoulos, C. Meletti, R. Musson, K. Pitilakis, K. Sesetyan,  D. Stromeyer,  M. Stucchi, A. Rovida, Seismic Hazard Harmonization in Europe (SHARE): Online Data Resource, doi: 10.12686/SED-00000001-SHARE, 2013."
-	"doi": "10.12686/SED-00000001-SHARE"
+  "description": "Seismic Hazard Harmonization in Europe"
+  "source_url": "http://hazard.efehr.org/en/Documentation/specific-hazard-models/europe/seismogenic-sources/index.html"
+  "license": "CC BY-SA 3.0 (unported) [http://creativecommons.org/licenses/by-sa/3.0/]"
+  "cite_as": "D. Giardini, J. Woessner, L. Danciu, H. Crowley, F. Cotton, G. Grünthal, R. Pinho, G. Valensise, S. Akkar, R. Arvidsson, R. Basili, T. Cameelbeeck, A. Campos-Costa, J. Douglas, M. B. Demircioglu, M. Erdik, J. Fonseca, B. Glavatovic, C. Lindholm, K. Makropoulos, C. Meletti, R. Musson, K. Pitilakis, K. Sesetyan,  D. Stromeyer,  M. Stucchi, A. Rovida, Seismic Hazard Harmonization in Europe (SHARE): Online Data Resource, doi: 10.12686/SED-00000001-SHARE, 2013."
+  "doi": "10.12686/SED-00000001-SHARE"
 
 "ESM_flatfile_2018_SA":
-	"description": "Engineering strong-motion flat-file 2018"
-	"source_url": "https://esm-db.eu/#/products/flat_file"
-	"license": "Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) [https://creativecommons.org/licenses/by-nc/4.0/]"
-	"cite_as": "Lanzano G., Luzi L., Russo E., Felicetta C., D’Amico M. C., Sgobba S., Pacor F. (2018). Engineering Strong Motion Database (ESM) flatfile [Data set]. Istituto Nazionale di Geofisica e Vulcanologia (INGV). https://doi.org/10.13127/esm/flatfile.1.0"
-	"doi": "10.13127/esm/flatfile.1.0"
+  "description": "Engineering strong-motion flat-file 2018"
+  "source_url": "https://esm-db.eu/#/products/flat_file"
+  "license": "Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) [https://creativecommons.org/licenses/by-nc/4.0/]"
+  "cite_as": "Lanzano G., Luzi L., Russo E., Felicetta C., D’Amico M. C., Sgobba S., Pacor F. (2018). Engineering Strong Motion Database (ESM) flatfile [Data set]. Istituto Nazionale di Geofisica e Vulcanologia (INGV). https://doi.org/10.13127/esm/flatfile.1.0"
+  "doi": "10.13127/esm/flatfile.1.0"

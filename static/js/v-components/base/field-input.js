@@ -302,11 +302,11 @@ Vue.component('field-input', {
     </div>`,
     methods: {
         selectedInfoMsg(){
-        	// for select[multiple], return the string with the number of selected items
-        	var field = this.field;
+            // for select[multiple], return the string with the number of selected items
+            var field = this.field;
             var count = field.choices.filter(e => !e.disabled).length;
             var sel = field.value.length || 0;
             return `${count} total, ${sel} selected`;
-    	},
+        },
     }
 });

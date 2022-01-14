@@ -51,6 +51,7 @@ def home(request):
                                                        'last updated: '
                                                        'January 2022')))
 
+
 @xframe_options_sameorigin
 def apidoc(request):
     """view for the home page (iframe in browser)"""
@@ -70,20 +71,20 @@ def apidoc(request):
         # },
         'trellis': {
             'title': TABS.trellis.title,
-            'path': " or ".join(TABS.trellis.viewclass.urls),
-            'form': describe.as_dict(TABS.trellis.formclass()),
+            'path': " or ".join(TABS.trellis.urls),
+            'form': describe.as_dict(TABS.trellis.formclass),
             'key': TABS.trellis.name
         },
         'residuals': {
             'title': TABS.residuals.title,
-            'path': " or ".join(TABS.residuals.viewclass.urls),
-            'form': describe.as_dict(TABS.residuals.formclass()),
+            'path': " or ".join(TABS.residuals.urls),
+            'form': describe.as_dict(TABS.residuals.formclass),
             'key': TABS.residuals.name
         },
         'testing': {
             'title': TABS.testing.title,
-            'path': " or ".join(TABS.testing.viewclass.urls),
-            'form': describe.as_dict(TABS.testing.formclass()),
+            'path': " or ".join(TABS.testing.urls),
+            'form': describe.as_dict(TABS.testing.formclass),
             'key': TABS.testing.name
         },
         # 'FORMAT': {
