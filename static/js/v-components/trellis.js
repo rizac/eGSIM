@@ -1,51 +1,41 @@
 /**
- * Registers globally a Vue component. The name of the component
- * (first argument of 'Vue.component' below must be equal to this file's name 
- * (without extension)
+ * Registers globally the trellis component (model-to-model comparison).
+ * The component name must be a name of a `TAB` Enum in egsim.gui.__init__.py
  */
 Vue.component('trellis', {
-	extends: _BASE_FORM,  // defined in baseform.js
+    extends: _BASE_FORM,  // defined in base-form.js
     data: function () {
-    	// set the size of the plot_type <select>. Note that it turns out
-    	// that 'created' is executed after the template is created, so we add
-    	// reactive properties like 'size' here (or maybe 'beforeCreate' would be
-    	// a better place? https://vuejs.org/v2/api/#beforeCreate)
-    	this.$set(this.form['plot_type'], 'size', 3);
-		// return data:
         return {
-        	predefinedSA: false,  // whether we have selected spectra as plot type
-        	responseData: {},
-        	formHidden: false,
+            predefinedSA: false,  // whether we have selected spectra as plot type
+            responseData: {},
+            formHidden: false,
             scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='plot_type' && key!='stdev')
         }
     },
     computed: {
-    	scenarioHasErrors: function(){
-    		var form = this.form;
-    		return this.scenarioKeys.some(key => !!form[key].err);
-    	}
+        scenarioHasErrors: function(){
+            var form = this.form;
+            return this.scenarioKeys.some(key => !!form[key].err);
+        }
     },
     watch: {
-        // watch additionally for the property val of plot_type in form
-        // and make imt enabled if we are not choosing spectra plots
-        // this is a bit hacky in that it relies on the parameter names
-        // plot_type and imt:
         'form.plot_type.value': {
-        	immediate: true,
-        	handler: function(newVal, oldVal){
-        		var enabled = newVal !== 's' && newVal !== 'ss';
-        		this.form.imt.disabled = !enabled;
-        		this.predefinedSA = !enabled;
-        	}
+            // watch the selected plot type and enable/disable the imt <select> accordingly
+            immediate: true,
+            handler: function(newVal, oldVal){
+                var enabled = newVal !== 's' && newVal !== 'ss';
+                this.form.imt.disabled = !enabled;
+                this.predefinedSA = !enabled;
+            }
         }
     },
     template: `
 <div class='flexible d-flex flex-column position-relative'>
-	<!-- v-bind="$props" passes all of the props on to the "parent" component -->
-	<!-- https://stackoverflow.com/a/40485023 -->
-	<base-form v-show="!formHidden" v-bind="$props"
-		      @responsereceived="responseData = arguments[0]; formHidden = true"
-		      @closebuttonclicked="formHidden = true">
+    <!-- v-bind="$props" passes all of the props on to the "parent" component -->
+    <!-- https://stackoverflow.com/a/40485023 -->
+    <base-form v-show="!formHidden" v-bind="$props"
+              @responsereceived="responseData = arguments[0]; formHidden = true"
+              @closebuttonclicked="formHidden = true">
 
         <template v-slot:left-column>
             <gsim-select :field="form['gsim']" :imtField="form['imt']" class="flexible" />
@@ -53,16 +43,16 @@ Vue.component('trellis', {
 
         <template v-slot:right-column>
             <div style="position:relative">
-    	        <imt-select :field="form['imt']"></imt-select>
-    		    <div v-show='predefinedSA' class="form-control small text-muted"
-    		         style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
-    		        <i class='text-warning fa fa-info-circle'></i>
-    		        Intensity Measure will default to 'SA' with a set of pre-defined periods
-    		    </div>
-    		</div>
-        	<div class="flexible form-control mt-4"
-        	     :class="{'border-danger': scenarioHasErrors}"
-            	 style="flex-basis:0;background-color:transparent;overflow-y:auto">
+                <imt-select :field="form['imt']"></imt-select>
+                <div v-show='predefinedSA' class="form-control small text-muted"
+                     style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
+                    <i class='text-warning fa fa-info-circle'></i>
+                    Intensity Measure will default to 'SA' with a set of pre-defined periods
+                </div>
+            </div>
+            <div class="flexible form-control mt-4"
+                 :class="{'border-danger': scenarioHasErrors}"
+                 style="flex-basis:0;background-color:transparent;overflow-y:auto">
 
                 <field-input v-for="(name, index) in scenarioKeys" :key="name"
                              :field='form[name]' :class="{ 'mt-2': index > 0 }">
@@ -70,26 +60,26 @@ Vue.component('trellis', {
             </div>
 
             <div class="mt-4" style="background-color:transparent">
-                <field-input :field='form["plot_type"]'></field-input>
+                <field-input :field='form["plot_type"]' size="3"></field-input>
                 <field-input :field='form["stdev"]' class='mt-1'></field-input>
             </div>
         </template>
     </base-form>
 
-    <trellisplotdiv	:data="responseData"
-    	            :downloadurls="urls.downloadResponse.concat(urls.downloadImage)"
+    <trellis-plot-div :data="responseData"
+                    :downloadurls="urls.downloadResponse.concat(urls.downloadImage)"
                     class='position-absolute pos-0' style='z-index:1'>
         <slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'>
                 <i class='fa fa-list-alt'></i> Configuration
             </button>
         </slot>
-    </trellisplotdiv>
+    </trellis-plot-div>
 </div>`
 });
 
 
-Vue.component('trellisplotdiv', {
+Vue.component('trellis-plot-div', {
     extends: _PLOT_DIV,  // defined in plot-div.js
     methods: {
         // methods to be overridden:
@@ -149,16 +139,16 @@ Vue.component('trellisplotdiv', {
             // a dict of y axis properties. See documentation for 'xaxis'
             // above for details, just replace 'xaxis' with 'yaxis'.
 
-			var ln10 = Math.log(10);
-			var mathlog = Math.log;
-			function log10(val) {  // https://stackoverflow.com/a/3019290
-  				return mathlog(val) / ln10;
-			}
-			var mathpow = Math.pow;
-			var pow10 = elm => mathpow(10, elm);
+            var ln10 = Math.log(10);
+            var mathlog = Math.log;
+            function log10(val) {  // https://stackoverflow.com/a/3019290
+                return mathlog(val) / ln10;
+            }
+            var mathpow = Math.pow;
+            var pow10 = elm => mathpow(10, elm);
 
-			// get the current colorMap (will be used to set transparency on stdev
-			// areas, if given):
+            // get the current colorMap (will be used to set transparency on stdev
+            // areas, if given):
             var colorMap = this.colorMap;  // defined in plot-div.js
             var data = responseObject;
             var plots = [];
@@ -181,7 +171,7 @@ Vue.component('trellisplotdiv', {
                                 x: data.xvalues,
                                 // <extra></extra> hides the second tooltip (white):
                                 hovertemplate: `${name}<br>${data.xlabel}=%{x}<br>` +
-                                	`${fig.ylabel}=%{y}<extra></extra>`,
+                                    `${fig.ylabel}=%{y}<extra></extra>`,
                                 y: yvalues,
                                 type: 'scatter',
                                 mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
@@ -194,43 +184,43 @@ Vue.component('trellisplotdiv', {
                             trace.line = {color: color, width: 3};
                         }
 
-						var _traces = [trace];
+                        var _traces = [trace];
                         // add stdev if present:
                         var stdev = (fig.stdvalues || {})[name];
                         if (stdev && stdev.length){
-                        	//copy the trace Object (shallow except the 'y' property, copied deeply):
-                        	var _traces = [
-                        		trace,
-                        		Object.assign({}, trace, {y:  yvalues.slice()}),
-                        		Object.assign({}, trace, {y:  yvalues.slice()})
-                        	];
-                        	// put new values:
+                            //copy the trace Object (shallow except the 'y' property, copied deeply):
+                            var _traces = [
+                                trace,
+                                Object.assign({}, trace, {y:  yvalues.slice()}),
+                                Object.assign({}, trace, {y:  yvalues.slice()})
+                            ];
+                            // put new values:
                             stdev.forEach((std, index) => {
-                            	if (std === null || _traces[1].y[index] === null){
-                            		_traces[1].y[index] = null;
-                            		_traces[2].y[index] = null;
-                            	}else{
-	                                _traces[1].y[index] = pow10(log10(_traces[1].y[index]) + std);
-		                            _traces[2].y[index] = pow10(log10(_traces[2].y[index]) - std);
-		                        }
+                                if (std === null || _traces[1].y[index] === null){
+                                    _traces[1].y[index] = null;
+                                    _traces[2].y[index] = null;
+                                }else{
+                                    _traces[1].y[index] = pow10(log10(_traces[1].y[index]) + std);
+                                    _traces[2].y[index] = pow10(log10(_traces[2].y[index]) - std);
+                                }
                             });
                             // Values are now ok, now arrange visual stuff:
                             var colorT = colorMap.transparentize(color, 0.2);
                             for (var i of [2]){
-                            	_traces[i].fill = 'tonexty'; // which actually fills to PREVIOUS TRACE!
+                                _traces[i].fill = 'tonexty'; // which actually fills to PREVIOUS TRACE!
                             }
                             for (var i of [1, 2]){
-                            	_traces[i].line = {width: 0, color: color};  // the color here will be used in the label on hover
-                            	_traces[i].fillcolor = colorT;
-                            	var info = i==1 ? `value computed as 10<sup>log(${imt})+σ</sup>` : `value computed as 10<sup>log(${imt})-σ</sup>`;
-                            	_traces[i].hovertemplate = `${name}<br>${data.xlabel}=%{x}<br>${fig.ylabel}=%{y}` +
-                            		`<br><i>(${info})</i><extra></extra>`;
+                                _traces[i].line = {width: 0, color: color};  // the color here will be used in the label on hover
+                                _traces[i].fillcolor = colorT;
+                                var info = i==1 ? `value computed as 10<sup>log(${imt})+σ</sup>` : `value computed as 10<sup>log(${imt})-σ</sup>`;
+                                _traces[i].hovertemplate = `${name}<br>${data.xlabel}=%{x}<br>${fig.ylabel}=%{y}` +
+                                    `<br><i>(${info})</i><extra></extra>`;
                             }
                         }
 
                         // put traces into array:
                         for (var t of _traces){
-                        	traces.push(t);
+                            traces.push(t);
                         }
 
                     }, this);
