@@ -52,10 +52,13 @@ Vue.component('trellis', {
         </template>
 
         <template v-slot:right-column>
-    	    <imt-select :field="form['imt']"></imt-select>
-    		<div v-show='predefinedSA'>
-    		    <i class='text-warning fa fa-info-circle'></i>
-    		    Intensity Measure will default to 'SA' with a set of pre-defined periods
+            <div style="position:relative">
+    	        <imt-select :field="form['imt']"></imt-select>
+    		    <div v-show='predefinedSA' class="form-control small text-muted"
+    		         style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
+    		        <i class='text-warning fa fa-info-circle'></i>
+    		        Intensity Measure will default to 'SA' with a set of pre-defined periods
+    		    </div>
     		</div>
         	<div class="flexible form-control mt-4"
         	     :class="{'border-danger': scenarioHasErrors}"

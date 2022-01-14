@@ -194,7 +194,7 @@ Vue.component('testingtable', {
 		       	</div>
 	       	</div>
 
-	        <div cclass='mt-3 border p-2 bg-white'>
+	        <div class='mt-3 border p-2 bg-white'>
                 <download-select
                     :urls="downloadurls"
                     :data="data"

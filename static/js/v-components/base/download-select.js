@@ -46,8 +46,6 @@ Vue.component('download-select', {
         }
     },
     created: function(){
-    	// create an empty value and insert it at index 0:
-    	
     },
     watch: {
     	'selKey': function (newVal, oldVal){

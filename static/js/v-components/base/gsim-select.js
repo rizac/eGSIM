@@ -10,15 +10,18 @@ Vue.component('gsim-select', {
         regionalizationQueryURL: {type: String}
     },
     data: function () {
-        this.field.cclass = "";  // see `mso` property below
-    	return {
+        // set <select> style
+        this.field.cstyle = ['border-bottom-left-radius: 0rem !important',
+                            'border-bottom-right-radius: 0rem !important'].join(';')
+        // return custom data:
+        return {
             filterBy: {  // DO NOT CHANGE KEYS!
                 name: "",
                 imt: false,
                 geolocation: null
             },
             choices: Array.from(this.field.choices),  // copy Array to preserve order
-            warnings: [] //list of strings of warnings (updated also in watchers below)
+            warnings: [], //list of strings of warnings (updated also in watchers below)
         }
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
@@ -51,43 +54,24 @@ Vue.component('gsim-select', {
         }
     },
     computed: {
-        mso(){  //multi select options (setup right <div> with warnings):
-            var opts =  {'top-info': true};
-            this.field.cclass = "form-control rounded-bottom-0 border-bottom-0";
-            if (this.warnings && this.warnings.length){
-                this.field.cclass += ' rounded-right-0'
-                var warn = this.warnings.map(elm => `<div class="small text-muted pt-2 px-3"><span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>${elm}</div>`).join("");
-                opts = Object.assign(opts, {
-                    'right-info': warn,
-                    'right-info-style': {
-                        'width': '33%',
-                        'border': '1px solid #ced4da',
-                        'border-top-right-radius': '0.25rem',
-                        'border-bottom': '0',
-                        'border-left': '0'
-                    }
-                });
-            }
-            return opts;
-        }
     },
     template: `<div class='d-flex flex-column'>
 
         <div class='d-flex flex-row'>
-            <div class="flexible">
-                <field-input :field="field" size="15" :multiselect-opts="mso"></field-input>
-            </div>
-            <!-- <div v-show='warnings.length' style='position:relative;width:10rem;overflow:auto' ref='warningsDiv'>
-                <div class='small position-absolute ps-3' style='left:0;right:0;word-break: break-word;'>
-                    <div v-for='warn in warnings'>
-                        <span class='text-warning'><i class="fa fa-exclamation-triangle"></i></span><br/>{{ warn }}
+            <div class="flexible" style="position:relative">
+                <field-input :field="field" size="15"></field-input>
+                <div v-if="!!warnings.length" class='form-control'
+                     style="position:absolute; right:2rem; top:3rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
+                    <div v-for="w in warnings" class="small text-muted pt-2 px-3">
+                        <span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>{{ w }}
                     </div>
                 </div>
-            </div> -->
+            </div>
         </div>
     
         <!-- GSIM FILTER CONTROLS: -->
-        <div class="pt-2 d-flex flex-column rounded rounded-top-0" style='flex: 1 1 auto; border: 1px solid #ced4da'>
+        <div class="pt-2 d-flex flex-column form-control border-top-0 rounded-top-0"
+             style='flex: 1 1 auto; background-color:transparent !important'>
             <div class="d-flex flex-column" style='flex: 1 1 auto'>
                 <div class='mx-2 mb-1' style='position:relative'>
                     <div class='mb-1'><i class="fa fa-filter"></i> Filter GSIMs &hellip;</div>
@@ -331,9 +315,18 @@ Vue.component('imt-select', {
     	field: {type: Object},
     },
     data: function () {
-        this.field.cclass = "form-control rounded-bottom-0 border-bottom-0";  // add custom class
-    	return {
-    	    fieldCopy: Object.assign({}, this.field),
+        // copy field and add the 'cstyle' attribute:
+        var fieldCopy = {
+            'cstyle': ['border-bottom-left-radius:0rem !important',
+                       'border-bottom-right-radius:0rem !important'].join(";")
+        };
+        if ('size' in this.$attrs){
+            fieldCopy['size'] = this.$attrs['size'];
+        }
+        fieldCopy: Object.assign(fieldCopy, this.field);
+
+        return {
+    	    fieldCopy: fieldCopy,
     	    SAPeriods: ''
         }
     },
@@ -361,7 +354,7 @@ Vue.component('imt-select', {
         <field-input :field="fieldCopy"></field-input>
         <base-input v-model="SAPeriods" :disabled="field.disabled || !fieldCopy.value.includes('SA')"
                     placeholder="SA periods (space-separated)"
-                    :cclass="'form-control rounded-top-0'">
+                    :cstyle="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'">
         </base-input>
     </div>`,
     methods: {
