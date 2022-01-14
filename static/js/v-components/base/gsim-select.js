@@ -16,9 +16,9 @@ Vue.component('gsim-select', {
         // return custom data:
         return {
             filterBy: {  // DO NOT CHANGE KEYS!
-                name: "",
-                imt: false,
-                map: null
+                name: "", // string matching gsim name(s)
+                imt: false,  // boolean (imt filter on off)
+                map: null  // null or function(gsim_name) => true/false
             },
             choices: Array.from(this.field.choices),  // copy Array to preserve order
             warnings: [], //list of strings of warnings (updated also in watchers below)

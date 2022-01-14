@@ -1,5 +1,5 @@
 Vue.component('residualsplotdiv', {
-    extends: _PLOT_DIV,  // defined in plotdiv.js
+    extends: _PLOT_DIV,  // defined in plot-div.js
     methods: {
         // methods to be overridden:
         getData: function(responseObject){
@@ -222,7 +222,7 @@ Vue.component('residualsplotdiv', {
             // paramValues: Array of the values of the parameter keyed by 'paramName'
             return paramValues.length > 1 && paramName != 'imt';  // imt is already shown as y label
         },
-        /**configureLayout is the same as the super class 'plotdiv' and thus not overwritten.**/
+        /**configureLayout is the same as the super class 'plot-div' and thus not overwritten.**/
         // END OF OVERRIDABLE METHODS
     },
     computed: {  // "override" compiuted property from superclass
