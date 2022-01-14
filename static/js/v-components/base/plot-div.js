@@ -7,14 +7,14 @@ var _PLOT_DIV = Vue.component('plot-div', {
         // this is used to calculate plot areas and set it in the default layout
         // (use computed body font-size. Note that parseInt('16px')=16):
         plotfontsize: {
-        	type: Number,
-        	default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))
-       	},
-       	// these two properties are passed to the downloadselect for downloading the response:
+            type: Number,
+            default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))
+        },
+        // these two properties are passed to the downloadselect for downloading the response:
         downloadurls: {type: Array, default: () => []}
     },
     data: function(){
-    	// NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
+        // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
 
         // unique id based on the component name (note that if this is called by a subclass,
         // then this.$options.name is the subclass name). FIXME: NOT USED REMOVE?
@@ -63,30 +63,30 @@ var _PLOT_DIV = Vue.component('plot-div', {
                 annotations: []
             },
             mouseMode: { // https://plot.ly/python/reference/#layout-hovermode
-            	// hovermodes (plotly keys). Note that we remove the 'y' key because useless
-	            hovermodes: ["closest", "x", false],
-	            // the labels of hovermodes to be displayed. Copied from plotly modebar after visual test
-	            // (note that we remove  the value associated to 'y' because plotly does not implement it
-	            // and anyway, even providing a mapped label such as 'show y', tests revealed the mode was useless): 
-	            hovermodeLabels: {closest: 'show closest point', x: 'compare data',false: 'do nothing'},
-       			dragmodes: ["zoom", "pan"],  // "select", "lasso" are useless. false does not seem to work (it's zoom)
- 				dragmodeLabels: {zoom: 'zoom', pan: 'pan'},
-       			hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
- 				dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
+                // hovermodes (plotly keys). Note that we remove the 'y' key because useless
+                hovermodes: ["closest", "x", false],
+                // the labels of hovermodes to be displayed. Copied from plotly modebar after visual test
+                // (note that we remove  the value associated to 'y' because plotly does not implement it
+                // and anyway, even providing a mapped label such as 'show y', tests revealed the mode was useless):
+                hovermodeLabels: {closest: 'show closest point', x: 'compare data',false: 'do nothing'},
+                dragmodes: ["zoom", "pan"],  // "select", "lasso" are useless. false does not seem to work (it's zoom)
+                dragmodeLabels: {zoom: 'zoom', pan: 'pan'},
+                hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
+                dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
             },
             // axis options:
             axis: {
-            	// reminder: x.log and y.log determine the type of axis. Plotly has xaxis.type that can be:
-            	// ['-', 'linear', 'log', ... other values ], we will set here only 'normal' (log checkbox unselected)
-            	// or log (log checkbox selected)
-        		x: {
-            		log: {disabled: false, value: undefined},  // undefined: infer from plots, null: disable the option, otherwise boolean
-            		sameRange: {disabled: false, value: undefined}, // same as above
-            	},
-            	y: {
-            		log: {disabled: false, value: undefined}, // see above
-            		sameRange: {disabled: false, value: undefined} // see above
-            	}
+                // reminder: x.log and y.log determine the type of axis. Plotly has xaxis.type that can be:
+                // ['-', 'linear', 'log', ... other values ], we will set here only 'normal' (log checkbox unselected)
+                // or log (log checkbox selected)
+                x: {
+                    log: {disabled: false, value: undefined},  // undefined: infer from plots, null: disable the option, otherwise boolean
+                    sameRange: {disabled: false, value: undefined}, // same as above
+                },
+                y: {
+                    log: {disabled: false, value: undefined}, // see above
+                    sameRange: {disabled: false, value: undefined} // see above
+                }
             },
             // the plotly config for plots. See
             // https://community.plot.ly/t/remove-options-from-the-hover-toolbar/130/14
@@ -100,9 +100,9 @@ var _PLOT_DIV = Vue.component('plot-div', {
             colorMap: this.createColorMap(),
             // the waitbar while drawing plots
             waitbar: {
-            	msg: '',  // the message to be displayed, and below some defaults:
-            	DRAWING: 'Drawing plots... <i class="fa fa-hourglass-o"></i>',
-            	UPDATING: 'Updating plots... <i class="fa fa-hourglass-o"></i>'
+                msg: '',  // the message to be displayed, and below some defaults:
+                DRAWING: 'Drawing plots... <i class="fa fa-hourglass-o"></i>',
+                UPDATING: 'Updating plots... <i class="fa fa-hourglass-o"></i>'
             }
         }
     },
@@ -121,12 +121,12 @@ var _PLOT_DIV = Vue.component('plot-div', {
         }
     },
     activated: function(){  // when component become active
-    	if (this.visible){
-    	    this.react();
-    	}
+        if (this.visible){
+            this.react();
+        }
     },
     deactivated: function(){   // when component is deactivated
-    	// no op
+        // no op
     },
     computed: {  // https://stackoverflow.com/a/47044150
         legendNames: function(){
@@ -144,18 +144,18 @@ var _PLOT_DIV = Vue.component('plot-div', {
 
         <div class='flexible d-flex flex-column'>
             <div
-            	v-if="Object.keys(selectedParams).length"
-            	class='d-flex flex-row justify-content-around mb-3'
+                v-if="Object.keys(selectedParams).length"
+                class='d-flex flex-row justify-content-around mb-3'
             >
                 <div
-                	v-for='(values, key, index) in selectedParams'
-                	class='d-flex flex-row flexible align-items-baseline'
-                	:class="index > 0 ? 'ml-2' : ''"
+                    v-for='(values, key, index) in selectedParams'
+                    class='d-flex flex-row flexible align-items-baseline'
+                    :class="index > 0 ? 'ml-2' : ''"
                 >
                     <span class='text-nowrap mr-1'>{{ key }}</span>
                     <select
-                    	v-model="selectedParams[key]"
-                    	class='flexible form-control'
+                        v-model="selectedParams[key]"
+                        class='flexible form-control'
                     >
                         <option v-for='value in params[key]' :value="value">
                             {{ value }}
@@ -164,20 +164,20 @@ var _PLOT_DIV = Vue.component('plot-div', {
                 </div>
             </div>
             <div class='flexible position-relative'>
-            	<div
-            		v-show='drawingPlots'
-            		class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
-            		style='z-index:1001;background-color:rgba(0,0,0,0.0)'
-            	>
-            	    <div class='p-2 shadow border rounded text-white d-flex flex-column align-items-center'
+                <div
+                    v-show='drawingPlots'
+                    class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
+                    style='z-index:1001;background-color:rgba(0,0,0,0.0)'
+                >
+                    <div class='p-2 shadow border rounded text-white d-flex flex-column align-items-center'
                         style="background-color:rgba(0,0,0,0.3)"
                     >
-                		<span v-html="waitbar.msg" class='border-0 bg-transparent' style="font-size:200%;"></span>
-                		<span class='border-0 bg-transparent'>(It might take a while, please wait)</span>
+                        <span v-html="waitbar.msg" class='border-0 bg-transparent' style="font-size:200%;"></span>
+                        <span class='border-0 bg-transparent'>(It might take a while, please wait)</span>
 
                     </div>
-            		
-            	</div>
+
+                </div>
                 <div class='position-absolute pos-0' :id="plotdivid"></div>
             </div>
         </div>
@@ -190,28 +190,28 @@ var _PLOT_DIV = Vue.component('plot-div', {
             <slot></slot> <!-- slot for custom buttons -->
             
             <div
-            	v-show='legendNames.length'
-            	class='flexible mt-3 border p-2 bg-white'
-            	style='overflow: auto'
+                v-show='legendNames.length'
+                class='flexible mt-3 border p-2 bg-white'
+                style='overflow: auto'
             >
                 <div>Legend</div>
                 <div v-for="traceName in legendNames">
                     <label
-                    	class='my-0 mt-2 customcheckbox'
-                    	:class="{'checked': legend[traceName].visible}"
+                        class='my-0 mt-2 customcheckbox'
+                        :class="{'checked': legend[traceName].visible}"
                         :style="{color: legend[traceName].color}"
                     >
                         <input
-                        	type='checkbox'
-                        	v-model="legend[traceName].visible"
-                        	@change="traceVisibilityChanged(traceName)"
+                            type='checkbox'
+                            v-model="legend[traceName].visible"
+                            @change="traceVisibilityChanged(traceName)"
                         > {{ traceName }}
                     </label>
                 </div>
             </div>
 
-			<div>
-			    <div class='mt-3 border p-2 bg-white'>
+            <div>
+                <div class='mt-3 border p-2 bg-white'>
                     <download-select
                         :urls="downloadurls"
                         :data="getDownloadPostData"
@@ -219,80 +219,80 @@ var _PLOT_DIV = Vue.component('plot-div', {
                         data-balloon-pos='left' data-balloon-length='medium'
                         aria-label='Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see'
                     />
-				</div>
-	
-				<div
-					v-show="isGridCusomizable"
-					class='mt-3 border p-2 bg-white'
-				>
-	                <div>Subplots layout</div>
-	                <select
-	                	v-model='selectedgridlayout'
-	                	class='form-control mt-1'
-	                >
-	                    <option v-for='key in Object.keys(gridlayouts)' :value="key" v-html="key">
-	                    </option>
-	                </select>
-	
-	            </div>
-	
-				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
-					<div>Axis</div>
-					<div v-for="type in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
-						<span class='text-nowrap'>{{ type }}:</span>
-	            		<label
-	            			class='text-nowrap m-0 ml-2 customcheckbox'
+                </div>
+
+                <div
+                    v-show="isGridCusomizable"
+                    class='mt-3 border p-2 bg-white'
+                >
+                    <div>Subplots layout</div>
+                    <select
+                        v-model='selectedgridlayout'
+                        class='form-control mt-1'
+                    >
+                        <option v-for='key in Object.keys(gridlayouts)' :value="key" v-html="key">
+                        </option>
+                    </select>
+
+                </div>
+
+                <div class='mt-3 d-flex flex-column border p-2 bg-white'>
+                    <div>Axis</div>
+                    <div v-for="type in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
+                        <span class='text-nowrap'>{{ type }}:</span>
+                        <label
+                            class='text-nowrap m-0 ml-2 customcheckbox'
                             :class="{'checked': axis[type].sameRange.value}"
-	            			:disabled="axis[type].sameRange.disabled"
-	            		>
-		            		<input
-		            			type='checkbox'
-		            			v-model='axis[type].sameRange.value'
-		            			:disabled="axis[type].sameRange.disabled"
-		            		>	
-		            		<span>same range</span>
-		            	</label>
-	            		<label
-	            			class='text-nowrap m-0 ml-2 customcheckbox'
-	            			:class="{'checked': axis[type].log.value}"
-	            			:disabled="axis[type].log.disabled"
-	            		>
-		            		<input
-		            			type='checkbox'
-		            			v-model='axis[type].log.value'
-		            			:disabled="axis[type].log.disabled"
-		            		>	
-		            		<span>log scale</span>
-		            	</label>
-	            	</div>
-	            </div>
-	
-				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
-					<div> Mouse interactions</div>
-					<div class='d-flex flex-row mt-1 align-items-baseline'>
-						<span class='text-nowrap mr-1'> on hover:</span>
-	            		<select
-	            			v-model="mouseMode.hovermode"
-	            			class='form-control form-control-sm'
-	            		>
-	            			<option
-	            				v-for='name in mouseMode.hovermodes'
-	            				:value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
-	            		</select>
-	            	</div>
-	            	<div class='d-flex flex-row mt-1 align-items-baseline'>
-						<span class='text-nowrap mr-1'> on drag:</span>
-	            		<select
-	            			v-model="mouseMode.dragmode"
-	            			class='form-control form-control-sm'
-	            		>
-	            			<option
-	            				v-for='name in mouseMode.dragmodes'
-	            				:value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
-	            		</select>
-	            	</div>
-	            </div>
- 			</div>
+                            :disabled="axis[type].sameRange.disabled"
+                        >
+                            <input
+                                type='checkbox'
+                                v-model='axis[type].sameRange.value'
+                                :disabled="axis[type].sameRange.disabled"
+                            >
+                            <span>same range</span>
+                        </label>
+                        <label
+                            class='text-nowrap m-0 ml-2 customcheckbox'
+                            :class="{'checked': axis[type].log.value}"
+                            :disabled="axis[type].log.disabled"
+                        >
+                            <input
+                                type='checkbox'
+                                v-model='axis[type].log.value'
+                                :disabled="axis[type].log.disabled"
+                            >
+                            <span>log scale</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class='mt-3 d-flex flex-column border p-2 bg-white'>
+                    <div> Mouse interactions</div>
+                    <div class='d-flex flex-row mt-1 align-items-baseline'>
+                        <span class='text-nowrap mr-1'> on hover:</span>
+                        <select
+                            v-model="mouseMode.hovermode"
+                            class='form-control form-control-sm'
+                        >
+                            <option
+                                v-for='name in mouseMode.hovermodes'
+                                :value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
+                        </select>
+                    </div>
+                    <div class='d-flex flex-row mt-1 align-items-baseline'>
+                        <span class='text-nowrap mr-1'> on drag:</span>
+                        <select
+                            v-model="mouseMode.dragmode"
+                            class='form-control form-control-sm'
+                        >
+                            <option
+                                v-for='name in mouseMode.dragmodes'
+                                :value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
      
     </div>`,
@@ -300,94 +300,47 @@ var _PLOT_DIV = Vue.component('plot-div', {
         // no-op
     },
     methods: {
-    	getDownloadPostData: function(key, url){
-    		// returns the post data to be sent when an item of the download <select> is choosen
-    		if (['png', 'eps', 'pdf', 'svg'].includes(key.substring(0,3))){
-    			var [data, layout] = this.getPlotlyDataAndLayout();
-    			var parent = document.getElementById(this.plotdivid).parentNode.parentNode.parentNode;
-    			var [width, height] = this.getElmSize(parent);
-    			data = data.filter(elm => elm.visible || !('visible' in elm));
-    			return {data:data, layout:layout, width:width, height:height};
-    		}
-    		return this.data;
-    	},
+        getDownloadPostData: function(key, url){
+            // returns the post data to be sent when an item of the download <select> is
+            // chosen
+            if (['png', 'eps', 'pdf', 'svg'].includes(key.substring(0,3))){
+                var [data, layout] = this.getPlotlyDataAndLayout();
+                var parent = document.getElementById(this.plotdivid).parentNode.parentNode.parentNode;
+                var [width, height] = this.getElmSize(parent);
+                data = data.filter(elm => elm.visible || !('visible' in elm));
+                return {data:data, layout:layout, width:width, height:height};
+            }
+            return this.data;
+        },
         // methods to be overridden:
         getData: function(responseObject){
-            // this method needs to be implemented in order to initialize the response object into
-            // an Array of sub-plots, and return that Array: each Array element (or "sub-plot")
-            // need to be a js Object of the form:
-            // {traces: Array, params: Object, xaxis: Object, yaxis: Object} where:
-            //
-            // traces:
-            // an Array of valid representable plotly objects e.g. {x: Array, y: Array, name: string}.
-            // It is basically the 'data' argument passed to Plotly
-            // (https://plot.ly/javascript/plotlyjs-function-reference/#plotlynewplot). A list of
-            // valid keys / properties of each Object is available at
-            // https://plot.ly/javascript/reference/ for details, but consider that this class will
-            // dynamically create some of them for correctly placing plots on the grid: thus
-            // the keys `xaxis` (string), 'yaxis' (string), 'showlegend' (boolean) will be ignored
-            // (overwritten) if specified.
-            // NOTE1: Providing a `name` key makes the name showing when hovering over the trace with
-            // the mouse
-            // NOTE2: To add a unique color mapped to a trace id (e.g. the trace name) and
-            // setup the legendgroup and automatically map the trace to a legend item toggling
-            // the trace visibility, use `this.addLegend(trace, key)`, e.g.:
-            //     var trace = {x: Array, y: Array, name: 'mytrace'}
-            //     var color = this.addLegend(trace, trace.name)
-            //     trace.line = {color: color}  // set the trace color to the legend assigned color
-            // `addLegend(trace, K)` maps the returned color to the key K provided;
-            // subsequent calls to this.addLegend(..., K) return the same color.
-            // The returned color is a color assigned to K by cycling through an internal color
-            // array (copied from plotly). If you want to specify a default
-            // color for non-mapped keys avoiding the default assignement, call:
-            // `addLegend(trace, key, color)` with an optional color string in the form '#XXXXXX'.
-            // `addLegend` also sets trace.legendgroup=K.
-            //
-            // params:
-            // an Object of selectable params (string) mapped to the plot specific values
-            // (e.g. {magnitude: 5, 'xlabel: 'PGA'}). All possible values and all possible keys
-            // will be processed to build the parameters whereby it is possible to filter/select
-            // specific plots, as single view or on a XY grid (for the latter, at least two keys
-            // must be provided). Note that if only one
-            // key is provided, then the string "<key>: <value>" will be used as plot title (statically,
-            // as there are no grid parameter to be tuned). E.g., returning always
-            // {'plot title': '1'} will display 'plot title: 1' as plot title.
-            // 
-            // xaxis:
-            // a dict of x axis properties. Example: {title: 'plottitle', type: 'log'}.
-            // It is basically the 'layout.xaxis<N>' Object (where N is an integer which
-            // depends on the plot placement on the grid), where 'layout' is the layout argument
-            // passed to Plotly (https://plot.ly/javascript/plotlyjs-function-reference/#plotlynewplot).
-            // 'layout.xaxis<N>' will be built by merging `this.defaultxaxis` and the values
-            // provided here. A list of valid keys / properties of this Object is available at
-            // https://plot.ly/javascript/reference/#layout-xaxis for details, but consider that this class will
-            // dynamically create some of them for correctly placing plots on the gird: thus
-            // the keys 'domain' and 'anchor' will be ignored (overwritten) if specified.
-            //
-            // yaxis:
-            // a dict of y axis properties. See documentation for 'xaxis'
-            // above for details, just replace 'xaxis' with 'yaxis'.
+            /* Return from the given response object an Array of Objects representing
+            the sub-plot to be visualized. Each sub-plot Object has the form:
+            {traces: Array, params: Object, xaxis: Object, yaxis: Object}
+
+            See residuals.js and trellis.js for a details docstring and implementation
+            */
         },
         displayGridLabels: function(axis, paramName, paramValues){
-            // this optional method can be implemented to hide the labels of 'paramName' when it is
-            // set as grid parameter along the specified axis ('x' or 'y'). If not implemented,
-            // by default this method returns true if `paramValues.length > 1` because display the
-            // only parameter value on the grid would be redundant and space consuming
-            //
-            // params:
-            // 
-            // axis: string, either 'x' or 'y'
-            // paramName: the string denoting the parameter name along the given axis
-            // paramValues: Array of the values of the parameter keyed by 'paramName'
+            /* Return true / false to specify if the given parameter should be displayed
+            as grid parameter along the specified axis. In this default implementation,
+            return true if `paramValues.length > 1`.
+            Function arguments:
+                `axis`: string, either 'x' or 'y'
+                `paramName`: the string denoting the parameter name along the given axis
+                `paramValues`: Array of the values of the parameter keyed by 'paramName'
+            */
             return paramValues.length > 1;
         },
         configureLayout: function(layout){
-            // this optional method can be implemented to remove or add properties to the plotly `layout`
-            // Object, which is passed as shallow copy of `this.defaultlayout` (defined in `plotsdiv`).
-            // If not implemented, this method by default does nothing and returns.
-            // Note that the layout font size and family will be set according to `this.plotfontsize`
-            // and the <body> font family, because the font size is used to calculate plots area
-            // and cannot be changed. 
+            /* Configure the `layout` Object to be passed to plotly (for details, see
+            https://plotly.com/javascript/reference/layout/). Note that the `layout` keys
+            `font.family` and `font.size` will be overwritten if present as they need to
+            be equal to the HTML page in order to reliably calculate spaces and sizes.
+            Function argument:
+                `layout` Object copied from `this.defaultlayout` which can be modified
+                    here. Note that this function does not need to return any value
+            */
             return
         },
         // END OF OVERRIDABLE METHODS
@@ -402,10 +355,10 @@ var _PLOT_DIV = Vue.component('plot-div', {
                 color = colorMap.get(key);  // sets also the key if not existing
             }
             if (!(key in this.legend)){
-            	// make the key reactive:
-            	this.$set(this.legend, key, {visible: true, color:color});
+                // make the key reactive:
+                this.$set(this.legend, key, {visible: true, color:color});
             }else{
-	            this.legend[key].color = color;
+                this.legend[key].color = color;
             }
             trace.legendgroup = key;
             return color;
@@ -430,22 +383,22 @@ var _PLOT_DIV = Vue.component('plot-div', {
             this.newPlot();
         },
         watchOff: function(...keys){
-        	// turns (dynamically created/destroyed) watchers off.
-        	// If keys (list of strings) is NOT provided, turns off and deletes all watchers
-        	var keys2delete = keys.length ? keys : Object.keys(this.watchers);
-        	for(var name of keys2delete){
-        		if (name in this.watchers){
-                	this.watchers[name]();
-                	delete this.watchers[name];
+            // turns (dynamically created/destroyed) watchers off.
+            // If keys (list of strings) is NOT provided, turns off and deletes all watchers
+            var keys2delete = keys.length ? keys : Object.keys(this.watchers);
+            for(var name of keys2delete){
+                if (name in this.watchers){
+                    this.watchers[name]();
+                    delete this.watchers[name];
                 }
             }
         },
         watchOn: function(key, callback, options){
-        	if (key in this.watchers){
-        		this.watchOff(key);
-        	}
-        	var watch = this.$watch(key, callback, options || {});
-        	this.watchers[key] = watch;
+            if (key in this.watchers){
+                this.watchOff(key);
+            }
+            var watch = this.$watch(key, callback, options || {});
+            this.watchers[key] = watch;
         },
         setupSelection: function(){
             // sets up selectable params, including those choosable as 'x grid' or 'y rid'.
@@ -625,78 +578,78 @@ var _PLOT_DIV = Vue.component('plot-div', {
             this.selectedParams = selectedParams;
         },
         setupAxisDefaults(){
-        	// sets up the axis default for each plot and in the VueJs settings
-        	// modifies each plot xaxis / yaxis data and `this.axis` Object
-        	//
-        	// Remember that:
-        	// 1. `plots` is a subset of `this.plots` and it is an Array of plots,
-        	// i.e. Objects of the form:
-        	// plot= {
-        	//		traces: [] //list of Plotly Objects representing traces
-        	//		xaxis: {} //Plotly Object representing x axis
-        	//		yaxis: Plotly Object representing y axis
-        	//	 }, ..
-        	//
-        	// The Vue Object controlling axis settings is of the form:
-        	// axis: {
+            // sets up the axis default for each plot and in the VueJs settings
+            // modifies each plot xaxis / yaxis data and `this.axis` Object
+            //
+            // Remember that:
+            // 1. `plots` is a subset of `this.plots` and it is an Array of plots,
+            // i.e. Objects of the form:
+            // plot= {
+            //		traces: [] //list of Plotly Objects representing traces
+            //		xaxis: {} //Plotly Object representing x axis
+            //		yaxis: Plotly Object representing y axis
+            //	 }, ..
+            //
+            // The Vue Object controlling axis settings is of the form:
+            // axis: {
             //    		x: {
             //   			log: {value:undefined, disabled:false},  // undefined: infer from plots, null: disable the option, otherwise boolean
             //   			sameRange: {value:undefined, disabled: false} // same as above
             //   		},
-  			//		y: { same as above }
+            //		y: { same as above }
             //   }, 
-        	
-        	var keys = ['axis.x.log.value',
-            		 	'axis.y.log.value',
-            		 	'axis.x.sameRange.value',
-            		 	'axis.y.sameRange.value'];
-        	this.watchOff(...keys);
-        	
-        	// Set "private" variable in the xaxis and yaxis Objects used to
-        	// remember some defaults, if set.
-        	// Currently, we set _range and _type, which are the counterparts
-        	// of 'range' and 'type', respectively. The latter are Plotly reserved
-        	// keyswords and apparently it's harmless to add our custom (underscored)
-        	// counterparts
-        	this.plots.forEach(plot => {
-        		if (!plot.xaxis){
-        			plot.xaxis={};
-        		}
-        		if (!plot.yaxis){
-        			plot.yaxis={};
-        		}
-        		var [rangex, rangey] = this.getPlotBounds(plot.traces || []);  // note that hidden traces count
-        		plot.xaxis._range = rangex;
-        		plot.yaxis._range = rangey;
-        		
-        		plot.xaxis._type = !(plot.xaxis.type) || (plot.xaxis.type == 'log') ? '' : plot.xaxis.type;
-        		plot.yaxis._type = !(plot.yaxis.type) || (plot.yaxis.type == 'log') ? '' : plot.yaxis.type;
-        	});
 
-        	// setup default values:
-        	for (var key of ['x', 'y']){
-            	var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
-            	var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
-            	// axis.sameRange.disabled = false;
-            	axis.sameRange.value = false;
-            	// get if all axis have the same bounds:
-            	var pltBounds = this.plots[0][plotkey]._range;
-            	if (this.plots.every(plot => plot[plotkey]._range.every((elm, index) => elm === pltBounds[index]))){
-            		// axis.sameRange.disabled = true;
-            		axis.sameRange.value = true;
-            	}
-            	// log scale:
-            	axis.log.value = this.plots.every(plot => plot[plotkey].type === 'log');
-            	// set log scale disabled if the traces do not have 'log' as type and there are axis bound <=0:
-            	//axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
+            var keys = ['axis.x.log.value',
+                        'axis.y.log.value',
+                        'axis.x.sameRange.value',
+                        'axis.y.sameRange.value'];
+            this.watchOff(...keys);
+
+            // Set "private" variable in the xaxis and yaxis Objects used to
+            // remember some defaults, if set.
+            // Currently, we set _range and _type, which are the counterparts
+            // of 'range' and 'type', respectively. The latter are Plotly reserved
+            // keyswords and apparently it's harmless to add our custom (underscored)
+            // counterparts
+            this.plots.forEach(plot => {
+                if (!plot.xaxis){
+                    plot.xaxis={};
+                }
+                if (!plot.yaxis){
+                    plot.yaxis={};
+                }
+                var [rangex, rangey] = this.getPlotBounds(plot.traces || []);  // note that hidden traces count
+                plot.xaxis._range = rangex;
+                plot.yaxis._range = rangey;
+
+                plot.xaxis._type = !(plot.xaxis.type) || (plot.xaxis.type == 'log') ? '' : plot.xaxis.type;
+                plot.yaxis._type = !(plot.yaxis.type) || (plot.yaxis.type == 'log') ? '' : plot.yaxis.type;
+            });
+
+            // setup default values:
+            for (var key of ['x', 'y']){
+                var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
+                var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
+                // axis.sameRange.disabled = false;
+                axis.sameRange.value = false;
+                // get if all axis have the same bounds:
+                var pltBounds = this.plots[0][plotkey]._range;
+                if (this.plots.every(plot => plot[plotkey]._range.every((elm, index) => elm === pltBounds[index]))){
+                    // axis.sameRange.disabled = true;
+                    axis.sameRange.value = true;
+                }
+                // log scale:
+                axis.log.value = this.plots.every(plot => plot[plotkey].type === 'log');
+                // set log scale disabled if the traces do not have 'log' as type and there are axis bound <=0:
+                //axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
             }
 
             // restart watching: 
             for (var key of keys){
-            	// watch each prop separately because with 'deep=true' react is called more than once ...
-            	this.watchOn(key, function(newval, oldval){
-                	this.react();
-            	});
+                // watch each prop separately because with 'deep=true' react is called more than once ...
+                this.watchOn(key, function(newval, oldval){
+                    this.react();
+                });
             }
         },
         newPlot: function(){
@@ -706,22 +659,22 @@ var _PLOT_DIV = Vue.component('plot-div', {
              */
             var divElement = document.getElementById(this.plotdivid);
             this.$nextTick(() => {
-            	var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
-            	this.watchOff(hover, drag);
+                var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
+                this.watchOff(hover, drag);
                 var [data, layout] = this.createPlotlyDataAndLayout(divElement);
                 this.execute(function(){
-	                // console.log(this.getElmSize(divElement));
+                    // console.log(this.getElmSize(divElement));
                     Plotly.purge(divElement);  // Purge plot. FIXME: do actually need this?
-                	Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
-                	this.watchOn(hover, function (newval, oldval) {
-	                    this.setMouseModes(newval, undefined);  // hovermode, mousemode
-	                });
-	                this.watchOn(drag, function(newval, oldval){
-	                    this.setMouseModes(undefined, newval);  // hovermode, mousemode
-	                });
-	            }, {delay: 300});  // this delay is increased because we might have the animation
-	            // of the form closing to be finished: overlapping waitbar and form closing is
-	            // sometimes not nice
+                    Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
+                    this.watchOn(hover, function (newval, oldval) {
+                        this.setMouseModes(newval, undefined);  // hovermode, mousemode
+                    });
+                    this.watchOn(drag, function(newval, oldval){
+                        this.setMouseModes(undefined, newval);  // hovermode, mousemode
+                    });
+                }, {delay: 300});  // this delay is increased because we might have the animation
+                // of the form closing to be finished: overlapping waitbar and form closing is
+                // sometimes not nice
             });
         },
         react: function(){
@@ -732,26 +685,26 @@ var _PLOT_DIV = Vue.component('plot-div', {
             var divElement = document.getElementById(this.plotdivid);
             this.$nextTick(() => {
                 this.execute(function(){
-                	var [data, layout] = this.createPlotlyDataAndLayout(divElement);
+                    var [data, layout] = this.createPlotlyDataAndLayout(divElement);
                     // console.log(this.getElmSize(divElement));
                     Plotly.react(divElement, data, layout);
                 });
             });
         },
         execute: function(callback, options){
-        	// Executes asynchronously the given callback
-        	// (with this component as 'this' argument) showing a waitbar meanwhile.
-        	// 'options' is an Object with two optional properties:
-        	// options.msg (the waitbar message, defaults to self.waitbar.msg)
-        	// and delay (the delay to execute the given callback, defaults to self.waitbar.delay: 200)
-        	var delay = (options || {}).delay || 200;
-        	this.waitbar.msg = (options || {}).msg || this.waitbar.DRAWING;
-        	var self = this;
-        	this.drawingPlots=true;
-        	setTimeout(function(){
-	            callback.call(self);
-	            self.drawingPlots=false;
-	        }, delay);
+            // Executes asynchronously the given callback
+            // (with this component as 'this' argument) showing a waitbar meanwhile.
+            // 'options' is an Object with two optional properties:
+            // options.msg (the waitbar message, defaults to self.waitbar.msg)
+            // and delay (the delay to execute the given callback, defaults to self.waitbar.delay: 200)
+            var delay = (options || {}).delay || 200;
+            this.waitbar.msg = (options || {}).msg || this.waitbar.DRAWING;
+            var self = this;
+            this.drawingPlots=true;
+            setTimeout(function(){
+                callback.call(self);
+                self.drawingPlots=false;
+            }, delay);
         },
         createPlotlyDataAndLayout: function(divElement){
             var plots = this.plots;
@@ -768,8 +721,8 @@ var _PLOT_DIV = Vue.component('plot-div', {
             }
 
             // console.log('creating plots');
-     		this.setupPlotAxisData(plots);
-			
+            this.setupPlotAxisData(plots);
+
             var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
             var gridxvalues = params[gridxparam];
             var gridyvalues = params[gridyparam];
@@ -788,11 +741,11 @@ var _PLOT_DIV = Vue.component('plot-div', {
             // synchronize hovermode and hovermode
             // between the layout and this.mouseMode:
             ['hovermode', 'dragmode'].forEach(elm => {
-            	if (elm in layout){
-            		this.mouseMode[elm] = layout[elm];
-            	}else{
-            		layout[elm] = this.mouseMode[elm];
-            	}
+                if (elm in layout){
+                    this.mouseMode[elm] = layout[elm];
+                }else{
+                    layout[elm] = this.mouseMode[elm];
+                }
             });
             // set font (if not present):
             if (!('font' in layout)){
@@ -903,73 +856,73 @@ var _PLOT_DIV = Vue.component('plot-div', {
           return [data, layout];
         },
         setupPlotAxisData(plots){
-        	// sets up the plotly axis data on the plots to be plotted, according to
-        	// the current axis setting and the plot data
+            // sets up the plotly axis data on the plots to be plotted, according to
+            // the current axis setting and the plot data
 
-        	// set the plot.xaxis.type (same for y):
+            // set the plot.xaxis.type (same for y):
             for (var key of ['x', 'y']){
-            	var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
-            	var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
-            	plots.forEach(plot => {
-            		plot[plotkey].type = axis.log.value ? 'log' : plot[plotkey]._type;
-            		// we might have falsy plot type, meaning that the non-log type was unspecified
-            		// thus remove:
-            		if (!plot[plotkey].type){
-	            		delete plot[plotkey].type;  // reset to default, whatever it is
-	            	}
-            	});
-            	// set disabled state (some plots are not displayable as log. Although they might be actually be
-            	// displayed as log, this depends on the default settings, just prevent here the user to switch log on/off):
-	            axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
+                var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
+                var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
+                plots.forEach(plot => {
+                    plot[plotkey].type = axis.log.value ? 'log' : plot[plotkey]._type;
+                    // we might have falsy plot type, meaning that the non-log type was unspecified
+                    // thus remove:
+                    if (!plot[plotkey].type){
+                        delete plot[plotkey].type;  // reset to default, whatever it is
+                    }
+                });
+                // set disabled state (some plots are not displayable as log. Although they might be actually be
+                // displayed as log, this depends on the default settings, just prevent here the user to switch log on/off):
+                axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
             }
 
-			// set the plot.xaxis.type (same for y):
-			var [sign, log10] = [Math.sign, Math.log10];
-			// displaybars tells us if we are displaying (at least one) bar: this changes the behaviour
-			// of the margin for custom-defined ranges (see below)
-			var displaybars = plots.every(plot => plot.traces.some(trace => trace.type === 'bar'));
+            // set the plot.xaxis.type (same for y):
+            var [sign, log10] = [Math.sign, Math.log10];
+            // displaybars tells us if we are displaying (at least one) bar: this changes the behaviour
+            // of the margin for custom-defined ranges (see below)
+            var displaybars = plots.every(plot => plot.traces.some(trace => trace.type === 'bar'));
             for (var key of ['x', 'y']){
-            	var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
-            	var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
-            	
-				// set same Range disabled, preventing the user to perform useless click:
-            	// Note that this includes we are shoing only one plot:
-            	var pltBounds = plots[0][plotkey]._range;
-            	axis.sameRange.disabled = 
-            		(plots.every(plot => plot[plotkey]._range.every((elm, index) => elm === pltBounds[index])));
-            	if (!axis.sameRange.value || axis.sameRange.disabled){
-            		plots.forEach(plot => {
-	        			delete plot[plotkey].range;
-	        		});
-            		continue;
-            	}
-            	// here deal with the case we have 'sameRange' clicked (and enabled):
-            	var range = [NaN, NaN];
-            	plots.forEach(plot => {
-            		range = this.nanrange(...range, ...plot[plotkey]._range);
-            	});
-            	// calculate margins. Do not add them IF:
-            	// 1. log scale and adding/removing margin causes value <=0
-            	// 2. if range[0], Is displaybars, range  if: no log displayed or bound+- margin still positive,
-            	// no bar displayed OR signum min
-            	var margin = Math.abs(range[1] - range[0]) / 50;
-            	if (displaybars && sign(range[0]) >= 0 && sign(range[1]) >= 0){
-            		// do not add margin to the minimum
-            	}else if (!axis.log.value || range[0] - margin > 0){
-	        		range[0] -= margin;
-	        	}
-	        	if (displaybars && sign(range[0]) <= 0 && sign(range[1]) <= 0){
-            		// do not add margin to the maximum
-            	}else if (!axis.log.value || range[1] + margin > 0){
-	        		range[1] += margin;
-	        	}
-	        	if (range.every(elm => !isNaN(elm))){
-	        		plots.forEach(plot => {
-	        			// plotly wants range converted to log if axis type is 'log':
-	        			plot[plotkey].range = plot[plotkey].type === 'log' ? [log10(range[0]), log10(range[1])] : range;	
-	            	});
-            	}
-           	}
+                var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
+                var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
+
+                // set same Range disabled, preventing the user to perform useless click:
+                // Note that this includes we are shoing only one plot:
+                var pltBounds = plots[0][plotkey]._range;
+                axis.sameRange.disabled =
+                    (plots.every(plot => plot[plotkey]._range.every((elm, index) => elm === pltBounds[index])));
+                if (!axis.sameRange.value || axis.sameRange.disabled){
+                    plots.forEach(plot => {
+                        delete plot[plotkey].range;
+                    });
+                    continue;
+                }
+                // here deal with the case we have 'sameRange' clicked (and enabled):
+                var range = [NaN, NaN];
+                plots.forEach(plot => {
+                    range = this.nanrange(...range, ...plot[plotkey]._range);
+                });
+                // calculate margins. Do not add them IF:
+                // 1. log scale and adding/removing margin causes value <=0
+                // 2. if range[0], Is displaybars, range  if: no log displayed or bound+- margin still positive,
+                // no bar displayed OR signum min
+                var margin = Math.abs(range[1] - range[0]) / 50;
+                if (displaybars && sign(range[0]) >= 0 && sign(range[1]) >= 0){
+                    // do not add margin to the minimum
+                }else if (!axis.log.value || range[0] - margin > 0){
+                    range[0] -= margin;
+                }
+                if (displaybars && sign(range[0]) <= 0 && sign(range[1]) <= 0){
+                    // do not add margin to the maximum
+                }else if (!axis.log.value || range[1] + margin > 0){
+                    range[1] += margin;
+                }
+                if (range.every(elm => !isNaN(elm))){
+                    plots.forEach(plot => {
+                        // plotly wants range converted to log if axis type is 'log':
+                        plot[plotkey].range = plot[plotkey].type === 'log' ? [log10(range[0]), log10(range[1])] : range;
+                    });
+                }
+            }
         },
         displayGridLabels_(axis, paramName){
             if (this.paramnames2showongrid.has(paramName)){
@@ -1045,21 +998,21 @@ var _PLOT_DIV = Vue.component('plot-div', {
           }, props || {});
         },
         traceVisibilityChanged: function(traceName){
-        	var indices = [];
+            var indices = [];
             var plotlydata = this.getPlotlyDataAndLayout()[0];
-			var legend = this.legend;
-			var visible = legend[traceName].visible;
+            var legend = this.legend;
+            var visible = legend[traceName].visible;
             plotlydata.forEach(function(data, i){
-            	var plotlyVisible = ('visible' in data) ? !!data.visible : true;
-            	if (data.legendgroup === traceName && visible !== plotlyVisible){
-            		data.visible = visible;
-            		indices.push(i);
-            	}
+                var plotlyVisible = ('visible' in data) ? !!data.visible : true;
+                if (data.legendgroup === traceName && visible !== plotlyVisible){
+                    data.visible = visible;
+                    indices.push(i);
+                }
             });
             if(indices.length){
-            	this.execute(function(){
-	                Plotly.restyle(this.plotdivid, {visible: visible}, indices);
-	            });
+                this.execute(function(){
+                    Plotly.restyle(this.plotdivid, {visible: visible}, indices);
+                });
             }
         },
         getPlotlyDataAndLayout: function(){
@@ -1071,45 +1024,45 @@ var _PLOT_DIV = Vue.component('plot-div', {
             return elm ? [elm.data || [], elm.layout || {}] : [[], {}];
         },
         getPlotBounds: function(traces){
-        	// gets the bounds min max of all the traces of 'plot', which must be an
-        	// element of this.plots. Returns [rangeX, rangeY] where each range has two numeric elements
-        	// pmin, max] which might be NaN
-        	var [rangeX, rangeY] = [[NaN, NaN], [NaN, NaN]];
-        	for (var trace of traces){
-        		var [rangex, rangey] = [this.nanrange(...trace.x), this.nanrange(...trace.y)];
-        		rangeX = this.nanrange(...rangeX, ...rangex);
-        		rangeY = this.nanrange(...rangeY, ...rangey);
-        	}
-        	return [rangeX, rangeY];
+            // gets the bounds min max of all the traces of 'plot', which must be an
+            // element of this.plots. Returns [rangeX, rangeY] where each range has two numeric elements
+            // pmin, max] which might be NaN
+            var [rangeX, rangeY] = [[NaN, NaN], [NaN, NaN]];
+            for (var trace of traces){
+                var [rangex, rangey] = [this.nanrange(...trace.x), this.nanrange(...trace.y)];
+                rangeX = this.nanrange(...rangeX, ...rangex);
+                rangeY = this.nanrange(...rangeY, ...rangey);
+            }
+            return [rangeX, rangeY];
         },
         nanrange: function(...values){
-			values = values.filter(elm => typeof elm === 'number' && !isNaN(elm));
-		  	var m = Math;
-		  	return values.length? [m.min(...values), m.max(...values)] : [NaN, NaN];
-		},
-       	setMouseModes: function(hovermode, dragmode){
-       		var [data, layout] = this.getPlotlyDataAndLayout();
-       		var relayout = false;
-       		if (this.mouseMode.hovermodes.includes(hovermode)){
-       			layout.hovermode = hovermode;
-       			relayout = true;
-       		}
-       		if (this.mouseMode.dragmodes.includes(dragmode)){
-       			layout.dragmode = dragmode;
-       			relayout = true;
-       		}
-       		if (relayout){
-       			this.execute(function(){
-	       			Plotly.relayout(this.plotdivid, layout);
-	       		}, {msg: this.waitbar.UPDATING});
-       		}
-       	},
-       	createColorMap: function(){
-       	    // Returns a new ColorMap class extending `Map` and mapping a given key
-       	    // to a color. Given a key (e.g. legend name), then `colorMap.get(key)`
-       	    // automatically returns a color (hex string) assuring the same
-       	    // color for the same key. The class extends `Map` and has also a
-       	    // `transparentize` method (see below)
+            values = values.filter(elm => typeof elm === 'number' && !isNaN(elm));
+            var m = Math;
+            return values.length? [m.min(...values), m.max(...values)] : [NaN, NaN];
+        },
+        setMouseModes: function(hovermode, dragmode){
+            var [data, layout] = this.getPlotlyDataAndLayout();
+            var relayout = false;
+            if (this.mouseMode.hovermodes.includes(hovermode)){
+                layout.hovermode = hovermode;
+                relayout = true;
+            }
+            if (this.mouseMode.dragmodes.includes(dragmode)){
+                layout.dragmode = dragmode;
+                relayout = true;
+            }
+            if (relayout){
+                this.execute(function(){
+                    Plotly.relayout(this.plotdivid, layout);
+                }, {msg: this.waitbar.UPDATING});
+            }
+        },
+        createColorMap: function(){
+            // Returns a new ColorMap class extending `Map` and mapping a given key
+            // to a color. Given a key (e.g. legend name), then `colorMap.get(key)`
+            // automatically returns a color (hex string) assuring the same
+            // color for the same key. The class extends `Map` and has also a
+            // `transparentize` method (see below)
 
             // defines ColorMap class:
             class ColorMap extends Map {
@@ -1162,7 +1115,7 @@ var _PLOT_DIV = Vue.component('plot-div', {
                 }
             };
             return new ColorMap();
-       	}
+        }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         // no -op
