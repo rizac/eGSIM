@@ -135,15 +135,15 @@ def imprint(request):
     })
 
 
-def download_request(request, tab_name, filename):
+def download_request(request, key, filename):
     """Return the request (configuration) re-formatted according to the syntax
     inferred from filename (*.json or *.yaml) to be downloaded by the front
     end GUI.
 
-    :param tab_name: a :class:`TAB` name associated to a REST API TAB (i.e.,
+    :param key: a :class:`TAB` name associated to a REST API TAB (i.e.,
         with an associated Form class)
     """
-    form_class = TABS[tab_name].formclass
+    form_class = TABS[key].formclass
     input_dict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
     form = form_class(data=input_dict)  # pylint: disable=not-callable
     if not form.is_valid():
