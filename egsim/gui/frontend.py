@@ -18,10 +18,10 @@ def get_context(selected_menu=None, debug=True) -> dict:
     # this can be changed if needed:
     sel_component = TABS.home.name if not selected_menu else selected_menu
 
-    # setup browser detection
-    allowed_browsers = [['Chrome', 49], ['Firefox', 45], ['Safari', 10]]
-    allowed_browsers_msg = ', '.join('%s &ge; %d' % (brw, ver)
-                                     for brw, ver in allowed_browsers)
+    # setup browser detection:
+    allowed_browsers = {'Chrome': 49, 'Firefox': 45, 'Safari': 10}
+    allowed_browsers_msg = ', '.join(f'{brw} &ge; {ver}'
+                                     for brw, ver in allowed_browsers.items())
     invalid_browser_message = ('Some functionalities might not work '
                                'correctly. In case, please use any of the '
                                'following tested browsers: %s' %
@@ -45,7 +45,7 @@ def get_context(selected_menu=None, debug=True) -> dict:
         'gsims': json.dumps(gsims, separators=(',', ':')),
         'flatfiles': [(f.name, str(f)) for f in query_flatfiles()],
         'regionalization': regionalization,
-        'allowed_browsers': allowed_browsers,
+        'allowed_browsers': {k.lower(): v for k, v in allowed_browsers.items()},
         'invalid_browser_message': invalid_browser_message
     }
 
