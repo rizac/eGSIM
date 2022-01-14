@@ -306,7 +306,7 @@ Vue.component('field-input', {
         	var field = this.field;
             var count = field.choices.filter(e => !e.disabled).length;
             var sel = field.value.length || 0;
-            return `${count} to choose from, ${sel} selected`;
+            return `${count} total, ${sel} selected`;
     	},
     }
 });

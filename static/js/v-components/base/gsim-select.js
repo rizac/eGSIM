@@ -18,7 +18,7 @@ Vue.component('gsim-select', {
             filterBy: {  // DO NOT CHANGE KEYS!
                 name: "",
                 imt: false,
-                geolocation: null
+                map: null
             },
             choices: Array.from(this.field.choices),  // copy Array to preserve order
             warnings: [], //list of strings of warnings (updated also in watchers below)
@@ -88,13 +88,13 @@ Vue.component('gsim-select', {
                             <label :for="this.field.id + '_imt'" class='small' :disabled='imtField.disabled'>&hellip; defined for selected IMTs</label>
                         </td>
                         <td class='text-nowrap ps-3' style='text-align: right;'>
-                        <span :style="[!!filterBy.geolocation ? {'visibility': 'hidden'} : {}]" class='small'>
+                        <span :style="[!!filterBy.map ? {'visibility': 'hidden'} : {}]" class='small'>
                             &hellip; selected for a specific region (click on map):
                         </span>
                         </td>
                         </tr>
                     </table>
-                    <button v-if="!!filterBy.geolocation" type='button' class="btn btn-sm btn-outline-dark" @click="clearMapFilter"
+                    <button v-if="!!filterBy.map" type='button' class="btn btn-sm btn-outline-dark" @click="clearMapFilter"
                             style="position:absolute; right:0; bottom:0">
                         Clear map filter
                     </button>
@@ -183,17 +183,33 @@ Vue.component('gsim-select', {
             control.addTo(map);
         },
         mapClicked(event) {
-            this.filterBy.geolocation = [event.latlng.lat, event.latlng.lng];
+            var latLng = [event.latlng.lat, event.latlng.lng];
             // Destroy existing markers marker (or move existing one):
             this.removeMarkersFromMap();
             // ad new marker:
-            L.marker(this.filterBy.geolocation).addTo(this.map);
-            this.filterUpdated();
+            L.marker(latLng).addTo(this.map);
+            // query data:
+            var data = {
+                'lat': latLng[0],
+                'lon': latLng[1],
+                'reg': this.field.regionalization.value
+            };
+            // query data and update filter func:
+            Vue.post(this.field.regionalization.url, data).then(response => {  // defined in `vueutil.js`
+                var gsims = Array.isArray(response.data) ? response.data : Object.keys(response.data);
+                this.filterBy.map = null;
+                if(gsims && gsims.length){
+                    var regionGsims = new Set(gsims);
+                    // create filterFunc from list og Gsims:
+                    this.filterBy.map = gsim => regionGsims.has(gsim.value);
+                }
+                this.filterUpdated();
+            });
         },
         clearMapFilter(){
             // Destroy existing markers marker (or move existing one):
             this.removeMarkersFromMap();
-            this.filterBy.geolocation = null;
+            this.filterBy.map = null;
         },
         removeMarkersFromMap(){
             this.map.eachLayer(function (layer) {
@@ -214,26 +230,11 @@ Vue.component('gsim-select', {
                 var imtClassNames = new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm));
                 filterFuncs.push(gsim => gsim.imts.some(imt => imtClassNames.has(imt)));
             }
-            if (this.filterBy.geolocation){
-                var data = {
-                    'lat': this.filterBy.geolocation[0],
-                    'lon': this.filterBy.geolocation[1],
-                    'reg': this.field.regionalization.value
-                };
-                Vue.post(this.field.regionalization.url, data).then(response => {  // defined in `vueutil.js`
-                    var gsims = Array.isArray(response.data) ? response.data : Object.keys(response.data);
-                    if(gsims && gsims.length){
-                        var regionGsims = new Set(gsims);
-                        // create filterFunc from list og Gsims:
-                        filterFuncs.push(gsim => regionGsims.has(gsim.value));
-                        this.field.choices = this.filterChoices(filterFuncs);
-                        this.updateWarnings();
-                    }
-                });
-            }else{
-                this.field.choices = this.filterChoices(filterFuncs);
-                this.updateWarnings();
+            if (this.filterBy.map){
+                filterFuncs.push(this.filterBy.map);
             }
+            this.field.choices = this.filterChoices(filterFuncs);
+            this.updateWarnings();
         },
         filterChoices(filterFuncs){  // filterFuncs: callable(gsimName) -> bool
             var okGsims = new Array();
