@@ -66,10 +66,12 @@ Vue.component('trellisplotdiv', {
 			var mathpow = Math.pow;
 			var pow10 = elm => mathpow(10, elm);
 
-			// setup  label texts:
-            var colorMap = Vue.colorMap();
+			// get the current colorMap (will be used to set transparency on stdev
+			// areas, if given):
+            var colorMap = this.colorMap;  // defined in plot-div.js
             var data = responseObject;
             var plots = [];
+            // setup  label texts:
             for (var imt of data.imts){
                 var figures = data[imt];
                 for (var fig of figures){
