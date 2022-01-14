@@ -36,7 +36,7 @@ Vue.component('testing', {
         </template>
 
         <template v-slot:right-column>
-            <imt-select :field="form.imt" class='flexible' size="7"></imt-select>
+            <imt-select :field="form.imt" size="6"></imt-select>
 
             <div class="mt-4 form-control" style="background-color:transparent">
                 <field-input :field='form.flatfile'></field-input>

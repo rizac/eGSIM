@@ -20,15 +20,15 @@ Vue.component('residuals', {
 	<!-- $props passes all of the props on to the "parent" component -->
 	<!-- https://stackoverflow.com/a/40485023 -->
 	<base-form v-show="!formHidden" v-bind="$props"
-		      @responsereceived="responseData = arguments[0]; formHidden = true"
-		      @closebuttonclicked="formHidden = true">
+		       @responsereceived="responseData = arguments[0]; formHidden = true"
+		       @closebuttonclicked="formHidden = true">
 
 		<template v-slot:left-column>
             <gsim-select :field="form.gsim" :imtField="form.imt" class="flexible" />
         </template>
 
         <template v-slot:right-column>
-            <imt-select :field="form.imt" class='flexible' size="7"></imt-select>
+            <imt-select :field="form.imt" size="6"></imt-select>
             <div class="mt-4 form-control" style="background-color:transparent">
 			    <field-input :field='form.flatfile'></field-input>
         		<field-input :field='form.selexpr' class='mt-2'></field-input>
@@ -36,7 +36,7 @@ Vue.component('residuals', {
             </div>
 
 			<div class="mt-4">
-            	<field-input :field='form.plot_type' size="7"></field-input>
+            	<field-input :field='form.plot_type' size="10"></field-input>
 			</div>
 
 		</template>

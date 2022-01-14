@@ -39,10 +39,7 @@ class FlatfileForm(EgsimBaseForm):
     flatfile = ModelChoiceField(queryset=models.Flatfile.get_flatfiles(),
                                 to_field_name="name", label='Flatfile',
                                 help_text='The name of a preloaded flatfile (or '
-                                          'Ground Motion Database) with the observed '
-                                          'data to be used for comparison. Flatfiles '
-                                          'can also be user defined and uploaded in '
-                                          'the GUI or from your Python code',
+                                          'Ground Motion Database)',
                                 empty_label=None, required=False)
     selexpr = CharField(required=False, label='Selection expression')
 
