@@ -1,15 +1,10 @@
 /**
- * Registers globally a Vue component. The name of the component
- * (first argument of 'Vue.component' below must be equal to this file's name 
- * (without extension)
+ * Registers globally the residuals component (model-to-data comparison).
+ * The component name must be a name of a `TAB` Enum in egsim.gui.__init__.py
  */
 Vue.component('residuals', {
-	extends: _BASE_FORM,  // defined in baseform.js
+    extends: _BASE_FORM,  // defined in base-form.js
     data: function () {
-    	// set the size of the plot_type <select>. Maybe this is not the right place
-    	// (maybe the 'created' method would be better:
-    	// https://vuejs.org/v2/api/#created) but it works:
-    	// this.$set(this.form['plot_type'], 'size', 10);
         return {
             responseData: {},
             formHidden: false
@@ -17,43 +12,43 @@ Vue.component('residuals', {
     },
     template: `
 <div class='flexible d-flex flex-column position-relative'>
-	<!-- $props passes all of the props on to the "parent" component -->
-	<!-- https://stackoverflow.com/a/40485023 -->
-	<base-form v-show="!formHidden" v-bind="$props"
-		       @responsereceived="responseData = arguments[0]; formHidden = true"
-		       @closebuttonclicked="formHidden = true">
+    <!-- $props passes all of the props on to the "parent" component -->
+    <!-- https://stackoverflow.com/a/40485023 -->
+    <base-form v-show="!formHidden" v-bind="$props"
+               @responsereceived="responseData = arguments[0]; formHidden = true"
+               @closebuttonclicked="formHidden = true">
 
-		<template v-slot:left-column>
+        <template v-slot:left-column>
             <gsim-select :field="form.gsim" :imtField="form.imt" class="flexible" />
         </template>
 
         <template v-slot:right-column>
             <imt-select :field="form.imt" size="6"></imt-select>
             <div class="mt-4 form-control" style="background-color:transparent">
-			    <field-input :field='form.flatfile'></field-input>
-        		<field-input :field='form.selexpr' class='mt-2'></field-input>
-        		<!-- showhelpbutton	@helprequested='$emit("emit-event", "movetoapidoc", "selexpr")' -->
+                <field-input :field='form.flatfile'></field-input>
+                <field-input :field='form.selexpr' class='mt-2'></field-input>
+                <!-- showhelpbutton	@helprequested='$emit("emit-event", "movetoapidoc", "selexpr")' -->
             </div>
 
-			<div class="mt-4">
-            	<field-input :field='form.plot_type' size="10"></field-input>
-			</div>
+            <div class="mt-4">
+                <field-input :field='form.plot_type' size="10"></field-input>
+            </div>
 
-		</template>
-	</base-form>
+        </template>
+    </base-form>
 
-    <residualsplotdiv :data="responseData"
-    	              :downloadurls="urls.downloadResponse.concat(urls.downloadImage)"
+    <residuals-plot-div :data="responseData"
+                      :downloadurls="urls.downloadResponse.concat(urls.downloadImage)"
                       class='position-absolute pos-0' style='z-index:1'>
         <slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-list-alt'></i> Configuration</button>
         </slot>
-    </residualsplotdiv>
+    </residuals-plot-div>
 </div>`
 });
 
 
-Vue.component('residualsplotdiv', {
+Vue.component('residuals-plot-div', {
     extends: _PLOT_DIV,  // defined in plot-div.js
     methods: {
         // methods to be overridden:
@@ -127,17 +122,17 @@ Vue.component('residualsplotdiv', {
                 });
             };
             var resample = function(array, granularity=1, uniquesorted=true){
-            	if (uniquesorted){
-	            	var arr = Array.from(new Set(array)).sort((a,b) => a > b ? 1 : a < b ? -1 : 0);
-            	}else{
-            		var arr = array.slice();
-            	}
-            	if (granularity <= 1 || array.length <= 1){
-            		return arr;
-            	}
-            	var newarray = [];
+                if (uniquesorted){
+                    var arr = Array.from(new Set(array)).sort((a,b) => a > b ? 1 : a < b ? -1 : 0);
+                }else{
+                    var arr = array.slice();
+                }
+                if (granularity <= 1 || array.length <= 1){
+                    return arr;
+                }
+                var newarray = [];
                 for (var i=0; i< arr.length-1; i++){
-                	newarray.push(arr[i]);
+                    newarray.push(arr[i]);
                     var step = (array[i+1] - array[i])/granularity;
                     for(var j=1; j<granularity; j++){
                         newarray.push(array[i] + step*j);
@@ -147,20 +142,20 @@ Vue.component('residualsplotdiv', {
                 return newarray;
             };
             var endpoints = function(array){
-            	var sorted = array.filter(val => typeof val === 'number').
-            		sort((a,b) => a > b ? 1 : a < b ? -1 : 0);
-            	return sorted.length ? [sorted[0], sorted[sorted.length-1]] : [null, null];
+                var sorted = array.filter(val => typeof val === 'number').
+                    sort((a,b) => a > b ? 1 : a < b ? -1 : 0);
+                return sorted.length ? [sorted[0], sorted[sorted.length-1]] : [null, null];
             };
             // setup  plots:
             var data = responseObject;
             var plots = [];
             for (var imt of Object.keys(data)){
                 for (var type of Object.keys(data[imt])){
-            	    for (var gsim of Object.keys(data[imt][type])){
-                	    var plotdata = data[imt][type][gsim];
-                	    var hasLinearRegression = plotdata.intercept != null && plotdata.slope != null;
-                	    var [xlbl, ylbl] = [plotdata.xlabel, plotdata.ylabel];
-                	    var ptText = `${plotdata.xlabel}=%{x}<br>${plotdata.ylabel}=%{y}`;
+                    for (var gsim of Object.keys(data[imt][type])){
+                        var plotdata = data[imt][type][gsim];
+                        var hasLinearRegression = plotdata.intercept != null && plotdata.slope != null;
+                        var [xlbl, ylbl] = [plotdata.xlabel, plotdata.ylabel];
+                        var ptText = `${plotdata.xlabel}=%{x}<br>${plotdata.ylabel}=%{y}`;
                         var mainTrace = {
                             x: plotdata.xvalues,
                             y: plotdata.yvalues,
@@ -188,9 +183,9 @@ Vue.component('residualsplotdiv', {
                                 mode: 'lines',
                                 name: 'Linear regression',
                                 hovertemplate: `${gsim} linear regression` +
-                                	`<br>slope=${slope}<br>intercept=${intercept}<br>pvalue=${plotdata.pvalue}`+
-                                	`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
-                                	`<extra></extra>`
+                                    `<br>slope=${slope}<br>intercept=${intercept}<br>pvalue=${plotdata.pvalue}`+
+                                    `<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
+                                    `<extra></extra>`
                             }
                             var color = this.addLegend(linregtrace, linregtrace.name, '#331100');
                             linregtrace.line = {color: color};
@@ -214,9 +209,9 @@ Vue.component('residualsplotdiv', {
                                     mode: 'lines',
                                     name: 'Normal distribution',
                                     hovertemplate: `${gsim} normal distribution` +
-                                    	`<br>μ=${plotdata.mean}<br>σ=${plotdata.stddev}` +
-                                    	`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
-                                    	`<extra></extra>`
+                                        `<br>μ=${plotdata.mean}<br>σ=${plotdata.stddev}` +
+                                        `<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
+                                        `<extra></extra>`
                                 };
                                 var color = this.addLegend(normdistline, normdistline.name, '#331100');
                                 normdistline.line = {color: color};
@@ -228,7 +223,7 @@ Vue.component('residualsplotdiv', {
                                     mode: 'lines',
                                     name: 'Normal distribution (μ=0, σ=1)',
                                     hovertemplate: `Standard normal distribution (μ=0, σ=1)` +
-                                    	`<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
+                                        `<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
                                 };
                                 var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
                                 refnormdistline.line = {color: color};
