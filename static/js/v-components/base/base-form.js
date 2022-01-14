@@ -19,8 +19,30 @@ var _BASE_FORM = Vue.component('base-form', {
         }
     },
     methods: {
+        formToJSON: function(){
+            // first convert the form data to json data:
+            data = {};
+            for (var key of Object.keys(this.form)){
+                var field = this.form[key];
+                if (!field.disabled){
+                    // assign value to object up to be sent, use the "name" as key:
+                    data[field.name] = field.value;
+                }
+            }
+            return data;
+        },
+        post: function(url){
+            // send a post request to the given url using this.form as POST data. Returns
+            // an `axios.post` object so you can attach `then` to this function call:
+            // `this.post(url).then(response => callback)
+
+            for (var key of Object.keys(this.form)){  // clear errors first
+                this.form[key].error = "";
+            }
+            return Vue.post(this.url, this.formToJSON());  // defined in `vueutil.js`
+        },
         request: function(){
-            Vue.post(this.url, this.form).then(response => {  // defined in `vueutil.js`
+            this.post(this.url).then(response => {
                 if (response && response.data){
                     this.responseData = response.data;
                 } 
@@ -52,7 +74,7 @@ var _BASE_FORM = Vue.component('base-form', {
         	
         	for(var [key, url] of this.urls.downloadRequest){
         		if (key.startsWith('json')){
-        			return Vue.post(url, this.form).then(response => {  // defined in `vueutil.js`
+        			return this.post(url).then(response => {  // defined in `vueutil.js`
 		                if (response && response.data){
 		                    var responseData = response.data;
 		                    var retUrl = window.location.origin;
@@ -211,7 +233,7 @@ var _BASE_FORM = Vue.component('base-form', {
 	            <!-- NOTE: the control below must be placed immediately after the control above! -->
 	            <input style='display:none' type="file" id="file-input" @change='readLocalJSON'>
 
-	            <download-select :urls="urls.downloadRequest" :data="form" class='ml-2'
+	            <download-select :urls="urls.downloadRequest" :data="formToJSON" class='ml-2'
 					            :cclass="'form-control form-control-sm bg-transparent border-0'"
 					            data-balloon-pos="down" data-balloon-length="medium"
 					            aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"/>
