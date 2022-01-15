@@ -27,9 +27,9 @@ Vue.component('gsim-select', {
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
         filterBy: {
             deep: true,
-        	handler: function(newVal, oldVal){
-        		this.filterUpdated();
-        	}
+            handler: function(newVal, oldVal){
+                this.filterUpdated();
+            }
         },
         'imtField.disabled': function(newVal, oldVal){
             // if we disabled the imt field, uncheck the checkbox, too, if checked:
@@ -39,12 +39,12 @@ Vue.component('gsim-select', {
         },
         // listen for changes in the selected imts:
         'imtField.value': {  // even if it should not happen: if we change the imt param name, change it also here ...
-        	// immediate: true,
-        	handler: function(newVal, oldVal){
-        	    if (this.filterBy.imt){
-        	        this.filterUpdated();
-        	    }
-        	}
+            // immediate: true,
+            handler: function(newVal, oldVal){
+                if (this.filterBy.imt){
+                    this.filterUpdated();
+                }
+            }
         },
         'field.value': {
             immediate: true,
@@ -319,7 +319,7 @@ Vue.component('gsim-select', {
 Vue.component('imt-select', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
-    	field: {type: Object},
+        field: {type: Object},
     },
     data: function () {
         // copy field and add the 'cstyle' attribute:
@@ -333,12 +333,12 @@ Vue.component('imt-select', {
         fieldCopy: Object.assign(fieldCopy, this.field);
 
         return {
-    	    fieldCopy: fieldCopy,
-    	    SAPeriods: ''
+            fieldCopy: fieldCopy,
+            SAPeriods: ''
         }
     },
     created: function(){
-    	// no-op
+        // no-op
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
         'fieldCopy.value': function(newVal, oldVal){
