@@ -115,7 +115,7 @@ Vue.component('base-input', {
 
         // setup the style classes:
         var cls = {
-            label: 'text-nowrap me-1',
+            label: 'text-nowrap mr-1',
             rootDiv: 'd-flex flex-row align-items-baseline'
         };
         hasLabel = !!this.$slots.default || !!this.$scopedSlots.default;
@@ -273,13 +273,13 @@ Vue.component('field-input', {
         <div class="d-flex flex-row mb-0 align-items-baseline">
             <base-input v-if="isBool" v-model="field.value" :error="!!field.error"
                         v-bind="attrs" :choices="field.choices" :cstyle="field.cstyle"
-                        :disabled='field.disabled' class='me-1'>
+                        :disabled='field.disabled' class='mr-1'>
                 <span v-html="field.label"></span>
             </base-input>
             <label v-else :for="attrs.id" class='mb-1 text-nowrap'
                           :disabled='field.disabled' v-html="field.label">
             </label>
-            <span class="small ms-2 text-muted text-nowrap" :style="infoMessageStyle">
+            <span class="small ml-2 text-muted text-nowrap" :style="infoMessageStyle">
                 <template v-if="!!field.error">
                     <span v-html="field.error"></span>
                 </template>
@@ -293,7 +293,7 @@ Vue.component('field-input', {
                        style="cursor: pointer;" title="Clear selection"></i>
                 </template>
             </span>
-            <span class='text-primary small ms-3 text-right'>{{ attrs.name }}</span>
+            <span class='text-primary small ml-3 text-right'>{{ attrs.name }}</span>
         </div>
         <base-input v-if="!isBool" v-model="field.value" :error="!!field.error"
                 v-bind="attrs" :choices="field.choices" :cstyle="field.cstyle"
