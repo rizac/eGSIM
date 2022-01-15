@@ -73,7 +73,7 @@ Vue.component('gsim-select', {
         <div class="pt-2 d-flex flex-column form-control border-top-0 rounded-top-0"
              style='flex: 1 1 auto; background-color:transparent !important'>
             <div class="d-flex flex-column" style='flex: 1 1 auto'>
-                <div class='mx-2 mb-1' style='position:relative'>
+                <div class='mb-1' style='position:relative'>
                     <div class='mb-1'><i class="fa fa-filter"></i> Filter GSIMs &hellip;</div>
                     <table>
                         <tr>
@@ -83,11 +83,15 @@ Vue.component('gsim-select', {
                                style='min-width:15rem;display:inline-block;width:initial'
                                type="text" class="form-control form-control-sm">
                         </td>
-                        <td v-if="imtField" class='text-nowrap ps-3'>
-                            <input v-model="filterBy.imt" :id="this.field.id + '_imt'" type="checkbox" :disabled='imtField.disabled'>
-                            <label :for="this.field.id + '_imt'" class='small' :disabled='imtField.disabled'>&hellip; defined for selected IMTs</label>
+                        <td v-if="imtField" class='text-nowrap pl-3'>
+                            <input v-model="filterBy.imt" :id="this.field.id + '_imt'"
+                                   type="checkbox" :disabled='imtField.disabled'>
+                            <label :for="this.field.id + '_imt'" class='small my-0'
+                                   :disabled='imtField.disabled'>
+                                &hellip; defined for selected IMTs
+                            </label>
                         </td>
-                        <td class='text-nowrap ps-3' style='text-align: right;'>
+                        <td class='text-nowrap pl-3' style='text-align: right;'>
                         <span :style="[!!filterBy.map ? {'visibility': 'hidden'} : {}]" class='small'>
                             &hellip; selected for a specific region (click on map):
                         </span>
