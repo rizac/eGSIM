@@ -135,7 +135,7 @@ def imprint(request):
     })
 
 
-def download_request(request, key, filename):
+def download_request(request, key: TAB, filename: str):
     """Return the request (configuration) re-formatted according to the syntax
     inferred from filename (*.json or *.yaml) to be downloaded by the front
     end GUI.
@@ -164,7 +164,7 @@ def download_request(request, key, filename):
     return response
 
 
-def download_ascsv(request, tab_name, filename, sep=',', dec='.'):
+def download_ascsv(request, key: TAB, filename: str, sep=',', dec='.'):
     """Return the processed data as text/CSV. This method is used from within
     the browser when users want to get processed data as text/csv: as the
     browser stores the processed data dict, we just need to convert it as
@@ -172,17 +172,17 @@ def download_ascsv(request, tab_name, filename, sep=',', dec='.'):
     Consequently, the request's body is the JSON data resulting from a previous
     call of the GET or POST method of any REST API View.
 
-    :param tab_name: a :class:`TAB` name associated to a REST API TAB (i.e.,
-    with an associated Form class)
+    :param key: a :class:`TAB` name associated to a REST API TAB (i.e.,
+        with an associated Form class)
     """
-    formclass = TAB[tab_name].formclass
+    formclass = TAB[key].formclass
     inputdict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
     response = formclass.processed_data_as_csv(inputdict, sep, dec)
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response
 
 
-def download_asimage(request, filename):
+def download_asimage(request, filename: str):
     """Return the image from the given request built in the frontend GUI
     according to the choosen plots
     """
