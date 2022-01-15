@@ -60,7 +60,7 @@ Vue.component('gsim-select', {
         <div class='d-flex flex-row'>
             <div class="flexible" style="position:relative">
                 <field-input :field="field" size="15"></field-input>
-                <div v-if="!!warnings.length" class='form-control'
+                <div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
                      style="position:absolute; right:2rem; top:3rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
                     <div v-for="w in warnings" class="small text-muted pt-2 px-3">
                         <span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>{{ w }}
@@ -297,10 +297,12 @@ Vue.component('gsim-select', {
             selFilteredOut = selFilteredOut.map(elm => `${elm} is filtered out but still selected`);
             this.warnings = allDisabled.concat(selFilteredOut.concat(warnings));
             // scroll warnings to top:
-            var selComp = this.$refs.warningsDiv;
-            if (selComp){
+            if (this.warnings.length){
                 this.$nextTick(() => {
-                    selComp.scrollTop = 0;
+                    var selComp = this.$refs.warningsDiv;
+                    if (selComp){
+                        selComp.scrollTop=0;
+                    }
                 });
             }
         },

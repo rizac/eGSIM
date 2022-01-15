@@ -19,8 +19,24 @@ var _BASE_FORM = Vue.component('base-form', {
         }
     },
     methods: {
+        request: function(){
+            // send the main post request to `this.url` using `this.form` as POST data
+            this.post(this.url).then(response => {
+                if (response && response.data){
+                    this.responseData = response.data;
+                } 
+            });
+        },
+        post: function(url){
+            // send a post request to the given url using this.form as POST data. Returns
+            // an `Promise` object that can be chained (see e.g. `this.request`)
+            for (var key of Object.keys(this.form)){  // clear errors first
+                this.form[key].error = "";
+            }
+            return Vue.post(url, this.formToJSON());  // defined in `vueutil.js`
+        },
         formToJSON: function(){
-            // first convert the form data to json data:
+            // Return `this.form` as JSON serializable Object
             data = {};
             for (var key of Object.keys(this.form)){
                 var field = this.form[key];
@@ -30,23 +46,6 @@ var _BASE_FORM = Vue.component('base-form', {
                 }
             }
             return data;
-        },
-        post: function(url){
-            // send a post request to the given url using this.form as POST data. Returns
-            // an `axios.post` object so you can attach `then` to this function call:
-            // `this.post(url).then(response => callback)
-
-            for (var key of Object.keys(this.form)){  // clear errors first
-                this.form[key].error = "";
-            }
-            return Vue.post(this.url, this.formToJSON());  // defined in `vueutil.js`
-        },
-        request: function(){
-            this.post(this.url).then(response => {
-                if (response && response.data){
-                    this.responseData = response.data;
-                } 
-            });
         },
         resetDefaults: function(){
         	// reset the parameters to their defaults as implemented
