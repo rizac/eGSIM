@@ -46,29 +46,38 @@ class FlatfileForm(EgsimBaseForm):
     def __init__(self, data, files=None, **kwargs):
         super().__init__(data=data, **kwargs)  # <- normalizes data keys
         self._u_ff = None if files is None else _UploadedFlatfile(files=files)
-        # handle conflicts here for simplicity. eGSIM Views will catch
-        # ValidationErrors and send a 4xx response
-        if files is not None and 'flatfile' in self.data:
-            raise ValidationError('Please either select a flatfile, or '
-                                  'upload one', code='conflict')
-        elif files is None and not 'flatfile' in self.data:
-            raise ValidationError('Please select a flatfile or upload '
-                                  'one', code='required')
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
+        u_form = self._u_ff
+
+        flatfile_conflicts = False
+        # Handle flatfiles conflicts first. Note: with no selection from the web GUI we
+        # have data['flatfile'] = None
+        if u_form is not None and self.data.get('flatfile', None):
+            flatfile_conflicts = True
+            self.add_error("flatfile", ValidationError('Please either select a '
+                                                       'flatfile, or upload one',
+                                                       code='conflict'))
+        elif u_form is None and not self.data.get('flatfile', None):
+            flatfile_conflicts = True
+            # note: with no selection from the web GUI we have data['flatfile'] = None
+            self.add_error("flatfile",  ValidationError('Please select a flatfile '
+                                                        'or upload one',
+                                                        code='required'))
+
         cleaned_data = super().clean()
 
+        if flatfile_conflicts:
+            return cleaned_data
+
         u_flatfile = None  # None or bytes object
-        u_form = self._u_ff
+
         if u_form is not None:
             if not u_form.is_valid():
                 self._errors = u_form._errors
                 return cleaned_data
             u_flatfile = u_form.cleaned_data['flatfile']
-        elif 'flatfile' not in cleaned_data:
-            # ok, flatfile is landed in self.errors. Form i invalid no need to proceed
-            return cleaned_data
 
         if u_flatfile is None:
             # exception should be raised and sent as 500: don't catch

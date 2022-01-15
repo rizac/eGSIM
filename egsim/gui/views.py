@@ -20,7 +20,7 @@ from .frontend import get_context
 from ..api.forms.model_from_region.model_from_region import ModelFromRegionForm
 from ..api.forms.tools import describe, serialize
 from ..api.models import FlatfileColumn
-from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS
+from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS, RESTAPIView
 
 
 # common parameters to be passed to any Django template:
@@ -148,7 +148,7 @@ def download_request(request, key, filename):
     form = form_class(data=input_dict)  # pylint: disable=not-callable
     if not form.is_valid():
         errs = form.validation_errors()
-        return error_response(errs['message'], errs['code'],
+        return error_response(errs['message'], RESTAPIView.CLIENT_ERR_CODE,
                               errors=errs['errors'])
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
     buffer = serialize.as_text(input_dict, form_class, syntax=ext_nodot)
