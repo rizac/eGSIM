@@ -15,13 +15,8 @@ var EGSIM_BASE = {
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
     created: function(){
-        // Use regular expression to convert Gsim names to readable names by
-        // splitting into space-separated tokens (in the following order of importance):
-        // [A-Z]+[a-z]+ e.g. "Akkar" "BNCLower"
-        // (?<!_)[0-9]+(?!_)  e.g. "2006" but not "2006_"
-        // [A-Z_]+ or [a-z_]+ e.g. "ABC" "abc"
-        // .* anything else returned as single token, e.g., "b2006_g"
-        //var reg = /[A-Z]+[a-z]+|(?<!_)[0-9]+(?!_)|[A-Z_]+|[a-z_]+|.+/g;
+        // Use regular expression to convert Gsim names to readable names:
+        // (Note: Safari does not support lookbehind/ ahead, keep it simple!):
         var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g;
         // converts the gsims received from server from an Array of Arrays to an
         // Array of Objects:
@@ -62,10 +57,9 @@ var EGSIM_BASE = {
                 form.imt.choices = Array.from(imts);
             }
         }
-        // in `vueutils.js` we defined a POST function which emits the following events
-        // on this instance. Create the POST function and event notifiers attached to this object
+        // Create a global function `Vue.post(url, data, config)`:
         Vue.createPostFunction(this, this.postfuncDefaultConfig);
-        // and now listen for the just created event notifiers:
+        // `this` is now a listener for `Vue.post`, attach relative events callbacks:
         this.$on('postRequestStarted', this.postRequestStarted);
         this.$on('postRequestCompleted', this.postRequestCompleted);
         this.$on('postRequestFailed', this.postRequestFailed);
@@ -95,7 +89,7 @@ var EGSIM_BASE = {
             return false; // in case accessed from within anchors
         },
         /*
-         * POST request listeners:
+         * POST request listeners (see Vue.post below for details):
          */
         postRequestStarted(){
             this.setError('');
@@ -174,7 +168,7 @@ var EGSIM_BASE = {
                if (typeof compProps === 'object'){
                    Object.keys(compProps).forEach(pname => {
                        var element = compProps[pname];
-                       if (this.isFormObject(element)){  // defined in vueutil.js
+                       if (this.isFormObject(element)){
                            ret.push([name, element]);
                        }
                    });
