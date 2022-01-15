@@ -163,7 +163,7 @@ Vue.component('gsim-select', {
                     var input = L.DomUtil.create('input',
                                                  "leaflet-control-layers-selector",
                                                  label);
-                    var span = L.DomUtil.create('span', 'ms-2', label);
+                    var span = L.DomUtil.create('span', 'ml-2', label);
                     span.innerHTML = name;
                     input.setAttribute('type', 'checkbox');
                     input.setAttribute('value', val);
