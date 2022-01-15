@@ -209,22 +209,26 @@ Vue.use({
             return (obj === null) || (obj === undefined) || ((typeof obj === 'object') && Object.keys(obj).length === 0);
         };
         Vue.createPostFunction = function(root, defaultAxiosConfig){
-            // creates a globally available POST function using axios, and notifying the
-            // root instance. This function is called from egsim.html after creation of the main Vue instance
+            /* creates a globally available `Vue.post` function using axios
+
+            Parameters:
+            defaultAxiosConfig: an Object with default config for axios
+            root: The root Vue instance or component that will listen for the POST
+                events (before request, request ended, request failed) in order to e.g.,
+                control progress bars display request errors.
+            */
             Vue.post = (url, data, config) => {
-                /**
-                 * Perform a POST request. `Vue.post` can be called from any component and
-                 * returns a promise which can be chained with .then(response) and .catch(response)
-                 * where response is the axios response object. The function emits events on the root
-                 * instance passed above, to control visual stuff (e.g., progress bar while fetching,
-                 * display of errors)
-                 *
-                 * @param url: string of the url
-                 * @param data: any data (usually Object) to be sent as POST body. This might include the "form" objects
-                 *     in the form {field1: {err: '', val: V1, ... }, ..., fieldn: {err: '', val: Vn, ... }}
-                 *     In this case, 1. the Object sent will be of the form {field1: V1, ... fieldn: Vn} and
-                 *                   2. the fields errors ('err') will be set in case of form validation errors returned from the server
-                 * @param config: any data (Object) for configuring the POST request
+                /*
+                 Global function that can be called from any Vue instance or component
+                 performing a request and returning a `Promise` which can be chained with
+                 `.then(response)` and `.catch(response)` (`response` is the axios
+                 response object).
+                 See `axios.post(url, data, config)` for details
+
+                 Parameters:
+                 url: string of the url
+                 data: the request POST data (e.g. JSON serialzable Object)
+                 config: any data (Object) for configuring the POST request
                  */
                 // emit the starting of a POST:
                 root.$emit('postRequestStarted');

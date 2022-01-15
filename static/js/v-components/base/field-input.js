@@ -219,7 +219,7 @@ Vue.component('base-input', {
         scrollSelectToTop(){
             var selComp = this.$refs.selectComponent;
             this.$nextTick(() => {
-                selComp.scrollTop = 0;
+                setTimeout(() => {selComp.scrollTop = 0;}, 50);
             });
         }
     }
