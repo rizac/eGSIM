@@ -58,7 +58,7 @@ Vue.component('gsim-select', {
     template: `<div class='d-flex flex-column'>
 
         <div class='d-flex flex-row'>
-            <div class="flexible" style="position:relative">
+            <div style="position:relative; flex: 1 1 auto">
                 <field-input :field="field" size="15"></field-input>
                 <div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
                      style="position:absolute; right:2rem; top:3rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">

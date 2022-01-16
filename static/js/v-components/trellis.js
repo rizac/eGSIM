@@ -30,7 +30,7 @@ Vue.component('trellis', {
         }
     },
     template: `
-<div class='flexible d-flex flex-column position-relative'>
+<div class='d-flex flex-column position-relative' style="flex: 1 1 auto;">
     <!-- v-bind="$props" passes all of the props on to the "parent" component -->
     <!-- https://stackoverflow.com/a/40485023 -->
     <base-form v-show="!formHidden" v-bind="$props"
@@ -38,7 +38,7 @@ Vue.component('trellis', {
               @closebuttonclicked="formHidden = true">
 
         <template v-slot:left-column>
-            <gsim-select :field="form['gsim']" :imtField="form['imt']" class="flexible" />
+            <gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto"/>
         </template>
 
         <template v-slot:right-column>
@@ -50,9 +50,9 @@ Vue.component('trellis', {
                     Intensity Measure will default to 'SA' with a set of pre-defined periods
                 </div>
             </div>
-            <div class="flexible form-control mt-4"
+            <div class="form-control mt-4"
                  :class="{'border-danger': scenarioHasErrors}"
-                 style="flex-basis:0;background-color:transparent;overflow-y:auto">
+                 style="flex: 1 1 0;background-color:transparent;overflow-y:auto">
 
                 <field-input v-for="(name, index) in scenarioKeys" :key="name"
                              :field='form[name]' :class="{ 'mt-2': index > 0 }">
