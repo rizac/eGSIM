@@ -10,16 +10,14 @@ var _PLOT_DIV = Vue.component('plot-div', {
             type: Number,
             default: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))
         },
-        // these two properties are passed to the downloadselect for downloading the response:
-        downloadurls: {type: Array, default: () => []}
+        downloadUrl: String // base url for download actions
     },
     data: function(){
-        // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
-
         // unique id based on the component name (note that if this is called by a subclass,
         // then this.$options.name is the subclass name). FIXME: NOT USED REMOVE?
         var id = this.$options.name + new Date().getTime().toString();
         return {
+            downloadActions: [],  // populated when data is there, see watch.data
             visible: !Vue.isEmpty(this.data),  // defined in vueutil.js
             // boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
             drawingPlots: true,
@@ -116,6 +114,7 @@ var _PLOT_DIV = Vue.component('plot-div', {
                 this.visible = !Vue.isEmpty(this.data);  // defined in vueutil.js
                 if (this.visible){ // see prop below
                     this.init.call(this, this.data);
+                    this.downloadActions = this.createDownloadActions();
                 }
             }
         }
@@ -212,13 +211,11 @@ var _PLOT_DIV = Vue.component('plot-div', {
 
             <div>
                 <div class='mt-3 border p-2 bg-white'>
-                    <download-select
-                        :urls="downloadurls"
-                        :data="getDownloadPostData"
-                        title='asd'
-                        data-balloon-pos='left' data-balloon-length='medium'
-                        aria-label='Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see'
-                    />
+                    <action-select :actions="downloadActions" class='form-control'
+                                   data-balloon-pos='left' data-balloon-length='medium'
+                                   aria-label='Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see'>
+                        Download as:
+                    </action-select>
                 </div>
 
                 <div
@@ -300,18 +297,6 @@ var _PLOT_DIV = Vue.component('plot-div', {
         // no-op
     },
     methods: {
-        getDownloadPostData: function(key, url){
-            // returns the post data to be sent when an item of the download <select> is
-            // chosen
-            if (['png', 'eps', 'pdf', 'svg'].includes(key.substring(0,3))){
-                var [data, layout] = this.getPlotlyDataAndLayout();
-                var parent = document.getElementById(this.plotdivid).parentNode.parentNode.parentNode;
-                var [width, height] = this.getElmSize(parent);
-                data = data.filter(elm => elm.visible || !('visible' in elm));
-                return {data:data, layout:layout, width:width, height:height};
-            }
-            return this.data;
-        },
         // methods to be overridden:
         getData: function(responseObject){
             /* Return from the given response object an Array of Objects representing
@@ -1115,6 +1100,40 @@ var _PLOT_DIV = Vue.component('plot-div', {
                 }
             };
             return new ColorMap();
+        },
+        createDownloadActions(){
+            // Populate with the data to be downloaded as non-image formats:
+            var downloadActions = [];
+            // Download as JSON does not need to query the server, the data is here:
+            downloadActions.push(["json", () => {
+                var filename =  this.downloadUrl.split('/').pop() + '.json';
+                Vue.saveAsJSON(this.data, filename);
+            }]);
+            downloadActions.push(["text/csv", () => {
+                var url =  this.downloadUrl + '.csv';
+                Vue.download(url, this.data);
+            }]);
+            downloadActions.push(["text/csv, decimal comma", () => {
+                var url =  this.downloadUrl + '.csv_eu';
+                Vue.download(url, this.data);
+            }]);
+            // image formats:
+            // create a function factory to avoid closure inside loops (classical approach):
+            var createCallback = (ext) => {
+                return () => {
+                    var [data, layout] = this.getPlotlyDataAndLayout();
+                    var parent = document.getElementById(this.plotdivid).parentNode.parentNode.parentNode;
+                    var [width, height] = this.getElmSize(parent);
+                    data = data.filter(elm => elm.visible || !('visible' in elm));
+                    postData = {data:data, layout:layout, width:width, height:height};
+                    var url = this.downloadUrl + '.' + ext;
+                    Vue.download(url, postData);
+                };
+            };
+            for (var ext of ['png', 'eps', 'pdf', 'svg']){
+                downloadActions.push([ext, createCallback(ext)]);
+            }
+            return downloadActions;
         }
     },
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load

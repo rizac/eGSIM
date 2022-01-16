@@ -5,17 +5,21 @@ var _BASE_FORM = Vue.component('base-form', {
     props: {
         form: Object,
         url: String,
-        // urls properties are passed to the downloadselect for downloading the request:
+        // urls has two URL strings: "downloadRequest" and "downloadResponse"
         urls: {type: Object, default: () => {return {}}},
     },
     data: function () {
+        // setup the actions (callbacks) associated to the "download request urls" sent
+        // from server:  FIXME better doc
         return {
             responseDataEmpty: true,
             responseData: {},
+            downloadResponseActions: [], // populated later, see `watch.responseData`
             mounted: false,
             idRequestURLInput: this.url + '_requesturl_input_',
             requestURL: '',
-            watchers: []
+            watchers: [],
+            downloadActions: this.createDownloadActions()
         }
     },
     methods: {
@@ -176,6 +180,14 @@ var _BASE_FORM = Vue.component('base-form', {
                 }
             };
             reader.readAsText(file);
+        },
+        createDownloadActions(){
+            return ['json', 'yaml'].map(ext => {
+                var url = this.urls.downloadRequest + "." + ext;
+                return [ext, () => {
+                    Vue.download(url, this.formToJSON());
+                }];
+            }, this);  // <- make `this` in `map` point to this Vue instance
         }
     },
     mounted: function () {
@@ -195,8 +207,7 @@ var _BASE_FORM = Vue.component('base-form', {
         responseData: {
             immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
             handler: function(newVal, oldVal){
-                this.responseDataEmpty = Vue.isEmpty(newVal); // defined in vueutil.js
-                if (!this.responseDataEmpty){
+                if (!Vue.isEmpty(newVal)){ // defined in egsim_base.js
                     this.$emit('responsereceived', newVal);
                 }
             }
@@ -232,10 +243,12 @@ var _BASE_FORM = Vue.component('base-form', {
                 <!-- NOTE: the control below must be placed immediately after the control above! -->
                 <input style='display:none' type="file" id="file-input" @change='readLocalJSON'>
 
-                <download-select :urls="urls.downloadRequest" :data="formToJSON" class='ml-2'
-                                :cclass="'form-control form-control-sm bg-transparent border-0'"
-                                data-balloon-pos="down" data-balloon-length="medium"
-                                aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)"/>
+                <action-select :actions="downloadActions" style='width:initial !important'
+                               class="ml-2 form-control form-control-sm bg-transparent border-0"
+                               data-balloon-pos="down" data-balloon-length="medium"
+                               aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)">
+                    Download as:
+                </action-select>
 
                 <button type="button" @click='fetchRequestURL'
                         data-balloon-pos="down" data-balloon-length="medium"
@@ -283,4 +296,53 @@ var _BASE_FORM = Vue.component('base-form', {
         </div>
     </form>
     </transition>`
-})
+});
+
+
+/**
+ * A <select> that performs an action for each option clicked, restoring the first option
+ * (disabled and acting like a title) afterwards
+ */
+Vue.component('action-select', {
+    props: {
+        // action is an Array of [caption, callback] pairs associated to each <option>:
+        actions: {type: Array, default: () => { return []; }},
+    },
+    data: function () {
+        var noAction = null;
+        return {
+            noAction: noAction,
+            selecledAction: noAction
+        }
+    },
+    created: function(){
+    },
+    computed: {
+        options: function(){
+            return this.actions.filter(elm => {
+                return !!elm[0] && typeof elm[1] === 'function';
+            });
+        }
+    },
+    watch: {
+        'selecledAction': function (newVal, oldVal){
+            for (var [label, callback] of this.options){
+                if (label === newVal){
+                    callback();
+                    break;
+                }
+            }
+            this.selecledAction = this.noAction;
+        }
+    },
+    template: `<select v-model='selecledAction'>
+            <option :value='noAction' :disabled="true">
+                <slot></slot>
+            </option>
+            <option v-for='[key, callback] in actions' :value='key'>
+                {{ key }}
+            </option>
+        </select>`,
+    methods: {
+    }
+});

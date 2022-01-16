@@ -4,8 +4,8 @@ from django.conf.urls import url  # added by default by django
 from django.views.generic.base import RedirectView
 
 from . import URLS, TAB
-from .views import (main, home, apidoc, download_request,
-                    download_ascsv, download_asimage, imprint, get_gsims_from_region)
+from .views import (main, home, apidoc, download_request, download_response,
+                    imprint, get_gsims_from_region)
 
 # Watch out trailing slashes:
 # https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
@@ -25,16 +25,13 @@ urlpatterns = [
     url(r'^%s/?$' % URLS.HOME_PAGE, home),
     url(r'^%s/?$' % URLS.DOC_PAGE, apidoc),
 
-    # download config (=request) urls:
-    url(r'^%s/(?P<key>.+?)/(?P<filename>.+)/?$' % URLS.DOWNLOAD_CFG,
+    # download request data (json, yaml) urls:
+    url(r'^%s/(?P<key>.+?)/(?P<filename>.+)$' % URLS.DOWNLOAD_REQUEST,
         download_request),
-    # download as text:
-    url(r'^%s/(?P<key>.+?)/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASTEXT,
-        download_ascsv),
-    url(r'^%s/(?P<key>.+?)/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASTEXT_EU,
-        download_ascsv, {'csv_sep': ';', 'csv_dec': ','}),
-    # donwload as image:
-    url(r'^%s/(?P<filename>.+)/?$' % URLS.DOWNLOAD_ASIMG, download_asimage),
+
+    # download response (json, csv, png, svg, ...) urls:
+    url(r'^%s/(?P<key>.+?)/(?P<filename>.+)$' % URLS.DOWNLOAD_RESPONSE,
+        download_response),
 
     url(r'^%s/?$' % URLS.GET_GSIMS_FROM_REGION, get_gsims_from_region),
     # test stuff: (FIXME: REMOVE)

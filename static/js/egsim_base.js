@@ -228,12 +228,13 @@ Vue.use({
                  Parameters:
                  url: string of the url
                  data: the request POST data (e.g. JSON serialzable Object)
-                 config: any data (Object) for configuring the POST request
+                 config: any data (Object) for configuring the POST request. Defaults
+                    to the default config passed (see `createPostFunction` above)
                  */
                 // emit the starting of a POST:
                 root.$emit('postRequestStarted');
-                var config = Object.assign(config || {}, defaultAxiosConfig);  // Object.assign(target, source)
-                // guess if we passed a form data object, and in case convert it to a JSONizable Object:
+                // merge passed config with default config in a new config Object:
+                var config = Object.assign(config || {}, defaultAxiosConfig);
                 var jsonData = data || {};
                 return axios.post(url, jsonData, config).then(response => {
                     root.$emit('postRequestCompleted', url, data, config, response);
@@ -247,6 +248,70 @@ Vue.use({
                     root.$emit('postRequestEnded');
                 });
             }
+        },
+        Vue.download = function(url, postData){
+            /**
+             Send a `Vue.post` request and download the response data on the client OS.
+
+             The responses attributes 'content-disposition' ('attachment; filename=...')
+             and 'content-type' must be specified.
+
+             Those two attributes are enough ONLY for GET requests opened in a new tab or
+             window, but with AJAX POST requests (as in our case) the response is received
+             but no "save as" dialog pops up. Hence, the workaround implemented here.
+             */
+
+            // the post function needs to have the 'responseType' set in order
+            // to work with `window.URL.createObjectURL` (info extracted from the "messy":
+
+            Vue.post(url, postData, {responseType: 'arraybuffer'}).then(response => {
+                // ref on `responseType` above (long thread with several outdated hints):
+                // https://stackoverflow.com/questions/8022425/getting-blob-data-from-xhr-request
+                if (response && response.data){
+                    var filename = (response.headers || {})['content-disposition'];
+                    if (!filename){ return; }
+                    var iof = filename.indexOf('filename=');
+                    if (iof < 0){ return; }
+                    filename = filename.substring(iof + 'filename='.length);
+                    if (!filename){ return; }
+                    var ctype = (response.headers || {})['content-type'];
+                    Vue.save(response.data, filename, ctype);
+                }
+            });
+        },
+        Vue.saveAsJSON = function(data, filename){
+            /**
+             Save the given JavaScript Object `data` on the client OS as JSON
+             formatted string
+
+             Parameters:
+             data: the JavaScript Object or Array to be saved as JSON
+             */
+            var sData = JSON.stringify(data, null, 2);  // 2 -> num indentation chars
+            Vue.download(sData, filename, "application/json");
+        },
+        Vue.save = function(data, filename, mimeType){
+            /**
+             Saves data with the given filename and mimeType on the client OS
+
+             Parameters:
+                data: a Byte-String (e.g. JSOn.stringify) or an ArrayBuffer
+                    (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
+                filename: the string that is used as default name in the save as dialog
+                mimeType: s atring denoting the MIME type
+                     (https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types)
+             */
+            var blob = new Blob([data], {type: mimeType});
+            var downloadUrl = window.URL.createObjectURL(blob);
+            var downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", downloadUrl);
+            downloadAnchorNode.setAttribute("download", filename);
+            document.body.appendChild(downloadAnchorNode); // required for firefox
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            // as we removed the node, we should have freed up memopry,
+            // but let's be safe:
+            URL.revokeObjectURL( downloadUrl );
         }
     }
 });

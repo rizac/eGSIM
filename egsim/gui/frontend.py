@@ -90,68 +90,10 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             'form': form_to_json(TAB.trellis.formclass, ignore_choices),
             'url': TAB.trellis.urls[0],
             'urls': {
-                # the lists below must be made of elements of
-                # the form [key, url]. For each element the JS library (VueJS)
-                # will then create a POST data and issue a POST request
-                # at the given url (see JS code for details).
-                # Convention: If url is a JSON-serialized string representing
-                # the dict: '{"file": <str>, "mimetype": <str>}'
-                # then we will simply donwload the POST data without calling
-                # the server.
-                # Otherwise, when url denotes a Django view, remember
-                # that the function should build a response with
-                # response['Content-Disposition'] = 'attachment; filename=%s'
-                # to tell the browser to download the content.
-                # (it is just for safety, remember that we do not care because
-                # we will download data in AJAX calls which do not care about
-                # content disposition
-                'downloadRequest': [
-                    [
-                        'json',
-                        "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
-                                                         TAB.trellis.name)
-                    ],
-                    [
-                        'yaml',
-                        "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
-                                                         TAB.trellis.name)
-                    ]
-                ],
-                'downloadResponse': [
-                    [
-                        'json',
-                        '{"file": "%s.json", "mimetype": "application/json"}' %
-                        TAB.trellis.name
-                    ],
-                    [
-                        'text/csv',
-                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
-                                                 TAB.trellis.name)
-                    ],
-                    [
-                        "text/csv, decimal comma",
-                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
-                                                 TAB.trellis.name)
-                    ],
-                ],
-                'downloadImage': [
-                    [
-                        'png (visible plots only)',
-                        "%s/%s.png" % (URLS.DOWNLOAD_ASIMG, TAB.trellis.name)
-                    ],
-                    [
-                        'pdf (visible plots only)',
-                        "%s/%s.pdf" % (URLS.DOWNLOAD_ASIMG, TAB.trellis.name)
-                    ],
-                    [
-                        'eps (visible plots only)',
-                        "%s/%s.eps" % (URLS.DOWNLOAD_ASIMG, TAB.trellis.name)
-                    ],
-                    [
-                        'svg (visible plots only)',
-                        "%s/%s.svg" % (URLS.DOWNLOAD_ASIMG, TAB.trellis.name)
-                    ]
-                ]
+                'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.trellis.name}/"
+                                   f"{TAB.trellis.download_request_filename}",
+                'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.trellis.name}/"
+                                    f"{TAB.trellis.download_response_filename}"
             }
         },
         # KEY.GMDBPLOT: {  # FIXME REMOVE
@@ -162,97 +104,20 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             'form': form_to_json(TAB.residuals.formclass, ignore_choices),
             'url': TAB.residuals.urls[0],
             'urls': {
-                # download* below must be pairs of [key, url]. Each url
-                # must return a
-                # response['Content-Disposition'] = 'attachment; filename=%s'
-                # url can also start with 'file:///' telling the frontend
-                # to simply download the data
-                'downloadRequest': [
-                    [
-                        'json',
-                        "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
-                                                         TAB.residuals.name)],
-                    [
-                        'yaml',
-                        "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
-                                                         TAB.residuals.name)
-                    ],
-                ],
-                'downloadResponse': [
-                    [
-                        'json',
-                        '{"file": "%s.json", "mimetype": "application/json"}' %
-                        TAB.residuals.name
-                    ],
-                    [
-                        'text/csv',
-                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
-                                                 TAB.residuals.name)
-                    ],
-                    [
-                        "text/csv, decimal comma",
-                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
-                                                 TAB.residuals.name)
-                    ]
-                ],
-                'downloadImage': [
-                    [
-                        'png (visible plots only)',
-                        "%s/%s.png" % (URLS.DOWNLOAD_ASIMG, TAB.residuals.name)
-                    ],
-                    [
-                        'pdf (visible plots only)',
-                        "%s/%s.pdf" % (URLS.DOWNLOAD_ASIMG, TAB.residuals.name)
-                    ],
-                    [
-                        'eps (visible plots only)',
-                        "%s/%s.eps" % (URLS.DOWNLOAD_ASIMG, TAB.residuals.name)
-                    ],
-                    [
-                        'svg (visible plots only)',
-                        "%s/%s.svg" % (URLS.DOWNLOAD_ASIMG, TAB.residuals.name)
-                    ]
-                ]
+                'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.residuals.name}/"
+                                   f"{TAB.residuals.download_request_filename}",
+                'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.residuals.name}/"
+                                    f"{TAB.residuals.download_response_filename}"
             }
         },
         TAB.testing.name: {
             'form': form_to_json(TAB.testing.formclass, ignore_choices),
             'url': TAB.testing.urls[0],
             'urls': {
-                # download* below must be pairs of [key, url]. Each url
-                # must return a
-                # response['Content-Disposition'] = 'attachment; filename=%s'
-                # url can also start with 'file:///' telling the frontend
-                # to simply download the data
-                'downloadRequest': [
-                    [
-                        'json',
-                        "{0}/{1}/{1}.config.json".format(URLS.DOWNLOAD_CFG,
-                                                         TAB.testing.name)
-                    ],
-                    [
-                        'yaml',
-                        "{0}/{1}/{1}.config.yaml".format(URLS.DOWNLOAD_CFG,
-                                                         TAB.testing.name)
-                    ]
-                ],
-                'downloadResponse': [
-                    [
-                        'json',
-                        '{"file": "%s.json", "mimetype": "application/json"}' %
-                        TAB.testing.name
-                    ],
-                    [
-                        'text/csv',
-                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT,
-                                                 TAB.testing.name)
-                    ],
-                    [
-                        "text/csv, decimal comma",
-                        "{0}/{1}/{1}.csv".format(URLS.DOWNLOAD_ASTEXT_EU,
-                                                 TAB.testing.name)
-                    ]
-                ]
+                'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.testing.name}/"
+                                   f"{TAB.testing.download_request_filename}",
+                'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.testing.name}/"
+                                    f"{TAB.testing.download_response_filename}"
             }
         },
         TAB.apidoc.name: {

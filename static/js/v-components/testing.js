@@ -61,8 +61,8 @@ Vue.component('testing', {
         </template>
     </base-form>
 
-    <testing-table :data="responseData" :downloadurls="urls.downloadResponse"
-                  class='position-absolute pos-0' style='z-index:1'>
+    <testing-table :data="responseData" :download-url="urls.downloadResponse"
+                   class='position-absolute pos-0' style='z-index:1'>
         <slot>
             <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-list-alt'></i> Configuration</button>
         </slot>
@@ -76,12 +76,12 @@ Vue.component('testing-table', {
     props: {
         data: {type: Object, default: () => { return{} }},
         filename: {type: String},
-        // these two properties are passed to the downloadselect for downloading the response:
-        downloadurls: {type: Array, default: () => []}
+        downloadUrl: String  // base url for download actions
     },
     data: function () {
         var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value'];
         return {
+            downloadActions: [],  // populated when data is there, see watch.data
             visible: false,
             filterNames: colnames.slice(0, colnames.length-1),
             filterValues: {},  // Object of filterNames -> list of possible values for the filter name
@@ -108,6 +108,7 @@ Vue.component('testing-table', {
             handler(newval, oldval){
                 this.visible = !Vue.isEmpty(newval);
                 if (this.visible){
+                    this.downloadActions = this.createDownloadActions();
                     this.gsimsRecords = newval['Db records'];
                     this.gsimsSkipped = newval['Gsim skipped'];
                     this.tableData = this.init.call(this, newval['Measure of fit']);
@@ -268,12 +269,11 @@ Vue.component('testing-table', {
             </div>
 
             <div class='mt-3 border p-2 bg-white'>
-                <download-select
-                    :urls="downloadurls"
-                    :data="data"
-                    data-balloon-pos='left' data-balloon-length='medium'
-                    aria-label='Download the computed results in different formats'
-                />
+                <action-select :actions="downloadActions" class="form-control"
+                               data-balloon-pos='left' data-balloon-length='medium'
+                               aria-label='Download the computed results in different formats'>
+                    Download as:
+                </action-select>
             </div>
 
             <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto;  max-height:10rem'>
@@ -430,11 +430,23 @@ Vue.component('testing-table', {
                 this.$set(this.filterSelectedValues, key, []);
             }
         },
-        download: function(format, formatIndex, formats){
-            var filename = this.filename + '.request';
-            if (format === 'json'){
-                Vue.download(this.data, filename + '.json'); // defined in vueutil.js
-            }
+        createDownloadActions(){
+            // Populate with the data to be downloaded as non-image formats:
+            var downloadActions = [];
+            // Download as JSON does not need to query the server, the data is here:
+            downloadActions.push(["json", () => {
+                var filename =  this.downloadUrl.split('/').pop() + '.json';
+                Vue.saveAsJSON(this.data, filename);
+            }]);
+            downloadActions.push(["text/csv", () => {
+                var url =  this.downloadUrl + '.csv';
+                Vue.download(url, this.data);
+            }]);
+            downloadActions.push(["text/csv, decimal comma", () => {
+                var url =  this.downloadUrl + '.csv_eu';
+                Vue.download(url, this.data);
+            }]);
+            return downloadActions;
         }
     }
 });
