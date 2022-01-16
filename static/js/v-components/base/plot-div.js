@@ -136,21 +136,21 @@ var _PLOT_DIV = Vue.component('plot-div', {
         }
     },
     template: `<div v-show='visible' class='d-flex flex-row'>
-        <div class="d-flex flex-column" style="flex: 1 1 auto;">
+        <div class="d-flex flex-column" style="flex: 1 1 auto">
             <div v-if="Object.keys(selectedParams).length"
                  class='d-flex flex-row justify-content-around mb-3'>
                 <div v-for='(values, key, index) in selectedParams'
                      class='d-flex flex-row align-items-baseline'
-                     :class="index > 0 ? 'ml-2' : ''" style="flex: 1 1 auto;">
+                     :class="index > 0 ? 'ml-2' : ''" style="flex: 1 1 auto">
                     <span class='text-nowrap mr-1'>{{ key }}</span>
-                    <select v-model="selectedParams[key]" class='form-control' style="flex: 1 1 auto;">
+                    <select v-model="selectedParams[key]" class='form-control' style="flex: 1 1 auto">
                         <option v-for='value in params[key]' :value="value">
                             {{ value }}
                         </option>
                     </select>
                 </div>
             </div>
-            <div class='position-relative' style="flex: 1 1 auto;">
+            <div class='position-relative' style="flex: 1 1 auto">
                 <div v-show='drawingPlots'
                      class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
                      style='z-index:1001;background-color:rgba(0,0,0,0.0)'>

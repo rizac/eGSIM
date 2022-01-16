@@ -288,7 +288,7 @@ Vue.use({
              data: the JavaScript Object or Array to be saved as JSON
              */
             var sData = JSON.stringify(data, null, 2);  // 2 -> num indentation chars
-            Vue.download(sData, filename, "application/json");
+            Vue.save(sData, filename, "application/json");
         },
         Vue.save = function(data, filename, mimeType){
             /**
