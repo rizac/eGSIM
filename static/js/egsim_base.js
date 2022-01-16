@@ -97,7 +97,6 @@ var EGSIM_BASE = {
         },
         postRequestCompleted(url, data, config, response){ /* no-op*/ },
         postRequestFailed(url, data, config, response){
-            var errorMessage = response.message ||  'Unknown error';
             var errData = (response.response || {}).data;
             if (errData instanceof ArrayBuffer){
                 // sometimes we might want to download png and json, we then
@@ -113,18 +112,8 @@ var EGSIM_BASE = {
                 }
             }
             var error = (errData || {}).error || {};
-            // set the data field errors:
-            if (this.isFormObject(data)){
-                var errors = error.errors || [];
-                for (var err of errors){
-                    var paramName = err.location;
-                    if (paramName && (paramName in data)){
-                        data[paramName].error = err.message || 'invalid: unknown error';
-                    }
-                }
-            }
             // set the global error message:
-            this.setError(error.message || errorMessage);
+            this.setError(error.message || response.message ||  'Unknown error');
         },
         postRequestEnded(){
             this.setLoading(false);

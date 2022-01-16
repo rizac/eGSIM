@@ -29,6 +29,17 @@ var _BASE_FORM = Vue.component('base-form', {
                 if (response && response.data){
                     this.responseData = response.data;
                 } 
+            }).catch(response => {
+                var errData = (response.response || {}).data;
+                var error = (errData || {}).error || {};
+                // set the data field errors:
+                var errors = error.errors || [];
+                for (var err of errors){
+                    var paramName = err.location;
+                    if (paramName && (paramName in data)){
+                        this.form[paramName].error = err.message || 'invalid: unknown error';
+                    }
+                }
             });
         },
         post: function(url){
