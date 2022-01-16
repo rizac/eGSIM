@@ -224,7 +224,7 @@ var _BASE_FORM = Vue.component('base-form', {
           class="d-flex flex-column position-relative pb-4 align-self-center"
           style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important">
 
-        <div class="d-flex flex-column" style="flex: 1 1 auto;">
+        <div class="d-flex flex-column" style="flex: 1 1 auto">
 
             <div class='d-flex flex-row justify-content-center align-items-center p-1'
                  style='background-color:rgba(5, 73, 113, .2)'>
@@ -278,17 +278,17 @@ var _BASE_FORM = Vue.component('base-form', {
             </div>
 
             <div class="d-flex flex-row mt-3" :class="[responseDataEmpty ? '' : ['mx-4']]"
-                 style="flex: 1 1 auto;">
-                <div class="d-flex flex-column" style="flex: 1 1 auto;">
+                 style="flex: 1 1 auto">
+                <div class="d-flex flex-column" style="flex: 1 1 auto">
                     <slot name="left-column"></slot>
                 </div>
 
-                <div class="d-flex flex-column ml-4" style="flex: 1 1 auto;">
+                <div class="d-flex flex-column ml-4" style="flex: 1 1 auto">
 
                     <slot name="right-column"></slot>
 
                     <div class='d-flex flex-row justify-content-center mt-4'>
-                        <div style='flex: 1 1 auto;'></div>
+                        <div style='flex: 1 1 auto'></div>
                         <button type="submit" class="btn btn-primary ml-2">
                             <i class="fa fa-play"></i> Display results
                         </button>

@@ -23,7 +23,7 @@ Vue.component('testing', {
         }
     },
     template: `
-<div class='d-flex flex-column position-relative' style="flex: 1 1 auto;">
+<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
     <!-- $props passes all of the props on to the "parent" component -->
     <!-- https://stackoverflow.com/a/40485023 -->
     <base-form v-show="!formHidden" v-bind="$props"
@@ -201,20 +201,19 @@ Vue.component('testing-table', {
     },
     // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
     template: `<div v-show="visible" class="d-flex flex-row">
-        <div class='d-flex flex-column' style="flex: 1 1 auto;">
+        <div class='d-flex flex-column' style="flex: 1 1 auto">
             <div class='testing-table border-primary' style='flex: 1 1 auto;overflow-y: auto;'>
-                <table class='table testing-table' style="flex: 1 1 auto;">
+                <table class='table testing-table' style="flex: 1 1 auto">
                     <thead>
                         <tr>
                             <th v-for="colname in colnames" @click="sortBy(colname)"
-                              class='btn-primary align-text-top'
-                              :class="{'text-right': colname === COL_VAL}"
-                              >
-                              {{ colname }}
-                              <br>
-                              <i v-if='isSortKey(colname) && columns[colname].sortOrder > 0' class="fa fa-chevron-down"></i>
-                              <i v-else-if='isSortKey(colname) && columns[colname].sortOrder < 0' class="fa fa-chevron-up"></i>
-                              <i v-else> &nbsp;</i> <!--hack for preserving height when no arrow icon is there. tr.min-height css does not work -->
+                                class='btn-primary align-text-top'
+                                :class="{'text-right': colname === COL_VAL}">
+                                {{ colname }}
+                                <br>
+                                <i v-if='isSortKey(colname) && columns[colname].sortOrder > 0' class="fa fa-chevron-down"></i>
+                                <i v-else-if='isSortKey(colname) && columns[colname].sortOrder < 0' class="fa fa-chevron-up"></i>
+                                <i v-else> &nbsp;</i> <!--hack for preserving height when no arrow icon is there. tr.min-height css does not work -->
                             </th>
                         </tr>
                     </thead>
@@ -243,26 +242,23 @@ Vue.component('testing-table', {
 
             <slot></slot> <!-- slot for custom buttons -->
 
-            <div  v-show='Object.keys(filterSelectedValues).length' class='mt-3 border p-2 bg-white'
-                style='flex: 1 1 0; overflow:auto; min-height:3rem'
-            >
-                <div v-for='filterName in Object.keys(filterSelectedValues)' class="d-flex flex-column mt-2" style="flex: 1 1 auto;">
+            <div v-show='Object.keys(filterSelectedValues).length'
+                 class='mt-3 border p-2 bg-white'
+                 style='flex: 1 1 0; overflow:auto; min-height:3rem'>
+                <div v-for='filterName in Object.keys(filterSelectedValues)'
+                     class="d-flex flex-column mt-2" style="flex: 1 1 auto">
                     <div class='d-flex flex-row'>
-                        <span style="flex: 1 1 auto;"><i class="fa fa-filter"></i> {{ filterName }}</span>
-                        <button
-                            @click='clearFilters(filterName)' type='button'
-                            :style="filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}"
-                            style='padding-top:0.1rem; padding-bottom:0.1rem'
-                            class='btn btn-outline-secondary btn-sm ml-2'
-                        >
+                        <span style="flex: 1 1 auto"><i class="fa fa-filter"></i> {{ filterName }}</span>
+                        <button @click='clearFilters(filterName)' type='button'
+                                :style="filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}"
+                                style='padding-top:0.1rem; padding-bottom:0.1rem'
+                                class='btn btn-outline-secondary btn-sm ml-2'>
                             <i class="fa fa-eraser"></i> Clear filter (show all)
                         </button>
                     </div>
-                    <label
-                        v-for='value in filterValues[filterName]'
-                        class='customcheckbox'
-                        :class="{'checked': filterSelectedValues[filterName].includes(value)}"
-                    >
+                    <label v-for='value in filterValues[filterName]'
+                           class='customcheckbox'
+                           :class="{'checked': filterSelectedValues[filterName].includes(value)}">
                         <input type='checkbox' :value="value" v-model='filterSelectedValues[filterName]'> {{ value }}
                     </label>
                 </div>
@@ -276,23 +272,24 @@ Vue.component('testing-table', {
                 </action-select>
             </div>
 
-            <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white' style='overflow:auto;  max-height:10rem'>
+            <div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white'
+                 style='overflow:auto;  max-height:10rem'>
                 <div><i class="fa fa-info-circle"></i> Database records used:</div>
                 <table>
-                <tr
-                    v-for="gsimname in Object.keys(gsimsRecords)" v-if="!Object.keys(gsimsSkipped).includes(gsimname)"
-                >
-                    <td class='text-right pr-2'>{{ gsimname }}:<td></td>{{ gsimsRecords[gsimname] }}</td>
+                <tr v-for="gsimname in Object.keys(gsimsRecords)"
+                    v-if="!Object.keys(gsimsSkipped).includes(gsimname)">
+                    <td class='text-right pr-2'>{{ gsimname }}:<td>
+                    </td>{{ gsimsRecords[gsimname] }}</td>
                 </tr>
                 </table>
             </div>
-            <div v-show="Object.keys(gsimsSkipped).length" class='mt-3 border p-2 bg-white text-danger' style='overflow:auto;  max-height:10rem'>
+            <div v-show="Object.keys(gsimsSkipped).length"
+                 class='mt-3 border p-2 bg-white text-danger' style='overflow:auto;max-height:10rem'>
                 <div><i class="fa fa-exclamation-triangle"></i> Gsim skipped:</div>
                 <table>
-                <tr
-                    v-for="gsimname in Object.keys(gsimsSkipped)"
-                >
-                    <td class='text-right pr-2'>{{ gsimname }}:</td><td>{{ gsimsSkipped[gsimname] }}</td>
+                <tr v-for="gsimname in Object.keys(gsimsSkipped)">
+                    <td class='text-right pr-2'>{{ gsimname }}:</td>
+                    <td>{{ gsimsSkipped[gsimname] }}</td>
                 </tr>
                 </table>
             </div>

@@ -11,7 +11,7 @@ Vue.component('residuals', {
         }
     },
     template: `
-<div class='d-flex flex-column position-relative' style="flex: 1 1 auto;">
+<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
     <!-- $props passes all of the props on to the "parent" component -->
     <!-- https://stackoverflow.com/a/40485023 -->
     <base-form v-show="!formHidden" v-bind="$props"
