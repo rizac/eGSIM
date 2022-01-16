@@ -207,7 +207,7 @@ var _BASE_FORM = Vue.component('base-form', {
         responseData: {
             immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
             handler: function(newVal, oldVal){
-                if (!Vue.isEmpty(newVal)){ // defined in egsim_base.js
+                if (!Vue.isEmpty(newVal)){  // defined in egsim_base.js
                     this.$emit('responsereceived', newVal);
                 }
             }

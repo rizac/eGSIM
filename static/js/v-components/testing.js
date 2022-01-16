@@ -106,7 +106,7 @@ Vue.component('testing-table', {
         data: {
             immediate: true,
             handler(newval, oldval){
-                this.visible = !Vue.isEmpty(newval);
+                this.visible = !Vue.isEmpty(newval);  // defined in egsim_base.js
                 if (this.visible){
                     this.downloadActions = this.createDownloadActions();
                     this.gsimsRecords = newval['Db records'];

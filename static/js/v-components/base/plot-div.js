@@ -18,7 +18,7 @@ var _PLOT_DIV = Vue.component('plot-div', {
         var id = this.$options.name + new Date().getTime().toString();
         return {
             downloadActions: [],  // populated when data is there, see watch.data
-            visible: !Vue.isEmpty(this.data),  // defined in vueutil.js
+            visible: !Vue.isEmpty(this.data),  // defined in egsim_base.js
             // boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
             drawingPlots: true,
             // store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
@@ -111,7 +111,7 @@ var _PLOT_DIV = Vue.component('plot-div', {
         data: {
             immediate: true,
             handler(newval, oldval){
-                this.visible = !Vue.isEmpty(this.data);  // defined in vueutil.js
+                this.visible = !Vue.isEmpty(this.data);  // defined in egsim_base.js
                 if (this.visible){ // see prop below
                     this.init.call(this, this.data);
                     this.downloadActions = this.createDownloadActions();
