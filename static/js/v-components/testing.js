@@ -23,7 +23,7 @@ Vue.component('testing', {
         }
     },
     template: `
-<div class='flexible d-flex flex-column position-relative'>
+<div class='d-flex flex-column position-relative' style="flex: 1 1 auto;">
     <!-- $props passes all of the props on to the "parent" component -->
     <!-- https://stackoverflow.com/a/40485023 -->
     <base-form v-show="!formHidden" v-bind="$props"
@@ -31,7 +31,7 @@ Vue.component('testing', {
                @closebuttonclicked="formHidden = true">
 
         <template v-slot:left-column>
-            <gsim-select :field="form.gsim" :imtField="form.imt" class="flexible" />
+            <gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto"/>
         </template>
 
         <template v-slot:right-column>
@@ -201,9 +201,9 @@ Vue.component('testing-table', {
     },
     // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
     template: `<div v-show="visible" class="d-flex flex-row">
-        <div class='d-flex flex-column flexible'>
-            <div class='testing-table flexible border-primary' style='overflow-y: auto;'>
-                <table class='table testing-table flexible'>
+        <div class='d-flex flex-column' style="flex: 1 1 auto;">
+            <div class='testing-table border-primary' style='flex: 1 1 auto;overflow-y: auto;'>
+                <table class='table testing-table' style="flex: 1 1 auto;">
                     <thead>
                         <tr>
                             <th v-for="colname in colnames" @click="sortBy(colname)"
@@ -243,12 +243,12 @@ Vue.component('testing-table', {
 
             <slot></slot> <!-- slot for custom buttons -->
 
-            <div  v-show='Object.keys(filterSelectedValues).length' class='flexible mt-3 border p-2 bg-white'
-                style='flex-basis:0; overflow:auto; min-height:3rem'
+            <div  v-show='Object.keys(filterSelectedValues).length' class='mt-3 border p-2 bg-white'
+                style='flex: 1 1 0; overflow:auto; min-height:3rem'
             >
-                <div v-for='filterName in Object.keys(filterSelectedValues)' class="d-flex flex-column mt-2 flexible">
+                <div v-for='filterName in Object.keys(filterSelectedValues)' class="d-flex flex-column mt-2" style="flex: 1 1 auto;">
                     <div class='d-flex flex-row'>
-                        <span class='flexible'><i class="fa fa-filter"></i> {{ filterName }}</span>
+                        <span style="flex: 1 1 auto;"><i class="fa fa-filter"></i> {{ filterName }}</span>
                         <button
                             @click='clearFilters(filterName)' type='button'
                             :style="filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}"

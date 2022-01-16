@@ -136,21 +136,21 @@ var _PLOT_DIV = Vue.component('plot-div', {
         }
     },
     template: `<div v-show='visible' class='d-flex flex-row'>
-        <div class='flexible d-flex flex-column'>
+        <div class="d-flex flex-column" style="flex: 1 1 auto;">
             <div v-if="Object.keys(selectedParams).length"
                  class='d-flex flex-row justify-content-around mb-3'>
                 <div v-for='(values, key, index) in selectedParams'
-                     class='d-flex flex-row flexible align-items-baseline'
-                     :class="index > 0 ? 'ml-2' : ''">
+                     class='d-flex flex-row align-items-baseline'
+                     :class="index > 0 ? 'ml-2' : ''" style="flex: 1 1 auto;">
                     <span class='text-nowrap mr-1'>{{ key }}</span>
-                    <select v-model="selectedParams[key]" class='flexible form-control'>
+                    <select v-model="selectedParams[key]" class='form-control' style="flex: 1 1 auto;">
                         <option v-for='value in params[key]' :value="value">
                             {{ value }}
                         </option>
                     </select>
                 </div>
             </div>
-            <div class='flexible position-relative'>
+            <div class='position-relative' style="flex: 1 1 auto;">
                 <div v-show='drawingPlots'
                      class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
                      style='z-index:1001;background-color:rgba(0,0,0,0.0)'>
@@ -168,8 +168,8 @@ var _PLOT_DIV = Vue.component('plot-div', {
 
         <div class='d-flex flex-column pl-4' v-show="legendNames.length || isGridCusomizable">
             <slot></slot> <!-- slot for custom buttons -->
-            <div v-show='legendNames.length' class='flexible mt-3 border p-2 bg-white'
-                 style='overflow: auto'>
+            <div v-show='legendNames.length' class='mt-3 border p-2 bg-white'
+                 style='flex: 1 1 auto;overflow: auto'>
                 <div>Legend</div>
                 <div v-for="traceName in legendNames">
                     <label class='my-0 mt-2 customcheckbox'
