@@ -1,7 +1,8 @@
 from enum import Enum
-
+from typing import Type
 # import here once all api modules (also those used in other modules of this package)
-from ..api.views import ResidualsView, TestingView, TrellisView
+from ..api.forms import APIForm
+from ..api.views import ResidualsView, TestingView, TrellisView, RESTAPIView
 
 
 class URLS:  # noqa
@@ -16,29 +17,6 @@ class URLS:  # noqa
 
     DOWNLOAD_RESPONSE = 'data/downloadresponse'
 
-    # FIXME REMOVE
-    # # url(s) for downloading the requests (configuration params) in json or
-    # # yaml. Example of a complete url:
-    # # DOWNLOAD_CFG/trellis/filename.json
-    # # (see function 'main' below and module 'urls')
-    # DOWNLOAD_CFG = 'data/downloadcfg'
-    #
-    # # urls for downloading text. Example of a complete url:
-    # # DOWNLOAD_ASTEXT/trellis/filename.csv
-    # # DOWNLOAD_ASTEXT_EU/trellis/filename.csv
-    # # (see function 'main' below and module 'urls')
-    # DOWNLOAD_ASTEXT = 'data/downloadascsv'
-    # DOWNLOAD_ASTEXT_EU = 'data/downloadaseucsv'
-    #
-    # # url for downloading as image. Note that the request body (POST data) is
-    # # the frontend data, in turn previously generated from one of the REST APIs
-    # # above: this is a bit convoluted and prevents the url to be used outside
-    # # the web page (all other endpoints can in principle be used as REST
-    # # endpoints without the web page), but we want to generate figures based on
-    # # what the user chooses, and also it is not always possible to convert
-    # # a REST API response to image (e.g., 3D grid of plots)
-    # DOWNLOAD_ASIMG = 'data/downloadasimage'
-
     # url for the frontend pages to be rendered as HTML by means of the
     # typical Django templating system: these pages are usually inside
     # <iframe>s of the web SPA (single page application)
@@ -48,9 +26,10 @@ class URLS:  # noqa
 
 class TAB(Enum):
     """Define web page tabs properties as Enum. A TAB T has  attributes:
-    `T.title:str, T.icon:str, T.formclass:`forms.APIForm | None`
+    `T.title:str, T.icon:str, and optionally `T.viewclass`
 
-    **DO NOT CHANGE THIS ENUM names** (home, trellis, and so on),
+    **Each Enum NAME is assumed to be constant**: if you change them, be prepared to
+     fix a lot of stuff (also frontend side)
 
     as they are used as ID (also in JavaScript).
     Note: given a name as string variable, you can get the
@@ -63,18 +42,27 @@ class TAB(Enum):
     testing = 'Model-to-Data Testing', 'fa-list', TestingView
     apidoc = 'API Doc / Legal Info', 'fa-info-circle'
 
-    # GMDBPLOT = 'gmbdplot', 'Ground Motion Database', 'fa-database'
-    # GSIMS = 'Model Selection', 'fa-map-marker'
-
     def __init__(self, *args):
         # args is the unpacked tuple passed above (2-elements), set attributes:
         self.title: str = args[0]
         self.icon: str = args[1]
-        _viewclass = self.viewclass = args[2] if len(args) > 2 else None
-        self.urls = _viewclass.urls if _viewclass else []
-        self.formclass = _viewclass.formclass if _viewclass else None
-        self.download_request_filename = f"egsim-{self.name}-config"
-        self.download_response_filename = f"egsim-{self.name}-result"
+        self.viewclass: Type[RESTAPIView] = args[2] if len(args) > 2 else None
+
+    @property
+    def urls(self) -> list[str]:
+        return self.viewclass.urls if self.viewclass else []
+
+    @property
+    def formclass(self) -> Type[APIForm]:
+        return self.viewclass.formclass if self.viewclass else None
+
+    @property
+    def download_request_filename(self) -> str:
+        return f"egsim-{self.name}-config"
+
+    @property
+    def download_response_filename(self) -> str:
+        return f"egsim-{self.name}-result"
 
     def __str__(self):
         return self.name

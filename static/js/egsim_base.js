@@ -312,6 +312,35 @@ Vue.use({
             // as we removed the node, we should have freed up memopry,
             // but let's be safe:
             URL.revokeObjectURL( downloadUrl );
+        },
+        Vue.createDownloadActions = function(downloadUrl, data){
+            /* Return an Array of for downloading on the client OS) the given data.
+            The returned Array has elements of the form `[format, download_callback]`,
+            where format is 'json' 'csv', 'csv (comma separated)'. See <plot-div> and
+            <testing-table> components for details
+
+             Parameters:
+              downloadUrl: a string identifying a download url, usually sent from the server
+              data: the data returned from a response (e.g., trellis residuals or
+                testing data) that needs to be downloaded
+            */
+            // Populate with the data to be downloaded as non-image formats:
+            var downloadActions = [];
+            // Download as JSON does not need to query the server, the data is here:
+            downloadActions.push(["json", () => {
+                var filename =  downloadUrl.split('/').pop() + '.json';
+                Vue.saveAsJSON(data, filename);
+            }]);
+            // CSV download actions send data to the server and expects back converted:
+            downloadActions.push(["text/csv", () => {
+                var url =  downloadUrl + '.csv';
+                Vue.download(url, data);
+            }]);
+            downloadActions.push(["text/csv, decimal comma", () => {
+                var url =  downloadUrl + '.csv_eu';
+                Vue.download(url, data);
+            }]);
+            return downloadActions;
         }
     }
 });

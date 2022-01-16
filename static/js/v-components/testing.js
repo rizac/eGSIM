@@ -431,22 +431,7 @@ Vue.component('testing-table', {
             }
         },
         createDownloadActions(){
-            // Populate with the data to be downloaded as non-image formats:
-            var downloadActions = [];
-            // Download as JSON does not need to query the server, the data is here:
-            downloadActions.push(["json", () => {
-                var filename =  this.downloadUrl.split('/').pop() + '.json';
-                Vue.saveAsJSON(this.data, filename);
-            }]);
-            downloadActions.push(["text/csv", () => {
-                var url =  this.downloadUrl + '.csv';
-                Vue.download(url, this.data);
-            }]);
-            downloadActions.push(["text/csv, decimal comma", () => {
-                var url =  this.downloadUrl + '.csv_eu';
-                Vue.download(url, this.data);
-            }]);
-            return downloadActions;
+            return Vue.createDownloadActions(this.downloadUrl, this.data);
         }
     }
 });
