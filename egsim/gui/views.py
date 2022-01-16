@@ -63,12 +63,6 @@ def apidoc(request):
     # Note that the keus of the egsim_data dict below should NOT
     # be changed: if you do, you should also change the templates
     egsim_data = {
-        # 'GSIMS': {
-        #     'title': TITLES.GSIMS,
-        #     'path': URLS.GSIMS_RESTAPI,
-        #     'form': to_help_dict(GsimsView.formclass()),
-        #     'key': KEY.GSIMS
-        # },
         'trellis': {
             'title': TAB.trellis.title,
             'path': " or ".join(TAB.trellis.urls),

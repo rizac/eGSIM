@@ -136,26 +136,14 @@ var _PLOT_DIV = Vue.component('plot-div', {
         }
     },
     template: `<div v-show='visible' class='d-flex flex-row'>
-        
-        <!-- MAIN PLOT CONTAINER: upper div (with optional <select> tag),
-            waitbar div ("drawing" , "plotting") and finally
-            plotly div -->
-
         <div class='flexible d-flex flex-column'>
-            <div
-                v-if="Object.keys(selectedParams).length"
-                class='d-flex flex-row justify-content-around mb-3'
-            >
-                <div
-                    v-for='(values, key, index) in selectedParams'
-                    class='d-flex flex-row flexible align-items-baseline'
-                    :class="index > 0 ? 'ml-2' : ''"
-                >
+            <div v-if="Object.keys(selectedParams).length"
+                 class='d-flex flex-row justify-content-around mb-3'>
+                <div v-for='(values, key, index) in selectedParams'
+                     class='d-flex flex-row flexible align-items-baseline'
+                     :class="index > 0 ? 'ml-2' : ''">
                     <span class='text-nowrap mr-1'>{{ key }}</span>
-                    <select
-                        v-model="selectedParams[key]"
-                        class='flexible form-control'
-                    >
+                    <select v-model="selectedParams[key]" class='flexible form-control'>
                         <option v-for='value in params[key]' :value="value">
                             {{ value }}
                         </option>
@@ -163,19 +151,14 @@ var _PLOT_DIV = Vue.component('plot-div', {
                 </div>
             </div>
             <div class='flexible position-relative'>
-                <div
-                    v-show='drawingPlots'
-                    class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
-                    style='z-index:1001;background-color:rgba(0,0,0,0.0)'
-                >
+                <div v-show='drawingPlots'
+                     class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
+                     style='z-index:1001;background-color:rgba(0,0,0,0.0)'>
                     <div class='p-2 shadow border rounded text-white d-flex flex-column align-items-center'
-                        style="background-color:rgba(0,0,0,0.3)"
-                    >
+                         style="background-color:rgba(0,0,0,0.3)">
                         <span v-html="waitbar.msg" class='border-0 bg-transparent' style="font-size:200%;"></span>
                         <span class='border-0 bg-transparent'>(It might take a while, please wait)</span>
-
                     </div>
-
                 </div>
                 <div class='position-absolute pos-0' :id="plotdivid"></div>
             </div>
@@ -183,28 +166,17 @@ var _PLOT_DIV = Vue.component('plot-div', {
     
         <!-- RIGHT TOOLBAR (legend, buttons, controls) -->
 
-        <div class='d-flex flex-column pl-4'
-            v-show="legendNames.length || isGridCusomizable">
-
+        <div class='d-flex flex-column pl-4' v-show="legendNames.length || isGridCusomizable">
             <slot></slot> <!-- slot for custom buttons -->
-            
-            <div
-                v-show='legendNames.length'
-                class='flexible mt-3 border p-2 bg-white'
-                style='overflow: auto'
-            >
+            <div v-show='legendNames.length' class='flexible mt-3 border p-2 bg-white'
+                 style='overflow: auto'>
                 <div>Legend</div>
                 <div v-for="traceName in legendNames">
-                    <label
-                        class='my-0 mt-2 customcheckbox'
-                        :class="{'checked': legend[traceName].visible}"
-                        :style="{color: legend[traceName].color}"
-                    >
-                        <input
-                            type='checkbox'
-                            v-model="legend[traceName].visible"
-                            @change="traceVisibilityChanged(traceName)"
-                        > {{ traceName }}
+                    <label class='my-0 mt-2 customcheckbox'
+                           :class="{'checked': legend[traceName].visible}"
+                           :style="{color: legend[traceName].color}">
+                        <input type='checkbox' v-model="legend[traceName].visible"
+                               @change="traceVisibilityChanged(traceName)"> {{ traceName }}
                     </label>
                 </div>
             </div>
@@ -218,47 +190,30 @@ var _PLOT_DIV = Vue.component('plot-div', {
                     </action-select>
                 </div>
 
-                <div
-                    v-show="isGridCusomizable"
-                    class='mt-3 border p-2 bg-white'
-                >
+                <div v-show="isGridCusomizable" class='mt-3 border p-2 bg-white'>
                     <div>Subplots layout</div>
-                    <select
-                        v-model='selectedgridlayout'
-                        class='form-control mt-1'
-                    >
+                    <select v-model='selectedgridlayout' class='form-control mt-1'>
                         <option v-for='key in Object.keys(gridlayouts)' :value="key" v-html="key">
                         </option>
                     </select>
-
                 </div>
 
                 <div class='mt-3 d-flex flex-column border p-2 bg-white'>
                     <div>Axis</div>
                     <div v-for="type in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
                         <span class='text-nowrap'>{{ type }}:</span>
-                        <label
-                            class='text-nowrap m-0 ml-2 customcheckbox'
-                            :class="{'checked': axis[type].sameRange.value}"
-                            :disabled="axis[type].sameRange.disabled"
-                        >
-                            <input
-                                type='checkbox'
-                                v-model='axis[type].sameRange.value'
-                                :disabled="axis[type].sameRange.disabled"
-                            >
+                        <label class='text-nowrap m-0 ml-2 customcheckbox'
+                               :class="{'checked': axis[type].sameRange.value}"
+                               :disabled="axis[type].sameRange.disabled">
+                            <input type='checkbox' v-model='axis[type].sameRange.value'
+                                   :disabled="axis[type].sameRange.disabled">
                             <span>same range</span>
                         </label>
-                        <label
-                            class='text-nowrap m-0 ml-2 customcheckbox'
-                            :class="{'checked': axis[type].log.value}"
-                            :disabled="axis[type].log.disabled"
-                        >
-                            <input
-                                type='checkbox'
-                                v-model='axis[type].log.value'
-                                :disabled="axis[type].log.disabled"
-                            >
+                        <label class='text-nowrap m-0 ml-2 customcheckbox'
+                               :class="{'checked': axis[type].log.value}"
+                               :disabled="axis[type].log.disabled">
+                            <input type='checkbox' v-model='axis[type].log.value'
+                                   :disabled="axis[type].log.disabled">
                             <span>log scale</span>
                         </label>
                     </div>
@@ -268,24 +223,20 @@ var _PLOT_DIV = Vue.component('plot-div', {
                     <div> Mouse interactions</div>
                     <div class='d-flex flex-row mt-1 align-items-baseline'>
                         <span class='text-nowrap mr-1'> on hover:</span>
-                        <select
-                            v-model="mouseMode.hovermode"
-                            class='form-control form-control-sm'
-                        >
-                            <option
-                                v-for='name in mouseMode.hovermodes'
-                                :value='name'>{{ mouseMode.hovermodeLabels[name] }}</option>
+                        <select v-model="mouseMode.hovermode"
+                                class='form-control form-control-sm'>
+                            <option v-for='name in mouseMode.hovermodes' :value='name'>
+                                {{ mouseMode.hovermodeLabels[name] }}
+                            </option>
                         </select>
                     </div>
                     <div class='d-flex flex-row mt-1 align-items-baseline'>
                         <span class='text-nowrap mr-1'> on drag:</span>
-                        <select
-                            v-model="mouseMode.dragmode"
-                            class='form-control form-control-sm'
-                        >
-                            <option
-                                v-for='name in mouseMode.dragmodes'
-                                :value='name'>{{ mouseMode.dragmodeLabels[name] }}</option>
+                        <select v-model="mouseMode.dragmode"
+                                class='form-control form-control-sm'>
+                            <option v-for='name in mouseMode.dragmodes' :value='name'>
+                                {{ mouseMode.dragmodeLabels[name] }}
+                            </option>
                         </select>
                     </div>
                 </div>
@@ -775,7 +726,7 @@ var _PLOT_DIV = Vue.component('plot-div', {
                     }
                     data.push(element);
                 });
-                // wrtie x and y labels: we might simply set xaxis.title= 'my label' (same for y axis) but:
+                // write x and y labels: we might simply set xaxis.title= 'my label' (same for y axis) but:
                 // 1. plotly reserves too much space between the axis line and the axis label (the space is out of control)
                 // 2. Plotly does some hard coded calculation and moves the labels, and we want control over it:
                 // for instance when two ploits are stacked vertically,
@@ -1043,7 +994,7 @@ var _PLOT_DIV = Vue.component('plot-div', {
             }
         },
         createColorMap: function(){
-            // Returns a new ColorMap class extending `Map` and mapping a given key
+            // Return a new ColorMap class extending `Map` and mapping a given key
             // to a color. Given a key (e.g. legend name), then `colorMap.get(key)`
             // automatically returns a color (hex string) assuring the same
             // color for the same key. The class extends `Map` and has also a
@@ -1103,22 +1054,9 @@ var _PLOT_DIV = Vue.component('plot-div', {
         },
         createDownloadActions(){
             // Populate with the data to be downloaded as non-image formats:
-            var downloadActions = [];
-            // Download as JSON does not need to query the server, the data is here:
-            downloadActions.push(["json", () => {
-                var filename =  this.downloadUrl.split('/').pop() + '.json';
-                Vue.saveAsJSON(this.data, filename);
-            }]);
-            downloadActions.push(["text/csv", () => {
-                var url =  this.downloadUrl + '.csv';
-                Vue.download(url, this.data);
-            }]);
-            downloadActions.push(["text/csv, decimal comma", () => {
-                var url =  this.downloadUrl + '.csv_eu';
-                Vue.download(url, this.data);
-            }]);
+            var downloadActions = Vue.createDownloadActions(this.downloadUrl, this.data);
             // image formats:
-            // create a function factory to avoid closure inside loops (classical approach):
+            // create a function factory to avoid closure inside loops (classic approach):
             var createCallback = (ext) => {
                 return () => {
                     var [data, layout] = this.getPlotlyDataAndLayout();
@@ -1131,7 +1069,7 @@ var _PLOT_DIV = Vue.component('plot-div', {
                 };
             };
             for (var ext of ['png', 'eps', 'pdf', 'svg']){
-                downloadActions.push([ext, createCallback(ext)]);
+                downloadActions.push([`${ext} (visible plots only)`, createCallback(ext)]);
             }
             return downloadActions;
         }
