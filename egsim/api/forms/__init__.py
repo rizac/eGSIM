@@ -407,10 +407,6 @@ class APIForm(MediaTypeForm):
         raise NotImplementedError(":meth:%s.process_data" % cls.__name__)
 
     @classmethod
-    def processed_data_as_csv(cls,  processed_data: dict, sep=',', dec='.'):
-        return cls.to_csv_buffer(processed_data, sep, dec).getvalue()
-
-    @classmethod
     def to_csv_buffer(cls, processed_data: dict, sep=',', dec='.') -> StringIO:
         """Convert the given processed data to a StringIO with CSV data
         as string

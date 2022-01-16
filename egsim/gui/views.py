@@ -145,7 +145,7 @@ def download_request(request, key: TAB, filename: str):
     """
     form_class = TAB[key].formclass
     input_dict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
-    form = form_class(data=input_dict)  # pylint: disable=not-callable
+    form = form_class(data=input_dict)
     if not form.is_valid():
         errs = form.validation_errors()
         return error_response(errs['message'], RESTAPIView.CLIENT_ERR_CODE,
@@ -164,6 +164,20 @@ def download_request(request, key: TAB, filename: str):
     return response
 
 
+def download_response(request, key: TAB, filename: str):
+    basename, ext = os.path.splitext(filename)
+    if ext == '.csv':
+        return download_ascsv(request, key, filename)
+    elif ext == '.csv_eu':
+        return download_ascsv(request, key, basename + '.csv', ';', ',')
+    else:
+        try:
+            return download_asimage(request, filename)
+        except KeyError:  # image format not found
+            pass
+    return error_response(f'Unsupported format "{ext[1:]}"', RESTAPIView.CLIENT_ERR_CODE)
+
+
 def download_ascsv(request, key: TAB, filename: str, sep=',', dec='.'):
     """Return the processed data as text/CSV. This method is used from within
     the browser when users want to get processed data as text/csv: as the
@@ -177,31 +191,33 @@ def download_ascsv(request, key: TAB, filename: str, sep=',', dec='.'):
     """
     formclass = TAB[key].formclass
     inputdict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
-    response = formclass.processed_data_as_csv(inputdict, sep, dec)
+    response_data = formclass.to_csv_buffer(inputdict, sep, dec)
+    response = TAB[key].viewclass.response_text(response_data)
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response
 
 
+_IMG_FORMATS = {
+    'eps': 'application/postscript',
+    'pdf': 'application/pdf',
+    'svg': 'image/svg+xml',
+    'png': 'image/png'
+}
+
+
 def download_asimage(request, filename: str):
     """Return the image from the given request built in the frontend GUI
-    according to the choosen plots
+    according to the chosen plots
     """
-    format = os.path.splitext(filename)[1][1:]  # @ReservedAssignment
+    img_format = os.path.splitext(filename)[1][1:]
+    content_type = _IMG_FORMATS[img_format]
     jsondata = json.loads(request.body.decode('utf-8'))
     data, layout, width, height = (jsondata['data'],
                                    jsondata['layout'],
                                    jsondata['width'],
                                    jsondata['height'])
-    bytestr = figutils.get_img(data, layout, width, height, format)
-
-    if format == 'eps':
-        response = HttpResponse(bytestr, content_type='application/postscript')
-    elif format == 'pdf':
-        response = HttpResponse(bytestr, content_type='application/pdf')
-    elif format == 'svg':
-        response = HttpResponse(bytestr, content_type='image/svg+xml')
-    else:
-        response = HttpResponse(bytestr, content_type='image/png')
+    bytestr = figutils.get_img(data, layout, width, height, img_format)
+    response = HttpResponse(bytestr, content_type=content_type)
     response['Content-Disposition'] = \
         'attachment; filename=%s' % filename
     response['Content-Length'] = len(bytestr)
