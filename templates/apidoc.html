@@ -17,13 +17,10 @@ WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bott
 
 
 {% block body %}
-<div class='flexible d-flex flex-row' style='overflow-y:auto;'>
+<div class='d-flex flex-row' style='flex: 1 1 auto;overflow-y:auto;'>
 	<div id='toc' class='shadow px-2 pt-3' style='overflow-y:auto;z-index:10'></div>
-	<div class='flexible text-justify px-5 pt-3 bg-white'
-		style='overflow-x:auto;'>
+	<div class='text-justify px-5 pt-3 bg-white' style='flex: 1 1 auto;overflow-x:auto;'>
 		<div style='margin:0 auto;max-width:45em'>  <!-- margin:0 auto centers div horizontally -->
-		
-		
 			<h1>eGSIM API</h1>
 			{% if last_modified %}
 			<p style='font-size:50%;text-align:right;'>Last modified: June 2019</p>
