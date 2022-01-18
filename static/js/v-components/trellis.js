@@ -3,7 +3,11 @@
  * The component name must be a name of a `TAB` Enum in egsim.gui.__init__.py
  */
 Vue.component('trellis', {
-    mixins: [FORM_CONTAINER],  // defined in base-form.js
+    props :{
+        form: Object,
+        url: String,
+        urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
+    },
     data: function () {
         return {
             predefinedSA: false,  // whether we have selected spectra as plot type
@@ -31,7 +35,8 @@ Vue.component('trellis', {
     },
     template: `
 <div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-    <base-form v-show="!formHidden" v-bind="$props" :show-as-dialog="Object.keys(responseData).length"
+    <egsim-form v-show="!formHidden" :form="form" :url="url" :download-url="urls.downloadRequest"
+               :show-as-dialog="Object.keys(responseData).length"
                @response-received="responseData = arguments[0]; formHidden = true"
                @close-button-clicked="formHidden = true">
 
@@ -62,7 +67,7 @@ Vue.component('trellis', {
                 <field-input :field='form["stdev"]' class='mt-1'></field-input>
             </div>
         </template>
-    </base-form>
+    </egsim-form>
 
     <trellis-plot-div :data="responseData"
                       :download-url="urls.downloadResponse"
