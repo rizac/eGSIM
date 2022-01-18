@@ -1,7 +1,7 @@
 /**
  * Base "class" for any component showing plots as a result of a response Object sent from the server
  */
-var _PLOT_DIV = Vue.component('plot-div', {
+var PLOT_DIV = {
     props: {
         data: {type: Object, default: () => { return{} }},
         // this is used to calculate plot areas and set it in the default layout
@@ -1077,4 +1077,4 @@ var _PLOT_DIV = Vue.component('plot-div', {
     mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
         // no -op
     }
-});
+};

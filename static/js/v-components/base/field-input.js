@@ -118,7 +118,7 @@ Vue.component('base-input', {
             label: 'text-nowrap mr-1',
             rootDiv: 'd-flex flex-row align-items-baseline'
         };
-        hasLabel = !!this.$slots.default || !!this.$scopedSlots.default;
+        hasLabel = !!this.$slots.default || !!(this.$scopedSlots || {}).default;
         // change some classes according to current configuration:
         if (!hasLabel){
             cls.rootDiv = '';

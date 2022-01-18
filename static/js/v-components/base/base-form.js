@@ -23,7 +23,7 @@ var _BASE_FORM = Vue.component('base-form', {
         }
     },
     methods: {
-        request: function(){
+        submit: function(){
             // send the main post request to `this.url` using `this.form` as POST data
             this.post(this.url).then(response => {
                 if (response && response.data){
@@ -230,7 +230,7 @@ var _BASE_FORM = Vue.component('base-form', {
     },
     template: `
     <transition :name="mounted ? 'egsimform' : ''">
-    <form novalidate @submit.prevent="request"
+    <form novalidate @submit.prevent="submit"
           :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light', 'mb-2']]"
           class="d-flex flex-column position-relative pb-4 align-self-center"
           style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important">
