@@ -3,7 +3,7 @@
  * The component name must be a name of a `TAB` Enum in egsim.gui.__init__.py
  */
 Vue.component('residuals', {
-    extends: _BASE_FORM,  // defined in base-form.js
+    mixins: [FORM_CONTAINER],  // defined in base-form.js
     data: function () {
         return {
             responseData: {},
@@ -12,11 +12,9 @@ Vue.component('residuals', {
     },
     template: `
 <div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-    <!-- $props passes all of the props on to the "parent" component -->
-    <!-- https://stackoverflow.com/a/40485023 -->
-    <base-form v-show="!formHidden" v-bind="$props"
-               @responsereceived="responseData = arguments[0]; formHidden = true"
-               @closebuttonclicked="formHidden = true">
+    <base-form v-show="!formHidden" v-bind="$props" :show-as-dialog="Object.keys(responseData).length"
+               @response-received="responseData = arguments[0]; formHidden = true"
+               @close-button-clicked="formHidden = true">
 
         <template v-slot:left-column>
             <gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto"/>
