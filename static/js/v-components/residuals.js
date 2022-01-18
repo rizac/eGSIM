@@ -49,7 +49,7 @@ Vue.component('residuals', {
 
 
 Vue.component('residuals-plot-div', {
-    extends: _PLOT_DIV,  // defined in plot-div.js
+    mixins: [PLOT_DIV],  // defined in plot-div.js
     methods: {
         // methods to be overridden:
         getData: function(responseObject){
