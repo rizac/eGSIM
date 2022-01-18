@@ -1,33 +1,38 @@
-/**
- * Represents a base form used in trellis, residuals, testing
- */
-var _BASE_FORM = Vue.component('base-form', {
+var FORM_CONTAINER = {
     props: {
         form: Object,
         url: String,
         // urls has two URL strings: "downloadRequest" and "downloadResponse"
         urls: {type: Object, default: () => {return {}}},
+    }
+}
+
+/**
+ * Represents a base form used in trellis, residuals, testing
+ */
+var BASE_FORM = Vue.component('base-form', {
+    mixins: [FORM_CONTAINER],
+    props :{
+        showAsDialog: false,  // appearance control
     },
     data: function () {
-        // setup the actions (callbacks) associated to the "download request urls" sent
-        // from server:  FIXME better doc
         return {
-            responseDataEmpty: true,
-            responseData: {},
-            downloadResponseActions: [], // populated later, see `watch.responseData`
-            mounted: false,
+            mounted: false,  // needed for ? FIXME
             idRequestURLInput: this.url + '_requesturl_input_',
             requestURL: '',
-            watchers: [],
+            watchers: [],  // needed for FIXME
             downloadActions: this.createDownloadActions()
         }
     },
+    emits: ['response-received', 'close-button-clicked'], // Vue 3 compat. mode (in case we migrate)
     methods: {
         submit: function(){
             // send the main post request to `this.url` using `this.form` as POST data
             this.post(this.url).then(response => {
                 if (response && response.data){
-                    this.responseData = response.data;
+                    if (!Vue.isEmpty(response.data)){
+                        this.$emit('response-received', response.data);
+                    }
                 } 
             }).catch(response => {
                 var errData = (response.response || {}).data;
@@ -214,24 +219,13 @@ var _BASE_FORM = Vue.component('base-form', {
             this.mounted = true;
         });
     },
-    watch: {
-        responseData: {
-            immediate: true, // https://forum.vuejs.org/t/watchers-not-triggered-on-initialization/12475
-            handler: function(newVal, oldVal){
-                this.responseDataEmpty = Vue.isEmpty(newVal); // defined in egsim_base.js
-                if (!this.responseDataEmpty){
-                    this.$emit('responsereceived', newVal);
-                }
-            }
-        }
-    },
     computed: {
         // no-op
     },
     template: `
     <transition :name="mounted ? 'egsimform' : ''">
     <form novalidate @submit.prevent="submit"
-          :class="[responseDataEmpty ? '' : ['shadow', 'border', 'bg-light', 'mb-2']]"
+          :class="[showAsDialog ? ['shadow', 'border', 'bg-light', 'mb-2'] : '']"
           class="d-flex flex-column position-relative pb-4 align-self-center"
           style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important">
 
@@ -280,7 +274,7 @@ var _BASE_FORM = Vue.component('base-form', {
                     <i class="fa fa-copy"></i>
                 </button>
 
-                <button type="button" v-show='!responseDataEmpty' @click='$emit("closebuttonclicked")'
+                <button type="button" v-show='showAsDialog' @click="$emit('close-button-clicked')"
                         aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
                         class="btn btn-outline-dark border-0 ml-2">
                     <i class="fa fa-times"></i>
@@ -288,7 +282,7 @@ var _BASE_FORM = Vue.component('base-form', {
 
             </div>
 
-            <div class="d-flex flex-row mt-3" :class="[responseDataEmpty ? '' : ['mx-4']]"
+            <div class="d-flex flex-row mt-3" :class="[showAsDialog ? ['mx-4'] : '']"
                  style="flex: 1 1 auto">
                 <div class="d-flex flex-column" style="flex: 1 1 auto">
                     <slot name="left-column"></slot>
