@@ -118,27 +118,6 @@ var EGSIM_BASE = {
         postRequestEnded(){
             this.setLoading(false);
         },
-        /*
-         * Components event handlers:
-         */
-        handleEmittedEvent(eventName){
-            if (eventName == 'movetoapidoc'){
-                this.moveToApidoc(arguments[1] || '');
-            }else if (eventName == 'selectgsims'){
-                this.selectGsims(arguments[1] || []);
-            }
-        },
-        moveToApidoc(fragmentName){
-            this.componentProps['apidoc'].fragment = fragmentName.startsWith('#') ? fragmentName : '#' + fragmentName;
-            this.setComponent('apidoc');
-        },
-        selectGsims(gsims){
-            for (var [name, form] of this.forms()){
-                if (form.gsim){
-                    form.gsim.val = Array.from(gsims);
-                }
-            }
-        },
         /* other functions: */
         clearErrors(){
             this.setError('');
