@@ -69,12 +69,8 @@
 				<transition name="fade" mode="out-in">
 				<keep-alive>
 					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
-					<!-- Further note on "@emit-event='handleEmittedEvent'": the line binds
-					components firing `$emit('emit-event', eventName, ...)` to the function
-					`handleEmittedEvent` on the main instance (implemented in egsim_base.js)  -->
 					<component v-bind:is="selComponent"
 						v-bind="selComponentProps"
-						@emit-event='handleEmittedEvent'
 						:class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'"
 					></component>
 				</keep-alive>
@@ -141,7 +137,7 @@ var _UNSUPPORTED_BROWSER_MSG = function(){
 <script type='text/javascript' src="{% static 'js/v-components/base/field-input.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/plot-div.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/base-form.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/v-components/base/egsim-form.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}testing.js"></script>

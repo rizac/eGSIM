@@ -1,18 +1,11 @@
-var FORM_CONTAINER = {
-    props: {
-        form: Object,
-        url: String,
-        // urls has two URL strings: "downloadRequest" and "downloadResponse"
-        urls: {type: Object, default: () => {return {}}},
-    }
-}
-
 /**
  * Represents a base form used in trellis, residuals, testing
  */
-var BASE_FORM = Vue.component('base-form', {
-    mixins: [FORM_CONTAINER],
+Vue.component('egsim-form', {
     props :{
+        form: Object,
+        url: String,
+        downloadUrl: String,  // url for downloading the current form as config yaml/json
         showAsDialog: false,  // appearance control
     },
     data: function () {
@@ -91,7 +84,7 @@ var BASE_FORM = Vue.component('base-form', {
             // below). If you want the source button, pass src as argument and access
             // src.currentTarget
 
-            for(var [key, url] of this.urls.downloadRequest){
+            for(var [key, url] of this.downloadUrl){
                 if (key.startsWith('json')){
                     return this.post(url).then(response => {  // defined in `vueutil.js`
                         if (response && response.data){
@@ -199,7 +192,7 @@ var BASE_FORM = Vue.component('base-form', {
         },
         createDownloadActions(){
             return ['json', 'yaml'].map(ext => {
-                var url = this.urls.downloadRequest + "." + ext;
+                var url = this.downloadUrl + "." + ext;
                 return [ext, () => {
                     Vue.download(url, this.formToJSON());
                 }];
