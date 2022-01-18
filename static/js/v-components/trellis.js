@@ -15,7 +15,7 @@ Vue.component('trellis', {
     computed: {
         scenarioHasErrors: function(){
             var form = this.form;
-            return this.scenarioKeys.some(key => !!form[key].err);
+            return this.scenarioKeys.some(key => !!form[key].error);
         }
     },
     watch: {
