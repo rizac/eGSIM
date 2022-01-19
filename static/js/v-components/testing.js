@@ -109,7 +109,7 @@ Vue.component('testing-table', {
         data: {
             immediate: true,
             handler(newval, oldval){
-                this.visible = !Vue.isEmpty(newval);  // defined in egsim_base.js
+                this.visible = (typeof newval === 'object') && !!(Object.keys(newval).length);
                 if (this.visible){
                     this.downloadActions = this.createDownloadActions();
                     this.gsimsRecords = newval['Db records'];
@@ -431,7 +431,7 @@ Vue.component('testing-table', {
             }
         },
         createDownloadActions(){
-            return Vue.createDownloadActions(this.downloadUrl, this.data);
+            return EGSIM.createDownloadActions(this.downloadUrl, this.data);
         }
     }
 });

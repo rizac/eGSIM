@@ -1,5 +1,4 @@
-/** base skeleton implementation for the base Vue instance. Also implements
- Vue.post global function (see page bottom)
+/** base skeleton implementation for the base Vue instance
  */
 var EGSIM_BASE = {
     data: function(){ return {
@@ -10,7 +9,7 @@ var EGSIM_BASE = {
         // FIXME: IMPLEMENT PROPS FOR DEFAULT VARIABLES?
         // gsims: {}, // an Object of gsim names (string) mapped to [[... imts ...], trt, oq_gsim_warning] (all elements strings)
         componentProps: {}, // an object of Objects keyed by each string denoting a component name (<=> menu tab)
-        postfuncDefaultConfig: {}  // default config used in Vue.post. FIXME: better doc
+        postfuncDefaultConfig: {}  // default config used in `post` function
         // In case we want to use an event bus:
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
@@ -57,13 +56,6 @@ var EGSIM_BASE = {
                 form.imt.choices = Array.from(imts);
             }
         }
-        // Create a global function `Vue.post(url, data, config)`:
-        Vue.createPostFunction(this, this.postfuncDefaultConfig);
-        // `this` is now a listener for `Vue.post`, attach relative events callbacks:
-        this.$on('postRequestStarted', this.postRequestStarted);
-        this.$on('postRequestCompleted', this.postRequestCompleted);
-        this.$on('postRequestFailed', this.postRequestFailed);
-        this.$on('postRequestEnded', this.postRequestEnded);
     },
     computed: {
         selComponentProps(){  // https://stackoverflow.com/a/43658979
@@ -89,7 +81,7 @@ var EGSIM_BASE = {
             return false; // in case accessed from within anchors
         },
         /*
-         * POST request listeners (see Vue.post below for details):
+         * POST request listeners (see `post` below for details):
          */
         postRequestStarted(){
             this.setError('');
@@ -162,64 +154,43 @@ var EGSIM_BASE = {
         },
         setLoading(value){
             this.loading = value;
-        }
-    }
-};
-
-
-/**
- * Add global property / method / directives to Vue (https://vuejs.org/v2/guide/plugins.html)
-*/
-Vue.use({
-    install : function (Vue, options) {
-        Vue.isEmpty = function(obj){
-            // global function returning true if `obj` is null, undefined or an empty Object
-            return (obj === null) || (obj === undefined) || ((typeof obj === 'object') && Object.keys(obj).length === 0);
-        };
-        Vue.createPostFunction = function(root, defaultAxiosConfig){
-            /* creates a globally available `Vue.post` function using axios
-
-            Parameters:
-            defaultAxiosConfig: an Object with default config for axios
-            root: The root Vue instance or component that will listen for the POST
-                events (before request, request ended, request failed) in order to e.g.,
-                control progress bars display request errors.
-            */
-            Vue.post = (url, data, config) => {
-                /*
-                 Global function that can be called from any Vue instance or component
-                 performing a request and returning a `Promise` which can be chained with
-                 `.then(response)` and `.catch(response)` (`response` is the axios
-                 response object).
-                 See `axios.post(url, data, config)` for details
-
-                 Parameters:
-                 url: string of the url
-                 data: the request POST data (e.g. JSON serialzable Object)
-                 config: any data (Object) for configuring the POST request. Defaults
-                    to the default config passed (see `createPostFunction` above)
-                 */
-                // emit the starting of a POST:
-                root.$emit('postRequestStarted');
-                // merge passed config with default config in a new config Object:
-                var config = Object.assign(config || {}, defaultAxiosConfig);
-                var jsonData = data || {};
-                return axios.post(url, jsonData, config).then(response => {
-                    root.$emit('postRequestCompleted', url, data, config, response);
-                    // allow chaining this promise from sub-components:
-                    return response;  // https://github.com/axios/axios/issues/1057#issuecomment-324433430
-                }).catch(response => {
-                    root.$emit('postRequestFailed', url, data, config, response);
-                    // allow chaining this promise from sub-components:
-                    throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
-                }).finally(() => {
-                    root.$emit('postRequestEnded');
-                });
-            }
         },
-        Vue.download = function(url, postData){
+        // Note that all the methods are accessible through EGSIM.<method>. However, only the
+        // following are conceived to be used like that:
+        post(url, data, config){
+            /*
+             Sends POST request through axios, while performing several GUI operations
+             on the root element. Return `axios.post(url, data, config)`, i.e. a `Promise`
+             which can be chained with `.then(response)` and `.catch(response)` (`response`
+             is the axios response object).
+
+             Parameters:
+             url: string of the url
+             data: the request POST data (e.g. JSON serialzable Object)
+             config: any data (Object) for configuring the POST request. Defaults
+                to the default config passed (see `createPostFunction` above)
+             */
+            var root = this;
+            // emit the starting of a POST:
+            root.postRequestStarted();
+            // merge passed config with default config in a new config Object:
+            var config = Object.assign(config || {}, this.postfuncDefaultConfig);
+            var jsonData = data || {};
+            return axios.post(url, jsonData, config).then(response => {
+                root.postRequestCompleted(url, data, config, response);
+                // allow chaining this promise from sub-components:
+                return response;  // https://github.com/axios/axios/issues/1057#issuecomment-324433430
+            }).catch(response => {
+                root.postRequestFailed(url, data, config, response);
+                // allow chaining this promise from sub-components:
+                throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
+            }).finally(() => {
+                root.postRequestEnded();
+            });
+        },
+        download(url, postData){
             /**
-             Send a `Vue.post` request and download the response data on the client OS.
+             Send a POST request and download the response data on the client OS.
 
              The responses attributes 'content-disposition' ('attachment; filename=...')
              and 'content-type' must be specified.
@@ -232,7 +203,7 @@ Vue.use({
             // the post function needs to have the 'responseType' set in order
             // to work with `window.URL.createObjectURL` (info extracted from the "messy":
 
-            Vue.post(url, postData, {responseType: 'arraybuffer'}).then(response => {
+            this.post(url, postData, {responseType: 'arraybuffer'}).then(response => {
                 // ref on `responseType` above (long thread with several outdated hints):
                 // https://stackoverflow.com/questions/8022425/getting-blob-data-from-xhr-request
                 if (response && response.data){
@@ -243,11 +214,11 @@ Vue.use({
                     filename = filename.substring(iof + 'filename='.length);
                     if (!filename){ return; }
                     var ctype = (response.headers || {})['content-type'];
-                    Vue.save(response.data, filename, ctype);
+                    this.save(response.data, filename, ctype);
                 }
             });
         },
-        Vue.saveAsJSON = function(data, filename){
+        saveAsJSON(data, filename){
             /**
              Save the given JavaScript Object `data` on the client OS as JSON
              formatted string
@@ -256,9 +227,9 @@ Vue.use({
              data: the JavaScript Object or Array to be saved as JSON
              */
             var sData = JSON.stringify(data, null, 2);  // 2 -> num indentation chars
-            Vue.save(sData, filename, "application/json");
+            this.save(sData, filename, "application/json");
         },
-        Vue.save = function(data, filename, mimeType){
+        save(data, filename, mimeType){
             /**
              Saves data with the given filename and mimeType on the client OS
 
@@ -281,7 +252,7 @@ Vue.use({
             // but let's be safe:
             URL.revokeObjectURL( downloadUrl );
         },
-        Vue.createDownloadActions = function(downloadUrl, data){
+        createDownloadActions(downloadUrl, data){
             /* Return an Array of for downloading on the client OS) the given data.
             The returned Array has elements of the form `[format, download_callback]`,
             where format is 'json' 'csv', 'csv (comma separated)'. See <plot-div> and
@@ -297,18 +268,18 @@ Vue.use({
             // Download as JSON does not need to query the server, the data is here:
             downloadActions.push(["json", () => {
                 var filename =  downloadUrl.split('/').pop() + '.json';
-                Vue.saveAsJSON(data, filename);
+                this.saveAsJSON(data, filename);
             }]);
             // CSV download actions send data to the server and expects back converted:
             downloadActions.push(["text/csv", () => {
                 var url =  downloadUrl + '.csv';
-                Vue.download(url, data);
+                this.download(url, data);
             }]);
             downloadActions.push(["text/csv, decimal comma", () => {
                 var url =  downloadUrl + '.csv_eu';
-                Vue.download(url, data);
+                this.download(url, data);
             }]);
             return downloadActions;
         }
     }
-});
+};

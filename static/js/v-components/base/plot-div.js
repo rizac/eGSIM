@@ -18,7 +18,7 @@ var PLOT_DIV = {
         var id = this.$options.name + new Date().getTime().toString();
         return {
             downloadActions: [],  // populated when data is there, see watch.data
-            visible: !Vue.isEmpty(this.data),  // defined in egsim_base.js
+            visible: false, // see watcher below
             // boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
             drawingPlots: true,
             // store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
@@ -111,9 +111,9 @@ var PLOT_DIV = {
         data: {
             immediate: true,
             handler(newval, oldval){
-                this.visible = !Vue.isEmpty(this.data);  // defined in egsim_base.js
+                this.visible = (typeof newval === 'object') && (Object.keys(newval).length);
                 if (this.visible){ // see prop below
-                    this.init.call(this, this.data);
+                    this.init.call(this, newval);
                     this.downloadActions = this.createDownloadActions();
                 }
             }
@@ -521,19 +521,19 @@ var PLOT_DIV = {
             // 1. `plots` is a subset of `this.plots` and it is an Array of plots,
             // i.e. Objects of the form:
             // plot= {
-            //		traces: [] //list of Plotly Objects representing traces
-            //		xaxis: {} //Plotly Object representing x axis
-            //		yaxis: Plotly Object representing y axis
-            //	 }, ..
+            //     traces: [] //list of Plotly Objects representing traces
+            //     xaxis: {} //Plotly Object representing x axis
+            //     yaxis: Plotly Object representing y axis
+            // }, ..
             //
             // The Vue Object controlling axis settings is of the form:
             // axis: {
-            //    		x: {
-            //   			log: {value:undefined, disabled:false},  // undefined: infer from plots, null: disable the option, otherwise boolean
-            //   			sameRange: {value:undefined, disabled: false} // same as above
-            //   		},
-            //		y: { same as above }
-            //   }, 
+            //     x: {
+            //         log: {value:undefined, disabled:false},  // undefined: infer from plots, null: disable the option, otherwise boolean
+            //         sameRange: {value:undefined, disabled: false} // same as above
+            //     },
+            //     y: { same as above }
+            // },
 
             var keys = ['axis.x.log.value',
                         'axis.y.log.value',
@@ -1054,7 +1054,7 @@ var PLOT_DIV = {
         },
         createDownloadActions(){
             // Populate with the data to be downloaded as non-image formats:
-            var downloadActions = Vue.createDownloadActions(this.downloadUrl, this.data);
+            var downloadActions = EGSIM.createDownloadActions(this.downloadUrl, this.data);
             // image formats:
             // create a function factory to avoid closure inside loops (classic approach):
             var createCallback = (ext) => {
@@ -1065,7 +1065,7 @@ var PLOT_DIV = {
                     data = data.filter(elm => elm.visible || !('visible' in elm));
                     postData = {data:data, layout:layout, width:width, height:height};
                     var url = this.downloadUrl + '.' + ext;
-                    Vue.download(url, postData);
+                    EGSIM.download(url, postData);
                 };
             };
             for (var ext of ['png', 'eps', 'pdf', 'svg']){
