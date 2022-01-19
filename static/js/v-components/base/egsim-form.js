@@ -17,14 +17,14 @@ Vue.component('egsim-form', {
             downloadActions: this.createDownloadActions()
         }
     },
-    emits: ['response-received', 'close-button-clicked'], // Vue 3 required attr (in case we migrate)
+    emits: ['form-successfully-submitted', 'close-button-clicked'], // Vue 3 required attr (in case we migrate)
     methods: {
         submit: function(){
             // send the main post request to `this.url` using `this.form` as POST data
             this.post(this.url).then(response => {
                 if (response && response.data){
                     if ((typeof response.data === 'object') && !!(Object.keys(response.data).length)){
-                        this.$emit('response-received', response.data);
+                        this.$emit('form-successfully-submitted', response.data);
                     }
                 }
             }).catch(response => {
