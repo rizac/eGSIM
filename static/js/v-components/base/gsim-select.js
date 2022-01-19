@@ -199,7 +199,7 @@ Vue.component('gsim-select', {
                 'reg': this.field.regionalization.value
             };
             // query data and update filter func:
-            Vue.post(this.field.regionalization.url, data).then(response => {  // defined in `vueutil.js`
+            EGSIM.post(this.field.regionalization.url, data).then(response => {  // defined in `vueutil.js`
                 var gsims = Array.isArray(response.data) ? response.data : Object.keys(response.data);
                 this.filterBy.map = null;
                 if(gsims && gsims.length){

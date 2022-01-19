@@ -17,16 +17,16 @@ Vue.component('egsim-form', {
             downloadActions: this.createDownloadActions()
         }
     },
-    emits: ['response-received', 'close-button-clicked'], // Vue 3 compat. mode (in case we migrate)
+    emits: ['response-received', 'close-button-clicked'], // Vue 3 required attr (in case we migrate)
     methods: {
         submit: function(){
             // send the main post request to `this.url` using `this.form` as POST data
             this.post(this.url).then(response => {
                 if (response && response.data){
-                    if (!Vue.isEmpty(response.data)){
+                    if ((typeof response.data === 'object') && !!(Object.keys(response.data).length)){
                         this.$emit('response-received', response.data);
                     }
-                } 
+                }
             }).catch(response => {
                 var errData = (response.response || {}).data;
                 var error = (errData || {}).error || {};
@@ -46,7 +46,7 @@ Vue.component('egsim-form', {
             for (var key of Object.keys(this.form)){  // clear errors first
                 this.form[key].error = "";
             }
-            return Vue.post(url, this.formToJSON());  // defined in `vueutil.js`
+            return EGSIM.post(url, this.formToJSON());  // defined in `vueutil.js`
         },
         formToJSON: function(){
             // Return `this.form` as JSON serializable Object
@@ -189,7 +189,7 @@ Vue.component('egsim-form', {
             return ['json', 'yaml'].map(ext => {
                 var url = this.downloadUrl + "." + ext;
                 return [ext, () => {
-                    Vue.download(url, this.formToJSON());
+                    EGSIM.download(url, this.formToJSON()); // see egism_base.js
                 }];
             }, this);  // <- make `this` in `map` point to this Vue instance
         }
