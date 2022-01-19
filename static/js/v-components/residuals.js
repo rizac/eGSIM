@@ -17,9 +17,9 @@ Vue.component('residuals', {
     template: `
 <div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
     <egsim-form v-show="!formHidden" :form="form" :url="url" :download-url="urls.downloadRequest"
-               :show-as-dialog="Object.keys(responseData).length"
-               @response-received="responseData = arguments[0]; formHidden = true"
-               @close-button-clicked="formHidden = true">
+                :show-as-dialog="Object.keys(responseData).length"
+                @form-successfully-submitted="responseData = arguments[0]; formHidden = true"
+                @close-button-clicked="formHidden = true">
 
         <template v-slot:left-column>
             <gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto"/>
