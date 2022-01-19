@@ -10,8 +10,8 @@ Vue.component('testing', {
     },
     data: function () {
         return {
-            responseData: {},
-            formHidden: false
+            formVisibilityToggle: true,  // switch form visibility on/off
+            responseData: {}
         }
     },
     watch: {
@@ -28,10 +28,9 @@ Vue.component('testing', {
     },
     template: `
 <div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-    <egsim-form v-show="!formHidden" :form="form" :url="url" :download-url="urls.downloadRequest"
-                :show-as-dialog="Object.keys(responseData).length"
-                @form-successfully-submitted="responseData = arguments[0]; formHidden = true"
-                @close-button-clicked="formHidden = true">
+    <egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
+                :visibilityToggle="formVisibilityToggle"
+                @form-successfully-submitted="responseData=arguments[0]">
 
         <template v-slot:left-column>
             <gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto"/>
@@ -67,7 +66,9 @@ Vue.component('testing', {
     <testing-table :data="responseData" :download-url="urls.downloadResponse"
                    class='position-absolute pos-0' style='z-index:1'>
         <slot>
-            <button @click='formHidden=false' class='btn btn-sm btn-primary'><i class='fa fa-list-alt'></i> Configuration</button>
+            <button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
+                <i class='fa fa-list-alt'></i> Configuration
+            </button>
         </slot>
     </testing-table>
 </div>`
