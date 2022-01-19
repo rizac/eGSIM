@@ -374,8 +374,8 @@ Vue.component('imt-select', {
         getSelectedImts(){
             var imts = Array.from(this.fieldCopy.value);
             if (imts.includes('SA')){
-                var periods = this.SAPeriods.trim().split(/\s+/).map(p => `SA(${p})`);
-                imts = imts.concat(periods);
+                var saWithPeriods = this.SAPeriods.trim().split(/\s+/).map(p => `SA(${p})`);
+                imts = imts.filter(elm => elm!='SA').concat(saWithPeriods);
             }
             return imts;
         }
