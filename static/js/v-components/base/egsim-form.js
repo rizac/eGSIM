@@ -83,30 +83,25 @@ Vue.component('egsim-form', {
             // and then restoring it later inside a `then` attached to the returned promise
             // below). If you want the source button, pass src as argument and access
             // src.currentTarget
-
-            for(var [key, url] of this.downloadUrl){
-                if (key.startsWith('json')){
-                    return this.post(url).then(response => {  // defined in `vueutil.js`
-                        if (response && response.data){
-                            var responseData = response.data;
-                            var retUrl = window.location.origin;
-                            if (!window.location.origin) {  // https://stackoverflow.com/a/25495161
-                                retUrl = window.location.protocol + "//"
-                                    + window.location.hostname
-                                    + (window.location.port ? ':' + window.location.port : '');
-                            }
-                            retUrl += (this.url.startsWith('/') ? '' : '/') + this.url;
-                            var prefix = '?';
-                            for (var paramName of Object.keys(responseData)){
-                                retUrl += `${prefix}` + encodeURIComponent(paramName) + '=' + encodeURIComponent(responseData[paramName]);
-                                prefix = '&';
-                            }
-                            this.watchForValueChanges(true);
-                            this.requestURL = retUrl;
-                        }
-                    });
+            return this.post(this.downloadUrl + '.json').then(response => {
+                if (response && response.data){
+                    var responseData = response.data;
+                    var retUrl = window.location.origin;
+                    if (!window.location.origin) {  // https://stackoverflow.com/a/25495161
+                        retUrl = window.location.protocol + "//"
+                            + window.location.hostname
+                            + (window.location.port ? ':' + window.location.port : '');
+                    }
+                    retUrl += (this.url.startsWith('/') ? '' : '/') + this.url;
+                    var prefix = '?';
+                    for (var paramName of Object.keys(responseData)){
+                        retUrl += `${prefix}` + encodeURIComponent(paramName) + '=' + encodeURIComponent(responseData[paramName]);
+                        prefix = '&';
+                    }
+                    this.watchForValueChanges(true);
+                    this.requestURL = retUrl;
                 }
-            }
+            });
         },
         watchForValueChanges: function(watch){
             if (watch == !!this.watchers.length){
