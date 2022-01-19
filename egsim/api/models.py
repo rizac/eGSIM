@@ -114,10 +114,9 @@ class Flatfile(_DataSource):
 
     filepath = TextField(unique=True, null=False)
     hidden = BooleanField(null=False, default=False,
-                                     help_text="if true, the flatfile is hidden "
-                                               "in browsers (users can still "
-                                               "access it via API requests, if "
-                                               "not expired)")
+                          help_text="if true, the flatfile is hidden in browsers "
+                                    "(users can still access it via API requests, "
+                                    "if not expired)")
     expiration = DateTimeField(null=True, default=None,
                                help_text="expiration date(time) after which the "
                                          "flatfile is not visible or accessible "

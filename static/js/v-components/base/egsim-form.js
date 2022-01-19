@@ -28,7 +28,10 @@ Vue.component('egsim-form', {
                     if ((typeof response.data === 'object') && !!(Object.keys(response.data).length)){
                         this.show = !this.show;
                         this.showAsDialog = true;
-                        this.$emit('form-successfully-submitted', response.data);
+                        setTimeout(() => {
+                            // notify asynchronously after the form has been hidden:
+                            this.$emit('form-successfully-submitted', response.data);
+                        }, 250);
                     }
                 }
             }).catch(response => {
