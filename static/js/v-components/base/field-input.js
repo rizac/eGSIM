@@ -111,7 +111,8 @@ Vue.component('base-input', {
     data: function () {
         // Complete the HTML attributes of this component with values that can
         // be inferred if missing:
-        const data = this.createData(this.$attrs, this.choices, this.value);
+        var value = this.modelValue === undefined ? this.value : this.modelValue;  // Vue2/3 compatible
+        const data = this.createData(this.$attrs, this.choices, value);
 
         // setup the style classes:
         var cls = {
@@ -164,10 +165,15 @@ Vue.component('base-input', {
         },
         val: {  // https://stackoverflow.com/questions/47311936/v-model-and-child-components
             get() {
-                return this.value;
+                // this.modelValue === undefined -> Vue2, otherwise Vue3
+                return this.modelValue === undefined ? this.value : this.modelValue;
             },
             set(value) {
-                this.$emit('input', value);
+                if (this.modelValue === undefined){  // Vue2
+                    this.$emit('input', value);
+                }else{  // Vue3
+                    this.$emit('update:modelValue', value);
+                }
             }
         }
     },
