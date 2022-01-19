@@ -6,10 +6,12 @@ Vue.component('egsim-form', {
         form: Object,
         url: String,
         downloadUrl: String,  // url for downloading the current form as config yaml/json
-        showAsDialog: false,  // appearance control
+        visibilityToggle: true,
     },
     data: function () {
         return {
+            show: true,
+            showAsDialog: false,  // appearance control
             mounted: false,  // needed for ? FIXME
             idRequestURLInput: this.url + '_requesturl_input_',
             requestURL: '',
@@ -17,13 +19,15 @@ Vue.component('egsim-form', {
             downloadActions: this.createDownloadActions()
         }
     },
-    emits: ['form-successfully-submitted', 'close-button-clicked'], // Vue 3 required attr (in case we migrate)
+    emits: ['form-successfully-submitted'], // Vue 3 required attr (in case we migrate)
     methods: {
         submit: function(){
             // send the main post request to `this.url` using `this.form` as POST data
             this.post(this.url).then(response => {
                 if (response && response.data){
                     if ((typeof response.data === 'object') && !!(Object.keys(response.data).length)){
+                        this.show = !this.show;
+                        this.showAsDialog = true;
                         this.$emit('form-successfully-submitted', response.data);
                     }
                 }
@@ -207,12 +211,14 @@ Vue.component('egsim-form', {
             this.mounted = true;
         });
     },
-    computed: {
-        // no-op
+    watch: {
+        visibilityToggle: function(newVal, oldVal){
+            this.show = !this.show;
+        }
     },
     template: `
     <transition :name="mounted ? 'egsimform' : ''">
-    <form novalidate @submit.prevent="submit"
+    <form novalidate @submit.prevent="submit" v-show="show"
           :class="[showAsDialog ? ['shadow', 'border', 'bg-light', 'mb-2'] : '']"
           class="d-flex flex-column position-relative pb-4 align-self-center"
           style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important">
@@ -262,7 +268,7 @@ Vue.component('egsim-form', {
                     <i class="fa fa-copy"></i>
                 </button>
 
-                <button type="button" v-show='showAsDialog' @click="$emit('close-button-clicked')"
+                <button type="button" v-show='showAsDialog' @click="show=!show"
                         aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
                         class="btn btn-outline-dark border-0 ml-2">
                     <i class="fa fa-times"></i>
