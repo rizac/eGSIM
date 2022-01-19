@@ -156,7 +156,8 @@ var EGSIM_BASE = {
             this.loading = value;
         },
         // Note that all the methods are accessible through EGSIM.<method>. However, only the
-        // following are conceived to be used like that:
+        // following are conceived to be used like that. Remember to call them AFTER
+        // the global EGSIM app has been mounted, i.e. not while initializing each component
         post(url, data, config){
             /*
              Sends POST request through axios, while performing several GUI operations
