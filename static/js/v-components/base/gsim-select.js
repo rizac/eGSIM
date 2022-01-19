@@ -331,10 +331,13 @@ Vue.component('imt-select', {
             fieldCopy['size'] = this.$attrs['size'];
         }
         fieldCopy: Object.assign(fieldCopy, this.field);
-
+        // setup the init values for IMTs in the <elect> and SA Periods in the <input>:
+        var imts = fieldCopy.value || [];
+        fieldCopy.value = Array.from(new Set(imts.map(elm => elm.startsWith('SA(') ? 'SA' : elm)));
+        var saPeriods = imts.filter(elm => elm.startsWith('SA(')).map(elm => elm.substring(3, elm.length-1)).join(' ');
         return {
             fieldCopy: fieldCopy,
-            SAPeriods: ''
+            SAPeriods: saPeriods
         }
     },
     created: function(){
