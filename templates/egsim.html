@@ -138,6 +138,7 @@ var _UNSUPPORTED_BROWSER_MSG = function(){
 <script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/plot-div.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/egsim-form.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/v-components/' %}flatfileview.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}testing.js"></script>
@@ -176,6 +177,8 @@ var EGSIM = new Vue({
 			// (csrf token stored in an <input> in the base.html. Get it here and use it for each post request):
 			postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value}}),
 			selComponent: "{{sel_component}}",
+			flatfiles: {{flatfiles|safe}},
+			flatfile_columns: {{flatfile_columns|safe}},
 			regionalization: {{ regionalization|safe }},
 			// incompatibleBrowserMessage is defined in browserdetection.js:
 			errormsg: _UNSUPPORTED_BROWSER_MSG,

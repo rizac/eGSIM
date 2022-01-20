@@ -3,6 +3,7 @@ Base Form for to model-to-data operations i.e. flatfile handling
 """
 from io import BytesIO
 import re
+from datetime import datetime
 
 import pandas as pd
 from django.core.exceptions import ValidationError
@@ -80,6 +81,10 @@ class FlatfileForm(EgsimBaseForm):
         if u_flatfile is None:
             # exception should be raised and sent as 500: don't catch
             p_ff = cleaned_data["flatfile"]
+            if p_ff.expiration is not None and p_ff.expiration > datetime.utcnow():
+                self.add_error("flatfile", ValidationError("Flatfile expired",
+                                                           code='invalid'))
+                return cleaned_data  # no nned to further process
             dataframe = pd.read_hdf(p_ff.filepath, key=p_ff.name)
         else:
             # u_ff = cleaned_data[key_u]
@@ -92,7 +97,7 @@ class FlatfileForm(EgsimBaseForm):
                 # for the `files` argument in requests
                 self.add_error("flatfile", ValidationError(gettext(msg),
                                                            code='invalid'))
-                return cleaned_data  # noo need to further process
+                return cleaned_data  # no need to further process
 
         key = 'selexpr'
         selexpr = cleaned_data.get(key, None)
@@ -139,8 +144,8 @@ def reformat_selection_expression(dataframe, sel_expr):
     # Before replacing `notna`, first check that the argument is a column:
     notna_expr = r'\bnotna\((.*?)\)'
     for match in re.finditer(notna_expr, sel_expr):
-        if match.group(1) not in dataframe.olumns:
-            # raise the same pandas excpetion:
+        if match.group(1) not in dataframe.columns:
+            # raise the same pandas exception:
             raise UndefinedVariableError(match.group(1))
     # now replace `notna(x)` with `x == x` (`isna` can be typed as `~notna`):
     sel_expr = re.sub(notna_expr, r"(\1==\1)", sel_expr, re.IGNORECASE)
@@ -178,9 +183,9 @@ def flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]
     for residuals computation
     """
     qry = models.FlatfileColumn.objects  # noqa
-    qry = qry.filter(name__isnull=False, oq_name__isnull=False)
     rup, site, dist = {}, {}, {}
-    for ffname, attname, categ in qry.values_list('name', 'oq_name', 'category'):
+    cols = 'name', 'oq_name', 'category'
+    for ffname, attname, categ in qry.only(*cols).values_list(*cols):
         if categ == models.FlatfileColumn.CATEGORY.RUPTURE_PARAMETER:
             rup[ffname] = attname
         elif categ == models.FlatfileColumn.CATEGORY.SITE_PARAMETER:
