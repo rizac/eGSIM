@@ -190,7 +190,8 @@ class FlatfileColumn(_UniqueNameModel):
         `defaults`
         """
         dtype, defaults = {}, {}
-        for name, props in cls.objects.filter().values_list('name', 'properties'):
+        cols = 'name', 'properties'
+        for name, props in cls.objects.filter().only(*cols).values_list(*cols):
             if not props:
                 continue
             dtype[name] = props['dtype']

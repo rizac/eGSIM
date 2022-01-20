@@ -19,6 +19,7 @@ from .forms.model_to_data import FlatfileForm
 from .forms.model_to_model.trellis import TrellisForm
 from .forms.model_to_data.residuals import ResidualsForm
 from .forms.model_to_data.testing import TestingForm
+from .forms.model_to_data.flatfile_plotter import FlatfilePlotForm
 from .forms import APIForm
 
 
@@ -151,6 +152,13 @@ class TestingView(RESTAPIView):
 
     formclass = TestingForm
     urls = (f'{API_PATH}/testing', f'{API_PATH}/model-data-test')
+
+
+class FlatfilePlotView(RESTAPIView):
+    """EgsimQueryView subclass for generating Testing responses"""
+
+    formclass = FlatfilePlotForm
+    urls = (f'{API_PATH}/flatfile-plot', f'{API_PATH}/ffplot')
 
 
 def error_response(exception: Union[str, Exception], code=500, **kwargs) -> JsonResponse:

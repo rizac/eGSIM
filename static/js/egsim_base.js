@@ -9,7 +9,9 @@ var EGSIM_BASE = {
         // FIXME: IMPLEMENT PROPS FOR DEFAULT VARIABLES?
         // gsims: {}, // an Object of gsim names (string) mapped to [[... imts ...], trt, oq_gsim_warning] (all elements strings)
         componentProps: {}, // an object of Objects keyed by each string denoting a component name (<=> menu tab)
-        postfuncDefaultConfig: {}  // default config used in `post` function
+        postfuncDefaultConfig: {},  // default config used in `post` function
+        flatfiles: {},  // Array of flatfiles, each flatfile is an Object of the form: {name:str labe':str, url:str}
+        flatfile_columns: [], //Array of columns, each Column is an Array of the form: [colname, coldescription]
         // In case we want to use an event bus:
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
@@ -40,6 +42,11 @@ var EGSIM_BASE = {
             }
         });
         var regionalization = this.regionalization;
+        // make each flatfile object not editable:
+        this.flatfiles = this.flatfiles.map(elm => Object.freeze(elm));
+        // for flatfile viewer, x and y <select> are too wide. Set as <option>s name AND
+        // value the flatfile column name only (elm[0]) skipping the description (elm[1]):
+        var ffColumns = this.flatfile_columns.map(elm => [elm[0], elm[0]]).sort();
         // set processed data:
         for (var [name, form] of this.forms()){
             if (form.gsim){
@@ -54,6 +61,18 @@ var EGSIM_BASE = {
             if (form.imt){
                 // set form.imt as a deep copy of imts:
                 form.imt.choices = Array.from(imts);
+            }
+            // set flatfile choices adn references. Note: share the same array, so
+            // adding an uploaded flatfile updates all controls!
+            if (form.flatfile){
+                form.flatfile.choices = this.flatfiles;
+                form.flatfile['data-columns'] = this.flatfile_columns;
+            }
+            if (form.x){
+                form.x.choices = ffColumns;
+            }
+            if(form.y){
+                form.y.choices = ffColumns;
             }
         }
     },

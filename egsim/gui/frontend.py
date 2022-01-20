@@ -5,6 +5,7 @@ from django.db.models import Prefetch, QuerySet
 from . import TAB, URLS
 from ..api import models
 from ..api.forms import EgsimBaseForm
+from ..api.forms.model_to_data.flatfile_plotter import get_flatfile_column_choices
 from ..api.forms.tools import field_to_dict, field_to_htmlelement_attrs
 
 
@@ -37,13 +38,18 @@ def get_context(selected_menu=None, debug=True) -> dict:
                       values_list('name', flat=True))
     }
 
+    flatfiles = [{'name': r.name, 'label': r.display_name, 'url': r.url}
+                 for r in query_flatfiles()]
+    flatfile_columns = get_flatfile_column_choices()
+
     return {
         'debug': debug,
         'sel_component': sel_component,
         'components': components_tabs,
         'component_props': json.dumps(components_props, separators=(',', ':')),
         'gsims': json.dumps(gsims, separators=(',', ':')),
-        'flatfiles': [(f.name, str(f)) for f in query_flatfiles()],
+        'flatfiles': flatfiles,
+        'flatfile_columns': flatfile_columns,
         'regionalization': regionalization,
         'allowed_browsers': {k.lower(): v for k, v in allowed_browsers.items()},
         'invalid_browser_message': invalid_browser_message
@@ -77,7 +83,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         test click buttons
     """
     def ignore_choices(field_att_name):
-        return field_att_name in ('gsim', 'imt')
+        return field_att_name in ('gsim', 'imt', 'flatfile', 'x', 'y')
 
     # properties to be passed to vuejs components.
     # If you change THE KEYS of the dict here you should change also the
@@ -96,10 +102,10 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                                     f"{TAB.trellis.download_response_filename}"
             }
         },
-        # KEY.GMDBPLOT: {  # FIXME REMOVE
-        #     'form': to_vuejs_dict(GmdbPlotView.formclass()),
-        #     'url': URLS.GMDBPLOT_RESTAPI
-        # },
+        TAB.flatfileview.name: {  # FIXME REMOVE
+            'form': form_to_json(TAB.flatfileview.formclass, ignore_choices),
+            'url': TAB.flatfileview.urls[0]
+        },
         TAB.residuals.name: {
             'form': form_to_json(TAB.residuals.formclass, ignore_choices),
             'url': TAB.residuals.urls[0],
