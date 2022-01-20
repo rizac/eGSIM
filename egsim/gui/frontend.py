@@ -1,11 +1,10 @@
-from typing import Any, Type, Callable, Union
+from typing import Any, Type, Callable, Union, Iterable
 import json
 
 from django.db.models import Prefetch, QuerySet
 from . import TAB, URLS
 from ..api import models
 from ..api.forms import EgsimBaseForm
-from ..api.forms.model_to_data.flatfile_plotter import get_flatfile_column_choices
 from ..api.forms.tools import field_to_dict, field_to_htmlelement_attrs
 
 
@@ -40,7 +39,8 @@ def get_context(selected_menu=None, debug=True) -> dict:
 
     flatfiles = [{'name': r.name, 'label': r.display_name, 'url': r.url}
                  for r in query_flatfiles()]
-    flatfile_columns = get_flatfile_column_choices()
+    flatfile_columns = {name: [help_ if help_ and help_ != name else "", dtype]
+                        for name, help_, dtype in query_flatfile_columns()}
 
     return {
         'debug': debug,
@@ -72,6 +72,13 @@ def query_gims() -> QuerySet:
 
 def query_flatfiles() -> QuerySet:
     return models.Flatfile.get_flatfiles(hidden=False)
+
+
+def query_flatfile_columns() -> Iterable[tuple[str, str, str]]:
+    qry = models.FlatfileColumn.objects
+    cols = 'name', 'properties', 'help'
+    for name, props, help_ in qry.only(*cols).values_list(*cols):
+        yield name, props['dtype'], help_
 
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:

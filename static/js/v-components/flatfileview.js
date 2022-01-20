@@ -268,11 +268,23 @@ Vue.component('flatfile-select', {
                    <b>please try to provide the strict minimum of columns in order to improve
                    memory consumption and upload time</b>.
                    </p>
-                   Flatfile columns:
-                   <ul>
-                       <li>event_id: event identifier (string or numeric): two event id are equal if and only if they refer to the same seismic event. Several rows can - and usually should - share the same event id</li>
-                       <li v-for="colelm in columns"> {{ colelm[0] }}: {{ colelm[1] }}</li>
-                   </ul>
+                   <table class="table table-sm">
+                       <tr>
+                           <th>Flatfile column</th><th>Description</th><th>Data type</th></tr>
+                       <tr>
+                           <td>event_id</td>
+                           <td>a <b>mandatory</b> record event id: <i>two event id must be
+                               equal if and only if they refer to the same seismic event</i>. Several
+                               rows can - and usually should - share the same event id. Many
+                               event web services provide their own ID which serves the purpose
+                               effortless
+                           </td>
+                           <td>str or int</td>
+                       </tr>
+                       <tr v-for="cname in Object.keys(columns)">
+                            <td>{{ cname }} </td><td> {{ columns[cname][1] }} </td><td> {{ columns[cname][0] }}</td>
+                       </tr>
+                   </table>
                 </div>
             </div>
         </div>

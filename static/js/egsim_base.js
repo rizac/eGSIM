@@ -11,7 +11,7 @@ var EGSIM_BASE = {
         componentProps: {}, // an object of Objects keyed by each string denoting a component name (<=> menu tab)
         postfuncDefaultConfig: {},  // default config used in `post` function
         flatfiles: {},  // Array of flatfiles, each flatfile is an Object of the form: {name:str labe':str, url:str}
-        flatfile_columns: [], //Array of columns, each Column is an Array of the form: [colname, coldescription]
+        flatfile_columns: [], // Object of column names mapped to the Array [description, dataType] (both str)
         // In case we want to use an event bus:
         // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
     }},
@@ -46,7 +46,7 @@ var EGSIM_BASE = {
         this.flatfiles = this.flatfiles.map(elm => Object.freeze(elm));
         // for flatfile viewer, x and y <select> are too wide. Set as <option>s name AND
         // value the flatfile column name only (elm[0]) skipping the description (elm[1]):
-        var ffColumns = this.flatfile_columns.map(elm => [elm[0], elm[0]]).sort();
+        var ffColumns = Object.keys(this.flatfile_columns).map(elm => [elm, elm]).sort();
         // set processed data:
         for (var [name, form] of this.forms()){
             if (form.gsim){
