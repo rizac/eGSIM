@@ -251,20 +251,20 @@ Vue.component('flatfile-select', {
             </button>
         </div>
         <div style="position:relative">
-            <div style="position:absolute;left:0;right:0;max-height:45vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
+            <div style="position:absolute;left:0;right:0;max-height:45vh;top:0.1rem;display:none;overflow:auto;z-index:10;font-family:sans-serif"
                  class='form-control shadow'>
-                <i class="fa fa-times-circle ml-2" style='font-size:125%;float:right;cursor:pointer' title='close'
+                <i class="fa fa-times-circle ml-2" style='font-size:110%;float:right;cursor:pointer' title='close'
                    onclick="this.parentNode.style.display='none'"></i>
                 <div>
                    <p>
-                   To upload a user-defined flatfile, provide an uncompressed or zipped CSV file
-                   where each row denotes an observed record and each column a record attribute.
-                   The flatfile must have at least one column denoting an observed Intensity measure
+                   To upload a user-defined flatfile, please upload it as uncompressed or zipped CSV file.
+                   Each CSV row must denotes an observed record and each column a record attribute.
+                   The file must have at least one column denoting an observed Intensity measure
                    to compare (PGA, PGV or SA typed with their period in parentheses, e.g. "Sa(0.1), Sa(0.2)"),
                    and the columns of the parameters required by the ground shaking intensity models
-                   that meant to be used, e.g. magnitude, vs30 (scroll down for a complete list).
+                   that are meant to be used, e.g., magnitude, vs30 (scroll down for a complete list).
                    Any flatfile column non required by any model will be ignored but can be used for
-                   filtering records (see selection expression), but
+                   filtering records (see selection expression). However,
                    <b>please try to provide the strict minimum of columns in order to improve
                    memory consumption and upload time</b>.
                    </p>
@@ -305,9 +305,9 @@ Vue.component('flatfile-selexpr-input', {
             </button>
         </div>
         <div style="position:relative">
-            <div style="position:absolute;left:0;right:0;max-height:45vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
+            <div style="position:absolute;left:0;right:0;max-height:45vh;top:0.1rem;display:none;overflow:auto;z-index:10;font-family:sans-serif"
                  class='form-control shadow'>
-                <i class="fa fa-times-circle" style='font-size:125%;float:right;cursor:pointer' title='close'
+                <i class="fa fa-times-circle" style='font-size:110%;float:right;cursor:pointer' title='close'
                    onclick="this.parentNode.style.display='none'"></i>
                 Filter matching rows typing an expression that operates on arbitrary
                 flatfile columns, e.g.:
