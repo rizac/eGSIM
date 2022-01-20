@@ -1,23 +1,20 @@
 /**
  * Represents a base form used in trellis, residuals, testing
  */
-Vue.component('egsim-form', {
+
+Vue.component('submit-button', {  // provide a single place for styling the submit button of forms
+    template: `<button type="submit" class="btn btn-primary">
+        <i class="fa fa-play"></i> Display results
+    </button>`
+});
+
+var BASE_FORM = Vue.component('base-form', {
     props :{
         form: Object,
         url: String,
-        downloadUrl: String,  // url for downloading the current form as config yaml/json
-        visibilityToggle: true,
     },
     data: function () {
-        return {
-            show: true,
-            showAsDialog: false,  // appearance control
-            mounted: false,  // needed for ? FIXME
-            idRequestURLInput: this.url + '_requesturl_input_',
-            requestURL: '',
-            watchers: [],  // needed for FIXME
-            downloadActions: this.createDownloadActions()
-        }
+        return {}
     },
     emits: ['form-successfully-submitted'], // Vue 3 required attr (in case we migrate)
     methods: {
@@ -49,11 +46,29 @@ Vue.component('egsim-form', {
         },
         post: function(url){
             // send a post request to the given url using this.form as POST data. Returns
-            // an `Promise` object that can be chained (see e.g. `this.request`)
+            // a `Promise` object that can be chained (see e.g. `this.request`)
             for (var key of Object.keys(this.form)){  // clear errors first
                 this.form[key].error = "";
             }
-            return EGSIM.post(url, this.formToJSON());  // defined in `vueutil.js`
+            var [data, config] = this.getPostDataAndConfig();
+            return EGSIM.post(url, data, config);
+        },
+        getPostDataAndConfig: function(){
+            // Returns the arguments for a POSt request in the form of the Array
+            // [postData, config], where data is either an Object or a
+            // FormData object, and config is an Object with varying keys depending on
+            // the data of `this.form` (basically: this.form has files or not)
+            var form = this.form;
+            var hasFiles = Object.keys(form).some(elm => form[elm].value instanceof File);
+            if (hasFiles){
+                const config = {
+                    headers: {
+                        'content-type': 'multipart/form-data'
+                    }
+                };
+                return [this.formToFormData(), config];
+            }
+            return [this.formToJSON(), {}];
         },
         formToJSON: function(){
             // Return `this.form` as JSON serializable Object
@@ -67,16 +82,45 @@ Vue.component('egsim-form', {
             }
             return data;
         },
-        resetDefaults: function(){
-            // reset the parameters to their defaults as implemented
-            // server side.
-            // Note that there are functions here calling this function
-            for (var key of Object.keys(this.form)){
-                if (this.form[key].initial !== undefined){
-                    this.form[key].val = this.form[key].initial;
-                }
+        formToFormData: function(){
+            // snippet from:
+            // https://www.codegrepper.com/code-examples/javascript/axios+upload+a+multipart%2Fform-data
+            const formData = new FormData();
+            var formObj = this.formToJSON();
+            for (var name of Object.keys(formObj)){
+                formData.append(name, formObj[name]);
             }
+            return formData;
         },
+    },
+    template: `<form novalidate @submit.prevent="submit">
+        <slot></slot>
+        <submit-button></submit-button>
+    </form>`
+});
+
+/**
+ * Represents a base form used in trellis, residuals, testing
+ */
+Vue.component('egsim-form', {
+    mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
+    props :{
+        downloadUrl: String,  // url for downloading the current form as config yaml/json
+        visibilityToggle: true,  // variable to toggle form visibility from external components
+    },
+    data: function () {
+        return {
+            show: true,
+            showAsDialog: false,  // appearance control
+            mounted: false,  // needed for ? FIXME
+            idRequestURLInput: this.url + '_requesturl_input_',
+            requestURL: '',
+            watchers: [],  // needed for FIXME
+            downloadActions: this.createDownloadActions()
+        }
+    },
+    methods: {
+        // toolbar methods:
         fetchRequestURL: function(){
             // Fetches
             // the current config (request) as dict and builds this.requestURL
@@ -228,14 +272,8 @@ Vue.component('egsim-form', {
 
         <div class="d-flex flex-column" style="flex: 1 1 auto">
 
-            <div class='d-flex flex-row justify-content-center align-items-center p-1'
+            <div class='d-flex flex-row justify-content-center align-items-center p-1 mb-3'
                  style='background-color:rgba(5, 73, 113, .2)'>
-
-                <button type="button" @click='resetDefaults' aria-label="Restore default parameters"
-                        data-balloon-pos="down" data-balloon-length="medium"
-                        class="btn btn-outline-dark border-0">
-                    <i class="fa fa-fast-backward"></i>
-                </button>
 
                 <button type="button" onclick='this.nextElementSibling.click()'
                         data-balloon-pos="down" data-balloon-length="medium"
@@ -279,7 +317,7 @@ Vue.component('egsim-form', {
 
             </div>
 
-            <div class="d-flex flex-row mt-3" :class="[showAsDialog ? ['mx-4'] : '']"
+            <div class="d-flex flex-row" :class="[showAsDialog ? ['mx-4'] : '']"
                  style="flex: 1 1 auto">
                 <div class="d-flex flex-column" style="flex: 1 1 auto">
                     <slot name="left-column"></slot>
@@ -291,9 +329,7 @@ Vue.component('egsim-form', {
 
                     <div class='d-flex flex-row justify-content-center mt-4'>
                         <div style='flex: 1 1 auto'></div>
-                        <button type="submit" class="btn btn-primary ml-2">
-                            <i class="fa fa-play"></i> Display results
-                        </button>
+                        <submit-button></submit-button>
                     </div>
                 </div>
             </div>

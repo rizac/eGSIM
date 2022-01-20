@@ -27,9 +27,8 @@ Vue.component('residuals', {
         <template v-slot:right-column>
             <imt-select :field="form.imt" size="6"></imt-select>
             <div class="mt-4 form-control" style="background-color:transparent">
-                <field-input :field='form.flatfile'></field-input>
-                <field-input :field='form.selexpr' class='mt-2'></field-input>
-                <!-- showhelpbutton	@helprequested='$emit("emit-event", "movetoapidoc", "selexpr")' -->
+                <flatfile-select :field="form.flatfile"></flatfile-select>
+                <flatfile-selexpr-input :field="form.selexpr" class='mt-2'></flatfile-selexpr-input>
             </div>
 
             <div class="mt-4">
