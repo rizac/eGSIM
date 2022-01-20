@@ -212,16 +212,11 @@ Vue.component('flatfile-select', {
     methods:{
         filesUploaded: function(files){
             var flatfiles = this.flatfiles;
-            this.fieldProxy.error="";
             for (var file of files){
                 for (var i=0; i<flatfiles.length; i++){
                     var flatfile = flatfiles[i];
-                    if (flatfile.name == file.name){
-                        if (!flatfile.file){
-                            // predefined flatfile with the same name as uploaded one:
-                            this.fieldProxy.error='Please rename "${file.name}" before uploading (name conflict)';
-                            return;
-                        }
+                    if ((flatfile.name == file.name) && (flatfile.file)){
+                        // `flatfile.file` assures we are modifying an user uploaded flatfile
                         flatfile.file = file;
                         file = null;
                         break;
@@ -229,7 +224,7 @@ Vue.component('flatfile-select', {
                 }
                 if (file != null){
                     flatfiles.push({
-                        name: file.name, label: `${file.name} (uploaded)`, file: file
+                        name: file.name, label: `${file.name} (uploaded: ${new Date().toLocaleString()})`, file: file
                     });
                 }
             }
