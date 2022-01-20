@@ -235,36 +235,40 @@ Vue.component('flatfile-select', {
             }
         }
     },
-    template:`
-    <div class='d-flex flex-row align-items-end'>
-        <field-input :field="fieldProxy"></field-input>
-        <a target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL">Ref.</a>
-        <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
-                aria-label="Upload a user defined flatfile. Please click on help for details"
-                data-balloon-pos="down" data-balloon-length="small">
-            upload
-        </button>
-        <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
-        <button class='btn ml-1 btn-outline-dark border-0' type="button"
-                onclick="this.nextElementSibling.firstElementChild.style.display=''">
-            <i class="fa fa-question-circle"></i>
-        </button>
+    template:`<div>
+        <div class='d-flex flex-row align-items-end'>
+            <field-input :field="fieldProxy"></field-input>
+            <a target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL">Ref.</a>
+            <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
+                    aria-label="Upload a user defined flatfile. Please click on help for details"
+                    data-balloon-pos="down" data-balloon-length="small">
+                upload
+            </button>
+            <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
+            <button class='btn ml-1 btn-outline-dark border-0' type="button"
+                    onclick="this.parentNode.nextElementSibling.firstElementChild.style.display=''">
+                <i class="fa fa-question-circle"></i>
+            </button>
+        </div>
         <div style="position:relative">
-            <div style="position:absolute;left:-3rem;width:33vw;max-height:50vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
+            <div style="position:absolute;left:0;right:0;max-height:45vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
                  class='form-control shadow'>
                 <i class="fa fa-times-circle ml-2" style='font-size:125%;float:right;cursor:pointer' title='close'
                    onclick="this.parentNode.style.display='none'"></i>
                 <div>
-                   To upload a user-defined flatfile, provide a plain-text or zipped CSV file
+                   <p>
+                   To upload a user-defined flatfile, provide an uncompressed or zipped CSV file
                    where each row denotes an observed record and each column a record attribute.
-                   The number of flatfile columns required depends on the ground shaking intensity
-                   models used for comparison, because different models require different
-                   attributes. Non-required flatfile columns will be ignored but can be used for
-                   filtering records (see selection expression). However,
-                   <b>please try to implement the minimum
-                   required amount of columns to improve memory consumption and upload time</b>.
-                   <br><br>
-                   Flatfile possible columns inferred by all models required attributes:
+                   The flatfile must have at least one column denoting an observed Intensity measure
+                   to compare (PGA, PGV or SA typed with their period in parentheses, e.g. "Sa(0.1), Sa(0.2)"),
+                   and the columns of the parameters required by the ground shaking intensity models
+                   that meant to be used, e.g. magnitude, vs30 (scroll down for a complete list).
+                   Any flatfile column non required by any model will be ignored but can be used for
+                   filtering records (see selection expression), but
+                   <b>please try to provide the strict minimum of columns in order to improve
+                   memory consumption and upload time</b>.
+                   </p>
+                   Flatfile columns:
                    <ul>
                        <li>event_id: event identifier (string or numeric): two event id are equal if and only if they refer to the same seismic event. Several rows can - and usually should - share the same event id</li>
                        <li v-for="colelm in columns"> {{ colelm[0] }}: {{ colelm[1] }}</li>
@@ -280,15 +284,16 @@ Vue.component('flatfile-selexpr-input', {
     props: {
         field: {type: Object}
     },
-    template:`
-    <div class='d-flex flex-row align-items-end'>
-        <field-input :field='field' style='flex:1 1 auto'></field-input>
-        <button class='btn ml-1 btn-outline-dark border-0' type="button"
-                onclick="this.nextElementSibling.firstElementChild.style.display=''">
-            <i class="fa fa-question-circle"></i>
-        </button>
+    template:`<div>
+        <div class='d-flex flex-row align-items-end'>
+            <field-input :field='field' style='flex:1 1 auto'></field-input>
+            <button class='btn ml-1 btn-outline-dark border-0' type="button"
+                    onclick="this.parentNode.nextElementSibling.firstElementChild.style.display=''">
+                <i class="fa fa-question-circle"></i>
+            </button>
+        </div>
         <div style="position:relative">
-            <div style="position:absolute;left:-3rem;width:33vw;max-height:50vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
+            <div style="position:absolute;left:0;right:0;max-height:45vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
                  class='form-control shadow'>
                 <i class="fa fa-times-circle" style='font-size:125%;float:right;cursor:pointer' title='close'
                    onclick="this.parentNode.style.display='none'"></i>
