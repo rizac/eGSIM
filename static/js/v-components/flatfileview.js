@@ -37,26 +37,20 @@ Vue.component('flatfileview', {
             });
         }
     },
-    template: `<div class='flexible d-flex flex-column'>
+    template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
         <div class='mb-3'>
-            <egsim-form novalidate @submit.prevent="submit" class='d-flex flex-column' method='post'
-                  enctype="multipart/form-data">
-                <div class="d-flex flex-row flexible align-items-end">
-
-                    <flatfile-select :field="form.flatfile" :selexpr-field='form.selexpr'
-                                     class='d-flex flex-row align-items-baseline'>
-                    </flatfile-select>
-                    <field-input :field='form.x' class='ml-3'></field-input>
-                    <field-input :field='form.y' class='ml-3'></field-input>
-
-                    <button type="submit" class="ml-3 btn btn-primary mt-2">
-                        Display plot
-                    </button>
-
-                </div>
-            </egsim-form>
+            <base-form class='d-flex flex-row align-items-end'>
+                <slot>
+                    <div class="d-flex flex-row align-items-end mr-3" style='flex: 1 1 auto'>
+                        <flatfile-select :field="form.flatfile"></flatfile-select>
+                        <flatfile-selexpr-input :field="form.selexpr" class='ml-3' style='flex:1 1 auto'></flatfile-selexpr-input>
+                        <field-input :field='form.x' class='ml-3'></field-input>
+                        <field-input :field='form.y' class='ml-3'></field-input>
+                    </div>
+                </slot>
+            </base-form>
         </div>
-        <flatfile-plot-div :data="responseData" class='flexible'></flatfile-plot-div>
+        <flatfile-plot-div :data="responseData" style='flex: 1 1 auto'></flatfile-plot-div>
     </div>`
 });
 
@@ -163,7 +157,6 @@ Vue.component('flatfile-plot-div', {
 Vue.component('flatfile-select', {
     props: {
         field: {type: Object},
-        selexprField: {type: Object}
     },
     data(){
         // fieldProxy is a bridge between user input and final value: it has global 'choices'
@@ -242,65 +235,72 @@ Vue.component('flatfile-select', {
             }
         }
     },
-    template:`<div>
-        <div class='d-flex flex-row align-items-end'>
-            <field-input :field="fieldProxy"></field-input>
-            <a target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL">Ref.</a>
-            <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
-                    aria-label="Upload a user defined flatfile. Please click on help for details"
-                    data-balloon-pos="down" data-balloon-length="small">
-                upload
-            </button>
-            <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
-            <button class='btn ml-1 btn-outline-dark border-0' type="button"
-                    onclick="this.nextElementSibling.firstElementChild.style.display=''">
-                <i class="fa fa-question-circle"></i>
-            </button>
-            <div style="position:relative">
-                <div style="position:absolute;left:-3rem;width:33vw;max-height:50vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
-                     class='form-control shadow'>
-                    <i class="fa fa-times-circle ml-2" style='font-size:125%;float:right;cursor:pointer' title='close'
-                       onclick="this.parentNode.style.display='none'"></i>
-                    <div>
-                       To upload a user-defined flatfile, provide a plain-text or zipped CSV file
-                       where each row denotes an observed record and each column a record attribute.
-                       The number of flatfile columns required depends on the ground shaking intensity
-                       models used for comparison, because different models require different
-                       attributes. Non-required flatfile columns will be ignored but can be used for
-                       filtering records (see selection expression). However,
-                       <b>please try to implement the minimum
-                       required amount of columns to improve memory consumption and upload time</b>.
-                       <br><br>
-                       Flatfile possible columns inferred by all models required attributes:
-                       <ul>
-                           <li>event_id: event identifier (string or numeric): two event id are equal if and only if they refer to the same seismic event. Several rows can - and usually should - share the same event id</li>
-                           <li v-for="colelm in columns"> {{ colelm[0] }}: {{ colelm[1] }}</li>
-                       </ul>
-                    </div>
+    template:`
+    <div class='d-flex flex-row align-items-end'>
+        <field-input :field="fieldProxy"></field-input>
+        <a target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL">Ref.</a>
+        <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
+                aria-label="Upload a user defined flatfile. Please click on help for details"
+                data-balloon-pos="down" data-balloon-length="small">
+            upload
+        </button>
+        <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
+        <button class='btn ml-1 btn-outline-dark border-0' type="button"
+                onclick="this.nextElementSibling.firstElementChild.style.display=''">
+            <i class="fa fa-question-circle"></i>
+        </button>
+        <div style="position:relative">
+            <div style="position:absolute;left:-3rem;width:33vw;max-height:50vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
+                 class='form-control shadow'>
+                <i class="fa fa-times-circle ml-2" style='font-size:125%;float:right;cursor:pointer' title='close'
+                   onclick="this.parentNode.style.display='none'"></i>
+                <div>
+                   To upload a user-defined flatfile, provide a plain-text or zipped CSV file
+                   where each row denotes an observed record and each column a record attribute.
+                   The number of flatfile columns required depends on the ground shaking intensity
+                   models used for comparison, because different models require different
+                   attributes. Non-required flatfile columns will be ignored but can be used for
+                   filtering records (see selection expression). However,
+                   <b>please try to implement the minimum
+                   required amount of columns to improve memory consumption and upload time</b>.
+                   <br><br>
+                   Flatfile possible columns inferred by all models required attributes:
+                   <ul>
+                       <li>event_id: event identifier (string or numeric): two event id are equal if and only if they refer to the same seismic event. Several rows can - and usually should - share the same event id</li>
+                       <li v-for="colelm in columns"> {{ colelm[0] }}: {{ colelm[1] }}</li>
+                   </ul>
                 </div>
             </div>
         </div>
-        <div class='d-flex flex-row align-items-end'>
-            <field-input :field='selexprField' class='ml-3'></field-input>
-            <button class='btn ml-1 btn-outline-dark border-0' type="button"
-                    onclick="this.nextElementSibling.firstElementChild.style.display=''">
-                <i class="fa fa-question-circle"></i>
-            </button>
-            <div style="position:relative">
-                <div style="position:absolute;left:-3rem;width:33vw;max-height:50vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
-                     class='form-control shadow'>
-                    <i class="fa fa-times-circle" style='font-size:125%;float:right;cursor:pointer' title='close'
-                       onclick="this.parentNode.style.display='none'"></i>
-                    Filter matching rows typing an expression that operates on arbitrary
-                    flatfile columns, e.g.:
-                    <pre><code>magnitude>5</code></pre>
-                    Valid comparison operators are <b>== != &gt; &lt; &gt;= &lt;=</b>
-                    <br>Logical operators are <b>&</b> (and) <b>|</b> (or) <b>!</b> (not), e.g.:
-                    <pre><code>(magnitude >= 5) & (vs30 > 760)</code></pre>
-                    Use <b>notna([column])</b> to match rows where the column value is
-                    given, i.e. not "not available" (na). For instance:
-                    <pre><code>(magnitude>5) & (notna(rjb) | notna(repi))</code></pre>
-                </div>
+    </div>`
+});
+
+
+Vue.component('flatfile-selexpr-input', {
+    props: {
+        field: {type: Object}
+    },
+    template:`
+    <div class='d-flex flex-row align-items-end'>
+        <field-input :field='field' style='flex:1 1 auto'></field-input>
+        <button class='btn ml-1 btn-outline-dark border-0' type="button"
+                onclick="this.nextElementSibling.firstElementChild.style.display=''">
+            <i class="fa fa-question-circle"></i>
+        </button>
+        <div style="position:relative">
+            <div style="position:absolute;left:-3rem;width:33vw;max-height:50vh;top:0.1rem;display:none;overflow:auto;z-index:10;"
+                 class='form-control shadow'>
+                <i class="fa fa-times-circle" style='font-size:125%;float:right;cursor:pointer' title='close'
+                   onclick="this.parentNode.style.display='none'"></i>
+                Filter matching rows typing an expression that operates on arbitrary
+                flatfile columns, e.g.:
+                <pre><code>magnitude>5</code></pre>
+                Valid comparison operators are <b>== != &gt; &lt; &gt;= &lt;=</b>
+                <br>Logical operators are <b>&</b> (and) <b>|</b> (or) <b>!</b> (not), e.g.:
+                <pre><code>(magnitude >= 5) & (vs30 > 760)</code></pre>
+                Use <b>notna([column])</b> to match rows where the column value is
+                given, i.e. not "not available" (na). For instance:
+                <pre><code>(magnitude>5) & (notna(rjb) | notna(repi))</code></pre>
             </div>
         </div>
     </div>`
