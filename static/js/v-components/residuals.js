@@ -26,9 +26,9 @@ Vue.component('residuals', {
 
         <template v-slot:right-column>
             <imt-select :field="form.imt" size="6"></imt-select>
-            <div class="mt-4 form-control" style="background-color:transparent">
+            <div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
                 <flatfile-select :field="form.flatfile"></flatfile-select>
-                <flatfile-selexpr-input :field="form.selexpr" class='mt-2'></flatfile-selexpr-input>
+                <flatfile-selexpr-input :field="form.selexpr" class='mt-3'></flatfile-selexpr-input>
             </div>
 
             <div class="mt-4">
