@@ -14,15 +14,10 @@ from ..fields import ChoiceField
 from ... import models
 
 
-def get_flatfile_column_choices() -> list[list[str, str]]:
+def get_flatfile_column_choices() -> list[tuple[str, str]]:
+    """Returns the choices for the x and y Fields"""
     qry = models.FlatfileColumn.objects
-    cols = 'name', 'properties', 'help'
-    ret = []
-    for name, props, help_ in qry.only(*cols).values_list(*cols):
-        value = f"{help_ if help_ and help_ != name else name} (data type: " \
-                f"{props['dtype'] or 'unknown'})"
-        ret.append([name, value])
-    return ret
+    return [(_, _) for _ in qry.only('name').values_list('name')]
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):
