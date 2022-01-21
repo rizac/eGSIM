@@ -15,31 +15,10 @@ Vue.component('flatfileview', {
             responseData: this.response,
         }
     },
-    watch: {  // no-op
-    },
-    methods: {
-        submit: function(){
-            var form = this.form;
-            const formData = new FormData();
-
-            formData.append('file', file)
-            const config = {
-                headers: {
-                    'content-type': 'multipart/form-data'
-                }
-            }
-            return  post(url, formData,config)
-
-            EGSIM.post(this.url, formData, config).then(response => {  // defined in `vueutil.js`
-                if (response && response.data){
-                    this.responseData = response.data;
-                } 
-            });
-        }
-    },
     template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
         <div class='mb-3'>
-            <base-form class='d-flex flex-row align-items-end'>
+            <base-form :form="form" :url="url" class='d-flex flex-row align-items-end'
+                        @form-successfully-submitted="responseData=arguments[0]">
                 <slot>
                     <div class="d-flex flex-row align-items-end mr-3" style='flex: 1 1 auto'>
                         <flatfile-select :field="form.flatfile"></flatfile-select>
@@ -177,7 +156,7 @@ Vue.component('flatfile-select', {
             for (var ff of this.flatfiles){
                 if (ff.name == newVal){
                     if (ff.file){
-                        newVal = file;
+                        newVal = ff.file;
                     }
                     break
                 }
@@ -213,18 +192,20 @@ Vue.component('flatfile-select', {
         filesUploaded: function(files){
             var flatfiles = this.flatfiles;
             for (var file of files){
+                var label = `${file.name} (${new Date().toLocaleString()})`;
                 for (var i=0; i<flatfiles.length; i++){
                     var flatfile = flatfiles[i];
                     if ((flatfile.name == file.name) && (flatfile.file)){
                         // `flatfile.file` assures we are modifying an user uploaded flatfile
                         flatfile.file = file;
+                        flatfile.label = label;  // update label to show we overwrote the file
                         file = null;
                         break;
                     }
                 }
                 if (file != null){
                     flatfiles.push({
-                        name: file.name, label: `${file.name} (uploaded: ${new Date().toLocaleString()})`, file: file
+                        name: file.name, label: label, file: file
                     });
                 }
             }
@@ -252,11 +233,11 @@ Vue.component('flatfile-select', {
                    onclick="this.parentNode.style.display='none'"></i>
                 <div>
                    <p>
-                   To upload a user-defined flatfile, please upload it as uncompressed or zipped CSV file.
+                   To use your own flatfile, please upload it as uncompressed or zipped CSV file.
                    Each CSV row must denotes an observed record and each column a record attribute.
-                   The file must have at least one column denoting an observed Intensity measure
-                   to compare (PGA, PGV or SA typed with their period in parentheses, e.g. "Sa(0.1), Sa(0.2)"),
-                   and the columns of the parameters required by the ground shaking intensity models
+                   The file columns must be composed of the observed Intensity measure of interest
+                   (PGA, PGV or SA typed with their period in parentheses, e.g. "SA(0.1), SA(0.2)"),
+                   and the parameters required by the ground shaking intensity models
                    that are meant to be used, e.g., magnitude, vs30 (scroll down for a complete list).
                    Any flatfile column non required by any model will be ignored but can be used for
                    filtering records (see selection expression). However,

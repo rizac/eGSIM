@@ -88,7 +88,13 @@ var BASE_FORM = Vue.component('base-form', {
             const formData = new FormData();
             var formObj = this.formToJSON();
             for (var name of Object.keys(formObj)){
-                formData.append(name, formObj[name]);
+                // https://stackoverflow.com/a/63340869:
+                // in form-data content, null will be converted to "null". Either replace
+                // (but how to get a default?) or simply remove:
+                var val = formObj[name];
+                if ((val !== null) && (val !== undefined)){
+                    formData.append(name, val);
+                }
             }
             return formData;
         },

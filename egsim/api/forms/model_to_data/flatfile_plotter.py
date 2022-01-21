@@ -17,7 +17,7 @@ from ... import models
 def get_flatfile_column_choices() -> list[tuple[str, str]]:
     """Returns the choices for the x and y Fields"""
     qry = models.FlatfileColumn.objects
-    return [(_, _) for _ in qry.only('name').values_list('name')]
+    return [(_, _) for _ in qry.only('name').values_list('name', flat=True)]
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):
@@ -31,9 +31,9 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
 
     # plot_type = ChoiceField(required=True,
     #                         choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
-    x = ChoiceField(label='X', help_text="Select a flatfile column for the x values",
+    x = ChoiceField(label='X', help_text="The flatfile column for the x values",
                     required=True, choices=get_flatfile_column_choices)
-    y = ChoiceField(label='Y', help_text="Select a flatfile column for the y values",
+    y = ChoiceField(label='Y', help_text="The flatfile column for the y values",
                     required=True, choices=get_flatfile_column_choices)
 
     @classmethod
@@ -47,11 +47,11 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         dataframe = cleaned_data['flatfile']
         xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
         xvalues, yvalues = dataframe[xlabel], dataframe[ylabel]
-        xnan, ynan = pd.isnan(xvalues), pd.isnan(yvalues)
+        xnan, ynan = pd.isna(xvalues), pd.isna(yvalues)
         all_finite = ~(xnan | ynan)
         return {
-            'xvalues': xvalues[all_finite].tolist(),
-            'yvalues': yvalues[all_finite].tolist(),
+            'xvalues': xvalues[all_finite].values.tolist(),
+            'yvalues': yvalues[all_finite].values.tolist(),
             'xlabel': xlabel,
             'ylabel': ylabel,
             'nan_count': int(xnan.sum() + ynan.sum())
