@@ -71,7 +71,7 @@ class RESTAPIView(View):
             if not issubclass(self.formclass, FlatfileForm):
                 return error_response("The given URL does not support "
                                       "uploaded files", self.CLIENT_ERR_CODE)
-            return self.response(data=request.POST, files=request.FILES)
+            return self.response(data=request.POST.dict(), files=request.FILES)
         else:
             stream = StringIO(request.body.decode('utf-8'))
             inputdict = yaml.safe_load(stream)

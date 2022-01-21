@@ -89,7 +89,10 @@ class FlatfileForm(EgsimBaseForm):
         else:
             # u_ff = cleaned_data[key_u]
             try:
-                dataframe = read_flatfilefrom_csv_bytes(BytesIO(u_flatfile))
+                # u_flatfile is a Django TemporaryUploadedFile or InMemoryUploadedFile
+                # (the former if file size > configurable threshold
+                # (https://stackoverflow.com/a/10758350):
+                dataframe = read_flatfilefrom_csv_bytes(u_flatfile)
             except Exception as exc:
                 msg = str(exc)
                 # Use 'flatfile' as error key: users can not be confused
@@ -129,13 +132,22 @@ class MOF:  # noqa
     EDR = "edr"
 
 
-def read_flatfilefrom_csv_bytes(buffer, *, sep=None):
+def read_flatfilefrom_csv_bytes(buffer, *, sep=None) -> pd.DataFrame:
     dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
-    return read_flatfile(buffer, sep=sep, dtype=dtype,
-                         defaults=defaults)
+    # pre rename of IMTs lower case (SA excluded):
+    imts_cols = {_.lower(): _ for _ in
+                 models.Imt.objects.only('name').values_list('name', flat=True)
+                 if not _.startswith('SA')}
+    ret = read_flatfile(buffer, sep=sep, dtype=dtype, col_mapping=imts_cols,
+                        defaults=defaults)
+    # post rename of SA:
+    sa_cols = {c: c.upper() for c in ret.columns if c.startswith('sa(')}
+    if sa_cols:
+        ret.rename(columns=sa_cols, inplace=True)
+    return ret
 
 
-def reformat_selection_expression(dataframe, sel_expr):
+def reformat_selection_expression(dataframe, sel_expr) -> str:
     """Reformat the filter expression by changing `notna(column)` to
     column == column. Also change true/false to True/False
     """
