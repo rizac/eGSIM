@@ -26,7 +26,7 @@ Vue.component('flatfile', {
             return Object.keys(this.responseData.columns).sort();
         }
     },
-    template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
+    template: `<div class='d-flex flex-column' style='flex: 1 1 auto; overflow:hidden'>
         <div class='mb-3'>
             <base-form :form="form" :url="url" class='d-flex flex-row align-items-end'
                         @form-successfully-submitted="responseData=arguments[0]">
@@ -40,37 +40,20 @@ Vue.component('flatfile', {
                 </slot>
             </base-form>
         </div>
-        <div v-if="!!Object.keys(responseData).length">
+        <div v-if="!!Object.keys(responseData).length" style="overflow:auto">
             <div> Flatfile records (number of rows): {{ responseData.rows }}. Data details per column:</div>
             <div> Missing columns: {{ responseData.missing_columns }} (these columns need to be implemented only if the models requiring them are used)</div>
-            <div class='d-flex flex-row'>
-                <table>
-                    <thead>
-                        <tr>
-                            <td></td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="row in tableRows">
-                            <td class="text-nowrap"><b> {{ row }} </b> </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <table class='table' style='flex: 0 1 100%;overflow:auto'>
-                    <thead>
-                        <tr>
-                            <!-- <td></td> -->
-                            <td v-for="col in tableColumns">{{ col }}</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="row in tableRows">
-                            <!-- <td><b> {{ row }} </b> </td> -->
-                            <td v-for="col in tableColumns" :title="responseData.columns[col][row]">{{ val(col, row) }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <table class='table'>
+                <thead>
+                    <tr><td></td><td v-for="col in tableColumns">{{ col }}</td></tr>
+                </thead>
+                <tbody>
+                    <tr v-for="row in tableRows">
+                        <td><b> {{ row }} </b> </td>
+                        <td v-for="col in tableColumns" :title="responseData.columns[col][row]">{{ val(col, row) }}</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         <!-- <flatfile-plot-div :data="responseData" style='flex: 1 1 auto'></flatfile-plot-div> -->
     </div>`,
