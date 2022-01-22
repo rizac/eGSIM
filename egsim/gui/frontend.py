@@ -5,6 +5,7 @@ from django.db.models import Prefetch, QuerySet
 from . import TAB, URLS
 from ..api import models
 from ..api.forms import EgsimBaseForm
+from ..api.forms.flatfile.inspection import FlatfileInspectionForm
 from ..api.forms.tools import field_to_dict, field_to_htmlelement_attrs
 
 
@@ -109,9 +110,9 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                                     f"{TAB.trellis.download_response_filename}"
             }
         },
-        TAB.flatfileview.name: {  # FIXME REMOVE
-            'form': form_to_json(TAB.flatfileview.formclass, ignore_choices),
-            'url': TAB.flatfileview.urls[0]
+        TAB.flatfile.name: {  # FIXME REMOVE
+            'form': form_to_json(FlatfileInspectionForm),
+            'url': URLS.INSPECT_FLATFILE
         },
         TAB.residuals.name: {
             'form': form_to_json(TAB.residuals.formclass, ignore_choices),

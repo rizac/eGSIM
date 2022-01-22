@@ -11,9 +11,9 @@ from django.core.exceptions import ValidationError
 
 from smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
 
-from . import FlatfileForm, MOF, get_residuals
-from .. import APIForm, GsimImtForm, relabel_sa
-from ..fields import MultipleChoiceField, FloatField
+from .. import FlatfileForm, MOF, get_residuals
+from ... import APIForm, GsimImtForm, relabel_sa
+from ...fields import MultipleChoiceField, FloatField
 
 
 MOF_TYPE = {

@@ -11,11 +11,11 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-from .forms.model_to_data import FlatfileForm
-from .forms.model_to_model.trellis import TrellisForm
-from .forms.model_to_data.residuals import ResidualsForm
-from .forms.model_to_data.testing import TestingForm
-from .forms.model_to_data.flatfile_inspection import FlatfileInspectionForm
+from .forms.flatfile import FlatfileForm
+from .forms.trellis import TrellisForm
+from .forms.flatfile.comparison.residuals import ResidualsForm
+from .forms.flatfile.comparison.testing import TestingForm
+from .forms.flatfile.inspection import FlatfileInspectionForm
 from .forms import APIForm
 
 
@@ -30,8 +30,18 @@ QUERY_PARAMS_SAFE_CHARS = "-_.~!*'()"
 
 
 class RESTAPIView(View):
-    """Base view for every eGSIM REST API endpoint"""
-    # The form class:
+    """Base view for every eGSIM REST API endpoint. Typical usage:
+
+    1. For usage as view in `urls.py`: subclass and provide the relative `formclass`
+    2. For usage inside a `views.py` function, to process data with a `APIForm`
+       class `form_cls` (note: class not object):
+       ```
+       def myview(request):
+           return RESTAPIView.as_view(formclass=form_cls)(request)
+       ```
+    """
+    # The APIForm of this view. You can set it at a class level in subclasses,
+    # or pass at instance level via: `__init__(formclass=...)`
     formclass: Type[APIForm] = None
     # the URL(s) endpoints of the API (no paths, no slashes, just the name)
     urls: list[str] = []
@@ -73,8 +83,7 @@ class RESTAPIView(View):
             inputdict = yaml.safe_load(stream)
             return self.response(data=inputdict)
 
-    @classmethod
-    def response(cls, **form_kwargs):
+    def response(self, **form_kwargs):
         """process an input Response by calling `self.process` if the input is
         valid according to this class Form (`cls.formclass`). On error, return
         an appropriate JSON response
@@ -82,23 +91,23 @@ class RESTAPIView(View):
         :param form_kwargs: keyword arguments to be passed to this class Form
         """
         try:
-            form = cls.formclass(**form_kwargs)
+            form = self.formclass(**form_kwargs)
             if not form.is_valid():
                 err = form.validation_errors()
-                return error_response(err['message'], cls.CLIENT_ERR_CODE,
+                return error_response(err['message'], self.CLIENT_ERR_CODE,
                                       errors=err['errors'])
 
             response_data = form.response_data
             if form.data_format == form.DATA_FORMAT_CSV:
-                return cls.response_text(response_data)
+                return self.response_text(response_data)
             else:
-                return cls.response_json(response_data)
+                return self.response_json(response_data)
         except ValidationError as v_err:
             # str(ValidationError) is a list[str] (why???), use `message`:
-            return error_response(v_err.message, cls.CLIENT_ERR_CODE)
+            return error_response(v_err.message, self.CLIENT_ERR_CODE)
         except Exception as err:
             msg = f'Server error ({err.__class__.__name__}): {str(err)}'
-            return error_response(msg, cls.SERVER_ERR_CODE)
+            return error_response(msg, self.SERVER_ERR_CODE)
 
     @classmethod
     def response_json(cls, response_data: dict):
@@ -148,13 +157,6 @@ class TestingView(RESTAPIView):
 
     formclass = TestingForm
     urls = (f'{API_PATH}/testing', f'{API_PATH}/model-data-testing')
-
-
-class FlatfileInspectionView(RESTAPIView):
-    """EgsimQueryView subclass for inspecting a flatfile"""
-
-    formclass = FlatfileInspectionForm
-    urls = (f'{API_PATH}/ffinspection', f'{API_PATH}/flatfile-inspection')
 
 
 def error_response(exception: Union[str, Exception], code=500, **kwargs) -> JsonResponse:

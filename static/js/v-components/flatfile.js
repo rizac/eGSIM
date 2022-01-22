@@ -3,7 +3,7 @@
  * (first argument of 'Vue.component' below must be equal to this file's name 
  * (without extension)
  */
-Vue.component('ffinspection', {
+Vue.component('flatfile', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         form: Object,
@@ -15,6 +15,17 @@ Vue.component('ffinspection', {
             responseData: this.response,
         }
     },
+    computed: {
+        tableRows: function(){
+            var colNames = this.tableColumns;
+            if (!colNames.length){ return []; }
+            var firstColObj = this.responseData.columns[colNames[0]];
+            return Object.keys(firstColObj);
+        },
+        tableColumns: function(){
+            return Object.keys(this.responseData.columns).sort();
+        }
+    },
     template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
         <div class='mb-3'>
             <base-form :form="form" :url="url" class='d-flex flex-row align-items-end'
@@ -23,14 +34,55 @@ Vue.component('ffinspection', {
                     <div class="d-flex flex-row align-items-end mr-3" style='flex: 1 1 auto'>
                         <flatfile-select :field="form.flatfile"></flatfile-select>
                         <flatfile-selexpr-input :field="form.selexpr" class='ml-3' style='flex:1 1 auto'></flatfile-selexpr-input>
-                        <field-input :field='form.x' class='ml-3'></field-input>
-                        <field-input :field='form.y' class='ml-3'></field-input>
+                        <!-- <field-input :field='form.x' class='ml-3'></field-input>
+                             <field-input :field='form.y' class='ml-3'></field-input> -->
                     </div>
                 </slot>
             </base-form>
         </div>
-        <flatfile-plot-div :data="responseData" style='flex: 1 1 auto'></flatfile-plot-div>
-    </div>`
+        <div v-if="!!Object.keys(responseData).length">
+            <div> Flatfile records (number of rows): {{ responseData.rows }}. Data details per column:</div>
+            <div> Missing columns: {{ responseData.missing_columns }} (these columns need to be implemented only if the models requiring them are used)</div>
+            <div class='d-flex flex-row'>
+                <table>
+                    <thead>
+                        <tr>
+                            <td></td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in tableRows">
+                            <td class="text-nowrap"><b> {{ row }} </b> </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class='table' style='flex: 0 1 100%;overflow:auto'>
+                    <thead>
+                        <tr>
+                            <!-- <td></td> -->
+                            <td v-for="col in tableColumns">{{ col }}</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in tableRows">
+                            <!-- <td><b> {{ row }} </b> </td> -->
+                            <td v-for="col in tableColumns" :title="responseData.columns[col][row]">{{ val(col, row) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- <flatfile-plot-div :data="responseData" style='flex: 1 1 auto'></flatfile-plot-div> -->
+    </div>`,
+    methods: {
+        val(col, row){
+            var val = this.responseData.columns[col][row];
+            if ((typeof val == 'number') && (parseInt(val) != val) && (val > 0.00001)){
+                val = val.toFixed(5);
+            }
+            return val;
+        }
+    }
 });
 
 

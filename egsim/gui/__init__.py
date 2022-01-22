@@ -2,8 +2,7 @@ from enum import Enum
 from typing import Type
 # import here once all api modules (also those used in other modules of this package)
 from ..api.forms import APIForm
-from ..api.views import (ResidualsView, TestingView, TrellisView, RESTAPIView,
-                         FlatfileInspectionView)
+from ..api.views import (ResidualsView, TestingView, TrellisView, RESTAPIView)
 
 
 class URLS:  # noqa
@@ -13,6 +12,8 @@ class URLS:  # noqa
 
     # Url for getting the gsim list from a given geographic location:
     GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
+    # inspecting a flatfile:
+    INSPECT_FLATFILE = 'data/inspectflatfile'
 
     DOWNLOAD_REQUEST = 'data/downloadrequest'
 
@@ -39,7 +40,7 @@ class TAB(Enum):
     # icons (2nd element) are fontawesome bootsrap icons FIXME REF
     home = 'Home', 'fa-home'
     trellis = 'Model-to-Model Comparison', 'fa-area-chart', TrellisView
-    flatfileview = 'Flatfile inspection', 'fa-database', FlatfileInspectionView
+    flatfile = 'Flatfile inspection', 'fa-database'
     residuals = 'Model-to-Data Comparison', 'fa-bar-chart', ResidualsView
     testing = 'Model-to-Data Testing', 'fa-list', TestingView
     apidoc = 'API Doc / Legal Info', 'fa-info-circle'
