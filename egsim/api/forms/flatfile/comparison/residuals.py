@@ -15,9 +15,9 @@ from smtk.residuals.residual_plots import (residuals_density_distribution,
                                            likelihood)
 from smtk.database_visualiser import DISTANCE_LABEL
 
-from . import FlatfileForm, MOF, get_residuals
-from .. import APIForm, GsimImtForm, relabel_sa
-from ..fields import ChoiceField
+from .. import FlatfileForm, MOF, get_residuals
+from ... import APIForm, GsimImtForm, relabel_sa
+from ...fields import ChoiceField
 
 
 # For residuals with distance, use labels coded in smtk DISTANCE_LABEL dict:

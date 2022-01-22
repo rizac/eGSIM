@@ -17,7 +17,8 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import figutils, TAB
 from .frontend import get_context
-from ..api.forms.model_from_region.model_from_region import ModelFromRegionForm
+from ..api.forms.flatfile.inspection import FlatfileInspectionForm
+from ..api.forms.regionalization import GsimFromRegionForm
 from ..api.forms.tools import describe, serialize
 from ..api.models import FlatfileColumn
 from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS, RESTAPIView
@@ -219,12 +220,11 @@ def download_asimage(request, filename: str):
 
 
 def get_gsims_from_region(request):
-    jsondata = json.loads(request.body.decode('utf-8'))
-    form = ModelFromRegionForm(jsondata)
-    if not form.is_valid():
-        return JsonResponse(form.validation_errors())
-    else:
-        return JsonResponse(form.response_data)
+    return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
+
+
+def inspect_flatfile(request):
+    return RESTAPIView.as_view(formclass=FlatfileInspectionForm)(request)
 
 
 def _test_err(request):

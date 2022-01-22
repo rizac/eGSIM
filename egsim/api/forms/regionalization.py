@@ -6,16 +6,16 @@ from typing import Iterable, Any
 
 from shapely.geometry import Polygon, Point
 
-from ..fields import FloatField, MultipleChoiceWildcardField
-from .. import APIForm
-from ... import models
+from .fields import FloatField, MultipleChoiceWildcardField
+from . import APIForm
+from .. import models
 
 
 def get_regionalizations() -> Iterable[tuple[str, str]]:
     return [(_.name, str(_)) for _ in models.RegionalizationDataSource.objects.all()]
 
 
-class ModelFromRegionForm(APIForm):
+class GsimFromRegionForm(APIForm):
     """Form for Trellis plot generation"""
 
     # Set the public names of this Form Fields as `public_name: attribute_name`

@@ -1,9 +1,9 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from io import BytesIO
 import re
 from datetime import datetime
+from typing import Iterator
 
 import pandas as pd
 from django.core.exceptions import ValidationError
@@ -181,7 +181,7 @@ def get_residuals(flatfile: pd.DataFrame, gsim: list[str], imt: list[str]) -> Re
     flatfile columns into a ValidationError so that it can be returned as
     "client error" (4xx) response
     """
-    context_db = EgsimContextDB(flatfile, *flatfile_colnames())
+    context_db = EgsimContextDB(flatfile, *ctx_flatfile_colnames())
     residuals = Residuals(gsim, imt)
     try:
         residuals.get_residuals(context_db)
@@ -198,8 +198,8 @@ def get_residuals(flatfile: pd.DataFrame, gsim: list[str], imt: list[str]) -> Re
         raise kerr
 
 
-def flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
-    """Return rupture, site distance parameters as three dicts of
+def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    """Return rupture, site distance parameters as three `dict`s of
     flatfile column names mapped to the relative Context attribute used
     for residuals computation
     """
@@ -214,3 +214,9 @@ def flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]
         elif categ == models.FlatfileColumn.CATEGORY.DISTANCE_MEASURE:
             dist[ffname] = attname
     return rup, site, dist
+
+
+def flatfile_colnames() -> Iterator[str]:
+    """Yields all flatfile column names
+    """
+    yield from models.FlatfileColumn.objects.only('nemae').values_list('name', flat=True)  # noqa

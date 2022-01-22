@@ -20,9 +20,9 @@ from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                         MagnitudeDistanceSpectraTrellis,
                                         MagnitudeDistanceSpectraSigmaTrellis)
 
-from ..fields import (BooleanField, FloatField, ChoiceField, NArrayField,
-                      vectorize, isscalar)
-from .. import APIForm, GsimImtForm, relabel_sa
+from .fields import (BooleanField, FloatField, ChoiceField, NArrayField,
+                     vectorize, isscalar)
+from . import APIForm, GsimImtForm, relabel_sa
 
 PLOT_TYPE = {
     # key: (display label, trellis class, stddev trellis class)
