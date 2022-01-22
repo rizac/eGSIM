@@ -8,10 +8,12 @@ from smtk.sm_utils import DEFAULT_MSR
 from smtk.residuals import context_db
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
+EVENT_ID_COL = 'event_id'
 
 ############
 # Flatfile #
 ############
+
 
 def read_flatfile(filepath_or_buffer: str,
                   sep: str = None,
@@ -236,10 +238,10 @@ class EgsimContextDB(context_db.ContextDB):
 
     def get_event_and_records(self):
         # FIXME: pandas bug? flatfile bug?
-        # `return self._data.groupby(['event_id'])` should be sufficient, but
+        # `return self._data.groupby([EVENT_ID_COL])` should be sufficient, but
         # sometimes in the yielded `(ev_id, dfr)` tuple, `dfr` is empty and
         # `ev_id` is actually not in the dataframe (???). So:
-        yield from (_ for _ in self._data.groupby(['event_id']) if not _[1].empty)
+        yield from (_ for _ in self._data.groupby([EVENT_ID_COL]) if not _[1].empty)
 
     def get_observations(self, imtx, records, component="Geometric"):
 

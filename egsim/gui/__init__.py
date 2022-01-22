@@ -3,7 +3,7 @@ from typing import Type
 # import here once all api modules (also those used in other modules of this package)
 from ..api.forms import APIForm
 from ..api.views import (ResidualsView, TestingView, TrellisView, RESTAPIView,
-                         FlatfilePlotView)
+                         FlatfileInspectionView)
 
 
 class URLS:  # noqa
@@ -39,7 +39,7 @@ class TAB(Enum):
     # icons (2nd element) are fontawesome bootsrap icons FIXME REF
     home = 'Home', 'fa-home'
     trellis = 'Model-to-Model Comparison', 'fa-area-chart', TrellisView
-    flatfileview = 'Flatfile view', 'fa-database', FlatfilePlotView
+    flatfileview = 'Flatfile inspection', 'fa-database', FlatfileInspectionView
     residuals = 'Model-to-Data Comparison', 'fa-bar-chart', ResidualsView
     testing = 'Model-to-Data Testing', 'fa-list', TestingView
     apidoc = 'API Doc / Legal Info', 'fa-info-circle'

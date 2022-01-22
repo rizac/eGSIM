@@ -193,11 +193,13 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
 
 def get_gsim_choices():  # https://stackoverflow.com/a/57809521
-    return [(_, _) for _ in models.Gsim.objects.values_list('name', flat=True)]
+    return [(_, _) for _ in models.Gsim.objects.only('name').values_list('name',
+                                                                         flat=True)]
 
 
 def get_imt_choices():  # https://stackoverflow.com/a/57809521
-    return [(_, _) for _ in models.Imt.objects.values_list('name', flat=True)]
+    return [(_, _) for _ in models.Imt.objects.only('name').values_list('name',
+                                                                        flat=True)]
 
 
 class GsimImtForm(EgsimBaseForm):

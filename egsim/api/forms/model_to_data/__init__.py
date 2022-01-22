@@ -13,7 +13,7 @@ from pandas.core.computation.ops import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
-from ...flatfile import read_flatfile, EgsimContextDB
+from ...flatfile import read_flatfile, EgsimContextDB, EVENT_ID_COL
 from .. import EgsimBaseForm
 from ..fields import ModelChoiceField, CharField, FileField
 
@@ -102,6 +102,12 @@ class FlatfileForm(EgsimBaseForm):
                                                            code='invalid'))
                 return cleaned_data  # no need to further process
 
+        if EVENT_ID_COL not in dataframe.columns:
+            self.add_error("flatfile", ValidationError("Missing flatfile column "
+                                                       f"'{EVENT_ID_COL}'",
+                                                       code='invalid'))
+            return cleaned_data  # no need to further process
+
         key = 'selexpr'
         selexpr = cleaned_data.get(key, None)
         if selexpr:
@@ -138,7 +144,10 @@ def read_flatfilefrom_csv_bytes(buffer, *, sep=None) -> pd.DataFrame:
     imts_cols = {_.lower(): _ for _ in
                  models.Imt.objects.only('name').values_list('name', flat=True)
                  if not _.startswith('SA')}
-    ret = read_flatfile(buffer, sep=sep, dtype=dtype, col_mapping=imts_cols,
+    evid_cols = {'ev_id': EVENT_ID_COL, 'evt_id': EVENT_ID_COL, 'eventid': EVENT_ID_COL,
+                 'evtID': EVENT_ID_COL, 'eventID': EVENT_ID_COL}
+
+    ret = read_flatfile(buffer, sep=sep, dtype=dtype, col_mapping=imts_cols | evid_cols,
                         defaults=defaults)
     # post rename of SA:
     sa_cols = {c: c.upper() for c in ret.columns if c.startswith('sa(')}

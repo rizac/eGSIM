@@ -1,17 +1,13 @@
 """Module with the views for the web API (no GUI)"""
 import os
-from io import StringIO, BytesIO
+from io import StringIO
 from typing import Union, Type
 
 import yaml
 from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import UploadedFile
-from django.forms import Form
 
 from django.http import JsonResponse, HttpRequest
-from django.http.multipartparser import MultiPartParser
 from django.http.response import HttpResponse
-from django.utils.datastructures import MultiValueDict
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
@@ -19,7 +15,7 @@ from .forms.model_to_data import FlatfileForm
 from .forms.model_to_model.trellis import TrellisForm
 from .forms.model_to_data.residuals import ResidualsForm
 from .forms.model_to_data.testing import TestingForm
-from .forms.model_to_data.flatfile_plotter import FlatfilePlotForm
+from .forms.model_to_data.flatfile_inspection import FlatfileInspectionForm
 from .forms import APIForm
 
 
@@ -137,28 +133,28 @@ class TrellisView(RESTAPIView):
     """EgsimQueryView subclass for generating Trellis plots responses"""
 
     formclass = TrellisForm
-    urls = (f'{API_PATH}/trellis', f'{API_PATH}/model-model-comp')
+    urls = (f'{API_PATH}/trellis', f'{API_PATH}/model-model-comparison')
 
 
 class ResidualsView(RESTAPIView):
     """EgsimQueryView subclass for generating Residuals plot responses"""
 
     formclass = ResidualsForm
-    urls = (f'{API_PATH}/residuals', f'{API_PATH}/model-data-comp')
+    urls = (f'{API_PATH}/residuals', f'{API_PATH}/model-data-comparison')
 
 
 class TestingView(RESTAPIView):
     """EgsimQueryView subclass for generating Testing responses"""
 
     formclass = TestingForm
-    urls = (f'{API_PATH}/testing', f'{API_PATH}/model-data-test')
+    urls = (f'{API_PATH}/testing', f'{API_PATH}/model-data-testing')
 
 
-class FlatfilePlotView(RESTAPIView):
-    """EgsimQueryView subclass for generating Testing responses"""
+class FlatfileInspectionView(RESTAPIView):
+    """EgsimQueryView subclass for inspecting a flatfile"""
 
-    formclass = FlatfilePlotForm
-    urls = (f'{API_PATH}/flatfile-plot', f'{API_PATH}/ffplot')
+    formclass = FlatfileInspectionForm
+    urls = (f'{API_PATH}/ffinspection', f'{API_PATH}/flatfile-inspection')
 
 
 def error_response(exception: Union[str, Exception], code=500, **kwargs) -> JsonResponse:

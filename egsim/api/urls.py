@@ -3,7 +3,7 @@ from django.conf.urls import url  # added by default by django
 from django.contrib import admin  # added by default by django
 from re import escape as esc
 
-from .views import TrellisView, ResidualsView, TestingView, FlatfilePlotView
+from .views import TrellisView, ResidualsView, TestingView, FlatfileInspectionView
 
 # Watch out trailing slashes:
 # https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
@@ -13,5 +13,5 @@ urlpatterns = [
     *[url(r'^%s/?$' % esc(_), TrellisView.as_view()) for _ in TrellisView.urls],
     *[url(r'^%s/?$' % esc(_), ResidualsView.as_view()) for _ in ResidualsView.urls],
     *[url(r'^%s/?$' % esc(_), TestingView.as_view()) for _ in TestingView.urls],
-    *[url(r'^%s/?$' % esc(_), FlatfilePlotView.as_view()) for _ in FlatfilePlotView.urls],
+    *[url(r'^%s/?$' % esc(_), FlatfileInspectionView.as_view()) for _ in FlatfileInspectionView.urls],
 ]

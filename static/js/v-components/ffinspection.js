@@ -3,7 +3,7 @@
  * (first argument of 'Vue.component' below must be equal to this file's name 
  * (without extension)
  */
-Vue.component('flatfileview', {
+Vue.component('ffinspection', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         form: Object,
