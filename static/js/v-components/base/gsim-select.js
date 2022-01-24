@@ -5,9 +5,7 @@ Vue.component('gsim-select', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         field: {type: Object}, // see field-input
-        imtField: {type: Object, default: null}, // field of IMTs (can be null)
-        regionalizations: {type: Array, default: () => {[]}},
-        regionalizationQueryURL: {type: String}
+        imtField: {type: Object, default: null} // field of IMTs (can be null)
     },
     data: function () {
         // set <select> style
@@ -15,6 +13,7 @@ Vue.component('gsim-select', {
                             'border-bottom-right-radius: 0rem !important'].join(';')
         // return custom data:
         return {
+            regionalization: this.field['data-regionalization'] || {},
             filterBy: {  // DO NOT CHANGE KEYS!
                 name: "", // string matching gsim name(s)
                 imt: false,  // boolean (imt filter on off)
@@ -55,11 +54,11 @@ Vue.component('gsim-select', {
     },
     computed: {
     },
-    template: `<div class='d-flex flex-column'>
+    template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
 
-        <div class='d-flex flex-row'>
+        <div class='d-flex flex-row' flex="1 1 60%">
             <div style="position:relative; flex: 1 1 auto">
-                <field-input :field="field" size="15"></field-input>
+                <field-input :field="field" :cstyle="flex: 1 1 auto"></field-input>
                 <div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
                      style="position:absolute; right:2rem; top:3rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
                     <div v-for="w in warnings" class="small text-muted pt-2 px-3">
@@ -71,7 +70,7 @@ Vue.component('gsim-select', {
     
         <!-- GSIM FILTER CONTROLS: -->
         <div class="pt-2 d-flex flex-column form-control border-top-0 rounded-top-0"
-             style='flex: 1 1 auto; background-color:transparent !important'>
+             style='flex: 0 0 15rem; background-color:transparent !important'>
             <div class="d-flex flex-column" style='flex: 1 1 auto'>
                 <div class='mb-1' style='position:relative'>
                     <div class='mb-1'><i class="fa fa-filter"></i> Filter GSIMs &hellip;</div>
@@ -153,7 +152,7 @@ Vue.component('gsim-select', {
         },
         addRegionalizationControl(map){
             var field = this.field;
-
+            var regionalization = this.regionalization;
             var control = L.control({position: 'topright'});
             control.onAdd = function (map) {
                 var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded leaflet-control');
@@ -162,7 +161,7 @@ Vue.component('gsim-select', {
                 // Add title:
                 var title = L.DomUtil.create('span', '', div);
                 title.innerHTML = '<h6>Regionalization:</h6>';
-                for (var [val, name] of field.regionalization.choices){
+                for (var [val, name] of regionalization.choices){
                     var label = L.DomUtil.create('label', 'd-flex flex-row align-items-baseline', div);
                     var input = L.DomUtil.create('input',
                                                  "leaflet-control-layers-selector",
@@ -171,14 +170,14 @@ Vue.component('gsim-select', {
                     span.innerHTML = name;
                     input.setAttribute('type', 'checkbox');
                     input.setAttribute('value', val);
-                    input.checked = field.regionalization.value.includes(val);
+                    input.checked = regionalization.value.includes(val);
                     input.addEventListener('input', function (evt) {
                         var val = evt.target.value;
-                        var idx = field.regionalization.value.indexOf(val);
+                        var idx = regionalization.value.indexOf(val);
                         if (idx == -1){
-                            field.regionalization.value.push(val);
+                            regionalization.value.push(val);
                         }else{
-                            field.regionalization.value.splice(idx, 1);
+                            regionalization.value.splice(idx, 1);
                         }
                     });
                 }
@@ -196,10 +195,10 @@ Vue.component('gsim-select', {
             var data = {
                 'lat': latLng[0],
                 'lon': latLng[1],
-                'reg': this.field.regionalization.value
+                'reg': this.regionalization.value
             };
             // query data and update filter func:
-            EGSIM.post(this.field.regionalization.url, data).then(response => {  // defined in `vueutil.js`
+            EGSIM.post(this.regionalization.url, data).then(response => {  // defined in `vueutil.js`
                 var gsims = Array.isArray(response.data) ? response.data : Object.keys(response.data);
                 this.filterBy.map = null;
                 if(gsims && gsims.length){

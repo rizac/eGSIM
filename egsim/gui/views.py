@@ -8,7 +8,6 @@ from io import StringIO
 from os.path import join, dirname
 import json
 import yaml
-from django.http import JsonResponse
 
 from django.http.response import HttpResponse
 from django.shortcuts import render
@@ -17,7 +16,8 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import figutils, TAB
 from .frontend import get_context
-from ..api.forms.flatfile.inspection import FlatfileInspectionForm
+from ..api.forms.flatfile.compilation import FlatfileColumnsForm
+from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
 from ..api.forms.regionalization import GsimFromRegionForm
 from ..api.forms.tools import describe, serialize
 from ..api.models import FlatfileColumn
@@ -223,8 +223,16 @@ def get_gsims_from_region(request):
     return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
 
 
-def inspect_flatfile(request):
+def flatfile_inspection(request):
     return RESTAPIView.as_view(formclass=FlatfileInspectionForm)(request)
+
+
+def flatfile_columns(request):
+    return RESTAPIView.as_view(formclass=FlatfileColumnsForm)(request)
+
+
+def flatfile_plot(request):
+    return RESTAPIView.as_view(formclass=FlatfilePlotForm)(request)
 
 
 def _test_err(request):

@@ -13,7 +13,9 @@ class URLS:  # noqa
     # Url for getting the gsim list from a given geographic location:
     GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
     # inspecting a flatfile:
-    INSPECT_FLATFILE = 'data/inspectflatfile'
+    FLATFILE_INSPECTION = 'data/flatfile_inspection'
+    FLATFILE_COLUMNS = 'data/flatfile_columns'
+    FLATFILE_PLOT = 'data/flatfile_plot'
 
     DOWNLOAD_REQUEST = 'data/downloadrequest'
 
@@ -40,7 +42,7 @@ class TAB(Enum):
     # icons (2nd element) are fontawesome bootsrap icons FIXME REF
     home = 'Home', 'fa-home'
     trellis = 'Model-to-Model Comparison', 'fa-area-chart', TrellisView
-    flatfile = 'Flatfile inspection', 'fa-database'
+    flatfile = 'Flatfiles', 'fa-database'
     residuals = 'Model-to-Data Comparison', 'fa-bar-chart', ResidualsView
     testing = 'Model-to-Data Testing', 'fa-list', TestingView
     apidoc = 'API Doc / Legal Info', 'fa-info-circle'

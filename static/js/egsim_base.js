@@ -52,7 +52,8 @@ var EGSIM_BASE = {
             if (form.gsim){
                 // set form.gsim.choices as a deep copy of gsimObjects:
                 form.gsim.choices = gsimObjects.map(elm => Object.assign({}, elm));
-                form.gsim.regionalization = {
+                form.gsim.value || (form.gsim.value = []); // assure empty list (not null)
+                form.gsim['data-regionalization'] = {
                     url: regionalization.url,
                     choices: regionalization.names.map(elm => [elm, elm]),
                     value: Array.from(regionalization.names)
@@ -61,6 +62,7 @@ var EGSIM_BASE = {
             if (form.imt){
                 // set form.imt as a deep copy of imts:
                 form.imt.choices = Array.from(imts);
+                form.imt.value || (form.imt.value = []); // assure empty list (not null)
             }
             // set flatfile choices adn references. Note: share the same array, so
             // adding an uploaded flatfile updates all controls!

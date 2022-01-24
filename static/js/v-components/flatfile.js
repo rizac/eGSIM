@@ -6,8 +6,8 @@
 Vue.component('flatfile', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
-        form: Object,
-        url: String,
+        forms: Object,
+        urls: String,
         response: {type: Object, default: () => {return {}}}
     },
     data: function () {
@@ -26,7 +26,7 @@ Vue.component('flatfile', {
             return Object.keys(this.responseData.columns).sort();
         }
     },
-    template: `<div class='d-flex flex-column' style='flex: 1 1 auto; overflow:hidden'>
+    template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
         <div class='mb-3'>
             <base-form :form="form" :url="url" class='d-flex flex-row align-items-end'
                         @form-successfully-submitted="responseData=arguments[0]">
@@ -39,6 +39,43 @@ Vue.component('flatfile', {
                     </div>
                 </slot>
             </base-form>
+        </div>
+        <div class='d-flex flex-column' style="flex:1 1 auto; position: relative">
+            <div class='d-flex flex-row' style='flex: 1 1 auto'>
+                <div class='d-flex flex-column' style='flex: 1 1 40%'>
+                    <div style='font-family:sans-serif'>
+                        <p>Flatfiles must be uploaded as uncompressed or zipped CSV file with
+                        rows representing manually processed waveforms and columns denoting the
+                        waveform intensity measures and metadata.
+                        <p>
+                        The required intensity measures are user-dependent and can be PGA, PGV
+                        or SA with periods in brackets, e.g. "SA(0.1)", the required metadata
+                        depend on the models of interest which can be selected
+                        from the list below (the metadata flatfile columns will update accordingly).
+                        </p>
+                    </div>
+                    <div class='d-flex' style='flex:1 1 auto'>
+                        <gsim-select :field='form.gsim'></gsim-select>
+                    </div>
+                </div>
+                <div class='d-flex flex-column ml-3' style="flex: 1 1 60%">
+                    <div class='mb-2'> Flatfile Metadata columns: </div>
+                    <div style="flex: 1 1 auto; position:relative;overflow:auto">
+                        <table class="table" style='position:absolute;top:0;bottom:0;right:0;left:0'>
+                          <tr v-for="(cell, i) in form.flatfile['data-columns'][0]" v-if="i>0">
+                            <td v-html="colHTML(i)"></td>
+                          </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class='mt-3' style='font-family:sans-serif'>
+                Note: In general, there are no restriction on the number of columns of a flatfile, as
+                        any column provided can eventually be used in selection expressions
+                        for filtering records. <b>However, please
+                        try to provide the strict minimum of columns in order to improve
+                        memory consumption and upload time</b>
+            </div>
         </div>
         <div v-if="!!Object.keys(responseData).length" style="overflow:auto">
             <div> Flatfile records (number of rows): {{ responseData.rows }}. Data details per column:</div>
@@ -58,6 +95,19 @@ Vue.component('flatfile', {
         <!-- <flatfile-plot-div :data="responseData" style='flex: 1 1 auto'></flatfile-plot-div> -->
     </div>`,
     methods: {
+        colHTML(index){
+            var ff = this.form.flatfile['data-columns'];
+            var name = ff[0][index];
+            var desc = ff[1][index];
+            var dtype = ff[2][index];
+            if (Array.isArray(dtype)){
+                dtype = `Categories: ${dtype.join(", ")}`;
+            }else{
+                dtype = `Data type: ${dtype}`;
+            }
+            if (desc){ desc = ": " + desc;}
+            return `<b>${name}</b> <span class='text-muted'>(${dtype})</span>${desc}`;
+        },
         val(col, row){
             var val = this.responseData.columns[col][row];
             if ((typeof val == 'number') && (parseInt(val) != val) && (val > 0.00001)){
@@ -251,7 +301,7 @@ Vue.component('flatfile-select', {
             <field-input :field="fieldProxy"></field-input>
             <a target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL">Ref.</a>
             <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
-                    aria-label="Upload a user defined flatfile. Please click on help for details"
+                    aria-label="Upload a user-defined flatfile (CSV or zipped CSV). IMPORTANT NOTES: try to keep the file size below few Megabytes. Before usage, try to analyze your flatfile (see 'Flatfile' tab of the browser). An uploaded flatfile will be available in all page tabs"
                     data-balloon-pos="down" data-balloon-length="small">
                 upload
             </button>
