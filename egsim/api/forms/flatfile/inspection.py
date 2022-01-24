@@ -13,12 +13,11 @@ from . import FlatfileForm
 from .. import APIForm
 from ..fields import ChoiceField
 
-from ... import models
 from ..flatfile import flatfile_colnames
 
 
 class FlatfileInspectionForm(APIForm, FlatfileForm):
-    """Form for residual analysis"""
+    """Form for flatfile inspection, return stats from a given flatfile"""
 
     # Set the public names of this Form Fields as `public_name: attribute_name`
     # mappings. Superclass mappings are merged into this one. An attribute name
@@ -108,10 +107,11 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
             yield chain([stat_name], (s[stat_name] for s in col_stats))
         yield ['rows:', processed_data['rows']]
         yield ['events:', processed_data['events']]
+        yield ['missing columns:', processed_data['missing_columns']]
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):
-    """Form for residual analysis"""
+    """Form for plotting flatfile columns"""
 
     # Set the public names of this Form Fields as `public_name: attribute_name`
     # mappings. Superclass mappings are merged into this one. An attribute name

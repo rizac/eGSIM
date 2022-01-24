@@ -5,7 +5,8 @@ from django.views.generic.base import RedirectView
 
 from . import URLS, TAB
 from .views import (main, home, apidoc, download_request, download_response,
-                    imprint, get_gsims_from_region, inspect_flatfile)
+                    imprint, get_gsims_from_region, flatfile_inspection, flatfile_plot,
+                    flatfile_columns)
 
 # Watch out trailing slashes:
 # https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
@@ -34,7 +35,9 @@ urlpatterns = [
         download_response),
 
     url(r'^%s/?$' % URLS.GET_GSIMS_FROM_REGION, get_gsims_from_region),
-    url(r'^%s/?$' % URLS.INSPECT_FLATFILE, inspect_flatfile),
+    url(r'^%s/?$' % URLS.FLATFILE_INSPECTION, flatfile_inspection),
+    url(r'^%s/?$' % URLS.FLATFILE_COLUMNS, flatfile_columns),
+    url(r'^%s/?$' % URLS.FLATFILE_PLOT, flatfile_plot),
 
     # test stuff: (FIXME: REMOVE)
     # url(r'_test_err', _test_err),
