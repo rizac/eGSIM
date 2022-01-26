@@ -39,11 +39,13 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         missing_columns = set(flatfile_colnames()) - set(columns)
         columns = sorted(columns)
         stats = {c: cls.create_col_stats(dataframe, c) for c in columns}
+        # flatfile columns not present in this flatfile are set as {}:
+        for c in missing_columns:
+            stats[c] = {}
         return {
             'rows': len(dataframe),
             'events': len(pd.unique(dataframe.event_id)),
-            'columns': stats,
-            'missing_columns': list(missing_columns)
+            'columns': stats
         }
 
     @classmethod
@@ -67,15 +69,16 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
                 max_ = series.dtype.categories.max()  # categorical
             except AttributeError:
                 max_ = None  # give up: min is None
+        dtype = None if no_data else str(series.dtype)
         try:
             quantiles = [None] * 3 if no_data else series.quantile([0.05, 0.5, 0.95]).values
         except TypeError:
-            # boolean series, string sereis and so on
+            # boolean series, string series and so on
             quantiles = [None] * 3
         ret = {
             'distinct values': None if no_data else len(pd.unique(series_notna)),
             'missing values': na,
-            'values type': None if no_data else str(series.dtype),
+            'values type': None if no_data else dtype,
             'median': None if no_data else quantiles[1],
             'min': min_,
             'max': max_,
@@ -104,10 +107,9 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         yield chain([''], col_names)
         col_stats = processed_data['columns'].values()
         for stat_name in next(iter(col_stats)).keys():
-            yield chain([stat_name], (s[stat_name] for s in col_stats))
+            yield chain([stat_name], (s.get(stat_name, None) for s in col_stats))
         yield ['rows:', processed_data['rows']]
         yield ['events:', processed_data['events']]
-        yield ['missing columns:', processed_data['missing_columns']]
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):

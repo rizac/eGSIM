@@ -1,5 +1,6 @@
-from typing import Union, Callable, Any
+from typing import Union, Callable, Any, Iterable
 
+from enum import Enum
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
@@ -8,7 +9,20 @@ from smtk.sm_utils import DEFAULT_MSR
 from smtk.residuals import context_db
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
+
+# The event_id is not inserted as row in the database because of its particular nature:
+# it is not a flatfile metadata, it is not an intensity measure, and if we want to
+# change quickly its description we can do it here more explicitly:
+
 EVENT_ID_COL = 'event_id'
+
+EVENT_ID_DESC = "The event unique ID <b>required</b> to identify flatfile rows " \
+                "resulting from the same event. You can use the id " \
+                "provided by the event event web service used or create your own, as " \
+                "long as it holds: same id ⇔ same event"
+
+EVENT_ID_DTYPE = "Any (usually int or str)"
+
 
 ############
 # Flatfile #
@@ -125,6 +139,7 @@ def read_flatfile(filepath_or_buffer: str,
         if col in dtype_ib:
             dfr[col] = dfr[col].astype(dtype_ib[col])
 
+    _check(dfr)  # rename imts lower / upper case, check mandatory columns ...
     return dfr
 
 
@@ -182,6 +197,27 @@ def _read_csv_header(filepath_or_buffer, sep: str, reset_if_stream=True) -> pd.I
     if reset_if_stream and hasattr(filepath_or_buffer, 'seek'):
         filepath_or_buffer.seek(0)
     return columns
+
+
+def _check(flatfile: pd.DataFrame):
+    """Check the given flatfile, renaming inplace IMT lower case, and raising
+    if some required column is not present
+    """
+    col2rename = {}
+    mandatory = {EVENT_ID_COL}
+    imts = {'pga', 'pgv'}
+    for col in flatfile.columns:
+        if col in imts or (col.startswith("sa(") and col.endswith(")")):
+            col2rename[col] = col.upper()
+        if mandatory and col in mandatory:
+            mandatory.remove(col)
+
+    if mandatory:
+        raise ValueError(f"Column{'s' if len(mandatory) != 1 else ''} required: "
+                         f"{', '.join(mandatory)}")
+
+    if col2rename:
+        flatfile.rename(columns=col2rename, inplace=True)
 
 
 #######################################

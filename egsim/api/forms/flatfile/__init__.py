@@ -102,12 +102,6 @@ class FlatfileForm(EgsimBaseForm):
                                                            code='invalid'))
                 return cleaned_data  # no need to further process
 
-        if EVENT_ID_COL not in dataframe.columns:
-            self.add_error("flatfile", ValidationError("Missing flatfile column "
-                                                       f"'{EVENT_ID_COL}'",
-                                                       code='invalid'))
-            return cleaned_data  # no need to further process
-
         key = 'selexpr'
         selexpr = cleaned_data.get(key, None)
         if selexpr:
@@ -141,19 +135,9 @@ class MOF:  # noqa
 def read_flatfilefrom_csv_bytes(buffer, *, sep=None) -> pd.DataFrame:
     dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
     # pre rename of IMTs lower case (SA excluded):
-    imts_cols = {_.lower(): _ for _ in
-                 models.Imt.objects.only('name').values_list('name', flat=True)
-                 if not _.startswith('SA')}
-    evid_cols = {'ev_id': EVENT_ID_COL, 'evt_id': EVENT_ID_COL, 'eventid': EVENT_ID_COL,
-                 'evtID': EVENT_ID_COL, 'eventID': EVENT_ID_COL}
-
-    ret = read_flatfile(buffer, sep=sep, dtype=dtype, col_mapping=imts_cols | evid_cols,
-                        defaults=defaults)
-    # post rename of SA:
-    sa_cols = {c: c.upper() for c in ret.columns if c.startswith('sa(')}
-    if sa_cols:
-        ret.rename(columns=sa_cols, inplace=True)
-    return ret
+    # (skip, just use the default of read_flatfile: PGA, PGV, SA):
+    # imts = models.Imt.objects.only('name').values_list('name', flat=True)
+    return read_flatfile(buffer, sep=sep, dtype=dtype, defaults=defaults)
 
 
 def reformat_selection_expression(dataframe, sel_expr) -> str:

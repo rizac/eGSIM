@@ -11,7 +11,7 @@ from . import FlatfileForm
 from .. import APIForm, MultipleChoiceWildcardField, get_gsim_choices
 
 from .. import models
-from ...flatfile import EVENT_ID_COL
+from ...flatfile import EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE
 
 
 class FlatfileColumnsForm(APIForm, FlatfileForm):
@@ -24,7 +24,7 @@ class FlatfileColumnsForm(APIForm, FlatfileForm):
     # done here (see `egsim.forms.EgsimFormMeta` for details)
     public_field_names = {}
 
-    gsim = MultipleChoiceWildcardField(required=True, choices=get_gsim_choices,
+    gsim = MultipleChoiceWildcardField(required=False, choices=get_gsim_choices,
                                        label='Ground Shaking Intensity Model(s)')
 
 
@@ -36,19 +36,23 @@ class FlatfileColumnsForm(APIForm, FlatfileForm):
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
+        qry = models.FlatfileColumn.objects  # noqa
+
+        required = set()
         # Try to perform everything in a single more efficient query. Use
         # prefetch_related for this. It Looks like we need to assign the imts to a
         # new attribute, the attribute "Gsim.imts" does not work as expected
-        cols = Prefetch('imts', queryset=models.FlatfileColumn.objects.only('name'),
-                        to_attr='ffcolumns')
+        if cleaned_data.get('gsim', []):
+            required = set(qry.only('name').
+                           filter(gsims__name__in=cleaned_data['gsim']).
+                           values_list('name', flat=True))
 
-        qry = models.Gsim.objects.only('name').prefetch_related(cols)
-
-        columns = [EVENT_ID_COL]
-        for model in qry:
-            for col in model.ffcolumns:
-                if col not in columns:
-                    columns.append(col)
+        columns = {EVENT_ID_COL: {'help': EVENT_ID_DESC, 'dtype': EVENT_ID_DTYPE}}
+        attrs = 'name', 'help', 'properties'
+        for name, help, props in qry.only(*attrs).values_list(*attrs):
+            columns[name] = {}
+            if not required or name in required:
+                columns[name] = {'help': help, 'dtype': props['dtype']}
 
         return columns
 
@@ -62,4 +66,7 @@ class FlatfileColumnsForm(APIForm, FlatfileForm):
 
         :param processed_data: dict resulting from `self.process_data`
         """
-        return ([c] for c in processed_data)
+        names = processed_data.keys()
+        yield names
+        yield (processed_data[n].get('help', '') for n in names)
+        yield (processed_data[n].get('dtype', '') for n in names)

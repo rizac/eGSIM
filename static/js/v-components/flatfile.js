@@ -6,8 +6,144 @@
 Vue.component('flatfile', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
-        forms: Object,
-        urls: String,
+        forms: Array,
+        urls: Array
+        // response: {type: Object, default: () => {return {}}}
+    },
+    data: function () {
+        var compNames = ['flatfile-columns','flatfile-inspection', 'flatfile-plot']
+        var componentProps = {};
+        compNames.forEach((elm, index) => {
+            componentProps[elm] = {
+                form: this.forms[index],
+                url: this.urls[index]
+            };
+        }, this);
+        return {
+            componentNames: compNames,
+            componentProps: componentProps,
+            selComponent: compNames[0],
+        }
+    },
+    computed: {
+        tableRows: function(){
+            var colNames = this.tableColumns;
+            if (!colNames.length){ return []; }
+            var firstColObj = this.responseData.columns[colNames[0]];
+            return Object.keys(firstColObj);
+        },
+        tableColumns: function(){
+            return Object.keys(this.responseData.columns).sort();
+        }
+    },
+    template: `<transition name="fade" mode="out-in">
+    <keep-alive>
+        <!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
+        <component v-bind:is="selComponent" v-bind="componentProps[selComponent]"></component>
+    </keep-alive>
+    </transition>`
+});
+
+
+Vue.component('flatfile-columns', {
+    //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
+    props: {
+        form: Object,
+        url: String,
+        response: {type: Object, default: () => {return []}}
+    },
+    data: function () {
+        return {
+            responseData: this.response,
+            refreshDisabled: true
+        }
+    },
+    computed: {
+        tableRows: function(){
+            var colNames = this.tableColumns;
+            if (!colNames.length){ return []; }
+            var firstColObj = this.responseData.columns[colNames[0]];
+            return Object.keys(firstColObj);
+        },
+        tableColumns: function(){
+            return Object.keys(this.responseData.columns).sort();
+        }
+    },
+    mounted: {
+        if (!this.response.length){
+            Vue.post(this.url, {}).then(response => {
+                this.responseData = response.data;
+            });
+        }
+    },
+    template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
+        <div class='mb-3'>
+            <base-form :form="form" :url="url" class='d-flex flex-row align-items-end'
+                        @form-successfully-submitted="responseData=arguments[0]">
+
+                <div class='d-flex flex-column' style="flex:1 1 auto; position: relative">
+                    <div class='d-flex flex-row' style='flex: 1 1 auto'>
+                        <div class='d-flex flex-column' style='flex: 1 1 40%'>
+                            <div style='font-family:sans-serif'>
+                                <p>Flatfiles must be uploaded as uncompressed or zipped CSV file with
+                                rows representing manually processed waveforms and columns denoting the
+                                waveform intensity measures and metadata.
+                                <p>
+                                The required intensity measures are user-dependent and can be PGA, PGV
+                                or SA with periods in brackets, e.g. "SA(0.1)", the required metadata
+                                depend on the models of interest which can be selected
+                                from the list below (the metadata flatfile columns will update accordingly).
+                                </p>
+                            </div>
+                            <div class='d-flex' style='flex:1 1 auto'>
+                                <gsim-select :field='form.gsim' @gsim-selected='refreshDisabled=false'></gsim-select>
+                            </div>
+                        </div>
+                        <div class='d-flex flex-column ml-3' style="flex: 1 1 60%">
+                            <div class='mb-2'> Flatfile Metadata columns: <submit-button :disabled="refreshDisabled"></submit-button>  </div>
+                            <div style="flex: 1 1 auto; position:relative;overflow:auto">
+                                <table class="table" style='position:absolute;top:0;bottom:0;right:0;left:0'>
+                                  <tr v-for="(cell, i) in form.flatfile['data-columns'][0]" v-if="i>0">
+                                    <td v-html="colHTML(i)"></td>
+                                  </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class='mt-3' style='font-family:sans-serif'>
+                        Note: In general, there are no restriction on the number of columns of a flatfile, as
+                                any column provided can eventually be used in selection expressions
+                                for filtering records. <b>However, please
+                                try to provide the strict minimum of columns in order to improve
+                                memory consumption and upload time</b>
+                    </div>
+                </div>
+            </base_form>
+        </div>
+    </div>`,
+    methods: {
+        colHTML(index){
+            var ff = this.form.flatfile['data-columns'];
+            var name = ff[0][index];
+            var desc = ff[1][index];
+            var dtype = ff[2][index];
+            if (Array.isArray(dtype)){
+                dtype = `Categories: ${dtype.join(", ")}`;
+            }else{
+                dtype = `Data type: ${dtype}`;
+            }
+            if (desc){ desc = ": " + desc;}
+            return `<b>${name}</b> <span class='text-muted'>(${dtype})</span>${desc}`;
+        }
+    }
+});
+
+
+Vue.component('flatfile-columns', {
+    //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
+    props: {
+        form: Object,
+        url: String,
         response: {type: Object, default: () => {return {}}}
     },
     data: function () {

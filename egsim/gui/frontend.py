@@ -158,7 +158,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     return components_props
 
 
-class FlatfileTabForm(FlatfileInspectionForm, FlatfileCompilationHelper, FlatfilePlotForm):
+class FlatfileTabForm(FlatfileInspectionForm, FlatfileColumnsForm, FlatfilePlotForm):
     """Readonly Form for the Flatfile TAB: just a collector of fields to be transferred to frontend as
     JSOn dicts"""
     pass
