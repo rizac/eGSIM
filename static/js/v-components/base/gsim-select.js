@@ -7,6 +7,7 @@ Vue.component('gsim-select', {
         field: {type: Object}, // see field-input
         imtField: {type: Object, default: null} // field of IMTs (can be null)
     },
+    emits: ['gsim-selected'],
     data: function () {
         // set <select> style
         this.field.cstyle = ['border-bottom-left-radius: 0rem !important',
@@ -49,6 +50,7 @@ Vue.component('gsim-select', {
             immediate: true,
             handler: function(newVal, oldVal){
                 this.updateWarnings();
+                this.$emit('gsim-selected', newVal)
             }
         }
     },
