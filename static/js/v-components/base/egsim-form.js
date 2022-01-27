@@ -8,29 +8,28 @@ Vue.component('submit-button', {  // provide a single place for styling the subm
     </button>`
 });
 
-var BASE_FORM = Vue.component('base-form', {
-    props :{
+var BASE_FORM = {
+    props: {
         form: Object,
         url: String,
     },
     data: function () {
         return {}
     },
-    emits: ['form-successfully-submitted'], // Vue 3 required attr (in case we migrate)
     methods: {
         submit: function(){
+            // submits the form data at the form URL (see props).
+            // This method can be used with a form template written as:
+            // <form novalidate @submit.prevent="submit"> ...
+
             // send the main post request to `this.url` using `this.form` as POST data
-            this.post(this.url).then(response => {
+            return this.post(this.url).then(response => {
                 if (response && response.data){
                     if ((typeof response.data === 'object') && !!(Object.keys(response.data).length)){
-                        this.show = !this.show;
-                        this.showAsDialog = true;
-                        setTimeout(() => {
-                            // notify asynchronously after the form has been hidden:
-                            this.$emit('form-successfully-submitted', response.data);
-                        }, 250);
+                        return response.data; // allows .then on the Promise
                     }
                 }
+                throw new Error('response empty');  // should allow to .catch the promise in case
             }).catch(response => {
                 var errData = (response.response || {}).data;
                 var error = (errData || {}).error || {};
@@ -42,6 +41,7 @@ var BASE_FORM = Vue.component('base-form', {
                         this.form[paramName].error = err.message || 'invalid: unknown error';
                     }
                 }
+                throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
             });
         },
         post: function(url){
@@ -98,12 +98,8 @@ var BASE_FORM = Vue.component('base-form', {
             }
             return formData;
         },
-    },
-    template: `<form novalidate @submit.prevent="submit">
-        <slot></slot>
-        <submit-button></submit-button>
-    </form>`
-});
+    }
+};
 
 /**
  * Represents a base form used in trellis, residuals, testing
@@ -125,7 +121,18 @@ Vue.component('egsim-form', {
             downloadActions: this.createDownloadActions()
         }
     },
+    emits: ['form-successfully-submitted'], // Vue 3 required attr (in case we migrate)
     methods: {
+        submitMe: function(responseData){  // overrides super method
+            this.submit().then(responseData => {
+                this.show = !this.show;
+                this.showAsDialog = true;
+                setTimeout(() => {
+                    // notify asynchronously after the form has been hidden:
+                    this.$emit('form-successfully-submitted', response.data);
+                }, 250);
+            });
+        },
         // toolbar methods:
         fetchRequestURL: function(){
             // Fetches
@@ -271,7 +278,7 @@ Vue.component('egsim-form', {
     },
     template: `
     <transition :name="mounted ? 'egsimform' : ''">
-    <form novalidate @submit.prevent="submit" v-show="show"
+    <form novalidate @submit.prevent="submitMe" v-show="show"
           :class="[showAsDialog ? ['shadow', 'border', 'bg-light', 'mb-2'] : '']"
           class="d-flex flex-column position-relative pb-4 align-self-center"
           style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important">
