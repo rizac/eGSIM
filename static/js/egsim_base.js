@@ -148,9 +148,11 @@ var EGSIM_BASE = {
                var compProps = this.componentProps[name];
                if (typeof compProps === 'object'){
                    Object.keys(compProps).forEach(pname => {
-                       var element = compProps[pname];
-                       if (this.isFormObject(element)){
-                           ret.push([name, element]);
+                       var elm = compProps[pname];
+                       for (element of (Array.isArray(elm) ? elm : [elm])){
+                           if (this.isFormObject(element)){
+                               ret.push([name, element]);
+                           }
                        }
                    });
                }

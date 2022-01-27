@@ -14,7 +14,7 @@ from .. import models
 from ...flatfile import EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE
 
 
-class FlatfileColumnsForm(APIForm, FlatfileForm):
+class FlatfileColumnsForm(APIForm):
     """Form for flatfile compilation, return the necessary columns from a
     given list of Gsims"""
 

@@ -60,7 +60,7 @@ Vue.component('gsim-select', {
 
         <div class='d-flex flex-row' flex="1 1 60%">
             <div style="position:relative; flex: 1 1 auto">
-                <field-input :field="field" :cstyle="flex: 1 1 auto"></field-input>
+                <field-input :field="field" :cstyle="'flex: 1 1 auto'"></field-input>
                 <div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
                      style="position:absolute; right:2rem; top:3rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
                     <div v-for="w in warnings" class="small text-muted pt-2 px-3">
