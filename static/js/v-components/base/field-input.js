@@ -116,21 +116,21 @@ Vue.component('base-input', {
 
         // setup the style classes:
         var cls = {
-            label: 'text-nowrap mr-1',
+            label: '',
             rootDiv: 'd-flex flex-row align-items-baseline'
         };
         hasLabel = !!this.$slots.default || !!(this.$scopedSlots || {}).default;
         // change some classes according to current configuration:
-        if (!hasLabel){
-            cls.rootDiv = '';
-        }else if(data.isSelectMultiple ||
+        if(data.isSelectMultiple ||
                  (data.isSelect && parseInt(data.attrs.size || 1) > 1)){
             // two rows layout (label above component):
-            cls.rootDiv = 'text-nowrap';
+            cls.rootDiv = 'text-nowrap d-flex flex-column';
             cls.label = 'text-nowrap mb-1';
         }else if (data.isBool){
             cls.rootDiv = 'text-nowrap';
-            cls.label = 'text-nowrap';
+            cls.label = 'text-nowrap ml-1';
+        }else if(hasLabel){
+            cls.label += 'text-nowrap mr-1';
         }
 
         return Object.assign({
@@ -156,12 +156,14 @@ Vue.component('base-input', {
     },
     computed: {
         mainComponentStyle: function(){
-            var style = this.cstyle;
-            if (!!this.error){
-                var errc = `border-color: ${this.errorColor} !important`;
-                style += `${style.trim().slice(-1) != ';' ? ';' : ''}${errc};`
+            var style = (this.cstyle || "").split(';');
+            if(this.isSelectMultiple && !style.some(e => e.trim().startsWith('flex:'))){
+                style.push('flex: 1 1 auto');
             }
-            return style;
+            if (!!this.error){
+                style.push(`border-color: ${this.errorColor} !important`);
+            }
+            return style.join(';');
         },
         val: {  // https://stackoverflow.com/questions/47311936/v-model-and-child-components
             get() {
@@ -185,12 +187,12 @@ Vue.component('base-input', {
         </label>
         <select v-if="isSelect" v-model="val" v-bind="attrs" :disabled='disabled'
                 :class="mainComponentClasses" :style="mainComponentStyle" ref='selectComponent'>
-	        <option	v-for='opt in options' :value="opt.value" :disabled="opt.disabled"
-	                :class="opt.class" :style="opt.style" v-html="opt.innerHTML">
-	        </option>
-	    </select>
-	    <input v-else-if="!isBool"  v-model="val" v-bind="attrs" :disabled='disabled'
-	           :class="mainComponentClasses" :style="mainComponentStyle">
+            <option	v-for='opt in options' :value="opt.value" :disabled="opt.disabled"
+                    :class="opt.class" :style="opt.style" v-html="opt.innerHTML">
+            </option>
+        </select>
+        <input v-else-if="!isBool"  v-model="val" v-bind="attrs" :disabled='disabled'
+               :class="mainComponentClasses" :style="mainComponentStyle">
         </div>`,
     methods: {
         makeOptions: function(choices) {
@@ -275,7 +277,7 @@ Vue.component('field-input', {
             return 'flex: 1 1 auto;' + color;
         },
     },
-    template: `<div>
+    template: `<div class="d-flex flex-column" style="flex: 1 1 auto">
         <div class="d-flex flex-row mb-0 align-items-baseline">
             <base-input v-if="isBool" v-model="field.value" :error="!!field.error"
                         v-bind="attrs" :choices="field.choices" :cstyle="field.cstyle"
