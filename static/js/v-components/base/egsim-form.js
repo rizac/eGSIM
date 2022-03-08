@@ -25,7 +25,8 @@ var BASE_FORM = {
             // send the main post request to `this.url` using `this.form` as POST data
             return this.post(this.url).then(response => {
                 if (response && response.data){
-                    if ((typeof response.data === 'object') && !!(Object.keys(response.data).length)){
+                    // response data must not be empty Array empty Object:
+                    if ((typeof response.data !== 'object') || !!(Object.keys(response.data).length)){
                         return response.data; // allows .then on the Promise
                     }
                 }

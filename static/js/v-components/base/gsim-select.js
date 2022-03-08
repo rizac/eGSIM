@@ -58,8 +58,8 @@ Vue.component('gsim-select', {
     },
     template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
 
-        <div class='d-flex flex-row' flex="1 1 60%">
-            <div style="position:relative; flex: 1 1 auto">
+        <div class='d-flex flex-column' style="flex: 1 1 60%">
+            <div class='d-flex flex column' style="position:relative; flex: 1 1 auto">
                 <field-input :field="field" :cstyle="'flex: 1 1 auto'"></field-input>
                 <div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
                      style="position:absolute; right:2rem; top:3rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
@@ -72,7 +72,7 @@ Vue.component('gsim-select', {
     
         <!-- GSIM FILTER CONTROLS: -->
         <div class="pt-2 d-flex flex-column form-control border-top-0 rounded-top-0"
-             style='flex: 0 0 15rem; background-color:transparent !important'>
+             style='flex: 1 1 20rem; background-color:transparent !important'>
             <div class="d-flex flex-column" style='flex: 1 1 auto'>
                 <div class='mb-1' style='position:relative'>
                     <div class='mb-1'><i class="fa fa-filter"></i> Filter GSIMs &hellip;</div>

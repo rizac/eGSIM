@@ -90,15 +90,14 @@ Vue.component('flatfile-columns', {
         <div class='d-flex flex-row' style='flex: 1 1 auto'>
             <div class='d-flex flex-column' style='flex: 1 1 40%'>
                 <div style='font-family:sans-serif'>
-                    <p>Flatfiles must be uploaded as uncompressed or zipped CSV file with
-                    rows representing manually processed waveforms and columns denoting the
-                    waveform intensity measures and metadata.
-                    <p>
-                    The required intensity measures are user-dependent and can be PGA, PGV
-                    or SA with periods in brackets, e.g. "SA(0.1)", the required metadata
-                    depend on the models of interest which can be selected
-                    from the list below (the metadata flatfile columns will update accordingly).
-                    </p>
+                    Flatfiles must be uploaded as uncompressed or zipped CSV file with
+                    rows representing manually processed waveforms and columns denoting:
+                    <ul>
+                    <li>The intensity measures of interest (supported are PGA, PGV
+                    or SA with periods in brackets, e.g. "SA(0.1)")</li>
+                    <li>The metadata required by the models used. Select
+                    your models below to see the required flatfile columns in the right table:</li>
+                    </ul>
                 </div>
                 <div class='d-flex' style='flex:1 1 auto'>
                     <gsim-select :field='form.gsim' @gsim-selected='gsimSelected'></gsim-select>
@@ -369,6 +368,14 @@ Vue.component('flatfile-plot-div', {
 Vue.component('flatfile-select', {
     props: {
         field: {type: Object},
+        doc: {
+            type: String,
+            default: `Upload a user-defined flatfile (CSV or zipped CSV).
+                      IMPORTANT: please read compile instructions (tab "Flatfiles > Compile")
+                      and try to inspect your flatfile before usage (tab "Flatfiles > Inspect").
+                      An uploaded flatfile size should be kept within few Mb. Any uploaded
+                      flatfile will be available in all page tabs`
+        }
     },
     data(){
         // fieldProxy is a bridge between user input and final value: it has global 'choices'
@@ -449,53 +456,10 @@ Vue.component('flatfile-select', {
             <field-input :field="fieldProxy"></field-input>
             <a target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL">Ref.</a>
             <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
-                    aria-label="Upload a user-defined flatfile (CSV or zipped CSV). IMPORTANT NOTES: try to keep the file size below few Megabytes. Before usage, try to analyze your flatfile (see 'Flatfile' tab of the browser). An uploaded flatfile will be available in all page tabs"
-                    data-balloon-pos="down" data-balloon-length="small">
+                    :aria-label='doc' data-balloon-pos="down" data-balloon-length="large">
                 upload
             </button>
             <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
-            <button class='btn ml-1 btn-outline-dark border-0' type="button"
-                    onclick="this.parentNode.nextElementSibling.firstElementChild.style.display=''">
-                <i class="fa fa-question-circle"></i>
-            </button>
-        </div>
-        <div style="position:relative">
-            <div style="position:absolute;left:0;right:0;max-height:45vh;top:0.1rem;display:none;overflow:auto;z-index:10;font-family:sans-serif"
-                 class='form-control shadow'>
-                <i class="fa fa-times-circle ml-2" style='font-size:110%;float:right;cursor:pointer' title='close'
-                   onclick="this.parentNode.style.display='none'"></i>
-                <div>
-                   <p>
-                   To use your own flatfile, please upload it as uncompressed or zipped CSV file.
-                   Each CSV row must denotes an observed record and each column a record attribute.
-                   The file columns must be composed of the observed Intensity measure of interest
-                   (PGA, PGV or SA typed with their period in parentheses, e.g. "SA(0.1), SA(0.2)"),
-                   and the parameters required by the ground shaking intensity models
-                   that are meant to be used, e.g., magnitude, vs30 (scroll down for a complete list).
-                   Any flatfile column non required by any model will be ignored but can be used for
-                   filtering records (see selection expression). However,
-                   <b>please try to provide the strict minimum of columns in order to improve
-                   memory consumption and upload time</b>.
-                   </p>
-                   <table class="table table-sm">
-                       <tr>
-                           <th>Flatfile column</th><th>Description</th><th>Data type</th></tr>
-                       <tr>
-                           <td>event_id</td>
-                           <td>a <b>mandatory</b> record event id: <i>two event id must be
-                               equal if and only if they refer to the same seismic event</i>. Several
-                               rows can - and usually should - share the same event id. Many
-                               event web services provide their own ID which serves the purpose
-                               effortless
-                           </td>
-                           <td>str or int</td>
-                       </tr>
-                       <tr v-for="cname in Object.keys(columns)">
-                            <td>{{ cname }} </td><td> {{ columns[cname][1] }} </td><td> {{ columns[cname][0] }}</td>
-                       </tr>
-                   </table>
-                </div>
-            </div>
         </div>
     </div>`
 });
@@ -503,31 +467,24 @@ Vue.component('flatfile-select', {
 
 Vue.component('flatfile-selexpr-input', {
     props: {
-        field: {type: Object}
+        field: {type: Object},
+        doc: {
+            type: String,
+            default: `Type an expression that operates on arbitrary flatfile columns to select
+                      only rows matching the expression, e.g.: "magnitude>5" (quote characters "" excluded).
+                      Valid comparison operators are == != > < >= <=.
+                      Logical operators are & (and) | (or) ! (not), e.g.:
+                      "(magnitude >= 5) & (vs30 > 760)".
+                      Use notna([column]) to match rows where the column value is given,
+                      i.e. not 'not available' (na). For instance, to get records where at rjb or
+                      repi is available:
+                      "(magnitude>5) & (notna(rjb) | notna(repi))"`
+        }
     },
     template:`<div>
-        <div class='d-flex flex-row align-items-end'>
+        <div class='d-flex flex-row align-items-end'
+             :aria-label="doc" data-balloon-pos="down" data-balloon-length="xlarge">
             <field-input :field='field' style='flex:1 1 auto'></field-input>
-            <button class='btn ml-1 btn-outline-dark border-0' type="button"
-                    onclick="this.parentNode.nextElementSibling.firstElementChild.style.display=''">
-                <i class="fa fa-question-circle"></i>
-            </button>
-        </div>
-        <div style="position:relative">
-            <div style="position:absolute;left:0;right:0;max-height:45vh;top:0.1rem;display:none;overflow:auto;z-index:10;font-family:sans-serif"
-                 class='form-control shadow'>
-                <i class="fa fa-times-circle" style='font-size:110%;float:right;cursor:pointer' title='close'
-                   onclick="this.parentNode.style.display='none'"></i>
-                Filter matching rows typing an expression that operates on arbitrary
-                flatfile columns, e.g.:
-                <pre><code>magnitude>5</code></pre>
-                Valid comparison operators are <b>== != &gt; &lt; &gt;= &lt;=</b>
-                <br>Logical operators are <b>&</b> (and) <b>|</b> (or) <b>!</b> (not), e.g.:
-                <pre><code>(magnitude >= 5) & (vs30 > 760)</code></pre>
-                Use <b>notna([column])</b> to match rows where the column value is
-                given, i.e. not "not available" (na). For instance:
-                <pre><code>(magnitude>5) & (notna(rjb) | notna(repi))</code></pre>
-            </div>
         </div>
     </div>`
 });
