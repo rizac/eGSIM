@@ -21,7 +21,7 @@ class propname(str, Enum):  # noqa
 
 # Provide a class that is callable like Python builtin types for datetime objects:
 # `datetime(obj) -> python datetime`, where `obj` is a datetime, date or iso formatted
-# string. IMPORTANT: Any custom tye class like this one must have the name equals
+# string. IMPORTANT: Any custom type class like this one must have the name equals
 # one of the supported dtypes documented in the YAML (so, e.g., `class dtime` would be
 # wrong)
 class datetime:  # noqa

@@ -81,6 +81,7 @@ def read_flatfile(filepath_or_buffer: str,
     """
     kwargs['sep'] = sep
     kwargs.setdefault('encoding', 'utf-8-sig')
+    kwargs.setdefault('comment', '#')
 
     # CSV columns can be renamed via `read_csv(..., names=[...], header=0, ...)`
     # or simply by calling afterwards `dataframe.rename(columns={...})`. Both

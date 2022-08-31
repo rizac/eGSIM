@@ -201,6 +201,6 @@ def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, s
 
 
 def flatfile_colnames() -> Iterator[str]:
-    """Yields all flatfile column names
+    """Yields all flatfile column names stored in the database
     """
     yield from models.FlatfileColumn.objects.only('nemae').values_list('name', flat=True)  # noqa

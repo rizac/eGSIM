@@ -329,8 +329,8 @@ class RegionalizationDataSource(_DataSource):
 def _is_field_value_unique(instance: Model, field_name: str, ignore_nulls=True):
     """Return True if the instance field value is unique by querying the db table
 
-    :param instance: a Model instance
-    :param field_name: the instance field name to check
+    :param instance: a Model instance (or db table row)
+    :param field_name: the instance field name to check (db table column name)
     :param ignore_nulls: boolean (default True): ignore null. I.e., allow
         multiple null values
     """

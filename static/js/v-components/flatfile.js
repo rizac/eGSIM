@@ -11,7 +11,7 @@ Vue.component('flatfile', {
         // response: {type: Object, default: () => {return {}}}
     },
     data: function () {
-        var compNames = ['flatfile-columns'];  //, 'flatfile-inspection', 'flatfile-plot'];
+        var compNames = ['flatfile-compilation', 'flatfile-inspection'];  //, 'flatfile-inspection', 'flatfile-plot'];
         var compProps = {};
         compNames.forEach((elm, index) => {
             compProps[elm] = {
@@ -20,9 +20,8 @@ Vue.component('flatfile', {
             };
         }, this);
         var compLabels = {
-            'flatfile-columns': 'Help',
-            'flatfile-inspection': 'Inspection',
-            'flatfile-plot': 'Plot'
+            'flatfile-compilation': 'Compilation',
+            'flatfile-inspection': 'Inspection'
         };
         return {
             componentNames: compNames,
@@ -32,36 +31,38 @@ Vue.component('flatfile', {
         }
     },
     computed: {
-        tableRows: function(){
-            var colNames = this.tableColumns;
-            if (!colNames.length){ return []; }
-            var firstColObj = this.responseData.columns[colNames[0]];
-            return Object.keys(firstColObj);
-        },
-        tableColumns: function(){
-            return Object.keys(this.responseData.columns).sort();
-        }
+//        tableRows: function(){
+//            var colNames = this.tableColumns;
+//            if (!colNames.length){ return []; }
+//            var firstColObj = this.responseData.columns[colNames[0]];
+//            return Object.keys(firstColObj);
+//        },
+//        tableColumns: function(){
+//            return Object.keys(this.responseData.columns).sort();
+//        }
     },
-    template: `
-    <div class='d-flex flex-column' stle='flex: 1 1 auto'>
+   template: `
+    <div class='d-flex flex-column' style='flex: 1 1 auto'>
         <ul class="nav nav-tabs">
             <li class="nav-item" v-for="compName in componentNames">
                 <a class="nav-link" :class="selComponentName==compName ? 'active' : ''"
-                   :click='selComponentName=compName'
+                   @click='selComponentName=compName'
                    :aria-current="compName" href="#">{{ componentLabels[compName] }}</a>
             </li>
         </ul>
+
         <transition name="fade" mode="out-in">
         <keep-alive>
             <!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
             <component v-bind:is="selComponentName" v-bind="componentProps[selComponentName]"></component>
         </keep-alive>
         </transition>
+
     </div>`
 });
 
 
-Vue.component('flatfile-columns', {
+Vue.component('flatfile-compilation', {
     mixins: [BASE_FORM],
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
@@ -70,87 +71,157 @@ Vue.component('flatfile-columns', {
         response: {type: Object, default: () => {return {}}}
     },
     data: function () {
+        this.form.gsim.value = this.form.gsim.choices.map(elm => elm.value);
         return {
-            responseData: this.response
+            responseData: this.response,
+            imts: {
+                value: ['SA(0.1)', 'SA(0.2)', 'SA(0.3)', 'SA(0.5)',  'SA(1.0)', 'PGA', 'PGV'],
+                error: '',
+                choices: ['SA', 'PGA', 'PGV'],
+                label: 'Intensity Measure Type(s)'
+            },
+            columnsCustomizerVisible: false,
+            csvSep: ',',
+            flatfileContent: '',
+            flatfileHeader: []
         }
     },
-    computed: {
-        columns(){
-            var data = this.responseData;
-            var namesOk = Object.keys(data).filter(name => !!Object.keys(data[name]).length);
-            var namesNo = Object.keys(data).filter(name => !Object.keys(data[name]).length);
-            var ret = [];
-            for (var name of namesOk.sort()){
-                ret.push([name, data[name].help, data[name].dtype]);
-            }
-            return ret;
-        }
+    watch: {
+        responseData: function(newVal, oldVal){
+            this.updateFlatfile();
+        },
+        'imts.value':  function(newVal, oldVal){
+            this.updateFlatfile();
+        },
+        csvSep: function(newVal, oldVal){
+            this.updateFlatfile();
+        },
     },
-    template: `<form novalidate @submit.prevent="submit" class='d-flex flex-column align-items-end' style='flex: 1 1 auto'>
-        <div class='d-flex flex-row' style='flex: 1 1 auto'>
-            <div class='d-flex flex-column' style='flex: 1 1 40%'>
-                <div style='font-family:sans-serif'>
-                    Flatfiles must be uploaded as uncompressed or zipped CSV file with
-                    rows representing manually processed waveforms and columns denoting:
-                    <ul>
-                    <li>The intensity measures of interest (supported are PGA, PGV
-                    or SA with periods in brackets, e.g. "SA(0.1)")</li>
-                    <li>The metadata required by the models used. Select
-                    your models below to see the required flatfile columns in the right table:</li>
-                    </ul>
+    template: `<form novalidate @submit.prevent="submit" class='d-flex flex-column' style='flex: 1 1 auto'>
+        <div class='d-flex flex-row' style='flex: 1 1 auto; justify-content: center'>
+            <div class='d-flex flex-column' style='max-width: 50rem'>
+
+                <p class='text-justify'>
+                Flatfiles are parametric tables required in Model-to-data comparison and testing,
+                and must be uploaded as uncompressed or zipped
+                <a target="_blank" href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV files</a>,
+                with each row representing a manually processed waveform, and the waveform metadata and intensity measures
+                arranged in columns.
+
+                Here you can create a flatfile template with the columns <b>required</b> by
+                the models and intensity measures that you want to analyze (see "Selection").
+
+                The template can then be filled with your data and uploaded in eGSIM.
+
+                <div class='d-flex flex-row align-items-baseline'>
+                    <div v-show="!columnsCustomizerVisible">
+                        <b>Flatfile template</b> ({{ flatfileHeader.length }} columns)
+                    </div>
+                    <div style='flex: 1 1 auto'></div>
+                    <div class='ml-3' v-show="!columnsCustomizerVisible">CSV separator</div>
+                    <input v-show="!columnsCustomizerVisible" type="text" v-model="csvSep" class='ml-1' style='max-width:2rem'>
+                    <div v-show="!columnsCustomizerVisible" class='ml-3'>Selection</div>
+                    <button type='button' @click='columnsCustomizerVisible=!columnsCustomizerVisible' class='ml-1 btn btn-primary'>
+                        {{ columnsCustomizerVisible ? 'Show Flatfile' :
+                           form.gsim.value.length + ' model' + (form.gsim.value.length == 1 ? ', ': 's, ') +
+                           imts.value.length + ' intensity measure' + (imts.value.length.length == 1 ? '': 's')
+                        }}
+                    </button>
                 </div>
-                <div class='d-flex' style='flex:1 1 auto'>
+
+                <textarea v-show="!columnsCustomizerVisible"
+                          v-model='flatfileContent' class='mt-3' style='flex:1 1 auto; white-space: pre; font-family:monospace'></textarea>
+
+                <div class='d-flex flex-row my-2' v-show='columnsCustomizerVisible'  style='flex:1 1 auto;'>
                     <gsim-select :field='form.gsim' @gsim-selected='gsimSelected'></gsim-select>
+                    <div class='mr-3'></div>
+                    <div class='d-flex flex-column'>
+                        <imt-select :field='imts' style='flex: 1 1 auto'></imt-select>
+                    </div>
                 </div>
-            </div>
-            <div class='d-flex flex-column ml-3' style="flex: 1 1 60%">
-                <div>Flatfile metadata columns ({{ columns.length }})</div>
-                <div style="flex: 1 1 auto; position:relative;overflow:auto">
-                    <table class="table" style='position:absolute;top:0;bottom:0;right:0;left:0'>
-                      <tr v-for="colObj in columns">
-                        <td v-html="col2HTML(colObj)"></td>
-                      </tr>
-                    </table>
+
+                <div class='mt-2 text-muted'>
+                Hint: For performance reasons <b>try to upload flatfiles not exceeding 5-10 Mb</b>
+                <!-- In doing so, try to upload only necessary data, e.g., by removing columns that are not
+                required and are not meant to be used in selection expressions for filtering records. -->
                 </div>
+
             </div>
-        </div>
-        <div class='mt-3' style='font-family:sans-serif'>
-            Note: In general, there are no restriction on the number of columns of a flatfile, as
-            any column provided can eventually be used in selection expressions
-            for filtering records. <b>However, please
-            try to provide the strict minimum of columns in order to improve
-            memory consumption and upload time</b>
         </div>
     </form>`,
     methods: {
         gsimSelected(){
-            // delegate submit after the component has been rndered
+            // query the server and store in response data the metadata columns
+            // required for the current GSIM selection
             this.$nextTick(() => {
                 this.submit().then(responseData => {
                     this.responseData = responseData;
                 });
             });
         },
-        col2HTML(colObject){
-            var name = colObject[0];
-            var desc = colObject[1];
-            var dtype = colObject[2];
-            if (desc === null){
-                return `<span class="text-muted small">${name}</span>`;
+        updateFlatfile(){
+            var metadataColumns = this.getMetadataColumns();
+            var imtColumns = this.getImtColumns();
+            var columns = metadataColumns.concat(imtColumns);
+            // calculate depths (characters length of each column):
+            var helpHeaders = ['Column:', 'Type:', 'Data type:', 'Description:'];
+            var depths = helpHeaders.map(elm => elm.length);
+            var header = [];
+            var max = Math.max;
+            for (var val of columns){
+                header.push(val[0]);
+                depths = val.map((elm, index) => max(elm.length, depths[index]));
             }
-            if (Array.isArray(dtype)){
-                dtype = `Data type: categorical, a value from ${dtype.join(", ")}`;
-            }else{
-                dtype = `Data type: ${dtype}`;
+            this.flatfileHeader = header;
+            var flatfileContent = [
+                header.join(this.csvSep), '',
+                '# This block comment is not part of the CSV but contains column information to help the compilation:',
+            ];
+            for (var val of [helpHeaders].concat(columns)){
+                var row = val.map((elm, index) => elm + " ".repeat(depths[index] - elm.length)).join(" | ");
+                flatfileContent.push(`# ${row}`);
             }
-            if (desc){ desc = ": " + desc;}
-            return `<b>${name}</b>${desc}<br><span class='text-muted'>(${dtype})</span>`;
+            var numGsim = this.form.gsim.value.length;
+            var listGsim = this.form.gsim.value.join(' ');
+            flatfileContent.push(`# The metadata columns above are required in eGSIM by ${numGsim} selected model(s):  ${listGsim}`);
+            flatfileContent.push('');
+            this.flatfileContent = flatfileContent.join("\n");
+        },
+        getMetadataColumns(){  // -> Array[Array[str, str, str, str]]
+            // return a list of metadata columns from the response data
+            var data = this.responseData;
+            // the columns are objects that are empty if the column is not needed in the flatfile:
+            var namesOk = Object.keys(data).filter(name => !!Object.keys(data[name]).length);
+            var namesNo = Object.keys(data).filter(name => !Object.keys(data[name]).length);
+            var ret = [];
+            for (var name of namesOk.sort()){
+                var [dtype, help] = [data[name].dtype, data[name].help];
+                if (Array.isArray(dtype)){
+                    help += `. Specify a value from: ${dtype.join(", ")}`;
+                    dtype = "categorical";
+                }
+                ret.push([name, "Metadata", dtype, help]);
+            }
+            return ret;
+        },
+        getImtColumns(){  // -> Array[Array[str, str, str, str]]
+            var desc = (imt) => {
+                if (imt.startsWith('SA')){
+                    return 'Spectral Acceleration, in g (computed at the given period, in s)'
+                }else if (imt == 'PGA'){
+                    return 'Peak Ground Acceleration, in cm/s*s'
+                }else if (imt == 'PGV'){
+                    return 'Peak Ground Velocity, in cm/s'
+                }
+                return '';
+            }
+            return this.imts.value.map(elm => [elm, 'Intensity measure', 'float', desc(elm)]);
         }
     }
 });
 
-/*
-Vue.component('flatfile-columns', {
+
+Vue.component('flatfile-inspection', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         form: Object,
@@ -162,109 +233,41 @@ Vue.component('flatfile-columns', {
             responseData: this.response,
         }
     },
-    computed: {
-        tableRows: function(){
-            var colNames = this.tableColumns;
-            if (!colNames.length){ return []; }
-            var firstColObj = this.responseData.columns[colNames[0]];
-            return Object.keys(firstColObj);
-        },
-        tableColumns: function(){
-            return Object.keys(this.responseData.columns).sort();
+    watch: {
+//        no-op
+    },
+    methods: {
+        request: function(){
+            var form = this.form;
+            Vue.post(this.url, form).then(response => {  // defined in `vueutil.js`
+                if (response && response.data){
+                    this.responseData = response.data;
+                }
+            });
         }
     },
-    template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
+    template: `<div class='flexible d-flex flex-column'>
         <div class='mb-3'>
-            <base-form :form="form" :url="url" class='d-flex flex-row align-items-end'
-                        @form-successfully-submitted="responseData=arguments[0]">
-                <slot>
-                    <div class="d-flex flex-row align-items-end mr-3" style='flex: 1 1 auto'>
-                        <flatfile-select :field="form.flatfile"></flatfile-select>
-                        <flatfile-selexpr-input :field="form.selexpr" class='ml-3' style='flex:1 1 auto'></flatfile-selexpr-input>
-                        <!-- <field-input :field='form.x' class='ml-3'></field-input>
-                             <field-input :field='form.y' class='ml-3'></field-input> -->
-                    </div>
-                </slot>
-            </base-form>
-        </div>
-        <div class='d-flex flex-column' style="flex:1 1 auto; position: relative">
-            <div class='d-flex flex-row' style='flex: 1 1 auto'>
-                <div class='d-flex flex-column' style='flex: 1 1 40%'>
-                    <div style='font-family:sans-serif'>
-                        <p>Flatfiles must be uploaded as uncompressed or zipped CSV file with
-                        rows representing manually processed waveforms and columns denoting the
-                        waveform intensity measures and metadata.
-                        <p>
-                        The required intensity measures are user-dependent and can be PGA, PGV
-                        or SA with periods in brackets, e.g. "SA(0.1)", the required metadata
-                        depend on the models of interest which can be selected
-                        from the list below (the metadata flatfile columns will update accordingly).
-                        </p>
-                    </div>
-                    <div class='d-flex' style='flex:1 1 auto'>
-                        <gsim-select :field='form.gsim'></gsim-select>
-                    </div>
+            <!-- <egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
+                        :visibilityToggle="formVisibilityToggle"
+                        @form-successfully-submitted="responseData=arguments[0]"> -->
+<!--           <egsim-form :form="form" :url="url"
+                        @form-successfully-submitted="responseData=arguments[0]"> -->
+                <div class="d-flex flex-row flexible align-items-end">
+                    <flatfile-select :field="form.flatfile"></flatfile-select>
+                    <flatfile-selexpr-input :field="form.selexpr" class='mt-3'></flatfile-selexpr-input>
+
+                    <button type="submit" class="btn btn-primary mt-2">
+                        Display magnitude-distance plot
+                    </button>
+
                 </div>
-                <div class='d-flex flex-column ml-3' style="flex: 1 1 60%">
-                    <div class='mb-2'> Flatfile Metadata columns: </div>
-                    <div style="flex: 1 1 auto; position:relative;overflow:auto">
-                        <table class="table" style='position:absolute;top:0;bottom:0;right:0;left:0'>
-                          <tr v-for="(cell, i) in form.flatfile['data-columns'][0]" v-if="i>0">
-                            <td v-html="colHTML(i)"></td>
-                          </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class='mt-3' style='font-family:sans-serif'>
-                Note: In general, there are no restriction on the number of columns of a flatfile, as
-                        any column provided can eventually be used in selection expressions
-                        for filtering records. <b>However, please
-                        try to provide the strict minimum of columns in order to improve
-                        memory consumption and upload time</b>
-            </div>
+           <!--</egsim-form>-->
         </div>
-        <div v-if="!!Object.keys(responseData).length" style="overflow:auto">
-            <div> Flatfile records (number of rows): {{ responseData.rows }}. Data details per column:</div>
-            <div> Missing columns: {{ responseData.missing_columns }} (these columns need to be implemented only if the models requiring them are used)</div>
-            <table class='table'>
-                <thead>
-                    <tr><td></td><td v-for="col in tableColumns">{{ col }}</td></tr>
-                </thead>
-                <tbody>
-                    <tr v-for="row in tableRows">
-                        <td><b> {{ row }} </b> </td>
-                        <td v-for="col in tableColumns" :title="responseData.columns[col][row]">{{ val(col, row) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <!-- <flatfile-plot-div :data="responseData" style='flex: 1 1 auto'></flatfile-plot-div> -->
-    </div>`,
-    methods: {
-        colHTML(index){
-            var ff = this.form.flatfile['data-columns'];
-            var name = ff[0][index];
-            var desc = ff[1][index];
-            var dtype = ff[2][index];
-            if (Array.isArray(dtype)){
-                dtype = `Categories: ${dtype.join(", ")}`;
-            }else{
-                dtype = `Data type: ${dtype}`;
-            }
-            if (desc){ desc = ": " + desc;}
-            return `<b>${name}</b> <span class='text-muted'>(${dtype})</span>${desc}`;
-        },
-        val(col, row){
-            var val = this.responseData.columns[col][row];
-            if ((typeof val == 'number') && (parseInt(val) != val) && (val > 0.00001)){
-                val = val.toFixed(5);
-            }
-            return val;
-        }
-    }
+<!--       <flatfile-plot-div :data="responseData" class='flexible'></flatfile-plot-div>  -->
+    </div>`
 });
-*/
+
 
 Vue.component('flatfile-plot-div', {
     mixins: [PLOT_DIV],
@@ -358,7 +361,7 @@ Vue.component('flatfile-plot-div', {
                 `paramValues`: Array of the values of the parameter keyed by 'paramName'
             */
             return true;  // we have  single param (sort of title on the x axis), alswya show
-        },
+        }
         /**configureLayout is the same as the super class 'plot-div' and thus not overwritten.**/
         // END OF OVERRIDABLE METHODS
     }
@@ -371,10 +374,8 @@ Vue.component('flatfile-select', {
         doc: {
             type: String,
             default: `Upload a user-defined flatfile (CSV or zipped CSV).
-                      IMPORTANT: please read compile instructions (tab "Flatfiles > Compile")
-                      and try to inspect your flatfile before usage (tab "Flatfiles > Inspect").
-                      An uploaded flatfile size should be kept within few Mb. Any uploaded
-                      flatfile will be available in all page tabs`
+                      Fore details please read CAREFULLY the compile section (tab "Flatfiles > Compilation").
+                      Any uploaded flatfile will be available in all tabs of this web page`
         }
     },
     data(){
@@ -413,7 +414,7 @@ Vue.component('flatfile-select', {
             deep: true,
             immediate: true,
             handler: function(newVal, oldVal){
-                this.fieldProxy.choices = Array.from(newVal.map(elm => [elm.name, elm.label]));
+                this.fieldProxy.choices = Array.from(newVal.map(elm => [elm.name, elm.name == elm.label ? elm.name : `${elm.name} (${elm.label})`]));
             }
         }
     },
@@ -444,9 +445,7 @@ Vue.component('flatfile-select', {
                     }
                 }
                 if (file != null){
-                    flatfiles.push({
-                        name: file.name, label: label, file: file
-                    });
+                    flatfiles.push({ name: file.name, label: label, file: file });
                 }
             }
         }
@@ -454,11 +453,13 @@ Vue.component('flatfile-select', {
     template:`<div>
         <div class='d-flex flex-row align-items-end'>
             <field-input :field="fieldProxy"></field-input>
-            <a target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL">Ref.</a>
-            <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
-                    :aria-label='doc' data-balloon-pos="down" data-balloon-length="large">
-                upload
-            </button>
+            <div class='d-flex flex-row align-items-baseline'>
+                <a title='flatfile reference (opens in new tab)' target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>
+                <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
+                        :aria-label='doc' data-balloon-pos="down" data-balloon-length="large">
+                    upload
+                </button>
+            </div>
             <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
         </div>
     </div>`
