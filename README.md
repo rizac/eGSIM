@@ -132,9 +132,10 @@ using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
 
 ## Usage
 
-### Setup project data
-
 (*NOTE: the settings module MUST be changed in production*!)
+
+Initialize the database/db (**one-time only operation to be done 
+before running the program for the first time**):
 
 - Create db:
 
@@ -148,12 +149,12 @@ using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
   ``` 
 
-- If you want to access the admin panel, see [the admin panel](#admin-panel)
-  
-- Run server and navigate in the browser:
-  ```console
-  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver 
-  ```
+If you want to access the admin panel, see [the admin panel](#admin-panel).
+Otherwise, **to run the program in your local browser**, type:
+
+```console
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver 
+```
 
 (you can also invoke the commands without `export ...` but using the 
 `--settings` option: 

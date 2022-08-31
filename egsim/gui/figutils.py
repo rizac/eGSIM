@@ -43,11 +43,8 @@ def rgba2rgb(color, background=None):
     # this function is modified from: https://stackoverflow.com/a/48359835
     alpha = color[3]
     color = color[:-1]
-    # infer if we passed 0, 255 as color ranges by checking that all color
-    # components are <=1: Note that these 7 notations:
-    # [100] [010], [001] [110] [101] [011]
-    # are ambiguous and will be interpreted to be in the [0 1] range, which
-    # is far more likely in this context (note that "black" is not ambiguous)
+    # infer color components are in the [0, 255] or [0, 1] range (1 is the only
+    # ambiguous value but will be interpreted to be in the [0, 1] range):
     is01 = all(_ <= 1 for _ in color[:-1]) and \
         (background is None or all(_ <= 1 for _ in background))
 

@@ -42,19 +42,19 @@ def get_context(selected_menu=None, debug=True) -> dict:
     flatfiles = [{'name': r.name, 'label': r.display_name, 'url': r.url}
                  for r in query_flatfiles()]
 
-    flatfile_columns = [
-        ['Flatfile column:', 'event_id'],
-        ['Description:', 'The unique identifier of the seismic event (<b>mandatory</b>),'
-                         ' such as the ID provided by most event web services (if '
-                         'multiple web services are used, conflicts should be checked '
-                         'for). Flatfile rows sharing the same event_id denote recordings '
-                         'of the event at different sites'],
-        ['Data type:', 'int or str']
-    ]
-    for name, dtype, help_ in sorted(query_flatfile_columns(), key=lambda _: _[0]):
-        flatfile_columns[0].append(name)
-        flatfile_columns[1].append(help_)
-        flatfile_columns[2].append(dtype)
+    # flatfile_columns = [
+    #     ['Flatfile column:', 'event_id'],
+    #     ['Description:', 'The unique identifier of the seismic event (<b>mandatory</b>),'
+    #                      ' such as the ID provided by most event web services (if '
+    #                      'multiple web services are used, conflicts should be checked '
+    #                      'for). Flatfile rows sharing the same event_id denote recordings '
+    #                      'of the event at different sites'],
+    #     ['Data type:', 'int or str']
+    # ]
+    # for name, dtype, help_ in sorted(query_flatfile_columns(), key=lambda _: _[0]):
+    #     flatfile_columns[0].append(name)
+    #     flatfile_columns[1].append(help_)
+    #     flatfile_columns[2].append(dtype)
 
     return {
         'debug': debug,
@@ -63,7 +63,7 @@ def get_context(selected_menu=None, debug=True) -> dict:
         'component_props': json.dumps(components_props, separators=(',', ':')),
         'gsims': json.dumps(gsims, separators=(',', ':')),
         'flatfiles': flatfiles,
-        'flatfile_columns': flatfile_columns,
+        # 'flatfile_columns': flatfile_columns,
         'regionalization': regionalization,
         'allowed_browsers': {k.lower(): v for k, v in allowed_browsers.items()},
         'invalid_browser_message': invalid_browser_message
@@ -125,9 +125,11 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         },
         TAB.flatfile.name: {  # FIXME REMOVE
             'forms': [form_to_json(FlatfileColumnsForm, ignore_choices),
-                      form_to_json(FlatfileInspectionForm, ignore_choices),
+                      # form_to_json(FlatfileInspectionForm, ignore_choices),
                       form_to_json(FlatfilePlotForm, ignore_choices)],
-            'urls': [URLS.FLATFILE_COLUMNS, URLS.FLATFILE_INSPECTION, URLS.FLATFILE_PLOT]
+            'urls': [URLS.FLATFILE_COLUMNS,
+                     # URLS.FLATFILE_INSPECTION,
+                     URLS.FLATFILE_PLOT]
         },
         TAB.residuals.name: {
             'form': form_to_json(TAB.residuals.formclass, ignore_choices),
@@ -156,12 +158,6 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     if debugging:
         _setup_default_values(components_props)
     return components_props
-
-
-class FlatfileTabForm(FlatfileInspectionForm, FlatfileColumnsForm, FlatfilePlotForm):
-    """Readonly Form for the Flatfile TAB: just a collector of fields to be transferred to frontend as
-    JSOn dicts"""
-    pass
 
 
 def _setup_default_values(components_props: dict[str, dict[str, Any]]):
