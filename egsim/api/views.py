@@ -13,9 +13,9 @@ from django.forms.fields import MultipleChoiceField
 
 from .forms.flatfile import FlatfileForm
 from .forms.trellis import TrellisForm
-from .forms.flatfile.comparison.residuals import ResidualsForm
-from .forms.flatfile.comparison.testing import TestingForm
-from .forms.flatfile.inspection import FlatfileInspectionForm
+from .forms.flatfile.residuals import ResidualsForm
+from .forms.flatfile.testing import TestingForm
+# from .forms.flatfile.inspection import FlatfileColumnsForm
 from .forms import APIForm
 
 

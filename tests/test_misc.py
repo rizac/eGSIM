@@ -9,7 +9,7 @@ import pytest
 
 from egsim.api.forms import relabel_sa
 from egsim.api.forms.fields import NArrayField, vectorize
-from smtk.residuals.gmpe_residuals import Residuals
+
 
 
 def test_vectorize():

@@ -15,9 +15,9 @@ from smtk.residuals.residual_plots import (residuals_density_distribution,
                                            likelihood)
 from smtk.database_visualiser import DISTANCE_LABEL
 
-from .. import FlatfileForm, MOF, get_residuals
-from ... import APIForm, GsimImtForm, relabel_sa
-from ...fields import ChoiceField
+from . import MOF, get_residuals, GsimImtFlatfileForm
+from .. import APIForm, relabel_sa
+from ..fields import ChoiceField
 
 
 # For residuals with distance, use labels coded in smtk DISTANCE_LABEL dict:
@@ -42,7 +42,7 @@ PLOT_TYPE = {
 }
 
 
-class ResidualsForm(GsimImtForm, APIForm, FlatfileForm):
+class ResidualsForm(GsimImtFlatfileForm, APIForm):
     """Form for residual analysis"""
 
     # Set the public names of this Form Fields as `public_name: attribute_name`
@@ -55,11 +55,6 @@ class ResidualsForm(GsimImtForm, APIForm, FlatfileForm):
 
     plot_type = ChoiceField(required=True,
                             choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
-
-    # def clean(self):  FIXME REMOVE
-    #     # call programmatically superclass `clean` to avoid multiple inheritance
-    #     # confusion:
-    #     return super().clean()
 
     RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
                        'pvalue')

@@ -106,7 +106,7 @@ def test_initdb_gsim_required_attrs_not_defined(capsys):
     # why is it @patch not working if provided as decorator?
     # It has conflicts with capsys fixture, but only here ....
     # Anyway:
-    with patch('egsim.management.commands.initdb.'
+    with patch('api.management.commands.initdb.'
                'get_gsim_required_attrs_dict',
                return_value={'rjb': 'rjb'}) as _:
         call_command('initdb')

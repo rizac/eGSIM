@@ -9,7 +9,7 @@ import re
 import pytest
 
 from egsim.api.views import TrellisView
-from egsim.api.forms.model_to_model.trellis import TrellisForm
+from egsim.api.forms.trellis import TrellisForm
 from egsim.api.forms import MediaTypeForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa

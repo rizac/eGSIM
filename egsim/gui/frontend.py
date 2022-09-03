@@ -5,7 +5,7 @@ from django.db.models import Prefetch, QuerySet
 from . import TAB, URLS
 from ..api import models
 from ..api.forms import EgsimBaseForm
-from ..api.forms.flatfile.compilation import FlatfileColumnsForm
+from ..api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
 from ..api.forms.tools import field_to_dict, field_to_htmlelement_attrs
 
@@ -124,10 +124,10 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             }
         },
         TAB.flatfile.name: {  # FIXME REMOVE
-            'forms': [form_to_json(FlatfileColumnsForm, ignore_choices),
+            'forms': [form_to_json(FlatfileRequiredColumnsForm, ignore_choices),
                       # form_to_json(FlatfileInspectionForm, ignore_choices),
                       form_to_json(FlatfilePlotForm, ignore_choices)],
-            'urls': [URLS.FLATFILE_COLUMNS,
+            'urls': [URLS.FLATFILE_REQUIRED_COLUMNS,
                      # URLS.FLATFILE_INSPECTION,
                      URLS.FLATFILE_PLOT]
         },

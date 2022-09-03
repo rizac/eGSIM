@@ -5,28 +5,24 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
-from io import StringIO
-
-import yaml
 import json
 import pytest
 
-from egsim.api.forms.model_from_region.model_from_region import ModelFromRegionForm
-from egsim.api.forms.model_to_data.residuals import ResidualsForm
-from egsim.api.forms.model_to_data.testing import TestingForm
-from egsim.api.forms.model_to_model.trellis import TrellisForm
+from egsim.api.forms.regionalization import GsimFromRegionForm
+from egsim.api.forms.flatfile.residuals import ResidualsForm
+from egsim.api.forms.flatfile.testing import TestingForm
+from egsim.api.forms.trellis import TrellisForm
 
-from egsim.gui.vuejs import form_to_json, get_components_properties
 from egsim.api.forms.tools.describe import as_dict
+from egsim.gui.frontend import get_context, form_to_json
 
 GSIM, IMT = 'gsim', 'imt'
-
 
 @pytest.mark.django_db
 class Test:
 
     def test_get_component_properties(self):
-        data = get_components_properties(debugging=False)
+        data = get_context(debug=False)
         # test it is json serializable:
         json.dumps(data)
 
@@ -41,11 +37,11 @@ class Test:
         data = json.dumps(val)
 
     def test_get_gsim_from_region(self, areequal):
-        form = ModelFromRegionForm({'lat': 50, 'lon': 7})
+        form = GsimFromRegionForm({'lat': 50, 'lon': 7})
         assert form.is_valid()
         resp = form.response_data
         for res, reg in resp.items():
             dict_test = {k: v for k, v in resp.items() if v == reg}
-            resp_ = ModelFromRegionForm({'lat': 50, 'lon': 7, 'reg': reg}).response_data
+            resp_ = GsimFromRegionForm({'lat': 50, 'lon': 7, 'reg': reg}).response_data
             assert resp_ == dict_test
         asd = 9

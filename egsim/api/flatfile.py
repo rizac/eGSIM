@@ -1,6 +1,6 @@
 from typing import Union, Callable, Any, Iterable
 
-from enum import Enum
+# from enum import Enum
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
@@ -16,12 +16,30 @@ from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 EVENT_ID_COL = 'event_id'
 
-EVENT_ID_DESC = "The event unique ID <b>required</b> to identify flatfile rows " \
+EVENT_ID_DESC = "The event unique ID required to identify flatfile rows " \
                 "resulting from the same event. You can use the id " \
                 "provided by the event event web service used or create your own, as " \
                 "long as it holds: same id ⇔ same event"
 
 EVENT_ID_DTYPE = "Any (usually int or str)"
+
+
+REQUIRED_COLUMNS = frozenset([EVENT_ID_COL])
+
+
+def get_imt(imt_name: str, ignore_case=False) -> Union[str, None]:
+    """Return the OpenQuake formatted IMT CLASS name from string, or None if col does not
+    denote a IMT name.
+    Wit ignore_case=True:
+    "sa(0.1)"  and "SA(0.1)" will be returned as "SA(0.1)"
+    "pga"  and "pGa" will be returned as "PGA"
+    With ignore_case=False, the comparison is strict:
+    "sa(0.1)" -> None
+    """
+    try:
+        return imt.imt2tup(imt_name.upper() if ignore_case else imt_name)[0]
+    except Exception as _:  # noqa
+        return None
 
 
 ############
@@ -201,22 +219,38 @@ def _read_csv_header(filepath_or_buffer, sep: str, reset_if_stream=True) -> pd.I
 
 
 def _check(flatfile: pd.DataFrame):
-    """Check the given flatfile, renaming inplace IMT lower case, and raising
-    if some required column is not present
+    """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
+    Modifications will be done inplace
     """
+    # check required columns:
+    if REQUIRED_COLUMNS - set(flatfile.columns):
+        missing = REQUIRED_COLUMNS - set(flatfile.columns)
+        raise ValueError(f"Missing required column(s): {', '.join(missing)}")
+
+    # check IMTs (but allow mixed case, such as 'pga'). So first rename:
     col2rename = {}
-    mandatory = {EVENT_ID_COL}
-    imts = {'pga', 'pgv'}
+    no_imt_col = True
+    imt_invalid_dtype = []
     for col in flatfile.columns:
-        if col in imts or (col.startswith("sa(") and col.endswith(")")):
-            col2rename[col] = col.upper()
-        if mandatory and col in mandatory:
-            mandatory.remove(col)
-
-    if mandatory:
-        raise ValueError(f"Column{'s' if len(mandatory) != 1 else ''} required: "
-                         f"{', '.join(mandatory)}")
-
+        imtx = get_imt(col, ignore_case=True)
+        if imtx is None:
+            continue
+        no_imt_col = False
+        if not str(flatfile[col].dtype).lower().startswith('float'):
+            imt_invalid_dtype.append(col)
+        if imtx != col:
+            col2rename[col] = imtx
+            # do we actually have the imt provided? (conflict upper/lower case):
+            if imtx in flatfile.columns:
+                raise ValueError(f'Column conflict, please rename: '
+                                 f'"{col}" vs. "{imtx}"')
+    # ok but regardless of all, do we have imt columns at all?
+    if no_imt_col:
+        raise ValueError(f"No IMT column found (e.g. 'PGA', 'PGV', 'SA(0.1)')")
+    if imt_invalid_dtype:
+        raise ValueError(f"Invalid data type ('float' required) in IMT column(s): "
+                         f"{', '.join(imt_invalid_dtype)}")
+    # rename imts:
     if col2rename:
         flatfile.rename(columns=col2rename, inplace=True)
 

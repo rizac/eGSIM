@@ -11,9 +11,9 @@ from django.core.exceptions import ValidationError
 
 from smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
 
-from .. import FlatfileForm, MOF, get_residuals
-from ... import APIForm, GsimImtForm, relabel_sa
-from ...fields import MultipleChoiceField, FloatField
+from . import MOF, get_residuals, GsimImtFlatfileForm
+from .. import APIForm, relabel_sa
+from ..fields import MultipleChoiceField, FloatField
 
 
 MOF_TYPE = {
@@ -26,7 +26,7 @@ MOF_TYPE = {
 }
 
 
-class TestingForm(GsimImtForm, APIForm, FlatfileForm):
+class TestingForm(GsimImtFlatfileForm, APIForm):
     """Form for testing Gsims via Measures of Fit"""
 
     # Set the public names of this Form Fields as `public_name: attribute_name`

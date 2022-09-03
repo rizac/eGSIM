@@ -14,7 +14,7 @@ class URLS:  # noqa
     GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
     # inspecting a flatfile:
     FLATFILE_INSPECTION = 'data/flatfile_inspection'
-    FLATFILE_COLUMNS = 'data/flatfile_columns'
+    FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
     FLATFILE_PLOT = 'data/flatfile_plot'
 
     DOWNLOAD_REQUEST = 'data/downloadrequest'

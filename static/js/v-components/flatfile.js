@@ -141,7 +141,7 @@ Vue.component('flatfile-compilation', {
                 </div>
 
                 <div class='mt-2 text-muted'>
-                Hint: For performance reasons <b>try to upload flatfiles not exceeding 5-10 Mb</b>
+                Hint: For performance reasons <b>try to keep uploaded flatfiles size within few tens of Megabytes</b>
                 <!-- In doing so, try to upload only necessary data, e.g., by removing columns that are not
                 required and are not meant to be used in selection expressions for filtering records. -->
                 </div>

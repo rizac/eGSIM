@@ -142,13 +142,19 @@ def testdata(request):  # noqa
             # assert os.path.isfile(filepath)
             return filepath
 
-        def read(self, filename, decode=None):
+        def open(self, filename, mode='rb'):
+            return open(self.path(filename), mode)
+
+        def read(self, filename, mode='rb', *, decode=None):
             """reads the data (byte mode, with encoding) and returns it
             :param filename: a string denoting the file name inside the test
                 data directory
             """
-            with open(self.path(filename), 'rb') as opn:
-                return opn.read().decode(decode) if decode else opn.read()
+            with self.open(filename, mode) as opn:
+                _ = opn.read()
+                if not decode:
+                    return _
+                return _.decode(decode)  # noqa
 
         def readjson(self, filename):
             with open(self.path(filename), 'r') as opn:

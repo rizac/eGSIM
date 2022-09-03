@@ -6,110 +6,15 @@ Django Forms for eGSIM flatfile plot generator
 from itertools import chain
 from typing import Iterable, Any
 
+import numpy as np
 import pandas as pd
 from django.core.exceptions import ValidationError
 
-from . import FlatfileForm
+from . import FlatfileForm, flatfile_supported_gsims
 from .. import APIForm
-from ..fields import ChoiceField
+from ..fields import CharField
 
-from ..flatfile import flatfile_colnames
-
-
-class FlatfileInspectionForm(APIForm, FlatfileForm):
-    """Form for flatfile inspection, return stats from a given flatfile"""
-
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself anyway if not
-    # done here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {}
-
-
-    @classmethod
-    def process_data(cls, cleaned_data: dict) -> dict:
-        """Process the input data `cleaned_data` returning the response data
-        of this form upon user request.
-        This method is called by `self.response_data` only if the form is valid.
-
-        :param cleaned_data: the result of `self.cleaned_data`
-        """
-        dataframe = cleaned_data['flatfile']
-        columns = dataframe.columns
-        missing_columns = set(flatfile_colnames()) - set(columns)
-        columns = sorted(columns)
-        stats = {c: cls.create_col_stats(dataframe, c) for c in columns}
-        # flatfile columns not present in this flatfile are set as {}:
-        for c in missing_columns:
-            stats[c] = {}
-        return {
-            'rows': len(dataframe),
-            'events': len(pd.unique(dataframe.event_id)),
-            'columns': stats
-        }
-
-    @classmethod
-    def create_col_stats(cls, dataframe: pd.DataFrame, col: str):
-        """Creates a stat JSON serializable dict"""
-        series = dataframe[col] if col in dataframe.columns else None
-        no_data = series is None
-        series_notna = None if no_data else series[pd.notna(series)]
-        na = len(dataframe) if no_data else len(series) - len(series_notna)
-        try:
-            min_ = None if no_data else series.min()
-        except TypeError:  # categorical?
-            try:
-                min_ = series.dtype.categories.min()  # categorical
-            except AttributeError:
-                min_ = None  # give up: min is None
-        try:
-            max_ = None if no_data else series.max()
-        except TypeError:  # categorical?
-            try:
-                max_ = series.dtype.categories.max()  # categorical
-            except AttributeError:
-                max_ = None  # give up: min is None
-        dtype = None if no_data else str(series.dtype)
-        try:
-            quantiles = [None] * 3 if no_data else series.quantile([0.05, 0.5, 0.95]).values
-        except TypeError:
-            # boolean series, string series and so on
-            quantiles = [None] * 3
-        ret = {
-            'distinct values': None if no_data else len(pd.unique(series_notna)),
-            'missing values': na,
-            'values type': None if no_data else dtype,
-            'median': None if no_data else quantiles[1],
-            'min': min_,
-            'max': max_,
-            'quantile(0.05)': None if no_data else quantiles[0],
-            'quantile(0.95)': None if no_data else quantiles[2],
-        }
-        # json serialize:
-        for key, val in ret.items():
-            if val is not None and pd.isna(val):
-                ret[key] = None
-            elif hasattr(val, 'item'):
-                ret[key] = val.item()
-        return ret
-
-    @classmethod
-    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
-        """Yield CSV rows, where each row is an iterables of Python objects
-        representing a cell value. Each row doesn't need to contain the same
-        number of elements, the caller function `self.to_csv_buffer` will pad
-        columns with Nones, in case (note that None is rendered as "", any other
-        value using its string representation).
-
-        :param processed_data: dict resulting from `self.process_data`
-        """
-        col_names = processed_data['columns'].keys()
-        yield chain([''], col_names)
-        col_stats = processed_data['columns'].values()
-        for stat_name in next(iter(col_stats)).keys():
-            yield chain([stat_name], (s.get(stat_name, None) for s in col_stats))
-        yield ['rows:', processed_data['rows']]
-        yield ['events:', processed_data['events']]
+from ... import models
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):
@@ -121,12 +26,10 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
     # done here (see `egsim.forms.EgsimFormMeta` for details)
     public_field_names = {}
 
-    # plot_type = ChoiceField(required=True,
-    #                         choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
-    x = ChoiceField(label='X', help_text="The flatfile column for the x values",
-                    required=False, choices=flatfile_colnames)
-    y = ChoiceField(label='Y', help_text="The flatfile column for the y values",
-                    required=False, choices=flatfile_colnames)
+    x = CharField(label='X', help_text="The flatfile column for the x values",
+                  required=False)
+    y = CharField(label='Y', help_text="The flatfile column for the y values",
+                  required=False)
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
@@ -139,16 +42,14 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             self.add_error("y", ValidationError('with no "x" specfied, this '
                                                 'parameter is required',
                                                 code='required'))
-        elif isinstance(cleaned_data.get('dataframe'), pd.DataFrame):
-            cols = cleaned_data['dataframe']
-            if 'x' in cleaned_data and x not in cols:
-                self.add_error("x", ValidationError('"x" value is not a flatfile'
-                                                    'column name',
-                                                    code='invalid'))
-            if 'y' in cleaned_data and y not in cols:
-                self.add_error("y", ValidationError('"y" value is not a flatfile'
-                                                    'column name',
-                                                    code='invalid'))
+
+        cols = cleaned_data['flatfile']
+        if x is not None and x not in cols:
+            self.add_error("x", ValidationError(f'"{x}" is not a flatfile'
+                                                'column', code='invalid'))
+        if y is not None and y not in cols:
+            self.add_error("y", ValidationError(f'"{y}" is not a flatfile'
+                                                'column', code='invalid'))
 
         return cleaned_data
 
@@ -162,41 +63,82 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         """
         dataframe = cleaned_data['flatfile']
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
-        if x and y:
+        if x and y:  # scatter plot
             xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
-            xvalues, yvalues = dataframe[xlabel], dataframe[ylabel]
-            xnan, ynan = pd.isna(xvalues), pd.isna(yvalues)
-            all_finite = ~(xnan | ynan)
+            xvalues = dataframe[xlabel]
+            yvalues = dataframe[ylabel]
+            with pd.use_inf_as_na():
+                xnan = pd.isna(xvalues)
+                ynan = pd.isna(yvalues)
+            xvalues = xvalues[~(xnan | ynan)]
+            yvalues = yvalues[~(xnan | ynan)]
             plot = dict(
-                xvalues=xvalues[all_finite].values.tolist(),
-                yvalues=yvalues[all_finite].values.tolist(),
+                xvalues=xvalues.values.tolist(),
+                yvalues=yvalues.values.tolist(),
                 xlabel=xlabel,
                 ylabel=ylabel,
-                nan_count=all_finite.sum()
+                stats={xlabel: cls._get_stats(xvalues),
+                       ylabel: cls._get_stats(yvalues)}
             )
-        else:
+        else:  # histogram
             xlabel = x or y
+            na_values = cls._isna(dataframe[xlabel])
+            num_na_values = na_values.sum()
+            if num_na_values > 0:
+                dataframe = dataframe.loc[~na_values, :]
             series = dataframe[xlabel]
-            num = 20
-            uniques = pd.unique(series)
-            if len(uniques) <= num:
-                uniques.sort()
-                xvalues = uniques
-                yvalues = [(series == x).sum() for x in xvalues]  # noqa
-            else:
-                res = dataframe.groupby(pd.cut(series, num)).count()
-                xvalues = [str(_) for _ in res.index]
-                yvalues = res[res.columns[0]].tolist()
+            res = dataframe.groupby(xlabel)
+            bins_count = len(res)
+            max_bins_count = 100
+            if bins_count > 1.5 * max_bins_count:
+                res = dataframe.groupby(pd.cut(series, max_bins_count))
+            res = res.count()
+            xvalues = ['N/A'] + [str(_) for _ in res.index]
+            yvalues = [num_na_values] + res[res.columns[0]].tolist()
 
             plot = dict(
                 xvalues=xvalues,
                 yvalues=yvalues,
                 xlabel=xlabel,
                 ylabel='count',
-                nan_count=pd.isna(yvalues).sum()
+                stats={xlabel: cls._get_stats(series.values, na_values)}
             )
 
         return plot
+
+    @classmethod
+    def _isna(cls, values):
+        with pd.option_context('mode.use_inf_as_na', True):
+            return pd.isna(values)
+
+    @classmethod
+    def _get_stats(cls, values, na_values=None):
+        if na_values is None:
+            na_values = cls._isna(values)
+        values = np.asarray(values)
+        if na_values.any():
+            values = values[~na_values]
+        try:
+            return {
+                'min': np.min(values),
+                'max': np.max(values),
+                'median': np.median(values),
+                'mean': np.mean(values),
+                '0.25quantile': np.quantile(values, 0.25),
+                '0.75quantile': np.quantile(values, 0.75),
+                'N/A count': na_values.sum()
+            }
+        except (ValueError, TypeError):
+            # ValueError if values is empty. TypeError if values contains mixed types
+            return {
+                'min': None,
+                'max': None,
+                'median': None,
+                'mean': None,
+                '0.25quantile': None,
+                '0.75quantile': None,
+                'N/A count': na_values.sum()
+            }
 
     @classmethod
     def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
@@ -210,3 +152,76 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         """
         yield chain([processed_data['xlabel']], processed_data['x'])
         yield chain([processed_data['ylabel']], processed_data['y'])
+
+
+class FlatfileInspectionForm(APIForm, FlatfileForm):
+    """Form for flatfile inspection, return info from a given flatfile"""
+
+    # Set the public names of this Form Fields as `public_name: attribute_name`
+    # mappings. Superclass mappings are merged into this one. An attribute name
+    # can be keyed by several names, and will be keyed by itself anyway if not
+    # done here (see `egsim.forms.EgsimFormMeta` for details)
+    public_field_names = {}
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if 'flatfile' not in cleaned_data:  # has errors FIXME: HOW TO HANDLE
+            return cleaned_data
+
+        dataframe = cleaned_data['flatfile']
+
+        # get data types and raise if some data type is unknown:
+        try:
+            cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
+        except Exception as exc:
+            self.add_error("flatfile",
+                           ValidationError(str(exc), code='invalid'))
+
+        invalid_cols = super().get_flatfile_columns_with_invalid_dtypes()
+        if invalid_cols:
+            self.add_error("flatfile",
+                           ValidationError(f"{len(invalid_cols)} columns have "
+                                           f"unexpected data type (e.g. str "
+                                           f"instead of float): "
+                                           f"{', '.join(_[0] for _ in invalid_cols)}",
+                                           code='invalid'))
+        gsims = list(flatfile_supported_gsims(dataframe.columns))
+
+        if not gsims:
+            self.add_error("flatfile",
+                           ValidationError("No GSIM can work with the "
+                                           "provided columns. Rename or add "
+                                           "new columns", code='invalid'))
+        cleaned_data['gsim'] = gsims
+
+        return cleaned_data
+
+    @classmethod
+    def process_data(cls, cleaned_data: dict) -> dict:
+        """Process the input data `cleaned_data` returning the response data
+        of this form upon user request.
+        This method is called by `self.response_data` only if the form is valid.
+
+        :param cleaned_data: the result of `self.cleaned_data`
+        """
+        dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
+        return {
+            'dtypes': cleaned_data['flatfile_dtypes'],
+            'default_dtype': dtype,
+            'gsim': cleaned_data['gsim']
+        }
+
+    @classmethod
+    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
+        """Yield CSV rows, where each row is an iterables of Python objects
+        representing a cell value. Each row doesn't need to contain the same
+        number of elements, the caller function `self.to_csv_buffer` will pad
+        columns with Nones, in case (note that None is rendered as "", any other
+        value using its string representation).
+
+        :param processed_data: dict resulting from `self.process_data`
+        """
+        # NOT IMPLEMENTED. THIS SHOULD RAISE:
+        return super().csv_rows(processed_data)
+
