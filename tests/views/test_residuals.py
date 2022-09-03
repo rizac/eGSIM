@@ -13,7 +13,7 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
-from egsim.api.forms.model_to_data.residuals import ResidualsForm
+from egsim.api.forms.flatfile.residuals import ResidualsForm
 from egsim.api.views import ResidualsView, RESTAPIView
 
 
@@ -46,7 +46,7 @@ class Test:
             # this method simply bypasses the files renaming (from the user provided
             # flatfile into 'uploaded_flatfile' in the Form) and calls directly :
             mvd = MultiValueDict({'flatfile': request.FILES['uploaded_flatfile']})
-            return ResidualsView.response(data=request.POST.copy(),files=mvd)
+            return ResidualsView.response(data=request.POST.copy(), files=mvd)
 
         with patch.object(RESTAPIView, 'post', fake_post):
             inputdic['plot_type'] = 'res'

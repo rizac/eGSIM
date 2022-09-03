@@ -16,7 +16,7 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import figutils, TAB
 from .frontend import get_context
-from ..api.forms.flatfile.compilation import FlatfileColumnsForm
+from ..api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
 from ..api.forms.regionalization import GsimFromRegionForm
 from ..api.forms.tools import describe, serialize
@@ -223,12 +223,12 @@ def get_gsims_from_region(request):
     return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
 
 
+def flatfile_required_columns(request):
+    return RESTAPIView.as_view(formclass=FlatfileRequiredColumnsForm)(request)
+
+
 def flatfile_inspection(request):
     return RESTAPIView.as_view(formclass=FlatfileInspectionForm)(request)
-
-
-def flatfile_columns(request):
-    return RESTAPIView.as_view(formclass=FlatfileColumnsForm)(request)
 
 
 def flatfile_plot(request):

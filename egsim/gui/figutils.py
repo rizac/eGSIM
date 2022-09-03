@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib
 # https://stackoverflow.com/questions/29620884/how-to-put-python-3-4-matplotlib-in-non-interactive-mode
 matplotlib.use('Agg')  # @IgnorePep8
-import matplotlib.pyplot as plt  # @IgnorePep8 pylint: disable=wrong-import-position
+import matplotlib.pyplot as plt  # noqa
 
 # global (READONLY) options:
 DEFAULT_LINEWIDTH = 2

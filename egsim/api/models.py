@@ -111,6 +111,9 @@ class _DataSource(_UniqueNameModel):
 
 
 class Flatfile(_DataSource):
+    """class handling flatfiles stored in the server file system"""
+    # base directory for any uploaded or created flat file:
+    BASEDIR_PATH = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
 
     filepath = TextField(unique=True, null=False)
     hidden = BooleanField(null=False, default=False,
@@ -118,19 +121,16 @@ class Flatfile(_DataSource):
                                     "(users can still access it via API requests, "
                                     "if not expired)")
     expiration = DateTimeField(null=True, default=None,
-                               help_text="expiration date(time) after which the "
-                                         "flatfile is not visible or accessible "
-                                         "to any request. If null, the flatfile "
-                                         "has no expiration date")
-
-    # base directory for any uploaded or created flat file:
-    BASEDIR_PATH = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
+                               help_text="expiration date(time). If null, the "
+                                         "flatfile has no expiration date")
 
     @classmethod
-    def get_flatfiles(cls, hidden=False):
-        qry = cls.objects.filter(Q(expiration__isnull=True) |
-                                 Q(expiration__lt=datetime.utcnow()))
-        if hidden:
+    def get_flatfiles(cls, show_hidden=False, show_expired=False):
+        qry = cls.objects  # noqa
+        if not show_expired:
+            qry = qry.filter(Q(expiration__isnull=True) |
+                                     Q(expiration__lt=datetime.utcnow()))
+        if not show_hidden:
             qry = qry.filter(hidden=False)
         return qry
 

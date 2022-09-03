@@ -6,15 +6,18 @@ Created on 2 Jun 2018
 @author: riccardo
 """
 import json
+from io import BytesIO
 
 import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils.datastructures import MultiValueDict
 from openquake.hazardlib import imt
 
 from egsim.api.forms import GsimImtForm
-from egsim.api.forms.model_to_data import FlatfileForm
-from egsim.api.forms.model_to_model.trellis import TrellisForm
+from egsim.api.forms.flatfile import FlatfileForm
+from egsim.api.forms.flatfile.inspection import FlatfileInspectionForm
+from egsim.api.forms.trellis import TrellisForm
 
 
 GSIM, IMT = 'gsim', 'imt'
@@ -314,3 +317,56 @@ class Test:
             ]
         }
         assert areequal(form.validation_errors(), expected_json)
+
+    def test_flatfile_inspect(self, testdata):
+
+        # file_content = testdata.read('esm2018.hdf.small.csv')
+        # files = {'esm2019': SimpleUploadedFile('cover', file_content)}
+        # # mvd = MultiValueDict({'flatfile': fp})
+        # form = FlatfileInspectionForm({}, files=files)
+        # is_valid = form.is_valid()
+        # assert is_valid
+
+        # now let's test some errors:
+        flatfile_df = FlatfileForm.read_flatfilefrom_csv_bytes(testdata.open('esm2018.hdf.small.csv'))
+
+        # Test Cauzzi et al:
+        for imt in ['PGA', 'pga']:
+            flatfile = flatfile_df[['rake', 'magnitude', 'rrup', 'vs30', 'event_id', 'PGA']].copy()
+            if imt != 'PGA':
+                flatfile = flatfile.rename(columns={'PGA': imt})
+            bio = BytesIO()
+            flatfile.to_csv(bio, sep=',')
+            files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+            # mvd = MultiValueDict({'flatfile': fp})
+            form = FlatfileInspectionForm({}, files=files)
+            is_valid = form.is_valid()
+            assert is_valid
+            data = form.response_data
+            assert 'CauzziEtAl2014' in data['gsim']
+
+        # Test removing all IMTs
+        flatfile = flatfile_df[
+            ['rake', 'magnitude', 'rrup', 'vs30', 'event_id']].copy()
+        bio = BytesIO()
+        flatfile.to_csv(bio, sep=',')
+        files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+        # mvd = MultiValueDict({'flatfile': fp})
+        form = FlatfileInspectionForm({}, files=files)
+        is_valid = form.is_valid()
+        assert not is_valid
+
+        # Test removing event_id:
+        flatfile = flatfile_df[
+            ['rake', 'magnitude', 'rrup', 'vs30', 'PGA']].copy()
+        bio = BytesIO()
+        flatfile.to_csv(bio, sep=',')
+        files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+        # mvd = MultiValueDict({'flatfile': fp})
+        form = FlatfileInspectionForm({}, files=files)
+        is_valid = form.is_valid()
+        assert not is_valid
+
+        # Test renaming IMTs lower case:
+
+        dfg = 9

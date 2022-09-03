@@ -5,18 +5,15 @@ Django Forms for eGSIM flatfile plot generator
 """
 from typing import Iterable, Any
 
-from django.db.models import Prefetch
 
-from . import FlatfileForm
-from .. import APIForm, MultipleChoiceWildcardField, get_gsim_choices
+from . import APIForm, MultipleChoiceWildcardField, get_gsim_choices
 
 from .. import models
-from ...flatfile import EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE
+from ..flatfile import EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE
 
 
-class FlatfileColumnsForm(APIForm):
-    """Form for flatfile compilation, return the necessary columns from a
-    given list of Gsims"""
+class FlatfileRequiredColumnsForm(APIForm):
+    """Form for querying the necessary metadaata columns from a given list of Gsims"""
 
     # Set the public names of this Form Fields as `public_name: attribute_name`
     # mappings. Superclass mappings are merged into this one. An attribute name

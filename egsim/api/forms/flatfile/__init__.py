@@ -3,18 +3,19 @@ Base Form for to model-to-data operations i.e. flatfile handling
 """
 import re
 from datetime import datetime
-from typing import Iterator
+from typing import Iterable, Sequence, Any
 
 import pandas as pd
 from django.core.exceptions import ValidationError
+from django.db.models import Prefetch
 from django.forms import Form
 from django.utils.translation import gettext
 from pandas.core.computation.ops import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
-from ...flatfile import read_flatfile, EgsimContextDB, EVENT_ID_COL
-from .. import EgsimBaseForm
+from ...flatfile import read_flatfile, EgsimContextDB, REQUIRED_COLUMNS, get_imt
+from .. import EgsimBaseForm, GsimImtForm
 from ..fields import ModelChoiceField, CharField, FileField
 
 
@@ -76,7 +77,10 @@ class FlatfileForm(EgsimBaseForm):
             if not u_form.is_valid():
                 self._errors = u_form._errors
                 return cleaned_data
-            u_flatfile = u_form.cleaned_data['flatfile']
+            # the files dict[str, UploadedFile] should have only one item
+            # in any case, get the first value:
+            u_flatfile = u_form.files[next(iter(u_form.files))]  # Django Uploaded file
+            u_flatfile = u_flatfile.file  # ByesIO or similar
 
         if u_flatfile is None:
             # exception should be raised and sent as 500: don't catch
@@ -92,7 +96,7 @@ class FlatfileForm(EgsimBaseForm):
                 # u_flatfile is a Django TemporaryUploadedFile or InMemoryUploadedFile
                 # (the former if file size > configurable threshold
                 # (https://stackoverflow.com/a/10758350):
-                dataframe = read_flatfilefrom_csv_bytes(u_flatfile)
+                dataframe = self.read_flatfilefrom_csv_bytes(u_flatfile)
             except Exception as exc:
                 msg = str(exc)
                 # Use 'flatfile' as error key: users can not be confused
@@ -101,6 +105,19 @@ class FlatfileForm(EgsimBaseForm):
                 self.add_error("flatfile", ValidationError(gettext(msg),
                                                            code='invalid'))
                 return cleaned_data  # no need to further process
+
+            # check data types:
+            invalid_cols = self.get_flatfile_columns_with_invalid_dtypes(dataframe)
+            if invalid_cols:
+                # FIXME: gettext?
+                err_gsim = ValidationError(gettext("%(num)d columns(s) have invalid "
+                                                   "data types (e.g., str whereas "
+                                                   "int is expected)"),
+                                           params={'num': len(invalid_cols)},
+                                           code='invalid')
+                # add_error removes also the field from self.cleaned_data:
+                self.add_error('flatfile', err_gsim)
+                return cleaned_data
 
         key = 'selexpr'
         selexpr = cleaned_data.get(key, None)
@@ -117,6 +134,61 @@ class FlatfileForm(EgsimBaseForm):
         cleaned_data['flatfile'] = dataframe
         return cleaned_data
 
+    @classmethod
+    def read_flatfilefrom_csv_bytes(cls, buffer, *, sep=None) -> pd.DataFrame:
+        dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
+        # pre rename of IMTs lower case (SA excluded):
+        # (skip, just use the default of read_flatfile: PGA, PGV, SA):
+        # imts = models.Imt.objects.only('name').values_list('name', flat=True)
+        return read_flatfile(buffer, sep=sep, dtype=dtype, defaults=defaults)
+
+    @classmethod
+    def get_flatfile_columns_with_invalid_dtypes(cls, flatfile: pd.DataFrame) -> \
+            Sequence[tuple[str, Any, Any]]:
+        """return tuple (col, dtype, expected_dtype) elements"""
+        standard_dtypes, _ = models.FlatfileColumn.get_dtype_and_defaults()
+        ff_dtypes = cls.get_flatfile_dtypes(flatfile)
+        bad_cols = []
+        for col in set(standard_dtypes) & set(ff_dtypes):
+            expected_dtype = standard_dtypes[col]
+            ff_dtype = ff_dtypes[col]
+            if expected_dtype == ff_dtype:
+                continue
+            if expected_dtype == 'int' and ff_dtype == 'float':
+                continue
+            if isinstance(expected_dtype, list) and isinstance(ff_dtype, list) \
+                    and sorted(expected_dtype) == sorted(ff_dtype):
+                continue
+            bad_cols.append((col, ff_dtype, expected_dtype))
+
+        return bad_cols
+
+    @classmethod
+    def get_flatfile_dtypes(cls, flatfile: pd.DataFrame) -> dict[str, str]:
+        """Return the data types of the given flatfile in eGSIM format:
+        'str', 'int', 'float', 'bool', 'datetime', list (for categorical data).
+
+        The data types above must be consistent with those implemented in:
+        `api.management.gsim_params.py` which writes data types from the YAML into
+        `models.FlatfileColumn` (`property` column)
+        """
+        dtypes = {}
+        for c in flatfile.columns:
+            dtype = str(flatfile[c].dtype)
+            if dtype.startswith('int'):
+                dtype = 'int'
+            elif dtype.startswith('float'):
+                dtype = 'float'
+            elif dtype.startswith('datetime'):
+                dtype = 'datetime'
+            elif dtype == 'object':
+                dtype = 'str'
+            elif dtype == 'category':
+                dtype = flatfile[c].dtype.categories.tolist()
+            elif dtype != 'bool':
+                raise ValueError(f'Unsupported data type for column "{c}": "{dtype}"')
+            dtypes[c] = dtype
+        return dtypes
 
 #############
 # Utilities #
@@ -132,14 +204,6 @@ class MOF:  # noqa
     EDR = "edr"
 
 
-def read_flatfilefrom_csv_bytes(buffer, *, sep=None) -> pd.DataFrame:
-    dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
-    # pre rename of IMTs lower case (SA excluded):
-    # (skip, just use the default of read_flatfile: PGA, PGV, SA):
-    # imts = models.Imt.objects.only('name').values_list('name', flat=True)
-    return read_flatfile(buffer, sep=sep, dtype=dtype, defaults=defaults)
-
-
 def reformat_selection_expression(dataframe, sel_expr) -> str:
     """Reformat the filter expression by changing `notna(column)` to
     column == column. Also change true/false to True/False
@@ -149,9 +213,14 @@ def reformat_selection_expression(dataframe, sel_expr) -> str:
     # Before replacing `notna`, first check that the argument is a column:
     notna_expr = r'\bnotna\((.*?)\)'
     for match in re.finditer(notna_expr, sel_expr):
-        if match.group(1) not in dataframe.columns:
+        # check that the column inside the expression is valid:
+        cname = match.group(1)
+        # if col contains invalid chars, thus i wrapped in ``:
+        if len(cname) > 1 and cname[0] == cname[-1] == '`':
+            cname = cname[1:-1]
+        if cname not in dataframe.columns:
             # raise the same pandas exception:
-            raise UndefinedVariableError(match.group(1))
+            raise UndefinedVariableError(cname)
     # now replace `notna(x)` with `x == x` (`isna` can be typed as `~notna`):
     sel_expr = re.sub(notna_expr, r"(\1==\1)", sel_expr, re.IGNORECASE)
     # be relaxed about booleans: accept any case (lower, upper, mixed):
@@ -200,7 +269,66 @@ def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, s
     return rup, site, dist
 
 
-def flatfile_colnames() -> Iterator[str]:
-    """Yields all flatfile column names stored in the database
+# Form handling Gsims and flatfile:
+
+class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if 'flatfile' in cleaned_data:
+            flatfile = cleaned_data['flatfile']
+            if 'gsim' in cleaned_data:
+                invalid_gsims = \
+                    self.get_flatfile_invalid_gsim(flatfile, cleaned_data['gsim'])
+                if invalid_gsims:
+                    # FIXME: gettext?
+                    err_gsim = ValidationError(gettext("%(num)d gsim(s) not supported "
+                                                       "by the given flatfile"),
+                                               params={'num': len(invalid_gsims)},
+                                               code='invalid')
+                    # add_error removes also the field from self.cleaned_data:
+                    self.add_error('gsim', err_gsim)
+                    cleaned_data.pop('flatfile')
+                    return cleaned_data
+
+        return cleaned_data
+
+    @classmethod
+    def get_flatfile_invalid_gsim(cls, flatfile: pd.DataFrame,
+                                  gsims: Sequence[str]) -> set[str, ...]:
+        return set(gsims) - set(flatfile_supported_gsims(flatfile.columns))
+
+
+def flatfile_supported_gsims(flatfile_columns: Sequence[str]) -> Iterable[str]:
+    """Yields the GSIM names supported by the given flatfile"""
+    ff_imts = set()
+    ff_metadata = set()
+    for col in flatfile_columns:
+        imt = get_imt(col, ignore_case=False)
+        if imt is not None:
+            ff_imts.add('SA' if imt.startswith('SA(') else imt)
+        elif col not in REQUIRED_COLUMNS:
+            ff_metadata.add(col)
+
+    for gsim, gsim_metadata, gsim_imts in _get_gsim_columns_imts():
+        if gsim_metadata.issubset(ff_metadata) and (gsim_imts & ff_imts):
+            yield gsim
+
+
+def _get_gsim_columns_imts() -> Iterable[tuple[str, set[str, ...], set[str, ...]]]:
+    """Yields tuples of model names and associated flatfile columns and imts.
+    Each yielded tuple is:
+    ```
+    (gsim:str, flatfile_columns:set[str], imts:set[str])
+    ```
     """
-    yield from models.FlatfileColumn.objects.only('nemae').values_list('name', flat=True)  # noqa
+
+    qry = models.Gsim.objects.only('name').prefetch_related(
+        Prefetch('required_flatfile_columns',
+                 queryset=models.FlatfileColumn.objects.all().only('name')),
+        Prefetch('imts', queryset=models.Imt.objects.all().only('name')))
+
+    for gsim in qry:
+        ff_cols = set(_.name for _ in gsim.required_flatfile_columns.all())
+        imts = set(_.name for _ in gsim.imts.all())
+        yield gsim.name, ff_cols, imts

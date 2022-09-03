@@ -13,7 +13,7 @@ from . import field_to_dict, get_choices, get_docstring
 
 
 def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
-    """Convert this form to to a JSON serializable dict of information to be
+    """Convert the given form to to a JSON serializable dict of information to be
     displayed as parameter help in user requests. Each dict key is a field
     name, mapped to a sub-dict with several field properties
 
