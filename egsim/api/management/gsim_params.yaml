@@ -8,7 +8,7 @@
 #   flatfile_name: the flat file column name. Default when missing: null, which
 #            means no associated flat file column and thus that the
 #            parameter and the GSIMs requiring it will be *deliberately*
-#            ignored in computations requiring flatfiles
+#            ignored in eGSIM (see `_egsim_oq.py`)
 #   dtype:   The data type (default when missing: float). Supported values are:
 #            float, int, str, datetime, bool, or the list of the possible values
 #            that the field can have (categorical data)
@@ -65,11 +65,11 @@ REQUIRES_DISTANCES:  # Distance parameters
 
 
 REQUIRES_RUPTURE_PARAMETERS:  # Rupture parameters
-  ev_lat:
+  hypo_lat:
     flatfile_name: event_latitude
     help: event latitude (deg)
     bounds: [ -90, 90 ]
-  ev_lon :
+  hypo_lon :
     flatfile_name: event_longitude
     help: event longitude (deg)
     bounds: [ -180, 180 ]

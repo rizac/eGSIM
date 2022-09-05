@@ -5,10 +5,11 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
+from dataclasses import dataclass
 from os.path import abspath, join
 import json
-from enum import IntEnum
-from datetime import datetime
+from enum import Enum, IntEnum
+from datetime import datetime, date
 
 from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
                               ManyToManyField, JSONField, UniqueConstraint,
@@ -41,11 +42,9 @@ class DateTimeEncoder(CompactEncoder):
     _KEY = '__iso8601datetime__'  # DO NOT CHANGE or repopulate db
 
     def default(self, obj):
-        try:
-            # Note: from timestamp is not faster, so let's use isoformat to speed up:
-            return {self._KEY: obj.isoformat()}
-        except Exception:  # noqa
-            return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
+        if isinstance(obj, (datetime, date)):
+            obj = {self._KEY: obj.isoformat()}
+        return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
 
 
 class DateTimeDecoder(json.JSONDecoder):
@@ -156,7 +155,7 @@ class FlatfileColumn(_UniqueNameModel):
                                            'property associated to this '
                                            'column')
     help = TextField(null=False, default='', help_text="Field help text")
-    properties = JSONField(null=True, encoder=DateTimeEncoder,
+    properties = JSONField(null=False, encoder=DateTimeEncoder,
                            decoder=DateTimeDecoder,
                            help_text=('column data properties as JSON (null: no '
                                       'properties). Optional keys: "dtype" '
@@ -167,15 +166,101 @@ class FlatfileColumn(_UniqueNameModel):
                                       'unbounded), "default" (the default when '
                                       'missing)'))
 
-    class Meta(_UniqueNameModel.Meta):
-        constraints = [
-            # unique constraint name must be unique across ALL db tables:
-            # use `app_label` and `class` to achieve that:
-            UniqueConstraint(fields=['oq_name', 'category'],
-                             name='%(app_label)s_%(class)s_unique_oq_name_and_'
-                                  'category'),
-        ]
-        indexes = [Index(fields=['name']), ]
+    @dataclass
+    class properties_key:
+        """The Field `self.properties` is a JSON dict. Here the relevant keys
+        used throughout the program (see e.g. `save` for usage details)
+        """
+        dtype = 'dtype'
+        bounds = 'bounds'
+        default = 'default'
+
+
+    @dataclass
+    class base_dtypes(Enum):
+        """The base data types of a flatfile, mapped to the Python type that
+        must be JSON or YAML serializable.
+        Supported is also a categorical data type similar to pandas one (see
+        `save` for details)
+        """
+        float = float
+        int = int
+        bool = bool
+        datetime = datetime
+        str = str
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        """Call `super.save` after checking and harmonizing the values of
+        `self.properties` to be usable with flatfiles
+        """
+        # perform some check on the data type consistencies:
+        props = self.properties
+        if props is None:
+            props = self.properties = {}
+        prefix = f'Flatfile column "{self.name}"'
+        # this assert is silly but makes pycharm linting not complaining:
+        assert isinstance(props, dict), \
+            f"{prefix}: properties field must be null or dict"
+
+        # check dtype:
+        dtype_name = self.properties_key.dtype
+        dtype = props.setdefault(dtype_name, self.base_dtypes.float.name)
+        is_categorical_dtype = isinstance(dtype, (list, tuple))
+        if is_categorical_dtype:
+            # check that all values in the list are of supported dtype
+            assert all(any(isinstance(_, cl.value) for cl in self.base_dtypes)
+                       for _ in dtype),\
+                f"{prefix}: some value in the provided categories is of " \
+                f"unsupported type"
+        else:
+            assert dtype in (_.name for _ in self.base_dtypes), \
+                f"{prefix}: unrecognized data type: {str(dtype)}"
+
+        # check bounds
+        bounds_name = self.properties_key.bounds
+        bounds = props.setdefault(bounds_name, [None, None])
+        if isinstance(bounds, tuple):
+            bounds = props[bounds_name] = list(bounds)
+        assert isinstance(bounds, list) and len(bounds) == 2, \
+            f"{prefix}: bounds must be a 2-element list"
+        if is_categorical_dtype:
+            assert bounds == [None, None], \
+                f"{prefix}: bounds must be [Null, null] or missing with " \
+                f"categorical data type"
+        else:
+            py_dtype = self.base_dtypes[dtype].value
+            # type promotion (ints are valid floats):
+            if py_dtype == float:
+                for i in [0, 1]:
+                    if isinstance(bounds[i], int):
+                        bounds[i] = float(bounds[i])
+            assert bounds[0] is None or isinstance(bounds[0], py_dtype), \
+                f"{prefix}: bounds[0] must be null/None or of type {str(py_dtype)}"
+            assert bounds[1] is None or isinstance(bounds[1], py_dtype), \
+                f"{prefix}: bounds[0] must be null/None or of type {str(py_dtype)}"
+            assert any(_ is None for _ in bounds) or bounds[0] < bounds[1], \
+                f"{prefix}: bounds[0] must be < bounds[1], or both null/None"
+
+        # check default value (defval):
+        defval_name = self.properties_key.default
+        if defval_name in props:
+            def_val = props[defval_name]
+            if is_categorical_dtype:
+                assert def_val in props[dtype_name], \
+                    f"{prefix}: default is given but not in list of possible values"
+            else:
+                # type promotion (int is a valid float):
+                if py_dtype == float and isinstance(def_val, int):  # noqa
+                    props[defval_name] = float(def_val)
+                else:
+                    assert isinstance(def_val, py_dtype), \
+                        f"{prefix}: default if given must be of type {str(py_dtype)}"
+
+        super().save(force_insert=force_insert,
+                     force_update=force_update,
+                     using=using,
+                     update_fields=update_fields)
 
     @classmethod
     def get_dtype_and_defaults(cls) -> tuple[dict[str, str], dict[str, str]]:
@@ -194,11 +279,21 @@ class FlatfileColumn(_UniqueNameModel):
         for name, props in cls.objects.filter().only(*cols).values_list(*cols):
             if not props:
                 continue
-            dtype[name] = props['dtype']
-            if 'default' in props:
-                defaults[name] = props['default']
+            dtype[name] = props[cls.properties_key.dtype]
+            if cls.properties_key.default in props:
+                defaults[name] = props[cls.properties_key.default]
 
         return dtype, defaults
+
+    class Meta(_UniqueNameModel.Meta):
+        constraints = [
+            # unique constraint name must be unique across ALL db tables:
+            # use `app_label` and `class` to achieve that:
+            UniqueConstraint(fields=['oq_name', 'category'],
+                             name='%(app_label)s_%(class)s_unique_oq_name_and_'
+                                  'category'),
+        ]
+        indexes = [Index(fields=['name']), ]
 
     def __str__(self):
         categ = 'N/A' if self.category is None else \

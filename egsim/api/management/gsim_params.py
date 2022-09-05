@@ -24,14 +24,12 @@ class propname(str, Enum):  # noqa
 # string. IMPORTANT: Any custom type class like this one must have the name equals
 # one of the supported dtypes documented in the YAML (so, e.g., `class dtime` would be
 # wrong)
-class datetime:  # noqa
-
-    def __call__(self, obj):
-        if isinstance(obj, py_datetime):
-            return obj
-        if isinstance(obj, py_date):
-            return py_datetime(year=obj.year, month=obj.month, day=obj.day)
-        return py_datetime.fromisoformat(str(obj))
+def datetime(obj):  # noqa
+    if isinstance(obj, py_datetime):
+        return obj
+    if isinstance(obj, py_date):
+        return py_datetime(year=obj.year, month=obj.month, day=obj.day)
+    return py_datetime.fromisoformat(str(obj))
 
 
 # SUPPORTED DATA TYPES. Each element must be a callable class producing elements

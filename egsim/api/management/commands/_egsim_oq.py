@@ -2,29 +2,34 @@
 (Re)populate the eGSIM database with all OpenQuake data
 
 This command is invoked by `egsim_init.py` and is currently hidden from Django
-(beacuse of the leading underscore in the module name)
+(because of the leading underscore in the module name)
 
 Created on 6 Apr 2019
 
-@author: riccardo
+@author: riccardo z. (rizac@github.com)
 """
 import warnings
+import os
+import yaml
 import inspect
 from collections import defaultdict
 from typing import Union
-from enum import Enum
 
+from django.core.management import CommandError
 from openquake.baselib.general import (DeprecationWarning as
                                        OQDeprecationWarning)
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
-from ..gsim_params import (read_gsim_params, DEFAULT_FILE_PATH as model_params_filepath)
 from . import EgsimBaseCommand
 from ... import models
 
 
 SUPPORTED_IMTS = (imt.PGA, imt.PGV, imt.SA, imt.PGD, imt.IA, imt.CAV)
+
+GSIM_PARAMS_YAML_PATH = \
+    os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
+                 "gsim_params.yaml")
 
 
 class Command(EgsimBaseCommand):
@@ -46,8 +51,7 @@ class Command(EgsimBaseCommand):
         # populate db:
         self.printinfo('Populating DB with OpenQuake data:')
         imts = populate_imts()
-        model_params = read_gsim_params()
-        _, missing_params, unused_params = populate_gsims(imts, model_params)
+        _, missing_params, unused_params = populate_gsims(imts)
 
         _imtc = models.Imt.objects.count()  # noqa
         _imt = 'Imt' if _imtc == 1 else 'Imts'
@@ -63,7 +67,7 @@ class Command(EgsimBaseCommand):
         self.printinfo(' - initialization errors')
         self.printinfo(' - not defined for any supported Imt')
         self.printinfo(' - requiring parameters that have no '
-                       'associated flatfile name in ' + model_params_filepath)
+                       f'associated flatfile name in {GSIM_PARAMS_YAML_PATH}')
 
         if unused_params:
             _prm = 'parameter' if len(unused_params) == 1 else 'parameters'
@@ -107,7 +111,7 @@ def populate_imts() -> dict[imt.IMT, models.Imt]:
     return imts
 
 
-def populate_gsims(imts: dict[imt.IMT, models.Imt], model_params: dict[str, dict])\
+def populate_gsims(imts: dict[imt.IMT, models.Imt])\
         -> tuple[list[models.Gsim], dict[str, list[str]], set[str]]:
     """Write all Gsims from OpenQuake to the db
 
@@ -116,6 +120,13 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], model_params: dict[str, dict
         as registered in the internal YAML file
     """
     gsims = []
+    # read GSIM parameters:
+    model_params: dict[str, dict] = {}
+    with open(GSIM_PARAMS_YAML_PATH) as fpt:
+        root_dict = yaml.safe_load(fpt)
+        for param_type, params in root_dict.items():
+            for param_name, props in params.items():
+                model_params[f'{param_type}.{param_name}'] = props
 
     saved_params = {}  # paramname -> flatfilename
     missing_params = defaultdict(list)
@@ -194,23 +205,28 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], model_params: dict[str, dict
                         key = "%s.%s" % (attname, pname)
                         if key not in model_params:
                             missing_params[key].append(gsim_name)
+                            # this exception is not exiting (see below):
                             raise ValueError('%s is unknown' % _param2str(key))
 
                         if key not in saved_params:
                             props = model_params[key] or {}
                             ffname = props.pop('flatfile_name', None)
                             if ffname is None:
+                                # this exception is not exiting (see below):
                                 raise ValueError('%s has no matching '
                                                  'flatfile column' % _param2str(key))
                             # save to model
                             help_ = props.pop('help', '')
                             category = attname2category[attname]
                             # create (and save) object:
+                            #try:
                             models.FlatfileColumn.objects.create(name=ffname,
                                                                  help=help_,
                                                                  properties=props,
                                                                  category=category,
                                                                  oq_name=pname)
+                            # except Exception as exc:
+                            #     raise CommandError(str(exc))
                             saved_params[key] = ffname
 
                         db_p = models.FlatfileColumn.objects.\
@@ -287,9 +303,15 @@ attname2category = {
 }
 
 
-def _param2str(param):
-    """Converts a model parameter key (as read from the YAML file)
-    into a human readable name"""
+def _param2str(param: str):
+    """Makes `param` human readable, e.g. 'REQUIRES_DISTANCES.rcdpp' into:
+    'Distance measure "rcdpp" (found in Gsim attribute `REQUIRES_DISTANCES`)'
+
+    :param param: a model parameter name, in the format `category.name`,
+        e.g. 'REQUIRES_DISTANCES.rcdpp' (`category` is one of the keys of
+        `atrname2category`)
+
+    """
     attname, pname = param.split(".", 1)
     categ = attname2category[attname]
     return categ.name.replace('_', ' ').capitalize() + \
