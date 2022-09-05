@@ -41,7 +41,6 @@ def test_initdb(capfd, tmpdir):
             inst = _.objects.all().first()
             print(str(inst))
 
-    # Note: not specifying category means that the category is null
     f = models.FlatfileColumn(name='rx_1', oq_name='ert').save()
 
     with pytest.raises(Exception) as ierr:
