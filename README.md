@@ -1,7 +1,19 @@
 eGSIM is a web service for selecting and testing  ground shaking models (GSIM) 
-in Europe, developed in the framework of the Thematic Core Services for 
+in Europe, developed a the [GFZ](https://www.gfz-potsdam.de/) in the framework of the Thematic Core Services for 
 Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of 
 [EFEHR](http://www.efehr.org/en/home/)
+
+<p align="middle">
+    <a title='EFEHR' href='www.efehr.org'><img height='50' src='http://www.efehr.org/export/system/modules/ch.ethz.sed.bootstrap.efehr2021/resources/img/logos/efehr.png'></a>
+    &nbsp;&nbsp;
+    <a title='GFZ' href='https://www.gfz-potsdam.de/'><img height='50' src='https://www.gfz-potsdam.de/fileadmin/gfz/GFZ.svg'></a>
+    &nbsp;&nbsp;
+    <a title='EPOS' href='https://www.epos-eu.org/'><img height='50' src='https://www.epos-eu.org/themes/epos/logo.svg'></a>
+    <br>
+</p>
+
+The web portal (and API documentation) is available at:
+## https://egsim.gfz-potsdam.de
 
 # Table of contents
 
