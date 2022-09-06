@@ -82,8 +82,8 @@ class _UniqueNameModel(Model):
 
 
 class _DataSource(_UniqueNameModel):
-    """Abstract class for Table entries describing the source of data used in
-    this program"""
+    """Abstract class for Table rows associated to source data with given
+    URL, license, citation and so on"""
 
     display_name = TextField(default=None, null=True)
     url = URLField(default=None, null=True)
@@ -110,7 +110,9 @@ class _DataSource(_UniqueNameModel):
 
 
 class Flatfile(_DataSource):
-    """class handling flatfiles stored in the server file system"""
+    """Class handling flatfiles stored in the file system
+    (predefined flatfiles)
+    """
     # base directory for any uploaded or created flat file:
     BASEDIR_PATH = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
 
@@ -167,7 +169,7 @@ class FlatfileColumn(_UniqueNameModel):
                                       'missing)'))
 
     @dataclass
-    class properties_key:
+    class properties_key:  # noqa
         """The Field `self.properties` is a JSON dict. Here the relevant keys
         used throughout the program (see e.g. `save` for usage details)
         """
@@ -175,9 +177,7 @@ class FlatfileColumn(_UniqueNameModel):
         bounds = 'bounds'
         default = 'default'
 
-
-    @dataclass
-    class base_dtypes(Enum):
+    class base_dtypes(Enum):  # noqa
         """The base data types of a flatfile, mapped to the Python type that
         must be JSON or YAML serializable.
         Supported is also a categorical data type similar to pandas one (see
@@ -361,7 +361,7 @@ class GsimRegion(Model):
     """Model representing a GSIM Region"""
 
     gsim = ForeignKey(Gsim, on_delete=CASCADE, null=False, related_name='regions')
-    regionalization = ForeignKey("RegionalizationDataSource", to_field='name',
+    regionalization = ForeignKey("Regionalization", to_field='name',
                                  on_delete=SET_NULL, null=True,
                                  help_text="The name of the regionalization "
                                            "this region derives from")
@@ -413,7 +413,7 @@ class GsimRegion(Model):
                (str(self.gsim), npoly, poly, self.regionalization)
 
 
-class RegionalizationDataSource(_DataSource):
+class Regionalization(_DataSource):
     """Model representing the data source of a given Regionalization"""
     pass
 
