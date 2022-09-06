@@ -284,7 +284,7 @@ To perform a db reset:
 ## Repopulate the DB
 
 NOTE: If you don't have created and initialized the db yet, go to 
-[Complete DB reset](#Complete DB reset)
+[Complete DB reset](#Complete-DB-reset)
 
 When the db is created for the first time or reset, 
 OpenQuake is upgraded, or new data is implemented (new regionalization 

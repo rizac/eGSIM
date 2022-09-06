@@ -139,7 +139,7 @@ class Flatfile(_DataSource):
 class FlatfileColumn(_UniqueNameModel):
     """Flat file column"""
 
-    class CATEGORY(IntEnum):
+    class Category(IntEnum):
         """Flat file category inferred from the relative Gsim attribute(s)"""
         DISTANCE_MEASURE = 0  # Gsim attr: REQUIRES_DISTANCES
         RUPTURE_PARAMETER = 1  # Gsim attr: REQUIRES_RUPTURE_PARAMETERS
@@ -153,7 +153,7 @@ class FlatfileColumn(_UniqueNameModel):
     category = SmallIntegerField(null=True,
                                  choices=[(c.value,
                                            c.name.replace('_', ' ').capitalize())
-                                          for c in CATEGORY],
+                                          for c in Category],
                                  help_text='The OpenQuake category of the GSIM '
                                            'property associated to this '
                                            'column')
@@ -169,8 +169,7 @@ class FlatfileColumn(_UniqueNameModel):
                                       'unbounded), "default" (the default when '
                                       'missing)'))
 
-    @dataclass
-    class properties_key:  # noqa
+    class PropertiesKey:
         """The Field `self.properties` is a JSON dict. Here the relevant keys
         used throughout the program (see e.g. `save` for usage details)
         """
@@ -178,7 +177,7 @@ class FlatfileColumn(_UniqueNameModel):
         bounds = 'bounds'
         default = 'default'
 
-    class base_dtypes(Enum):  # noqa
+    class BaseDtype(Enum):  # noqa
         """The base data types of a flatfile, mapped to the Python type that
         must be JSON or YAML serializable.
         Supported is also a categorical data type similar to pandas one (see
@@ -205,21 +204,21 @@ class FlatfileColumn(_UniqueNameModel):
             f"{prefix}: properties field must be null or dict"
 
         # check dtype:
-        dtype_name = self.properties_key.dtype
-        dtype = props.setdefault(dtype_name, self.base_dtypes.float.name)
+        dtype_name = self.PropertiesKey.dtype
+        dtype = props.setdefault(dtype_name, self.BaseDtype.float.name)
         is_categorical_dtype = isinstance(dtype, (list, tuple))
         if is_categorical_dtype:
             # check that all values in the list are of supported dtype
-            assert all(any(isinstance(_, cl.value) for cl in self.base_dtypes)
+            assert all(any(isinstance(_, cl.value) for cl in self.BaseDtype)
                        for _ in dtype),\
                 f"{prefix}: some value in the provided categories is of " \
                 f"unsupported type"
         else:
-            assert dtype in (_.name for _ in self.base_dtypes), \
+            assert dtype in (_.name for _ in self.BaseDtype), \
                 f"{prefix}: unrecognized data type: {str(dtype)}"
 
         # check bounds
-        bounds_name = self.properties_key.bounds
+        bounds_name = self.PropertiesKey.bounds
         bounds = props.setdefault(bounds_name, [None, None])
         if isinstance(bounds, tuple):
             bounds = props[bounds_name] = list(bounds)
@@ -230,7 +229,7 @@ class FlatfileColumn(_UniqueNameModel):
                 f"{prefix}: bounds must be [Null, null] or missing with " \
                 f"categorical data type"
         else:
-            py_dtype = self.base_dtypes[dtype].value
+            py_dtype = self.BaseDtype[dtype].value
             # type promotion (ints are valid floats):
             if py_dtype == float:
                 for i in [0, 1]:
@@ -244,7 +243,7 @@ class FlatfileColumn(_UniqueNameModel):
                 f"{prefix}: bounds[0] must be < bounds[1], or both null/None"
 
         # check default value (defval):
-        defval_name = self.properties_key.default
+        defval_name = self.PropertiesKey.default
         if defval_name in props:
             def_val = props[defval_name]
             if is_categorical_dtype:
@@ -280,9 +279,9 @@ class FlatfileColumn(_UniqueNameModel):
         for name, props in cls.objects.filter().only(*cols).values_list(*cols):
             if not props:
                 continue
-            dtype[name] = props[cls.properties_key.dtype]
-            if cls.properties_key.default in props:
-                defaults[name] = props[cls.properties_key.default]
+            dtype[name] = props[cls.PropertiesKey.dtype]
+            if cls.PropertiesKey.default in props:
+                defaults[name] = props[cls.PropertiesKey.default]
 
         return dtype, defaults
 

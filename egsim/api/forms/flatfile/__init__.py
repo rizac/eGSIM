@@ -260,11 +260,11 @@ def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, s
     rup, site, dist = {}, {}, {}
     cols = 'name', 'oq_name', 'category'
     for ffname, attname, categ in qry.only(*cols).values_list(*cols):
-        if categ == models.FlatfileColumn.CATEGORY.RUPTURE_PARAMETER:
+        if categ == models.FlatfileColumn.Category.RUPTURE_PARAMETER:
             rup[ffname] = attname
-        elif categ == models.FlatfileColumn.CATEGORY.SITE_PARAMETER:
+        elif categ == models.FlatfileColumn.Category.SITE_PARAMETER:
             site[ffname] = attname
-        elif categ == models.FlatfileColumn.CATEGORY.DISTANCE_MEASURE:
+        elif categ == models.FlatfileColumn.Category.DISTANCE_MEASURE:
             dist[ffname] = attname
     return rup, site, dist
 
