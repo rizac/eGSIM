@@ -13,6 +13,7 @@ Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of
      * [Admin panel](#admin-panel)
      * [Complete DB reset](#Complete-DB-reset)
      * [~~Migrate and populate the db~~](#Migrate-and-populate-the-db)
+     * [Create a custom management command](#Create-a-custom-management-command)  
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
      * [Add new regionalization](#Add-new-regionalization)
      * [Dependencies upgrade](#Dependencies-upgrade)
@@ -300,6 +301,15 @@ Before reading, remember:
    The command `migrate` does nothing if it detects that there is nothing to migrate)
    
 6. Repopulate all eGSIM tables (command `egsim_init`)
+
+
+### Create a custom management command
+
+See `egsim/api/management/commands/README.md`.
+
+The next two sections will describe how to store
+new data (regionalizations and flatfiles) that will be
+made available in eGSIM by means of two management commands
 
 
 ### Add new predefined flatfiles
