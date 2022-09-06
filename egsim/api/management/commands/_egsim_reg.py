@@ -42,7 +42,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         self.printinfo('Populating DB with Regionalization data:')
-        self.empty_db_table(models.GsimRegion, models.RegionalizationDataSource)
+        self.empty_db_table(models.GsimRegion, models.Regionalization)
 
         skipped = defaultdict(list)  # regionalization name -> list of warnings
         for name, mapping_file, regionalization_file in self.get_data_files():
@@ -124,7 +124,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                                % (_nump, _poly, gsim))
                 continue
 
-            rds, _ = models.RegionalizationDataSource.objects.\
+            rds, _ = models.Regionalization.objects.\
                 get_or_create(**regionalization_data_source)  # noqa
             models.GsimRegion.objects.create(regionalization=rds,
                                              gsim=db_gsim,  # noqa
@@ -134,7 +134,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
 
         if printinfo:
             _gsim = "Gsim" if len(printinfo) == 1 else "Gsims"
-            name = rds.name
+            name = rds.name  # noqa
             self.printinfo(' - Regionalization "%s"; %d %s written '
                            '(number of associated GeoPolygons in brackets):\n'
                            '   %s' % (name, len(printinfo), _gsim, ", ".join(printinfo)))

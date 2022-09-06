@@ -17,7 +17,7 @@ Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
      * [Add new regionalization](#Add-new-regionalization)
      * [Dependencies upgrade](#Dependencies-upgrade)
-     * [Fix gmpe-smtk](#Fix-gmpe-smtk)
+     * [Fix smtk](#Fix-smtk)
 
      
 ## Installation
@@ -65,11 +65,13 @@ python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
 source .env/<ENVNAME>/bin/activate  # activate venv
 ```
 
-**NOTE: From now on, all following operations must have the virtualenv activated FIRST**
+**NOTE: From now on, all following operations must have the virtualenv 
+activated FIRST**
 
 ### Install
 
-*Note: if the installation is done for upgrading all dependencies and `pip freeze` into new requirements files,
+*Note: if the installation is done for upgrading all dependencies and 
+`pip freeze` into new requirements files,
 please go to [dependency upgrade](#dependencies-upgrade)* 
 
 
@@ -96,7 +98,8 @@ git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
 
 **Note** that the current commit hash (`git log -1`) **should be the same** as
-in `requirements.txt` (i.e., the string portion between '@' and '#' of the text line containing "smtk").
+in `requirements.txt` (i.e., the string portion between '@' and '#' of the 
+text line containing "smtk").
 
 Then, (re)install smtk from the cloned directory:
 
@@ -105,7 +108,7 @@ cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 pip install -e .
 ```
 
-and have a look at [Fixing gmpe-smtk](#Fix gmpe-smtk)
+and have a look at [Fixing gmpe-smtk](#Fix-smtk)
 for the suggested workflow
 
 </details>
@@ -133,25 +136,15 @@ using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
 
 ## Usage
 
-(*NOTE: the settings module MUST be changed in production*!)
+(NOTE: the settings module MUST be changed in production!)
 
-Initialize the database/db (**one-time only operation to be done 
-before running the program for the first time**):
-
-- Create db:
-
-  ```bash
-  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
-  ```
-
-- Populate db:
-
-  ```bash
-  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
-  ``` 
+If you didn't do already, perform 
+a [Complete DB reset](#Complete-DB-reset)
+(**one-time only operation**)
 
 If you want to access the admin panel, see [the admin panel](#admin-panel).
-Otherwise, **to run the program in your local browser**, type:
+
+**To run the program in your local browser**, type:
 
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver 
@@ -176,13 +169,13 @@ organization structures:
    https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
 
 In eGSIM we have a project (root directory) named "egsim" two apps: "api" and
-"gui". Whereas the latter is simply a package housing frontedn code, urls
-and view, the former also housed databse models and it is thus technically
+"gui". Whereas the latter is simply a package housing frontend code, urls
+and view, the former also housed database models, and it is thus technically
 speaking the only app of the project. Note that "api" is not the only used 
 app (see `INSTALLED_APPS` in the settings file, among which we enabled the 
 `admin` app visualizable through the [Admin panel](#admin-panel)).
 
-Most ofthe management commands we are about to see are command line 
+Most of the management commands we are about to see are command line 
 applications invokable from the terminal: remember that 
 **The DJANGO_SETTINGS_MODULE environment variable 
 in the examples below is not the value to be given in production**, where a 
@@ -207,7 +200,8 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell
 (check or modify database data from the web browser)
 
 The database must have been created and populated (see [Usage](#usage)). 
-For further details: check [Django docs](https://docs.djangoproject.com/en/stable/ref/django-admin/))
+For further details, check the 
+[Django doc](https://docs.djangoproject.com/en/stable/ref/django-admin/)
 
 Create a super user (to be done **once only** ):
 ```bash
@@ -221,29 +215,47 @@ http://127.0.0.1:8000/admin/)
 
 ### Complete DB reset
 
-As eGSIM does not need to store user data in the database, it might be
-easier to throw everything away and regenerate all db schema and data 
-(e.g., after changing the directory structure of the project), instead
-of running migrations.
+Every time you change something in the Database schema, e.g. 
+a table, a column, a column type, a constraint
+(see `egsim.pai.models.py`), you need to run DB migrations.
+
+However, as eGSIM does not need to store user data in the database, it might be
+easier to throw everything away and regenerate all db schema and data.
 
 To perform a db reset:
- - delete `db.sqlite3` (or wherever the database is)
+ - delete or rename `db.sqlite3` (or wherever the database is)
  - delete all migrations (currently under "egsim/api/migrations"), i.e.
    all all .py files except `__init__.py`
- - execute (change `DJANGO_SETTINGS_MODULE` value in production!):
+ - Create and run migrations. Execute (change `DJANGO_SETTINGS_MODULE` value 
+   in production!):
  
    ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
    ```
+ - [Repopulate the db](#Repopulate-the-DB)
  
- - Re-add if needed the Django admin superuser(s) as explained in the
+ - [**Optional**] Re-add the Django admin superuser(s) as explained in the
    [admin panel](#admin-panel) above
    
 
-### ~~Migrate and populate the db~~
+### Repopulate the DB
 
-DISCLAIMER: Consider
+NOTE: If you don't have created and run migrations yet, go to 
+[Complete DB reset](#Complete DB reset)
+
+When OpenQuake is upgraded, or a new regionalization or flatfile is 
+implemented, you need to repopulate the database, and the filesystem to make
+changes available to eGSIM users via:
+
+```bash
+   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
+```
+ 
+
+### Migrate and populate the db
+
+**DISCLAIMER**: Consider
 performing a [Complete db reset](#complete-db-reset)
 instead.
 
@@ -252,8 +264,8 @@ Before reading, remember:
  - `DJANGO_SETTINGS_MODULE` value in the examples below must be changed 
    in production!
  - The `make_migration` command just generates a migration file, it doesn't 
-   change the db. The `migrate` command does that, by means of the migration files
-   generated. For details on Django migrations, see:
+   change the db. The `migrate` command does that, by means of the migration 
+   files generated. For details on Django migrations, see:
    - https://realpython.com/django-migrations-a-primer/#changing-models
    - https://docs.djangoproject.com/en/3.2/topics/migrations/#workflow
 
@@ -297,8 +309,9 @@ Before reading, remember:
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim
    ```
 
-   ("egsim" above is the app name. If you omit the app, all apps will be migrated.
-   The command `migrate` does nothing if it detects that there is nothing to migrate)
+   ("egsim" above is the app name. If you omit the app, all apps will be 
+   migrated. The command `migrate` does nothing if it detects that there is 
+   nothing to migrate)
    
 6. Repopulate all eGSIM tables (command `egsim_init`)
 
@@ -366,9 +379,9 @@ Implemented flatfiles sources (click on the items below to expand)
   - .geojson (regionalization, aka regions collection) and
   - .json (region -> gsim mapping)
   
-  in `managements/commands/data/regionalization_files`. Usually, these files are
-  copied and pasted from the `shakyground2` project (see GFZ gitlab), but if
-  you neeed to implement your own see examples in the given directory 
+  in `managements/commands/data/regionalization_files`. Usually, these files 
+  are copied and pasted from the `shakyground2` project (see GFZ gitlab), but 
+  if you neeed to implement your own see examples in the given directory 
   or ask the developers
 
 - (Optional) Add the file data source 
@@ -391,11 +404,11 @@ Please note that it is safer (from now even
 with `pip`) to upgrade all dependencies
 instead of single packages in order to avoid conflicts.
 Consequently, **follow the procedure below also in case of
-Github single packages security issues or dependencies alert**.
+GitHub single packages security issues or dependencies alert**.
 
 To upgrade all dependencies, we just need to `pull` the newest version
 of `smtk` and relaunch an installation from there (this will fetch
-also OpenQuake newest version and all dependencies automatically)
+also the newest OpenQuake version and all dependencies automatically)
 
 First create and activate a new virtualenv:
 
@@ -415,7 +428,7 @@ cd ../egsim. # (or wherever egsim is)
 pip freeze > requirements.txt
 ```
 
-And finally install the newset version of the test packages:
+And finally install the newest version of the test packages:
 
 ```bash
 pip install pylint pytest-django pytest-cov
@@ -426,25 +439,28 @@ Finally, proceed with the normal workflow:
 run tests, fix new bugs and eventually `git push`, as always.
 
 
-### Fix gmpe-smtk
+### Fix smtk
 
 We will refer to smtk as the [forked branch](https://github.com/rizac/gmpe-smtk)
-used by eGSIM. As we have seen during installation, it is a forked repository from the
-[upstream branch](https://github.com/GEMScienceTools/gmpe-smtk.git).
+used by eGSIM. As we have seen during installation, it is a forked repository 
+from the [upstream branch](https://github.com/GEMScienceTools/gmpe-smtk.git).
 
-By convention **the last commit of the `master` branch of smtk is the updated one which
-can be used in production** (basically, the one written in the `requirements` text files).
-Therefore, when fixing an smtk issue or implementing
-a new feature, switch to a dev branch (we usually use the branch called ... "dev").
+By convention **the last commit of the `master` branch of smtk is the updated 
+one which can be used in production** (basically, the one written in the 
+`requirements` text files).
+Therefore, when fixing a smtk issue or implementing a new feature, switch to 
+a dev branch (we usually use the branch called ... "dev").
 
 Then simply implement your changes, tests and issue a PR, as usual.
-Meanwhile, because in dev mode smtk is usually installed as editable ('-e' flag),
-you don't need to change anything locally, as the new features/fixes are already available in eGSIM.
-Then, *once the PR is merged in the upstream branch*, you can switch back to the
-"master" branch in smtk, and merge from the upstream branch, as follows:
+Meanwhile, because in dev mode smtk is usually installed as editable 
+('-e' flag), you don't need to change anything locally, as the new 
+features/fixes are already available in eGSIM.
+Then, *once the PR is merged in the upstream branch*, you can switch back to 
+the "master" branch in smtk, and merge from the upstream branch, as follows:
 
 <details>
-	<summary>First make sure you added the upstream branch (once-only operation)</summary>
+	<summary>First make sure you added the upstream branch 
+(one-time operation)</summary>
 
 Type:
 
@@ -481,5 +497,6 @@ git merge upstream/master
 
 Finally, update the smtk version: issue a `git log -1` and copy the commit
 hash into the two `requirements` text files.
-Open them, find the line where `gmpe-smtk` is listed and replace the commit hash in
-the portion of the line between '@' and '#'. Eventually, issue a `git push`
+Open them, find the line where `gmpe-smtk` is listed and replace the commit 
+hash in the portion of the line between '@' and '#'. Eventually, issue a 
+`git push`
