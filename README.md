@@ -13,7 +13,8 @@ Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of
 </p>
 
 The web portal (and API documentation) is available at:
-## https://egsim.gfz-potsdam.de
+
+# https://egsim.gfz-potsdam.de
 
 # Table of contents
 
