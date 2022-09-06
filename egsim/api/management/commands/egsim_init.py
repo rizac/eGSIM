@@ -1,8 +1,11 @@
 """
 Empty and (re)populate the database with all eGSIM required data.
-This is also the RECOMMENDED command to be executed every time eGSIM
-dependencies are upgraded, or new external source data is added.
-See the README file in the "egsim/management/commands" directory for details
+this command should be executed after:
+1. initializing the db (first migration)
+2. OpenQuake upgrade
+3. new data files added (regionalizations, flatfiles).
+See README files on the top level directory and under
+"egsim/management/commands"
 
 Usage:
 ```
@@ -26,7 +29,8 @@ from . import EgsimBaseCommand
 from django.conf import settings
 
 
-if any(_['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.values()):
+if any(_['ENGINE'] == 'django.db.backends.sqlite3'
+       for _ in settings.DATABASES.values()):
     # sqlite is used, check JSON1 extension. Note that Django does also this
     # (JSONField) but for safety we perform the test again
     try:
@@ -35,7 +39,8 @@ if any(_['ENGINE'] == 'django.db.backends.sqlite3' for _ in settings.DATABASES.v
         cursor = conn.cursor()
         cursor.execute('SELECT JSON(\'{"a": "b"}\')')
     except Exception:
-        raise ValueError('JSON not supported in this SQLite version. To fix it, visit: '
+        raise ValueError('JSON not supported in this SQLite version. To fix '
+                         'it, visit: '
                          'https://code.djangoproject.com/wiki/JSON1Extension')
 
 
@@ -97,8 +102,8 @@ class Command(EgsimBaseCommand):
             # This might be due to the fact that the migration workflow has
             # not been performed. Append a hint to the error message:
             url = "https://docs.djangoproject.com/en/stable/topics/migrations/"
-            raise CommandError('%s.\nDid you create the db first?\n(for '
-                               'info see: %s)' % (str(db_err), url))
+            raise CommandError(f'{str(db_err)}.\nDid you create the db first?'
+                               f'\n(for info see: {url})')
 
         options.pop('interactive', None)
         for cmd in SUBCOMMANDS:
@@ -162,40 +167,22 @@ class Command(EgsimBaseCommand):
                 continue
             for oq_att in oq_atts:
                 for param in getattr(gsim, oq_att) or []:
-                    key = "%s.%s" % (oq_att, param)
+                    key = f"{oq_att}.{param}"
                     if key in already_done:
                         continue
                     already_done.add(key)
                     if key not in registered_params:
                         ret = 1
-                        self.printwarn('Warning: %s not defined in YAML' % key)
+                        self.printwarn(f'Warning: {key} not defined in YAML')
                     else:
                         registered_params.pop(key)
 
         for key in registered_params:
             ret = 1
-            self.printwarn('Warning: %s in YAML not defined as OpenQuake '
-                           'attribute' % key)
+            self.printwarn(f'Warning: {key} in YAML not defined as OpenQuake '
+                           'attribute')
 
         if ret == 0:
             self.printinfo('YAML file is ok')
         self.printinfo(f'')
         return ret
-
-
-def read_gsim_params() -> dict[str, dict]:
-    """Reads the content of `gsim_params.yaml` where all GSIM parameters
-    have been registered
-    """
-    import os
-    import yaml
-    GSIM_PARAMS_YAML_PATH = \
-        os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
-                     "gsim_params.yaml")
-    model_params: dict[str, dict] = {}
-    with open(GSIM_PARAMS_YAML_PATH) as fpt:
-        root_dict = yaml.safe_load(fpt)
-        for param_type, params in root_dict.items():
-            for param_name, props in params.items():
-                model_params[f'{param_type}.{param_name}'] = props
-    return model_params

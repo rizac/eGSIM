@@ -1,7 +1,7 @@
 from os.path import abspath, join, dirname
 import yaml
 
-from argparse import RawTextHelpFormatter, SUPPRESS
+from argparse import RawTextHelpFormatter
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -49,8 +49,8 @@ class EgsimBaseCommand(BaseCommand):  # noqa
             for model in models:
                 model.objects.all().delete()  # noqa
                 if model.objects.count() > 0:  # noqa
-                    raise CommandError('Could not delete all rows in table "%s"' %
-                                       str(model))
+                    raise CommandError(f'Could not delete all rows in table '
+                                       f'"{str(model)}"')
 
     def printinfo(self, msg):
         """Shortcut for `self.stdout.write(msg)`"""

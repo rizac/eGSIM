@@ -52,14 +52,11 @@ class Command(EgsimBaseCommand):
         _, missing_params, unused_params = populate_gsims(imts)
 
         _imtc = models.Imt.objects.count()  # noqa
-        _imt = 'Imt' if _imtc == 1 else 'Imts'
-        self.printsuccess('%d %s written' % (_imtc, _imt))
+        self.printsuccess(f"{_imtc} Imt{'' if _imtc == 1 else 's'} written")
 
         _gsimc = models.Gsim.objects.count()  # noqa
-        _gsim = 'Gsim' if _gsimc == 1 else 'Gsims'
-        self.printsuccess('%d %s written, %d skipped' %
-                          (_gsimc, _gsim,
-                           models.GsimWithError.objects.count()))  # noqa
+        self.printsuccess(f"{_gsimc} Gsim{'' if _gsimc == 1 else 's'} written, "
+                          f"{models.GsimWithError.objects.count()} skipped")  # noqa
 
         self.printinfo('A Gsim might be skipped for various reasons, e.g.:')
         self.printinfo(' - initialization errors')
@@ -68,23 +65,21 @@ class Command(EgsimBaseCommand):
                        f'associated flatfile name in {GSIM_PARAMS_YAML_PATH}')
 
         if unused_params:
-            _prm = 'parameter' if len(unused_params) == 1 else 'parameters'
-            verb = 'is' if len(unused_params) == 1 else 'are'
-            self.printinfo('   (note: %d %s in the yaml file %s not required by any '
-                           'written Gsim: %s' % (len(unused_params), _prm, verb,
-                                                 ", ".join(unused_params)))
+            self.printinfo(f'   (note: {len(unused_params)} '
+                           f"parameter{'' if len(unused_params) == 1 else ''} "
+                           f'in the YAML file not required by any written Gsim')
 
         if missing_params:
-            _prms = 'parameter' if len(missing_params) == 1 else 'parameters'
             self.printwarn('WARNING:')
-            self.printwarn(' Some Gsims were skipped because they '
-                           'require the following unknown %d %s (edit '
-                           'yaml file above if needed. See details in the file): ' %
-                           (len(missing_params), _prms))
+            self.printwarn(' Some Gsims were skipped because they require '
+                           f"the following unknown {len(missing_params)} "
+                           f"parameter{'' if len(missing_params) == 1 else ''} "
+                           f"(edit YAML file above if needed. See details in "
+                           f"the file)")
             for param, gsims in missing_params.items():
-                gsim_ = 'Gsim' if len(gsims) == 1 else 'Gsims'
-                self.printwarn(" - %s required by %d skipped %s" %
-                               (_param2str(param), len(gsims), gsim_))
+                self.printwarn(f" - {_param2str(param)} required by "
+                               f"{len(gsims)} skipped "
+                               f"Gsim{'' if len(gsims) == 1 else 's'}")
 
 
 def populate_imts() -> dict[imt.IMT, models.Imt]:
@@ -104,8 +99,9 @@ def populate_imts() -> dict[imt.IMT, models.Imt]:
     # last check that everything was written:
     not_written = set(SUPPORTED_IMTS) - set(imts)
     if not_written:
-        raise ValueError('Could not store %d IMT(s) on the database: %s' %
-                         (len(not_written), not_written))
+        raise ValueError(f"Could not store {len(not_written)} "
+                         f"IMT{'' if len(not_written) == 1 else 's'} "
+                         f"on the database: {not_written}")
     return imts
 
 
@@ -114,8 +110,6 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
     """Write all Gsims from OpenQuake to the db
 
     :param imts: a dict of imt names mapped to the relative db model instance
-    :param model_params: the dict of Gsim parameters mapped to their properties,
-        as registered in the internal YAML file
     """
     gsims = []
     # read GSIM parameters:
@@ -149,20 +143,17 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                         store_gsim_error(gsim_name, warn)
                         continue
             except (OSError, NotImplementedError, KeyError, IndexError,
-                    TypeError) as exc:
-                # NOTE: ADD HERE THE EXCEPTIONS THAT YOU WANT TO JUST REPORT.
+                    TypeError) as exc:  # MODEL SKIPPING EXCEPTIONS
                 store_gsim_error(gsim_name, exc)
                 continue
             except Exception as _ex:
-                # IMPORTANT For developers: if we are here something unexpected
-                # happened. Therefore, inspect the traceback and - if nothing
-                # critical is detected - skip the Gsim raising this exception
-                # by adding the latter to the `except` clause above. Otherwise,
-                # fix the problem
-                errmsg = ("`%s()` raised %s which should be added in module %s, "
-                          "at the line of code reading \"except (OSError, ...\"  "
-                          "(original err msg: %s)") % \
-                         (gsim_name, _ex.__class__.__name__, __name__, str(_ex))
+                errmsg = (f"The model `{gsim_name}()` raised "
+                          f"{_ex.__class__.__name__}. You need to handle the "
+                          f"exception by fixing the code or, if you think the "
+                          f"exception should simply discard the models raising "
+                          f"it, add the exception in {__name__} around the "
+                          f"line: '# MODEL SKIPPING EXCEPTIONS' "
+                          f"(Detailed exception message: {str(_ex)})")
                 raise Exception(errmsg) from _ex
 
             # IMTs. Check now because a Gsim without IMTs can not be saved
@@ -173,16 +164,14 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                     # gsim_imts is not iterable, raise (caught below):
                     # raise AttributeError('%s.%s not iterable' %
                     #                      (gsim_name, attname))
-                    raise AttributeError('Attribute %s not iterable' % attname)
+                    raise AttributeError(f"Attribute {attname} not iterable")
                 # convert `gsim_imts` from a sequence of OpenQuake imt (Python
                 # entity) to the relative db model object:
                 gsim_imts = [imts[_] for _ in gsim_imts if _ in imts]
                 # ... and that we have imts:
                 if not gsim_imts:
-                    # raise AttributeError(('%s.%s has no IMT supported by the '
-                    #                       'program') % (gsim_name, attname))
-                    raise AttributeError(('Attribute %s has no IMT supported by the '
-                                          'program') % attname)
+                    raise AttributeError(f"Attribute {attname} has no IMT "
+                                         f"supported by the program")
             except AttributeError as exc:
                 store_gsim_error(gsim_name, exc)
                 continue
@@ -199,15 +188,15 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                         if key not in model_params:
                             missing_params[key].append(gsim_name)
                             # this exception is not exiting (see below):
-                            raise ValueError('%s is unknown' % _param2str(key))
+                            raise ValueError(f"{_param2str(key)} is unknown")
 
                         if key not in saved_params:
                             props = model_params[key] or {}
                             ffname = props.pop('flatfile_name', None)
                             if ffname is None:
                                 # this exception is not exiting (see below):
-                                raise ValueError('%s has no matching '
-                                                 'flatfile column' % _param2str(key))
+                                raise ValueError(f"{_param2str(key)} has no "
+                                                 f"matching flatfile column")
                             # save to model
                             help_ = props.pop('help', '')
                             category = attname2category[attname]
@@ -239,8 +228,8 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
             if len(gsim_warnings) == 1:
                 gsim_warning = gsim_warnings[0].strip()
             elif len(gsim_warnings) > 1:
-                gsim_warning = " ".join('%d) %s' % (i, _.strip())
-                                        for (i, _) in enumerate(gsim_warnings, 1))
+                gsim_warning = " ".join(f"{i}) {_.strip()}" for (i, _)
+                                        in enumerate(gsim_warnings, 1))
 
             # get parameters:
             init_params = {}
@@ -318,4 +307,4 @@ def _param2str(param: str):
     attname, pname = param.split(".", 1)
     categ = attname2category[attname]
     return categ.name.replace('_', ' ').capitalize() + \
-        ' "%s" (found in Gsim attribute `%s`)' % (pname, attname)
+        f' "{pname}" (found in Gsim attribute `{attname}`)'
