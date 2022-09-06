@@ -23,7 +23,7 @@ and Regionalizations, and creates all predefined Flatfiles
 in separate HDF files.
 
 To execute the `egsim_init` command:
-```buildoutcfg
+```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py egsim_init
 ```
 (type `--help` to list the command options, e.g. 
@@ -31,12 +31,12 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py egsim_ini
 
 To list all commands:
 
-```buildoutcfg
+```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py --help
 ```
 
 To test the commands:
-```buildoutcfg
+```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; pytest tests/test_commands.py
 ```
 
@@ -86,7 +86,7 @@ That said, in order to add a new command:
    the directory "management/commands/data/". E.g., if your data files are 
    inside "management/commands/data/abc", your code would read:
    ```python
-   def handle(self, *args, **kwargs):
+    def handle(self, *args, **kwargs):
         data_dir = self.data_path('abc')
    ```
    (see `EgsimBaseCommand.data_dir` for details). 
