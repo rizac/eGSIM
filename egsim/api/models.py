@@ -126,12 +126,12 @@ class Flatfile(_DataSource):
                                          "flatfile has no expiration date")
 
     @classmethod
-    def get_flatfiles(cls, show_hidden=False, show_expired=False):
+    def get_flatfiles(cls, hidden=False, expired=False):
         qry = cls.objects  # noqa
-        if not show_expired:
+        if not expired:
             qry = qry.filter(Q(expiration__isnull=True) |
                                      Q(expiration__lt=datetime.utcnow()))
-        if not show_hidden:
+        if not hidden:
             qry = qry.filter(hidden=False)
         return qry
 
