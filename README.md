@@ -26,8 +26,8 @@ DISCLAIMER: **This document covers installation in development (or debug)
 mode, i.e. when the program is deployed locally, usually for testing, 
 fixing bug or adding features.**
 
-The "formal" installation of eGSIM as web service (*production* or *deploy* 
-mode) on a remote, publicly available server is covered in `deploy.html`.
+For installation in **production** mode, see `deploy.html` (note however
+that the document was last updated in 2019)
 
 ### Requirements
 
@@ -116,6 +116,9 @@ for the suggested workflow
 
 ### Run Test
 
+**Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
+must be changed in production**
+
 Move in the `egsim directory` and type:
 
 ```bash
@@ -136,7 +139,8 @@ using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
 
 ## Usage
 
-(NOTE: the settings module MUST be changed in production!)
+**Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
+must be changed in production**
 
 If you didn't do already, perform 
 a [Complete DB reset](#Complete-DB-reset)
@@ -176,16 +180,20 @@ app (see `INSTALLED_APPS` in the settings file, among which we enabled the
 `admin` app visualizable through the [Admin panel](#admin-panel)).
 
 Most of the management commands we are about to see are command line 
-applications invokable from the terminal: remember that 
-**The DJANGO_SETTINGS_MODULE environment variable 
-in the examples below is not the value to be given in production**, where a 
-new settings file has to be created with production specific settings such as, 
-e.g. `debug=False` and a new `SECRET_KEY` (which needs to be secret and not 
-git committed).
+applications invokable from the terminal. All commands rely on a 
+[**Django Settings file**](https://docs.djangoproject.com/en/4.1/topics/settings/)
+that is usually given by prepending 
+`export DJANGO_SETTINGS_MODULE=<settings_file_path>`
+to the command. **Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
+must be changed in production**. This is because on the production server a 
+separate settings file must be created, outside the git repo and 
+**not shared for security reasons**.
 
 
 ### Starting a Python terminal shell
 
+**Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
+must be changed in production**
 
 Typing `python` on the terminal does not work if you need to import django
 stuff, as there are things to be initialized beforehand. The Django `shell`
@@ -197,11 +205,14 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell
 
 ### Admin panel
 
-(check or modify database data from the web browser)
+**Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
+must be changed in production**
+
+This command allows the user to check database data from the 
+web browser. For further details, check the 
+[Django doc](https://docs.djangoproject.com/en/stable/ref/django-admin/)
 
 The database must have been created and populated (see [Usage](#usage)). 
-For further details, check the 
-[Django doc](https://docs.djangoproject.com/en/stable/ref/django-admin/)
 
 Create a super user (to be done **once only** ):
 ```bash
@@ -209,25 +220,31 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py createsupe
 ```
 and follow the instructions.
 
-Then navigate in the browser to `[SITE_URL]/admin` (in development mode,
-http://127.0.0.1:8000/admin/)
+Start the program (see [Usage](Usage)) and then navigate in the browser to 
+`[SITE_URL]/admin` (in development mode, `http://127.0.0.1:8000/admin/`)
 
+*Note: Theoretically, you can modify db data from the browser, but to make 
+changes persistent after a database reset you should implement them in 
+the management command `egsim_init` (see [Repopulate the DB](#Repopulate-the-DB))*
 
 ### Complete DB reset
 
-Every time you change something in the Database schema, e.g. 
-a table, a column, a column type, a constraint
-(see `egsim.pai.models.py`), you need to run DB migrations.
+**Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
+must be changed in production**
 
-However, as eGSIM does not need to store user data in the database, it might be
-easier to throw everything away and regenerate all db schema and data.
+Every time you change something in the Database schema, e.g. 
+a table, a column, a constraint
+(see `egsim.api.models.py`), you need to run DB migrations.
+
+However, as eGSIM does not need to store user-defined data in the database, 
+it is often easier to throw everything away and regenerate all db schema and data 
+from scratch.
 
 To perform a db reset:
  - delete or rename `db.sqlite3` (or wherever the database is)
  - delete all migrations (currently under "egsim/api/migrations"), i.e.
    all all .py files except `__init__.py`
- - Create and run migrations. Execute (change `DJANGO_SETTINGS_MODULE` value 
-   in production!):
+ - Create and run migrations:
  
    ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
@@ -241,12 +258,14 @@ To perform a db reset:
 
 ### Repopulate the DB
 
-NOTE: If you don't have created and run migrations yet, go to 
+NOTE: If you don't have created and initialized the db yet, go to 
 [Complete DB reset](#Complete DB reset)
 
-When OpenQuake is upgraded, or a new regionalization or flatfile is 
-implemented, you need to repopulate the database, and the filesystem to make
-changes available to eGSIM users via:
+When the db is created for the first time or reset, 
+OpenQuake is upgraded, or new data is implemented (new regionalization 
+or flatfile), you need to repopulate the database and the filesystem, 
+to make changes available to eGSIM users.
+Execute the custom management command `egsim_init`:
 
 ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
@@ -259,10 +278,14 @@ changes available to eGSIM users via:
 performing a [Complete db reset](#complete-db-reset)
 instead.
 
+<details>
+
+<summary>Details (click to expand)</summary>
+
 Before reading, remember:
 
- - `DJANGO_SETTINGS_MODULE` value in the examples below must be changed 
-   in production!
+ - **the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+   must be changed in production**
  - The `make_migration` command just generates a migration file, it doesn't 
    change the db. The `migrate` command does that, by means of the migration 
    files generated. For details on Django migrations, see:
@@ -314,6 +337,8 @@ Before reading, remember:
    nothing to migrate)
    
 6. Repopulate all eGSIM tables (command `egsim_init`)
+
+</details>
 
 
 ### Create a custom management command
@@ -372,6 +397,7 @@ Implemented flatfiles sources (click on the items below to expand)
 - If on macOS, type the command above to remove the
   macOS folder from the zip
 </details>
+
 
 ### Add new regionalization
 

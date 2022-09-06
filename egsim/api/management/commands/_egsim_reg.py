@@ -61,12 +61,13 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                 if _skipped:
                     skipped[name].extend(_skipped)
             except Exception as exc:
-                skipped[name].append('Skipping regionalization "%s": %s' % (name, str(exc)))
+                skipped[name].append(f'Skipping regionalization "{name}": '
+                                     f'{str(exc)}')
 
         if skipped:
             self.printwarn('WARNING:')
             for name, errs in skipped.items():
-                self.printwarn(' - Regionalization "%s":' % name)
+                self.printwarn(f' - Regionalization "{name}":')
                 for err in errs:
                     self.printwarn(err)
 
@@ -118,10 +119,9 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                 db_gsim = models.Gsim.objects.get(name=gsim)  # noqa
             except models.Gsim.DoesNotExist:  # noqa
                 _nump = models.GsimRegion.num_polygons(geom)
-                _poly = 'Polygon' if _nump == 1 else 'Polygons'
-                skipped.append('   %d %s skipped: '
-                               'associated Gsim "%s" unknown (not written to DB)'
-                               % (_nump, _poly, gsim))
+                skipped.append(f"{_nump:>4} Polygon{'' if _nump == 1 else 's'} "
+                               f'skipped: associated Gsim "{gsim}" unknown '
+                               f'(not written to DB)')
                 continue
 
             rds, _ = models.Regionalization.objects.\
@@ -133,11 +133,11 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             printinfo.append('%s (%s)' % (gsim, models.GsimRegion.num_polygons(geom)))
 
         if printinfo:
-            _gsim = "Gsim" if len(printinfo) == 1 else "Gsims"
             name = rds.name  # noqa
-            self.printinfo(' - Regionalization "%s"; %d %s written '
-                           '(number of associated GeoPolygons in brackets):\n'
-                           '   %s' % (name, len(printinfo), _gsim, ", ".join(printinfo)))
+            self.printinfo(f' - Regionalization "{name}"; {len(printinfo)} '
+                           f"Gsim{'' if len(printinfo) == 1 else 's'} written "
+                           f'(number of associated GeoPolygons in brackets):\n'
+                           f'   {", ".join(printinfo)}')
         return skipped
 
 
