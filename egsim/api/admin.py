@@ -7,11 +7,6 @@ Created on Oct 7, 2020
 
 @author: rizac
 """
-# from typing import Union
-# import sys
-# from inspect import getmembers, isclass
-# from django.db.models import Model
-
 from django.contrib import admin
 
 from ..api import models
