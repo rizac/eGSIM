@@ -290,7 +290,7 @@ def store_gsim_error(gsim_name: str, error: Union[str, Exception]):
 
 # Maps Gsim attribute names to the relative Flatfile category (IntEnum):
 attname2category = {
-    'REQUIRES_DISTANCES' : models.FlatfileColumn.CATEGORY.DISTANCE_MEASURE,
+    'REQUIRES_DISTANCES': models.FlatfileColumn.CATEGORY.DISTANCE_MEASURE,
     'REQUIRES_RUPTURE_PARAMETERS': models.FlatfileColumn.CATEGORY.RUPTURE_PARAMETER,
     'REQUIRES_SITES_PARAMETERS': models.FlatfileColumn.CATEGORY.SITE_PARAMETER
 }

@@ -151,7 +151,8 @@ class FlatfileColumn(_UniqueNameModel):
                                               'Contexts during residuals '
                                               'computation)')
     category = SmallIntegerField(null=True,
-                                 choices=[(c, c.name.replace('_', ' ').capitalize())
+                                 choices=[(c.value,
+                                           c.name.replace('_', ' ').capitalize())
                                           for c in CATEGORY],
                                  help_text='The OpenQuake category of the GSIM '
                                            'property associated to this '
