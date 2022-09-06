@@ -1,14 +1,14 @@
-# PLEASE READ (I REPEAT, PLEASE READ): this YAML document collects and describes all
-# OpenQuake GSIMs parameters and how they should be represented as columns of
-# user-defined flat files. See also `gsim_params.py` and `models.FlatfileColumn`
+# PLEASE READ (I REPEAT, PLEASE READ): this YAML document is used in `egsim_init.py`
+# to collects and describes all OpenQuake GSIM parameters and how they should be
+# represented as flatfile columns (`egsim.api.models.FlatfileColumn`)
 
 # GSIM parameter format:
 #
 # <parameter_name>:
 #   flatfile_name: the flat file column name. Default when missing: null, which
-#            means no associated flat file column and thus that the
-#            parameter and the GSIMs requiring it will be *deliberately*
-#            ignored in eGSIM (see `_egsim_oq.py`)
+#            means no associated flat file column and thus that THE GSIM
+#            REQUIRING IT WILL BE DELIBERATELY EXCLUDED FROM THE PROGRAM
+#            (see `_egsim_oq.py`)
 #   dtype:   The data type (default when missing: float). Supported values are:
 #            float, int, str, datetime, bool, or the list of the possible values
 #            that the field can have (categorical data)
@@ -60,7 +60,7 @@ REQUIRES_DISTANCES:  # Distance parameters
     flatfile_name: rvolc
     default: 0
     help: Distance through volcanic zone (km)
-  # Parameters wit no flatfile mapping:
+  # Parameters with no flatfile mapping:
   rcdpp:
 
 
@@ -159,7 +159,7 @@ REQUIRES_SITES_PARAMETERS:  # Site parameters
     flatfile_name: slope
     help: The local slope of the station
     bounds: [ 1.0e-100, null ]  # 1.0e-100 is a workaround to tell: >0
-  # Parameters wit no flatfile mapping:
+  # Parameters with no flatfile mapping:
   f0:
   z1pt4:
   ec8_p18:

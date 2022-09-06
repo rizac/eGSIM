@@ -1,6 +1,8 @@
-# Data sources in YAML format. None of the fields here is essential for the API
-# functioning: only `name` is used but will be inferred (usually from the file name)
-# when not found
+# Data sources in YAML format. Each mapping below represents an entry
+# of `api.models._DataSource` and is implemented for legal requirements:
+# the only parameter exposed through the API is `name` (which will be inferred
+# - usually from the file name - when not found)
+# See `commands/_egsim_flatfiles.py` and `commands/_egsim_reg.py`
 
 "regionalization_files/share.json":
   name: "share"

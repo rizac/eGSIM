@@ -26,11 +26,13 @@ To execute the `egsim_init` command:
 ```buildoutcfg
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py egsim_init
 ```
+(type `--help` to list the command options, e.g. 
+`--no-input` or `--dry-run`)
 
 To list all commands:
 
 ```buildoutcfg
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; `python manage.py --help
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug"; python manage.py --help
 ```
 
 To test the commands:
@@ -85,7 +87,7 @@ That said, in order to add a new command:
    inside "management/commands/data/abc", your code would read:
    ```python
    def handle(self, *args, **kwargs):
-        data_dir = self.data_dir('abc')
+        data_dir = self.data_path('abc')
    ```
    (see `EgsimBaseCommand.data_dir` for details). 
    
@@ -96,64 +98,3 @@ That said, in order to add a new command:
 **[3]** (optional, but very likely) If the command has to be added to the chain of
    subcommand issued by the main command `egsim_init`, add the module
    name in the `egsim_init.py` module (see the module implementation)
-   
-## Add a new predefined flat files
-
-*Predefined* flat files are parametric tables, usually coming from 
-established research projects, that must be available to all eGSIM users.
-
-To add a flatfile to the eGSIM API:
-
-**[1]** Add the original file it in the "data/predefined_flatfiles" 
-   direcotry, usually zipped (flatfils are quite big, pay attention
-   to `git commit` huge files. If zipping in macOS, see NOTES below)
-
-**[2]** Open the Python module "management.flatfile_parsers.py" and
-   implement a new `FlatfileParser` (see `EsmFlatfileParser` as 
-   example). The parser must convert whatever format the flatfile
-   is, into a `pandas.DataFrame` in order to be saved in the more
-   efficient HDF format
-
-**[3]** Open `_egsim_flatfiles.py` and add to the `dict`
-   `Command.PARSERS` a new (key, value) pair where the key is
-   the source *file name* in 1, and the value is the 
-   parser class implemented in 2.
-
-
-NOTES:
-
-To compress a file in macOS:
-
-- Zip with macOS adds a kind of `__MACOSX` folder
-  in the zip file (https://stackoverflow.com/q/10924236). 
-  Pandas expects zips with only one item,
-  so in order to remove that macOS specific folder
-  zip **and afterwards type**:
-
-  ```buildoutcfg
-  zip -d <filename>.zip __MACOSX/\*
-  ```
-  
-  OR ZIP like this (-9 is optional is the compression level):
-
-  ```buildoutcfg
-  zip ZIPFILE_PATH  CSV_FILEPATH -9 -x ".*" -x "__MACOSX"
-  ```
-
-### Added flatfiles (Reminder)
-
-#### ESM 2018 flatfile
-
-- Go to https://esm.mi.ingv.it//flatfile-2018/flatfile.php
-(with username and password, you must be registered 
-  beforehand it's relatively fast and simple)
-
-- Download `ESM_flatfile_2018.zip`, uncompress and extract
-  `ESM_flatfile_SA.csv` from there 
-  
-- `ESM_flatfile_SA.csv` is our raw flatfile, compress it 
-  again (it's big) into this directory as 
-  `ESM_flatfile_2018_SA.zip`
- 
-- If on macOS, type the command above to remove the
-  macOS folder from the zip
