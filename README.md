@@ -172,34 +172,47 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver
 
 # Maintenance
 
-Few remarks before proceeding: Django projects have two fundamental
-organization structures:
+<details>
+<summary>
+Brief Introduction to some important concepts and key terms (click to show)
+</summary>
 
-1. the Django project itself in the base
-   working directory (created with the command
-   `django-admin startproject egsim`)
+ - [Settings file](https://docs.djangoproject.com/en/stable/topics/settings/): 
+   A Django settings file contains all the configuration of your Django 
+   installation. The settings file referred in this document, 
+   included in this git repo, is for debug and local deployment only.
+   On production, a separate settings file is used, located on the server 
+   outside the git repo and **not shared for security reasons**.
 
-2. the app(s), usually organized in sub-directories, which are used to break
-   a project's functionality down into logical units (For details, see
-   https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
+   
+ - [manage.py](https://docs.djangoproject.com/en/stable/ref/django-admin/) or
+   `django-admin` is Django’s command-line utility for administrative tasks.
+   It is invoked from the terminal within your Python virtualenv (see examples
+   in this document) by providing the settings file via:
+   ```bash
+   export DJANGO_SETTINGS_MODULE=<settings_file_path> python manage.py <command>
+   ```
+   (see examples in this document).
+   Django allows also the implementation of custom management commands.
+   eGSIM implements `egsim-init` in order to populate the db (more details 
+   below)
 
-In eGSIM we have a project (root directory) named "egsim" two apps: "api" and
-"gui". Whereas the latter is simply a package housing frontend code, urls
-and view, the former also housed database models, and it is thus technically
-speaking the only app of the project. Note that "api" is not the only used 
-app (see `INSTALLED_APPS` in the settings file, among which we enabled the 
-`admin` app visualizable through the [Admin panel](#admin-panel)).
 
-Most of the management commands we are about to see are command line 
-applications invokable from the terminal. All commands rely on a 
-[**Django Settings file**](https://docs.djangoproject.com/en/4.1/topics/settings/)
-that is usually given by prepending 
-`export DJANGO_SETTINGS_MODULE=<settings_file_path>`
-to the command. **Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
-must be changed in production**. This is because on the production server a 
-separate settings file must be created, outside the git repo and 
-**not shared for security reasons**.
+ - [app](https://docs.djangoproject.com/en/stable/intro/reusable-apps/) a 
+   Django app is a Python package that is specifically intended for use in 
+   a Django project. An application may use common Django conventions, such as 
+   having models, tests, urls, and views submodules. In our case, the Django
+   project is the egsim root directory (created with the command
+   `django-admin startproject egsim`), and the apps inside it are 
+   "api" (the core web API) and "gui" (a simple container of frontend stuff 
+   relying on "api").
+   Inside the settings file (variable `INSTALLED_APPS`) is configured the list 
+   of all applications that are enabled in the eGSIM project. This includes not 
+   only our "api" app, that tells Django to create the eGISM tables when
+   initializing the database, but also several builtin Django apps, e.g. the 
+   Django `admin` app, visible through the [Admin panel](#admin-panel)).
 
+</details>
 
 ## Starting a Python terminal shell
 
@@ -440,8 +453,9 @@ Please note that it is safer (from now even
 [mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
 with `pip`) to upgrade all dependencies
 instead of single packages in order to avoid conflicts.
-Consequently, **follow the procedure below also in case of
-GitHub single packages security issues or dependencies alert**.
+
+Consequently, we recommend to follow this procedure also
+in case of a GitHub security issue (or dependency alert) on a single package.
 
 To upgrade all dependencies, we just need to `pull` the newest version
 of `smtk` and relaunch an installation from there (this will fetch
