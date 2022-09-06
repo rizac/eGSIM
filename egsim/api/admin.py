@@ -17,8 +17,9 @@ from django.contrib import admin
 from ..api import models
 
 admin.site.register(models.Gsim)
-admin.site.register(models.GsimRegion)
 admin.site.register(models.GsimWithError)
+admin.site.register(models.GsimRegion)
+admin.site.register(models.Regionalization)
 admin.site.register(models.Imt)
 admin.site.register(models.Flatfile)
 admin.site.register(models.FlatfileColumn)
