@@ -1,5 +1,4 @@
-# eGSIM
-A web service for selecting and testing  ground shaking models (GSIM) 
+eGSIM is a web service for selecting and testing  ground shaking models (GSIM) 
 in Europe, developed in the framework of the Thematic Core Services for 
 Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of 
 [EFEHR](http://www.efehr.org/en/home/)
@@ -20,7 +19,7 @@ Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of
      * [Fix smtk](#Fix-smtk)
 
      
-## Installation
+# Installation
 
 DISCLAIMER: **This document covers installation in development (or debug) 
 mode, i.e. when the program is deployed locally, usually for testing, 
@@ -29,7 +28,7 @@ fixing bug or adding features.**
 For installation in **production** mode, see `deploy.html` (note however
 that the document was last updated in 2019)
 
-### Requirements
+## Requirements
 
 ```bash
 sudo apt-get update # pre-requisite
@@ -47,7 +46,7 @@ install in addition to the Python version required by your system, and use
 it. Any command `python3` hereafter will refer to the required Python version.
 
 
-### Clone repository
+## Clone repository
 
 Select a `root directory` (e.g. `/root/path/to/egsim`), and clone egsim into the
 so-called egsim directory:
@@ -56,7 +55,7 @@ so-called egsim directory:
 git clone https://github.com/rizac/eGSIM.git egsim
 ```
 
-### Create and activate Python virtual env
+## Create and activate Python virtual env
 
 Move to whatever directory you want (usually the egsim directory above) and then:
 
@@ -68,7 +67,7 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 **NOTE: From now on, all following operations must have the virtualenv 
 activated FIRST**
 
-### Install
+## Install
 
 *Note: if the installation is done for upgrading all dependencies and 
 `pip freeze` into new requirements files,
@@ -114,7 +113,7 @@ for the suggested workflow
 </details>
 
 
-### Run Test
+## Run Test
 
 **Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
 must be changed in production**
@@ -137,7 +136,7 @@ export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv --cov=./egsim/ 
 using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
 
 
-## Usage
+# Usage
 
 **Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
 must be changed in production**
@@ -159,7 +158,7 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver
 `python manage.py --settings=egsim.settings_debug [command]`)
 
 
-## Maintenance
+# Maintenance
 
 Few remarks before proceeding: Django projects have two fundamental
 organization structures:
@@ -190,7 +189,7 @@ separate settings file must be created, outside the git repo and
 **not shared for security reasons**.
 
 
-### Starting a Python terminal shell
+## Starting a Python terminal shell
 
 **Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
 must be changed in production**
@@ -203,7 +202,7 @@ command does this:
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
 ```
 
-### Admin panel
+## Admin panel
 
 **Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
 must be changed in production**
@@ -227,7 +226,7 @@ Start the program (see [Usage](Usage)) and then navigate in the browser to
 changes persistent after a database reset you should implement them in 
 the management command `egsim_init` (see [Repopulate the DB](#Repopulate-the-DB))*
 
-### Complete DB reset
+## Complete DB reset
 
 **Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
 must be changed in production**
@@ -256,7 +255,7 @@ To perform a db reset:
    [admin panel](#admin-panel) above
    
 
-### Repopulate the DB
+## Repopulate the DB
 
 NOTE: If you don't have created and initialized the db yet, go to 
 [Complete DB reset](#Complete DB reset)
@@ -272,7 +271,7 @@ Execute the custom management command `egsim_init`:
 ```
  
 
-### Migrate and populate the db
+## Migrate and populate the db
 
 **DISCLAIMER**: Consider
 performing a [Complete db reset](#complete-db-reset)
@@ -341,7 +340,7 @@ Before reading, remember:
 </details>
 
 
-### Create a custom management command
+## Create a custom management command
 
 See `egsim/api/management/commands/README.md`.
 
@@ -350,7 +349,7 @@ new data (regionalizations and flatfiles) that will be
 made available in eGSIM by means of two management commands
 
 
-### Add new predefined flatfiles
+## Add new predefined flatfiles
 
 - Add the file (CSV or zipped CSV) in
   `managements/commands/data/predefined_flatfiles`. 
@@ -399,7 +398,7 @@ Implemented flatfiles sources (click on the items below to expand)
 </details>
 
 
-### Add new regionalization
+## Add new regionalization
 
 - Add two files *with the same basename* and extensions 
   - .geojson (regionalization, aka regions collection) and
@@ -423,7 +422,7 @@ Implemented flatfiles sources (click on the items below to expand)
 - Repopulate all eGSIM tables (command `egsim_init`)
 
 
-### Dependencies upgrade
+## Dependencies upgrade
 
 Please note that it is safer (from now even 
 [mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
@@ -465,7 +464,7 @@ Finally, proceed with the normal workflow:
 run tests, fix new bugs and eventually `git push`, as always.
 
 
-### Fix smtk
+## Fix smtk
 
 We will refer to smtk as the [forked branch](https://github.com/rizac/gmpe-smtk)
 used by eGSIM. As we have seen during installation, it is a forked repository 
