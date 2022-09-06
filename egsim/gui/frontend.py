@@ -35,8 +35,7 @@ def get_context(selected_menu=None, debug=True) -> dict:
 
     regionalization = {
         'url': URLS.GET_GSIMS_FROM_REGION,
-        'names': list(models.RegionalizationDataSource.objects.
-                      values_list('name', flat=True))
+        'names': list(models.Regionalization.objects.values_list('name', flat=True))
     }
 
     flatfiles = [{'name': r.name, 'label': r.display_name, 'url': r.url}
