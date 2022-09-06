@@ -27,9 +27,7 @@ from ... import models
 
 SUPPORTED_IMTS = (imt.PGA, imt.PGV, imt.SA, imt.PGD, imt.IA, imt.CAV)
 
-GSIM_PARAMS_YAML_PATH = \
-    os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
-                 "gsim_params.yaml")
+GSIM_PARAMS_YAML_PATH = EgsimBaseCommand.data_path("gsim_params.yaml")
 
 
 class Command(EgsimBaseCommand):
@@ -121,12 +119,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
     """
     gsims = []
     # read GSIM parameters:
-    model_params: dict[str, dict] = {}
-    with open(GSIM_PARAMS_YAML_PATH) as fpt:
-        root_dict = yaml.safe_load(fpt)
-        for param_type, params in root_dict.items():
-            for param_name, props in params.items():
-                model_params[f'{param_type}.{param_name}'] = props
+    model_params = read_gsim_params()
 
     saved_params = {}  # paramname -> flatfilename
     missing_params = defaultdict(list)
@@ -219,14 +212,14 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                             help_ = props.pop('help', '')
                             category = attname2category[attname]
                             # create (and save) object:
-                            #try:
-                            models.FlatfileColumn.objects.create(name=ffname,
-                                                                 help=help_,
-                                                                 properties=props,
-                                                                 category=category,
-                                                                 oq_name=pname)
-                            # except Exception as exc:
-                            #     raise CommandError(str(exc))
+                            try:
+                                models.FlatfileColumn.objects.create(name=ffname,
+                                                                     help=help_,
+                                                                     properties=props,
+                                                                     category=category,
+                                                                     oq_name=pname)
+                            except AssertionError as exc:
+                                raise CommandError(str(exc))
                             saved_params[key] = ffname
 
                         db_p = models.FlatfileColumn.objects.\
@@ -279,6 +272,17 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
     return gsims, missing_params, unused_params
 
 
+def read_gsim_params() -> dict[str, dict]:
+    """Returns the GSIM YAML param `gsim_params.yaml into a dict[str, dict]"""
+    model_params = {}
+    with open(GSIM_PARAMS_YAML_PATH) as fpt:
+        root_dict = yaml.safe_load(fpt)
+        for param_type, params in root_dict.items():
+            for param_name, props in params.items():
+                model_params[f'{param_type}.{param_name}'] = props
+    return model_params
+
+
 def store_gsim_error(gsim_name: str, error: Union[str, Exception]):
     """Creates an error from the given entity type (e.g. `DB_ENTITY.GSIM`) and
     key (e.g., the Gsim class name) and saves it to the database.
@@ -310,7 +314,6 @@ def _param2str(param: str):
     :param param: a model parameter name, in the format `category.name`,
         e.g. 'REQUIRES_DISTANCES.rcdpp' (`category` is one of the keys of
         `atrname2category`)
-
     """
     attname, pname = param.split(".", 1)
     categ = attname2category[attname]

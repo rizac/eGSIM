@@ -22,6 +22,9 @@ from . import EgsimBaseCommand
 from ... import models
 
 
+SRC_DIR = EgsimBaseCommand.data_path('regionalization_files')
+
+
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
     """Class implementing the command functionality"""
 
@@ -67,8 +70,9 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                 for err in errs:
                     self.printwarn(err)
 
-    def get_data_files(self) -> dict[str, list[str]]:
-        datadir = self.data_dir('regionalization_files')
+    @classmethod
+    def get_data_files(cls) -> dict[str, list[str]]:
+        datadir = SRC_DIR
         ret = set()
         for filename in listdir(datadir):
             name, ext = splitext(filename)

@@ -12,16 +12,19 @@ from . import EgsimBaseCommand
 from ..flatfile_parsers import EsmFlatfileParser
 from ... import models
 
+SRC_DIR = EgsimBaseCommand.data_path('predefined_flatfiles')
+
+DEST_DIR = models.Flatfile.BASEDIR_PATH
+
 
 class Command(EgsimBaseCommand):
     """Command to convert predefined flatfiles (usually in CSV format) into HDF
     files suitable for the eGSIM API
     """
 
-    # source flatfiles paths relative to `self.data_dir()` mapped to their
-    # :class:`FlatfileParser` (files can be CSV or zipped-CSV):
+    # flatfiles abs paths (csv or zipped csv) -> :class:`FlatfileParser`:
     PARSERS = {
-        "predefined_flatfiles/ESM_flatfile_2018_SA.csv.zip": EsmFlatfileParser
+        join(SRC_DIR, "ESM_flatfile_2018_SA.csv.zip"): EsmFlatfileParser
     }
 
     help = ('Parse predefined flatfile(s) from the "commands/data" directory into '
@@ -35,7 +38,7 @@ class Command(EgsimBaseCommand):
                        'metadata to DB:')
         self.empty_db_table(models.Flatfile)
 
-        destdir = models.Flatfile.BASEDIR_PATH
+        destdir = DEST_DIR
         if not isdir(destdir):
             if isdir(dirname(destdir)):
                 self.printinfo(f'Creating directory {destdir}')
@@ -46,8 +49,7 @@ class Command(EgsimBaseCommand):
                                    f"directory should be git-ignored")
 
         parsers = {}
-        for filename, parser in self.PARSERS.items():
-            fullpath = join(self.data_dir(filename))
+        for fullpath, parser in self.PARSERS.items():
             if not isfile(fullpath):
                 raise CommandError(f'File does not exist: "{fullpath}".\nPlease '
                                    f'check `{__name__}.{__class__.__name__}.PARSERS`')

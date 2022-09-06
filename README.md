@@ -12,7 +12,7 @@ Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of
      * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
      * [Admin panel](#admin-panel)
      * [Complete DB reset](#Complete-DB-reset)
-     * [Migrate and populate the db](#Migrate-and-populate-the-db)
+     * [~~Migrate and populate the db~~](#Migrate-and-populate-the-db)
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
      * [Add new regionalization](#Add-new-regionalization)
      * [Dependencies upgrade](#Dependencies-upgrade)
@@ -99,7 +99,7 @@ in `requirements.txt` (i.e., the string portion between '@' and '#' of the text 
 
 Then, (re)install smtk from the cloned directory:
 
-```
+```bash
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 pip install -e .
 ```
@@ -139,20 +139,20 @@ before running the program for the first time**):
 
 - Create db:
 
-  ```console
+  ```bash
   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
   ```
 
 - Populate db:
 
-  ```console
+  ```bash
   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
   ``` 
 
 If you want to access the admin panel, see [the admin panel](#admin-panel).
 Otherwise, **to run the program in your local browser**, type:
 
-```console
+```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver 
 ```
 
@@ -165,11 +165,11 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver
 
 Few remarks before proceeding: Django projects have two fundamental
 organization structures:
-	
+
 1. the Django project itself in the base
    working directory (created with the command
    `django-admin startproject egsim`)
-	
+
 2. the app(s), usually organized in sub-directories, which are used to break
    a project's functionality down into logical units (For details, see
    https://ultimatedjango.com/learn-django/lessons/understanding-apps/)
@@ -222,22 +222,29 @@ http://127.0.0.1:8000/admin/)
 
 As eGSIM does not need to store user data in the database, it might be
 easier to throw everything away and regenerate all db schema and data 
-(e.g., after changing the directory structure of the project).
+(e.g., after changing the directory structure of the project), instead
+of running migrations.
 
-To do this:
- - delete db.sqlite (or wherever the database is)
+To perform a db reset:
+ - delete `db.sqlite3` (or wherever the database is)
  - delete all migrations (currently under "egsim/api/migrations"), i.e.
    all all .py files except `__init__.py`
  - execute (change `DJANGO_SETTINGS_MODULE` value in production!):
-   ```console
+ 
+   ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
    ```
+ 
  - Re-add if needed the Django admin superuser(s) as explained in the
    [admin panel](#admin-panel) above
    
 
-### Migrate and populate the db
+### ~~Migrate and populate the db~~
+
+DISCLAIMER: Consider
+performing a [Complete db reset](#complete-db-reset)
+instead.
 
 Before reading, remember:
 
@@ -256,9 +263,10 @@ Before reading, remember:
    just run** `git pull`)
 2. Make a migration (**This does not run a migration, see note above**):
    
-   ```console
+   ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>
    ```
+
    (<migration_name> will be a suffix appended to the migration file, use it
    like you would use a commit message in `git`).
    
@@ -273,7 +281,7 @@ Before reading, remember:
    changes (probably yes)?
    Then implement these changes in the existing 
    commands, or create a new one, see `README.md` in 
-   `egsim/management/commands`
+   `egsim/api/management/commands`
    
 4. Run `test_initdb` in `/tests/test_commands.py` (it re-creates
    from scratch a test db, runs all migrations and `egsim_init`)
@@ -284,7 +292,7 @@ Before reading, remember:
    will introduce new non-nullable fields, maybe better to run 
    `manage.py flush` first to empty all tables, to avoid conflicts
    
-   ```console
+   ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim
    ```
 
@@ -297,7 +305,10 @@ Before reading, remember:
 ### Add new predefined flatfiles
 
 - Add the file (CSV or zipped CSV) in
-  `managements/commands/data/predefined_flatfiles`
+  `managements/commands/data/predefined_flatfiles`. 
+  Do **not** commit files too big (**max few tens of Mb**). When zipping in 
+  macOS you will probably need to
+  [exclude or remove (after zipping) the ___MACOSX folder](https://stackoverflow.com/q/10924236)
   
 - Implement a new `FlatfileParser` class in 
   `management/commands/flatfile_parsers.py`
@@ -319,6 +330,25 @@ Before reading, remember:
 
 - Repopulate all eGSIM tables (command `egsim_init`)
 
+Implemented flatfiles sources (click on the items below to expand)
+
+<details>
+<summary>ESM 2018 flatfile</summary>
+
+- Go to https://esm.mi.ingv.it//flatfile-2018/flatfile.php
+(with username and password, you must be registered 
+  beforehand it's relatively fast and simple)
+
+- Download `ESM_flatfile_2018.zip`, uncompress and extract
+  `ESM_flatfile_SA.csv` from there 
+  
+- `ESM_flatfile_SA.csv` is our raw flatfile, compress it 
+  again (it's big) into this directory as 
+  `ESM_flatfile_2018_SA.zip`
+ 
+- If on macOS, type the command above to remove the
+  macOS folder from the zip
+</details>
 
 ### Add new regionalization
 
@@ -377,7 +407,7 @@ pip freeze > requirements.txt
 
 And finally install the newset version of the test packages:
 
-```
+```bash
 pip install pylint pytest-django pytest-cov
 pip freeze > requirements.dev.txt
 ```

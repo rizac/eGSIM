@@ -13,16 +13,19 @@ class EgsimBaseCommand(BaseCommand):  # noqa
     """
 
     @staticmethod
-    def data_dir(*paths) -> str:
-        """Return a data directory path. The result will be the same as
-        `os.path.join(*paths)` prefixed with the "./data" directory path
+    def data_path(*paths) -> str:
+        """Return the full absolute path to a data file. Same as:
+        ```
+        os.path.join("./data", *paths)
+        ```
+        :param paths: a series of paths relative to "./data"
         """
-        return join(dirname(__file__), 'data', *paths)
+        return join(abspath(dirname(__file__)), 'data', *paths)
 
     @staticmethod
     def data_source(datafile_path) -> dict:
         """Return a data source information from the given data file"""
-        base_dir = EgsimBaseCommand.data_dir()
+        base_dir = EgsimBaseCommand.data_path()
         with open(join(base_dir, 'data_sources.yaml')) as _:
             data_sources = yaml.safe_load(_)
 
