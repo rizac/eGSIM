@@ -9,6 +9,7 @@ from os.path import abspath, join
 import json
 from enum import Enum, IntEnum
 from datetime import datetime, date
+from typing import Union, Any
 
 from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
                               ManyToManyField, JSONField, UniqueConstraint,
@@ -153,9 +154,9 @@ class FlatfileColumn(_UniqueNameModel):
                                  choices=[(c.value,
                                            c.name.replace('_', ' ').capitalize())
                                           for c in Category],
-                                 help_text='The OpenQuake category of the GSIM '
-                                           'property associated to this '
-                                           'column')
+                                 help_text='The (OpenQuake-related) category '
+                                           'of the GSIM property associated '
+                                           'to this column')
     help = TextField(null=False, default='', help_text="Field help text")
     properties = JSONField(null=False, encoder=DateTimeEncoder,
                            decoder=DateTimeDecoder,
@@ -265,18 +266,19 @@ class FlatfileColumn(_UniqueNameModel):
                      update_fields=update_fields)
 
     @classmethod
-    def get_dtype_and_defaults(cls) -> tuple[dict[str, str], dict[str, str]]:
+    def split_props(cls) -> \
+            tuple[dict[str, str], dict[str, Any], dict[str, list[Any, Any]]]:
         """
-        Return the tuple:
-        ```
-        (dtype: dict, defaults: dict)
-        ```
-        where each dict maps flatfile column names to its type ('float', 'int',
-        'datetime') and its default. If no dtype is stored in the database, it
-        defaults to 'float'. If no default is given, it is not inserted in
-        `defaults`
+        Split each `JSONField` `properties` into three dicts where a Flatfile
+        column name (str) is mapped to its data type, its default value
+        (if given), its bounds (if given).
+        Data types are strings (see the names of the Enum `BaseDtype`) or
+        lists of possible values (categorical data). Default values and bounds,
+        if given, are Python objects of ony supported type (see the values of
+        the Enum `BaseDtype`). Bounds are given in lists of two elements, where
+        None means: unbounded
         """
-        dtype, defaults = {}, {}
+        dtype, defaults, bounds = {}, {}, {}
         cols = 'name', 'properties'
         for name, props in cls.objects.filter().only(*cols).values_list(*cols):
             if not props:
@@ -284,8 +286,10 @@ class FlatfileColumn(_UniqueNameModel):
             dtype[name] = props[cls.PropertiesKey.dtype]
             if cls.PropertiesKey.default in props:
                 defaults[name] = props[cls.PropertiesKey.default]
+            if cls.PropertiesKey.bounds in props:
+                bounds[name] = props[cls.PropertiesKey.bounds]
 
-        return dtype, defaults
+        return dtype, defaults, bounds
 
     class Meta(_UniqueNameModel.Meta):
         constraints = [

@@ -109,10 +109,13 @@ class FlatfileForm(EgsimBaseForm):
             # check data types:
             invalid_cols = self.get_flatfile_columns_with_invalid_dtypes(dataframe)
             if invalid_cols:
+                icol_str = ', '.join(str(_[0]) for _ in invalid_cols[:5])
+                if len(invalid_cols) > 5:
+                    icol_str += ' ... (showing first 5 only)'
                 # FIXME: gettext?
                 err_gsim = ValidationError(gettext("%(num)d columns(s) have invalid "
-                                                   "data types (e.g., str whereas "
-                                                   "int is expected)"),
+                                                   "data types (e.g., str where "
+                                                   "int is expected): " + icol_str),
                                            params={'num': len(invalid_cols)},
                                            code='invalid')
                 # add_error removes also the field from self.cleaned_data:
@@ -136,7 +139,7 @@ class FlatfileForm(EgsimBaseForm):
 
     @classmethod
     def read_flatfilefrom_csv_bytes(cls, buffer, *, sep=None) -> pd.DataFrame:
-        dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
+        dtype, defaults, _ = models.FlatfileColumn.split_props()
         # pre rename of IMTs lower case (SA excluded):
         # (skip, just use the default of read_flatfile: PGA, PGV, SA):
         # imts = models.Imt.objects.only('name').values_list('name', flat=True)
@@ -145,19 +148,24 @@ class FlatfileForm(EgsimBaseForm):
     @classmethod
     def get_flatfile_columns_with_invalid_dtypes(cls, flatfile: pd.DataFrame) -> \
             Sequence[tuple[str, Any, Any]]:
-        """return tuple (col, dtype, expected_dtype) elements"""
-        standard_dtypes, _ = models.FlatfileColumn.get_dtype_and_defaults()
-        ff_dtypes = cls.get_flatfile_dtypes(flatfile)
+        """return tuple (col, dtype, expected_dtype) elements
+        for the columns with invalid data types
+        """
+        standard_dtypes, _, _ = models.FlatfileColumn.split_props()
+        ff_dtypes: dict[str, str] = cls.get_flatfile_dtypes(flatfile)
+        base_dtype = models.FlatfileColumn.BaseDtype
         bad_cols = []
         for col in set(standard_dtypes) & set(ff_dtypes):
             expected_dtype = standard_dtypes[col]
             ff_dtype = ff_dtypes[col]
             if expected_dtype == ff_dtype:
                 continue
-            if expected_dtype == 'int' and ff_dtype == 'float':
+            # type promotion (expected float, found int is still ok):
+            if expected_dtype == base_dtype.float.name and \
+                    ff_dtype == base_dtype.int.name:
                 continue
             if isinstance(expected_dtype, list) and isinstance(ff_dtype, list) \
-                    and sorted(expected_dtype) == sorted(ff_dtype):
+                    and set(expected_dtype) == set(ff_dtype):
                 continue
             bad_cols.append((col, ff_dtype, expected_dtype))
 
@@ -173,21 +181,23 @@ class FlatfileForm(EgsimBaseForm):
         `models.FlatfileColumn` (`property` column)
         """
         dtypes = {}
-        for c in flatfile.columns:
-            dtype = str(flatfile[c].dtype)
-            if dtype.startswith('int'):
-                dtype = 'int'
-            elif dtype.startswith('float'):
-                dtype = 'float'
-            elif dtype.startswith('datetime'):
-                dtype = 'datetime'
-            elif dtype == 'object':
-                dtype = 'str'
-            elif dtype == 'category':
-                dtype = flatfile[c].dtype.categories.tolist()
-            elif dtype != 'bool':
-                raise ValueError(f'Unsupported data type for column "{c}": "{dtype}"')
-            dtypes[c] = dtype
+        ff_dtypes = models.FlatfileColumn.BaseDtype  # Enum
+        for col in flatfile.columns:
+            pd_dtype = str(flatfile[col].dtype)
+            for ff_dtype in [ff_dtypes.int, ff_dtypes.float,
+                             ff_dtypes.datetime, ff_dtypes.bool]:
+                if pd_dtype.startswith(ff_dtype.name):  # e.g.: 'int64' -> 'int'
+                    dtype = ff_dtype.name
+                    break
+            else:
+                if pd_dtype == 'object':
+                    dtype = ff_dtypes.str.name  # 'str'
+                elif pd_dtype == 'category':
+                    dtype = flatfile[col].dtype.categories.tolist()
+                else:
+                    raise ValueError(f'Unsupported data type for column '
+                                     f'"{col}": {pd_dtype}')
+            dtypes[col] = dtype
         return dtypes
 
 #############
@@ -281,9 +291,13 @@ class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):
                 invalid_gsims = \
                     self.get_flatfile_invalid_gsim(flatfile, cleaned_data['gsim'])
                 if invalid_gsims:
+                    inv_str = ', '.join(invalid_gsims[:5])
+                    if len(invalid_gsims) > 5:
+                        inv_str += ' ... (showing first 5 only)'
                     # FIXME: gettext?
                     err_gsim = ValidationError(gettext("%(num)d gsim(s) not supported "
-                                                       "by the given flatfile"),
+                                                       "by the given flatfile: " +
+                                                       inv_str),
                                                params={'num': len(invalid_gsims)},
                                                code='invalid')
                     # add_error removes also the field from self.cleaned_data:

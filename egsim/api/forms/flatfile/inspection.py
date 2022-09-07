@@ -170,22 +170,6 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
             return cleaned_data
 
         dataframe = cleaned_data['flatfile']
-
-        # get data types and raise if some data type is unknown:
-        try:
-            cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
-        except Exception as exc:
-            self.add_error("flatfile",
-                           ValidationError(str(exc), code='invalid'))
-
-        invalid_cols = super().get_flatfile_columns_with_invalid_dtypes()
-        if invalid_cols:
-            self.add_error("flatfile",
-                           ValidationError(f"{len(invalid_cols)} columns have "
-                                           f"unexpected data type (e.g. str "
-                                           f"instead of float): "
-                                           f"{', '.join(_[0] for _ in invalid_cols)}",
-                                           code='invalid'))
         gsims = list(flatfile_supported_gsims(dataframe.columns))
 
         if not gsims:
@@ -205,7 +189,7 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
-        dtype, defaults = models.FlatfileColumn.get_dtype_and_defaults()
+        dtype, defaults, _ = models.FlatfileColumn.split_props()
         return {
             'dtypes': cleaned_data['flatfile_dtypes'],
             'default_dtype': dtype,

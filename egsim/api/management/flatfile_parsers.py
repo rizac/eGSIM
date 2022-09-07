@@ -90,7 +90,7 @@ class EsmFlatfileParser(FlatfileParser):
     @classmethod
     def parse(cls, filepath: str) -> pd.DataFrame:
         """Parse ESM flatfile (CSV) and return the pandas DataFrame"""
-        dtype, defaults = FlatfileColumn.get_dtype_and_defaults()
+        dtype, defaults, _ = FlatfileColumn.split_props()
         dtype |= cls.esm_dtypes
 
         # dfr = check_flatfile(filepath, col_mapping=esm_col_mapping, sep=';',
