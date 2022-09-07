@@ -178,7 +178,7 @@ var EGSIM = new Vue({
 			postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value}}),
 			selComponent: "{{sel_component}}",
 			flatfiles: {{flatfiles|safe}},
-			//  flatfile_columns: {{flatfile_columns|safe}},  // FIXME REMOVE
+			flatfileUploadUrl: "{{flatfile_upload_url}}",
 			regionalization: {{ regionalization|safe }},
 			// incompatibleBrowserMessage is defined in browserdetection.js:
 			errormsg: _UNSUPPORTED_BROWSER_MSG,

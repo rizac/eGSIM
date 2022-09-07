@@ -16,11 +16,8 @@ class URLS:  # noqa
     FLATFILE_INSPECTION = 'data/flatfile_inspection'
     FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
     FLATFILE_PLOT = 'data/flatfile_plot'
-
     DOWNLOAD_REQUEST = 'data/downloadrequest'
-
     DOWNLOAD_RESPONSE = 'data/downloadresponse'
-
     # url for the frontend pages to be rendered as HTML by means of the
     # typical Django templating system: these pages are usually inside
     # <iframe>s of the web SPA (single page application)

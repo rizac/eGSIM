@@ -89,7 +89,7 @@ class FlatfileForm(EgsimBaseForm):
                 self.add_error("flatfile", ValidationError("Flatfile expired",
                                                            code='invalid'))
                 return cleaned_data  # no nned to further process
-            dataframe = pd.read_hdf(p_ff.filepath, key=p_ff.name)
+            dataframe = self.read_flatfile_from_db(p_ff)
         else:
             # u_ff = cleaned_data[key_u]
             try:
@@ -138,6 +138,10 @@ class FlatfileForm(EgsimBaseForm):
         return cleaned_data
 
     @classmethod
+    def read_flatfile_from_db(cls, model_instance: models.Flatfile) -> pd.DataFrame:
+        return pd.read_hdf(model_instance.filepath, key=model_instance.name)
+
+    @classmethod
     def read_flatfilefrom_csv_bytes(cls, buffer, *, sep=None) -> pd.DataFrame:
         dtype, defaults, _ = models.FlatfileColumn.split_props()
         # pre rename of IMTs lower case (SA excluded):
@@ -172,33 +176,58 @@ class FlatfileForm(EgsimBaseForm):
         return bad_cols
 
     @classmethod
-    def get_flatfile_dtypes(cls, flatfile: pd.DataFrame) -> dict[str, str]:
+    def get_flatfile_dtypes(cls, flatfile: pd.DataFrame,
+                            compact=False) -> dict[str, str]:
         """Return the data types of the given flatfile in eGSIM format:
         'str', 'int', 'float', 'bool', 'datetime', list (for categorical data).
 
         The data types above must be consistent with those implemented in:
         `api.management.gsim_params.py` which writes data types from the YAML into
         `models.FlatfileColumn` (`property` column)
+
+        :param compact: if True, categorical data will be returned as human
+            readable string instead of the list of categories, which might be
+            huge in size
         """
         dtypes = {}
         ff_dtypes = models.FlatfileColumn.BaseDtype  # Enum
         for col in flatfile.columns:
             pd_dtype = str(flatfile[col].dtype)
-            for ff_dtype in [ff_dtypes.int, ff_dtypes.float,
-                             ff_dtypes.datetime, ff_dtypes.bool]:
-                if pd_dtype.startswith(ff_dtype.name):  # e.g.: 'int64' -> 'int'
-                    dtype = ff_dtype.name
-                    break
+            categories = None
+            if pd_dtype == 'category':
+                categories = flatfile[col].dtype.categories
+                pd_dtype = str(categories.dtype)
+
+            dtype = None
+            if pd_dtype == 'object':
+                dtype = ff_dtypes.str.name
+            elif pd_dtype.startswith('int'):
+                dtype = ff_dtypes.int.name
+            elif pd_dtype.startswith('float'):
+                dtype = ff_dtypes.float.name
+            elif pd_dtype.startswith('datetime'):
+                dtype = ff_dtypes.datetime.name
             else:
-                if pd_dtype == 'object':
-                    dtype = ff_dtypes.str.name  # 'str'
-                elif pd_dtype == 'category':
-                    dtype = flatfile[col].dtype.categories.tolist()
+                try:
+                    dtype = ff_dtypes[pd_dtype].name
+                except KeyError:
+                    pass
+
+            if dtype is None:
+                suffix = '' if categories is None else ' (categorical)'
+                raise ValueError(f'Unsupported data type for column '
+                                 f'"{col}": {pd_dtype}{suffix}')
+
+            if categories is not None:
+                if compact:
+                    dtype = f'{dtype} (selectable from ' \
+                            f'{len(categories)} discrete values)'
                 else:
-                    raise ValueError(f'Unsupported data type for column '
-                                     f'"{col}": {pd_dtype}')
+                    dtype = flatfile[col].dtype.categories.tolist()
+
             dtypes[col] = dtype
         return dtypes
+
 
 #############
 # Utilities #
@@ -336,7 +365,6 @@ def _get_gsim_columns_imts() -> Iterable[tuple[str, set[str, ...], set[str, ...]
     (gsim:str, flatfile_columns:set[str], imts:set[str])
     ```
     """
-
     qry = models.Gsim.objects.only('name').prefetch_related(
         Prefetch('required_flatfile_columns',
                  queryset=models.FlatfileColumn.objects.all().only('name')),

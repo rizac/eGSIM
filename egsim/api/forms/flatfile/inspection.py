@@ -168,10 +168,11 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
 
         if 'flatfile' not in cleaned_data:  # has errors FIXME: HOW TO HANDLE
             return cleaned_data
-
         dataframe = cleaned_data['flatfile']
-        gsims = list(flatfile_supported_gsims(dataframe.columns))
 
+        cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe,
+                                                                   compact=True)
+        gsims = list(flatfile_supported_gsims(dataframe.columns))
         if not gsims:
             self.add_error("flatfile",
                            ValidationError("No GSIM can work with the "
@@ -189,10 +190,12 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
-        dtype, defaults, _ = models.FlatfileColumn.split_props()
+        # return columns and default columns as dicts of strings mapped to
+        # the column data type
+        dtype, _, _ = models.FlatfileColumn.split_props()
         return {
-            'dtypes': cleaned_data['flatfile_dtypes'],
-            'default_dtype': dtype,
+            'columns': cleaned_data['flatfile_dtypes'],
+            'default_columns': dtype,
             'gsim': cleaned_data['gsim']
         }
 
