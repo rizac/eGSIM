@@ -10,6 +10,7 @@ from os.path import abspath, join
 import json
 from enum import Enum, IntEnum
 from datetime import datetime, date
+from typing import Any
 
 from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
                               ManyToManyField, JSONField, UniqueConstraint,
@@ -195,7 +196,7 @@ class FlatfileColumn(_UniqueNameModel):
         `self.properties` to be usable with flatfiles
         """
         # perform some check on the data type consistencies:
-        props = self.properties
+        props: [str, Any] = self.properties
         if props is None:
             props = self.properties = {}
         prefix = f'Flatfile column "{self.name}"'
@@ -203,7 +204,7 @@ class FlatfileColumn(_UniqueNameModel):
         assert isinstance(props, dict), \
             f"{prefix}: properties field must be null or dict"
 
-        # check dtype:
+        # check dtype (set to 'float' if missing):
         dtype_name = self.PropertiesKey.dtype
         dtype = props.setdefault(dtype_name, self.BaseDtype.float.name)
         is_categorical_dtype = isinstance(dtype, (list, tuple))
@@ -217,45 +218,48 @@ class FlatfileColumn(_UniqueNameModel):
             assert dtype in (_.name for _ in self.BaseDtype), \
                 f"{prefix}: unrecognized data type: {str(dtype)}"
 
-        # check bounds
+        # check bounds (not required, remove if [None, None])
         bounds_name = self.PropertiesKey.bounds
-        bounds = props.setdefault(bounds_name, [None, None])
-        if isinstance(bounds, tuple):
-            bounds = props[bounds_name] = list(bounds)
-        assert isinstance(bounds, list) and len(bounds) == 2, \
-            f"{prefix}: bounds must be a 2-element list"
-        if is_categorical_dtype:
-            assert bounds == [None, None], \
-                f"{prefix}: bounds must be [Null, null] or missing with " \
-                f"categorical data type"
-        else:
-            py_dtype = self.BaseDtype[dtype].value
-            # type promotion (ints are valid floats):
-            if py_dtype == float:
-                for i in [0, 1]:
-                    if isinstance(bounds[i], int):
-                        bounds[i] = float(bounds[i])
-            assert bounds[0] is None or isinstance(bounds[0], py_dtype), \
-                f"{prefix}: bounds[0] must be null/None or of type {str(py_dtype)}"
-            assert bounds[1] is None or isinstance(bounds[1], py_dtype), \
-                f"{prefix}: bounds[0] must be null/None or of type {str(py_dtype)}"
-            assert any(_ is None for _ in bounds) or bounds[0] < bounds[1], \
-                f"{prefix}: bounds[0] must be < bounds[1], or both null/None"
+        if bounds_name in props:
+            bounds = props[bounds_name]
+            if isinstance(bounds, tuple):
+                bounds = props[bounds_name] = list(bounds)  # noqa
+            if bounds == [None, None]:
+                props.pop(bounds_name)
+            else:
+                assert isinstance(bounds, list) and len(bounds) == 2, \
+                    f"{prefix}: bounds must be a 2-element list"
+                assert not is_categorical_dtype, \
+                    f"{prefix}: bounds must be [Null, null] or missing with " \
+                    f"categorical data type"
+                py_dtype = self.BaseDtype[dtype].value  # Python type
+                # type promotion (ints are valid floats):
+                if py_dtype == float:
+                    for i in [0, 1]:
+                        if isinstance(bounds[i], int):
+                            bounds[i] = float(bounds[i])
+                assert bounds[0] is None or isinstance(bounds[0], py_dtype), \
+                    f"{prefix}: bounds[0] must be of type {str(py_dtype)}"
+                assert bounds[1] is None or isinstance(bounds[1], py_dtype), \
+                    f"{prefix}: bounds[0] must be of type {str(py_dtype)}"
+                assert any(_ is None for _ in bounds) or bounds[0] < bounds[1], \
+                    f"{prefix}: bounds[0] must be < bounds[1]"
 
-        # check default value (defval):
+        # check default value (defval, not required):
         defval_name = self.PropertiesKey.default
         if defval_name in props:
             def_val = props[defval_name]
             if is_categorical_dtype:
                 assert def_val in props[dtype_name], \
-                    f"{prefix}: default is given but not in list of possible values"
+                    f"{prefix}: default is not in the list of possible values"
             else:
+                py_dtype = self.BaseDtype[dtype].value  # Python type
                 # type promotion (int is a valid float):
                 if py_dtype == float and isinstance(def_val, int):  # noqa
                     props[defval_name] = float(def_val)
                 else:
                     assert isinstance(def_val, py_dtype), \
-                        f"{prefix}: default if given must be of type {str(py_dtype)}"
+                        f"{prefix}: default must be of type {str(py_dtype)}"
 
         super().save(force_insert=force_insert,
                      force_update=force_update,
