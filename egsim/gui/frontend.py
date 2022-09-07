@@ -29,7 +29,9 @@ def get_context(selected_menu=None, debug=True) -> dict:
                                'following tested browsers: %s' %
                                allowed_browsers_msg)
 
-    gsims = [[g.name, [i.name for i in g.imts], g.warning or ""] for g in query_gims()]
+    gsims = [
+        [g.name, [i for i in g.imts.values_list('name', flat=True)], g.warning or ""]
+        for g in query_gims()]
 
     components_props = get_components_properties(debug)
 
@@ -40,20 +42,6 @@ def get_context(selected_menu=None, debug=True) -> dict:
 
     flatfiles = [{'name': r.name, 'label': r.display_name, 'url': r.url}
                  for r in query_flatfiles()]
-
-    # flatfile_columns = [
-    #     ['Flatfile column:', 'event_id'],
-    #     ['Description:', 'The unique identifier of the seismic event (<b>mandatory</b>),'
-    #                      ' such as the ID provided by most event web services (if '
-    #                      'multiple web services are used, conflicts should be checked '
-    #                      'for). Flatfile rows sharing the same event_id denote recordings '
-    #                      'of the event at different sites'],
-    #     ['Data type:', 'int or str']
-    # ]
-    # for name, dtype, help_ in sorted(query_flatfile_columns(), key=lambda _: _[0]):
-    #     flatfile_columns[0].append(name)
-    #     flatfile_columns[1].append(help_)
-    #     flatfile_columns[2].append(dtype)
 
     return {
         'debug': debug,
@@ -75,22 +63,13 @@ def query_gims() -> QuerySet:
     attribute)
     """
     # Try to perform everything in a single more efficient query. Use
-    # prefetch_related for this. It Looks like we need to assign the imts to a
-    # new attribute, the attribute "Gsim.imts" does not work as expected
+    # prefetch_related for this:
     imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
-
     return models.Gsim.objects.only('name', 'warning').prefetch_related(imts)
 
 
 def query_flatfiles() -> QuerySet:
     return models.Flatfile.get_flatfiles(hidden=False)
-
-
-def query_flatfile_columns() -> Iterable[tuple[str, str, str]]:
-    qry = models.FlatfileColumn.objects
-    cols = 'name', 'properties', 'help'
-    for name, props, help_ in qry.only(*cols).values_list(*cols):
-        yield name, props['dtype'], help_
 
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
