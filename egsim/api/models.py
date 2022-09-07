@@ -5,12 +5,10 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
-from dataclasses import dataclass
 from os.path import abspath, join
 import json
 from enum import Enum, IntEnum
 from datetime import datetime, date
-from typing import Any
 
 from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
                               ManyToManyField, JSONField, UniqueConstraint,
@@ -196,7 +194,7 @@ class FlatfileColumn(_UniqueNameModel):
         `self.properties` to be usable with flatfiles
         """
         # perform some check on the data type consistencies:
-        props: [str, Any] = self.properties
+        props = self.properties
         if props is None:
             props = self.properties = {}
         prefix = f'Flatfile column "{self.name}"'
