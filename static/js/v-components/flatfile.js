@@ -31,15 +31,6 @@ Vue.component('flatfile', {
         }
     },
     computed: {
-//        tableRows: function(){
-//            var colNames = this.tableColumns;
-//            if (!colNames.length){ return []; }
-//            var firstColObj = this.responseData.columns[colNames[0]];
-//            return Object.keys(firstColObj);
-//        },
-//        tableColumns: function(){
-//            return Object.keys(this.responseData.columns).sort();
-//        }
     },
    template: `
     <div class='d-flex flex-column' style='flex: 1 1 auto'>
@@ -108,10 +99,9 @@ Vue.component('flatfile-compilation', {
                 with each row representing a manually processed waveform, and the waveform metadata and intensity measures
                 arranged in columns.
 
-                Here you can create a flatfile template with the columns <b>required</b> by
+                To help the compilation of your flatfile, from scratch or existing sources,
+                here you can create a template with the smallest set of columns <b>required</b> by
                 the models and intensity measures that you want to analyze (see "Selection").
-
-                The template can then be filled with your data and uploaded in eGSIM.
 
                 <div class='d-flex flex-row align-items-baseline'>
                     <div v-show="!columnsCustomizerVisible">
@@ -130,7 +120,9 @@ Vue.component('flatfile-compilation', {
                 </div>
 
                 <textarea v-show="!columnsCustomizerVisible"
-                          v-model='flatfileContent' class='mt-3' style='flex:1 1 auto; white-space: pre; font-family:monospace'></textarea>
+                          v-model='flatfileContent' class='mt-3'
+                          style='flex:1 1 auto; white-space: pre; font-family:monospace; background-color:darkslategray; color:#e1e1e1'>
+                </textarea>
 
                 <div class='d-flex flex-row my-2' v-show='columnsCustomizerVisible'  style='flex:1 1 auto;'>
                     <gsim-select :field='form.gsim' @gsim-selected='gsimSelected'></gsim-select>
@@ -142,8 +134,6 @@ Vue.component('flatfile-compilation', {
 
                 <div class='mt-2 text-muted'>
                 Hint: For performance reasons <b>try to keep uploaded flatfiles size within few tens of Megabytes</b>
-                <!-- In doing so, try to upload only necessary data, e.g., by removing columns that are not
-                required and are not meant to be used in selection expressions for filtering records. -->
                 </div>
 
             </div>
@@ -222,13 +212,13 @@ Vue.component('flatfile-compilation', {
 
 
 Vue.component('flatfile-inspection', {
-    //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
+    mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
     props: {
         form: Object,
         url: String,
         response: {type: Object, default: () => {return {}}}
     },
-    data: function () {
+    data() {
         return {
             responseData: this.response,
         }
@@ -237,13 +227,18 @@ Vue.component('flatfile-inspection', {
 //        no-op
     },
     methods: {
-        request: function(){
+        request(){
             var form = this.form;
             Vue.post(this.url, form).then(response => {  // defined in `vueutil.js`
                 if (response && response.data){
                     this.responseData = response.data;
                 }
             });
+        },
+        flatfileUploaded(file){
+            var vals = Object.keys(file.columns).map(elm => [col, `${col} (${file.columns[col]})`]);
+            this.form.x.choices = Array.from(vals);
+            this.form.y.choices = Array.from(vals);
         }
     },
     template: `<div class='flexible d-flex flex-column'>
@@ -251,20 +246,21 @@ Vue.component('flatfile-inspection', {
             <!-- <egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
                         :visibilityToggle="formVisibilityToggle"
                         @form-successfully-submitted="responseData=arguments[0]"> -->
-<!--           <egsim-form :form="form" :url="url"
-                        @form-successfully-submitted="responseData=arguments[0]"> -->
+           <form novalidate @submit.prevent="submitMe"
+                        @form-successfully-submitted="responseData=arguments[0]">
                 <div class="d-flex flex-row flexible align-items-end">
-                    <flatfile-select :field="form.flatfile"></flatfile-select>
-                    <flatfile-selexpr-input :field="form.selexpr" class='mt-3'></flatfile-selexpr-input>
-
+                    <flatfile-select :field="form.flatfile" @flatfile-uploaded="flatfileUploaded" />
+                    <flatfile-selexpr-input :field="form.selexpr" class='mt-3'/>
+                    <field-input :field='form.x'/>
+                    <field-input :field='form.y'/>
                     <button type="submit" class="btn btn-primary mt-2">
                         Display magnitude-distance plot
                     </button>
 
                 </div>
-           <!--</egsim-form>-->
+           </form>
         </div>
-<!--       <flatfile-plot-div :data="responseData" class='flexible'></flatfile-plot-div>  -->
+        <flatfile-plot-div :data="responseData" class='flexible'></flatfile-plot-div>
     </div>`
 });
 
@@ -374,8 +370,8 @@ Vue.component('flatfile-select', {
         doc: {
             type: String,
             default: `Upload a user-defined flatfile (CSV or zipped CSV).
-                      Fore details please read CAREFULLY the compile section (tab "Flatfiles > Compilation").
-                      Any uploaded flatfile will be available in all tabs of this web page`
+                      Please consult also the tab "Flatfiles" to inspect your flatfile before usage.
+                      An uploaded flatfile will be available in all tabs of this web page`
         }
     },
     data(){
@@ -392,17 +388,12 @@ Vue.component('flatfile-select', {
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
         'fieldProxy.value': function(newVal, oldVal){
-            // Set the field values as either a string (predefined flatfile) or a File
-            // Object
-            for (var ff of this.flatfiles){
-                if (ff.name == newVal){
-                    if (ff.file){
-                        newVal = ff.file;
-                    }
-                    break
-                }
-            }
+            // called when we select a flatfile. newVal and oldVal are the names
+            // of the selected <option>
+            var selFile = this.flatfiles[parseInt(newVal)] || null;
+            // if (selFile == null){ return; }
             this.field.value = newVal;
+            this.$emit('flatfile-selected', selFile);
         },
         'field.error': function(newVal, oldVal){
             this.fieldProxy.error = newVal;
@@ -414,7 +405,7 @@ Vue.component('flatfile-select', {
             deep: true,
             immediate: true,
             handler: function(newVal, oldVal){
-                this.fieldProxy.choices = Array.from(newVal.map(elm => [elm.name, elm.name == elm.label ? elm.name : `${elm.name} (${elm.label})`]));
+                this.fieldProxy.choices = Array.from(newVal.map((elm, idx) => [idx, elm.label]));
             }
         }
     },
@@ -430,24 +421,42 @@ Vue.component('flatfile-select', {
         }
     },
     methods:{
-        filesUploaded: function(files){
+        filesUploaded(files){
             var flatfiles = this.flatfiles;
-            for (var file of files){
-                var label = `${file.name} (${new Date().toLocaleString()})`;
-                for (var i=0; i<flatfiles.length; i++){
-                    var flatfile = flatfiles[i];
-                    if ((flatfile.name == file.name) && (flatfile.file)){
-                        // `flatfile.file` assures we are modifying an user uploaded flatfile
-                        flatfile.file = file;
-                        flatfile.label = label;  // update label to show we overwrote the file
-                        file = null;
+            var newflatfiles = [];
+            for (let file of files){
+                var label = `${file.name} (Uploaded: ${new Date().toLocaleString()})`;
+                var append = true;
+                for (let flatfile of flatfiles){
+                    if (!flatfile.file){  // pre-defined flatfile
+                        continue;
+                    }
+                    if (flatfile.name == file.name){
+                        this.upload(file).then(response => {
+                            flatfile.file = file;
+                            flatfile.label = label;  // update label on <select>
+                            flatfile.columns = response.data.columns;
+                        });
+                        append = false;
                         break;
                     }
                 }
-                if (file != null){
-                    flatfiles.push({ name: file.name, label: label, file: file });
+                if (append){
+                    this.upload(file).then(response => {
+                        var cols = response.data.columns;
+                        flatfiles.push({ name: file.name, label: label, file: file, columns: cols });
+                    });
                 }
             }
+        },
+        upload(file){  // return a Promise
+            var formData = new FormData();
+            formData.append("flatfile", file);
+            return EGSIM.post(this.field.url, formData, {
+                headers: {
+                  'Content-Type': 'multipart/form-data'
+                }
+            });
         }
     },
     template:`<div>
@@ -459,8 +468,9 @@ Vue.component('flatfile-select', {
                         :aria-label='doc' data-balloon-pos="down" data-balloon-length="large">
                     upload
                 </button>
+                <!- THIS MUST ALWAYS BE NEXT TO THE BUTTON ABOVE: ->
+                <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
             </div>
-            <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
         </div>
     </div>`
 });

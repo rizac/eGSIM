@@ -5,6 +5,7 @@ from django.db.models import Prefetch, QuerySet
 from . import TAB, URLS
 from ..api import models
 from ..api.forms import EgsimBaseForm
+from ..api.forms.flatfile import FlatfileForm
 from ..api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
 from ..api.forms.tools import field_to_dict, field_to_htmlelement_attrs
@@ -40,7 +41,8 @@ def get_context(selected_menu=None, debug=True) -> dict:
         'names': list(models.Regionalization.objects.values_list('name', flat=True))
     }
 
-    flatfiles = [{'name': r.name, 'label': r.display_name, 'url': r.url}
+    flatfiles = [{'name': r.name, 'label': f'{r.name} ({r.display_name})', 'url': r.url,
+                  'columns': FlatfileForm.get_flatfile_dtypes(FlatfileForm.read_flatfile_from_db(r), compact=True)}
                  for r in query_flatfiles()]
 
     return {
@@ -50,7 +52,7 @@ def get_context(selected_menu=None, debug=True) -> dict:
         'component_props': json.dumps(components_props, separators=(',', ':')),
         'gsims': json.dumps(gsims, separators=(',', ':')),
         'flatfiles': flatfiles,
-        # 'flatfile_columns': flatfile_columns,
+        'flatfile_upload_url': URLS.FLATFILE_INSPECTION,
         'regionalization': regionalization,
         'allowed_browsers': {k.lower(): v for k, v in allowed_browsers.items()},
         'invalid_browser_message': invalid_browser_message

@@ -6,14 +6,10 @@ var EGSIM_BASE = {
         loading: false,
         errormsg: '',
         selComponent: '',
-        // FIXME: IMPLEMENT PROPS FOR DEFAULT VARIABLES?
-        // gsims: {}, // an Object of gsim names (string) mapped to [[... imts ...], trt, oq_gsim_warning] (all elements strings)
-        componentProps: {}, // an object of Objects keyed by each string denoting a component name (<=> menu tab)
+        componentProps: {}, // component names (e.g. 'trellis') -> Object
         postfuncDefaultConfig: {},  // default config used in `post` function
         flatfiles: {},  // Array of flatfiles, each flatfile is an Object of the form: {name:str labe':str, url:str}
-        flatfile_columns: [], // Object of column names mapped to the Array [description, dataType] (both str)
-        // In case we want to use an event bus:
-        // https://laracasts.com/discuss/channels/vue/help-please-how-to-refresh-the-data-of-child-component-after-i-post-some-data-on-main-component/replies/288180
+        flatfileUploadUrl: '', // used when we upload a flatfile
     }},
     created: function(){
         // Use regular expression to convert Gsim names to readable names:
@@ -44,9 +40,6 @@ var EGSIM_BASE = {
         var regionalization = this.regionalization;
         // make each flatfile object not editable:
         this.flatfiles = this.flatfiles.map(elm => Object.freeze(elm));
-        // for flatfile viewer, x and y <select> are too wide. Set as <option>s name AND
-        // value the flatfile column name only (elm[0]) skipping the description (elm[1]):
-        var ffColumns = Object.keys(this.flatfile_columns).map(elm => [elm, elm]).sort();
         // set processed data:
         for (var [name, form] of this.forms()){
             if (form.gsim){
@@ -64,17 +57,11 @@ var EGSIM_BASE = {
                 form.imt.choices = Array.from(imts);
                 form.imt.value || (form.imt.value = []); // assure empty list (not null)
             }
-            // set flatfile choices adn references. Note: share the same array, so
+            // set flatfile choices and references. Note: share the same array, so
             // adding an uploaded flatfile updates all controls!
             if (form.flatfile){
                 form.flatfile.choices = this.flatfiles;
-                form.flatfile['data-columns'] = this.flatfile_columns;
-            }
-            if (form.x){
-                form.x.choices = ffColumns;
-            }
-            if(form.y){
-                form.y.choices = ffColumns;
+                form.flatfile['url'] = this.flatfileUploadUrl;
             }
         }
     },
