@@ -29,7 +29,7 @@ def get_context(selected_menu=None, debug=True) -> dict:
                                'following tested browsers: %s' %
                                allowed_browsers_msg)
 
-    gsims = [[g.name, [i.name for i in g.imtz], g.warning or ""] for g in query_gims()]
+    gsims = [[g.name, [i.name for i in g.imts], g.warning or ""] for g in query_gims()]
 
     components_props = get_components_properties(debug)
 
@@ -77,8 +77,7 @@ def query_gims() -> QuerySet:
     # Try to perform everything in a single more efficient query. Use
     # prefetch_related for this. It Looks like we need to assign the imts to a
     # new attribute, the attribute "Gsim.imts" does not work as expected
-    imts = Prefetch('imts', queryset=models.Imt.objects.only('name'),
-                    to_attr='imtz')
+    imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
 
     return models.Gsim.objects.only('name', 'warning').prefetch_related(imts)
 
