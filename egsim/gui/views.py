@@ -5,7 +5,7 @@ Created on 17 Jan 2018
 """
 import os
 from io import StringIO
-from os.path import join, dirname
+from os.path import join, dirname, abspath
 import json
 import yaml
 
@@ -81,17 +81,17 @@ def apidoc(request):
             'path': " or ".join(TAB.testing.urls),
             'form': describe.as_dict(TAB.testing.formclass),
             'key': TAB.testing.name
-        },
-        # 'FORMAT': {
-        #     'form': to_help_dict(FormatForm())
-        # }
+        }
     }
 
     # add references:
-    with open(join(dirname(__file__), 'references.yaml')) as _:
-        dic = yaml.safe_load(_)
-
-    egsim_data['REFERENCES'] = dic
+    refs = {}
+    with open(join(dirname(dirname(abspath(__file__))), 'api', 'management',
+                   'commands', 'data' 'data_sources.yaml')) as _:
+        for ref in yaml.safe_load(_).values():
+            name = ref.pop('display_name')
+            refs[name] = ref
+    egsim_data['REFERENCES'] = refs
 
     return render(request, filename,
                   dict(COMMON_PARAMS,
