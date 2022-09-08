@@ -1,8 +1,5 @@
-/**
- * Registers globally a Vue component. The name of the component
- * (first argument of 'Vue.component' below must be equal to this file's name 
- * (without extension)
- */
+/* Flatfile components */
+
 Vue.component('flatfile', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {

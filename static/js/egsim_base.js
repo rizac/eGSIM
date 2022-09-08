@@ -1,5 +1,4 @@
-/** base skeleton implementation for the base Vue instance
- */
+/** base skeleton implementation for the main Vue instance. See egsim.html */
 var EGSIM_BASE = {
     data: function(){ return {
         // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
@@ -69,10 +68,6 @@ var EGSIM_BASE = {
         selComponentProps(){  // https://stackoverflow.com/a/43658979
             return this.componentProps[this.selComponent];
         }
-    },
-    mounted: function() {
-        // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
-        // no -op for the moment
     },
     methods: {
         setComponent(name){
@@ -170,14 +165,13 @@ var EGSIM_BASE = {
         // the global EGSIM app has been mounted, i.e. not while initializing each component
         post(url, data, config){
             /*
-             Sends POST request through axios, while performing several GUI operations
-             on the root element. Return `axios.post(url, data, config)`, i.e. a `Promise`
-             which can be chained with `.then(response)` and `.catch(response)` (`response`
-             is the axios response object).
+             Global recommended method to issue POST requests in this app. Wraps axios
+             call while performing several GUI operations (e.g., display errors). Usage:
+            `EGSIM.post.then(response => { ... }).catch(response -> { ... });
 
              Parameters:
              url: string of the url
-             data: the request POST data (e.g. JSON serialzable Object)
+             data: the request POST data (e.g. JSON serializable Object)
              config: any data (Object) for configuring the POST request. Defaults
                 to the default config passed (see `createPostFunction` above)
              */

@@ -1,7 +1,5 @@
-/**
- * Registers globally the residuals component (model-to-data comparison).
- * The component name must be a name of a `TAB` Enum in egsim.gui.__init__.py
- */
+/* Residuals plot components (model-to-data comparison) */
+
 Vue.component('residuals', {
     props :{
         form: Object,

@@ -1,6 +1,4 @@
-/**
- * Form components
- */
+/* Form components */
 
 Vue.component('submit-button', {  // provide a single place for styling the submit button of forms
     template: `<button type="submit" class="btn btn-primary">
@@ -8,32 +6,30 @@ Vue.component('submit-button', {  // provide a single place for styling the subm
     </button>`
 });
 
-/**
- Base class for Form components. USAGE:
+/*Base class for Form components. USAGE:
 
- Vue.component('<component name>', {
-    mixins: [BASE_FORM],
-    props: {
-        // whatever you implement here, remember that you have
-        // `this.url` and `this.form` (see below)
-    }
-    template: `<form novalidate @submit.prevent="myCustomFunc">
-        <!-- here your input components, usually bound to elements of `this.form` -->
-        <button type='submit'>Ok</button>
-    </form>`
-    methods: {
-        myCustomFunc(){
-            // You can call here `this.submit()` (implemented in BASE_FORM)
-            // that does all the work of creating a FormData, send the request with
-            // correct headers and displaying errors in case. You deal here only with
-            // successful responses that you can chain as usual:
-            this.submit().then(response => {
-                this.$emit('submitted', response); // example to notify listeners
-            }
-        }
-    }
- });
-*/
+Vue.component('<component name>', {
+   mixins: [BASE_FORM],
+   props: {
+       // whatever you implement here, remember that you have
+       // `this.url` and `this.form` (see below)
+   }
+   template: `<form novalidate @submit.prevent="myCustomFunc">
+       <!-- here your input components, usually bound to elements of `this.form` -->
+       <button type='submit'>Ok</button>
+   </form>`
+   methods: {
+       myCustomFunc(){
+           // You can call here `this.submit()` (implemented in BASE_FORM)
+           // that does all the work of creating a FormData, send the request with
+           // correct headers and displaying errors in case. You deal here only with
+           // successful responses that you can chain as usual:
+           this.submit().then(response => {
+               this.$emit('submitted', response); // example to notify listeners
+           }
+       }
+   }
+});*/
 var BASE_FORM = {
     props: {
         form: Object,  // field names mapped to Objects describing <input>s or <select>
@@ -126,12 +122,10 @@ var BASE_FORM = {
     }
 };
 
-/**
- Egsim form used in trellis, residuals, testing. Main features:
-  - emits a 'submitted' on response successfully received, after submit
-  - implements a toolbar for IO operations such as get Form in YAML or JSON config
-  - Deals with hiding and transforming the form into a dialog popup after first submit
- */
+/**Egsim form used in trellis, residuals, testing. Main features:
+- emits a 'submitted' on response successfully received, after submit
+- implements a toolbar for IO operations such as get Form in YAML or JSON config
+- Deals with hiding and transforming the form into a dialog popup after first submit*/
 Vue.component('egsim-form', {
     mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
     props :{
@@ -380,13 +374,11 @@ Vue.component('egsim-form', {
 });
 
 
-/**
- * A <select> that performs an action for each option clicked, restoring the first option
- * (disabled and acting like a title) afterwards
- */
+/* A <select> that performs an action for each <option> clicked, and first option
+ disabled acting as a title (see <slot> in template)*/
 Vue.component('action-select', {
     props: {
-        // action is an Array of [caption, callback] pairs associated to each <option>:
+        // provide an Array of [caption, callback] pairs associated to each <option>:
         actions: {type: Array, default: () => { return []; }},
     },
     data: function () {
