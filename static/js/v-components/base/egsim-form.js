@@ -1,5 +1,5 @@
 /**
- * Represents a base form used in trellis, residuals, testing
+ * Form components
  */
 
 Vue.component('submit-button', {  // provide a single place for styling the submit button of forms
@@ -8,10 +8,37 @@ Vue.component('submit-button', {  // provide a single place for styling the subm
     </button>`
 });
 
+/**
+ Base class for Form components. USAGE:
+
+ Vue.component('<component name>', {
+    mixins: [BASE_FORM],
+    props: {
+        // whatever you implement here, remember that you have
+        // `this.url` and `this.form` (see below)
+    }
+    template: `<form novalidate @submit.prevent="myCustomFunc">
+        <!-- here your input components, usually bound to elements of `this.form` -->
+        <button type='submit'>Ok</button>
+    </form>`
+    methods: {
+        myCustomFunc(){
+            // You can call here `this.submit()` (implemented in BASE_FORM)
+            // that does all the work of creating a FormData, send the request with
+            // correct headers and displaying errors in case. You deal here only with
+            // successful responses that you can chain as usual:
+            this.submit().then(response => {
+                this.$emit('submitted', response); // example to notify listeners
+            }
+        }
+    }
+ });
+*/
 var BASE_FORM = {
     props: {
-        form: Object,
-        url: String,
+        form: Object,  // field names mapped to Objects describing <input>s or <select>
+                       // (the keys 'value' and 'error' are mandatory)
+        url: String,  // the request URL after form submission
     },
     data: function () {
         return {}
@@ -25,10 +52,7 @@ var BASE_FORM = {
             // send the main post request to `this.url` using `this.form` as POST data
             return this.post(this.url).then(response => {
                 if (response && response.data){
-                    // response data must not be empty Array empty Object:
-                    if ((typeof response.data !== 'object') || !!(Object.keys(response.data).length)){
-                        return response.data; // allows .then on the Promise
-                    }
+                    return response; // allows .then on the Promise
                 }
                 throw new Error('response empty');  // should allow to .catch the promise in case
             }).catch(response => {
@@ -103,7 +127,10 @@ var BASE_FORM = {
 };
 
 /**
- * Represents a base form used in trellis, residuals, testing
+ Egsim form used in trellis, residuals, testing. Main features:
+  - emits a 'submitted' on response successfully received, after submit
+  - implements a toolbar for IO operations such as get Form in YAML or JSON config
+  - Deals with hiding and transforming the form into a dialog popup after first submit
  */
 Vue.component('egsim-form', {
     mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
@@ -125,12 +152,12 @@ Vue.component('egsim-form', {
     emits: ['form-successfully-submitted'], // Vue 3 required attr (in case we migrate)
     methods: {
         submitMe: function(responseData){  // overrides super method
-            this.submit().then(responseData => {
+            this.submit().then(response => {
                 this.show = !this.show;
                 this.showAsDialog = true;
                 setTimeout(() => {
                     // notify asynchronously after the form has been hidden:
-                    this.$emit('form-successfully-submitted', responseData);
+                    this.$emit('submitted', response);
                 }, 250);
             });
         },

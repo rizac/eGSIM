@@ -104,10 +104,8 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         },
         TAB.flatfile.name: {  # FIXME REMOVE
             'forms': [form_to_json(FlatfileRequiredColumnsForm, ignore_choices),
-                      # form_to_json(FlatfileInspectionForm, ignore_choices),
                       form_to_json(FlatfilePlotForm, ignore_choices)],
             'urls': [URLS.FLATFILE_REQUIRED_COLUMNS,
-                     # URLS.FLATFILE_INSPECTION,
                      URLS.FLATFILE_PLOT]
         },
         TAB.residuals.name: {
@@ -134,6 +132,17 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             'src': URLS.DOC_PAGE
         }
     }
+
+    # FlatfilePlotForm has x and y that must be represented as <select> but cannot
+    # be implemented as ChoiceField, because their content is not static but
+    # flatfile dependent. So
+    plot_form = components_props[TAB.flatfile.name]['forms'][-1]
+    plot_form['x']['type'] = 'select'
+    plot_form['y']['type'] = 'select'
+    # provide initial value:
+    plot_form['x']['choices'] = [('', 'None: display histogram of Y values')]
+    plot_form['y']['choices'] = [('', 'None: display histogram of X values')]
+
     if debugging:
         _setup_default_values(components_props)
     return components_props
