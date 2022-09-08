@@ -37,7 +37,7 @@ Vue.component('trellis', {
 <div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
     <egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
                 :visibilityToggle="formVisibilityToggle"
-                @form-successfully-submitted="responseData=arguments[0]">
+                @submitted="responseData=arguments[0].data">
 
         <template v-slot:left-column>
             <gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto"/>

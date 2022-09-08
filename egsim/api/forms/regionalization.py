@@ -12,7 +12,7 @@ from .. import models
 
 
 def get_regionalizations() -> Iterable[tuple[str, str]]:
-    return [(_.name, str(_)) for _ in models.RegionalizationDataSource.objects.all()]
+    return [(_.name, str(_)) for _ in models.Regionalization.objects.all()]
 
 
 class GsimFromRegionForm(APIForm):

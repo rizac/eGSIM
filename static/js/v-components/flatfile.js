@@ -11,7 +11,7 @@ Vue.component('flatfile', {
         // response: {type: Object, default: () => {return {}}}
     },
     data: function () {
-        var compNames = ['flatfile-compilation', 'flatfile-inspection'];  //, 'flatfile-inspection', 'flatfile-plot'];
+        var compNames = ['flatfile-compilation', 'flatfile-plot'];  //, 'flatfile-inspection', 'flatfile-plot'];
         var compProps = {};
         compNames.forEach((elm, index) => {
             compProps[elm] = {
@@ -21,7 +21,7 @@ Vue.component('flatfile', {
         }, this);
         var compLabels = {
             'flatfile-compilation': 'Compilation',
-            'flatfile-inspection': 'Inspection'
+            'flatfile-plot': 'Inspection plot'
         };
         return {
             componentNames: compNames,
@@ -48,7 +48,6 @@ Vue.component('flatfile', {
             <component v-bind:is="selComponentName" v-bind="componentProps[selComponentName]"></component>
         </keep-alive>
         </transition>
-
     </div>`
 });
 
@@ -88,7 +87,7 @@ Vue.component('flatfile-compilation', {
             this.updateFlatfile();
         },
     },
-    template: `<form novalidate @submit.prevent="submit" class='d-flex flex-column' style='flex: 1 1 auto'>
+    template: `<form novalidate class='d-flex flex-column' style='flex: 1 1 auto'>
         <div class='d-flex flex-row' style='flex: 1 1 auto; justify-content: center'>
             <div class='d-flex flex-column' style='max-width: 50rem'>
 
@@ -144,8 +143,8 @@ Vue.component('flatfile-compilation', {
             // query the server and store in response data the metadata columns
             // required for the current GSIM selection
             this.$nextTick(() => {
-                this.submit().then(responseData => {
-                    this.responseData = responseData;
+                this.submit().then(response => {
+                    this.responseData = response.data;
                 });
             });
         },
@@ -211,7 +210,7 @@ Vue.component('flatfile-compilation', {
 });
 
 
-Vue.component('flatfile-inspection', {
+Vue.component('flatfile-plot', {
     mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
     props: {
         form: Object,
@@ -235,32 +234,34 @@ Vue.component('flatfile-inspection', {
                 }
             });
         },
-        flatfileUploaded(file){
-            var vals = Object.keys(file.columns).map(elm => [col, `${col} (${file.columns[col]})`]);
-            this.form.x.choices = Array.from(vals);
-            this.form.y.choices = Array.from(vals);
+        flatfileSelected(file){
+            var vals = Object.keys(file.columns).map(col => [col, `${col} ${file.columns[col]}`]);
+            this.form.x.choices = this.form.x.choices.slice(0, 1).concat(vals);
+            this.form.y.choices = this.form.y.choices.slice(0, 1).concat(vals);
+        },
+        submitMe(){
+            this.submit().then(response => {this.responseData = response.data});
         }
     },
-    template: `<div class='flexible d-flex flex-column'>
+    template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
         <div class='mb-3'>
-            <!-- <egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
-                        :visibilityToggle="formVisibilityToggle"
-                        @form-successfully-submitted="responseData=arguments[0]"> -->
-           <form novalidate @submit.prevent="submitMe"
-                        @form-successfully-submitted="responseData=arguments[0]">
-                <div class="d-flex flex-row flexible align-items-end">
-                    <flatfile-select :field="form.flatfile" @flatfile-uploaded="flatfileUploaded" />
+           <form novalidate @submit.prevent="submitMe">
+                <div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
+                    <flatfile-select :field="form.flatfile" @flatfile-selected="flatfileSelected" />
+                    <span class='mr-3'></span>
                     <flatfile-selexpr-input :field="form.selexpr" class='mt-3'/>
+                    <span class='mr-3'></span>
                     <field-input :field='form.x'/>
+                    <span class='mr-3'></span>
                     <field-input :field='form.y'/>
+                    <span class='mr-3'></span>
                     <button type="submit" class="btn btn-primary mt-2">
-                        Display magnitude-distance plot
+                        Display plot
                     </button>
-
                 </div>
            </form>
         </div>
-        <flatfile-plot-div :data="responseData" class='flexible'></flatfile-plot-div>
+        <flatfile-plot-div :data="responseData" style='flex: 1 1 auto'></flatfile-plot-div>
     </div>`
 });
 
@@ -319,19 +320,28 @@ Vue.component('flatfile-plot-div', {
             var trace = {
                     x: jsondict.xvalues,
                     y: jsondict.yvalues,
-                    mode: 'markers',
-                    type: 'scatter',
+                    // mode: 'markers',
+                    // type: 'scatter',
                     text: jsondict.labels || [],
                     marker: { size: 10, color: this.colorMap.transparentize(0, .5) },
                     // <extra></extra> hides the second tooltip (white):
                     hovertemplate: `${jsondict.xlabel}=%{x}<br>${jsondict.ylabel}=%{y}`+
                         `<extra></extra>`
                   };
+            if ((jsondict.xlabel == 'Count') || (jsondict.ylabel == 'Count')){
+                trace.type = 'bar';
+                if (jsondict.xlabel == 'Count'){
+                    trace.orientation = 'h'
+                }
+            }else{
+                trace.mode = 'markers'
+                trace.type = 'scatter'
+            }
             // modify here the defaut layout:
             // this.defaultlayout.title = `Magnitude Distance plot (${trace.x.length} records in database)`;
             var data = [ trace ];
             var xaxis = {
-                type: 'log',
+                // type: 'log',
                 title: jsondict.xlabel
             };
             var yaxis = {
@@ -341,9 +351,9 @@ Vue.component('flatfile-plot-div', {
             // display a sort of title on the x axis:
             var numFormatted = trace.x.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); //https://stackoverflow.com/a/2901298
             var title = `${numFormatted} records`;
-            if (jsondict.nan_count){
-                title += ' (' + jsondict.nan_count + ' NaN records not shown)';
-            }
+//            if (jsondict.nan_count){
+//                title += ' (' + jsondict.nan_count + ' NaN records not shown)';
+//            }
             var params = {'Magnitude Distance plot': title};
             return [{traces: [trace], params: params, xaxis: xaxis, yaxis: yaxis}];
         },
@@ -386,13 +396,15 @@ Vue.component('flatfile-select', {
             columns: this.field['data-columns']
         }
     },
+    emits: ['flatfile-selected'],
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
         'fieldProxy.value': function(newVal, oldVal){
-            // called when we select a flatfile. newVal and oldVal are the names
-            // of the selected <option>
+            // called when we select a flatfile. newVal and oldVal are the indices
+            // of the flatfiles. But the field expects either a string (flatfile name)
+            // or a File Object (see BASE_FORM). So:
             var selFile = this.flatfiles[parseInt(newVal)] || null;
             // if (selFile == null){ return; }
-            this.field.value = newVal;
+            this.field.value = selFile.file || selFile.name;
             this.$emit('flatfile-selected', selFile);
         },
         'field.error': function(newVal, oldVal){
@@ -489,7 +501,9 @@ Vue.component('flatfile-selexpr-input', {
                       Use notna([column]) to match rows where the column value is given,
                       i.e. not 'not available' (na). For instance, to get records where at rjb or
                       repi is available:
-                      "(magnitude>5) & (notna(rjb) | notna(repi))"`
+                      "(magnitude>5) & (notna(rjb) | notna(repi))"
+                      (notna works for numeric and string columns only)
+                      `
         }
     },
     template:`<div>
