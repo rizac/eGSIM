@@ -1,7 +1,6 @@
-/**
- * Registers globally the testing component (model-to-data testing).
- * The component name must be a name of a `TAB` Enum in egsim.gui.__init__.py
- */
+/* Testing (model ranking) components (model-to-data testing) */
+
+
 Vue.component('testing', {
     props :{
         form: Object,

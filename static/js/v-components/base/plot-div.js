@@ -1,6 +1,6 @@
-/**
- * Base "class" for any component showing plots as a result of a response Object sent from the server
- */
+/* Base class to be used as mixin for any component showing plots as a result
+of a response Object sent from the server */
+
 var PLOT_DIV = {
     props: {
         data: {type: Object, default: () => { return{} }},

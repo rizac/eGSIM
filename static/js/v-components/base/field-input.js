@@ -1,9 +1,6 @@
-/**
- * Implementation of from input components <base-input> and <field-input>
- * Requires Bootstrap CSS 5
- */
+/* form input components (<input>, <select>) */
 
-// Mixin used by <base-input> and <field-input> (see below)
+/* Mixin used by <base-input> and <field-input> (see below)*/
 const baseComponentMixin = {
     data: function(){
         return {

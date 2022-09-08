@@ -1,7 +1,5 @@
-/**
- * Registers globally the trellis component (model-to-model comparison).
- * The component name must be a name of a `TAB` Enum in egsim.gui.__init__.py
- */
+/* Trellis plot components (model-to-model comparison) */
+
 Vue.component('trellis', {
     props :{
         form: Object,

@@ -1,6 +1,5 @@
-/**
- * Implements a component representing the form element of GSIMs
- */
+/* GSIM and IMT <select> components */
+
 Vue.component('gsim-select', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
