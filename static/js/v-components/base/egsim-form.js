@@ -143,7 +143,7 @@ Vue.component('egsim-form', {
             downloadActions: this.createDownloadActions()
         }
     },
-    emits: ['form-successfully-submitted'], // Vue 3 required attr (in case we migrate)
+    emits: ['submitted'], // Vue 3 required attr (in case we migrate)
     methods: {
         submitMe: function(responseData){  // overrides super method
             this.submit().then(response => {
