@@ -43,13 +43,14 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                                                 'parameter is required',
                                                 code='required'))
 
-        cols = cleaned_data['flatfile']
-        if x and x not in cols:
-            self.add_error("x", ValidationError(f'"{x}" is not a flatfile'
-                                                'column', code='invalid'))
-        if y and y not in cols:
-            self.add_error("y", ValidationError(f'"{y}" is not a flatfile'
-                                                'column', code='invalid'))
+        if 'flatfile' in cleaned_data:
+            cols = cleaned_data['flatfile'].columns
+            if x and x not in cols:
+                self.add_error("x", ValidationError(f'"{x}" is not a flatfile'
+                                                    'column', code='invalid'))
+            if y and y not in cols:
+                self.add_error("y", ValidationError(f'"{y}" is not a flatfile'
+                                                    'column', code='invalid'))
 
         return cleaned_data
 
@@ -70,8 +71,8 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             xnan = cls._isna(xvalues)
             ynan = cls._isna(yvalues)
             plot = dict(
-                xvalues=xvalues[~(xnan | ynan)].values.tolist(),
-                yvalues=yvalues[~(xnan | ynan)].values.tolist(),
+                xvalues=cls.tolist(xvalues[~(xnan | ynan)]),
+                yvalues=cls.tolist(yvalues[~(xnan | ynan)]),
                 xlabel=xlabel,
                 ylabel=ylabel,
                 stats={
@@ -81,35 +82,43 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                              **cls._get_stats(yvalues.values[~ynan])}
                 }
             )
-        else:  # histogram
-            xlabel = x or y
-            na_values = cls._isna(dataframe[xlabel])
+        else:
+            label = x or y
+            na_values = cls._isna(dataframe[label])
             dataframe = dataframe.loc[~na_values, :]
-            series = dataframe[xlabel]
-            res = dataframe.groupby(xlabel)
-            bins_count = len(res)
-            max_bins_count = 100
-            if bins_count > 1.5 * max_bins_count:
-                res = dataframe.groupby(pd.cut(series, max_bins_count))
-            res = res.count()
-            xvalues = ['N/A'] + [str(_) for _ in res.index]
+            series = dataframe[label]
             na_count = int(na_values.sum())
-            yvalues = [na_count] + res[res.columns[0]].tolist()
-
-            plot = dict(
-                xvalues=xvalues,
-                yvalues=yvalues,
-                xlabel=xlabel,
-                ylabel='Count',
-                stats={
-                    xlabel: {
-                        'N/A count': na_count,
-                        **cls._get_stats(series.values)
+            if x:
+                plot = dict(
+                    xvalues=series.values.tolist(),
+                    xlabel=label,
+                    stats={
+                        label: {
+                            'N/A count': na_count,
+                            **cls._get_stats(series.values)
+                        }
                     }
-                }
-            )
-
+                )
+            else:
+                plot = dict(
+                    yvalues=cls.tolist(series),
+                    ylabel=label,
+                    stats={
+                        label: {
+                            'N/A count': na_count,
+                            **cls._get_stats(series.values)
+                        }
+                    }
+                )
         return plot
+
+    @classmethod
+    def tolist(cls, series_with_no_na: pd.Series):
+        if str(series_with_no_na.dtype).startswith('datetime'):
+            return pd.to_datetime(series_with_no_na.values).\
+                strftime('%Y-%m-%dT%H:%M:%S').tolist()
+        else:
+            return series_with_no_na.values.tolist()
 
     @classmethod
     def _isna(cls, values):

@@ -314,44 +314,48 @@ Vue.component('flatfile-plot-div', {
             // defined normal dist. constants:
             var jsondict = responseObject;
             // set plotly data from jsondict:
-            var trace = {
+            if (jsondict.xlabel && jsondict.ylabel){
+                var trace = {
+                        x: jsondict.xvalues,
+                        y: jsondict.yvalues,
+                        mode: 'markers',
+                        type: 'scatter',
+                        text: jsondict.labels || [],
+                        marker: { size: 10, color: this.colorMap.transparentize(0, .5) },
+                        // <extra></extra> hides the second tooltip (white):
+                        hovertemplate: `${jsondict.xlabel}=%{x}<br>${jsondict.ylabel}=%{y}`+
+                            `<extra></extra>`
+                      };
+            }else if(jsondict.xlabel){
+                var trace = {
                     x: jsondict.xvalues,
-                    y: jsondict.yvalues,
-                    // mode: 'markers',
-                    // type: 'scatter',
-                    text: jsondict.labels || [],
-                    marker: { size: 10, color: this.colorMap.transparentize(0, .5) },
-                    // <extra></extra> hides the second tooltip (white):
-                    hovertemplate: `${jsondict.xlabel}=%{x}<br>${jsondict.ylabel}=%{y}`+
-                        `<extra></extra>`
+                    type: 'histogram',
                   };
-            if ((jsondict.xlabel == 'Count') || (jsondict.ylabel == 'Count')){
-                trace.type = 'bar';
-                if (jsondict.xlabel == 'Count'){
-                    trace.orientation = 'h'
-                }
             }else{
-                trace.mode = 'markers'
-                trace.type = 'scatter'
+                var trace = {
+                    y: jsondict.yvalues,
+                    type: 'histogram',
+                  };
             }
+
             // modify here the defaut layout:
             // this.defaultlayout.title = `Magnitude Distance plot (${trace.x.length} records in database)`;
             var data = [ trace ];
             var xaxis = {
                 // type: 'log',
-                title: jsondict.xlabel
+                title: jsondict.xlabel || 'Count'
             };
             var yaxis = {
-                title: jsondict.ylabel
+                title: jsondict.ylabel || 'Count'
             };
             // build the params. Setting just a single param allows us to
             // display a sort of title on the x axis:
-            var numFormatted = trace.x.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); //https://stackoverflow.com/a/2901298
-            var title = `${numFormatted} records`;
+//            var numFormatted = trace.x.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); //https://stackoverflow.com/a/2901298
+//            var title = `${numFormatted} records`;
 //            if (jsondict.nan_count){
 //                title += ' (' + jsondict.nan_count + ' NaN records not shown)';
 //            }
-            var params = {'Magnitude Distance plot': title};
+            var params = {};  // {'Magnitude Distance plot': title};
             return [{traces: [trace], params: params, xaxis: xaxis, yaxis: yaxis}];
         },
         displayGridLabels: function(axis, paramName, paramValues){

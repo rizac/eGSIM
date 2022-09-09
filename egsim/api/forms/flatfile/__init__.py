@@ -131,6 +131,7 @@ class FlatfileForm(EgsimBaseForm):
             except Exception as exc:
                 # add_error removes also the field from self.cleaned_data:
                 self.add_error(key, ValidationError(str(exc), code='invalid'))
+                cleaned_data.pop('flatfile')  # FIXME handle better
                 return cleaned_data  # no need to further processing
 
         # replace the flatfile parameter with the pandas dataframe:
