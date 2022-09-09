@@ -965,9 +965,14 @@ var PLOT_DIV = {
             // pmin, max] which might be NaN
             var [rangeX, rangeY] = [[NaN, NaN], [NaN, NaN]];
             for (var trace of traces){
-                var [rangex, rangey] = [this.nanrange(...trace.x), this.nanrange(...trace.y)];
-                rangeX = this.nanrange(...rangeX, ...rangex);
-                rangeY = this.nanrange(...rangeY, ...rangey);
+                if (trace.x){
+                    var rangex = this.nanrange(...trace.x);
+                    rangeX = this.nanrange(...rangeX, ...rangex);
+                }
+                if (trace.y){
+                    var rangey = this.nanrange(...trace.y);
+                    rangeY = this.nanrange(...rangeY, ...rangey);
+                }
             }
             return [rangeX, rangeY];
         },
