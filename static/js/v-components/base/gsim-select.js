@@ -9,7 +9,7 @@ Vue.component('gsim-select', {
     emits: ['gsim-selected'],
     data: function () {
         // set <select> style
-        this.field.cstyle = ['border-bottom-left-radius: 0rem !important',
+        this.field.style = ['border-bottom-left-radius: 0rem !important',
                             'border-bottom-right-radius: 0rem !important'].join(';')
         // return custom data:
         return {
@@ -58,8 +58,9 @@ Vue.component('gsim-select', {
     template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
 
         <div class='d-flex flex-column' style="flex: 1 1 60%">
+            <field-label :field="field" class="mb-1"/>
             <div class='d-flex flex column' style="position:relative; flex: 1 1 auto">
-                <field-input :field="field" :cstyle="'flex: 1 1 auto'"></field-input>
+                <field-input :field="field" :style="'flex: 1 1 auto'" />
                 <div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
                      style="position:absolute; right:2rem; top:3rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
                     <div v-for="w in warnings" class="small text-muted pt-2 px-3">
@@ -322,9 +323,8 @@ Vue.component('imt-select', {
         field: {type: Object},
     },
     data: function () {
-        // copy field and add the 'cstyle' attribute:
         var fieldCopy = {
-            'cstyle': ['border-bottom-left-radius:0rem !important',
+            'style': ['border-bottom-left-radius:0rem !important',
                        'border-bottom-right-radius:0rem !important'].join(";")
         };
         if ('size' in this.$attrs){
@@ -361,10 +361,11 @@ Vue.component('imt-select', {
         // no-op
     },
     template: `<div class='d-flex flex-column'>
-        <field-input :field="fieldCopy"></field-input>
+        <field-label :field="fieldCopy" class="mb-1"/>
+        <field-input :field="fieldCopy" />
         <base-input v-model="SAPeriods" :disabled="field.disabled || !fieldCopy.value.includes('SA')"
                     placeholder="SA periods (space-separated)"
-                    :cstyle="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'">
+                    :style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'">
         </base-input>
     </div>`,
     methods: {

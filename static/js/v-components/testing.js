@@ -36,16 +36,25 @@ Vue.component('testing', {
         </template>
 
         <template v-slot:right-column>
-            <imt-select :field="form.imt" size="6"></imt-select>
+            <imt-select :field="form.imt" size="6"/>
 
             <div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
-                <flatfile-select :field="form.flatfile"></flatfile-select>
-                <flatfile-selexpr-input :field="form.selexpr" class='mt-3'></flatfile-selexpr-input>
+                <flatfile-select :field="form.flatfile"/>
+                <flatfile-selexpr-input :field="form.selexpr" class='mt-3'/>
             </div>
             
             <div class="mt-4" style="background-color:transparent">
-                <field-input :field='form.fit_measure' size="5"></field-input>
-                <base-input v-show="isEDRSelected" class='mt-1'
+                <field-label :field='form.fit_measure'/>
+                <field-input :field='form.fit_measure' size="5"/>
+
+                <div v-show="isEDRSelected"">
+                    <field-label :field="form.edr_bandwidth" />
+                    <field-input class='small' :field="form.edr_bandwidth" />
+                    <field-label :field="form.edr_multiplier" />
+                    <field-input class='small' :field="form.edr_multiplier" />
+                </div>
+
+                <!-- <base-input v-show="isEDRSelected" class='mt-1'
                             v-model="form.edr_bandwidth.value"
                             :disabled="form.edr_bandwidth.disabled"
                             :error="!!form.edr_bandwidth.error">
@@ -56,7 +65,7 @@ Vue.component('testing', {
                             :disabled="form.edr_multiplier.disabled"
                             :error="!!form.edr_multiplier.error">
                     {{ form.edr_multiplier.name }}
-                </base-input>
+                </base-input>  -->
             </div>
         </template>
     </egsim-form>

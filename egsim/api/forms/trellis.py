@@ -56,7 +56,8 @@ class TrellisForm(GsimImtForm, APIForm):
     }
 
     plot_type = ChoiceField(label='Plot type',
-                            choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
+                            choices=[(k, f'{v[0]} [{k}]')
+                                     for k, v in PLOT_TYPE.items()])
     stdev = BooleanField(label='Compute Standard Deviation(s)', required=False,
                          initial=False)
 

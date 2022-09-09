@@ -23,14 +23,15 @@ Vue.component('residuals', {
         </template>
 
         <template v-slot:right-column>
-            <imt-select :field="form.imt" size="6"></imt-select>
+            <imt-select :field="form.imt" size="6" />
             <div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
-                <flatfile-select :field="form.flatfile"></flatfile-select>
-                <flatfile-selexpr-input :field="form.selexpr" class='mt-3'></flatfile-selexpr-input>
+                <flatfile-select :field="form.flatfile"/>
+                <flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
             </div>
 
             <div class="mt-4">
-                <field-input :field='form.plot_type' size="10"></field-input>
+                <field-label :field='form.plot_type' />
+                <field-input :field='form.plot_type' size="10"/>
             </div>
 
         </template>

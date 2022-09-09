@@ -38,12 +38,12 @@ Vue.component('trellis', {
                 @submitted="responseData=arguments[0].data">
 
         <template v-slot:left-column>
-            <gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto"/>
+            <gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
         </template>
 
         <template v-slot:right-column>
             <div style="position:relative">
-                <imt-select :field="form['imt']"></imt-select>
+                <imt-select :field="form['imt']" />
                 <div v-show='predefinedSA' class="form-control small text-muted"
                      style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
                     <i class='text-warning fa fa-info-circle'></i>
@@ -54,14 +54,28 @@ Vue.component('trellis', {
                  :class="{'border-danger': scenarioHasErrors}"
                  style="flex: 1 1 0;background-color:transparent;overflow-y:auto">
 
-                <field-input v-for="(name, index) in scenarioKeys" :key="name"
-                             :field='form[name]' :class="{ 'mt-2': index > 0 }">
-                </field-input>
+                <template v-for="(name, index) in scenarioKeys" >
+                    <div v-if="form[name].type != 'checkbox'" class='d-flex flex-column'
+                         :class="{ 'mt-2': index > 0 }">
+                        <field-label :field="form[name]" />
+                        <field-input :field="form[name]" />
+                    </div>
+                    <div v-else class='d-flex flex-row align-items-baseline'
+                         :class="{ 'mt-2': index > 0 }">
+                        <field-input :field="form[name]" />
+                        <field-label :field="form[name]" class='ml-2' style='flex: 1 1 auto'/>
+                    </div>
+                </template>
+
             </div>
 
             <div class="mt-4" style="background-color:transparent">
-                <field-input :field='form["plot_type"]' size="3"></field-input>
-                <field-input :field='form["stdev"]' class='mt-1'></field-input>
+                <field-label :field='form["plot_type"]' />
+                <field-input :field='form["plot_type"]' size="3" />
+                <div class='mt-1 d-flex flex-row align-items-baseline'>
+                    <field-input :field='form["stdev"]'/>
+                    <field-label :field='form["stdev"]' class='ml-2' style='flex: 1 1 auto'/>
+                </div>
             </div>
         </template>
     </egsim-form>

@@ -468,9 +468,10 @@ Vue.component('flatfile-select', {
             });
         }
     },
-    template:`<div>
-        <div class='d-flex flex-row align-items-end'>
-            <field-input :field="fieldProxy"></field-input>
+    template:`<div class='d-flex flex-column'>
+        <field-label :field="fieldProxy"/>
+        <div class='d-flex flex-row align-items-baseline'>
+            <field-input :field="fieldProxy"/>
             <div class='d-flex flex-row align-items-baseline'>
                 <a title='flatfile reference (opens in new tab)' target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>
                 <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
@@ -478,7 +479,7 @@ Vue.component('flatfile-select', {
                     upload
                 </button>
                 <!- THIS MUST ALWAYS BE NEXT TO THE BUTTON ABOVE: ->
-                <input type="file" class='ml-1' v-show="false" @change="filesUploaded($event.target.files)"/>
+                <input type="file" v-show="false" @change="filesUploaded($event.target.files)"/>
             </div>
         </div>
     </div>`
@@ -503,10 +504,9 @@ Vue.component('flatfile-selexpr-input', {
                       `
         }
     },
-    template:`<div>
-        <div class='d-flex flex-row align-items-end'
+    template: `<div class='d-flex flex-column'
              :aria-label="doc" data-balloon-pos="down" data-balloon-length="xlarge">
-            <field-input :field='field' style='flex:1 1 auto'></field-input>
-        </div>
-    </div>`
+            <field-label :field='field'/>
+            <field-input :field='field' style='flex:1 1 auto'/>
+        </div>`
 });

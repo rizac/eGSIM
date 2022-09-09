@@ -53,8 +53,9 @@ class ResidualsForm(GsimImtFlatfileForm, APIForm):
         'plot': 'plot_type'
     }
 
-    plot_type = ChoiceField(required=True,
-                            choices=[(k, v[0]) for k, v in PLOT_TYPE.items()])
+    plot_type = ChoiceField(required=True, label='Plot type',
+                            choices=[(k, f'{v[0]} [{k}] ')
+                                     for k, v in PLOT_TYPE.items()])
 
     RESIDUALS_STATS = ('mean', 'stddev', 'median', 'slope', 'intercept',
                        'pvalue')

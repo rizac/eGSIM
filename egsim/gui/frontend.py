@@ -83,7 +83,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         test click buttons
     """
     def ignore_choices(field_att_name):
-        return field_att_name in ('gsim', 'imt', 'flatfile', 'x', 'y')
+        return field_att_name in ('gsim', 'imt', 'flatfile')
 
     # properties to be passed to vuejs components.
     # If you change THE KEYS of the dict here you should change also the
