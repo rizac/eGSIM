@@ -38,13 +38,12 @@ class TestingForm(GsimImtFlatfileForm, APIForm):
     }
 
     fit_measure = MultipleChoiceField(required=True, label="Measure(s) of fit",
-                                      choices=[(k, v[0]) for k, v in MOF_TYPE.items()])
-    edr_bandwidth = FloatField(required=False, initial=0.01,
-                               help_text=('Ignored if EDR is not a '
-                                          'selected measure of fit'))
-    edr_multiplier = FloatField(required=False, initial=3.0,
-                                help_text=('Ignored if EDR is not a '
-                                           'selected measure of fit'))
+                                      choices=[(k, f'{v[0]} [{k}]')
+                                               for k, v in MOF_TYPE.items()])
+    edr_bandwidth = FloatField(required=False, initial=0.01, label="EDR bandwith",
+                               help_text='Ignored if the measure of fit is not EDR')
+    edr_multiplier = FloatField(required=False, initial=3.0,  label="EDR multiplier",
+                                help_text='Ignored if the measure of fit is not EDR')
 
     def clean(self):
         cleaned_data = super().clean()

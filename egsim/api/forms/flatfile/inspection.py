@@ -69,15 +69,17 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             yvalues = dataframe[ylabel]
             xnan = cls._isna(xvalues)
             ynan = cls._isna(yvalues)
-            xvalues = xvalues[~(xnan | ynan)]
-            yvalues = yvalues[~(xnan | ynan)]
             plot = dict(
-                xvalues=xvalues.values.tolist(),
-                yvalues=yvalues.values.tolist(),
+                xvalues=xvalues[~(xnan | ynan)].values.tolist(),
+                yvalues=yvalues[~(xnan | ynan)].values.tolist(),
                 xlabel=xlabel,
                 ylabel=ylabel,
-                stats={xlabel: cls._get_stats(xvalues, xnan),
-                       ylabel: cls._get_stats(yvalues, ynan)}
+                stats={
+                    xlabel: {'N/A count': int(xnan.sum()),
+                             **cls._get_stats(xvalues.values[~xnan])},
+                    ylabel: {'N/A count': int(ynan.sum()),
+                             **cls._get_stats(yvalues.values[~ynan])}
+                }
             )
         else:  # histogram
             xlabel = x or y
@@ -91,14 +93,20 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 res = dataframe.groupby(pd.cut(series, max_bins_count))
             res = res.count()
             xvalues = ['N/A'] + [str(_) for _ in res.index]
-            yvalues = [int(na_values.sum())] + res[res.columns[0]].tolist()
+            na_count = int(na_values.sum())
+            yvalues = [na_count] + res[res.columns[0]].tolist()
 
             plot = dict(
                 xvalues=xvalues,
                 yvalues=yvalues,
                 xlabel=xlabel,
                 ylabel='Count',
-                stats={xlabel: cls._get_stats(series.values, na_values)}
+                stats={
+                    xlabel: {
+                        'N/A count': na_count,
+                        **cls._get_stats(series.values)
+                    }
+                }
             )
 
         return plot
@@ -106,15 +114,11 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
     @classmethod
     def _isna(cls, values):
         with pd.option_context('mode.use_inf_as_na', True):
-            return pd.isna(values)
+            return pd.isna(values).values
 
     @classmethod
-    def _get_stats(cls, values, na_values=None):
-        if na_values is None:
-            na_values = cls._isna(values)
-        values = np.asarray(values)
-        if na_values.any():
-            values = values[~na_values]
+    def _get_stats(cls, finite_values):
+        values = np.asarray(finite_values)
         try:
             return {
                 'min': float(np.min(values)),
@@ -122,8 +126,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 'median': float(np.median(values)),
                 'mean': float(np.mean(values)),
                 '0.25quantile': float(np.quantile(values, 0.25)),
-                '0.75quantile': float(np.quantile(values, 0.75)),
-                'N/A count': int(na_values.sum())
+                '0.75quantile': float(np.quantile(values, 0.75))
             }
         except (ValueError, TypeError):
             # ValueError if values is empty. TypeError if values contains mixed types
@@ -133,8 +136,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 'median': None,
                 'mean': None,
                 '0.25quantile': None,
-                '0.75quantile': None,
-                'N/A count': int(na_values.sum())
+                '0.75quantile': None
             }
 
     @classmethod
