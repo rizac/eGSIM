@@ -6,7 +6,7 @@ Vue.component('residuals', {
         url: String,
         urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
     },
-    data: function () {
+    data() {
         return {
             formVisibilityToggle: true,  // switch form visibility on/off
             responseData: {}
@@ -52,50 +52,8 @@ Vue.component('residuals', {
 Vue.component('residuals-plot-div', {
     mixins: [PLOT_DIV],  // defined in plot-div.js
     methods: {
-        // methods to be overridden:
-        getData: function(responseObject){
-            /* Return from the given response object an Array of Objects representing
-            the sub-plot to be visualized. Each sub-plot Object has the form:
-            {traces: Array, params: Object, xaxis: Object, yaxis: Object}
-            where:
-
-            `traces`: Array of valid representable Trace Objects e.g.:
-                {x: Array, y: Array, name: string}.
-                A list of keys of each Object is available at https://plot.ly/javascript/reference/
-                Consider that some layout-related keys will be set automatically
-                and overwritten if present: `xaxis` (string), 'yaxis' (string),
-                'showlegend' (boolean). See plot-div.js
-                NOTE1: Providing a `name` key to a Trace Object makes the name showing
-                when hovering over the plot trace with the mouse.
-                NOTE2: To add a unique color mapped to a trace id (e.g. the trace name),
-                setup the legendgroup and automatically map the trace to a legend item
-                toggling the trace visibility, use `this.addLegend(trace, key)`, e.g.:
-                var trace = {x: Array, y: Array, name: 'mytrace'}
-                var color = this.addLegend(trace, trace.name)
-                trace.line = {color: color}  // set the trace color as the legend color
-               `addLegend(trace, key)` assign an automatic color to the given key such as
-                subsequent calls to addLegend(..., key) return the same color. To specify
-                an explicit color color for non yet mapped key, call:
-                addLegend(trace, key, color)` where color is a string in the HEX-form
-                '#XXXXXX'. See `colorMap` in `plotDoc` for details.
-
-            `params`: Object identifying the plot properties (Object keys) and their
-                value, e.g. {magnitude: 5, xlabel: 'PGA}. The Object keys can then be
-                used in the GUI in order to select or layout plots on a grid, grouping
-                plots according to the selected keys values. Consequently, all `params`
-                Objects of all returned sub-plots must have the same keys. If `params` is
-                always composed of the same single key and the same value, then in this
-                case it's used to display the main plot title as "<key>: <value>".
-
-            `xaxis`: Object of x axis properties, e.g.: {title: 'A title', type: 'log'}.
-                The final Axis properties will be built by merging `this.defaultxaxis`
-                and the values provided here. For a list of possible keys, see:
-                https://plot.ly/javascript/reference/#layout-xaxis, but consider that
-                some layout-related keys will be set automatically and overwritten if
-                present: `domain` and `anchor`.
-
-            `yaxis` is a dict of y axis properties. See 'xaxis' above for details.
-            */
+        // The next two methods are overwritten from PLOT_DIV. See README.md for details
+        getData(responseObject){
             // defined normal dist. constants:
             var E = Math.E;
             var PI = Math.PI;
@@ -247,22 +205,12 @@ Vue.component('residuals-plot-div', {
             }
             return plots;
         },
-        displayGridLabels: function(axis, paramName, paramValues){
-            /* Return true / false to specify if the given parameter should be displayed
-            as grid parameter along the specified axis. In the default implementation
-            (see plot-div.js), return true if `paramValues.length > 1`.
-            Function arguments:
-                `axis`: string, either 'x' or 'y'
-                `paramName`: the string denoting the parameter name along the given axis
-                `paramValues`: Array of the values of the parameter keyed by 'paramName'
-            */
+        displayGridLabels(axis, paramName, paramValues){
             return paramValues.length > 1 && paramName != 'imt';
-        },
-        /** method `configureLayout` is not overwritten (see 'plot-div' for details) **/
-        // END OF OVERRIDABLE METHODS
+        }
     },
     computed: {  // "override" computed property from superclass
-        legendNames: function(){
+        legendNames(){
             // override legendNames property by ordering legend names so that statistics labels
             // are placed at the bottom:
             var names = Object.keys(this.legend);

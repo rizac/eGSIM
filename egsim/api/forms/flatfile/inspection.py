@@ -90,7 +90,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             na_count = int(na_values.sum())
             if x:
                 plot = dict(
-                    xvalues=series.values.tolist(),
+                    xvalues=cls.tolist(series),
                     xlabel=label,
                     stats={
                         label: {

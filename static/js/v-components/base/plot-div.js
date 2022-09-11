@@ -12,7 +12,7 @@ var PLOT_DIV = {
         },
         downloadUrl: String // base url for download actions
     },
-    data: function(){
+    data(){
         // unique id based on the component name (note that if this is called by a subclass,
         // then this.$options.name is the subclass name). FIXME: NOT USED REMOVE?
         var id = this.$options.name + new Date().getTime().toString();
@@ -119,19 +119,16 @@ var PLOT_DIV = {
             }
         }
     },
-    activated: function(){  // when component become active
+    activated(){  // when component become active
         if (this.visible){
             this.react();
         }
     },
-    deactivated: function(){   // when component is deactivated
-        // no op
-    },
     computed: {  // https://stackoverflow.com/a/47044150
-        legendNames: function(){
+        legendNames(){
             return Object.keys(this.legend);
         },
-        isGridCusomizable: function(){
+        isGridCusomizable(){
             return Object.keys(this.gridlayouts).length>1;
         }
     },
@@ -244,12 +241,9 @@ var PLOT_DIV = {
         </div>
      
     </div>`,
-    created: function() { // https://vuejs.org/v2/api/#created
-        // no-op
-    },
     methods: {
         // methods to be overridden:
-        getData: function(responseObject){
+        getData(responseObject){
             /* Return from the given response object an Array of Objects representing
             the sub-plot to be visualized. Each sub-plot Object has the form:
             {traces: Array, params: Object, xaxis: Object, yaxis: Object}
@@ -257,7 +251,7 @@ var PLOT_DIV = {
             See residuals.js and trellis.js for a details docstring and implementation
             */
         },
-        displayGridLabels: function(axis, paramName, paramValues){
+        displayGridLabels(axis, paramName, paramValues){
             /* Return true / false to specify if the given parameter should be displayed
             as grid parameter along the specified axis. In this default implementation,
             return true if `paramValues.length > 1`.
@@ -268,7 +262,7 @@ var PLOT_DIV = {
             */
             return paramValues.length > 1;
         },
-        configureLayout: function(layout){
+        configureLayout(layout){
             /* Configure the `layout` Object to be passed to plotly (for details, see
             https://plotly.com/javascript/reference/layout/). Note that the `layout` keys
             `font.family` and `font.size` will be overwritten if present as they need to
@@ -280,7 +274,7 @@ var PLOT_DIV = {
             return
         },
         // END OF OVERRIDABLE METHODS
-        addLegend: function(trace, key, defaultColor){
+        addLegend(trace, key, defaultColor){
             // defaultColor is optional. If given (not undefined), it is in the form '#XXXXXX'
             var color;
             var colorMap = this.colorMap;
@@ -299,7 +293,7 @@ var PLOT_DIV = {
             trace.legendgroup = key;
             return color;
         },
-        init: function(jsondict){
+        init(jsondict){
             // unwatch watchers, if any:
             this.watchOff();
             this.legend = {};
@@ -318,7 +312,7 @@ var PLOT_DIV = {
             // now plot:
             this.newPlot();
         },
-        watchOff: function(...keys){
+        watchOff(...keys){
             // turns (dynamically created/destroyed) watchers off.
             // If keys (list of strings) is NOT provided, turns off and deletes all watchers
             var keys2delete = keys.length ? keys : Object.keys(this.watchers);
@@ -329,14 +323,14 @@ var PLOT_DIV = {
                 }
             }
         },
-        watchOn: function(key, callback, options){
+        watchOn(key, callback, options){
             if (key in this.watchers){
                 this.watchOff(key);
             }
             var watch = this.$watch(key, callback, options || {});
             this.watchers[key] = watch;
         },
-        setupSelection: function(){
+        setupSelection(){
             // sets up selectable params, including those choosable as 'x grid' or 'y rid'.
             // called once from 'init'
             var plots = this.plots;
@@ -497,7 +491,7 @@ var PLOT_DIV = {
             // update grid layouts:
             this.gridLayoutChanged();
         },
-        gridLayoutChanged: function(){
+        gridLayoutChanged(){
             var params = this.params;
             var [gridx, gridy] = this.gridlayouts[this.selectedgridlayout];
             var selectedParams = {};
@@ -588,7 +582,7 @@ var PLOT_DIV = {
                 });
             }
         },
-        newPlot: function(){
+        newPlot(){
             /**
              * Filters the plots to display according to current parameters and grid choosen, and
              * calls Plotly.newPlot on the plotly <div>
@@ -613,7 +607,7 @@ var PLOT_DIV = {
                 // sometimes not nice
             });
         },
-        react: function(){
+        react(){
             /**
              * Same as this.newPlot above, and can be used in its place to create a plot,
              * but when called again on the same <div> will update it far more efficiently
@@ -627,7 +621,7 @@ var PLOT_DIV = {
                 });
             });
         },
-        execute: function(callback, options){
+        execute(callback, options){
             // Executes asynchronously the given callback
             // (with this component as 'this' argument) showing a waitbar meanwhile.
             // 'options' is an Object with two optional properties:
@@ -642,7 +636,7 @@ var PLOT_DIV = {
                 self.drawingPlots=false;
             }, delay);
         },
-        createPlotlyDataAndLayout: function(divElement){
+        createPlotlyDataAndLayout(divElement){
             var plots = this.plots;
             var params = this.params;
             
@@ -866,7 +860,7 @@ var PLOT_DIV = {
             }
             return false;
         },
-        getAxis: function(divElement, row, col, rows, cols){
+        getAxis(divElement, row, col, rows, cols){
             // computes the sub-plot area according to the row and col index
             // returns the array [axisIndex, xaxis, yaxis, xdomain, ydomain]
             // where xaxis and yaxis are the Objects to be passed to plotly's layout, xdomain = [x1, x2] and
@@ -914,14 +908,14 @@ var PLOT_DIV = {
             //console.log('xdomain:' + xdomain); console.log('ydomain:' + ydomain);
             return [axisIndex, xaxis, yaxis, xdomain, ydomain];
         },
-        getElmEmUnits: function(domElement, fontsize){
+        getElmEmUnits(domElement, fontsize){
             // returns [uwidth, uheight], the units of a 1em in percentage of the given dom element,
             // which must be shown on the browser
             // Both returned units should be < 1 in principle
             var [width, height] = this.getElmSize(domElement);
             return [fontsize/width, fontsize/height];
         },
-        getElmSize: function(domElement){
+        getElmSize(domElement){
             // returns the Array [width, height] of the given dom element size
             return [domElement.offsetWidth, domElement.offsetHeight];
         },
@@ -933,7 +927,7 @@ var PLOT_DIV = {
                 font: {size: this.plotfontsize}
           }, props || {});
         },
-        traceVisibilityChanged: function(traceName){
+        traceVisibilityChanged(traceName){
             var indices = [];
             var plotlydata = this.getPlotlyDataAndLayout()[0];
             var legend = this.legend;
@@ -951,7 +945,7 @@ var PLOT_DIV = {
                 });
             }
         },
-        getPlotlyDataAndLayout: function(){
+        getPlotlyDataAndLayout(){
             /**
              * returns [data, layout] (Array an Object),
              * i.e. the Plotly data and layout used to draw the plot
@@ -959,7 +953,7 @@ var PLOT_DIV = {
             var elm = document.getElementById(this.plotdivid);
             return elm ? [elm.data || [], elm.layout || {}] : [[], {}];
         },
-        getPlotBounds: function(traces){
+        getPlotBounds(traces){
             // gets the bounds min max of all the traces of 'plot', which must be an
             // element of this.plots. Returns [rangeX, rangeY] where each range has two numeric elements
             // pmin, max] which might be NaN
@@ -976,12 +970,12 @@ var PLOT_DIV = {
             }
             return [rangeX, rangeY];
         },
-        nanrange: function(...values){
+        nanrange(...values){
             values = values.filter(elm => typeof elm === 'number' && !isNaN(elm));
             var m = Math;
             return values.length? [m.min(...values), m.max(...values)] : [NaN, NaN];
         },
-        setMouseModes: function(hovermode, dragmode){
+        setMouseModes(hovermode, dragmode){
             var [data, layout] = this.getPlotlyDataAndLayout();
             var relayout = false;
             if (this.mouseMode.hovermodes.includes(hovermode)){
@@ -998,7 +992,7 @@ var PLOT_DIV = {
                 }, {msg: this.waitbar.UPDATING});
             }
         },
-        createColorMap: function(){
+        createColorMap(){
             // Return a new ColorMap class extending `Map` and mapping a given key
             // to a color. Given a key (e.g. legend name), then `colorMap.get(key)`
             // automatically returns a color (hex string) assuring the same
@@ -1078,8 +1072,5 @@ var PLOT_DIV = {
             }
             return downloadActions;
         }
-    },
-    mounted: function() { // https://stackoverflow.com/questions/40714319/how-to-call-a-vue-js-function-on-page-load
-        // no -op
     }
 };

@@ -7,7 +7,7 @@ Vue.component('testing', {
         url: String,
         urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
     },
-    data: function () {
+    data() {
         return {
             formVisibilityToggle: true,  // switch form visibility on/off
             responseData: {}
@@ -89,7 +89,7 @@ Vue.component('testing-table', {
         filename: {type: String},
         downloadUrl: String  // base url for download actions
     },
-    data: function () {
+    data() {
         var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value'];
         return {
             downloadActions: [],  // populated when data is there, see watch.data
@@ -110,7 +110,7 @@ Vue.component('testing-table', {
             columns: {}  // this stores columns data (Object) keyed by each colname. See `init`
         }
     },
-    created: function(){
+    created(){
         this.createFilterValues([]);
     },
     watch: {
@@ -132,7 +132,7 @@ Vue.component('testing-table', {
         }
     },
     computed: {
-        filteredSortedEntries: function () {  // (filtering actually not yet implemented)
+        filteredSortedEntries() {  // (filtering actually not yet implemented)
             var [sortCol, sortOrder] = this.sortKeyAndOrder();
             var tData = this.tableData;
             var columns = this.columns;
@@ -307,7 +307,7 @@ Vue.component('testing-table', {
         </div>
     </div>`,
     filters: {
-        numCell2Str: function (val, maxNumDigits, maxArraySize) {
+        numCell2Str(val, maxNumDigits, maxArraySize) {
             // provide a string representation of the value:
             var tostr = elm => maxNumDigits > 0 ? Number(elm).toFixed(maxNumDigits > 20 ? 20 : maxNumDigits) : '' + elm;
             if(typeof val == 'object' & val instanceof Array){
@@ -324,7 +324,7 @@ Vue.component('testing-table', {
         }
     },
     methods: {
-        filtersCount: function(filterName){
+        filtersCount(filterName){
             // returns the number of elements currently selected for the filter identified by 'filterName'
             // if 'filterName' is undefined, returns all elements currently selected for all filters
             var sum = 0;
@@ -335,7 +335,7 @@ Vue.component('testing-table', {
             }
             return sum;
         },
-        clearFilters: function(filterName){
+        clearFilters(filterName){
             // clear the filter for the filter identified by 'filterName'
             // if 'filterName' is undefined, clears all filters (show all elements in table)
             for (var k of Object.keys(this.filterSelectedValues)){
@@ -344,7 +344,7 @@ Vue.component('testing-table', {
                 }
             }
         },
-        sortBy: function (key) {
+        sortBy(key) {
             var columns = this.columns;
             if (!(key in columns)){return;}
             var ret = {}; // copy a new Object (see below)
@@ -365,7 +365,7 @@ Vue.component('testing-table', {
             // deep flags
             this.columns = ret;
         },
-        sortKeyAndOrder: function(){
+        sortKeyAndOrder(){
             for (var colname of this.colnames){
                 if (this.isSortKey(colname)){
                     return [colname, this.columns[colname].sortOrder];
@@ -373,10 +373,10 @@ Vue.component('testing-table', {
             }
             return ["", 0];
         },
-        isSortKey: function(colname){
+        isSortKey(colname){
             return !!((this.columns[colname] || {}).sortKey);  //!! = coerce to boolean
         },
-        init: function(data){
+        init(data){
             // make an Array of Arrays (tabular-like) from the Object data
             // and store all possible Measures of Fit (mof), imt and gsims.
             // return the Array of data
@@ -417,7 +417,7 @@ Vue.component('testing-table', {
             this.createFilterValues(ret);
             return ret;
         },
-        createFilterValues: function(tableData){
+        createFilterValues(tableData){
             [this.filterValues, this.filterSelectedValues] = [{}, {}];
             var filterNames = this.filterNames;
             for (var key of filterNames){

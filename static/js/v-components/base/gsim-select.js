@@ -7,7 +7,7 @@ Vue.component('gsim-select', {
         imtField: {type: Object, default: null} // field of IMTs (can be null)
     },
     emits: ['gsim-selected'],
-    data: function () {
+    data() {
         // set <select> style
         this.field.style = ['border-bottom-left-radius: 0rem !important',
                             'border-bottom-right-radius: 0rem !important'].join(';')
@@ -26,7 +26,7 @@ Vue.component('gsim-select', {
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
         filterBy: {
             deep: true,
-            handler: function(newVal, oldVal){
+            handler(newVal, oldVal){
                 this.filterUpdated();
             }
         },
@@ -39,7 +39,7 @@ Vue.component('gsim-select', {
         // listen for changes in the selected imts:
         'imtField.value': {  // even if it should not happen: if we change the imt param name, change it also here ...
             // immediate: true,
-            handler: function(newVal, oldVal){
+            handler(newVal, oldVal){
                 if (this.filterBy.imt){
                     this.filterUpdated();
                 }
@@ -47,7 +47,7 @@ Vue.component('gsim-select', {
         },
         'field.value': {
             immediate: true,
-            handler: function(newVal, oldVal){
+            handler(newVal, oldVal){
                 this.updateWarnings();
                 this.$emit('gsim-selected', newVal)
             }
@@ -108,10 +108,10 @@ Vue.component('gsim-select', {
            </div>
         </div>
     </div>`,
-    mounted: function(){
+    mounted(){
         this.createLeafletMap();
     },
-    activated: function(){
+    activated(){
         // Called when a kept-alive component is activated to fix leaflet problems on resize.
         // See https://vuejs.org/v2/api/#activated
         // https://github.com/Leaflet/Leaflet/issues/4835#issuecomment-241445225
@@ -307,9 +307,6 @@ Vue.component('gsim-select', {
                 });
             }
         },
-    },
-    deactivated: function(){
-        // no-op
     }
 })
 
@@ -322,7 +319,7 @@ Vue.component('imt-select', {
     props: {
         field: {type: Object},
     },
-    data: function () {
+    data() {
         var fieldCopy = {
             'style': ['border-bottom-left-radius:0rem !important',
                        'border-bottom-right-radius:0rem !important'].join(";")
@@ -340,9 +337,6 @@ Vue.component('imt-select', {
             SAPeriods: saPeriods
         }
     },
-    created: function(){
-        // no-op
-    },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
         'fieldCopy.value': function(newVal, oldVal){
             this.updateSelectedImts();
@@ -356,9 +350,6 @@ Vue.component('imt-select', {
         'SAPeriods': function(newVal, oldVal){
             this.updateSelectedImts();
         }
-    },
-    computed: {
-        // no-op
     },
     template: `<div class='d-flex flex-column'>
         <field-label :field="fieldCopy" class="mb-1"/>
