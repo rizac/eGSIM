@@ -11,7 +11,7 @@ Vue.component('base-input', {
         choices: {type:Array, default: () => ([])},  // defaults to empty Array
         disabled: {type: Boolean, default: false},
     },
-    data: function () {
+    data () {
         return {
             errorColor: "#dc3545",
             options: [],  // will be set in watch.choices (because immediate=true)
@@ -70,7 +70,7 @@ Vue.component('base-input', {
         </select>
         <input v-else v-model="val" :disabled='disabled' class='form-control' :style="cssstyle">`,
     methods: {
-        makeOptions: function(choices) {
+        makeOptions(choices) {
             // convert the `choices` prop to an Array of options (JS Objects):
             return choices.map(elm => {
                 var [cls, style, disabled] = ["", "", false];
@@ -114,7 +114,7 @@ Vue.component('field-input', {
         field: {type: Object},
     },
     computed: {
-        attrz(){  // merge passed attrs ($attrs) with this Field attrs
+        attrz(){  // merge passed non-reactive attrs ($attrs) with this Field attrs
             var attrs = Object.assign({}, this.$attrs);  // Object.assign(target, ...sources)
             var reactiveKeys = ['value', 'error',  'choices', 'disabled'];
             var field = this.field;
@@ -136,7 +136,7 @@ Vue.component('field-label', {
     props: {
         field: {type: Object},
     },
-    data: function () {
+    data() {
         return {
             errorColor: "#dc3545",
             showSelectedInfo: this.field.multiple && this.field.choices.length > 10

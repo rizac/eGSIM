@@ -36,11 +36,11 @@ var BASE_FORM = {
                        // (the keys 'value' and 'error' are mandatory)
         url: String,  // the request URL after form submission
     },
-    data: function () {
+    data() {
         return {}
     },
     methods: {
-        submit: function(){
+        submit(){
             // submits the form data at the form URL (see props).
             // This method can be used with a form template written as:
             // <form novalidate @submit.prevent="submit"> ...
@@ -65,7 +65,7 @@ var BASE_FORM = {
                 throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
             });
         },
-        post: function(url){
+        post(url){
             // send a post request to the given url using this.form as POST data. Returns
             // a `Promise` object that can be chained (see e.g. `this.request`)
             for (var key of Object.keys(this.form)){  // clear errors first
@@ -74,7 +74,7 @@ var BASE_FORM = {
             var [data, config] = this.getPostDataAndConfig();
             return EGSIM.post(url, data, config);
         },
-        getPostDataAndConfig: function(){
+        getPostDataAndConfig(){
             // Returns the arguments for a POSt request in the form of the Array
             // [postData, config], where data is either an Object or a
             // FormData object, and config is an Object with varying keys depending on
@@ -91,7 +91,7 @@ var BASE_FORM = {
             }
             return [this.formToJSON(), {}];
         },
-        formToJSON: function(){
+        formToJSON(){
             // Return `this.form` as JSON serializable Object
             data = {};
             for (var key of Object.keys(this.form)){
@@ -103,7 +103,7 @@ var BASE_FORM = {
             }
             return data;
         },
-        formToFormData: function(){
+        formToFormData(){
             // snippet from:
             // https://www.codegrepper.com/code-examples/javascript/axios+upload+a+multipart%2Fform-data
             const formData = new FormData();
@@ -132,7 +132,7 @@ Vue.component('egsim-form', {
         downloadUrl: String,  // url for downloading the current form as config yaml/json
         visibilityToggle: true,  // variable to toggle form visibility from external components
     },
-    data: function () {
+    data() {
         return {
             show: true,
             showAsDialog: false,  // appearance control
@@ -145,7 +145,7 @@ Vue.component('egsim-form', {
     },
     emits: ['submitted'], // Vue 3 required attr (in case we migrate)
     methods: {
-        submitMe: function(responseData){  // overrides super method
+        submitMe(responseData){  // overrides super method
             this.submit().then(response => {
                 this.show = !this.show;
                 this.showAsDialog = true;
@@ -156,7 +156,7 @@ Vue.component('egsim-form', {
             });
         },
         // toolbar methods:
-        fetchRequestURL: function(){
+        fetchRequestURL(){
             // Fetches
             // the current config (request) as dict and builds this.requestURL
             // Returns an axios Promise to which a user can attach functions to
@@ -189,7 +189,7 @@ Vue.component('egsim-form', {
                 }
             });
         },
-        watchForValueChanges: function(watch){
+        watchForValueChanges(watch){
             if (watch == !!this.watchers.length){
                 return;
             }
@@ -206,7 +206,7 @@ Vue.component('egsim-form', {
             this.watchers.forEach(wacther => wacther());
             this.watchers = [];
         },
-        copyRequestURL: function(src){
+        copyRequestURL(src){
             var targetElement = src.currentTarget; // the button
             // aria-label is used by balloon.css to display the tooltip
             // store the current one:
@@ -220,7 +220,7 @@ Vue.component('egsim-form', {
                 }, 1000);
             }
         },
-        copyText: function(element){
+        copyText(element){
             // https://www.w3schools.com/howto/howto_js_copy_clipboard.asp
             element.focus();
             element.select();
@@ -231,7 +231,7 @@ Vue.component('egsim-form', {
             }
             return successful;
         },
-        readLocalJSON: function(src){
+        readLocalJSON(src){
             // reads a local uploaded file from src.currentTarget
             // copied and modified from http://researchhubs.com/post/computing/javascript/open-a-local-file-with-javascript.html
             var fileInput = src.currentTarget;
@@ -280,7 +280,7 @@ Vue.component('egsim-form', {
             }, this);  // <- make `this` in `map` point to this Vue instance
         }
     },
-    mounted: function () {
+    mounted() {
         // set the mounted variable in order to activate the transition after the
         // whole component has been mounted
         // the transition is used just to show up / hide the form
@@ -294,7 +294,7 @@ Vue.component('egsim-form', {
         });
     },
     watch: {
-        visibilityToggle: function(newVal, oldVal){
+        visibilityToggle(newVal, oldVal){
             this.show = !this.show;
         }
     },
@@ -381,34 +381,32 @@ Vue.component('action-select', {
         // provide an Array of [caption, callback] pairs associated to each <option>:
         actions: {type: Array, default: () => { return []; }},
     },
-    data: function () {
+    data() {
         var noAction = null;
         return {
             noAction: noAction,
-            selecledAction: noAction
+            selectedAction: noAction
         }
     },
-    created: function(){
-    },
     computed: {
-        options: function(){
+        options(){
             return this.actions.filter(elm => {
                 return !!elm[0] && typeof elm[1] === 'function';
             });
         }
     },
     watch: {
-        'selecledAction': function (newVal, oldVal){
+        'selectedAction': function (newVal, oldVal){
             for (var [label, callback] of this.options){
                 if (label === newVal){
                     callback();
                     break;
                 }
             }
-            this.selecledAction = this.noAction;
+            this.selectedAction = this.noAction;
         }
     },
-    template: `<select v-model='selecledAction'>
+    template: `<select v-model='selectedAction'>
             <option :value='noAction' :disabled="true">
                 <slot></slot>
             </option>
