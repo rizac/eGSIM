@@ -1,6 +1,6 @@
 /* Trellis plot components (model-to-model comparison) */
 
-Vue.component('trellis', {
+EGSIM.component('trellis', {
     props :{
         form: Object,
         url: String,
@@ -92,7 +92,7 @@ Vue.component('trellis', {
 });
 
 
-Vue.component('trellis-plot-div', {
+EGSIM.component('trellis-plot-div', {
     mixins: [PLOT_DIV],  // defined in plot-div.js
     methods: {
         // The next two methods are overwritten from PLOT_DIV. See README.md for details

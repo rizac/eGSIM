@@ -1,6 +1,6 @@
 /* Flatfile components */
 
-Vue.component('flatfile', {
+EGSIM.component('flatfile', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         forms: Array,
@@ -39,17 +39,17 @@ Vue.component('flatfile', {
             </li>
         </ul>
 
-        <transition name="fade" mode="out-in">
-        <keep-alive>
+        <!--<transition name="fade" mode="out-in">
+        <keep-alive>-->
             <!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
-            <component v-bind:is="selComponentName" v-bind="componentProps[selComponentName]"></component>
-        </keep-alive>
-        </transition>
+            <component :is="selComponentName" v-bind="componentProps[selComponentName]"></component>
+        <!--</keep-alive>
+        </transition>-->
     </div>`
 });
 
 
-Vue.component('flatfile-compilation', {
+EGSIM.component('flatfile-compilation', {
     mixins: [BASE_FORM],
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
@@ -94,11 +94,12 @@ Vue.component('flatfile-compilation', {
                 <a target="_blank" href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV files</a>,
                 with each row representing a manually processed waveform, and the waveform metadata and intensity measures
                 arranged in columns.
-
+                </p>
+                <p class='text-justify'>
                 To help the compilation of your flatfile, from scratch or existing sources,
                 here you can create a template with the smallest set of columns <b>required</b> by
                 the models and intensity measures that you want to analyze (see "Selection").
-
+                </p>
                 <div class='d-flex flex-row align-items-baseline'>
                     <div v-show="!columnsCustomizerVisible">
                         <b>Flatfile template</b> ({{ flatfileHeader.length }} columns)
@@ -207,7 +208,7 @@ Vue.component('flatfile-compilation', {
 });
 
 
-Vue.component('flatfile-plot', {
+EGSIM.component('flatfile-plot', {
     mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
     props: {
         form: Object,
@@ -263,7 +264,7 @@ Vue.component('flatfile-plot', {
 });
 
 
-Vue.component('flatfile-plot-div', {
+EGSIM.component('flatfile-plot-div', {
     mixins: [PLOT_DIV],
     methods: {
         // The next two methods are overwritten from PLOT_DIV. See README.md for details
@@ -322,7 +323,7 @@ Vue.component('flatfile-plot-div', {
 });
 
 
-Vue.component('flatfile-select', {
+EGSIM.component('flatfile-select', {
     props: {
         field: {type: Object},
         doc: {
@@ -340,8 +341,7 @@ Vue.component('flatfile-select', {
         var fieldProxy = Object.assign({}, this.field);
         return {
             flatfiles: this.field.choices,
-            fieldProxy: fieldProxy,
-            columns: this.field['data-columns']
+            fieldProxy: fieldProxy
         }
     },
     emits: ['flatfile-selected'],
@@ -429,7 +429,7 @@ Vue.component('flatfile-select', {
                         :aria-label='doc' data-balloon-pos="down" data-balloon-length="large">
                     upload
                 </button>
-                <!- THIS MUST ALWAYS BE NEXT TO THE BUTTON ABOVE: ->
+                <!-- THIS MUST ALWAYS BE NEXT TO THE BUTTON ABOVE: -->
                 <input type="file" v-show="false" @change="filesUploaded($event.target.files)"/>
             </div>
         </div>
@@ -437,7 +437,7 @@ Vue.component('flatfile-select', {
 });
 
 
-Vue.component('flatfile-selexpr-input', {
+EGSIM.component('flatfile-selexpr-input', {
     props: {
         field: {type: Object},
         doc: {

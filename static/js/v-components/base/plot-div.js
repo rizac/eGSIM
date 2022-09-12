@@ -239,7 +239,6 @@ var PLOT_DIV = {
                 </div>
             </div>
         </div>
-     
     </div>`,
     methods: {
         // methods to be overridden:

@@ -1,6 +1,6 @@
 /* GSIM and IMT <select> components */
 
-Vue.component('gsim-select', {
+EGSIM.component('gsim-select', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         field: {type: Object}, // see field-input
@@ -314,7 +314,7 @@ Vue.component('gsim-select', {
 /**
  * HTML component representing the form element of IMTs and SA periods
  */
-Vue.component('imt-select', {
+EGSIM.component('imt-select', {
     //https://vuejs.org/v2/guide/components-props.html#Prop-Types:
     props: {
         field: {type: Object},

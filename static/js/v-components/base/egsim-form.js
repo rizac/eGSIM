@@ -1,6 +1,6 @@
 /* Form components */
 
-Vue.component('submit-button', {  // provide a single place for styling the submit button of forms
+EGSIM.component('submit-button', {  // provide a single place for styling the submit button of forms
     template: `<button type="submit" class="btn btn-primary">
         <i class="fa fa-play"></i> Display results
     </button>`
@@ -103,11 +103,11 @@ var BASE_FORM = {
 - emits a 'submitted' on response successfully received, after submit
 - implements a toolbar for IO operations such as get Form in YAML or JSON config
 - Deals with hiding and transforming the form into a dialog popup after first submit*/
-Vue.component('egsim-form', {
+EGSIM.component('egsim-form', {
     mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
     props :{
         downloadUrl: String,  // url for downloading the current form as config yaml/json
-        visibilityToggle: true,  // variable to toggle form visibility from external components
+        visibilityToggle: {type: Boolean, default: true},  // variable to toggle form visibility from external components
     },
     data() {
         return {
@@ -353,7 +353,7 @@ Vue.component('egsim-form', {
 
 /* A <select> that performs an action for each <option> clicked, and first option
  disabled acting as a title (see <slot> in template)*/
-Vue.component('action-select', {
+EGSIM.component('action-select', {
     props: {
         // provide an Array of [caption, callback] pairs associated to each <option>:
         actions: {type: Array, default: () => { return []; }},

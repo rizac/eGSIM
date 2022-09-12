@@ -99,7 +99,7 @@ To let the code above work, the implementation of `my-form` in
 Vue might look at least like this:
 
 ```
-Vue.component('my-form', {
+EGSIM.component('my-form', {
    mixins: [BASE_FORM],
    props: {
    }
@@ -159,7 +159,7 @@ To let the code above work, the implementation of `my-plot-div` in
 Vue might look at least like this:
 
 ```
-Vue.component('my-plot-div', {
+EGSIM.component('my-plot-div', {
     mixins: [PLOT_DIV],
     methods: {
         getData(responseObject){},
