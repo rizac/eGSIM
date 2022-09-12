@@ -274,10 +274,11 @@ EGSIM.component('testing-table', {
                  style='overflow:auto;  max-height:10rem'>
                 <div><i class="fa fa-info-circle"></i> Database records used:</div>
                 <table>
-                <tr v-for="gsimname in Object.keys(gsimsRecords)"
-                    v-if="!Object.keys(gsimsSkipped).includes(gsimname)">
-                    <td class='text-right pr-2'>{{ gsimname }}:<td>
-                    </td>{{ gsimsRecords[gsimname] }}</td>
+                <tr v-for="gsimname in Object.keys(gsimsRecords)">
+                    <template v-if="!Object.keys(gsimsSkipped).includes(gsimname)">
+                        <td class='text-right pr-2'>{{ gsimname }}:<td>
+                        </td>{{ gsimsRecords[gsimname] }}</td>
+                    </template>
                 </tr>
                 </table>
             </div>
