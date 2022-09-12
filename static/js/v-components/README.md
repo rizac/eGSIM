@@ -1,15 +1,177 @@
-# JS Developers Cheatsheet
+# Developers README
 
-## plot-div
-(base/plot-div.js)
+## Table of Contents
 
-This abstract class (or better Vue mixin) is the main 
-container for displaying grids of plots. 
-In "subclasses" (see trellis.js, testing.js, residuals.js 
-and flatfile.js) one mandatory and two optional
-methods must be implemented in order to dictate how to display 
-these plots and the
-<[select]> that will allow switching among them, if needed.
+- [FORM FIELD INPUTS in egsm-form.js](#FORM-FIELD-INPUTS)
+- [BASE_FORM in egsm-form.js](#BASE_FORM)
+- [PLOT_DIV in plot-div.js](#PLOT_DIV)
+
+## Overview
+
+eGSIM handles the communication between Django (backend Python library) 
+and Vue (frontend JavaScript library) via
+JSON serializable Python dicts, or JavaScript Objects.
+
+The main Object which represents both a Django and an HTML `Form` 
+for sending data is a so-called `Form Object`:
+```
+form_obj = {
+    "parameter1": {
+        "value": [1, 2],
+        "choices": [0, 1,2,3,4,5,6,7,8,9],
+        "error": "",
+        "disabled": "false
+    },
+    "parameter2": { ... }
+    ...
+}
+```
+
+Above, each 'parameterN' is mapped to a so-called `Field` Object
+(the term is Django legacy) that represents a Form parameter.
+
+
+## FORM FIELD INPUTS
+(`base/field-form.js`)
+
+A Field is represented via a `field-input` which automatically
+created the associated [input] component from he Field data (e.g. select,
+input[type=checkbox], and so on)
+
+```
+<field-input :field="form_obj['parameter1']" />
+```
+
+
+A Field input can also be called for more control with each parameter 
+separately using a `base-component`, a base class for any HTML input 
+or select component:
+
+```
+<base-input v-model="field.value" :disabled="field.disabled"
+    :choices="field.choices" :error="field.error" />
+```
+
+('error' is a string usually returned from the server. When error
+is given, it outlines the component in red, if present)
+
+## BASE_FORM
+(`base/egsim-form.js`)
+
+`BASE_FORM` is the Mixin base class for all Form related components.
+This snippet shortly describes how to use BASE_FORM in subclasses. 
+Given, e.g. a subclass `my-form`:
+
+```
+<my-form :form=form :url=url @submitted='my_callback' />
+```
+
+where:
+ - `form` is a Form object (see above)
+ - `url` is the URL to which a request will be sent with the Form data
+ - `@submitted` is the Vue event fired when the server successfully
+   sent a response after submission. `my_callback` is a function 
+   taking the axios response Object as argument and has to be 
+   implemented somewhere to process the response. For instance 
+   throughout the code (e.g., `trellis.js`, `residuals.js`) you will 
+   see a wrapper component implementing
+   a `BASE_FORM` component, and a `PLOT_DIV` component receiving the form 
+   submitted data in order to update its plots 
+   (For `PLOT_DIV` see details below):
+   ```
+   Vue component('wrapper',{
+        data() {
+            return {
+                resData: {}
+            }
+        },
+        template: `
+            <my-form @submitted='resData=arguments[0].data' ... />
+            <my-plot-div :data="resData" ... >
+        `
+   });
+   ``` 
+  listening
+   the successful submit and takes as first argument the `axios` 
+   `response` object (see snippet below)
+   
+To let the code above work, the implementation of `my-form` in 
+Vue might look at least like this:
+
+```
+Vue.component('my-form', {
+   mixins: [BASE_FORM],
+   props: {
+   }
+   template: `<form novalidate @submit.prevent="mySubmitFunc">
+       <button type='submit'>Ok</button>
+   </form>`
+   methods: {
+       mySubmitFunc(){
+           this.submit().then(response => {
+               this.$emit('submitted', response);
+           }
+       }
+   }
+});
+```
+
+Notes:
+
+ 1. `props` here you implement additional `props`, 
+    remembering that you have the props `this.url` and `this.form`
+    (defined in `BASE_FORM`) by default
+    
+ 2. `template` in the template you implement your components
+    usually bound to elements of `this.form`. As such, the snippet above
+    must be filled with something meaningful
+
+ 3. `mySubmitFunc` this is your submit function. You can call here 
+    `this.submit()` (implemented in `BASE_FORM`) that does all the 
+    work of creating a FormData, send it to `this.url`
+    with correct headers and displaying errors in case. 
+    `this.submit` is a `Promise` that you can chain as in the snippet
+    above, where we notify the listeners emitting a `submitted`
+    event
+
+
+## PLOT_DIV
+(`base/plot-div.js`)
+
+`PLOT_DIV` is the Mixin base class for all Grids of plots
+This snippet shortly describes how to use BASE_FORM in subclasses. 
+Given, e.g. a subclass `my-plot-div`:
+
+```
+<my-plot-div :data="responseData" 
+             :download-url="urls.downloadResponse">
+```
+
+where:
+
+- `responseData` is the `response.data` Object received from the server
+  after e.g. form submission (e.g., there must be a `BASE_FORM` implementing
+  something like `@submitted="responseData=arguments[0].data`)
+
+- `download-url` is  a string of the URL to call for downloading plots
+
+To let the code above work, the implementation of `my-plot-div` in 
+Vue might look at least like this:
+
+```
+Vue.component('my-plot-div', {
+    mixins: [PLOT_DIV],
+    methods: {
+        getData(responseObject){},
+        displayGridLabels(axis, paramName, paramValues){}
+        configureLayout(layout){}
+    }
+});
+
+```
+Among the three methods above one is mandatory (`getData`) and 
+two optional. These methods dictate how to display 
+plots and the controls of the plot grid.
 
 ### `getData(responseObject)`
 

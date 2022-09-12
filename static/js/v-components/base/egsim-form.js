@@ -6,30 +6,7 @@ Vue.component('submit-button', {  // provide a single place for styling the subm
     </button>`
 });
 
-/*Base class for Form components. USAGE:
-
-Vue.component('<component name>', {
-   mixins: [BASE_FORM],
-   props: {
-       // whatever you implement here, remember that you have
-       // `this.url` and `this.form` (see below)
-   }
-   template: `<form novalidate @submit.prevent="myCustomFunc">
-       <!-- here your input components, usually bound to elements of `this.form` -->
-       <button type='submit'>Ok</button>
-   </form>`
-   methods: {
-       myCustomFunc(){
-           // You can call here `this.submit()` (implemented in BASE_FORM)
-           // that does all the work of creating a FormData, send the request with
-           // correct headers and displaying errors in case. You deal here only with
-           // successful responses that you can chain as usual:
-           this.submit().then(response => {
-               this.$emit('submitted', response); // example to notify listeners
-           }
-       }
-   }
-});*/
+/*Base class for Form components. See README.md for details */
 var BASE_FORM = {
     props: {
         form: Object,  // field names mapped to Objects describing <input>s or <select>
