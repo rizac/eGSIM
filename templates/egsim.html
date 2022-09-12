@@ -59,22 +59,21 @@
 			<div v-show='errormsg'
 				class='d-flex flex-row bg-danger text-sm-center text-white text-truncate position-absolute pos-t-0 pos-x-0 align-items-baseline'
 				style='z-index:100'>
-				<div class='ml-1' v-html='errormsg' id='globalerrormessage-div' style="flex: 1 1 auto">
-					{{ invalid_browser_message | safe }}
-				</div>
+				<div class='ml-1' v-html='errormsg' id='globalerrormessage-div'
+					 style="flex: 1 1 auto"></div>
 				<i class="fa fa-times mr-1" @click='clearErrors()'></i>
 			</div>
 
 			<div class='d-flex m-0' style="flex: 1 1 auto">
-				<transition name="fade" mode="out-in">
-				<keep-alive>
+<!--				<transition name="fade" mode="out-in">-->
+<!--				<keep-alive>-->
 					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
 					<component v-bind:is="selComponent"
 						v-bind="selComponentProps"
 						:class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'"
 					></component>
-				</keep-alive>
-				</transition>
+<!--				</keep-alive>-->
+<!--				</transition>-->
 				{% block main %}{% endblock %}
 			</div>
 
@@ -132,43 +131,15 @@ var _UNSUPPORTED_BROWSER_MSG = function(){
 }();
 </script>
 
+<-- VUE.JS: -->
 
-<!-- VueJS stuff -->
-<script type='text/javascript' src="{% static 'js/v-components/base/field-input.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/plot-div.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/egsim-form.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}flatfile.js"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}testing.js"></script>
-<script>
-/**
- * Registers globally "apidoc" and "home" Vue components here in order to avoid further
- * JS requests for just few lines of code. Remember, the component names must be a name
- * of a TAB Enum in egsim.gui.__init__.py
- */
-Vue.component('home', {
-	props: {src: String},
-	template: `<iframe style='flex: 1 1 auto' :src='src'></iframe>`
-});
-Vue.component('apidoc', {
-	props: {
-		src: String,
-		id: {String, default: '__apidoc__iframe__'},
-		fragment: {String, default: ''}
-	},
-	template: `<iframe :id='id' style='flex: 1 1 auto' :src='src + fragment'></iframe>`
-});
-</script>
 <script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 <script>
 /**
  * Init the EGSIM Vue Instance with content injected from the server and the
  * the browser version check just implemented
 */
-var EGSIM = new Vue({
-	el: '#egsim-vue',
+var EGSIM = Vue.createApp({
 	mixins: [EGSIM_BASE],  /* defined in egsim_base.js */
 	data: function(){
 		return {
@@ -186,6 +157,39 @@ var EGSIM = new Vue({
 		};
 	}
 });
+</script>
+
+<!-- Components and dependencies of the EGISM app: -->
+<script type='text/javascript' src="{% static 'js/v-components/base/field-input.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/v-components/base/egsim-form.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/v-components/base/plot-div.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/v-components/' %}flatfile.js"></script>
+<script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>
+<script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
+<script type='text/javascript' src="{% static 'js/v-components/' %}testing.js"></script>
+<script>
+/**
+ * Registers globally "apidoc" and "home" Vue components here in order to avoid further
+ * JS requests for just few lines of code. Remember, the component names must be a name
+ * of a TAB Enum in egsim.gui.__init__.py
+ */
+EGSIM.component('home', {
+	props: {src: String},
+	template: `<iframe style='flex: 1 1 auto' :src='src'></iframe>`
+});
+EGSIM.component('apidoc', {
+	props: {
+		src: String,
+		id: {String, default: '__apidoc__iframe__'},
+		fragment: {String, default: ''}
+	},
+	template: `<iframe :id='id' style='flex: 1 1 auto' :src='src + fragment'></iframe>`
+});
+
+var EGSIM_APP = EGSIM;
+EGSIM = EGSIM_APP.mount('#egsim-vue');
+
 </script>
 
 {% endblock %}

@@ -1,7 +1,7 @@
 /* Testing (model ranking) components (model-to-data testing) */
 
 
-Vue.component('testing', {
+EGSIM.component('testing', {
     props :{
         form: Object,
         url: String,
@@ -47,25 +47,12 @@ Vue.component('testing', {
                 <field-label :field='form.fit_measure'/>
                 <field-input :field='form.fit_measure' size="5"/>
 
-                <div v-show="isEDRSelected"">
+                <div v-show="isEDRSelected">
                     <field-label :field="form.edr_bandwidth" />
                     <field-input class='small' :field="form.edr_bandwidth" />
                     <field-label :field="form.edr_multiplier" />
                     <field-input class='small' :field="form.edr_multiplier" />
                 </div>
-
-                <!-- <base-input v-show="isEDRSelected" class='mt-1'
-                            v-model="form.edr_bandwidth.value"
-                            :disabled="form.edr_bandwidth.disabled"
-                            :error="!!form.edr_bandwidth.error">
-                    {{ form.edr_bandwidth.name }}
-                </base-input>
-                <base-input v-show="isEDRSelected" class='mt-1'
-                            v-model="form.edr_multiplier.value"
-                            :disabled="form.edr_multiplier.disabled"
-                            :error="!!form.edr_multiplier.error">
-                    {{ form.edr_multiplier.name }}
-                </base-input>  -->
             </div>
         </template>
     </egsim-form>
@@ -83,7 +70,7 @@ Vue.component('testing', {
 
 
 // register the grid component
-Vue.component('testing-table', {
+EGSIM.component('testing-table', {
     props: {
         data: {type: Object, default: () => { return{} }},
         filename: {type: String},

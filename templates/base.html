@@ -16,10 +16,12 @@
 	{% if vue %}
 		{% if debug %}
 		<!-- development version, includes helpful console warnings -->
-		<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+<!--		<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>-->
+		<script src="https://unpkg.com/vue@3.2.39/dist/vue.global.js"></script>
 		{% else %}
 		<!-- production version, optimized for size and speed -->
-		<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+<!--		<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>-->
+		<script src="https://unpkg.com/vue@3.2.39/dist/vue.global.prod.js"></script>
 		{% endif %}
 	{% endif %}
 	

@@ -1,6 +1,6 @@
 /* Residuals plot components (model-to-data comparison) */
 
-Vue.component('residuals', {
+EGSIM.component('residuals', {
     props :{
         form: Object,
         url: String,
@@ -19,7 +19,7 @@ Vue.component('residuals', {
                 @submitted="responseData=arguments[0].data">
 
         <template v-slot:left-column>
-            <gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto"/>
+            <gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto" />
         </template>
 
         <template v-slot:right-column>
@@ -49,7 +49,7 @@ Vue.component('residuals', {
 });
 
 
-Vue.component('residuals-plot-div', {
+EGSIM.component('residuals-plot-div', {
     mixins: [PLOT_DIV],  // defined in plot-div.js
     methods: {
         // The next two methods are overwritten from PLOT_DIV. See README.md for details

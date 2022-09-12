@@ -4,9 +4,9 @@
 Base input or select component (depending on props). Usage:
 <base-input v-model=... :choices=... :error=... :disabled=... />
 */
-Vue.component('base-input', {
+EGSIM.component('base-input', {
     props: {
-        value: {type: [String, Number, Array, Boolean]},
+        modelValue: {type: [String, Number, Array, Boolean]},
         error: {type: Boolean, default: false},
         choices: {type:Array, default: () => ([])},  // defaults to empty Array
         disabled: {type: Boolean, default: false},
@@ -34,19 +34,6 @@ Vue.component('base-input', {
     },
     emits: ['update:modelValue'],  // Vue3 necessary?
     computed: {
-        val: {  // https://stackoverflow.com/questions/47311936/v-model-and-child-components
-            get() {
-                // this.modelValue === undefined -> Vue2, otherwise Vue3
-                return this.modelValue === undefined ? this.value : this.modelValue;
-            },
-            set(value) {
-                if (this.modelValue === undefined){  // Vue2
-                    this.$emit('input', value);
-                }else{  // Vue3
-                    this.$emit('update:modelValue', value);
-                }
-            }
-        },
         cssstyle(){
             var style = [];
             if (!!this.error){
@@ -61,14 +48,15 @@ Vue.component('base-input', {
             return this.$attrs.type == 'checkbox';
         }
     },
-    template: `<input v-if="isBool" v-model="val" :disabled='disabled'>
-        <select v-else-if="isSelect" v-model="val" :disabled='disabled' class='form-control'
+    template: `<input v-if="isBool" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)"
+                      :disabled='disabled'>
+        <select v-else-if="isSelect" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" :disabled='disabled' class='form-control'
                :style="cssstyle" ref='selectComponent'>
             <option	v-for='opt in options' :value="opt.value" :disabled="opt.disabled"
                     :class="opt.class" :style="opt.style" v-html="opt.innerHTML">
             </option>
         </select>
-        <input v-else v-model="val" :disabled='disabled' class='form-control' :style="cssstyle">`,
+        <input v-else :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" :disabled='disabled' class='form-control' :style="cssstyle">`,
     methods: {
         makeOptions(choices) {
             // convert the `choices` prop to an Array of options (JS Objects):
@@ -109,7 +97,7 @@ Vue.component('base-input', {
 });
 
 /** A <base-input> that accepts a single prop as Field (Object) */
-Vue.component('field-input', {
+EGSIM.component('field-input', {
     props: {
         field: {type: Object},
     },
@@ -132,7 +120,7 @@ Vue.component('field-input', {
 });
 
 /** Field label */
-Vue.component('field-label', {
+EGSIM.component('field-label', {
     props: {
         field: {type: Object},
     },
