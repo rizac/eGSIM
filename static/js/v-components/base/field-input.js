@@ -6,18 +6,35 @@ Base input or select component (depending on props). Usage:
 */
 EGSIM.component('base-input', {
     props: {
-        modelValue: {type: [String, Number, Array, Boolean]},
+        value: {type: [String, Number, Array, Boolean]},
         error: {type: Boolean, default: false},
         choices: {type:Array, default: () => ([])},  // defaults to empty Array
         disabled: {type: Boolean, default: false},
     },
     data () {
+        // get the type of this component, from $attrs or inferred
+        var type = this.$attrs.type;
+        // ($attrs: all attributes not declared in `props` above, e.g. 'name')
+        var isSelect = (type === 'select') || (Vue.toRaw(this.choices).length > 0);
+        var isBool = !isSelect &&
+                     ((type === 'checkbox') || (typeof Vue.toRaw(this.value) === 'boolean'));
+        if (isSelect){
+            delete this.$attrs.type; // do not put the type attribute on the <select>
+        }
+
         return {
+            isSelect: isSelect,
+            isBool: isBool,
+            val: Vue.toRaw(this.value),  // this is the proxy to value
             errorColor: "#dc3545",
-            options: [],  // will be set in watch.choices (because immediate=true)
+            options: [],  // will be set in watch.choices (because immediate=true),
         }
     },
+    emits: ['value-changed'],
     watch: {
+        val: function(newVal, oldVal){
+            this.$emit('value-changed', newVal);  // val changed, emit a value-changed
+        },
         // Whenever the choices change (including nested element), update options:
         choices: {
             deep: true,
@@ -32,7 +49,7 @@ EGSIM.component('base-input', {
             }
         }
     },
-    emits: ['update:modelValue'],  // Vue3 necessary?
+    // emits: ['update:modelValue'],  // Vue3 necessary?
     computed: {
         cssstyle(){
             var style = [];
@@ -40,23 +57,16 @@ EGSIM.component('base-input', {
                 style.push(`border-color: ${this.errorColor} !important`);
             }
             return style.join(';');
-        },
-        isSelect(){
-            return this.$attrs.type === 'select' ||  this.choices.length > 0;
-        },
-        isBool(){
-            return this.$attrs.type == 'checkbox';
         }
     },
-    template: `<input v-if="isBool" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)"
-                      :disabled='disabled'>
-        <select v-else-if="isSelect" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" :disabled='disabled' class='form-control'
-               :style="cssstyle" ref='selectComponent'>
+    template: `<select v-if="isSelect" v-model="val" :disabled='disabled'
+                       class='form-control' :style="cssstyle" ref='selectComponent'>
             <option	v-for='opt in options' :value="opt.value" :disabled="opt.disabled"
                     :class="opt.class" :style="opt.style" v-html="opt.innerHTML">
             </option>
         </select>
-        <input v-else :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" :disabled='disabled' class='form-control' :style="cssstyle">`,
+        <input v-else v-model="val" :disabled='disabled' :class='isBool ? "" : "form-control"'
+               :style="isBool ? '' : cssstyle" />`,
     methods: {
         makeOptions(choices) {
             // convert the `choices` prop to an Array of options (JS Objects):
@@ -104,7 +114,7 @@ EGSIM.component('field-input', {
     computed: {
         attrz(){  // merge passed non-reactive attrs ($attrs) with this Field attrs
             var attrs = Object.assign({}, this.$attrs);  // Object.assign(target, ...sources)
-            var reactiveKeys = ['value', 'error',  'choices', 'disabled'];
+            var reactiveKeys = ['value', 'error',  'choices', 'disabled', 'help', 'label'];
             var field = this.field;
             Object.keys(field).map(key => {
                 if (!reactiveKeys.includes(key)){
@@ -114,9 +124,11 @@ EGSIM.component('field-input', {
             return attrs;
         }
     },
-    template: `<base-input v-model="field.value" :error="!!field.error"
-                :choices="field.choices" :disabled='field.disabled'
-                v-bind="attrz" />`
+    template: `<base-input :value="field.value"
+                           @value-changed="(value) => {field.value = value;}"
+                           :error="!!field.error"
+                           :choices="field.choices" :disabled='field.disabled'
+                           v-bind="attrz" />`
 });
 
 /** Field label */
