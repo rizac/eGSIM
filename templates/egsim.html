@@ -65,15 +65,14 @@
 			</div>
 
 			<div class='d-flex m-0' style="flex: 1 1 auto">
-<!--				<transition name="fade" mode="out-in">-->
-<!--				<keep-alive>-->
-					<!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
-					<component v-bind:is="selComponent"
-						v-bind="selComponentProps"
-						:class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'"
-					></component>
-<!--				</keep-alive>-->
-<!--				</transition>-->
+				<transition name="fade" mode="out-in">
+					<keep-alive>
+						<component v-bind:is="selComponent"
+								   v-bind="selComponentProps"
+								   :class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'">
+						</component>
+					</keep-alive>
+				</transition>
 				{% block main %}{% endblock %}
 			</div>
 
@@ -190,7 +189,7 @@ EGSIM.component('apidoc', {
 	template: `<iframe :id='id' style='flex: 1 1 auto' :src='src + fragment'></iframe>`
 });
 
-var EGSIM_APP = EGSIM;
+const EGSIM_APP = EGSIM;
 EGSIM = EGSIM_APP.mount('#egsim-vue');
 
 </script>
