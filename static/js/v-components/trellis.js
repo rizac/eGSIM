@@ -35,7 +35,7 @@ EGSIM.component('trellis', {
 <div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
     <egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
                 :visibilityToggle="formVisibilityToggle"
-                @submitted="responseData=arguments[0].data">
+                @submitted="(response) => responseData=response.data">
 
         <template v-slot:left-column>
             <gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />

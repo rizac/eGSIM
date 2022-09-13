@@ -284,8 +284,7 @@ var PLOT_DIV = {
                 color = colorMap.get(key);  // sets also the key if not existing
             }
             if (!(key in this.legend)){
-                // make the key reactive:
-                this.$set(this.legend, key, {visible: true, color:color});
+                this.legend[key] = {visible: true, color: color};
             }else{
                 this.legend[key].color = color;
             }

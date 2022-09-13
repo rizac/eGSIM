@@ -423,7 +423,7 @@ EGSIM.component('testing-table', {
                     continue;
                 }
                 this.filterValues[key] = Array.from(this.filterValues[key]);
-                this.$set(this.filterSelectedValues, key, []);
+                this.filterSelectedValues[key] = [];
             }
         },
         createDownloadActions(){
