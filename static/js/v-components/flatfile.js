@@ -327,8 +327,8 @@ EGSIM.component('flatfile-select', {
     props: {
         field: {type: Object},
         doc: {
-            type: String,
-            default: `Upload a user-defined flatfile (CSV or zipped CSV).
+            'type': String,
+            'default': `Upload a user-defined flatfile (CSV or zipped CSV).
                       Please consult also the tab "Flatfiles" to inspect your flatfile before usage.
                       An uploaded flatfile will be available in all tabs of this web page`
         }
@@ -338,15 +338,49 @@ EGSIM.component('flatfile-select', {
         // (<option>s) so that all <flatfile-select> are updated after a flatfile upload,
         // and the flatfile field value will then be built from the input value and the
         // uploaded flatfiles as as either a string or a File object (see `watch`)
-        var fieldProxy = Object.assign({}, this.field);
+        /*var fieldProxy = Object.assign({}, this.field);
         return {
             flatfiles: this.field.choices,
             fieldProxy: fieldProxy
+        }*/
+
+        // We cannot add here things that are already a Proxy, see created() and
+        // here for details: https://stackoverflow.com/a/65732553
+        // return {};
+
+        return {
+            fieldProxy: Object.assign({}, this.field, {'choices': []})
         }
+    },
+    created(){
+        // since we get a Proxy error, we need to copy some data:
+        // this.flatfiles = this.field.choices;
+        // this.fieldProxy = Object.assign({}, this.field, {'choices': []});  // reset choices to []
+//        this.$watch('field.choices', {
+//            deep: true,
+//            immediate: true,
+//            handler(newVal, oldVal){
+//                this.fieldProxy.choices = this.createSelectOptions();
+//            }
+//        });
+
+//        this.fieldProxy.choices = this.createSelectOptions();
+
+//        this.fieldProxy = {
+//            'value': this.field.value,
+//            'error': this.field.error,
+//            'disabled': this.field.disabled,
+//            'choices': [],
+//            'name': this.field.name,
+//            'label': this.field.label,
+//            'help': this.field.help
+//        };
+//        this.createSelectOptions();
     },
     emits: ['flatfile-selected'],
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
         'fieldProxy.value': function(newVal, oldVal){
+            return;
             // called when we select a flatfile. newVal and oldVal are the indices
             // of the flatfiles. But the field expects either a string (flatfile name)
             // or a File Object (see BASE_FORM). So:
@@ -361,18 +395,25 @@ EGSIM.component('flatfile-select', {
         'field.disabled': function(newVal, oldVal){
             this.fieldProxy.disabled = newVal;
         },
-        flatfiles: {
-            deep: true,
-            immediate: true,
-            handler(newVal, oldVal){
-                this.fieldProxy.choices = Array.from(newVal.map((elm, idx) => [idx, elm.label]));
-            }
-        }
+//        'field.choices': {
+//            deep: true,
+//            immediate: true,
+//            handler(newVal, oldVal){
+//                return;
+//                //this.createSelectOptions();
+//                if (!this.fieldProxy){
+//                    return;
+//                }
+//                // var choices = newVal === undefined ? this.field.choices : newVal;
+//                this.fieldProxy.choices = this.createSelectOptions();
+//            }
+//        }
     },
     computed: {
         flatfileURL(){
+            var flatfiles = this.field.choices;
             var val = this.fieldProxy.value;
-            for (var ff of this.flatfiles){
+            for (var ff of flatfiles){
                 if (ff.name == val){
                     return ff.url;
                 }
@@ -382,7 +423,7 @@ EGSIM.component('flatfile-select', {
     },
     methods:{
         filesUploaded(files){
-            var flatfiles = this.flatfiles;
+            var flatfiles = this.field.choices;
             var newflatfiles = [];
             for (let file of files){
                 var label = `${file.name} (Uploaded: ${new Date().toLocaleString()})`;
@@ -417,14 +458,18 @@ EGSIM.component('flatfile-select', {
                   'Content-Type': 'multipart/form-data'
                 }
             });
+        },
+        createSelectOptions(){
+            return Array.from(this.field.choices.map((elm, idx) => [idx, elm.label]));
         }
     },
     template:`<div class='d-flex flex-column'>
-        <field-label :field="fieldProxy"/>
+        <field-label :field="fieldProxy" />
         <div class='d-flex flex-row align-items-baseline'>
             <field-input :field="fieldProxy"/>
             <div class='d-flex flex-row align-items-baseline'>
-                <a title='flatfile reference (opens in new tab)' target="_blank" class='ml-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>
+                <a title='flatfile reference (opens in new tab)' target="_blank"
+                   class='ml-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>
                 <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
                         :aria-label='doc' data-balloon-pos="down" data-balloon-length="large">
                     upload

@@ -38,7 +38,7 @@ var EGSIM_BASE = {
         });
         var regionalization = this.regionalization;
         // make each flatfile object not editable:
-        this.flatfiles = this.flatfiles.map(elm => Object.freeze(elm));
+        const flatfiles = this.flatfiles.map(elm => Object.freeze(elm));
         // set processed data:
         for (var [name, form] of this.forms()){
             if (form.gsim){
@@ -59,7 +59,7 @@ var EGSIM_BASE = {
             // set flatfile choices and references. Note: share the same array, so
             // adding an uploaded flatfile updates all controls!
             if (form.flatfile){
-                form.flatfile.choices = this.flatfiles;
+                form.flatfile.choices = flatfiles;
                 form.flatfile['url'] = this.flatfileUploadUrl;
             }
         }
