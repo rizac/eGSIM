@@ -5,6 +5,7 @@
 - [FORM FIELD INPUTS in egsm-form.js](#FORM-FIELD-INPUTS)
 - [BASE_FORM in egsm-form.js](#BASE_FORM)
 - [PLOT_DIV in plot-div.js](#PLOT_DIV)
+- [FLATFILE_SELECT_COMPONENT](#FLATFILE-SELECT)
 
 ## Overview
 
@@ -32,7 +33,7 @@ Above, each 'parameterN' is mapped to a so-called `Field` Object
 
 
 ## FORM FIELD INPUTS
-(`base/field-form.js`)
+(`v-components/base/field-form.js`)
 
 A Field is represented via a `field-input` which automatically
 created the associated [input] component from he Field data (e.g. select,
@@ -56,7 +57,7 @@ or select component:
 is given, it outlines the component in red, if present)
 
 ## BASE_FORM
-(`base/egsim-form.js`)
+(`v-components/base/egsim-form.js`)
 
 `BASE_FORM` is the Mixin base class for all Form related components.
 This snippet shortly describes how to use BASE_FORM in subclasses. 
@@ -136,7 +137,7 @@ Notes:
 
 
 ## PLOT_DIV
-(`base/plot-div.js`)
+(`v-components/base/plot-div.js`)
 
 `PLOT_DIV` is the Mixin base class for all Grids of plots
 This snippet shortly describes how to use BASE_FORM in subclasses. 
@@ -281,3 +282,40 @@ to reliably calculate spaces and sizes.
 
  - `layout` Object copied from `this.defaultlayout` which can be modified
    here. Note that this function does not need to return any value
+   
+
+## FLATFILE SELECT
+(`v-components/flatfiles.js`)
+
+This [select] component associated to the flatfile Field of, e.g.,
+residuals and testing forms, behaves differently than the other components
+associated to Form Fields because:
+
+- when a flatfile is selected, the Field `value` type must change 
+  dynamically: a String for predefined flatfiles, or a File object 
+  (the DOM object returned from uploaded files)
+  
+- we want to upload user-defined flatfiles. But in doing so, we need to:
+  - know if the same flatfile has already been uploaded (change 
+  the [option] component label) or is new (add a new [option] component) 
+  - never replace a predefined flatfile in the [option]s list
+  
+- make any change in the available flatfiles immediately
+  available also in all other similar [select] components on the page
+  
+As such, in a [flatfile-select] we watch immediately for any change 
+(deep) in the global `$flatfiles` variable (Array of flatfiles). 
+The watcher updates the Field `choices` with the flatfile index and label.
+The [select] component `model` is not bound to the Field value,
+but to a Component variable called `selectedFlatfileIndex` (int).
+
+When a flatfile is selected, `selectedFlatfileIndex` changes, and
+because it is watched, it updates the Field `value` accordingly (File
+or String). 
+
+When a flatfile is uploaded, we check whether it is a new [option] or
+has to override an existing one *by index* (so that we avoid overwriting
+predefined flatfiles), and then we update the global
+`$flatfiles` variable: this makes the flatfile available to all
+[select] and also triggers the update of the [options] in the
+current [select] component.
