@@ -324,6 +324,7 @@ EGSIM.component('flatfile-plot-div', {
 
 
 EGSIM.component('flatfile-select', {
+    //See README.md
     props: {
         field: {type: Object},
         doc: {
@@ -334,56 +335,40 @@ EGSIM.component('flatfile-select', {
         }
     },
     data(){
-        // We cannot add here things that are already a Proxy, see created() and
-        // here for details: https://stackoverflow.com/a/65732553
+        // In case of Proxy error, see here for details: https://stackoverflow.com/a/65732553
         return {
-            fieldProxy: Object.assign({}, this.field, {'choices': []})
+            selectedFlatfileIndex: -1  //our model value
         }
     },
     emits: ['flatfile-selected'],
-    watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
-        'fieldProxy.value': function(newVal, oldVal){
-            return;
-            // called when we select a flatfile. newVal and oldVal are the indices
-            // of the flatfiles. But the field expects either a string (flatfile name)
-            // or a File Object (see BASE_FORM). So:
-            var selFile = this.flatfiles[parseInt(newVal)] || null;
-            // if (selFile == null){ return; }
+    watch: {
+        'selectedFlatfileIndex': function(newVal, oldVal){
+            // set the Field value as String (predefined flatfile) or File:
+            var selFile = this.$flatfiles[parseInt(newVal)] || null;
             this.field.value = selFile.file || selFile.name;
             this.$emit('flatfile-selected', selFile);
         },
-        'field.error': function(newVal, oldVal){
-            this.fieldProxy.error = newVal;
-        },
-        'field.disabled': function(newVal, oldVal){
-            this.fieldProxy.disabled = newVal;
-        },
-        '$flatfiles': {  // global property (see egsim.html) in order to update available faltfiles in all <select>
+        '$flatfiles': {
+            // global property (see egsim.html): it provides the choices for the current
+            // Field and makes all other similar Fields update automatically
             deep: true,
             immediate: true,
             handler(newVal, oldVal){
-                // var choices = newVal === undefined ? this.field.choices : newVal;
-                this.fieldProxy.choices = Array.from(newVal.map((elm, idx) => [idx, elm.label]));
+                this.field.choices = Array.from(newVal.map((elm, idx) => [idx, elm.label]));
             }
         }
     },
     computed: {
         flatfileURL(){
-            var flatfiles = this.field.choices;
-            var val = this.fieldProxy.value;
-            for (var ff of flatfiles){
-                if (ff.name == val){
-                    return ff.url;
-                }
+            if (this.selectedFlatfileIndex >=0 ){
+                return this.$flatfiles[this.selectedFlatfileIndex].url;
             }
             return undefined;
         }
     },
     methods:{
         filesUploaded(files){
-            // var flatfiles = this.field.choices;
             var flatfiles = this.$flatfiles;
-            // var newflatfiles = [];
             for (let file of files){
                 var label = `${file.name} (Uploaded: ${new Date().toLocaleString()})`;
                 var append = true;
@@ -420,9 +405,10 @@ EGSIM.component('flatfile-select', {
         }
     },
     template:`<div class='d-flex flex-column'>
-        <field-label :field="fieldProxy" />
+        <field-label :field="field" />
         <div class='d-flex flex-row align-items-baseline'>
-            <field-input :field="fieldProxy"/>
+            <base-input v-model="selectedFlatfileIndex" :choices="field.choices"
+                        :error="!!field.error" :disabled="field.disabled"/>
             <div class='d-flex flex-row align-items-baseline'>
                 <a title='flatfile reference (opens in new tab)' target="_blank"
                    class='ml-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>
