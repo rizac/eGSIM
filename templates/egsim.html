@@ -148,7 +148,7 @@ var EGSIM = Vue.createApp({
 			// (csrf token stored in an <input> in the base.html. Get it here and use it for each post request):
 			postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value}}),
 			selComponent: "{{sel_component}}",
-			flatfiles: {{flatfiles|safe}},
+			// flatfiles: {{flatfiles|safe}},
 			flatfileUploadUrl: "{{flatfile_upload_url}}",
 			regionalization: {{ regionalization|safe }},
 			// incompatibleBrowserMessage is defined in browserdetection.js:
@@ -157,6 +157,9 @@ var EGSIM = Vue.createApp({
 		};
 	}
 });
+// provide the Array of flatfiles as global variable `$flatfiles`, and make it
+// reactive as it must be updated with whatever file is uploaded by the user
+EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
 </script>
 
 <!-- Components and dependencies of the EGISM app: -->
