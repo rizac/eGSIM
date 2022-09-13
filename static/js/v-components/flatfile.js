@@ -27,9 +27,7 @@ EGSIM.component('flatfile', {
             selComponentName: compNames[0],
         }
     },
-    computed: {
-    },
-   template: `
+    template: `
     <div class='d-flex flex-column' style='flex: 1 1 auto'>
         <ul class="nav nav-tabs">
             <li class="nav-item" v-for="compName in componentNames">
@@ -39,12 +37,12 @@ EGSIM.component('flatfile', {
             </li>
         </ul>
 
-        <!--<transition name="fade" mode="out-in">
-        <keep-alive>-->
-            <!-- https://vuejs.org/v2/guide/components-dynamic-async.html#keep-alive-with-Dynamic-Components -->
-            <component :is="selComponentName" v-bind="componentProps[selComponentName]"></component>
-        <!--</keep-alive>
-        </transition>-->
+        <transition name="fade" mode="out-in">
+            <keep-alive>
+                <component :is="selComponentName"
+                           v-bind="componentProps[selComponentName]" />
+            </keep-alive>
+        </transition>
     </div>`
 });
 

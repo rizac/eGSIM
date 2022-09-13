@@ -18,9 +18,7 @@ EGSIM.component('base-input', {
         var isSelect = (type === 'select') || (Vue.toRaw(this.choices).length > 0);
         var isBool = !isSelect &&
                      ((type === 'checkbox') || (typeof Vue.toRaw(this.value) === 'boolean'));
-        if (isSelect){
-            delete this.$attrs.type; // do not put the type attribute on the <select>
-        }
+        // $attrs is readonly. FIXME: remove type when explicitly set as 'select'?
 
         return {
             isSelect: isSelect,
