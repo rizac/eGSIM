@@ -334,48 +334,11 @@ EGSIM.component('flatfile-select', {
         }
     },
     data(){
-        // fieldProxy is a bridge between user input and final value: it has global 'choices'
-        // (<option>s) so that all <flatfile-select> are updated after a flatfile upload,
-        // and the flatfile field value will then be built from the input value and the
-        // uploaded flatfiles as as either a string or a File object (see `watch`)
-        /*var fieldProxy = Object.assign({}, this.field);
-        return {
-            flatfiles: this.field.choices,
-            fieldProxy: fieldProxy
-        }*/
-
         // We cannot add here things that are already a Proxy, see created() and
         // here for details: https://stackoverflow.com/a/65732553
-        // return {};
-
         return {
             fieldProxy: Object.assign({}, this.field, {'choices': []})
         }
-    },
-    created(){
-        // since we get a Proxy error, we need to copy some data:
-        // this.flatfiles = this.field.choices;
-        // this.fieldProxy = Object.assign({}, this.field, {'choices': []});  // reset choices to []
-//        this.$watch('field.choices', {
-//            deep: true,
-//            immediate: true,
-//            handler(newVal, oldVal){
-//                this.fieldProxy.choices = this.createSelectOptions();
-//            }
-//        });
-
-//        this.fieldProxy.choices = this.createSelectOptions();
-
-//        this.fieldProxy = {
-//            'value': this.field.value,
-//            'error': this.field.error,
-//            'disabled': this.field.disabled,
-//            'choices': [],
-//            'name': this.field.name,
-//            'label': this.field.label,
-//            'help': this.field.help
-//        };
-//        this.createSelectOptions();
     },
     emits: ['flatfile-selected'],
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
@@ -395,19 +358,14 @@ EGSIM.component('flatfile-select', {
         'field.disabled': function(newVal, oldVal){
             this.fieldProxy.disabled = newVal;
         },
-//        'field.choices': {
-//            deep: true,
-//            immediate: true,
-//            handler(newVal, oldVal){
-//                return;
-//                //this.createSelectOptions();
-//                if (!this.fieldProxy){
-//                    return;
-//                }
-//                // var choices = newVal === undefined ? this.field.choices : newVal;
-//                this.fieldProxy.choices = this.createSelectOptions();
-//            }
-//        }
+        '$flatfiles': {  // global property (see egsim.html) in order to update available faltfiles in all <select>
+            deep: true,
+            immediate: true,
+            handler(newVal, oldVal){
+                // var choices = newVal === undefined ? this.field.choices : newVal;
+                this.fieldProxy.choices = Array.from(newVal.map((elm, idx) => [idx, elm.label]));
+            }
+        }
     },
     computed: {
         flatfileURL(){
@@ -423,8 +381,9 @@ EGSIM.component('flatfile-select', {
     },
     methods:{
         filesUploaded(files){
-            var flatfiles = this.field.choices;
-            var newflatfiles = [];
+            // var flatfiles = this.field.choices;
+            var flatfiles = this.$flatfiles;
+            // var newflatfiles = [];
             for (let file of files){
                 var label = `${file.name} (Uploaded: ${new Date().toLocaleString()})`;
                 var append = true;
@@ -458,9 +417,6 @@ EGSIM.component('flatfile-select', {
                   'Content-Type': 'multipart/form-data'
                 }
             });
-        },
-        createSelectOptions(){
-            return Array.from(this.field.choices.map((elm, idx) => [idx, elm.label]));
         }
     },
     template:`<div class='d-flex flex-column'>

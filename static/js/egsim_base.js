@@ -7,7 +7,6 @@ var EGSIM_BASE = {
         selComponent: '',
         componentProps: {}, // component names (e.g. 'trellis') -> Object
         postfuncDefaultConfig: {},  // default config used in `post` function
-        flatfiles: {},  // Array of flatfiles, each flatfile is an Object of the form: {name:str labe':str, url:str}
         flatfileUploadUrl: '', // used when we upload a flatfile
     }},
     created: function(){
@@ -37,8 +36,6 @@ var EGSIM_BASE = {
             }
         });
         var regionalization = this.regionalization;
-        // make each flatfile object not editable:
-        const flatfiles = this.flatfiles.map(elm => Object.freeze(elm));
         // set processed data:
         for (var [name, form] of this.forms()){
             if (form.gsim){
@@ -56,10 +53,8 @@ var EGSIM_BASE = {
                 form.imt.choices = Array.from(imts);
                 form.imt.value || (form.imt.value = []); // assure empty list (not null)
             }
-            // set flatfile choices and references. Note: share the same array, so
-            // adding an uploaded flatfile updates all controls!
+            // set flatfile Field the url for uploading a flatfile:
             if (form.flatfile){
-                form.flatfile.choices = flatfiles;
                 form.flatfile['url'] = this.flatfileUploadUrl;
             }
         }
