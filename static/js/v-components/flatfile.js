@@ -342,12 +342,6 @@ EGSIM.component('flatfile-select', {
     },
     emits: ['flatfile-selected'],
     watch: {
-        'selectedFlatfileIndex': function(newVal, oldVal){
-            // set the Field value as String (predefined flatfile) or File:
-            var selFile = this.$flatfiles[parseInt(newVal)] || null;
-            this.field.value = selFile.file || selFile.name;
-            this.$emit('flatfile-selected', selFile);
-        },
         '$flatfiles': {
             // global property (see egsim.html): it provides the choices for the current
             // Field and makes all other similar Fields update automatically
@@ -402,12 +396,22 @@ EGSIM.component('flatfile-select', {
                   'Content-Type': 'multipart/form-data'
                 }
             });
+        },
+        ffSelected(flatfileIndex){
+            // set the Field value as String (predefined flatfile) or File:
+            var selFile = this.$flatfiles[parseInt(flatfileIndex)] || null;
+            if (selFile){
+                this.field.value = selFile.file || selFile.name;
+                this.$emit('flatfile-selected', selFile);
+            }
         }
     },
     template:`<div class='d-flex flex-column'>
         <field-label :field="field" />
         <div class='d-flex flex-row align-items-baseline'>
-            <base-input v-model="selectedFlatfileIndex" :choices="field.choices"
+            <base-input :value="selectedFlatfileIndex"
+                        @value-changed="ffSelected"
+                        :choices="field.choices"
                         :error="!!field.error" :disabled="field.disabled"/>
             <div class='d-flex flex-row align-items-baseline'>
                 <a title='flatfile reference (opens in new tab)' target="_blank"

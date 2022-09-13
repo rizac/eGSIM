@@ -29,7 +29,7 @@ EGSIM.component('testing', {
 <div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
     <egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
                 :visibilityToggle="formVisibilityToggle"
-                @submitted="responseData=arguments[0].data">
+                @submitted="(response) => responseData=response.data">
 
         <template v-slot:left-column>
             <gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto"/>
@@ -294,7 +294,7 @@ EGSIM.component('testing-table', {
             </div>
         </div>
     </div>`,
-    filters: {
+    methods: {
         numCell2Str(val, maxNumDigits, maxArraySize) {
             // provide a string representation of the value:
             var tostr = elm => maxNumDigits > 0 ? Number(elm).toFixed(maxNumDigits > 20 ? 20 : maxNumDigits) : '' + elm;
@@ -309,9 +309,7 @@ EGSIM.component('testing-table', {
                 return `${strval.join(', ')} (${val.length} elements)`;
             }
             return tostr(val);
-        }
-    },
-    methods: {
+        },
         filtersCount(filterName){
             // returns the number of elements currently selected for the filter identified by 'filterName'
             // if 'filterName' is undefined, returns all elements currently selected for all filters

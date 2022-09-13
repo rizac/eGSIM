@@ -276,7 +276,7 @@ var PLOT_DIV = {
         addLegend(trace, key, defaultColor){
             // defaultColor is optional. If given (not undefined), it is in the form '#XXXXXX'
             var color;
-            var colorMap = this.colorMap;
+            var colorMap = Vue.toRaw(this.colorMap);
             if (defaultColor !== undefined && !colorMap.has(key)){
                 colorMap.set(key, defaultColor);
                 color = defaultColor;
