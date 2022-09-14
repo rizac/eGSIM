@@ -63,7 +63,7 @@ EGSIM.component('trellis', {
                     <div v-else class='d-flex flex-row align-items-baseline'
                          :class="{ 'mt-2': index > 0 }">
                         <field-input :field="form[name]" />
-                        <field-label :field="form[name]" class='ml-2' style='flex: 1 1 auto'/>
+                        <field-label :field="form[name]" class='ms-2' style='flex: 1 1 auto'/>
                     </div>
                 </template>
 
@@ -74,14 +74,15 @@ EGSIM.component('trellis', {
                 <field-input :field='form["plot_type"]' size="3" />
                 <div class='mt-1 d-flex flex-row align-items-baseline'>
                     <field-input :field='form["stdev"]'/>
-                    <field-label :field='form["stdev"]' class='ml-2' style='flex: 1 1 auto'/>
+                    <field-label :field='form["stdev"]' class='ms-2' style='flex: 1 1 auto'/>
                 </div>
             </div>
         </template>
     </egsim-form>
 
     <trellis-plot-div :data="responseData" :download-url="urls.downloadResponse"
-                      class='position-absolute pos-0' style='z-index:1'>
+                      class='invisible position-absolute start-0 top-0 end-0 bottom-0'
+                      :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
         <slot>
             <button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
                 <i class='fa fa-list-alt'></i> Configuration

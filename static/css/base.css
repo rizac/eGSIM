@@ -1,46 +1,19 @@
-/**
- * Main css styleshett for eGSIM
- */
+/* eGSIM main stylesheet */
 
 
-/* ================ FONTS =============================== */
+/*** Fonts ***/
 
-body{
-	font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
-}
-
-nav, h1, h2, h3, h4, h5, h6{
-	font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
-}
-
-/* MAKE <select> with icons. REQUIRES bootstrap-fontawesome
-https://stackoverflow.com/questions/36743041/font-awesome-icon-in-select-option
-*/
-select.with-icons {
-	font-family: 'FontAwesome', 'Encode Sans Semi Condensed', Helvetica, sans-serif;
-}
+body{ font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif; }
+nav, h1, h2, h3, h4, h5, h6{ font-family: 'Encode Sans Condensed', Helvetica, sans-serif; }
 
 
-/* ================== custom classes / settings =================*/
+/*** Custom classes / settings ***/
 
-.height100{
-	height: 100vh;
-}
-
-iframe{
-	border:0;
-	margin:0;
-}
+.height100{ height: 100vh; }
+iframe{ border:0;margin:0; }
 
 
-/* ========================================================================= */
-/* ================ OVERRIDE BOOTSTRAP4 ==================================== */
-/* ========================================================================= */
-
-/* Overriding BADLY IMPLEMENTED bootstrap !important that makes Vue v-show
-not working as expected. This stylesheet must be loaded AFTER bootstrap.css
-(see https://github.com/vuejs/vue/issues/3761#issuecomment-251545116):*/
-*[style*="display: none"] { display: none !important; }
+/*** Overwrite Bootstrap ***/
 
 /* make focus border inset, otherwise it is outside the element and sometimes
    "cropped", and the effect it's not nice*/
@@ -48,219 +21,76 @@ not working as expected. This stylesheet must be loaded AFTER bootstrap.css
     box-shadow: inset 0px 0px 5px 1px rgba(128,198,237,.95) !important;
 }
 
-/* form-control is used also for divs for its nice border, BUT for divs the height set is misleading, thus reset it: */
-div.form-control {
-    height: initial;
+/* form-control on divs makes them nice, but messes up height. Reset it: */
+div.form-control { height: initial; }
+
+/* harmonize borders color */
+.border, *.form-control:not([style*="border-color"]), .leaflet-control-layers {
+    border-color: rgba(0,0,0,.33) !important;
+}
+/* harmonize borders width */
+.border, *.form-control:not([style*="border-width"]), .leaflet-control-layers {
+    border-width: 1px !important;
 }
 
-/* make border it a little bit darker. Original: border: 1px solid #dee2e6!important;
-Apply also to form-controls without a border specified as css inline*/
-.border, *.form-control:not([style*="border-color"]):not([class*="border-"]), .leaflet-control {
-    border-color: rgba(0,0,0,.25) !important;
-}
-
-/* Make primary color nicer with a darker blue. Taken from */
-.bg-primary, .btn-primary{
-	background-color: rgba(7, 104, 159, 1) !important;
-}
-.border-primary, .btn-primary {
-    border-color: rgba(7, 104, 159, 1) !important;
-}
-.text-primary{
-	color: rgba(7, 104, 159, 1) !important;
-}
-.btn-primary:hover,
-.btn-primary:not(:disabled):not(.disabled):active{
-	border-color: rgba(5, 73, 113, 1) !important;
+/* Make primary color nicer with a darker blue */
+.bg-primary, .btn-primary{ background-color: rgba(7, 104, 159, 1) !important; color:white;}
+.border-primary, .btn-primary { border-color: rgba(7, 104, 159, 1) !important; }
+.text-primary{ color: rgba(7, 104, 159, 1) !important; }
+.btn-primary:hover,.btn-primary:not(:disabled):not(.disabled):active{
+    border-color: rgba(5, 73, 113, 1) !important;
     background-color: rgba(5, 73, 113, 1) !important;
 }
-
-
-/* margins m*-4 increased to 2rem (bootstrap4 default is 1.5rem */
-.m-4 {
-    margin: 2rem !important;
-}
-.mt-4, .my-4 {
-    margin-top: 2rem !important;
-}
-.mr-4, .mx-4 {
-    margin-right: 2rem !important;
-}
-.mb-4, .my-4 {
-    margin-bottom: 2rem !important;
-}
-.ml-4, .mx-4 {
-    margin-left: 2rem !important;
-}
-
+input[type=checkbox], input[type=radio]{ accent-color: rgba(7, 104, 159, 1); }
 
 /* nav */
-nav#egsim-nav {
-	min-height: 3.5rem;  /* for safari */
-}
-nav .menu-item{
-	padding: 1rem .6rem;
-	color: rgba(255,255,255,.5) !important;
-}
-/* pointer must be set for all inner elements otherwise seems no to work: */
-nav .menu-item,
-nav .menu-item *{
-	cursor: pointer;
-}
-nav .menu-item.active{
-	color: #FFF !important;
-}
-@media (max-width: 1200px){
-	nav .menu-item span {
-    	display: none !important;
-	}
+nav#egsim-nav {min-height: 3.5rem;}  /* for safari */
+/* nav style */
+nav .menu-item{ padding: 1rem .6rem; color: rgba(255,255,255,.5) !important; }
+/* nav pointer (must be set for all inner elements to work) */
+nav .menu-item, nav .menu-item *{ cursor: pointer; }
+nav .menu-item.active{ color: #FFF !important; }
+
+@media (max-width: 1200px){  /* narrow  screen (< 1200px) */
+    nav .menu-item span { display: none !important; } /* hide menu texts */
 }
 
 
-/* ========================================================================= */
-/* ================ HARMONIZING BROWSER APPEARENCE ========================= */
-/* ========================================================================= */
- 
-/* Remove Firefox focus border (this is a border added regardless of our focus
-   border that might be set) DOES NOT WORK on current MacOS and Firefox. In any
-   case, for info see https://stackoverflow.com/a/19451423 */
+/*** Harmonizing browser appearance ***/
 
 /* fix background and foregrounds in Chrome webkit autocomplete */
-input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
-input:-webkit-autofill:active  {
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active  {
     -webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
 }
 
-/* change <option> selected (or checked) color. DOES NOT WORK IN SAFARI.
-The solutions proboped below (https://stackoverflow.com/a/36899803) work
-in Firefox and Chrome. Still have to test if we really need the hack of setting
-a background image instead of a background-color */
-select[multiple]:focus option:checked:not(:disabled), select[size]:focus option:checked:not(:disabled) {
-	background-color: transparent;  /* to be sure that color transparency, if set, is not added up with bg image below */
-	background-image: linear-gradient(0deg, rgba(163, 196, 135, 1) 0%, rgba(163, 196, 135, 1) 100%);
-}
-select[multiple] option:checked:not(:disabled), select[size] option:checked:not(:disabled) {
-	background-color: transparent; /* to be sure that color transparency, if set, is not added up with bg image below */
-	background-image: linear-gradient(0deg, rgba(163, 196, 135, .4) 0%, rgba(163, 196, 135, .4) 100%);
-}
-
-/* styling <select> when single selection and no size (combo box). Works on Mac in Safari, Chrome, Firefox */
+/* style <select> when single selection and no size (combo box). Works on Mac in Safari, Chrome, Firefox */
 select:not([multiple]):not([size]).form-control{
-	/* prevent browser to style <select>:*/
-	-moz-appearance: none;
+    /* prevent browser to style <select>:*/
+    -moz-appearance: none;
     -webkit-appearance: none;
     appearance: none;
-	/* set two background image (arrow), svg percent-encoded (from '%3Csvg' on)
-	you can put several images comma-separated. Then also backround propreties below can be comma separated and refer to
-	the i-th image here*/
-	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
+    /* config <select> arrow. Provide inline coded image (svg) */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
     background-repeat: no-repeat;
     background-position: right .3em top 50%;
     background-size: .65em auto;
-    /* set padding (depends on background-position second value above (.3rem)*/
-	padding: 0rem 1.2rem 0rem .3rem !important;  /* top right bottom left */
+    padding-right: 1.2rem;
+    padding-left: 0.3rem;
 }
 
-/* disabled elements: */
-
-*[disabled],
-.disabled{
-    opacity: 0.65 !important;
-}
-/* safari has limited support for options, thus the rule above does not work, but text color is supported*/
-option[disabled],
-option.disabled{
-    color: #bbb !important;
-}
+/* style disabled */
+*[disabled:not([disabled="false"])], .disabled{ opacity: 0.65 !important;}
+/* style disabled for <option>s (in safari, `disabled` above does not work) */
+option[disabled:not([disabled="false"])], option.disabled{ color: #bbb !important; }
 
 
-/* ========================================================================= */
-/* ================ NEW CLASSES EMULATING BOOTSTRAP LOGIC ================== */
-/* ========================================================================= */
-
-/* classes for resetting top and bottom rounded borders, to be used alsone or tiwht .rounded */
-.rounded-top-0 {
-    border-top-left-radius: 0rem!important;
-    border-top-right-radius: 0rem!important;
-}
-.rounded-bottom-0 {
-    border-bottom-left-radius: 0rem!important;
-    border-bottom-right-radius: 0rem!important;
-}
-.rounded-left-0 {
-    border-top-left-radius: 0rem!important;
-    border-bottom-left-radius: 0rem!important;
-}
-.rounded-right-0 {
-    border-top-right-radius: 0rem!important;
-    border-bottom-right-radius: 0rem!important;
-}
-
-/* absolute positioning, to be used with bootstrap's .position-absolute: */
-.pos-t-0, .pos-y-0, .pos-0{
-	top: 0px;
-}
-.pos-b-0, .pos-y-0, .pos-0{
-	bottom: 0px;
-}
-.pos-l-0, .pos-x-0, .pos-0{
-	left: 0px;
-}
-.pos-r-0, .pos-x-0, .pos-0{
-	right: 0px;
-}
-
-
-/* ========================================================================= */
-/* ================ CUSTOMIZING CHECKBOXES AND RADIO BUTTONS =============== */
-/* ========================================================================= */
-
-label.customcheckbox,
-label.customradio{
-  cursor: pointer;
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-label.customcheckbox input[type=checkbox],
-label.customradio input[type=radio]{
-	display:none;
-}
-
-label.customcheckbox:before,
-label.customradio:before{
-	/* font-family can be removed, it will use the default font. But you should
-	also change 'content' below to display a checkmark, e.g.: content: "\2714";*/
-	font-family: FontAwesome; 
-	content: "\f096"; /* toggle-of is:  "\f204"; */
-    /* margin-right: .25em; */
-    /* instead of the above, the rule below assures "width stability"
-    if content and content:checked
-    do not have the same width: */
-    width: 1.15em;
-    transition: .5s; /* does not work for text change */
-}
-
-label.customcheckbox.checked:before,
-label.customradio.checked:before{
-	content: "\f14a";  /* toggle-of is:  "\f205"; */
-}
-
-
-/* ========================================================================= */
-/* ================ CUSTOMIZING LIBRARIES ================================== */
-/* ========================================================================= */
+/*** CUSTOMIZING LIBRARIES ***/
 
 /* plotly */
-div.modebar.modebar--hover{
-	display: none;
-}
+div.modebar.modebar--hover{ display: none; }
 
 /* Leaflet */
 .leaflet-popup-content {
-	width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
-	margin: 1.5rem !important; /*increase margins (nicer and more consistent with the page elements) */
+    width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
+    margin: 1.5rem !important; /*increase margins (nicer and more consistent with the page elements) */
 }

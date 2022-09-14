@@ -51,13 +51,12 @@
 
 		<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
 
-			<div id='waitdiv' v-show='loading' class="position-absolute pos-t-0 pos-x-0" style='z-index:99'>
-				<!-- Loading, please wait ... --> <!-- (<- text removed) -->
+			<div id='waitdiv' v-show='loading' class="position-absolute start-0 end-0" style='z-index:99'>
 				<div class="loader"></div>
 			</div>
 
-			<div v-show='errormsg'
-				class='d-flex flex-row bg-danger text-sm-center text-white text-truncate position-absolute pos-t-0 pos-x-0 align-items-baseline'
+			<div :style="{display: errormsg ? 'flex' : 'none'}"
+				class='flex-row bg-danger text-sm-center text-white text-truncate position-absolute start-0 end-0 align-items-baseline'
 				style='z-index:100'>
 				<div class='ml-1' v-html='errormsg' id='globalerrormessage-div'
 					 style="flex: 1 1 auto"></div>

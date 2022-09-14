@@ -277,14 +277,15 @@ EGSIM.component('egsim-form', {
     },
     template: `
     <transition :name="mounted ? 'egsimform' : ''">
-    <form novalidate @submit.prevent="submitMe" v-show="show"
+    <form novalidate @submit.prevent="submitMe"
+          class="flex-column position-relative pb-4 align-self-center"
           :class="[showAsDialog ? ['shadow', 'border', 'bg-light', 'mb-2'] : '']"
-          class="d-flex flex-column position-relative pb-4 align-self-center"
-          style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important">
+          style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important"
+          :style="{'display': show ? 'flex' : 'none'}">
 
         <div class="d-flex flex-column" style="flex: 1 1 auto">
 
-            <div class='d-flex flex-row justify-content-center align-items-center p-1 mb-3'
+            <div class='d-flex flex-row justify-content-center align-items-baseline p-1 mb-3'
                  style='background-color:rgba(5, 73, 113, .2)'>
 
                 <button type="button" onclick='this.nextElementSibling.click()'
@@ -297,7 +298,7 @@ EGSIM.component('egsim-form', {
                 <input style='display:none' type="file" id="file-input" @change='readLocalJSON'>
 
                 <action-select :actions="downloadActions" style='width:initial !important'
-                               class="ml-2 form-control form-control-sm bg-transparent border-0"
+                               class="ms-2 form-control form-control-sm bg-transparent border-0"
                                data-balloon-pos="down" data-balloon-length="medium"
                                aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)">
                     Download as:
@@ -306,13 +307,13 @@ EGSIM.component('egsim-form', {
                 <button type="button" @click='fetchRequestURL'
                         data-balloon-pos="down" data-balloon-length="medium"
                         aria-label="Show the API URL of the current configuration. The URL can be used in your custom code to fetch data (see GET requests in the API documentation for details). You can also paste it in the browser to see the results (e.g., Firefox nicely displays JSON formatted data)"
-                        class="btn btn-outline-dark border-0 ml-2">
+                        class="btn btn-outline-dark border-0 ms-2">
                     <i class="fa fa-link"></i>
                 </button>
 
                 <input :id="idRequestURLInput" type='text' v-model='requestURL'
                        :style= "requestURL ? {} : { 'visibility': 'hidden'}"
-                       class="form-control form-control-sm ml-2 bg-transparent border-0"
+                       class="form-control form-control-sm ms-2 bg-transparent border-0"
                        style="flex: 1 1 auto;width:initial !important"/>
 
                 <button type="button" v-show='requestURL' @click="copyRequestURL"
@@ -323,7 +324,7 @@ EGSIM.component('egsim-form', {
 
                 <button type="button" v-show='showAsDialog' @click="show=!show"
                         aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
-                        class="btn btn-outline-dark border-0 ml-2">
+                        class="btn btn-outline-dark border-0 ms-2">
                     <i class="fa fa-times"></i>
                 </button>
 
@@ -335,7 +336,7 @@ EGSIM.component('egsim-form', {
                     <slot name="left-column"></slot>
                 </div>
 
-                <div class="d-flex flex-column ml-4" style="flex: 1 1 auto">
+                <div class="d-flex flex-column ms-4" style="flex: 1 1 auto">
 
                     <slot name="right-column"></slot>
 

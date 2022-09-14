@@ -58,7 +58,8 @@ EGSIM.component('testing', {
     </egsim-form>
 
     <testing-table :data="responseData" :download-url="urls.downloadResponse"
-                   class='position-absolute pos-0' style='z-index:1'>
+                    class='invisible position-absolute start-0 top-0 end-0 bottom-0'
+                    :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
         <slot>
             <button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
                 <i class='fa fa-list-alt'></i> Configuration
@@ -236,7 +237,7 @@ EGSIM.component('testing-table', {
             </span>
         </div>
 
-        <div class='d-flex flex-column pl-4'>
+        <div class='d-flex flex-column ps-4'>
 
             <slot></slot> <!-- slot for custom buttons -->
 
@@ -250,12 +251,11 @@ EGSIM.component('testing-table', {
                         <button @click='clearFilters(filterName)' type='button'
                                 :style="filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}"
                                 style='padding-top:0.1rem; padding-bottom:0.1rem'
-                                class='btn btn-outline-secondary btn-sm ml-2'>
+                                class='btn btn-outline-secondary btn-sm ms-2'>
                             <i class="fa fa-eraser"></i> Clear filter (show all)
                         </button>
                     </div>
                     <label v-for='value in filterValues[filterName]'
-                           class='customcheckbox'
                            :class="{'checked': filterSelectedValues[filterName].includes(value)}">
                         <input type='checkbox' :value="value" v-model='filterSelectedValues[filterName]'> {{ value }}
                     </label>
@@ -276,8 +276,8 @@ EGSIM.component('testing-table', {
                 <table>
                 <tr v-for="gsimname in Object.keys(gsimsRecords)">
                     <template v-if="!Object.keys(gsimsSkipped).includes(gsimname)">
-                        <td class='text-right pr-2'>{{ gsimname }}:<td>
-                        </td>{{ gsimsRecords[gsimname] }}</td>
+                        <td class='text-right pe-2'>{{ gsimname }}:</td>
+                        <td>{{ gsimsRecords[gsimname] }}</td>
                     </template>
                 </tr>
                 </table>
@@ -287,7 +287,7 @@ EGSIM.component('testing-table', {
                 <div><i class="fa fa-exclamation-triangle"></i> Gsim skipped:</div>
                 <table>
                 <tr v-for="gsimname in Object.keys(gsimsSkipped)">
-                    <td class='text-right pr-2'>{{ gsimname }}:</td>
+                    <td class='text-right pe-2'>{{ gsimname }}:</td>
                     <td>{{ gsimsSkipped[gsimname] }}</td>
                 </tr>
                 </table>

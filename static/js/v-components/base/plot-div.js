@@ -138,8 +138,8 @@ var PLOT_DIV = {
                  class='d-flex flex-row justify-content-around mb-3'>
                 <div v-for='(values, key, index) in selectedParams'
                      class='d-flex flex-row align-items-baseline'
-                     :class="index > 0 ? 'ml-2' : ''" style="flex: 1 1 auto">
-                    <span class='text-nowrap mr-1'>{{ key }}</span>
+                     :class="index > 0 ? 'ms-2' : ''" style="flex: 1 1 auto">
+                    <span class='text-nowrap me-1'>{{ key }}</span>
                     <select v-model="selectedParams[key]" class='form-control' style="flex: 1 1 auto">
                         <option v-for='value in params[key]' :value="value">
                             {{ value }}
@@ -148,8 +148,8 @@ var PLOT_DIV = {
                 </div>
             </div>
             <div class='position-relative' style="flex: 1 1 auto">
-                <div v-show='drawingPlots'
-                     class='position-absolute pos-0 d-flex flex-column align-items-center justify-content-center'
+                <div :style='{display: drawingPlots ? "flex" : "none"}'
+                     class='position-absolute start-0 top-0 end-0 bottom-0 flex-column align-items-center justify-content-center'
                      style='z-index:1001;background-color:rgba(0,0,0,0.0)'>
                     <div class='p-2 shadow border rounded text-white d-flex flex-column align-items-center'
                          style="background-color:rgba(0,0,0,0.3)">
@@ -157,22 +157,23 @@ var PLOT_DIV = {
                         <span class='border-0 bg-transparent'>(It might take a while, please wait)</span>
                     </div>
                 </div>
-                <div class='position-absolute pos-0' :id="plotdivid"></div>
+                <div class='position-absolute start-0 top-0 end-0 bottom-0'
+                     :id="plotdivid"></div>
             </div>
         </div>
     
         <!-- RIGHT TOOLBAR (legend, buttons, controls) -->
 
-        <div class='d-flex flex-column pl-4' v-show="legendNames.length || isGridCusomizable">
+        <div class='d-flex flex-column ps-4' v-show="legendNames.length || isGridCusomizable">
             <slot></slot> <!-- slot for custom buttons -->
             <div v-show='legendNames.length' class='mt-3 border p-2 bg-white'
                  style='flex: 1 1 auto;overflow: auto'>
                 <div>Legend</div>
                 <div v-for="traceName in legendNames">
-                    <label class='my-0 mt-2 customcheckbox'
-                           :class="{'checked': legend[traceName].visible}"
-                           :style="{color: legend[traceName].color}">
+                    <label class='my-0 mt-2' :class="{'checked': legend[traceName].visible}"
+                        :style="{color: legend[traceName].color}">
                         <input type='checkbox' v-model="legend[traceName].visible"
+                               :style="{'accent-color': legend[traceName].color}"
                                @change="traceVisibilityChanged(traceName)"> {{ traceName }}
                     </label>
                 </div>
@@ -199,18 +200,18 @@ var PLOT_DIV = {
                     <div>Axis</div>
                     <div v-for="type in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
                         <span class='text-nowrap'>{{ type }}:</span>
-                        <label class='text-nowrap m-0 ml-2 customcheckbox'
+                        <label class='text-nowrap m-0 ms-2'
                                :class="{'checked': axis[type].sameRange.value}"
                                :disabled="axis[type].sameRange.disabled">
                             <input type='checkbox' v-model='axis[type].sameRange.value'
-                                   :disabled="axis[type].sameRange.disabled">
+                                   :disabled="axis[type].sameRange.disabled"  class="me-1">
                             <span>same range</span>
                         </label>
-                        <label class='text-nowrap m-0 ml-2 customcheckbox'
+                        <label class='text-nowrap m-0 ms-2'
                                :class="{'checked': axis[type].log.value}"
                                :disabled="axis[type].log.disabled">
                             <input type='checkbox' v-model='axis[type].log.value'
-                                   :disabled="axis[type].log.disabled">
+                                   :disabled="axis[type].log.disabled" class="me-1">
                             <span>log scale</span>
                         </label>
                     </div>
@@ -219,7 +220,7 @@ var PLOT_DIV = {
                 <div class='mt-3 d-flex flex-column border p-2 bg-white'>
                     <div> Mouse interactions</div>
                     <div class='d-flex flex-row mt-1 align-items-baseline'>
-                        <span class='text-nowrap mr-1'> on hover:</span>
+                        <span class='text-nowrap me-1'> on hover:</span>
                         <select v-model="mouseMode.hovermode"
                                 class='form-control form-control-sm'>
                             <option v-for='name in mouseMode.hovermodes' :value='name'>
@@ -228,7 +229,7 @@ var PLOT_DIV = {
                         </select>
                     </div>
                     <div class='d-flex flex-row mt-1 align-items-baseline'>
-                        <span class='text-nowrap mr-1'> on drag:</span>
+                        <span class='text-nowrap me-1'> on drag:</span>
                         <select v-model="mouseMode.dragmode"
                                 class='form-control form-control-sm'>
                             <option v-for='name in mouseMode.dragmodes' :value='name'>
@@ -787,7 +788,7 @@ var PLOT_DIV = {
             // sets up the plotly axis data on the plots to be plotted, according to
             // the current axis setting and the plot data
 
-            // set the plot.xaxis.type (same for y):
+            // set the plot xaxis and yaxis type:
             for (var key of ['x', 'y']){
                 var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
                 var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
@@ -799,12 +800,10 @@ var PLOT_DIV = {
                         delete plot[plotkey].type;  // reset to default, whatever it is
                     }
                 });
-                // set disabled state (some plots are not displayable as log. Although they might be actually be
-                // displayed as log, this depends on the default settings, just prevent here the user to switch log on/off):
-                axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
+                axis.log.disabled = false;  // enabled log chekbox, plotly seems to handle it. Previous code was:
+                // axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
             }
 
-            // set the plot.xaxis.type (same for y):
             var [sign, log10] = [Math.sign, Math.log10];
             // displaybars tells us if we are displaying (at least one) bar: this changes the behaviour
             // of the margin for custom-defined ranges (see below)

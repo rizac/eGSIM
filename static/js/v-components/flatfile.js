@@ -103,10 +103,10 @@ EGSIM.component('flatfile-compilation', {
                         <b>Flatfile template</b> ({{ flatfileHeader.length }} columns)
                     </div>
                     <div style='flex: 1 1 auto'></div>
-                    <div class='ml-3' v-show="!columnsCustomizerVisible">CSV separator</div>
-                    <input v-show="!columnsCustomizerVisible" type="text" v-model="csvSep" class='ml-1' style='max-width:2rem'>
-                    <div v-show="!columnsCustomizerVisible" class='ml-3'>Selection</div>
-                    <button type='button' @click='columnsCustomizerVisible=!columnsCustomizerVisible' class='ml-1 btn btn-primary'>
+                    <div class='ms-3' v-show="!columnsCustomizerVisible">CSV separator</div>
+                    <input v-show="!columnsCustomizerVisible" type="text" v-model="csvSep" class='ms-1' style='max-width:2rem'>
+                    <div v-show="!columnsCustomizerVisible" class='ms-3'>Selection</div>
+                    <button type='button' @click='columnsCustomizerVisible=!columnsCustomizerVisible' class='ms-1 btn btn-primary'>
                         {{ columnsCustomizerVisible ? 'Show Flatfile' :
                            form.gsim.value.length + ' model' + (form.gsim.value.length == 1 ? ', ': 's, ') +
                            imts.value.length + ' intensity measure' + (imts.value.length.length == 1 ? '': 's')
@@ -119,9 +119,10 @@ EGSIM.component('flatfile-compilation', {
                           style='flex:1 1 auto; white-space: pre; font-family:monospace; background-color:darkslategray; color:#e1e1e1'>
                 </textarea>
 
-                <div class='d-flex flex-row my-2' v-show='columnsCustomizerVisible'  style='flex:1 1 auto;'>
+                <div :style="{display: columnsCustomizerVisible ? 'flex' : 'none', flex: '1 1 auto'}"
+                     class='flex-row my-2' v-show='columnsCustomizerVisible'>
                     <gsim-select :field='form.gsim' @gsim-selected='gsimSelected'></gsim-select>
-                    <div class='mr-3'></div>
+                    <div class='me-3'></div>
                     <div class='d-flex flex-column'>
                         <imt-select :field='imts' style='flex: 1 1 auto'></imt-select>
                     </div>
@@ -244,20 +245,21 @@ EGSIM.component('flatfile-plot', {
            <form novalidate @submit.prevent="submitMe">
                 <div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
                     <flatfile-select :field="form.flatfile" @flatfile-selected="flatfileSelected" />
-                    <span class='mr-3'></span>
+                    <span class='me-3'></span>
                     <flatfile-selexpr-input :field="form.selexpr" class='mt-3'/>
-                    <span class='mr-3'></span>
+                    <span class='me-3'></span>
                     <field-input :field='form.x'/>
-                    <span class='mr-3'></span>
+                    <span class='me-3'></span>
                     <field-input :field='form.y'/>
-                    <span class='mr-3'></span>
+                    <span class='me-3'></span>
                     <button type="submit" class="btn btn-primary mt-2">
                         Display plot
                     </button>
                 </div>
            </form>
         </div>
-        <flatfile-plot-div :data="responseData" style='flex: 1 1 auto'></flatfile-plot-div>
+        <flatfile-plot-div :data="responseData" class="invisible"
+                           :style='{visibility: Object.keys(responseData).length ? "visible !important" : "", flex: "1 1 auto"}'/>
     </div>`
 });
 
@@ -413,8 +415,8 @@ EGSIM.component('flatfile-select', {
                         :error="!!field.error" :disabled="field.disabled"/>
             <div class='d-flex flex-row align-items-baseline'>
                 <a title='flatfile reference (opens in new tab)' target="_blank"
-                   class='ml-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>
-                <button type="button" class="btn btn-primary ml-1" onclick="this.nextElementSibling.click()"
+                   class='ms-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>
+                <button type="button" class="btn btn-primary ms-1" onclick="this.nextElementSibling.click()"
                         :aria-label='doc' data-balloon-pos="down" data-balloon-length="large">
                     upload
                 </button>
