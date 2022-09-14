@@ -30,8 +30,10 @@
 	{% endif %}
 
 	<!-- BOOTSTRAP for safety, it must be loaded before all possible plugins -->
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css"
-		  integrity="sha384-zCbKRCUGaJDkqS1kPbPd7TveP5iyJE0EjAuZQTgFLD2ylzuqKfdKlfG/eSrtxUkn"
+	<!-- CSS only -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css"
+		  rel="stylesheet"
+		  integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT"
 		  crossorigin="anonymous">
 
 	{% if leaflet %}
@@ -61,9 +63,9 @@
 	 	(the fallback local script is downloaded below)
 	 	-->
 		{% if debug %}
-			<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-2.8.3.js"></script>
+			<script src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist@2.14.0/plotly-cartesian.js"></script>
 		{% else %}
-			<script type="text/javascript" src="https://cdn.plot.ly/plotly-cartesian-2.8.3.min.js"></script> <!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md -->
+			<script src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@2.14.0/plotly-cartesian.min.js"></script>
 		{% endif %}
 	{% endif %}
 

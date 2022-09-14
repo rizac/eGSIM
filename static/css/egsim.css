@@ -3,7 +3,7 @@
 	z-index: 200;  /* to sit on top of everything, in case */
 }
 .loader, .loader:before {
-	height: 6px;
+	height: 10px;
 }
 .loader {
 	width: 100%;

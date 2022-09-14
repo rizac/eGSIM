@@ -154,7 +154,7 @@ EGSIM.component('field-label', {
     },
     template: `<div class="d-flex flex-row m-0 align-items-baseline">
             <label class='m-0 text-nowrap' :disabled='field.disabled' v-html="field.label" />
-            <span class="small ml-2 text-muted text-nowrap" :style="infoMessageStyle">
+            <span class="small ms-2 text-muted text-nowrap" :style="infoMessageStyle">
                 <template v-if="!!field.error">
                     <span v-html="field.error"/>
                 </template>
@@ -168,6 +168,6 @@ EGSIM.component('field-label', {
                        style="cursor: pointer;" title="Clear selection"></i>
                 </template>
             </span>
-            <span class='text-primary small ml-3 text-right'>{{ field.name }}</span>
+            <span class='text-primary small ms-3 text-right'>{{ field.name }}</span>
         </div>`
 });

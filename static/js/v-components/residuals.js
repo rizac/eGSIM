@@ -38,7 +38,8 @@ EGSIM.component('residuals', {
     </egsim-form>
 
     <residuals-plot-div :data="responseData" :download-url="urls.downloadResponse"
-                        class='position-absolute pos-0' style='z-index:1'>
+                        class='invisible position-absolute start-0 top-0 end-0 bottom-0'
+                        :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
         <slot>
             <button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
                 <i class='fa fa-list-alt'></i> Configuration
