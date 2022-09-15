@@ -19,8 +19,10 @@ EGSIM.component('gsim-select', {
                 imt: false,  // boolean (imt filter on off)
                 map: null  // null or function(gsim_name) => true/false
             },
+            mapOffsetParent: undefined,  // to refresh the map when made visible again
             choices: Array.from(this.field.choices),  // copy Array to preserve order
             warnings: [], //list of strings of warnings (updated also in watchers below)
+            mapId: `map${Date.now()}${Math.random()}`
         }
     },
     watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
@@ -104,25 +106,20 @@ EGSIM.component('gsim-select', {
                         Clear map filter
                     </button>
                 </div>
-                <div :id="this.field.id + '_geolocation'" style='flex: 1 1 auto'></div>
+                <div :id="mapId" ref="mapDiv" style='flex: 1 1 auto'></div>
            </div>
         </div>
     </div>`,
     mounted(){
         this.createLeafletMap();
     },
-    activated(){
-        // Called when a kept-alive component is activated to fix leaflet problems on resize.
-        // See https://vuejs.org/v2/api/#activated
-        // https://github.com/Leaflet/Leaflet/issues/4835#issuecomment-241445225
-        var map = this.map;
-        setTimeout(function(){ map.invalidateSize()}, 100);
-    },
     methods: {
         createLeafletMap(){
-            var id = this.field.id + '_geolocation'
-            var map = L.map(id, {center: [48, 7], zoom: 4});
-
+            var map = L.map(this.mapId, {center: [48, 7], zoom: 4});
+            if(window.LMapCollector){
+                // store map in a global object (egsim.html) to auto-refresh maps later:
+                window.LMapCollector[this.mapId] = map;
+            }
             // provide two base layers. Keep it simple as many base layers are just to shof off
             // and they do not need to be the main map concern
             // 1 MapBox Outdorrs (if you want more, sign in to mapbox. FIXME: why is it working with the token then?)
