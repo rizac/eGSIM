@@ -1,12 +1,6 @@
 /* Form components */
 
-EGSIM.component('submit-button', {  // provide a single place for styling the submit button of forms
-    template: `<button type="submit" class="btn btn-primary">
-        <i class="fa fa-play"></i> Display results
-    </button>`
-});
-
-/*Base class for Form components. See README.md for details */
+/* Base class for Form components. See README.md for details */
 var BASE_FORM = {
     props: {
         form: Object,  // field names mapped to Objects describing <input>s or <select>
@@ -273,6 +267,10 @@ EGSIM.component('egsim-form', {
     watch: {
         visibilityToggle(newVal, oldVal){
             this.show = !this.show;
+            // Fix map not rendering ok in case of size/visibility change:
+            if (this.show && window.LMapCollector){
+                window.LMapCollector.invalidateSize();
+            }
         }
     },
     template: `
@@ -342,7 +340,9 @@ EGSIM.component('egsim-form', {
 
                     <div class='d-flex flex-row justify-content-center mt-4'>
                         <div style='flex: 1 1 auto'></div>
-                        <submit-button></submit-button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-play"></i> Display results
+                        </button>
                     </div>
                 </div>
             </div>

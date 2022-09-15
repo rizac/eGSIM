@@ -12,19 +12,15 @@ EGSIM.component('base-input', {
         disabled: {type: Boolean, default: false},
     },
     data () {
-        // get the type of this component, from $attrs or inferred
-        var type = this.$attrs.type;
-        // ($attrs: all attributes not declared in `props` above, e.g. 'name')
-        var isSelect = (type === 'select') || (Vue.toRaw(this.choices).length > 0);
-        var isBool = !isSelect &&
-                     ((type === 'checkbox') || (typeof Vue.toRaw(this.value) === 'boolean'));
-        // $attrs is readonly. FIXME: remove type when explicitly set as 'select'?
-
+        var val = Vue.toRaw(this.value);
+        var isSelect = Vue.toRaw(this.choices || []).length > 0;
+        var isBool = !isSelect && (typeof val === 'boolean');
+        var isNum = !isSelect && (typeof val === 'number');
         return {
             isSelect: isSelect,
             isBool: isBool,
-            val: Vue.toRaw(this.value),  // this is the proxy to value
-            errorColor: "#dc3545",
+            isNum: isNum,
+            val: val,  // this is the proxy to value
             options: [],  // will be set in watch.choices (because immediate=true),
         }
     },
@@ -47,24 +43,19 @@ EGSIM.component('base-input', {
             }
         }
     },
-    // emits: ['update:modelValue'],  // Vue3 necessary?
     computed: {
-        cssstyle(){
-            var style = [];
-            if (!!this.error){
-                style.push(`border-color: ${this.errorColor} !important`);
-            }
-            return style.join(';');
+        cssClass(){
+            return this.isBool ? "" : (!!this.error ? "form-control border-danger" : "form-control");
         }
     },
     template: `<select v-if="isSelect" v-model="val" :disabled='disabled'
-                       class='form-control' :style="cssstyle" ref='selectComponent'>
+                       :class='cssClass' ref='selectComponent'>
             <option	v-for='opt in options' :value="opt.value" :disabled="opt.disabled"
                     :class="opt.class" :style="opt.style" v-html="opt.innerHTML">
             </option>
         </select>
-        <input v-else v-model="val" :disabled='disabled' :class='isBool ? "" : "form-control"'
-               :style="isBool ? '' : cssstyle" />`,
+        <input v-else :type="isBool ? 'checkbox' : (isNum ? 'number' : 'text')"
+               v-model="val" :disabled='disabled' :class="cssClass" />`,
     methods: {
         makeOptions(choices) {
             // convert the `choices` prop to an Array of options (JS Objects):
@@ -112,7 +103,7 @@ EGSIM.component('field-input', {
     computed: {
         attrz(){  // merge passed non-reactive attrs ($attrs) with this Field attrs
             var attrs = Object.assign({}, this.$attrs);  // Object.assign(target, ...sources)
-            var reactiveKeys = ['value', 'error',  'choices', 'disabled', 'help', 'label'];
+            var reactiveKeys = ['value', 'error',  'choices', 'disabled', 'help', 'label', 'type'];
             var field = this.field;
             Object.keys(field).map(key => {
                 if (!reactiveKeys.includes(key)){
@@ -136,14 +127,13 @@ EGSIM.component('field-label', {
     },
     data() {
         return {
-            errorColor: "#dc3545",
             showSelectedInfo: this.field.multiple && this.field.choices.length > 10
         }
     },
     computed: {
-        infoMessageStyle(){
-            var color = !!this.field.error ? `color: ${this.errorColor} !important` : "";
-            return 'flex: 1 1 auto;' + color;
+        infoMessageClass(){
+            var cls = "small ms-2 text-nowrap ";
+            return cls + (!!this.field.error ? 'text-danger' : ' text-muted');
         },
         selectedInfoMsg(){
             // for select[multiple], return the string with the number of selected items
@@ -154,7 +144,7 @@ EGSIM.component('field-label', {
     },
     template: `<div class="d-flex flex-row m-0 align-items-baseline">
             <label class='m-0 text-nowrap' :disabled='field.disabled' v-html="field.label" />
-            <span class="small ms-2 text-muted text-nowrap" :style="infoMessageStyle">
+            <span :class="infoMessageClass" style="flex: 1 1 auto;">
                 <template v-if="!!field.error">
                     <span v-html="field.error"/>
                 </template>

@@ -43,6 +43,10 @@ div.form-control { height: initial; }
 }
 input[type=checkbox], input[type=radio]{ accent-color: rgba(7, 104, 159, 1); }
 
+/* error color */
+.text-danger{ color: #dc3545 !important; }
+.border-danger{ border-color: #dc3545 !important; }
+
 /* nav */
 nav#egsim-nav {min-height: 3.5rem;}  /* for safari */
 /* nav style */
