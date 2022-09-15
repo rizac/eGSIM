@@ -5,7 +5,7 @@
 	<title>{{ project_name }}</title>
 
 	{% block head %}
-	
+
 	<link rel="shortcut icon" href="{% static 'img/favicon.png' %}" type="image/png"/>
 
 	<!--  Google font:, also related:  -->
@@ -15,12 +15,8 @@
 
 	{% if vue %}
 		{% if debug %}
-		<!-- development version, includes helpful console warnings -->
-<!--		<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>-->
 		<script src="https://unpkg.com/vue@3.2.39/dist/vue.global.js"></script>
 		{% else %}
-		<!-- production version, optimized for size and speed -->
-<!--		<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>-->
 		<script src="https://unpkg.com/vue@3.2.39/dist/vue.global.prod.js"></script>
 		{% endif %}
 	{% endif %}
@@ -29,15 +25,13 @@
 	<script src="https://cdn.jsdelivr.net/npm/axios@0.27.2/dist/axios.min.js"></script>
 	{% endif %}
 
-	<!-- BOOTSTRAP for safety, it must be loaded before all possible plugins -->
-	<!-- CSS only -->
+	<!-- BOOTSTRAP CSS must be loaded before custom classes if we want to override it -->
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css"
 		  rel="stylesheet"
 		  integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT"
 		  crossorigin="anonymous">
 
 	{% if leaflet %}
-	<!-- LEAFLET -->
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
 		  integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
 		  crossorigin="" />
@@ -51,17 +45,9 @@
 	<link rel="stylesheet" type="text/css"
 		  href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 	<!-- <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/fontawesome.min.css" rel="stylesheet"> -->
-	{% endif %}		
-			
-	<!-- material design for bootsrap (css only) COMMENT IF NOT NEEDED -->
-	<!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons">
-	<link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css"
-		integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous"> -->
+	{% endif %}
 
 	{% if plotly %}
-	 	<!-- plotly: https://github.com/plotly/plotly.js/blob/master/dist/README.md
-	 	(the fallback local script is downloaded below)
-	 	-->
 		{% if debug %}
 			<script src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist@2.14.0/plotly-cartesian.js"></script>
 		{% else %}
@@ -74,7 +60,7 @@
 	{% if debug %}
 
 	if (!navigator.onLine){
-	    {% if vue %}
+		{% if vue %}
 		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.js'><\/script>");
 		{% endif %}
 
