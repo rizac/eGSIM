@@ -46,8 +46,8 @@ WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bott
 			{% include "apidoc/intro.html" %}
 			
 			
-			<h2 id="gsimselection">{{ egsim_data.GSIMS.title }}</h2>
-			{% include "apidoc/gsims.html" with data=egsim_data.GSIMS %}
+			<!--<h2 id="gsimselection">{{ egsim_data.GSIMS.title }}</h2>
+			{% include "apidoc/gsims.html" with data=egsim_data.GSIMS %} -->
 			
 			
 			<h2 id="trellisplots">{{ egsim_data.TRELLIS.title }}</h2>
@@ -60,9 +60,6 @@ WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bott
 		
 			<h2 id="testing">{{ egsim_data.TESTING.title }}</h2>
 			{% include "apidoc/testing.html" with data=egsim_data.TESTING %}
-		
-			<h2 id="legalinfo">Legal information</h2>
-			{% include "apidoc/legalinfo.html" with data=egsim_data.REFERENCES %}
 
 		</div>	
 	</div>
@@ -146,15 +143,7 @@ function getHVisible(e){  // (e is the event, not used)
 addEventListener('DOMContentLoaded', getHVisible, false); 
 addEventListener('load', getHVisible, false);
 addEventListener('scroll', getHVisible, true); 
-addEventListener('resize', getHVisible, true); 
-
-// 3] Make all external anchor tags open in a new frame
-document.querySelectorAll("a").forEach(elm => {
-    if ((elm.getAttribute('href') || '').startsWith('http')){
-        elm.setAttribute("target", "_blank");
-    }
-});
-
+addEventListener('resize', getHVisible, true);
 </script>
 
 {% endblock %}

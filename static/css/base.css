@@ -11,7 +11,7 @@ nav, h1, h2, h3, h4, h5, h6{ font-family: 'Encode Sans Condensed', Helvetica, sa
 
 .height100{ height: 100vh; }
 iframe{ border:0;margin:0; }
-
+a:hover, a:visited, a:link, a:active{ text-decoration: none !important; }
 
 /*** Overwrite Bootstrap ***/
 
@@ -49,6 +49,7 @@ input[type=checkbox], input[type=radio]{ accent-color: rgba(7, 104, 159, 1); }
 
 /* nav */
 nav#egsim-nav {min-height: 3.5rem;}  /* for safari */
+nav#egsim-nav .sub-menu {top: 3.5rem;}
 /* nav style */
 nav .menu-item{ padding: 1rem .6rem; color: rgba(255,255,255,.5) !important; }
 /* nav pointer (must be set for all inner elements to work) */

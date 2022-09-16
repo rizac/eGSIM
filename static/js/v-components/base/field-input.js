@@ -158,6 +158,6 @@ EGSIM.component('field-label', {
                        style="cursor: pointer;" title="Clear selection"></i>
                 </template>
             </span>
-            <span class='text-primary small ms-3 text-right'>{{ field.name }}</span>
+            <span class='text-primary small ms-3 text-end'>{{ field.name }}</span>
         </div>`
 });

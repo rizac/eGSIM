@@ -21,8 +21,11 @@ class URLS:  # noqa
     # url for the frontend pages to be rendered as HTML by means of the
     # typical Django templating system: these pages are usually inside
     # <iframe>s of the web SPA (single page application)
-    HOME_PAGE = 'pages/home'
-    DOC_PAGE = 'pages/apidoc'
+    HOME_NO_MENU = 'home_no_menu'
+    API = 'api'
+    DATA_PROTECTION = 'https://www.gfz-potsdam.de/en/data-protection/'
+    IMPRINT = "imprint"
+    REF_AND_LICENSE = "ref_and_license"
 
 
 class TAB(Enum):
@@ -42,7 +45,6 @@ class TAB(Enum):
     flatfile = 'Flatfiles', 'fa-database'
     residuals = 'Model-to-Data Comparison', 'fa-bar-chart', ResidualsView
     testing = 'Model-to-Data Testing', 'fa-list', TestingView
-    apidoc = 'API Doc / Legal Info', 'fa-info-circle'
 
     def __init__(self, *args):
         # args is the unpacked tuple passed above (2-elements), set attributes:
