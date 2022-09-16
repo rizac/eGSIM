@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" class='height100'>
 <head>
 	<meta charset="UTF-8">
-	<title>{{ project_name }}</title>
+	<title>eGSIM</title>
 
 	{% block head %}
 
@@ -55,37 +55,6 @@
 		{% endif %}
 	{% endif %}
 
-	<!--  THESE ARE FALLBACKS, COMMENT OUT IF YOU WORK OFFLINE -->
-	<script type='text/javascript'>
-	{% if debug %}
-
-	if (!navigator.onLine){
-		{% if vue %}
-		document.write("<script type='text/javascript' src='/static/fallbacks/vue.2.5.16.js'><\/script>");
-		{% endif %}
-
-		{% if axios %}
-		document.write("<script type='text/javascript' src='/static/fallbacks/axios.0.18.0.min.js'><\/script>");
-		{% endif %}
-
-		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/bootstrap.4.1.3.min.css'/>");
-
-		{% if fontawesome %}
-		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/font-awesome.4.7.0.css'/>");
-		{% endif %}
-		
-		{% if leaflet %}
-		document.write("<script type='text/javascript' src='/static/fallbacks/leaflet.1.3.0.js'><\/script>");
-		document.write("<link rel='stylesheet' type='text/css' href='/static/fallbacks/leaflet.1.3.0.css'/>");
-		{% endif %}
-		
-		{% if plotly %}
-		document.write("<script type='text/javascript' src='/static/fallbacks/plotly-cartesian-1.49.1.js'><\/script>");
-		{% endif %}
-	}
-	{% endif %}
-	</script>
-
 	<!-- egsim base css. Load at the real end:  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
 	
@@ -95,7 +64,7 @@
 	{% endblock %}
 </head>
 
-<body class='height100 d-flex flex-column bg-light'>
+<body class='height100 d-flex flex-column'>
 {% block body %}{% endblock %}
 <!-- https://docs.djangoproject.com/en/2.0/ref/csrf/#acquiring-the-token-if-csrf-use-sessions-is-true -->
 {% csrf_token %}

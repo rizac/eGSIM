@@ -8,7 +8,7 @@
 "regionalization_files/share.json":
   name: "share"
   display_name: "Seismic Hazard Harmonization in Europe (SHARE)"
-  url: "http://hazard.efehr.org/en/Documentation/specific-hazard-models/europe/seismogenic-sources/index.html"
+  url: "http://hazard.efehr.org/en/Documentation/specific-hazard-models/europe/overview/seismogenic-sources/"
   license: "CC BY-SA 3.0 (unported) [http://creativecommons.org/licenses/by-sa/3.0/]"
   citation: "D. Giardini, J. Woessner, L. Danciu, H. Crowley, F. Cotton, G. Grünthal, R. Pinho, G. Valensise, S. Akkar, R. Arvidsson, R. Basili, T. Cameelbeeck, A. Campos-Costa, J. Douglas, M. B. Demircioglu, M. Erdik, J. Fonseca, B. Glavatovic, C. Lindholm, K. Makropoulos, C. Meletti, R. Musson, K. Pitilakis, K. Sesetyan,  D. Stromeyer,  M. Stucchi, A. Rovida, Seismic Hazard Harmonization in Europe (SHARE): Online Data Resource, doi: 10.12686/SED-00000001-SHARE, 2013."
   doi: "10.12686/SED-00000001-SHARE"

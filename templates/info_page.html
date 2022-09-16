@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block head %}
+	{% with fontawesome=True leaflet=False plotly=False vue=False %}
+		{{ block.super }}
+	{% endwith %}
+{% endblock %}
+
+{% block extra-head %}
+<link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
+<!--  include the (few) css declarations here to avoid loading external css -->
+<style type="text/css">
+	.home-title{
+		font-size: 500%;
+		text-shadow: 2px 8px 6px rgba(0,0,0,0.2), 0px -5px 35px rgba(255,255,255,0.3);
+	}
+	a.logo{
+		margin-right: 2rem;
+		margin-top: 2rem;
+		display: inline-block;
+		height: 3rem;
+		overflow: hidden;
+	}
+	a.logo:first-of-type{
+		margin-left: 2rem;
+	}
+	a.logo img{
+		margin-left:0px;
+		margin-top:0px;
+		height:100%;
+	}
+	#page-header {
+		transform:scaleY(1);
+		transition: transform .1s ease;
+	}
+	#page-header { transform-origin: top; }
+	#page-footer { transform-origin: bottom; }
+	body{
+		font-family: Lato, Helvetica;
+		align-items: center !important;
+	}
+	#page-footer{
+		background-image: linear-gradient(180deg, rgb(248, 249, 250, 0), rgba(248, 249, 250, 1));
+  	}
+</style>
+{% endblock %}
+
+{% block body %}
+<div id='page-header' class='border-bottom position-fixed top-0 start-0 end-0 py-4 d-flex flex-column bg-light'>
+	<div class='d-flex flex-row'>
+		<div style='flex:0 0 40%; overflow:hidden'>
+			<a target="_blank" class='logo' href='https://www.epos-ip.org/'>
+				<img src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
+			</a>
+			<a target="_blank" class='logo' href='http://www.efehr.org/'>
+				<img src="{% static 'img/logos/efehr_fin@3x.png' %}" />
+			</a>
+			<a target="_blank" class='logo' href='https://www.gfz-potsdam.de/'>
+				<img src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" style="margin-right:-0.4rem;margin-left:-0.4rem;margin-top:-0.4rem;height:3.7rem;"/>
+			</a>
+		</div>
+		<div style="flex: 1 1 auto">
+			<h1 class='home-title text-center' style="'z-index:100">eGSIM</h1>
+		</div>
+		<div style='flex:0 0 40%; overflow:hidden' class="text-end">
+			<a target="_blank" class='logo' href='https://www.globalquakemodel.org/'>
+				<img class='bigger' src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans_scaled.png' %}" style="height:3.8rem;margin-right:-1.2rem;margin-top:-.3rem;"/>
+			</a>
+			<a target="_blank" class='logo' href='http://www.sera-eu.org/'>
+				<img src="{% static 'img/logos/SERA_logo_scaled.png' %}" />
+			</a>
+		</div>
+	</div>
+	<h5 class='p-0 mt-3 text-center' style="flex: 1 1 auto">a web service for selecting and testing Ground-Shaking Intensity Models (GSIMs)</h5>
+</div>
+<div id="page-content" class="" style="visibility:hidden;transition:visibility .1s ease;padding-top: 2rem;max-width: 50em;text-align: justify;">
+{% block page-content %}
+{% endblock %}
+</div>
+<div id="page-footer" class="px-4 py-2 text-right position-fixed start-0 end-0 bottom-0 d-flex flex-row align-items-baseline">
+	<span>v2.0.0 2022-10-01</span>
+	<div style="flex:1 1 auto"></div>
+	{% if ref_and_license_url %}
+	<a target='_bank' href="{{ ref_and_license_url }}">
+		<img class='me-1' style='height:1.5rem' src="https://www.gnu.org/graphics/agplv3-155x51.png">
+		<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1" />
+		<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1" />
+	</a>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block after-body %}
+<script>
+
+// make header and footer slowly appear/disappear on scroll up/down:
+(function(){
+	const mTop = parseFloat(document.getElementById('page-header').offsetHeight);
+	var prevScroll = window.scrollY || document.scrollTop;
+	var curScroll;
+	var header = document.getElementById('page-header');
+	var footer = document.getElementById('page-footer');
+
+	var scrolled = function() {
+		var scale = 1;
+		var currScroll = parseFloat(window.scrollY || document.scrollTop);
+		if (isNaN(currScroll)){ currScroll = 0; }
+		console.log(currScroll);
+		if (currScroll > 0){
+			scale = (mTop - currScroll) / mTop;
+			if (scale <= 0){ scale = 0; }
+		}
+		header.style.transform = `scaleY(${scale})`;
+		footer.style.transform = `scaleY(${scale})`;
+	};
+
+	window.addEventListener('load', () => {
+		var pageContent = document.getElementById('page-content');
+		pageContent.style.marginTop = `${mTop}px`;
+		pageContent.style.visibility = 'visible';
+	});
+  window.addEventListener('scroll', scrolled);
+
+})();
+
+// Make all external anchor tags open in a new frame
+document.querySelectorAll("a").forEach(elm => {
+    if ((elm.getAttribute('href') || '').startsWith('http')){
+        elm.setAttribute("target", "_blank");
+    }
+});
+
+</script>
+{% endblock %}
+
+{% block after-body2 %}
+
+
+
+{% endblock %}

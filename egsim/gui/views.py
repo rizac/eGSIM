@@ -14,7 +14,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from . import figutils, TAB
+from . import figutils, TAB, URLS
 from .frontend import get_context
 from ..api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
@@ -24,33 +24,17 @@ from ..api.models import FlatfileColumn
 from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS, RESTAPIView
 
 
-# common parameters to be passed to any Django template:
-COMMON_PARAMS = {
-    'project_name': 'eGSIM',
-    # 'debug': settings.DEBUG,
-    'data_protection_url': 'https://www.gfz-potsdam.de/en/data-protection/'
-}
-
-
 def main(request, selected_menu=None):
     """view for the main page"""
-    context = COMMON_PARAMS | get_context(selected_menu, settings.DEBUG)
+    context = get_context(selected_menu, settings.DEBUG)
     return render(request, 'egsim.html', context)
 
 
 @xframe_options_sameorigin
 def home(request):
     """view for the home page (iframe in browser)"""
-    egsim_data = {
-        _.name: {'title': _.title, 'icon': _.icon} for _ in TAB
-        if _ not in (TAB.apidoc,)
-    }
-    return render(request, 'home.html', dict(COMMON_PARAMS,
-                                             debug=settings.DEBUG,
-                                             egsim_data=egsim_data,
-                                             info_str=('Version 2.0.0, '
-                                                       'last updated: '
-                                                       'January 2022')))
+    return render(request, 'info_pages/home.html',
+                  context={'ref_and_license_url': URLS.REF_AND_LICENSE})
 
 
 @xframe_options_sameorigin
@@ -84,24 +68,30 @@ def apidoc(request):
         }
     }
 
-    # add references:
-    refs = {}
-    with open(join(dirname(dirname(abspath(__file__))), 'api', 'management',
-                   'commands', 'data' 'data_sources.yaml')) as _:
-        for ref in yaml.safe_load(_).values():
-            name = ref.pop('display_name')
-            refs[name] = ref
-    egsim_data['REFERENCES'] = refs
-
     return render(request, filename,
-                  dict(COMMON_PARAMS,
-                       debug=settings.DEBUG,
+                  dict(debug=settings.DEBUG,
                        query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
                        egsim_data=egsim_data,
                        baseurl=baseurl,
                        gmt=_get_flatfile_column_desc(),
                        )
                   )
+
+@xframe_options_sameorigin
+def ref_and_license(request):
+    """view for the home page (iframe in browser)"""
+    filename = 'info_pages/ref_and_license.html'
+    egsim_data = {}
+    # add references:
+    refs = {}
+    with open(join(dirname(dirname(abspath(__file__))), 'api', 'management',
+                   'commands', 'data', 'data_sources.yaml')) as _:
+        for ref in yaml.safe_load(_).values():
+            name = ref.pop('display_name')
+            refs[name] = ref
+    egsim_data['references'] = refs
+
+    return render(request, filename, context=egsim_data)
 
 
 def _get_flatfile_column_desc(as_html=True):
@@ -125,8 +115,9 @@ def _get_flatfile_column_desc(as_html=True):
 
 @xframe_options_sameorigin
 def imprint(request):
-    return render(request, 'imprint.html', {
-        'data_protection_url': COMMON_PARAMS['data_protection_url']
+    return render(request, 'info_pages/imprint.html', {
+        'data_protection_url': URLS.DATA_PROTECTION,
+        'ref_and_license_url': URLS.REF_AND_LICENSE
     })
 
 

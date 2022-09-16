@@ -1,3 +1,7 @@
+{% extends '../info_page.html' %}
+
+
+{% block page-content %}
 
 <h3 id='license'>License</h3>
 
@@ -26,10 +30,9 @@ alongside eGSIM in your work):
 </p>
 
 <ul>
-{% for key, value in data.items %}
+{% for key, value in references.items %}
     <li>
-        <a href="{{value.source_url}}">{{key}}</a><br>
-        <!-- <span class='text-muted'>License: {{value.license}}</span> -->
+        <a href="{{value.url}}">{{key}}</a><br>
     </li>
 {% endfor %}
 </ul>
@@ -37,3 +40,5 @@ alongside eGSIM in your work):
 <p class='small text-muted'>
 (All links provided in this page open in a new tab/window when clicked)
 </p>
+
+{% endblock %}

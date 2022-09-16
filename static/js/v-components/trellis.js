@@ -52,7 +52,7 @@ EGSIM.component('trellis', {
             </div>
             <div class="form-control mt-4"
                  :class="{'border-danger': scenarioHasErrors}"
-                 style="flex: 1 1 0;background-color:transparent;overflow-y:auto">
+                 style="flex: 1 1 0;min-height:3rem;background-color:transparent;overflow-y:auto">
 
                 <template v-for="(name, index) in scenarioKeys" >
                     <div v-if="form[name].type != 'checkbox'" class='d-flex flex-column'

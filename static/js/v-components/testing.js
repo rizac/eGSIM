@@ -207,7 +207,7 @@ EGSIM.component('testing-table', {
                         <tr>
                             <th v-for="colname in colnames" @click="sortBy(colname)"
                                 class='btn-primary align-text-top'
-                                :class="{'text-right': colname === COL_VAL}">
+                                :class="{'text-end': colname === COL_VAL}">
                                 {{ colname }}
                                 <br>
                                 <i v-if='isSortKey(colname) && columns[colname].sortOrder > 0' class="fa fa-chevron-down"></i>
@@ -220,7 +220,7 @@ EGSIM.component('testing-table', {
                         <template v-for="(entry, index) in filteredSortedEntries">
                             <tr :style="entry._group ? 'background-color: rgba(0,0,0,.05)':  ''">
                                 <template v-for="colname in colnames">
-                                    <td v-if="colname === COL_VAL" class='align-top text-right'>
+                                    <td v-if="colname === COL_VAL" class='align-top text-end'>
                                         {{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
                                     </td>
                                     <td v-else class='align-top'>{{ entry[colname] }}</td>
@@ -276,7 +276,7 @@ EGSIM.component('testing-table', {
                 <table>
                 <tr v-for="gsimname in Object.keys(gsimsRecords)">
                     <template v-if="!Object.keys(gsimsSkipped).includes(gsimname)">
-                        <td class='text-right pe-2'>{{ gsimname }}:</td>
+                        <td class='text-end pe-2'>{{ gsimname }}:</td>
                         <td>{{ gsimsRecords[gsimname] }}</td>
                     </template>
                 </tr>
@@ -287,7 +287,7 @@ EGSIM.component('testing-table', {
                 <div><i class="fa fa-exclamation-triangle"></i> Gsim skipped:</div>
                 <table>
                 <tr v-for="gsimname in Object.keys(gsimsSkipped)">
-                    <td class='text-right pe-2'>{{ gsimname }}:</td>
+                    <td class='text-end pe-2'>{{ gsimname }}:</td>
                     <td>{{ gsimsSkipped[gsimname] }}</td>
                 </tr>
                 </table>

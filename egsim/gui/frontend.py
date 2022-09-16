@@ -55,7 +55,13 @@ def get_context(selected_menu=None, debug=True) -> dict:
         'flatfile_upload_url': URLS.FLATFILE_INSPECTION,
         'regionalization': regionalization,
         'allowed_browsers': {k.lower(): v for k, v in allowed_browsers.items()},
-        'invalid_browser_message': invalid_browser_message
+        'invalid_browser_message': invalid_browser_message,
+        'newpage_urls': {
+            'api': URLS.API,
+            'imprint': URLS.IMPRINT,
+            'data_protection': URLS.DATA_PROTECTION,
+            'ref_and_license': URLS.REF_AND_LICENSE
+        }
     }
 
 
@@ -90,7 +96,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     # javascript:
     components_props = {
         TAB.home.name: {
-            'src': URLS.HOME_PAGE
+            'src': URLS.HOME_NO_MENU
         },
         TAB.trellis.name: {
             'form': form_to_json(TAB.trellis.formclass, ignore_choices),
@@ -127,9 +133,6 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                 'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.testing.name}/"
                                     f"{TAB.testing.download_response_filename}"
             }
-        },
-        TAB.apidoc.name: {
-            'src': URLS.DOC_PAGE
         }
     }
 

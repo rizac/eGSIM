@@ -1,38 +1,7 @@
-<head>
-<!-- <script type="text/javascript">
- function UnCryptMailto(s) {
-	var n=0;
-	var r="";
-	for(var i=0; i < s.length; i++) {
-		n=s.charCodeAt(i);
-		if (n>=8364) {n = 128;}
-		r += String.fromCharCode(n-(1));
-	}
-	return r;
- }
- function linkTo_UnCryptMailto(s)	{
-	location.href=UnCryptMailto(s);
- }
-</script>
-</head>
--->
+{% extends '../info_page.html' %}
 
-{% extends 'base.html' %}
+{% block page-content %}
 
-{% block head %}
-	{% with fontawesome=False leaflet=False plotly=False vue=False %}
-		{{ block.super }}
-	{% endwith %}
-{% endblock %}
-
-{% block extra-head %}
-<!-- <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
-<link rel="stylesheet" type="text/css" href="{% static 'css/apidoc.css' %}"> -->
-{% endblock %}
-
-{% block body %}
-
-<div class='d-flex flex-column align-items-center'>
 <div style='max-width: 40em;text-align: justify;'>
 
 <h1>Legal information / Provider Identification</h1>
@@ -147,6 +116,5 @@ Content, which is published under the Creative Commons License may be used only 
 <a href="{{ data_protection_url }}" target="_blank">Data Privacy Protection</a>
 </p>
 
-</div>
 </div>
 {% endblock %}

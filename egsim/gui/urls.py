@@ -5,7 +5,7 @@ from django.views.generic.base import RedirectView
 
 from . import URLS, TAB
 from .views import (main, home, apidoc, download_request, download_response,
-                    imprint, get_gsims_from_region, flatfile_inspection,
+                    imprint, ref_and_license, get_gsims_from_region, flatfile_inspection,
                     flatfile_plot, flatfile_required_columns)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
@@ -18,11 +18,12 @@ urlpatterns = [
     url(r'^(?P<selected_menu>%s)/?$' % "|".join(_.name for _ in TAB), main),
 
     # Imprint, refs (pages with a "normal" static django template associated):
-    url(r'imprint', imprint),
+    url(r'^%s/?$' % URLS.IMPRINT, imprint),
 
     # other urls called from within the page:
-    url(r'^%s/?$' % URLS.HOME_PAGE, home),
-    url(r'^%s/?$' % URLS.DOC_PAGE, apidoc),
+    url(r'^%s/?$' % URLS.HOME_NO_MENU, home),
+    url(r'^%s/?$' % URLS.API, apidoc),
+    url(r'^%s/?$' % URLS.REF_AND_LICENSE, ref_and_license),
 
     # download request data (json, yaml) urls:
     url(r'^%s/(?P<key>.+?)/(?P<filename>.+)$' % URLS.DOWNLOAD_REQUEST,

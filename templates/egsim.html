@@ -18,35 +18,38 @@
 
 
 {% block body %}
-	<div class="d-flex flex-column height100" id='egsim-vue'>
+	<div class="d-flex flex-column height100 bg-light" id='egsim-vue'>
 
-		<nav class="d-flex flex-row navbar-dark bg-dark align-items-center" id='egsim-nav'>
+		<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
 				{% for component in components %}
-					{% if forloop.last %}
-						<div style='flex: 1 1 auto'></div>
-					{% endif %}
 					<a class='menu-item' :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
 							@click="setComponent('{{ component.0 }}')" title="{{ component.1 }}">
 						<i class="fa {{ component.2 }}"></i> <span>{{ component.1 }}</span>
 					</a>
 				{% endfor %}
-				<!-- imprint adn data protection: -->
-				<table style='font-size:small'>
-					<tr><td>
-						<a style='padding-top:0;padding-bottom:0' class='menu-item'
-							href='/imprint' target="_blank"
-							 title="imprint">
-							Imprint
-						</a>
-					</td></tr>
-					<tr><td>
-						<a style='padding-top:0;padding-bottom:0' class='menu-item'
-							href='{{ data_protection_url }}'
-							target="_blank" title="Data Protection">
-							Data Protection
-						</a>
-					</td></tr>
-				</table>
+
+				<div style='flex: 1 1 auto'></div>
+
+				<a class="menu-item " href="#" title="options"
+				   onclick="this.nextElementSibling.style.transform ? this.nextElementSibling.style.removeProperty('transform') : this.nextElementSibling.style.transform='scaleY(0)'">
+					<i class="fa fa-bars"></i>
+				</a>
+				<div style="transform: scaleY(0);z-index:100" class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
+					<a class="menu-item py-2" title="API Doc / Legal Info" href='{{ newpage_urls.api }}' target="_blank">
+						<i class="fa fa-info-circle"></i> <span>API Doc</span>
+					</a>
+					<a class="menu-item py-2" title="References and License Info" href='{{ newpage_urls.ref_and_license }}' target="_blank">
+						<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
+					</a>
+					<a class='menu-item py-2' href='{{ newpage_urls.imprint }}' target="_blank" title="Imprint"
+					   onclick="this.parentNode.style.transform='scaleY(0)'">
+						Imprint
+					</a>
+					<a class='menu-item py-2' href='{{ newpage_urls.data_protection }}' target="_blank" title="Data Protection"
+					   onclick="this.parentNode.style.transform='scaleY(0)'">
+						Data Protection
+					</a>
+				</div>
 		</nav>
 
 		<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
@@ -197,14 +200,6 @@ EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
 EGSIM.component('home', {
 	props: {src: String},
 	template: `<iframe style='flex: 1 1 auto' :src='src'></iframe>`
-});
-EGSIM.component('apidoc', {
-	props: {
-		src: String,
-		id: {String, default: '__apidoc__iframe__'},
-		fragment: {String, default: ''}
-	},
-	template: `<iframe :id='id' style='flex: 1 1 auto' :src='src + fragment'></iframe>`
 });
 
 const EGSIM_APP = EGSIM;
