@@ -15,7 +15,7 @@ from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import figutils, TAB, URLS
-from .frontend import get_context
+from . import get_context
 from ..api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
 from ..api.forms.regionalization import GsimFromRegionForm
