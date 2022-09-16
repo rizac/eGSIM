@@ -11,7 +11,7 @@ nav, h1, h2, h3, h4, h5, h6{ font-family: 'Encode Sans Condensed', Helvetica, sa
 
 .height100{ height: 100vh; }
 iframe{ border:0;margin:0; }
-a:hover, a:visited, a:link, a:active{ text-decoration: none !important; }
+a, a:hover, a:visited, a:link, a:active{ text-decoration: none !important; }
 
 /*** Overwrite Bootstrap ***/
 
