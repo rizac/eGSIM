@@ -397,7 +397,7 @@ EGSIM.component('flatfile-select', {
         upload(file){  // return a Promise
             var formData = new FormData();
             formData.append("flatfile", file);
-            return EGSIM.post(this.field.url, formData, {
+            return EGSIM.post(this.field['data-url'], formData, {
                 headers: {
                   'Content-Type': 'multipart/form-data'
                 }

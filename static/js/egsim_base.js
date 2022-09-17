@@ -1,18 +1,20 @@
 /** base skeleton implementation for the main Vue instance. See egsim.html */
 var EGSIM_BASE = {
-    data: function(){ return {
-        // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
-        loading: false,
-        errormsg: '',
-        selComponent: '',
-        componentProps: {}, // component names (e.g. 'trellis') -> Object
-        postfuncDefaultConfig: {},  // default config used in `post` function
-        flatfileUploadUrl: '', // used when we upload a flatfile
-    }},
+    data: function(){
+        return {
+            // NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
+            loading: false,
+            initialErrorMsg: "",
+            errors: {},  // populated in created()
+            selComponent: '',
+            componentProps: {}, // component names (e.g. 'trellis') -> Object
+            postfuncDefaultConfig: {},  // default config used in `post` function
+            flatfileUploadUrl: '', // used when we upload a flatfile
+        }
+    },
     created: function(){
-        // Use regular expression to convert Gsim names to readable names:
-        // (Note: Safari does not support lookbehind/ ahead, keep it simple!):
-        var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g;
+        // Create a "template" Array of gsims and imts, to be copied as field choices
+        var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
         // converts the gsims received from server from an Array of Arrays to an
         // Array of Objects:
         var imts = [];
@@ -27,16 +29,13 @@ var EGSIM_BASE = {
             return {
                 value: gsimName,
                 disabled: false,
-                // innerHTML (the display name) is gsimName with spaces: split
-                // according to Camel Case words, or numbers, the rest (.*)
-                // keep it together:
                 innerHTML: gsimName.match(reg).join(" "),
                 imts: imts_,
                 warning: warning || "",
             }
         });
+        // Setup fields data:
         var regionalization = this.regionalization;
-        // set processed data:
         for (var [name, form] of this.forms()){
             if (form.gsim){
                 // set form.gsim.choices as a deep copy of gsimObjects:
@@ -55,13 +54,20 @@ var EGSIM_BASE = {
             }
             // set flatfile Field the url for uploading a flatfile:
             if (form.flatfile){
-                form.flatfile['url'] = this.flatfileUploadUrl;
+                form.flatfile['data-url'] = this.flatfileUploadUrl;
             }
+        }
+        // setup the errors dict:
+        for(var key of Object.keys(this.componentProps)){
+            this.errors[key] = this.initialErrorMsg || "";
         }
     },
     computed: {
         selComponentProps(){  // https://stackoverflow.com/a/43658979
             return this.componentProps[this.selComponent];
+        },
+        errorMsg(){
+            return this.errors[this.selComponent];
         }
     },
     methods: {
@@ -111,13 +117,17 @@ var EGSIM_BASE = {
         /* other functions: */
         clearErrors(){
             this.setError('');
-            // clear all errors in forms:
-            // set processed data:
+            // clear all param-specific errors in the current form, if found:
             for (var [name, form] of this.forms()){
-                Object.keys(form).forEach(fieldname => {
-                    form[fieldname].err = '';
-                });
+                if (name === this.selComponent){
+                    Object.keys(form).forEach(fieldname => {
+                        form[fieldname].error = '';
+                    });
+                }
             }
+        },
+        setError(error){
+            this.errors[this.selComponent] = error;
         },
         forms(){
             var ret = [];
@@ -148,9 +158,6 @@ var EGSIM_BASE = {
                 var elm = obj[key];
                 return (typeof elm === 'object') && ('value' in elm) && ('error' in elm);
             });
-        },
-        setError(error){
-            this.errormsg = error;
         },
         setLoading(value){
             this.loading = value;

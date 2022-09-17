@@ -166,7 +166,7 @@ EGSIM.component('egsim-form', {
             }
             if (watch){
                 for (var key of Object.keys(this.form)){
-                    this.watchers.push(this.$watch(`form.${key}.val`, (newVal, oldVal) => {
+                    this.watchers.push(this.$watch(`form.${key}.value`, (newVal, oldVal) => {
                         this.requestURL ='';
                         this.watchForValueChanges(false);
                     }));
@@ -237,7 +237,7 @@ EGSIM.component('egsim-form', {
                 }
                 self.resetDefaults.call(self);
                 for (var key of Object.keys(obj)){
-                    form[key].val = obj[key];
+                    form[key].value = obj[key];
                 }
             };
             reader.readAsText(file);
