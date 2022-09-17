@@ -115,11 +115,35 @@ EGSIM.component('gsim-select', {
     },
     methods: {
         createLeafletMap(){
-            var map = L.map(this.mapId, {center: [48, 7], zoom: 4});
-            if(window.LMapCollector){
-                // store map in a global object (egsim.html) to auto-refresh maps later:
-                window.LMapCollector[this.mapId] = map;
+            let map = L.map(this.mapId, {center: [48, 7], zoom: 4});
+            // center map:
+            var mapCenter = L.latLng([49, 13]);
+            map.fitBounds(L.latLngBounds([mapCenter, mapCenter]), {maxZoom: 3});
+            // setup IntersectionObserver to auto-call invalidateSize on map resize/reshown:
+            if (!window.IntersectionObserver){
+                // old browser, add a button to call invalidateSize manually
+                var Control = L.Control.extend({
+                    onAdd: function(map) {
+                        var btn = L.DomUtil.create('button', 'btn btn-secondary btn-sm');
+                        btn.setAttribute('type', 'button');  // prevent form submit
+                        btn.onclick = (evt) => { evt.stopPropagation(); map.invalidateSize(); };
+                        btn.innerHTML = '<i class="fa fa-refresh"></i> Redraw map'
+                        return btn;
+                    }
+                });
+                new Control({ position: 'bottomright' }).addTo(map);
+            }else{
+                let mapElm = document.getElementById(this.mapId);
+                let options = { root: document, threshold: 1.0 };
+                let callback = (entries, observer) => {
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 100);
+                };
+                let observer = new IntersectionObserver(callback, options);
+                observer.observe(mapElm);
             }
+
             // provide two base layers. Keep it simple as many base layers are just to shof off
             // and they do not need to be the main map concern
             // 1 MapBox Outdorrs (if you want more, sign in to mapbox. FIXME: why is it working with the token then?)
