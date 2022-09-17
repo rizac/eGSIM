@@ -20,7 +20,7 @@
 {% block body %}
 	<div class="d-flex flex-column height100 bg-light" id='egsim-vue'>
 
-		<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
+		<nav class="d-flex flex-row navbar-dark bg-dark align-items-stretch position-relative" id='egsim-nav'>
 				{% for component in components %}
 					<a class='menu-item' :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
 							@click="setComponent('{{ component.0 }}')" title="{{ component.1 }}">
@@ -28,7 +28,13 @@
 					</a>
 				{% endfor %}
 
-				<div style='flex: 1 1 auto'></div>
+				<div class='d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
+					 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible' : 'hidden'}">
+					<input type="text" class="border-0" :value="errorMsg"
+						   style="flex: 1 1 auto; background-color: rgba(0,0,0,0); color: white;outline: none;" readonly />
+					<!--<i class="fa fa-copy ms-1" @click=''></i>-->
+					<i class="fa fa-times ms-2" @click='clearErrors()' style="cursor: pointer"></i>
+				</div>
 
 				<a class="menu-item " href="#" title="options"
 				   onclick="this.nextElementSibling.style.transform ? this.nextElementSibling.style.removeProperty('transform') : this.nextElementSibling.style.transform='scaleY(0)'">
@@ -56,14 +62,6 @@
 
 			<div id='waitdiv' v-show='loading' class="position-absolute start-0 end-0" style='z-index:99'>
 				<div class="loader"></div>
-			</div>
-
-			<div :style="{display: errormsg ? 'flex' : 'none'}"
-				class='flex-row bg-danger text-sm-center text-white text-truncate position-absolute start-0 end-0 align-items-baseline'
-				style='z-index:100'>
-				<div class='ml-1' v-html='errormsg' id='globalerrormessage-div'
-					 style="flex: 1 1 auto"></div>
-				<i class="fa fa-times mr-1" @click='clearErrors()'></i>
 			</div>
 
 			<div class='d-flex m-0' style="flex: 1 1 auto">
@@ -172,7 +170,7 @@ var EGSIM = Vue.createApp({
 			flatfileUploadUrl: "{{flatfile_upload_url}}",
 			regionalization: {{ regionalization|safe }},
 			// incompatibleBrowserMessage is defined in browserdetection.js:
-			errormsg: _UNSUPPORTED_BROWSER_MSG,
+			initialErrorMsg: _UNSUPPORTED_BROWSER_MSG,
 			componentProps: {{ component_props | safe }}
 		};
 	}
