@@ -80,12 +80,6 @@ EGSIM.component('flatfile-compilation', {
         },
         csvSep(newVal, oldVal){
             this.updateFlatfile();
-        },
-        columnsCustomizerVisible(newVal, oldVal){
-            // Fix map not rendering ok in case of size/visibility change:
-            if (newVal && window.LMapCollector){
-                window.LMapCollector.invalidateSize();
-            }
         }
     },
     template: `<form novalidate class='d-flex flex-column' style='flex: 1 1 auto'>

@@ -130,25 +130,6 @@ var _UNSUPPORTED_BROWSER_MSG = function(){
 }();
 </script>
 
-<script>
-	// We need to call invalidateSize() on Leaflet maps when made visible. Problem
-	// is to get the nested maps from top level components. Let's store them here
-	// in a global var:
-	LMapCollector = {
-		invalidateSize(timeout=200) {
-			var self = this;
-			setTimeout(() => {
-				for (let mapId of Object.keys(self)){
-					var mapDiv = document.getElementById(mapId);
-					// Skip if mapDiv not found, or not visible (offsetParent = null):
-					if (!mapDiv || !mapDiv.offsetParent){continue;}
-					let map = self[mapId];
-					map.invalidateSize();
-				}
-			}, timeout);
-		}
-	}
-</script>
 <!-- VUE.JS: -->
 
 <script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>

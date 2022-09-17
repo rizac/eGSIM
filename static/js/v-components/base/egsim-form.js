@@ -267,15 +267,9 @@ EGSIM.component('egsim-form', {
     watch: {
         visibilityToggle(newVal, oldVal){
             this.show = !this.show;
-            // Fix map not rendering ok in case of size/visibility change:
-            if (this.show && window.LMapCollector){
-                window.LMapCollector.invalidateSize();
-            }
         }
     },
-    template: `
-    <transition :name="mounted ? 'egsimform' : ''">
-    <form novalidate @submit.prevent="submitMe"
+    template: `<form novalidate @submit.prevent="submitMe"
           class="flex-column position-relative pb-4 align-self-center"
           :class="[showAsDialog ? ['shadow', 'border', 'bg-light', 'mb-2'] : '']"
           style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important"
@@ -347,8 +341,7 @@ EGSIM.component('egsim-form', {
                 </div>
             </div>
         </div>
-    </form>
-    </transition>`
+    </form>`
 });
 
 

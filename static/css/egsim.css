@@ -47,17 +47,6 @@ table.testing-table th{
 	cursor:pointer
 }
 
-/* transitions. See: https://vuejs.org/v2/guide/transitions.html */
-
-.egsimform-enter-active, .egsimform-leave-active {
-	transition: all .4s;  /* with all, everything put in the class below will be animated (transitioned) */
-	transform-origin: top;
-}
-.egsimform-enter, .egsimform-leave-to /* .fade-leave-active below version 2.1.8 */ {
-	transform: scaleY(0);  /* in case you wonder, width, max-width (and height) do not work (conflict with flex layout?) */
-}
-
-
 .fade-enter-active, .fade-leave-active {
 	transition: opacity .4s ease-out;
 }
