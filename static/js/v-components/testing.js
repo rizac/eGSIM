@@ -99,6 +99,11 @@ EGSIM.component('testing-table', {
         }
     },
     created(){
+        this.tableParentStyle = { 'border-width': '2px', 'border-style': 'solid', 'border-radius': '4px',
+             padding: '3px', color: 'initial !important', 'background-color': 'initial !important',
+             flex: '1 1 auto', 'overflow-y': 'auto'};
+        this.tableTHStyle = { border: 'none !important', padding:'.5rem', 'line-height': '1rem', cursor: 'pointer' };
+        // attrs above should be non reactive (==immutable) and consume less memory
         this.createFilterValues([]);
     },
     watch: {
@@ -201,13 +206,15 @@ EGSIM.component('testing-table', {
     // for sort keys and other features, see: https://vuejs.org/v2/examples/grid-component.html
     template: `<div v-show="visible" class="d-flex flex-row">
         <div class='d-flex flex-column' style="flex: 1 1 auto">
-            <div class='testing-table border-primary' style='flex: 1 1 auto;overflow-y: auto;'>
-                <table class='table testing-table' style="flex: 1 1 auto">
+            <div class='border-primary' :style='tableParentStyle'>
+                <table class='table' style="flex: 1 1 auto">
                     <thead>
                         <tr>
                             <th v-for="colname in colnames" @click="sortBy(colname)"
                                 class='btn-primary align-text-top'
-                                :class="{'text-end': colname === COL_VAL}">
+                                :class="{'text-end': colname === COL_VAL}"
+                                :style='tableTHStyle'
+                                >
                                 {{ colname }}
                                 <br>
                                 <i v-if='isSortKey(colname) && columns[colname].sortOrder > 0' class="fa fa-chevron-down"></i>
@@ -255,7 +262,7 @@ EGSIM.component('testing-table', {
                             <i class="fa fa-eraser"></i> Clear filter (show all)
                         </button>
                     </div>
-                    <label v-for='value in filterValues[filterName]'
+                    <label v-for='value in filterValues[filterName]' class="mt-1"
                            :class="{'checked': filterSelectedValues[filterName].includes(value)}">
                         <input type='checkbox' :value="value" v-model='filterSelectedValues[filterName]'> {{ value }}
                     </label>

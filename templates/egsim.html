@@ -5,14 +5,40 @@
 {% with vue=True plotly=True leaflet=True axios=True fontawesome=True %}
 {{ block.super }}
 {% endwith %}
-<!-- includes css for form-related stuff (e.g. waitbar)  -->
-<link rel="stylesheet" type="text/css" href="{% static 'css/egsim.css' %}">
 <!-- for tooltips https://kazzkiq.github.io/balloon.css/ -->
-{% if debug %}
-<link rel='stylesheet' type='text/css' href='/static/fallbacks/balloon.1.0.3.css'/>
-{% else %}
 <link rel="stylesheet" type='text/css' href="https://unpkg.com/balloon-css/balloon.min.css">
-{% endif %}
+<!-- custom css -->
+<style>
+/* Waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
+#waitdiv{ z-index: 200; }
+.loader, .loader:before { height: 10px; }
+.loader {
+	width: 100%;
+	position: relative;
+	overflow: hidden;
+	background-color: #999;
+}
+.loader:before{
+	display: block;
+	position: absolute;
+	content: "";
+	left: -200px;
+	width: 200px;
+	background-color: #ffc107; /*#a2cd7e;*/
+	animation: loading 2s linear infinite;
+}
+@keyframes loading {
+	from {left: -200px; width: 30%;}
+	50% {width: 30%;}
+	70% {width: 70%;}
+	80% { left: 50%;}
+	95% {left: 120%;}
+	to {left: 100%;}
+}
+/* Transitions when activating a main component: https://vuejs.org/guide/built-ins/transition.html */
+.fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
+.fade-enter, .fade-leave-to { opacity: 0; }
+</style>
 
 {% endblock %}
 
