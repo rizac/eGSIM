@@ -126,7 +126,8 @@ EGSIM.component('gsim-select', {
                     onAdd: function(map) {
                         var btn = L.DomUtil.create('button', 'btn btn-secondary btn-sm');
                         btn.setAttribute('type', 'button');  // prevent form submit
-                        btn.onclick = (evt) => { evt.stopPropagation(); map.invalidateSize(); };
+                        var onclick = (evt) => { evt.stopPropagation(); map.invalidateSize(); };
+                        btn.addEventListener('click', onclick);
                         btn.innerHTML = '<i class="fa fa-refresh"></i> Redraw map'
                         return btn;
                     }
