@@ -56,8 +56,9 @@
 
 				<div class='d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
 					 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible' : 'hidden'}">
+					<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
 					<input type="text" class="border-0" :value="errorMsg"
-						   style="flex: 1 1 auto; background-color: rgba(0,0,0,0); color: white;outline: none;" readonly />
+						   style="flex: 1 1 auto; background-color: rgba(0,0,0,0); color: white;outline: none;font-family: sans-serif;" readonly />
 					<!--<i class="fa fa-copy ms-1" @click=''></i>-->
 					<i class="fa fa-times ms-2" @click='clearErrors()' style="cursor: pointer"></i>
 				</div>
@@ -112,10 +113,8 @@
 {{ block.super }}
 
 <script type="text/javascript">
-/**
- * Before initializing all Vue stuff, check browser compatibility and, if needed,
- * create global var message that will be passed to the Vue instance
- */
+/* First of all create functions to check browser compatibility and display warning if needed */
+
 function getBrowser() {
 	// Return the Array [browser, version] e.g. (examples tested locally):
 	// ["Firefox", 97], ["Chrome": 97], ["Safari", 15]. The version might be NaN.
@@ -141,7 +140,7 @@ function getBrowser() {
 	}
 	return [M[0], parseInt(M[1])];
 };
-var _UNSUPPORTED_BROWSER_MSG = function(){
+function unsupportedBrowserMessage(){
 	try {
 		var [name, version] = getBrowser();
 		var minVersion = {{ allowed_browsers | safe }}[name.toLowerCase()];
@@ -153,7 +152,7 @@ var _UNSUPPORTED_BROWSER_MSG = function(){
 		console.log("Warning: unable to check browser compatibility");
 	}
 	return "";
-}();
+};
 </script>
 
 <!-- VUE.JS: -->
@@ -168,16 +167,12 @@ var EGSIM = Vue.createApp({
 	mixins: [EGSIM_BASE],  /* defined in egsim_base.js */
 	data: function(){
 		return {
-			gsims: {{ gsims|safe }},
-			// default config for the POST function:
-			// (csrf token stored in an <input> in the base.html. Get it here and use it for each post request):
+			gsims: Vue.markRaw({{ gsims|safe }}),
 			postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value}}),
 			selComponent: "{{sel_component}}",
-			// flatfiles: {{flatfiles|safe}},
 			flatfileUploadUrl: "{{flatfile_upload_url}}",
-			regionalization: {{ regionalization|safe }},
-			// incompatibleBrowserMessage is defined in browserdetection.js:
-			initialErrorMsg: _UNSUPPORTED_BROWSER_MSG,
+			regionalization: Vue.markRaw({{ regionalization|safe }}),
+			initialErrorMsg: unsupportedBrowserMessage(),
 			componentProps: {{ component_props | safe }}
 		};
 	}
@@ -209,6 +204,7 @@ EGSIM.component('home', {
 
 const EGSIM_APP = EGSIM;
 EGSIM = EGSIM_APP.mount('#egsim-vue');
+EGSIM.datadata = {'a': 5, 1: 5};
 
 </script>
 

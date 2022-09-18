@@ -90,12 +90,10 @@ def get_context(selected_menu=None, debug=True) -> dict:
 
     # setup browser detection:
     allowed_browsers = {'Chrome': 49, 'Firefox': 45, 'Safari': 10}
-    allowed_browsers_msg = ', '.join(f'{brw} &ge; {ver}'
-                                     for brw, ver in allowed_browsers.items())
-    invalid_browser_message = ('Some functionalities might not work '
-                               'correctly. In case, please use any of the '
-                               'following tested browsers: %s' %
-                               allowed_browsers_msg)
+    allowed_browsers_msg = ', '.join(f'{b}≥{v}' for b, v in allowed_browsers.items())
+    invalid_browser_message = (f'Your browser or version number '
+                               f'does not seem to match {allowed_browsers_msg}. '
+                               f'This portal might not work as expected')
 
     # Get gsims and all related data (imts and warnings). Try to perform everything
     # in a single more efficient query. Use prefetch_related for this:
