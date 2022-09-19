@@ -159,16 +159,13 @@ function unsupportedBrowserMessage(){
 
 <script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 <script>
-/**
- * Init the EGSIM Vue Instance with content injected from the server and the
- * the browser version check just implemented
-*/
+/* Init the EGSIM Vue Instance with content injected from the server */
 var EGSIM = Vue.createApp({
 	mixins: [EGSIM_BASE],  /* defined in egsim_base.js */
 	data: function(){
 		return {
 			gsims: Vue.markRaw({{ gsims|safe }}),
-			postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value}}),
+			postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": "{{ csrf_token }}"}}),
 			selComponent: "{{sel_component}}",
 			flatfileUploadUrl: "{{flatfile_upload_url}}",
 			regionalization: Vue.markRaw({{ regionalization|safe }}),
@@ -177,8 +174,7 @@ var EGSIM = Vue.createApp({
 		};
 	}
 });
-// provide the Array of flatfiles as global variable `$flatfiles`, and make it
-// reactive as it must be updated with whatever file is uploaded by the user
+/* setup the global Array of flatfiles, accessible anywhere as `this.$flatfiles` */
 EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
 </script>
 

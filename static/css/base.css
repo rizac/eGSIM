@@ -18,7 +18,7 @@ a, a:hover, a:visited, a:link, a:active{ text-decoration: none !important; }
 /* make focus border inset, otherwise it is outside the element and sometimes
    "cropped", and the effect it's not nice*/
 .form-control:focus, .btn.focus, .btn:focus {
-    box-shadow: inset 0px 0px 5px 1px rgba(128,198,237,.95) !important;
+	box-shadow: inset 0px 0px 5px 1px rgba(128,198,237,.95) !important;
 }
 
 /* form-control on divs makes them nice, but messes up height. Reset it: */
@@ -26,11 +26,11 @@ div.form-control { height: initial; }
 
 /* harmonize borders color */
 .border, *.form-control:not([style*="border-color"]), .leaflet-control-layers {
-    border-color: rgba(0,0,0,.33) !important;
+	border-color: rgba(0,0,0,.33) !important;
 }
 /* harmonize borders width */
 .border, *.form-control:not([style*="border-width"]), .leaflet-control-layers {
-    border-width: 1px !important;
+	border-width: 1px !important;
 }
 
 /* Make primary color nicer with a darker blue */
@@ -38,8 +38,8 @@ div.form-control { height: initial; }
 .border-primary, .btn-primary { border-color: rgba(7, 104, 159, 1) !important; }
 .text-primary{ color: rgba(7, 104, 159, 1) !important; }
 .btn-primary:hover,.btn-primary:not(:disabled):not(.disabled):active{
-    border-color: rgba(5, 73, 113, 1) !important;
-    background-color: rgba(5, 73, 113, 1) !important;
+	border-color: rgba(5, 73, 113, 1) !important;
+	background-color: rgba(5, 73, 113, 1) !important;
 }
 input[type=checkbox], input[type=radio]{ accent-color: rgba(7, 104, 159, 1); }
 
@@ -57,7 +57,7 @@ nav .menu-item, nav .menu-item *{ cursor: pointer; }
 nav .menu-item.active{ color: #FFF !important; }
 
 @media (max-width: 1200px){  /* narrow  screen (< 1200px) */
-    nav .menu-item span { display: none !important; } /* hide menu texts */
+	nav .menu-item span { display: none !important; } /* hide menu texts */
 }
 
 
@@ -65,22 +65,21 @@ nav .menu-item.active{ color: #FFF !important; }
 
 /* fix background and foregrounds in Chrome webkit autocomplete */
 input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active  {
-    -webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
+	-webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
 }
 
 /* style <select> when single selection and no size (combo box). Works on Mac in Safari, Chrome, Firefox */
 select:not([multiple]):not([size]).form-control{
-    /* prevent browser to style <select>:*/
-    -moz-appearance: none;
-    -webkit-appearance: none;
-    appearance: none;
-    /* config <select> arrow. Provide inline coded image (svg) */
-    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
-    background-repeat: no-repeat;
-    background-position: right .3em top 50%;
-    background-size: .65em auto;
-    padding-right: 1.2rem;
-    padding-left: 0.3rem;
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	appearance: none;
+	/* config <select> arrow. Provide inline coded image (svg) */
+	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
+	background-repeat: no-repeat;
+	background-position: right .3em top 50%;
+	background-size: .65em auto;
+	padding-right: 1.2rem;
+	padding-left: 0.3rem;
 }
 
 /* style disabled */
@@ -96,6 +95,6 @@ div.modebar.modebar--hover{ display: none; }
 
 /* Leaflet */
 .leaflet-popup-content {
-    width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
-    margin: 1.5rem !important; /*increase margins (nicer and more consistent with the page elements) */
+	width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
+	margin: 1.5rem !important; /*increase margins (nicer and more consistent with the page elements) */
 }
