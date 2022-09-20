@@ -6,8 +6,8 @@ import yaml
 
 from io import StringIO
 
-from . import get_docstring
-from .. import EgsimBaseForm
+from ..api.forms import EgsimBaseForm
+from ..api.forms.fields import get_field_docstring
 
 
 def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> StringIO:
@@ -32,7 +32,7 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
     for f_name, a_name in field_names.items():
         # Omit unchanged optional parameters. This is not only to make
         # the dumped string more readable and light size, but to avoid
-        # parameters which defaults to None (e.g. z1pt0 in
+        # parameters which default to None (e.g. z1pt0 in
         # TrellisForm): if they were written here (e.g. `z1pt0: None`) then
         # a routine converting the returned JSON/YAML to a query string
         # would write "...z1pt0=null...", which might be interpreted as
@@ -42,7 +42,7 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
         if is_optional and data[f_name] == field.initial:
             data.pop(f_name)
         if syntax == 'yaml':
-            docstrings[f_name] = get_docstring(field.label, field.help_text, True)
+            docstrings[f_name] = get_field_docstring(field, True)
 
     if syntax == 'json':
         stream = _dump_json(data)

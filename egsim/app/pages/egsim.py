@@ -1,81 +1,18 @@
-from enum import Enum
+"""Module for rendering the main page of the site (single page application)"""
+
 from typing import Any, Type, Callable, Union
 import json
 
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch
+from django.forms import (Field, IntegerField, ModelChoiceField)
+from django.forms.widgets import ChoiceWidget, Input
 
-from ..api import models
-from ..api.forms import EgsimBaseForm, APIForm
-from ..api.forms.flatfile import FlatfileForm
-from ..api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
-from ..api.forms.flatfile.inspection import FlatfilePlotForm
-from ..api.forms.tools import field_to_dict, field_to_htmlelement_attrs
-from ..api.views import (ResidualsView, TestingView, TrellisView, RESTAPIView)
-
-
-class URLS:  # noqa
-    """Define URLs to be used in :module:`urls.py` and in GUI views (injected in
-    web pages via dicts or templates). NO URL MUST END WITH THE SLASH CHARACTER "/"
-    """
-
-    # Url for getting the gsim list from a given geographic location:
-    GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
-    # inspecting a flatfile:
-    FLATFILE_INSPECTION = 'data/flatfile_inspection'
-    FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
-    FLATFILE_PLOT = 'data/flatfile_plot'
-    DOWNLOAD_REQUEST = 'data/downloadrequest'
-    DOWNLOAD_RESPONSE = 'data/downloadresponse'
-    # info pages:
-    HOME_NO_MENU = 'home_no_menu'
-    API = 'api'
-    DATA_PROTECTION = 'https://www.gfz-potsdam.de/en/data-protection/'
-    IMPRINT = "imprint"
-    REF_AND_LICENSE = "ref_and_license"
-
-
-class TAB(Enum):
-    """Define web page tabs properties as Enum. A TAB T has  attributes:
-    `T.title:str, T.icon:str, and optionally `T.viewclass`
-
-    **Each Enum NAME is assumed to be constant**: if you change them, be prepared to
-     fix a lot of stuff (also frontend side)
-
-    as they are used as ID (also in JavaScript).
-    Note: given a name as string variable, you can get the
-    TAB element via square brackets notation, e.g. TAB["trellis"]
-    """
-    # icons (2nd element) are fontawesome bootsrap icons FIXME REF
-    home = '', 'fa-home'
-    trellis = 'Model-to-Model Comparison', 'fa-area-chart', TrellisView
-    flatfile = 'Flatfiles', 'fa-database'
-    residuals = 'Model-to-Data Comparison', 'fa-bar-chart', ResidualsView
-    testing = 'Model-to-Data Testing', 'fa-list', TestingView
-
-    def __init__(self, *args):
-        # args is the unpacked tuple passed above (2-elements), set attributes:
-        self.title: str = args[0]
-        self.icon: str = args[1]
-        self.viewclass: Type[RESTAPIView] = args[2] if len(args) > 2 else None
-
-    @property
-    def urls(self) -> list[str]:
-        return self.viewclass.urls if self.viewclass else []
-
-    @property
-    def formclass(self) -> Type[APIForm]:
-        return self.viewclass.formclass if self.viewclass else None
-
-    @property
-    def download_request_filename(self) -> str:
-        return f"egsim-{self.name}-config"
-
-    @property
-    def download_response_filename(self) -> str:
-        return f"egsim-{self.name}-result"
-
-    def __str__(self):
-        return self.name
+from .. import TAB, URLS
+from ...api import models
+from ...api.forms import EgsimBaseForm
+from ...api.forms.flatfile import FlatfileForm
+from ...api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
+from ...api.forms.flatfile.inspection import FlatfilePlotForm
 
 
 def get_context(selected_menu=None, debug=True) -> dict:
@@ -269,3 +206,87 @@ def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
         form_data[field_attname] = field_dict
 
     return form_data
+
+
+def field_to_dict(field: Field, ignore_choices: bool = False) -> dict:
+    """Convert a Field to a JSON serializable dict with keys:
+    {
+        'initial': field.initial,
+        'help': (field.help_text or "").strip(),
+        'label': (field.label or "").strip(),
+        'is_hidden': False,
+        'choices': field.choices
+    }
+
+    :param field: a Django Field
+    :param ignore_choices: boolean. If True, 'chocies' will be not evaluated
+        and set to `[]`. Useful with long lists for saving time and space
+    """
+
+    choices = []
+
+    if not ignore_choices:
+        choices = list(get_choices(field))
+
+    return {
+        'value': field.initial,
+        'help': (field.help_text or "").strip(),
+        'label': (field.label or "").strip(),
+        # 'is_hidden': False,
+        'choices': choices
+    }
+
+
+def get_choices(field: Field):
+    """Yields tuples (value, label) corresponding to the field choices"""
+    if isinstance(field, ModelChoiceField):
+        # choices are ModeChoiceIteratorValue instances and are not
+        # JSON serializable. Let's take their `value` attribute:
+        for (val, label) in field.choices:
+            yield val.value, label
+    else:
+        yield from getattr(field, 'choices', [])
+
+
+def field_to_htmlelement_attrs(field: Field) -> dict:
+    """Convert a Field to a JSON serializable dict with keys denoting the
+    attributes of the associated HTML Element, e.g.:
+    {'type', 'required', 'disabled', 'min' 'max', 'multiple'}
+    and values inferred from the Field
+
+    :param field: a Django Field
+    """
+    # Note: we could return the dict `field.widget.get_context` but we build our
+    # own for several reasons, e.g.:
+    # 1. Avoid loading all <option>s for Gsim and Imt (we could subclass
+    #    `optgroups` in `widgets.SelectMultiple` and return [], but it's clumsy)
+    # 2. Remove some attributes (e.g. checkbox with the 'checked' attribute are
+    #    not compatible with VueJS v-model or v-checked)
+    # 3. Some Select with single choice set their initial value as list  (e.g.
+    #    ['value'] instead of 'value') and I guess VueJs prefers strings.
+
+    # All in all, instead of complex patching we provide our code here:
+    widget = field.widget
+    attrs = {
+        # 'hidden': widget.is_hidden,
+        'required': field.required,
+        'disabled': False
+    }
+    if isinstance(field, IntegerField):  # note: FloatField inherits from IntegerField
+        if field.min_value is not None:
+            attrs['min'] = field.min_value
+        if field.max_value is not None:
+            attrs['max'] = field.max_value
+        # The step attribute seems to be needed by some browsers:
+        if field.__class__.__name__ == IntegerField.__name__:
+            attrs['step'] = '1'  # IntegerField
+        else:  # FloatField or DecimalField.
+            attrs['step'] = 'any'
+
+    if isinstance(widget, ChoiceWidget):
+        if widget.allow_multiple_selected:
+            attrs['multiple'] = True
+    elif isinstance(widget, Input):
+        attrs['type'] = widget.input_type
+
+    return attrs

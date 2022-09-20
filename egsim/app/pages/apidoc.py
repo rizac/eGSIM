@@ -7,9 +7,50 @@ from django.forms import (MultipleChoiceField, Field, CharField,
                           ChoiceField, BooleanField, FloatField, IntegerField,
                           ModelChoiceField, ModelMultipleChoiceField)
 
-from .. import EgsimBaseForm
-from ..fields import MultipleChoiceWildcardField, NArrayField
-from . import field_to_dict, get_choices, get_docstring
+from .egsim import field_to_dict, get_choices
+from .. import TAB
+from ...api.models import FlatfileColumn
+from ...api.views import QUERY_PARAMS_SAFE_CHARS
+from ...api.forms import EgsimBaseForm
+from ...api.forms.fields import (MultipleChoiceWildcardField, NArrayField,
+                                 get_field_docstring)
+
+
+def get_context(debug: bool) -> dict:
+    """The context to be injected in the template of the api doc HTML page"""
+    # baseurl is the base URL for the services explained in the tutorial
+    # It is the request.META['HTTP_HOST'] key. But during testing, this
+    # key is not present. Actually, just use a string for the moment:
+    baseurl = "<eGSIMsite>"
+    # Note that the keus of the egsim_data dict below should NOT
+    # be changed: if you do, you should also change the templates
+    egsim_data = {
+        'trellis': {
+            'title': TAB.trellis.title,
+            'path': " or ".join(TAB.trellis.urls),
+            'form': as_dict(TAB.trellis.formclass),
+            'key': TAB.trellis.name
+        },
+        'residuals': {
+            'title': TAB.residuals.title,
+            'path': " or ".join(TAB.residuals.urls),
+            'form': as_dict(TAB.residuals.formclass),
+            'key': TAB.residuals.name
+        },
+        'testing': {
+            'title': TAB.testing.title,
+            'path': " or ".join(TAB.testing.urls),
+            'form': as_dict(TAB.testing.formclass),
+            'key': TAB.testing.name
+        }
+    }
+    return {
+        'debug': debug,
+        'query_params_safe_chars': QUERY_PARAMS_SAFE_CHARS,
+        'egsim_data': egsim_data,
+        'baseurl': baseurl,
+        'gmt':_get_flatfile_column_desc()
+    }
 
 
 def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
@@ -31,8 +72,7 @@ def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
         # remove unused keys for the help page:
         field_dict['name'] = f_name
         field_dict['opt_names'] = opt_names
-        label, help_text = field_dict.pop('label', None), field_dict.pop('help', None)
-        desc = get_docstring(label, help_text)
+        desc = get_field_docstring(field)
         type_desc = get_field_dtype_description(field)
         field_dict['description'] = f'{desc}{". " if desc else ""}{type_desc}'
         field_dict['is_optional'] = not field.required or field.initial is not None
@@ -123,14 +163,22 @@ def get_field_dtype(field: Field) -> Type:
         raise ValueError(f'No data type specified for Field {field}')
 
 
-# def is_optional(cls, field):
-#     """Return True if the given Field is optional, i.e. if it is not
-#     required or its initial value is given (i.e., not None. A field initial
-#     value acts as default value when missing)
-#
-#     :param field: a Field object or a string denoting the name of one of
-#         this Form's fields
-#     """
-#     if isinstance(field, str):
-#         field = cls.declared_fields[field]
-#     return not field.required or field.initial is not None
+def _get_flatfile_column_desc(as_html=True):
+    ret = {}
+    for ff_field in FlatfileColumn.objects.all():
+        name = ff_field.name
+        props = ff_field.properties
+        dtype = props['dtype']
+        if isinstance(dtype, (list, tuple)):
+            type2str = 'categorical. Possible values:\n' + \
+                       "\n".join(str(_) for _ in dtype)
+        else:
+            type2str = str(dtype)
+        default = str(props.get('default', ''))
+        if as_html:
+            type2str = "<span style='white-space: nowrap'>%s</span>" % \
+                type2str.replace('\n', '<br>')
+        ret[name] = (type2str, default)
+    return ret
+
+

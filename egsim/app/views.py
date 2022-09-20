@@ -5,7 +5,6 @@ Created on 17 Jan 2018
 """
 import os
 from io import StringIO
-from os.path import join, dirname, abspath
 import json
 import yaml
 
@@ -15,110 +14,52 @@ from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import figutils, TAB, URLS
-from . import get_context
+from . import form_serialization
+from .pages import (ref_and_license_page_renderer_context,
+                    imprint_page_renderer_context, egsim_page_renderer_context,
+                    apidoc_page_renderer_context, home_page_renderer_context)
 from ..api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
 from ..api.forms.regionalization import GsimFromRegionForm
-from ..api.forms.tools import describe, serialize
-from ..api.models import FlatfileColumn
-from ..api.views import error_response, QUERY_PARAMS_SAFE_CHARS, RESTAPIView
+from ..api.views import error_response, RESTAPIView
 
 
 def main(request, selected_menu=None):
     """view for the main page"""
-    context = get_context(selected_menu, settings.DEBUG)
-    return render(request, 'egsim.html', context)
+    template = 'egsim.html'
+    context = egsim_page_renderer_context(selected_menu, settings.DEBUG)
+    return render(request, template, context=context)
 
 
 @xframe_options_sameorigin
 def home(request):
     """view for the home page (iframe in browser)"""
-    return render(request, 'info_pages/home.html',
-                  context={'ref_and_license_url': URLS.REF_AND_LICENSE})
+    template = 'info_pages/home.html'
+    context = home_page_renderer_context()
+    return render(request, template, context=context)
 
 
 @xframe_options_sameorigin
 def apidoc(request):
     """view for the home page (iframe in browser)"""
-    filename = 'apidoc.html'
-    # baseurl is the base URL for the services explained in the tutorial
-    # It is the request.META['HTTP_HOST'] key. But during testing, this
-    # key is not present. Actually, just use a string for the moment:
-    baseurl = "<eGSIMsite>"
-    # Note that the keus of the egsim_data dict below should NOT
-    # be changed: if you do, you should also change the templates
-    egsim_data = {
-        'trellis': {
-            'title': TAB.trellis.title,
-            'path': " or ".join(TAB.trellis.urls),
-            'form': describe.as_dict(TAB.trellis.formclass),
-            'key': TAB.trellis.name
-        },
-        'residuals': {
-            'title': TAB.residuals.title,
-            'path': " or ".join(TAB.residuals.urls),
-            'form': describe.as_dict(TAB.residuals.formclass),
-            'key': TAB.residuals.name
-        },
-        'testing': {
-            'title': TAB.testing.title,
-            'path': " or ".join(TAB.testing.urls),
-            'form': describe.as_dict(TAB.testing.formclass),
-            'key': TAB.testing.name
-        }
-    }
+    template = 'apidoc.html'
+    context = apidoc_page_renderer_context(settings.DEBUG)
+    return render(request, template, context=context)
 
-    return render(request, filename,
-                  dict(debug=settings.DEBUG,
-                       query_params_safe_chars=QUERY_PARAMS_SAFE_CHARS,
-                       egsim_data=egsim_data,
-                       baseurl=baseurl,
-                       gmt=_get_flatfile_column_desc(),
-                       )
-                  )
 
 @xframe_options_sameorigin
 def ref_and_license(request):
     """view for the home page (iframe in browser)"""
-    filename = 'info_pages/ref_and_license.html'
-    egsim_data = {}
-    # add references:
-    refs = {}
-    with open(join(dirname(dirname(abspath(__file__))), 'api', 'management',
-                   'commands', 'data', 'data_sources.yaml')) as _:
-        for ref in yaml.safe_load(_).values():
-            name = ref.pop('display_name')
-            refs[name] = ref
-    egsim_data['references'] = refs
-
-    return render(request, filename, context=egsim_data)
-
-
-def _get_flatfile_column_desc(as_html=True):
-    ret = {}
-    for ff_field in FlatfileColumn.objects.all():
-        name = ff_field.name
-        props = ff_field.properties
-        dtype = props['dtype']
-        if isinstance(dtype, (list, tuple)):
-            type2str = 'categorical. Possible values:\n' + \
-                       "\n".join(str(_) for _ in dtype)
-        else:
-            type2str = str(dtype)
-        default = str(props.get('default', ''))
-        if as_html:
-            type2str = "<span style='white-space: nowrap'>%s</span>" % \
-                type2str.replace('\n', '<br>')
-        ret[name] = (type2str, default)
-    return ret
+    template = 'info_pages/ref_and_license.html'
+    context = ref_and_license_page_renderer_context()
+    return render(request, template, context=context)
 
 
 @xframe_options_sameorigin
 def imprint(request):
-    return render(request, 'info_pages/imprint.html', {
-        'data_protection_url': URLS.DATA_PROTECTION,
-        'ref_and_license_url': URLS.REF_AND_LICENSE
-    })
+    template = 'info_pages/imprint.html'
+    context = imprint_page_renderer_context()
+    return render(request, template, context=context)
 
 
 def download_request(request, key: TAB, filename: str):
@@ -137,7 +78,7 @@ def download_request(request, key: TAB, filename: str):
         return error_response(errs['message'], RESTAPIView.CLIENT_ERR_CODE,
                               errors=errs['errors'])
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
-    buffer = serialize.as_text(input_dict, form_class, syntax=ext_nodot)
+    buffer = form_serialization.as_text(input_dict, form_class, syntax=ext_nodot)
     if ext_nodot == 'json':
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,
