@@ -11,8 +11,9 @@ import numpy as np
 from openquake.hazardlib import imt
 from django.core.exceptions import ValidationError
 
-# import here all Fields used in this project to have a common namespace:
-from django.forms.fields import (ChoiceField, FloatField, BooleanField,
+# Use this module as common namespace for all Fields. As such, DO NOT REMOVE UNUSED
+# IMPORTS BELOW as they are imported throughout the project:
+from django.forms.fields import (ChoiceField, FloatField, BooleanField, Field,
                                  CharField, MultipleChoiceField, FileField)
 from django.forms.models import ModelChoiceField
 
@@ -327,3 +328,26 @@ class ImtField(MultipleChoiceWildcardField):
         """Checks that value is in the choices"""
         # if we have 'SA(...)' we must validate 'SA':
         return super().valid_value('SA' if value.startswith('SA(') else value)
+
+
+def get_field_docstring(field: Field, remove_html_tags=False):
+    """Return a docstring from the given Form field `label` and `help_text`
+    attributes. The returned string will have newlines replaced by spaces
+    """
+    field_label = getattr(field, 'label')
+    field_help_text = getattr(field, 'help_text')
+
+    label = (field_label or '') + \
+            ('' if not field_help_text else f' ({field_help_text})')
+    if label and remove_html_tags:
+        # replace html tags, e.g.: "<a href='#'>X</a>" -> "X",
+        # "V<sub>s30</sub>" -> "Vs30"
+        _html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)</\\1>')
+        # replace html characters with their content
+        # (or empty str if no content):
+        label = _html_tags_re.sub(r'\2', label)
+
+    # replace newlines for safety:
+    label = label.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+
+    return label

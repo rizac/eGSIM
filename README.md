@@ -204,9 +204,10 @@ Brief Introduction to some important concepts and key terms (click to show)
    a Django project. An application may use common Django conventions, such as 
    having models, tests, urls, and views submodules. In our case, the Django
    project is the egsim root directory (created with the command
-   `django-admin startproject egsim`), and the apps inside it are 
-   "api" (the core web API) and "gui" (a simple container of frontend stuff 
-   relying on "api").
+   `django-admin startproject egsim`), and the *Django apps* inside it are 
+   "api" (the core web API) and "app" (the *web app*, i.e. the part of eGSIM
+   delivered over the Internet through a browser interface), that relies on 
+   the "api" code.
    Inside the settings file (variable `INSTALLED_APPS`) is configured the list 
    of all applications that are enabled in the eGSIM project. This includes not 
    only our "api" app, that tells Django to create the eGISM tables when

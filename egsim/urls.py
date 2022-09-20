@@ -5,5 +5,5 @@ from django.urls import include, path
 
 urlpatterns = [
     path('', include('egsim.api.urls')),
-    path('', include('egsim.gui.urls')),
+    path('', include('egsim.app.urls')),
 ]
