@@ -15,12 +15,6 @@ from ..flatfile import EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE
 class FlatfileRequiredColumnsForm(APIForm):
     """Form for querying the necessary metadaata columns from a given list of Gsims"""
 
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself anyway if not
-    # done here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {}
-
     gsim = MultipleChoiceWildcardField(required=False, choices=get_gsim_choices,
                                        label='Ground Shaking Intensity Model(s)')
 

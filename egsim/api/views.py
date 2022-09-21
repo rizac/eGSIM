@@ -52,17 +52,17 @@ class RESTAPIView(View):
         """processes a get request"""
 
         form_cls = self.formclass
-        # get param names with multiple choices  allowed. For these parameters
-        # we'll treat commas as element separators (see below):
-        mval_params = set(n for n, a in form_cls.public_field_names.items()
-                          if isinstance(form_cls.declared_fields[a],
-                                        MultipleChoiceField))
+
+        multi_params = set()
+        for param_names, field_name, field in form_cls.params():
+            if isinstance(field, MultipleChoiceField):
+                multi_params.update(param_names)
 
         ret = {}
         # request.GET is a QueryDict object (see Django doc for details)
         # with percent-encoded characters already decoded
         for param_name, values in request.GET.lists():
-            if param_name in mval_params:  # treat commas as element separators:
+            if param_name in multi_params:  # treat commas as element separators:
                 newvalues = []
                 for val in values:
                     newvalues.extend(val.split(','))

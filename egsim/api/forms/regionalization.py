@@ -18,16 +18,15 @@ def get_regionalizations() -> Iterable[tuple[str, str]]:
 class GsimFromRegionForm(APIForm):
     """Form for Trellis plot generation"""
 
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself anyway if not
-    # done here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {
-        'lat': 'lat',
-        'latitude': 'lat',
-        'lon': 'lon',
-        'longitude': 'lon',
-        'reg': 'regionalization'
+    # Fields of this class are exposed as API parameters via their attribute name. This
+    # default behaviour can be changed here by manually mapping a Field attribute name to
+    # its API param name(s). `_field2params` allows to easily change API params whilst
+    # keeping the Field attribute names immutable, which is needed to avoid breaking the
+    # code. See `egsim.forms.EgsimFormMeta` for details
+    _field2params = {
+        'lat': ['lat', 'latitude'],
+        'lon': ['lon', 'longitude'],
+        'regionalization': ['reg']
     }
 
     lat = FloatField(label='Strike', min_value=-90., max_value=90.)

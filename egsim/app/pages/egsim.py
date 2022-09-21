@@ -195,15 +195,14 @@ def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
     field_done = {'format', 'csv_sep', 'csv_dec'}
     # iterate over the field (public) names because we also have the attribute
     # name immediately available:
-    for field_name, field_attname in form.public_field_names.items():
-        if field_attname in field_done:
+    for param_names, field_name, field in form.params():
+        if field_name in field_done:
             continue
-        field_done.add(field_attname)
-        field = form.declared_fields[field_attname]
-        field_dict = field_to_dict(field, ignore_choices=ignore_choices(field_attname))
-        field_dict |= dict(field_to_htmlelement_attrs(field), name=field_name)
+        field_done.add(field_name)
+        field_dict = field_to_dict(field, ignore_choices=ignore_choices(field_name))
+        field_dict |= dict(field_to_htmlelement_attrs(field), name=param_names[0])
         field_dict['error'] = ''
-        form_data[field_attname] = field_dict
+        form_data[field_name] = field_dict
 
     return form_data
 
