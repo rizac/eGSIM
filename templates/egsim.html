@@ -54,8 +54,8 @@
 					</a>
 				{% endfor %}
 
-				<div class='d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
-					 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible' : 'hidden'}">
+				<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
+					 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
 					<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
 					<input type="text" class="border-0" :value="errorMsg"
 						   style="flex: 1 1 auto; background-color: rgba(0,0,0,0); color: white;outline: none;font-family: sans-serif;" readonly />
