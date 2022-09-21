@@ -50,7 +50,7 @@ class ResidualsForm(GsimImtFlatfileForm, APIForm):
     # its API param name(s). `_field2params` allows to easily change API params whilst
     # keeping the Field attribute names immutable, which is needed to avoid breaking the
     # code. See `egsim.forms.EgsimFormMeta` for details
-    field2params = {'plot_type': ['plot']}
+    _field2params = {'plot_type': ['plot']}
 
     plot_type = ChoiceField(required=True, label='Plot type',
                             choices=[(k, f'{v[0]} [{k}] ')
