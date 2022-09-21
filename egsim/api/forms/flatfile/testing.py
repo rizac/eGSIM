@@ -29,12 +29,13 @@ MOF_TYPE = {
 class TestingForm(GsimImtFlatfileForm, APIForm):
     """Form for testing Gsims via Measures of Fit"""
 
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself anyway if not
-    # done here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {
-        'mof': 'fit_measure', 'measure_of_fit': 'fit_measure'
+    # Fields of this class are exposed as API parameters via their attribute name. This
+    # default behaviour can be changed here by manually mapping a Field attribute name to
+    # its API param name(s). `_field2params` allows to easily change API params whilst
+    # keeping the Field attribute names immutable, which is needed to avoid breaking the
+    # code. See `egsim.forms.EgsimFormMeta` for details
+    field2params = {
+        'fit_measure': ['mof', 'measure_of_fit']
     }
 
     fit_measure = MultipleChoiceField(required=True, label="Measure(s) of fit",

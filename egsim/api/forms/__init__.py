@@ -1,8 +1,7 @@
 """Base eGSIM forms"""
 
 import re
-from collections import defaultdict
-from typing import Union, Iterable, Any, Collection
+from typing import Union, Iterable, Any
 import json
 from itertools import chain, repeat
 from io import StringIO
@@ -12,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.utils.translation import gettext
 from django.forms import Form
-from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField)
+from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField, Field)
 from .. import models
 
 
@@ -42,46 +41,46 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 
     def __new__(mcs, name, bases, attrs):
         new_class = super().__new__(mcs, name, bases, attrs)
-        # build public_field_names (dict: field_public_name -> field_att_name).
-        # First check no typos in field_att_names:
-        declared_fields = new_class.declared_fields
-        public_field_names = getattr(new_class, 'public_field_names', {})
-        invalid_a = set(public_field_names.values()) - set(declared_fields)
-        if invalid_a:
-            raise ValueError(f'Some public field names in {str(new_class)} are '
-                             f'mapped to field attributes that do not exist: '
-                             f'{str(invalid_a)}. Check typos')
+
+        attname = '_field2params'
         # Walk through the MRO to merge all dicts
-        public_field_names = {}  # reset dict
-        for base in new_class.__mro__:
-            # (in principle newer mappings should override older)
-            if hasattr(base, 'public_field_names'):
-                public_field_names.update(base.public_field_names)
-        # Map every field attribute name to itself, if not already done:
-        for name in declared_fields:
-            if name in public_field_names:
-                if public_field_names[name] != name:
-                    raise ValueError(f'The Field attribute {name} of {str(new_class)} '
-                                     f'is mapped to {public_field_names[name]} in '
-                                     f'some superclass: rename the field or the '
-                                     f'mapping')
-                continue
-            public_field_names[name] = name
-        # assign new dict of public field names, merged and checked:
-        new_class.public_field_names = public_field_names
+        field2params = {}
+        for cls in reversed(new_class.__mro__):
+            field2params.update(getattr(cls, attname, {}))
+
+        # Check1: no param provided twice or more:
+        _done_params = set()
+        for field, params in field2params.items():
+            if set(params) & _done_params:
+                raise ValueError(f"Error in `{name}.{attname}['{field}']={params}:"
+                                 f"{', '.join(set(params) & _done_params)} already "
+                                 f"provided")
+            _done_params.update(params)
+
+        # Check2: no param equal to another field name
+        cls_fields = set(new_class.declared_fields)
+        for field, params in field2params.items():
+            for p in params:
+                if p != field and p in cls_fields:
+                    raise ValueError(f"Error in `{name}.{attname}['{field}']={params}:"
+                                     f"`{p}` denotes another Field name")
+
+        # assign new dict of public field name:
+        setattr(new_class, attname, field2params)
         return new_class
 
 
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself if not done
-    # here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {}
+    # Fields of this class are exposed as API parameters via their attribute name. This
+    # default behaviour can be changed here by manually mapping a Field attribute name to
+    # its API param name(s). `_field2params` allows to easily change API params whilst
+    # keeping the Field attribute names immutable, which is needed to avoid breaking the
+    # code. See `egsim.forms.EgsimFormMeta` for details and `self.params()`
+    _field2params: dict[str, list[str]]
 
-    def __init__(self, data=None, files=None, unknown_fields_strict=True, **kwargs):
+    def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
         """Override init: re-arrange `self.data` and set the initial value for
         missing fields
         """
@@ -90,46 +89,33 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         # call super:
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
-        # Set self._input_field_name (field attribute name -> input field name)
-        in_f_names = set(self.data)  # field names as input by the user
-        f_names = in_f_names & set(self.public_field_names)
-        self._input_field_name = {self.public_field_names[n]: n for n in f_names}
+        # Replace keys of `self.data` (input params) with the field names, when
+        # needed (see `_field2params`), and do some check:
+        self._renamed_fields = {}  # keep track of what will be replaced
+        for field_name, param_names in self._field2params.items():
+            if field_name in self.data:
+                continue
+            params = [p for p in param_names if p in self.data]
+            if not params:
+                continue
+            elif len(params) > 1:
+                raise ValidationError('Conflicting parameter names: '
+                                      f'{", ".join(params)}')
+            self._renamed_fields[field_name] = params[0]
+            self.data[field_name] = self.data.pop(params[0])
 
-        # check conflicts (parameters mapped to the same field):
-        if len(self._input_field_name) < len(f_names):  # conflicts
-            self._raise_conflicting_fieldnames(f_names)
-
-        # check unknown parameters (field names):
-        if unknown_fields_strict and (in_f_names - f_names):
-            self._raise_unknown_fieldnames(in_f_names - f_names)
-
-        # Now rename self.data keys if needed:
-        for att_name, name in self._input_field_name.items():
-            if att_name != name:
-                self.data[att_name] = self.data.pop(name)
+        # check unknown parameters provided by the user:
+        if no_unknown_params and (set(self.data) - set(self.declared_fields)):
+            err_names = set(self.data) - set(self.declared_fields)
+            raise ValidationError(f'Unknown parameter'
+                                  f'{"s" if len(err_names) != 1 else ""}: '
+                                  f'{", ".join(err_names)}')
 
         # Make fields initial value the default (for details see discussion and
         # code example at https://stackoverflow.com/a/20309754):
         for name, field in self.fields.items():
             if name not in self.data and field.initial is not None:
                 self.data[name] = field.initial
-
-    @classmethod
-    def _raise_unknown_fieldnames(cls, names: Collection[str]):
-        raise ValidationError(f'Unknown parameter'
-                              f'{"s" if len(names) != 1 else ""}'
-                              f': {", ".join(names)}')
-
-    @classmethod
-    def _raise_conflicting_fieldnames(cls, names):
-        conflicts = defaultdict(list)  # in case of conflicts (see below)
-        for fnm in names:
-            conflicts[cls.public_field_names[fnm]].append(fnm)
-        param_conflicts_str = ", ".join("/".join(conflicts[c])
-                                        for c in conflicts
-                                        if len(conflicts[c]) > 1)
-        raise ValidationError('Multiple parameter provided (name conflict): '
-                              f'{param_conflicts_str}')
 
     def validation_errors(self, msg: str = None) -> dict:
         """Reformat `self.errors.as_json()` into the following dict:
@@ -160,36 +146,40 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         if not dic:
             return {}
         errors = []
-        # build dict of: field attr. name -> field. name to be displayed:
-        field_names = {}
-        for field_attrname in dic:
-            if field_attrname in self._input_field_name:
-                # the field name to be displayed is that input by the user:
-                field_names[field_attrname] = self._input_field_name[field_attrname]
-            else:
-                # the field name to be displayed is its first public name:
-                for p_name, a_name in self.public_field_names.items():
-                    if a_name == field_attrname:
-                        field_names[field_attrname] = p_name
-                        break
+
+        err_param_names = []
         # build errors dict:
-        for field_attrname, errs in dic.items():
-            field_name = field_names[field_attrname]  # field display name
+        for err_field_name, errs in dic.items():
+            err_param_name = self._renamed_fields.get(err_field_name, err_field_name)
+            err_param_names.append(err_param_name)
             # compose dict for detailed error messages:
             for err in errs:
-                errors.append({'location': field_name,
+                errors.append({'location': err_param_name,
                                'message': err.get('message', ''),
                                'reason': err.get('code', '')})
 
         if not msg:
-            invalid_p_names = list(field_names.values())
-            msg = f'Invalid parameter{"" if len(invalid_p_names) == 1 else "s"}: ' \
-                  f'{", ".join(invalid_p_names)}'
+            msg = f'Invalid parameter{"" if len(err_param_names) == 1 else "s"}: ' \
+                  f'{", ".join(err_param_names)}'
 
         return {
             'message': msg,
             'errors': errors
         }
+
+    @classmethod
+    def params(cls) -> Iterable[tuple[list[str], str, Field]]:
+        """Yields the Fields of this form as tuples of
+
+        (API parameter name(s) of the field, field name, Field object).
+
+        By default, the API parameter name(s) is trivially a list with the
+        field name as only element. This is not the case for fields mapped
+        manually to different API parameter names in  `self._field2params`
+        """
+        for field_name, field in cls.declared_fields.items():
+            params = cls._field2params.get(field_name, [field_name])
+            yield params, field_name, field
 
 
 def get_gsim_choices():  # https://stackoverflow.com/a/57809521
@@ -205,13 +195,12 @@ def get_imt_choices():  # https://stackoverflow.com/a/57809521
 class GsimImtForm(EgsimBaseForm):
     """Base abstract-like form for any form requiring Gsim+Imt selection"""
 
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself if not done
-    # here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {
-        'gsim': 'gsim', 'gmpe': 'gsim', 'gmm': 'gsim'
-    }
+    # Fields of this class are exposed as API parameters via their attribute name. This
+    # default behaviour can be changed here by manually mapping a Field attribute name to
+    # its API param name(s). `_field2params` allows to easily change API params whilst
+    # keeping the Field attribute names immutable, which is needed to avoid breaking the
+    # code. See `egsim.forms.EgsimFormMeta` for details
+    _field2params: dict[str, list[str]] = {'gsim': ['model', 'gmm']}
 
     gsim = MultipleChoiceWildcardField(required=True, choices=get_gsim_choices,
                                        label='Ground Shaking Intensity Model(s)')
@@ -327,14 +316,6 @@ class MediaTypeForm(EgsimBaseForm):
     @property
     def data_format(self):
         return self.data['format']
-
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself if not done
-    # here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {
-        'format': 'format', 'data_format': 'format'
-    }
 
     format = ChoiceField(required=True, initial=DATA_FORMAT_JSON,
                          label='The format of the data returned (response data)',

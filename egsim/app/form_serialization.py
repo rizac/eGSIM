@@ -27,9 +27,14 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
                          "not in ('json', 'yam')" % syntax)
 
     docstrings = {}
-    field_names = {k: form_class.public_field_names[k] for k in data}
-    fields = form_class.declared_fields
-    for f_name, a_name in field_names.items():
+    for param_names, field_name, field in form_class.params():
+        data_pnames = set(_ for _ in param_names + [field_name] if _ in data)
+        # this should never happen if the form is successfully validated, however:
+        if len(data_pnames) > 1:
+            raise ValueError(f'Conflicting parameters: {", " .join(data_pnames)}')
+        elif not data_pnames:
+            continue
+        param_name = data_pnames[0]
         # Omit unchanged optional parameters. This is not only to make
         # the dumped string more readable and light size, but to avoid
         # parameters which default to None (e.g. z1pt0 in
@@ -37,12 +42,11 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
         # a routine converting the returned JSON/YAML to a query string
         # would write "...z1pt0=null...", which might be interpreted as
         # the string "null"
-        field = fields[a_name]
         is_optional = not field.required or field.initial is not None
-        if is_optional and data[f_name] == field.initial:
-            data.pop(f_name)
-        if syntax == 'yaml':
-            docstrings[f_name] = get_field_docstring(field, True)
+        if is_optional and data[param_name] == field.initial:
+            data.pop(param_name)
+        elif syntax == 'yaml':
+            docstrings[param_name] = get_field_docstring(field, True)
 
     if syntax == 'json':
         stream = _dump_json(data)

@@ -20,12 +20,6 @@ from ... import models
 class FlatfilePlotForm(APIForm, FlatfileForm):
     """Form for plotting flatfile columns"""
 
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself anyway if not
-    # done here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {}
-
     x = CharField(label='X', help_text="The flatfile column for the x values",
                   required=False)
     y = CharField(label='Y', help_text="The flatfile column for the y values",

@@ -38,21 +38,19 @@ _mag_scalerel = get_available_magnitude_scalerel()
 class TrellisForm(GsimImtForm, APIForm):
     """Form for Trellis plot generation"""
 
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself anyway if not
-    # done here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {
-        'plot': 'plot_type',
-        'stdev': 'stdev', 'stddev': 'stdev',
-        'magnitude': 'magnitude', 'mag': 'magnitude',
-        'distance': 'distance', 'dist': 'distance',
-        'msr': 'msr', 'magnitude_scalerel': 'msr',
-        'location': 'initial_point',
-        'hypoloc': 'hypocentre_location',
-        'vs30measured': 'vs30measured', 'vs30_measured': 'vs30measured',
-        'lineazimuth': 'line_azimuth',
-        'z1': 'z1pt0'
+    # Fields of this class are exposed as API parameters via their attribute name. This
+    # default behaviour can be changed here by manually mapping a Field attribute name to
+    # its API param name(s). `_field2params` allows to easily change API params whilst
+    # keeping the Field attribute names immutable, which is needed to avoid breaking the
+    # code. See `egsim.forms.EgsimFormMeta` for details
+    _field2params = {
+        'plot_type': ['plot'],
+        'stdev': ['stdev', 'stddev'],
+        'magnitude': ['magnitude', 'mag'],
+        'distance': ['distance', 'dist'],
+        'msr': ['msr', 'magnitude_scalerel'],
+        'vs30measured': ['vs30m', 'vs30measured', 'vs30_measured'],
+        'z1pt0': ['z1', 'z1pt0']
     }
 
     plot_type = ChoiceField(label='Plot type',

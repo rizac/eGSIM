@@ -60,23 +60,16 @@ def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
 
     :param form: EgsimBaseForm class or object (class instance)
     """
-    names_of = defaultdict(list)
-    for f_name, a_name in form.public_field_names.items():
-        names_of[a_name].append(f_name)
-
     form_data = {}
-    for a_name, field in form.declared_fields.items():
+    for param_names, field_name, field in form.params():
         field_dict = field_to_dict(field)
-        f_name = names_of[a_name][0]
-        opt_names = names_of[a_name][1:]
-        # remove unused keys for the help page:
-        field_dict['name'] = f_name
-        field_dict['opt_names'] = opt_names
+        field_dict['name'] = param_names[0]
+        field_dict['opt_names'] = param_names[1:]
         desc = get_field_docstring(field)
         type_desc = get_field_dtype_description(field)
         field_dict['description'] = f'{desc}{". " if desc else ""}{type_desc}'
         field_dict['is_optional'] = not field.required or field.initial is not None
-        form_data[f_name] = field_dict
+        form_data[param_names[0]] = field_dict
 
     return form_data
 
