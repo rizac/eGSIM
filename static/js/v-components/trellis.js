@@ -1,204 +1,204 @@
 /* Trellis plot components (model-to-model comparison) */
 
 EGSIM.component('trellis', {
-    props :{
-        form: Object,
-        url: String,
-        urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
-    },
-    data() {
-        return {
-            formVisibilityToggle: true,  // switch form visibility on/off
-            predefinedSA: false,  // whether we have selected spectra as plot type
-            responseData: {},
-            scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='plot_type' && key!='stdev')
-        }
-    },
-    computed: {
-        scenarioHasErrors(){
-            var form = this.form;
-            return this.scenarioKeys.some(key => !!form[key].error);
-        }
-    },
-    watch: {
-        'form.plot_type.value': {
-            // watch the selected plot type and enable/disable the imt <select> accordingly
-            immediate: true,
-            handler(newVal, oldVal){
-                var enabled = newVal !== 's' && newVal !== 'ss';
-                this.form.imt.disabled = !enabled;
-                this.predefinedSA = !enabled;
-            }
-        }
-    },
-    template: `
+	props :{
+		form: Object,
+		url: String,
+		urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
+	},
+	data() {
+		return {
+			formVisibilityToggle: true,  // switch form visibility on/off
+			predefinedSA: false,  // whether we have selected spectra as plot type
+			responseData: {},
+			scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='plot_type' && key!='stdev')
+		}
+	},
+	computed: {
+		scenarioHasErrors(){
+			var form = this.form;
+			return this.scenarioKeys.some(key => !!form[key].error);
+		}
+	},
+	watch: {
+		'form.plot_type.value': {
+			// watch the selected plot type and enable/disable the imt <select> accordingly
+			immediate: true,
+			handler(newVal, oldVal){
+				var enabled = newVal !== 's' && newVal !== 'ss';
+				this.form.imt.disabled = !enabled;
+				this.predefinedSA = !enabled;
+			}
+		}
+	},
+	template: `
 <div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-    <egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
-                :visibilityToggle="formVisibilityToggle"
-                @submitted="(response) => responseData=response.data">
+	<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
+				:visibilityToggle="formVisibilityToggle"
+				@submitted="(response) => responseData=response.data">
 
-        <template v-slot:left-column>
-            <gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
-        </template>
+		<template v-slot:left-column>
+			<gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
+		</template>
 
-        <template v-slot:right-column>
-            <div style="position:relative">
-                <imt-select :field="form['imt']" />
-                <div v-show='predefinedSA' class="form-control small text-muted"
-                     style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
-                    <i class='text-warning fa fa-info-circle'></i>
-                    Intensity Measure will default to 'SA' with a set of pre-defined periods
-                </div>
-            </div>
-            <div class="form-control mt-4"
-                 :class="{'border-danger': scenarioHasErrors}"
-                 style="flex: 1 1 0;min-height:3rem;background-color:transparent;overflow-y:auto">
+		<template v-slot:right-column>
+			<div style="position:relative">
+				<imt-select :field="form['imt']" />
+				<div v-show='predefinedSA' class="form-control small text-muted"
+					 style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
+					<i class='text-warning fa fa-info-circle'></i>
+					Intensity Measure will default to 'SA' with a set of pre-defined periods
+				</div>
+			</div>
+			<div class="form-control mt-4"
+				 :class="{'border-danger': scenarioHasErrors}"
+				 style="flex: 1 1 0;min-height:3rem;background-color:transparent;overflow-y:auto">
 
-                <template v-for="(name, index) in scenarioKeys" >
-                    <div v-if="form[name].type != 'checkbox'" class='d-flex flex-column'
-                         :class="{ 'mt-2': index > 0 }">
-                        <field-label :field="form[name]" />
-                        <field-input :field="form[name]" />
-                    </div>
-                    <div v-else class='d-flex flex-row align-items-baseline'
-                         :class="{ 'mt-2': index > 0 }">
-                        <field-input :field="form[name]" />
-                        <field-label :field="form[name]" class='ms-2' style='flex: 1 1 auto'/>
-                    </div>
-                </template>
+				<template v-for="(name, index) in scenarioKeys" >
+					<div v-if="form[name].type != 'checkbox'" class='d-flex flex-column'
+						 :class="{ 'mt-2': index > 0 }">
+						<field-label :field="form[name]" />
+						<field-input :field="form[name]" />
+					</div>
+					<div v-else class='d-flex flex-row align-items-baseline'
+						 :class="{ 'mt-2': index > 0 }">
+						<field-input :field="form[name]" />
+						<field-label :field="form[name]" class='ms-2' style='flex: 1 1 auto'/>
+					</div>
+				</template>
 
-            </div>
+			</div>
 
-            <div class="mt-4" style="background-color:transparent">
-                <field-label :field='form["plot_type"]' />
-                <field-input :field='form["plot_type"]' size="3" />
-                <div class='mt-1 d-flex flex-row align-items-baseline'>
-                    <field-input :field='form["stdev"]'/>
-                    <field-label :field='form["stdev"]' class='ms-2' style='flex: 1 1 auto'/>
-                </div>
-            </div>
-        </template>
-    </egsim-form>
+			<div class="mt-4" style="background-color:transparent">
+				<field-label :field='form["plot_type"]' />
+				<field-input :field='form["plot_type"]' size="3" />
+				<div class='mt-1 d-flex flex-row align-items-baseline'>
+					<field-input :field='form["stdev"]'/>
+					<field-label :field='form["stdev"]' class='ms-2' style='flex: 1 1 auto'/>
+				</div>
+			</div>
+		</template>
+	</egsim-form>
 
-    <trellis-plot-div :data="responseData" :download-url="urls.downloadResponse"
-                      class='invisible position-absolute start-0 top-0 end-0 bottom-0'
-                      :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
-        <slot>
-            <button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
-                <i class='fa fa-list-alt'></i> Configuration
-            </button>
-        </slot>
-    </trellis-plot-div>
+	<trellis-plot-div :data="responseData" :download-url="urls.downloadResponse"
+					  class='invisible position-absolute start-0 top-0 end-0 bottom-0'
+					  :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
+		<slot>
+			<button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
+				<i class='fa fa-list-alt'></i> Configuration
+			</button>
+		</slot>
+	</trellis-plot-div>
 </div>`
 });
 
 
 EGSIM.component('trellis-plot-div', {
-    mixins: [PLOT_DIV],  // defined in plot-div.js
-    methods: {
-        // The next two methods are overwritten from PLOT_DIV. See README.md for details
-        getData(responseObject){
-            var ln10 = Math.log(10);
-            var mathlog = Math.log;
-            function log10(val) {  // https://stackoverflow.com/a/3019290
-                return mathlog(val) / ln10;
-            }
-            var mathpow = Math.pow;
-            var pow10 = elm => mathpow(10, elm);
+	mixins: [PLOT_DIV],  // defined in plot-div.js
+	methods: {
+		// The next two methods are overwritten from PLOT_DIV. See README.md for details
+		getData(responseObject){
+			var ln10 = Math.log(10);
+			var mathlog = Math.log;
+			function log10(val) {  // https://stackoverflow.com/a/3019290
+				return mathlog(val) / ln10;
+			}
+			var mathpow = Math.pow;
+			var pow10 = elm => mathpow(10, elm);
 
-            // get the current colorMap (will be used to set transparency on stdev
-            // areas, if given):
-            var colorMap = this.colorMap;  // defined in plot-div.js
-            var data = responseObject;
-            var plots = [];
-            // setup  label texts:
-            for (var imt of data.imts){
-                var figures = data[imt];
-                for (var fig of figures){
-                    var params = {};
-                    params.imt = imt;
-                    params.magnitude = fig.magnitude;
-                    params.distance = fig.distance;
-                    params.vs30 = fig.vs30;
-                    var traces = [];
-                    Object.keys(fig.yvalues).map(function(name){
-                        // FIXME: check if with arrow function we can avoid apply and this
-                        // to test that plots are correctly placed, uncomment this:
-                        // var name = `${name}_${params.magnitude}_${params.distance}_${params.vs30}`;
-                        var yvalues = fig.yvalues[name];
-                        var trace = {
-                                x: data.xvalues,
-                                // <extra></extra> hides the second tooltip (white):
-                                hovertemplate: `${name}<br>${data.xlabel}=%{x}<br>` +
-                                    `${fig.ylabel}=%{y}<extra></extra>`,
-                                y: yvalues,
-                                type: 'scatter',
-                                mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
-                                name: name
-                        };
-                        var color = this.addLegend(trace, name);  // Sets also trace.legendgroup = name
-                        if (data.xvalues.length == 1){
-                            trace.marker = {color: color};
-                        }else{
-                            trace.line = {color: color, width: 3};
-                        }
+			// get the current colorMap (will be used to set transparency on stdev
+			// areas, if given):
+			var colorMap = this.colorMap;  // defined in plot-div.js
+			var data = responseObject;
+			var plots = [];
+			// setup  label texts:
+			for (var imt of data.imts){
+				var figures = data[imt];
+				for (var fig of figures){
+					var params = {};
+					params.imt = imt;
+					params.magnitude = fig.magnitude;
+					params.distance = fig.distance;
+					params.vs30 = fig.vs30;
+					var traces = [];
+					Object.keys(fig.yvalues).map(function(name){
+						// FIXME: check if with arrow function we can avoid apply and this
+						// to test that plots are correctly placed, uncomment this:
+						// var name = `${name}_${params.magnitude}_${params.distance}_${params.vs30}`;
+						var yvalues = fig.yvalues[name];
+						var trace = {
+								x: data.xvalues,
+								// <extra></extra> hides the second tooltip (white):
+								hovertemplate: `${name}<br>${data.xlabel}=%{x}<br>` +
+									`${fig.ylabel}=%{y}<extra></extra>`,
+								y: yvalues,
+								type: 'scatter',
+								mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
+								name: name
+						};
+						var color = this.addLegend(trace, name);  // Sets also trace.legendgroup = name
+						if (data.xvalues.length == 1){
+							trace.marker = {color: color};
+						}else{
+							trace.line = {color: color, width: 3};
+						}
 
-                        var _traces = [trace];
-                        // add stdev if present:
-                        var stdev = (fig.stdvalues || {})[name];
-                        if (stdev && stdev.length){
-                            //copy the trace Object (shallow except the 'y' property, copied deeply):
-                            var _traces = [
-                                trace,
-                                Object.assign({}, trace, {y:  yvalues.slice()}),
-                                Object.assign({}, trace, {y:  yvalues.slice()})
-                            ];
-                            // put new values:
-                            stdev.forEach((std, index) => {
-                                if (std === null || _traces[1].y[index] === null){
-                                    _traces[1].y[index] = null;
-                                    _traces[2].y[index] = null;
-                                }else{
-                                    _traces[1].y[index] = pow10(log10(_traces[1].y[index]) + std);
-                                    _traces[2].y[index] = pow10(log10(_traces[2].y[index]) - std);
-                                }
-                            });
-                            // Values are now ok, now arrange visual stuff:
-                            var colorT = colorMap.transparentize(color, 0.2);
-                            for (var i of [2]){
-                                _traces[i].fill = 'tonexty'; // which actually fills to PREVIOUS TRACE!
-                            }
-                            for (var i of [1, 2]){
-                                _traces[i].line = {width: 0, color: color};  // the color here will be used in the label on hover
-                                _traces[i].fillcolor = colorT;
-                                var info = i==1 ? `value computed as 10<sup>log(${imt})+σ</sup>` : `value computed as 10<sup>log(${imt})-σ</sup>`;
-                                _traces[i].hovertemplate = `${name}<br>${data.xlabel}=%{x}<br>${fig.ylabel}=%{y}` +
-                                    `<br><i>(${info})</i><extra></extra>`;
-                            }
-                        }
+						var _traces = [trace];
+						// add stdev if present:
+						var stdev = (fig.stdvalues || {})[name];
+						if (stdev && stdev.length){
+							//copy the trace Object (shallow except the 'y' property, copied deeply):
+							var _traces = [
+								trace,
+								Object.assign({}, trace, {y:  yvalues.slice()}),
+								Object.assign({}, trace, {y:  yvalues.slice()})
+							];
+							// put new values:
+							stdev.forEach((std, index) => {
+								if (std === null || _traces[1].y[index] === null){
+									_traces[1].y[index] = null;
+									_traces[2].y[index] = null;
+								}else{
+									_traces[1].y[index] = pow10(log10(_traces[1].y[index]) + std);
+									_traces[2].y[index] = pow10(log10(_traces[2].y[index]) - std);
+								}
+							});
+							// Values are now ok, now arrange visual stuff:
+							var colorT = colorMap.transparentize(color, 0.2);
+							for (var i of [2]){
+								_traces[i].fill = 'tonexty'; // which actually fills to PREVIOUS TRACE!
+							}
+							for (var i of [1, 2]){
+								_traces[i].line = {width: 0, color: color};  // the color here will be used in the label on hover
+								_traces[i].fillcolor = colorT;
+								var info = i==1 ? `value computed as 10<sup>log(${imt})+σ</sup>` : `value computed as 10<sup>log(${imt})-σ</sup>`;
+								_traces[i].hovertemplate = `${name}<br>${data.xlabel}=%{x}<br>${fig.ylabel}=%{y}` +
+									`<br><i>(${info})</i><extra></extra>`;
+							}
+						}
 
-                        // put traces into array:
-                        for (var t of _traces){
-                            traces.push(t);
-                        }
+						// put traces into array:
+						for (var t of _traces){
+							traces.push(t);
+						}
 
-                    }, this);
-                    plots.push({
-                        traces: traces,
-                        params: params,
-                        xaxis: {
-                            title: data.xlabel
-                        },
-                        yaxis: {
-                            title: fig.ylabel, type: 'log'
-                        }
-                    });
-                }
-            }
-            return plots;
-        },
-        displayGridLabels(axis, paramName, paramValues){
-            return paramValues.length > 1 && paramName != 'imt';
-        }
-    }
+					}, this);
+					plots.push({
+						traces: traces,
+						params: params,
+						xaxis: {
+							title: data.xlabel
+						},
+						yaxis: {
+							title: fig.ylabel, type: 'log'
+						}
+					});
+				}
+			}
+			return plots;
+		},
+		displayGridLabels(axis, paramName, paramValues){
+			return paramValues.length > 1 && paramName != 'imt';
+		}
+	}
 });
