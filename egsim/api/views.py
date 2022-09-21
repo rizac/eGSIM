@@ -54,7 +54,7 @@ class RESTAPIView(View):
         form_cls = self.formclass
 
         multi_params = set()
-        for param_names, field_name, field in form_cls.params():
+        for param_names, field_name, field in form_cls.apifields():
             if isinstance(field, MultipleChoiceField):
                 multi_params.update(param_names)
 

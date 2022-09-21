@@ -195,7 +195,7 @@ def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
     field_done = {'format', 'csv_sep', 'csv_dec'}
     # iterate over the field (public) names because we also have the attribute
     # name immediately available:
-    for param_names, field_name, field in form.params():
+    for param_names, field_name, field in form.apifields():
         if field_name in field_done:
             continue
         field_done.add(field_name)
