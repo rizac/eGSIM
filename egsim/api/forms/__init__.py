@@ -65,6 +65,16 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
                     raise ValueError(f"Error in `{name}.{attname}['{field}']={params}:"
                                      f"`{p}` denotes another Field name")
 
+        # Check 3: all values must be list or tuples:
+        for field in list(field2params):
+            params = field2params[field]
+            if not isinstance(params, tuple):
+                if isinstance(params, list):
+                    field2params[field] = tuple(params)
+                else:
+                    raise ValueError(f"Error in `{name}.{attname}['{field}']={params}:"
+                                     f"`dict values must be lists or tuples")
+
         # assign new dict of public field name:
         setattr(new_class, attname, field2params)
         return new_class
@@ -77,7 +87,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     # default behaviour can be changed here by manually mapping a Field attribute name to
     # its API param name(s). `_field2params` allows to easily change API params whilst
     # keeping the Field attribute names immutable, which is needed to avoid breaking the
-    # code. See `egsim.forms.EgsimFormMeta` for details and `self.params()`
+    # code. See `egsim.forms.EgsimFormMeta` for details and `self.apifields()`
     _field2params: dict[str, list[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
@@ -168,14 +178,14 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         }
 
     @classmethod
-    def params(cls) -> Iterable[tuple[list[str], str, Field]]:
+    def apifields(cls) -> Iterable[tuple[list[str, ...], str, Field]]:
         """Yields the Fields of this form as tuples of
 
         (API parameter name(s) of the field, field name, Field object).
 
         By default, the API parameter name(s) is trivially a list with the
-        field name as only element. This is not the case for fields mapped
-        manually to different API parameter names in  `self._field2params`
+        field name as only element. This is not the case for Field names mapped
+        to different API parameter names in `self._field2params`
         """
         for field_name, field in cls.declared_fields.items():
             params = cls._field2params.get(field_name, [field_name])
