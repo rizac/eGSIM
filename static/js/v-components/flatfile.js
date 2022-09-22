@@ -58,12 +58,7 @@ EGSIM.component('flatfile-compilation', {
 		var supportedIMT = ['PGA', 'PGV', 'SA'];
 		var selectedIMTs = ['PGA', 'SA'];
 		var selectedSAPeriods = [0.1, 0.2, 0.3, 0.5, 1.0];
-		var selImtsSet = new Set(selectedIMTs);
-		if (selectedSAPeriods.length){
-			selImtsSet.add('SA');
-		}
-		var gsimsFiltered = this.form.gsim.choices.filter(elm => elm.imts.some(imt => selImtsSet.has(imt)));
-		this.form.gsim.value = gsimsFiltered.map(elm => elm.value);
+		this.form.gsim.value = ['AkkarEtAlRjb2014', 'BooreEtAl2014', 'CauzziEtAl2014'];
 		return {
 			responseData: this.response,
 			imts: {
@@ -74,7 +69,6 @@ EGSIM.component('flatfile-compilation', {
 				name: 'imt',
 				multiple: true
 			},
-			columnsCustomizerVisible: false,
 			csvSep: ',',
 			flatfileContent: '',
 			flatfileHeader: []
@@ -92,50 +86,46 @@ EGSIM.component('flatfile-compilation', {
 		}
 	},
 	template: `<form novalidate class='d-flex flex-column' style='flex: 1 1 auto'>
-		<div class='d-flex flex-row' style='flex: 1 1 auto; justify-content: center'>
-			<div class='d-flex flex-column' style='max-width: 50rem'>
-
-				<p style='text-align: justify;'>
+		<div class='d-flex flex-row p-3' style='flex: 1 1 auto;'>
+			<div style='max-width:9rem;text-align: justify;'>
+				<p>
 				Flatfiles are parametric tables required in Model-to-data comparison and testing,
 				and must be uploaded as uncompressed or zipped
 				<a target="_blank" href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV files</a>,
 				with each row representing a manually processed waveform, and the waveform metadata and intensity measures
 				arranged in columns.
 				</p>
-				<p style='text-align: justify;'>
+				<p>
 				To help the compilation of your flatfile, from scratch or existing sources,
 				here you can create a template with the smallest set of columns <b>required</b> by
-				the models and intensity measures that you want to analyze (see "Selection").
+				the models and intensity measures that you want to analyze.
 				</p>
-				<div class='d-flex flex-row align-items-baseline'>
-					<div v-show="!columnsCustomizerVisible">
-						<b>Flatfile template</b> ({{ flatfileHeader.length }} columns)
+			</div>
+
+			<div class='d-flex flex-column mx-5'>
+				<div class='mb-4'>
+					<b>Select models</b> ({{ form.gsim.value.length }}) <b>and intensity measures</b> ({{ imts.value.length }})
+					<b>of interest:</b>
+				</div>
+				<gsim-select :field='form.gsim'
+							 @gsim-selected='gsimSelected'
+							 :imt-field="imts"
+							 class='mb-5' style='flex: 1 1 auto' />
+				<imt-select :field='imts' />
+			</div>
+
+			<div class='d-flex flex-column' style='flex: 1 1 auto'>
+				<div class='mb-4 position-relative'>
+					<b>Flatfile template</b>&nbsp; ({{ flatfileHeader.length }} columns)
+					<div class='text-nowrap position-absolute end-0 top-0'>
+						CSV separator
+						<input type="text" v-model="csvSep" class='ms-1' style='max-width:2rem' />
 					</div>
-					<div style='flex: 1 1 auto'></div>
-					<div class='ms-3' v-show="!columnsCustomizerVisible">CSV separator</div>
-					<input v-show="!columnsCustomizerVisible" type="text" v-model="csvSep" class='ms-1' style='max-width:2rem'>
-					<div v-show="!columnsCustomizerVisible" class='ms-3'>Selection</div>
-					<button type='button' @click='columnsCustomizerVisible=!columnsCustomizerVisible' class='ms-1 btn btn-primary'>
-						{{ columnsCustomizerVisible ? 'Show Flatfile' :
-						   form.gsim.value.length + ' model' + (form.gsim.value.length == 1 ? ', ': 's, ') +
-						   imts.value.length + ' intensity measure' + (imts.value.length.length == 1 ? '': 's')
-						}}
-					</button>
 				</div>
 
-				<textarea v-show="!columnsCustomizerVisible"
-						  v-model='flatfileContent' class='mt-3'
+				<textarea v-model='flatfileContent'
 						  style='flex:1 1 auto; white-space: pre; font-family:monospace; background-color:#363945; color:#e1e1e1'>
 				</textarea>
-
-				<div :style="{display: columnsCustomizerVisible ? 'flex' : 'none', flex: '1 1 auto'}"
-					 class='flex-row my-2'>
-					<gsim-select :field='form.gsim' @gsim-selected='gsimSelected' :imt-field="imts"></gsim-select>
-					<div class='me-3'></div>
-					<div class='d-flex flex-column'>
-						<imt-select :field='imts' style='flex: 1 1 auto'></imt-select>
-					</div>
-				</div>
 
 				<div class='mt-2 text-muted'>
 				Hint: For performance reasons <b>try to keep uploaded flatfiles size within few tens of Megabytes</b>

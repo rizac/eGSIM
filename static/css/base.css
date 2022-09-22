@@ -22,6 +22,11 @@
 	--bs-btn-disabled-border-color: var(--bs-primary);
 }
 
+/* make option padding (chrome <option>s are very narrow */
+option {
+	padding-top: .2rem;
+	padding-bottom: .2rem;
+}
 /* set checkboxes and radio background equal to .btn-primary colors (for browsers
 released roughly < 2021 doesn't work, but we don't care) */
 input[type=checkbox], input[type=radio]{
