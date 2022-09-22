@@ -78,19 +78,19 @@ EGSIM.component('gsim-select', {
 				<div class='mb-1' style='position:relative'>
 					<table>
 						<tr>
-						<td class='text-nowrap'><i class="fa fa-filter"></i> Filter GSIMs: </td>
-						<td class='text-nowrap ps-3'>
+						<td class='text-nowrap'><i class="fa fa-filter"></i> Filter models: </td>
+						<td class='text-nowrap ps-3' title="filter models by name. The search will ignore case and spaces">
 							<input v-model="filterBy.name"
-								   placeholder="by name (ignoring case and spaces)"
+								   placeholder="by name (case and spaces ignored)"
 								   style='min-width:13.5rem;display:inline-block;width:initial'
 								   type="text" class="form-control form-control-sm">
 						</td>
-						<td v-if="imtField" class='text-nowrap ps-3'>
+						<td v-if="imtField" class='text-nowrap ps-3' title='filter models that are defined for the IMT selected'>
 							<label class='small my-0' :disabled='imtField.disabled'>
 								<input v-model="filterBy.imt" type="checkbox" :disabled='imtField.disabled'> by IMTs
 							</label>
 						</td>
-						<td class='text-nowrap ps-3' style='text-align: right;'>
+						<td class='text-nowrap ps-3' style='text-align: right;' title='filter models that have been selected on specific regions'>
 							<span :style="[!!filterBy.map ? {'visibility': 'hidden'} : {}]" class='small'>
 								by region (click on map):
 							</span>
@@ -370,8 +370,8 @@ EGSIM.component('imt-select', {
 		}
 	},
 	template: `<div class='d-flex flex-column'>
-		<field-label :field="fieldCopy"/>
-		<field-input :field="fieldCopy" />
+		<field-label :field="fieldCopy" />
+		<field-input :field="fieldCopy" style="flex: 1 1 auto" />
 		<base-input :value="SAPeriods" :disabled="field.disabled || !fieldCopy.value.includes('SA')"
 					placeholder="SA periods (space-separated)"
 					:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />

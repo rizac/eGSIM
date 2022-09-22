@@ -6,7 +6,7 @@ Django Forms for eGSIM flatfile plot generator
 from typing import Iterable, Any
 
 
-from . import APIForm, MultipleChoiceWildcardField, get_gsim_choices
+from . import APIForm, MultipleChoiceWildcardField, get_gsim_choices, GsimImtForm
 
 from .. import models
 from ..flatfile import EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE
@@ -14,6 +14,13 @@ from ..flatfile import EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE
 
 class FlatfileRequiredColumnsForm(APIForm):
     """Form for querying the necessary metadaata columns from a given list of Gsims"""
+
+    # Fields of this class are exposed as API parameters via their attribute name. This
+    # default behaviour can be changed here by manually mapping a Field attribute name to
+    # its API param name(s). `_field2params` allows to easily change API params whilst
+    # keeping the Field attribute names immutable, which is needed to avoid breaking the
+    # code. See `egsim.forms.EgsimFormMeta` for details
+    _field2params = {'gsim' : GsimImtForm._field2params['gsim']}  # noqa
 
     gsim = MultipleChoiceWildcardField(required=False, choices=get_gsim_choices,
                                        label='Ground Shaking Intensity Model(s)')

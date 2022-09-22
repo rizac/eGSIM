@@ -36,7 +36,7 @@ EGSIM.component('testing', {
 		</template>
 
 		<template v-slot:right-column>
-			<imt-select :field="form.imt" size="6"/>
+			<imt-select :field="form.imt" style="flex: 1 1 auto" />
 
 			<div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
 				<flatfile-select :field="form.flatfile"/>
@@ -47,7 +47,7 @@ EGSIM.component('testing', {
 				<field-label :field='form.fit_measure'/>
 				<field-input :field='form.fit_measure' size="5"/>
 
-				<div v-show="isEDRSelected">
+				<div class='invisible small' :style="{visibility: isEDRSelected ? 'visible !important': 'hidden'}">
 					<field-label :field="form.edr_bandwidth" class='mt-2' />
 					<field-input class='small' :field="form.edr_bandwidth" />
 					<field-label :field="form.edr_multiplier" class='mt-2' />
