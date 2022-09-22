@@ -48,9 +48,9 @@ EGSIM.component('testing', {
 				<field-input :field='form.fit_measure' size="5"/>
 
 				<div v-show="isEDRSelected">
-					<field-label :field="form.edr_bandwidth" />
+					<field-label :field="form.edr_bandwidth" class='mt-2' />
 					<field-input class='small' :field="form.edr_bandwidth" />
-					<field-label :field="form.edr_multiplier" />
+					<field-label :field="form.edr_multiplier" class='mt-2' />
 					<field-input class='small' :field="form.edr_multiplier" />
 				</div>
 			</div>

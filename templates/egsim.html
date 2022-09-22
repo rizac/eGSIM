@@ -9,7 +9,14 @@
 <link rel="stylesheet" type='text/css' href="https://unpkg.com/balloon-css/balloon.min.css">
 <!-- custom css -->
 <style>
-/* Waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
+/* navbar (top toolbar with menus): */
+nav .menu-item{ margin-right: 1rem; cursor: pointer; color: #FFF; opacity: 0.66; }
+nav .menu-item:first-of-type{ margin-left: 1rem}
+nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
+@media (max-width: 1200px){  /* narrow  screen (< 1200px) */
+	nav .menu-item span { display: none !important; } /* hide menu texts */
+}
+/* waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
 #waitdiv{ z-index: 200; }
 .loader, .loader:before { height: 10px; }
 .loader {
@@ -38,6 +45,14 @@
 /* Transitions when activating a main component: https://vuejs.org/guide/built-ins/transition.html */
 .fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
 .fade-enter, .fade-leave-to { opacity: 0; }
+.error-msg {
+	font-family: Lato, Helvetica, sans-serif;
+	flex: 1 1 auto;
+	background-color: rgba(0,0,0,0);
+	color: white;
+	outline: none;
+	border-width: 0px;
+}
 </style>
 
 {% endblock %}
@@ -45,9 +60,9 @@
 
 {% block body %}
 
-<div class="d-flex flex-column bg-light" id='egsim-vue' style="height: 100vh;">
+<div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
 
-	<nav class="d-flex flex-row navbar-dark bg-dark align-items-stretch position-relative" id='egsim-nav'>
+	<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
 			{% for component in components %}
 				<a class='menu-item' :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
 						@click="setComponent('{{ component.0 }}')" title="{{ component.1 }}">
@@ -58,9 +73,7 @@
 			<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
 				 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
 				<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
-				<input type="text" class="border-0" :value="errorMsg"
-					   style="flex: 1 1 auto; background-color: rgba(0,0,0,0); color: white;outline: none;font-family: sans-serif;" readonly />
-				<!--<i class="fa fa-copy ms-1" @click=''></i>-->
+				<input type="text" class="error-msg " :value="errorMsg" readonly />
 				<i class="fa fa-times ms-2" @click='clearErrors()' style="cursor: pointer"></i>
 			</div>
 
