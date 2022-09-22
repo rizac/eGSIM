@@ -4,15 +4,35 @@
 	<meta charset="UTF-8">
 	<title>eGSIM</title>
 
+	{% block fonts %}
+		<!-- load font now, set font later when loaded (otherwise it could not be applied) -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed&family=Encode+Sans+Condensed&family=Lato&display=swap" rel="stylesheet">
+	{% endblock %}
+
+	{% block fontloadingscript %}
+		<script type="text/javascript">
+		document.fonts.ready.then(() => {  // https://developer.mozilla.org/en-US/docs/Web/API/Document/fonts
+			var style = document.createElement('style');
+			style.type = 'text/css';
+			style.innerHTML = `
+				body {
+					font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
+				}
+				nav, h1, h2, h3, h4, h5, h6{
+					font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
+				}
+				p {
+					font-family: Lato, Helvetica, sans-serif;
+				}
+			`;
+			document.getElementsByTagName('head')[0].appendChild(style);
+		});
+		</script>
+	{% endblock %}
+
 	{% block head %}
-
-	<link rel="shortcut icon" href="{% static 'img/favicon.png' %}" type="image/png"/>
-
-	<!--  Google font:, also related:  -->
-	<!--  Encode+Sans|Encode+Sans+Condensed|Encode+Sans+Semi+Condensed|Montserrat|Open+Sans+Condensed:300|Cabin+Condensed| -->
-	<link href="https://fonts.googleapis.com/css?family=Encode+Sans+Condensed|Encode+Sans+Semi+Condensed"
-		  rel="stylesheet">
-
 	{% if vue %}
 		{% if debug %}
 		<script src="https://unpkg.com/vue@3.2.39/dist/vue.global.js"></script>
@@ -38,6 +58,7 @@
 	<script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
 			integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
 			crossorigin=""></script>
+	<style>.leaflet-container { font-family: inherit !important; }</style>
 	{% endif %}
 
 	{% if fontawesome %}
@@ -53,15 +74,23 @@
 		{% else %}
 			<script src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@2.14.0/plotly-cartesian.min.js"></script>
 		{% endif %}
+		<style>/* hide upper-right toolbar in plots */ div.modebar.modebar--hover{ display: none; }</style>
 	{% endif %}
+
+	<!-- custom stylesheet to be applied globally: -->
+	<style>
+		a, a:hover, a:visited, a:link, a:active{ text-decoration: none !important; }
+		iframe{ border:0; margin:0; }
+	</style>
 
 	<!-- egsim base css. Load at the real end:  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
-	
 	{% endblock %}
 
 	{% block extra-head %}
 	{% endblock %}
+
+	<link rel="shortcut icon" href="{% static 'img/favicon.png' %}" type="image/png"/>
 </head>
 
 <body class='d-flex flex-column'>

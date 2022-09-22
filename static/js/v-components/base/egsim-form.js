@@ -271,14 +271,13 @@ EGSIM.component('egsim-form', {
 	},
 	template: `<form novalidate @submit.prevent="submitMe"
 		  class="flex-column position-relative pb-4 align-self-center"
-		  :class="[showAsDialog ? ['shadow', 'border', 'bg-light', 'mb-2'] : '']"
+		  :class="[showAsDialog ? ['shadow', 'border', 'bg-body', 'mb-2'] : '']"
 		  style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important"
 		  :style="{'display': show ? 'flex' : 'none'}">
 
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
 
-			<div class='d-flex flex-row justify-content-center align-items-baseline p-1 mb-3'
-				 style='background-color:rgba(5, 73, 113, .2)'>
+			<div class='d-flex flex-row justify-content-center align-items-baseline p-1 mb-3 bg-light'>
 
 				<button type="button" onclick='this.nextElementSibling.click()'
 						data-balloon-pos="down" data-balloon-length="medium"

@@ -1,18 +1,35 @@
-/* eGSIM main stylesheet */
+/* Redefines base colors and appearance overriding bootstrap5 */
 
+/* global colors */
+:root {
+	--bs-primary-rgb: 7,104,159;  /* overrides .text-primary */
+	--bs-link-color: rgba(var(--bs-primary-rgb), 1);  /* overrides <a> text color */
+	--bs-body-bg-rgb: 248,249,250;  /* overrides color of class .bg_body */
+	--bs-light-rgb: 202,214,222;  /* overrides color of class .bg-light */
+	--bs-primary: rgba(var(--bs-primary-rgb), 1); /* primary buttons bg, see below */
+	--bs-primary-active-hover: rgba(32, 77, 116, 1); /* primary buttons hover bg */
+}
 
-/*** Fonts ***/
+/* redefine .btn-primary colors */
+.btn-primary {
+	--bs-btn-bg: var(--bs-primary);
+	--bs-btn-border-color: var(--bs-primary);
+	--bs-btn-hover-bg: var(--bs-primary-active-hover);
+	--bs-btn-hover-border-color: var(--bs-primary-active-hover);
+	--bs-btn-active-bg: var(--bs-primary-active-hover);
+	--bs-btn-active-border-color: var(--bs-primary-active-hover);
+	--bs-btn-disabled-bg: var(--bs-primary);
+	--bs-btn-disabled-border-color: var(--bs-primary);
+}
 
-body{ font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif; }
-nav, h1, h2, h3, h4, h5, h6{ font-family: 'Encode Sans Condensed', Helvetica, sans-serif; }
-
-
-/*** Custom classes / settings ***/
-
-iframe{ border:0;margin:0; }
-a, a:hover, a:visited, a:link, a:active{ text-decoration: none !important; }
-
-/*** Overwrite Bootstrap ***/
+/* set checkboxes and radio background equal to .btn-primary colors (for browsers
+released roughly < 2021 doesn't work, but we don't care) */
+input[type=checkbox], input[type=radio]{
+	accent-color: var(--bs-primary) !important;
+}
+input[type=checkbox]:hover, input[type=radio]:hover{
+	accent-color: var(--bs-primary-active-hover) !important;
+}
 
 /* make focus border inset, otherwise it is outside the element and sometimes
    "cropped", and the effect it's not nice*/
@@ -20,49 +37,13 @@ a, a:hover, a:visited, a:link, a:active{ text-decoration: none !important; }
 	box-shadow: inset 0px 0px 5px 1px rgba(128,198,237,.95) !important;
 }
 
-/* form-control on divs makes them nice, but messes up height. Reset it: */
-div.form-control { height: initial; }
-
-/* harmonize borders color */
-.border, *.form-control:not([style*="border-color"]), .leaflet-control-layers {
-	border-color: rgba(0,0,0,.33) !important;
-}
-/* harmonize borders width */
-.border, *.form-control:not([style*="border-width"]), .leaflet-control-layers {
+/* harmonize borders color and width */
+*.form-control:not([style*="border-color"]):not(.border-danger), .border, .leaflet-control-layers {
+	border-color: rgb(179, 186, 193) !important; /*#bec4ca !important;*/
 	border-width: 1px !important;
 }
 
-/* Make primary color nicer with a darker blue */
-.bg-primary, .btn-primary{ background-color: rgba(7, 104, 159, 1) !important; color:white;}
-.border-primary, .btn-primary { border-color: rgba(7, 104, 159, 1) !important; }
-.text-primary{ color: rgba(7, 104, 159, 1) !important; }
-.btn-primary:hover,.btn-primary:not(:disabled):not(.disabled):active{
-	border-color: rgba(5, 73, 113, 1) !important;
-	background-color: rgba(5, 73, 113, 1) !important;
-}
-input[type=checkbox], input[type=radio]{ accent-color: rgba(7, 104, 159, 1); }
-
-/* error color */
-.text-danger{ color: #dc3545 !important; }
-.border-danger{ border-color: #dc3545 !important; }
-
-/* nav */
-nav#egsim-nav {min-height: 3.5rem;}  /* for safari */
-nav#egsim-nav .sub-menu {top: 3.5rem;}
-/* nav style */
-nav .menu-item{ padding: 1rem .6rem; color: rgba(255,255,255,.5) !important; }
-/* nav pointer (must be set for all inner elements to work) */
-nav .menu-item, nav .menu-item *{ cursor: pointer; }
-nav .menu-item.active{ color: #FFF !important; }
-
-@media (max-width: 1200px){  /* narrow  screen (< 1200px) */
-	nav .menu-item span { display: none !important; } /* hide menu texts */
-}
-
-
-/*** Harmonizing browser appearance ***/
-
-/* fix background and foregrounds in Chrome webkit autocomplete */
+/* remove background and foregrounds added by Chrome when autocompleting <input> values  */
 input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active  {
 	-webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
 }
@@ -72,7 +53,7 @@ select:not([multiple]):not([size]).form-control{
 	-moz-appearance: none;
 	-webkit-appearance: none;
 	appearance: none;
-	/* config <select> arrow. Provide inline coded image (svg) */
+	/* config <select> arrow via inline coded image (svg) */
 	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
 	background-repeat: no-repeat;
 	background-position: right .3em top 50%;
@@ -85,15 +66,3 @@ select:not([multiple]):not([size]).form-control{
 *[disabled:not([disabled="false"])], .disabled{ opacity: 0.65 !important;}
 /* style disabled for <option>s (in safari, `disabled` above does not work) */
 option[disabled:not([disabled="false"])], option.disabled{ color: #bbb !important; }
-
-
-/*** CUSTOMIZING LIBRARIES ***/
-
-/* plotly */
-div.modebar.modebar--hover{ display: none; }
-
-/* Leaflet */
-.leaflet-popup-content {
-	width:auto !important;  /* https://github.com/Leaflet/Leaflet/issues/724 */
-	margin: 1.5rem !important; /*increase margins (nicer and more consistent with the page elements) */
-}

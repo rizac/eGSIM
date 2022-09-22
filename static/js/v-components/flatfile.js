@@ -55,13 +55,21 @@ EGSIM.component('flatfile-compilation', {
 		response: {type: Object, default: () => {return {}}}
 	},
 	data() {
-		this.form.gsim.value = this.form.gsim.choices.map(elm => elm.value);
+		var supportedIMT = ['PGA', 'PGV', 'SA'];
+		var selectedIMTs = ['PGA', 'SA'];
+		var selectedSAPeriods = [0.1, 0.2, 0.3, 0.5, 1.0];
+		var selImtsSet = new Set(selectedIMTs);
+		if (selectedSAPeriods.length){
+			selImtsSet.add('SA');
+		}
+		var gsimsFiltered = this.form.gsim.choices.filter(elm => elm.imts.some(imt => selImtsSet.has(imt)));
+		this.form.gsim.value = gsimsFiltered.map(elm => elm.value);
 		return {
 			responseData: this.response,
 			imts: {
-				value: ['SA(0.1)', 'SA(0.2)', 'SA(0.3)', 'SA(0.5)',  'SA(1.0)', 'PGA', 'PGV'],
+				value: selectedIMTs.filter(elm => elm != 'SA').concat(selectedSAPeriods.map(p => `SA(${p})`)),
 				error: '',
-				choices: ['SA', 'PGA', 'PGV'],
+				choices: supportedIMT,
 				label: 'Intensity Measure Type(s)',
 				name: 'imt',
 				multiple: true
@@ -87,14 +95,14 @@ EGSIM.component('flatfile-compilation', {
 		<div class='d-flex flex-row' style='flex: 1 1 auto; justify-content: center'>
 			<div class='d-flex flex-column' style='max-width: 50rem'>
 
-				<p class='text-justify'>
+				<p style='text-align: justify;'>
 				Flatfiles are parametric tables required in Model-to-data comparison and testing,
 				and must be uploaded as uncompressed or zipped
 				<a target="_blank" href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV files</a>,
 				with each row representing a manually processed waveform, and the waveform metadata and intensity measures
 				arranged in columns.
 				</p>
-				<p class='text-justify'>
+				<p style='text-align: justify;'>
 				To help the compilation of your flatfile, from scratch or existing sources,
 				here you can create a template with the smallest set of columns <b>required</b> by
 				the models and intensity measures that you want to analyze (see "Selection").
@@ -121,7 +129,7 @@ EGSIM.component('flatfile-compilation', {
 				</textarea>
 
 				<div :style="{display: columnsCustomizerVisible ? 'flex' : 'none', flex: '1 1 auto'}"
-					 class='flex-row my-2' v-show='columnsCustomizerVisible'>
+					 class='flex-row my-2'>
 					<gsim-select :field='form.gsim' @gsim-selected='gsimSelected' :imt-field="imts"></gsim-select>
 					<div class='me-3'></div>
 					<div class='d-flex flex-column'>

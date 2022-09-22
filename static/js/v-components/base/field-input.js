@@ -136,7 +136,7 @@ EGSIM.component('field-label', {
 	computed: {
 		infoMessageClass(){
 			var cls = "small ms-2 text-nowrap text-end flex-row";
-			return cls + (!!this.field.error ? 'text-danger' : ' text-muted');
+			return cls + (!!this.field.error ? ' text-danger' : ' text-muted');
 		},
 		infoMsg(){
 			if (this.field.error){
