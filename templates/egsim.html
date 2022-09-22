@@ -10,11 +10,13 @@
 <!-- custom css -->
 <style>
 /* navbar (top toolbar with menus): */
-nav .menu-item{ margin-right: 1rem; cursor: pointer; color: #FFF; opacity: 0.66; }
-nav .menu-item:first-of-type{ margin-left: 1rem}
+nav .menu-item{ cursor: pointer; color: #FFF; opacity: 0.66; }
+nav > .menu-item{ margin-right: 1rem; }
+nav > .menu-item:first-of-type{ margin-left: 1rem}
 nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
+#options-menu { transition: transform .25s ease-out; transform-origin: top; }
 @media (max-width: 1200px){  /* narrow  screen (< 1200px) */
-	nav .menu-item span { display: none !important; } /* hide menu texts */
+	nav > .menu-item span { display: none !important; } /* hide menu texts */
 }
 /* waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
 #waitdiv{ z-index: 200; }
@@ -63,40 +65,40 @@ nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
 <div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
 
 	<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
-			{% for component in components %}
-				<a class='menu-item' :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
-						@click="setComponent('{{ component.0 }}')" title="{{ component.1 }}">
-					<i class="fa {{ component.2 }}"></i> <span>{{ component.1 }}</span>
-				</a>
-			{% endfor %}
-
-			<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
-				 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
-				<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
-				<input type="text" class="error-msg " :value="errorMsg" readonly />
-				<i class="fa fa-times ms-2" @click='clearErrors()' style="cursor: pointer"></i>
-			</div>
-
-			<a class="menu-item " href="#" title="options"
-			   onclick="this.nextElementSibling.style.transform ? this.nextElementSibling.style.removeProperty('transform') : this.nextElementSibling.style.transform='scaleY(0)'">
-				<i class="fa fa-bars"></i>
+		{% for component in components %}
+			<a class='menu-item' :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
+					@click="setComponent('{{ component.0 }}')" title="{{ component.1 }}">
+				<i class="fa {{ component.2 }}"></i> <span>{{ component.1 }}</span>
 			</a>
-			<div style="transform: scaleY(0);z-index:100" class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
-				<a class="menu-item py-2" title="API Doc / Legal Info" href='{{ newpage_urls.api }}' target="_blank">
-					<i class="fa fa-info-circle"></i> <span>API Doc</span>
-				</a>
-				<a class="menu-item py-2" title="References and License Info" href='{{ newpage_urls.ref_and_license }}' target="_blank">
-					<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
-				</a>
-				<a class='menu-item py-2' href='{{ newpage_urls.imprint }}' target="_blank" title="Imprint"
-				   onclick="this.parentNode.style.transform='scaleY(0)'">
-					Imprint
-				</a>
-				<a class='menu-item py-2' href='{{ newpage_urls.data_protection }}' target="_blank" title="Data Protection"
-				   onclick="this.parentNode.style.transform='scaleY(0)'">
-					Data Protection
-				</a>
-			</div>
+		{% endfor %}
+
+		<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
+			 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
+			<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
+			<input type="text" class="error-msg " :value="errorMsg" readonly />
+			<i class="fa fa-times ms-2" @click='clearErrors()' style="cursor: pointer"></i>
+		</div>
+
+		<a class="menu-item " href="#" title="options" onclick="toggleOptionsMenu(event)">
+			<i class="fa fa-bars"></i>
+		</a>
+		<div style="transform: scaleY(0);z-index:100;" id="options-menu"
+			 class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
+			<a class="menu-item p-2" title="API Documentation" href='{{ newpage_urls.api }}' target="_blank">
+				<i class="fa fa-info-circle"></i> <span>API Doc</span>
+			</a>
+			<a class="menu-item p-2" title="References and API License" href='{{ newpage_urls.ref_and_license }}' target="_blank">
+				<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
+			</a>
+			<a class='menu-item p-2' href='{{ newpage_urls.imprint }}' target="_blank" title="Imprint"
+			   onclick="this.parentNode.style.transform='scaleY(0)'">
+				Imprint
+			</a>
+			<a class='menu-item p-2' href='{{ newpage_urls.data_protection }}' target="_blank" title="Data Protection"
+			   onclick="this.parentNode.style.transform='scaleY(0)'">
+				Data Protection
+			</a>
+		</div>
 	</nav>
 
 	<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
@@ -127,7 +129,36 @@ nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
 {{ block.super }}
 
 <script type="text/javascript">
-/* First of all create functions to check browser compatibility and display warning if needed */
+function toggleOptionsMenu(evt){
+	var elm = document.getElementById('options-menu');
+	// if we clicked or keypressed on the menu, return
+	if (evt.type == 'keyup'){
+		var elm2 = evt.target;
+		while(elm2 && elm2.getAttribute){
+			if (elm2.getAttribute('id') === elm.getAttribute('id')){
+				return;
+			}
+			elm2 = elm2.parentNode;
+		}
+	}
+	if (elm.style.transform == 'scaleY(0)'){
+		// set top (for safety) and show component
+		elm.style.top = `${document.getElementById('egsim-nav').offsetHeight}px`;
+		elm.style.transform = 'scaleY(1)';
+		evt.stopPropagation();
+		// hide popup if we press or click everywhere in the document:
+		document.addEventListener('click', toggleOptionsMenu);
+		document.addEventListener('keyup', toggleOptionsMenu);
+		console.log('showing');
+	}else{
+		// hide component:
+		elm.style.transform = 'scaleY(0)';
+		// remove document event listeners attached above:
+		document.removeEventListener('click', toggleOptionsMenu);
+		document.removeEventListener('keyup', toggleOptionsMenu);
+		console.log('hiding');
+	}
+};
 
 function getBrowser() {
 	// Return the Array [browser, version] e.g. (examples tested locally):
