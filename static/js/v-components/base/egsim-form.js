@@ -271,8 +271,8 @@ EGSIM.component('egsim-form', {
 	},
 	template: `<form novalidate @submit.prevent="submitMe"
 		  class="flex-column position-relative pb-4 align-self-center"
-		  :class="[showAsDialog ? ['shadow', 'border', 'bg-body', 'mb-2'] : '']"
-		  style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.5) !important"
+		  :class="[showAsDialog ? ['shadow', 'border', 'bg-body', 'mt-1', 'mb-3'] : '']"
+		  style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.3) !important"
 		  :style="{'display': show ? 'flex' : 'none'}">
 
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
