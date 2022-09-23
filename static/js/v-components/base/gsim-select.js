@@ -58,7 +58,7 @@ EGSIM.component('gsim-select', {
 	computed: {
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
-		<div class='d-flex flex-column' style="flex: 1 1 60%">
+		<div class='d-flex flex-column' style="flex: 1 1 auto">
 			<field-label :field="field" />
 			<div class='d-flex flex column' style="position:relative; flex: 1 1 auto">
 				<field-input :field="field" :style="'flex: 1 1 auto'" />
@@ -73,8 +73,8 @@ EGSIM.component('gsim-select', {
 
 		<!-- GSIM FILTER CONTROLS: -->
 		<div class="pt-2 d-flex flex-column form-control border-top-0"
-			 style='flex: 1 1 20rem; background-color:transparent !important; border-top-left-radius: 0rem!important; border-top-right-radius: 0rem!important;'>
-			<div class="d-flex flex-column" style='flex: 1 1 auto'>
+			 style='background-color:transparent !important; border-top-left-radius: 0rem!important; border-top-right-radius: 0rem!important;'>
+			<div class="d-flex flex-column">
 				<div class='mb-1' style='position:relative'>
 					<table>
 						<tr>
@@ -102,7 +102,7 @@ EGSIM.component('gsim-select', {
 						Clear map filter
 					</button>
 				</div>
-				<div :id="mapId" ref="mapDiv" style='flex: 1 1 auto'></div>
+				<div :id="mapId" ref="mapDiv" style='height:14rem'></div>
 		   </div>
 		</div>
 	</div>`,

@@ -85,37 +85,39 @@ EGSIM.component('flatfile-compilation', {
 			this.updateFlatfile();
 		}
 	},
-	template: `<form novalidate class='d-flex flex-column' style='flex: 1 1 auto'>
-		<div class='d-flex flex-row p-3' style='flex: 1 1 auto;'>
-			<div style='max-width:9rem;text-align: justify;'>
-				<p>
-				Flatfiles are parametric tables required in Model-to-data comparison and testing,
-				and must be uploaded as uncompressed or zipped
-				<a target="_blank" href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV files</a>,
-				with each row representing a manually processed waveform, and the waveform metadata and intensity measures
-				arranged in columns.
-				</p>
-				<p>
-				To help the compilation of your flatfile, from scratch or existing sources,
-				here you can create a template with the smallest set of columns <b>required</b> by
-				the models and intensity measures that you want to analyze.
-				</p>
-			</div>
+	template: `<form novalidate class='d-flex flex-column p-2' style='flex: 1 1 auto'>
+		<div class='mt-3'>
+			<p>
+			Model-to-data comparison and testing require data which must be provided
+			in eGSIM via flatfiles, i.e. text files in <a target="_blank"
+			href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV format</a>.
+			Each line of a flatfile is an observed seismic waveform. Each waveform
+			consists of one or more fields (the waveform data and metadata),
+			separated by commas or similar characters (e.g. semicolon).
+			The minimum required fields that must be provided when uploading a flatfile
+			depend on the models to compare and the intensity measures used for
+			comparison, as illustrated in the template below that can be dynamically
+			adapted and used for compiling user defined flatfiles
+			</p>
+		</div>
 
-			<div class='d-flex flex-column mx-5'>
-				<div class='mb-4'>
+		<div class='d-flex flex-row' style='flex: 1 1 auto;'>
+			<div class='d-flex flex-column'>
+				<div class='mb-3'>
 					<b>Select models</b> ({{ form.gsim.value.length }}) <b>and intensity measures</b> ({{ imts.value.length }})
 					<b>of interest:</b>
 				</div>
 				<gsim-select :field='form.gsim'
 							 @gsim-selected='gsimSelected'
 							 :imt-field="imts"
-							 class='mb-5' style='flex: 1 1 auto' />
+							 class='mb-3' style='flex: 1 1 auto' />
 				<imt-select :field='imts' />
 			</div>
 
+			<div class='mx-3'></div>
+
 			<div class='d-flex flex-column' style='flex: 1 1 auto'>
-				<div class='mb-4 position-relative'>
+				<div class='mb-3 position-relative'>
 					<b>Flatfile template</b>&nbsp; ({{ flatfileHeader.length }} columns)
 					<div class='text-nowrap position-absolute end-0 top-0'>
 						CSV separator
@@ -160,7 +162,7 @@ EGSIM.component('flatfile-compilation', {
 			this.flatfileHeader = header;
 			var flatfileContent = [
 				header.join(this.csvSep), '',
-				'# This block comment is not part of the CSV but contains column information to help the compilation:',
+				'# This block comment is not part of the CSV: it contains column information to help the compilation:',
 			];
 			for (var val of [helpHeaders].concat(columns)){
 				var row = val.map((elm, index) => elm + " ".repeat(depths[index] - elm.length)).join(" | ");
@@ -269,32 +271,44 @@ EGSIM.component('flatfile-plot-div', {
 		// The next two methods are overwritten from PLOT_DIV. See README.md for details
 		getData(responseObject){
 			var jsondict = responseObject;
+			var hist = true;
 			// set plotly data from jsondict:
 			if (jsondict.xlabel && jsondict.ylabel){
+				hist = false;
 				var trace = {
-						x: jsondict.xvalues,
-						y: jsondict.yvalues,
-						mode: 'markers',
-						type: 'scatter',
-						text: jsondict.labels || [],
-						marker: { size: 10, color: this.colorMap.transparentize(0, .5) },
-						// <extra></extra> hides the second tooltip (white):
-						hovertemplate: `${jsondict.xlabel}=%{x}<br>${jsondict.ylabel}=%{y}`+
-							`<extra></extra>`
-					  };
+					x: jsondict.xvalues,
+					y: jsondict.yvalues,
+					mode: 'markers',
+					type: 'scatter',
+					text: jsondict.labels || [],
+					name: `${jsondict.xlabel} vs ${jsondict.ylabel}`,
+					marker: { size: 10 },
+					// <extra></extra> hides the second tooltip (white):
+					hovertemplate: `${jsondict.xlabel}=%{x}<br>${jsondict.ylabel}=%{y}`+
+						`<extra></extra>`
+				};
 			}else if(jsondict.xlabel){
 				var trace = {
 					x: jsondict.xvalues,
 					type: 'histogram',
-				  };
+					name: jsondict.xlabel,
+					marker: { line: { width: 0 }}
+				};
 			}else{
 				var trace = {
 					y: jsondict.yvalues,
 					type: 'histogram',
+					name: jsondict.ylabel,
+					marker: { line: { width: 0 }}
 				  };
 			}
-			var color = this.addLegend(trace, 'name');
-			trace.color = color;
+			var color = this.addLegend(trace, trace.name); //sets also mainTrace.legendgroup
+			// set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
+			trace.marker.color = this.colorMap.transparentize(color, .5);
+			if (hist){
+				trace.marker.line.color = color;
+			}
+
 			// modify here the default layout:
 			// this.defaultlayout.title = `Magnitude Distance plot (${trace.x.length} records in database)`;
 			var data = [ trace ];
@@ -305,13 +319,7 @@ EGSIM.component('flatfile-plot-div', {
 			var yaxis = {
 				title: jsondict.ylabel || 'Count'
 			};
-			// build the params. Setting just a single param allows us to
-			// display a sort of title on the x axis:
-//			var numFormatted = trace.x.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); //https://stackoverflow.com/a/2901298
-//			var title = `${numFormatted} records`;
-//			if (jsondict.nan_count){
-//				title += ' (' + jsondict.nan_count + ' NaN records not shown)';
-//			}
+
 			var params = {};  // {'Magnitude Distance plot': title};
 			return [{traces: [trace], params: params, xaxis: xaxis, yaxis: yaxis}];
 		},
