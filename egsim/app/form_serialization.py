@@ -1,5 +1,5 @@
 """Forms input data serialization into YAML or JSON"""
-
+from itertools import chain
 from typing import Type
 import json
 import yaml
@@ -28,9 +28,7 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
 
     docstrings = {}
     for param_names, field_name, field in form_class.apifields():
-        data_pnames = set(p for p in param_names if p in data)
-        if field_name not in data_pnames and field_name in data:
-            data_pnames.add(field_name)
+        data_pnames = set(chain(param_names, [field_name]))
         # this should never happen if the form is successfully validated, however:
         if len(data_pnames) > 1:
             raise ValueError(f'Conflicting parameters: {", " .join(data_pnames)}')

@@ -88,16 +88,16 @@ EGSIM.component('flatfile-compilation', {
 	template: `<form novalidate class='d-flex flex-column p-2' style='flex: 1 1 auto'>
 		<div class='mt-3'>
 			<p>
-			Model-to-data comparison and testing require data which must be provided
-			in eGSIM via flatfiles, i.e. text files in <a target="_blank"
-			href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV format</a>.
-			Each line of a flatfile is an observed seismic waveform. Each waveform
+			A Flatfile is the data set required in Model-to-data comparison and
+			testing, and must be uploaded in eGSIM as zipped or uncompressed
+			<a target="_blank"
+			href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV file</a>.
+			Each line of a flatfile is an observed seismic waveform, each waveform
 			consists of one or more fields (the waveform data and metadata),
 			separated by commas or similar characters (e.g. semicolon).
-			The minimum required fields that must be provided when uploading a flatfile
-			depend on the models to compare and the intensity measures used for
-			comparison, as illustrated in the template below that can be dynamically
-			adapted and used for compiling user defined flatfiles
+			The minimum required fields that must be provided depend on the models to
+			compare and the intensity measures used for comparison, as illustrated in
+			the template below that can be dynamically adapted to the use case
 			</p>
 		</div>
 
