@@ -84,18 +84,20 @@ nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
 		</a>
 		<div style="transform: scaleY(0);z-index:100;" id="options-menu"
 			 class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
-			<a class="menu-item p-2" title="API Documentation" href='{{ newpage_urls.api }}' target="_blank">
+			<a class="menu-item p-2" title="API Documentation"
+			   href='{{ newpage_urls.api }}' target="_blank">
 				<i class="fa fa-info-circle"></i> <span>API Doc</span>
 			</a>
-			<a class="menu-item p-2" title="References and API License" href='{{ newpage_urls.ref_and_license }}' target="_blank">
+			<a class="menu-item p-2" title="References and API License"
+			   href='{{ newpage_urls.ref_and_license }}' target="_blank">
 				<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
 			</a>
-			<a class='menu-item p-2' href='{{ newpage_urls.imprint }}' target="_blank" title="Imprint"
-			   onclick="this.parentNode.style.transform='scaleY(0)'">
+			<a class='menu-item p-2' href='{{ newpage_urls.imprint }}' target="_blank"
+			   title="Imprint">
 				Imprint
 			</a>
-			<a class='menu-item p-2' href='{{ newpage_urls.data_protection }}' target="_blank" title="Data Protection"
-			   onclick="this.parentNode.style.transform='scaleY(0)'">
+			<a class='menu-item p-2' href='{{ newpage_urls.data_protection }}' target="_blank"
+			   title="Data Protection">
 				Data Protection
 			</a>
 		</div>
@@ -131,32 +133,31 @@ nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
 <script type="text/javascript">
 function toggleOptionsMenu(evt){
 	var elm = document.getElementById('options-menu');
-	// if we clicked or keypressed on the menu, return
-	if (evt.type == 'keyup'){
-		var elm2 = evt.target;
-		while(elm2 && elm2.getAttribute){
-			if (elm2.getAttribute('id') === elm.getAttribute('id')){
-				return;
-			}
-			elm2 = elm2.parentNode;
-		}
+	var isShowing = () => { return elm.getAttribute('data-showing') === '1' };
+	function popup(visible, timeout=0){
+		console.log(`skip popup ${visible} ${event.type}`);
+		if (isShowing() == visible){ return; }
+		console.log(`popup ${visible} ${event.type}`);
+		setTimeout(() => {
+			elm.style.transform = visible ? 'scaleY(1)' : 'scaleY(0)';
+			elm.setAttribute('data-showing', visible ? '1': '');
+		}, timeout);
 	}
-	if (elm.style.transform == 'scaleY(0)'){
+
+	if (isShowing()){
+		// hide component:
+		popup(false);
+	}else{
+		evt.stopPropagation();
 		// set top (for safety) and show component
 		elm.style.top = `${document.getElementById('egsim-nav').offsetHeight}px`;
-		elm.style.transform = 'scaleY(1)';
-		evt.stopPropagation();
-		// hide popup if we press or click everywhere in the document:
-		document.addEventListener('click', toggleOptionsMenu);
-		document.addEventListener('keyup', toggleOptionsMenu);
-		console.log('showing');
-	}else{
-		// hide component:
-		elm.style.transform = 'scaleY(0)';
-		// remove document event listeners attached above:
-		document.removeEventListener('click', toggleOptionsMenu);
-		document.removeEventListener('keyup', toggleOptionsMenu);
-		console.log('hiding');
+		// show popup:
+		popup(true);
+		// add document event listener to hide popup:
+		const ctr = new AbortController();
+		var opts = { signal: ctr.signal };
+		document.addEventListener('click', e => { popup(false, 100); ctr.abort();}, opts);
+		document.addEventListener('keydown', e => { console.log(e.keyCode); if(e.keyCode != 9){popup(false, 100); ctr.abort();} }, opts);
 	}
 };
 
@@ -233,20 +234,15 @@ EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
 <script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}testing.js"></script>
 <script>
-/**
- * Registers globally "apidoc" and "home" Vue components here in order to avoid further
- * JS requests for just few lines of code. Remember, the component names must be a name
- * of a TAB Enum in egsim.gui.__init__.py
- */
+/* Register simple Vue component here to speed up rendering: */
 EGSIM.component('home', {
 	props: {src: String},
 	template: `<iframe style='flex: 1 1 auto' :src='src'></iframe>`
 });
 
+/* init app*/
 const EGSIM_APP = EGSIM;
 EGSIM = EGSIM_APP.mount('#egsim-vue');
-EGSIM.datadata = {'a': 5, 1: 5};
-
 </script>
 
 {% endblock %}

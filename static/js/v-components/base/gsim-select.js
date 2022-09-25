@@ -372,7 +372,9 @@ EGSIM.component('imt-select', {
 	template: `<div class='d-flex flex-column'>
 		<field-label :field="fieldCopy" />
 		<field-input :field="fieldCopy" style="flex: 1 1 auto" />
-		<base-input :value="SAPeriods" :disabled="field.disabled || !fieldCopy.value.includes('SA')"
+		<base-input :value="SAPeriods"
+					@value-changed="(value) => {SAPeriods = value;}"
+					:disabled="field.disabled || !fieldCopy.value.includes('SA')"
 					placeholder="SA periods (space-separated)"
 					:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />
 	</div>`,
