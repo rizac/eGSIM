@@ -25,12 +25,15 @@ var BASE_FORM = {
 			}).catch(response => {
 				var errData = (response.response || {}).data;
 				var error = (errData || {}).error || {};
-				// set the data field errors:
+				// set the data field errors
 				var errors = error.errors || [];
 				for (var err of errors){
 					var paramName = err.location;
-					if (paramName && (paramName in data)){
-						this.form[paramName].error = err.message || 'invalid: unknown error';
+					for (attrName of Object.keys(this.form)){
+						var formField = this.form[attrName];
+						if (formField.name === paramName){
+							formField.error = err.message || 'invalid: unknown error';
+						}
 					}
 				}
 				throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise

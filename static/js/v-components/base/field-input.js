@@ -128,11 +128,6 @@ EGSIM.component('field-label', {
 	props: {
 		field: {type: Object},
 	},
-	data() {
-		return {
-			isSelectMultiple: this.field.multiple && this.field.choices.length > 10
-		}
-	},
 	computed: {
 		infoMessageClass(){
 			var cls = "small ms-2 text-nowrap text-end flex-row";
@@ -151,16 +146,6 @@ EGSIM.component('field-label', {
 			if (infoMsg.toLowerCase().trim() === this.field.name.toLowerCase()){
 				infoMsg = "";
 			}
-			if (this.isSelectMultiple){
-				var count = this.field.choices.filter(e => !e.disabled).length;
-				var sel = Array.isArray(this.field.value) ? this.field.value.length : 0;
-				var selected = `${count} total, ${sel} selected`;
-				if (infoMsg){
-					infoMsg += `, ${selected}`;
-				}else{
-					infoMsg = selected;
-				}
-			}
 			return infoMsg;
 		},
 		showControlsForSelectMultiple(){
@@ -171,14 +156,6 @@ EGSIM.component('field-label', {
 		<label class='m-0 text-nowrap p-1 pe-2 ps-0' :disabled='field.disabled'
 			   v-html="field.name" />
 		<span :class="infoMessageClass" v-html="infoMsg" style="flex: 1 1 auto;"></span>
-		<i v-if="showControlsForSelectMultiple"
-		   @click="clearSelection" class="fa fa-times-circle ms-2"
-		   style="cursor: pointer;" title="Clear selection"></i>
-	</div>`,
-	methods: {
-		clearSelection(){
-			this.field.value = [];
-			var asf = 9;
-		}
-	}
+		<slot name="trailing-content"></slot>
+	</div>`
 });
