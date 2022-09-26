@@ -20,9 +20,11 @@ EGSIM.component('gsim-select', {
 				map: null  // null or function(gsim_name) => true/false
 			},
 			mapOffsetParent: undefined,  // to refresh the map when made visible again
-			choices: Array.from(this.field.choices),  // copy Array to preserve order
+			choices: Array.from(this.field.choices),  // avoid modifying or reordering field.choices
+			modelNamesSet: new Set(this.field.choices.map(elm => elm.value)), // used when view=text to check typos
 			warnings: [], //list of strings of warnings (updated also in watchers below)
-			mapId: `map${Date.now()}${Math.random()}`
+			mapId: `map${Date.now()}${Math.random()}`,
+			selectionView: true
 		}
 	},
 	watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
@@ -56,23 +58,75 @@ EGSIM.component('gsim-select', {
 		}
 	},
 	computed: {
+		infoMsg(){
+			return `${this.field.value.length || 0} of ${this.field.choices.length} selected`
+		},
+		textSelectionErrorMsg(){
+			var msg = "";
+			if (!(this.field.value) || !(this.field.value.length)){
+				msg = "No model provided";
+			}else if (this.field.value.some(elm => !elm || !this.modelNamesSet.has(elm))){
+				msg = 'Invalid model name(s), check empty lines or typos';
+			}
+			return msg ? `<span class='text-warning me-1'><i class='fa fa-exclamation-triangle'></i></span>${msg}` : "";
+		},
+		modelSelectionAsString: {  // called when we are in text view mode
+			get(){
+				var retVal = (this.field.value.length ? this.field.value : []).join("\n")
+				// retVal should be what the textarea displays, however, as it is it
+				// would overwrite the text content while editing, e.g. typing a newline. So:
+				if (this.$refs.textSelectionContainer){
+					var textArea = this.$refs.textSelectionContainer.querySelector('textarea');
+					var currentText = "" + textArea.value;
+					// we need to allow newlines, so first get the text representation
+					// of the currently selected models:
+					if (currentText.trim() == retVal){
+						retVal = currentText;
+					}
+				}
+				return retVal;
+			},
+			set(text){
+				this.field.value = text.trim().split("\n");
+			}
+		}
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
-		<div class='d-flex flex-column' style="flex: 1 1 auto">
-			<field-label :field="field" />
-			<div class='d-flex flex column' style="position:relative; flex: 1 1 auto">
-				<field-input :field="field" :style="'flex: 1 1 auto'" />
-				<div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
-					 style="position:absolute; right:2rem; top:1rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
-					<div v-for="w in warnings" class="small text-muted pt-2 px-3">
-						<span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>{{ w }}
-					</div>
+		<field-label :field="field">
+			<template v-slot:trailing-content>
+				<span v-if="!field.error" class='ms-2 small text-muted' v-html="infoMsg"></span>
+				<i v-if="field.value.length && !field.error"
+				   @click="field.value=[]" class="fa fa-times-circle ms-2"
+				   style="cursor: pointer;" title="Clear selection"></i>
+				<i v-if="!field.error"
+				   @click="toggleView" class="fa ms-2"
+				   :class="selectionView ? 'fa-file-text' : 'fa-list-alt'"
+				   :title="selectionView ? 'Switch to text view' : 'Switch to list view'"
+				   style="cursor: pointer;" ></i>
+			</template>
+		</field-label>
+		<div class='flex column' style="position:relative; flex: 1 1 auto"
+			:style="{display: selectionView ? 'flex' : 'none'}"
+			ref='listSelectionContainer'>
+			<field-input :field="field" :style="'flex: 1 1 auto'"/>
+			<div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
+				 style="position:absolute; right:2rem; top:1rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
+				<div v-for="w in warnings" class="small text-muted pt-2 px-3">
+					<span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>{{ w }}
 				</div>
 			</div>
 		</div>
-
+		<div class='flex-column' style="flex: 1 1 auto"
+			 :style="{display: selectionView ? 'none' : 'flex'}" ref="textSelectionContainer">
+			<textarea v-model="modelSelectionAsString" spellcheck="false"
+					  class="form-control" :class="field.error ? 'border-danger' : ''"
+					  style='flex: 1 1 auto; resize: none;'>
+			</textarea>
+			<div class='mt-2' v-show="textSelectionErrorMsg" v-html="textSelectionErrorMsg"></div>
+		</div>
 		<!-- GSIM FILTER CONTROLS: -->
-		<div class="pt-2 d-flex flex-column form-control border-top-0"
+		<div :style="{display: selectionView ? 'flex' : 'none'}"
+			 class="pt-2 flex-column form-control border-top-0"
 			 style='background-color:transparent !important; border-top-left-radius: 0rem!important; border-top-right-radius: 0rem!important;'>
 			<div class="d-flex flex-column">
 				<div class='mb-1' style='position:relative'>
@@ -110,6 +164,14 @@ EGSIM.component('gsim-select', {
 		this.createLeafletMap();
 	},
 	methods: {
+		toggleView(){
+			if (this.selectionView){
+				var width = `${this.$refs.listSelectionContainer.offsetWidth}px`;
+				// to avoid unpleasant resizing, set textarea size if we are about to show it:
+				this.$refs.textSelectionContainer.style.width = width;
+			}
+			this.selectionView=!this.selectionView;
+		},
 		createLeafletMap(){
 			let map = L.map(this.mapId, {center: [48, 7], zoom: 4});
 			// center map:
