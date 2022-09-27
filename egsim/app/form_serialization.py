@@ -16,7 +16,8 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
     NOTE: This method should b executed only if `form_class(data).is_valid()`
     returns True
 
-    :param data: the form input data to be serialized
+    :param data: the form input data to be serialized. The dict keys are the
+        Field attribute names, which might not be the API parameter names
     :param form_class: a EgsimMBaseForm class that should process the input data
     :param syntax: string either json or yaml. Default: yaml
 
@@ -27,14 +28,16 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
                          "not in ('json', 'yam')" % syntax)
 
     docstrings = {}
+    serializable_data = {}
     for param_names, field_name, field in form_class.apifields():
-        data_pnames = set(chain(param_names, [field_name]))
+        data_keys = set(chain(param_names, [field_name])) & set(data)
         # this should never happen if the form is successfully validated, however:
-        if len(data_pnames) > 1:
-            raise ValueError(f'Conflicting parameters: {", " .join(data_pnames)}')
-        elif not data_pnames:
+        if len(data_keys) > 1:
+            raise ValueError(f'Conflicting parameters: {", " .join(data_keys)}')
+        elif not data_keys:
             continue
-        param_name = data_pnames[0]
+        data_key = next(iter(data_keys))  # 1st (and only) element
+        param_value = data[data_key]
         # Omit unchanged optional parameters. This is not only to make
         # the dumped string more readable and light size, but to avoid
         # parameters which default to None (e.g. z1pt0 in
@@ -43,15 +46,17 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
         # would write "...z1pt0=null...", which might be interpreted as
         # the string "null"
         is_optional = not field.required or field.initial is not None
-        if is_optional and data[param_name] == field.initial:
-            data.pop(param_name)
-        elif syntax == 'yaml':
+        if is_optional and param_value == field.initial:
+            continue
+        param_name = param_names[0]
+        serializable_data[param_name] = param_value
+        if syntax == 'yaml':
             docstrings[param_name] = get_field_docstring(field, True)
 
     if syntax == 'json':
-        stream = _dump_json(data)
+        stream = _dump_json(serializable_data)
     else:
-        stream = _dump_yaml(data, docstrings)
+        stream = _dump_yaml(serializable_data, docstrings)
     stream.seek(0)
 
     return stream
