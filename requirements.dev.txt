@@ -5,7 +5,7 @@ charset-normalizer==2.0.7
 coverage==6.1.2
 cycler==0.11.0
 decorator==5.1.0
-Django==3.2.9
+Django==3.2.15
 docutils==0.18
 fonttools==4.28.2
 h5py==3.6.0
