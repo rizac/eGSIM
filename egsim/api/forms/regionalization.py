@@ -24,15 +24,17 @@ class GsimFromRegionForm(APIForm):
     # keeping the Field attribute names immutable, which is needed to avoid breaking the
     # code. See `egsim.forms.EgsimFormMeta` for details
     _field2params = {
-        'lat': ['lat', 'latitude'],
-        'lon': ['lon', 'longitude'],
-        'regionalization': ['reg']
+        'latitude': ['latitude', 'lat'],
+        'longitude': ['longitude', 'lon'],
+        'regionalization': ['regionalization', 'shsr']
     }
 
-    lat = FloatField(label='Strike', min_value=-90., max_value=90.)
-    lon = FloatField(label='Strike', min_value=-180., max_value=180.)
+    latitude = FloatField(label='Strike', min_value=-90., max_value=90.)
+    longitude = FloatField(label='Strike', min_value=-180., max_value=180.)
     regionalization = MultipleChoiceWildcardField(choices=get_regionalizations,
-                                                  label='Regionalization name',
+                                                  label='The name of this '
+                                                        'Seimsic Hazard '
+                                                        'Source Regionalization',
                                                   required=False)
 
     @classmethod
@@ -52,7 +54,7 @@ class GsimFromRegionForm(APIForm):
         if rgnz:
             qry = qry.filter(regionalization__name__in=rgnz)
         gsims = {}
-        point = Point(cleaned_data['lon'], cleaned_data['lat'])
+        point = Point(cleaned_data['longitude'], cleaned_data['latitude'])
         for gsim_name, regionalization_name, geometry in qry.all():
             if gsim_name in gsims:
                 continue
