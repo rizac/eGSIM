@@ -7,11 +7,14 @@ from itertools import chain, repeat
 from io import StringIO
 import csv
 
+from shapely.geometry import Polygon, Point
 from django.core.exceptions import ValidationError
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.utils.translation import gettext
 from django.forms import Form
-from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField, Field)
+
+from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField, Field,
+                     FloatField)
 from .. import models
 
 
@@ -192,17 +195,79 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             yield params, field_name, field
 
 
-def get_gsim_choices():  # https://stackoverflow.com/a/57809521
+def _get_regionalizations() -> Iterable[tuple[str, str]]:
+    return [(_.name, str(_)) for _ in models.Regionalization.objects.all()]
+
+
+class SHSRForm(EgsimBaseForm):
+    """Base class for all Form accepting a list of models in form of location
+    (lat lon) and optional list of seismic hazard source regionalizations (SHSR)"""
+
+    # Fields of this class are exposed as API parameters via their attribute name. This
+    # default behaviour can be changed here by manually mapping a Field attribute name to
+    # its API param name(s). `_field2params` allows to easily change API params whilst
+    # keeping the Field attribute names immutable, which is needed to avoid breaking the
+    # code. See `egsim.forms.EgsimFormMeta` for details
+    _field2params = {
+        'latitude': ['latitude', 'lat'],
+        'longitude': ['longitude', 'lon'],
+        'regionalization': ['regionalization', 'shsr']
+    }
+
+    latitude = FloatField(label='Latitude', min_value=-90., max_value=90.,
+                          required=False)
+    longitude = FloatField(label='Longitude', min_value=-180., max_value=180.,
+                           required=False)
+    regionalization = MultipleChoiceWildcardField(choices=_get_regionalizations,
+                                                  label='The Seimsic Hazard '
+                                                        'Source Regionalizations '
+                                                        'to use',
+                                                  required=False)
+
+    # the key of `cleaned_data:dict` mapped to the regionalization-selected models:
+    SHSR_MODELS_KEY = 'shsr_gsim'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        lon = cleaned_data.get('longitude', None)
+        lat = cleaned_data.get('latitude', None)
+        if lat is None or lon is None:
+            return cleaned_data
+        fields = ('gsim__name', 'regionalization__name', 'geometry')
+        qry = models.GsimRegion.objects.\
+            select_related('gsim', 'regionalization').\
+            only(*fields).values_list(*fields)
+        rgnz = cleaned_data['regionalization'] or []
+        if rgnz:
+            qry = qry.filter(regionalization__name__in=rgnz)
+        gsims = set()
+        point = Point(lon, lat)
+        for gsim_name, regionalization_name, geometry in qry.all():
+            if gsim_name in gsims:
+                continue
+            type, coords = geometry['type'], geometry['coordinates']
+            for coord in coords if type == 'MultiPolygon' else [coords]:
+                polygon = Polygon((tuple(l) for l in coord[0]))
+                if polygon.contains(point):
+                    gsims.add(gsim_name)
+                    break
+        if gsims:
+            cleaned_data[self.SHSR_MODELS_KEY] = sorted(gsims)
+
+        return cleaned_data
+
+
+def _get_gsim_choices():  # https://stackoverflow.com/a/57809521
     return [(_, _) for _ in models.Gsim.objects.only('name').values_list('name',
                                                                          flat=True)]
 
 
-def get_imt_choices():  # https://stackoverflow.com/a/57809521
+def _get_imt_choices():  # https://stackoverflow.com/a/57809521
     return [(_, _) for _ in models.Imt.objects.only('name').values_list('name',
                                                                         flat=True)]
 
 
-class GsimImtForm(EgsimBaseForm):
+class GsimImtForm(SHSRForm):
     """Base abstract-like form for any form requiring Gsim+Imt selection"""
 
     # Fields of this class are exposed as API parameters via their attribute name. This
@@ -212,23 +277,38 @@ class GsimImtForm(EgsimBaseForm):
     # code. See `egsim.forms.EgsimFormMeta` for details
     _field2params: dict[str, list[str]] = {'gsim': ['model', 'gmm']}
 
-    gsim = MultipleChoiceWildcardField(required=True, choices=get_gsim_choices,
+    # Note: both Fields below are required actually (see `clean` for details):
+    gsim = MultipleChoiceWildcardField(required=False, choices=_get_gsim_choices,
                                        label='Ground Shaking Intensity Model(s)')
-    imt = ImtField(required=True, choices=get_imt_choices,
+    imt = ImtField(required=False, choices=_get_imt_choices,
                    label='Intensity Measure Type(s)')
 
     def clean(self):
         """Run validation where we must validate selected gsim(s) based on
         selected intensity measure type
         """
-        cleaned_data = super().clean()
         gsim, imt = 'gsim', 'imt'
-        # for safety, check both are provided (with some field settings Django
-        # might append a falsy value if missing, e.g. [], which we do not want):
-        if gsim in cleaned_data and not cleaned_data[gsim]:
-            self.add_error(gsim, ValidationError('Missing gsim(s)', code='required'))
-        if imt in cleaned_data and not cleaned_data[imt]:
-            self.add_error(imt, ValidationError('Missing imt(s)', code='required'))
+
+        # gsim is required but first check that we passed the lat, lon arguments,
+        # in that case we might have already a list of gsim to merge with the
+        # one provided via the classical gsim parameter
+        cleaned_data = super().clean()
+        regionalization_based_gsims = cleaned_data.pop(self.SHSR_MODELS_KEY, [])
+        if regionalization_based_gsims:
+            if cleaned_data.get(gsim, None):
+                unique_gsims = sorted(set(list(cleaned_data[gsim]) +
+                                          regionalization_based_gsims))
+                cleaned_data[gsim] = unique_gsims
+            else:
+                cleaned_data[gsim] = regionalization_based_gsims
+
+        # Check that both fields are provided. Another reason we do it here instead
+        # than simply set `required=True` as Field argument is that sometimes
+        # `MultipleChoiceField`s do not raise but puts a def. val, e.g. []
+        if not cleaned_data.get(gsim, None):
+            self.add_error(gsim, ValidationError('Missing value', code='required'))
+        if not cleaned_data.get(imt, None):
+            self.add_error(imt, ValidationError('Missing value', code='required'))
         # if any of the if above was true, then the parameter has been removed from
         # cleaned_data. If both are provided, check gsims and imts match:
         if gsim in cleaned_data and imt in cleaned_data:
@@ -441,3 +521,31 @@ class APIForm(MediaTypeForm):
         :param processed_data: dict resulting from `self.process_data`
         """
         raise NotImplementedError(":meth:%s.csv_rows" % cls.__name__)
+
+
+class GsimFromRegionForm(SHSRForm, APIForm):
+    """API Form returning a list of models from a given location and optional
+    seismic hazard source regionalizations (SHSR)"""
+
+    @classmethod
+    def process_data(cls, cleaned_data: dict) -> dict[str, str]:
+        """Process the input data `cleaned_data` returning the response data
+        of this form upon user request, ie.e a dict of gsim name mapped to its
+        regionalization name.
+        This method is called by `self.response_data` only if the form is valid.
+
+        :param cleaned_data: the result of `self.cleaned_data`
+        """
+        return cleaned_data.get(SHSRForm.SHSR_MODELS_KEY, [])
+
+    @classmethod
+    def csv_rows(cls, processed_data) -> Iterable[Iterable[Any]]:
+        """Yield CSV rows, where each row is an iterables of Python objects
+        representing a cell value. Each row doesn't need to contain the same
+        number of elements, the caller function `self.to_csv_buffer` will pad
+        columns with Nones, in case (note that None is rendered as "", any other
+        value using its string representation).
+
+        :param processed_data: dict resulting from `self.process_data`
+        """
+        yield from processed_data

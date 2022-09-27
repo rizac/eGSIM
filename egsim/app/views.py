@@ -13,14 +13,14 @@ from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from . import figutils, TAB, URLS
+from . import figutils, TAB
 from . import form_serialization
 from .pages import (ref_and_license_page_renderer_context,
                     imprint_page_renderer_context, egsim_page_renderer_context,
                     apidoc_page_renderer_context, home_page_renderer_context)
-from ..api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
+from ..api.forms.flatfile import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
-from ..api.forms.regionalization import GsimFromRegionForm
+from ..api.forms import GsimFromRegionForm
 from ..api.views import error_response, RESTAPIView
 
 

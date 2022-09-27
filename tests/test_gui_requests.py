@@ -8,7 +8,7 @@ Created on 2 Jun 2018
 import json
 import pytest
 
-from egsim.api.forms.regionalization import GsimFromRegionForm
+from egsim.api.forms import GsimFromRegionForm
 from egsim.api.forms.flatfile.residuals import ResidualsForm
 from egsim.api.forms.flatfile.testing import TestingForm
 from egsim.api.forms.trellis import TrellisForm
