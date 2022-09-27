@@ -71,14 +71,19 @@ def download_request(request, key: TAB, filename: str):
         with an associated Form class)
     """
     form_class = TAB[key].formclass
-    input_dict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
-    form = form_class(data=input_dict)
+
+    def input_dict() -> dict:
+        """return the input dict. This function allows to work each time
+        on a new copy of the input data"""
+        return yaml.safe_load(StringIO(request.body.decode('utf-8')))
+
+    form = form_class(data=input_dict())
     if not form.is_valid():
         errs = form.validation_errors()
         return error_response(errs['message'], RESTAPIView.CLIENT_ERR_CODE,
                               errors=errs['errors'])
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
-    buffer = form_serialization.as_text(input_dict, form_class, syntax=ext_nodot)
+    buffer = form_serialization.as_text(input_dict(), form_class, syntax=ext_nodot)
     if ext_nodot == 'json':
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,
