@@ -10,8 +10,7 @@ from django.forms.widgets import ChoiceWidget, Input
 from .. import TAB, URLS
 from ...api import models
 from ...api.forms import EgsimBaseForm
-from ...api.forms.flatfile import FlatfileForm
-from ...api.forms.flatfile_compilation import FlatfileRequiredColumnsForm
+from ...api.forms.flatfile import FlatfileForm, FlatfileRequiredColumnsForm
 from ...api.forms.flatfile.inspection import FlatfilePlotForm
 
 
@@ -83,7 +82,11 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         test click buttons
     """
     def ignore_choices(field_att_name):
-        return field_att_name in ('gsim', 'imt', 'flatfile')
+        return field_att_name in {'gsim', 'imt', 'flatfile'}
+
+    def ignore_field(field_att_name):
+        return field_att_name in {'format', 'csv_sep', 'csv_dec',
+                                  'latitude', 'longitude', 'regionalization'}
 
     # properties to be passed to vuejs components.
     # If you change THE KEYS of the dict here you should change also the
@@ -93,7 +96,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             'src': URLS.HOME_NO_MENU
         },
         TAB.trellis.name: {
-            'form': form_to_json(TAB.trellis.formclass, ignore_choices),
+            'form': form_to_json(TAB.trellis.formclass, ignore_field, ignore_choices),
             'url': TAB.trellis.urls[0],
             'urls': {
                 'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.trellis.name}/"
@@ -103,13 +106,14 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             }
         },
         TAB.flatfile.name: {  # FIXME REMOVE
-            'forms': [form_to_json(FlatfileRequiredColumnsForm, ignore_choices),
-                      form_to_json(FlatfilePlotForm, ignore_choices)],
+            'forms': [form_to_json(FlatfileRequiredColumnsForm, ignore_field,
+                                   ignore_choices),
+                      form_to_json(FlatfilePlotForm, ignore_field, ignore_choices)],
             'urls': [URLS.FLATFILE_REQUIRED_COLUMNS,
                      URLS.FLATFILE_PLOT]
         },
         TAB.residuals.name: {
-            'form': form_to_json(TAB.residuals.formclass, ignore_choices),
+            'form': form_to_json(TAB.residuals.formclass, ignore_field, ignore_choices),
             'url': TAB.residuals.urls[0],
             'urls': {
                 'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.residuals.name}/"
@@ -119,7 +123,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
             }
         },
         TAB.testing.name: {
-            'form': form_to_json(TAB.testing.formclass, ignore_choices),
+            'form': form_to_json(TAB.testing.formclass, ignore_field, ignore_choices),
             'url': TAB.testing.urls[0],
             'urls': {
                 'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.testing.name}/"
@@ -133,7 +137,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     # FlatfilePlotForm has x and y that must be represented as <select> but cannot
     # be implemented as ChoiceField, because their content is not static but
     # flatfile dependent. So
-    plot_form = components_props[TAB.flatfile.name]['forms'][-1]
+    plot_form: dict = components_props[TAB.flatfile.name]['forms'][-1]
     plot_form['x']['type'] = 'select'
     plot_form['y']['type'] = 'select'
     # provide initial value:
@@ -174,12 +178,17 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
 
 
 def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
+                 ignore_field: Callable[[str], bool] = None,
                  ignore_choices: Callable[[str], bool] = None) -> dict[str, dict[Any]]:
     """Return a JSON-serializable dictionary of the Form Field names mapped to
     their properties, in order e.g. to be injected in HTML templates in order
     to render the Field as HTML component.
 
     :param form: EgsimBaseForm class or object (class instance)
+    :param ignore_field: callable accepting a string (field attribute name)
+        and returning True or False. If True, the field will be skipped and
+        not included in the returned dict. Useful for Fields not visible from
+        the GUI
     :param ignore_choices: callable accepting a string (field attribute name)
         and returning True or False. If False, the Field choices will not be
         loaded and the returned dict 'choices' key will be `[]`. Useful for
@@ -187,18 +196,19 @@ def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
     """
 
     if ignore_choices is None:
-        def ignore_choices(*a, **k):
+        def ignore_choices(*a, **kw):
+            return False
+
+    if ignore_field is None:
+        def ignore_field(*a, **kw):
             return False
 
     form_data = {}
-    # keep track of Field done. Initialize the set below with the ignored fields:
-    field_done = {'format', 'csv_sep', 'csv_dec'}
     # iterate over the field (public) names because we also have the attribute
     # name immediately available:
     for param_names, field_name, field in form.apifields():
-        if field_name in field_done:
+        if ignore_field(field_name):
             continue
-        field_done.add(field_name)
         field_dict = field_to_dict(field, ignore_choices=ignore_choices(field_name))
         field_dict |= dict(field_to_htmlelement_attrs(field), name=param_names[0])
         field_dict['error'] = ''

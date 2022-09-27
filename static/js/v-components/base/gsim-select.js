@@ -280,8 +280,8 @@ EGSIM.component('gsim-select', {
 				'regionalization': this.regionalization.value
 			};
 			// query data and update filter func:
-			EGSIM.post(this.regionalization.url, data).then(response => {  // defined in `vueutil.js`
-				var gsims = Array.isArray(response.data) ? response.data : Object.keys(response.data);
+			EGSIM.post(this.regionalization.url, data).then(response => {
+				var gsims = response.data; // Array of gsim names
 				this.filterBy.map = null;
 				if(gsims && gsims.length){
 					var regionGsims = new Set(gsims);

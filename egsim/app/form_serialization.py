@@ -1,5 +1,4 @@
 """Forms input data serialization into YAML or JSON"""
-from itertools import chain
 from typing import Type
 import json
 import yaml
