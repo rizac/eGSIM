@@ -139,12 +139,12 @@ EGSIM.component('gsim-select', {
 								   style='min-width:13.5rem;display:inline-block;width:initial'
 								   type="text" class="form-control form-control-sm">
 						</td>
-						<td v-if="imtField" class='text-nowrap ps-3' title='filter models that are defined for the IMT selected'>
+						<td v-if="imtField" class='text-nowrap ps-3' title='filter models that are defined for the currently selected IMT(s)'>
 							<label class='small my-0' :disabled='imtField.disabled'>
 								<input v-model="filterBy.imt" type="checkbox" :disabled='imtField.disabled'> by IMTs
 							</label>
 						</td>
-						<td class='text-nowrap ps-3' style='text-align: right;' title='filter models that have been selected on specific regions'>
+						<td class='text-nowrap ps-3' style='text-align: right;' title='filter models that have been selected for a specific location according to one or more Seismic Hazard Source Regionalizations'>
 							<span :style="[!!filterBy.map ? {'visibility': 'hidden'} : {}]" class='small'>
 								by region (click on map):
 							</span>
@@ -275,9 +275,9 @@ EGSIM.component('gsim-select', {
 			L.marker(latLng).addTo(this.map);
 			// query data:
 			var data = {
-				'lat': latLng[0],
-				'lon': latLng[1],
-				'reg': this.regionalization.value
+				'latitude': latLng[0],
+				'longitude': latLng[1],
+				'regionalization': this.regionalization.value
 			};
 			// query data and update filter func:
 			EGSIM.post(this.regionalization.url, data).then(response => {  // defined in `vueutil.js`
