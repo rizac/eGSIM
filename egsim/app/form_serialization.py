@@ -13,11 +13,11 @@ from ..api.forms.fields import get_field_docstring
 def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> StringIO:
     """Serialize `data` into a YAML or JSON stream that can be saved to file
     in order to perform POST Requests from client code.
-    NOTE: This method should b executed only if `form_class(data).is_valid()`
-    returns True
+    NOTE: This method does not validate `data`. If you want to check that (the
+    usual case) you should check that:
+    ```form_class(copy.deepcopy(data)).is_valid() is True```
 
-    :param data: the form input data to be serialized. The dict keys are the
-        Field attribute names, which might not be the API parameter names
+    :param data: the form input data to be serialized
     :param form_class: a EgsimMBaseForm class that should process the input data
     :param syntax: string either json or yaml. Default: yaml
 
@@ -30,7 +30,7 @@ def as_text(data: dict, form_class: Type[EgsimBaseForm], syntax='json') -> Strin
     docstrings = {}
     serializable_data = {}
     for param_names, field_name, field in form_class.apifields():
-        data_keys = set(chain(param_names, [field_name])) & set(data)
+        data_keys = set(param_names) & set(data)
         # this should never happen if the form is successfully validated, however:
         if len(data_keys) > 1:
             raise ValueError(f'Conflicting parameters: {", " .join(data_keys)}')
