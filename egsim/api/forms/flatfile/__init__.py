@@ -42,7 +42,8 @@ class FlatfileForm(EgsimBaseForm):
     flatfile = ModelChoiceField(queryset=models.Flatfile.get_flatfiles(),
                                 to_field_name="name", label='Flatfile',
                                 empty_label=None, required=False)
-    selexpr = CharField(required=False, label='Selection expression')
+    selexpr = CharField(required=False, label='Filter flatfile records via a '
+                                              'query string')
 
     def __init__(self, data, files=None, **kwargs):
         super().__init__(data=data, **kwargs)  # <- normalizes data keys

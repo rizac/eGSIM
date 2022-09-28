@@ -385,8 +385,9 @@ class GsimImtForm(SHSRForm):
         return objs.values_list('name', flat=True).distinct()
 
 
-class MediaTypeForm(EgsimBaseForm):
-    """Form handling the validation of the format related argument in a request"""
+class APIForm(EgsimBaseForm):
+    """Basic API Form: handle user request in different media types (json, text)
+     and returning the relative response"""
 
     DATA_FORMAT_CSV = 'csv'
     DATA_FORMAT_JSON = 'json'
@@ -444,10 +445,6 @@ class MediaTypeForm(EgsimBaseForm):
 
         return cleaned_data
 
-
-class APIForm(MediaTypeForm):
-    """GsimImtForm + MediaTypeForm"""
-
     @property
     def response_data(self) -> Union[dict, StringIO, None]:
         """Return the response data by processing the form data, or None if
@@ -458,7 +455,7 @@ class APIForm(MediaTypeForm):
 
         cleaned_data = self.cleaned_data
         obj = self.process_data(cleaned_data) or {}  # assure is not None
-        if self.data_format == MediaTypeForm.DATA_FORMAT_CSV:
+        if self.data_format == self.DATA_FORMAT_CSV:
             obj = self.to_csv_buffer(obj, cleaned_data['csv_sep'],
                                      cleaned_data['csv_dec'])
         return obj
