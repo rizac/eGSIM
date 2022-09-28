@@ -16,7 +16,7 @@ from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 EVENT_ID_COL = 'event_id'
 
-EVENT_ID_DESC = "The unique ID of the event that generated the observation. " \
+EVENT_ID_DESC = "The unique ID of the record seismic event. " \
                 "You can use the id provided by the event event web service " \
                 "used or create your own, as " \
                 "long as it holds: same id <=> same event"

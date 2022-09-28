@@ -37,8 +37,8 @@ PLOT_TYPE = {
     'vs30': ('Residuals vs. Vs30', residuals_with_vs30, {}),
     'depth': ('Residuals vs. Depth', residuals_with_depth, {}),
     # insert distances related residuals:
-    **{'dist_%s' % n: ("Residuals vs. %s" % l, residuals_with_distance,
-                       {'distance_type': n}) for n, l in _DIST_LABEL.items()}
+    **{n: ("Residuals vs. %s" % l, residuals_with_distance,
+           {'distance_type': n}) for n, l in _DIST_LABEL.items()}
 }
 
 

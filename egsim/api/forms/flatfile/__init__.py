@@ -36,7 +36,7 @@ class FlatfileForm(EgsimBaseForm):
     # keeping the Field attribute names immutable, which is needed to avoid breaking the
     # code. See `egsim.forms.EgsimFormMeta` for details
     _field2params = {
-        'selexpr': ['query', 'selection_expression']
+        'selexpr': ['data-query', 'selection-expression', 'selexp']
     }
 
     flatfile = ModelChoiceField(queryset=models.Flatfile.get_flatfiles(),
@@ -240,9 +240,9 @@ class FlatfileForm(EgsimBaseForm):
 class MOF:  # noqa
     # simple class emulating an Enum
     RES = 'res'
-    LH = 'lh'
-    LLH = "llh"
-    MLLH = "mllh"
+    LH = 'l'
+    LLH = "ll"
+    MLLH = "mll"
     EDR = "edr"
 
 
