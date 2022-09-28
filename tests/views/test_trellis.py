@@ -10,7 +10,7 @@ import pytest
 
 from egsim.api.views import TrellisView
 from egsim.api.forms.trellis import TrellisForm
-from egsim.api.forms import MediaTypeForm
+from egsim.api.forms import APIForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa
 
@@ -139,7 +139,7 @@ class Test:
         assert re.search(self.csv_expected_text, resp2.content)
         ref_resp = resp2.content
         # test different text formats
-        for text_sep, symbol in MediaTypeForm._textcsv_sep.items():
+        for text_sep, symbol in APIForm._textcsv_sep.items():
             resp3 = client.post(self.url, data=dict(inputdic, format='csv',
                                                     csv_sep=text_sep),
                                 content_type='text/csv')
