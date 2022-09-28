@@ -220,18 +220,7 @@ EGSIM.component('flatfile-plot', {
 			responseData: this.response,
 		}
 	},
-	watch: {
-//		no-op
-	},
 	methods: {
-		request(){
-			var form = this.form;
-			Vue.post(this.url, form).then(response => {  // defined in `vueutil.js`
-				if (response && response.data){
-					this.responseData = response.data;
-				}
-			});
-		},
 		flatfileSelected(file){
 			var vals = Object.keys(file.columns).map(col => [col, `${col} ${file.columns[col]}`]);
 			this.form.x.choices = this.form.x.choices.slice(0, 1).concat(vals);
