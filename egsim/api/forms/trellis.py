@@ -49,8 +49,14 @@ class TrellisForm(GsimImtForm, APIForm):
         'magnitude': ['magnitude', 'mag'],
         'distance': ['distance', 'dist'],
         'msr': ['msr', 'magnitude_scalerel'],
-        'vs30measured': ['vs30m', 'vs30measured', 'vs30_measured'],
-        'z1pt0': ['z1', 'z1pt0']
+        'vs30measured': ['vs30measured', 'vs30_measured'],
+        'z1pt0': ['z1', 'z1pt0'],
+        'initial_point': ['initial-point', 'initial_point'],
+        'hypocentre_location': ['hypocenter', 'hypocenter-location',
+                                'hypocenter_location',
+                                'hypocentre', 'hypocentre-location',
+                                'hypocentre_location', ],
+        'line_azimuth': ['line-azimuth', 'line_azimuth'],
     }
 
     plot_type = ChoiceField(label='Plot type',
