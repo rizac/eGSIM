@@ -211,6 +211,7 @@ var EGSIM = Vue.createApp({
 	data: function(){
 		return {
 			gsims: Vue.markRaw({{ gsims|safe }}),
+			imtGroups: Vue.markRaw({{ imt_groups|safe }}),
 			postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": "{{ csrf_token }}"}}),
 			selComponent: "{{sel_component}}",
 			flatfileUploadUrl: "{{flatfile_upload_url}}",

@@ -10,7 +10,7 @@ from django.forms.widgets import ChoiceWidget, Input
 from .. import TAB, URLS
 from ...api import models
 from ...api.forms import EgsimBaseForm
-from ...api.forms.flatfile import FlatfileForm, FlatfileRequiredColumnsForm
+from ...api.forms.flatfile import FlatfileForm, FlatfileRequiredColumnsForm, MOF
 from ...api.forms.flatfile.inspection import FlatfilePlotForm
 
 
@@ -34,10 +34,19 @@ def get_context(selected_menu=None, debug=True) -> dict:
     # Get gsims and all related data (imts and warnings). Try to perform everything
     # in a single more efficient query. Use prefetch_related for this:
     gsims = []
+    imt_groups = []
     imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
     for gsim in models.Gsim.objects.only('name', 'warning').prefetch_related(imts):
-        imt_names = [i for i in gsim.imts.values_list('name', flat=True)]
-        gsims.append([gsim.name, imt_names, gsim.warning or ""])
+        imt_names = sorted(i for i in gsim.imts.values_list('name', flat=True))
+        try:
+            imt_group_index = imt_groups.index(imt_names)
+        except ValueError:
+            imt_group_index = len(imt_groups)
+            imt_groups.append(imt_names)
+        if gsim.warning:
+            gsims.append([gsim.name, imt_group_index, str(gsim.warning)])
+        else:
+            gsims.append([gsim.name, imt_group_index])
 
     # get regionalization data (for selecting models on a map):
     regionalization = {
@@ -59,6 +68,7 @@ def get_context(selected_menu=None, debug=True) -> dict:
         'components': components_tabs,
         'component_props': json.dumps(components_props, separators=(',', ':')),
         'gsims': json.dumps(gsims, separators=(',', ':')),
+        'imt_groups': imt_groups,
         'flatfiles': flatfiles,
         'flatfile_upload_url': URLS.FLATFILE_INSPECTION,
         'regionalization': regionalization,
@@ -169,12 +179,12 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
     residuals_form['gsim'][val] = gsimnames
     residuals_form['imt'][val] = ['PGA', "SA(0.2)", "SA(1.0)", "SA(2.0)"]
     residuals_form['selexpr'][val] = "magnitude > 5"
-    residuals_form['plot_type'][val] = 'res'
+    residuals_form['plot_type'][val] = MOF.RES
 
     testing_form = components_props['testing']['form']
     testing_form['gsim'][val] = gsimnames + ['AbrahamsonSilva2008']
     testing_form['imt'][val] = ['PGA', 'PGV', "0.2", "1.0", "2.0"]
-    testing_form['fit_measure'][val] = ['res', 'lh']
+    testing_form['fit_measure'][val] = [MOF.RES, MOF.LH]
 
 
 def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
@@ -241,7 +251,6 @@ def field_to_dict(field: Field, ignore_choices: bool = False) -> dict:
         'value': field.initial,
         'help': (field.help_text or "").strip(),
         'label': (field.label or "").strip(),
-        # 'is_hidden': False,
         'choices': choices
     }
 

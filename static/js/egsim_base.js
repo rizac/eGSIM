@@ -3,6 +3,8 @@ var EGSIM_BASE = {
 	data: function(){
 		return {
 			// NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
+			gsims: [],
+			imtGroups: [],
 			loading: false,
 			initialErrorMsg: "",
 			errors: {},  // populated in created()
@@ -17,23 +19,23 @@ var EGSIM_BASE = {
 		var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
 		// converts the gsims received from server from an Array of Arrays to an
 		// Array of Objects:
-		var imts = [];
-		var gsimObjects = this.gsims.map(elm => {
-			var [gsimName, imts_, warning] = elm;
-			// add imt:
-			imts_.map(imt => {
-				if (!imts.includes(imt)){
-					imts.push(imt);
-				}
-			});
+		var imts = new Set();
+		var imtGroups = this.imtGroups;
+		var gsimObjects = this.gsims.map(elm => {  // elm: Array of 2 or 3 elements
+			var gsimName = elm[0];
+			var gsimImts = imtGroups[elm[1]];
+			// add the model imts to the global imt collection:
+			gsimImts.forEach(imt => imts.add(imt));
 			return {
 				value: gsimName,
 				disabled: false,
 				innerHTML: gsimName.match(reg).join(" "),
-				imts: imts_,
-				warning: warning || "",
+				imts: gsimImts,
+				warning: elm[2] || "",
 			}
 		});
+		// convert imts (Set) into Array:
+		imts = Array.from(imts);
 		// Setup fields data:
 		var regionalization = this.regionalization;
 		for (var [name, form] of this.forms()){

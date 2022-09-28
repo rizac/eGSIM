@@ -211,7 +211,7 @@ EGSIM.component('testing-table', {
 					<thead>
 						<tr>
 							<th v-for="colname in colnames" @click="sortBy(colname)"
-								class='btn-primary align-text-top'
+								class='bg-primary text-white align-text-top'
 								:class="{'text-end': colname === COL_VAL}"
 								:style='tableTHStyle'
 								>
