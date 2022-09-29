@@ -249,7 +249,13 @@ EGSIM.component('egsim-form', {
 			return ['json', 'yaml'].map(ext => {
 				var url = this.downloadUrl + "." + ext;
 				return [ext, () => {
-					this.$httpClient.download(url, this.formToJSON()); // see egism_base.js
+					// note that when sending this.formToJSON() the browser
+					// converts File objects to {}. By chance, this means that
+					// the backend Django Form will see no flatfile and thus
+					// the returned 'flatfile error' will make sense. We could
+					// try a better message (e.g. 'flatfile non serializable')
+					// but it's actually quite complex
+					this.$httpClient.download(url, this.formToJSON());
 				}];
 			}, this);  // <- make `this` in `map` point to this Vue instance
 		}

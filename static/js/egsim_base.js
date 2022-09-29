@@ -190,24 +190,15 @@ class HTTPClient{
 			ls.forEach(l => {if(l.postRequestEnded){l.postRequestEnded();}});
 		});
 	}
-	download(url, postData){
-		/**
-		 Send a POST request and download the response data on the client OS.
-
-		 The responses attributes 'content-disposition' ('attachment; filename=...')
-		 and 'content-type' must be specified.
-
-		 Those two attributes are enough ONLY for GET requests opened in a new tab or
-		 window, but with AJAX POST requests (as in our case) the response is received
-		 but no "save as" dialog pops up. Hence, the workaround implemented here.
-		 */
-
-		// the post function needs to have the 'responseType' set in order
-		// to work with `window.URL.createObjectURL` (info extracted from the "messy":
-
+	download(url, postData, config){
+		/** send `postData` to `url`, and download the response on the client OS */
+		config = config || {};
+		// provide a default responseType. For info (long thread with several outdated hints):
+		// https://stackoverflow.com/questions/8022425/getting-blob-data-from-xhr-request
+		if (!config.responseType){
+			config.responseType = 'arraybuffer';
+		}
 		this.post(url, postData, {responseType: 'arraybuffer'}).then(response => {
-			// ref on `responseType` above (long thread with several outdated hints):
-			// https://stackoverflow.com/questions/8022425/getting-blob-data-from-xhr-request
 			if (response && response.data){
 				var filename = (response.headers || {})['content-disposition'];
 				if (!filename){ return; }
