@@ -250,7 +250,7 @@ class HTTPClient{
 		document.body.appendChild(downloadAnchorNode); // required for firefox
 		downloadAnchorNode.click();
 		downloadAnchorNode.remove();
-		// as we removed the node, we should have freed up memopry,
+		// as we removed the node, we should have freed up memory,
 		// but let's be safe:
 		URL.revokeObjectURL( downloadUrl );
 	}
