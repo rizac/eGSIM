@@ -1,7 +1,6 @@
 /* GSIM and IMT <select> components */
 
 EGSIM.component('gsim-select', {
-	//https://vuejs.org/v2/guide/components-props.html#Prop-Types:
 	props: {
 		field: {type: Object}, // see field-input
 		imtField: {type: Object, default: null} // field of IMTs (can be null)
@@ -280,7 +279,7 @@ EGSIM.component('gsim-select', {
 				'regionalization': this.regionalization.value
 			};
 			// query data and update filter func:
-			EGSIM.post(this.regionalization.url, data).then(response => {
+			this.$httpClient.post(this.regionalization.url, data).then(response => {
 				var gsims = response.data; // Array of gsim names
 				this.filterBy.map = null;
 				if(gsims && gsims.length){

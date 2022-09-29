@@ -112,7 +112,7 @@ EGSIM.component('testing-table', {
 			handler(newval, oldval){
 				this.visible = (typeof newval === 'object') && !!(Object.keys(newval).length);
 				if (this.visible){
-					this.downloadActions = this.createDownloadActions();
+					this.downloadActions = this.$httpClient.createDownloadActions(this.downloadUrl, newval);
 					this.gsimsRecords = newval['Db records'];
 					this.gsimsSkipped = newval['Gsim skipped'];
 					this.tableData = this.init.call(this, newval['Measure of fit']);
@@ -430,9 +430,6 @@ EGSIM.component('testing-table', {
 				this.filterValues[key] = Array.from(this.filterValues[key]);
 				this.filterSelectedValues[key] = [];
 			}
-		},
-		createDownloadActions(){
-			return EGSIM.createDownloadActions(this.downloadUrl, this.data);
 		}
 	}
 });

@@ -320,7 +320,6 @@ EGSIM.component('flatfile-plot-div', {
 
 
 EGSIM.component('flatfile-select', {
-	//See README.md
 	props: {
 		field: {type: Object},
 		doc: {
@@ -387,7 +386,7 @@ EGSIM.component('flatfile-select', {
 		upload(file){  // return a Promise
 			var formData = new FormData();
 			formData.append("flatfile", file);
-			return EGSIM.post(this.field['data-url'], formData, {
+			return this.$httpClient.post(this.field['data-url'], formData, {
 				headers: {
 				  'Content-Type': 'multipart/form-data'
 				}
