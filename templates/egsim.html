@@ -206,7 +206,7 @@ function unsupportedBrowserMessage(){
 <script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 <script>
 /* Init the EGSIM Vue Instance with content injected from the server */
-var EGSIM = Vue.createApp({
+const EGSIM = Vue.createApp({
 	mixins: [EGSIM_BASE],  /* defined in egsim_base.js */
 	data: function(){
 		return {
@@ -220,9 +220,6 @@ var EGSIM = Vue.createApp({
 		};
 	}
 });
-
-/** setup a global HTTPClient to issue post requests */
-EGSIM.config.globalProperties.$httpClient = new HTTPClient(Object.freeze({headers: {"X-CSRFToken": "{{ csrf_token }}"}}));
 
 /* setup the global Array of flatfiles, accessible anywhere as `this.$flatfiles` */
 EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
@@ -245,7 +242,26 @@ EGSIM.component('home', {
 });
 
 /* mount app, and set the mounted instance as only listener for our httpClient: */
-EGSIM.config.globalProperties.$httpClient.listeners = [EGSIM.mount('#egsim-vue')];
+const eGSIM = EGSIM.mount('#egsim-vue');
+
+/* create a new HTTPClient (defined in egsim_base) instance */
+var httpClient = new HTTPClient(Object.freeze({headers: {"X-CSRFToken": "{{ csrf_token }}"}}));
+
+/* Make the EGSIM instance be notified when we issue POST requests via httpClient */
+httpClient.on('before-request', () => {
+	eGSIM.setError('');
+	eGSIM.loading = true;
+});
+httpClient.on('response-error', (errorResponse) => {
+	eGSIM.setError(eGSIM.getErrorMsg(errorResponse));
+});
+httpClient.on('after-response', () => {
+	eGSIM.loading = false;
+});
+
+/** setup a global HTTPClient to issue post requests in all EGSIM sub-component */
+EGSIM.config.globalProperties.$httpClient = httpClient;
+
 </script>
 
 {% endblock %}

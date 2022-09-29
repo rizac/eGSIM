@@ -15,10 +15,6 @@ var EGSIM_BASE = {
 		}
 	},
 	created(){
-		// this.httpClient is provided in egsim.html. Making `this` as listener means
-		// that when httpClient.post is called, then this object is notified
-		// (see postrequest* method(s) below):
-		this.$httpClient.listeners = [this];
 		// Create a "template" Array of gsims and imts, to be copied as field choices
 		var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
 		// converts the gsims received from server from an Array of Arrays to an
@@ -90,43 +86,22 @@ var EGSIM_BASE = {
 			}
 			return false; // in case accessed from within anchors
 		},
-		// These functions are called when this.httpClient.post is called:
-		postRequestStarted(){
-			this.clearErrors();
-			this.loading = true;
-		},
-		postRequestEnded(){
-			this.loading = false;
-		},
-		postRequestFailed(response){
-			var errData = (response.response || {}).data;
+		getErrorMsg(errorResponse){
+			// get the error message (str) from an axios errorResponse and return it
+			var errData = (errorResponse.response || {}).data;
 			if (errData instanceof ArrayBuffer){
-				// sometimes we might want to download png and json, we then
-				// need to return an ArrayBuffer (see download.js).
-				// The ArrayBuffer might "hide" a JSON formatted string. Thus,
-				// try to convert to string and then json.parse:
+				// this might happen if, e.g., we requested png. The JSON error response
+				// is then returned in the same ArrayBuffer format, so:
 				try{
-					// copied from: https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
-					// Uint8 because we send data as UTF8
+					// see https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
+					// (Uint8 because we send data as UTF8)
 					errData = JSON.parse(String.fromCharCode.apply(null, new Uint8Array(errData)));
 				}catch(exc){
 					errData = {};
 				}
 			}
 			var error = (errData || {}).error || {};
-			// set the global error message:
-			this.setError(error.message || response.message ||  'Unknown error');
-		},
-		clearErrors(){
-			this.setError('');
-			// clear all param-specific errors in the current form, if found:
-			for (var [name, form] of this.forms()){
-				if (name === this.selComponent){
-					Object.keys(form).forEach(fieldname => {
-						form[fieldname].error = '';
-					});
-				}
-			}
+			return error.message || errorResponse.message ||  'Unknown error';
 		},
 		setError(error){
 			this.errors[this.selComponent] = error;
@@ -167,27 +142,36 @@ var EGSIM_BASE = {
 class HTTPClient{
 	constructor(defaultConfig, ...listeners){
 		this.postfuncDefaultConfig = defaultConfig || {};
-		this.listeners = listeners || [];
+		this.listeners = {
+			'before-request': [],
+			'response-ok': [],
+			'response-error': [],
+			'after-response': []
+		};
+	}
+	on(key, callback){  // on: 'before-request' 'response-ok', 'response-error' 'after-response'
+		if (!(key in this.listeners)){
+			throw `${key} not in HTTPClient listeners keys`;
+		}
+		this.listeners[key].push(callback);
 	}
 	post(url, data, config){
 		var config = Object.assign(config || {}, this.postfuncDefaultConfig);
 		var jsonData = data || {};
-		var ls = this.listeners || [];
-		// emit the starting of a POST:
-		ls.forEach(l => {if(l.postRequestStarted){l.postRequestStarted();}});
+		this.listeners['before-request'].forEach(func => func());
 		// merge passed config with default config in a new config Object:
 		var config = Object.assign(config || {}, this.postfuncDefaultConfig);
 		var jsonData = data || {};
 		return axios.post(url, jsonData, config).then(response => {
-			ls.forEach(l => {if(l.postRequestCompleted){l.postRequestCompleted(response);}});
+			this.listeners['response-ok'].forEach(func => func(response));
 			// allow chaining this promise from sub-components:
 			return response;  // https://github.com/axios/axios/issues/1057#issuecomment-324433430
-		}).catch(response => {
-			ls.forEach(l => {if(l.postRequestFailed){l.postRequestFailed(response);}});
+		}).catch(error => {
+			this.listeners['response-error'].forEach(func => func(error));
 			// allow chaining this promise from sub-components:
-			throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
+			throw error;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
 		}).finally(() => {
-			ls.forEach(l => {if(l.postRequestEnded){l.postRequestEnded();}});
+			this.listeners['after-response'].forEach(func => func());
 		});
 	}
 	download(url, postData, config={}){
