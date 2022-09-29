@@ -3,7 +3,7 @@
 ## Table of Contents
 
 - [FORM FIELD INPUTS in egsm-form.js](#FORM-FIELD-INPUTS)
-- [BASE_FORM in egsm-form.js](#BASE_FORM)
+- [FormDataHTTPClient in egsm-form.js](#FormDataHTTPClient)
 - [PLOT_DIV in plot-div.js](#PLOT_DIV)
 - [FLATFILE_SELECT_COMPONENT](#FLATFILE-SELECT)
 
@@ -56,11 +56,11 @@ or select component:
 ('error' is a string usually returned from the server. When error
 is given, it outlines the component in red, if present)
 
-## BASE_FORM
+## FormDataHTTPClient
 (`v-components/base/egsim-form.js`)
 
-`BASE_FORM` is the Mixin base class for all Form related components.
-This snippet shortly describes how to use BASE_FORM in subclasses. 
+`FormDataHTTPClient` is the Mixin base class for all Form related components.
+This snippet shortly describes how to use FormDataHTTPClient in subclasses. 
 Given, e.g. a subclass `my-form`:
 
 ```
@@ -76,7 +76,7 @@ where:
    implemented somewhere to process the response. For instance 
    throughout the code (e.g., `trellis.js`, `residuals.js`) you will 
    see a wrapper component implementing
-   a `BASE_FORM` component, and a `PLOT_DIV` component receiving the form 
+   a `FormDataHTTPClient` component, and a `PLOT_DIV` component receiving the form 
    submitted data in order to update its plots 
    (For `PLOT_DIV` see details below):
    ```
@@ -101,7 +101,7 @@ Vue might look at least like this:
 
 ```
 EGSIM.component('my-form', {
-   mixins: [BASE_FORM],
+   mixins: [FormDataHTTPClient],
    props: {
    }
    template: `<form novalidate @submit.prevent="mySubmitFunc">
@@ -121,14 +121,14 @@ Notes:
 
  1. `props` here you implement additional `props`, 
     remembering that you have the props `this.url` and `this.form`
-    (defined in `BASE_FORM`) by default
+    (defined in `FormDataHTTPClient`) by default
     
  2. `template` in the template you implement your components
     usually bound to elements of `this.form`. As such, the snippet above
     must be filled with something meaningful
 
  3. `mySubmitFunc` this is your submit function. You can call here 
-    `this.submit()` (implemented in `BASE_FORM`) that does all the 
+    `this.submit()` (implemented in `FormDataHTTPClient`) that does all the 
     work of creating a FormData, send it to `this.url`
     with correct headers and displaying errors in case. 
     `this.submit` is a `Promise` that you can chain as in the snippet
@@ -140,7 +140,7 @@ Notes:
 (`v-components/base/plot-div.js`)
 
 `PLOT_DIV` is the Mixin base class for all Grids of plots
-This snippet shortly describes how to use BASE_FORM in subclasses. 
+This snippet shortly describes how to use FormDataHTTPClient in subclasses. 
 Given, e.g. a subclass `my-plot-div`:
 
 ```
@@ -151,7 +151,7 @@ Given, e.g. a subclass `my-plot-div`:
 where:
 
 - `responseData` is the `response.data` Object received from the server
-  after e.g. form submission (e.g., there must be a `BASE_FORM` implementing
+  after e.g. form submission (e.g., there must be a `FormDataHTTPClient` implementing
   something like `@submitted="responseData=arguments[0].data`)
 
 - `download-url` is  a string of the URL to call for downloading plots

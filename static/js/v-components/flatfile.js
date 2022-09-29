@@ -47,7 +47,7 @@ EGSIM.component('flatfile', {
 
 
 EGSIM.component('flatfile-compilation', {
-	mixins: [BASE_FORM],
+	mixins: [FormDataHTTPClient],
 	//https://vuejs.org/v2/guide/components-props.html#Prop-Types:
 	props: {
 		form: Object,
@@ -209,7 +209,7 @@ EGSIM.component('flatfile-compilation', {
 
 
 EGSIM.component('flatfile-plot', {
-	mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
+	mixins: [FormDataHTTPClient],
 	props: {
 		form: Object,
 		url: String,
