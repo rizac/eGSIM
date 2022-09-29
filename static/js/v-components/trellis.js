@@ -94,9 +94,9 @@ EGSIM.component('trellis', {
 
 
 EGSIM.component('trellis-plot-div', {
-	mixins: [PLOT_DIV],  // defined in plot-div.js
+	mixins: [PlotsDiv],  // defined in plot-div.js
 	methods: {
-		// The next two methods are overwritten from PLOT_DIV. See README.md for details
+		// The next two methods are overwritten from PlotsDiv. See README.md for details
 		getData(responseObject){
 			var ln10 = Math.log(10);
 			var mathlog = Math.log;

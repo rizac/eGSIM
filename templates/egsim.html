@@ -232,7 +232,7 @@ EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
 <script type='text/javascript' src="{% static 'js/v-components/base/field-input.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/egsim-form.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/plot-div.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/v-components/base/plots-div.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}flatfile.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
@@ -245,7 +245,7 @@ EGSIM.component('home', {
 });
 
 /* mount app, and set the mounted instance as only listener for our httpClient: */
-EGSIM.mount('#egsim-vue');
+EGSIM.config.globalProperties.$httpClient.listeners = [EGSIM.mount('#egsim-vue')];
 </script>
 
 {% endblock %}
