@@ -1,23 +1,26 @@
 /* Form components */
 
-/* Base class for Form components. See README.md for details */
-var BASE_FORM = {
+/* Sends Post request with Form objects as data.
+Base class for Form components. See README.md for details */
+var FormDataHTTPClient = {
 	props: {
 		form: Object,  // field names mapped to Objects describing <input>s or <select>
 					   // (the keys 'value' and 'error' are mandatory)
 		url: String,  // the request URL after form submission
 	},
-	data() {
-		return {}
-	},
 	methods: {
-		submit(){
-			// submits the form data at the form URL (see props).
-			// This method can be used with a form template written as:
-			// <form novalidate @submit.prevent="submit"> ...
-
-			// send the main post request to `this.url` using `this.form` as POST data
-			return this.post(this.url).then(response => {
+		postFormData(url=null){
+			// send a POST request to `url` (defaults to `this.url`) with this form data
+			if(!url){
+				url = this.url;
+			}
+			// send a post request to the given url using this.form as POST data. Returns
+			// a `Promise` object that can be chained (see e.g. `this.request`)
+			for (var key of Object.keys(this.form)){  // clear errors first
+				this.form[key].error = "";
+			}
+			var [data, config] = this.getPostDataAndConfig();
+			return this.$httpClient.post(url, data, config).then(response => {
 				if (response && response.data){
 					return response; // allows .then on the Promise
 				}
@@ -38,15 +41,6 @@ var BASE_FORM = {
 				}
 				throw response;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
 			});
-		},
-		post(url){
-			// send a post request to the given url using this.form as POST data. Returns
-			// a `Promise` object that can be chained (see e.g. `this.request`)
-			for (var key of Object.keys(this.form)){  // clear errors first
-				this.form[key].error = "";
-			}
-			var [data, config] = this.getPostDataAndConfig();
-			return this.$httpClient.post(url, data, config);
 		},
 		getPostDataAndConfig(){
 			// Returns the arguments for a POSt request in the form of the Array
@@ -101,7 +95,7 @@ var BASE_FORM = {
 - implements a toolbar for IO operations such as get Form in YAML or JSON config
 - Deals with hiding and transforming the form into a dialog popup after first submit*/
 EGSIM.component('egsim-form', {
-	mixins: [BASE_FORM],  // will have props Form, url, and all methods for issuing post requests
+	mixins: [FormDataHTTPClient],
 	props :{
 		downloadUrl: String,  // url for downloading the current form as config yaml/json
 		visibilityToggle: {type: Boolean, default: true},  // variable to toggle form visibility from external components
@@ -117,33 +111,25 @@ EGSIM.component('egsim-form', {
 			downloadActions: this.createDownloadActions()
 		}
 	},
-	emits: ['submitted'], // Vue 3 required attr (in case we migrate)
+	emits: ['submitted'],
 	methods: {
-		submitMe(responseData){  // overrides super method
-			this.submit().then(response => {
+		submit(){
+			this.postFormData().then(response => {
 				this.show = !this.show;
 				this.showAsDialog = true;
 				setTimeout(() => {
 					// notify asynchronously after the form has been hidden:
 					this.$emit('submitted', response);
-				}, 250);
+				}, 200);
 			});
 		},
 		// toolbar methods:
 		fetchRequestURL(){
-			// Fetches
-			// the current config (request) as dict and builds this.requestURL
-			// Returns an axios Promise to which a user can attach functions to
-			// be executed when the POST request returns successfully
-
-			// *NOTE*: in Chrome, after clicking on the button calling this function,
-			// when we move out of it, the tooltip stays there: to make it disappear,
-			// we need to focus something else. This is annoying but we could not fix it
-			// (we tried implementing a wrapper method, which was hiding the aria-label
-			// and then restoring it later inside a `then` attached to the returned promise
-			// below). If you want the source button, pass src as argument and access
-			// src.currentTarget
-			return this.post(this.downloadUrl + '.json').then(response => {
+			/* Fetch the current config (request) as dict and builds this.requestURL
+			Returns an axios Promise to which a user can attach functions to
+			be executed when the POST request returns successfully
+			*/
+			return this.postFormData(this.downloadUrl + '.json').then(response => {
 				if (response && response.data){
 					var responseData = response.data;
 					var retUrl = window.location.origin;
@@ -278,7 +264,7 @@ EGSIM.component('egsim-form', {
 			this.show = !this.show;
 		}
 	},
-	template: `<form novalidate @submit.prevent="submitMe"
+	template: `<form novalidate @submit.prevent="submit"
 		  class="flex-column position-relative pb-4 align-self-center"
 		  :class="[showAsDialog ? ['shadow', 'border', 'bg-body', 'mt-1', 'mb-3'] : '']"
 		  style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.3) !important"

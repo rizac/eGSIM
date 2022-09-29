@@ -190,7 +190,7 @@ class HTTPClient{
 			ls.forEach(l => {if(l.postRequestEnded){l.postRequestEnded();}});
 		});
 	}
-	download(url, postData, config){
+	download(url, postData, config={}){
 		/** send `postData` to `url`, and download the response on the client OS */
 		config = config || {};
 		// provide a default responseType. For info (long thread with several outdated hints):
@@ -212,27 +212,23 @@ class HTTPClient{
 		});
 	}
 	saveAsJSON(data, filename){
-		/**
-		 Save the given JavaScript Object `data` on the client OS as JSON
-		 formatted string
+		/* Save the given JavaScript Object `data` on the client OS as JSON
+		formatted string
 
-		 Parameters:
-		 data: the JavaScript Object or Array to be saved as JSON
-		 */
+		data: the JavaScript Object or Array to be saved as JSON
+		*/
 		var sData = JSON.stringify(data, null, 2);  // 2 -> num indentation chars
 		this.save(sData, filename, "application/json");
 	}
 	save(data, filename, mimeType){
-		/**
-		 Saves data with the given filename and mimeType on the client OS
+		/* Save `data` with the given filename and mimeType on the client OS
 
-		 Parameters:
-			data: a Byte-String (e.g. JSOn.stringify) or an ArrayBuffer
-				(https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
-			filename: the string that is used as default name in the save as dialog
-			mimeType: s atring denoting the MIME type
-				 (https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types)
-		 */
+		data: a Byte-String (e.g. JSON.stringify) or an ArrayBuffer
+			(https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
+		filename: the string that is used as default name in the save as dialog
+		mimeType: a string denoting the MIME type
+			(https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types)
+		*/
 		var blob = new Blob([data], {type: mimeType});
 		var downloadUrl = window.URL.createObjectURL(blob);
 		var downloadAnchorNode = document.createElement('a');
@@ -246,14 +242,13 @@ class HTTPClient{
 		URL.revokeObjectURL( downloadUrl );
 	}
 	createDownloadActions(downloadUrl, data){
-		/* Return an Array of for downloading on the client OS) the given data.
-		The returned Array has elements of the form `[format, download_callback]`,
-		where format is 'json' 'csv', 'csv (comma separated)'. See <plot-div> and
-		<testing-table> components for details
+		/* Return an Array of [string, callaback] Arrays where each callback
+		downloads `data` on the client OS) the given data in different formats:
+		'json' 'csv', 'csv (comma separated)'.
 
-		 Parameters:
-		  downloadUrl: a string identifying a download url, usually sent from the server
-		  data: the data returned from a response (e.g., trellis residuals or
+		downloadUrl: a string identifying a base download url, usually sent from the
+			server, whereby each single download URL will be built
+		data: the data returned from a response (e.g., trellis residuals or
 			testing data) that needs to be downloaded
 		*/
 		// Populate with the data to be downloaded as non-image formats:
