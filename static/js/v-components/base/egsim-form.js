@@ -246,19 +246,6 @@ EGSIM.component('egsim-form', {
 			}, this);  // <- make `this` in `map` point to this Vue instance
 		}
 	},
-	mounted() {
-		// set the mounted variable in order to activate the transition after the
-		// whole component has been mounted
-		// the transition is used just to show up / hide the form
-		if (this.mounted){
-			return;
-		}
-		this.$nextTick(function () {
-			// Code that will run only after the
-			// entire view has been rendered
-			this.mounted = true;
-		});
-	},
 	watch: {
 		visibilityToggle(newVal, oldVal){
 			this.show = !this.show;
@@ -378,7 +365,5 @@ EGSIM.component('action-select', {
 			<option v-for='[key, callback] in actions' :value='key'>
 				{{ key }}
 			</option>
-		</select>`,
-	methods: {
-	}
+		</select>`
 });

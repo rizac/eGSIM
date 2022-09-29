@@ -1,7 +1,7 @@
 /* Base class to be used as mixin for any component showing plots as a result
 of a response Object sent from the server */
 
-var PLOT_DIV = {
+var PlotsDiv = {
 	props: {
 		data: {type: Object, default: () => { return{} }},
 		// this is used to calculate plot areas and set it in the default layout

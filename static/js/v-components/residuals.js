@@ -51,9 +51,9 @@ EGSIM.component('residuals', {
 
 
 EGSIM.component('residuals-plot-div', {
-	mixins: [PLOT_DIV],  // defined in plot-div.js
+	mixins: [PlotsDiv],  // defined in plot-div.js
 	methods: {
-		// The next two methods are overwritten from PLOT_DIV. See README.md for details
+		// The next two methods are overwritten from PlotsDiv. See README.md for details
 		getData(responseObject){
 			// defined normal dist. constants:
 			var E = Math.E;

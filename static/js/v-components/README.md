@@ -4,7 +4,7 @@
 
 - [FORM FIELD INPUTS in egsm-form.js](#FORM-FIELD-INPUTS)
 - [FormDataHTTPClient in egsm-form.js](#FormDataHTTPClient)
-- [PLOT_DIV in plot-div.js](#PLOT_DIV)
+- [PlotsDiv in plot-div.js](#PlotsDiv)
 - [FLATFILE_SELECT_COMPONENT](#FLATFILE-SELECT)
 
 ## Overview
@@ -76,9 +76,9 @@ where:
    implemented somewhere to process the response. For instance 
    throughout the code (e.g., `trellis.js`, `residuals.js`) you will 
    see a wrapper component implementing
-   a `FormDataHTTPClient` component, and a `PLOT_DIV` component receiving the form 
+   a `FormDataHTTPClient` component, and a `PlotsDiv` component receiving the form 
    submitted data in order to update its plots 
-   (For `PLOT_DIV` see details below):
+   (For `PlotsDiv` see details below):
    ```
    Vue component('wrapper',{
         data() {
@@ -136,10 +136,10 @@ Notes:
     event
 
 
-## PLOT_DIV
+## PlotsDiv
 (`v-components/base/plot-div.js`)
 
-`PLOT_DIV` is the Mixin base class for all Grids of plots
+`PlotsDiv` is the Mixin base class for all Grids of plots
 This snippet shortly describes how to use FormDataHTTPClient in subclasses. 
 Given, e.g. a subclass `my-plot-div`:
 
@@ -161,7 +161,7 @@ Vue might look at least like this:
 
 ```
 EGSIM.component('my-plot-div', {
-    mixins: [PLOT_DIV],
+    mixins: [PlotsDiv],
     methods: {
         getData(responseObject){},
         displayGridLabels(axis, paramName, paramValues){}

@@ -141,7 +141,7 @@ EGSIM.component('flatfile-compilation', {
 			// query the server and store in response data the metadata columns
 			// required for the current GSIM selection
 			this.$nextTick(() => {
-				this.submit().then(response => {
+				this.postFormData().then(response => {
 					this.responseData = response.data;
 				});
 			});
@@ -226,13 +226,13 @@ EGSIM.component('flatfile-plot', {
 			this.form.x.choices = this.form.x.choices.slice(0, 1).concat(vals);
 			this.form.y.choices = this.form.y.choices.slice(0, 1).concat(vals);
 		},
-		submitMe(){
-			this.submit().then(response => {this.responseData = response.data});
+		submit(){
+			this.postFormData().then(response => {this.responseData = response.data});
 		}
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
 		<div class='mb-3'>
-		   <form novalidate @submit.prevent="submitMe">
+		   <form novalidate @submit.prevent="submit">
 				<div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
 					<flatfile-select :field="form.flatfile" @flatfile-selected="flatfileSelected" />
 					<span class='me-3'></span>
@@ -255,9 +255,9 @@ EGSIM.component('flatfile-plot', {
 
 
 EGSIM.component('flatfile-plot-div', {
-	mixins: [PLOT_DIV],
+	mixins: [PlotsDiv],
 	methods: {
-		// The next two methods are overwritten from PLOT_DIV. See README.md for details
+		// The next two methods are overwritten from PlotsDiv. See README.md for details
 		getData(responseObject){
 			var jsondict = responseObject;
 			var hist = true;
