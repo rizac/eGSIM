@@ -139,22 +139,23 @@ var EGSIM_BASE = {
 	}
 };
 
-class HTTPClient{
-	constructor(defaultConfig, ...listeners){
-		this.postfuncDefaultConfig = defaultConfig || {};
-		this.listeners = {
-			'before-request': [],
-			'response-ok': [],
-			'response-error': [],
-			'after-response': []
-		};
-	}
+const HTTPClient = {
+	listeners: {
+		'before-request': [],
+		'response-ok': [],
+		'response-error': [],
+		'after-response': []
+	},
+	postfuncDefaultConfig: {},
+	configure(configObj){
+		this.postfuncDefaultConfig = configObj;
+	},
 	on(key, callback){  // on: 'before-request' 'response-ok', 'response-error' 'after-response'
 		if (!(key in this.listeners)){
 			throw `${key} not in HTTPClient listeners keys`;
 		}
 		this.listeners[key].push(callback);
-	}
+	},
 	post(url, data, config){
 		var config = Object.assign(config || {}, this.postfuncDefaultConfig);
 		var jsonData = data || {};
@@ -173,7 +174,7 @@ class HTTPClient{
 		}).finally(() => {
 			this.listeners['after-response'].forEach(func => func());
 		});
-	}
+	},
 	download(url, postData, config={}){
 		/** send `postData` to `url`, and download the response on the client OS */
 		config = config || {};
@@ -194,7 +195,7 @@ class HTTPClient{
 				this.save(response.data, filename, ctype);
 			}
 		});
-	}
+	},
 	saveAsJSON(data, filename){
 		/* Save the given JavaScript Object `data` on the client OS as JSON
 		formatted string
@@ -203,7 +204,7 @@ class HTTPClient{
 		*/
 		var sData = JSON.stringify(data, null, 2);  // 2 -> num indentation chars
 		this.save(sData, filename, "application/json");
-	}
+	},
 	save(data, filename, mimeType){
 		/* Save `data` with the given filename and mimeType on the client OS
 
@@ -224,7 +225,7 @@ class HTTPClient{
 		// as we removed the node, we should have freed up memory,
 		// but let's be safe:
 		URL.revokeObjectURL( downloadUrl );
-	}
+	},
 	createDownloadActions(downloadUrl, data){
 		/* Return an Array of [string, callaback] Arrays where each callback
 		downloads `data` on the client OS) the given data in different formats:
