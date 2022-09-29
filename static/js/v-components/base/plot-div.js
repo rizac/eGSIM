@@ -1050,7 +1050,7 @@ var PLOT_DIV = {
 		},
 		createDownloadActions(){
 			// Populate with the data to be downloaded as non-image formats:
-			var downloadActions = EGSIM.createDownloadActions(this.downloadUrl, this.data);
+			var downloadActions = this.$httpClient.createDownloadActions(this.downloadUrl, this.data);
 			// image formats:
 			// create a function factory to avoid closure inside loops (classic approach):
 			var createCallback = (ext) => {
@@ -1061,7 +1061,7 @@ var PLOT_DIV = {
 					data = data.filter(elm => elm.visible || !('visible' in elm));
 					postData = {data:data, layout:layout, width:width, height:height};
 					var url = this.downloadUrl + '.' + ext;
-					EGSIM.download(url, postData);
+					this.$httpClient.download(url, postData);
 				};
 			};
 			for (var ext of ['png', 'eps', 'pdf', 'svg']){

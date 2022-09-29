@@ -212,7 +212,6 @@ var EGSIM = Vue.createApp({
 		return {
 			gsims: Vue.markRaw({{ gsims|safe }}),
 			imtGroups: Vue.markRaw({{ imt_groups|safe }}),
-			postfuncDefaultConfig: Object.freeze({headers: {"X-CSRFToken": "{{ csrf_token }}"}}),
 			selComponent: "{{sel_component}}",
 			flatfileUploadUrl: "{{flatfile_upload_url}}",
 			regionalization: Vue.markRaw({{ regionalization|safe }}),
@@ -221,6 +220,10 @@ var EGSIM = Vue.createApp({
 		};
 	}
 });
+
+/** setup a global HTTPClient to issue post requests */
+EGSIM.config.globalProperties.$httpClient = new HTTPClient(Object.freeze({headers: {"X-CSRFToken": "{{ csrf_token }}"}}));
+
 /* setup the global Array of flatfiles, accessible anywhere as `this.$flatfiles` */
 EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
 </script>
@@ -241,9 +244,8 @@ EGSIM.component('home', {
 	template: `<iframe style='flex: 1 1 auto' :src='src'></iframe>`
 });
 
-/* init app*/
-const EGSIM_APP = EGSIM;
-EGSIM = EGSIM_APP.mount('#egsim-vue');
+/* mount app, and set the mounted instance as only listener for our httpClient: */
+EGSIM.mount('#egsim-vue');
 </script>
 
 {% endblock %}

@@ -46,7 +46,7 @@ var BASE_FORM = {
 				this.form[key].error = "";
 			}
 			var [data, config] = this.getPostDataAndConfig();
-			return EGSIM.post(url, data, config);
+			return this.$httpClient.post(url, data, config);
 		},
 		getPostDataAndConfig(){
 			// Returns the arguments for a POSt request in the form of the Array
@@ -249,7 +249,7 @@ EGSIM.component('egsim-form', {
 			return ['json', 'yaml'].map(ext => {
 				var url = this.downloadUrl + "." + ext;
 				return [ext, () => {
-					EGSIM.download(url, this.formToJSON()); // see egism_base.js
+					this.$httpClient.download(url, this.formToJSON()); // see egism_base.js
 				}];
 			}, this);  // <- make `this` in `map` point to this Vue instance
 		}
