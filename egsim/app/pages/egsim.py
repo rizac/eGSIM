@@ -177,8 +177,9 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
 
     residuals_form = components_props['residuals']['form']
     residuals_form['gsim'][val] = gsimnames
-    residuals_form['imt'][val] = ['PGA', "SA(0.2)", "SA(1.0)", "SA(2.0)"]
-    residuals_form['selexpr'][val] = "magnitude > 5"
+    residuals_form['imt'][val] = ["SA(0.2)", "SA(1.0)", "SA(2.0)"]
+    residuals_form['flatfile'][val] = "esm2018"
+    residuals_form['selexpr'][val] = "magnitude > 6"
     residuals_form['plot_type'][val] = MOF.RES
 
     testing_form = components_props['testing']['form']
