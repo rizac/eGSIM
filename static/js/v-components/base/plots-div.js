@@ -1,6 +1,5 @@
 /* Base class to be used as mixin for any component showing plots as a result
 of a response Object sent from the server */
-
 var PlotsDiv = {
 	props: {
 		data: {type: Object, default: () => { return{} }},
@@ -13,9 +12,6 @@ var PlotsDiv = {
 		downloadUrl: String // base url for download actions
 	},
 	data(){
-		// unique id based on the component name (note that if this is called by a subclass,
-		// then this.$options.name is the subclass name). FIXME: NOT USED REMOVE?
-		var id = this.$options.name + new Date().getTime().toString();
 		return {
 			downloadActions: [],  // populated when data is there, see watch.data
 			visible: false, // see watcher below
@@ -24,7 +20,6 @@ var PlotsDiv = {
 			// store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
 			watchers: {},
 			paramnames2showongrid: new Set(),  // parameter names to show on the grid
-			plotdivid: Date.now().toString(),
 			// an Object of names -> {visible: boolean, color: html color (string)}:
 			legend: {},
 			// plots is the data constructed from the received response.
@@ -72,18 +67,17 @@ var PlotsDiv = {
 				hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
 				dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
 			},
-			// axis options:
-			axis: {
+			axisOptions: {
 				// reminder: x.log and y.log determine the type of axis. Plotly has xaxis.type that can be:
 				// ['-', 'linear', 'log', ... other values ], we will set here only 'normal' (log checkbox unselected)
 				// or log (log checkbox selected)
 				x: {
-					log: {disabled: false, value: undefined},  // undefined: infer from plots, null: disable the option, otherwise boolean
-					sameRange: {disabled: false, value: undefined}, // same as above
+					log: {disabled: false, value: undefined},
+					sameRange: {disabled: false, value: undefined},
 				},
 				y: {
-					log: {disabled: false, value: undefined}, // see above
-					sameRange: {disabled: false, value: undefined} // see above
+					log: {disabled: false, value: undefined},
+					sameRange: {disabled: false, value: undefined}
 				}
 			},
 			// the plotly config for plots. See
@@ -124,7 +118,7 @@ var PlotsDiv = {
 			this.react();
 		}
 	},
-	computed: {  // https://stackoverflow.com/a/47044150
+	computed: {
 		legendNames(){
 			return Object.keys(this.legend);
 		},
@@ -157,13 +151,11 @@ var PlotsDiv = {
 						<span class='border-0 bg-transparent'>(It might take a while, please wait)</span>
 					</div>
 				</div>
-				<div class='position-absolute start-0 top-0 end-0 bottom-0'
-					 :id="plotdivid"></div>
+				<div class='position-absolute start-0 top-0 end-0 bottom-0' ref='rootDiv'
+					 :id="'plot-div-' + new Date().getTime() + Math.random()"></div>
 			</div>
 		</div>
-	
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
-
 		<div class='d-flex flex-column ps-4' v-show="legendNames.length || isGridCusomizable">
 			<slot></slot> <!-- slot for custom buttons -->
 			<div v-show='legendNames.length' class='mt-3 border p-2 bg-white'
@@ -178,7 +170,6 @@ var PlotsDiv = {
 					</label>
 				</div>
 			</div>
-
 			<div>
 				<div class='mt-3 border p-2 bg-white'>
 					<action-select :actions="downloadActions" class='form-control'
@@ -187,7 +178,6 @@ var PlotsDiv = {
 						Download as:
 					</action-select>
 				</div>
-
 				<div v-show="isGridCusomizable" class='mt-3 border p-2 bg-white'>
 					<div>Subplots layout</div>
 					<select v-model='selectedgridlayout' class='form-control mt-1'>
@@ -195,28 +185,26 @@ var PlotsDiv = {
 						</option>
 					</select>
 				</div>
-
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
 					<div>Axis</div>
 					<div v-for="type in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
 						<span class='text-nowrap'>{{ type }}:</span>
 						<label class='text-nowrap m-0 ms-2'
-							   :class="{'checked': axis[type].sameRange.value}"
-							   :disabled="axis[type].sameRange.disabled">
-							<input type='checkbox' v-model='axis[type].sameRange.value'
-								   :disabled="axis[type].sameRange.disabled"  class="me-1">
+							   :class="{'checked': axisOptions[type].sameRange.value}"
+							   :disabled="axisOptions[type].sameRange.disabled">
+							<input type='checkbox' v-model='axisOptions[type].sameRange.value'
+								   :disabled="axisOptions[type].sameRange.disabled"  class="me-1">
 							<span>same range</span>
 						</label>
 						<label class='text-nowrap m-0 ms-2'
-							   :class="{'checked': axis[type].log.value}"
-							   :disabled="axis[type].log.disabled">
-							<input type='checkbox' v-model='axis[type].log.value'
-								   :disabled="axis[type].log.disabled" class="me-1">
+							   :class="{'checked': axisOptions[type].log.value}"
+							   :disabled="axisOptions[type].log.disabled">
+							<input type='checkbox' v-model='axisOptions[type].log.value'
+								   :disabled="axisOptions[type].log.disabled" class="me-1">
 							<span>log scale</span>
 						</label>
 					</div>
 				</div>
-
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
 					<div> Mouse interactions</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
@@ -247,7 +235,6 @@ var PlotsDiv = {
 			/* Return from the given response object an Array of Objects representing
 			the sub-plot to be visualized. Each sub-plot Object has the form:
 			{traces: Array, params: Object, xaxis: Object, yaxis: Object}
-
 			See residuals.js and trellis.js for a details docstring and implementation
 			*/
 		},
@@ -299,15 +286,14 @@ var PlotsDiv = {
 			// convert data:
 			this.plots = this.getData(jsondict);
 			// update selection, taking into account previously selected stuff:
-			this.setupSelection(); // which sets this.selectedgridlayout which calls this.gridLayoutChanged (see watch above)
-			// which in turn sets this.selectedParams which eventually calls this.newPlot (see watch above)
+			this.setupSelection();
 			this.watchOn('selectedParams', function (newval, oldval) {
 				this.newPlot();
 			},{deep: true});
 			this.watchOn('selectedgridlayout', function(newval, oldval){
 				this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
 			});
-			this.setupAxisDefaults();
+			this.setupAxisOptions();
 			// now plot:
 			this.newPlot();
 		},
@@ -330,21 +316,20 @@ var PlotsDiv = {
 			this.watchers[key] = watch;
 		},
 		setupSelection(){
-			// sets up selectable params, including those choosable as 'x grid' or 'y rid'.
+			// sets up selectable params, including those selectable as 'x grid' or 'y rid'.
 			// called once from 'init'
 			var plots = this.plots;
 			var allparams = {};
 			plots.forEach(plotElement => {
-			   var plotParams = plotElement.params;
-			   for (var key of Object.keys(plotParams)){
-				   var paramValue = plotParams[key];
-				   if(!(key in allparams)){
-					   allparams[key] = new Set();
-				   }
-				   allparams[key].add(paramValue);
-			   }
+				var plotParams = plotElement.params;
+				for (var key of Object.keys(plotParams)){
+					var paramValue = plotParams[key];
+					if(!(key in allparams)){
+						allparams[key] = new Set();
+					}
+					allparams[key].add(paramValue);
+				}
 			});
-			
 			// adds a new parameter name to each plot and to all plot
 			// argument multiValue is boolean (false: single value)
 			var addParam = function(multiValue){
@@ -363,57 +348,46 @@ var PlotsDiv = {
 			// param names with a single choosable value, and multi values:
 			var multiValueParamNames = Object.keys(allparams).filter(key => allparams[key].size > 1);
 			var singleValueParamNames = Object.keys(allparams).filter(key => allparams[key].size == 1);
-
 			var [paramNames, gridlabels2show] = [[], []];
-			
 			var gridlayouts = {};
 			var selectedgridlayout = '';
-			
 			// set the param names to be choosen.
 			// DEFINITIONS:
 			// SVP (single value param): a parameter that has the same value for all plots
 			// MVP (multi value param): a parameter that has a unique value for each plot
 			// (note that the case where two plots share the same param value should never happen,
 			// but we cannot check and correct for it)
-			
 			if (multiValueParamNames.length == 0){
 				if (plots.length == 1){
-					
 					// case 1 (see DEFINITIONS above): only N>=0 SVPs, and the plots count is one:
 					// nothing complex to do: assure the param count is at least two,
 					// take the first two and provide a single possible grid selection (based on those two parameters)
 					// the grid selection will be hidden as nothing can be choosen
-
 					// if we have a single SVP, and one plot, display the param name for that SVP
 					// on the xgrid above the plot, as to emulate a title, if one wants to:
 					if (singleValueParamNames.length == 1){
 						gridlabels2show.push(singleValueParamNames[0]);
 					}
-					
 					// assure SVPs are at least two:
 					while (singleValueParamNames.length < 2){
 						singleValueParamNames.push(addParam(false));
 					}
-					
 					// set the two SVPs as only choosable grid option (the option will be hidden as
 					// there is nothing else to choose):
 					paramNames = singleValueParamNames.slice(0, 2);
 					gridlayouts['---'] = paramNames;  // the key of gridlayouts is ininfluent
 					selectedgridlayout = '---';
 				}else{
-					
 					// case 2 (see DEFINITIONS above): only N>=0 SVPs and the plots count is more than one:
 					// this should not happen but neverthless provide a 'stack horizontally' and
 					// 'stack vertically' grid options, by the order specified by building a "fake"
 					// multi-value-param which assigns an incremental index to each plot
-
 					// assure SVPs are at least one:
 					while (singleValueParamNames.length < 1){
 						singleValueParamNames.push(addParam(false));
 					}
 					// create MVP:
 					multiValueParamNames.push(addParam(true));
-					
 					// set the two combinations of the SVP and the MVP as only choosable grid options
 					// (providing a 'stack horizontally and 'stack vertically' generic names):
 					paramNames = [singleValueParamNames[0], multiValueParamNames[0]];
@@ -422,39 +396,31 @@ var PlotsDiv = {
 					selectedgridlayout = '&varr; stack vertically';
 				}
 			}else{
-				
 				// assure SVPs are at least two:
 				while (singleValueParamNames.length < 2){
 					singleValueParamNames.push(addParam(false));
 				}
-
 				// take the multi value param and first single-value param:
 				paramNames = multiValueParamNames.concat(singleValueParamNames[0]).concat(singleValueParamNames[1]);
 				gridlabels2show = Array.from(multiValueParamNames);
-
 				// always provide a grid option selecting a single plot: when chosen, the MVPs will be set
-				// as this.selectedParams and displayed in one or more single <select> on top of the plots 
+				// as this.selectedParams and displayed in one or more single <select> on top of the plots
 				gridlayouts['single plot'] = [singleValueParamNames[0], singleValueParamNames[1]];
-
 				if (multiValueParamNames.length == 1){
-					
 					// case 3 (see DEFINITIONS above): N>=0 SVPs and 1 MVP: basically same as
-					// case 2 above but we do not need to create a fake multi-value param, 
+					// case 2 above but we do not need to create a fake multi-value param,
 					// we use what we have providing the parameter name in the grid options
 					// (horizontal vs vertical) with the parameter name
 					// instead of generic 'stack horizontally' or 'stack vertically'
-
 					var svp = singleValueParamNames[0];
 					var mvp = multiValueParamNames[0];
 					gridlayouts[`&harr; ${mvp}`] = [mvp, svp];
 					gridlayouts[`&varr; ${mvp}`] = [svp, mvp];
 					selectedgridlayout = `&varr; ${mvp}`;
 				}else{
-					
 					// case 4 (see DEFINITIONS above): N>=0 SVPs and M>1 MVPs: build a choosable grid
 					// with all combinations of the given MVPs times 2, as for each couple of P1, P2
 					// we can display the grid as P1xP2 or P2xP1
-					
 					for (var prm1 of multiValueParamNames){
 						for (var prm2 of multiValueParamNames){
 							if (prm1 === prm2){
@@ -506,79 +472,64 @@ var PlotsDiv = {
 			}
 			this.selectedParams = selectedParams;
 		},
-		setupAxisDefaults(){
-			// sets up the axis default for each plot and in the VueJs settings
-			// modifies each plot xaxis / yaxis data and `this.axis` Object
-			//
-			// Remember that:
-			// 1. `plots` is a subset of `this.plots` and it is an Array of plots,
-			// i.e. Objects of the form:
-			// plot= {
-			//	 traces: [] //list of Plotly Objects representing traces
-			//	 xaxis: {} //Plotly Object representing x axis
-			//	 yaxis: Plotly Object representing y axis
-			// }, ..
-			//
-			// The Vue Object controlling axis settings is of the form:
-			// axis: {
-			//	 x: {
-			//		 log: {value:undefined, disabled:false},  // undefined: infer from plots, null: disable the option, otherwise boolean
-			//		 sameRange: {value:undefined, disabled: false} // same as above
-			//	 },
-			//	 y: { same as above }
-			// },
+		setupAxisOptions(){
+			// Initializes the values of this.axisOptions based on the plots we have. Axes
+			// options are bound to checkbox controls on the side panel of the plot grid
 
-			var keys = ['axis.x.log.value',
-						'axis.y.log.value',
-						'axis.x.sameRange.value',
-						'axis.y.sameRange.value'];
+			var keys = ['axisOptions.x.log.value',
+						'axisOptions.y.log.value',
+						'axisOptions.x.sameRange.value',
+						'axisOptions.y.sameRange.value'];
 			this.watchOff(...keys);
 
-			// Set "private" variable in the xaxis and yaxis Objects used to
-			// remember some defaults, if set.
-			// Currently, we set _range and _type, which are the counterparts
-			// of 'range' and 'type', respectively. The latter are Plotly reserved
-			// keyswords and apparently it's harmless to add our custom (underscored)
-			// counterparts
+			// Reminder: this.plots is an Array of Objects of this type: {
+			//	traces: [] // list of Plotly Objects representing traces
+			//	xaxis: {}  // Plotly Object representing x axis
+			//	yaxis: {}  // Plotly Object representing y axis
+			// }
 			this.plots.forEach(plot => {
-				if (!plot.xaxis){
-					plot.xaxis={};
-				}
-				if (!plot.yaxis){
-					plot.yaxis={};
-				}
-				var [rangex, rangey] = this.getPlotBounds(plot.traces || []);  // note that hidden traces count
-				plot.xaxis._range = rangex;
-				plot.yaxis._range = rangey;
-
-				plot.xaxis._type = !(plot.xaxis.type) || (plot.xaxis.type == 'log') ? '' : plot.xaxis.type;
-				plot.yaxis._type = !(plot.yaxis.type) || (plot.yaxis.type == 'log') ? '' : plot.yaxis.type;
+				if (!plot.xaxis){ plot.xaxis={}; }
+				if (!plot.yaxis){ plot.yaxis={}; }
 			});
 
-			// setup default values:
-			for (var key of ['x', 'y']){
-				var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
-				var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
-				// axis.sameRange.disabled = false;
-				axis.sameRange.value = false;
-				// get if all axis have the same bounds:
-				var pltBounds = this.plots[0][plotkey]._range;
-				if (this.plots.every(plot => plot[plotkey]._range.every((elm, index) => elm === pltBounds[index]))){
-					// axis.sameRange.disabled = true;
-					axis.sameRange.value = true;
-				}
-				// log scale:
-				axis.log.value = this.plots.every(plot => plot[plotkey].type === 'log');
-				// set log scale disabled if the traces do not have 'log' as type and there are axis bound <=0:
-				//axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
-			}
+			var defaultPlotlyType = '-';
+			var allAxisTypeUndefined = false; // will be set below
 
-			// restart watching: 
+			this.axisOptions.x.log.disabled = false;
+			// check for any plot P, P.xaxis.type ('-', 'linear', 'log'): enable the
+			// x axis.log checkbox (on the right panel) if, for every P, P.axis.type is
+			// missing or 'log'. In the latter case also force axis.log checkbox=true
+			allAxisTypeUndefined = this.plots.every(p => [undefined, defaultPlotlyType].includes(p.xaxis.type));
+			if (!allAxisTypeUndefined){
+				var allAxisTypeAreLog = this.plots.every(p => p.xaxis.type === 'log');
+				this.axisOptions.x.log.disabled = !allAxisTypeAreLog;
+				if (allAxisTypeAreLog){
+					this.axisOptions.x.log.value = true;
+				}else{
+					this.axisOptions.x.log.disabled = true;
+				}
+			}
+			this.axisOptions.x.sameRange.disabled = this.plots.some(p => 'range' in p.xaxis);
+
+			this.axisOptions.y.log.disabled = false;
+			// check for any plot P, P.yaxis.type ('-', 'linear', 'log'): enable the
+			// y axis.log checkbox (on the right panel) if, for every P, P.axis.type is
+			// missing or 'log'. In the latter case also force axis.log checkbox=true
+			allAxisTypeUndefined = this.plots.every(p => [undefined, defaultPlotlyType].includes(p.yaxis.type));
+			if (!allAxisTypeUndefined){
+				var allAxisTypeAreLog = this.plots.every(p => p.yaxis.type === 'log');
+				if (allAxisTypeAreLog){
+					this.axisOptions.y.log.value = true;
+				}else{
+					this.axisOptions.y.log.disabled = true;
+				}
+			}
+			this.axisOptions.y.sameRange.disabled = this.plots.some(p => 'range' in p.yaxis);
+
+			// restart watching:
 			for (var key of keys){
 				// watch each prop separately because with 'deep=true' react is called more than once ...
-				this.watchOn(key, function(newval, oldval){
-					this.react();
-				});
+				this.watchOn(key, (newval, oldval) => { this.react(); });
 			}
 		},
 		newPlot(){
@@ -586,7 +537,7 @@ var PlotsDiv = {
 			 * Filters the plots to display according to current parameters and grid choosen, and
 			 * calls Plotly.newPlot on the plotly <div>
 			 */
-			var divElement = document.getElementById(this.plotdivid);
+			var divElement = this.$refs.rootDiv;
 			this.$nextTick(() => {
 				var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
 				this.watchOff(hover, drag);
@@ -595,6 +546,9 @@ var PlotsDiv = {
 					// console.log(this.getElmSize(divElement));
 					Plotly.purge(divElement);  // Purge plot. FIXME: do actually need this?
 					Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
+					// now compute labels and ticks size:
+					this.computeLabelAndTickSize(data, layout);
+					Plotly.react(divElement, data, layout, this.defaultplotlyconfig);
 					this.watchOn(hover, function (newval, oldval) {
 						this.setMouseModes(newval, undefined);  // hovermode, mousemode
 					});
@@ -602,7 +556,7 @@ var PlotsDiv = {
 						this.setMouseModes(undefined, newval);  // hovermode, mousemode
 					});
 				}, {delay: 300});  // this delay is increased because we might have the animation
-				// of the form closing to be finished: overlapping waitbar and form closing is
+				// of the form closing to be finished: overlapping wait-bar and form closing is
 				// sometimes not nice
 			});
 		},
@@ -611,11 +565,12 @@ var PlotsDiv = {
 			 * Same as this.newPlot above, and can be used in its place to create a plot,
 			 * but when called again on the same <div> will update it far more efficiently
 			 */
-			var divElement = document.getElementById(this.plotdivid);
+			var divElement = this.$refs.rootDiv;
 			this.$nextTick(() => {
 				this.execute(function(){
 					var [data, layout] = this.createPlotlyDataAndLayout(divElement);
-					// console.log(this.getElmSize(divElement));
+					Plotly.react(divElement, data, layout);
+					this.computeLabelAndTickSize(data, layout);
 					Plotly.react(divElement, data, layout);
 				});
 			});
@@ -638,7 +593,6 @@ var PlotsDiv = {
 		createPlotlyDataAndLayout(divElement){
 			var plots = this.plots;
 			var params = this.params;
-			
 			// filter plots according to selectedParams keys, i.e. the parameter names
 			// which are mapped to mupliple values AND are not currently set to be displayed on the
 			// grid x or grid y (basically, the parameters which will show up in a combo box on top of the whole plot)
@@ -648,10 +602,8 @@ var PlotsDiv = {
 				var val = this.selectedParams[key];
 				plots = plots.filter(plot => plot.params[key] == val);
 			}
-
 			// console.log('creating plots');
-			this.setupPlotAxisData(plots);
-
+			this.setupPlotAxis(plots);
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			var gridxvalues = params[gridxparam];
 			var gridyvalues = params[gridyparam];
@@ -664,7 +616,6 @@ var PlotsDiv = {
 				var plotYGridIndex = gridYval2index.get(plot.params[gridyparam]);
 				plotsGridIndices.push([plotXGridIndex, plotYGridIndex]);
 			}
-
 			var layout = Object.assign({}, this.defaultlayout);
 			this.configureLayout(layout);
 			// synchronize hovermode and hovermode
@@ -686,7 +637,6 @@ var PlotsDiv = {
 			layout.font.size = this.plotfontsize;
 			// copy layout annotations cause it's not a "primitive" type and thus we want to avoid old annotation to be re-rendered
 			layout.annotations = layout.annotations ? Array.from(this.defaultlayout.annotations) : [];
-			
 			var data = [];
 			var xdomains = new Array(gridxvalues.length);  // used below to place correctly the x labels of the GRID
 			var ydomains = new Array(gridyvalues.length);  // used below to place correctly the x labels of the GRID
@@ -694,7 +644,7 @@ var PlotsDiv = {
 			var legendgroups = new Set();
 			for (var i = 0; i < plots.length; i++){
 				var [plot, [gridxindex, gridyindex]] = [plots[i], plotsGridIndices[i]];
-				var [axisIndex, xaxis, yaxis, xdomain, ydomain] = this.getAxis(divElement, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
+				var [axisIndex, xaxis, yaxis] = this.getAxis(divElement, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
 				xdomains[gridxindex] = xaxis.domain;  // used below to place correctly the x labels of the GRID
 				ydomains[gridyindex] = yaxis.domain;  // used below to place correctly the y labels of the GRID
 				// merge plot xaxis defined in getData with this.defaultxaxis, and then with xaxis.
@@ -708,7 +658,7 @@ var PlotsDiv = {
 				// 1. T.xaxis and T.yaxis (i.e., basically on which subplot the trace has to be displayed), and
 				// 2. T.showlegend. The latter is set to true for the FIRST trace found for a given legendgroup
 				// in order to avoid duplicated legend names. (T.legendgroup = T.name is the GSIM name, and it allows
-				// toggling visibility simultaneously on all subplots for every trace with the same legendgroup, when 
+				// toggling visibility simultaneously on all subplots for every trace with the same legendgroup, when
 				// clicking on the legend's GSIM name)
 				plot.traces.forEach(function(element){
 					element.xaxis = `x${axisIndex}`;
@@ -719,134 +669,212 @@ var PlotsDiv = {
 					}
 					data.push(element);
 				});
-				// write x and y labels: we might simply set xaxis.title= 'my label' (same for y axis) but:
-				// 1. plotly reserves too much space between the axis line and the axis label (the space is out of control)
-				// 2. Plotly does some hard coded calculation and moves the labels, and we want control over it:
-				// for instance when two ploits are stacked vertically,
-				// the bottom one has the legend moved up to be included in the plot area)
-				
-				// So, get xaxis.title and yaxis.title (if any) and put them as annotations:
+				/* set standoff property (distance label text and axis) */
 				if (xaxis.title){
-					layout.annotations.push(annotation({
-						x: (xaxis.domain[1]+xaxis.domain[0])/2,
-						y: ydomain[0],
-						xanchor: 'center',
-						yanchor: 'bottom',
-						text: xaxis.title
-					}));
-					// delete xaxis title otherwise plotly draws the label:
-					delete xaxis.title;
+					if(typeof xaxis.title !== 'object'){
+						xaxis.title = {text: `${xaxis.title}`};
+					}
+					xaxis.title.standoff = 0; // reset plotly space between label and axis, we handle it
 				}
-				// and ylabel: (why this? can't I set the tile to the xaxis object?)
 				if (yaxis.title){
-					layout.annotations.push(annotation({
-						x: xdomain[0],
-						y: (yaxis.domain[1]+yaxis.domain[0])/2,
-						xanchor: 'left',
-						yanchor: 'middle',
-						textangle: '-90',
-						text: yaxis.title
-					}));
-					// delete xaxis title otherwise plotly draws the label:
-					delete yaxis.title;
+					if(typeof yaxis.title !== 'object'){
+						yaxis.title = {text: `${yaxis.title}`};
+					}
+					yaxis.title.standoff = 0; // skip space between label and axis, we handle it
 				}
-		  }
-		  // Grid X labels: (horizontally on top)
-		  if (this.displayGridLabels_('x', gridxparam)){
-			  // determine the maximum y of all plot frames:
-			  // var y = Math.max(...ydomains.map(elm => elm[1]));
-			  // create the x labels of the vertical grid:
-			  for (var [domain, gridvalue] of xdomains.map((elm, index) => [elm, gridxvalues[index]])){
-				  layout.annotations.push(annotation({
-					  x: (domain[1] + domain[0])/2,
-					  y: 1,
-					  xanchor: 'center', /* DO NOT CHANGE THIS */
-					  yanchor: 'top',
-					  text: `${gridxparam}: ${gridvalue}`
-				}));
-			  }
-		  }
-		  // Grid Y labels: (vertically on the right)
-		  if (this.displayGridLabels_('y', gridyparam)){
-			  // determine the maximum x of all plot frames:
-			  // var x = Math.max(...xdomains.map(elm => elm[1]));
-			  // create the y labels of the vertical grid:
-			  for (var [domain, gridvalue] of ydomains.map((elm, index) => [elm, gridyvalues[index]])){
-				  layout.annotations.push(annotation({
-					  x: 1,
-					  y: (domain[1] + domain[0])/2,
-					  xanchor: 'right',
-					  yanchor: 'middle', /* DO NOT CHANGE THIS */
-					  text: `${gridyparam}: ${gridvalue}`,
-					  textangle: '-270'
-				}));
-			  }
-		  }
-		  return [data, layout];
+			}
+			// Grid X labels: (horizontally on top)
+			if (this.displayGridLabels_('x', gridxparam)){
+				// determine the maximum y of all plot frames:
+				// var y = Math.max(...ydomains.map(elm => elm[1]));
+				// create the x labels of the vertical grid:
+				for (var [domain, gridvalue] of xdomains.map((elm, index) => [elm, gridxvalues[index]])){
+				 	layout.annotations.push(annotation({
+						x: (domain[1] + domain[0])/2,
+						y: 1,
+						xanchor: 'center', /* DO NOT CHANGE THIS */
+						yanchor: 'top',
+						text: `${gridxparam}: ${gridvalue}`
+					}));
+				}
+			}
+			// Grid Y labels: (vertically on the right)
+			if (this.displayGridLabels_('y', gridyparam)){
+				// determine the maximum x of all plot frames:
+				// var x = Math.max(...xdomains.map(elm => elm[1]));
+				// create the y labels of the vertical grid:
+				for (var [domain, gridvalue] of ydomains.map((elm, index) => [elm, gridyvalues[index]])){
+					layout.annotations.push(annotation({
+						x: 1,
+						y: (domain[1] + domain[0])/2,
+						xanchor: 'right',
+						yanchor: 'middle', /* DO NOT CHANGE THIS */
+						text: `${gridyparam}: ${gridvalue}`,
+						textangle: '-270'
+					}));
+				}
+			}
+			return [data, layout];
 		},
-		setupPlotAxisData(plots){
+		computeLabelAndTickSize(data, layout){
+			// recomputes labels and tick sizes based on data and the currently
+			// displayed plot. Input args are the output of createPlotlyDataAndLayout()
+			var [width, height] = this.getElmSize(this.$refs.rootDiv);
+			// default values (computed values will be ADDED to these values):
+			var marginTop = 0;
+			var marginRight = 0;
+			var marginBottom = width > height ? 15 : 20;
+			var marginLeft = height > width ? 20 : 15;
+			var margin = this.getAxesMargins();
+			margin.top += marginTop;
+			margin.bottom += marginBottom;
+			margin.right += marginRight;
+			margin.left += marginLeft;
+			var [xlabels, ylabels] = this.getAxesLabelsRectangles();
+			if (xlabels.length){
+				margin.bottom += Math.max(...xlabels.map(elm => elm.height));
+			}
+			if (ylabels.length){
+				margin.left += Math.max(...ylabels.map(elm => elm.width));
+			}
+			// compute margins as ratio of plot sizes, i.e. in [0, 1]:
+			var [width, height] = this.getElmSize(this.$refs.rootDiv);  // main di size
+			for (var key of Object.keys(layout)){
+				if (key.startsWith('xaxis') && layout[key].domain){
+					var domain = layout[key].domain;  // [x0, x1]
+					domain[0] += margin.left / width;
+					domain[1] -= margin.right / width;
+				}else if (key.startsWith('yaxis') && layout[key].domain){
+					var domain = layout[key].domain;  // [y0, y1]
+					// console.log(`yd pre: ${domain}`);
+					domain[0] += margin.bottom / height;
+					domain[1] -=  margin.top / height;
+					// console.log(`yd post: ${domain}`);
+				}
+			}
+		},
+		getAxesMargins(){
+			// Return an object representing the max margins of all plots, where
+			// each plot margin is computed subtracting the outer axes rectangle
+			// (plot area + axis ticks and ticklabels area) and the inner one
+			var margin = { top: 0, bottom: 0, right: 0, left: 0 };
+			var [min, max, abs] = [Math.min, Math.max, Math.abs];
+			var plotDiv = this.$refs.rootDiv;
+			for (var elm of plotDiv.querySelector('g[class=cartesianlayer]').
+					querySelectorAll('g[class^=subplot]')){
+				// there are 2 svg elements that, upon browser inspection, seem to match
+				// the inner axes rect (i.e. axes with no ticks and ticklabels):
+				var axesRect1 = elm.querySelector('*[class="xlines-above crisp"]');
+				var axesRect2 = elm.querySelector('*[class="ylines-above crisp"]');
+				axesRect = this.getOuterRect(axesRect1, axesRect2);
+				if (!axesRect){ continue; }
+				// these are the two svg elements of the x and y ticks and ticklabels:
+				var xTicks = elm.querySelector('g[class=xaxislayer-above]');
+				var yTicks = elm.querySelector('g[class=yaxislayer-above]');
+				// compute margin (distance between ticks and inner axes border):
+				if (xTicks){
+					xTicks = xTicks.getBBox();
+					margin.bottom = max(margin.bottom, xTicks.y + xTicks.height - axesRect.y - axesRect.height);
+					margin.right = max(margin.right, xTicks.x + xTicks.width - axesRect.x - axesRect.width);
+				}
+				if (yTicks){
+					yTicks = yTicks.getBBox();
+					margin.top = max(margin.top, axesRect.y - yTicks.y);
+					margin.left = max(margin.left, axesRect.x - yTicks.x);
+				}
+			}
+			return margin;
+		},
+		getOuterRect(elm1, elm2){  // elm1, elm2 are svg elements (or null)
+			if (!elm2){
+				return elm1 ? elm1.getBBox(): elm1;
+			}else if(!elm1){
+				return elm2.getBBox();
+			}
+			var min = Math.min;
+			var max = Math.max;
+			var r1 = elm1.getBBox();
+			var r2 = elm2.getBBox();
+			rect = {
+				x: min(r1.x, r2.x),
+				y: min(r1.y, r2.y)
+			};
+			x2 = max(r1.x + r1.width, r2.x + r2.width);
+			y2 = max(r1.y + r1.height, r2.y + r2.height);
+			rect.width = x2 - rect.x;
+			rect.height = y2 - rect.y;
+			return rect;
+		},
+		getAxesLabelsRectangles(){
+			// Return two Arrays of N `SVGRect`s (N = number of plots on the page):
+			// [xRectangles, yRectangles]
+			var xRect = [];
+			var yRect = [];
+			var xregexp = /g-x\d*title/;
+			var yregexp = /g-y\d*title/;
+			var plotDiv = this.$refs.rootDiv.querySelector('g[class=infolayer]');
+			for (var elm of plotDiv.querySelectorAll('g[class$=title]')){
+				for (var cls of elm.classList){
+					if (xregexp.exec(cls)) {
+						xRect.push(elm.getBBox());
+						break;
+					}else if (yregexp.exec(cls)) {
+						yRect.push(elm.getBBox());
+						break;
+					}
+				}
+			}
+			return [xRect, yRect];
+		},
+		setupPlotAxis(plots){
 			// sets up the plotly axis data on the plots to be plotted, according to
 			// the current axis setting and the plot data
 
-			// set the plot xaxis and yaxis type:
-			for (var key of ['x', 'y']){
-				var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
-				var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
-				plots.forEach(plot => {
-					plot[plotkey].type = axis.log.value ? 'log' : plot[plotkey]._type;
-					// we might have falsy plot type, meaning that the non-log type was unspecified
-					// thus remove:
-					if (!plot[plotkey].type){
-						delete plot[plotkey].type;  // reset to default, whatever it is
-					}
-				});
-				axis.log.disabled = false;  // enabled log chekbox, plotly seems to handle it. Previous code was:
-				// axis.log.disabled = !axis.log.value && plots.some(plot => plot[plotkey]._range.some(n => isNaN(n) || n <= 0));
-			}
-
+			// set axis type according to the selcted checkbox:
+			var defaultPlotlyAxisType = '-';
+			var isXAxisLog = (!this.axisOptions.x.log.disabled) && this.axisOptions.x.log.value;
+			var isYAxisLog = (!this.axisOptions.y.log.disabled) && this.axisOptions.y.log.value;
+			plots.forEach(plot => {
+				plot['xaxis'].type = isXAxisLog ? 'log' : defaultPlotlyAxisType;
+				plot['yaxis'].type = isYAxisLog ? 'log' : defaultPlotlyAxisType;
+			});
+			// setup ranges:
 			var [sign, log10] = [Math.sign, Math.log10];
-			// displaybars tells us if we are displaying (at least one) bar: this changes the behaviour
-			// of the margin for custom-defined ranges (see below)
-			var displaybars = plots.every(plot => plot.traces.some(trace => trace.type === 'bar'));
 			for (var key of ['x', 'y']){
-				var axis = this.axis[key];  // the key for this,.axis ('x' or 'y')
-				var plotkey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
-
+				var axisOpt = this.axisOptions[key];  // the key for this,.axis ('x' or 'y')
+				var axisKey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
 				// set same Range disabled, preventing the user to perform useless click:
-				// Note that this includes we are shoing only one plot:
-				var pltBounds = plots[0][plotkey]._range;
-				axis.sameRange.disabled =
-					(plots.every(plot => plot[plotkey]._range.every((elm, index) => elm === pltBounds[index])));
-				if (!axis.sameRange.value || axis.sameRange.disabled){
+				// Note that this includes the case of only one plot:
+				if (!axisOpt.sameRange.value || axisOpt.sameRange.disabled){
 					plots.forEach(plot => {
-						delete plot[plotkey].range;
+						delete plot[axisKey].range;
 					});
 					continue;
 				}
 				// here deal with the case we have 'sameRange' clicked (and enabled):
 				var range = [NaN, NaN];
 				plots.forEach(plot => {
-					range = this.nanrange(...range, ...plot[plotkey]._range);
+					var [rangex, rangey] = this.getPlotBounds(plot.traces || []);  // note that hidden traces count
+					range = this.nanrange(...range, ...(key == 'x' ? rangex : rangey));
 				});
-				// calculate margins. Do not add them IF:
-				// 1. log scale and adding/removing margin causes value <=0
-				// 2. if range[0], Is displaybars, range  if: no log displayed or bound+- margin still positive,
-				// no bar displayed OR signum min
+
+				// add margins for better visualization but note that in case of bars
+				// margins help visually only if the bars min and max cross 0 on the axis
+				var axis0crossed = range[0] * range[1] < 0;
+
 				var margin = Math.abs(range[1] - range[0]) / 50;
-				if (displaybars && sign(range[0]) >= 0 && sign(range[1]) >= 0){
-					// do not add margin to the minimum
-				}else if (!axis.log.value || range[0] - margin > 0){
+				// set margins but avoid negative logarithmic values:
+				var isAxisLog = key === 'x' ? isXAxisLog : isYAxisLog;
+				if (!isAxisLog || (range[0] > margin && range[1] > 0)){
 					range[0] -= margin;
-				}
-				if (displaybars && sign(range[0]) <= 0 && sign(range[1]) <= 0){
-					// do not add margin to the maximum
-				}else if (!axis.log.value || range[1] + margin > 0){
 					range[1] += margin;
 				}
-				if (range.every(elm => !isNaN(elm))){
+
+				// set computed ranges to all plot axis:
+				if (!isNaN(range[0]) && !isNaN(range[1])){
 					plots.forEach(plot => {
 						// plotly wants range converted to log if axis type is 'log':
-						plot[plotkey].range = plot[plotkey].type === 'log' ? [log10(range[0]), log10(range[1])] : range;
+						plot[axisKey].range = plot[axisKey].type === 'log' ? [log10(range[0]), log10(range[1])] : range;
 					});
 				}
 			}
@@ -870,8 +898,8 @@ var PlotsDiv = {
 			if (!this.displayGridLabels_('y', gridyparam)){
 				gridyparam = '';
 			}
-			var tt = gridxparam ? 1.5 * uheight : 0;
-			var rr = gridyparam ? 3 * uwidth : 0;
+			var tt = gridxparam ? 2.5 * uheight : 0;
+			var rr = gridyparam ? 2.5 * uwidth : 0;
 			// the legend, if present, is not included in the plot area, so we can safely ignore it. Comment this line:
 			// rr += 0. * uwidth * Math.max(...Object.keys(this.plotTraceColors).map(elm => elm.length)) ;
 			var axisIndex = 1 + row * cols + col;
@@ -884,26 +912,10 @@ var PlotsDiv = {
 			var xdomain = [col*colwidth, (1+col)*colwidth];
 			// determine the ydomain [y0, y1] defining the enclosing plot frame height (including xlabel):
 			var ydomain = [(rows-row-1)*rowheight, (rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
-			// define now the plotly x and y domains, which do NOT include x and y labels. Define paddings:
-			var b = 3 * uheight;
-			var t = 1 * uheight;
-			var l = 4.5 * uwidth;
-			var r = 1 * uwidth;
-			// now define domains:
-			var xaxisdomain = [xdomain[0]+l, xdomain[1]-r];
-			var yaxisdomain = [ydomain[0]+b, ydomain[1]-t];
-			// check that the domains are greater than a font unit:
-			if (xaxisdomain[1] - xaxisdomain[0] < minuwidth){
-				xaxisdomain = xdomain;
-			}
-			// check that the domains are greater than a font unit:
-			if (yaxisdomain[1] - yaxisdomain[0] < minuheight){
-				yaxisdomain = ydomain;
-			}
-			var xaxis = {domain: xaxisdomain, anchor: `y${axisIndex}`};
-			var yaxis = {domain: yaxisdomain, anchor: `x${axisIndex}`};
+			var xaxis = {domain: xdomain, anchor: `y${axisIndex}`, __computed_base_domain: xdomain};
+			var yaxis = {domain: ydomain, anchor: `x${axisIndex}`, __computed_base_domain: ydomain};
 			//console.log('xdomain:' + xdomain); console.log('ydomain:' + ydomain);
-			return [axisIndex, xaxis, yaxis, xdomain, ydomain];
+			return [axisIndex, xaxis, yaxis];
 		},
 		getElmEmUnits(domElement, fontsize){
 			// returns [uwidth, uheight], the units of a 1em in percentage of the given dom element,
@@ -922,7 +934,7 @@ var PlotsDiv = {
 				yref: 'paper',
 				showarrow: false,
 				font: {size: this.plotfontsize}
-		  }, props || {});
+			}, props || {});
 		},
 		traceVisibilityChanged(traceName){
 			var indices = [];
@@ -938,7 +950,7 @@ var PlotsDiv = {
 			});
 			if(indices.length){
 				this.execute(function(){
-					Plotly.restyle(this.plotdivid, {visible: visible}, indices);
+					Plotly.restyle(this.$refs.rootDiv, {visible: visible}, indices);
 				});
 			}
 		},
@@ -947,7 +959,7 @@ var PlotsDiv = {
 			 * returns [data, layout] (Array an Object),
 			 * i.e. the Plotly data and layout used to draw the plot
 			 */
-			var elm = document.getElementById(this.plotdivid);
+			var elm = this.$refs.rootDiv;
 			return elm ? [elm.data || [], elm.layout || {}] : [[], {}];
 		},
 		getPlotBounds(traces){
@@ -985,7 +997,7 @@ var PlotsDiv = {
 			}
 			if (relayout){
 				this.execute(function(){
-					Plotly.relayout(this.plotdivid, layout);
+					Plotly.relayout(this.$refs.rootDiv, layout);
 				}, {msg: this.waitbar.UPDATING});
 			}
 		},
@@ -995,7 +1007,6 @@ var PlotsDiv = {
 			// automatically returns a color (hex string) assuring the same
 			// color for the same key. The class extends `Map` and has also a
 			// `transparentize` method (see below)
-
 			// defines ColorMap class:
 			class ColorMap extends Map {
 				constructor() {
@@ -1056,7 +1067,7 @@ var PlotsDiv = {
 			var createCallback = (ext) => {
 				return () => {
 					var [data, layout] = this.getPlotlyDataAndLayout();
-					var parent = document.getElementById(this.plotdivid).parentNode.parentNode.parentNode;
+					var parent = this.$refs.rootDiv.parentNode.parentNode.parentNode;
 					var [width, height] = this.getElmSize(parent);
 					data = data.filter(elm => elm.visible || !('visible' in elm));
 					postData = {data:data, layout:layout, width:width, height:height};

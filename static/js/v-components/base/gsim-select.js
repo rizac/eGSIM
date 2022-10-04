@@ -22,7 +22,6 @@ EGSIM.component('gsim-select', {
 			choices: Array.from(this.field.choices),  // avoid modifying or reordering field.choices
 			modelNamesSet: new Set(this.field.choices.map(elm => elm.value)), // used when view=text to check typos
 			warnings: [], //list of strings of warnings (updated also in watchers below)
-			mapId: `map${Date.now()}${Math.random()}`,
 			selectionView: true
 		}
 	},
@@ -155,7 +154,7 @@ EGSIM.component('gsim-select', {
 						Clear map filter
 					</button>
 				</div>
-				<div :id="mapId" ref="mapDiv" style='height:14rem'></div>
+				<div ref="mapDiv" style='height:14rem'></div>
 		   </div>
 		</div>
 	</div>`,
@@ -172,7 +171,8 @@ EGSIM.component('gsim-select', {
 			this.selectionView=!this.selectionView;
 		},
 		createLeafletMap(){
-			let map = L.map(this.mapId, {center: [48, 7], zoom: 4});
+			var mapDiv = this.$refs.mapDiv;
+			let map = L.map(mapDiv, {center: [48, 7], zoom: 4});
 			// center map:
 			var mapCenter = L.latLng([49, 13]);
 			map.fitBounds(L.latLngBounds([mapCenter, mapCenter]), {maxZoom: 3});
@@ -191,7 +191,6 @@ EGSIM.component('gsim-select', {
 				});
 				new Control({ position: 'bottomright' }).addTo(map);
 			}else{
-				let mapElm = document.getElementById(this.mapId);
 				let options = { root: document, threshold: 1.0 };
 				let callback = (entries, observer) => {
 					setTimeout(() => {
@@ -199,7 +198,7 @@ EGSIM.component('gsim-select', {
 					}, 100);
 				};
 				let observer = new IntersectionObserver(callback, options);
-				observer.observe(mapElm);
+				observer.observe(mapDiv);
 			}
 
 			// provide two base layers. Keep it simple as many base layers are just to shof off
