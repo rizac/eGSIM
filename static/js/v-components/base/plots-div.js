@@ -553,11 +553,10 @@ var PlotsDiv = {
 				var [data, layout] = this.createPlotlyDataAndLayout(divElement);
 				this.execute(function(){
 					// console.log(this.getElmSize(divElement));
-					Plotly.purge(divElement);  // Purge plot. FIXME: do actually need this?
 					Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
 					// now compute labels and ticks size:
-					this.computeLabelAndTickSize(data, layout);
-					Plotly.react(divElement, data, layout, this.defaultplotlyconfig);
+					var newLayout = this.computeLabelAndTickSize(data, layout);
+					Plotly.relayout(divElement, newLayout);
 					this.watchOn(hover, function (newval, oldval) {
 						this.setMouseModes(newval, undefined);  // hovermode, mousemode
 					});
@@ -579,8 +578,8 @@ var PlotsDiv = {
 				this.execute(function(){
 					var [data, layout] = this.createPlotlyDataAndLayout(divElement);
 					Plotly.react(divElement, data, layout);
-					this.computeLabelAndTickSize(data, layout);
-					Plotly.react(divElement, data, layout);
+					var newLayout = this.computeLabelAndTickSize(data, layout);
+					Plotly.relayout(divElement, newLayout);
 				});
 			});
 		},
@@ -729,8 +728,8 @@ var PlotsDiv = {
 			return [data, layout];
 		},
 		computeLabelAndTickSize(data, layout){
-			// recomputes labels and tick sizes based on data and the currently
-			// displayed plot. Input args are the output of createPlotlyDataAndLayout()
+			// recomputes labels and tick sizes based on data and the currently displayed
+			// plot, returns a 'layout' Object to be passed as 2nd arg to Plotly.relayout
 			var [width, height] = this.getElmSize(this.$refs.rootDiv);
 			// default values (computed values will be ADDED to these values):
 			var marginTop = 0;
@@ -749,21 +748,25 @@ var PlotsDiv = {
 			if (ylabels.length){
 				margin.left += Math.max(...ylabels.map(elm => elm.width));
 			}
+			var newLayout = {};
 			// compute margins as ratio of plot sizes, i.e. in [0, 1]:
 			var [width, height] = this.getElmSize(this.$refs.rootDiv);  // main di size
 			for (var key of Object.keys(layout)){
 				if (key.startsWith('xaxis') && layout[key].domain){
 					var domain = layout[key].domain;  // [x0, x1]
-					domain[0] += margin.left / width;
-					domain[1] -= margin.right / width;
+					newLayout[`${key}.domain`] = [
+						domain[0] + margin.left / width,
+						domain[1] - margin.right / width
+					];
 				}else if (key.startsWith('yaxis') && layout[key].domain){
 					var domain = layout[key].domain;  // [y0, y1]
-					// console.log(`yd pre: ${domain}`);
-					domain[0] += margin.bottom / height;
-					domain[1] -=  margin.top / height;
-					// console.log(`yd post: ${domain}`);
+					newLayout[`${key}.domain`] = [
+						domain[0] + margin.bottom / height,
+						domain[1] - margin.top / height
+					];
 				}
 			}
+			return newLayout;
 		},
 		getAxesMargins(){
 			// Return an object representing the max margins of all plots, where
