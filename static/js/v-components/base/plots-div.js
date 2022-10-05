@@ -35,38 +35,15 @@ var PlotsDiv = {
 			// a dict of property names mapped (string) to an array of possible (string) values. This is
 			// built automatically according to all possible values of the each Plot.params Object (see above)
 			params: {},
-			// dict of subplots layout (string) mapped to a two element Array
+			// dict of subplots layout name (string) mapped to a two element Array
 			// [xgrid param name, y grid param name]:
 			gridlayouts: {},
-			// string denoting the selected key of gridLayouts:
+			// string denoting the selected layout name:
 			selectedgridlayout: '',
 			// selectedParams below is a dict of property names mapped to a scalar denoting the selected value
 			// it is the keys of this.params without the values of this.gridlayouts[this.selectedgridlayout]
 			// and each param will be displayed on one single-value-choosable combobox
 			selectedParams: {},
-			// defaultlayout. Note that defaultlayout.annotations, if specified here, will be copied and then
-			// xaxis and grid labels will be copied to the new copied Array before passing it to Plotly as layout argument
-			defaultlayout: {
-				autosize: true,  // without this, the inner svg does not expand properly
-				paper_bgcolor: 'rgba(0,0,0,0)', //window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('background-color'),
-				// font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
-				showlegend: false,
-				legend: { bgcolor: 'rgba(0,0,0,0)'},
-				margin: {r: 0, b: 0, t: 0, l:0, pad:0},
-				annotations: []
-			},
-			mouseMode: { // https://plot.ly/python/reference/#layout-hovermode
-				// hovermodes (plotly keys). Note that we remove the 'y' key because useless
-				hovermodes: ["closest", "x", false],
-				// the labels of hovermodes to be displayed. Copied from plotly modebar after visual test
-				// (note that we remove  the value associated to 'y' because plotly does not implement it
-				// and anyway, even providing a mapped label such as 'show y', tests revealed the mode was useless):
-				hovermodeLabels: {closest: 'show closest point', x: 'compare data',false: 'do nothing'},
-				dragmodes: ["zoom", "pan"],  // "select", "lasso" are useless. false does not seem to work (it's zoom)
-				dragmodeLabels: {zoom: 'zoom', pan: 'pan'},
-				hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
-				dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
-			},
 			axisOptions: {
 				// reminder: x.log and y.log determine the type of axis. Plotly has xaxis.type that can be:
 				// ['-', 'linear', 'log', ... other values ], we will set here only 'normal' (log checkbox unselected)
@@ -80,22 +57,59 @@ var PlotsDiv = {
 					sameRange: {disabled: false, value: undefined}
 				}
 			},
-			// the plotly config for plots. See
-			// https://community.plot.ly/t/remove-options-from-the-hover-toolbar/130/14
-			defaultplotlyconfig: {
-				responsive: true,
-				modeBarButtonsToRemove: ['sendDataToCloud', 'toImage'],
-				displaylogo: false
-			},
-			defaultxaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
-			defaultyaxis: {mirror: true, zeroline: false, linewidth: 1},  // domain and anchor properties will be overridden
-			colorMap: this.createColorMap(),
-			// the waitbar while drawing plots
+			// the wait bar while drawing plots
 			waitbar: {
 				msg: '',  // the message to be displayed, and below some defaults:
 				DRAWING: 'Drawing plots... <i class="fa fa-hourglass-o"></i>',
 				UPDATING: 'Updating plots... <i class="fa fa-hourglass-o"></i>'
 			}
+		}
+	},
+	created(){
+		// setup non reactive data:
+
+		// default Plotly layout. See this.configureLayout for details
+		this.defaultlayout = {
+			autosize: true,  // without this, the inner svg does not expand properly
+			paper_bgcolor: 'rgba(0,0,0,0)', //window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('background-color'),
+			// font: {family: "Encode Sans Condensed, sans-serif", size: 12}, // this will be overridden
+			showlegend: false,
+			legend: { bgcolor: 'rgba(0,0,0,0)'},
+			margin: {r: 0, b: 0, t: 0, l:0, pad:0},
+			annotations: []  // base annotations, it might be enhanced with custom ones (e.g., axis labels)
+		};
+
+		// options of the side panel to configure mouse interactions on the plots:
+		this.mouseMode = { // https://plot.ly/python/reference/#layout-hovermode
+			// hovermodes (plotly keys). Note that we remove the 'y' key because useless
+			hovermodes: ["closest", "x", false],
+			// the labels of hovermodes to be displayed. Copied from plotly modebar after visual test
+			// (note that we remove  the value associated to 'y' because plotly does not implement it
+			// and anyway, even providing a mapped label such as 'show y', tests revealed the mode was useless):
+			hovermodeLabels: {closest: 'show closest point', x: 'compare data',false: 'do nothing'},
+			dragmodes: ["zoom", "pan"],  // "select", "lasso" are useless. false does not seem to work (it's zoom)
+			dragmodeLabels: {zoom: 'zoom', pan: 'pan'},
+			hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
+			dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
+		};
+
+		// the plotly config for plots. See
+		// https://community.plot.ly/t/remove-options-from-the-hover-toolbar/130/14
+		this.defaultplotlyconfig = {
+			responsive: true,
+			modeBarButtonsToRemove: ['sendDataToCloud', 'toImage'],
+			displaylogo: false
+		};
+
+		// default layout axis props. https://plotly.com/javascript/reference/layout/xaxis/#layout-xaxis
+		// Note that domain and anchor props will be overridden
+		this.defaultxaxis = { mirror: true, zeroline: false, linewidth: 1 };
+		this.defaultyaxis = { mirror: true, zeroline: false, linewidth: 1 };
+		this.colorMap = this.createColorMap();
+	},
+	activated(){  // when component become active
+		if (this.visible){
+			this.react();
 		}
 	},
 	watch: {
@@ -111,11 +125,6 @@ var PlotsDiv = {
 					this.downloadActions = this.createDownloadActions();
 				}
 			}
-		}
-	},
-	activated(){  // when component become active
-		if (this.visible){
-			this.react();
 		}
 	},
 	computed: {
