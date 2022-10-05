@@ -644,7 +644,10 @@ var PlotsDiv = {
 			var legendgroups = new Set();
 			for (var i = 0; i < plots.length; i++){
 				var [plot, [gridxindex, gridyindex]] = [plots[i], plotsGridIndices[i]];
-				var [axisIndex, xaxis, yaxis] = this.getAxis(divElement, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
+				var [xdomain, ydomain] = this.computePlotDomain(divElement, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
+				var axisIndex = 1 + gridyindex * gridxvalues.length + gridxindex;
+				var xaxis = { domain: xdomain, anchor: `y${axisIndex}` };
+				var yaxis = { domain: ydomain, anchor: `x${axisIndex}` };
 				xdomains[gridxindex] = xaxis.domain;  // used below to place correctly the x labels of the GRID
 				ydomains[gridyindex] = yaxis.domain;  // used below to place correctly the y labels of the GRID
 				// merge plot xaxis defined in getData with this.defaultxaxis, and then with xaxis.
@@ -882,11 +885,13 @@ var PlotsDiv = {
 			}
 			return false;
 		},
-		getAxis(divElement, row, col, rows, cols){
-			// computes the sub-plot area according to the row and col index
-			// returns the array [axisIndex, xaxis, yaxis, xdomain, ydomain]
-			// where xaxis and yaxis are the Objects to be passed to plotly's layout, xdomain = [x1, x2] and
-			// ydomain = [y1, y2] are the two-element arrays denoting the enclosing area of the sub-plot
+		computePlotDomain(divElement, row, col, rows, cols){
+			// computes the sub-plot domain (position and area) according to the row and
+			// col indices. The domain does not account for axis ticks and labels, so
+			// it might need to be shrunk.
+			// Returns the array [xdomain, ydomain], where xdomain=[x0, x1] and
+			// ydomain=[y0, y1] return the plot rectangle in [0, 1] i.e. in figure
+			// coordinates (note that y axis values are cartesian, i.e. increase upwards)
 			var [uwidth, uheight] = this.getElmEmUnits(divElement, this.plotfontsize);
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			if (!this.displayGridLabels_('x', gridxparam)){
@@ -897,22 +902,19 @@ var PlotsDiv = {
 			}
 			var tt = gridxparam ? 2.5 * uheight : 0;
 			var rr = gridyparam ? 2.5 * uwidth : 0;
-			// the legend, if present, is not included in the plot area, so we can safely ignore it. Comment this line:
-			// rr += 0. * uwidth * Math.max(...Object.keys(this.plotTraceColors).map(elm => elm.length)) ;
-			var axisIndex = 1 + row * cols + col;
 			// assure the dimensions are at least a minimum, otherwise plotly complains (assuming 10px as font-minimum):
-			var [minuwidth, minuheight] = this.getElmEmUnits(divElement, 10);
-			// calculate plot width and height:
-			var colwidth = Math.max(minuwidth, (1-rr) / cols);
-			var rowheight = Math.max(minuheight, (1-tt) / rows);
-			// determine the xdomain [x0, x1] defining the enclosing plot frame width (including ylabel):
+			var [minuwidth, minuheight] = this.getElmEmUnits(divElement, 1);
+			// prevent the top / right plot borders to be hidden by adding 1px aditional margin:
+			rr = Math.max(rr, minuwidth);
+			tt = Math.max(tt, minuheight);
+			// calculate plot width and height, setting them at least 10px:
+			var colwidth = Math.max(10 * minuwidth, (1-rr) / cols);
+			var rowheight = Math.max(10 * minuheight, (1-tt) / rows);
+			// determine the xdomain [x0, x1]:
 			var xdomain = [col*colwidth, (1+col)*colwidth];
-			// determine the ydomain [y0, y1] defining the enclosing plot frame height (including xlabel):
+			// determine the ydomain [y0, y1]:
 			var ydomain = [(rows-row-1)*rowheight, (rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
-			var xaxis = {domain: xdomain, anchor: `y${axisIndex}`, __computed_base_domain: xdomain};
-			var yaxis = {domain: ydomain, anchor: `x${axisIndex}`, __computed_base_domain: ydomain};
-			//console.log('xdomain:' + xdomain); console.log('ydomain:' + ydomain);
-			return [axisIndex, xaxis, yaxis];
+			return [xdomain, ydomain];
 		},
 		getElmEmUnits(domElement, fontsize){
 			// returns [uwidth, uheight], the units of a 1em in percentage of the given dom element,
