@@ -858,12 +858,9 @@ var PlotsDiv = {
 					range = this.nanrange(...range, ...(key == 'x' ? rangex : rangey));
 				});
 
-				// add margins for better visualization but note that in case of bars
-				// margins help visually only if the bars min and max cross 0 on the axis
-				var axis0crossed = range[0] * range[1] < 0;
-
+				// add margins for better visualization:
 				var margin = Math.abs(range[1] - range[0]) / 50;
-				// set margins but avoid negative logarithmic values:
+				// be careful with negative logarithmic values:
 				var isAxisLog = key === 'x' ? isXAxisLog : isYAxisLog;
 				if (!isAxisLog || (range[0] > margin && range[1] > 0)){
 					range[0] -= margin;
