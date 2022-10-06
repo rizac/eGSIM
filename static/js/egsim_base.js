@@ -215,33 +215,5 @@ const DataDownloader = {
 			// but let's be safe:
 			URL.revokeObjectURL( downloadUrl );
 		}
-		/*createDownloadActions(downloadUrl, data){
-			// Return an Array of [string, callaback] Arrays where each callback
-			// downloads `data` on the client OS) the given data in different formats:
-			// 'json' 'csv', 'csv (comma separated)'.
-
-			// downloadUrl: a string identifying a base download url, usually sent from the
-			//	server, whereby each single download URL will be built
-			// data: the data returned from a response (e.g., trellis residuals or
-			//	testing data) that needs to be downloaded
-
-			// Populate with the data to be downloaded as non-image formats:
-			var downloadActions = [];
-			// Download as JSON does not need to query the server, the data is here:
-			downloadActions.push(["json", () => {
-				var filename =  downloadUrl.split('/').pop() + '.json';
-				this.saveAsJSON(data, filename);
-			}]);
-			// CSV download actions send data to the server and expects back converted:
-			downloadActions.push(["text/csv", () => {
-				var url =  downloadUrl + '.csv';
-				this.download(url, data);
-			}]);
-			downloadActions.push(["text/csv, decimal comma", () => {
-				var url =  downloadUrl + '.csv_eu';
-				this.download(url, data);
-			}]);
-			return downloadActions;
-		}*/
 	}
 }

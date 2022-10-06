@@ -81,7 +81,6 @@ EGSIM.component('testing-table', {
 	data() {
 		var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value'];
 		return {
-			//downloadActions: [],  // FIXME REMOVE populated when data is there, see watch.data
 			visible: false,
 			filterNames: colnames.slice(0, colnames.length-1),
 			filterValues: {},  // Object of filterNames -> list of possible values for the filter name
@@ -113,7 +112,6 @@ EGSIM.component('testing-table', {
 			handler(newval, oldval){
 				this.visible = (typeof newval === 'object') && !!(Object.keys(newval).length);
 				if (this.visible){
-					// FIXME REMOVE this.downloadActions = this.createDownloadActions(this.downloadUrl, newval);  // defined in Clientdownloader
 					this.gsimsRecords = newval['Db records'];
 					this.gsimsSkipped = newval['Gsim skipped'];
 					this.tableData = this.init.call(this, newval['Measure of fit']);
