@@ -31,65 +31,64 @@ EGSIM.component('trellis', {
 			}
 		}
 	},
-	template: `
-<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-	<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
-				:visibilityToggle="formVisibilityToggle"
-				@submitted="(response) => responseData=response.data">
+	template: `<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
+		<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
+					:visibilityToggle="formVisibilityToggle"
+					@submitted="(response) => responseData=response.data">
 
-		<template v-slot:left-column>
-			<gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
-		</template>
+			<template v-slot:left-column>
+				<gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
+			</template>
 
-		<template v-slot:right-column>
-			<div style="position:relative">
-				<imt-select :field="form['imt']" />
-				<div v-show='predefinedSA' class="form-control small text-muted"
-					 style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
-					<i class='text-warning fa fa-info-circle'></i>
-					Intensity Measure will default to 'SA' with a set of pre-defined periods
-				</div>
-			</div>
-			<div class="form-control mt-4"
-				 :class="{'border-danger': scenarioHasErrors}"
-				 style="flex: 1 1 0;min-height:3rem;background-color:transparent;overflow-y:auto">
-
-				<template v-for="(name, index) in scenarioKeys" >
-					<div v-if="form[name].type != 'checkbox'" class='d-flex flex-column'
-						 :class="{ 'mt-2': index > 0 }">
-						<field-label :field="form[name]" />
-						<field-input :field="form[name]" />
+			<template v-slot:right-column>
+				<div style="position:relative">
+					<imt-select :field="form['imt']" />
+					<div v-show='predefinedSA' class="form-control small text-muted"
+						 style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
+						<i class='text-warning fa fa-info-circle'></i>
+						Intensity Measure will default to 'SA' with a set of pre-defined periods
 					</div>
-					<div v-else class='d-flex flex-row align-items-baseline'
-						 :class="{ 'mt-2': index > 0 }">
-						<field-input :field="form[name]" />
-						<field-label :field="form[name]" class='ms-2' style='flex: 1 1 auto'/>
-					</div>
-				</template>
-
-			</div>
-
-			<div class="mt-4" style="background-color:transparent">
-				<field-label :field='form["plot_type"]' />
-				<field-input :field='form["plot_type"]' size="3" />
-				<div class='mt-1 d-flex flex-row align-items-baseline'>
-					<field-input :field='form["stdev"]'/>
-					<field-label :field='form["stdev"]' class='ms-2' style='flex: 1 1 auto'/>
 				</div>
-			</div>
-		</template>
-	</egsim-form>
+				<div class="form-control mt-4"
+					 :class="{'border-danger': scenarioHasErrors}"
+					 style="flex: 1 1 0;min-height:3rem;background-color:transparent;overflow-y:auto">
 
-	<trellis-plot-div :data="responseData" :download-url="urls.downloadResponse"
-					  class='invisible position-absolute start-0 top-0 end-0 bottom-0'
-					  :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
-		<slot>
-			<button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
-				<i class='fa fa-list-alt'></i> Configuration
-			</button>
-		</slot>
-	</trellis-plot-div>
-</div>`
+					<template v-for="(name, index) in scenarioKeys" >
+						<div v-if="form[name].type != 'checkbox'" class='d-flex flex-column'
+							 :class="{ 'mt-2': index > 0 }">
+							<field-label :field="form[name]" />
+							<field-input :field="form[name]" />
+						</div>
+						<div v-else class='d-flex flex-row align-items-baseline'
+							 :class="{ 'mt-2': index > 0 }">
+							<field-input :field="form[name]" />
+							<field-label :field="form[name]" class='ms-2' style='flex: 1 1 auto'/>
+						</div>
+					</template>
+
+				</div>
+
+				<div class="mt-4" style="background-color:transparent">
+					<field-label :field='form["plot_type"]' />
+					<field-input :field='form["plot_type"]' size="3" />
+					<div class='mt-1 d-flex flex-row align-items-baseline'>
+						<field-input :field='form["stdev"]'/>
+						<field-label :field='form["stdev"]' class='ms-2' style='flex: 1 1 auto'/>
+					</div>
+				</div>
+			</template>
+		</egsim-form>
+
+		<trellis-plot-div :data="responseData" :download-url="urls.downloadResponse"
+						  class='invisible position-absolute start-0 top-0 end-0 bottom-0'
+						  :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
+			<slot>
+				<button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
+					<i class='fa fa-list-alt'></i> Configuration
+				</button>
+			</slot>
+		</trellis-plot-div>
+	</div>`
 });
 
 
@@ -122,7 +121,6 @@ EGSIM.component('trellis-plot-div', {
 					params.vs30 = fig.vs30;
 					var traces = [];
 					Object.keys(fig.yvalues).map(function(name){
-						// FIXME: check if with arrow function we can avoid apply and this
 						// to test that plots are correctly placed, uncomment this:
 						// var name = `${name}_${params.magnitude}_${params.distance}_${params.vs30}`;
 						var yvalues = fig.yvalues[name];

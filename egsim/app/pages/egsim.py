@@ -184,8 +184,9 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
 
     testing_form = components_props['testing']['form']
     testing_form['gsim'][val] = gsimnames + ['AbrahamsonSilva2008']
-    testing_form['imt'][val] = ['PGA', 'PGV', "0.2", "1.0", "2.0"]
-    testing_form['fit_measure'][val] = [MOF.RES, MOF.LH]
+    testing_form['imt'][val] = ['PGA']  # , 'PGV', "0.2", "1.0", "2.0"]
+    testing_form['selexpr'][val] = "magnitude > 6"
+    testing_form['fit_measure'][val] = [MOF.RES]  # , MOF.LH]
 
 
 def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],

@@ -1,6 +1,7 @@
 /* Base class to be used as mixin for any component showing plots as a result
 of a response Object sent from the server */
 var PlotsDiv = {
+	mixins: [DataDownloader],
 	props: {
 		data: {type: Object, default: () => { return{} }},
 		// this is used to calculate plot areas and set it in the default layout
@@ -122,7 +123,7 @@ var PlotsDiv = {
 				this.visible = (typeof newval === 'object') && (Object.keys(newval).length);
 				if (this.visible){ // see prop below
 					this.init.call(this, newval);
-					this.downloadActions = this.createDownloadActions();
+					// this.downloadActions = this.createDownloadActions_();
 				}
 			}
 		}
@@ -181,11 +182,18 @@ var PlotsDiv = {
 			</div>
 			<div>
 				<div class='mt-3 border p-2 bg-white'>
-					<action-select :actions="downloadActions" class='form-control'
-								   data-balloon-pos='left' data-balloon-length='medium'
-								   aria-label='Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see'>
-						Download as:
-					</action-select>
+					<select @change="downloadTriggered" class='form-control'
+							data-balloon-pos='left' data-balloon-length='medium'
+							aria-label='Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see'>
+						<option value="">Download as:</option>
+						<option value="json">json</option>
+						<option value="csv">text/csv</option>
+						<option value="csv_eu">tex/csv (decimal comma)</option>
+						<option value="png">png (visible plots only)</option>
+						<option value="pdf">pdf (visible plots only)</option>
+						<option value="eps">eps (visible plots only)</option>
+						<option value="svg">svg (visible plots only)</option>
+					</select>
 				</div>
 				<div v-show="isGridCusomizable" class='mt-3 border p-2 bg-white'>
 					<div>Subplots layout</div>
@@ -552,7 +560,6 @@ var PlotsDiv = {
 				this.watchOff(hover, drag);
 				var [data, layout] = this.createPlotlyDataAndLayout(divElement);
 				this.execute(function(){
-					// console.log(this.getElmSize(divElement));
 					Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
 					// now compute labels and ticks size:
 					var newLayout = this.computeLabelAndTickSize(data, layout);
@@ -584,18 +591,17 @@ var PlotsDiv = {
 			});
 		},
 		execute(callback, options){
-			// Executes asynchronously the given callback
-			// (with this component as 'this' argument) showing a waitbar meanwhile.
+			// Executes asynchronously the given callback (which can safely use `this`
+			// in its code to point to this Vue component) showing a wait bar meanwhile.
 			// 'options' is an Object with two optional properties:
-			// options.msg (the waitbar message, defaults to self.waitbar.msg)
-			// and delay (the delay to execute the given callback, defaults to self.waitbar.delay: 200)
+			// options.msg (the wait bar message)
+			// and delay (the execution delay)
 			var delay = (options || {}).delay || 200;
 			this.waitbar.msg = (options || {}).msg || this.waitbar.DRAWING;
-			var self = this;
 			this.drawingPlots=true;
-			setTimeout(function(){
-				callback.call(self);
-				self.drawingPlots=false;
+			setTimeout(() => {
+				callback.call(this);
+				this.drawingPlots=false;
 			}, delay);
 		},
 		createPlotlyDataAndLayout(divElement){
@@ -899,41 +905,42 @@ var PlotsDiv = {
 		},
 		computePlotDomain(divElement, row, col, rows, cols){
 			// computes the sub-plot domain (position and area) according to the row and
-			// col indices. The domain does not account for axis ticks and labels, so
-			// it might need to be shrunk.
+			// col indices. The computed domain will not account for axis ticks and
+			// labels, so it might need to be shrunk.
 			// Returns the array [xdomain, ydomain], where xdomain=[x0, x1] and
-			// ydomain=[y0, y1] return the plot rectangle in [0, 1] i.e. in figure
-			// coordinates (note that y axis values are cartesian, i.e. increase upwards)
-			var [uwidth, uheight] = this.getElmEmUnits(divElement, this.plotfontsize);
+			// ydomain=[y0, y1] represent the plot rectangle coordinates in [0, 1], i.e.
+			// relative to the whole plotly figure (note that y axis values are cartesian,
+			// i.e. they increase upwards)
+
+			// get length of 1px, which will be the base for our calculations
+			var [width_, height_] = this.getElmSize(divElement);
+			var width1px = 1/width_;
+			var height1px = 1/height_;
+
+			// compute top and right margin for the grid labels, if any. Default size
+			// is 2px in order not to cut the axis border
+			var tt = 2 * height1px;
+			var rr = 2 * width1px;
+			// now check if we have grid labels to display:
+			var fontsize = this.plotfontsize;
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (!this.displayGridLabels_('x', gridxparam)){
-				gridxparam = '';
+			if (this.displayGridLabels_('x', gridxparam)){
+				// there are labels to display on the x axis => increase tt:
+				tt = Math.max(2.5 * fontsize * height1px, tt);
 			}
-			if (!this.displayGridLabels_('y', gridyparam)){
-				gridyparam = '';
+			if (this.displayGridLabels_('y', gridyparam)){
+				// there are labels to display on the y axis => increase rr:
+				rr = Math.max(2.5 * fontsize * width1px, rr);
 			}
-			var tt = gridxparam ? 2.5 * uheight : 0;
-			var rr = gridyparam ? 2.5 * uwidth : 0;
-			// assure the dimensions are at least a minimum, otherwise plotly complains (assuming 10px as font-minimum):
-			var [minuwidth, minuheight] = this.getElmEmUnits(divElement, 1);
-			// prevent the top / right plot borders to be hidden by adding 1px aditional margin:
-			rr = Math.max(rr, minuwidth);
-			tt = Math.max(tt, minuheight);
+
 			// calculate plot width and height, setting them at least 10px:
-			var colwidth = Math.max(10 * minuwidth, (1-rr) / cols);
-			var rowheight = Math.max(10 * minuheight, (1-tt) / rows);
+			var colwidth = Math.max(10 * width1px, (1-rr) / cols);
+			var rowheight = Math.max(10 * height1px, (1-tt) / rows);
 			// determine the xdomain [x0, x1]:
 			var xdomain = [col*colwidth, (1+col)*colwidth];
 			// determine the ydomain [y0, y1]:
 			var ydomain = [(rows-row-1)*rowheight, (rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
 			return [xdomain, ydomain];
-		},
-		getElmEmUnits(domElement, fontsize){
-			// returns [uwidth, uheight], the units of a 1em in percentage of the given dom element,
-			// which must be shown on the browser
-			// Both returned units should be < 1 in principle
-			var [width, height] = this.getElmSize(domElement);
-			return [fontsize/width, fontsize/height];
 		},
 		getElmSize(domElement){
 			// returns the Array [width, height] of the given dom element size
@@ -1070,9 +1077,33 @@ var PlotsDiv = {
 			};
 			return new ColorMap();
 		},
-		createDownloadActions(){
+		downloadTriggered(event){
+			var selectElement = event.target;
+			if (selectElement.selectedIndex == 0){
+				return;
+			}
+			var format = selectElement.value;
+			var url = this.downloadUrl + '.' + format;
+			var data = this.data;
+			if (format == 'json'){
+				var filename =  url.split('/').pop();
+				this.saveAsJSON(data, filename);
+			} else if (format.startsWith('csv')){
+				this.download(url, data);
+			}else{
+				// image format:
+				var [data, layout] = this.getPlotlyDataAndLayout();
+				var parent = this.$refs.rootDiv.parentNode.parentNode.parentNode;
+				var [width, height] = this.getElmSize(parent);
+				data = data.filter(elm => elm.visible || !('visible' in elm));
+				postData = {data:data, layout:layout, width:width, height:height};
+				this.download(url, postData);
+			}
+			selectElement.selectedIndex = 0;
+		}
+		/*createDownloadActions_(){
 			// Populate with the data to be downloaded as non-image formats:
-			var downloadActions = this.$httpClient.createDownloadActions(this.downloadUrl, this.data);
+			var downloadActions = this.createDownloadActions(this.downloadUrl, this.data);
 			// image formats:
 			// create a function factory to avoid closure inside loops (classic approach):
 			var createCallback = (ext) => {
@@ -1083,13 +1114,13 @@ var PlotsDiv = {
 					data = data.filter(elm => elm.visible || !('visible' in elm));
 					postData = {data:data, layout:layout, width:width, height:height};
 					var url = this.downloadUrl + '.' + ext;
-					this.$httpClient.download(url, postData);
+					this.download(url, postData);
 				};
 			};
 			for (var ext of ['png', 'eps', 'pdf', 'svg']){
 				downloadActions.push([`${ext} (visible plots only)`, createCallback(ext)]);
 			}
 			return downloadActions;
-		}
+		}*/
 	}
 };
