@@ -10,7 +10,6 @@ const EGSIM_BASE = {
 			errors: {},  // populated in created()
 			selComponent: '',
 			componentProps: {}, // component names (e.g. 'trellis') -> Object
-			postfuncDefaultConfig: {},  // default HTTPClient config
 			flatfileUploadUrl: '', // used when we upload a flatfile
 		}
 	},
