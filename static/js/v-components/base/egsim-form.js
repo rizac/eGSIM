@@ -107,7 +107,6 @@ EGSIM.component('egsim-form', {
 			mounted: false,  // needed for ? FIXME
 			requestURL: '',
 			watchers: []  // needed for FIXME
-			// downloadActions: this.createDownloadActions()
 		}
 	},
 	emits: ['submitted'],
@@ -247,20 +246,6 @@ EGSIM.component('egsim-form', {
 			// but it's actually quite complex
 			this.download(url, this.formToJSON());  // defined in DataDownloader
 		}
-		/*createDownloadActions(){
-			return ['json', 'yaml'].map(ext => {
-				var url = this.downloadUrl + "." + ext;
-				return [ext, () => {
-					// note that when sending this.formToJSON() with an uploaded File
-					// object, the browser converts it to {}. By chance, this means that
-					// the backend Django Form will see no flatfile and thus
-					// the returned 'flatfile error' will make sense. We could
-					// try a better message (e.g. 'provided flatfile non serializable')
-					// but it's actually quite complex
-					this.download(url, this.formToJSON());  // defined in DataDownloader
-				}];
-			}, this);  // <- make `this` in `map` point to this Vue instance
-		}*/
 	},
 	watch: {
 		visibilityToggle(newVal, oldVal){
@@ -342,47 +327,3 @@ EGSIM.component('egsim-form', {
 		</div>
 	</form>`
 });
-
-/*
-// A <select> that performs an action for each <option> clicked, and first option
-// disabled acting as a title (see <slot> in template)
-EGSIM.component('action-select', {
-	props: {
-		// provide an Array of [caption, callback] pairs associated to each <option>:
-		actions: {type: Array, default: () => { return []; }},
-	},
-	data() {
-		var noAction = null;
-		return {
-			noAction: noAction,
-			selectedAction: noAction
-		}
-	},
-	computed: {
-		options(){
-			return this.actions.filter(elm => {
-				return !!elm[0] && typeof elm[1] === 'function';
-			});
-		}
-	},
-	watch: {
-		'selectedAction': function (newVal, oldVal){
-			for (var [label, callback] of this.options){
-				if (label === newVal){
-					callback();
-					break;
-				}
-			}
-			this.selectedAction = this.noAction;
-		}
-	},
-	template: `<select v-model='selectedAction'>
-			<option :value='noAction' :disabled="true">
-				<slot></slot>
-			</option>
-			<option v-for='[key, callback] in actions' :value='key'>
-				{{ key }}
-			</option>
-		</select>`
-});
-*/

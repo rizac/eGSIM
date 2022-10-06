@@ -14,7 +14,6 @@ var PlotsDiv = {
 	},
 	data(){
 		return {
-			downloadActions: [],  // populated when data is there, see watch.data
 			visible: false, // see watcher below
 			// boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
 			drawingPlots: true,
@@ -123,7 +122,6 @@ var PlotsDiv = {
 				this.visible = (typeof newval === 'object') && (Object.keys(newval).length);
 				if (this.visible){ // see prop below
 					this.init.call(this, newval);
-					// this.downloadActions = this.createDownloadActions_();
 				}
 			}
 		}
@@ -1101,26 +1099,5 @@ var PlotsDiv = {
 			}
 			selectElement.selectedIndex = 0;
 		}
-		/*createDownloadActions_(){
-			// Populate with the data to be downloaded as non-image formats:
-			var downloadActions = this.createDownloadActions(this.downloadUrl, this.data);
-			// image formats:
-			// create a function factory to avoid closure inside loops (classic approach):
-			var createCallback = (ext) => {
-				return () => {
-					var [data, layout] = this.getPlotlyDataAndLayout();
-					var parent = this.$refs.rootDiv.parentNode.parentNode.parentNode;
-					var [width, height] = this.getElmSize(parent);
-					data = data.filter(elm => elm.visible || !('visible' in elm));
-					postData = {data:data, layout:layout, width:width, height:height};
-					var url = this.downloadUrl + '.' + ext;
-					this.download(url, postData);
-				};
-			};
-			for (var ext of ['png', 'eps', 'pdf', 'svg']){
-				downloadActions.push([`${ext} (visible plots only)`, createCallback(ext)]);
-			}
-			return downloadActions;
-		}*/
 	}
 };
