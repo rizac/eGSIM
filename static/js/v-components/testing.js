@@ -72,6 +72,7 @@ EGSIM.component('testing', {
 
 // register the grid component
 EGSIM.component('testing-table', {
+	mixins: [DataDownloader],
 	props: {
 		data: {type: Object, default: () => { return{} }},
 		filename: {type: String},
@@ -80,7 +81,7 @@ EGSIM.component('testing-table', {
 	data() {
 		var colnames = ['Measure of fit', 'IMT', 'GSIM', 'Value'];
 		return {
-			downloadActions: [],  // populated when data is there, see watch.data
+			//downloadActions: [],  // FIXME REMOVE populated when data is there, see watch.data
 			visible: false,
 			filterNames: colnames.slice(0, colnames.length-1),
 			filterValues: {},  // Object of filterNames -> list of possible values for the filter name
@@ -112,7 +113,7 @@ EGSIM.component('testing-table', {
 			handler(newval, oldval){
 				this.visible = (typeof newval === 'object') && !!(Object.keys(newval).length);
 				if (this.visible){
-					this.downloadActions = this.$httpClient.createDownloadActions(this.downloadUrl, newval);
+					// FIXME REMOVE this.downloadActions = this.createDownloadActions(this.downloadUrl, newval);  // defined in Clientdownloader
 					this.gsimsRecords = newval['Db records'];
 					this.gsimsSkipped = newval['Gsim skipped'];
 					this.tableData = this.init.call(this, newval['Measure of fit']);
@@ -228,7 +229,7 @@ EGSIM.component('testing-table', {
 							<tr :style="entry._group ? 'background-color: rgba(0,0,0,.05)':  ''">
 								<template v-for="colname in colnames">
 									<td v-if="colname === COL_VAL" class='align-top text-end'>
-										{{ entry[colname] | numCell2Str(MAX_NUM_DIGITS, MAX_ARRAY_SIZE) }}
+										{{ entry[colname].toFixed(5) }}
 									</td>
 									<td v-else class='align-top'>{{ entry[colname] }}</td>
 								</template>
@@ -254,7 +255,9 @@ EGSIM.component('testing-table', {
 				<div v-for='filterName in Object.keys(filterSelectedValues)'
 					 class="d-flex flex-column mt-2" style="flex: 1 1 auto">
 					<div class='d-flex flex-row'>
-						<span style="flex: 1 1 auto"><i class="fa fa-filter"></i> {{ filterName }}</span>
+						<span class="text-nowrap" style="flex: 1 1 auto">
+							<i class="fa fa-filter"></i> {{ filterName }}
+						</span>
 						<button @click='clearFilters(filterName)' type='button'
 								:style="filtersCount(filterName) > 0 ? {} : {visibility: 'hidden'}"
 								style='padding-top:0.1rem; padding-bottom:0.1rem'
@@ -270,11 +273,14 @@ EGSIM.component('testing-table', {
 			</div>
 
 			<div class='mt-3 border p-2 bg-white'>
-				<action-select :actions="downloadActions" class="form-control"
-							   data-balloon-pos='left' data-balloon-length='medium'
-							   aria-label='Download the computed results in different formats'>
-					Download as:
-				</action-select>
+				<select @change="downloadTriggered" class="form-control"
+						data-balloon-pos='left' data-balloon-length='medium'
+						aria-label='Download the computed results in different formats'>
+					<option value="">Download as:</option>
+					<option value="json">json</option>
+					<option value="csv">text/csv</option>
+					<option value="csv_eu">tex/csv (decimal comma)</option>
+				</select>
 			</div>
 
 			<div v-show="Object.keys(gsimsRecords).length" class='mt-3 border p-2 bg-white'
@@ -302,21 +308,6 @@ EGSIM.component('testing-table', {
 		</div>
 	</div>`,
 	methods: {
-		numCell2Str(val, maxNumDigits, maxArraySize) {
-			// provide a string representation of the value:
-			var tostr = elm => maxNumDigits > 0 ? Number(elm).toFixed(maxNumDigits > 20 ? 20 : maxNumDigits) : '' + elm;
-			if(typeof val == 'object' & val instanceof Array){
-				if(val.length > maxArraySize){
-					var num = parseInt(maxArraySize/2);
-					strval = val.slice(0, num).map(elm => tostr(elm)).concat(['...'],
-						val.slice(val.length-num, val.length).map(elm => tostr(elm)));
-				}else{
-					strval = val.map(elm => Number(elm).toFixed(maxD));
-				}
-				return `${strval.join(', ')} (${val.length} elements)`;
-			}
-			return tostr(val);
-		},
 		filtersCount(filterName){
 			// returns the number of elements currently selected for the filter identified by 'filterName'
 			// if 'filterName' is undefined, returns all elements currently selected for all filters
@@ -430,6 +421,22 @@ EGSIM.component('testing-table', {
 				this.filterValues[key] = Array.from(this.filterValues[key]);
 				this.filterSelectedValues[key] = [];
 			}
+		},
+		downloadTriggered(event){
+			var selectElement = event.target;
+			if (selectElement.selectedIndex == 0){
+				return;
+			}
+			var format = selectElement.value;
+			var url = this.downloadUrl + '.' + format;
+			var data = this.data;
+			if (format == 'json'){
+				var filename =  url.split('/').pop();
+				this.saveAsJSON(data, filename);
+			} else if (format.startsWith('csv')){
+				this.download(url, data);
+			}
+			selectElement.selectedIndex = 0;
 		}
 	}
 });

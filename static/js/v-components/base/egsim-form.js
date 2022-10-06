@@ -20,7 +20,7 @@ var FormDataHTTPClient = {
 				this.form[key].error = "";
 			}
 			var [data, config] = this.getPostDataAndConfig();
-			return this.$httpClient.post(url, data, config).then(response => {
+			return axios.post(url, data, config).then(response => {
 				if (response && response.data){
 					return response; // allows .then on the Promise
 				}
@@ -95,7 +95,7 @@ var FormDataHTTPClient = {
 - implements a toolbar for IO operations such as get Form in YAML or JSON config
 - Deals with hiding and transforming the form into a dialog popup after first submit*/
 EGSIM.component('egsim-form', {
-	mixins: [FormDataHTTPClient],
+	mixins: [FormDataHTTPClient, DataDownloader],
 	props :{
 		downloadUrl: String,  // url for downloading the current form as config yaml/json
 		visibilityToggle: {type: Boolean, default: true},  // variable to toggle form visibility from external components
@@ -105,10 +105,9 @@ EGSIM.component('egsim-form', {
 			show: true,
 			showAsDialog: false,  // appearance control
 			mounted: false,  // needed for ? FIXME
-			idRequestURLInput: this.url + '_requesturl_input_',
 			requestURL: '',
-			watchers: [],  // needed for FIXME
-			downloadActions: this.createDownloadActions()
+			watchers: []  // needed for FIXME
+			// downloadActions: this.createDownloadActions()
 		}
 	},
 	emits: ['submitted'],
@@ -171,7 +170,7 @@ EGSIM.component('egsim-form', {
 			// aria-label is used by balloon.css to display the tooltip
 			// store the current one:
 			var ariaLabel = targetElement.getAttribute('aria-label');
-			var successful = this.copyText(document.getElementById(this.idRequestURLInput));
+			var successful = this.copyText(this.$refs.copyURLInput);
 			// restore the old aria-label
 			if (ariaLabel){
 				targetElement.setAttribute('aria-label', successful ? 'Copied' : 'Unable to copy');
@@ -231,20 +230,37 @@ EGSIM.component('egsim-form', {
 			};
 			reader.readAsText(file);
 		},
-		createDownloadActions(){
+		downloadTriggered(event){
+			var selectElement = event.target;
+			if(selectElement.selectedIndex > 0){
+				this.downloadFormAsConfig(event.target.value);
+			}
+			selectElement.selectedIndex = 0;
+		},
+		downloadFormAsConfig(format){
+			var url = this.downloadUrl + "." + format;
+			// note that when sending this.formToJSON() with an uploaded File
+			// object, the browser converts it to {}. By chance, this means that
+			// the backend Django Form will see no flatfile and thus
+			// the returned 'flatfile error' will make sense. We could
+			// try a better message (e.g. 'provided flatfile non serializable')
+			// but it's actually quite complex
+			this.download(url, this.formToJSON());  // defined in DataDownloader
+		}
+		/*createDownloadActions(){
 			return ['json', 'yaml'].map(ext => {
 				var url = this.downloadUrl + "." + ext;
 				return [ext, () => {
-					// note that when sending this.formToJSON() the browser
-					// converts File objects to {}. By chance, this means that
+					// note that when sending this.formToJSON() with an uploaded File
+					// object, the browser converts it to {}. By chance, this means that
 					// the backend Django Form will see no flatfile and thus
 					// the returned 'flatfile error' will make sense. We could
-					// try a better message (e.g. 'flatfile non serializable')
+					// try a better message (e.g. 'provided flatfile non serializable')
 					// but it's actually quite complex
-					this.$httpClient.download(url, this.formToJSON());
+					this.download(url, this.formToJSON());  // defined in DataDownloader
 				}];
 			}, this);  // <- make `this` in `map` point to this Vue instance
-		}
+		}*/
 	},
 	watch: {
 		visibilityToggle(newVal, oldVal){
@@ -252,10 +268,10 @@ EGSIM.component('egsim-form', {
 		}
 	},
 	template: `<form novalidate @submit.prevent="submit"
-		  class="flex-column position-relative pb-4 align-self-center"
-		  :class="[showAsDialog ? ['shadow', 'border', 'bg-body', 'mt-1', 'mb-3'] : '']"
-		  style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.3) !important"
-		  :style="{'display': show ? 'flex' : 'none'}">
+		class="flex-column position-relative pb-4 align-self-center"
+		:class="[showAsDialog ? ['shadow', 'border', 'bg-body', 'mt-1', 'mb-3'] : '']"
+		style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.3) !important"
+		:style="{'display': show ? 'flex' : 'none'}">
 
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
 
@@ -270,12 +286,14 @@ EGSIM.component('egsim-form', {
 				<!-- NOTE: the control below must be placed immediately after the control above! -->
 				<input style='display:none' type="file" id="file-input" @change='readLocalJSON'>
 
-				<action-select :actions="downloadActions" style='width:initial !important'
-							   class="ms-2 form-control form-control-sm bg-transparent border-0"
-							   data-balloon-pos="down" data-balloon-length="medium"
-							   aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)">
-					Download as:
-				</action-select>
+				<select @change="downloadTriggered" style='width:initial !important'
+						class="ms-2 form-control form-control-sm bg-transparent border-0"
+						data-balloon-pos="down" data-balloon-length="medium"
+						aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)">
+					<option value="">Download as:</option>
+					<option value="json">JSON</option>
+					<option value="yaml">YAML</option>
+				</select>
 
 				<button type="button" @click='fetchRequestURL'
 						data-balloon-pos="down" data-balloon-length="medium"
@@ -284,7 +302,7 @@ EGSIM.component('egsim-form', {
 					<i class="fa fa-link"></i>
 				</button>
 
-				<input :id="idRequestURLInput" type='text' v-model='requestURL'
+				<input ref="copyURLInput" type='text' v-model='requestURL'
 					   :style= "requestURL ? {} : { 'visibility': 'hidden'}"
 					   class="form-control form-control-sm ms-2 bg-transparent border-0"
 					   style="flex: 1 1 auto;width:initial !important"/>
@@ -325,9 +343,9 @@ EGSIM.component('egsim-form', {
 	</form>`
 });
 
-
-/* A <select> that performs an action for each <option> clicked, and first option
- disabled acting as a title (see <slot> in template)*/
+/*
+// A <select> that performs an action for each <option> clicked, and first option
+// disabled acting as a title (see <slot> in template)
 EGSIM.component('action-select', {
 	props: {
 		// provide an Array of [caption, callback] pairs associated to each <option>:
@@ -367,3 +385,4 @@ EGSIM.component('action-select', {
 			</option>
 		</select>`
 });
+*/

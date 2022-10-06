@@ -12,41 +12,40 @@ EGSIM.component('residuals', {
 			responseData: {}
 		}
 	},
-	template: `
-<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-	<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
-				:visibilityToggle="formVisibilityToggle"
-				@submitted="(response) => responseData=response.data">
+	template: `<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
+		<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
+					:visibilityToggle="formVisibilityToggle"
+					@submitted="(response) => responseData=response.data">
 
-		<template v-slot:left-column>
-			<gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto" />
-		</template>
+			<template v-slot:left-column>
+				<gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto" />
+			</template>
 
-		<template v-slot:right-column>
+			<template v-slot:right-column>
 
-			<imt-select :field="form.imt" style="flex: 1 1 auto;" />
-			<div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
-				<flatfile-select :field="form.flatfile"/>
-				<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
-			</div>
-			<div class="mt-4">
-				<field-label :field='form.plot_type' />
-				<field-input :field='form.plot_type' size="10"/>
-			</div>
+				<imt-select :field="form.imt" style="flex: 1 1 auto;" />
+				<div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
+					<flatfile-select :field="form.flatfile"/>
+					<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
+				</div>
+				<div class="mt-4">
+					<field-label :field='form.plot_type' />
+					<field-input :field='form.plot_type' size="10"/>
+				</div>
 
-		</template>
-	</egsim-form>
+			</template>
+		</egsim-form>
 
-	<residuals-plot-div :data="responseData" :download-url="urls.downloadResponse"
-						class='invisible position-absolute start-0 top-0 end-0 bottom-0'
-						:style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
-		<slot>
-			<button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
-				<i class='fa fa-list-alt'></i> Configuration
-			</button>
-		</slot>
-	</residuals-plot-div>
-</div>`
+		<residuals-plot-div :data="responseData" :download-url="urls.downloadResponse"
+							class='invisible position-absolute start-0 top-0 end-0 bottom-0'
+							:style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
+			<slot>
+				<button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
+					<i class='fa fa-list-alt'></i> Configuration
+				</button>
+			</slot>
+		</residuals-plot-div>
+	</div>`
 });
 
 

@@ -1,5 +1,5 @@
 /** base skeleton implementation for the main Vue instance. See egsim.html */
-var EGSIM_BASE = {
+const EGSIM_BASE = {
 	data: function(){
 		return {
 			// NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
@@ -15,6 +15,7 @@ var EGSIM_BASE = {
 		}
 	},
 	created(){
+		this.configureHTTPClient();
 		// Create a "template" Array of gsims and imts, to be copied as field choices
 		var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
 		// converts the gsims received from server from an Array of Arrays to an
@@ -86,6 +87,28 @@ var EGSIM_BASE = {
 			}
 			return false; // in case accessed from within anchors
 		},
+		configureHTTPClient(){
+			// Configures the HTTPClient (currently axios library)
+
+			axios.interceptors.request.use((config) => {
+				// Do something before request is sent
+				this.setError('');
+				this.loading = true;
+				return config;
+			}, (error) => {
+				this.setError(this.getErrorMsg(error));
+				this.loading = false;
+			});
+
+			// Add a response interceptor
+			axios.interceptors.response.use((response) => {
+				this.loading = false;
+				return response;
+			}, (error) => {
+				this.setError(this.getErrorMsg(error));
+				this.loading = false;
+			});
+		},
 		getErrorMsg(errorResponse){
 			// get the error message (str) from an axios errorResponse and return it
 			var errData = (errorResponse.response || {}).data;
@@ -139,119 +162,86 @@ var EGSIM_BASE = {
 	}
 };
 
-const HTTPClient = {
-	listeners: {
-		'before-request': [],
-		'response-ok': [],
-		'response-error': [],
-		'after-response': []
-	},
-	postfuncDefaultConfig: {},
-	configure(configObj){
-		this.postfuncDefaultConfig = configObj;
-	},
-	on(key, callback){  // on: 'before-request' 'response-ok', 'response-error' 'after-response'
-		if (!(key in this.listeners)){
-			throw `${key} not in HTTPClient listeners keys`;
-		}
-		this.listeners[key].push(callback);
-	},
-	post(url, data, config){
-		var config = Object.assign(config || {}, this.postfuncDefaultConfig);
-		var jsonData = data || {};
-		this.listeners['before-request'].forEach(func => func());
-		// merge passed config with default config in a new config Object:
-		var config = Object.assign(config || {}, this.postfuncDefaultConfig);
-		var jsonData = data || {};
-		return axios.post(url, jsonData, config).then(response => {
-			this.listeners['response-ok'].forEach(func => func(response));
-			// allow chaining this promise from sub-components:
-			return response;  // https://github.com/axios/axios/issues/1057#issuecomment-324433430
-		}).catch(error => {
-			this.listeners['response-error'].forEach(func => func(error));
-			// allow chaining this promise from sub-components:
-			throw error;   // https://www.peterbe.com/plog/chainable-catches-in-a-promise
-		}).finally(() => {
-			this.listeners['after-response'].forEach(func => func());
-		});
-	},
-	download(url, postData, config={}){
-		/** send `postData` to `url`, and download the response on the client OS */
-		config = config || {};
-		// provide a default responseType. For info (long thread with several outdated hints):
-		// https://stackoverflow.com/questions/8022425/getting-blob-data-from-xhr-request
-		if (!config.responseType){
-			config.responseType = 'arraybuffer';
-		}
-		this.post(url, postData, {responseType: 'arraybuffer'}).then(response => {
-			if (response && response.data){
-				var filename = (response.headers || {})['content-disposition'];
-				if (!filename){ return; }
-				var iof = filename.indexOf('filename=');
-				if (iof < 0){ return; }
-				filename = filename.substring(iof + 'filename='.length);
-				if (!filename){ return; }
-				var ctype = (response.headers || {})['content-type'];
-				this.save(response.data, filename, ctype);
+const DataDownloader = {
+	methods: {
+		download(url, postData, config){
+			/** send `postData` to `url`, and download the response on the client OS */
+			config = config || {};
+			// provide a default responseType. For info (long thread with several outdated hints):
+			// https://stackoverflow.com/questions/8022425/getting-blob-data-from-xhr-request
+			if (!config.responseType){
+				config.responseType = 'arraybuffer';
 			}
-		});
-	},
-	saveAsJSON(data, filename){
-		/* Save the given JavaScript Object `data` on the client OS as JSON
-		formatted string
+			axios.post(url, postData, {responseType: 'arraybuffer'}).then(response => {
+				if (response && response.data){
+					var filename = (response.headers || {})['content-disposition'];
+					if (!filename){ return; }
+					var iof = filename.indexOf('filename=');
+					if (iof < 0){ return; }
+					filename = filename.substring(iof + 'filename='.length);
+					if (!filename){ return; }
+					var ctype = (response.headers || {})['content-type'];
+					this.save(response.data, filename, ctype);
+				}
+			});
+		},
+		saveAsJSON(data, filename){
+			/* Save the given JavaScript Object `data` on the client OS as JSON
+			formatted string
 
-		data: the JavaScript Object or Array to be saved as JSON
-		*/
-		var sData = JSON.stringify(data, null, 2);  // 2 -> num indentation chars
-		this.save(sData, filename, "application/json");
-	},
-	save(data, filename, mimeType){
-		/* Save `data` with the given filename and mimeType on the client OS
+			data: the JavaScript Object or Array to be saved as JSON
+			*/
+			var sData = JSON.stringify(data, null, 2);  // 2 -> num indentation chars
+			this.save(sData, filename, "application/json");
+		},
+		save(data, filename, mimeType){
+			/* Save `data` with the given filename and mimeType on the client OS
 
-		data: a Byte-String (e.g. JSON.stringify) or an ArrayBuffer
-			(https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
-		filename: the string that is used as default name in the save as dialog
-		mimeType: a string denoting the MIME type
-			(https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types)
-		*/
-		var blob = new Blob([data], {type: mimeType});
-		var downloadUrl = window.URL.createObjectURL(blob);
-		var downloadAnchorNode = document.createElement('a');
-		downloadAnchorNode.setAttribute("href", downloadUrl);
-		downloadAnchorNode.setAttribute("download", filename);
-		document.body.appendChild(downloadAnchorNode); // required for firefox
-		downloadAnchorNode.click();
-		downloadAnchorNode.remove();
-		// as we removed the node, we should have freed up memory,
-		// but let's be safe:
-		URL.revokeObjectURL( downloadUrl );
-	},
-	createDownloadActions(downloadUrl, data){
-		/* Return an Array of [string, callaback] Arrays where each callback
-		downloads `data` on the client OS) the given data in different formats:
-		'json' 'csv', 'csv (comma separated)'.
+			data: a Byte-String (e.g. JSON.stringify) or an ArrayBuffer
+				(https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
+			filename: the string that is used as default name in the save as dialog
+			mimeType: a string denoting the MIME type
+				(https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types)
+			*/
+			var blob = new Blob([data], {type: mimeType});
+			var downloadUrl = window.URL.createObjectURL(blob);
+			var downloadAnchorNode = document.createElement('a');
+			downloadAnchorNode.setAttribute("href", downloadUrl);
+			downloadAnchorNode.setAttribute("download", filename);
+			document.body.appendChild(downloadAnchorNode); // required for firefox
+			downloadAnchorNode.click();
+			downloadAnchorNode.remove();
+			// as we removed the node, we should have freed up memory,
+			// but let's be safe:
+			URL.revokeObjectURL( downloadUrl );
+		}
+		/*createDownloadActions(downloadUrl, data){
+			// Return an Array of [string, callaback] Arrays where each callback
+			// downloads `data` on the client OS) the given data in different formats:
+			// 'json' 'csv', 'csv (comma separated)'.
 
-		downloadUrl: a string identifying a base download url, usually sent from the
-			server, whereby each single download URL will be built
-		data: the data returned from a response (e.g., trellis residuals or
-			testing data) that needs to be downloaded
-		*/
-		// Populate with the data to be downloaded as non-image formats:
-		var downloadActions = [];
-		// Download as JSON does not need to query the server, the data is here:
-		downloadActions.push(["json", () => {
-			var filename =  downloadUrl.split('/').pop() + '.json';
-			this.saveAsJSON(data, filename);
-		}]);
-		// CSV download actions send data to the server and expects back converted:
-		downloadActions.push(["text/csv", () => {
-			var url =  downloadUrl + '.csv';
-			this.download(url, data);
-		}]);
-		downloadActions.push(["text/csv, decimal comma", () => {
-			var url =  downloadUrl + '.csv_eu';
-			this.download(url, data);
-		}]);
-		return downloadActions;
+			// downloadUrl: a string identifying a base download url, usually sent from the
+			//	server, whereby each single download URL will be built
+			// data: the data returned from a response (e.g., trellis residuals or
+			//	testing data) that needs to be downloaded
+
+			// Populate with the data to be downloaded as non-image formats:
+			var downloadActions = [];
+			// Download as JSON does not need to query the server, the data is here:
+			downloadActions.push(["json", () => {
+				var filename =  downloadUrl.split('/').pop() + '.json';
+				this.saveAsJSON(data, filename);
+			}]);
+			// CSV download actions send data to the server and expects back converted:
+			downloadActions.push(["text/csv", () => {
+				var url =  downloadUrl + '.csv';
+				this.download(url, data);
+			}]);
+			downloadActions.push(["text/csv, decimal comma", () => {
+				var url =  downloadUrl + '.csv_eu';
+				this.download(url, data);
+			}]);
+			return downloadActions;
+		}*/
 	}
 }

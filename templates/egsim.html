@@ -244,23 +244,13 @@ EGSIM.component('home', {
 /* mount app and return an App instance (eGSIM): */
 const eGSIM = EGSIM.mount('#egsim-vue');
 
-/* Make the EGSIM instance be notified when we issue POST requests via HTTPClient (see egsim_base.js) */
-HTTPClient.on('before-request', () => {
-	eGSIM.setError('');
-	eGSIM.loading = true;
+axios.interceptors.request.use(function (config) {
+	if (!('headers' in config)){
+		config.headers = {};
+	}
+	config.headers["X-CSRFToken"] = "{{ csrf_token }}";
+	return config;
 });
-HTTPClient.on('response-error', (errorResponse) => {
-	eGSIM.setError(eGSIM.getErrorMsg(errorResponse));
-});
-HTTPClient.on('after-response', () => {
-	eGSIM.loading = false;
-});
-
-/* Configure HTTPClient */
-HTTPClient.configure(Object.freeze({headers: {"X-CSRFToken": "{{ csrf_token }}"}}));
-
-/** Make HTTPClient a global Vue prop to allow post requests in all EGSIM sub-component */
-EGSIM.config.globalProperties.$httpClient = HTTPClient;
 
 </script>
 
