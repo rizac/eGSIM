@@ -70,78 +70,7 @@ nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
 
 {{ block.super }}
 
-<script type="text/javascript">
-function toggleOptionsMenu(evt){
-	var elm = document.getElementById('options-menu');
-	var isShowing = () => { return elm.getAttribute('data-showing') === '1' };
-	function popup(visible, timeout=0){
-		console.log(`skip popup ${visible} ${event.type}`);
-		if (isShowing() == visible){ return; }
-		console.log(`popup ${visible} ${event.type}`);
-		setTimeout(() => {
-			elm.style.transform = visible ? 'scaleY(1)' : 'scaleY(0)';
-			elm.setAttribute('data-showing', visible ? '1': '');
-		}, timeout);
-	}
-
-	if (isShowing()){
-		// hide component:
-		popup(false);
-	}else{
-		evt.stopPropagation();
-		// set top (for safety) and show component
-		elm.style.top = `${document.getElementById('egsim-nav').offsetHeight}px`;
-		// show popup:
-		popup(true);
-		// add document event listener to hide popup:
-		const ctr = new AbortController();
-		var opts = { signal: ctr.signal };
-		document.addEventListener('click', e => { popup(false, 100); ctr.abort();}, opts);
-		document.addEventListener('keydown', e => { console.log(e.keyCode); if(e.keyCode != 9){popup(false, 100); ctr.abort();} }, opts);
-	}
-};
-/*
-function unsupportedBrowserMessage(){
-	try {
-		var [name, version] = getBrowser();
-		var minVersion = {{ allowed_browsers | safe }}[name.toLowerCase()];
-		if (!minVersion || isNaN(version) || minVersion > version){
-			return "{{ invalid_browser_message | safe }}";
-		}
-	} catch (error) {
-		// avoid breaking the program in case of bug
-		console.log("Warning: unable to check browser compatibility");
-	}
-	return "";
-};
-*/
-</script>
-
-<!-- VUE.JS: -->
-
-<script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 <script>
-/* Init the EGSIM Vue Instance with content injected from the server */
-/*
-const EGSIM = Vue.createApp({
-	mixins: [EGSIM_BASE],  // defined in egsim_base.js
-	data: function(){
-		return {
-			gsims: [],
-			imtGroups: Vue.markRaw({{ imt_groups|safe }}),
-			selComponent: "{{sel_component}}",
-			flatfileUploadUrl: "{{flatfile_upload_url}}",
-			regionalization: Vue.markRaw({{ regionalization|safe }}),
-			initialErrorMsg: unsupportedBrowserMessage(),
-			componentProps: {}
-		};
-	}
-});
-*/
-
-/* setup the global Array of flatfiles, accessible anywhere as `this.$flatfiles` */
-/* EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}}); */
-
 axios.interceptors.request.use(function (config) {
 	if (!('headers' in config)){
 		config.headers = {};
@@ -151,6 +80,8 @@ axios.interceptors.request.use(function (config) {
 });
 </script>
 
+<!-- VUE.JS: -->
+<script type='text/javascript' src = "{% static 'js/egsim.js' %}"></script>
 <!-- Components and dependencies of the EGISM app: -->
 <script type='text/javascript' src="{% static 'js/v-components/base/field-input.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>

@@ -69,12 +69,6 @@ def get_context(browser: dict = None,
                 FlatfileForm.read_flatfile_from_db(r), compact=True)
         })
 
-    # FIXME REMOVE
-    # flatfiles = [{'value': r.name, 'innerHTML': f'{r.name} ({r.display_name})',
-    #               'url': r.url,
-    #               'columns': FlatfileForm.get_flatfile_dtypes(FlatfileForm.read_flatfile_from_db(r), compact=True)}
-    #              for r in models.Flatfile.get_flatfiles(hidden=False)]
-
     # Get component props (core data needed for Vue rendering):
     components_props = get_components_properties(debug)
 
