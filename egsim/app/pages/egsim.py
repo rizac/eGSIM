@@ -14,22 +14,26 @@ from ...api.forms.flatfile import FlatfileForm, FlatfileRequiredColumnsForm, MOF
 from ...api.forms.flatfile.inspection import FlatfilePlotForm
 
 
-def get_context(selected_menu=None, debug=True) -> dict:
-    """The context to be injected in the template of the main HTML page"""
+def get_context(browser: dict = None,
+                selected_menu: str = None,
+                debug=True) -> dict:
+    """The context to be injected in the template of the main HTML page
 
-    # Tab components (one per tab, one per activated vue component)
-    # (key, label and icon) (the last is bootstrap fontawesome name)
-    components_tabs = [[_.name, _.title, _.icon] for _ in TAB]
-
-    # this can be changed if needed:
-    sel_component = TAB.home.name if not selected_menu else selected_menu
-
-    # setup browser detection:
-    allowed_browsers = {'Chrome': 49, 'Firefox': 45, 'Safari': 10}
-    allowed_browsers_msg = ', '.join(f'{b}≥{v}' for b, v in allowed_browsers.items())
-    invalid_browser_message = (f'Your browser or version number '
-                               f'does not seem to match {allowed_browsers_msg}. '
+    :param browser: a dict with 'name':str and 'version': float keys
+    """
+    # check browser:
+    allowed_browsers = {'chrome': 49, 'firefox': 45, 'safari': 10}
+    allowed_browsers_msg = ', '.join(f'{b.title()}≥{v}'
+                                     for b, v in allowed_browsers.items())
+    invalid_browser_message = (f'eGSIM could not determine if your browser '
+                               f'matches {allowed_browsers_msg}. '
                                f'This portal might not work as expected')
+    browser_name = (browser or {}).get('name', None)
+    browser_ver = (browser or {}).get('version', None)
+    if browser_ver is not None:
+        a_browser_ver = allowed_browsers.get(browser_name.lower(), None)
+        if a_browser_ver is not None and browser_ver >= a_browser_ver:
+            invalid_browser_message = ''
 
     # Get gsims and all related data (imts and warnings). Try to perform everything
     # in a single more efficient query. Use prefetch_related for this:
@@ -55,24 +59,39 @@ def get_context(selected_menu=None, debug=True) -> dict:
     }
 
     # get predefined flatfiles info:
-    flatfiles = [{'name': r.name, 'label': f'{r.name} ({r.display_name})', 'url': r.url,
-                  'columns': FlatfileForm.get_flatfile_dtypes(FlatfileForm.read_flatfile_from_db(r), compact=True)}
-                 for r in models.Flatfile.get_flatfiles(hidden=False)]
+    flatfiles = []
+    for r in models.Flatfile.get_flatfiles(hidden=False):
+        flatfiles .append({
+            'value': r.name,
+            'innerHTML': f'{r.name} ({r.display_name})',
+            'url': r.url,
+            'columns': FlatfileForm.get_flatfile_dtypes(
+                FlatfileForm.read_flatfile_from_db(r), compact=True)
+        })
+
+    # FIXME REMOVE
+    # flatfiles = [{'value': r.name, 'innerHTML': f'{r.name} ({r.display_name})',
+    #               'url': r.url,
+    #               'columns': FlatfileForm.get_flatfile_dtypes(FlatfileForm.read_flatfile_from_db(r), compact=True)}
+    #              for r in models.Flatfile.get_flatfiles(hidden=False)]
 
     # Get component props (core data needed for Vue rendering):
     components_props = get_components_properties(debug)
 
     return {
-        'debug': debug,
-        'sel_component': sel_component,
-        'components': components_tabs,
-        'component_props': json.dumps(components_props, separators=(',', ':')),
-        'gsims': json.dumps(gsims, separators=(',', ':')),
+        'components': {
+            'names': [_.name for _ in TAB],
+            'tabs': {_.name: {'title': _.title, 'icon': _.icon} for _ in TAB},
+            'props': components_props
+        },
+        'sel_component': TAB.home.name if not selected_menu else selected_menu,
+        'gsims': gsims,
         'imt_groups': imt_groups,
-        'flatfiles': flatfiles,
-        'flatfile_upload_url': URLS.FLATFILE_INSPECTION,
+        'flatfile': {
+            'choices': flatfiles,
+            'upload_url': URLS.FLATFILE_INSPECTION,
+        },
         'regionalization': regionalization,
-        'allowed_browsers': {k.lower(): v for k, v in allowed_browsers.items()},
         'invalid_browser_message': invalid_browser_message,
         'newpage_urls': {
             'api': URLS.API,
@@ -183,7 +202,7 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
     residuals_form['plot_type'][val] = MOF.RES
 
     testing_form = components_props['testing']['form']
-    testing_form['gsim'][val] = gsimnames + ['AbrahamsonSilva2008']
+    testing_form['gsim'][val] = ['AbrahamsonSilva2008']
     testing_form['imt'][val] = ['PGA']  # , 'PGV', "0.2", "1.0", "2.0"]
     testing_form['selexpr'][val] = "magnitude > 6"
     testing_form['fit_measure'][val] = [MOF.RES]  # , MOF.LH]

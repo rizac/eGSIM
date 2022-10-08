@@ -8,7 +8,7 @@ from io import StringIO
 import json
 import yaml
 
-from django.http.response import HttpResponse
+from django.http.response import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
@@ -27,8 +27,18 @@ from ..api.views import error_response, RESTAPIView
 def main(request, selected_menu=None):
     """view for the main page"""
     template = 'egsim.html'
-    context = egsim_page_renderer_context(selected_menu, settings.DEBUG)
+    context = {'debug': settings.DEBUG}
     return render(request, template, context=context)
+
+
+def main_page_init_data(request, selected_menu=None):
+    """view for the main page"""
+    request_body = json.loads(request.body)
+    browser = request_body.get('browser', {})
+    selected_menu = request_body.get('selectedMenu', TAB.home.name)
+    return JsonResponse(egsim_page_renderer_context(browser,
+                                                    selected_menu,
+                                                    settings.DEBUG))
 
 
 @xframe_options_sameorigin

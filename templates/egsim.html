@@ -62,67 +62,7 @@ nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
 
 {% block body %}
 
-<div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
-
-	<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
-		{% for component in components %}
-			<a class='menu-item' :class="selComponent == '{{ component.0 }}' ? 'active' : ''"
-					@click="setComponent('{{ component.0 }}')" title="{{ component.1 }}">
-				<i class="fa {{ component.2 }}"></i> <span>{{ component.1 }}</span>
-			</a>
-		{% endfor %}
-
-		<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
-			 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
-			<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
-			<input type="text" class="error-msg " :value="errorMsg" readonly />
-			<i class="fa fa-times ms-2" @click='clearErrors()' style="cursor: pointer"></i>
-		</div>
-
-		<a class="menu-item " href="#" title="options" onclick="toggleOptionsMenu(event)">
-			<i class="fa fa-bars"></i>
-		</a>
-		<div style="transform: scaleY(0);z-index:100;" id="options-menu"
-			 class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
-			<a class="menu-item p-2" title="API Documentation"
-			   href='{{ newpage_urls.api }}' target="_blank">
-				<i class="fa fa-info-circle"></i> <span>API Doc</span>
-			</a>
-			<a class="menu-item p-2" title="References and API License"
-			   href='{{ newpage_urls.ref_and_license }}' target="_blank">
-				<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
-			</a>
-			<a class='menu-item p-2' href='{{ newpage_urls.imprint }}' target="_blank"
-			   title="Imprint">
-				Imprint
-			</a>
-			<a class='menu-item p-2' href='{{ newpage_urls.data_protection }}' target="_blank"
-			   title="Data Protection">
-				Data Protection
-			</a>
-		</div>
-	</nav>
-
-	<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-
-		<div id='waitdiv' v-show='loading' class="position-absolute start-0 end-0" style='z-index:99'>
-			<div class="loader"></div>
-		</div>
-
-		<div class='d-flex m-0' style="flex: 1 1 auto">
-			<transition name="fade" mode="out-in">
-				<keep-alive>
-					<component v-bind:is="selComponent"
-							   v-bind="selComponentProps"
-							   :class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'">
-					</component>
-				</keep-alive>
-			</transition>
-			{% block main %}{% endblock %}
-		</div>
-
-	</div>
-</div>
+<div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;"></div>
 
 {% endblock %}
 
@@ -160,32 +100,7 @@ function toggleOptionsMenu(evt){
 		document.addEventListener('keydown', e => { console.log(e.keyCode); if(e.keyCode != 9){popup(false, 100); ctr.abort();} }, opts);
 	}
 };
-
-function getBrowser() {
-	// Return the Array [browser, version] e.g. (examples tested locally):
-	// ["Firefox", 97], ["Chrome": 97], ["Safari", 15]. The version might be NaN.
-	// This code uses heuristics and should be used to display information only
-	// (https://stackoverflow.com/a/16938481)
-
-	var ua=navigator.userAgent;
-	var tem;
-	var M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
-	if(/trident/i.test(M[1])){
-		tem=/\brv[ :]+(\d+)/g.exec(ua) || [];
-		return ['IE', parseInt(tem[1])];
-	}
-	if(M[1]==='Chrome'){
-		tem=ua.match(/\bOPR|Edge\/(\d+)/)
-		if(tem!=null){
-			return ['Opera', parseInt(tem[1])];
-		}
-	}
-	M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
-	if((tem=ua.match(/version\/(\d+)/i))!=null){
-		M.splice(1,1,tem[1]);
-	}
-	return [M[0], parseInt(M[1])];
-};
+/*
 function unsupportedBrowserMessage(){
 	try {
 		var [name, version] = getBrowser();
@@ -199,6 +114,7 @@ function unsupportedBrowserMessage(){
 	}
 	return "";
 };
+*/
 </script>
 
 <!-- VUE.JS: -->
@@ -206,23 +122,33 @@ function unsupportedBrowserMessage(){
 <script type='text/javascript' src = "{% static 'js/egsim_base.js' %}"></script>
 <script>
 /* Init the EGSIM Vue Instance with content injected from the server */
+/*
 const EGSIM = Vue.createApp({
-	mixins: [EGSIM_BASE],  /* defined in egsim_base.js */
+	mixins: [EGSIM_BASE],  // defined in egsim_base.js
 	data: function(){
 		return {
-			gsims: Vue.markRaw({{ gsims|safe }}),
+			gsims: [],
 			imtGroups: Vue.markRaw({{ imt_groups|safe }}),
 			selComponent: "{{sel_component}}",
 			flatfileUploadUrl: "{{flatfile_upload_url}}",
 			regionalization: Vue.markRaw({{ regionalization|safe }}),
 			initialErrorMsg: unsupportedBrowserMessage(),
-			componentProps: {{ component_props | safe }}
+			componentProps: {}
 		};
 	}
 });
+*/
 
 /* setup the global Array of flatfiles, accessible anywhere as `this.$flatfiles` */
-EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
+/* EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}}); */
+
+axios.interceptors.request.use(function (config) {
+	if (!('headers' in config)){
+		config.headers = {};
+	}
+	config.headers["X-CSRFToken"] = "{{ csrf_token }}";
+	return config;
+});
 </script>
 
 <!-- Components and dependencies of the EGISM app: -->
@@ -235,23 +161,8 @@ EGSIM.config.globalProperties.$flatfiles = Vue.reactive({{flatfiles|safe}});
 <script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}testing.js"></script>
 <script>
-/* Register simple Vue component here to speed up rendering: */
-EGSIM.component('home', {
-	props: {src: String},
-	template: `<iframe style='flex: 1 1 auto' :src='src'></iframe>`
-});
-
 /* mount app and return an App instance (eGSIM): */
 const eGSIM = EGSIM.mount('#egsim-vue');
-
-axios.interceptors.request.use(function (config) {
-	if (!('headers' in config)){
-		config.headers = {};
-	}
-	config.headers["X-CSRFToken"] = "{{ csrf_token }}";
-	return config;
-});
-
 </script>
 
 {% endblock %}
