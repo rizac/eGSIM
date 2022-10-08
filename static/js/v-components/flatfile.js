@@ -220,6 +220,7 @@ EGSIM.component('flatfile-plot', {
 	methods: {
 		flatfileSelected(value, columns){  // value: string or File object
 			var vals = value ? Object.keys(columns).map(col => [col, `${col} ${columns[col]}`]) : [];
+			vals.sort((a, b) => { return a[0].toLowerCase() > b[0].toLowerCase() ? 1 : -1 });
 			this.form.x.choices = this.form.x.choices.slice(0, 1).concat(vals);
 			this.form.y.choices = this.form.y.choices.slice(0, 1).concat(vals);
 		},

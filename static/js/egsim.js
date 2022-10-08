@@ -230,8 +230,7 @@ const EGSIM = Vue.createApp({
 			});
 		},
 		getBrowser() {
-			// Return the Array [browser, version] e.g. (examples tested locally):
-			// ["firefox", 97], ["chrome": 97], ["safari", 15]. The version might be NaN.
+			// Return the browser name (string) and version (numeric or null).
 			// This code uses heuristics and should be used to display information only
 			// (https://stackoverflow.com/a/16938481)
 			var [name, version ] = ['', null];
@@ -260,9 +259,7 @@ const EGSIM = Vue.createApp({
 			var elm = this.$refs['options-menu']; // document.getElementById('options-menu');
 			var isShowing = () => { return elm.getAttribute('data-showing') === '1' };
 			function popup(visible, timeout=0){
-				console.log(`skip popup ${visible} ${event.type}`);
 				if (isShowing() == visible){ return; }
-				console.log(`popup ${visible} ${event.type}`);
 				setTimeout(() => {
 					elm.style.transform = visible ? 'scaleY(1)' : 'scaleY(0)';
 					elm.setAttribute('data-showing', visible ? '1': '');
@@ -283,7 +280,6 @@ const EGSIM = Vue.createApp({
 				var opts = { signal: ctr.signal };
 				document.addEventListener('click', e => { popup(false, 100); ctr.abort(); }, opts);
 				document.addEventListener('keydown', e => {
-					console.log(e.keyCode);
 					if(e.keyCode != 9){
 						popup(false, 100);
 						ctr.abort();
