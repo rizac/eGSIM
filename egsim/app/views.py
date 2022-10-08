@@ -27,11 +27,10 @@ from ..api.views import error_response, RESTAPIView
 def main(request, selected_menu=None):
     """view for the main page"""
     template = 'egsim.html'
-    context = {'debug': settings.DEBUG}
-    return render(request, template, context=context)
+    return render(request, template, context={'debug': settings.DEBUG})
 
 
-def main_page_init_data(request, selected_menu=None):
+def main_page_init_data(request):
     """view for the main page"""
     request_body = json.loads(request.body)
     browser = request_body.get('browser', {})

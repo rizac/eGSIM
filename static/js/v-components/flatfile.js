@@ -1,11 +1,9 @@
 /* Flatfile components */
 
 EGSIM.component('flatfile', {
-	//https://vuejs.org/v2/guide/components-props.html#Prop-Types:
 	props: {
 		forms: Array,
 		urls: Array
-		// response: {type: Object, default: () => {return {}}}
 	},
 	data() {
 		var compNames = ['flatfile-compilation', 'flatfile-plot'];  //, 'flatfile-inspection', 'flatfile-plot'];
@@ -48,7 +46,6 @@ EGSIM.component('flatfile', {
 
 EGSIM.component('flatfile-compilation', {
 	mixins: [FormDataHTTPClient],
-	//https://vuejs.org/v2/guide/components-props.html#Prop-Types:
 	props: {
 		form: Object,
 		url: String,
@@ -347,8 +344,6 @@ EGSIM.component('flatfile-select', {
 	// FIXME: watch fieldProxy value and emit a flatfile selected
 	watch: {
 		'field.choices': {
-			// global property (see egsim.html): it provides the choices for the current
-			// Field and makes all other similar Fields update automatically
 			deep: true,
 			immediate: true,
 			handler(newVal, oldVal){
@@ -360,8 +355,10 @@ EGSIM.component('flatfile-select', {
 		'fieldProxy.value': {
 			immediate: true,
 			handler(newVal, oldVal){
-				this.field.value = this.field.choices[newVal] ? this.field.choices[newVal].value : null;
-				this.$emit('flatfile-selected', this.field.value, this.field.columns);
+				var choice = this.field.choices[newVal];
+				this.field.value = choice ? choice.value || null : null;
+				var columns = choice ? choice.columns || [] : []
+				this.$emit('flatfile-selected', ... [this.field.value, columns]);
 			}
 		}
 	},
@@ -410,14 +407,6 @@ EGSIM.component('flatfile-select', {
 				}
 			});
 		}
-//		ffSelected(flatfileIndex){
-//			// set the Field value as String (predefined flatfile) or File:
-//			var selFile = this.fieldProxy.choices[flatfileIndex] || null;
-//			if (selFile){
-//				this.field.value = selFile.file || selFile.name;
-//				this.$emit('flatfile-selected', selFile);
-//			}
-//		}
 	},
 	template:`<div class='d-flex flex-column'>
 		<field-label :field="fieldProxy" />

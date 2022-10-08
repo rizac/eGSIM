@@ -7,10 +7,70 @@ const EGSIM = Vue.createApp({
 			errors: {},  // populated in created()
 			selComponent: '',
 			components: {}, // component names (e.g. 'trellis') -> Object
+			newpageURLs: {}
 		}
 	},
+	template: `<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
+
+		<a v-for="n in components.names" class='menu-item' :class="selComponent == n ? 'active' : ''"
+		   @click="setComponent(n)" :title="components.tabs[n].title">
+			<i :class="['fa', components.tabs[n].icon, 'me-1']"></i>
+			<span>{{ components.tabs[n].title }}</span>
+		</a>
+
+		<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
+			 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
+			<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
+			<input type="text" class="error-msg " :value="errorMsg" readonly />
+			<i class="fa fa-times ms-2" @click='setError("")' style="cursor: pointer"></i>
+		</div>
+
+		<a class="menu-item " href="#" title="options" @click="toggleOptionsMenu">
+			<i class="fa fa-bars"></i>
+		</a>
+		<div style="transform: scaleY(0);z-index:100;" id="options-menu" ref='options-menu'
+			 class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
+			<a class="menu-item p-2" title="API Documentation"
+			   :href='newpageURLs.api' target="_blank">
+				<i class="fa fa-info-circle"></i> <span>API Doc</span>
+			</a>
+			<a class="menu-item p-2" title="References and API License"
+			   :href='newpageURLs.ref_and_license' target="_blank">
+				<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
+			</a>
+			<a class='menu-item p-2' :href='newpageURLs.imprint' target="_blank"
+			   title="Imprint">
+				Imprint
+			</a>
+			<a class='menu-item p-2' :href='newpageURLs.data_protection' target="_blank"
+			   title="Data Protection">
+				Data Protection
+			</a>
+		</div>
+	</nav>
+
+	<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
+
+		<div id='waitdiv' v-show='loading' class="position-absolute start-0 end-0" style='z-index:99'>
+			<div class="loader"></div>
+		</div>
+
+		<div v-if="!!selComponent" class='d-flex m-0' style="flex: 1 1 auto">
+			<transition name="fade" mode="out-in">
+				<keep-alive>
+					<component v-bind:is="selComponent"
+							   v-bind="selComponentProps"
+							   :class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'">
+					</component>
+				</keep-alive>
+			</transition>
+		</div>
+
+	</div>`,
 	created(){
 		this.configureHTTPClient();
+	},
+	mounted(){
 		cfg = {
 			headers: { 'content-type': 'application/json; charset=utf-8' }
 		};
@@ -21,8 +81,12 @@ const EGSIM = Vue.createApp({
 		axios.post('/init_data', data, cfg).then(response => {
 			data = response.data;
 			this.components = data.components;
-			this.init(data.gsims, data.imt_groups, data.flatfile, data.regionalization,
-				data.invalid_browser_message, data.newpage_urls);
+			// setup the errors dict:
+			for(var key of Object.keys(this.components.props)){
+				this.errors[key] = data.invalid_browser_message || "";
+			}
+			this.newpageURLs = data.newpage_urls;
+			this.init(data.gsims, data.imt_groups, data.flatfile, data.regionalization);
 			this.selComponent = data.sel_component;
 		});
 	},
@@ -70,8 +134,7 @@ const EGSIM = Vue.createApp({
 				this.loading = false;
 			});
 		},
-		init(gsims, imtGroups, flatfile, regionalization, invalidBrowserMessage, newpageURLs){
-			this.newpageURLs = newpageURLs;
+		init(gsims, imtGroups, flatfile, regionalization){
 			// Create a "template" Array of gsims and imts, to be copied as field choices
 			var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
 			// converts the gsims received from server from an Array of Arrays to an
@@ -114,10 +177,6 @@ const EGSIM = Vue.createApp({
 					form.flatfile['data-url'] = flatfile.upload_url;
 					form.flatfile.choices = flatfile.choices;
 				}
-			}
-			// setup the errors dict:
-			for(var key of Object.keys(this.components.props)){
-				this.errors[key] = invalidBrowserMessage || "";
 			}
 		},
 		getErrorMsg(errorResponse){
@@ -196,65 +255,43 @@ const EGSIM = Vue.createApp({
 			}
 			var isnan = isNaN(parseFloat(version));
 			return {'name': name, 'version': isnan ? null : parseFloat(version)};
+		},
+		toggleOptionsMenu(evt){
+			var elm = this.$refs['options-menu']; // document.getElementById('options-menu');
+			var isShowing = () => { return elm.getAttribute('data-showing') === '1' };
+			function popup(visible, timeout=0){
+				console.log(`skip popup ${visible} ${event.type}`);
+				if (isShowing() == visible){ return; }
+				console.log(`popup ${visible} ${event.type}`);
+				setTimeout(() => {
+					elm.style.transform = visible ? 'scaleY(1)' : 'scaleY(0)';
+					elm.setAttribute('data-showing', visible ? '1': '');
+				}, timeout);
+			}
+
+			if (isShowing()){
+				// hide component:
+				popup(false);
+			}else{
+				evt.stopPropagation();
+				// set top (for safety) and show component
+				elm.style.top = `${document.getElementById('egsim-nav').offsetHeight}px`;
+				// show popup:
+				popup(true);
+				// add document event listener to hide popup:
+				const ctr = new AbortController();
+				var opts = { signal: ctr.signal };
+				document.addEventListener('click', e => { popup(false, 100); ctr.abort(); }, opts);
+				document.addEventListener('keydown', e => {
+					console.log(e.keyCode);
+					if(e.keyCode != 9){
+						popup(false, 100);
+						ctr.abort();
+					}
+				}, opts);
+			}
 		}
-	},
-	template: `<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
-
-		<a v-for="n in components.names" class='menu-item' :class="selComponent == n ? 'active' : ''"
-		   @click="setComponent(n)" :title="components.tabs[n].title">
-			<i :class="['fa', components.tabs[n].icon, 'me-1']"></i>
-			<span>{{ components.tabs[n].title }}</span>
-		</a>
-
-		<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
-			 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
-			<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
-			<input type="text" class="error-msg " :value="errorMsg" readonly />
-			<i class="fa fa-times ms-2" @click='clearErrors()' style="cursor: pointer"></i>
-		</div>
-
-		<a class="menu-item " href="#" title="options" onclick="toggleOptionsMenu(event)">
-			<i class="fa fa-bars"></i>
-		</a>
-		<div style="transform: scaleY(0);z-index:100;" id="options-menu"
-			 class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
-			<a class="menu-item p-2" title="API Documentation"
-			   href='{{ newpage_urls.api }}' target="_blank">
-				<i class="fa fa-info-circle"></i> <span>API Doc</span>
-			</a>
-			<a class="menu-item p-2" title="References and API License"
-			   href='{{ newpage_urls.ref_and_license }}' target="_blank">
-				<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
-			</a>
-			<a class='menu-item p-2' href='{{ newpage_urls.imprint }}' target="_blank"
-			   title="Imprint">
-				Imprint
-			</a>
-			<a class='menu-item p-2' href='{{ newpage_urls.data_protection }}' target="_blank"
-			   title="Data Protection">
-				Data Protection
-			</a>
-		</div>
-	</nav>
-
-	<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-
-		<div id='waitdiv' v-show='loading' class="position-absolute start-0 end-0" style='z-index:99'>
-			<div class="loader"></div>
-		</div>
-
-		<div v-if="!!selComponent" class='d-flex m-0' style="flex: 1 1 auto">
-			<transition name="fade" mode="out-in">
-				<keep-alive>
-					<component v-bind:is="selComponent"
-							   v-bind="selComponentProps"
-							   :class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'">
-					</component>
-				</keep-alive>
-			</transition>
-		</div>
-
-	</div>`
+	}
 });
 
 
