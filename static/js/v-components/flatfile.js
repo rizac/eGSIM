@@ -221,8 +221,8 @@ EGSIM.component('flatfile-plot', {
 		}
 	},
 	methods: {
-		flatfileSelected(file){
-			var vals = Object.keys(file.columns).map(col => [col, `${col} ${file.columns[col]}`]);
+		flatfileSelected(value, columns){  // value: string or File object
+			var vals = value ? Object.keys(columns).map(col => [col, `${col} ${columns[col]}`]) : [];
 			this.form.x.choices = this.form.x.choices.slice(0, 1).concat(vals);
 			this.form.y.choices = this.form.y.choices.slice(0, 1).concat(vals);
 		},
@@ -330,46 +330,64 @@ EGSIM.component('flatfile-select', {
 		}
 	},
 	data(){
-		// In case of Proxy error, see here for details: https://stackoverflow.com/a/65732553
+		// the idea here is to provide a proxy Field and bound it to the <select>
+		// This Proxy will have as value an index, which works with <option>s and allows
+		// to easily check for duplicate Files, whereas our Field will have as value
+		// either the File object or the string, in case of a predefined flatfile
 		return {
-			selectedFlatfileIndex: -1  //our model value
+			fieldProxy: {
+				name: this.field.name,
+				disabled: this.field.disabled || false,
+				value: -1,
+				choices: []
+			}
 		}
 	},
 	emits: ['flatfile-selected'],
+	// FIXME: watch fieldProxy value and emit a flatfile selected
 	watch: {
-		'$flatfiles': {
+		'field.choices': {
 			// global property (see egsim.html): it provides the choices for the current
 			// Field and makes all other similar Fields update automatically
 			deep: true,
 			immediate: true,
 			handler(newVal, oldVal){
-				this.field.choices = Array.from(newVal.map((elm, idx) => [idx, elm.label]));
+				this.fieldProxy.choices = newVal.map((elm, idx) => {
+					return { url: elm.url || "", value: idx, innerHTML: elm.innerHTML };
+				});
+			}
+		},
+		'fieldProxy.value': {
+			immediate: true,
+			handler(newVal, oldVal){
+				this.field.value = this.field.choices[newVal] ? this.field.choices[newVal].value : null;
+				this.$emit('flatfile-selected', this.field.value, this.field.columns);
 			}
 		}
 	},
 	computed: {
 		flatfileURL(){
-			if (this.selectedFlatfileIndex >=0 ){
-				return this.$flatfiles[this.selectedFlatfileIndex].url;
+			var selIndex = this.fieldProxy.value;
+			if (selIndex >=0 ){
+				return this.fieldProxy.choices[selIndex].url;
 			}
 			return undefined;
 		}
 	},
 	methods:{
 		filesUploaded(files){
-			var flatfiles = this.$flatfiles;
-			for (let file of files){
+			var choices = this.field.choices;
+			// var proxyChoices = this.fieldProxy.choices;
+			for(var index = 0; index < files.length; index++){
+				var file = files[index];
 				var label = `${file.name} (Uploaded: ${new Date().toLocaleString()})`;
 				var append = true;
-				for (let flatfile of flatfiles){
-					if (!flatfile.file){  // pre-defined flatfile
-						continue;
-					}
-					if (flatfile.name == file.name){
+				for (let choice of choices){
+					if (choice.value instanceof File && flatfile.name == file.name){
 						this.upload(file).then(response => {
-							flatfile.file = file;
-							flatfile.label = label;  // update label on <select>
-							flatfile.columns = response.data.columns;
+							choice.value = file;
+							choice.innerHTML = label;  // update label on <select>
+							choice.columns = response.data.columns;
 						});
 						append = false;
 						break;
@@ -378,7 +396,7 @@ EGSIM.component('flatfile-select', {
 				if (append){
 					this.upload(file).then(response => {
 						var cols = response.data.columns;
-						flatfiles.push({ name: file.name, label: label, file: file, columns: cols });
+						choices.push({ value: file, innerHTML: label, columns: cols });
 					});
 				}
 			}
@@ -391,23 +409,20 @@ EGSIM.component('flatfile-select', {
 				  'Content-Type': 'multipart/form-data'
 				}
 			});
-		},
-		ffSelected(flatfileIndex){
-			// set the Field value as String (predefined flatfile) or File:
-			var selFile = this.$flatfiles[parseInt(flatfileIndex)] || null;
-			if (selFile){
-				this.field.value = selFile.file || selFile.name;
-				this.$emit('flatfile-selected', selFile);
-			}
 		}
+//		ffSelected(flatfileIndex){
+//			// set the Field value as String (predefined flatfile) or File:
+//			var selFile = this.fieldProxy.choices[flatfileIndex] || null;
+//			if (selFile){
+//				this.field.value = selFile.file || selFile.name;
+//				this.$emit('flatfile-selected', selFile);
+//			}
+//		}
 	},
 	template:`<div class='d-flex flex-column'>
-		<field-label :field="field" />
+		<field-label :field="fieldProxy" />
 		<div class='d-flex flex-row align-items-baseline'>
-			<base-input :value="selectedFlatfileIndex"
-						@value-changed="ffSelected"
-						:choices="field.choices"
-						:error="!!field.error" :disabled="field.disabled"/>
+			<field-input :field="fieldProxy" />
 			<div class='d-flex flex-row align-items-baseline'>
 				<a title='flatfile reference (opens in new tab)' target="_blank"
 				   class='ms-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>

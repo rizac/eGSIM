@@ -1,72 +1,34 @@
 /** base skeleton implementation for the main Vue instance. See egsim.html */
-const EGSIM_BASE = {
-	data: function(){
+const EGSIM = Vue.createApp({
+	data(){
 		return {
 			// NOTE: do not prefix data variable with underscore: https://vuejs.org/v2/api/#data
-			gsims: [],
-			imtGroups: [],
 			loading: false,
-			initialErrorMsg: "",
 			errors: {},  // populated in created()
 			selComponent: '',
-			componentProps: {}, // component names (e.g. 'trellis') -> Object
-			flatfileUploadUrl: '', // used when we upload a flatfile
+			components: {}, // component names (e.g. 'trellis') -> Object
 		}
 	},
 	created(){
 		this.configureHTTPClient();
-		// Create a "template" Array of gsims and imts, to be copied as field choices
-		var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
-		// converts the gsims received from server from an Array of Arrays to an
-		// Array of Objects:
-		var imts = new Set();
-		var imtGroups = this.imtGroups;
-		var gsimObjects = this.gsims.map(elm => {  // elm: Array of 2 or 3 elements
-			var gsimName = elm[0];
-			var gsimImts = imtGroups[elm[1]];
-			// add the model imts to the global imt collection:
-			gsimImts.forEach(imt => imts.add(imt));
-			return {
-				value: gsimName,
-				disabled: false,
-				innerHTML: gsimName.match(reg).join(" "),
-				imts: gsimImts,
-				warning: elm[2] || "",
-			}
+		cfg = {
+			headers: { 'content-type': 'application/json; charset=utf-8' }
+		};
+		data = {
+			browser: this.getBrowser(),
+			selectedMenu: window.location.pathname.split("/").pop()
+		};
+		axios.post('/init_data', data, cfg).then(response => {
+			data = response.data;
+			this.components = data.components;
+			this.init(data.gsims, data.imt_groups, data.flatfile, data.regionalization,
+				data.invalid_browser_message, data.newpage_urls);
+			this.selComponent = data.sel_component;
 		});
-		// convert imts (Set) into Array:
-		imts = Array.from(imts);
-		// Setup fields data:
-		var regionalization = this.regionalization;
-		for (var [name, form] of this.forms()){
-			if (form.gsim){
-				// set form.gsim.choices as a deep copy of gsimObjects:
-				form.gsim.choices = gsimObjects.map(elm => Object.assign({}, elm));
-				form.gsim.value || (form.gsim.value = []); // assure empty list (not null)
-				form.gsim['data-regionalization'] = {
-					url: regionalization.url,
-					choices: regionalization.names.map(elm => [elm, elm]),
-					value: Array.from(regionalization.names)
-				}
-			}
-			if (form.imt){
-				// set form.imt as a deep copy of imts:
-				form.imt.choices = Array.from(imts);
-				form.imt.value || (form.imt.value = []); // assure empty list (not null)
-			}
-			// set flatfile Field the url for uploading a flatfile:
-			if (form.flatfile){
-				form.flatfile['data-url'] = this.flatfileUploadUrl;
-			}
-		}
-		// setup the errors dict:
-		for(var key of Object.keys(this.componentProps)){
-			this.errors[key] = this.initialErrorMsg || "";
-		}
 	},
 	computed: {
 		selComponentProps(){  // https://stackoverflow.com/a/43658979
-			return this.componentProps[this.selComponent];
+			return this.components.props[this.selComponent];
 		},
 		errorMsg(){
 			return this.errors[this.selComponent];
@@ -108,6 +70,56 @@ const EGSIM_BASE = {
 				this.loading = false;
 			});
 		},
+		init(gsims, imtGroups, flatfile, regionalization, invalidBrowserMessage, newpageURLs){
+			this.newpageURLs = newpageURLs;
+			// Create a "template" Array of gsims and imts, to be copied as field choices
+			var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
+			// converts the gsims received from server from an Array of Arrays to an
+			// Array of Objects:
+			var imts = new Set();
+			var gsimObjects = gsims.map(elm => {  // elm: Array of 2 or 3 elements
+				var gsimName = elm[0];
+				var gsimImts = imtGroups[elm[1]];
+				// add the model imts to the global imt collection:
+				gsimImts.forEach(imt => imts.add(imt));
+				return {
+					value: gsimName,
+					disabled: false,
+					innerHTML: gsimName.match(reg).join(" "),
+					imts: gsimImts,
+					warning: elm[2] || "",
+				}
+			});
+			// convert imts (Set) into Array:
+			imts = Array.from(imts);
+			// Setup fields data:
+			for (var [name, form] of this.forms()){
+				if (form.gsim){
+					// set form.gsim.choices as a deep copy of gsimObjects:
+					form.gsim.choices = gsimObjects.map(elm => Object.assign({}, elm));
+					form.gsim.value || (form.gsim.value = []); // assure empty list (not null)
+					form.gsim['data-regionalization'] = {
+						url: regionalization.url,
+						choices: regionalization.names.map(elm => [elm, elm]),
+						value: Array.from(regionalization.names)
+					}
+				}
+				if (form.imt){
+					// set form.imt as a deep copy of imts:
+					form.imt.choices = Array.from(imts);
+					form.imt.value || (form.imt.value = []); // assure empty list (not null)
+				}
+				// set flatfile Field the url for uploading a flatfile:
+				if (form.flatfile){
+					form.flatfile['data-url'] = flatfile.upload_url;
+					form.flatfile.choices = flatfile.choices;
+				}
+			}
+			// setup the errors dict:
+			for(var key of Object.keys(this.components.props)){
+				this.errors[key] = invalidBrowserMessage || "";
+			}
+		},
 		getErrorMsg(errorResponse){
 			// get the error message (str) from an axios errorResponse and return it
 			var errData = (errorResponse.response || {}).data;
@@ -130,8 +142,8 @@ const EGSIM_BASE = {
 		},
 		forms(){
 			var ret = [];
-			Object.keys(this.componentProps).forEach(name => {
-			   var compProps = this.componentProps[name];
+			Object.keys(this.components.props).forEach(name => {
+			   var compProps = this.components.props[name];
 			   if (typeof compProps === 'object'){
 				   Object.keys(compProps).forEach(pname => {
 					   var elm = compProps[pname];
@@ -157,9 +169,101 @@ const EGSIM_BASE = {
 				var elm = obj[key];
 				return (typeof elm === 'object') && ('value' in elm) && ('error' in elm);
 			});
+		},
+		getBrowser() {
+			// Return the Array [browser, version] e.g. (examples tested locally):
+			// ["firefox", 97], ["chrome": 97], ["safari", 15]. The version might be NaN.
+			// This code uses heuristics and should be used to display information only
+			// (https://stackoverflow.com/a/16938481)
+			var [name, version ] = ['', null];
+			var ua=navigator.userAgent;
+			var tem;
+			var M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || [];
+			if(/trident/i.test(M[1])){
+				tem=/\brv[ :]+(\d+)/g.exec(ua) || [];
+				name = 'ie';
+				version = tem[1];
+			}else if(M[1]==='Chrome' && (tem=ua.match(/\bOPR|Edge\/(\d+)/))!=null){
+				name = 'opera';
+				version = tem[1];
+			}else{
+				M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
+				if((tem=ua.match(/version\/(\d+)/i))!=null){
+					M.splice(1,1,tem[1]);
+				}
+				name = (M[0] || "").toLowerCase();
+				version = M[1];
+			}
+			var isnan = isNaN(parseFloat(version));
+			return {'name': name, 'version': isnan ? null : parseFloat(version)};
 		}
-	}
-};
+	},
+	template: `<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
+
+		<a v-for="n in components.names" class='menu-item' :class="selComponent == n ? 'active' : ''"
+		   @click="setComponent(n)" :title="components.tabs[n].title">
+			<i :class="['fa', components.tabs[n].icon, 'me-1']"></i>
+			<span>{{ components.tabs[n].title }}</span>
+		</a>
+
+		<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
+			 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
+			<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
+			<input type="text" class="error-msg " :value="errorMsg" readonly />
+			<i class="fa fa-times ms-2" @click='clearErrors()' style="cursor: pointer"></i>
+		</div>
+
+		<a class="menu-item " href="#" title="options" onclick="toggleOptionsMenu(event)">
+			<i class="fa fa-bars"></i>
+		</a>
+		<div style="transform: scaleY(0);z-index:100;" id="options-menu"
+			 class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
+			<a class="menu-item p-2" title="API Documentation"
+			   href='{{ newpage_urls.api }}' target="_blank">
+				<i class="fa fa-info-circle"></i> <span>API Doc</span>
+			</a>
+			<a class="menu-item p-2" title="References and API License"
+			   href='{{ newpage_urls.ref_and_license }}' target="_blank">
+				<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
+			</a>
+			<a class='menu-item p-2' href='{{ newpage_urls.imprint }}' target="_blank"
+			   title="Imprint">
+				Imprint
+			</a>
+			<a class='menu-item p-2' href='{{ newpage_urls.data_protection }}' target="_blank"
+			   title="Data Protection">
+				Data Protection
+			</a>
+		</div>
+	</nav>
+
+	<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
+
+		<div id='waitdiv' v-show='loading' class="position-absolute start-0 end-0" style='z-index:99'>
+			<div class="loader"></div>
+		</div>
+
+		<div v-if="!!selComponent" class='d-flex m-0' style="flex: 1 1 auto">
+			<transition name="fade" mode="out-in">
+				<keep-alive>
+					<component v-bind:is="selComponent"
+							   v-bind="selComponentProps"
+							   :class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'">
+					</component>
+				</keep-alive>
+			</transition>
+		</div>
+
+	</div>`
+});
+
+
+/* Register home page (simple) here: */
+EGSIM.component('home', {
+	props: {src: String},
+	template: `<iframe style='flex: 1 1 auto' :src='src'></iframe>`
+});
+
 
 const DataDownloader = {
 	methods: {
