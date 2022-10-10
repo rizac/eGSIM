@@ -169,13 +169,22 @@ var PlotsDiv = {
 			<div v-show='legendNames.length' class='mt-3 border p-2 bg-white'
 				 style='flex: 1 1 auto;overflow: auto'>
 				<div>Legend</div>
-				<div v-for="traceName in legendNames">
-					<label class='my-0 mt-2' :class="{'checked': legend[traceName].visible}"
-						:style="{color: legend[traceName].color}">
-						<input type='checkbox' v-model="legend[traceName].visible"
-							   :style="{'accent-color': legend[traceName].color}"
-							   @change="traceVisibilityChanged(traceName)"> {{ traceName }}
-					</label>
+				<div v-for="traceName in legendNames" class='d-flex flex-column'>
+					<div class='d-flex flex-row align-items-baseline' :style="{color: legend[traceName].color}" >
+						<label class='my-0 mt-2 text-nowrap' :class="{'checked': legend[traceName].visible}"
+							style='flex: 1 1 auto'>
+							<input type='checkbox' v-model="legend[traceName].visible"
+								   :style="{'accent-color': legend[traceName].color + ' !important'}"
+								   @change="traceVisibilityChanged(traceName)"> {{ traceName }}
+						</label>
+						<i class="fa fa-chevron-down" data-baloon-pos="bottom"
+						   aria-label='Click to style the plot elements appearance via JSON configuration'
+						   onclick='this.parentNode.parentNode.querySelector("div._pso").classList.toggle("d-none"); this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
+					</div>
+					<div class='_pso flex-row d-none'>
+						<textarea class='_pso border' style='flex: 1 1 auto; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll;'
+								  v-html="getStyleCfg(traceName)" />
+					</div>
 				</div>
 			</div>
 			<div>
@@ -951,6 +960,24 @@ var PlotsDiv = {
 				showarrow: false,
 				font: {size: this.plotfontsize}
 			}, props || {});
+		},
+		getStyleCfg(traceName){
+			var plotlydata = this.getPlotlyDataAndLayout()[0];
+			var cfg = {};
+			var keys = ['marker', 'line'];  // configurable cfg keys
+			plotlydata.forEach(function(data, i){
+				if (data.legendgroup === traceName){
+					for (var key of keys){
+						cfg[key] = data[key];
+					}
+				}
+			});
+			for (var k of Object.keys(cfg)){
+				if (cfg[k] === undefined){
+					delete cfg[k]
+				}
+			}
+			return Object.keys(cfg).length ? JSON.stringify(cfg, null, "  ") : "";
 		},
 		traceVisibilityChanged(traceName){
 			var indices = [];
