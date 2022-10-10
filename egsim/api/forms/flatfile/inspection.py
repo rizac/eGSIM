@@ -37,7 +37,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                                                 'parameter is required',
                                                 code='required'))
 
-        if 'flatfile' in cleaned_data:
+        if not self.has_error('flatfile'):
             cols = cleaned_data['flatfile'].columns
             if x and x not in cols:
                 self.add_error("x", ValidationError(f'"{x}" is not a flatfile'
@@ -168,7 +168,7 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
     def clean(self):
         cleaned_data = super().clean()
 
-        if 'flatfile' not in cleaned_data:  # has errors FIXME: HOW TO HANDLE
+        if self.has_error('flatfile'):
             return cleaned_data
         dataframe = cleaned_data['flatfile']
 

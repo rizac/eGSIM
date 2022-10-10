@@ -311,7 +311,7 @@ class GsimImtForm(SHSRForm):
             self.add_error(imt, ValidationError('Missing value', code='required'))
         # if any of the if above was true, then the parameter has been removed from
         # cleaned_data. If both are provided, check gsims and imts match:
-        if gsim in cleaned_data and imt in cleaned_data:
+        if not self.has_error(gsim) and not self.has_error(imt):
             self.validate_gsim_and_imt(cleaned_data[gsim], cleaned_data[imt])
         return self.cleaned_data
 

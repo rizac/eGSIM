@@ -53,16 +53,13 @@ class FlatfileForm(EgsimBaseForm):
         """Call `super.clean()` and handle the flatfile"""
         u_form = self._u_ff
 
-        flatfile_conflicts = False
         # Handle flatfiles conflicts first. Note: with no selection from the web GUI we
         # have data['flatfile'] = None
         if u_form is not None and self.data.get('flatfile', None):
-            flatfile_conflicts = True
             self.add_error("flatfile", ValidationError('Please either select a '
                                                        'flatfile, or upload one',
                                                        code='conflict'))
         elif u_form is None and not self.data.get('flatfile', None):
-            flatfile_conflicts = True
             # note: with no selection from the web GUI we have data['flatfile'] = None
             self.add_error("flatfile",  ValidationError('Please select a flatfile '
                                                         'or upload one',
@@ -70,7 +67,7 @@ class FlatfileForm(EgsimBaseForm):
 
         cleaned_data = super().clean()
 
-        if flatfile_conflicts:
+        if self.has_error('flatfile'):
             return cleaned_data
 
         u_flatfile = None  # None or bytes object
@@ -124,20 +121,19 @@ class FlatfileForm(EgsimBaseForm):
                 self.add_error('flatfile', err_gsim)
                 return cleaned_data
 
+        # replace the flatfile parameter with the pandas dataframe:
+        cleaned_data['flatfile'] = dataframe
+
         key = 'selexpr'
         selexpr = cleaned_data.get(key, None)
         if selexpr:
             try:
                 selexpr = reformat_selection_expression(dataframe, selexpr)
-                dataframe = dataframe.query(selexpr).copy()
+                cleaned_data['flatfile'] = dataframe.query(selexpr).copy()
             except Exception as exc:
                 # add_error removes also the field from self.cleaned_data:
                 self.add_error(key, ValidationError(str(exc), code='invalid'))
-                cleaned_data.pop('flatfile')  # FIXME handle better
-                return cleaned_data  # no need to further processing
 
-        # replace the flatfile parameter with the pandas dataframe:
-        cleaned_data['flatfile'] = dataframe
         return cleaned_data
 
     @classmethod
@@ -317,7 +313,7 @@ class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if 'flatfile' in cleaned_data:
+        if not self.has_error('flatfile'):
             flatfile = cleaned_data['flatfile']
             if 'gsim' in cleaned_data:
                 invalid_gsims = \
