@@ -153,7 +153,7 @@ class TrellisForm(GsimImtForm, APIForm):
         cleaned_data = super().clean()
         # Handle spectra plot type (see __init__), but only if 'imt' is valid
         # (i.e., 'imt' in cleaned_data):
-        if self._is_input_plottype_spectra() and 'imt' in cleaned_data:
+        if self._is_input_plottype_spectra() and not self.has_error('imt'):
             if self._replace_sa_periods_with_default:
                 # imt was not in data, for safety, remove it:
                 self.data.pop('imt')
