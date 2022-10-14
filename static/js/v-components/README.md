@@ -201,32 +201,29 @@ Each Object represents a sub-plot to be visualized, in the form:
     - A list of keys of each Object is available at 
       https://plot.ly/javascript/reference/. Consider that some layout-related 
       keys will be set automatically and overwritten if present: `xaxis` (string), 
-      `yaxis` (string), `showlegend` (boolean) and `legendgroup` (see `addLegend`
-      below).
+      `yaxis` (string), `showlegend` (boolean).
  
     - Providing a `name` key to a Trace Object makes the name showing
       when hovering over the trace with the mouse.
    
-    - To add the Trace to the legend, where a checkboxes allow to toggle the 
-      Traces visibility, call `addLegend`:
+    - To add the Trace to the legend, set its `legendgroup` attribute. All traces with 
+      the same legend group are treated the same way during click/double-click 
+      interactions.
+      Usually, you need to get a starting color for a `legendgroup` in order to style
+      all legend traces the same way. You can do this by using 
+      `this.colors.get(legendgroup)` which returns
+      a color from a cyclic palette assuring that the same `legendgroup` is mapped to
+      the same color. Example:
  
       ```
-      var color = this.addLegend(trace, trace.name)
-      trace.line = {color: color}
+      trace.legendgroup = trace.name;
+      var color = this.colors.get(trace.legendgroup);
+      trace.line = { color: this.colors.rgba(color, 0.5) }
       ```
- 
-      `trace.name` in the example above sets the `key` argument of `addLegend`. `key` 
-      is both the checkbox label shown on the GUI, and an unique identifier: 
-      calling `addLegend` with the same key for several traces will toggle all 
-      traces visibility at once. 
- 
+      
       If no item is in the legend, the right panel is not shown. The right panel
       includes several controls such as log axis, download actions and so on (this
-      behavious could anyway change in the future and the right panel shown anyway)
- 
-      To specify an explicit color for non yet mapped key, call:
-      `addLegend(trace, key, color)` where color is a string in the HEX-form
-      '#XXXXXX' that can be created via a `colorMap` for details.
+      behaviour could anyway change in the future, and the right panel shown anyway)
    
  - `params` Object defining the plot properties (String -> Any scalar), e.g. 
     ```
