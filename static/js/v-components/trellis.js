@@ -105,9 +105,6 @@ EGSIM.component('trellis-plot-div', {
 			var mathpow = Math.pow;
 			var pow10 = elm => mathpow(10, elm);
 
-			// get the current colorMap (will be used to set transparency on stdev
-			// areas, if given):
-			var colorMap = this.colorMap;  // defined in plot-div.js
 			var data = responseObject;
 			var plots = [];
 			// setup  label texts:
@@ -134,7 +131,8 @@ EGSIM.component('trellis-plot-div', {
 								mode: (data.xvalues.length == 1 ? 'markers' : 'lines'),
 								name: name
 						};
-						var color = this.addLegend(trace, name);  // Sets also trace.legendgroup = name
+						trace.legendgroup = name;
+						var color = this.colors.get(trace.legendgroup);
 						if (data.xvalues.length == 1){
 							trace.marker = {color: color};
 						}else{
@@ -162,7 +160,7 @@ EGSIM.component('trellis-plot-div', {
 								}
 							});
 							// Values are now ok, now arrange visual stuff:
-							var colorT = colorMap.transparentize(color, 0.2);
+							var colorT = this.colors.rgba(color, 0.2);
 							for (var i of [2]){
 								_traces[i].fill = 'tonexty'; // which actually fills to PREVIOUS TRACE!
 							}

@@ -20,8 +20,8 @@ var PlotsDiv = {
 			// store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
 			watchers: {},
 			paramnames2showongrid: new Set(),  // parameter names to show on the grid
-			// an Object of names -> {visible: boolean, color: html color (string)}:
-			legend: {},
+			// an Array of [legendgroup:str, traceProperties:Object] elements:
+			legend: [],
 			// plots is the data constructed from the received response.
 			// It is an Array of Objects, each Object representing a plot P:
 			// P: {
@@ -105,7 +105,42 @@ var PlotsDiv = {
 		// Note that domain and anchor props will be overridden
 		this.defaultxaxis = { mirror: true, zeroline: false, linewidth: 1 };
 		this.defaultyaxis = { mirror: true, zeroline: false, linewidth: 1 };
-		this.colorMap = this.createColorMap();
+
+		this.colors = {
+			_i: -1,
+			_values: [
+				'#1f77b4',  // muted blue
+				'#ff7f0e',  // safety orange
+				'#2ca02c',  // cooked asparagus green
+				'#d62728',  // brick red
+				'#9467bd',  // muted purple
+				'#8c564b',  // chestnut brown
+				'#e377c2',  // raspberry yogurt pink
+				'#7f7f7f',  // middle gray
+				'#bcbd22',  // curry yellow-green
+				'#17becf'   // blue-teal
+			],
+			_cmap: {},
+			get(key){  // return a new color mapped to key. Subsequent calls with `key` as argument return the same color
+				if (!(key in this._cmap)){
+					this._cmap[key] = this._values[(++this._i) % this._values.length];
+				}
+				return this._cmap[key];
+			},
+			rgba(hexcolor, alpha) {
+				// Returns the corresponding 'rgba' string of `hexcolor` with the given alpha channel ( in [0, 1], 1:opaque)
+				if (hexcolor.length == 4){
+					var [r, g, b] = [hexcolor.substring(1, 2), hexcolor.substring(2, 3), hexcolor.substring(3, 4)];
+					var [r, g, b] = [r+r, g+g, b+b];
+				}else if(hexcolor.length == 7){
+					var [r, g, b] = [hexcolor.substring(1, 3), hexcolor.substring(3, 5), hexcolor.substring(5, 7)];
+				}else{
+					return hexcolor;
+				}
+				var [r, g, b] = [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16)];
+				return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+			}
+		};
 	},
 	activated(){  // when component become active
 		if (this.visible){
@@ -127,9 +162,6 @@ var PlotsDiv = {
 		}
 	},
 	computed: {
-		legendNames(){
-			return Object.keys(this.legend);
-		},
 		isGridCusomizable(){
 			return Object.keys(this.gridlayouts).length>1;
 		}
@@ -164,26 +196,34 @@ var PlotsDiv = {
 			</div>
 		</div>
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
-		<div class='d-flex flex-column ps-4' v-show="legendNames.length || isGridCusomizable">
+		<div class='d-flex flex-column ps-4' v-show="legend.length || isGridCusomizable">
 			<slot></slot> <!-- slot for custom buttons -->
-			<div v-show='legendNames.length' class='mt-3 border p-2 bg-white'
+			<div v-show='legend.length' class='mt-3 border p-2 bg-white px-1'
 				 style='flex: 1 1 auto;overflow: auto'>
 				<div>Legend</div>
-				<div v-for="traceName in legendNames" class='d-flex flex-column'>
-					<div class='d-flex flex-row align-items-baseline' :style="{color: legend[traceName].color}" >
-						<label class='my-0 mt-2 text-nowrap' :class="{'checked': legend[traceName].visible}"
+				<div v-for="l in legend" class='d-flex flex-column'>
+					<div class='d-flex flex-row align-items-baseline'  getLegendColor
+						 :style="{color: getLegendColor(l[1])}">
+						<label class='my-0 mt-2 text-nowrap' :class="{'checked': l[1].visible}"
 							style='flex: 1 1 auto'>
-							<input type='checkbox' v-model="legend[traceName].visible"
-								   :style="{'accent-color': legend[traceName].color + ' !important'}"
-								   @change="traceVisibilityChanged(traceName)"> {{ traceName }}
+							<input type='checkbox' v-model="l[1].visible"  getLegendColor
+								   :style="{'accent-color': getLegendColor(l[1]) + ' !important'}"
+								   @change="setTraceStyle(l[0], l[1])"> {{ l[0] }}
 						</label>
-						<i class="fa fa-chevron-down" data-baloon-pos="bottom"
-						   aria-label='Click to style the plot elements appearance via JSON configuration'
-						   onclick='this.parentNode.parentNode.querySelector("div._pso").classList.toggle("d-none"); this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
+
+						<div data-balloon-pos="left" data-balloon-length="small" class='ms-1'
+						     aria-label='Style the plot traces (lines, bars, markers) of this legend group'>
+							<i class="fa fa-chevron-down" style="cursor:pointer"
+							   onclick='this.parentNode.parentNode.parentNode.querySelector("div._pso").classList.toggle("d-none"); this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
+						</div>
 					</div>
-					<div class='_pso flex-row d-none'>
-						<textarea class='_pso border' style='flex: 1 1 auto; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll;'
-								  v-html="getStyleCfg(traceName)" />
+					<div class='_pso d-flex flex-column d-none'>
+						<textarea class='border'
+								  style='margin:0px;padding:0px !important; height: 12rem;font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
+								  v-model="l[2]"/>
+						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonParse(l[2])"
+								@click="setTraceStyle(l[0], jsonParse(l[2]))"
+								:style="{color: getLegendColor(l[1]), 'border-color': getLegendColor(l[1])}">Apply</button>
 					</div>
 				</div>
 			</div>
@@ -285,24 +325,6 @@ var PlotsDiv = {
 			return
 		},
 		// END OF OVERRIDABLE METHODS
-		addLegend(trace, key, defaultColor){
-			// defaultColor is optional. If given (not undefined), it is in the form '#XXXXXX'
-			var color;
-			var colorMap = Vue.toRaw(this.colorMap);
-			if (defaultColor !== undefined && !colorMap.has(key)){
-				colorMap.set(key, defaultColor);
-				color = defaultColor;
-			}else{
-				color = colorMap.get(key);  // sets also the key if not existing
-			}
-			if (!(key in this.legend)){
-				this.legend[key] = {visible: true, color: color};
-			}else{
-				this.legend[key].color = color;
-			}
-			trace.legendgroup = key;
-			return color;
-		},
 		init(jsondict){
 			// unwatch watchers, if any:
 			this.watchOff();
@@ -318,8 +340,9 @@ var PlotsDiv = {
 				this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
 			});
 			this.setupAxisOptions();
+			this.createLegend();
 			// now plot:
-			this.newPlot();
+			this.newPlot(this.plots);
 		},
 		watchOff(...keys){
 			// turns (dynamically created/destroyed) watchers off.
@@ -961,40 +984,67 @@ var PlotsDiv = {
 				font: {size: this.plotfontsize}
 			}, props || {});
 		},
-		getStyleCfg(traceName){
-			var plotlydata = this.getPlotlyDataAndLayout()[0];
-			var cfg = {};
-			var keys = ['marker', 'line'];  // configurable cfg keys
-			plotlydata.forEach(function(data, i){
-				if (data.legendgroup === traceName){
-					for (var key of keys){
-						cfg[key] = data[key];
+		createLegend(){
+			this.legend = [];
+			var legend = this.legend;
+			var legendgroups = new Set();
+			this.plots.forEach(function(plot, i){
+				plot.traces.forEach(function(trace){
+					var legendgroup = trace.legendgroup;
+					if (legendgroup && !legendgroups.has(legendgroup)){
+						legendgroups.add(legendgroup);
+						var legenddata = {visible: ('visible' in trace) ? !!trace.visible : true};
+						for (var key of ['line', 'marker']){
+							if (key in trace){
+								legenddata[key] = Object.assign({}, trace[key]);
+							}
+						}
+						legend.push([legendgroup, legenddata, JSON.stringify(legenddata, null, '  ')]);
 					}
-				}
+				});
 			});
-			for (var k of Object.keys(cfg)){
-				if (cfg[k] === undefined){
-					delete cfg[k]
+		},
+		getLegendColor(legenddata){
+			if (legenddata) {
+				var marker = legenddata.marker;
+				if (marker && marker.line && marker.line.color){
+					return marker.line.color;
+				}
+				if (legenddata.line && legenddata.line.color){
+					return legenddata.line.color;
+				}
+				if (marker && marker.color){
+					return marker.color;
 				}
 			}
-			return Object.keys(cfg).length ? JSON.stringify(cfg, null, "  ") : "";
+			return '#000000';
 		},
-		traceVisibilityChanged(traceName){
+		setTraceStyle(legendgroup, legenddata){
+			if (!legenddata){ return; }
+			for (var legend of this.legend){
+				if(legend[0] === legendgroup){
+					legend[1] = legenddata;
+					legend[2] = JSON.stringify(legenddata, null, "  ")
+				}
+			}
 			var indices = [];
 			var plotlydata = this.getPlotlyDataAndLayout()[0];
-			var legend = this.legend;
-			var visible = legend[traceName].visible;
 			plotlydata.forEach(function(data, i){
-				var plotlyVisible = ('visible' in data) ? !!data.visible : true;
-				if (data.legendgroup === traceName && visible !== plotlyVisible){
-					data.visible = visible;
+				if (data.legendgroup === legendgroup){
 					indices.push(i);
 				}
 			});
 			if(indices.length){
 				this.execute(function(){
-					Plotly.restyle(this.$refs.rootDiv, {visible: visible}, indices);
+					Plotly.restyle(this.$refs.rootDiv, legenddata, indices);
 				});
+			}
+		},
+		jsonParse(jsonString){
+			try{
+				return JSON.parse(jsonString);
+			}catch(error){
+				return null;
 			}
 		},
 		getPlotlyDataAndLayout(){
@@ -1043,64 +1093,6 @@ var PlotsDiv = {
 					Plotly.relayout(this.$refs.rootDiv, layout);
 				}, {msg: this.waitbar.UPDATING});
 			}
-		},
-		createColorMap(){
-			// Return a new ColorMap class extending `Map` and mapping a given key
-			// to a color. Given a key (e.g. legend name), then `colorMap.get(key)`
-			// automatically returns a color (hex string) assuring the same
-			// color for the same key. The class extends `Map` and has also a
-			// `transparentize` method (see below)
-			// defines ColorMap class:
-			class ColorMap extends Map {
-				constructor() {
-					super();
-					this._defaults = {
-							index: 0,
-							colors: [
-								'#1f77b4',  // muted blue
-								'#ff7f0e',  // safety orange
-								'#2ca02c',  // cooked asparagus green
-								'#d62728',  // brick red
-								'#9467bd',  // muted purple
-								'#8c564b',  // chestnut brown
-								'#e377c2',  // raspberry yogurt pink
-								'#7f7f7f',  // middle gray
-								'#bcbd22',  // curry yellow-green
-								'#17becf'   // blue-teal
-							]
-					}
-				}
-				get(key){
-					// sets a color mapping `key` if `key` is not in this Map
-					// (the color will be set incrementally based on `this._defauls.colors`).
-					// Eventually, it returns the color (hex string) mapped to `key`, as the superclass does
-					var color = super.get(key);
-					if (color === undefined){
-						var colors = this._defaults.colors;
-						color = colors[(this._defaults.index++) % colors.length];
-						this.set(key, color);
-					}
-					return color;
-				}
-				transparentize(hexcolor, alpha) {
-					// Returns the corresponding 'rgba' string of `hexcolor` with the given alpha channel ( in [0, 1], 1:opaque)
-					// If `hexcolor` is an integer, it indicates the index of the default color to be converted
-					if (typeof hexcolor == 'number'){
-						hexcolor = this._defaults.colors[parseInt(hexcolor) % this._defaults.colors.length];
-					}
-					if (hexcolor.length == 4){
-						var [r, g, b] = [hexcolor.substring(1, 2), hexcolor.substring(2, 3), hexcolor.substring(3, 4)];
-						var [r, g, b] = [r+r, g+g, b+b];
-					}else if(hexcolor.length == 7){
-						var [r, g, b] = [hexcolor.substring(1, 3), hexcolor.substring(3, 5), hexcolor.substring(5, 7)];
-					}else{
-						return hexcolor;
-					}
-					var [r, g, b] = [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16)];
-					return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-				}
-			};
-			return new ColorMap();
 		},
 		downloadTriggered(event){
 			var selectElement = event.target;

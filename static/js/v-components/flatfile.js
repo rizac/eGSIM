@@ -289,9 +289,9 @@ EGSIM.component('flatfile-plot-div', {
 					marker: { line: { width: 0 }}
 				  };
 			}
-			var color = this.addLegend(trace, trace.name); //sets also mainTrace.legendgroup
-			// set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
-			trace.marker.color = this.colorMap.transparentize(color, .5);
+			trace.legendgroup = trace.name;
+			var color = this.colors.get(trace.legendgroup);
+			trace.marker.color = this.colors.rgba(color, .5);
 			if (hist){
 				trace.marker.line.color = color;
 			}

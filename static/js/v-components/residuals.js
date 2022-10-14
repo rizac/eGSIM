@@ -110,9 +110,9 @@ EGSIM.component('residuals-plot-div', {
 							// <extra></extra> hides the second tooltip (white):
 							hovertemplate: `${gsim}<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
 						};
-						var color = this.addLegend(mainTrace, mainTrace.name); //sets also mainTrace.legendgroup
-						// set the marker color (marker is visually a bar if mainTrace.type is 'bar'):
-						mainTrace.marker = {color: this.colorMap.transparentize(color, .5)};
+						mainTrace.legendgroup = mainTrace.name;
+						var color = this.colors.get(mainTrace.legendgroup);
+						mainTrace.marker = {color: this.colors.rgba(color, .5)};
 						// add other stuff (normal distributions, regression lines, ...):
 						if (hasLinearRegression){  // scatter plot
 							mainTrace.mode = 'markers';  // hide connecting lines
@@ -133,8 +133,8 @@ EGSIM.component('residuals-plot-div', {
 									`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
 									`<extra></extra>`
 							}
-							var color = this.addLegend(linregtrace, linregtrace.name, '#331100');
-							linregtrace.line = {color: color};
+							linregtrace.legendgroup = linregtrace.name;
+							linregtrace.line = {color: '#331100'};
 							var traces = [mainTrace, linregtrace];
 						}else{
 							// customize more the marker (which are bars in this case):
@@ -159,8 +159,8 @@ EGSIM.component('residuals-plot-div', {
 										`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
 										`<extra></extra>`
 								};
-								var color = this.addLegend(normdistline, normdistline.name, '#331100');
-								normdistline.line = {color: color};
+								normdistline.legendgroup = normdistline.name;
+								normdistline.line = {color: '#331100'};
 
 								var refnormdistline = {
 									x: x,
@@ -171,8 +171,8 @@ EGSIM.component('residuals-plot-div', {
 									hovertemplate: `Standard normal distribution (μ=0, σ=1)` +
 										`<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
 								};
-								var color = this.addLegend(refnormdistline, refnormdistline.name, '#999999');
-								refnormdistline.line = {color: color};
+								refnormdistline.legendgroup = refnormdistline.name;
+								refnormdistline.line = {color: '#999999'};
 
 								var traces = [mainTrace, normdistline, refnormdistline];
 
@@ -187,8 +187,8 @@ EGSIM.component('residuals-plot-div', {
 									name: 'Median LH',
 									hovertemplate: `${gsim} median<br>${xlbl}=${plotdata.median}<extra></extra>`
 								};
-								var color = this.addLegend(medianline, medianline.name, '#331100');
-								medianline.line = {color: color, dash: 'dot'};
+								medianline.legendgroup = medianline.name;
+								medianline.line = {color: '#331100', dash: 'dot'};
 
 								var traces = [mainTrace, medianline];
 							}
