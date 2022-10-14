@@ -51,10 +51,12 @@ var PlotsDiv = {
 				x: {
 					log: {disabled: false, value: undefined},
 					sameRange: {disabled: false, value: undefined},
+					grid: {disabled: false, value: false}
 				},
 				y: {
 					log: {disabled: false, value: undefined},
-					sameRange: {disabled: false, value: undefined}
+					sameRange: {disabled: false, value: undefined},
+					grid: {disabled: false, value: false}
 				}
 			},
 			// the wait bar while drawing plots
@@ -218,7 +220,7 @@ var PlotsDiv = {
 						</div>
 					</div>
 					<div class='_pso d-flex flex-column d-none'>
-						<textarea class='border'
+						<textarea class='border' spellcheck="false"
 								  style='margin:0px;padding:0px !important; height: 12rem;font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
 								  v-model="l[2]"/>
 						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonParse(l[2])"
@@ -266,6 +268,13 @@ var PlotsDiv = {
 							<input type='checkbox' v-model='axisOptions[type].log.value'
 								   :disabled="axisOptions[type].log.disabled" class="me-1">
 							<span>log scale</span>
+						</label>
+						<label class='text-nowrap m-0 ms-2'
+							   :class="{'checked': axisOptions[type].grid.value}"
+							   :disabled="axisOptions[type].grid.disabled">
+							<input type='checkbox' v-model='axisOptions[type].grid.value'
+								   :disabled="axisOptions[type].grid.disabled" class="me-1">
+							<span>grid</span>
 						</label>
 					</div>
 				</div>
@@ -523,10 +532,14 @@ var PlotsDiv = {
 			// Initializes the values of this.axisOptions based on the plots we have. Axes
 			// options are bound to checkbox controls on the side panel of the plot grid
 
-			var keys = ['axisOptions.x.log.value',
-						'axisOptions.y.log.value',
-						'axisOptions.x.sameRange.value',
-						'axisOptions.y.sameRange.value'];
+			var keys = [
+				'axisOptions.x.log.value',
+				'axisOptions.y.log.value',
+				'axisOptions.x.sameRange.value',
+				'axisOptions.y.sameRange.value',
+				'axisOptions.x.grid.value',
+				'axisOptions.y.grid.value'
+			];
 			this.watchOff(...keys);
 
 			// Reminder: this.plots is an Array of Objects of this type: {
@@ -690,8 +703,8 @@ var PlotsDiv = {
 				var [plot, [gridxindex, gridyindex]] = [plots[i], plotsGridIndices[i]];
 				var [xdomain, ydomain] = this.computePlotDomain(divElement, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
 				var axisIndex = 1 + gridyindex * gridxvalues.length + gridxindex;
-				var xaxis = { domain: xdomain, anchor: `y${axisIndex}` };
-				var yaxis = { domain: ydomain, anchor: `x${axisIndex}` };
+				var xaxis = { domain: xdomain, anchor: `y${axisIndex}`, showgrid: this.axisOptions.x.grid.value };
+				var yaxis = { domain: ydomain, anchor: `x${axisIndex}`, showgrid: this.axisOptions.y.grid.value };
 				xdomains[gridxindex] = xaxis.domain;  // used below to place correctly the x labels of the GRID
 				ydomains[gridyindex] = yaxis.domain;  // used below to place correctly the y labels of the GRID
 				// merge plot xaxis defined in getData with this.defaultxaxis, and then with xaxis.
