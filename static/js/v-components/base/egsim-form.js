@@ -24,7 +24,7 @@ var FormDataHTTPClient = {
 				if (response && response.data){
 					return response; // allows .then on the Promise
 				}
-				throw new Error('response empty');  // should allow to .catch the promise in case
+				// throw new Error('response empty');  // should allow to .catch the promise in case
 			}).catch(response => {
 				var errData = (response.response || {}).data;
 				var error = (errData || {}).error || {};

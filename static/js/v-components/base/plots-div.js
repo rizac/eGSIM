@@ -625,7 +625,7 @@ var PlotsDiv = {
 				this.execute(function(){
 					var [data, layout] = this.createPlotlyDataAndLayout(divElement);
 					Plotly.react(divElement, data, layout);
-					var newLayout = this.relayout(data, layout);
+					var newLayout = this.relayout(layout);
 					Plotly.relayout(divElement, newLayout);
 				});
 			});
@@ -904,7 +904,7 @@ var PlotsDiv = {
 				// create the x labels of the vertical grid:
 				for (var [gridvalue, domainName] of gridvalues.map((elm, idx) => [elm, xDomainNames[idx]])){
 					var domain = newLayout[domainName];
-				 	newLayout.annotations.push(Object.assign(defAnnotation, {
+				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: (domain[1] + domain[0])/2,
 						y: 0,
 						xanchor: 'center', /* DO NOT CHANGE THIS */
@@ -918,16 +918,16 @@ var PlotsDiv = {
 				// get the domain of the bottom plots:
 				var gridvalues = this.params[gridyparam];
 				// get the number of plots columns:
-				var ncols = displayXGridParams ? this.params[gridxparam].length : 1;
+				var ncols = this.params[gridxparam].length || 1;
 				for (var [gridvalue, domainName] of gridvalues.map((elm, idx) => [elm, yDomainNames[idx*ncols]])){
 					var domain = newLayout[domainName];
-				 	newLayout.annotations.push(Object.assign(defAnnotation, {
+				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: 0,
 						y: (domain[1] + domain[0])/2,
 						xanchor: 'left',
 						yanchor: 'middle', /* DO NOT CHANGE THIS */
 						text: `${gridyparam}: ${gridvalue}`,
-						textangle: '-270'
+						textangle: '-90'
 					}));
 				}
 			}
@@ -941,8 +941,8 @@ var PlotsDiv = {
 			var marginTop = 0;
 			var marginRight = 0;
 			var fontsize = this.plotfontsize;
-			var marginBottom = displayXGridParams ? 2*fontsize : 0;
-			var marginLeft = displayYGridParams ? 2*fontsize : 0;
+			var marginBottom = displayXGridParams ? 2*fontsize : fontsize/2;
+			var marginLeft = displayYGridParams ? 2*fontsize : fontsize/2;
 			var margin = this.getAxesMargins();
 			margin.top += marginTop;
 			margin.bottom += marginBottom;
