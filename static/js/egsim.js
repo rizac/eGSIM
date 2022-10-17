@@ -123,6 +123,7 @@ const EGSIM = Vue.createApp({
 			}, (error) => {
 				this.setError(this.getErrorMsg(error));
 				this.loading = false;
+				throw error;
 			});
 
 			// Add a response interceptor
@@ -132,6 +133,7 @@ const EGSIM = Vue.createApp({
 			}, (error) => {
 				this.setError(this.getErrorMsg(error));
 				this.loading = false;
+				throw error;
 			});
 		},
 		init(gsims, imtGroups, flatfile, regionalization){
