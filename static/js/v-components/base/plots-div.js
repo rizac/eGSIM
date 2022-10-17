@@ -490,14 +490,11 @@ var PlotsDiv = {
 					}
 				}
 			}
-			// replace sets with sorted Arrays (vuejs wants Arrays, not Sets), and remove proeprties that are 'empty'
-			// (either empty array or have a single falsy element (empty string, null)):
+			// replace sets with sorted Arrays:
 			var params = {};
 			for(var key of paramNames){
 				var values = Array.from(allparams[key]);
-				// now sort values. Note that javascript array sort converts to string first (WTF!!!??), so
-				// use a particular sort function for numbers only (see https://stackoverflow.com/a/1063027):
-				if (typeof values[0] === 'number'){
+				if (typeof values[0] === 'number'){  // https://stackoverflow.com/a/1063027
 					values.sort((a, b) => a - b);
 				}else{
 					values.sort();
@@ -605,7 +602,7 @@ var PlotsDiv = {
 				this.execute(function(){
 					Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
 					// now compute labels and ticks size:
-					var newLayout = this.computeLabelAndTickSize(data, layout);
+					var newLayout = this.relayout(layout);
 					Plotly.relayout(divElement, newLayout);
 					this.watchOn(hover, function (newval, oldval) {
 						this.setMouseModes(newval, undefined);  // hovermode, mousemode
@@ -628,7 +625,7 @@ var PlotsDiv = {
 				this.execute(function(){
 					var [data, layout] = this.createPlotlyDataAndLayout(divElement);
 					Plotly.react(divElement, data, layout);
-					var newLayout = this.computeLabelAndTickSize(data, layout);
+					var newLayout = this.relayout(data, layout);
 					Plotly.relayout(divElement, newLayout);
 				});
 			});
@@ -651,7 +648,7 @@ var PlotsDiv = {
 			var plots = this.plots;
 			var params = this.params;
 			// filter plots according to selectedParams keys, i.e. the parameter names
-			// which are mapped to mupliple values AND are not currently set to be displayed on the
+			// which are mapped to multiple values AND are not currently set to be displayed on the
 			// grid x or grid y (basically, the parameters which will show up in a combo box on top of the whole plot)
 			// The number of these parameters might be zero: in this case the filter below has no effect and we
 			// still have all plots after the loop. Note also that the filter returns a copy of the original array.
@@ -692,12 +689,12 @@ var PlotsDiv = {
 			// is used to calculate spaces it cannot be changed in configureLayout:
 			layout.font.family = window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-family');
 			layout.font.size = this.plotfontsize;
-			// copy layout annotations cause it's not a "primitive" type and thus we want to avoid old annotation to be re-rendered
-			layout.annotations = layout.annotations ? Array.from(this.defaultlayout.annotations) : [];
 			var data = [];
+			/*
 			var xdomains = new Array(gridxvalues.length);  // used below to place correctly the x labels of the GRID
 			var ydomains = new Array(gridyvalues.length);  // used below to place correctly the x labels of the GRID
-			var annotation = this.getAnnotation;
+			*/
+			/* var annotation = this.getAnnotation; */
 			var legendgroups = new Set();
 			for (var i = 0; i < plots.length; i++){
 				var [plot, [gridxindex, gridyindex]] = [plots[i], plotsGridIndices[i]];
@@ -705,8 +702,10 @@ var PlotsDiv = {
 				var axisIndex = 1 + gridyindex * gridxvalues.length + gridxindex;
 				var xaxis = { domain: xdomain, anchor: `y${axisIndex}`, showgrid: this.axisOptions.x.grid.value };
 				var yaxis = { domain: ydomain, anchor: `x${axisIndex}`, showgrid: this.axisOptions.y.grid.value };
+				/*
 				xdomains[gridxindex] = xaxis.domain;  // used below to place correctly the x labels of the GRID
 				ydomains[gridyindex] = yaxis.domain;  // used below to place correctly the y labels of the GRID
+				*/
 				// merge plot xaxis defined in getData with this.defaultxaxis, and then with xaxis.
 				// Priority in case of conflicts goes from right (xaxis) to left (this.defaultxaxis)
 				layout[`xaxis${axisIndex}`] = xaxis = Object.assign({}, this.defaultxaxis, plot.xaxis, xaxis);
@@ -743,48 +742,207 @@ var PlotsDiv = {
 					yaxis.title.standoff = 0; // skip space between label and axis, we handle it
 				}
 			}
-			// Grid X labels: (horizontally on top)
+			return [data, layout];
+		},
+		setupPlotAxis(plots){
+			// sets up the plotly axis data on the plots to be plotted, according to
+			// the current axis setting and the plot data
+
+			// set axis type according to the selcted checkbox:
+			var defaultPlotlyAxisType = '-';
+			var isXAxisLog = (!this.axisOptions.x.log.disabled) && this.axisOptions.x.log.value;
+			var isYAxisLog = (!this.axisOptions.y.log.disabled) && this.axisOptions.y.log.value;
+			plots.forEach(plot => {
+				plot['xaxis'].type = isXAxisLog ? 'log' : defaultPlotlyAxisType;
+				plot['yaxis'].type = isYAxisLog ? 'log' : defaultPlotlyAxisType;
+			});
+			// setup ranges:
+			var [sign, log10] = [Math.sign, Math.log10];
+			for (var key of ['x', 'y']){
+				var axisOpt = this.axisOptions[key];  // the key for this,.axis ('x' or 'y')
+				var axisKey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
+				// set same Range disabled, preventing the user to perform useless click:
+				// Note that this includes the case of only one plot:
+				if (!axisOpt.sameRange.value || axisOpt.sameRange.disabled){
+					plots.forEach(plot => {
+						delete plot[axisKey].range;
+					});
+					continue;
+				}
+				// here deal with the case we have 'sameRange' clicked (and enabled):
+				var range = [NaN, NaN];
+				plots.forEach(plot => {
+					var [rangex, rangey] = this.getPlotBounds(plot.traces || []);  // note that hidden traces count
+					range = this.nanrange(...range, ...(key == 'x' ? rangex : rangey));
+				});
+
+				// add margins for better visualization:
+				var margin = Math.abs(range[1] - range[0]) / 50;
+				// be careful with negative logarithmic values:
+				var isAxisLog = key === 'x' ? isXAxisLog : isYAxisLog;
+				if (!isAxisLog || (range[0] > margin && range[1] > 0)){
+					range[0] -= margin;
+					range[1] += margin;
+				}
+
+				// set computed ranges to all plot axis:
+				if (!isNaN(range[0]) && !isNaN(range[1])){
+					plots.forEach(plot => {
+						// plotly wants range converted to log if axis type is 'log':
+						plot[axisKey].range = plot[axisKey].type === 'log' ? [log10(range[0]), log10(range[1])] : range;
+					});
+				}
+			}
+		},
+		computePlotDomain(divElement, row, col, rows, cols){
+			// computes the sub-plot domain (position and area) according to the row and
+			// col indices. The computed domain will NOT account for axis ticks and
+			// labels, so it might need to be shrunk.
+			// Returns the array [xdomain, ydomain], where xdomain=[x0, x1] and
+			// ydomain=[y0, y1] represent the plot rectangle coordinates in [0, 1], i.e.
+			// relative to the whole plotly figure (note that y axis values are cartesian,
+			// i.e. they increase upwards)
+
+			// get length of 1px, which will be the base for our calculations
+			var [width_, height_] = this.getElmSize(divElement);
+			var width1px = 1/width_;
+			var height1px = 1/height_;
+
+			// compute top and right margin for the grid labels, if any. Default size
+			// is 2px in order not to cut the axis border
+			var vPadding = 2 * height1px;
+			var hPadding = 2 * width1px;
+
+			// calculate plot width and height, setting them at least 10px:
+			var colwidth = Math.max(10 * width1px, (1-2*hPadding) / cols);
+			var rowheight = Math.max(10 * height1px, (1-2*vPadding) / rows);
+			// determine the xdomain [x0, x1]:
+			var xdomain = [hPadding+col*colwidth, hPadding+(1+col)*colwidth];
+			// determine the ydomain [y0, y1]:
+			var ydomain = [vPadding+(rows-row-1)*rowheight, vPadding+(rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
+			return [xdomain, ydomain];
+		},
+		/*computePlotDomain(divElement, row, col, rows, cols){
+			// computes the sub-plot domain (position and area) according to the row and
+			// col indices. The computed domain will not account for axis ticks and
+			// labels, so it might need to be shrunk.
+			// Returns the array [xdomain, ydomain], where xdomain=[x0, x1] and
+			// ydomain=[y0, y1] represent the plot rectangle coordinates in [0, 1], i.e.
+			// relative to the whole plotly figure (note that y axis values are cartesian,
+			// i.e. they increase upwards)
+
+			// get length of 1px, which will be the base for our calculations
+			var [width_, height_] = this.getElmSize(divElement);
+			var width1px = 1/width_;
+			var height1px = 1/height_;
+
+			// compute top and right margin for the grid labels, if any. Default size
+			// is 2px in order not to cut the axis border
+			var minVPadding = 2 * height1px;
+			var minHPadding = 2 * width1px;
+			var vPadding = minVPadding;
+			var hPadding = minHPadding;
+			// now check if we have grid labels to display:
+			var fontsize = this.plotfontsize;
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			if (this.displayGridLabels_('x', gridxparam)){
-				// determine the maximum y of all plot frames:
-				// var y = Math.max(...ydomains.map(elm => elm[1]));
+				// there are labels to display on the x axis => increase tt:
+				vPadding = Math.max(2 * fontsize * minHPadding, vPadding);
+			}
+			if (this.displayGridLabels_('y', gridyparam)){
+				// there are labels to display on the y axis => increase rr:
+				hPadding = Math.max(2 * fontsize * width1px, hPadding);
+			}
+
+			// calculate plot width and height, setting them at least 10px:
+			var colwidth = Math.max(10 * width1px, (1-minHPadding-hPadding) / cols);
+			var rowheight = Math.max(10 * height1px, (1-minVPadding-vPadding) / rows);
+			// determine the xdomain [x0, x1]:
+			var xdomain = [hPadding+col*colwidth, hPadding+(1+col)*colwidth];
+			// determine the ydomain [y0, y1]:
+			var ydomain = [vPadding+(rows-row-1)*rowheight, vPadding+(rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
+			return [xdomain, ydomain];
+		},*/
+		relayout(layout){
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			var displayXGridParams = this.paramnames2showongrid.has(gridxparam) &&
+				this.displayGridLabels('x', gridxparam, this.params[gridxparam]);
+			var displayYGridParams = this.paramnames2showongrid.has(gridyparam) &&
+				this.displayGridLabels('y', gridyparam, this.params[gridyparam]);
+
+			var newLayout = this.computeLabelAndTickSize(layout, displayXGridParams, displayYGridParams);
+
+			// compute the domain of x and y
+
+			// newLayout has a series of keys denoted as 'xaxis[index].domain',
+			// 'yaxis[index].domain'. Put them into two mseparate Arrays:
+			var xDomainNames = Object.keys(newLayout).filter(key => /^xaxis\d*\.domain$/g.exec(key));
+			xDomainNames.sort((key1, key2) => {
+				var idx1 = /^xaxis(\d*)\.domain$/g.exec(key1)[1] || 1;
+				var idx2 = /^xaxis(\d*)\.domain$/g.exec(key2)[1] || 1;
+				return parseInt(idx1) - parseInt(idx2);
+			});
+			var yDomainNames = Object.keys(newLayout).filter(key => /^yaxis\d*\.domain$/g.exec(key));
+			yDomainNames.sort((key1, key2) => {
+				var idx1 = /^yaxis(\d*)\.domain$/g.exec(key1)[1] || 1;
+				var idx2 = /^yaxis(\d*)\.domain$/g.exec(key2)[1] || 1;
+				return parseInt(idx1) - parseInt(idx2);
+			});
+
+			var defAnnotation = {
+				xref: 'paper',
+				yref: 'paper',
+				showarrow: false,
+				font: {size: this.plotfontsize}
+			};
+
+			// Grid X labels: (horizontally on top):
+			newLayout.annotations = Array.from(this.defaultlayout.annotations);
+			if (displayXGridParams){
+				// get the domain of the bottom plots:
+				var gridvalues = this.params[gridxparam];
 				// create the x labels of the vertical grid:
-				for (var [domain, gridvalue] of xdomains.map((elm, index) => [elm, gridxvalues[index]])){
-				 	layout.annotations.push(annotation({
+				for (var [gridvalue, domainName] of gridvalues.map((elm, idx) => [elm, xDomainNames[idx]])){
+					var domain = newLayout[domainName];
+				 	newLayout.annotations.push(Object.assign(defAnnotation, {
 						x: (domain[1] + domain[0])/2,
-						y: 1,
+						y: 0,
 						xanchor: 'center', /* DO NOT CHANGE THIS */
-						yanchor: 'top',
+						yanchor: 'bottom',
 						text: `${gridxparam}: ${gridvalue}`
 					}));
 				}
 			}
 			// Grid Y labels: (vertically on the right)
-			if (this.displayGridLabels_('y', gridyparam)){
-				// determine the maximum x of all plot frames:
-				// var x = Math.max(...xdomains.map(elm => elm[1]));
-				// create the y labels of the vertical grid:
-				for (var [domain, gridvalue] of ydomains.map((elm, index) => [elm, gridyvalues[index]])){
-					layout.annotations.push(annotation({
-						x: 1,
+			if (displayYGridParams){
+				// get the domain of the bottom plots:
+				var gridvalues = this.params[gridyparam];
+				// get the number of plots columns:
+				var ncols = displayXGridParams ? this.params[gridxparam].length : 1;
+				for (var [gridvalue, domainName] of gridvalues.map((elm, idx) => [elm, yDomainNames[idx*ncols]])){
+					var domain = newLayout[domainName];
+				 	newLayout.annotations.push(Object.assign(defAnnotation, {
+						x: 0,
 						y: (domain[1] + domain[0])/2,
-						xanchor: 'right',
+						xanchor: 'left',
 						yanchor: 'middle', /* DO NOT CHANGE THIS */
 						text: `${gridyparam}: ${gridvalue}`,
 						textangle: '-270'
 					}));
 				}
 			}
-			return [data, layout];
+			return newLayout;
 		},
-		computeLabelAndTickSize(data, layout){
-			// recomputes labels and tick sizes based on data and the currently displayed
+		computeLabelAndTickSize(layout, displayXGridParams, displayYGridParams){
+			// recomputes labels and tick sizes based on the currently displayed
 			// plot, returns a 'layout' Object to be passed as 2nd arg to Plotly.relayout
 			var [width, height] = this.getElmSize(this.$refs.rootDiv);
 			// default values (computed values will be ADDED to these values):
 			var marginTop = 0;
 			var marginRight = 0;
-			var marginBottom = width > height ? 15 : 20;
-			var marginLeft = height > width ? 20 : 15;
+			var fontsize = this.plotfontsize;
+			var marginBottom = displayXGridParams ? 2*fontsize : 0;
+			var marginLeft = displayYGridParams ? 2*fontsize : 0;
 			var margin = this.getAxesMargins();
 			margin.top += marginTop;
 			margin.bottom += marginBottom;
@@ -890,113 +1048,24 @@ var PlotsDiv = {
 			}
 			return [xRect, yRect];
 		},
-		setupPlotAxis(plots){
-			// sets up the plotly axis data on the plots to be plotted, according to
-			// the current axis setting and the plot data
-
-			// set axis type according to the selcted checkbox:
-			var defaultPlotlyAxisType = '-';
-			var isXAxisLog = (!this.axisOptions.x.log.disabled) && this.axisOptions.x.log.value;
-			var isYAxisLog = (!this.axisOptions.y.log.disabled) && this.axisOptions.y.log.value;
-			plots.forEach(plot => {
-				plot['xaxis'].type = isXAxisLog ? 'log' : defaultPlotlyAxisType;
-				plot['yaxis'].type = isYAxisLog ? 'log' : defaultPlotlyAxisType;
-			});
-			// setup ranges:
-			var [sign, log10] = [Math.sign, Math.log10];
-			for (var key of ['x', 'y']){
-				var axisOpt = this.axisOptions[key];  // the key for this,.axis ('x' or 'y')
-				var axisKey = key + 'axis';  //  the key for each plot axis: 'xaxis' or 'yaxis'
-				// set same Range disabled, preventing the user to perform useless click:
-				// Note that this includes the case of only one plot:
-				if (!axisOpt.sameRange.value || axisOpt.sameRange.disabled){
-					plots.forEach(plot => {
-						delete plot[axisKey].range;
-					});
-					continue;
-				}
-				// here deal with the case we have 'sameRange' clicked (and enabled):
-				var range = [NaN, NaN];
-				plots.forEach(plot => {
-					var [rangex, rangey] = this.getPlotBounds(plot.traces || []);  // note that hidden traces count
-					range = this.nanrange(...range, ...(key == 'x' ? rangex : rangey));
-				});
-
-				// add margins for better visualization:
-				var margin = Math.abs(range[1] - range[0]) / 50;
-				// be careful with negative logarithmic values:
-				var isAxisLog = key === 'x' ? isXAxisLog : isYAxisLog;
-				if (!isAxisLog || (range[0] > margin && range[1] > 0)){
-					range[0] -= margin;
-					range[1] += margin;
-				}
-
-				// set computed ranges to all plot axis:
-				if (!isNaN(range[0]) && !isNaN(range[1])){
-					plots.forEach(plot => {
-						// plotly wants range converted to log if axis type is 'log':
-						plot[axisKey].range = plot[axisKey].type === 'log' ? [log10(range[0]), log10(range[1])] : range;
-					});
-				}
-			}
-		},
-		displayGridLabels_(axis, paramName){
+		/*displayGridLabels_(axis, paramName){
 			if (this.paramnames2showongrid.has(paramName)){
 				return this.displayGridLabels(axis, paramName, this.params[paramName]);
 			}
 			return false;
-		},
-		computePlotDomain(divElement, row, col, rows, cols){
-			// computes the sub-plot domain (position and area) according to the row and
-			// col indices. The computed domain will not account for axis ticks and
-			// labels, so it might need to be shrunk.
-			// Returns the array [xdomain, ydomain], where xdomain=[x0, x1] and
-			// ydomain=[y0, y1] represent the plot rectangle coordinates in [0, 1], i.e.
-			// relative to the whole plotly figure (note that y axis values are cartesian,
-			// i.e. they increase upwards)
-
-			// get length of 1px, which will be the base for our calculations
-			var [width_, height_] = this.getElmSize(divElement);
-			var width1px = 1/width_;
-			var height1px = 1/height_;
-
-			// compute top and right margin for the grid labels, if any. Default size
-			// is 2px in order not to cut the axis border
-			var tt = 2 * height1px;
-			var rr = 2 * width1px;
-			// now check if we have grid labels to display:
-			var fontsize = this.plotfontsize;
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (this.displayGridLabels_('x', gridxparam)){
-				// there are labels to display on the x axis => increase tt:
-				tt = Math.max(2.5 * fontsize * height1px, tt);
-			}
-			if (this.displayGridLabels_('y', gridyparam)){
-				// there are labels to display on the y axis => increase rr:
-				rr = Math.max(2.5 * fontsize * width1px, rr);
-			}
-
-			// calculate plot width and height, setting them at least 10px:
-			var colwidth = Math.max(10 * width1px, (1-rr) / cols);
-			var rowheight = Math.max(10 * height1px, (1-tt) / rows);
-			// determine the xdomain [x0, x1]:
-			var xdomain = [col*colwidth, (1+col)*colwidth];
-			// determine the ydomain [y0, y1]:
-			var ydomain = [(rows-row-1)*rowheight, (rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
-			return [xdomain, ydomain];
-		},
+		},*/
 		getElmSize(domElement){
 			// returns the Array [width, height] of the given dom element size
 			return [domElement.offsetWidth, domElement.offsetHeight];
 		},
-		getAnnotation(props){
+		/*getAnnotation(props){
 			return Object.assign({
 				xref: 'paper',
 				yref: 'paper',
 				showarrow: false,
 				font: {size: this.plotfontsize}
 			}, props || {});
-		},
+		},*/
 		createLegend(){
 			this.legend = [];
 			var legend = this.legend;
