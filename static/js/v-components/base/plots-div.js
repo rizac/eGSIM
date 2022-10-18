@@ -760,13 +760,13 @@ var PlotsDiv = {
 					if(typeof xaxis.title !== 'object'){
 						xaxis.title = {text: `${xaxis.title}`};
 					}
-					xaxis.title.standoff = 0; // reset plotly space between label and axis, we handle it
+					xaxis.title.standoff = 10; // space between label and axis
 				}
 				if (yaxis.title){
 					if(typeof yaxis.title !== 'object'){
 						yaxis.title = {text: `${yaxis.title}`};
 					}
-					yaxis.title.standoff = 0; // skip space between label and axis, we handle it
+					yaxis.title.standoff = 5; // space between label and axis
 				}
 			}
 			return [data, layout];
@@ -829,7 +829,7 @@ var PlotsDiv = {
 			if (paramsgrid.y.label){
 				paramsgrid.y.domains = new Array(paramsgrid.y.values.length);
 			}
-			var margin = this.computeLabelAndTickSizeMargins();
+			var margin = this.getPlotsMaxMargin();
 			var newLayout = {};
 			for (var key of Object.keys(layout)){
 				if (!key.startsWith('xaxis') && !key.startsWith('yaxis')){
@@ -914,114 +914,59 @@ var PlotsDiv = {
 			}
 			return ret;
 		},
-		computeLabelAndTickSizeMargins(){
-			// recomputes labels and tick sizes based on the currently displayed
-			// plot, returns a 'layout' Object to be passed as 2nd arg to Plotly.relayout
-			var margin = this.getAxesMargins();
-			/*var [xlabels, ylabels] = this.getAxesLabelsRectangles();
-			if (xlabels.length){
-				margin.bottom += Math.max(...xlabels.map(elm => elm.height));
+		getPlotsMaxMargin(){
+			// Return an object representing the max margins of all plots, where
+			// each plot margin is computed subtracting the outer axes rectangle
+			// (plot area + axis ticks and ticklabels area) and the inner one
+			var margin = { top: 20, bottom: 0, right: 10, left: 0 };
+			var [min, max, abs] = [Math.min, Math.max, Math.abs];
+			var plotDiv = this.$refs.rootDiv;
+			var certesianLayer = plotDiv.querySelector('g.cartesianlayer');
+			var infoLayer = plotDiv.querySelector('g.infolayer');
+			for (var elm of certesianLayer.querySelectorAll('g[class^=subplot]')){
+				// get plot index from classes of type 'xy' 'x2y2' and so on:
+				var xindex = '';
+				var yindex = '';
+				var re = /^(x\d*)(y\d*)$/g;
+				for (var cls of elm.classList){
+					var matches = re.exec(cls);
+					if (matches){
+						xindex = matches[1];
+						yindex = matches[2];
+						break;
+					}
+				}
+				if (!xindex || !yindex){
+					continue;
+				}
+				var innerPlotRect = elm.querySelector(`path.ylines-above.crisp`) || elm.querySelector(`path.xlines-above.crisp`);
+				if(!innerPlotRect){
+					continue;
+				}
+				innerPlotRect = innerPlotRect.getBBox();
+
+				// try to find the xlabel, otherwise get the xticks+xticklabels:
+				var xlabel = infoLayer.querySelector(`g[class=g-${xindex}title]`) || elm.querySelector('g.xaxislayer-above');
+				if (xlabel){
+					var xElm = xlabel.getBBox();
+					margin.bottom = max(margin.bottom, xElm.y + xElm.height - innerPlotRect.y - innerPlotRect.height);
+				}
+				// try to find the ylabel, otherwise get the yticks+yticklabels:
+				var ylabel =  infoLayer.querySelector(`g[class=g-${yindex}title]`)  || elm.querySelector('g.yaxislayer-above');
+				if (ylabel){
+					var yElm = ylabel.getBBox();
+					// margin.top = max(margin.top, axesRect.y - yElm.y);
+					margin.left = max(margin.left, innerPlotRect.x - yElm.x);
+				}
 			}
-			if (ylabels.length){
-				margin.left += Math.max(...ylabels.map(elm => elm.width));
-			}
-			*/
+
 			var [width, height] = this.getElmSize(this.$refs.rootDiv);
 			margin.left /= width;
 			margin.right /= width;
 			margin.top /= height;
 			margin.bottom /= height;
-			return margin
-		},
-		getAxesMargins(){
-			// Return an object representing the max margins of all plots, where
-			// each plot margin is computed subtracting the outer axes rectangle
-			// (plot area + axis ticks and ticklabels area) and the inner one
-			var margin = { top: 0, bottom: 0, right: 0, left: 0 };
-			var [min, max, abs] = [Math.min, Math.max, Math.abs];
-			var plotDiv = this.$refs.rootDiv;
-			var certesianLayer = plotDiv.querySelector('g[class=cartesianlayer]');
-			var infoLayer = plotDiv.querySelector('g[class=infolayer]');
-			for (var elm of certesianLayer.querySelectorAll('g[class^=subplot]')){
-				// there are 2 svg elements that, upon browser inspection, seem to match
-				// the inner axes rect (i.e. axes with no ticks and ticklabels):
-				var axesRect1 = elm.querySelector('*[class="xlines-above crisp"]');
-				var axesRect2 = elm.querySelector('*[class="ylines-above crisp"]');
-				/* axesRect = this.getOuterRect(axesRect1, axesRect2); */
-				if (!axesRect1 && !axesRect2){
-					continue;
-				}else if(!axesRect1){
-					axesRect = axesRect2.getBBox();
-				}else if(!axesRect2){
-					axesRect = axesRect1.getBBox();
-				}else{
-					// get inner rect:
-					axesRect1 = axesRect1.getBBox();
-					axesRect2 = axesRect2.getBBox();
-					var x = Math.max(axesRect1.x, axesRect2.x);
-					var y = Math.max(axesRect1.y, axesRect2.y);
-					axesRect = {
-						x: x,
-						width: Math.min(axesRect1.width + axesRect1.x, axesRect2.width + axesRect2.x) - x,
-						y: y,
-						height: Math.min(axesRect1.height  + axesRect1.y, axesRect2.height + axesRect2.y) - y,
-					}
-				}
-				// try to find the xlabel, otherwise compute the ticks size:
-				var xlabel = null;
-				var ylabel = null;
-				if(infoLayer){
-					var re = /^(x\d*)(y\d*)$/g;
-					for (var cls of elm.classList){
-						var matches = re.exec(cls);
-						if (matches){
-							xlabel = infoLayer.querySelector(`g[class=g-${matches[1]}title]`);
-							ylabel = infoLayer.querySelector(`g[class=g-${matches[2]}title]`);
-							break;
-						}
-					}
-				}
-				var xElm = xlabel;
-				if(!xlabel){  // if xlabel null or not found, use the xticks:
-					xElm = elm.querySelector('g[class=xaxislayer-above]');
-				}
-				var yElm = ylabel;
-				if(!ylabel){  // if xlabel null or not found, use the yticks:
-					yElm = elm.querySelector('g[class=yaxislayer-above]');
-				}
-				// compute margin (distance between ticks and inner axes border):
-				if (xElm){
-					xElm = xElm.getBBox();
-					margin.bottom = max(margin.bottom, xElm.y + xElm.height - axesRect.y - axesRect.height);
-					// margin.right = max(margin.right, xElm.x + xElm.width - axesRect.x - axesRect.width);
-				}
-				if (yElm){
-					yElm = yElm.getBBox();
-					// margin.top = max(margin.top, axesRect.y - yElm.y);
-					margin.left = max(margin.left, axesRect.x - yElm.x);
-				}
-			}
+
 			return margin;
-		},
-		getOuterRect(elm1, elm2){  // elm1, elm2 are svg elements (or null)
-			if (!elm2){
-				return elm1 ? elm1.getBBox(): elm1;
-			}else if(!elm1){
-				return elm2.getBBox();
-			}
-			var min = Math.min;
-			var max = Math.max;
-			var r1 = elm1.getBBox();
-			var r2 = elm2.getBBox();
-			rect = {
-				x: min(r1.x, r2.x),
-				y: min(r1.y, r2.y)
-			};
-			x2 = max(r1.x + r1.width, r2.x + r2.width);
-			y2 = max(r1.y + r1.height, r2.y + r2.height);
-			rect.width = x2 - rect.x;
-			rect.height = y2 - rect.y;
-			return rect;
 		},
 		getElmSize(domElement){
 			// returns the Array [width, height] of the given dom element size
