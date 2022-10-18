@@ -70,6 +70,9 @@ var PlotsDiv = {
 	created(){
 		// setup non reactive data:
 
+		// space reserved for the params grid ticklabels:
+		this.paramsGridMargin = 3*this.plotfontsize;
+
 		// default Plotly layout. See this.configureLayout for details
 		this.defaultlayout = {
 			autosize: true,  // without this, the inner svg does not expand properly
@@ -699,7 +702,7 @@ var PlotsDiv = {
 
 			if (paramsgrid.x.label || paramsgrid.y.label){
 				var [width, height] = this.getElmSize(this.$refs.rootDiv);
-				var margin = 2*this.plotfontsize;
+				var margin = this.paramsGridMargin;
 				if (paramsgrid.x.label){
 					marginbottom = margin / height;
 				}
@@ -864,19 +867,23 @@ var PlotsDiv = {
 				xref: 'paper',
 				yref: 'paper',
 				showarrow: false,
-				font: {size: this.plotfontsize}
+				font: {size: 1.2*this.plotfontsize}
 			};
 
 			newLayout.annotations = Array.from(this.defaultlayout.annotations);
+			var [width, height] = this.getElmSize(this.$refs.rootDiv);
 			if (paramsgrid.x.label){
 				for (var i=0; i < paramsgrid.x.values.length; i++){
 					var domain = paramsgrid.x.domains[i];
 				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: (domain[1] + domain[0])/2,
 						y: 0,
+						width: (width-this.paramsGridMargin-10)/paramsgrid.x.values.length,
 						xanchor: 'center', /* DO NOT CHANGE THIS */
 						yanchor: 'bottom',
-						text: `${paramsgrid.x.label}: ${paramsgrid.x.values[i]}`
+						text: `${paramsgrid.x.label}: ${paramsgrid.x.values[i]}`,
+						bgcolor: 'rgba(0,0,0,0.1)',
+						bordercolor: '#fff'
 					}));
 				}
 			}
@@ -886,10 +893,13 @@ var PlotsDiv = {
 				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: 0,
 						y: (domain[1] + domain[0])/2,
+						width: (height-this.paramsGridMargin-10)/paramsgrid.y.values.length,
 						xanchor: 'left',
 						yanchor: 'middle', /* DO NOT CHANGE THIS */
 						text: `${paramsgrid.y.label}: ${paramsgrid.y.values[i]}`,
-						textangle: '-90'
+						textangle: '-90',
+						bgcolor: 'rgba(0,0,0,0.1)',
+						bordercolor: '#fff'
 					}));
 				}
 			}
