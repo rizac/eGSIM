@@ -690,16 +690,43 @@ var PlotsDiv = {
 			layout.font.family = window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-family');
 			layout.font.size = this.plotfontsize;
 			var data = [];
-			/*
-			var xdomains = new Array(gridxvalues.length);  // used below to place correctly the x labels of the GRID
-			var ydomains = new Array(gridyvalues.length);  // used below to place correctly the x labels of the GRID
-			*/
-			/* var annotation = this.getAnnotation; */
+			// compute rows, cols, and margins for paramsGrid labels:
+			var colwidth = 1.0;
+			var rowheight = 1.0;
+			var marginleft = 0;
+			var marginbottom = 0;
+			var paramsgrid = this.getParamsGrid();
+
+			if (paramsgrid.x.label || paramsgrid.y.label){
+				var [width, height] = this.getElmSize(this.$refs.rootDiv);
+				var margin = 2*this.plotfontsize;
+				if (paramsgrid.x.label){
+					marginbottom = margin / height;
+				}
+				if (paramsgrid.y.label){
+					marginleft = margin / width;
+				}
+			}
+			var cols = paramsgrid.x.values.length;
+			if (cols > 1 || marginleft){
+				colwidth = (1-marginleft) / cols;
+			}
+			var rows = paramsgrid.y.values.length;
+			if (rows > 1 || marginbottom){
+				rowheight = (1-marginbottom) / rows;
+			}
+
 			var legendgroups = new Set();
 			for (var i = 0; i < plots.length; i++){
 				var [plot, [gridxindex, gridyindex]] = [plots[i], plotsGridIndices[i]];
+				/*
 				var [xdomain, ydomain] = this.computePlotDomain(divElement, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
-				var axisIndex = 1 + gridyindex * gridxvalues.length + gridxindex;
+				*/
+				// compute domains (assure the second domain element is 1 and not, e.g., 0.9999):
+				var xdomain = [marginleft + gridxindex*colwidth, 1+gridxindex == cols? 1 : marginleft+(1+gridxindex)*colwidth];
+				var ydomain = [marginbottom + gridyindex*rowheight, 1+gridyindex == rows ? 1 : marginbottom+(1+gridyindex)*rowheight];
+
+				var axisIndex = 1 + gridyindex * cols + gridxindex;
 				var xaxis = { domain: xdomain, anchor: `y${axisIndex}`, showgrid: this.axisOptions.x.grid.value };
 				var yaxis = { domain: ydomain, anchor: `x${axisIndex}`, showgrid: this.axisOptions.y.grid.value };
 				/*
@@ -794,100 +821,44 @@ var PlotsDiv = {
 				}
 			}
 		},
-		computePlotDomain(divElement, row, col, rows, cols){
-			// computes the sub-plot domain (position and area) according to the row and
-			// col indices. The computed domain will NOT account for axis ticks and
-			// labels, so it might need to be shrunk.
-			// Returns the array [xdomain, ydomain], where xdomain=[x0, x1] and
-			// ydomain=[y0, y1] represent the plot rectangle coordinates in [0, 1], i.e.
-			// relative to the whole plotly figure (note that y axis values are cartesian,
-			// i.e. they increase upwards)
-
-			// get length of 1px, which will be the base for our calculations
-			var [width_, height_] = this.getElmSize(divElement);
-			var width1px = 1/width_;
-			var height1px = 1/height_;
-
-			// compute top and right margin for the grid labels, if any. Default size
-			// is 2px in order not to cut the axis border
-			var vPadding = 2 * height1px;
-			var hPadding = 2 * width1px;
-
-			// calculate plot width and height, setting them at least 10px:
-			var colwidth = Math.max(10 * width1px, (1-2*hPadding) / cols);
-			var rowheight = Math.max(10 * height1px, (1-2*vPadding) / rows);
-			// determine the xdomain [x0, x1]:
-			var xdomain = [hPadding+col*colwidth, hPadding+(1+col)*colwidth];
-			// determine the ydomain [y0, y1]:
-			var ydomain = [vPadding+(rows-row-1)*rowheight, vPadding+(rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
-			return [xdomain, ydomain];
-		},
-		/*computePlotDomain(divElement, row, col, rows, cols){
-			// computes the sub-plot domain (position and area) according to the row and
-			// col indices. The computed domain will not account for axis ticks and
-			// labels, so it might need to be shrunk.
-			// Returns the array [xdomain, ydomain], where xdomain=[x0, x1] and
-			// ydomain=[y0, y1] represent the plot rectangle coordinates in [0, 1], i.e.
-			// relative to the whole plotly figure (note that y axis values are cartesian,
-			// i.e. they increase upwards)
-
-			// get length of 1px, which will be the base for our calculations
-			var [width_, height_] = this.getElmSize(divElement);
-			var width1px = 1/width_;
-			var height1px = 1/height_;
-
-			// compute top and right margin for the grid labels, if any. Default size
-			// is 2px in order not to cut the axis border
-			var minVPadding = 2 * height1px;
-			var minHPadding = 2 * width1px;
-			var vPadding = minVPadding;
-			var hPadding = minHPadding;
-			// now check if we have grid labels to display:
-			var fontsize = this.plotfontsize;
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (this.displayGridLabels_('x', gridxparam)){
-				// there are labels to display on the x axis => increase tt:
-				vPadding = Math.max(2 * fontsize * minHPadding, vPadding);
-			}
-			if (this.displayGridLabels_('y', gridyparam)){
-				// there are labels to display on the y axis => increase rr:
-				hPadding = Math.max(2 * fontsize * width1px, hPadding);
-			}
-
-			// calculate plot width and height, setting them at least 10px:
-			var colwidth = Math.max(10 * width1px, (1-minHPadding-hPadding) / cols);
-			var rowheight = Math.max(10 * height1px, (1-minVPadding-vPadding) / rows);
-			// determine the xdomain [x0, x1]:
-			var xdomain = [hPadding+col*colwidth, hPadding+(1+col)*colwidth];
-			// determine the ydomain [y0, y1]:
-			var ydomain = [vPadding+(rows-row-1)*rowheight, vPadding+(rows-row)*rowheight]; // (y coordinate 0 => bottom , 1 => top)
-			return [xdomain, ydomain];
-		},*/
 		relayout(layout){
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			var displayXGridParams = this.paramnames2showongrid.has(gridxparam) &&
-				this.displayGridLabels('x', gridxparam, this.params[gridxparam]);
-			var displayYGridParams = this.paramnames2showongrid.has(gridyparam) &&
-				this.displayGridLabels('y', gridyparam, this.params[gridyparam]);
+			var paramsgrid = this.getParamsGrid();
+			if (paramsgrid.x.label){
+				paramsgrid.x.domains = new Array(paramsgrid.x.values.length);
+			}
+			if (paramsgrid.y.label){
+				paramsgrid.y.domains = new Array(paramsgrid.y.values.length);
+			}
+			var margin = this.computeLabelAndTickSizeMargins();
+			var newLayout = {};
+			for (var key of Object.keys(layout)){
+				if (!key.startsWith('xaxis') && !key.startsWith('yaxis')){
+					continue;
+				}
+				var domain = layout[key].domain;
+				if (!domain){
+					continue;
+				}
+				var plotIndex = key.substring(5);
+				plotIndex = plotIndex ? parseInt(plotIndex)-1 : 0;
 
-			var newLayout = this.computeLabelAndTickSize(layout, displayXGridParams, displayYGridParams);
-
-			// compute the domain of x and y
-
-			// newLayout has a series of keys denoted as 'xaxis[index].domain',
-			// 'yaxis[index].domain'. Put them into two mseparate Arrays:
-			var xDomainNames = Object.keys(newLayout).filter(key => /^xaxis\d*\.domain$/g.exec(key));
-			xDomainNames.sort((key1, key2) => {
-				var idx1 = /^xaxis(\d*)\.domain$/g.exec(key1)[1] || 1;
-				var idx2 = /^xaxis(\d*)\.domain$/g.exec(key2)[1] || 1;
-				return parseInt(idx1) - parseInt(idx2);
-			});
-			var yDomainNames = Object.keys(newLayout).filter(key => /^yaxis\d*\.domain$/g.exec(key));
-			yDomainNames.sort((key1, key2) => {
-				var idx1 = /^yaxis(\d*)\.domain$/g.exec(key1)[1] || 1;
-				var idx2 = /^yaxis(\d*)\.domain$/g.exec(key2)[1] || 1;
-				return parseInt(idx1) - parseInt(idx2);
-			});
+				if (key.startsWith('x')){
+					newLayout[`${key}.domain`] = [domain[0]+margin.left, domain[1]-margin.right];
+					if (paramsgrid.x.label){
+						if (plotIndex < paramsgrid.x.values.length){
+							paramsgrid.x.domains[plotIndex] = domain;
+						}
+					}
+				}else{
+					newLayout[`${key}.domain`] = [domain[0]+margin.bottom, domain[1]-margin.top];
+					if (paramsgrid.y.label){
+						var cols = paramsgrid.x.values.length;
+						if (plotIndex % cols == 0){
+							paramsgrid.y.domains[parseInt(plotIndex / cols)] = domain;
+						}
+					}
+				}
+			}
 
 			var defAnnotation = {
 				xref: 'paper',
@@ -896,84 +867,71 @@ var PlotsDiv = {
 				font: {size: this.plotfontsize}
 			};
 
-			// Grid X labels: (horizontally on top):
 			newLayout.annotations = Array.from(this.defaultlayout.annotations);
-			if (displayXGridParams){
-				// get the domain of the bottom plots:
-				var gridvalues = this.params[gridxparam];
-				// create the x labels of the vertical grid:
-				for (var [gridvalue, domainName] of gridvalues.map((elm, idx) => [elm, xDomainNames[idx]])){
-					var domain = newLayout[domainName];
+			if (paramsgrid.x.label){
+				for (var i=0; i < paramsgrid.x.values.length; i++){
+					var domain = paramsgrid.x.domains[i];
 				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: (domain[1] + domain[0])/2,
 						y: 0,
 						xanchor: 'center', /* DO NOT CHANGE THIS */
 						yanchor: 'bottom',
-						text: `${gridxparam}: ${gridvalue}`
+						text: `${paramsgrid.x.label}: ${paramsgrid.x.values[i]}`
 					}));
 				}
 			}
-			// Grid Y labels: (vertically on the right)
-			if (displayYGridParams){
-				// get the domain of the bottom plots:
-				var gridvalues = this.params[gridyparam];
-				// get the number of plots columns:
-				var ncols = this.params[gridxparam].length || 1;
-				for (var [gridvalue, domainName] of gridvalues.map((elm, idx) => [elm, yDomainNames[idx*ncols]])){
-					var domain = newLayout[domainName];
+			if (paramsgrid.y.label){
+				for (var i=0; i < paramsgrid.y.values.length; i++){
+					var domain = paramsgrid.y.domains[i];
 				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: 0,
 						y: (domain[1] + domain[0])/2,
 						xanchor: 'left',
 						yanchor: 'middle', /* DO NOT CHANGE THIS */
-						text: `${gridyparam}: ${gridvalue}`,
+						text: `${paramsgrid.y.label}: ${paramsgrid.y.values[i]}`,
 						textangle: '-90'
 					}));
 				}
 			}
 			return newLayout;
 		},
-		computeLabelAndTickSize(layout, displayXGridParams, displayYGridParams){
+		getParamsGrid(){
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			var ret = {x: { values: [''] }, y: { values: [''] }};
+			if (this.paramnames2showongrid.has(gridxparam)){
+				// display params on the grid x axis:
+				ret.x.values = this.params[gridxparam];
+				if (this.displayGridLabels('x', gridxparam, this.params[gridxparam])){
+					ret.x.label = gridxparam;
+				}
+			}
+			if (this.paramnames2showongrid.has(gridyparam)){
+				// display params on the grid y axis:
+				ret.y.values = this.params[gridyparam];
+				if (this.displayGridLabels('y', gridyparam, this.params[gridyparam])){
+					ret.y.label = gridyparam;
+				}
+			}
+			return ret;
+		},
+		computeLabelAndTickSizeMargins(){
 			// recomputes labels and tick sizes based on the currently displayed
 			// plot, returns a 'layout' Object to be passed as 2nd arg to Plotly.relayout
-			var [width, height] = this.getElmSize(this.$refs.rootDiv);
-			// default values (computed values will be ADDED to these values):
-			var marginTop = 0;
-			var marginRight = 0;
-			var fontsize = this.plotfontsize;
-			var marginBottom = displayXGridParams ? 2*fontsize : fontsize/2;
-			var marginLeft = displayYGridParams ? 2*fontsize : fontsize/2;
 			var margin = this.getAxesMargins();
-			margin.top += marginTop;
-			margin.bottom += marginBottom;
-			margin.right += marginRight;
-			margin.left += marginLeft;
-			var [xlabels, ylabels] = this.getAxesLabelsRectangles();
+			/*var [xlabels, ylabels] = this.getAxesLabelsRectangles();
 			if (xlabels.length){
 				margin.bottom += Math.max(...xlabels.map(elm => elm.height));
 			}
 			if (ylabels.length){
 				margin.left += Math.max(...ylabels.map(elm => elm.width));
 			}
-			var newLayout = {};
-			// compute margins as ratio of plot sizes, i.e. in [0, 1]:
-			var [width, height] = this.getElmSize(this.$refs.rootDiv);  // main di size
-			for (var key of Object.keys(layout)){
-				if (key.startsWith('xaxis') && layout[key].domain){
-					var domain = layout[key].domain;  // [x0, x1]
-					newLayout[`${key}.domain`] = [
-						domain[0] + margin.left / width,
-						domain[1] - margin.right / width
-					];
-				}else if (key.startsWith('yaxis') && layout[key].domain){
-					var domain = layout[key].domain;  // [y0, y1]
-					newLayout[`${key}.domain`] = [
-						domain[0] + margin.bottom / height,
-						domain[1] - margin.top / height
-					];
-				}
-			}
-			return newLayout;
+			*/
+			var [width, height] = this.getElmSize(this.$refs.rootDiv);
+			margin.left /= width;
+			margin.right /= width;
+			margin.top /= height;
+			margin.bottom /= height;
+			return margin
 		},
 		getAxesMargins(){
 			// Return an object representing the max margins of all plots, where
@@ -982,27 +940,65 @@ var PlotsDiv = {
 			var margin = { top: 0, bottom: 0, right: 0, left: 0 };
 			var [min, max, abs] = [Math.min, Math.max, Math.abs];
 			var plotDiv = this.$refs.rootDiv;
-			for (var elm of plotDiv.querySelector('g[class=cartesianlayer]').
-					querySelectorAll('g[class^=subplot]')){
+			var certesianLayer = plotDiv.querySelector('g[class=cartesianlayer]');
+			var infoLayer = plotDiv.querySelector('g[class=infolayer]');
+			for (var elm of certesianLayer.querySelectorAll('g[class^=subplot]')){
 				// there are 2 svg elements that, upon browser inspection, seem to match
 				// the inner axes rect (i.e. axes with no ticks and ticklabels):
 				var axesRect1 = elm.querySelector('*[class="xlines-above crisp"]');
 				var axesRect2 = elm.querySelector('*[class="ylines-above crisp"]');
-				axesRect = this.getOuterRect(axesRect1, axesRect2);
-				if (!axesRect){ continue; }
-				// these are the two svg elements of the x and y ticks and ticklabels:
-				var xTicks = elm.querySelector('g[class=xaxislayer-above]');
-				var yTicks = elm.querySelector('g[class=yaxislayer-above]');
-				// compute margin (distance between ticks and inner axes border):
-				if (xTicks){
-					xTicks = xTicks.getBBox();
-					margin.bottom = max(margin.bottom, xTicks.y + xTicks.height - axesRect.y - axesRect.height);
-					margin.right = max(margin.right, xTicks.x + xTicks.width - axesRect.x - axesRect.width);
+				/* axesRect = this.getOuterRect(axesRect1, axesRect2); */
+				if (!axesRect1 && !axesRect2){
+					continue;
+				}else if(!axesRect1){
+					axesRect = axesRect2.getBBox();
+				}else if(!axesRect2){
+					axesRect = axesRect1.getBBox();
+				}else{
+					// get inner rect:
+					axesRect1 = axesRect1.getBBox();
+					axesRect2 = axesRect2.getBBox();
+					var x = Math.max(axesRect1.x, axesRect2.x);
+					var y = Math.max(axesRect1.y, axesRect2.y);
+					axesRect = {
+						x: x,
+						width: Math.min(axesRect1.width + axesRect1.x, axesRect2.width + axesRect2.x) - x,
+						y: y,
+						height: Math.min(axesRect1.height  + axesRect1.y, axesRect2.height + axesRect2.y) - y,
+					}
 				}
-				if (yTicks){
-					yTicks = yTicks.getBBox();
-					margin.top = max(margin.top, axesRect.y - yTicks.y);
-					margin.left = max(margin.left, axesRect.x - yTicks.x);
+				// try to find the xlabel, otherwise compute the ticks size:
+				var xlabel = null;
+				var ylabel = null;
+				if(infoLayer){
+					var re = /^(x\d*)(y\d*)$/g;
+					for (var cls of elm.classList){
+						var matches = re.exec(cls);
+						if (matches){
+							xlabel = infoLayer.querySelector(`g[class=g-${matches[1]}title]`);
+							ylabel = infoLayer.querySelector(`g[class=g-${matches[2]}title]`);
+							break;
+						}
+					}
+				}
+				var xElm = xlabel;
+				if(!xlabel){  // if xlabel null or not found, use the xticks:
+					xElm = elm.querySelector('g[class=xaxislayer-above]');
+				}
+				var yElm = ylabel;
+				if(!ylabel){  // if xlabel null or not found, use the yticks:
+					yElm = elm.querySelector('g[class=yaxislayer-above]');
+				}
+				// compute margin (distance between ticks and inner axes border):
+				if (xElm){
+					xElm = xElm.getBBox();
+					margin.bottom = max(margin.bottom, xElm.y + xElm.height - axesRect.y - axesRect.height);
+					// margin.right = max(margin.right, xElm.x + xElm.width - axesRect.x - axesRect.width);
+				}
+				if (yElm){
+					yElm = yElm.getBBox();
+					// margin.top = max(margin.top, axesRect.y - yElm.y);
+					margin.left = max(margin.left, axesRect.x - yElm.x);
 				}
 			}
 			return margin;
@@ -1027,45 +1023,10 @@ var PlotsDiv = {
 			rect.height = y2 - rect.y;
 			return rect;
 		},
-		getAxesLabelsRectangles(){
-			// Return two Arrays of N `SVGRect`s (N = number of plots on the page):
-			// [xRectangles, yRectangles]
-			var xRect = [];
-			var yRect = [];
-			var xregexp = /g-x\d*title/;
-			var yregexp = /g-y\d*title/;
-			var plotDiv = this.$refs.rootDiv.querySelector('g[class=infolayer]');
-			for (var elm of plotDiv.querySelectorAll('g[class$=title]')){
-				for (var cls of elm.classList){
-					if (xregexp.exec(cls)) {
-						xRect.push(elm.getBBox());
-						break;
-					}else if (yregexp.exec(cls)) {
-						yRect.push(elm.getBBox());
-						break;
-					}
-				}
-			}
-			return [xRect, yRect];
-		},
-		/*displayGridLabels_(axis, paramName){
-			if (this.paramnames2showongrid.has(paramName)){
-				return this.displayGridLabels(axis, paramName, this.params[paramName]);
-			}
-			return false;
-		},*/
 		getElmSize(domElement){
 			// returns the Array [width, height] of the given dom element size
 			return [domElement.offsetWidth, domElement.offsetHeight];
 		},
-		/*getAnnotation(props){
-			return Object.assign({
-				xref: 'paper',
-				yref: 'paper',
-				showarrow: false,
-				font: {size: this.plotfontsize}
-			}, props || {});
-		},*/
 		createLegend(){
 			this.legend = [];
 			var legend = this.legend;
