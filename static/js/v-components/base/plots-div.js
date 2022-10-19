@@ -19,7 +19,6 @@ var PlotsDiv = {
 			drawingPlots: true,
 			// store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
 			watchers: {},
-			paramnames2showongrid: new Set(),  // parameter names to show on the grid
 			// an Array of [legendgroup:str, traceProperties:Object] elements:
 			legend: [],
 			// plots is the data constructed from the received response.
@@ -32,18 +31,15 @@ var PlotsDiv = {
 			//   yaxis: Plotly Object with the yaxis data
 			// }
 			plots: [],
-			// a dict of property names mapped (string) to an array of possible (string) values. This is
-			// built automatically according to all possible values of the each Plot.params Object (see above)
-			params: {},
-			// dict of subplots layout name (string) mapped to a two element Array
-			// [xgrid param name, y grid param name]:
+			// An Array of Param Objects for laying out plots. Each param has at least the function indexOf(plot, idx, plots)
+			// and optionally a value:Array key and a name:str key. If the latter are provided, then the param
+			// is displayable as label on the plot grids
+			params: [],
+			// dict of subplots layout name (string) mapped to an Array of two params dictating the layout.
+			// Params are those implemented in params (se above) or other dummy params created in `setoSelection`
 			gridlayouts: {},
-			// string denoting the selected layout name:
+			// string denoting the selected layout name of gridlayouts (see above)
 			selectedgridlayout: '',
-			// selectedParams below is a dict of property names mapped to a scalar denoting the selected value
-			// it is the keys of this.params without the values of this.gridlayouts[this.selectedgridlayout]
-			// and each param will be displayed on one single-value-choosable combobox
-			selectedParams: {},
 			axisOptions: {
 				// reminder: x.log and y.log determine the type of axis. Plotly has xaxis.type that can be:
 				// ['-', 'linear', 'log', ... other values ], we will set here only 'normal' (log checkbox unselected)
@@ -173,18 +169,19 @@ var PlotsDiv = {
 	},
 	template: `<div v-show='visible' class='d-flex flex-row'>
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
-			<div v-if="Object.keys(selectedParams).length"
-				 class='d-flex flex-row justify-content-around mb-3'>
-				<div v-for='(values, key, index) in selectedParams'
-					 class='d-flex flex-row align-items-baseline'
-					 :class="index > 0 ? 'ms-2' : ''" style="flex: 1 1 auto">
-					<span class='text-nowrap me-1'>{{ key }}</span>
-					<select v-model="selectedParams[key]" class='form-control' style="flex: 1 1 auto">
-						<option v-for='value in params[key]' :value="value">
-							{{ value }}
-						</option>
-					</select>
-				</div>
+			<div v-if="params.length" class='d-flex flex-row justify-content-around mb-3'>
+				<template v-for='(param, index) in params'>
+					<div v-if='param.label && param.value!==undefined && selectedgridlayout && !gridlayouts[selectedgridlayout].includes(param)'
+						 class='d-flex flex-row align-items-baseline'
+						 :class="index > 0 ? 'ms-2' : ''" style="flex: 1 1 auto">
+						<span class='text-nowrap me-1'>{{ param.label }}</span>
+						<select v-model="param.value" class='form-control' style="flex: 1 1 auto">
+							<option v-for='value in param.values' :value="value">
+								{{ value }}
+							</option>
+						</select>
+					</div>
+				</template>
 			</div>
 			<div class='position-relative' style="flex: 1 1 auto">
 				<div :style='{display: drawingPlots ? "flex" : "none"}'
@@ -345,11 +342,11 @@ var PlotsDiv = {
 			this.plots = this.getData(jsondict);
 			// update selection, taking into account previously selected stuff:
 			this.setupSelection();
-			this.watchOn('selectedParams', function (newval, oldval) {
+			this.watchOn('params', function (newval, oldval) {
 				this.newPlot();
 			},{deep: true});
 			this.watchOn('selectedgridlayout', function(newval, oldval){
-				this.gridLayoutChanged(); // which changes this.selectedParams which should call newPlot above
+				this.newPlot(); // which changes this.selectedParams which should call newPlot above
 			});
 			this.setupAxisOptions();
 			this.createLegend();
@@ -377,46 +374,52 @@ var PlotsDiv = {
 		setupSelection(){
 			// sets up selectable params, including those selectable as 'x grid' or 'y rid'.
 			// called once from 'init'
-			var plots = this.plots;
-			var allparams = {};
-			plots.forEach(plotElement => {
-				var plotParams = plotElement.params;
-				for (var key of Object.keys(plotParams)){
-					var paramValue = plotParams[key];
-					if(!(key in allparams)){
-						allparams[key] = new Set();
+			var paramvalues = new Map();
+			this.plots.forEach(plot => {
+				var plotParams = plot.params || {};
+				for (var paramName of Object.keys(plotParams)){
+					if(!paramvalues.has(paramName)){
+						paramvalues.set(paramName, new Set());
 					}
-					allparams[key].add(paramValue);
+					paramvalues.get(paramName).add(plotParams[paramName]);
 				}
 			});
-			// adds a new parameter name to each plot and to all plot
-			// argument multiValue is boolean (false: single value)
-			var addParam = function(multiValue){
-				var newParamName = '';
-				while (newParamName in allparams){
-					newParamName += ' ';
+			var params = [];
+			paramvalues.forEach((pvalues, pname) => {
+				var values = Array.from(pvalues);
+				if (values.every(v => v === null || typeof v === 'number')){  // https://stackoverflow.com/a/1063027
+					values.sort((a, b) => b===null ? 1 : (a===null ? -1 : a - b));
+				}else{
+					values.sort();
 				}
-				allparams[newParamName] = new Set();
-				for (var i=0; i < plots.length; i++){
-					var val = multiValue ? i : 0;
-					plots[i].params[newParamName] = val;
-					allparams[newParamName].add(val);
+				params.push({
+					values: values,
+					label: pname,
+					value: values[0],
+					indexOf(plot, idx, plots){ return this.values.indexOf(plot.params[this.label]); }
+				});
+			});
+
+			// dummy params that might be added below:
+			var singleParam = {
+				values: [''],  // Array of empty values (just to calculate plots width/height)
+				indexOf(plot, idx, plots){
+					return 0;
 				}
-				return newParamName;
-			}
-			// param names with a single choosable value, and multi values:
-			var multiValueParamNames = Object.keys(allparams).filter(key => allparams[key].size > 1);
-			var singleValueParamNames = Object.keys(allparams).filter(key => allparams[key].size == 1);
-			var [paramNames, gridlabels2show] = [[], []];
+			};
+
+			// params with a single choosable value, and multi values:
+			var multiValueParams = params.filter(p => p.values.length > 1);
+			var singleValueParams = params.filter(p => p.values.length == 1);
+			//var [paramNames, gridlabels2show] = [[], []];
 			var gridlayouts = {};
 			var selectedgridlayout = '';
-			// set the param names to be choosen.
 			// DEFINITIONS:
 			// SVP (single value param): a parameter that has the same value for all plots
 			// MVP (multi value param): a parameter that has a unique value for each plot
 			// (note that the case where two plots share the same param value should never happen,
 			// but we cannot check and correct for it)
-			if (multiValueParamNames.length == 0){
+			if (multiValueParams.length == 0){
 				if (plots.length == 1){
 					// case 1 (see DEFINITIONS above): only N>=0 SVPs, and the plots count is one:
 					// nothing complex to do: assure the param count is at least two,
@@ -424,109 +427,64 @@ var PlotsDiv = {
 					// the grid selection will be hidden as nothing can be choosen
 					// if we have a single SVP, and one plot, display the param name for that SVP
 					// on the xgrid above the plot, as to emulate a title, if one wants to:
-					if (singleValueParamNames.length == 1){
-						gridlabels2show.push(singleValueParamNames[0]);
-					}
-					// assure SVPs are at least two:
-					while (singleValueParamNames.length < 2){
-						singleValueParamNames.push(addParam(false));
-					}
-					// set the two SVPs as only choosable grid option (the option will be hidden as
-					// there is nothing else to choose):
-					paramNames = singleValueParamNames.slice(0, 2);
-					gridlayouts['---'] = paramNames;  // the key of gridlayouts is ininfluent
-					selectedgridlayout = '---';
+					params = [singleParam, singleParam];
+					selectedgridlayout = '---';  // any value is irrelevant
+					gridlayouts[selectedgridlayout] = [singleParam, singleParam];
 				}else{
 					// case 2 (see DEFINITIONS above): only N>=0 SVPs and the plots count is more than one:
-					// this should not happen but neverthless provide a 'stack horizontally' and
+					// this should not happen but nevertheless provide a 'stack horizontally' and
 					// 'stack vertically' grid options, by the order specified by building a "fake"
 					// multi-value-param which assigns an incremental index to each plot
 					// assure SVPs are at least one:
-					while (singleValueParamNames.length < 1){
-						singleValueParamNames.push(addParam(false));
-					}
-					// create MVP:
-					multiValueParamNames.push(addParam(true));
+					var multiParam = {
+						values: plots.map(elm => ''), // Array of empty values (just to calculate plots width/height)
+						indexOf(plot, idx, plots){
+							return idx;
+						}
+					};
+					params = [multiParam, singleParam];
 					// set the two combinations of the SVP and the MVP as only choosable grid options
 					// (providing a 'stack horizontally and 'stack vertically' generic names):
-					paramNames = [singleValueParamNames[0], multiValueParamNames[0]];
-					gridlayouts['&harr; stack horizontally'] = [paramNames[1], paramNames[0]];
-					gridlayouts['&varr; stack vertically'] = [paramNames[0], paramNames[1]];
+					gridlayouts['&harr; stack horizontally'] = [multiParam, singleParam];
+					gridlayouts['&varr; stack vertically'] = [singleParam, multiParam];
 					selectedgridlayout = '&varr; stack vertically';
 				}
 			}else{
-				// assure SVPs are at least two:
-				while (singleValueParamNames.length < 2){
-					singleValueParamNames.push(addParam(false));
-				}
-				// take the multi value param and first single-value param:
-				paramNames = multiValueParamNames.concat(singleValueParamNames[0]).concat(singleValueParamNames[1]);
-				gridlabels2show = Array.from(multiValueParamNames);
-				// always provide a grid option selecting a single plot: when chosen, the MVPs will be set
-				// as this.selectedParams and displayed in one or more single <select> on top of the plots
-				gridlayouts['single plot'] = [singleValueParamNames[0], singleValueParamNames[1]];
-				if (multiValueParamNames.length == 1){
+				params = multiValueParams;
+				// always provide a grid option selecting a single plot:
+				gridlayouts['single plot'] = [singleParam, singleParam];
+				if (multiValueParams.length == 1){
 					// case 3 (see DEFINITIONS above): N>=0 SVPs and 1 MVP: basically same as
 					// case 2 above but we do not need to create a fake multi-value param,
 					// we use what we have providing the parameter name in the grid options
 					// (horizontal vs vertical) with the parameter name
 					// instead of generic 'stack horizontally' or 'stack vertically'
-					var svp = singleValueParamNames[0];
-					var mvp = multiValueParamNames[0];
-					gridlayouts[`&harr; ${mvp}`] = [mvp, svp];
-					gridlayouts[`&varr; ${mvp}`] = [svp, mvp];
-					selectedgridlayout = `&varr; ${mvp}`;
+					selectedgridlayout = `&varr; ${multiValueParams[0].label}`;
+					gridlayouts[selectedgridlayout] = [singleValueParam, multiValueParams[0]];
+					gridlayouts[`&harr; ${multiValueParams[0].label}`] = [multiValueParams[0], singleValueParam];
 				}else{
 					// case 4 (see DEFINITIONS above): N>=0 SVPs and M>1 MVPs: build a choosable grid
 					// with all combinations of the given MVPs times 2, as for each couple of P1, P2
 					// we can display the grid as P1xP2 or P2xP1
-					for (var prm1 of multiValueParamNames){
-						for (var prm2 of multiValueParamNames){
+					for (var prm1 of params){
+						for (var prm2 of params){
 							if (prm1 === prm2){
 								continue;
 							}
-							gridlayouts[`&harr; ${prm1} vs. &varr; ${prm2}`] = [prm1, prm2];
+							var gridlayoutname = `&harr; ${prm1.label} vs. &varr; ${prm2.label}`;
+							gridlayouts[gridlayoutname] = [prm1, prm2];
 							if (!selectedgridlayout){ // take the first combination as selected one:
-								selectedgridlayout = `&harr; ${prm1} vs. &varr; ${prm2}`;
+								selectedgridlayout = gridlayoutname;
 							}
 						}
 					}
 				}
 			}
-			// replace sets with sorted Arrays:
-			var params = {};
-			for(var key of paramNames){
-				var values = Array.from(allparams[key]);
-				if (typeof values[0] === 'number'){  // https://stackoverflow.com/a/1063027
-					values.sort((a, b) => a - b);
-				}else{
-					values.sort();
-				}
-				params[key] = values;
-			}
 			// set defaults:
 			this.gridlayouts = gridlayouts;
 			this.selectedgridlayout = selectedgridlayout;
-			this.paramnames2showongrid = new Set(gridlabels2show);
 			this.params = params;
-			// update grid layouts:
-			this.gridLayoutChanged();
-		},
-		gridLayoutChanged(){
-			var params = this.params;
-			var [gridx, gridy] = this.gridlayouts[this.selectedgridlayout];
-			var selectedParams = {};
-			for(var paramName of Object.keys(params)){
-				if (paramName == gridx || paramName == gridy || params[paramName].length <= 1){
-					continue;
-				}
-				// if value is in this.selectedParams, keep that value, otherwise
-				// take the first one:
-				var val = (paramName in this.selectedParams) ? this.selectedParams[paramName] : params[paramName][0];
-				// set as selected param the first value:
-				selectedParams[paramName] = val;
-			}
-			this.selectedParams = selectedParams;
+			this.newPlot();
 		},
 		setupAxisOptions(){
 			// Initializes the values of this.axisOptions based on the plots we have. Axes
@@ -649,30 +607,20 @@ var PlotsDiv = {
 		},
 		createPlotlyDataAndLayout(divElement){
 			var plots = this.plots;
-			var params = this.params;
-			// filter plots according to selectedParams keys, i.e. the parameter names
-			// which are mapped to multiple values AND are not currently set to be displayed on the
-			// grid x or grid y (basically, the parameters which will show up in a combo box on top of the whole plot)
-			// The number of these parameters might be zero: in this case the filter below has no effect and we
-			// still have all plots after the loop. Note also that the filter returns a copy of the original array.
-			for (var key of Object.keys(this.selectedParams)){
-				var val = this.selectedParams[key];
-				plots = plots.filter(plot => plot.params[key] == val);
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			// filter plots according to the value of the parameter which are not displayed as grid param:
+			for (var param of this.params){
+				if (param === gridxparam || param === gridyparam || param.value === undefined){
+					continue;
+				}
+				plots = plots.filter(plot => plot.params[param.label] == param.value);
 			}
 			// console.log('creating plots');
 			this.setupPlotAxis(plots);
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			var gridxvalues = params[gridxparam];
-			var gridyvalues = params[gridyparam];
-			var gridXval2index = new Map(gridxvalues.map((elm, idx) => [elm, idx]));
-			var gridYval2index = new Map(gridyvalues.map((elm, idx) => [elm, idx]));
+
 			// now build an array the same length as plots with each element the grids position [index_x, index_y]
-			var plotsGridIndices = [];
-			for (var plot of plots){
-				var plotXGridIndex = gridXval2index.get(plot.params[gridxparam]);
-				var plotYGridIndex = gridYval2index.get(plot.params[gridyparam]);
-				plotsGridIndices.push([plotXGridIndex, plotYGridIndex]);
-			}
+			var plotsGridIndices = plots.map((plot, idx, plots) =>
+				[gridxparam.indexOf(plot, idx, plots), gridyparam.indexOf(plot, idx, plots)]);
 			var layout = Object.assign({}, this.defaultlayout);
 			this.configureLayout(layout);
 			// synchronize hovermode and hovermode
@@ -698,23 +646,22 @@ var PlotsDiv = {
 			var rowheight = 1.0;
 			var marginleft = 0;
 			var marginbottom = 0;
-			var paramsgrid = this.getParamsGrid();
 
-			if (paramsgrid.x.label || paramsgrid.y.label){
+			if (gridxparam.label || gridyparam.label){
 				var [width, height] = this.getElmSize(this.$refs.rootDiv);
 				var margin = this.paramsGridMargin;
-				if (paramsgrid.x.label){
+				if (gridxparam.label){
 					marginbottom = margin / height;
 				}
-				if (paramsgrid.y.label){
+				if (gridyparam.label){
 					marginleft = margin / width;
 				}
 			}
-			var cols = paramsgrid.x.values.length;
+			var cols = gridxparam.values.length;
 			if (cols > 1 || marginleft){
 				colwidth = (1-marginleft) / cols;
 			}
-			var rows = paramsgrid.y.values.length;
+			var rows = gridyparam.values.length;
 			if (rows > 1 || marginbottom){
 				rowheight = (1-marginbottom) / rows;
 			}
@@ -729,10 +676,7 @@ var PlotsDiv = {
 				var axisIndex = 1 + gridyindex * cols + gridxindex;
 				var xaxis = { domain: xdomain, anchor: `y${axisIndex}`, showgrid: this.axisOptions.x.grid.value };
 				var yaxis = { domain: ydomain, anchor: `x${axisIndex}`, showgrid: this.axisOptions.y.grid.value };
-				/*
-				xdomains[gridxindex] = xaxis.domain;  // used below to place correctly the x labels of the GRID
-				ydomains[gridyindex] = yaxis.domain;  // used below to place correctly the y labels of the GRID
-				*/
+
 				// merge plot xaxis defined in getData with this.defaultxaxis, and then with xaxis.
 				// Priority in case of conflicts goes from right (xaxis) to left (this.defaultxaxis)
 				layout[`xaxis${axisIndex}`] = xaxis = Object.assign({}, this.defaultxaxis, plot.xaxis, xaxis);
@@ -822,13 +766,9 @@ var PlotsDiv = {
 			}
 		},
 		relayout(layout){
-			var paramsgrid = this.getParamsGrid();
-			if (paramsgrid.x.label){
-				paramsgrid.x.domains = new Array(paramsgrid.x.values.length);
-			}
-			if (paramsgrid.y.label){
-				paramsgrid.y.domains = new Array(paramsgrid.y.values.length);
-			}
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			var xdomains = gridxparam.label ? new Array(gridxparam.values.length) : [];
+			var ydomains = gridyparam.label ? new Array(gridyparam.values.length) : [];
 			var margin = this.getPlotsMaxMargin();
 			var newLayout = {};
 			for (var key of Object.keys(layout)){
@@ -844,17 +784,17 @@ var PlotsDiv = {
 
 				if (key.startsWith('x')){
 					newLayout[`${key}.domain`] = [domain[0]+margin.left, domain[1]-margin.right];
-					if (paramsgrid.x.label){
-						if (plotIndex < paramsgrid.x.values.length){
-							paramsgrid.x.domains[plotIndex] = domain;
+					if (gridxparam.label){
+						if (plotIndex < gridxparam.values.length){
+							xdomains[plotIndex] = domain;
 						}
 					}
 				}else{
 					newLayout[`${key}.domain`] = [domain[0]+margin.bottom, domain[1]-margin.top];
-					if (paramsgrid.y.label){
-						var cols = paramsgrid.x.values.length;
+					if (gridyparam.label){
+						var cols = gridxparam.values.length;
 						if (plotIndex % cols == 0){
-							paramsgrid.y.domains[parseInt(plotIndex / cols)] = domain;
+							ydomains[parseInt(plotIndex / cols)] = domain;
 						}
 					}
 				}
@@ -869,40 +809,40 @@ var PlotsDiv = {
 
 			newLayout.annotations = Array.from(this.defaultlayout.annotations);
 			var [width, height] = this.getElmSize(this.$refs.rootDiv);
-			if (paramsgrid.x.label){
-				for (var i=0; i < paramsgrid.x.values.length; i++){
-					var domain = paramsgrid.x.domains[i];
-					var w = width - (paramsgrid.y.label ? this.paramsGridMargin : 0);
+			if (gridxparam.label){
+				for (var i=0; i < gridxparam.values.length; i++){
+					var domain = xdomains[i];
+					var w = width - (gridyparam.label ? this.paramsGridMargin : 0);
 					// avoid label overlapping by removing 3 pixel from left and right:
-					w-= 6 * paramsgrid.x.values.length;
+					w-= 6 * gridxparam.values.length;
 				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: (domain[1] + domain[0])/2,
 						y: 0,
-						width: w/paramsgrid.x.values.length,
+						width: w/gridxparam.values.length,
 						height: 2*this.paramsGridMargin/3,
 						xanchor: 'center', /* DO NOT CHANGE THIS */
 						yanchor: 'bottom',
-						text: `${paramsgrid.x.label}: ${paramsgrid.x.values[i]}`,
+						text: `${gridxparam.label}: ${gridxparam.values[i]}`,
 						bgcolor: 'rgba(0,102,133,0.1)',
 						borderwidth: 1,
 						bordercolor: 'rgba(0,102,133,0.4)',
 					}));
 				}
 			}
-			if (paramsgrid.y.label){
-				for (var i=0; i < paramsgrid.y.values.length; i++){
-					var domain = paramsgrid.y.domains[i];
-					var w = height - (paramsgrid.x.label ? this.paramsGridMargin : 0);
+			if (gridyparam.label){
+				for (var i=0; i < gridyparam.values.length; i++){
+					var domain = ydomains[i];
+					var w = height - (gridxparam.label ? this.paramsGridMargin : 0);
 					// avoid label overlapping by removing 3 pixel from top and bottom:
-					w-= 6 * paramsgrid.y.values.length;
+					w-= 6 * gridyparam.values.length;
 				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: 0,
 						y: (domain[1] + domain[0])/2,
-						width: w/paramsgrid.y.values.length,
+						width: w/gridyparam.values.length,
 						height: 2*this.paramsGridMargin/3,
 						xanchor: 'left',
 						yanchor: 'middle', /* DO NOT CHANGE THIS */
-						text: `${paramsgrid.y.label}: ${paramsgrid.y.values[i]}`,
+						text: `${gridyparam.label}: ${gridyparam.values[i]}`,
 						textangle: '-90',
 						bgcolor: 'rgba(0,102,133,0.1)',
 						borderwidth: 1,
@@ -911,25 +851,6 @@ var PlotsDiv = {
 				}
 			}
 			return newLayout;
-		},
-		getParamsGrid(){
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			var ret = {x: { values: [''] }, y: { values: [''] }};
-			if (this.paramnames2showongrid.has(gridxparam)){
-				// display params on the grid x axis:
-				ret.x.values = this.params[gridxparam];
-				if (this.displayGridLabels('x', gridxparam, this.params[gridxparam])){
-					ret.x.label = gridxparam;
-				}
-			}
-			if (this.paramnames2showongrid.has(gridyparam)){
-				// display params on the grid y axis:
-				ret.y.values = this.params[gridyparam];
-				if (this.displayGridLabels('y', gridyparam, this.params[gridyparam])){
-					ret.y.label = gridyparam;
-				}
-			}
-			return ret;
 		},
 		getPlotsMaxMargin(){
 			// Return an object representing the max margins of all plots, where
