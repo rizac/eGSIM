@@ -875,31 +875,41 @@ var PlotsDiv = {
 			if (paramsgrid.x.label){
 				for (var i=0; i < paramsgrid.x.values.length; i++){
 					var domain = paramsgrid.x.domains[i];
+					var w = width - (paramsgrid.y.label ? this.paramsGridMargin : 0);
+					// avoid label overlapping by removing 3 pixel from left and right:
+					w-= 6 * paramsgrid.x.values.length;
 				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: (domain[1] + domain[0])/2,
 						y: 0,
-						width: (width-this.paramsGridMargin-10)/paramsgrid.x.values.length,
+						width: w/paramsgrid.x.values.length,
+						height: 2*this.paramsGridMargin/3,
 						xanchor: 'center', /* DO NOT CHANGE THIS */
 						yanchor: 'bottom',
 						text: `${paramsgrid.x.label}: ${paramsgrid.x.values[i]}`,
-						bgcolor: 'rgba(0,0,0,0.1)',
-						bordercolor: '#fff'
+						bgcolor: 'rgba(0,102,133,0.1)',
+						borderwidth: 1,
+						bordercolor: 'rgba(0,102,133,0.4)',
 					}));
 				}
 			}
 			if (paramsgrid.y.label){
 				for (var i=0; i < paramsgrid.y.values.length; i++){
 					var domain = paramsgrid.y.domains[i];
+					var w = height - (paramsgrid.x.label ? this.paramsGridMargin : 0);
+					// avoid label overlapping by removing 3 pixel from top and bottom:
+					w-= 6 * paramsgrid.y.values.length;
 				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
 						x: 0,
 						y: (domain[1] + domain[0])/2,
-						width: (height-this.paramsGridMargin-10)/paramsgrid.y.values.length,
+						width: w/paramsgrid.y.values.length,
+						height: 2*this.paramsGridMargin/3,
 						xanchor: 'left',
 						yanchor: 'middle', /* DO NOT CHANGE THIS */
 						text: `${paramsgrid.y.label}: ${paramsgrid.y.values[i]}`,
 						textangle: '-90',
-						bgcolor: 'rgba(0,0,0,0.1)',
-						bordercolor: '#fff'
+						bgcolor: 'rgba(0,102,133,0.1)',
+						borderwidth: 1,
+						bordercolor: 'rgba(0,102,133,0.4)',
 					}));
 				}
 			}
