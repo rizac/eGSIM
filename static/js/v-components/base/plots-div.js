@@ -341,7 +341,7 @@ var PlotsDiv = {
 			// convert data:
 			this.plots = this.getData(jsondict);
 			// update selection, taking into account previously selected stuff:
-			this.setupSelection();
+			this.setupParams();
 			this.watchOn('params', function (newval, oldval) {
 				this.newPlot();
 			},{deep: true});
@@ -371,9 +371,9 @@ var PlotsDiv = {
 			var watch = this.$watch(key, callback, options || {});
 			this.watchers[key] = watch;
 		},
-		setupSelection(){
-			// sets up selectable params, including those selectable as 'x grid' or 'y rid'.
-			// called once from 'init'
+		setupParams(){
+			// sets up the params implemented on each plot. Params are used to select
+			// specific plots to show, or to layout plots on a XY grid
 			var paramvalues = new Map();
 			this.plots.forEach(plot => {
 				var plotParams = plot.params || {};
@@ -384,23 +384,27 @@ var PlotsDiv = {
 					paramvalues.get(paramName).add(plotParams[paramName]);
 				}
 			});
+			// create an Array of params object (params mapped to a single value are discarded):
 			var params = [];
 			paramvalues.forEach((pvalues, pname) => {
-				var values = Array.from(pvalues);
-				if (values.every(v => v === null || typeof v === 'number')){  // https://stackoverflow.com/a/1063027
-					values.sort((a, b) => b===null ? 1 : (a===null ? -1 : a - b));
-				}else{
-					values.sort();
+				if(pvalues.size > 1){
+					var values = Array.from(pvalues);
+					if (values.some(v => v!==null) && values.every(v => v === null || typeof v === 'number')){
+						values.sort((a, b) => b===null ? 1 : (a===null ? -1 : a - b));  // https://stackoverflow.com/a/1063027
+					}else{
+						values.sort();
+					}
+					params.push({
+						values: values,
+						label: pname,
+						value: values[0],
+						indexOf(plot, idx, plots){ return this.values.indexOf(plot.params[this.label]); }
+					});
 				}
-				params.push({
-					values: values,
-					label: pname,
-					value: values[0],
-					indexOf(plot, idx, plots){ return this.values.indexOf(plot.params[this.label]); }
-				});
 			});
 
-			// dummy params that might be added below:
+			// dummy params that might be added below. It has no label (=>cannot be on the grid)
+			// and no value (=>cannot be selectable via <select> controls)
 			var singleParam = {
 				values: [''],  // Array of empty values (just to calculate plots width/height)
 				indexOf(plot, idx, plots){
@@ -408,34 +412,17 @@ var PlotsDiv = {
 				}
 			};
 
-			// params with a single choosable value, and multi values:
-			var multiValueParams = params.filter(p => p.values.length > 1);
-			var singleValueParams = params.filter(p => p.values.length == 1);
-			//var [paramNames, gridlabels2show] = [[], []];
 			var gridlayouts = {};
 			var selectedgridlayout = '';
-			// DEFINITIONS:
-			// SVP (single value param): a parameter that has the same value for all plots
-			// MVP (multi value param): a parameter that has a unique value for each plot
-			// (note that the case where two plots share the same param value should never happen,
-			// but we cannot check and correct for it)
-			if (multiValueParams.length == 0){
+			if (params.length == 0){
 				if (this.plots.length == 1){
-					// case 1 (see DEFINITIONS above): only N>=0 SVPs, and the plots count is one:
-					// nothing complex to do: assure the param count is at least two,
-					// take the first two and provide a single possible grid selection (based on those two parameters)
-					// the grid selection will be hidden as nothing can be choosen
-					// if we have a single SVP, and one plot, display the param name for that SVP
-					// on the xgrid above the plot, as to emulate a title, if one wants to:
+					// config this Vue Component with a 1x1 grid of plots non selectable and with no grid labels:
 					params = [singleParam, singleParam];
 					selectedgridlayout = '---';  // any value is irrelevant
 					gridlayouts[selectedgridlayout] = [singleParam, singleParam];
 				}else{
-					// case 2 (see DEFINITIONS above): only N>=0 SVPs and the plots count is more than one:
-					// this should not happen but nevertheless provide a 'stack horizontally' and
-					// 'stack vertically' grid options, by the order specified by building a "fake"
-					// multi-value-param which assigns an incremental index to each plot
-					// assure SVPs are at least one:
+					// config this Vue Component with two selectable 1xn or nx1 grids of plots,
+					// but without grid labels:
 					var multiParam = {
 						values: plots.map(elm => ''), // Array of empty values (just to calculate plots width/height)
 						indexOf(plot, idx, plots){
@@ -443,29 +430,22 @@ var PlotsDiv = {
 						}
 					};
 					params = [multiParam, singleParam];
-					// set the two combinations of the SVP and the MVP as only choosable grid options
-					// (providing a 'stack horizontally and 'stack vertically' generic names):
 					gridlayouts['&harr; stack horizontally'] = [multiParam, singleParam];
 					gridlayouts['&varr; stack vertically'] = [singleParam, multiParam];
 					selectedgridlayout = '&varr; stack vertically';
 				}
 			}else{
-				params = multiValueParams;
 				// always provide a grid option selecting a single plot:
 				gridlayouts['single plot'] = [singleParam, singleParam];
-				if (multiValueParams.length == 1){
-					// case 3 (see DEFINITIONS above): N>=0 SVPs and 1 MVP: basically same as
-					// case 2 above but we do not need to create a fake multi-value param,
-					// we use what we have providing the parameter name in the grid options
-					// (horizontal vs vertical) with the parameter name
-					// instead of generic 'stack horizontally' or 'stack vertically'
-					selectedgridlayout = `&varr; ${multiValueParams[0].label}`;
-					gridlayouts[selectedgridlayout] = [singleValueParam, multiValueParams[0]];
-					gridlayouts[`&harr; ${multiValueParams[0].label}`] = [multiValueParams[0], singleValueParam];
+				if (params.length == 1){
+					// config this Vue Component with two selectable 1xn or nx1 grids of plots,
+					// with the grid labels displayed according to the only param:
+					selectedgridlayout = `&varr; ${params[0].label}`;
+					gridlayouts[selectedgridlayout] = [singleValueParam, params[0]];
+					gridlayouts[`&harr; ${params[0].label}`] = [params[0], singleValueParam];
 				}else{
-					// case 4 (see DEFINITIONS above): N>=0 SVPs and M>1 MVPs: build a choosable grid
-					// with all combinations of the given MVPs times 2, as for each couple of P1, P2
-					// we can display the grid as P1xP2 or P2xP1
+					// config this Vue Component with n>2 selectable grids of plots,
+					// with the grid labels displayed according to the selected params:
 					for (var prm1 of params){
 						for (var prm2 of params){
 							if (prm1 === prm2){
@@ -484,7 +464,6 @@ var PlotsDiv = {
 			this.gridlayouts = gridlayouts;
 			this.selectedgridlayout = selectedgridlayout;
 			this.params = params;
-			this.newPlot();
 		},
 		setupAxisOptions(){
 			// Initializes the values of this.axisOptions based on the plots we have. Axes
@@ -823,7 +802,7 @@ var PlotsDiv = {
 						xanchor: 'center', /* DO NOT CHANGE THIS */
 						yanchor: 'bottom',
 						text: `${gridxparam.label}: ${gridxparam.values[i]}`,
-						bgcolor: 'rgba(0,102,133,0.1)',
+						bgcolor: 'rgba(0,92,103,0.1)',
 						borderwidth: 1,
 						bordercolor: 'rgba(0,102,133,0.4)',
 					}));
@@ -844,7 +823,7 @@ var PlotsDiv = {
 						yanchor: 'middle', /* DO NOT CHANGE THIS */
 						text: `${gridyparam.label}: ${gridyparam.values[i]}`,
 						textangle: '-90',
-						bgcolor: 'rgba(0,102,133,0.1)',
+						bgcolor: 'rgba(0,92,103,0.1)',
 						borderwidth: 1,
 						bordercolor: 'rgba(0,102,133,0.4)',
 					}));
