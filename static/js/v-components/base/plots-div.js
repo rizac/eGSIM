@@ -169,10 +169,10 @@ var PlotsDiv = {
 	},
 	template: `<div v-show='visible' class='d-flex flex-row'>
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
-			<div v-if="params.length" class='d-flex flex-row justify-content-around mb-3'>
+			<div v-if="params.length" class='d-flex flex-row justify-content-around'>
 				<template v-for='(param, index) in params'>
 					<div v-if='param.label && param.value!==undefined && selectedgridlayout && !gridlayouts[selectedgridlayout].includes(param)'
-						 class='d-flex flex-row align-items-baseline'
+						 class='d-flex flex-row align-items-baseline mb-3'
 						 :class="index > 0 ? 'ms-2' : ''" style="flex: 1 1 auto">
 						<span class='text-nowrap me-1'>{{ param.label }}</span>
 						<select v-model="param.value" class='form-control' style="flex: 1 1 auto">
@@ -420,7 +420,7 @@ var PlotsDiv = {
 			// (note that the case where two plots share the same param value should never happen,
 			// but we cannot check and correct for it)
 			if (multiValueParams.length == 0){
-				if (plots.length == 1){
+				if (this.plots.length == 1){
 					// case 1 (see DEFINITIONS above): only N>=0 SVPs, and the plots count is one:
 					// nothing complex to do: assure the param count is at least two,
 					// take the first two and provide a single possible grid selection (based on those two parameters)
