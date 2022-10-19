@@ -722,9 +722,6 @@ var PlotsDiv = {
 			var legendgroups = new Set();
 			for (var i = 0; i < plots.length; i++){
 				var [plot, [gridxindex, gridyindex]] = [plots[i], plotsGridIndices[i]];
-				/*
-				var [xdomain, ydomain] = this.computePlotDomain(divElement, gridyindex, gridxindex, gridyvalues.length, gridxvalues.length);
-				*/
 				// compute domains (assure the second domain element is 1 and not, e.g., 0.9999):
 				var xdomain = [marginleft + gridxindex*colwidth, 1+gridxindex == cols? 1 : marginleft+(1+gridxindex)*colwidth];
 				var ydomain = [marginbottom + gridyindex*rowheight, 1+gridyindex == rows ? 1 : marginbottom+(1+gridyindex)*rowheight];
