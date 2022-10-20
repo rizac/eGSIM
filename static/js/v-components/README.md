@@ -102,14 +102,12 @@ Vue might look at least like this:
 ```
 EGSIM.component('my-form', {
    mixins: [FormDataHTTPClient],
-   props: {
-   }
    template: `<form novalidate @submit.prevent="mySubmitFunc">
        <button type='submit'>Ok</button>
    </form>`
    methods: {
-       mySubmitFunc(){
-           this.submit().then(response => {
+       submit(){
+           this.post().then(response => {
                this.$emit('submitted', response);
            }
        }
@@ -163,21 +161,20 @@ Vue might look at least like this:
 EGSIM.component('my-plot-div', {
     mixins: [PlotsDiv],
     methods: {
-        getData(responseObject){},
-        displayGridLabels(axis, paramName, paramValues){}
-        configureLayout(layout){}
+        createPlotlyDataAndLayout(responseObject){}
     }
 });
 
 ```
-Among the three methods above one is mandatory (`getData`) and 
-two optional. These methods dictate how to display 
-plots and the controls of the plot grid.
+Where the only required method to "subclass" is:
 
-### `getData(responseObject)`
+### `createPlotlyDataAndLayout(responseObject)`
 
-(mandatory) return from the given response object an Array of Objects.
-Each Object represents a sub-plot to be visualized, in the form:
+Return the plotly data (Array) and layout (Object) from the given response object.
+Some properties of both Objects might be overwritten, e.g. those related to plot
+placement and size.
+Plotly layout ref is here: https://plotly.com/javascript/reference/layout, whereas
+Plotly data is an Array of Objects representing a plot:
 
 ```javascript
 {
@@ -188,7 +185,7 @@ Each Object represents a sub-plot to be visualized, in the form:
 }
 ```
 
-#### Function arguments:
+#### Plotly data arguments:
  
  - `traces` Array of Trace Objects (lines, points, bars) e.g.:
     ```
@@ -225,20 +222,18 @@ Each Object represents a sub-plot to be visualized, in the form:
       includes several controls such as log axis, download actions and so on (this
       behaviour could anyway change in the future, and the right panel shown anyway)
    
- - `params` Object defining the plot properties (String -> Any scalar), e.g. 
+ - `params` eGSIM specific property (ignored by Plotly), 
+    define the plot parameters (String -> Any scalar), e.g. 
     ```
     {magnitude: 5, xlabel: 'PGA', 'PGV': 0.01}
     ```
-    The property names ('magnitude', 'xlabel' and 'PGV' in the example above) 
-    will be collected and made selectable on the GUI, 
-    so that users can choose two of them on the X and Y axis in order 
-    display plot in grids, where each plot is
-    placed on the grid according to its parameters values.
+    Params dictate how plots should be selected (e.g., show only plots of 
+    magnitude 5) and arranged in grid layouts (e.g. show plot on a grid where x:
+    magnitude values and y: PGA values).
     
-    Consequently, all traces must return the same `params`, i.e,. Objects
-    with the same keys. If `params` is always composed of the same single 
-    key and the same value, then in this
-    case it's used to display the main plot title as `${key}: ${value}`.
+    All traces must return the same `params`, i.e,. Objects
+    with the same keys. `params` that are mapped to the same value for all plots
+    will be discarded.
 
   - `xaxis` Object of x axis properties, e.g.:  
     ```
@@ -252,34 +247,6 @@ Each Object represents a sub-plot to be visualized, in the form:
 
  - `yaxis` 
    A `dict` of y axis properties. See `xaxis` above for details.
-          
-
-### `displayGridLabels(axis, paramName, paramValues)`
-
-(optional) return true / false to specify if the given parameter should be displayed
-as grid parameter along the specified axis. In the default implementation
-of `plot-div.js`, return `true` if `paramValues.length > 1`.
-
-#### Function arguments:
-
- - `axis` String, either 'x' or 'y'
- - `paramName` The string denoting the parameter name along the given axis
- - `paramValues` Array of the values of the parameter keyed by 'paramName'
-
-
-### `configureLayout(layout)`
-
-(optional configure the `layout` Object to be passed to plotly (for details, see
-https://plotly.com/javascript/reference/layout/). 
-Note that the `layout` keys `font.family` and `font.size` will be 
-overwritten if present as they need to be equal to the HTML page in order 
-to reliably calculate spaces and sizes.
-
-#### Function argument:
-
- - `layout` Object copied from `this.defaultlayout` which can be modified
-   here. Note that this function does not need to return any value
-   
 
 ## FLATFILE SELECT
 (`v-components/flatfiles.js`)
