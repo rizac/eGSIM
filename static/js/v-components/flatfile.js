@@ -256,7 +256,7 @@ EGSIM.component('flatfile-plot-div', {
 	mixins: [PlotsDiv],
 	methods: {
 		// The next two methods are overwritten from PlotsDiv. See README.md for details
-		getData(responseObject){
+		createPlotlyDataAndLayout(responseObject){
 			var jsondict = responseObject;
 			var hist = true;
 			// set plotly data from jsondict:
@@ -307,11 +307,8 @@ EGSIM.component('flatfile-plot-div', {
 				title: jsondict.ylabel || 'Count'
 			};
 
-			var params = {};  // {'Magnitude Distance plot': title};
-			return [{traces: [trace], params: params, xaxis: xaxis, yaxis: yaxis}];
-		},
-		displayGridLabels(axis, paramName, paramValues){ //
-			return true;  // we have  single param (sort of title on the x axis), alswya show
+			var data = [{traces: [trace], params: {}, xaxis: xaxis, yaxis: yaxis}];
+			return [data, {}];
 		}
 	}
 });

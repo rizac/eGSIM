@@ -96,7 +96,7 @@ EGSIM.component('trellis-plot-div', {
 	mixins: [PlotsDiv],  // defined in plot-div.js
 	methods: {
 		// The next two methods are overwritten from PlotsDiv. See README.md for details
-		getData(responseObject){
+		createPlotlyDataAndLayout(responseObject){
 			var ln10 = Math.log(10);
 			var mathlog = Math.log;
 			function log10(val) {  // https://stackoverflow.com/a/3019290
@@ -191,10 +191,7 @@ EGSIM.component('trellis-plot-div', {
 					});
 				}
 			}
-			return plots;
-		},
-		displayGridLabels(axis, paramName, paramValues){
-			return paramValues.length > 1 && paramName != 'imt';
+			return [plots, {}];
 		}
 	}
 });

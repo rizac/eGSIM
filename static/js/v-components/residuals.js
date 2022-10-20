@@ -53,7 +53,7 @@ EGSIM.component('residuals-plot-div', {
 	mixins: [PlotsDiv],  // defined in plot-div.js
 	methods: {
 		// The next two methods are overwritten from PlotsDiv. See README.md for details
-		getData(responseObject){
+		createPlotlyDataAndLayout(responseObject){
 			// defined normal dist. constants:
 			var E = Math.E;
 			var PI = Math.PI;
@@ -203,10 +203,7 @@ EGSIM.component('residuals-plot-div', {
 					}
 				}
 			}
-			return plots;
-		},
-		displayGridLabels(axis, paramName, paramValues){
-			return paramValues.length > 1 && paramName != 'imt';
+			return [plots, {}];
 		}
 	},
 	computed: {  // "override" computed property from superclass
