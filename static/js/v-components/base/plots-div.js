@@ -420,8 +420,8 @@ var PlotsDiv = {
 					// config this Vue Component with two selectable 1xn or nx1 grids of plots,
 					// with the grid labels displayed according to the only param:
 					selectedgridlayout = `${varr} ${params[0].label}`;
-					gridlayouts[selectedgridlayout] = [singleValueParam, params[0]];
-					gridlayouts[`${harr} ${params[0].label}`] = [params[0], singleValueParam];
+					gridlayouts[selectedgridlayout] = [singleParam, params[0]];
+					gridlayouts[`${harr} ${params[0].label}`] = [params[0], singleParam];
 				}else{
 					// config this Vue Component with n>2 selectable grids of plots,
 					// with the grid labels displayed according to the selected params:
