@@ -255,8 +255,7 @@ EGSIM.component('flatfile-plot', {
 EGSIM.component('flatfile-plot-div', {
 	mixins: [PlotsDiv],
 	methods: {
-		// The next two methods are overwritten from PlotsDiv. See README.md for details
-		createPlotlyDataAndLayout(responseObject){
+		getPlots(responseObject){
 			var jsondict = responseObject;
 			var hist = true;
 			// set plotly data from jsondict:
@@ -298,17 +297,19 @@ EGSIM.component('flatfile-plot-div', {
 
 			// modify here the default layout:
 			// this.defaultlayout.title = `Magnitude Distance plot (${trace.x.length} records in database)`;
-			var data = [ trace ];
-			var xaxis = {
-				// type: 'log',
-				title: jsondict.xlabel || 'Count'
-			};
-			var yaxis = {
-				title: jsondict.ylabel || 'Count'
-			};
-
-			var data = [{traces: [trace], params: {}, xaxis: xaxis, yaxis: yaxis}];
-			return [data, {}];
+			var plot = {
+				data: [ trace ],
+				params: {},
+				layout: {
+					xaxis: {
+						title: jsondict.xlabel || 'Count'
+					},
+					yaxis: {
+						title: jsondict.ylabel || 'Count'
+					}
+				}
+			}
+			return [plot];
 		}
 	}
 });

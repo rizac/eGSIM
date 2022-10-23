@@ -95,8 +95,7 @@ EGSIM.component('trellis', {
 EGSIM.component('trellis-plot-div', {
 	mixins: [PlotsDiv],  // defined in plot-div.js
 	methods: {
-		// The next two methods are overwritten from PlotsDiv. See README.md for details
-		createPlotlyDataAndLayout(responseObject){
+		getPlots(responseObject){
 			var ln10 = Math.log(10);
 			var mathlog = Math.log;
 			function log10(val) {  // https://stackoverflow.com/a/3019290
@@ -180,18 +179,22 @@ EGSIM.component('trellis-plot-div', {
 
 					}, this);
 					plots.push({
-						traces: traces,
+						data: traces,
 						params: params,
-						xaxis: {
-							title: data.xlabel
-						},
-						yaxis: {
-							title: fig.ylabel, type: 'log'
+						layout: {
+							xaxis: {
+								title: data.xlabel,
+								type: 'linear'
+							},
+							yaxis: {
+								title: fig.ylabel,
+								type: 'log'
+							}
 						}
 					});
 				}
 			}
-			return [plots, {}];
+			return plots;
 		}
 	}
 });
