@@ -3,14 +3,13 @@ of a response Object sent from the server */
 var PlotsDiv = {
 	mixins: [DataDownloader],
 	props: {
-		data: {type: Object, default: () => { return{} }},
+		data: {type: Object, default: () => { return {} }},
 		downloadUrl: String // base url for download actions
 	},
 	data(){
 		return {
-			visible: false, // see watcher below
 			// boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
-			drawingPlots: true,
+			drawingPlots: false,
 			// an Array of [legendgroup:str, traceProperties:Object] elements:
 			legend: [],
 			// An Array of Param Objects for laying out plots. Each param has at least the function indexOf(plot, idx, plots)
@@ -33,7 +32,9 @@ var PlotsDiv = {
 					log: {disabled: false, value: undefined},
 					sameRange: {disabled: false, value: undefined},
 					grid: {disabled: false, value: undefined}
-				}
+				},
+				hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
+				dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
 			},
 			// the wait bar while drawing plots
 			waitbar: {
@@ -67,9 +68,19 @@ var PlotsDiv = {
 			paper_bgcolor: 'rgba(0,0,0,0)',
 			showlegend: false,
 			legend: { bgcolor: 'rgba(0,0,0,0)'},
-			margin: {r: 0, b: 0, t: 0, l:0, pad:0},
+			margin: { r: 0, b: 0, t: 0, l: 0, pad: 0 },
 			font: font,
-			annotations: []
+			annotations: [],
+			xaxis: {  // https://plotly.com/javascript/reference/layout/xaxis/#layout-xaxis
+				mirror: true,
+				zeroline: false,
+				linewidth: 1
+			},
+			yaxis: {
+				mirror: true,
+				zeroline: false,
+				linewidth: 1
+			}
 		};
 		// space reserved for the params grid ticklabels:
 		this.paramsGridMargin = 3 * font.size || 36;
@@ -84,8 +95,6 @@ var PlotsDiv = {
 			hovermodeLabels: {closest: 'show closest point', x: 'compare data',false: 'do nothing'},
 			dragmodes: ["zoom", "pan"],  // "select", "lasso" are useless. false does not seem to work (it's zoom)
 			dragmodeLabels: {zoom: 'zoom', pan: 'pan'},
-			hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
-			dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
 		};
 
 		// the plotly config for plots. See
@@ -95,11 +104,6 @@ var PlotsDiv = {
 			modeBarButtonsToRemove: ['sendDataToCloud', 'toImage'],
 			displaylogo: false
 		};
-
-		// default layout axis props. https://plotly.com/javascript/reference/layout/xaxis/#layout-xaxis
-		// Note that domain and anchor props will be overridden
-		this.defaultxaxis = { mirror: true, zeroline: false, linewidth: 1 };
-		this.defaultyaxis = { mirror: true, zeroline: false, linewidth: 1 };
 
 		this.colors = {
 			_i: -1,
@@ -138,21 +142,13 @@ var PlotsDiv = {
 		};
 	},
 	activated(){  // when component become active
-		/*if (this.visible){  // FIXME need visible or it is enough to check arg below?
-			var layout = this.getPlotlyDataAndLayout()[1];
-			var newLayout = this.relayoutPositions(layout);
-			this.relayout(newLayout);
-		}*/
+
 	},
 	watch: {
-		// NOTE: There are several data variable that are watched dynamically
-		// to avoid redrawing and recalculating the plot with recursive loops
-		// See 'init' (calling 'turnWatchersOn')
 		data: {
 			immediate: true,
 			handler(newval, oldval){
-				this.visible = (typeof newval === 'object') && (Object.keys(newval).length);
-				if (this.visible){ // see prop below
+				if (typeof newval === 'object' && Object.keys(newval).length){
 					this.init.call(this, newval);
 				}
 			}
@@ -160,13 +156,17 @@ var PlotsDiv = {
 		params: {
 			deep: true,
 			handler (newval, oldval) {
-				if(!this.drawingPlots){ this.newPlot(); }
+				if(!this.drawingPlots){
+					this.newPlot();
+				}
 			}
 		},
 		selectedgridlayout: function(newval, oldval){
-			if(!this.drawingPlots){ this.newPlot(); }
+			if(!this.drawingPlots){
+				this.newPlot();
+			}
 		},
-		layoutcontrols: {
+		'layoutcontrols.xaxys': {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
@@ -174,6 +174,23 @@ var PlotsDiv = {
 				var newLayout = this.relayoutAxis(data, layout);
 				this.relayout(newLayout);
 			}
+		},
+		'layoutcontrols.yaxys': {
+			deep: true,
+			handler(newval, oldval){
+				if(this.drawingPlots){ return; }
+				var [data, layout]  = this.getPlotlyDataAndLayout();
+				var newLayout = this.relayoutAxis(data, layout);
+				this.relayout(newLayout);
+			}
+		},
+		'layoutcontrols.dragmode': function(newval, oldval){
+			if(this.drawingPlots){ return; }
+			this.relayout({ dragmode: newval });
+		},
+		'layoutcontrols.hovermode': function(newval, oldval){
+			if(this.drawingPlots){ return; }
+			this.relayout({ hovermode: newval });
 		}
 	},
 	computed: {
@@ -181,7 +198,7 @@ var PlotsDiv = {
 			return Object.keys(this.gridlayouts).length>1;
 		}
 	},
-	template: `<div v-show='visible' class='d-flex flex-row'>
+	template: `<div v-show='Object.keys(data).length' class='d-flex flex-row'>
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
 			<div v-if="params.length" class='d-flex flex-row justify-content-around'>
 				<template v-for='(param, index) in params'>
@@ -297,7 +314,7 @@ var PlotsDiv = {
 					<div> Mouse interactions</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
 						<span class='text-nowrap me-1'> on hover:</span>
-						<select v-model="mouseMode.hovermode"
+						<select v-model="layoutcontrols.hovermode"
 								class='form-control form-control-sm'>
 							<option v-for='name in mouseMode.hovermodes' :value='name'>
 								{{ mouseMode.hovermodeLabels[name] }}
@@ -306,7 +323,7 @@ var PlotsDiv = {
 					</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
 						<span class='text-nowrap me-1'> on drag:</span>
-						<select v-model="mouseMode.dragmode"
+						<select v-model="layoutcontrols.dragmode"
 								class='form-control form-control-sm'>
 							<option v-for='name in mouseMode.dragmodes' :value='name'>
 								{{ mouseMode.dragmodeLabels[name] }}
@@ -332,30 +349,13 @@ var PlotsDiv = {
 			this.legend = {};
 			// convert data:
 			this.plots = this.getPlots(jsondict);
+			this.drawingPlots = true;
 			// update selection, taking into account previously selected stuff:
 			this.setupParams();
 			this.createLegend();
 			// now plot:
 			this.newPlot();
 		},
-		/*watchOff(...keys){
-			// turns (dynamically created/destroyed) watchers off.
-			// If keys (list of strings) is NOT provided, turns off and deletes all watchers
-			var keys2delete = keys.length ? keys : Object.keys(this.watchers);
-			for(var name of keys2delete){
-				if (name in this.watchers){
-					this.watchers[name]();
-					delete this.watchers[name];
-				}
-			}
-		},
-		watchOn(key, callback, options){
-			if (key in this.watchers){
-				this.watchOff(key);
-			}
-			var watch = this.$watch(key, callback, options || {});
-			this.watchers[key] = watch;
-		},*/
 		setupParams(){
 			var plots = this.plots;
 			// sets up the params implemented on each plot. Params are used to select
@@ -455,104 +455,22 @@ var PlotsDiv = {
 			this.selectedgridlayout = selectedgridlayout;
 			this.params = params;
 		},
-/*		setupAxisOptions(){
-			// Initializes the values of this.layoutcontrols based on the plots we have. Axes
-			// options are bound to checkbox controls on the side panel of the plot grid
-
-			var keys = [
-				'layoutcontrols.xaxis.log.value',
-				'layoutcontrols.yaxis.log.value',
-				'layoutcontrols.xaxis.sameRange.value',
-				'layoutcontrols.yaxis.sameRange.value',
-				'layoutcontrols.xaxis.grid.value',
-				'layoutcontrols.yaxis.grid.value'
-			];
-			this.watchOff(...keys);
-
-
-			var defaultPlotlyType = '-';
-			var allAxisTypeUndefined = false; // will be set below
-
-			this.axisOptions.xaxis.log.disabled = false;
-			// check for any plot P, P.xaxis.type ('-', 'linear', 'log'): enable the
-			// x axis.log checkbox (on the right panel) if, for every P, P.axis.type is
-			// missing or 'log'. In the latter case also force axis.log checkbox=true
-			allAxisTypeUndefined = plots.every(p => [undefined, defaultPlotlyType].includes(p.xaxis.type));
-			if (!allAxisTypeUndefined){
-				var allAxisTypeAreLog = plots.every(p => p.xaxis.type === 'log');
-				this.axisOptions.xaxis.log.disabled = !allAxisTypeAreLog;
-				if (allAxisTypeAreLog){
-					this.axisOptions.xaxis.log.value = true;
-				}else{
-					this.axisOptions.xaxis.log.disabled = true;
-				}
-			}
-			this.axisOptions.xaxis.sameRange.disabled = plots.some(p => 'range' in p.xaxis);
-
-			this.axisOptions.yaxis.log.disabled = false;
-			// check for any plot P, P.yaxis.type ('-', 'linear', 'log'): enable the
-			// y axis.log checkbox (on the right panel) if, for every P, P.axis.type is
-			// missing or 'log'. In the latter case also force axis.log checkbox=true
-			allAxisTypeUndefined = plots.every(p => [undefined, defaultPlotlyType].includes(p.yaxis.type));
-			if (!allAxisTypeUndefined){
-				var allAxisTypeAreLog = plots.every(p => p.yaxis.type === 'log');
-				if (allAxisTypeAreLog){
-					this.axisOptions.yaxis.log.value = true;
-				}else{
-					this.axisOptions.yaxis.log.disabled = true;
-				}
-			}
-			this.axisOptions.yaxis.sameRange.disabled = plots.some(p => 'range' in p.yaxis);
-
-			// restart watching:
-			for (var key of keys){
-				// watch each prop separately because with 'deep=true' react is called more than once ...
-				this.watchOn(key, (newval, oldval) => { this.react(); });
-			}
-		},*/
 		newPlot(){
-			/**
-			 * Filters the plots to display according to current parameters and grid choosen, and
-			 * calls Plotly.newPlot on the plotly <div>
-			 */
+			// Filters the plots to display according to current parameters and grid
+			// chosen, and calls Plotly.newPlot on the plotly <div>
 			var divElement = this.$refs.rootDiv;
 			this.$nextTick(() => {
-				var [hover, drag] = ['mouseMode.hovermode', 'mouseMode.dragmode'];
 				var [data, layout] = this.setupPlotlyDataAndLayout();
 				this.execute(function(){
 					Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
 					// now compute labels and ticks size:
-					var newLayout = this.relayoutPositions(layout);
+					var newLayout = this.relayoutAxisDomainsAndGridAnnotations(layout);
 					Plotly.relayout(divElement, newLayout);
-					/* FIXME HERE!
-					this.watchOn(hover, function (newval, oldval) {
-						this.setMouseModes(newval, undefined);  // hovermode, mousemode
-					});
-					this.watchOn(drag, function(newval, oldval){
-						this.setMouseModes(undefined, newval);  // hovermode, mousemode
-					});
-					*/
 				}, {delay: 200});  // delay might be increased in case of animations
 			});
 		},
-		/*react(){
-			//Same as this.newPlot above, and can be used in its place to create a plot,
-			//but when called again on the same <div> will update it far more efficiently
-			var divElement = this.$refs.rootDiv;
-			this.$nextTick(() => {
-				this.execute(function(){
-					var [data, layout] = this.setupPlotlyDataAndLayout();
-					Plotly.react(divElement, data, layout);
-					var newLayout = this.relayout(layout);
-					Plotly.relayout(divElement, newLayout);
-				});
-			});
-		},*/
-		relayout(newLayout){  // arg null undefined: use current layout
-			/**
-			 * Same as this.newPlot above, and can be used in its place to create a plot,
-			 * but when called again on the same <div> will update it far more efficiently
-			 */
+		relayout(newLayout){  // Redraw the plot after changes on the layout (layout=anything but data)
+		    // The function arg null undefined: {}
 			var divElement = this.$refs.rootDiv;
 			this.$nextTick(() => {
 				this.execute(function(){
@@ -568,7 +486,7 @@ var PlotsDiv = {
 			// and delay (the execution delay)
 			var delay = (options || {}).delay || 200;
 			this.waitbar.msg = (options || {}).msg || this.waitbar.DRAWING;
-			this.drawingPlots=true;
+			if(!this.drawingPlots){ this.drawingPlots=true; }
 			setTimeout(() => {
 				callback.call(this);
 				this.drawingPlots=false;
@@ -586,17 +504,14 @@ var PlotsDiv = {
 			}
 
 			// now build an array the same length as plots with each element the grids position [index_x, index_y]
-			/*var plotsGridIndices = plots.map((plot, idx, plots) =>
-				[gridxparam.indexOf(plot, idx, plots), gridyparam.indexOf(plot, idx, plots)]);*/
 			var gridxindices = plots.map((plot, idx, plots) => gridxparam.indexOf(plot, idx, plots));
 			var gridyindices = plots.map((plot, idx, plots) => gridyparam.indexOf(plot, idx, plots));
 
-			// global layout (will be merged with all plot layouts, if given):
+			// initialize our layout Object (see plotly doc for details):
 			var layout = Object.assign({}, this.defaultlayout, {
-				hovermode: this.mouseMode.hovermode,
-				dragmode: this.mouseMode.dragmode
+				hovermode: this.layoutcontrols.hovermode,
+				dragmode: this.layoutcontrols.dragmode
 			});
-
 			var data = [];
 			// compute rows, cols, and margins for paramsGrid labels:
 			var colwidth = 1.0;
@@ -626,40 +541,34 @@ var PlotsDiv = {
 			var legendgroups = new Set();
 			for (var i = 0; i < plots.length; i++){
 				var plot = plots[i];
-
 				var plotLayout = plot.layout || {};
-				var xaxis = Object.assign({}, this.defaultxaxis, plotLayout.xaxis || {});
-				var yaxis = Object.assign({}, this.defaultyaxis, plotLayout.yaxis || {});
-				/* set standoff property (distance label text and axis) */
+				// Before merging plotLayout into `layout`, keep track of its xaxis and yaxis Objects:
+				var xaxis = Object.assign({}, this.defaultlayout.xaxis || {}, plotLayout.xaxis || {});
+				var yaxis = Object.assign({}, this.defaultlayout.yaxis || {}, plotLayout.yaxis || {});
+				// merge plot layout keys into main layout:
+				Object.assign(layout, plotLayout);
+				// Edit xaxis and yaxis:
 				if (xaxis.title){
 					if(typeof xaxis.title !== 'object'){
-						xaxis.title = {text: `${xaxis.title}`};
+						xaxis.title = {text: `${xaxis}`};
 					}
 					xaxis.title.standoff = 10; // space between label and axis
 				}
 				if (yaxis.title){
 					if(typeof yaxis.title !== 'object'){
-						yaxis.title = {text: `${yaxis.title}`};
+						yaxis.title = {text: `${yaxis}`};
 					}
 					yaxis.title.standoff = 5; // space between label and axis
 				}
-
-				// merge plot layout keys (except xaxis and yaxis) into main layout:
-				delete plotLayout.xaxis;
-				delete plotLayout.yaxis;
-				Object.assign(layout, plotLayout);
-
-				// compute domains (assure the second domain element is 1 and not, e.g., 0.9999):
+				// compute axis domains (assure the second domain element is 1 and not, e.g., 0.9999):
 				var gridxindex = gridxindices[i];
 				var gridyindex = gridyindices[i];
 				var xdomain = [marginleft + gridxindex*colwidth, 1+gridxindex == cols? 1 : marginleft+(1+gridxindex)*colwidth];
 				var ydomain = [marginbottom + gridyindex*rowheight, 1+gridyindex == rows ? 1 : marginbottom+(1+gridyindex)*rowheight];
-
-				// Add to the layout the current axis properties:
+				// Add to the layout xaxis and yaxis, with specific key:
 				var axisIndex = 1 + gridyindex * cols + gridxindex;
 				layout[`xaxis${axisIndex}`] = Object.assign(xaxis, { domain: xdomain, anchor: `y${axisIndex}` });
 				layout[`yaxis${axisIndex}`] = Object.assign(yaxis, { domain: ydomain, anchor: `x${axisIndex}` });
-
 				// Map all traces to the axis just created on the layout:
 				plot.data.forEach((trace) => {
 					trace.xaxis = `x${axisIndex}`;
@@ -673,6 +582,10 @@ var PlotsDiv = {
 					data.push(trace);
 				});
 			}
+			// delete xaxis and yaxis on layout, as they are meaningless (their values
+			// are merged into each layout.xaxisN, layout.yaxisN Objects)
+			delete layout.xaxis;
+			delete layout.yaxis;
 			var newLayout = this.relayoutAxis(data, layout);
 			for(key of Object.keys(newLayout)){
 				var keys = key.split('.');
@@ -683,10 +596,9 @@ var PlotsDiv = {
 			return [data, layout];
 		},
 		relayoutAxis(data, layout){
-			// sets up the keys 'range' ,' type' and 'showgrid' of each layout['xaxis'],
-			// layout['xaxis1'], ... (same for yaxys) using the settings of `this.layoutcontrols`
+			// return a new Object to be passed to `Plotly.relayout` with the axis properties
+			// of `this.layoutcontrols`
 			var newLayout = {};
-
 			for (var ax of ['x', 'y']){
 				var axisControl = ax == 'x' ? this.layoutcontrols.xaxis : this.layoutcontrols.yaxis;
 				// get all layout['xaxis'], layout['xaxis1'] and so on. These are Objects
@@ -772,7 +684,11 @@ var PlotsDiv = {
 			}
 			return newLayout;
 		},
-		relayoutPositions(layout){
+		relayoutAxisDomainsAndGridAnnotations(layout){
+			// return a new Object to be passed to `Plotly.relayout` with the axis domains
+			// (positions) re-adjusted to account for axis ticks and label size, and, if
+			// needed, the annotations denoting the grid labels resulting from the
+			// currently selected grid parameters
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			var xdomains = gridxparam.label ? new Array(gridxparam.values.length) : [];
 			var ydomains = gridyparam.label ? new Array(gridyparam.values.length) : [];
@@ -978,23 +894,6 @@ var PlotsDiv = {
 			// returns the [data, layout] (Array, Object) currently displayed
 			var elm = this.$refs.rootDiv;
 			return elm ? [elm.data || [], elm.layout || {}] : [[], {}];
-		},
-		setMouseModes(hovermode, dragmode){
-			var [data, layout] = this.getPlotlyDataAndLayout();
-			var relayout = false;
-			if (this.mouseMode.hovermodes.includes(hovermode)){
-				layout.hovermode = hovermode;
-				relayout = true;
-			}
-			if (this.mouseMode.dragmodes.includes(dragmode)){
-				layout.dragmode = dragmode;
-				relayout = true;
-			}
-			if (relayout){
-				this.execute(function(){
-					Plotly.relayout(this.$refs.rootDiv, layout);
-				}, {msg: this.waitbar.UPDATING});
-			}
 		},
 		downloadTriggered(event){
 			var selectElement = event.target;
