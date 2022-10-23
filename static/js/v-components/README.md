@@ -170,24 +170,21 @@ Where the only required method to "subclass" is:
 
 ### `createPlotlyDataAndLayout(responseObject)`
 
-Return the plotly data (Array) and layout (Object) from the given response object.
-Some properties of both Objects might be overwritten, e.g. those related to plot
-placement and size.
-Plotly layout ref is here: https://plotly.com/javascript/reference/layout, whereas
-Plotly data is an Array of Objects representing a plot:
+Return an Array of plots (aka "figure" in plotly, see
+https://plotly.com/javascript/reference/index/) from the given response.
+Each plot has in EGSIM an additional `params` key, so a plot is an Object of the type:
 
 ```javascript
 {
-    traces: Array, 
-    params: Object, 
-    xaxis: Object, 
-    yaxis: Object
+    data: Array, 
+    layout: Object,
+    params: Object
 }
 ```
 
 #### Plotly data arguments:
  
- - `traces` Array of Trace Objects (lines, points, bars) e.g.:
+ - `data` is the plot data, an Array of Trace Objects (lines, points, bars) e.g.:
     ```
     {
         x: Array, 
@@ -195,11 +192,13 @@ Plotly data is an Array of Objects representing a plot:
         name: string
     }
     ```
-    - A list of keys of each Object is available at 
-      https://plot.ly/javascript/reference/. Consider that some layout-related 
-      keys will be set automatically and overwritten if present: `xaxis` (string), 
-      `yaxis` (string), `showlegend` (boolean).
- 
+    For details, see https://plotly.com/javascript/reference/.
+    Consider that some layout-related keys will be set automatically and 
+    overwritten if present: `xaxis` (string), `yaxis` (string), `showlegend` 
+    (boolean).
+   
+    **Notes:** 
+   
     - Providing a `name` key to a Trace Object makes the name showing
       when hovering over the trace with the mouse.
    
@@ -212,15 +211,11 @@ Plotly data is an Array of Objects representing a plot:
       a color from a cyclic palette assuring that the same `legendgroup` is mapped to
       the same color. Example:
  
-      ```
+      ```javascript
       trace.legendgroup = trace.name;
       var color = this.colors.get(trace.legendgroup);
       trace.line = { color: this.colors.rgba(color, 0.5) }
       ```
-      
-      If no item is in the legend, the right panel is not shown. The right panel
-      includes several controls such as log axis, download actions and so on (this
-      behaviour could anyway change in the future, and the right panel shown anyway)
    
  - `params` eGSIM specific property (ignored by Plotly), 
     define the plot parameters (String -> Any scalar), e.g. 
@@ -234,19 +229,24 @@ Plotly data is an Array of Objects representing a plot:
     All traces must return the same `params`, i.e,. Objects
     with the same keys. `params` that are mapped to the same value for all plots
     will be discarded.
-
-  - `xaxis` Object of x axis properties, e.g.:  
+     
+ - `layout` is the Plot layout, e.g.:
+   
     ```
-    {title: 'A title', type: 'log'}
+    { 
+        xaxis: {
+            title: 'A title', 
+            type: 'log'
+        }, 
+        yaxis: { 
+            ... 
+        }
+    }
     ```
-    The final Axis properties will be built by merging `this.defaultxaxis`
-    and the values provided here. For a list of possible keys, see: 
-    https://plot.ly/javascript/reference/#layout-xaxis, but consider that
-    some layout-related keys will be set automatically and overwritten if
-    present: `domain` and `anchor`.
+    For details, see https://plotly.com/javascript/reference/layout.
+    Note that some layout-related keys will be set automatically and overwritten if
+    present: `[xy]axis.domain` and `[xy]axis.anchor`.
 
- - `yaxis` 
-   A `dict` of y axis properties. See `xaxis` above for details.
 
 ## FLATFILE SELECT
 (`v-components/flatfiles.js`)

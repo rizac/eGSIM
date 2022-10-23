@@ -52,8 +52,7 @@ EGSIM.component('residuals', {
 EGSIM.component('residuals-plot-div', {
 	mixins: [PlotsDiv],  // defined in plot-div.js
 	methods: {
-		// The next two methods are overwritten from PlotsDiv. See README.md for details
-		createPlotlyDataAndLayout(responseObject){
+		getPlots(responseObject){
 			// defined normal dist. constants:
 			var E = Math.E;
 			var PI = Math.PI;
@@ -195,15 +194,23 @@ EGSIM.component('residuals-plot-div', {
 						}
 						var plotparams = {gsim: gsim, imt: imt, 'residual type': type};
 						plots.push({
-							traces: traces,
+							data: traces,
 							params: plotparams,
-							xaxis: { title: plotdata.xlabel },
-							yaxis: { title: plotdata.ylabel }
+							layout: {
+								xaxis: {
+									title: plotdata.xlabel,
+									type: 'linear'
+								},
+								yaxis: {
+									title: plotdata.ylabel,
+									type: 'linear'
+								}
+							}
 						});
 					}
 				}
 			}
-			return [plots, {}];
+			return plots;
 		}
 	},
 	computed: {  // "override" computed property from superclass
