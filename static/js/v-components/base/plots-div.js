@@ -550,13 +550,13 @@ var PlotsDiv = {
 				// Edit xaxis and yaxis:
 				if (xaxis.title){
 					if(typeof xaxis.title !== 'object'){
-						xaxis.title = {text: `${xaxis}`};
+						xaxis.title = {text: `${xaxis.title}`};
 					}
 					xaxis.title.standoff = 10; // space between label and axis
 				}
 				if (yaxis.title){
 					if(typeof yaxis.title !== 'object'){
-						yaxis.title = {text: `${yaxis}`};
+						yaxis.title = {text: `${yaxis.title}`};
 					}
 					yaxis.title.standoff = 5; // space between label and axis
 				}
