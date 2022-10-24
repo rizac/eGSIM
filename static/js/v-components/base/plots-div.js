@@ -21,20 +21,24 @@ var PlotsDiv = {
 			gridlayouts: {},
 			// string denoting the selected layout name of gridlayouts (see above)
 			selectedgridlayout: '',
-			// plot/figure layout controls (coffgiurable by the user on the page):
-			layoutcontrols: {
-				xaxis: {
-					log: {disabled: false, value: undefined},
-					sameRange: {disabled: false, value: undefined},
-					grid: {disabled: false, value: undefined}
-				} ,
-				yaxis: {
-					log: {disabled: false, value: undefined},
-					sameRange: {disabled: false, value: undefined},
-					grid: {disabled: false, value: undefined}
+			// plot options configurable via html controls:
+			plotoptions: {
+				axis: {
+					x: {
+						log: {disabled: false, value: undefined},
+						sameRange: {disabled: false, value: undefined},
+						grid: {disabled: false, value: undefined}
+					} ,
+					y: {
+						log: {disabled: false, value: undefined},
+						sameRange: {disabled: false, value: undefined},
+						grid: {disabled: false, value: undefined}
+					}
 				},
-				hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
-				dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
+				mouse: {
+					hovermode: 'closest',  // will set this value to the Plotly layout before plotting, if not explicitly set
+					dragmode: 'zoom'  // will set this value to the Plotly layout before plotting, if not explicitly set
+				}
 			},
 			// the wait bar while drawing plots
 			waitbar: {
@@ -166,7 +170,7 @@ var PlotsDiv = {
 				this.newPlot();
 			}
 		},
-		'layoutcontrols.xaxys': {
+		'plotoptions.axis': {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
@@ -175,23 +179,13 @@ var PlotsDiv = {
 				this.relayout(newLayout);
 			}
 		},
-		'layoutcontrols.yaxys': {
+		'plotoptions.mouse': {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
-				var [data, layout]  = this.getPlotlyDataAndLayout();
-				var newLayout = this.setupAxisConfigurableProperties(data, layout);
-				this.relayout(newLayout);
+				this.relayout({ dragmode: newval });
 			}
 		},
-		'layoutcontrols.dragmode': function(newval, oldval){
-			if(this.drawingPlots){ return; }
-			this.relayout({ dragmode: newval });
-		},
-		'layoutcontrols.hovermode': function(newval, oldval){
-			if(this.drawingPlots){ return; }
-			this.relayout({ hovermode: newval });
-		}
 	},
 	computed: {
 		isGridCusomizable(){
@@ -284,7 +278,7 @@ var PlotsDiv = {
 				</div>
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
 					<div>Axis</div>
-					<div v-for="(axiscontrol, idx) in [layoutcontrols.xaxis, layoutcontrols.yaxis]"
+					<div v-for="(axiscontrol, idx) in [plotoptions.axis.x, plotoptions.axis.y]"
 					     class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
 						<span class='text-nowrap'>{{ idx == 0 ? 'x' : 'y' }}:</span>
 						<label class='text-nowrap m-0 ms-2'
@@ -314,7 +308,7 @@ var PlotsDiv = {
 					<div> Mouse interactions</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
 						<span class='text-nowrap me-1'> on hover:</span>
-						<select v-model="layoutcontrols.hovermode"
+						<select v-model="plotoptions.mouse.hovermode"
 								class='form-control form-control-sm'>
 							<option v-for='name in mouseMode.hovermodes' :value='name'>
 								{{ mouseMode.hovermodeLabels[name] }}
@@ -323,7 +317,7 @@ var PlotsDiv = {
 					</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
 						<span class='text-nowrap me-1'> on drag:</span>
-						<select v-model="layoutcontrols.dragmode"
+						<select v-model="plotoptions.mouse.dragmode"
 								class='form-control form-control-sm'>
 							<option v-for='name in mouseMode.dragmodes' :value='name'>
 								{{ mouseMode.dragmodeLabels[name] }}
@@ -509,8 +503,8 @@ var PlotsDiv = {
 
 			// initialize our layout Object (see plotly doc for details):
 			var layout = Object.assign({}, this.defaultlayout, {
-				hovermode: this.layoutcontrols.hovermode,
-				dragmode: this.layoutcontrols.dragmode
+				hovermode: this.plotoptions.mouse.hovermode,
+				dragmode: this.plotoptions.mouse.dragmode
 			});
 			var data = [];
 			// compute rows, cols, and margins for paramsGrid labels:
@@ -597,10 +591,10 @@ var PlotsDiv = {
 		},
 		setupAxisConfigurableProperties(data, layout){
 			// return a new Object to be passed to `Plotly.relayout` with the axis properties
-			// that are configurable (see `this.layoutcontrols`)
+			// that are configurable (see `this.plotoptions`)
 			var newLayout = {};
 			for (var ax of ['x', 'y']){
-				var axisControl = ax == 'x' ? this.layoutcontrols.xaxis : this.layoutcontrols.yaxis;
+				var axisControl = ax == 'x' ? this.plotoptions.axis.x : this.plotoptions.axis.y;
 				// get all layout['xaxis'], layout['xaxis1'] and so on. These are Objects
 				// representing all plots x axis (same for 'y' the next loop):
 				var regexp = ax == 'x' ? /^xaxis\d*$/g : /^yaxis\d*$/g;
