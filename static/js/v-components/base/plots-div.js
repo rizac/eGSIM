@@ -171,7 +171,7 @@ var PlotsDiv = {
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
 				var [data, layout]  = this.getPlotlyDataAndLayout();
-				var newLayout = this.relayoutAxis(data, layout);
+				var newLayout = this.setupAxisConfigurableProperties(data, layout);
 				this.relayout(newLayout);
 			}
 		},
@@ -180,7 +180,7 @@ var PlotsDiv = {
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
 				var [data, layout]  = this.getPlotlyDataAndLayout();
-				var newLayout = this.relayoutAxis(data, layout);
+				var newLayout = this.setupAxisConfigurableProperties(data, layout);
 				this.relayout(newLayout);
 			}
 		},
@@ -464,7 +464,7 @@ var PlotsDiv = {
 				this.execute(function(){
 					Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
 					// now compute labels and ticks size:
-					var newLayout = this.relayoutAxisDomainsAndGridAnnotations(layout);
+					var newLayout = this.setupAxisDomainsAndGridLabels(layout);
 					Plotly.relayout(divElement, newLayout);
 				}, {delay: 200});  // delay might be increased in case of animations
 			});
@@ -586,7 +586,7 @@ var PlotsDiv = {
 			// are merged into each layout.xaxisN, layout.yaxisN Objects)
 			delete layout.xaxis;
 			delete layout.yaxis;
-			var newLayout = this.relayoutAxis(data, layout);
+			var newLayout = this.setupAxisConfigurableProperties(data, layout);
 			for(key of Object.keys(newLayout)){
 				var keys = key.split('.');
 				if(keys.length == 2){
@@ -595,9 +595,9 @@ var PlotsDiv = {
 			}
 			return [data, layout];
 		},
-		relayoutAxis(data, layout){
+		setupAxisConfigurableProperties(data, layout){
 			// return a new Object to be passed to `Plotly.relayout` with the axis properties
-			// of `this.layoutcontrols`
+			// that are configurable (see `this.layoutcontrols`)
 			var newLayout = {};
 			for (var ax of ['x', 'y']){
 				var axisControl = ax == 'x' ? this.layoutcontrols.xaxis : this.layoutcontrols.yaxis;
@@ -605,7 +605,6 @@ var PlotsDiv = {
 				// representing all plots x axis (same for 'y' the next loop):
 				var regexp = ax == 'x' ? /^xaxis\d*$/g : /^yaxis\d*$/g;
 				var axis = Object.keys(layout).filter(key => regexp.exec(key));
-				// axis = axis.map(key => layout[key]);
 
 				// set grid on/off
 				if (axisControl.grid.value === undefined){
@@ -638,7 +637,7 @@ var PlotsDiv = {
 						axisControl.log.value = false;
 					}else if (axis.every(a => layout[a].type === undefined || layout[a].type === '-')){
 						// undefined and '-' are plotly default for: infer. Let's do the same:
-						if (data.every(t => (ax in t) && t[ax].every(v => typeof v === 'number'))){
+						if (data.every(trace => (ax in trace) && trace[ax].every(v => typeof v === 'number'))){
 							axisControl.log.disabled = false;
 							axisControl.log.value = false;
 						}
@@ -656,8 +655,7 @@ var PlotsDiv = {
 				}else{
 					// set data from control:
 					if(!axisControl.sameRange.value){
-						// set computed ranges to all plot axis:
-						// axis.forEach(a => delete a.range);
+						// Provide a 'delete range key' command by setting it undefined (infer range):
 						axis.forEach(a => newLayout[`${a}.range`] = undefined);
 					}else{
 						var range = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
@@ -684,10 +682,10 @@ var PlotsDiv = {
 			}
 			return newLayout;
 		},
-		relayoutAxisDomainsAndGridAnnotations(layout){
+		setupAxisDomainsAndGridLabels(layout){
 			// return a new Object to be passed to `Plotly.relayout` with the axis domains
 			// (positions) re-adjusted to account for axis ticks and label size, and, if
-			// needed, the annotations denoting the grid labels resulting from the
+			// needed, the Plotly annotations, i.e.the grid labels resulting from the
 			// currently selected grid parameters
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			var xdomains = gridxparam.label ? new Array(gridxparam.values.length) : [];
@@ -814,13 +812,11 @@ var PlotsDiv = {
 					margin.left = max(margin.left, innerPlotRect.x - yElm.x);
 				}
 			}
-
 			var [width, height] = this.getElmSize(this.$refs.rootDiv);
 			margin.left /= width;
 			margin.right /= width;
 			margin.top /= height;
 			margin.bottom /= height;
-
 			return margin;
 		},
 		getElmSize(domElement){
