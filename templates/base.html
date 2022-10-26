@@ -8,7 +8,7 @@
 		<!-- load font now, set font later when loaded (otherwise it could not be applied) -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed&family=Encode+Sans+Condensed&family=Lato&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed&family=Encode+Sans+Condensed&display=swap" rel="stylesheet">
 	{% endblock %}
 
 	{% block fontloadingscript %}
@@ -17,14 +17,11 @@
 			var style = document.createElement('style');
 			style.type = 'text/css';
 			style.innerHTML = `
-				body {
+				body{
 					font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
 				}
-				nav, h1, h2, h3, h4, h5, h6{
+				h1, h2, h3, h4, h5, h6, nav{
 					font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
-				}
-				.font-readable{
-					font-family: Lato, Helvetica, sans-serif;
 				}
 			`;
 			document.getElementsByTagName('head')[0].appendChild(style);
