@@ -278,8 +278,7 @@ class GsimImtForm(SHSRForm):
     _field2params: dict[str, list[str]] = {'gsim': ['model', 'gmm']}
 
     # Note: both Fields below are required actually (see `clean` for details):
-    gsim = MultipleChoiceWildcardField(required=False, choices=_get_gsim_choices,
-                                       label='Ground Shaking Intensity Model(s)')
+    gsim = MultipleChoiceWildcardField(required=False, choices=_get_gsim_choices)
     imt = ImtField(required=False, choices=_get_imt_choices,
                    label='Intensity Measure Type(s)')
 

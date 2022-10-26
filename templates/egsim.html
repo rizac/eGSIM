@@ -48,7 +48,6 @@ nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
 .fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
 .fade-enter, .fade-leave-to { opacity: 0; }
 .error-msg {
-	font-family: Lato, Helvetica, sans-serif;
 	flex: 1 1 auto;
 	background-color: rgba(0,0,0,0);
 	color: white;
@@ -92,8 +91,8 @@ axios.interceptors.request.use(function (config) {
 <script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}testing.js"></script>
 <script>
-/* mount app and return an App instance (eGSIM): */
-const eGSIM = EGSIM.mount('#egsim-vue');
+/* mount the Vue App EGSIM. The function below returns an App instance (not used for the moment): */
+EGSIM.mount('#egsim-vue');
 </script>
 
 {% endblock %}

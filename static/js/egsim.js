@@ -11,20 +11,17 @@ const EGSIM = Vue.createApp({
 		}
 	},
 	template: `<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'>
-
 		<a v-for="n in components.names" class='menu-item' :class="selComponent == n ? 'active' : ''"
 		   @click="setComponent(n)" :title="components.tabs[n].title">
 			<i :class="['fa', components.tabs[n].icon, 'me-1']"></i>
 			<span>{{ components.tabs[n].title }}</span>
 		</a>
-
 		<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
 			 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
 			<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
 			<input type="text" class="error-msg " :value="errorMsg" readonly />
 			<i class="fa fa-times ms-2" @click='setError("")' style="cursor: pointer"></i>
 		</div>
-
 		<a class="menu-item " href="#" title="options" @click="toggleOptionsMenu">
 			<i class="fa fa-bars"></i>
 		</a>
@@ -50,11 +47,9 @@ const EGSIM = Vue.createApp({
 	</nav>
 
 	<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-
 		<div id='waitdiv' v-show='loading' class="position-absolute start-0 end-0" style='z-index:99'>
 			<div class="loader"></div>
 		</div>
-
 		<div v-if="!!selComponent" class='d-flex m-0' style="flex: 1 1 auto">
 			<transition name="fade" mode="out-in">
 				<keep-alive>
@@ -65,7 +60,6 @@ const EGSIM = Vue.createApp({
 				</keep-alive>
 			</transition>
 		</div>
-
 	</div>`,
 	created(){
 		this.configureHTTPClient();
