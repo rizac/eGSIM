@@ -9,12 +9,6 @@
 <link rel="stylesheet" type='text/css' href="https://unpkg.com/balloon-css/balloon.min.css">
 <!-- custom css -->
 <style>
-/* navbar (top toolbar with menus): */
-nav .menu-item{ cursor: pointer; color: #FFF; opacity: 0.66; }
-nav > .menu-item{ margin-right: 1rem; }
-nav > .menu-item:first-of-type{ margin-left: 1rem}
-nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
-#options-menu { transition: transform .25s ease-out; transform-origin: top; }
 @media (max-width: 1200px){  /* narrow  screen (< 1200px) */
 	nav > .menu-item span { display: none !important; } /* hide menu texts */
 }
@@ -47,13 +41,6 @@ nav .menu-item.active, nav .menu-item:hover{ opacity: 1 !important; }
 /* Transitions when activating a main component: https://vuejs.org/guide/built-ins/transition.html */
 .fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
 .fade-enter, .fade-leave-to { opacity: 0; }
-.error-msg {
-	flex: 1 1 auto;
-	background-color: rgba(0,0,0,0);
-	color: white;
-	outline: none;
-	border-width: 0px;
-}
 </style>
 
 {% endblock %}
