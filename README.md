@@ -96,6 +96,28 @@ installing as developer).
 
 <details>
 
+<summary>Full install (step by step)
+</summary>
+
+Having oq-engine and gmpe-smtk on the same level of the
+egsim directory, you can install the bove in 
+several steps for more control. From egsim directory:
+```console
+pip install --upgrade pip setuptools    
+(cd ../oq-engine && pip install -e .)
+(cd ../gmpe-smtk-rizac && pip install -e .)
+# additional packages (plotly and kaleido are for downloading plot images):
+pip install pyyaml tables plotly kaleido
+# optional: 
+# pip freeze > ./requirements.txt
+pip install pytest pytest-cov pytest-django
+# optional:
+# pip freeze > ./requirements.dev.txt
+```
+</details>
+
+<details>
+
 <summary>
 If you want also to be able to modify `gmpe-smtk`, e.g. 
 fix bug, implement new features and issue Pull Requests to the master branch 

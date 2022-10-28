@@ -70,20 +70,31 @@ var PlotsDiv = {
 		this.defaultlayout = {
 			autosize: true,  // without this, the inner svg does not expand properly FIXME HERE
 			paper_bgcolor: 'rgba(0,0,0,0)',
+			plot_bgcolor: 'rgba(255,255,255,1)',
 			showlegend: false,
 			legend: { bgcolor: 'rgba(0,0,0,0)'},
 			margin: { r: 0, b: 0, t: 0, l: 0, pad: 0 },
 			font: font,
 			annotations: [],
 			xaxis: {  // https://plotly.com/javascript/reference/layout/xaxis/#layout-xaxis
-				mirror: true,
 				zeroline: false,
-				linewidth: 1
+				showline: true,
+				linewidth: 1,
+				linecolor: '#444',
+				mirror: true,
+				showgrid: true,
+				gridwidth: 1,
+				gridcolor: "#eee"
 			},
 			yaxis: {
-				mirror: true,
 				zeroline: false,
-				linewidth: 1
+				showline: true,
+				linewidth: 1,
+				linecolor: '#444',
+				mirror: true,
+				showgrid: true,
+				gridwidth: 1,
+				gridcolor: "#eee",
 			}
 		};
 		// space reserved for the params grid ticklabels:
@@ -755,7 +766,7 @@ var PlotsDiv = {
 						xanchor: 'left',
 						yanchor: 'middle', /* DO NOT CHANGE THIS */
 						text: `${gridyparam.label}: ${gridyparam.values[i]}`,
-						textangle: '-90'
+						textangle: -90
 					}));
 				}
 			}
@@ -901,7 +912,7 @@ var PlotsDiv = {
 			}else{
 				// image format:
 				var [data, layout] = this.getPlotlyDataAndLayout();
-				var parent = this.$refs.rootDiv.parentNode.parentNode.parentNode;
+				var parent = this.$refs.rootDiv; //.parentNode.parentNode.parentNode;
 				var [width, height] = this.getElmSize(parent);
 				data = data.filter(elm => elm.visible || !('visible' in elm));
 				postData = {data:data, layout:layout, width:width, height:height};
