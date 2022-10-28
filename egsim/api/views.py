@@ -15,7 +15,6 @@ from .forms.flatfile import FlatfileForm
 from .forms.trellis import TrellisForm
 from .forms.flatfile.residuals import ResidualsForm
 from .forms.flatfile.testing import TestingForm
-# from .forms.flatfile.inspection import FlatfileColumnsForm
 from .forms import APIForm
 
 
