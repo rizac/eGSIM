@@ -1,11 +1,7 @@
 # Developers README
 
-This Django App (i.e., basically a standalone Python package that can
+This Django App (standalone Python package that can
 be plugged to a Django project) implements the basic eGSIM API.
-
-Because Django is implemented for web page application, a couple of
-tweaks were needed to adapt it to a REST framework. Other solutions
-(e.g. installing django-rest-framework) did not convince us.
 
 As in any Django app, everything starts in `urls.js`. As you can 
 see, urls strings are actually implemented in `views.py`. the reason
@@ -82,15 +78,15 @@ class APIForm(MediaTypeForm):
 Basic hierarchy of eGSIM Forms (see `api.forms.__init__.py`):
 
 ```
-[EgsimBaseForm] a Django Form that allows to expose the Form field attribute 
-│              names to one or more public parameter names, and get validation 
+[EgsimBaseForm] a Django Form that exposing the Form field attribute 
+│              names to one or more public parameter names, and formatting 
 │              errors into a dict with keys following the Google API spec
 │
-└── [SHSRForm] an EgsimBaseForm retrieving a list of models froma  given geo
+└── [SHSRForm] an EgsimBaseForm retrieving a list of models from a given geo
 │    │         location. After validation , the list of models will be put in 
 │    │         SHSRForm.cleaned_data and can be used in subclasses
 │    │   
-│    └── [GsimImtForm] a SHSRForm that accepts also models as list of names
+│    └── [GsimImtForm] a SHSRForm that accepts also models as list of names,
 │                      and intensity measures. Performs some checks during 
 │                      validation
 │    
@@ -98,8 +94,8 @@ Basic hierarchy of eGSIM Forms (see `api.forms.__init__.py`):
               the response in different media types (or mime types) such as 
               JSON, CSV via the main property:
               APIForm.response_data: Union[dict, StringIO, None]
-              There are 2 methods to overwrite, both called by response_data
-              
+              The method response_data calls in turn two asbtract methods to be
+              implemented in subclasses (see above) 
 ```
 
 Many Forms used in eGSIM are subclasses of both 

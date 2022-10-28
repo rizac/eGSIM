@@ -13,7 +13,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from . import figutils, TAB
+from . import TAB
 from . import form_serialization
 from .pages import (ref_and_license_page_renderer_context,
                     imprint_page_renderer_context, egsim_page_renderer_context,
@@ -150,7 +150,6 @@ def download_asimage(request, filename: str):
     """Return the image from the given request built in the frontend GUI
     according to the chosen plots
     """
-    import plotly.graph_objects as go
     img_format = os.path.splitext(filename)[1][1:]
     content_type = _IMG_FORMATS[img_format]
     jsondata = json.loads(request.body.decode('utf-8'))
@@ -158,13 +157,12 @@ def download_asimage(request, filename: str):
                                    jsondata['layout'],
                                    jsondata['width'],
                                    jsondata['height'])
+    from plotly import graph_objects as go, io as pio
     fig = go.Figure(data=data, layout=layout)
     # fix for https://github.com/plotly/plotly.py/issues/3469:
-    import plotly.io as pio
     pio.full_figure_for_development(fig, warn=False)
     # compute bytes string:
     bytestr = fig.to_image(format=img_format, width=width, height=height)  # , scale=2)
-    # bytestr = figutils.get_img(data, layout, width, height, img_format)
     response = HttpResponse(bytestr, content_type=content_type)
     response['Content-Disposition'] = \
         'attachment; filename=%s' % filename
