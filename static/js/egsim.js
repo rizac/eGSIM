@@ -55,7 +55,7 @@ const EGSIM = Vue.createApp({
 	</nav>
 
 	<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-		<div id='waitdiv' v-show='loading' class="position-absolute start-0 end-0" style='z-index:99'>
+		<div v-show='loading' class="position-absolute start-0 end-0" style='z-index:200;'>
 			<div class="loader"></div>
 		</div>
 		<div v-if="!!selComponent" class='d-flex m-0' style="flex: 1 1 auto">
