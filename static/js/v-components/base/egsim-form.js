@@ -104,8 +104,7 @@ EGSIM.component('egsim-form', {
 		return {
 			show: true,
 			showAsDialog: false,  // appearance control
-			requestURL: '',
-			watchers: []  // needed for FIXME
+			requestURL: ''
 		}
 	},
 	emits: ['submitted'],
@@ -141,27 +140,9 @@ EGSIM.component('egsim-form', {
 						retUrl += `${prefix}` + encodeURIComponent(paramName) + '=' + encodeURIComponent(responseData[paramName]);
 						prefix = '&';
 					}
-					this.watchForValueChanges(true);
 					this.requestURL = retUrl;
 				}
 			});
-		},
-		watchForValueChanges(watch){
-			if (watch == !!this.watchers.length){
-				return;
-			}
-			if (watch){
-				for (var key of Object.keys(this.form)){
-					this.watchers.push(this.$watch(`form.${key}.value`, (newVal, oldVal) => {
-						this.requestURL ='';
-						this.watchForValueChanges(false);
-					}));
-				}
-				return;
-			}
-			// unwatch: simply call the stored callback
-			this.watchers.forEach(wacther => wacther());
-			this.watchers = [];
 		},
 		copyRequestURL(src){
 			var targetElement = src.currentTarget; // the button
@@ -249,6 +230,16 @@ EGSIM.component('egsim-form', {
 	watch: {
 		visibilityToggle(newVal, oldVal){
 			this.show = !this.show;
+		},
+		form: {
+			deep: true,
+			handler(newVal, oldVal){
+				// changing the form reset requestURL. We should listen only for each form.value
+				// field actually, but it's simple like this:
+				if (this.requestURL){
+					this.requestURL = "";
+				}
+			}
 		}
 	},
 	template: `<form novalidate @submit.prevent="submit"
