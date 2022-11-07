@@ -21,7 +21,7 @@ EGSIM.component('gsim-select', {
 			mapOffsetParent: undefined,  // to refresh the map when made visible again
 			choices: Array.from(this.field.choices),  // avoid modifying or reordering field.choices
 			modelNamesSet: new Set(this.field.choices.map(elm => elm.value)), // used when view=text to check typos
-			warnings: [], //list of strings of warnings (updated also in watchers below)
+			warnings: [], // list of strings of warnings
 			selectionView: true
 		}
 	},

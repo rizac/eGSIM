@@ -342,9 +342,7 @@ EGSIM.component('testing-table', {
 				columns[colname].sortOrder = newSortOrder;
 				ret[colname] = columns[colname];
 			});
-			// by setting a new object we trigger the template refresh.
-			// this might look overhead but it triggers vuejs refresh without the need of watchers and/or
-			// deep flags
+			// by setting a new object we trigger the template refresh => vuejs refresh
 			this.columns = ret;
 		},
 		sortKeyAndOrder(){

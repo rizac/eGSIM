@@ -50,8 +50,6 @@ var PlotsDiv = {
 	},
 	created(){
 		// setup non reactive data:
-		// store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
-		this.watchers = {};
 		this.plots = [];  // populated in `init`
 		// define default font and infer from page if possible:
 		var font = {
@@ -345,7 +343,6 @@ var PlotsDiv = {
 			*/
 		},
 		init(jsondict){
-			// unwatch watchers, if any:
 			this.legend = {};
 			// convert data:
 			this.plots = this.getPlots(jsondict);
