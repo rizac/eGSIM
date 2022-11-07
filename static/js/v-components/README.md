@@ -36,7 +36,7 @@ Above, each 'parameterN' is mapped to a so-called `Field` Object
 (`v-components/base/field-form.js`)
 
 A Field is represented via a `field-input` which automatically
-created the associated [input] component from he Field data (e.g. select,
+created the associated [input] component from the Field data (e.g. select,
 input[type=checkbox], and so on)
 
 ```
@@ -59,79 +59,42 @@ is given, it outlines the component in red, if present)
 ## FormDataHTTPClient
 (`v-components/base/egsim-form.js`)
 
-`FormDataHTTPClient` is the Mixin base class for all Form related components.
-This snippet shortly describes how to use FormDataHTTPClient in subclasses. 
-Given, e.g. a subclass `my-form`:
+`FormDataHTTPClient` is the Mixin base class for all Form related components
+and is intended to perform HTTP requests with the form data as request data.
+It is subclassed by the component `egsim-form`, which is in turn used
+in `trellis.js`, `residuals.js` and `testing.js`.
+
+`egsim-form` handles also the fact that the <div> disappears and becomes a 
+dialog window after the first submission. To implement a more general form
+component from `FormDataHTTPClient`, e.g. a `my-form` Component from 
+a given Form Object and a URL where to send POST request with the form data:
 
 ```
-<my-form :form=form :url=url @submitted='my_callback' />
+<my-form :form=form :url=url />
 ```
 
-where:
- - `form` is a Form object (see above)
- - `url` is the URL to which a request will be sent with the Form data
- - `@submitted` is the Vue event fired when the server successfully
-   sent a response after submission. `my_callback` is a function 
-   taking the axios response Object as argument and has to be 
-   implemented somewhere to process the response. For instance 
-   throughout the code (e.g., `trellis.js`, `residuals.js`) you will 
-   see a wrapper component implementing
-   a `FormDataHTTPClient` component, and a `PlotsDiv` component receiving the form 
-   submitted data in order to update its plots 
-   (For `PlotsDiv` see details below):
-   ```
-   Vue component('wrapper',{
-        data() {
-            return {
-                resData: {}
-            }
-        },
-        template: `
-            <my-form @submitted='resData=arguments[0].data' ... />
-            <my-plot-div :data="resData" ... >
-        `
-   });
-   ``` 
-  listening
-   the successful submit and takes as first argument the `axios` 
-   `response` object (see snippet below)
-   
-To let the code above work, the implementation of `my-form` in 
-Vue might look at least like this:
+then, along the lines of `egsim-form` one could write:
 
 ```
 EGSIM.component('my-form', {
-   mixins: [FormDataHTTPClient],
-   template: `<form novalidate @submit.prevent="mySubmitFunc">
+    mixins: [FormDataHTTPClient],
+    emits: ['submitted'],  // needed only if we want to emit, see below
+    template: `<form novalidate @submit.prevent="submit">
+        <!-- you form component here, associated to this.form -->
        <button type='submit'>Ok</button>
-   </form>`
-   methods: {
-       submit(){
-           this.post().then(response => {
-               this.$emit('submitted', response);
-           }
-       }
-   }
+    </form>`
+    methods: {
+        submit(){
+            // call FormDataHTTPClient.postFormData. You can also
+            // chain the promise for performing custom operation upon 
+            // submission, e.g. let's emit the event 'submitted
+            this.postFormData().then(response => {
+                this.$emit('submitted', response);
+            });
+        },
+    }
 });
 ```
-
-Notes:
-
- 1. `props` here you implement additional `props`, 
-    remembering that you have the props `this.url` and `this.form`
-    (defined in `FormDataHTTPClient`) by default
-    
- 2. `template` in the template you implement your components
-    usually bound to elements of `this.form`. As such, the snippet above
-    must be filled with something meaningful
-
- 3. `mySubmitFunc` this is your submit function. You can call here 
-    `this.submit()` (implemented in `FormDataHTTPClient`) that does all the 
-    work of creating a FormData, send it to `this.url`
-    with correct headers and displaying errors in case. 
-    `this.submit` is a `Promise` that you can chain as in the snippet
-    above, where we notify the listeners emitting a `submitted`
-    event
 
 
 ## PlotsDiv
@@ -161,14 +124,14 @@ Vue might look at least like this:
 EGSIM.component('my-plot-div', {
     mixins: [PlotsDiv],
     methods: {
-        createPlotlyDataAndLayout(responseObject){}
+        getPlots(responseObject){}
     }
 });
 
 ```
 Where the only required method to "subclass" is:
 
-### `createPlotlyDataAndLayout(responseObject)`
+### `getPlots(responseObject){}`
 
 Return an Array of plots (aka "figure" in plotly, see
 https://plotly.com/javascript/reference/index/) from the given response.
@@ -202,14 +165,14 @@ Each plot has in EGSIM an additional `params` key, so a plot is an Object of the
     - Providing a `name` key to a Trace Object makes the name showing
       when hovering over the trace with the mouse.
    
-    - To add the Trace to the legend, set its `legendgroup` attribute. All traces with 
-      the same legend group are treated the same way during click/double-click 
-      interactions.
-      Usually, you need to get a starting color for a `legendgroup` in order to style
-      all legend traces the same way. You can do this by using 
-      `this.colors.get(legendgroup)` which returns
-      a color from a cyclic palette assuring that the same `legendgroup` is mapped to
-      the same color. Example:
+    - To add the Trace to the legend, set its `legendgroup` attribute. All 
+      traces with the same legend group are treated the same way during 
+      click/double-click interactions.
+      Usually, you need to get a starting color for a `legendgroup` in order 
+      to style all legend traces the same way. You can do this by using 
+      `this.colors.get(legendgroup)` which returns a color from a cyclic 
+      palette assuring that the same `legendgroup` is mapped to the same color. 
+      Example:
  
       ```javascript
       trace.legendgroup = trace.name;
@@ -247,6 +210,13 @@ Each plot has in EGSIM an additional `params` key, so a plot is an Object of the
     Note that some layout-related keys will be set automatically and overwritten if
     present: `[xy]axis.domain` and `[xy]axis.anchor`.
 
+### Plot details
+
+The plot is performed in two step: the first is by calling `plot.newPlot`, then
+by calling `Plotly.relayout` which re-positions the plots and labels. In 
+between, we compute the space taken by all elements to correctly compute 
+reserved space: plots margin (tick labels space) and paper padding (the plots 
+grid layout space, if present)
 
 ## FLATFILE SELECT
 (`v-components/flatfiles.js`)

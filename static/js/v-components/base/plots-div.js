@@ -337,15 +337,13 @@ var PlotsDiv = {
 		</div>
 	</div>`,
 	methods: {
-		// methods to be overridden:
 		getPlots(responseObject){
-			/* Return from the given response object an Array of Objects representing
+			/* METHOD TO BE SUBCLASSED: return from the given response object an Array of Objects representing
 			the sub-plot to be visualized. Each sub-plot Object has the form:
 			{data: Array, layout: Object, params: Object}
 			See README, residuals.js and trellis.js for a details docstring and implementation
 			*/
 		},
-		// END OF OVERRIDABLE METHODS
 		init(jsondict){
 			// unwatch watchers, if any:
 			this.legend = {};
