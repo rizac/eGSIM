@@ -50,21 +50,21 @@ var PlotsDiv = {
 	},
 	created(){
 		// setup non reactive data:
-
 		// store watchers to dynamically create / remove to avoid useless plot redrawing or calculations (see init)
 		this.watchers = {};
-
 		this.plots = [];  // populated in `init`
-
+		// define default font and infer from page if possible:
 		var font = {
-			family: window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-family'),
-			size: parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'))
+			family: 'Helvetica, Arial, sans-serif',
+			size: 16
 		};
-		// remove null undefined nan values:
-		for (key in font){
-			if ([NaN, undefined, null].includes(font[key])){
-				delete font[key];
-			}
+		var fontf = window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-family');
+		if (typeof fontf === 'string' && !!fontf){
+			font.family = fontf;
+		}
+		var fonts = parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'));
+		if (typeof fonts === 'number' && !isNaN(fonts)){
+			font.size = fonts;
 		}
 		// default Plotly layout
 		this.defaultlayout = {
@@ -97,9 +97,6 @@ var PlotsDiv = {
 				gridcolor: "#eee",
 			}
 		};
-		// space reserved for the params grid ticklabels:
-		this.paramsGridMargin = 3 * font.size || 36;
-
 		// options of the side panel to configure mouse interactions on the plots:
 		this.mouseMode = { // https://plot.ly/python/reference/#layout-hovermode
 			// hovermodes (plotly keys). Note that we remove the 'y' key because useless
@@ -519,29 +516,8 @@ var PlotsDiv = {
 			});
 			var data = [];
 			// compute rows, cols, and margins for paramsGrid labels:
-			var colwidth = 1.0;
-			var rowheight = 1.0;
-			var marginleft = 0;
-			var marginbottom = 0;
-
-			if (gridxparam.label || gridyparam.label){
-				var [width, height] = this.getElmSize(this.$refs.rootDiv);
-				var margin = this.paramsGridMargin;
-				if (gridxparam.label){
-					marginbottom = margin / height;
-				}
-				if (gridyparam.label){
-					marginleft = margin / width;
-				}
-			}
-			var cols = gridxparam.values.length;
-			if (cols > 1 || marginleft){
-				colwidth = (1-marginleft) / cols;
-			}
-			var rows = gridyparam.values.length;
-			if (rows > 1 || marginbottom){
-				rowheight = (1-marginbottom) / rows;
-			}
+			var cols = gridxparam.values.length || 1;
+			var rows = gridyparam.values.length || 1;
 
 			var legendgroups = new Set();
 			for (var i = 0; i < plots.length; i++){
@@ -568,8 +544,8 @@ var PlotsDiv = {
 				// compute axis domains (assure the second domain element is 1 and not, e.g., 0.9999):
 				var gridxindex = gridxindices[i];
 				var gridyindex = gridyindices[i];
-				var xdomain = [marginleft + gridxindex*colwidth, 1+gridxindex == cols? 1 : marginleft+(1+gridxindex)*colwidth];
-				var ydomain = [marginbottom + gridyindex*rowheight, 1+gridyindex == rows ? 1 : marginbottom+(1+gridyindex)*rowheight];
+				var xdomain = [gridxindex*(1.0/cols), (1+gridxindex)*(1.0/cols)];
+				var ydomain = [gridyindex*(1.0/rows), (1+gridyindex)*(1.0/rows)];
 				// Add to the layout xaxis and yaxis, with specific key:
 				var axisIndex = 1 + gridyindex * cols + gridxindex;
 				layout[`xaxis${axisIndex}`] = Object.assign(xaxis, { domain: xdomain, anchor: `y${axisIndex}` });
@@ -587,6 +563,24 @@ var PlotsDiv = {
 					data.push(trace);
 				});
 			}
+			// add grid tick labels in form text placed on the plot (Plotly annotations).
+			// The annotations position is only relevant to retrieve their <svg> elements
+			// later (see `this.getPaperMargin`). As such just place x grid labels on the
+			// left and y grid labels on the right. Prefer x because plotly y coordinates
+			// are cartesian (y increases upwards) and <svg> not (y increases downwards)
+			layout.annotations = [];
+			for (var i=0; i < gridxparam.values.length; i++){
+				layout.annotations.push(this.createGridAnnotation({
+					text: `${gridxparam.values[i]}`,
+					x: 0
+				}));
+			}
+			for (var i=0; i < gridyparam.values.length; i++){
+				layout.annotations.push(this.createGridAnnotation({
+					text: `${gridyparam.values[i]}`,
+					x: 1
+				}));
+			}
 			// delete xaxis and yaxis on layout, as they are meaningless (their values
 			// are merged into each layout.xaxisN, layout.yaxisN Objects)
 			delete layout.xaxis;
@@ -599,6 +593,17 @@ var PlotsDiv = {
 				}
 			}
 			return [data, layout];
+		},
+		createGridAnnotation(props){
+			var annotation = {
+				xref: 'paper',
+				yref: 'paper',
+				showarrow: false,
+				bgcolor: 'rgba(255,255,255,0)',
+				borderwidth: 0,
+				bordercolor: 'rgba(255,255,255,0)'
+			};
+			return Object.assign(annotation, props || {});
 		},
 		setupAxisConfigurableProperties(data, layout){
 			// return a new Object to be passed to `Plotly.relayout` with the axis properties
@@ -624,7 +629,6 @@ var PlotsDiv = {
 					}
 				}else{
 					// set data from control:
-					// axis.forEach(a => a.showgrid = !!axisControl.grid.value);
 					axis.forEach(a => newLayout[`${a}.showgrid`] = !!axisControl.grid.value);
 				}
 
@@ -648,7 +652,6 @@ var PlotsDiv = {
 						}
 					}
 				}else{
-					// axis.forEach(a => a.type = axisControl.log.value ? 'log': 'linear');
 					axis.forEach(a => newLayout[`${a}.type`] = axisControl.log.value ? 'log': 'linear');
 				}
 
@@ -679,7 +682,6 @@ var PlotsDiv = {
 								range[1] += margin;
 							}
 							// set computed ranges to all plot axis:
-							// axis.forEach(a => a.range = axisControl.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
 							axis.forEach(a => newLayout[`${a}.range`]  = axisControl.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
 						}
 					}
@@ -692,89 +694,56 @@ var PlotsDiv = {
 			// (positions) re-adjusted to account for axis ticks and label size, and, if
 			// needed, the Plotly annotations, i.e.the grid labels resulting from the
 			// currently selected grid parameters
+			var newLayout = {};
+			for (var key of Object.keys(layout)){
+				if ((key.startsWith('xaxis') || key.startsWith('yaxis')) && Array.isArray(layout[key].domain)){
+					newLayout[`${key}.domain`] = Array.from(layout[key].domain);
+				}
+			}
+			var axisKeys = Array.from(Object.keys(newLayout));
+			// paper margin:
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			var xdomains = gridxparam.label ? new Array(gridxparam.values.length) : [];
 			var ydomains = gridyparam.label ? new Array(gridyparam.values.length) : [];
-			var margin = this.getPlotsMaxMargin();
-			var newLayout = {};
-			for (var key of Object.keys(layout)){
-				if (!key.startsWith('xaxis') && !key.startsWith('yaxis')){
-					continue;
-				}
-				var domain = layout[key].domain;
-				if (!domain){
-					continue;
-				}
-				var plotIndex = key.substring(5);
-				plotIndex = plotIndex ? parseInt(plotIndex)-1 : 0;
-
+			var cols = Math.max(xdomains.length, 1);
+			var rows = Math.max(ydomains.length, 1);
+			var papermargin = this.getPaperMargin();
+			var plotmargin = this.getPlotsMaxMargin();
+			// roughly get row height from min of papermargin, which should be the height of x axis
+			var [w, h] = this.getElmSize(this.$refs.rootDiv);
+			var [fontwidth, fontheight] = [layout.font.size / w, layout.font.size / h];
+			papermargin.left += 5 * fontwidth;
+			papermargin.bottom += 5 * fontheight;
+			for (var key of axisKeys){
+				var [col, row] = this.getPlotGridPosition(key);
+				var width = (1 - papermargin.left - papermargin.right - cols*(plotmargin.left + plotmargin.right))/cols;
+				var height = (1 - papermargin.top - papermargin.bottom - rows*(plotmargin.top + plotmargin.bottom))/rows;
 				if (key.startsWith('x')){
-					newLayout[`${key}.domain`] = [domain[0]+margin.left, domain[1]-margin.right];
-					if (gridxparam.label){
-						if (plotIndex < gridxparam.values.length){
-							xdomains[plotIndex] = domain;
-						}
+					var x0 = papermargin.left + (col +1 ) * plotmargin.left + col * (width + plotmargin.right);
+					newLayout[key] = [x0, x0 + width];
+					if (row == 0){
+						xdomains[col] = newLayout[key];  // store to put grid labels and ticks (see below)
 					}
 				}else{
-					newLayout[`${key}.domain`] = [domain[0]+margin.bottom, domain[1]-margin.top];
-					if (gridyparam.label){
-						var cols = gridxparam.values.length;
-						if (plotIndex % cols == 0){
-							ydomains[parseInt(plotIndex / cols)] = domain;
-						}
+					var y0 = papermargin.bottom + (row + 1) * plotmargin.bottom + row * (height + plotmargin.top);
+					newLayout[key] = [y0, y0 + height];
+					if (col == 0){
+						ydomains[row] = newLayout[key];  // store to put grid labels and ticks (see below)
 					}
 				}
 			}
-			if (!newLayout.annotations){ newLayout.annotations = [] };
-			var defAnnotation = {
-				xref: 'paper',
-				yref: 'paper',
-				showarrow: false,
-				height: 2 * this.paramsGridMargin / 3,
-				bgcolor: 'rgba(0,92,103,0.1)',
-				borderwidth: 1,
-				bordercolor: 'rgba(0,102,133,0.4)'
-			};
-
-			var [width, height] = this.getElmSize(this.$refs.rootDiv);
-			if (gridxparam.label){
-				for (var i=0; i < gridxparam.values.length; i++){
-					var domain = xdomains[i];
-					var w = width - (gridyparam.label ? this.paramsGridMargin : 0);
-					// avoid label overlapping by removing 4 pixel from left and right:
-					w-= 8 * gridxparam.values.length;
-				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
-						x: (domain[1] + domain[0]) / 2,
-						y: 0,
-						width: w / gridxparam.values.length,
-						xanchor: 'center', /* DO NOT CHANGE THIS */
-						yanchor: 'bottom',
-						text: `${gridxparam.label}: ${gridxparam.values[i]}`
-					}));
-				}
-			}
-			if (gridyparam.label){
-				for (var i=0; i < gridyparam.values.length; i++){
-					var domain = ydomains[i];
-					var w = height - (gridxparam.label ? this.paramsGridMargin : 0);
-					// avoid label overlapping by removing 4 pixel from top and bottom:
-					w-= 8 * gridyparam.values.length;
-				 	newLayout.annotations.push(Object.assign({}, defAnnotation, {
-						x: 0,
-						y: (domain[1] + domain[0]) / 2,
-						width: w / gridyparam.values.length,
-						xanchor: 'left',
-						yanchor: 'middle', /* DO NOT CHANGE THIS */
-						text: `${gridyparam.label}: ${gridyparam.values[i]}`,
-						textangle: -90
-					}));
-				}
-			}
+			papermargin.left -= 2*fontwidth;
+			papermargin.bottom -= 2*fontheight;
+			newLayout.shapes = this.getGridLines(xdomains, ydomains, papermargin);
+			papermargin.left -= .5*fontwidth;
+			papermargin.bottom -= .5*fontheight;
+			var annotations = this.getGridTickLabels(xdomains, ydomains, papermargin);
+			newLayout.annotations = annotations.concat(this.getGridLabels(xdomains, ydomains, papermargin));
 			return newLayout;
 		},
 		getPlotsMaxMargin(){
-			// Return an object representing the max margins of all plots, where
-			// each plot margin is computed subtracting the outer axes rectangle
+			// Return an object representing the max margin to be applied to each individual plot,
+			// where each plot margin is computed subtracting the outer axes rectangle
 			// (plot area + axis ticks and ticklabels area) and the inner one
 			var margin = { top: 20, bottom: 0, right: 10, left: 0 };
 			var [min, max, abs] = [Math.min, Math.max, Math.abs];
@@ -823,6 +792,149 @@ var PlotsDiv = {
 			margin.top /= height;
 			margin.bottom /= height;
 			return margin;
+		},
+		getPaperMargin(){
+			var plotDiv = this.$refs.rootDiv;
+			var [width, height] = this.getElmSize(plotDiv);
+			var margin = {top: 2.0/height, bottom: 2.0/height, left: 2.0/width, right: 2.0/width};
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			if (!gridxparam.label && !gridyparam.label){
+				return margin;
+			}
+			var infoLayer = plotDiv.querySelector('g.infolayer');
+			var annotations = Array.from(infoLayer.querySelectorAll(`g[class=annotation]`));
+			if(gridxparam.label){
+				// get the x annotations, recognizable as those with lower x:
+				var num = gridxparam.values.length;
+				var annots = annotations.sort((a, b) => (a.getBBox().x - b.getBBox().x)).slice(0, num);
+				margin.bottom = Math.max(margin.bottom, Math.max(...annots.map(elm => elm.getBBox().height)) / height);
+			}
+			if(gridyparam.label){
+				// get the y annotations, recognizable as those with higher x:
+				var num = annotations.length - gridyparam.values.length;
+				var annots = annotations.sort((a, b) => (a.getBBox().y - b.getBBox().y)).slice(num);
+				margin.left = Math.max(margin.left, Math.max(...annots.map(elm => elm.getBBox().width)) / width);
+			}
+			return margin;
+		},
+		getPlotGridPosition(axisKey){
+			// return the current grid position [xIndex, yIndex] of the plot associated
+			// to the string `axisKey`, which is a plotly layout key of the form:
+			// /[xy]axis\d*/ (where "xaxis" in plotly equals "xaxis1"). xIndex and yIndex
+			// are in cartesian coordinates, so [0, 0] denotes the bottom-left plot,
+			// [1, 0] the plot on its right, [0, 1] the plot above it, and so on
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			var cols = gridxparam.values.length || 1;
+			var rows = gridyparam.values.length || 1;
+			if (cols == 1 && rows == 1){
+				return [0, 0];
+			}
+			// plotly.relayout accepts keys such as "[xy]axis.[subset]", e.g. "xaxis.domain"
+			// in that case, split(".")[0] assures we get rid of everything after a dot (if any):
+			var axisIndex = parseInt(axisKey.split('.')[0].substring(5) || 1);  // xaxis.domain -> '', yaxis3.domain -> 3, and so on ...
+			var col = (axisIndex - 1) % cols;
+			var row = parseInt((axisIndex - 1) / cols);
+			return [col, row];
+		},
+		getGridLabels(xdomains, ydomains, papermargin){
+			// return an Array of zero to two Objects representing the plots grid labels.
+			// xdomains and ydomains are arrays denoting the space reserved by the grid
+			// columns and rows: xdomains returns the horizontal space taken by the lower
+			// left plot (index 0) up to the rightmost plot (last index) on the same row,
+			// whereas ydomains[0] returns the vertical space of the lower left plot
+			// (index 0) up to the uppermost plot (last index) on the same column. Each
+			// domain represents the space as an Array of two numbers [start, end], both
+			// in [0, 1], i.e. relative to the plotly "paper" (the root <div>)
+			var annotations = [];
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			if (gridxparam.label){
+				annotations.push(this.createGridAnnotation({
+					text: `${gridxparam.label}`,
+					y: 0,
+					yanchor: 'bottom',
+					x: (xdomains[0][0] + xdomains[xdomains.length-1][1]) / 2,
+					xanchor: 'center'
+				}));
+			}
+			if (gridyparam.label){
+				annotations.push(this.createGridAnnotation({
+					text: `${gridyparam.label}`,
+					x: 0,
+					xanchor: 'left',
+					y: (ydomains[0][0] + ydomains[ydomains.length-1][1]) / 2,
+					yanchor: 'middle',
+					textangle: -90,
+				}));
+			}
+			return annotations;
+		},
+		getGridTickLabels(xdomains, ydomains, papermargin){
+			// return an Array of columns*rows Objects representing the plots grid ticklabels.
+			// xdomains and ydomains are arrays denoting the space reserved by the grid
+			// columns and rows: xdomains returns the horizontal space taken by the lower
+			// left plot (index 0) up to the rightmost plot (last index) on the same row,
+			// whereas ydomains[0] returns the vertical space of the lower left plot
+			// (index 0) up to the uppermost plot (last index) on the same column. Each
+			// domain represents the space as an Array of two numbers [start, end], both
+			// in [0, 1], i.e. relative to the plotly "paper" (the root <div>)
+			var annotations = [];
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			if (gridxparam.label){
+				for(var i =0; i < gridxparam.values.length; i ++){
+					var domain = xdomains[i];
+					annotations.push(this.createGridAnnotation({
+						text: `${gridxparam.values[i]}`,
+						y: papermargin.bottom,
+						yanchor: 'top',
+						x: (domain[1] + domain[0]) / 2,
+						xanchor: 'center'
+					}));
+				}
+			}
+			if (gridyparam.label){
+				for(var i =0; i < gridyparam.values.length; i ++){
+					var domain = ydomains[i];
+					annotations.push(this.createGridAnnotation({
+						text: `${gridyparam.values[i]}`,
+						x: papermargin.left,
+						xanchor: 'right',
+						y: (domain[1] + domain[0]) / 2,
+						yanchor: 'center',
+					}));
+				}
+			}
+			return annotations;
+		},
+		getGridLines(xdomains, ydomains, papermargin){
+			// Now the grid, if present.
+			// add lines (plotly shapes):
+			var defShape = {
+				xref: 'paper',
+				yref: 'paper',
+				line: {
+					color: '#444',
+					width: 1
+				}
+			};
+			var shapes = [];
+			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			if (gridxparam.label){  // horizontal grid line
+				shapes.push(Object.assign({}, defShape, {
+					x0: xdomains[0][0],
+					x1: xdomains[xdomains.length-1][1],  // 1 - papermargin.right,
+					y0: papermargin.bottom,
+					y1: papermargin.bottom
+				}));
+			}
+			if (gridyparam.label){  // vertical grid line
+				shapes.push(Object.assign({}, defShape, {
+					x0: papermargin.left,
+					x1: papermargin.left,
+					y0: ydomains[0][0],
+					y1: ydomains[ydomains.length-1][1]  // 1 - papermargin.top
+				}));
+			}
+			return shapes;
 		},
 		getElmSize(domElement){
 			// returns the Array [width, height] of the given dom element size
