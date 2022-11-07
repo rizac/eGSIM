@@ -98,12 +98,11 @@ EGSIM.component('egsim-form', {
 	mixins: [FormDataHTTPClient, DataDownloader],
 	props :{
 		downloadUrl: String,  // url for downloading the current form as config yaml/json
-		visibilityToggle: {type: Boolean, default: true},  // variable to toggle form visibility from external components
+		show: {type: Boolean, default: true},  // controls form visibility
+		dialogbox: {type: Boolean, default: false}  // controls if the form must be wrapped in a dialog-box like frame
 	},
 	data() {
 		return {
-			show: true,
-			showAsDialog: false,  // appearance control
 			requestURL: ''
 		}
 	},
@@ -111,10 +110,9 @@ EGSIM.component('egsim-form', {
 	methods: {
 		submit(){
 			this.postFormData().then(response => {
-				this.show = !this.show;
-				this.showAsDialog = true;
 				setTimeout(() => {
-					// notify asynchronously after the form has been hidden:
+					// notify asynchronously after the form has been hidden,
+					// we might have css transitions to complete
 					this.$emit('submitted', response);
 				}, 200);
 			});
@@ -228,9 +226,6 @@ EGSIM.component('egsim-form', {
 		}
 	},
 	watch: {
-		visibilityToggle(newVal, oldVal){
-			this.show = !this.show;
-		},
 		form: {
 			deep: true,
 			handler(newVal, oldVal){
@@ -244,7 +239,7 @@ EGSIM.component('egsim-form', {
 	},
 	template: `<form novalidate @submit.prevent="submit"
 		class="flex-column position-relative pb-4 align-self-center"
-		:class="[showAsDialog ? ['shadow', 'border', 'bg-body', 'mt-1', 'mb-3'] : '']"
+		:class="[dialogbox ? ['shadow', 'border', 'bg-body', 'mt-1', 'mb-3'] : '']"
 		style="flex: 1 1 auto;z-index:10; border-color:rgba(0,0,0,.3) !important"
 		:style="{'display': show ? 'flex' : 'none'}">
 
@@ -288,7 +283,7 @@ EGSIM.component('egsim-form', {
 					<i class="fa fa-copy"></i>
 				</button>
 
-				<button type="button" v-show='showAsDialog' @click="show=!show"
+				<button type="button" v-show='dialogbox' @click="show=!show"
 						aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
 						class="btn btn-outline-dark border-0 ms-2">
 					<i class="fa fa-times"></i>
@@ -296,7 +291,7 @@ EGSIM.component('egsim-form', {
 
 			</div>
 
-			<div class="d-flex flex-row" :class="[showAsDialog ? ['mx-4'] : '']"
+			<div class="d-flex flex-row" :class="[dialogbox ? ['mx-4'] : '']"
 				 style="flex: 1 1 auto">
 				<div class="d-flex flex-column" style="flex: 1 1 auto">
 					<slot name="left-column"></slot>
