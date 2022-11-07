@@ -104,7 +104,6 @@ EGSIM.component('egsim-form', {
 		return {
 			show: true,
 			showAsDialog: false,  // appearance control
-			mounted: false,  // needed for ? FIXME
 			requestURL: '',
 			watchers: []  // needed for FIXME
 		}

@@ -210,13 +210,83 @@ Each plot has in EGSIM an additional `params` key, so a plot is an Object of the
     Note that some layout-related keys will be set automatically and overwritten if
     present: `[xy]axis.domain` and `[xy]axis.anchor`.
 
-### Plot details
+### Plotting details (for developers needing to modify plot-div source code)
 
-The plot is performed in two step: the first is by calling `plot.newPlot`, then
-by calling `Plotly.relayout` which re-positions the plots and labels. In 
-between, we compute the space taken by all elements to correctly compute 
-reserved space: plots margin (tick labels space) and paper padding (the plots 
-grid layout space, if present)
+In `plot-div`s, the plot is performed in two steps: the first is by calling 
+`Plotly.newPlot`, then by calling `Plotly.relayout` which re-positions the plots 
+and labels. In between, we compute the space taken by all elements to correctly 
+compute reserved space: plots margin (tick labels space) and paper padding (the 
+plots grid layout space, if present). Plotly supports several parameters to 
+control the plots layout, but we were not satisfied by the results. Hence, the 
+two-steps workaround just described.
+
+`NewPlot` is implemented along the line of https://plotly.com/javascript/subplots/#multiple-custom-sized-subplots:
+
+```javascript
+
+// plot data:
+var data = [
+  {
+    // 1st trace. Setup trace data and then assign its plot:
+    xaxis: 'x1',  // trace plot x axis (see Layout.xaxis below)
+    yaxis: 'y1'   // trace plot y axis (see Layout.yaxis below)
+  },
+  {
+    // 2nd trace. Setup trace data and then assign its plot:
+    xaxis: 'x2',  // trace plot x axis (see Layout.xaxis2 below)
+    yaxis: 'y2'  // trace plot y axis (see Layout.yaxis2 below)
+  }
+];
+
+// Note: It turns out (although not documented in plotly) that "xaxis" and "yaxis"
+// keys above can be omitted and they will default to 'x1' and 'y1'. In the
+// code, we prefer to be explicit and provide the keys anyway
+
+// plot layout (plot axes positions and size):
+var layout = {
+  xaxis1: {  // for xaxis1, "1" is actually optional
+    domain: [0, 0.45],  // axis left and right, in paper coordinates (in [0, 1])
+    anchor: 'y1'  // opposite axis
+  },
+  yaxis1: {  // for yaxis1, "1" is actually optional
+    domain: [0.5, 1],  // axis bottom and top, in paper coordinates (in [0, 1])
+    anchor: 'x1'
+  },
+  xaxis2: {
+    domain: [0.55, 1],
+    anchor: 'y2'
+  },
+  yaxis2: {
+    domain: [0.8, 1],
+    anchor: 'x2'
+  }
+};
+
+// Note: It turns out (although not documented in plotly) that in "layout.xaxis1" 
+// and "layout.yaxis1" the "1" is optional. In the code, we prefer to be explicit 
+// and provide "xaxis1" and "yaxis1" anyway
+
+// Then plot with plotly:
+Plotly.newPlot(<root_div>, data, layout);
+```
+
+`relayout` is then called after setting the new computed axis domains.
+Note that it supports overwriting nested properties via the
+dot. Example:
+
+```javascript
+// plot layout (plot axes positions and size):
+var layout = {
+  'xaxis1.domain': [0, 0.55]  // overwrite 'domain' property of 'xaxis1' only
+  'yaxis1.domain' ...
+  'annotations': [],  // list of grid labels and tick labels, if any 
+  'shapes': []  // list of the horizontal and vertical grid lines, if needed
+};
+
+// Then plot with plotly:
+Plotly.relayout(layout);
+```
+
 
 ## FLATFILE SELECT
 (`v-components/flatfiles.js`)
