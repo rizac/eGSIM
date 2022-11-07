@@ -8,7 +8,8 @@ EGSIM.component('trellis', {
 	},
 	data() {
 		return {
-			formVisibilityToggle: true,  // switch form visibility on/off
+			formVisible: true,
+			formAsDialogBox: false,
 			predefinedSA: false,  // whether we have selected spectra as plot type
 			responseData: {},
 			scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='plot_type' && key!='stdev')
@@ -33,8 +34,8 @@ EGSIM.component('trellis', {
 	},
 	template: `<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
 		<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
-					:visibilityToggle="formVisibilityToggle"
-					@submitted="(response) => responseData=response.data">
+					:show="formVisible" :dialogbox="formAsDialogBox"
+					@submitted="(response) => {formVisible=false;formAsDialogBox=true;responseData=response.data;}">
 
 			<template v-slot:left-column>
 				<gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
@@ -83,7 +84,7 @@ EGSIM.component('trellis', {
 						  class='invisible position-absolute start-0 top-0 end-0 bottom-0'
 						  :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
 			<slot>
-				<button @click='formVisibilityToggle=!formVisibilityToggle' class='btn btn-sm btn-primary'>
+				<button @click='formVisible=!formVisible' class='btn btn-sm btn-primary'>
 					<i class='fa fa-list-alt'></i> Configuration
 				</button>
 			</slot>
