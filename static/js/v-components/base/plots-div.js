@@ -452,42 +452,34 @@ var PlotsDiv = {
 			this.selectedgridlayout = selectedgridlayout;
 			this.params = params;
 		},
-		newPlot(){
-			// Filters the plots to display according to current parameters and grid
-			// chosen, and calls Plotly.newPlot on the plotly <div>
-			var divElement = this.$refs.rootDiv;
-			this.$nextTick(() => {
-				var [data, layout] = this.setupPlotlyDataAndLayout();
-				this.execute(function(){
-					Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
-					// now compute labels and ticks size:
-					var newLayout = this.setupAxisDomainsAndGridLabels(layout);
-					Plotly.relayout(divElement, newLayout);
-				}, {delay: 200});  // delay might be increased in case of animations
-			});
-		},
-		relayout(newLayout){  // Redraw the plot after changes on the layout (layout=anything but data)
-		    // The function arg null undefined: {}
-			var divElement = this.$refs.rootDiv;
-			this.$nextTick(() => {
-				this.execute(function(){
-					Plotly.relayout(divElement, newLayout || {});
-				});
-			});
-		},
-		execute(callback, options){
-			// Executes asynchronously the given callback (which can safely use `this`
-			// in its code to point to this Vue component) showing a wait bar meanwhile.
-			// 'options' is an Object with two optional properties:
-			// options.msg (the wait bar message)
-			// and delay (the execution delay)
-			var delay = (options || {}).delay || 200;
-			this.waitbar.msg = (options || {}).msg || this.waitbar.DRAWING;
-			if(!this.drawingPlots){ this.drawingPlots=true; }
+		newPlot(){  // redraw completely the plots
+			this.drawingPlots = true;
+			this.waitbar.msg = this.waitbar.DRAWING;
 			setTimeout(() => {
-				callback.call(this);
-				this.drawingPlots=false;
-			}, delay);
+				var divElement = this.$refs.rootDiv;
+				var [data, layout] = this.setupPlotlyDataAndLayout();
+				Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
+				// now compute labels and ticks size:
+				var newLayout = this.setupAxisDomainsAndGridLabels(layout);
+				Plotly.relayout(divElement, newLayout);
+				this.drawingPlots = false;
+			}, 150);
+		},
+		relayout(newLayout){  // Redraw the plot layout (anything but data)
+			this.drawingPlots = true;
+			this.waitbar.msg = this.waitbar.UPDATING;
+			setTimeout(() => {
+				Plotly.relayout(this.$refs.rootDiv, newLayout || {});
+				this.drawingPlots = false;
+			}, 100);
+		},
+		restyle(newData, traceIndices){  // Redraw the plot data
+			this.drawingPlots = true;
+			this.waitbar.msg = this.waitbar.UPDATING;
+			setTimeout(() => {
+				Plotly.restyle(this.$refs.rootDiv, newData, traceIndices);
+				this.drawingPlots = false;
+			}, 100);
 		},
 		setupPlotlyDataAndLayout(){
 			var plots = this.plots;
@@ -992,9 +984,7 @@ var PlotsDiv = {
 				}
 			});
 			if(indices.length){
-				this.execute(function(){
-					Plotly.restyle(this.$refs.rootDiv, legenddata, indices);
-				});
+				this.restyle(legenddata, indices);
 			}
 		},
 		jsonParse(jsonString){
