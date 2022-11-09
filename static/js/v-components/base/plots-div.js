@@ -705,10 +705,12 @@ var PlotsDiv = {
 			var papermargin = this.getPaperMargin();
 			var plotmargin = this.getPlotsMaxMargin();
 			// roughly get row height from min of papermargin, which should be the height of x axis
-			var [w, h] = this.getElmSize(this.$refs.rootDiv);
-			var [fontwidth, fontheight] = [layout.font.size / w, layout.font.size / h];
-			papermargin.left += 5 * fontwidth;
-			papermargin.bottom += 5 * fontheight;
+			if (gridxparam.label || gridyparam.label){
+				var [w, h] = this.getElmSize(this.$refs.rootDiv);
+				var [fontwidth, fontheight] = [layout.font.size / w, layout.font.size / h];
+				if (gridxparam.label){ papermargin.left += 5 * fontwidth; }
+				if (gridyparam.label){ papermargin.bottom += 5 * fontheight; }
+			}
 			for (var key of axisKeys){
 				var [col, row] = this.getPlotGridPosition(key);
 				var width = (1 - papermargin.left - papermargin.right - cols*(plotmargin.left + plotmargin.right))/cols;
@@ -727,13 +729,17 @@ var PlotsDiv = {
 					}
 				}
 			}
-			papermargin.left -= 2*fontwidth;
-			papermargin.bottom -= 2*fontheight;
-			newLayout.shapes = this.getGridLines(xdomains, ydomains, papermargin);
-			papermargin.left -= .5*fontwidth;
-			papermargin.bottom -= .5*fontheight;
-			var annotations = this.getGridTickLabels(xdomains, ydomains, papermargin);
-			newLayout.annotations = annotations.concat(this.getGridLabels(xdomains, ydomains, papermargin));
+			newLayout.shapes = [];
+			newLayout.annotations = [];
+			if (gridxparam.label || gridyparam.label){
+				papermargin.left -= 2*fontwidth;
+				papermargin.bottom -= 2*fontheight;
+				newLayout.shapes = this.getGridLines(xdomains, ydomains, papermargin);
+				papermargin.left -= .5*fontwidth;
+				papermargin.bottom -= .5*fontheight;
+				var annotations = this.getGridTickLabels(xdomains, ydomains, papermargin);
+				newLayout.annotations = annotations.concat(this.getGridLabels(xdomains, ydomains, papermargin));
+			}
 			return newLayout;
 		},
 		getPlotsMaxMargin(){
