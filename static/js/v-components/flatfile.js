@@ -92,9 +92,11 @@ EGSIM.component('flatfile-compilation', {
 			Each line of a flatfile is an observed seismic waveform, each waveform
 			consists of one or more fields (the waveform data and metadata),
 			separated by commas or similar characters (e.g. semicolon).
+			</p>
+			<p>
 			The minimum required fields that must be provided depend on the models to
-			compare and the intensity measures used for comparison, as illustrated in
-			the template below that can be dynamically adapted to the use case
+			compare and the intensity measures used for comparison, as shown below.
+			The resulting template can then be used to compile your own flatfile.
 			</p>
 		</div>
 
@@ -123,7 +125,7 @@ EGSIM.component('flatfile-compilation', {
 				</div>
 
 				<textarea v-model='flatfileContent' spellcheck="false"
-						  style='resize:none; flex:1 1 auto; white-space: pre; font-family:monospace; background-color:#363945; color:#e1e1e1'>
+						  style='resize:none; flex:1 1 auto; white-space: pre; font-family:monospace; background-color: rgb(245, 242, 240);'>
 				</textarea>
 
 				<div class='mt-2 text-muted'>
