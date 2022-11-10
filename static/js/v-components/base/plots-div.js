@@ -27,12 +27,14 @@ var PlotsDiv = {
 					x: {
 						log: {disabled: false, value: undefined},
 						sameRange: {disabled: false, value: undefined},
-						grid: {disabled: false, value: undefined}
+						grid: {disabled: false, value: undefined},
+						title: {disabled: false, value: undefined, title: ''}
 					} ,
 					y: {
 						log: {disabled: false, value: undefined},
 						sameRange: {disabled: false, value: undefined},
-						grid: {disabled: false, value: undefined}
+						grid: {disabled: false, value: undefined},
+						title: {disabled: false, value: undefined, title: ''}
 					}
 				},
 				mouse: {
@@ -180,8 +182,7 @@ var PlotsDiv = {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
-				var [data, layout]  = this.getPlotlyDataAndLayout();
-				var newLayout = this.setupAxisConfigurableProperties(data, layout);
+				var newLayout = this.axisControlChanged();
 				this.relayout(newLayout);
 			}
 		},
@@ -308,6 +309,13 @@ var PlotsDiv = {
 								   :disabled="axiscontrol.grid.disabled" class="me-1">
 							<span>grid</span>
 						</label>
+						<label class='text-nowrap m-0 ms-2'
+							   :class="{'checked': axiscontrol.title.value}"
+							   :disabled="axiscontrol.title.disabled">
+							<input type='checkbox' v-model='axiscontrol.title.value'
+								   :disabled="axiscontrol.title.disabled" class="me-1">
+							<span>title</span>
+						</label>
 					</div>
 				</div>
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
@@ -350,6 +358,7 @@ var PlotsDiv = {
 			// update selection, taking into account previously selected stuff:
 			this.setupParams();
 			this.createLegend();
+			this.initAxisControls();
 			// now plot:
 			this.newPlot();
 		},
@@ -452,12 +461,97 @@ var PlotsDiv = {
 			this.selectedgridlayout = selectedgridlayout;
 			this.params = params;
 		},
+		createLegend(){
+			this.legend = [];
+			var legend = this.legend;
+			var legendgroups = new Set();
+			this.plots.forEach((plot, i) => {
+				plot.data.forEach((trace) => {
+					var legendgroup = trace.legendgroup;
+					if (legendgroup && !legendgroups.has(legendgroup)){
+						legendgroups.add(legendgroup);
+						var legenddata = {visible: ('visible' in trace) ? !!trace.visible : true};
+						for (var key of ['line', 'marker']){
+							if (key in trace){
+								legenddata[key] = Object.assign({}, trace[key]);
+							}
+						}
+						legend.push([legendgroup, legenddata, JSON.stringify(legenddata, null, '  ')]);
+					}
+				});
+			});
+		},
+		initAxisControls(){
+			for (var layoutkey of ['xaxis', 'yaxis']){
+				// get the Array of axis Objects:
+				var axis = this.plots.map(p => (p.layout || {})[layoutkey] || {});
+				// get the axis HTMl control:
+				var control = layoutkey == 'xaxis' ? this.plotoptions.axis.x : this.plotoptions.axis.y;
+				// title:
+				control.title.disabled = true;
+				control.title.value = false;
+				control.title.text = '';
+				var titles = new Set();
+				for (var a of axis){
+					// title can be given as string or as Object with key 'text' (string)
+					var title = a.title || undefined;
+					if (typeof title === 'object'){
+						title = title.text;
+					}
+					if (!title){
+						titles.clear();
+						break;
+					}
+					titles.add(title);
+				}
+				if (titles.size == 1){
+					control.title.disabled = false;
+					control.title.value = true;
+					control.title.text = Array.from(titles)[0];
+				}
+				// grid:
+				control.grid.disabled = true;
+				control.grid.value = false;
+				if (axis.every(a => a.showgrid || a.showgrid === undefined)){
+					control.grid.disabled = false;
+					control.grid.value = true;
+				}else if (axis.every(a => a.showgrid === false)){
+					control.grid.disabled = false;
+					control.grid.value = false;
+				}
+				// type (log linear)
+				control.log.disabled = true;
+				control.log.value = false;
+				// set control from data:
+				if (axis.every(a => a.type === 'log')){
+					// if all axes are log type, then set the checkbox value first:
+					control.log.value = true;
+					control.log.disabled = false;
+				}else if (axis.every(a => a.type === 'linear')){
+					// if all axes are linear type, then set the type according to the checkbox:
+					control.log.disabled = false;
+					control.log.value = false;
+				}else if (axis.every(a => a.type === undefined || a.type === '-')){
+					// undefined and '-' are plotly default for: infer. Let's do the same:
+					var datakey = layoutkey[0];  // "x" or "y"
+					// this is the time consuming case (that's why it is better to specify type in subclasses, when possible)
+					var traces = this.plots.filter(p => 'data' in p && datakey in p.data).map(p => p.data[datakey]);
+					if (traces.every(trace => trace.every(v => typeof v === 'number'))){
+						control.log.disabled = false;
+						control.log.value = false;
+					}
+				}
+				// same range:
+				control.sameRange.value = false;
+				control.sameRange.disabled = control.log.disabled || axis.some(a => a.range !== undefined);
+			}
+		},
 		newPlot(){  // redraw completely the plots
 			this.drawingPlots = true;
 			this.waitbar.msg = this.waitbar.DRAWING;
 			setTimeout(() => {
 				var divElement = this.$refs.rootDiv;
-				var [data, layout] = this.setupPlotlyDataAndLayout();
+				var [data, layout] = this.createPlotlyDataAndLayout();
 				Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
 				// now compute labels and ticks size:
 				var newLayout = this.setupAxisDomainsAndGridLabels(layout);
@@ -481,7 +575,7 @@ var PlotsDiv = {
 				this.drawingPlots = false;
 			}, 100);
 		},
-		setupPlotlyDataAndLayout(){
+		createPlotlyDataAndLayout(){
 			var plots = this.plots;
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			// filter plots according to the value of the parameter which are not displayed as grid param:
@@ -572,13 +666,6 @@ var PlotsDiv = {
 			// are merged into each layout.xaxisN, layout.yaxisN Objects)
 			delete layout.xaxis;
 			delete layout.yaxis;
-			var newLayout = this.setupAxisConfigurableProperties(data, layout);
-			for(key of Object.keys(newLayout)){
-				var keys = key.split('.');
-				if(keys.length == 2){
-					layout[keys[0]][keys[1]] = newLayout[key];
-				}
-			}
 			return [data, layout];
 		},
 		createGridAnnotation(props){
@@ -591,90 +678,6 @@ var PlotsDiv = {
 				bordercolor: 'rgba(255,255,255,0)'
 			};
 			return Object.assign(annotation, props || {});
-		},
-		setupAxisConfigurableProperties(data, layout){
-			// return a new Object to be passed to `Plotly.relayout` with the axis properties
-			// that are configurable (see `this.plotoptions`)
-			var newLayout = {};
-			for (var ax of ['x', 'y']){
-				var axisControl = ax == 'x' ? this.plotoptions.axis.x : this.plotoptions.axis.y;
-				// get all layout['xaxis'], layout['xaxis1'] and so on. These are Objects
-				// representing all plots x axis (same for 'y' the next loop):
-				var regexp = ax == 'x' ? /^xaxis\d*$/g : /^yaxis\d*$/g;
-				var axis = Object.keys(layout).filter(key => regexp.exec(key));
-
-				// set grid on/off
-				if (axisControl.grid.value === undefined){
-					axisControl.grid.disabled = true;
-					// set control from data:
-					if (axis.every(a => layout[a].showgrid || layout[a].showgrid === undefined)){
-						axisControl.grid.disabled = false;
-						axisControl.grid.value = true;
-					}else if (axis.every(a => a.showgrid === false)){
-						axisControl.grid.disabled = false;
-						axisControl.grid.value = false;
-					}
-				}else{
-					// set data from control:
-					axis.forEach(a => newLayout[`${a}.showgrid`] = !!axisControl.grid.value);
-				}
-
-				// set log / linear (not log). Note that non numeric data (e.g. category) disabled the control
-				if (axisControl.log.value === undefined){
-					axisControl.log.disabled = true;
-					// set control from data:
-					if (axis.every(a => layout[a].type === 'log')){
-						// if all axes are log type, then set the checkbox value first:
-						axisControl.log.value = true;
-						axisControl.log.disabled = false;
-					}else if (axis.every(a => layout[a].type === 'linear')){
-						// if all axes are linear type, then set the type according to the checkbox:
-						axisControl.log.disabled = false;
-						axisControl.log.value = false;
-					}else if (axis.every(a => layout[a].type === undefined || layout[a].type === '-')){
-						// undefined and '-' are plotly default for: infer. Let's do the same:
-						if (data.every(trace => (ax in trace) && trace[ax].every(v => typeof v === 'number'))){
-							axisControl.log.disabled = false;
-							axisControl.log.value = false;
-						}
-					}
-				}else{
-					axis.forEach(a => newLayout[`${a}.type`] = axisControl.log.value ? 'log': 'linear');
-				}
-
-				// set the range
-				if (axisControl.sameRange.value === undefined){
-					// set control from data:
-					axisControl.sameRange.disabled = axisControl.log.disabled ||
-						axis.some(a => a.range !== undefined);
-				}else{
-					// set data from control:
-					if(!axisControl.sameRange.value){
-						// Provide a 'delete range key' command by setting it undefined (infer range):
-						axis.forEach(a => newLayout[`${a}.range`] = undefined);
-					}else{
-						var range = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
-						data.forEach(trace => {
-							var values = (trace[ax] || []).filter(v => typeof v === 'number' && !isNaN(v));
-							if(values.length){
-								range = [Math.min(...values, range[0]), Math.max(...values, range[1])];
-							}
-						});
-						if (range[0] < range[1]){
-							// add margins for better visualization:
-							var margin = Math.abs(range[1] - range[0]) / 50;
-							// be careful with negative logarithmic values:
-							if (!axisControl.log.value || (range[0] > margin && range[1] > 0)){
-								range[0] -= margin;
-								range[1] += margin;
-							}
-							// set computed ranges to all plot axis:
-							axis.forEach(a => newLayout[`${a}.range`]  = axisControl.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
-						}
-					}
-				}
-			}
-			return newLayout;
 		},
 		setupAxisDomainsAndGridLabels(layout){
 			// return a new Object to be passed to `Plotly.relayout` with the axis domains
@@ -892,7 +895,7 @@ var PlotsDiv = {
 						x: papermargin.left,
 						xanchor: 'right',
 						y: (domain[1] + domain[0]) / 2,
-						yanchor: 'center',
+						yanchor: 'middle',
 					}));
 				}
 			}
@@ -933,25 +936,59 @@ var PlotsDiv = {
 			// returns the Array [width, height] of the given dom element size
 			return [domElement.offsetWidth, domElement.offsetHeight];
 		},
-		createLegend(){
-			this.legend = [];
-			var legend = this.legend;
-			var legendgroups = new Set();
-			this.plots.forEach((plot, i) => {
-				plot.data.forEach((trace) => {
-					var legendgroup = trace.legendgroup;
-					if (legendgroup && !legendgroups.has(legendgroup)){
-						legendgroups.add(legendgroup);
-						var legenddata = {visible: ('visible' in trace) ? !!trace.visible : true};
-						for (var key of ['line', 'marker']){
-							if (key in trace){
-								legenddata[key] = Object.assign({}, trace[key]);
+		axisControlChanged(){
+			var [data, layout]  = this.getPlotlyDataAndLayout();
+			// return a new Object to be passed to `Plotly.relayout` with the axis properties
+			// that are configurable (see `this.plotoptions`)
+			var newLayout = {};
+			for (var ax of ['x', 'y']){
+				var control = ax == 'x' ? this.plotoptions.axis.x : this.plotoptions.axis.y;
+				// get all layout['xaxis'], layout['xaxis1'] and so on. These are Objects
+				// representing all plots x axis (same for 'y' the next loop):
+				var regexp = ax == 'x' ? /^xaxis\d*$/g : /^yaxis\d*$/g;
+				var axis = Object.keys(layout).filter(key => regexp.exec(key));
+				// "remove" (set to undefined) the title
+				// Note that we should call newPlot because we should recompute spaces
+				// but that's too complex for the moment
+				if (!control.title.disabled){
+					var text = control.title.value ? control.title.text : "";
+					axis.forEach(a => newLayout[`${a}.title.text`] = text);
+				}
+				// set data from control:
+				if (!control.grid.disabled){
+					axis.forEach(a => newLayout[`${a}.showgrid`] = !!control.grid.value);
+				}
+				if (!control.log.disabled){
+					axis.forEach(a => newLayout[`${a}.type`] = control.log.value ? 'log': 'linear');
+				}
+				// set data from control:
+				if(!control.sameRange.disabled){
+					if(!control.sameRange.value){
+						// Provide a 'delete range key' command by setting it undefined (infer range):
+						axis.forEach(a => newLayout[`${a}.range`] = undefined);
+					}else{
+						var range = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+						data.forEach(trace => {
+							var values = (trace[ax] || []).filter(v => typeof v === 'number' && !isNaN(v));
+							if(values.length){
+								range = [Math.min(...values, range[0]), Math.max(...values, range[1])];
 							}
+						});
+						if (range[0] < range[1]){
+							// add margins for better visualization:
+							var margin = Math.abs(range[1] - range[0]) / 50;
+							// be careful with negative logarithmic values:
+							if (!control.log.value || (range[0] > margin && range[1] > 0)){
+								range[0] -= margin;
+								range[1] += margin;
+							}
+							// set computed ranges to all plot axis:
+							axis.forEach(a => newLayout[`${a}.range`]  = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
 						}
-						legend.push([legendgroup, legenddata, JSON.stringify(legenddata, null, '  ')]);
 					}
-				});
-			});
+				}
+			}
+			return newLayout;
 		},
 		getLegendColor(legenddata){
 			if (legenddata) {

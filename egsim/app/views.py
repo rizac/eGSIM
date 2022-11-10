@@ -162,7 +162,7 @@ def download_asimage(request, filename: str):
     # fix for https://github.com/plotly/plotly.py/issues/3469:
     pio.full_figure_for_development(fig, warn=False)
     # compute bytes string:
-    bytestr = fig.to_image(format=img_format, width=width, height=height)  # , scale=2)
+    bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)  # , scale=2)
     response = HttpResponse(bytestr, content_type=content_type)
     response['Content-Disposition'] = \
         'attachment; filename=%s' % filename
