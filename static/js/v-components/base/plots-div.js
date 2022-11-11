@@ -26,13 +26,13 @@ var PlotsDiv = {
 				axis: {
 					x: {
 						log: {disabled: false, value: undefined},
-						sameRange: {disabled: false, value: undefined},
+						sameRange: {disabled: false, value: undefined, range: null},
 						grid: {disabled: false, value: undefined},
 						title: {disabled: false, value: undefined, title: ''}
 					} ,
 					y: {
 						log: {disabled: false, value: undefined},
-						sameRange: {disabled: false, value: undefined},
+						sameRange: {disabled: false, value: undefined, range: null},
 						grid: {disabled: false, value: undefined},
 						title: {disabled: false, value: undefined, title: ''}
 					}
@@ -169,6 +169,9 @@ var PlotsDiv = {
 			deep: true,
 			handler (newval, oldval) {
 				if(!this.drawingPlots){
+					// displayed plots might change, so we need to reset ranges which will be recomputed
+					this.plotoptions.axis.x.sameRange.range = null;
+					this.plotoptions.axis.y.sameRange.range = null;
 					this.newPlot();
 				}
 			}
@@ -182,7 +185,7 @@ var PlotsDiv = {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
-				var newLayout = this.axisControlChanged();
+				var newLayout = this.axisControlChanged(...this.getPlotlyDataAndLayout());
 				this.relayout(newLayout);
 			}
 		},
@@ -252,7 +255,7 @@ var PlotsDiv = {
 						</div>
 					</div>
 					<div class='_pso d-flex flex-column d-none'>
-						<textarea class='border' spellcheck="false" class='form-control'
+						<textarea class='form-control' spellcheck="false"
 								  style='margin:0px;padding:0px !important; height: 12rem;font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
 								  v-model="l[2]"/>
 						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonParse(l[2])"
@@ -662,12 +665,25 @@ var PlotsDiv = {
 					x: 1
 				}));
 			}
-			// assign
-
 			// delete xaxis and yaxis on layout, as they are meaningless (their values
 			// are merged into each layout.xaxisN, layout.yaxisN Objects)
 			delete layout.xaxis;
 			delete layout.yaxis;
+			// assign the axis properties from the controls:
+			var newLayout = this.axisControlChanged(data, layout);
+			// newLayout is flattened, so e.g. newLayout['xaxis.title.text'] must be
+			// assigned to layout['xaxis']['title']['text']
+			for (var key of Object.keys(newLayout)){
+				var obj = layout;
+				var subkeys = key.split('.');
+				for (var subkey of subkeys.slice(0, -1)){
+					if (!(subkey in obj)){
+						obj[subkey] = {};
+					}
+					var obj = obj[subkey];
+				}
+				obj[subkeys[subkeys.length-1]] = newLayout[key];
+			}
 			return [data, layout];
 		},
 		createGridAnnotation(props){
@@ -938,8 +954,7 @@ var PlotsDiv = {
 			// returns the Array [width, height] of the given dom element size
 			return [domElement.offsetWidth, domElement.offsetHeight];
 		},
-		axisControlChanged(){
-			var [data, layout]  = this.getPlotlyDataAndLayout();
+		axisControlChanged(data, layout){
 			// return a new Object to be passed to `Plotly.relayout` with the axis properties
 			// that are configurable (see `this.plotoptions`)
 			var newLayout = {};
@@ -969,23 +984,27 @@ var PlotsDiv = {
 						// Provide a 'delete range key' command by setting it undefined (infer range):
 						axis.forEach(a => newLayout[`${a}.range`] = undefined);
 					}else{
-						var range = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
-						data.forEach(trace => {
-							var values = (trace[ax] || []).filter(v => typeof v === 'number' && !isNaN(v));
-							if(values.length){
-								range = [Math.min(...values, range[0]), Math.max(...values, range[1])];
+						var range = control.sameRange.range;  // don't recompute range twice
+						if (range == null){
+							var range = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+							data.forEach(trace => {
+								var values = (trace[ax] || []).filter(v => typeof v === 'number' && !isNaN(v));
+								if(values.length){
+									range = [Math.min(...values, range[0]), Math.max(...values, range[1])];
+								}
+							});
+							if (range[0] < range[1]){
+								control.range = range;
+								// add margins for better visualization:
+								var margin = Math.abs(range[1] - range[0]) / 50;
+								// be careful with negative logarithmic values:
+								if (!control.log.value || (range[0] > margin && range[1] > 0)){
+									range[0] -= margin;
+									range[1] += margin;
+								}
+								// set computed ranges to all plot axis:
+								axis.forEach(a => newLayout[`${a}.range`]  = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
 							}
-						});
-						if (range[0] < range[1]){
-							// add margins for better visualization:
-							var margin = Math.abs(range[1] - range[0]) / 50;
-							// be careful with negative logarithmic values:
-							if (!control.log.value || (range[0] > margin && range[1] > 0)){
-								range[0] -= margin;
-								range[1] += margin;
-							}
-							// set computed ranges to all plot axis:
-							axis.forEach(a => newLayout[`${a}.range`]  = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
 						}
 					}
 				}
