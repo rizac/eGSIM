@@ -124,7 +124,7 @@ EGSIM.component('flatfile-compilation', {
 					</div>
 				</div>
 
-				<textarea v-model='flatfileContent' spellcheck="false"
+				<textarea v-model='flatfileContent' spellcheck="false" class='form-control'
 						  style='resize:none; flex:1 1 auto; white-space: pre; font-family:monospace; background-color: rgb(245, 242, 240);'>
 				</textarea>
 

@@ -252,7 +252,7 @@ var PlotsDiv = {
 						</div>
 					</div>
 					<div class='_pso d-flex flex-column d-none'>
-						<textarea class='border' spellcheck="false"
+						<textarea class='border' spellcheck="false" class='form-control'
 								  style='margin:0px;padding:0px !important; height: 12rem;font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
 								  v-model="l[2]"/>
 						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonParse(l[2])"
@@ -632,7 +632,7 @@ var PlotsDiv = {
 				layout[`xaxis${axisIndex}`] = Object.assign(xaxis, { domain: xdomain, anchor: `y${axisIndex}` });
 				layout[`yaxis${axisIndex}`] = Object.assign(yaxis, { domain: ydomain, anchor: `x${axisIndex}` });
 				// Map all traces to the axis just created on the layout:
-				plot.data.forEach((trace) => {
+				plot.data.forEach(trace => {
 					trace.xaxis = `x${axisIndex}`;
 					trace.yaxis = `y${axisIndex}`;
 					// this is necessary only if we show the plotly legend (we don't)
@@ -662,6 +662,8 @@ var PlotsDiv = {
 					x: 1
 				}));
 			}
+			// assign
+
 			// delete xaxis and yaxis on layout, as they are meaningless (their values
 			// are merged into each layout.xaxisN, layout.yaxisN Objects)
 			delete layout.xaxis;
