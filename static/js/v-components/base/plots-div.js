@@ -26,7 +26,7 @@ var PlotsDiv = {
 				axis: {
 					x: {
 						log: {disabled: false, value: undefined},
-						sameRange: {disabled: false, value: undefined, range: null},
+						sameRange: {disabled: false, value: undefined},
 						grid: {disabled: false, value: undefined},
 						title: {disabled: false, value: undefined, title: ''}
 					} ,
@@ -1021,27 +1021,24 @@ var PlotsDiv = {
 						// Provide a 'delete range key' command by setting it undefined (infer range):
 						axis.forEach(a => newLayout[`${a}.range`] = undefined);
 					}else{
-						var range = control.sameRange.range;  // don't recompute range twice
-						if (range == null){
-							var range = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
-							data.forEach(trace => {
-								var values = (trace[ax] || []).filter(v => typeof v === 'number' && !isNaN(v));
-								if(values.length){
-									range = [Math.min(...values, range[0]), Math.max(...values, range[1])];
-								}
-							});
-							if (range[0] < range[1]){
-								control.range = range;
-								// add margins for better visualization:
-								var margin = Math.abs(range[1] - range[0]) / 50;
-								// be careful with negative logarithmic values:
-								if (!control.log.value || (range[0] > margin && range[1] > 0)){
-									range[0] -= margin;
-									range[1] += margin;
-								}
-								// set computed ranges to all plot axis:
-								axis.forEach(a => newLayout[`${a}.range`]  = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
+						var vals = [];
+						data.forEach(trace => {
+							if (ax in trace){
+								vals.concat(trace[ax].filter(v => !isNaN(v)));
 							}
+						});
+						var range = [Math.min(...vals), Math.max(...vals)];
+						if (range[0] < range[1]){
+							control.range = range;
+							// add margins for better visualization:
+							var margin = Math.abs(range[1] - range[0]) / 50;
+							// be careful with negative logarithmic values:
+							if (!control.log.value || (range[0] > margin && range[1] > 0)){
+								range[0] -= margin;
+								range[1] += margin;
+							}
+							// set computed ranges to all plot axis:
+							axis.forEach(a => newLayout[`${a}.range`]  = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
 						}
 					}
 				}
