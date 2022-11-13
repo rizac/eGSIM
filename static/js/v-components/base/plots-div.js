@@ -653,16 +653,29 @@ var PlotsDiv = {
 			// left and y grid labels on the right. Prefer x because plotly y coordinates
 			// are cartesian (y increases upwards) and <svg> not (y increases downwards)
 			layout.annotations = [];
-			for (var i=0; i < gridxparam.values.length; i++){
+			if (gridxparam.label){
+				for (var i=0; i < gridxparam.values.length; i++){
+					layout.annotations.push(this.createGridAnnotation({
+						text: `${gridxparam.values[i]}`,
+						x: 1
+					}));
+				}
 				layout.annotations.push(this.createGridAnnotation({
-					text: `${gridxparam.values[i]}`,
-					x: 0
+					text: `${gridxparam.label}`,
+					x: 1
 				}));
 			}
-			for (var i=0; i < gridyparam.values.length; i++){
+			if (gridyparam.label){
+				for (var i=0; i < gridyparam.values.length; i++){
+					layout.annotations.push(this.createGridAnnotation({
+						text: `${gridyparam.values[i]}`,
+						x: 0
+					}));
+				}
 				layout.annotations.push(this.createGridAnnotation({
-					text: `${gridyparam.values[i]}`,
-					x: 1
+					text: `${gridyparam.label}`,
+					x: 0,
+					textangle: -90
 				}));
 			}
 			// delete xaxis and yaxis on layout, as they are meaningless (their values
@@ -715,14 +728,28 @@ var PlotsDiv = {
 			var ydomains = gridyparam.label ? new Array(gridyparam.values.length) : [];
 			var cols = Math.max(xdomains.length, 1);
 			var rows = Math.max(ydomains.length, 1);
-			var papermargin = this.getPaperMargin();
 			var plotmargin = this.getPlotsMaxMargin();
-			// roughly get row height from min of papermargin, which should be the height of x axis
+			var [w, h] = this.getElmSize(this.$refs.rootDiv);
+			var [labelsmargin, ticklabelsmargin] = this.getPaperMargin();
+			var papermargin = Object.assign({}, ticklabelsmargin);
 			if (gridxparam.label || gridyparam.label){
-				var [w, h] = this.getElmSize(this.$refs.rootDiv);
-				var [fontwidth, fontheight] = [layout.font.size / w, layout.font.size / h];
-				if (gridxparam.label){ papermargin.left += 5 * fontwidth; }
-				if (gridyparam.label){ papermargin.bottom += 5 * fontheight; }
+				var linesmargin = Object.assign({}, ticklabelsmargin);
+				//define spaces: label-tiklabels space, ticklabels-gridline space, gridline-axis space
+				var _spaces = [0.1, 0.2, 1.7]; // [.5, .5, 1.5];
+				// roughly get row height from min of papermargin, which should be the height of x axis
+				var [fontW, fontH] = [layout.font.size / w, layout.font.size / h];
+				if (gridxparam.label){
+					var spaces = _spaces.map(val => fontH * val);
+					ticklabelsmargin.left += spaces[0];
+					linesmargin.left += spaces[0] + spaces[1];
+					papermargin.left += spaces[0] + spaces[1] + spaces[2];
+				}
+				if (gridyparam.label){
+					var spaces = _spaces.map(val => fontW * val);
+					ticklabelsmargin.bottom += spaces[0];
+					linesmargin.bottom += spaces[0] + spaces[1];
+					papermargin.bottom += spaces[0] + spaces[1] + spaces[2];
+				}
 			}
 			for (var key of axisKeys){
 				var [col, row] = this.getPlotGridPosition(key);
@@ -745,13 +772,9 @@ var PlotsDiv = {
 			newLayout.shapes = [];
 			newLayout.annotations = [];
 			if (gridxparam.label || gridyparam.label){
-				papermargin.left -= 2*fontwidth;
-				papermargin.bottom -= 2*fontheight;
-				newLayout.shapes = this.getGridLines(xdomains, ydomains, papermargin);
-				papermargin.left -= .5*fontwidth;
-				papermargin.bottom -= .5*fontheight;
-				var annotations = this.getGridTickLabels(xdomains, ydomains, papermargin);
-				newLayout.annotations = annotations.concat(this.getGridLabels(xdomains, ydomains, papermargin));
+				newLayout.shapes = this.getGridLines(xdomains, ydomains, linesmargin);
+				var annotations = this.getGridTickLabels(xdomains, ydomains, ticklabelsmargin);
+				newLayout.annotations = annotations.concat(this.getGridLabels(xdomains, ydomains, labelsmargin));
 			}
 			return newLayout;
 		},
@@ -810,26 +833,40 @@ var PlotsDiv = {
 		getPaperMargin(){
 			var plotDiv = this.$refs.rootDiv;
 			var [width, height] = this.getElmSize(plotDiv);
-			var margin = {top: 2.0/height, bottom: 2.0/height, left: 2.0/width, right: 2.0/width};
+			var labelmargin = {top: 2.0/height, bottom: 2.0/height, left: 2.0/width, right: 2.0/width};
+			var ticklabelsmargin = {left: 0, top: 0, bottom: 0, right: 0};
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			if (!gridxparam.label && !gridyparam.label){
-				return margin;
+				return [labelmargin, ticklabelsmargin];
 			}
 			var infoLayer = plotDiv.querySelector('g.infolayer');
 			var annotations = Array.from(infoLayer.querySelectorAll(`g[class=annotation]`));
 			if(gridxparam.label){
 				// get the x annotations, recognizable as those with lower x:
 				var num = gridxparam.values.length;
-				var annots = annotations.sort((a, b) => (a.getBBox().x - b.getBBox().x)).slice(0, num);
-				margin.bottom = Math.max(margin.bottom, Math.max(...annots.map(elm => elm.getBBox().height)) / height);
+				var annots = annotations.sort((a, b) => (b.getBBox().x - a.getBBox().x)).slice(0, num+1);
+				var ticklabels = annots.filter(a => a.textContent !== gridxparam.label);
+				ticklabelsmargin.bottom = Math.max(...ticklabels.map(elm => elm.getBBox().height)) / height;
+				var label = annots.filter(a => a.textContent === gridxparam.label)[0];
+				if (label) {
+					labelmargin.bottom = label.getBBox().height / height;
+					ticklabelsmargin.bottom += labelmargin.bottom;
+				};
 			}
 			if(gridyparam.label){
 				// get the y annotations, recognizable as those with higher x:
-				var num = annotations.length - gridyparam.values.length;
-				var annots = annotations.sort((a, b) => (a.getBBox().y - b.getBBox().y)).slice(num);
-				margin.left = Math.max(margin.left, Math.max(...annots.map(elm => elm.getBBox().width)) / width);
+				var num = gridyparam.values.length;
+				var annots = annotations.sort((a, b) => (a.getBBox().x - b.getBBox().x)).slice(0, num+1);
+				var ticklabels = annots.filter(a => a.textContent !== gridyparam.label);
+				ticklabelsmargin.left = Math.max(...ticklabels.map(elm => elm.getBBox().width)) / width;
+				var label = annots.filter(a => a.textContent === gridyparam.label)[0];
+				if (label){
+					// it should be label.getBBox().width, but label is rotated 90 deg:
+					labelmargin.left = label.getBBox().height / width;
+					ticklabelsmargin.left += labelmargin.left;
+				};
 			}
-			return margin;
+			return [labelmargin, ticklabelsmargin];
 		},
 		getPlotGridPosition(axisKey){
 			// return the current grid position [xIndex, yIndex] of the plot associated
