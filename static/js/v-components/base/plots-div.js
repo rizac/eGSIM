@@ -231,21 +231,18 @@ var PlotsDiv = {
 			</div>
 		</div>
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
-		<div class='d-flex flex-column ps-4' v-show="legend.length || isGridCusomizable">
+		<div class='d-flex flex-column ps-4' v-show="legend.length || isGridCusomizable" style='overflow-y: auto'>
 			<slot></slot> <!-- slot for custom buttons -->
-			<div v-show='legend.length' class='mt-3 border p-2 bg-white px-1'
-				 style='flex: 1 1 auto;overflow: auto'>
-				<div>Legend</div>
-				<div v-for="l in legend" class='d-flex flex-column'>
-					<div class='d-flex flex-row align-items-baseline'  getLegendColor
+			<div v-show='legend.length' class='mt-3 p-2 px-1'>
+				<div v-for="l in legend" class='d-flex flex-column form-control mt-2'>
+					<div class='d-flex flex-row align-items-baseline'
 						 :style="{color: getLegendColor(l[1])}">
-						<label class='my-0 mt-2 text-nowrap' :class="{'checked': l[1].visible}"
+						<label class='my-0 text-nowrap' :class="{'checked': l[1].visible}"
 							style='flex: 1 1 auto'>
 							<input type='checkbox' v-model="l[1].visible"  getLegendColor
 								   :style="{'accent-color': getLegendColor(l[1]) + ' !important'}"
 								   @change="setTraceStyle(l[0], l[1])"> {{ l[0] }}
 						</label>
-
 						<div data-balloon-pos="left" data-balloon-length="small" class='ms-1'
 						     aria-label='Style the plot traces (lines, bars, markers) of this legend group'>
 							<i class="fa fa-chevron-down" style="cursor:pointer"
@@ -253,8 +250,8 @@ var PlotsDiv = {
 						</div>
 					</div>
 					<div class='_pso d-flex flex-column d-none'>
-						<textarea class='form-control' spellcheck="false"
-								  style='margin:0px;padding:0px !important; height: 12rem;font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
+						<textarea class='form-control mt-1' spellcheck="false"
+								  style='min-height: 12rem;font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
 								  v-model="l[2]"/>
 						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonParse(l[2])"
 								@click="setTraceStyle(l[0], jsonParse(l[2]))"
@@ -262,6 +259,7 @@ var PlotsDiv = {
 					</div>
 				</div>
 			</div>
+			<div style='flex: 1 1 auto'></div>
 			<div>
 				<div class='mt-3 border p-2 bg-white'>
 					<select @change="downloadTriggered" class='form-control'
@@ -561,13 +559,16 @@ var PlotsDiv = {
 			}, 150);
 		},
 		relayout(newLayout, updatePositions){  // Redraw the plot layout (anything but data)
+			// updatePositions: set to true if newLayout affects in some way the position
+			// of axis and labels, which must thus be recomputed
 			this.drawingPlots = true;
 			this.waitbar.msg = this.waitbar.UPDATING;
 			// FIXME: if I do not do this, newLayout is undefined in setTimeout below WTF?!!!
 			var nl = newLayout || {};
+			var up = updatePositions;
 			setTimeout(() => {
 				Plotly.relayout(this.$refs.rootDiv, nl);
-				if (updatePositions){
+				if (up){
 					var newLayout = this.updateLayoutFromCurrentlyDisplayedPlots(this.getPlotlyDataAndLayout()[1]);
 					Plotly.relayout(this.$refs.rootDiv, newLayout);
 				}
@@ -652,10 +653,8 @@ var PlotsDiv = {
 				});
 			}
 			// add grid tick labels in form text placed on the plot (Plotly annotations).
-			// The annotations position is only relevant to retrieve their <svg> elements
-			// later (see `this.getPaperMargin`). As such just place x grid labels on the
-			// left and y grid labels on the right. Prefer x because plotly y coordinates
-			// are cartesian (y increases upwards) and <svg> not (y increases downwards)
+			// The precise annotations positions will be set later (see `this.getPaperMargin`):
+			// for now lace y labels+ticklabels on the left (x:0) and x stuff on the right (x:1)
 			layout.annotations = [];
 			if (gridxparam.label){
 				for (var i=0; i < gridxparam.values.length; i++){
@@ -715,10 +714,11 @@ var PlotsDiv = {
 			return Object.assign(annotation, props || {});
 		},
 		updateLayoutFromCurrentlyDisplayedPlots(layout){
-			// return a new Object to be passed to `Plotly.relayout` with the axis domains
-			// (positions) re-adjusted to account for axis ticks and label size, and, if
-			// needed, the Plotly annotations, i.e.the grid labels resulting from the
-			// currently selected grid parameters
+			// return a new Object to be passed to `Plotly.relayout` where sizes and positions
+			// of axis, gridlayout labels and ticks (if any) are recomputed from the HTML
+			// elements currently laid out on the page. this is necessary because 1. our
+			// gridlayout and 2. Plotly does not automatically computes ticklabels and label size
+			// when setting a plot size
 			var newLayout = {};
 			for (var key of Object.keys(layout)){
 				if ((key.startsWith('xaxis') || key.startsWith('yaxis')) && Array.isArray(layout[key].domain)){
@@ -814,43 +814,31 @@ var PlotsDiv = {
 				innerPlotRect = innerPlotRect.getBBox();
 
 				// try to find the xlabel, otherwise get the xticks+xticklabels:
-				var xElm = infoLayer.querySelector(`g[class=g-${xindex}title]`);  // xlabel
+				var xElm = infoLayer.querySelector(`g[class=g-${xindex}title]`);  // xlabel <g>
 				if (xElm){
-					xElm = xElm.getBBox();
-					if (!xElm.height){
-						xElm = null;
-					}
+					xElm = xElm.getBBox();  // xlabel rect
 				}
-				if (!xElm){
-					xElm = elm.querySelector('g.xaxislayer-above');  // xticks+xticklabels
+				if (!xElm || !xElm.height){
+					xElm = elm.querySelector('g.xaxislayer-above');  // xticks+xticklabels <g>
 					if (xElm){
-						xElm = xElm.getBBox();
-						if (!xElm.height){
-							xElm = null;
-						}
+						xElm = xElm.getBBox(); // xticks+xticklabels rect
 					}
 				}
-				if (xElm){
+				if (xElm && xElm.height){
 					margin.bottom = max(margin.bottom, xElm.y + xElm.height - innerPlotRect.y - innerPlotRect.height);
 				}
 				// try to find the ylabel, otherwise get the yticks+yticklabels:
 				var yElm =  infoLayer.querySelector(`g[class=g-${yindex}title]`); // ylabel
 				if (yElm){
 					yElm = yElm.getBBox();
-					if (!yElm.width){
-						yElm = null;
-					}
 				}
-				if (!yElm){
+				if (!yElm || !yElm.width){
 					yElm = elm.querySelector('g.yaxislayer-above');  // yticks+yticklabels
 					if (yElm){
 						yElm = yElm.getBBox();
-						if (!yElm.width){
-							yElm = null;
-						}
 					}
 				}
-				if (yElm){
+				if (yElm && yElm.width){
 					margin.left = max(margin.left, innerPlotRect.x - yElm.x);
 				}
 			}
@@ -861,7 +849,7 @@ var PlotsDiv = {
 			margin.bottom /= height;
 			return margin;
 		},
-		getPaperMargin(){
+		getPaperMargin(){ // returns two margins: gridlabels and gridticklabels (the latter is included in the former)
 			var plotDiv = this.$refs.rootDiv;
 			var [width, height] = this.getElmSize(plotDiv);
 			var labelmargin = {top: 2.0/height, bottom: 2.0/height, left: 2.0/width, right: 2.0/width};
@@ -892,8 +880,7 @@ var PlotsDiv = {
 				ticklabelsmargin.left = Math.max(...ticklabels.map(elm => elm.getBBox().width)) / width;
 				var label = annots.filter(a => a.textContent === gridyparam.label)[0];
 				if (label){
-					// it should be label.getBBox().width, but label is rotated 90 deg:
-					labelmargin.left = label.getBBox().height / width;
+					labelmargin.left = label.getBBox().width / width;
 					ticklabelsmargin.left += labelmargin.left;
 				};
 			}
@@ -901,8 +888,8 @@ var PlotsDiv = {
 		},
 		getPlotGridPosition(axisKey){
 			// return the current grid position [xIndex, yIndex] of the plot associated
-			// to the string `axisKey`, which is a plotly layout key of the form:
-			// /[xy]axis\d*/ (where "xaxis" in plotly equals "xaxis1"). xIndex and yIndex
+			// to the string `axisKey` (a plotly layout key of the form:
+			// /[xy]axis\d*/ where "xaxis" in plotly equals "xaxis1"). xIndex and yIndex
 			// are in cartesian coordinates, so [0, 0] denotes the bottom-left plot,
 			// [1, 0] the plot on its right, [0, 1] the plot above it, and so on
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
