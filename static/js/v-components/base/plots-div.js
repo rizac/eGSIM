@@ -169,9 +169,6 @@ var PlotsDiv = {
 			deep: true,
 			handler (newval, oldval) {
 				if(!this.drawingPlots){
-					// displayed plots might change, so we need to reset ranges which will be recomputed
-					this.plotoptions.axis.x.sameRange.range = null;
-					this.plotoptions.axis.y.sameRange.range = null;
 					this.newPlot();
 				}
 			}
@@ -185,15 +182,16 @@ var PlotsDiv = {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
-				var newLayout = this.axisControlChanged(...this.getPlotlyDataAndLayout());
-				this.relayout(newLayout);
+				var [data, layout] = this.getPlotlyDataAndLayout();
+				var newLayout = this.updateLayoutFromCurrentAxisControls(data, layout);
+				this.relayout(newLayout, true);
 			}
 		},
 		'plotoptions.mouse': {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
-				this.relayout({ dragmode: newval });
+				this.relayout({ dragmode: newval }, false);
 			}
 		},
 	},
@@ -557,16 +555,22 @@ var PlotsDiv = {
 				var [data, layout] = this.createPlotlyDataAndLayout();
 				Plotly.newPlot(divElement, data, layout, this.defaultplotlyconfig);
 				// now compute labels and ticks size:
-				var newLayout = this.setupAxisDomainsAndGridLabels(layout);
+				var newLayout = this.updateLayoutFromCurrentlyDisplayedPlots(layout);
 				Plotly.relayout(divElement, newLayout);
 				this.drawingPlots = false;
 			}, 150);
 		},
-		relayout(newLayout){  // Redraw the plot layout (anything but data)
+		relayout(newLayout, updatePositions){  // Redraw the plot layout (anything but data)
 			this.drawingPlots = true;
 			this.waitbar.msg = this.waitbar.UPDATING;
+			// FIXME: if I do not do this, newLayout is undefined in setTimeout below WTF?!!!
+			var nl = newLayout || {};
 			setTimeout(() => {
-				Plotly.relayout(this.$refs.rootDiv, newLayout || {});
+				Plotly.relayout(this.$refs.rootDiv, nl);
+				if (updatePositions){
+					var newLayout = this.updateLayoutFromCurrentlyDisplayedPlots(this.getPlotlyDataAndLayout()[1]);
+					Plotly.relayout(this.$refs.rootDiv, newLayout);
+				}
 				this.drawingPlots = false;
 			}, 100);
 		},
@@ -683,7 +687,7 @@ var PlotsDiv = {
 			delete layout.xaxis;
 			delete layout.yaxis;
 			// assign the axis properties from the controls:
-			var newLayout = this.axisControlChanged(data, layout);
+			var newLayout = this.updateLayoutFromCurrentAxisControls(data, layout);
 			// newLayout is flattened, so e.g. newLayout['xaxis.title.text'] must be
 			// assigned to layout['xaxis']['title']['text']
 			for (var key of Object.keys(newLayout)){
@@ -710,7 +714,7 @@ var PlotsDiv = {
 			};
 			return Object.assign(annotation, props || {});
 		},
-		setupAxisDomainsAndGridLabels(layout){
+		updateLayoutFromCurrentlyDisplayedPlots(layout){
 			// return a new Object to be passed to `Plotly.relayout` with the axis domains
 			// (positions) re-adjusted to account for axis ticks and label size, and, if
 			// needed, the Plotly annotations, i.e.the grid labels resulting from the
@@ -734,21 +738,21 @@ var PlotsDiv = {
 			var papermargin = Object.assign({}, ticklabelsmargin);
 			if (gridxparam.label || gridyparam.label){
 				var linesmargin = Object.assign({}, ticklabelsmargin);
-				//define spaces: label-tiklabels space, ticklabels-gridline space, gridline-axis space
-				var _spaces = [0.1, 0.2, 1.7]; // [.5, .5, 1.5];
+				//define spaces in font size units: label-tiklabels space, ticklabels-gridline space, gridline-axis space
+				var _spaces = [0.25, 0.5, 2];
 				// roughly get row height from min of papermargin, which should be the height of x axis
 				var [fontW, fontH] = [layout.font.size / w, layout.font.size / h];
 				if (gridxparam.label){
 					var spaces = _spaces.map(val => fontH * val);
-					ticklabelsmargin.left += spaces[0];
-					linesmargin.left += spaces[0] + spaces[1];
-					papermargin.left += spaces[0] + spaces[1] + spaces[2];
-				}
-				if (gridyparam.label){
-					var spaces = _spaces.map(val => fontW * val);
 					ticklabelsmargin.bottom += spaces[0];
 					linesmargin.bottom += spaces[0] + spaces[1];
 					papermargin.bottom += spaces[0] + spaces[1] + spaces[2];
+				}
+				if (gridyparam.label){
+					var spaces = _spaces.map(val => fontW * val);
+					ticklabelsmargin.left += spaces[0];
+					linesmargin.left += spaces[0] + spaces[1];
+					papermargin.left += spaces[0] + spaces[1] + spaces[2];
 				}
 			}
 			for (var key of axisKeys){
@@ -810,16 +814,43 @@ var PlotsDiv = {
 				innerPlotRect = innerPlotRect.getBBox();
 
 				// try to find the xlabel, otherwise get the xticks+xticklabels:
-				var xlabel = infoLayer.querySelector(`g[class=g-${xindex}title]`) || elm.querySelector('g.xaxislayer-above');
-				if (xlabel){
-					var xElm = xlabel.getBBox();
+				var xElm = infoLayer.querySelector(`g[class=g-${xindex}title]`);  // xlabel
+				if (xElm){
+					xElm = xElm.getBBox();
+					if (!xElm.height){
+						xElm = null;
+					}
+				}
+				if (!xElm){
+					xElm = elm.querySelector('g.xaxislayer-above');  // xticks+xticklabels
+					if (xElm){
+						xElm = xElm.getBBox();
+						if (!xElm.height){
+							xElm = null;
+						}
+					}
+				}
+				if (xElm){
 					margin.bottom = max(margin.bottom, xElm.y + xElm.height - innerPlotRect.y - innerPlotRect.height);
 				}
 				// try to find the ylabel, otherwise get the yticks+yticklabels:
-				var ylabel =  infoLayer.querySelector(`g[class=g-${yindex}title]`)  || elm.querySelector('g.yaxislayer-above');
-				if (ylabel){
-					var yElm = ylabel.getBBox();
-					// margin.top = max(margin.top, axesRect.y - yElm.y);
+				var yElm =  infoLayer.querySelector(`g[class=g-${yindex}title]`); // ylabel
+				if (yElm){
+					yElm = yElm.getBBox();
+					if (!yElm.width){
+						yElm = null;
+					}
+				}
+				if (!yElm){
+					yElm = elm.querySelector('g.yaxislayer-above');  // yticks+yticklabels
+					if (yElm){
+						yElm = yElm.getBBox();
+						if (!yElm.width){
+							yElm = null;
+						}
+					}
+				}
+				if (yElm){
 					margin.left = max(margin.left, innerPlotRect.x - yElm.x);
 				}
 			}
@@ -834,11 +865,11 @@ var PlotsDiv = {
 			var plotDiv = this.$refs.rootDiv;
 			var [width, height] = this.getElmSize(plotDiv);
 			var labelmargin = {top: 2.0/height, bottom: 2.0/height, left: 2.0/width, right: 2.0/width};
-			var ticklabelsmargin = {left: 0, top: 0, bottom: 0, right: 0};
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			if (!gridxparam.label && !gridyparam.label){
-				return [labelmargin, ticklabelsmargin];
+				return [labelmargin, labelmargin];
 			}
+			var ticklabelsmargin = {left: 0, top: 0, bottom: 0, right: 0};
 			var infoLayer = plotDiv.querySelector('g.infolayer');
 			var annotations = Array.from(infoLayer.querySelectorAll(`g[class=annotation]`));
 			if(gridxparam.label){
@@ -991,7 +1022,7 @@ var PlotsDiv = {
 			// returns the Array [width, height] of the given dom element size
 			return [domElement.offsetWidth, domElement.offsetHeight];
 		},
-		axisControlChanged(data, layout){
+		updateLayoutFromCurrentAxisControls(data, layout){
 			// return a new Object to be passed to `Plotly.relayout` with the axis properties
 			// that are configurable (see `this.plotoptions`)
 			var newLayout = {};
@@ -1023,13 +1054,10 @@ var PlotsDiv = {
 					}else{
 						var vals = [];
 						data.forEach(trace => {
-							if (ax in trace){
-								vals.concat(trace[ax].filter(v => !isNaN(v)));
-							}
+							vals.push(...trace[ax].filter(v => v!==null && !isNaN(v) && v!==undefined));
 						});
 						var range = [Math.min(...vals), Math.max(...vals)];
 						if (range[0] < range[1]){
-							control.range = range;
 							// add margins for better visualization:
 							var margin = Math.abs(range[1] - range[0]) / 50;
 							// be careful with negative logarithmic values:
