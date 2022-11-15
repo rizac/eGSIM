@@ -304,9 +304,9 @@ class GsimImtForm(SHSRForm):
         # Check that both fields are provided. Another reason we do it here instead
         # than simply set `required=True` as Field argument is that sometimes
         # `MultipleChoiceField`s do not raise but puts a def. val, e.g. []
-        if not cleaned_data.get(gsim, None):
+        if not cleaned_data.get(gsim, None) and not self.has_error(gsim):
             self.add_error(gsim, ValidationError('Missing value', code='required'))
-        if not cleaned_data.get(imt, None):
+        if not cleaned_data.get(imt, None) and not self.has_error(imt):
             self.add_error(imt, ValidationError('Missing value', code='required'))
         # if any of the if above was true, then the parameter has been removed from
         # cleaned_data. If both are provided, check gsims and imts match:
