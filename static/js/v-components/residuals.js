@@ -193,7 +193,7 @@ EGSIM.component('residuals-plot-div', {
 								var traces = [mainTrace, medianline];
 							}
 						}
-						var plotparams = {gsim: gsim, imt: imt, 'residual type': type};
+						var plotparams = {model: gsim, imt: imt, 'residual type': type};
 						plots.push({
 							data: traces,
 							params: plotparams,
