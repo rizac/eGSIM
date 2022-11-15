@@ -284,36 +284,15 @@ var PlotsDiv = {
 				</div>
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
 					<div>Axis</div>
-					<div v-for="(axiscontrol, idx) in [plotoptions.axis.x, plotoptions.axis.y]"
+					<div v-for="ax in ['x', 'y']"
 					     class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
-						<span class='text-nowrap'>{{ idx == 0 ? 'x' : 'y' }}:</span>
-						<label class='text-nowrap m-0 ms-2'
-							   :class="{'checked': axiscontrol.sameRange.value}"
-							   :disabled="axiscontrol.sameRange.disabled">
-							<input type='checkbox' v-model='axiscontrol.sameRange.value'
-								   :disabled="axiscontrol.sameRange.disabled"  class="me-1">
-							<span>same range</span>
-						</label>
-						<label class='text-nowrap m-0 ms-2'
-							   :class="{'checked': axiscontrol.log.value}"
-							   :disabled="axiscontrol.log.disabled">
-							<input type='checkbox' v-model='axiscontrol.log.value'
-								   :disabled="axiscontrol.log.disabled" class="me-1">
-							<span>log scale</span>
-						</label>
-						<label class='text-nowrap m-0 ms-2'
-							   :class="{'checked': axiscontrol.grid.value}"
-							   :disabled="axiscontrol.grid.disabled">
-							<input type='checkbox' v-model='axiscontrol.grid.value'
-								   :disabled="axiscontrol.grid.disabled" class="me-1">
-							<span>grid</span>
-						</label>
-						<label class='text-nowrap m-0 ms-2'
-							   :class="{'checked': axiscontrol.title.value}"
-							   :disabled="axiscontrol.title.disabled">
-							<input type='checkbox' v-model='axiscontrol.title.value'
-								   :disabled="axiscontrol.title.disabled" class="me-1">
-							<span>title</span>
+						<span class='text-nowrap'>{{ ax }}</span>
+						<label v-for="key in Object.keys(plotoptions.axis[ax])" class='text-nowrap m-0 ms-2'
+							   :class="{'checked': plotoptions.axis[ax][key].value}"
+							   :disabled="plotoptions.axis[ax][key].disabled">
+							<input type='checkbox' v-model='plotoptions.axis[ax][key].value'
+								   :disabled="plotoptions.axis[ax][key].disabled"  class="me-1">
+							<span :class="{'text-muted': plotoptions.axis[ax][key].disabled}">{{ key }}</span>
 						</label>
 					</div>
 				</div>
@@ -407,8 +386,8 @@ var PlotsDiv = {
 
 			var gridlayouts = {};
 			var selectedgridlayout = '';
-			var varr = '&udarr;';  // vartical arrow character
-			var harr = '&rlarr;';  // horiontal arrow character
+			var varr = '&#8679;';  // vartical arrow character
+			var harr = '&#8680;';  // horiontal arrow character
 			if (params.length == 0){
 				if (plots.length == 1){
 					// config this Vue Component with a 1x1 grid of plots non selectable and with no grid labels:
@@ -521,28 +500,64 @@ var PlotsDiv = {
 				// type (log linear)
 				control.log.disabled = true;
 				control.log.value = false;
+				// before controlling the axis type ('-', 'log', 'linear' and so on)
+				// check the datatype. This is because with bars and histograms we want
+				// to avoid log scales on the bar axis (i.e., x axis for vertical bars and vice versa)
+				var traces = [];
+				for (var p of this.plots){
+					traces.push(...(p.data || []));
+				}
+				var datatypeBar = traces.every(t => t.type === 'bar');
+				var datatypeHist = !datatypeBar && traces.every(t => t.type === 'histogram');
 				// set control from data:
-				if (axis.every(a => a.type === 'log')){
+				if (axis.every(a => a.type === 'log') && !datatypeBar && !datatypeHist){
 					// if all axes are log type, then set the checkbox value first:
 					control.log.value = true;
 					control.log.disabled = false;
-				}else if (axis.every(a => a.type === 'linear')){
+				}else if (axis.every(a => a.type === 'linear') && !datatypeBar && !datatypeHist){
 					// if all axes are linear type, then set the type according to the checkbox:
 					control.log.disabled = false;
 					control.log.value = false;
 				}else if (axis.every(a => a.type === undefined || a.type === '-')){
 					// undefined and '-' are plotly default for: infer. Let's do the same:
 					var datakey = layoutkey[0];  // "x" or "y"
-					// this is the time consuming case (that's why it is better to specify type in subclasses, when possible)
-					var traces = this.plots.filter(p => 'data' in p && datakey in p.data).map(p => p.data[datakey]);
-					if (traces.every(trace => trace.every(v => typeof v === 'number'))){
-						control.log.disabled = false;
-						control.log.value = false;
+					var infer = true;
+					// before inferring, check if we have bar charts with oriented on the current
+					// axis (vertical for x axis, horizontal for y axis). Not only plotly has problems in this case
+					// (play around with flatfile plots to check), but it doesn't make much sense, too,
+					// as visually log scales with bars/histograms distort bars width
+					if (datakey === 'y'){
+						var isHorizontalBarType = datatypeBar && traces.every(t => t.orientation === 'h');
+						if (!isHorizontalBarType){
+							isHorizontalBarType = datatypeHist && traces.every(t => t.orientation === 'h' || !('x' in t));
+						}
+						if (isHorizontalBarType){
+							infer = false;
+						}
+					}else{
+						var isVerticalBarType = datatypeBar &&  traces.every(!('orientation' in t) || t.orientation === 'v');
+						if (!isVerticalBarType){
+							isVerticalBarType = datatypeHist && traces.every(t => t.orientation === 'v' ||  !('y' in t));
+						}
+						if (isVerticalBarType){
+							infer = false;
+						}
+					}
+					if (infer){
+						// this is the time consuming case (that's why it is better to specify type in subclasses, when possible)
+						// isNaN has been proven to be the fastest check for numeric values.
+						// Also consider that when we have histograms we might have only either x or y, so:
+						tracevalues = traces.map(t => datatypeHist && (!(datakey in t)) ? t[datakey == 'x' ? ' y' : 'x'] : t[datakey]);
+						if (tracevalues.every(values => values.every(value => !isNaN(value)))){
+							control.log.disabled = false;
+							control.log.value = false;
+						}
 					}
 				}
 				// same range:
 				control.sameRange.value = false;
-				control.sameRange.disabled = control.log.disabled || axis.some(a => a.range !== undefined);
+				control.sameRange.disabled = (this.plots || []).length <= 1 ||
+					control.log.disabled || axis.some(a => a.range !== undefined);
 			}
 		},
 		newPlot(){  // redraw completely the plots
@@ -560,7 +575,7 @@ var PlotsDiv = {
 		},
 		relayout(newLayout, updatePositions){  // Redraw the plot layout (anything but data)
 			// updatePositions: set to true if newLayout affects in some way the position
-			// of axis and labels, which must thus be recomputed
+			// of axis and gridlabels, which must thus be recomputed
 			this.drawingPlots = true;
 			this.waitbar.msg = this.waitbar.UPDATING;
 			// FIXME: if I do not do this, newLayout is undefined in setTimeout below WTF?!!!

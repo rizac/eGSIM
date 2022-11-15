@@ -121,7 +121,7 @@ class TestingForm(GsimImtFlatfileForm, APIForm):
         """
         fitmeasures = processed_data['Measure of fit']
         dbrecords = processed_data['Db records']
-        yield ['measure of fit', 'imt', 'gsim', 'value', 'db records used']
+        yield ['measure of fit', 'imt', 'model', 'value', 'db records used']
         for mof, mofs in fitmeasures.items():
             for imt, imts in mofs.items():
                 for gsim, value in imts.items():

@@ -201,7 +201,7 @@ class TrellisForm(GsimImtForm, APIForm):
         :param processed_data: dict resulting from `self.process_data`
         """
         mag_s, dist_s = 'magnitude', 'distance'
-        yield ['imt', 'gsim', f'{mag_s}', f'{dist_s}', 'vs30']
+        yield ['imt', 'model', f'{mag_s}', f'{dist_s}', 'vs30']
         yield chain(repeat('', 5), [processed_data['xlabel']],
                     processed_data['xvalues'])
         for imt in processed_data['imts']:
