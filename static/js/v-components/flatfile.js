@@ -335,6 +335,7 @@ EGSIM.component('flatfile-select', {
 		return {
 			fieldProxy: {
 				name: this.field.name,
+				error: this.field.error,
 				disabled: this.field.disabled || false,
 				value: -1,
 				choices: []
@@ -360,6 +361,12 @@ EGSIM.component('flatfile-select', {
 				this.field.value = choice ? choice.value || null : null;
 				var columns = choice ? choice.columns || [] : []
 				this.$emit('flatfile-selected', ... [this.field.value, columns]);
+			}
+		},
+		'field.error': {
+			immediate: true,
+			handler(newVal, oldVal){
+				this.fieldProxy.error = newVal;
 			}
 		}
 	},
