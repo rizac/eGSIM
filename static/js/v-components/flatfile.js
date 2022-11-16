@@ -294,7 +294,7 @@ EGSIM.component('flatfile-plot-div', {
 					type: 'histogram',
 					name: jsondict.ylabel,
 					marker: { line: { width: 0 }}
-				  };
+				};
 			}
 			trace.legendgroup = trace.name;
 			var color = this.colors.get(trace.legendgroup);
