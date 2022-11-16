@@ -234,13 +234,19 @@ EGSIM.component('flatfile-plot', {
 		<div class='mb-3'>
 		   <form novalidate @submit.prevent="submit">
 				<div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
-					<flatfile-select :field="form.flatfile" @flatfile-selected="flatfileSelected" />
+					<flatfile-select :field="form.flatfile" @flatfile-selected="flatfileSelected" style='flex: 1 1 100%'/>
 					<span class='me-3'></span>
 					<flatfile-selexpr-input :field="form.selexpr" class='mt-3'/>
 					<span class='me-3'></span>
-					<field-input :field='form.x'/>
+					<div class='d-flex flex-column'>
+						<field-label :field='form.x'/>
+						<field-input :field='form.x'/>
+					</div>
 					<span class='me-3'></span>
-					<field-input :field='form.y'/>
+					<div class='d-flex flex-column'>
+						<field-label :field='form.y'/>
+						<field-input :field='form.y'/>
+					</div>
 					<span class='me-3'></span>
 					<button type="submit" class="btn btn-primary mt-2">
 						Display plot
