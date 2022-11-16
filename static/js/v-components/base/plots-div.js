@@ -245,7 +245,7 @@ var PlotsDiv = {
 						<div data-balloon-pos="left" data-balloon-length="small" class='ms-1'
 						     aria-label='Style the plot traces (lines, bars, markers) of this legend group'>
 							<i class="fa fa-chevron-down" style="cursor:pointer"
-							   onclick='this.parentNode.parentNode.parentNode.querySelector("div._pso").style.height=this.parentNode.parentNode.parentNode.querySelector("div._pso").offsetHeight ? "0px" : "15rem"; this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
+							   onclick='this.parentNode.parentNode.parentNode.querySelector("div._pso").style.maxHeight=this.parentNode.parentNode.parentNode.querySelector("div._pso").offsetHeight ? "0px" : "15rem"; this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
 						</div>
 					</div>
 					<div class='_pso d-flex flex-column' style='max-height:0px; transition:max-height 0.25s ease-out;overflow:hidden'>
