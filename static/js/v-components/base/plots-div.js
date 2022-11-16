@@ -237,8 +237,7 @@ var PlotsDiv = {
 				<div v-for="l in legend" class='d-flex flex-column form-control mt-2'>
 					<div class='d-flex flex-row align-items-baseline'
 						 :style="{color: getLegendColor(l[1])}">
-						<label class='my-0 text-nowrap' :class="{'checked': l[1].visible}"
-							style='flex: 1 1 auto'>
+						<label class='my-0 text-nowrap' :class="{'checked': l[1].visible}" style='flex: 1 1 auto'>
 							<input type='checkbox' v-model="l[1].visible"  getLegendColor
 								   :style="{'accent-color': getLegendColor(l[1]) + ' !important'}"
 								   @change="setTraceStyle(l[0], l[1])"> {{ l[0] }}
@@ -246,12 +245,12 @@ var PlotsDiv = {
 						<div data-balloon-pos="left" data-balloon-length="small" class='ms-1'
 						     aria-label='Style the plot traces (lines, bars, markers) of this legend group'>
 							<i class="fa fa-chevron-down" style="cursor:pointer"
-							   onclick='this.parentNode.parentNode.parentNode.querySelector("div._pso").classList.toggle("d-none"); this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
+							   onclick='this.parentNode.parentNode.parentNode.querySelector("div._pso").style.height=this.parentNode.parentNode.parentNode.querySelector("div._pso").offsetHeight ? "0px" : "15rem"; this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
 						</div>
 					</div>
-					<div class='_pso d-flex flex-column d-none'>
+					<div class='_pso d-flex flex-column' style='max-height:0px; transition:max-height 0.25s ease-out;overflow:hidden'>
 						<textarea class='form-control mt-1' spellcheck="false"
-								  style='min-height: 12rem;font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
+								  style='flex: 1 1 auto; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
 								  v-model="l[2]"/>
 						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonParse(l[2])"
 								@click="setTraceStyle(l[0], jsonParse(l[2]))"
