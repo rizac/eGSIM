@@ -742,10 +742,10 @@ var PlotsDiv = {
 			var axisKeys = Array.from(Object.keys(newLayout));
 			// paper margin:
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			var xdomains = gridxparam.label ? new Array(gridxparam.values.length) : [];
-			var ydomains = gridyparam.label ? new Array(gridyparam.values.length) : [];
-			var cols = Math.max(xdomains.length, 1);
-			var rows = Math.max(ydomains.length, 1);
+			var xdomains = gridxparam.values.map(x => null);  // new Array of null(s), filled later
+			var ydomains = gridyparam.values.map(x => null);
+			var cols = xdomains.length;
+			var rows = ydomains.length;
 			var plotmargin = this.getPlotsMaxMargin();
 			var [w, h] = this.getElmSize(this.$refs.rootDiv);
 			var [labelsmargin, ticklabelsmargin] = this.getPaperMargin();
