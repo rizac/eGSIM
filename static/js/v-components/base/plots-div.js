@@ -301,7 +301,7 @@ var PlotsDiv = {
 						 <div v-for="ax in [0, 1]" class='d-flex flex-row'>
 							<label v-if="selectedGridParams[ax] && selectedGridParams[ax].label" class='text-nowrap m-0 ms-2 align-items-baseline'>
 								<input type='checkbox' v-model="showGridlayoutLabel[ax == 0 ? 'x' : 'y']">
-								<span> Show {{ ax == 0 ? 'X' : 'Y' }} labels ({{ selectedGridParams[ax].label }}) </span>
+								<span> {{ selectedGridParams[ax].label }} ({{ ax == 0 ? 'x' : 'y' }}): show labels</span>
 							</label>
 						</div>
 					</div>
