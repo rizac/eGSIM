@@ -183,8 +183,9 @@ var PlotsDiv = {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
-				var newLayout = this.updateLayoutFromCurrentlyDisplayedPlots(this.getPlotlyDataAndLayout()[1])
-				this.relayout({'annotations': newLayout.annotations || [], 'shapes': newLayout.shapes || []}, true);
+				// compute the annotations:
+				var newLayout = {annotations: this.getGridLabels().concat(this.getGridTickLabels())};
+				this.relayout(newLayout, true);
 			}
 		},
 		'plotoptions.axis': {
@@ -689,32 +690,7 @@ var PlotsDiv = {
 			// add grid tick labels in form text placed on the plot (Plotly annotations).
 			// The precise annotations positions will be set later (see `this.getPaperMargin`):
 			// for now lace y labels+ticklabels on the left (x:0) and x stuff on the right (x:1)
-			layout.annotations = [];
-			if (this.showgridlayout.x){
-				for (var i=0; i < gridxparam.values.length; i++){
-					layout.annotations.push(this.createGridAnnotation({
-						text: `${gridxparam.values[i]}`,
-						x: 1
-					}));
-				}
-				layout.annotations.push(this.createGridAnnotation({
-					text: `${gridxparam.label}`,
-					x: 1
-				}));
-			}
-			if (this.showgridlayout.y){
-				for (var i=0; i < gridyparam.values.length; i++){
-					layout.annotations.push(this.createGridAnnotation({
-						text: `${gridyparam.values[i]}`,
-						x: 0
-					}));
-				}
-				layout.annotations.push(this.createGridAnnotation({
-					text: `${gridyparam.label}`,
-					x: 0,
-					textangle: -90
-				}));
-			}
+			layout.annotations = this.getGridLabels().concat(this.getGridTickLabels());
 			// delete xaxis and yaxis on layout, as they are meaningless (their values
 			// are merged into each layout.xaxisN, layout.yaxisN Objects)
 			delete layout.xaxis;
@@ -953,8 +929,14 @@ var PlotsDiv = {
 			// domain represents the space as an Array of two numbers [start, end], both
 			// in [0, 1], i.e. relative to the plotly "paper" (the root <div>)
 			var annotations = [];
+			if (!papermargin){
+				papermargin = {left: 0.1, bottom: 0.1, top:0, right: 0};  // dummy margin
+			}
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			if (this.showgridlayout.x){
+				if (!xdomains){
+					xdomains = [[papermargin.left, 1-papermargin.right]];
+				}
 				annotations.push(this.createGridAnnotation({
 					text: `${gridxparam.label}`,
 					y: 0,
@@ -964,6 +946,9 @@ var PlotsDiv = {
 				}));
 			}
 			if (this.showgridlayout.y){
+				if (!ydomains){
+					ydomains = [[papermargin.bottom, 1-papermargin.top]];
+				}
 				annotations.push(this.createGridAnnotation({
 					text: `${gridyparam.label}`,
 					x: 0,
@@ -985,27 +970,40 @@ var PlotsDiv = {
 			// domain represents the space as an Array of two numbers [start, end], both
 			// in [0, 1], i.e. relative to the plotly "paper" (the root <div>)
 			var annotations = [];
+			if (!papermargin){
+				papermargin = {left: 0.1, bottom: 0.1, top:0, right: 0};  // dummy margin
+			}
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			if (this.showgridlayout.x){
-				for(var i =0; i < gridxparam.values.length; i ++){
-					var domain = xdomains[i];
+				var pvalues = gridxparam.values;
+				if (!xdomains){
+					var xs = pvalues.map((v, i, vs) => papermargin.left + i/vs.length);
+				}else{
+					var xs = xdomains.map(domain => (domain[1] + domain[0]) / 2);
+				}
+				for(var i =0; i < pvalues.length; i ++){
 					annotations.push(this.createGridAnnotation({
-						text: `${gridxparam.values[i]}`,
+						text: `${pvalues[i]}`,
 						y: papermargin.bottom,
 						yanchor: 'top',
-						x: (domain[1] + domain[0]) / 2,
+						x: xs[i],
 						xanchor: 'center'
 					}));
 				}
 			}
 			if (this.showgridlayout.y){
-				for(var i =0; i < gridyparam.values.length; i ++){
-					var domain = ydomains[i];
+				var pvalues = gridyparam.values;
+				if (!ydomains){
+					var ys = pvalues.map((v, i, vs) => papermargin.bottom + i/vs.length);
+				}else{
+					var ys = ydomains.map(domain => (domain[1] + domain[0]) / 2);
+				}
+				for(var i =0; i < pvalues.length; i ++){
 					annotations.push(this.createGridAnnotation({
-						text: `${gridyparam.values[i]}`,
+						text: `${pvalues[i]}`,
 						x: papermargin.left,
 						xanchor: 'right',
-						y: (domain[1] + domain[0]) / 2,
+						y: ys[i],
 						yanchor: 'middle',
 					}));
 				}
