@@ -201,10 +201,14 @@ var PlotsDiv = {
 		isGridCusomizable(){
 			return Object.keys(this.gridlayouts).length>1;
 		},
+		selectedGridParams(){
+			return this.selectedgridlayout ? Array.from(this.gridlayouts[this.selectedgridlayout]) : [];
+		},
 		showgridlayout(){
+			var params = this.selectedGridParams;
 			return {
-				x: this.selectedgridlayout && this.gridlayouts[this.selectedgridlayout][0].label && this.plotoptions.axis.x.showGridlayoutLabel.value,
-				y: this.selectedgridlayout && this.gridlayouts[this.selectedgridlayout][1].label && this.plotoptions.axis.y.showGridlayoutLabel.value
+				x: params[0] && params[0].label && this.plotoptions.axis.x.showGridlayoutLabel.value,
+				y: params[1] && params[1].label && this.plotoptions.axis.y.showGridlayoutLabel.value
 			}
 		}
 	},
@@ -212,7 +216,7 @@ var PlotsDiv = {
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
 			<div v-if="params.length" class='d-flex flex-row justify-content-around'>
 				<template v-for='(param, index) in params'>
-					<div v-if='selectedgridlayout && !gridlayouts[selectedgridlayout].includes(param)'
+					<div v-if='!selectedGridParams.includes(param)'
 						 class='d-flex flex-row align-items-baseline mb-3'
 						 :class="index > 0 ? 'ms-2' : ''" style="flex: 1 1 auto">
 						<span class='text-nowrap me-1'>{{ param.label }}</span>
@@ -288,10 +292,10 @@ var PlotsDiv = {
 						</option>
 					</select>
 					<div class='mt-1 d-flex flex-column'>
-						<div v-for="ax in ['x', 'y']" class='d-flex flex-row'>
-							<label v-show="showgridlayout[ax]" class='text-nowrap m-0 ms-2 align-items-baseline'>
-								<input type='checkbox' v-model='plotoptions.axis[ax].showGridlayoutLabel.value'>
-								<!-- <span> Show {{ ax }} labels ({{ gridlayouts[selectedgridlayout][ax == 'x' ? 0 : 1].label }}) </span> -->
+						 <div v-for="ax in [0, 1]" class='d-flex flex-row'>
+							<label v-if="selectedGridParams[ax] && selectedGridParams[ax].label" class='text-nowrap m-0 ms-2 align-items-baseline'>
+								<input type='checkbox' v-model="plotoptions.axis[ax == 0 ? 'x' : 'y'].showGridlayoutLabel.value">
+								<span> Show {{ ax == 0 ? 'X' : 'Y' }} labels ({{ selectedGridParams[ax].label }}) </span>
 							</label>
 						</div>
 					</div>
