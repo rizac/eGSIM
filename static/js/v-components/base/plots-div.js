@@ -21,6 +21,7 @@ var PlotsDiv = {
 			gridlayouts: {},
 			// string denoting the selected layout name of gridlayouts (see above)
 			selectedgridlayout: '',
+			showGridlayoutLabel: { x: true, y: true },
 			// plot options configurable via html controls:
 			plotoptions: {
 				axis: {
@@ -28,15 +29,13 @@ var PlotsDiv = {
 						log: {disabled: false, value: undefined},
 						sameRange: {disabled: false, value: undefined},
 						grid: {disabled: false, value: undefined},
-						title: {disabled: false, value: undefined, title: ''},
-						showGridlayoutLabel: {value: true}
+						title: {disabled: false, value: undefined, title: ''}
 					} ,
 					y: {
 						log: {disabled: false, value: undefined},
 						sameRange: {disabled: false, value: undefined, range: null},
 						grid: {disabled: false, value: undefined},
-						title: {disabled: false, value: undefined, title: ''},
-						showGridlayoutLabel: {value: true}
+						title: {disabled: false, value: undefined, title: ''}
 					}
 				},
 				mouse: {
@@ -180,12 +179,19 @@ var PlotsDiv = {
 				this.newPlot();
 			}
 		},
+		'showGridlayoutLabel': {
+			deep: true,
+			handler(newval, oldval){
+				if(this.drawingPlots){ return; }
+				var newLayout = this.updateLayoutFromCurrentlyDisplayedPlots(this.getPlotlyDataAndLayout()[1])
+				this.relayout({'annotations': newLayout.annotations || [], 'shapes': newLayout.shapes || []}, true);
+			}
+		},
 		'plotoptions.axis': {
 			deep: true,
 			handler(newval, oldval){
 				if(this.drawingPlots){ return; }
-				var [data, layout] = this.getPlotlyDataAndLayout();
-				var newLayout = this.updateLayoutFromCurrentAxisControls(data, layout);
+				var newLayout = this.updateLayoutFromCurrentAxisControls(...this.getPlotlyDataAndLayout());
 				this.relayout(newLayout, true);
 			}
 		},
@@ -207,8 +213,8 @@ var PlotsDiv = {
 		showgridlayout(){
 			var params = this.selectedGridParams;
 			return {
-				x: params[0] && params[0].label && this.plotoptions.axis.x.showGridlayoutLabel.value,
-				y: params[1] && params[1].label && this.plotoptions.axis.y.showGridlayoutLabel.value
+				x: params[0] && params[0].label && this.showGridlayoutLabel.x,
+				y: params[1] && params[1].label && this.showGridlayoutLabel.y
 			}
 		}
 	},
@@ -294,7 +300,7 @@ var PlotsDiv = {
 					<div class='mt-1 d-flex flex-column'>
 						 <div v-for="ax in [0, 1]" class='d-flex flex-row'>
 							<label v-if="selectedGridParams[ax] && selectedGridParams[ax].label" class='text-nowrap m-0 ms-2 align-items-baseline'>
-								<input type='checkbox' v-model="plotoptions.axis[ax == 0 ? 'x' : 'y'].showGridlayoutLabel.value">
+								<input type='checkbox' v-model="showGridlayoutLabel[ax == 0 ? 'x' : 'y']">
 								<span> Show {{ ax == 0 ? 'X' : 'Y' }} labels ({{ selectedGridParams[ax].label }}) </span>
 							</label>
 						</div>
@@ -767,7 +773,7 @@ var PlotsDiv = {
 			if (this.showgridlayout.x || this.showgridlayout.y){
 				var linesmargin = Object.assign({}, ticklabelsmargin);
 				//define spaces in font size units: label-tiklabels space, ticklabels-gridline space, gridline-axis space
-				var _spaces = [0.25, 0.5, 2];
+				var _spaces = [0.75, 0.5, 2.25];
 				// roughly get row height from min of papermargin, which should be the height of x axis
 				var [fontW, fontH] = [layout.font.size / w, layout.font.size / h];
 				if (this.showgridlayout.x){
@@ -893,7 +899,9 @@ var PlotsDiv = {
 				var num = gridxparam.values.length;
 				var annots = annotations.sort((a, b) => (b.getBBox().x - a.getBBox().x)).slice(0, num+1);
 				var ticklabels = annots.filter(a => a.textContent !== gridxparam.label);
-				ticklabelsmargin.bottom = Math.max(...ticklabels.map(elm => elm.getBBox().height)) / height;
+				if (ticklabels.length){
+					ticklabelsmargin.bottom = Math.max(...ticklabels.map(elm => elm.getBBox().height)) / height;
+				}
 				var label = annots.filter(a => a.textContent === gridxparam.label)[0];
 				if (label) {
 					labelmargin.bottom = label.getBBox().height / height;
@@ -905,7 +913,9 @@ var PlotsDiv = {
 				var num = gridyparam.values.length;
 				var annots = annotations.sort((a, b) => (a.getBBox().x - b.getBBox().x)).slice(0, num+1);
 				var ticklabels = annots.filter(a => a.textContent !== gridyparam.label);
-				ticklabelsmargin.left = Math.max(...ticklabels.map(elm => elm.getBBox().width)) / width;
+				if (ticklabels.length){
+					ticklabelsmargin.left = Math.max(...ticklabels.map(elm => elm.getBBox().width)) / width;
+				}
 				var label = annots.filter(a => a.textContent === gridyparam.label)[0];
 				if (label){
 					labelmargin.left = label.getBBox().width / width;
