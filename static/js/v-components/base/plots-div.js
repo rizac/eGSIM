@@ -28,13 +28,15 @@ var PlotsDiv = {
 						log: {disabled: false, value: undefined},
 						sameRange: {disabled: false, value: undefined},
 						grid: {disabled: false, value: undefined},
-						title: {disabled: false, value: undefined, title: ''}
+						title: {disabled: false, value: undefined, title: ''},
+						showGridlayoutLabel: {value: true}
 					} ,
 					y: {
 						log: {disabled: false, value: undefined},
 						sameRange: {disabled: false, value: undefined, range: null},
 						grid: {disabled: false, value: undefined},
-						title: {disabled: false, value: undefined, title: ''}
+						title: {disabled: false, value: undefined, title: ''},
+						showGridlayoutLabel: {value: true}
 					}
 				},
 				mouse: {
@@ -198,13 +200,19 @@ var PlotsDiv = {
 	computed: {
 		isGridCusomizable(){
 			return Object.keys(this.gridlayouts).length>1;
+		},
+		showgridlayout(){
+			return {
+				x: this.selectedgridlayout && this.gridlayouts[this.selectedgridlayout][0].label && this.plotoptions.axis.x.showGridlayoutLabel.value,
+				y: this.selectedgridlayout && this.gridlayouts[this.selectedgridlayout][1].label && this.plotoptions.axis.y.showGridlayoutLabel.value
+			}
 		}
 	},
 	template: `<div v-show='Object.keys(data).length' class='d-flex flex-row'>
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
 			<div v-if="params.length" class='d-flex flex-row justify-content-around'>
 				<template v-for='(param, index) in params'>
-					<div v-if='param.label && param.value!==undefined && selectedgridlayout && !gridlayouts[selectedgridlayout].includes(param)'
+					<div v-if='selectedgridlayout && !gridlayouts[selectedgridlayout].includes(param)'
 						 class='d-flex flex-row align-items-baseline mb-3'
 						 :class="index > 0 ? 'ms-2' : ''" style="flex: 1 1 auto">
 						<span class='text-nowrap me-1'>{{ param.label }}</span>
@@ -235,8 +243,7 @@ var PlotsDiv = {
 			<slot></slot> <!-- slot for custom buttons -->
 			<div v-show='legend.length' class='mt-3 p-2 px-1'>
 				<div v-for="l in legend" class='d-flex flex-column form-control mt-2'>
-					<div class='d-flex flex-row align-items-baseline'
-						 :style="{color: getLegendColor(l[1])}">
+					<div class='d-flex flex-row align-items-baseline' :style="{color: getLegendColor(l[1])}">
 						<label class='my-0 text-nowrap' :class="{'checked': l[1].visible}" style='flex: 1 1 auto'>
 							<input type='checkbox' v-model="l[1].visible"  getLegendColor
 								   :style="{'accent-color': getLegendColor(l[1]) + ' !important'}"
@@ -280,15 +287,20 @@ var PlotsDiv = {
 						<option v-for='key in Object.keys(gridlayouts)' :value="key" v-html="key">
 						</option>
 					</select>
+					<div class='mt-1 d-flex flex-column'>
+						<div v-for="ax in ['x', 'y']" class='d-flex flex-row'>
+							<label v-show="showgridlayout[ax]" class='text-nowrap m-0 ms-2 align-items-baseline'>
+								<input type='checkbox' v-model='plotoptions.axis[ax].showGridlayoutLabel.value'>
+								<!-- <span> Show {{ ax }} labels ({{ gridlayouts[selectedgridlayout][ax == 'x' ? 0 : 1].label }}) </span> -->
+							</label>
+						</div>
+					</div>
 				</div>
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
-					<div>Axis</div>
-					<div v-for="ax in ['x', 'y']"
-					     class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
+					<div>Plot axis</div>
+					<div v-for="ax in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
 						<span class='text-nowrap'>{{ ax }}</span>
-						<label v-for="key in Object.keys(plotoptions.axis[ax])" class='text-nowrap m-0 ms-2'
-							   :class="{'checked': plotoptions.axis[ax][key].value}"
-							   :disabled="plotoptions.axis[ax][key].disabled">
+						<label v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap m-0 ms-2'>
 							<input type='checkbox' v-model='plotoptions.axis[ax][key].value'
 								   :disabled="plotoptions.axis[ax][key].disabled"  class="me-1">
 							<span :class="{'text-muted': plotoptions.axis[ax][key].disabled}">{{ key }}</span>
@@ -296,7 +308,7 @@ var PlotsDiv = {
 					</div>
 				</div>
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
-					<div> Mouse interactions</div>
+					<div> Plot mouse interactions</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
 						<span class='text-nowrap me-1'> on hover:</span>
 						<select v-model="plotoptions.mouse.hovermode"
@@ -390,7 +402,6 @@ var PlotsDiv = {
 			if (params.length == 0){
 				if (plots.length == 1){
 					// config this Vue Component with a 1x1 grid of plots non selectable and with no grid labels:
-					params = [singleParam, singleParam];
 					selectedgridlayout = '---';  // any value is irrelevant
 					gridlayouts[selectedgridlayout] = [singleParam, singleParam];
 				}else{
@@ -402,7 +413,6 @@ var PlotsDiv = {
 							return idx;
 						}
 					};
-					params = [multiParam, singleParam];
 					selectedgridlayout = `${varr} stack vertically`;
 					gridlayouts[selectedgridlayout] = [singleParam, multiParam];
 					gridlayouts[`${harr} stack horizontally`] = [multiParam, singleParam];
@@ -602,10 +612,10 @@ var PlotsDiv = {
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
 			// filter plots according to the value of the parameter which are not displayed as grid param:
 			for (var param of this.params){
-				if (param === gridxparam || param === gridyparam || param.value === undefined){
+				if (param === gridxparam || param === gridyparam){
 					continue;
 				}
-				plots = plots.filter(plot => plot.params[param.label] == param.value);
+				plots = plots.filter(plot => plot.params[param.label] === param.value);
 			}
 
 			// now build an array the same length as plots with each element the grids position [index_x, index_y]
@@ -670,7 +680,7 @@ var PlotsDiv = {
 			// The precise annotations positions will be set later (see `this.getPaperMargin`):
 			// for now lace y labels+ticklabels on the left (x:0) and x stuff on the right (x:1)
 			layout.annotations = [];
-			if (gridxparam.label){
+			if (this.showgridlayout.x){
 				for (var i=0; i < gridxparam.values.length; i++){
 					layout.annotations.push(this.createGridAnnotation({
 						text: `${gridxparam.values[i]}`,
@@ -682,7 +692,7 @@ var PlotsDiv = {
 					x: 1
 				}));
 			}
-			if (gridyparam.label){
+			if (this.showgridlayout.y){
 				for (var i=0; i < gridyparam.values.length; i++){
 					layout.annotations.push(this.createGridAnnotation({
 						text: `${gridyparam.values[i]}`,
@@ -750,19 +760,19 @@ var PlotsDiv = {
 			var [w, h] = this.getElmSize(this.$refs.rootDiv);
 			var [labelsmargin, ticklabelsmargin] = this.getPaperMargin();
 			var papermargin = Object.assign({}, ticklabelsmargin);
-			if (gridxparam.label || gridyparam.label){
+			if (this.showgridlayout.x || this.showgridlayout.y){
 				var linesmargin = Object.assign({}, ticklabelsmargin);
 				//define spaces in font size units: label-tiklabels space, ticklabels-gridline space, gridline-axis space
 				var _spaces = [0.25, 0.5, 2];
 				// roughly get row height from min of papermargin, which should be the height of x axis
 				var [fontW, fontH] = [layout.font.size / w, layout.font.size / h];
-				if (gridxparam.label){
+				if (this.showgridlayout.x){
 					var spaces = _spaces.map(val => fontH * val);
 					ticklabelsmargin.bottom += spaces[0];
 					linesmargin.bottom += spaces[0] + spaces[1];
 					papermargin.bottom += spaces[0] + spaces[1] + spaces[2];
 				}
-				if (gridyparam.label){
+				if (this.showgridlayout.y){
 					var spaces = _spaces.map(val => fontW * val);
 					ticklabelsmargin.left += spaces[0];
 					linesmargin.left += spaces[0] + spaces[1];
@@ -789,7 +799,7 @@ var PlotsDiv = {
 			}
 			newLayout.shapes = [];
 			newLayout.annotations = [];
-			if (gridxparam.label || gridyparam.label){
+			if (this.showgridlayout.x || this.showgridlayout.y){
 				newLayout.shapes = this.getGridLines(xdomains, ydomains, linesmargin);
 				var annotations = this.getGridTickLabels(xdomains, ydomains, ticklabelsmargin);
 				newLayout.annotations = annotations.concat(this.getGridLabels(xdomains, ydomains, labelsmargin));
@@ -868,13 +878,13 @@ var PlotsDiv = {
 			var [width, height] = this.getElmSize(plotDiv);
 			var labelmargin = {top: 2.0/height, bottom: 2.0/height, left: 2.0/width, right: 2.0/width};
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (!gridxparam.label && !gridyparam.label){
+			if (!this.showgridlayout.x && !this.showgridlayout.y){
 				return [labelmargin, labelmargin];
 			}
 			var ticklabelsmargin = {left: 0, top: 0, bottom: 0, right: 0};
 			var infoLayer = plotDiv.querySelector('g.infolayer');
 			var annotations = Array.from(infoLayer.querySelectorAll(`g[class=annotation]`));
-			if(gridxparam.label){
+			if(this.showgridlayout.x){
 				// get the x annotations, recognizable as those with lower x:
 				var num = gridxparam.values.length;
 				var annots = annotations.sort((a, b) => (b.getBBox().x - a.getBBox().x)).slice(0, num+1);
@@ -886,7 +896,7 @@ var PlotsDiv = {
 					ticklabelsmargin.bottom += labelmargin.bottom;
 				};
 			}
-			if(gridyparam.label){
+			if(this.showgridlayout.y){
 				// get the y annotations, recognizable as those with higher x:
 				var num = gridyparam.values.length;
 				var annots = annotations.sort((a, b) => (a.getBBox().x - b.getBBox().x)).slice(0, num+1);
@@ -930,7 +940,7 @@ var PlotsDiv = {
 			// in [0, 1], i.e. relative to the plotly "paper" (the root <div>)
 			var annotations = [];
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (gridxparam.label){
+			if (this.showgridlayout.x){
 				annotations.push(this.createGridAnnotation({
 					text: `${gridxparam.label}`,
 					y: 0,
@@ -939,7 +949,7 @@ var PlotsDiv = {
 					xanchor: 'center'
 				}));
 			}
-			if (gridyparam.label){
+			if (this.showgridlayout.y){
 				annotations.push(this.createGridAnnotation({
 					text: `${gridyparam.label}`,
 					x: 0,
@@ -962,7 +972,7 @@ var PlotsDiv = {
 			// in [0, 1], i.e. relative to the plotly "paper" (the root <div>)
 			var annotations = [];
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (gridxparam.label){
+			if (this.showgridlayout.x){
 				for(var i =0; i < gridxparam.values.length; i ++){
 					var domain = xdomains[i];
 					annotations.push(this.createGridAnnotation({
@@ -974,7 +984,7 @@ var PlotsDiv = {
 					}));
 				}
 			}
-			if (gridyparam.label){
+			if (this.showgridlayout.y){
 				for(var i =0; i < gridyparam.values.length; i ++){
 					var domain = ydomains[i];
 					annotations.push(this.createGridAnnotation({
@@ -1001,7 +1011,7 @@ var PlotsDiv = {
 			};
 			var shapes = [];
 			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (gridxparam.label){  // horizontal grid line
+			if (this.showgridlayout.x){  // horizontal grid line
 				shapes.push(Object.assign({}, defShape, {
 					x0: xdomains[0][0],
 					x1: xdomains[xdomains.length-1][1],  // 1 - papermargin.right,
@@ -1009,7 +1019,7 @@ var PlotsDiv = {
 					y1: papermargin.bottom
 				}));
 			}
-			if (gridyparam.label){  // vertical grid line
+			if (this.showgridlayout.y){  // vertical grid line
 				shapes.push(Object.assign({}, defShape, {
 					x0: papermargin.left,
 					x1: papermargin.left,
