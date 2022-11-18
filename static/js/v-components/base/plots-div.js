@@ -16,12 +16,13 @@ var PlotsDiv = {
 			// and optionally a value:Array key and a name:str key. If the latter are provided, then the param
 			// is displayable as label on the plot grids
 			params: [],
-			// dict of subplots layout name (string) mapped to an Array of two params dictating the layout.
-			// Params are those implemented in params (se above) or other dummy params created in `setoSelection`
-			gridlayouts: {},
-			// string denoting the selected layout name of gridlayouts (see above)
-			selectedgridlayout: '',
-			showGridlayoutLabel: { x: true, y: true },
+			// subplots grid object:
+			grid: {
+				layouts: {},
+				selectedLayout: "",
+				visibility: [true, true],  // x, y
+				params: [{}, {}]  // Array of x, y params (see above)
+			},
 			// plot options configurable via html controls:
 			plotoptions: {
 				axis: {
@@ -160,37 +161,42 @@ var PlotsDiv = {
 	watch: {
 		data: {
 			immediate: true,
-			handler(newval, oldval){
-				if (typeof newval === 'object' && Object.keys(newval).length){
-					this.init.call(this, newval);
+			handler(newVal, oldVal){
+				if (typeof newVal === 'object' && Object.keys(newVal).length){
+					this.init(newVal);
 				}
 			}
 		},
 		params: {
 			deep: true,
-			handler (newval, oldval) {
+			handler (newVal, oldVal) {
 				if(!this.drawingPlots){
 					this.newPlot();
 				}
 			}
 		},
-		selectedgridlayout: function(newval, oldval){
-			if(!this.drawingPlots){
-				this.newPlot();
-			}
+		'grid.selectedLayout': function(newVal, oldVal){
+			this.grid.params = this.grid.layouts[newVal];
+			this.grid.params.forEach((p, i) => p.visible = !!(p.label && this.grid.visibility[i]));
+			/*this.grid.params[0].visible = this.grid.params[0].label && this.grid.visibility[0];
+			this.grid.params[1].visible = this.grid.params[1].label && this.grid.visibility[1];*/
+			if(!this.drawingPlots){ this.newPlot(); }
 		},
-		'showGridlayoutLabel': {
+		'grid.visibility': {
 			deep: true,
-			handler(newval, oldval){
-				if(this.drawingPlots){ return; }
-				// compute the annotations:
-				var newLayout = {annotations: this.getGridLabels().concat(this.getGridTickLabels())};
-				this.relayout(newLayout, true);
+			handler(newVal, oldVal){
+				this.grid.params.forEach((p, i) => p.visible = !!(p.label && this.grid.visibility[i]));
+				/*this.grid.params[0].visible = this.grid.params[0].label && this.grid.visibility[0];
+				this.grid.params[1].visible = this.grid.params[1].label && this.grid.visibility[1];*/
+				if(!this.drawingPlots){
+					var newLayout = {annotations: this.getGridLabels().concat(this.getGridTickLabels())};
+					this.relayout(newLayout, true);
+				}
 			}
 		},
 		'plotoptions.axis': {
 			deep: true,
-			handler(newval, oldval){
+			handler(newVal, oldVal){
 				if(this.drawingPlots){ return; }
 				var newLayout = this.updateLayoutFromCurrentAxisControls(...this.getPlotlyDataAndLayout());
 				this.relayout(newLayout, true);
@@ -198,32 +204,17 @@ var PlotsDiv = {
 		},
 		'plotoptions.mouse': {
 			deep: true,
-			handler(newval, oldval){
+			handler(newVal, oldVal){
 				if(this.drawingPlots){ return; }
 				this.relayout({ dragmode: newval }, false);
 			}
 		},
 	},
-	computed: {
-		isGridCusomizable(){
-			return Object.keys(this.gridlayouts).length>1;
-		},
-		selectedGridParams(){
-			return this.selectedgridlayout ? Array.from(this.gridlayouts[this.selectedgridlayout]) : [];
-		},
-		showgridlayout(){
-			var params = this.selectedGridParams;
-			return {
-				x: params[0] && params[0].label && this.showGridlayoutLabel.x,
-				y: params[1] && params[1].label && this.showGridlayoutLabel.y
-			}
-		}
-	},
 	template: `<div v-show='Object.keys(data).length' class='d-flex flex-row'>
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
 			<div v-if="params.length" class='d-flex flex-row justify-content-around'>
 				<template v-for='(param, index) in params'>
-					<div v-if='!selectedGridParams.includes(param)'
+					<div v-if='!grid.params.includes(param)'
 						 class='d-flex flex-row align-items-baseline mb-3'
 						 :class="index > 0 ? 'ms-2' : ''" style="flex: 1 1 auto">
 						<span class='text-nowrap me-1'>{{ param.label }}</span>
@@ -250,7 +241,7 @@ var PlotsDiv = {
 			</div>
 		</div>
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
-		<div class='d-flex flex-column ps-4' v-show="legend.length || isGridCusomizable" style='overflow-y: auto'>
+		<div class='d-flex flex-column ps-4' style='overflow-y: auto'>
 			<slot></slot> <!-- slot for custom buttons -->
 			<div v-show='legend.length' class='mt-3 p-2 px-1'>
 				<div v-for="l in legend" class='d-flex flex-column form-control mt-2'>
@@ -292,17 +283,19 @@ var PlotsDiv = {
 						<option value="svg">svg (visible plots only)</option>
 					</select>
 				</div>
-				<div v-show="isGridCusomizable" class='mt-3 border p-2 bg-white'>
+				<div v-show="Object.keys(grid.layouts).length > 1" class='mt-3 border p-2 bg-white'>
 					<div>Subplots layout</div>
-					<select v-model='selectedgridlayout' class='form-control mt-1'>
-						<option v-for='key in Object.keys(gridlayouts)' :value="key" v-html="key">
+					<select v-model='grid.selectedLayout' class='form-control mt-1'>
+						<option v-for='key in Object.keys(grid.layouts)' :value="key" v-html="key">
 						</option>
 					</select>
 					<div class='mt-1 d-flex flex-column'>
 						 <div v-for="ax in [0, 1]" class='d-flex flex-row'>
-							<label v-if="selectedGridParams[ax] && selectedGridParams[ax].label" class='text-nowrap m-0 ms-2 align-items-baseline'>
-								<input type='checkbox' v-model="showGridlayoutLabel[ax == 0 ? 'x' : 'y']">
-								<span> {{ selectedGridParams[ax].label }} ({{ ax == 0 ? 'x' : 'y' }}): show labels</span>
+							<label :disabled="grid.params[ax].label" class='text-nowrap m-0 ms-2 align-items-baseline'>
+								<input type='checkbox' v-model="grid.visibility[ax]">
+								<span class='ms-1 text-nowrap' :class="{'text-muted': grid.params[ax].label}">
+									{{ grid.params[ax].label }} ({{ ax == 0 ? 'x' : 'y' }}): show labels
+								</span>
 							</label>
 						</div>
 					</div>
@@ -455,8 +448,8 @@ var PlotsDiv = {
 				}
 			}
 			// set defaults:
-			this.gridlayouts = gridlayouts;
-			this.selectedgridlayout = selectedgridlayout;
+			this.grid.layouts = gridlayouts;
+			this.grid.selectedLayout = selectedgridlayout;
 			this.params = params;
 		},
 		createLegend(){
@@ -620,7 +613,7 @@ var PlotsDiv = {
 		},
 		createPlotlyDataAndLayout(){
 			var plots = this.plots;
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			var [gridxparam, gridyparam] = this.grid.params;
 			// filter plots according to the value of the parameter which are not displayed as grid param:
 			for (var param of this.params){
 				if (param === gridxparam || param === gridyparam){
@@ -737,7 +730,7 @@ var PlotsDiv = {
 			}
 			var axisKeys = Array.from(Object.keys(newLayout));
 			// paper margin:
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			var [gridxparam, gridyparam] = this.grid.params;
 			var xdomains = gridxparam.values.map(x => null);  // new Array of null(s), filled later
 			var ydomains = gridyparam.values.map(x => null);
 			var cols = xdomains.length;
@@ -746,19 +739,19 @@ var PlotsDiv = {
 			var [w, h] = this.getElmSize(this.$refs.rootDiv);
 			var [labelsmargin, ticklabelsmargin] = this.getPaperMargin();
 			var papermargin = Object.assign({}, ticklabelsmargin);
-			if (this.showgridlayout.x || this.showgridlayout.y){
+			if (gridxparam.visible || gridyparam.visible){
 				var linesmargin = Object.assign({}, ticklabelsmargin);
 				//define spaces in font size units: label-tiklabels space, ticklabels-gridline space, gridline-axis space
 				var _spaces = [0.75, 0.5, 2.25];
 				// roughly get row height from min of papermargin, which should be the height of x axis
 				var [fontW, fontH] = [layout.font.size / w, layout.font.size / h];
-				if (this.showgridlayout.x){
+				if (gridxparam.visible){
 					var spaces = _spaces.map(val => fontH * val);
 					ticklabelsmargin.bottom += spaces[0];
 					linesmargin.bottom += spaces[0] + spaces[1];
 					papermargin.bottom += spaces[0] + spaces[1] + spaces[2];
 				}
-				if (this.showgridlayout.y){
+				if (gridyparam.visible){
 					var spaces = _spaces.map(val => fontW * val);
 					ticklabelsmargin.left += spaces[0];
 					linesmargin.left += spaces[0] + spaces[1];
@@ -785,7 +778,7 @@ var PlotsDiv = {
 			}
 			newLayout.shapes = [];
 			newLayout.annotations = [];
-			if (this.showgridlayout.x || this.showgridlayout.y){
+			if (gridxparam.visible || gridyparam.visible){
 				newLayout.shapes = this.getGridLines(xdomains, ydomains, linesmargin);
 				var annotations = this.getGridTickLabels(xdomains, ydomains, ticklabelsmargin);
 				newLayout.annotations = annotations.concat(this.getGridLabels(xdomains, ydomains, labelsmargin));
@@ -863,14 +856,14 @@ var PlotsDiv = {
 			var plotDiv = this.$refs.rootDiv;
 			var [width, height] = this.getElmSize(plotDiv);
 			var labelmargin = {top: 2.0/height, bottom: 2.0/height, left: 2.0/width, right: 2.0/width};
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (!this.showgridlayout.x && !this.showgridlayout.y){
+			var [gridxparam, gridyparam] = this.grid.params;
+			if (!gridxparam.visible && !gridyparam.visible){
 				return [labelmargin, labelmargin];
 			}
 			var ticklabelsmargin = {left: 0, top: 0, bottom: 0, right: 0};
 			var infoLayer = plotDiv.querySelector('g.infolayer');
 			var annotations = Array.from(infoLayer.querySelectorAll(`g[class=annotation]`));
-			if(this.showgridlayout.x){
+			if(gridxparam.visible){
 				// get the x annotations, recognizable as those with lower x:
 				var num = gridxparam.values.length;
 				var annots = annotations.sort((a, b) => (b.getBBox().x - a.getBBox().x)).slice(0, num+1);
@@ -884,7 +877,7 @@ var PlotsDiv = {
 					ticklabelsmargin.bottom += labelmargin.bottom;
 				};
 			}
-			if(this.showgridlayout.y){
+			if(gridyparam.visible){
 				// get the y annotations, recognizable as those with higher x:
 				var num = gridyparam.values.length;
 				var annots = annotations.sort((a, b) => (a.getBBox().x - b.getBBox().x)).slice(0, num+1);
@@ -906,7 +899,7 @@ var PlotsDiv = {
 			// /[xy]axis\d*/ where "xaxis" in plotly equals "xaxis1"). xIndex and yIndex
 			// are in cartesian coordinates, so [0, 0] denotes the bottom-left plot,
 			// [1, 0] the plot on its right, [0, 1] the plot above it, and so on
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
+			var [gridxparam, gridyparam] = this.grid.params;
 			var cols = gridxparam.values.length || 1;
 			var rows = gridyparam.values.length || 1;
 			if (cols == 1 && rows == 1){
@@ -932,8 +925,8 @@ var PlotsDiv = {
 			if (!papermargin){
 				papermargin = {left: 0.1, bottom: 0.1, top:0, right: 0};  // dummy margin
 			}
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (this.showgridlayout.x){
+			var [gridxparam, gridyparam] = this.grid.params;
+			if (gridxparam.visible){
 				if (!xdomains){
 					xdomains = [[papermargin.left, 1-papermargin.right]];
 				}
@@ -945,7 +938,7 @@ var PlotsDiv = {
 					xanchor: 'center'
 				}));
 			}
-			if (this.showgridlayout.y){
+			if (gridyparam.visible){
 				if (!ydomains){
 					ydomains = [[papermargin.bottom, 1-papermargin.top]];
 				}
@@ -973,8 +966,8 @@ var PlotsDiv = {
 			if (!papermargin){
 				papermargin = {left: 0.1, bottom: 0.1, top:0, right: 0};  // dummy margin
 			}
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (this.showgridlayout.x){
+			var [gridxparam, gridyparam] = this.grid.params;
+			if (gridxparam.visible){
 				var pvalues = gridxparam.values;
 				if (!xdomains){
 					var xs = pvalues.map((v, i, vs) => papermargin.left + i/vs.length);
@@ -991,7 +984,7 @@ var PlotsDiv = {
 					}));
 				}
 			}
-			if (this.showgridlayout.y){
+			if (gridyparam.visible){
 				var pvalues = gridyparam.values;
 				if (!ydomains){
 					var ys = pvalues.map((v, i, vs) => papermargin.bottom + i/vs.length);
@@ -1022,8 +1015,8 @@ var PlotsDiv = {
 				}
 			};
 			var shapes = [];
-			var [gridxparam, gridyparam] = this.gridlayouts[this.selectedgridlayout];
-			if (this.showgridlayout.x){  // horizontal grid line
+			var [gridxparam, gridyparam] = this.grid.params;
+			if (gridxparam.visible){  // horizontal grid line
 				shapes.push(Object.assign({}, defShape, {
 					x0: xdomains[0][0],
 					x1: xdomains[xdomains.length-1][1],  // 1 - papermargin.right,
@@ -1031,7 +1024,7 @@ var PlotsDiv = {
 					y1: papermargin.bottom
 				}));
 			}
-			if (this.showgridlayout.y){  // vertical grid line
+			if (gridyparam.visible){  // vertical grid line
 				shapes.push(Object.assign({}, defShape, {
 					x0: papermargin.left,
 					x1: papermargin.left,
