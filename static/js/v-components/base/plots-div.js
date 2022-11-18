@@ -18,10 +18,10 @@ var PlotsDiv = {
 			params: [],
 			// subplots grid object:
 			grid: {
-				layouts: {},
+				layouts: {}, // object of str mapped to an Array of 2 params: [x, y]
 				selectedLayout: "",
 				visibility: [true, true],  // x, y
-				params: [{}, {}]  // Array of x, y params (see above)
+				params: [{}, {}]  // Array of 2 params: [x, y]
 			},
 			// plot options configurable via html controls:
 			plotoptions: {
@@ -29,13 +29,13 @@ var PlotsDiv = {
 					x: {
 						log: {disabled: false, value: undefined},
 						sameRange: {disabled: false, value: undefined},
-						grid: {disabled: false, value: undefined},
+						grid: {disabled: false, value: undefined},  // plot x tick lines, not to be confused with this.grid
 						title: {disabled: false, value: undefined, title: ''}
 					} ,
 					y: {
 						log: {disabled: false, value: undefined},
 						sameRange: {disabled: false, value: undefined, range: null},
-						grid: {disabled: false, value: undefined},
+						grid: {disabled: false, value: undefined},  // plot y tick lines, not to be confused with this.grid
 						title: {disabled: false, value: undefined, title: ''}
 					}
 				},
@@ -143,8 +143,7 @@ var PlotsDiv = {
 			rgba(hexcolor, alpha) {
 				// Returns the corresponding 'rgba' string of `hexcolor` with the given alpha channel ( in [0, 1], 1:opaque)
 				if (hexcolor.length == 4){
-					var [r, g, b] = [hexcolor.substring(1, 2), hexcolor.substring(2, 3), hexcolor.substring(3, 4)];
-					var [r, g, b] = [r+r, g+g, b+b];
+					var [r, g, b] = Array.from(hexcolor.substring(1)).map(h => h+h);
 				}else if(hexcolor.length == 7){
 					var [r, g, b] = [hexcolor.substring(1, 3), hexcolor.substring(3, 5), hexcolor.substring(5, 7)];
 				}else{
@@ -154,9 +153,6 @@ var PlotsDiv = {
 				return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 			}
 		};
-	},
-	activated(){  // when component become active
-
 	},
 	watch: {
 		data: {
@@ -862,11 +858,16 @@ var PlotsDiv = {
 			}
 			var ticklabelsmargin = {left: 0, top: 0, bottom: 0, right: 0};
 			var infoLayer = plotDiv.querySelector('g.infolayer');
-			var annotations = Array.from(infoLayer.querySelectorAll(`g[class=annotation]`));
+			var annotations = Array.from(infoLayer.querySelectorAll(`g[class=annotation]`)).sort((annot1, annot2) => {
+				// sort annotations by their x midpoint:
+				var box1 = annot1.getBBox();
+				var box2 = annot2.getBBox();
+				return (box1.x + box1.width/2) - (box2.x + box2.width/2);
+			});
 			if(gridxparam.visible){
 				// get the x annotations, recognizable as those with lower x:
 				var num = gridxparam.values.length;
-				var annots = annotations.sort((a, b) => (b.getBBox().x - a.getBBox().x)).slice(0, num+1);
+				var annots = annotations.slice(annotations.length-num);
 				var ticklabels = annots.filter(a => a.textContent !== gridxparam.label);
 				if (ticklabels.length){
 					ticklabelsmargin.bottom = Math.max(...ticklabels.map(elm => elm.getBBox().height)) / height;
@@ -880,7 +881,7 @@ var PlotsDiv = {
 			if(gridyparam.visible){
 				// get the y annotations, recognizable as those with higher x:
 				var num = gridyparam.values.length;
-				var annots = annotations.sort((a, b) => (a.getBBox().x - b.getBBox().x)).slice(0, num+1);
+				var annots = annotations.slice(0, num+1);
 				var ticklabels = annots.filter(a => a.textContent !== gridyparam.label);
 				if (ticklabels.length){
 					ticklabelsmargin.left = Math.max(...ticklabels.map(elm => elm.getBBox().width)) / width;
