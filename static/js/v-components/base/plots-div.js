@@ -166,24 +166,22 @@ var PlotsDiv = {
 		params: {
 			deep: true,
 			handler (newVal, oldVal) {
+				this.updateGridParams();
 				if(!this.drawingPlots){
 					this.newPlot();
 				}
 			}
 		},
 		'grid.selectedLayout': function(newVal, oldVal){
-			this.grid.params = this.grid.layouts[newVal];
-			this.grid.params.forEach((p, i) => p.visible = !!(p.label && this.grid.visibility[i]));
-			/*this.grid.params[0].visible = this.grid.params[0].label && this.grid.visibility[0];
-			this.grid.params[1].visible = this.grid.params[1].label && this.grid.visibility[1];*/
-			if(!this.drawingPlots){ this.newPlot(); }
+			this.updateGridParams();
+			if(!this.drawingPlots){
+				this.newPlot();
+			}
 		},
 		'grid.visibility': {
 			deep: true,
 			handler(newVal, oldVal){
-				this.grid.params.forEach((p, i) => p.visible = !!(p.label && this.grid.visibility[i]));
-				/*this.grid.params[0].visible = this.grid.params[0].label && this.grid.visibility[0];
-				this.grid.params[1].visible = this.grid.params[1].label && this.grid.visibility[1];*/
+				this.updateGridParams();
 				if(!this.drawingPlots){
 					var newLayout = {annotations: this.getGridLabels().concat(this.getGridTickLabels())};
 					this.relayout(newLayout, true);
@@ -285,12 +283,13 @@ var PlotsDiv = {
 						<option v-for='key in Object.keys(grid.layouts)' :value="key" v-html="key">
 						</option>
 					</select>
-					<div class='mt-1 d-flex flex-column'>
-						 <div v-for="ax in [0, 1]" class='d-flex flex-row'>
-							<label :disabled="grid.params[ax].label" class='text-nowrap m-0 ms-2 align-items-baseline'>
-								<input type='checkbox' v-model="grid.visibility[ax]">
-								<span class='ms-1 text-nowrap' :class="{'text-muted': grid.params[ax].label}">
-									{{ grid.params[ax].label }} ({{ ax == 0 ? 'x' : 'y' }}): show labels
+					<div class='mt-1 d-flex flex-row'>
+						<div>labels</div>
+						 <div v-for="ax in [0, 1]" class='ms-1 d-flex flex-row'>
+							<label class='text-nowrap m-0 ms-2 align-items-baseline'>
+								<input type='checkbox' v-model="grid.visibility[ax]" :disabled="!grid.params[ax].label" >
+								<span class='ms-1 text-nowrap' :class="{'text-muted': !grid.params[ax].label }">
+									{{ grid.params[ax].label }}
 								</span>
 							</label>
 						</div>
@@ -310,7 +309,7 @@ var PlotsDiv = {
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
 					<div> Plot mouse interactions</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
-						<span class='text-nowrap me-1'> on hover:</span>
+						<span class='text-nowrap me-1'> on hover</span>
 						<select v-model="plotoptions.mouse.hovermode"
 								class='form-control form-control-sm'>
 							<option v-for='name in mouseMode.hovermodes' :value='name'>
@@ -319,7 +318,7 @@ var PlotsDiv = {
 						</select>
 					</div>
 					<div class='d-flex flex-row mt-1 align-items-baseline'>
-						<span class='text-nowrap me-1'> on drag:</span>
+						<span class='text-nowrap me-1'> on drag</span>
 						<select v-model="plotoptions.mouse.dragmode"
 								class='form-control form-control-sm'>
 							<option v-for='name in mouseMode.dragmodes' :value='name'>
@@ -339,17 +338,24 @@ var PlotsDiv = {
 			See README, residuals.js and trellis.js for a details docstring and implementation
 			*/
 		},
+		updateGridParams(){
+			this.grid.params = this.grid.layouts[this.grid.selectedLayout] || [{}, {}];
+			this.grid.params.forEach((p, i) => p.visible = !!(p.label && this.grid.visibility[i]));
+		},
 		init(jsondict){
+			this.drawingPlots = true;
 			this.legend = {};
 			// convert data:
 			this.plots = this.getPlots(jsondict);
-			this.drawingPlots = true;
 			// update selection, taking into account previously selected stuff:
 			this.setupParams();
 			this.createLegend();
 			this.initAxisControls();
 			// now plot:
-			this.newPlot();
+			this.$nextTick(() => {
+				this.drawingPlots = false;
+				this.newPlot();
+			});
 		},
 		setupParams(){
 			var plots = this.plots;
@@ -444,9 +450,9 @@ var PlotsDiv = {
 				}
 			}
 			// set defaults:
+			this.params = params;
 			this.grid.layouts = gridlayouts;
 			this.grid.selectedLayout = selectedgridlayout;
-			this.params = params;
 		},
 		createLegend(){
 			this.legend = [];
@@ -1113,11 +1119,20 @@ var PlotsDiv = {
 					legend[2] = JSON.stringify(legenddata, null, "  ")
 				}
 			}
+			// update plotly data:
 			var indices = [];
 			var plotlydata = this.getPlotlyDataAndLayout()[0];
-			plotlydata.forEach(function(data, i){
-				if (data.legendgroup === legendgroup){
+			plotlydata.forEach((trace, i) => {
+				if (trace.legendgroup === legendgroup){
 					indices.push(i);
+				}
+			});
+			// update our data:
+			this.plots.map(p => p.data).forEach(traces => {
+				for (var i =0; i < traces.length; i++){
+					if (traces[i].legendgroup === legendgroup){
+						traces[i] = Object.assign(traces[i], legenddata);
+					}
 				}
 			});
 			if(indices.length){
