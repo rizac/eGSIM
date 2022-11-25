@@ -21,7 +21,7 @@ numpy==1.22.4
 -e git+https://github.com/gem/oq-engine.git@7fb2eb17e1b90f8631299a570150b6f542ad5085#egg=openquake.engine
 packaging==21.3
 pandas==1.2.5
-Pillow==9.2.0
+Pillow==9.3.0
 plotly==5.10.0
 pluggy==1.0.0
 psutil==5.6.7
