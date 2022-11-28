@@ -8,24 +8,24 @@ EGSIM.component('gsim-select', {
 	emits: ['gsim-selected'],
 	data() {
 		// set <select> style
-		this.field.style = ['border-bottom-left-radius: 0rem !important',
-							'border-bottom-right-radius: 0rem !important'].join(';')
+		/*this.field.style = ['border-bottom-left-radius: 0rem !important',
+							'border-bottom-right-radius: 0rem !important'].join(';')*/
 		// return custom data:
 		return {
-			regionalization: this.field['data-regionalization'] || {},
-			filterBy: {  // DO NOT CHANGE KEYS!
+			regionalization: Vue.toRaw(this.field['data-regionalization'] || {}),
+			modeltext: "",  // text in the <input> (model = ground motion model)
+			/*filterBy: {  // DO NOT CHANGE KEYS!
 				name: "", // string matching gsim name(s)
 				imt: false,  // boolean (imt filter on off)
 				map: null  // null or function(gsim_name) => true/false
 			},
-			mapOffsetParent: undefined,  // to refresh the map when made visible again
 			choices: Array.from(this.field.choices),  // avoid modifying or reordering field.choices
 			modelNamesSet: new Set(this.field.choices.map(elm => elm.value)), // used when view=text to check typos
 			warnings: [], // list of strings of warnings
-			selectionView: true
+			selectionView: true*/
 		}
 	},
-	watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
+	/*watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
 		filterBy: {
 			deep: true,
 			handler(newVal, oldVal){
@@ -54,7 +54,7 @@ EGSIM.component('gsim-select', {
 				this.$emit('gsim-selected', newVal)
 			}
 		}
-	},
+	},*/
 	computed: {
 		infoMsg(){
 			return `${this.field.value.length || 0} of ${this.field.choices.length} selected`
@@ -68,7 +68,17 @@ EGSIM.component('gsim-select', {
 			}
 			return msg ? `<span class='text-warning me-1'><i class='fa fa-exclamation-triangle'></i></span>${msg}` : "";
 		},
-		modelSelectionAsString: {  // called when we are in text view mode
+		selectableModels(){
+			var text = this.modeltext;
+			if (!text){
+				return [];
+			}
+			var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
+			// filterFuncs.push(gsim => gsim.value.search(regexp) > -1);
+			var selectedModelNames = new Set(this.field.value);
+			return this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
+		}
+		/*modelSelectionAsString: {  // called when we are in text view mode
 			get(){
 				var retVal = (this.field.value.length ? this.field.value : []).join("\n")
 				// retVal should be what the textarea displays, however, as it is it
@@ -87,7 +97,7 @@ EGSIM.component('gsim-select', {
 			set(text){
 				this.field.value = text.trim().split("\n");
 			}
-		}
+		}*/
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
 		<field-label :field="field">
@@ -96,14 +106,42 @@ EGSIM.component('gsim-select', {
 				<i v-if="field.value.length && !field.error"
 				   @click="field.value=[]" class="fa fa-times-circle ms-2"
 				   style="cursor: pointer;" title="Clear selection"></i>
-				<i v-if="!field.error"
+				<!-- <i v-if="!field.error"
 				   @click="toggleView" class="fa ms-2"
 				   :class="selectionView ? 'fa-file-text' : 'fa-list-alt'"
 				   :title="selectionView ? 'Switch to text view' : 'Switch to list view'"
-				   style="cursor: pointer;" ></i>
+				   style="cursor: pointer;" ></i> -->
 			</template>
 		</field-label>
-		<div class='flex column' style="position:relative; flex: 1 1 auto"
+		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .75*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
+			<div class='d-flex flex-row'>
+				<div>
+					<div v-for="model in field.value" v-html='model' />
+				</div>
+				<div>
+					<div v-for="model in field.value">
+						<span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>
+						<span class='text-warning'><i class='fa fa-times-circle'></i></span>
+					</div>
+				</div>
+			</div>
+			<div class='mt-1 d-flex flex-row align-items-baseline'>
+				<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2">
+				<div style='flex: 1 1 auto'></div>
+				<div class='text-nowrap'>Select by region (click on map):</div>
+			</div>
+			<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto'>
+				<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0'
+						@change="this.field.value.push($event.target.value)" style='position:absolute;left:0;top:0;bottom:0;right:0;z-index:10000' >
+					<option v-for="m in selectableModels" :value='m.value'>
+						{{ m.innerHTML }}
+					</option>
+				</select>
+				<div ref="mapDiv" style='flex: 1 1 auto;'></div>
+			</div>
+		</div>
+
+		<!-- <div class='flex column' style="position:relative; flex: 1 1 auto"
 			:style="{display: selectionView ? 'flex' : 'none'}"
 			ref='listSelectionContainer'>
 			<field-input :field="field" :style="'flex: 1 1 auto'"/>
@@ -114,15 +152,8 @@ EGSIM.component('gsim-select', {
 				</div>
 			</div>
 		</div>
-		<div class='flex-column' style="flex: 1 1 auto"
-			 :style="{display: selectionView ? 'none' : 'flex'}" ref="textSelectionContainer">
-			<textarea v-model="modelSelectionAsString" spellcheck="false"
-					  class="form-control" :class="field.error ? 'border-danger' : ''"
-					  style='flex: 1 1 auto; resize: none;'>
-			</textarea>
-			<div class='mt-2' v-show="textSelectionErrorMsg" v-html="textSelectionErrorMsg"></div>
-		</div>
-		<!-- GSIM FILTER CONTROLS: -->
+
+		<div class='mt-2' v-show="textSelectionErrorMsg" v-html="textSelectionErrorMsg"></div>
 		<div :style="{display: selectionView ? 'flex' : 'none'}"
 			 class="pt-2 flex-column form-control border-top-0"
 			 style='background-color:transparent !important; border-top-left-radius: 0rem!important; border-top-right-radius: 0rem!important;'>
@@ -155,21 +186,21 @@ EGSIM.component('gsim-select', {
 					</button>
 				</div>
 				<div ref="mapDiv" style='height:14rem'></div>
-		   </div>
-		</div>
+			</div>
+		</div> -->
 	</div>`,
 	mounted(){
 		this.createLeafletMap();
 	},
 	methods: {
-		toggleView(){
+		/*toggleView(){
 			if (this.selectionView){
 				var width = `${this.$refs.listSelectionContainer.offsetWidth}px`;
 				// to avoid unpleasant resizing, set textarea size if we are about to show it:
 				this.$refs.textSelectionContainer.style.width = width;
 			}
 			this.selectionView=!this.selectionView;
-		},
+		},*/
 		createLeafletMap(){
 			var mapDiv = this.$refs.mapDiv;
 			let map = L.map(mapDiv, {center: [48, 7], zoom: 4});
@@ -279,14 +310,18 @@ EGSIM.component('gsim-select', {
 			};
 			// query data and update filter func:
 			axios.post(this.regionalization.url, data).then(response => {
-				var gsims = response.data; // Array of gsim names
+				// response.data is an Array of gsim names
+				var selectedModels = new Set(this.field.value || []);
+				var gsims = (response.data || []).filter(m => !selectedModels.has(m));
+				this.field.value.push(...gsims);
+				/*
 				this.filterBy.map = null;
 				if(gsims && gsims.length){
 					var regionGsims = new Set(gsims);
 					// create filterFunc from list og Gsims:
 					this.filterBy.map = gsim => regionGsims.has(gsim.value);
 				}
-				this.filterUpdated();
+				this.filterUpdated();*/
 			});
 		},
 		clearMapFilter(){
