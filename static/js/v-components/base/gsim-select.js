@@ -14,7 +14,7 @@ EGSIM.component('gsim-select', {
 	},
 	computed: {
 		infoMsg(){
-			return `${this.field.value.length || 0} of ${this.field.choices.length} selected`
+			return `${this.field.value.length || 0} of ${this.field.choices.length} selected`;
 		},
 		selectableModels(){
 			var text = this.modeltext;
@@ -25,6 +25,28 @@ EGSIM.component('gsim-select', {
 			// filterFuncs.push(gsim => gsim.value.search(regexp) > -1);
 			var selectedModelNames = new Set(this.field.value);
 			return this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
+		},
+		modelWarnings(){
+			var warns = {};
+			var selected = new Set(this.field.value || []);
+			if (selected.size){
+				var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
+				for (model of this.field.choices){
+					if (!selected.has(model.value)){ continue; }
+					var ws = [];
+					var critical = false;
+					if (selimts.length){
+						var wrongimts = selimts.filter(i => !model.imts.includes(i));
+						if (wrongimts.length){
+							critical = true;
+							ws.push(`This model does not support ${wrongimts.join(', ')}`);
+						}
+					}
+					ws.push(model.warning);
+					warns[model.value] = {text: ws.join('; '), critical: critical};
+				}
+			}
+			return warns;
 		}
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
@@ -34,25 +56,26 @@ EGSIM.component('gsim-select', {
 				<i v-if="field.value.length && !field.error"
 				   @click="field.value=[]" class="fa fa-times-circle ms-2"
 				   style="cursor: pointer;" title="Clear selection"></i>
-				<!-- <i v-if="!field.error"
-				   @click="toggleView" class="fa ms-2"
-				   :class="selectionView ? 'fa-file-text' : 'fa-list-alt'"
-				   :title="selectionView ? 'Switch to text view' : 'Switch to list view'"
-				   style="cursor: pointer;" ></i> -->
 			</template>
 		</field-label>
 		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .75*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
 			<div class='d-flex flex-row'>
-				<div>
-					<div v-for="model in field.value" v-html='model' />
-				</div>
-				<div>
-					<div v-for="model in field.value">
-						<span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>
-						<span class='text-warning'><i class='fa fa-times-circle'></i></span>
+				<div class='d-flex flex-column'>
+					<div v-for="model in field.value" class='me-1' title="remove from selection" @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
+							<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
+				<div class='d-flex flex-column' style='flex: 1 1 auto'>
+					<div v-for="model in field.value">{{ model }}</div>
+				</div>
+				<div class='d-flex flex-column'>
+					<span v-for="model in field.value" v-show='!!modelWarnings[model].text' :aria-label="modelWarnings[model].text"
+						  class='me-1' :class="modelWarnings[model].critical ? 'text-danger' : 'text-warning'">
+						<i class='fa fa-exclamation-triangle'></i>
+					</span>
+				</div>
 			</div>
+			<div v-show="!!field.value.length" class='mb-2'></div>
 			<div class='mt-1 d-flex flex-row align-items-baseline'>
 				<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2">
 				<div style='flex: 1 1 auto'></div>
@@ -187,11 +210,6 @@ EGSIM.component('gsim-select', {
 				var gsims = (response.data || []).filter(m => !selectedModels.has(m));
 				this.field.value.push(...gsims);
 			});
-		},
-		clearMapFilter(){
-			// Destroy existing markers marker (or move existing one):
-			this.removeMarkersFromMap();
-			this.filterBy.map = null;
 		},
 		removeMarkersFromMap(){
 			this.map.eachLayer(function (layer) {
