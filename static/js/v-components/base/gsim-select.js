@@ -7,66 +7,14 @@ EGSIM.component('gsim-select', {
 	},
 	emits: ['gsim-selected'],
 	data() {
-		// set <select> style
-		/*this.field.style = ['border-bottom-left-radius: 0rem !important',
-							'border-bottom-right-radius: 0rem !important'].join(';')*/
-		// return custom data:
 		return {
 			regionalization: Vue.toRaw(this.field['data-regionalization'] || {}),
-			modeltext: "",  // text in the <input> (model = ground motion model)
-			/*filterBy: {  // DO NOT CHANGE KEYS!
-				name: "", // string matching gsim name(s)
-				imt: false,  // boolean (imt filter on off)
-				map: null  // null or function(gsim_name) => true/false
-			},
-			choices: Array.from(this.field.choices),  // avoid modifying or reordering field.choices
-			modelNamesSet: new Set(this.field.choices.map(elm => elm.value)), // used when view=text to check typos
-			warnings: [], // list of strings of warnings
-			selectionView: true*/
+			modeltext: ""
 		}
 	},
-	/*watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
-		filterBy: {
-			deep: true,
-			handler(newVal, oldVal){
-				this.filterUpdated();
-			}
-		},
-		'imtField.disabled': function(newVal, oldVal){
-			// if we disabled the imt field, uncheck the checkbox, too, if checked:
-			if (newVal && this.filterBy.imt){
-				this.filterBy.imt = false;
-			}
-		},
-		// listen for changes in the selected imts:
-		'imtField.value': {  // even if it should not happen: if we change the imt param name, change it also here ...
-			// immediate: true,
-			handler(newVal, oldVal){
-				if (this.filterBy.imt){
-					this.filterUpdated();
-				}
-			}
-		},
-		'field.value': {
-			immediate: true,
-			handler(newVal, oldVal){
-				this.updateWarnings();
-				this.$emit('gsim-selected', newVal)
-			}
-		}
-	},*/
 	computed: {
 		infoMsg(){
 			return `${this.field.value.length || 0} of ${this.field.choices.length} selected`
-		},
-		textSelectionErrorMsg(){
-			var msg = "";
-			if (!(this.field.value) || !(this.field.value.length)){
-				msg = "No model provided";
-			}else if (this.field.value.some(elm => !elm || !this.modelNamesSet.has(elm))){
-				msg = 'Invalid model name(s), check empty lines or typos';
-			}
-			return msg ? `<span class='text-warning me-1'><i class='fa fa-exclamation-triangle'></i></span>${msg}` : "";
 		},
 		selectableModels(){
 			var text = this.modeltext;
@@ -78,26 +26,6 @@ EGSIM.component('gsim-select', {
 			var selectedModelNames = new Set(this.field.value);
 			return this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
 		}
-		/*modelSelectionAsString: {  // called when we are in text view mode
-			get(){
-				var retVal = (this.field.value.length ? this.field.value : []).join("\n")
-				// retVal should be what the textarea displays, however, as it is it
-				// would overwrite the text content while editing, e.g. typing a newline. So:
-				if (this.$refs.textSelectionContainer){
-					var textArea = this.$refs.textSelectionContainer.querySelector('textarea');
-					var currentText = "" + textArea.value;
-					// we need to allow newlines, so first get the text representation
-					// of the currently selected models:
-					if (currentText.trim() == retVal){
-						retVal = currentText;
-					}
-				}
-				return retVal;
-			},
-			set(text){
-				this.field.value = text.trim().split("\n");
-			}
-		}*/
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
 		<field-label :field="field">
@@ -140,67 +68,11 @@ EGSIM.component('gsim-select', {
 				<div ref="mapDiv" style='flex: 1 1 auto;'></div>
 			</div>
 		</div>
-
-		<!-- <div class='flex column' style="position:relative; flex: 1 1 auto"
-			:style="{display: selectionView ? 'flex' : 'none'}"
-			ref='listSelectionContainer'>
-			<field-input :field="field" :style="'flex: 1 1 auto'"/>
-			<div v-if="!!warnings.length" class='form-control' ref='warningsDiv'
-				 style="position:absolute; right:2rem; top:1rem; bottom:1rem; overflow:auto; width:15rem; word-wrap:break-word">
-				<div v-for="w in warnings" class="small text-muted pt-2 px-3">
-					<span class='text-warning'><i class='fa fa-exclamation-triangle'></i></span>{{ w }}
-				</div>
-			</div>
-		</div>
-
-		<div class='mt-2' v-show="textSelectionErrorMsg" v-html="textSelectionErrorMsg"></div>
-		<div :style="{display: selectionView ? 'flex' : 'none'}"
-			 class="pt-2 flex-column form-control border-top-0"
-			 style='background-color:transparent !important; border-top-left-radius: 0rem!important; border-top-right-radius: 0rem!important;'>
-			<div class="d-flex flex-column">
-				<div class='mb-1' style='position:relative'>
-					<table>
-						<tr>
-						<td class='text-nowrap'><i class="fa fa-filter"></i> Filter models: </td>
-						<td class='text-nowrap ps-3' title="filter models by name. The search will ignore case and spaces">
-							<input v-model="filterBy.name"
-								   placeholder="by name (case and spaces ignored)"
-								   style='min-width:13.5rem;display:inline-block;width:initial'
-								   type="text" class="form-control form-control-sm">
-						</td>
-						<td v-if="imtField" class='text-nowrap ps-3' title='filter models that are defined for the currently selected IMT(s)'>
-							<label class='small my-0' :disabled='imtField.disabled'>
-								<input v-model="filterBy.imt" type="checkbox" :disabled='imtField.disabled'> by IMTs
-							</label>
-						</td>
-						<td class='text-nowrap ps-3' style='text-align: right;' title='filter models that have been selected for a specific location according to one or more Seismic Hazard Source Regionalizations'>
-							<span :style="[!!filterBy.map ? {'visibility': 'hidden'} : {}]" class='small'>
-								by region (click on map):
-							</span>
-						</td>
-						</tr>
-					</table>
-					<button v-if="!!filterBy.map" type='button' class="btn btn-sm btn-outline-dark" @click="clearMapFilter"
-							style="position:absolute; right:0; bottom:0">
-						Clear map filter
-					</button>
-				</div>
-				<div ref="mapDiv" style='height:14rem'></div>
-			</div>
-		</div> -->
 	</div>`,
 	mounted(){
 		this.createLeafletMap();
 	},
 	methods: {
-		/*toggleView(){
-			if (this.selectionView){
-				var width = `${this.$refs.listSelectionContainer.offsetWidth}px`;
-				// to avoid unpleasant resizing, set textarea size if we are about to show it:
-				this.$refs.textSelectionContainer.style.width = width;
-			}
-			this.selectionView=!this.selectionView;
-		},*/
 		createLeafletMap(){
 			var mapDiv = this.$refs.mapDiv;
 			let map = L.map(mapDiv, {center: [48, 7], zoom: 4});
@@ -314,14 +186,6 @@ EGSIM.component('gsim-select', {
 				var selectedModels = new Set(this.field.value || []);
 				var gsims = (response.data || []).filter(m => !selectedModels.has(m));
 				this.field.value.push(...gsims);
-				/*
-				this.filterBy.map = null;
-				if(gsims && gsims.length){
-					var regionGsims = new Set(gsims);
-					// create filterFunc from list og Gsims:
-					this.filterBy.map = gsim => regionGsims.has(gsim.value);
-				}
-				this.filterUpdated();*/
 			});
 		},
 		clearMapFilter(){
@@ -335,60 +199,6 @@ EGSIM.component('gsim-select', {
 					layer.remove();
 				}
 			});
-		},
-		filterUpdated(){
-			var defFilterFunc = elm => true;
-			var filterFuncs = [];
-			if (this.filterBy.name){
-				var val = this.filterBy.name;
-				var regexp = new RegExp(val.replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
-				filterFuncs.push(gsim => gsim.value.search(regexp) > -1);
-			}
-			if (this.filterBy.imt && this.imtField.value && this.imtField.value.length && !this.imtField.disabled){
-				var imtClassNames = new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm));
-				filterFuncs.push(gsim => gsim.imts.some(imt => imtClassNames.has(imt)));
-			}
-			if (this.filterBy.map){
-				filterFuncs.push(this.filterBy.map);
-			}
-			this.field.choices = this.filterChoices(filterFuncs);
-			this.updateWarnings();
-		},
-		filterChoices(filterFuncs){  // filterFuncs: callable(gsimName) -> bool
-			var okGsims = new Array();
-			var noGsims = new Array();
-
-			for (var gsim of this.choices){
-				// Provide strikethrough for filtered out GSIMs but this won't be
-				// rendered in Safari, as <option>s cannot be styled. As such, set also
-				// those <option>s disabled for cross browser compatibility:
-				if (filterFuncs.every(filterFunc => filterFunc(gsim))){
-					// Note: if no filterFuncs provided we land here (`[].every` => true)
-					gsim.disabled = false;
-					gsim.style = '';
-					okGsims.push(gsim);
-				}else{
-					gsim.disabled = true;
-					gsim.style = 'text-decoration: line-through;';
-					noGsims.push(gsim);
-				}
-			}
-
-			if (!noGsims.length){
-				return this.choices;
-			}
-
-			var separator = {
-				value: '',
-				disabled: true,
-				innerHTML: ""
-			};
-
-			if(!okGsims.length){
-				return noGsims;
-			}else{
-				return okGsims.concat([separator]).concat(noGsims);
-			}
 		},
 		updateWarnings(){
 			var selGsimNames = new Set(this.field.value);
