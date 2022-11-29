@@ -1,6 +1,6 @@
-/* Redefines base colors and appearance overriding bootstrap5 */
+/* Custom css. Requires bootstrap5 */
 
-/* global colors */
+/* redefine bootstrap (bs) global colors */
 :root {
 	--bs-primary-rgb: 7,104,159;  /* overrides .text-primary */
 	--bs-link-color: rgba(var(--bs-primary-rgb), 1);  /* overrides <a> text color */
@@ -8,9 +8,11 @@
 	--bs-light-rgb: 202,214,222;  /* overrides color of class .bg-light */
 	--bs-primary: rgba(var(--bs-primary-rgb), 1); /* primary buttons bg, see below */
 	--bs-primary-active-hover: rgba(32, 77, 116, 1); /* primary buttons hover bg */
+	--bs-border-color: rgb(179, 186, 193);  /* color of .border* classes and (see below) form-control border */
+	--bs-border-width: 1px; /* same as above but controls the width */
 }
 
-/* redefine .btn-primary colors */
+/* redefine bootstrap .btn-primary colors */
 .btn-primary {
 	--bs-btn-bg: var(--bs-primary);
 	--bs-btn-border-color: var(--bs-primary);
@@ -24,7 +26,7 @@
 
 /* make option padding as firefox (chrome <option>s are very narrow) */
 option {
-	padding: 2px 4px;  /* v h */
+	padding: 2px 4px;  /* ver hor */
 }
 /* set checkboxes and radio background equal to .btn-primary colors (for browsers
 released roughly < 2021 doesn't work, but we don't care) */
@@ -35,16 +37,16 @@ input[type=checkbox]:hover, input[type=radio]:hover{
 	accent-color: var(--bs-primary-active-hover) !important;
 }
 
-/* make focus border inset, otherwise it is outside the element and sometimes
-   "cropped", and the effect it's not nice*/
-.form-control:focus, .btn.focus, .btn:focus {
-	box-shadow: inset 0px 0px 5px 1px rgba(128,198,237,.95) !important;
+/* change focus border. set outline none and make a shadow instead but not too spread out */
+select:focus, a:focus, button:focus, input:focus, *[tabindex]:not([tabindex^="-"]):focus {
+	box-shadow: 0px 0px 2px 2px rgba(128,198,237,1) !important;
+	outline: none;
 }
 
 /* harmonize borders color and width */
-*.form-control:not([style*="border-color"]):not(.border-danger), .border, .leaflet-control-layers {
-	border-color: rgb(179, 186, 193) !important; /*#bec4ca !important;*/
-	border-width: 1px !important;
+*.form-control:not([style*="border-color"]):not(.border-danger), .leaflet-control-layers {
+	border-color: var(--bs-border-color) !important; /*#bec4ca !important;*/
+	border-width: var(--bs-border-width) !important;
 }
 
 /* remove background and foregrounds added by Chrome when autocompleting <input> values  */
@@ -52,7 +54,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 	-webkit-box-shadow: 0 0 0 30px white inset !important;  /* https://stackoverflow.com/a/14205976 */
 }
 
-/* style <select> when single selection and no size (combo box). Works on Mac in Safari, Chrome, Firefox */
+/* style single <select> (combo-box like) */
 select:not([multiple]):not([size]).form-control{
 	-moz-appearance: none;
 	-webkit-appearance: none;
