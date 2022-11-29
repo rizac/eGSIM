@@ -8,9 +8,11 @@ EGSIM.component('gsim-select', {
 	emits: ['gsim-selected'],
 	data() {
 		return {
-			regionalization: Vue.toRaw(this.field['data-regionalization'] || {}),
 			modeltext: ""
 		}
+	},
+	created(){
+		this.regionalization = this.field['data-regionalization'] || {};
 	},
 	computed: {
 		infoMsg(){
@@ -26,27 +28,29 @@ EGSIM.component('gsim-select', {
 			var selectedModelNames = new Set(this.field.value);
 			return this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
 		},
-		modelWarnings(){
-			var warns = {};
-			var selected = new Set(this.field.value || []);
-			if (selected.size){
-				var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
-				for (model of this.field.choices){
-					if (!selected.has(model.value)){ continue; }
-					var ws = [];
-					var critical = false;
-					if (selimts.length){
-						var wrongimts = selimts.filter(i => !model.imts.includes(i));
-						if (wrongimts.length){
-							critical = true;
-							ws.push(`This model does not support ${wrongimts.join(', ')}`);
-						}
+		modelHTMLAttrs(){
+			var attrs = {};
+			var selected = new Set(this.field.value);
+			var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
+			for (var model of this.field.choices.filter(m => selected.has(m.value))){
+				var ws = [];
+				var critical = false;
+				if (selimts.length){
+					var wrongimts = selimts.filter(i => !model.imts.includes(i));
+					if (wrongimts.length){
+						critical = true;
+						ws.push(`${model.value} does not support ${wrongimts.join(', ')}`);
 					}
-					ws.push(model.warning);
-					warns[model.value] = {text: ws.join('; '), critical: critical};
 				}
+				if (model.warning){
+					ws.push(model.warning);
+				}
+				attrs[model.value] = !ws.length ? {} : {
+					class: critical ? 'text-danger' : 'text-warning',
+					'title': ws.join('\n')
+				};
 			}
-			return warns;
+			return attrs;
 		}
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
@@ -59,31 +63,35 @@ EGSIM.component('gsim-select', {
 			</template>
 		</field-label>
 		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .75*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
-			<div class='d-flex flex-row'>
+			<div class='d-flex flex-row' style='overflow: auto;max-height:20rem'>
 				<div class='d-flex flex-column'>
 					<div v-for="model in field.value" class='me-1' title="remove from selection" @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
 							<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
 				<div class='d-flex flex-column' style='flex: 1 1 auto'>
-					<div v-for="model in field.value">{{ model }}</div>
+					<div v-for="model in field.value" v-bind="modelHTMLAttrs[model]">{{ model }}</div>
 				</div>
 				<div class='d-flex flex-column'>
-					<span v-for="model in field.value" v-show='!!modelWarnings[model].text' :aria-label="modelWarnings[model].text"
-						  class='me-1' :class="modelWarnings[model].critical ? 'text-danger' : 'text-warning'">
+					<span v-for="model in field.value" style='{visibility: Object.keys(modelHTMLAttrs[model]).length ? "visible" : "hidden"}'
+						  v-bind="modelHTMLAttrs[model]" class='me-1'>
 						<i class='fa fa-exclamation-triangle'></i>
 					</span>
 				</div>
 			</div>
-			<div v-show="!!field.value.length" class='mb-2'></div>
+			<div v-show="!!field.value.length" class='mb-1 mt-1 border-top'></div>
 			<div class='mt-1 d-flex flex-row align-items-baseline'>
-				<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2">
+				<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2" ref="modelText"
+					   @keydown.down.prevent="focusSelectComponent()">
 				<div style='flex: 1 1 auto'></div>
 				<div class='text-nowrap'>Select by region (click on map):</div>
 			</div>
-			<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto'>
-				<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0'
-						@change="this.field.value.push($event.target.value)" style='position:absolute;left:0;top:0;bottom:0;right:0;z-index:10000' >
+			<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
+				<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0' ref="modelSelect"
+						@click.capture.prevent="fetchSelectComponentModels()"
+						@keydown.enter.prevent="fetchSelectComponentModels()"
+						@keydown.up="if($refs.modelSelect.selectedIndex==0){ $refs.modelSelect.selectedIndex=-1; $refs.modelText.focus(); $evt.preventDefault();}"
+						style='position:absolute;left:0;top:0;bottom:0;right:0;z-index:10000' >
 					<option v-for="m in selectableModels" :value='m.value'>
 						{{ m.innerHTML }}
 					</option>
@@ -96,6 +104,42 @@ EGSIM.component('gsim-select', {
 		this.createLeafletMap();
 	},
 	methods: {
+		focusSelectComponent(){
+			if (!!this.selectableModels.length){
+				var sel = this.$refs.modelSelect;
+				sel.selectedIndex = 0;
+				sel.focus();
+			}
+		},
+		focusSelectComponent(){
+			if (!!this.selectableModels.length){
+				var sel = this.$refs.modelSelect;
+				sel.selectedIndex = 0;
+				sel.focus();
+			}
+		},
+		focusSelectComponent(){
+			if (!!this.selectableModels.length){
+				var sel = this.$refs.modelSelect;
+				sel.selectedIndex = 0;
+				sel.focus();
+			}
+		},
+		fetchSelectComponentModels(){
+			var sel = this.$refs.modelSelect;
+			var opts = Array.from(sel.selectedOptions);
+			if (!opts.length && sel.selectedIndex > -1){
+				elms = [sel.options[sel.selectedIndex]];
+			}
+			if(!opts.length){
+				return;
+			}
+			this.field.value.push(...opts.map(opt => opt.value));
+			this.$nextTick(() => {
+				sel.selectedIndex = -1;
+				this.$refs.modelText.focus();
+			});
+		},
 		createLeafletMap(){
 			var mapDiv = this.$refs.mapDiv;
 			let map = L.map(mapDiv, {center: [48, 7], zoom: 4});
@@ -218,7 +262,7 @@ EGSIM.component('gsim-select', {
 				}
 			});
 		},
-		updateWarnings(){
+		/*updateWarnings(){
 			var selGsimNames = new Set(this.field.value);
 			var selFilteredOut = [];
 			var warnings = [];
@@ -247,7 +291,7 @@ EGSIM.component('gsim-select', {
 					}
 				});
 			}
-		},
+		},*/
 	}
 })
 

@@ -164,19 +164,21 @@ const EGSIM = Vue.createApp({
 					warning: elm[2] || "",
 				}
 			});
+			// create global like Object:
+			gsimObjects = Object.freeze(Vue.markRaw(gsimObjects));
 			// convert imts (Set) into Array:
 			imts = Array.from(imts);
 			// Setup fields data:
 			for (var [name, form] of this.forms()){
 				if (form.gsim){
 					// set form.gsim.choices as a deep copy of gsimObjects:
-					form.gsim.choices = gsimObjects.map(elm => Object.assign({}, elm));
+					form.gsim.choices = gsimObjects;
 					form.gsim.value || (form.gsim.value = []); // assure empty list (not null)
-					form.gsim['data-regionalization'] = {
+					form.gsim['data-regionalization'] = Vue.markRaw({
 						url: regionalization.url,
 						choices: regionalization.names.map(elm => [elm, elm]),
 						value: Array.from(regionalization.names)
-					}
+					})
 				}
 				if (form.imt){
 					// set form.imt as a deep copy of imts:
