@@ -12,7 +12,15 @@ EGSIM.component('gsim-select', {
 		}
 	},
 	created(){
-		this.regionalization = this.field['data-regionalization'] || {};
+		this.regionalization = this.field['data-regionalization'] || {};  // https://stackoverflow.com/a/69533537
+	},
+	watch: {
+		'field.value': {
+			immediate: true,
+			handler(newVal, oldVal){
+				this.$emit('gsim-selected', newVal)
+			}
+		}
 	},
 	computed: {
 		infoMsg(){
@@ -28,7 +36,7 @@ EGSIM.component('gsim-select', {
 			var selectedModelNames = new Set(this.field.value);
 			return this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
 		},
-		modelHTMLAttrs(){
+		modelHTMLAttrs(){  // https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
 			var attrs = {};
 			var selected = new Set(this.field.value);
 			var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
@@ -45,7 +53,7 @@ EGSIM.component('gsim-select', {
 				if (model.warning){
 					ws.push(model.warning);
 				}
-				attrs[model.value] = !ws.length ? {} : {
+				attrs[model.value] = !ws.length ? { class: '' } : {
 					class: critical ? 'text-danger' : 'text-warning',
 					'title': ws.join('\n')
 				};
@@ -57,15 +65,24 @@ EGSIM.component('gsim-select', {
 		<field-label :field="field">
 			<template v-slot:trailing-content>
 				<span v-if="!field.error" class='ms-2 small text-muted' v-html="infoMsg"></span>
+				<i v-if="field.value.length && Object.keys(modelHTMLAttrs).some(e => modelHTMLAttrs[e].class.includes('text-warning'))"
+				   title="Remove models with warnings (for details, hover mouse on the list below)"
+				   class="fa fa-exclamation-triangle ms-2 text-warning" style="cursor: pointer;"
+				   @click="field.value=field.value.filter(m => !modelHTMLAttrs[m].class.includes('text-warning'))"></i>
+				<i v-if="field.value.length && Object.keys(modelHTMLAttrs).some(e => modelHTMLAttrs[e].class.includes('text-danger'))"
+				   title="Remove models with errors (for details, hover mouse on the list below)"
+				   class="fa fa-exclamation-triangle ms-2 text-danger" style="cursor: pointer;"
+				   @click="field.value=field.value.filter(m => !modelHTMLAttrs[m].class.includes('text-danger'))"></i>
 				<i v-if="field.value.length && !field.error"
-				   @click="field.value=[]" class="fa fa-times-circle ms-2"
-				   style="cursor: pointer;" title="Clear selection"></i>
+				   title="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
+				   @click="field.value=[]" ></i>
 			</template>
 		</field-label>
 		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .7*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
 			<div class='d-flex flex-row' style='overflow: auto;max-height:20rem' :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
 				<div class='d-flex flex-column'>
-					<div v-for="model in field.value" class='me-1' title="remove from selection" @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
+					<div v-for="model in field.value" class='me-1' :class="modelHTMLAttrs[model].class" title="remove from selection"
+						 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
 						<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
@@ -261,36 +278,6 @@ EGSIM.component('gsim-select', {
 				}
 			});
 		},
-		/*updateWarnings(){
-			var selGsimNames = new Set(this.field.value);
-			var selFilteredOut = [];
-			var warnings = [];
-			var disabledCount = 0;
-			this.choices.forEach(elm => {
-				var disabled = elm.disabled;
-				disabledCount += !!disabled;
-				if (selGsimNames.has(elm.value)){
-					if (disabled){
-						selFilteredOut.push(elm.value);
-					}
-					if(elm.warning){
-						warnings.push(elm.warning);
-					}
-				}
-			});
-			var allDisabled = disabledCount == this.choices.length ? ['No GSIM matches current filters (all models filtered out)'] : [];
-			selFilteredOut = selFilteredOut.map(elm => `${elm} is filtered out but still selected`);
-			this.warnings = allDisabled.concat(selFilteredOut.concat(warnings));
-			// scroll warnings to top:
-			if (this.warnings.length){
-				this.$nextTick(() => {
-					var selComp = this.$refs.warningsDiv;
-					if (selComp){
-						selComp.scrollTop=0;
-					}
-				});
-			}
-		},*/
 	}
 })
 
