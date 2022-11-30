@@ -104,8 +104,8 @@ EGSIM.component('gsim-select', {
 			</div>
 			<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
 				<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0' ref="modelSelect"
-						@click.capture.prevent="fetchSelectComponentModels()"
-						@keydown.enter.prevent="fetchSelectComponentModels()"
+						@click.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
+						@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
 						@keydown.up="if($refs.modelSelect.selectedIndex==0){ $refs.modelSelect.selectedIndex=-1; $refs.modelText.focus(); $evt.preventDefault();}"
 						style='position:absolute;left:0;top:0;bottom:0;right:0;z-index:10000' >
 					<option v-for="m in selectableModels" :value='m.value'>
@@ -127,21 +127,7 @@ EGSIM.component('gsim-select', {
 				sel.focus();
 			}
 		},
-		focusSelectComponent(){
-			if (!!this.selectableModels.length){
-				var sel = this.$refs.modelSelect;
-				sel.selectedIndex = 0;
-				sel.focus();
-			}
-		},
-		focusSelectComponent(){
-			if (!!this.selectableModels.length){
-				var sel = this.$refs.modelSelect;
-				sel.selectedIndex = 0;
-				sel.focus();
-			}
-		},
-		fetchSelectComponentModels(){
+		addSelectedOptionComponentValuesToModelSelection(){
 			var sel = this.$refs.modelSelect;
 			var opts = Array.from(sel.selectedOptions);
 			if (!opts.length && sel.selectedIndex > -1){
