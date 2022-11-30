@@ -62,7 +62,7 @@ EGSIM.component('gsim-select', {
 				   style="cursor: pointer;" title="Clear selection"></i>
 			</template>
 		</field-label>
-		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .75*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
+		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .7*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
 			<div class='d-flex flex-row' style='overflow: auto;max-height:20rem' :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
 				<div class='d-flex flex-column'>
 					<div v-for="model in field.value" class='me-1' title="remove from selection" @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
