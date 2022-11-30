@@ -63,28 +63,27 @@ EGSIM.component('gsim-select', {
 			</template>
 		</field-label>
 		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .75*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
-			<div class='d-flex flex-row' style='overflow: auto;max-height:20rem'>
+			<div class='d-flex flex-row' style='overflow: auto;max-height:20rem' :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
 				<div class='d-flex flex-column'>
 					<div v-for="model in field.value" class='me-1' title="remove from selection" @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
-							<i class='fa fa-times-circle'></i>
+						<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
 				<div class='d-flex flex-column' style='flex: 1 1 auto'>
 					<div v-for="model in field.value" v-bind="modelHTMLAttrs[model]">{{ model }}</div>
 				</div>
 				<div class='d-flex flex-column'>
-					<span v-for="model in field.value" style='{visibility: Object.keys(modelHTMLAttrs[model]).length ? "visible" : "hidden"}'
+					<span v-for="model in field.value" :style='{visibility: Object.keys(modelHTMLAttrs[model]).length ? "visible" : "hidden"}'
 						  v-bind="modelHTMLAttrs[model]" class='me-1'>
 						<i class='fa fa-exclamation-triangle'></i>
 					</span>
 				</div>
 			</div>
-			<div v-show="!!field.value.length" class='mb-1 mt-1 border-top'></div>
 			<div class='mt-1 d-flex flex-row align-items-baseline'>
 				<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2" ref="modelText"
 					   @keydown.down.prevent="focusSelectComponent()">
 				<div style='flex: 1 1 auto'></div>
-				<div class='text-nowrap'>Select by region (click on map):</div>
+				<div class='text-nowrap ms-2'>Select by region (click on map):</div>
 			</div>
 			<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
 				<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0' ref="modelSelect"
@@ -96,7 +95,7 @@ EGSIM.component('gsim-select', {
 						{{ m.innerHTML }}
 					</option>
 				</select>
-				<div ref="mapDiv" style='flex: 1 1 auto;'></div>
+				<div ref="mapDiv" style='flex: 1 1 auto;cursor:pointer'></div>
 			</div>
 		</div>
 	</div>`,
