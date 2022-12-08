@@ -12,9 +12,8 @@ const EGSIM = Vue.createApp({
 	},
 	template: `<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'
 		style='color:lightgray'>
-		<a v-for="n in components.names" class='menu-item ms-3'
-		   @click="setComponent(n)" :title="components.tabs[n].title"
-		   :style='menuStyle(n)' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
+		<a v-for="n in components.names" class='menu-item ms-3' :style='menuStyle(n)'
+		   @click="setComponent(n)" onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
 			<i :class="['fa', components.tabs[n].icon, 'me-1']"></i>
 			<span>{{ components.tabs[n].title }}</span>
 		</a>
@@ -25,30 +24,26 @@ const EGSIM = Vue.createApp({
 				   style="flex: 1 1 auto;background-color: rgba(0,0,0,0);color: white;outline: none;border-width: 0px;"/>
 			<i class="fa fa-times ms-2" @click='setError("")' style="cursor: pointer"></i>
 		</div>
-		<a class="menu-item me-3" href="#" title="options" @click="toggleOptionsMenu"
+		<a class="menu-item me-3" href="#" @click="toggleOptionsMenu"
 		   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
 			<i class="fa fa-bars"></i>
 		</a>
 		<div style="transform: scaleY(0);z-index:100; transition: transform .25s ease-out; transform-origin: top;"
 			 ref='options-menu' class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
-			<a class="p-2" title="API Documentation"
-			   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
+			<a class="p-2" :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
 			   :href='newpageURLs.api' target="_blank">
-				<i class="fa fa-info-circle"></i> <span>API Doc</span>
+				<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
 			</a>
-			<a class="p-2" title="References and API License"
-			   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
+			<a class="p-2" :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
 			   :href='newpageURLs.ref_and_license' target="_blank">
-				<i class="fa fa-address-card-o"></i> <span>Ref. & License</span>
+				<i class="fa fa-address-card-o"></i> <span>References & License</span>
 			</a>
 			<a class='p-2' :href='newpageURLs.imprint' target="_blank"
-			   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
-			   title="Imprint">
+			   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
 				Imprint
 			</a>
 			<a class='p-2' :href='newpageURLs.data_protection' target="_blank"
-			   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
-			   title="Data Protection">
+			   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
 				Data Protection
 			</a>
 		</div>
@@ -73,6 +68,7 @@ const EGSIM = Vue.createApp({
 		this.configureHTTPClient();
 	},
 	mounted(){
+		setupTooltipObserver(this.$el.parentNode);   // https://vuejs.org/api/component-instance.html#el
 		cfg = {
 			headers: { 'content-type': 'application/json; charset=utf-8' }
 		};
@@ -364,4 +360,83 @@ const DataDownloader = {
 			URL.revokeObjectURL( downloadUrl );
 		}
 	}
+}
+
+function setupTooltipObserver(observedRootElement){
+	// Setup tooltips on elements with "aria-label" attr, showing the attr value as tooltip text
+	// create element:
+	var tooltip = document.createElement('div');
+	tooltip.classList.add('shadow', 'p-2', 'bg-dark', 'bg-gradient', 'text-white');
+	tooltip.style.cssText = "display:inline-block; position:fixed; overflow:auto; z-index:100000; transform:scaleY(0); transition:transform .25s ease-out;";
+	document.body.appendChild(tooltip);
+	// functions to show / hide tooltip:
+	function showTooltip(evt){
+		var target = evt.target;
+		var tooltipContent = target.getAttribute && target.getAttribute('aria-label') + "";
+		if(!tooltipContent){ return; }  // for safety
+		tooltip.innerHTML = tooltipContent + "";
+		// position tooltip:
+		var rect = target.getBoundingClientRect();
+		// define tooltip vertical dimensions (max-height, top, bottom):
+		var TOOLTIP_MIN_H = .25;  // tooltip max height (relative to the viewport height)
+		tooltip.style.maxHeight = `${parseInt(TOOLTIP_MIN_H*100)}vh`;
+		var winH = window.innerHeight;  // window (viewport) height
+		if ((winH - rect.bottom) / winH <= TOOLTIP_MIN_H){  // place tooltip below
+			tooltip.style.top = '';
+			tooltip.style.bottom = `${winH - rect.top}px`;
+		}else{  // place tooltip above
+			tooltip.style.top = `${rect.bottom}px`;
+			tooltip.style.bottom = '';
+		}
+		// define tooltip horizontal dimensions (max-width, left, right):
+		var TOOLTIP_MIN_W = .25; // tooltip max width (relative to the viewport width)
+		tooltip.style.maxWidth = `${parseInt(TOOLTIP_MIN_W*100)}vw`;
+		var winW = window.innerWidth;  // window (viewport) height
+		if ((winW - rect.right) / winW < TOOLTIP_MIN_W/2){  // align tooltip and target right sides
+			tooltip.style.left = '';
+			tooltip.style.right = `${winW - rect.right}px`;
+		}else{  // align tooltip and target left sides
+			tooltip.style.left = `${rect.x}px`;
+			tooltip.style.right = '';
+		}
+		tooltip.style.transform = 'scaleY(1)';
+		evt.stopPropagation();  // for safety
+	};
+	function hideTooltip(evt){
+		tooltip.style.transform='scaleY(0)';
+	};
+	// start observing all changes inside observedRootElement and attach/remove tooltip event listeners according to the aria-label attr:
+	new MutationObserver((mutations) => {
+		for (let mutation of mutations) {
+			var target = mutation.target;
+			var nodes = [];
+			if (mutation.type == 'childList'){
+				nodes = target.querySelectorAll('[aria-label], [data-tooltip-text]');
+			}else if (mutation.type == 'attributes' && mutation.attributeName == 'aria-label') {
+				nodes = [target];
+			}
+			for (var node of nodes){
+				var tooltip = node.getAttribute('aria-label') || "";
+				var tooltipRemainder = node.getAttribute('data-tooltip-text') || "";
+				// tooltip empty / missing => remove event listener if tooltipReminder not empty
+				// tooltip not empty / missing => add event listener if tooltipReminder
+				if (!tooltip && tooltipRemainder) {
+					node.removeAttribute('data-tooltip-text');
+					node.removeEventListener('mouseenter', showTooltip);
+					node.removeEventListener('mousedown', hideTooltip);
+					node.removeEventListener('mouseleave', hideTooltip);
+				}else if (tooltip && tooltip != tooltipRemainder){
+					node.setAttribute('data-tooltip-text', tooltip);
+					node.addEventListener('mouseenter', showTooltip);
+					node.addEventListener('mousedown', hideTooltip);
+					node.addEventListener('mouseleave', hideTooltip);
+				}
+			}
+		}
+	}).observe(observedRootElement, {
+		childList: true,
+		attributes: true,
+		subtree: true,
+	});
+
 }
