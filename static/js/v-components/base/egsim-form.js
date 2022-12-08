@@ -248,7 +248,6 @@ EGSIM.component('egsim-form', {
 			<div class='d-flex flex-row justify-content-center align-items-baseline p-1 mb-3 bg-light'>
 
 				<button type="button" onclick='this.nextElementSibling.click()'
-						data-balloon-pos="down" data-balloon-length="medium"
 						aria-label="Load a configuration from a local JSON-formatted text file. This can be, e.g., a configuration previously saved as JSON (see 'Download as')"
 						class="btn btn-outline-dark border-0">
 					<i class="fa fa-upload"></i>
@@ -258,7 +257,6 @@ EGSIM.component('egsim-form', {
 
 				<select @change="downloadTriggered" style='width:initial !important'
 						class="ms-2 form-control form-control-sm bg-transparent border-0"
-						data-balloon-pos="down" data-balloon-length="medium"
 						aria-label="Download the current configuration as text file. The file content can then be used in your custom code as input to fetch data (see POST requests in the API documentation for details)">
 					<option value="">Download as:</option>
 					<option value="json">JSON</option>
@@ -266,7 +264,6 @@ EGSIM.component('egsim-form', {
 				</select>
 
 				<button type="button" @click='fetchRequestURL'
-						data-balloon-pos="down" data-balloon-length="medium"
 						aria-label="Show the API URL of the current configuration. The URL can be used in your custom code to fetch data (see GET requests in the API documentation for details). You can also paste it in the browser to see the results (e.g., Firefox nicely displays JSON formatted data)"
 						class="btn btn-outline-dark border-0 ms-2">
 					<i class="fa fa-link"></i>
@@ -278,14 +275,12 @@ EGSIM.component('egsim-form', {
 					   style="flex: 1 1 auto;width:initial !important"/>
 
 				<button type="button" v-show='requestURL' @click="copyRequestURL"
-						aria-label="Copy the URL" data-balloon-pos="down" data-balloon-length="medium"
-						class="btn btn-outline-dark border-0">
+						aria-label="Copy the URL" class="btn btn-outline-dark border-0">
 					<i class="fa fa-copy"></i>
 				</button>
 
 				<button type="button" v-show='dialogbox' @click="show=!show"
-						aria-label="Close form window" data-balloon-pos="down" data-balloon-length="medium"
-						class="btn btn-outline-dark border-0 ms-2">
+						aria-label="Close form window" class="btn btn-outline-dark border-0 ms-2">
 					<i class="fa fa-times"></i>
 				</button>
 

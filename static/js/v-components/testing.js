@@ -273,7 +273,6 @@ EGSIM.component('testing-table', {
 
 			<div class='mt-3 border p-2 bg-white'>
 				<select @change="downloadTriggered" class="form-control"
-						data-balloon-pos='left' data-balloon-length='medium'
 						aria-label='Download the computed results in different formats'>
 					<option value="">Download as:</option>
 					<option value="json">json</option>
