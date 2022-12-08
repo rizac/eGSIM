@@ -5,8 +5,6 @@
 {% with vue=True plotly=True leaflet=True axios=True fontawesome=True %}
 {{ block.super }}
 {% endwith %}
-<!-- for tooltips https://kazzkiq.github.io/balloon.css/ -->
-<link rel="stylesheet" type='text/css' href="https://unpkg.com/balloon-css/balloon.min.css">
 <!-- custom css -->
 <style>
 @media (max-width: 975px){  /* narrow  screen (< 975px) */
@@ -49,6 +47,9 @@
 
 <div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;"></div>
 
+<div id='tooltip' style="display:inline-block; position:fixed; overflow:auto; z-index:100000; transform:scaleY(0); transition:transform .25s ease-out;"
+	 class="shadow p-2 bg-dark bg-gradient text-white"></div>
+
 {% endblock %}
 
 {% block after-body %}
@@ -81,4 +82,81 @@ axios.interceptors.request.use(function (config) {
 EGSIM.mount('#egsim-vue');
 </script>
 
+
+<script type='text/javascript'>
+// tooltips: replace all elements aria-label with an event listener that displays the aria-label text in a tooltip on hover
+// use a MutationObserver (see below) as the listeners should be dynamically added/removed when any document element is changed
+const tooltipManager = {
+	showTooltip(evt){
+		// console.log('element.mouseenter.started');
+		var target = evt.target;
+		var tooltipContent = target.getAttribute && target.getAttribute('aria-label') + "";
+		if(!tooltipContent){ return; }  // for safety
+		var tooltip = document.getElementById('tooltip');
+		tooltip.innerHTML = tooltipContent + "";
+		// position tooltip:
+		var rect = target.getBoundingClientRect();
+		// define tooltip vertical dimensions (max-height, top, bottom):
+		var TOOLTIP_MIN_H = .25;  // tooltip max height (relative to the viewport height)
+		tooltip.style.maxHeight = `${parseInt(TOOLTIP_MIN_H*100)}vh`;
+		var winH = window.innerHeight;  // window (viewport) height
+		if ((winH - rect.bottom) / winH <= TOOLTIP_MIN_H){  // place tooltip below
+			tooltip.style.top = '';
+			tooltip.style.bottom = `${winH - rect.top}px`;
+		}else{  // place tooltip above
+			tooltip.style.top = `${rect.bottom}px`;
+			tooltip.style.bottom = '';
+		}
+		// define tooltip horizontal dimensions (max-width, left, right):
+		var TOOLTIP_MIN_W = .25; // tooltip max width (relative to the viewport width)
+		tooltip.style.maxWidth = `${parseInt(TOOLTIP_MIN_W*100)}vw`;
+		var winW = window.innerWidth;  // window (viewport) height
+		if ((winW - rect.right) / winW < TOOLTIP_MIN_W/2){  // align tooltip and target right sides
+			tooltip.style.left = '';
+			tooltip.style.right = `${winW - rect.right}px`;
+		}else{  // align tooltip and target left sides
+			tooltip.style.left = `${rect.x}px`;
+			tooltip.style.right = '';
+		}
+		tooltip.style.transform = 'scaleY(1)';
+		// for safety, stop propagation:
+		evt.stopPropagation();
+		// console.log(`width: ${tooltip.clientWidth}, cssWidth: ${getComputedStyle(tooltip).getPropertyValue('width')}`);
+	},
+	hideTooltip(evt){ document.getElementById('tooltip').style.transform='scaleY(0)'; }
+};
+
+new MutationObserver((mutations) => {
+	for (let mutation of mutations) {
+		var target = mutation.target;
+		var nodes = [];
+		if (mutation.type == 'childList'){
+			nodes = target.querySelectorAll('[aria-label], [data-tooltip-text]');
+		}else if (mutation.type == 'attributes' && mutation.attributeName == 'aria-label') {
+			nodes = [target];
+		}
+		for (var node of nodes){
+			var tooltip = node.getAttribute('aria-label') || "";
+			var tooltipRemainder = node.getAttribute('data-tooltip-text') || "";
+			// tooltip empty / missing => remove event listener if tooltipReminder not empty
+			// tooltip not empty / missing => add event listener if tooltipReminder
+			if (!tooltip && tooltipRemainder) {
+				node.removeAttribute('data-tooltip-text');
+				node.removeEventListener('mouseenter', tooltipManager.showTooltip);
+				node.removeEventListener('mousedown', tooltipManager.hideTooltip);
+				node.removeEventListener('mouseleave', tooltipManager.hideTooltip);
+			}else if (tooltip && tooltip != tooltipRemainder){
+				node.setAttribute('data-tooltip-text', tooltip);
+				node.addEventListener('mouseenter', tooltipManager.showTooltip);
+				node.addEventListener('mousedown', tooltipManager.hideTooltip);
+				node.addEventListener('mouseleave', tooltipManager.hideTooltip);
+			}
+		}
+	}
+}).observe(document.getElementById('egsim-vue'), {
+	childList: true,
+	attributes: true,
+	subtree: true,
+});
+</script>
 {% endblock %}

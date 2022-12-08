@@ -36,7 +36,7 @@ EGSIM.component('gsim-select', {
 			var selectedModelNames = new Set(this.field.value);
 			return this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
 		},
-		modelHTMLAttrs(){  // https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
+		/*modelHTMLAttrs(){  // https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
 			var attrs = {};
 			var selected = new Set(this.field.value);
 			var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
@@ -55,43 +55,70 @@ EGSIM.component('gsim-select', {
 				}
 				attrs[model.value] = !ws.length ? { class: '' } : {
 					class: critical ? 'text-danger' : 'text-warning',
-					'title': ws.join('\n')
+					'aria-label': ws.join('\n')
 				};
 			}
 			return attrs;
+		}*/
+		errors(){  // remember: props are cached https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
+			var errors = {};
+			var selected = new Set(this.field.value);
+			var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
+			for (var model of this.field.choices.filter(m => selected.has(m.value))){
+				errors[model.value] = "";
+				var wrongimts = selimts.filter(i => !model.imts.includes(i));
+				if (wrongimts.length){
+					errors[model.value] = `${model.value} does not support ${wrongimts.join(', ')}`;
+				}
+			}
+			return errors;
+		},
+		warnings(){  // remember: props are cached https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
+			var warnings = {};
+			var selected = new Set(this.field.value);
+			for (var model of this.field.choices.filter(m => selected.has(m.value))){
+				warnings[model.value] = model.warning || "";
+			}
+			return warnings;
 		}
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
 		<field-label :field="field">
 			<template v-slot:trailing-content>
 				<span v-if="!field.error" class='ms-2 small text-muted' v-html="infoMsg"></span>
-				<i v-if="field.value.length && Object.keys(modelHTMLAttrs).some(e => modelHTMLAttrs[e].class.includes('text-warning'))"
-				   title="Remove models with warnings (for details, hover mouse on the list below)"
+				<i :style="{visibility: Object.keys(warnings).length ? 'visible' : 'hidden'}"
+				   aria-label="Remove models with warnings (for details, hover mouse on the list below)"
 				   class="fa fa-exclamation-triangle ms-2 text-warning" style="cursor: pointer;"
-				   @click="field.value=field.value.filter(m => !modelHTMLAttrs[m].class.includes('text-warning'))"></i>
-				<i v-if="field.value.length && Object.keys(modelHTMLAttrs).some(e => modelHTMLAttrs[e].class.includes('text-danger'))"
-				   title="Remove models with errors (for details, hover mouse on the list below)"
+				   @click="field.value=field.value.filter(m => !!warnings[m])"></i>
+				<i :style="{visibility: Object.keys(errors).length ? 'visible' : 'hidden'}"
+				   aria-label="Remove models with errors (for details, hover mouse on the list below)"
 				   class="fa fa-exclamation-triangle ms-2 text-danger" style="cursor: pointer;"
-				   @click="field.value=field.value.filter(m => !modelHTMLAttrs[m].class.includes('text-danger'))"></i>
-				<i v-if="field.value.length && !field.error"
-				   title="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
+				   @click="field.value=field.value.filter(m => !!errors[m])"></i>
+				<i :style="{visibility: field.value.length && !field.error ? 'visible' : 'hidden'}"
+				   aria-label="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
 				   @click="field.value=[]" ></i>
 			</template>
 		</field-label>
 		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .7*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
 			<div class='d-flex flex-row' style='overflow: auto;max-height:20rem' :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
 				<div class='d-flex flex-column'>
-					<div v-for="model in field.value" class='me-1' :class="modelHTMLAttrs[model].class" title="remove from selection"
+					<div v-for="model in field.value" class='me-1'
+						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						 aria-label="remove from selection"
 						 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
 						<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
 				<div class='d-flex flex-column' style='flex: 1 1 auto'>
-					<div v-for="model in field.value" v-bind="modelHTMLAttrs[model]">{{ model }}</div>
+					<div v-for="model in field.value"
+						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						 :aria-label="errors[model] || warnings[model] || ''">{{ model }}</div>
 				</div>
 				<div class='d-flex flex-column'>
-					<span v-for="model in field.value" :style='{visibility: Object.keys(modelHTMLAttrs[model]).length ? "visible" : "hidden"}'
-						  v-bind="modelHTMLAttrs[model]" class='me-1'>
+					<span v-for="model in field.value"
+						  :style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
+						  :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						  class='me-1'>
 						<i class='fa fa-exclamation-triangle'></i>
 					</span>
 				</div>
