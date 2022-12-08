@@ -88,7 +88,6 @@ EGSIM.mount('#egsim-vue');
 // use a MutationObserver (see below) as the listeners should be dynamically added/removed when any document element is changed
 const tooltipManager = {
 	showTooltip(evt){
-		// console.log('element.mouseenter.started');
 		var target = evt.target;
 		var tooltipContent = target.getAttribute && target.getAttribute('aria-label') + "";
 		if(!tooltipContent){ return; }  // for safety
@@ -119,9 +118,7 @@ const tooltipManager = {
 			tooltip.style.right = '';
 		}
 		tooltip.style.transform = 'scaleY(1)';
-		// for safety, stop propagation:
-		evt.stopPropagation();
-		// console.log(`width: ${tooltip.clientWidth}, cssWidth: ${getComputedStyle(tooltip).getPropertyValue('width')}`);
+		evt.stopPropagation();  // for safety
 	},
 	hideTooltip(evt){ document.getElementById('tooltip').style.transform='scaleY(0)'; }
 };

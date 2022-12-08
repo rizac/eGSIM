@@ -288,16 +288,15 @@ const EGSIM = Vue.createApp({
 				elm.style.top = `${document.getElementById('egsim-nav').offsetHeight}px`;
 				// show popup:
 				popup(true);
-				// add document event listener to hide popup:
-				const ctr = new AbortController();
-				var opts = { signal: ctr.signal };
-				document.addEventListener('click', e => { popup(false, 100); ctr.abort(); }, opts);
-				document.addEventListener('keydown', e => {
-					if(e.keyCode != 9){
+				function hidePopup(evt){
+					if (!evt.type.startsWith('key') || evt.keyCode == 9){
 						popup(false, 100);
-						ctr.abort();
+						document.removeEventListener('click', hidePopup);
+						document.removeEventListener('keydown', hidePopup);
 					}
-				}, opts);
+				}
+				document.addEventListener('click', hidePopup);
+				document.addEventListener('keydown', hidePopup);
 			}
 		}
 	}
