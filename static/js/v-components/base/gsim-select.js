@@ -20,6 +20,11 @@ EGSIM.component('gsim-select', {
 			handler(newVal, oldVal){
 				this.$emit('gsim-selected', newVal)
 			}
+		},
+		selectableModels(models){  // watch computed property (see below)
+			if(!models.length && this.map){
+				this.map.invalidateSize(); // no popup => map becomes visible underneath => refresh map
+			}
 		}
 	},
 	computed: {
@@ -27,45 +32,20 @@ EGSIM.component('gsim-select', {
 			return `${this.field.value.length || 0} of ${this.field.choices.length} selected`;
 		},
 		selectableModels(){
+			var models = [];
 			var text = this.modeltext;
-			if (!text){
-				return [];
+			if (text){
+				var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
+				var selectedModelNames = new Set(this.field.value);
+				models = this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
 			}
-			var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
-			// filterFuncs.push(gsim => gsim.value.search(regexp) > -1);
-			var selectedModelNames = new Set(this.field.value);
-			return this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
+			return models;
 		},
-		/*modelHTMLAttrs(){  // https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
-			var attrs = {};
-			var selected = new Set(this.field.value);
-			var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
-			for (var model of this.field.choices.filter(m => selected.has(m.value))){
-				var ws = [];
-				var critical = false;
-				if (selimts.length){
-					var wrongimts = selimts.filter(i => !model.imts.includes(i));
-					if (wrongimts.length){
-						critical = true;
-						ws.push(`${model.value} does not support ${wrongimts.join(', ')}`);
-					}
-				}
-				if (model.warning){
-					ws.push(model.warning);
-				}
-				attrs[model.value] = !ws.length ? { class: '' } : {
-					class: critical ? 'text-danger' : 'text-warning',
-					'aria-label': ws.join('\n')
-				};
-			}
-			return attrs;
-		}*/
 		errors(){  // remember: props are cached https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
 			var errors = {};
 			var selected = new Set(this.field.value);
 			var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
 			for (var model of this.field.choices.filter(m => selected.has(m.value))){
-				errors[model.value] = "";
 				var wrongimts = selimts.filter(i => !model.imts.includes(i));
 				if (wrongimts.length){
 					errors[model.value] = `${model.value} does not support ${wrongimts.join(', ')}`;
@@ -77,7 +57,9 @@ EGSIM.component('gsim-select', {
 			var warnings = {};
 			var selected = new Set(this.field.value);
 			for (var model of this.field.choices.filter(m => selected.has(m.value))){
-				warnings[model.value] = model.warning || "";
+				if (model.warning){
+					warnings[model.value] = model.warning || "";
+				}
 			}
 			return warnings;
 		}
@@ -86,15 +68,15 @@ EGSIM.component('gsim-select', {
 		<field-label :field="field">
 			<template v-slot:trailing-content>
 				<span v-if="!field.error" class='ms-2 small text-muted' v-html="infoMsg"></span>
-				<i :style="{visibility: Object.keys(warnings).length ? 'visible' : 'hidden'}"
+				<i v-show="Object.keys(warnings).length"
 				   aria-label="Remove models with warnings (for details, hover mouse on the list below)"
 				   class="fa fa-exclamation-triangle ms-2 text-warning" style="cursor: pointer;"
-				   @click="field.value=field.value.filter(m => !!warnings[m])"></i>
-				<i :style="{visibility: Object.keys(errors).length ? 'visible' : 'hidden'}"
+				   @click="field.value=field.value.filter(m => !warnings[m])"></i>
+				<i v-show="Object.keys(errors).length"
 				   aria-label="Remove models with errors (for details, hover mouse on the list below)"
 				   class="fa fa-exclamation-triangle ms-2 text-danger" style="cursor: pointer;"
-				   @click="field.value=field.value.filter(m => !!errors[m])"></i>
-				<i :style="{visibility: field.value.length && !field.error ? 'visible' : 'hidden'}"
+				   @click="field.value=field.value.filter(m => !errors[m])"></i>
+				<i v-show="field.value.length && !field.error"
 				   aria-label="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
 				   @click="field.value=[]" ></i>
 			</template>
@@ -124,7 +106,7 @@ EGSIM.component('gsim-select', {
 				</div>
 			</div>
 			<div class='mt-1 d-flex flex-row align-items-baseline'>
-				<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2" ref="modelText"
+				<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2" ref="modelTextControl"
 					   @keydown.down.prevent="focusSelectComponent()">
 				<div style='flex: 1 1 auto'></div>
 				<div class='text-nowrap ms-2'>Select by region (click on map):</div>
@@ -133,7 +115,7 @@ EGSIM.component('gsim-select', {
 				<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0' ref="modelSelect"
 						@click.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
 						@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
-						@keydown.up="if($refs.modelSelect.selectedIndex==0){ $refs.modelSelect.selectedIndex=-1; $refs.modelText.focus(); $evt.preventDefault();}"
+						@keydown.up="focusTextInput($event);"
 						style='position:absolute;left:0;top:0;bottom:0;right:0;z-index:10000' >
 					<option v-for="m in selectableModels" :value='m.value'>
 						{{ m.innerHTML }}
@@ -145,6 +127,11 @@ EGSIM.component('gsim-select', {
 	</div>`,
 	mounted(){
 		this.createLeafletMap();
+	},
+	activated(){
+		if(this.map){
+			this.map.invalidateSize();
+		}
 	},
 	methods: {
 		focusSelectComponent(){
@@ -166,8 +153,15 @@ EGSIM.component('gsim-select', {
 			this.field.value.push(...opts.map(opt => opt.value));
 			this.$nextTick(() => {
 				sel.selectedIndex = -1;
-				this.$refs.modelText.focus();
+				this.$refs.modelTextControl.focus();
 			});
+		},
+		focusTextInput(event){
+			if(this.$refs.modelSelect.selectedIndex==0){
+				this.$refs.modelSelect.selectedIndex=-1;
+				this.$refs.modelTextControl.focus();
+				event.preventDefault();
+			}
 		},
 		createLeafletMap(){
 			var mapDiv = this.$refs.mapDiv;
@@ -175,30 +169,20 @@ EGSIM.component('gsim-select', {
 			// center map:
 			var mapCenter = L.latLng([49, 13]);
 			map.fitBounds(L.latLngBounds([mapCenter, mapCenter]), {maxZoom: 3});
-			// setup IntersectionObserver to auto-call invalidateSize on map resize/reshown:
-			if (!window.IntersectionObserver){
-				// old browser, add a button to call invalidateSize manually
-				var Control = L.Control.extend({
-					onAdd: function(map) {
-						var btn = L.DomUtil.create('button', 'btn btn-secondary btn-sm');
-						btn.setAttribute('type', 'button');  // prevent form submit
-						var onclick = (evt) => { evt.stopPropagation(); map.invalidateSize(); };
-						btn.addEventListener('click', onclick);
-						btn.innerHTML = '<i class="fa fa-refresh"></i> Redraw map'
-						return btn;
-					}
-				});
-				new Control({ position: 'bottomright' }).addTo(map);
-			}else{
-				let options = { root: document, threshold: 1.0 };
-				let callback = (entries, observer) => {
-					setTimeout(() => {
-						map.invalidateSize();
-					}, 100);
-				};
-				let observer = new IntersectionObserver(callback, options);
-				observer.observe(mapDiv);
-			}
+			/*
+			// add a button to call invalidateSize manually
+			var Control = L.Control.extend({
+				onAdd: function(map) {
+					var btn = L.DomUtil.create('button', 'btn btn-secondary btn-sm');
+					btn.setAttribute('type', 'button');  // prevent form submit
+					var onclick = (evt) => { evt.stopPropagation(); map.invalidateSize(); };
+					btn.addEventListener('click', onclick);
+					btn.innerHTML = '<i class="fa fa-refresh"></i> Redraw map'
+					return btn;
+				}
+			});
+			new Control({ position: 'bottomright' }).addTo(map);
+			*/
 
 			// provide two base layers. Keep it simple as many base layers are just to shof off
 			// and they do not need to be the main map concern
