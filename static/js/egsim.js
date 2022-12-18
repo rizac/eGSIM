@@ -364,7 +364,7 @@ const DataDownloader = {
 
 function setupTooltipObserver(observedRootElement){
 	// Setup tooltips on elements with "aria-label" attr, showing the attr value as tooltip text
-	// create element:
+	// create tooltip <div>:
 	var tooltip = document.createElement('div');
 	tooltip.classList.add('shadow', 'p-2', 'bg-dark', 'bg-gradient', 'text-white');
 	tooltip.style.cssText = "font-family: Tahoma, Verdana, sans-serif; display:inline-block; position:fixed; overflow:hidden; z-index:100000; transform:scaleY(0); transition:transform .25s ease-out;";
@@ -372,11 +372,11 @@ function setupTooltipObserver(observedRootElement){
 	// functions to show / hide tooltip:
 	function showTooltip(evt){
 		var target = evt.target;
-		var tooltipContent = target.getAttribute && target.getAttribute('aria-label') + "";
+		var tooltipContent = target.getAttribute ? target.getAttribute('aria-label') : "";
 		if(!tooltipContent){ return; }  // for safety
 		tooltip.innerHTML = tooltipContent + "";
 		// position tooltip
-		var M = 16;  // tooltip margin (in px)
+		var M = 16;  // tooltip margin(s), in px
 		var rect = target.getBoundingClientRect();
 		// tooltip vertical dimensions (max-height, top, bottom):
 		var winH = window.innerHeight;  // window (viewport) height
@@ -426,7 +426,7 @@ function setupTooltipObserver(observedRootElement){
 				var tooltip = node.getAttribute('aria-label') || "";
 				var tooltipRemainder = node.getAttribute('data-tooltip-text') || "";
 				// tooltip empty / missing => remove event listener if tooltipReminder not empty
-				// tooltip not empty / missing => add event listener if tooltipReminder
+				// tooltip not empty => add event listener if tooltipReminder is different
 				if (!tooltip && tooltipRemainder) {
 					node.removeAttribute('data-tooltip-text');
 					node.removeEventListener('mouseenter', showTooltip);
