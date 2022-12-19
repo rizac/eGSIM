@@ -229,8 +229,8 @@ EGSIM.component('egsim-form', {
 		form: {
 			deep: true,
 			handler(newVal, oldVal){
-				// changing the form reset requestURL. We should listen only for each form.value
-				// field actually, but it's simple like this:
+				// changing the form must reset requestURL (in principle, we should listen
+				// only for each form.value field):
 				if (this.requestURL){
 					this.requestURL = "";
 				}

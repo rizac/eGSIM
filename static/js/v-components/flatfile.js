@@ -446,16 +446,15 @@ EGSIM.component('flatfile-selexpr-input', {
 		doc: {
 			type: String,
 			default: `Type an expression that operates on arbitrary flatfile columns to select
-					  only rows matching the expression, e.g.: "magnitude>5" (quote characters "" excluded).
-					  Valid comparison operators are == != > < >= <=.
-					  Logical operators are & (and) | (or) ! (not), e.g.:
-					  "(magnitude >= 5) & (vs30 > 760)".
-					  Use notna([column]) to match rows where the column value is given,
-					  i.e. not 'not available' (na). For instance, to get records where at rjb or
-					  repi is available:
-					  "(magnitude>5) & (notna(rjb) | notna(repi))"
-					  (notna works for numeric and string columns only)
-					  `
+					  only rows matching the expression. Comparison operators:
+					  <code style='font-size:105%'>== != &gt; &lt; &gt;= &lt;= </code>, logical operators (and or not):
+					  <code style='font-size:105%'>& | !</code>. Example:
+					  <br><br><code style='font-size:105%'>(magnitude >= 5) & (vs30 > 760)</code><br><br>
+					  Use <code style='font-size:105%'>notna([column])</code> to match rows where the column value is given,
+					  i.e. not 'not available' (na). Example (get records where at rjb or
+					  repi is available):
+					  <br><br><code style='font-size:105%'>(magnitude>5) & (notna(rjb) | notna(repi))</code><br><br>
+					  (notna works for numeric and string columns only)`
 		}
 	},
 	template: `<div class='d-flex flex-column' :aria-label="doc">

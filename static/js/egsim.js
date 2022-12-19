@@ -367,7 +367,7 @@ function setupTooltipObserver(observedRootElement){
 	// create tooltip <div>:
 	var tooltip = document.createElement('div');
 	tooltip.classList.add('shadow', 'p-2', 'bg-dark', 'bg-gradient', 'text-white');
-	tooltip.style.cssText = "font-family: Tahoma, Verdana, sans-serif; display:inline-block; position:fixed; overflow:hidden; z-index:100000; transform:scaleY(0); transition:transform .25s ease-out;";
+	tooltip.style.cssText = "font-size:smaller; font-family: Verdana, Tahoma, sans-serif; display:inline-block; position:fixed; overflow:hidden; z-index:100000; transform:scaleY(0); transition:transform .25s ease-out;";
 	document.body.appendChild(tooltip);
 	// functions to show / hide tooltip:
 	function showTooltip(evt){
@@ -379,33 +379,50 @@ function setupTooltipObserver(observedRootElement){
 		var M = 16;  // tooltip margin(s), in px
 		var rect = target.getBoundingClientRect();
 		// tooltip vertical dimensions (max-height, top, bottom):
-		var winH = window.innerHeight;  // window (viewport) height
+		var winH = window.innerHeight;   // window (viewport) height
 		tooltip.style.height = 'auto';
 		var spaceAbove = rect.top;
 		var spaceBelow = winH - rect.bottom;  // note: rect.bottom = rect.top + rect.height
 		if (spaceBelow > spaceAbove){  // place tooltip below
 			tooltip.style.top = `${rect.bottom + M}px`;
 			tooltip.style.bottom = '';
-			tooltip.style.maxHeight = `${winH- rect.bottom - 2*M}px`;
+			var tooltipMaxHeightPx = winH- rect.bottom - 2*M;
 		}else{  // place tooltip above
 			tooltip.style.top = '';
 			tooltip.style.bottom = `${winH - rect.top + M}px`;
-			tooltip.style.maxHeight = `${rect.top - 2*M}px`;
+			var tooltipMaxHeightPx = rect.top - 2*M;
 		}
-		// define tooltip horizontal dimensions (max-width, left, right):
+		tooltip.style.maxHeight = `${tooltipMaxHeightPx}px`;
+		// tooltip horizontal dimensions (max-width, left, right):
 		var winW = window.innerWidth;  // window (viewport) width
 		tooltip.style.width = 'auto';
 		var spaceLeft = rect.right;  // note: rect.right = rect.left + rect.width
-		var spaceRight = winH - rect.left;
+		var spaceRight = winW - rect.left;
 		if (spaceRight > spaceLeft){  // align tooltip and target left sides
 			tooltip.style.left = `${rect.left}px`;
 			tooltip.style.right = '';
-			tooltip.style.maxWidth = `${winW - rect.left -M}px`;
+			var tooltipMaxWidthPx = winW - rect.left -M;
 		}else{  // align tooltip and target right sides
 			tooltip.style.left = '';
 			tooltip.style.right = `${winW - rect.right}px`;
-			tooltip.style.maxWidth = `${rect.right - M}px`;
+			var tooltipMaxWidthPx = rect.right - M;
 		}
+		// set max width according to font size, if available:
+		var fsize = parseFloat(window.getComputedStyle(tooltip).getPropertyValue('font-size'));
+		if (fsize && !isNaN(fsize)){
+			var tooltipMaxHeightEm =  tooltipMaxHeightPx / fsize;
+			// compute preferred width, i.e. the width if tooltip stretches all height:
+			var preferredMaxWidthEm = 1 + Math.ceil((tooltipContent + "").length / tooltipMaxHeightEm);
+			// (because width in em is somehow heuristic, add 1 more em character for safety)
+			// avoid having too narrow tooltips:
+			if (preferredMaxWidthEm < 30){ preferredMaxWidthEm = 30; }
+			// is preferredWidth is really preferable?
+			var preferredMaxWidthPx = fsize * preferredMaxWidthEm;
+			if (preferredMaxWidthPx < tooltipMaxWidthPx){
+				tooltipMaxWidthPx = preferredMaxWidthPx;
+			}
+		}
+		tooltip.style.maxWidth = `${tooltipMaxWidthPx}px`;
 		tooltip.style.transform = 'scaleY(1)';
 		evt.stopPropagation();  // for safety
 	};
