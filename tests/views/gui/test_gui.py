@@ -15,7 +15,7 @@ from django.utils.datastructures import MultiValueDict
 
 from egsim.api.forms.flatfile.residuals import ResidualsForm
 from egsim.api.views import ResidualsView, RESTAPIView
-from egsim.gui import URLS
+from egsim.app import URLS
 
 
 @pytest.mark.django_db
@@ -25,7 +25,7 @@ class Test:
     def test_download_cfg(self,
                           # pytest fixtures:
                           testdata, areequal, client, querystring):
-        url = f'{URLS.DOWNLOAD_CFG}/residuals/filename.yaml'
+        url = f'{URLS.DOWNLOAD_REQUEST}/residuals/filename.yaml'
         request_filename = 'request_residuals.yaml'
         inputdic = testdata.readyaml(request_filename)
         # no flatfile, uploaded flatfile:

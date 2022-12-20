@@ -8,13 +8,15 @@ Created on 2 Jun 2018
 import json
 import pytest
 
-from egsim.api.forms import GsimFromRegionForm
+from egsim.api.forms import GsimFromRegionForm, _get_regionalizations
 from egsim.api.forms.flatfile.residuals import ResidualsForm
 from egsim.api.forms.flatfile.testing import TestingForm
 from egsim.api.forms.trellis import TrellisForm
 
-from egsim.api.forms.tools.describe import as_dict
-from egsim.gui.frontend import get_context, form_to_json
+# from egsim.api.forms.tools.describe import as_dict
+# from egsim.gui.frontend import get_context, form_to_json
+from egsim.app.pages.apidoc import as_dict
+from egsim.app.pages.egsim import get_context, form_to_json
 
 GSIM, IMT = 'gsim', 'imt'
 
@@ -39,9 +41,12 @@ class Test:
     def test_get_gsim_from_region(self, areequal):
         form = GsimFromRegionForm({'lat': 50, 'lon': 7})
         assert form.is_valid()
-        resp = form.response_data
-        for res, reg in resp.items():
-            dict_test = {k: v for k, v in resp.items() if v == reg}
-            resp_ = GsimFromRegionForm({'lat': 50, 'lon': 7, 'reg': reg}).response_data
-            assert resp_ == dict_test
-        asd = 9
+        # query each regionalization singularly and check that we get the same models:
+        resp = set(form.response_data)
+        regs = [_[0] for _ in _get_regionalizations()]
+        resp2 = []
+        for reg in regs:
+            resp_ = set(GsimFromRegionForm({'lat': 50, 'lon': 7, 'shsr': reg}).response_data)
+            assert sorted(resp_ & resp) == sorted(resp_)
+            resp2.extend(resp_)
+        assert sorted(resp) == sorted(resp2)

@@ -47,39 +47,59 @@ class Command(EgsimBaseCommand):
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         # populate db:
-        self.printinfo('Populating DB with OpenQuake data:')
+        self.printinfo('Populating the DB with OpenQuake data and the config file with '
+                       'the OpenQuake model parameters and their flatfile column '
+                       'mapping:')
+        self.printinfo(GSIM_PARAMS_YAML_PATH)
+        self.printwarn('Remember that you can always inspect the DB on the browser via '
+                       'the Django admin panel (see README file for info): the Db will '
+                       'also store detailed information of the warnings printed below, '
+                       'if any')
+
         imts = populate_imts()
-        _, missing_params, unused_params = populate_gsims(imts)
+        (general_errors, unsupported_imt_errors, excluded_params, missing_params) \
+            = populate_gsims(imts)
 
         _imtc = models.Imt.objects.count()  # noqa
-        self.printsuccess(f"{_imtc} Imt{'' if _imtc == 1 else 's'} written")
+        self.printsuccess(f"{_imtc} Intensity measure{'' if _imtc == 1 else 's'} "
+                          f"(Imt) written")
 
         _gsimc = models.Gsim.objects.count()  # noqa
-        self.printsuccess(f"{_gsimc} Gsim{'' if _gsimc == 1 else 's'} written, "
+        self.printsuccess(f"{_gsimc} model{'' if _gsimc == 1 else 's'} (Gsim) written, "
                           f"{models.GsimWithError.objects.count()} skipped")  # noqa
 
-        self.printinfo('A Gsim might be skipped for various reasons, e.g.:')
-        self.printinfo(' - initialization errors')
-        self.printinfo(' - not defined for any supported Imt')
-        self.printinfo(' - requiring parameters that have no '
-                       f'associated flatfile name in {GSIM_PARAMS_YAML_PATH}')
-
-        if unused_params:
-            self.printinfo(f'   (note: {len(unused_params)} '
-                           f"parameter{'' if len(unused_params) == 1 else ''} "
-                           f'in the YAML file not required by any written Gsim')
-
-        if missing_params:
-            self.printwarn('WARNING:')
-            self.printwarn(' Some Gsims were skipped because they require '
-                           f"the following unknown {len(missing_params)} "
-                           f"parameter{'' if len(missing_params) == 1 else ''} "
-                           f"(edit YAML file above if needed. See details in "
-                           f"the file)")
-            for param, gsims in missing_params.items():
+        if len(excluded_params):
+            self.printwarn(f'  note: {len(excluded_params)} models '
+                           f'deliberately skipped because they require a parameter '
+                           f'or measure with no flatfile column. To include these '
+                           f'models, open the config file and add the "flatfile_name" '
+                           f'property to any of the following parameter(s):')
+            for param, gsims in excluded_params.items():
                 self.printwarn(f" - {_param2str(param)} required by "
                                f"{len(gsims)} skipped "
-                               f"Gsim{'' if len(gsims) == 1 else 's'}")
+                               f"model{'' if len(gsims) == 1 else 's'}")
+
+        if sum([general_errors, unsupported_imt_errors, len(missing_params)]):
+            self.printwarn('WARNING:')
+
+        if general_errors:
+            self.printwarn(f' {general_errors} models skipped because of general '
+                           f'errors (e.g. Python initialization errors, abstract class, '
+                           f'deprecation warnings, no defined parameter found)')
+        if unsupported_imt_errors:
+            self.printwarn(f' {unsupported_imt_errors} models skipped because '
+                           f'defined for IMTs not supported by the program')
+
+        if len(missing_params):
+            self.printwarn(f' {len(missing_params)} models skipped because '
+                           f"they require the following unknown {len(missing_params)} "
+                           f"parameter{'' if len(missing_params) == 1 else ''}. "
+                           f"To include these models, add the relative parameter "
+                           f"to the config file")
+        for param, gsims in missing_params.items():
+            self.printwarn(f" - {_param2str(param)} required by "
+                           f"{len(gsims)} skipped "
+                           f"model{'' if len(gsims) == 1 else 's'}")
 
 
 def populate_imts() -> dict[imt.IMT, models.Imt]:
@@ -106,18 +126,19 @@ def populate_imts() -> dict[imt.IMT, models.Imt]:
 
 
 def populate_gsims(imts: dict[imt.IMT, models.Imt])\
-        -> tuple[list[models.Gsim], dict[str, list[str]], set[str]]:
+        -> tuple[int, int, dict[str, list[str]], dict[str, list[str]]]:
     """Write all Gsims from OpenQuake to the db
 
     :param imts: a dict of imt names mapped to the relative db model instance
     """
+    general_errors = 0
+    unsupported_imt_errors = 0
+    excluded_params = defaultdict(list)  # model params deliberately excluded (no flatfile col)
+    missing_params = defaultdict(list)  # model params missing (not implemented in YAML)
     gsims = []
     # read GSIM parameters:
     model_params = read_gsim_params()
-
     saved_params = {}  # paramname -> flatfilename
-    missing_params = defaultdict(list)
-
     with warnings.catch_warnings():
         warnings.filterwarnings('error')  # raise on warnings
         for gsim_name, gsim in get_available_gsims().items():
@@ -130,6 +151,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                 # treat OpenQuake (OQ) deprecation warnings as errors. Note that
                 # the builtin DeprecationWarning is silenced, OQ uses it's own
                 store_gsim_error(gsim_name, warn)
+                general_errors += 1
                 continue
             except Warning as warn:
                 # A warning has not loaded gsim_inst but raised. Grab the warning
@@ -141,10 +163,12 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                         gsim_warnings.append(str(warn))
                     except Exception as _exc:  # noqa
                         store_gsim_error(gsim_name, warn)
+                        general_errors += 1
                         continue
             except (OSError, NotImplementedError, KeyError, IndexError,
                     TypeError) as exc:  # MODEL SKIPPING EXCEPTIONS
                 store_gsim_error(gsim_name, exc)
+                general_errors += 1
                 continue
             except Exception as _ex:
                 errmsg = (f"The model `{gsim_name}()` raised "
@@ -174,6 +198,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                                          f"supported by the program")
             except AttributeError as exc:
                 store_gsim_error(gsim_name, exc)
+                unsupported_imt_errors += 1
                 continue
 
             # Parameters. check now because a Gsim with unknown parameters
@@ -194,6 +219,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                             props = model_params[key] or {}
                             ffname = props.pop('flatfile_name', None)
                             if ffname is None:
+                                excluded_params[key].append(gsim_name)
                                 # this exception is not exiting (see below):
                                 raise ValueError(f"{_param2str(key)} has no "
                                                  f"matching flatfile column")
@@ -216,6 +242,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                         gsim_db_params.append(db_p)
 
                 if not gsim_db_params:
+                    general_errors += 1
                     raise ValueError("No parameter (site, rupture, distance) found")
 
             except ValueError as verr:
@@ -257,8 +284,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
 
             gsims.append(gsim)
 
-    unused_params = set(model_params) - set(saved_params)
-    return gsims, missing_params, unused_params
+    return general_errors, unsupported_imt_errors, excluded_params, missing_params
 
 
 def read_gsim_params() -> dict[str, dict]:
