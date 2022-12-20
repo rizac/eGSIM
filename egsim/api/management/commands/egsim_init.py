@@ -112,7 +112,7 @@ class Command(EgsimBaseCommand):
 
     def dry_run(self):
         """Performs a dry run by just scanning the OpenQuake GSIMs, listing the
-        Gground shaking models that have required parameter(s) not implemented
+        Ground shaking models that have required parameter(s) not implemented
         in `gsim_params.yaml`, which makes the model(s) ignored in eGSIM.
         By implementing the parameters in the YAML file, you can decide whether
         to associate the parameter to a flatfile column and thus include the
