@@ -13,7 +13,7 @@ import os
 import yaml
 import inspect
 from collections import defaultdict
-from typing import Union
+from typing import Union, Iterable
 
 from django.core.management import CommandError
 from openquake.baselib.general import (DeprecationWarning as
@@ -47,14 +47,10 @@ class Command(EgsimBaseCommand):
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         # populate db:
-        self.printinfo('Populating the DB with OpenQuake data and the config file with '
-                       'the OpenQuake model parameters and their flatfile column '
-                       'mapping:')
+        self.printinfo('Populating the database (DB) with OpenQuake data and the config '
+                       'file with the OpenQuake model parameters and their flatfile '
+                       'column mapping:')
         self.printinfo(GSIM_PARAMS_YAML_PATH)
-        self.printwarn('Remember that you can always inspect the DB on the browser via '
-                       'the Django admin panel (see README file for info): the Db will '
-                       'also store detailed information of the warnings printed below, '
-                       'if any')
 
         imts = populate_imts()
         (general_errors, unsupported_imt_errors, excluded_params, missing_params) \
@@ -69,37 +65,49 @@ class Command(EgsimBaseCommand):
                           f"{models.GsimWithError.objects.count()} skipped")  # noqa
 
         if len(excluded_params):
-            self.printwarn(f'  note: {len(excluded_params)} models '
-                           f'deliberately skipped because they require a parameter '
-                           f'or measure with no flatfile column. To include these '
+            self.printwarn(f'  note: {sum(len(_) for _ in excluded_params.values())} '
+                           f'models deliberately skipped because they require a '
+                           f'parameter with no flatfile column. To include these '
                            f'models, open the config file and add the "flatfile_name" '
                            f'property to any of the following parameter(s):')
             for param, gsims in excluded_params.items():
-                self.printwarn(f" - {_param2str(param)} required by "
-                               f"{len(gsims)} skipped "
-                               f"model{'' if len(gsims) == 1 else 's'}")
+                self.printwarn(f" - {_param2str(param)} required by {models2str(gsims)}")
+                               # f"{len(gsims)} skipped "
+                               # f"model{'' if len(gsims) == 1 else 's'}")
 
-        if sum([general_errors, unsupported_imt_errors, len(missing_params)]):
+        if sum([len(general_errors), len(unsupported_imt_errors), len(missing_params)]):
             self.printwarn('WARNING:')
 
-        if general_errors:
-            self.printwarn(f' {general_errors} models skipped because of general '
+        if len(general_errors):
+            self.printwarn(f' {len(general_errors)} models skipped because of general '
                            f'errors (e.g. Python initialization errors, abstract class, '
-                           f'deprecation warnings, no defined parameter found)')
-        if unsupported_imt_errors:
-            self.printwarn(f' {unsupported_imt_errors} models skipped because '
-                           f'defined for IMTs not supported by the program')
+                           f'deprecation warnings, no parameter found): '
+                           f'{models2str(general_errors)}')
+        if len(unsupported_imt_errors):
+            self.printwarn(f' {len(unsupported_imt_errors)} models skipped because '
+                           f'defined for IMTs not supported by the program: '
+                           f'{models2str(unsupported_imt_errors)}')
 
         if len(missing_params):
-            self.printwarn(f' {len(missing_params)} models skipped because '
+            self.printwarn(f" {sum(len(_) for _ in missing_params.values())} models "
+                           f"skipped because "
                            f"they require the following unknown {len(missing_params)} "
                            f"parameter{'' if len(missing_params) == 1 else ''}. "
                            f"To include these models, add the relative parameter "
                            f"to the config file")
         for param, gsims in missing_params.items():
-            self.printwarn(f" - {_param2str(param)} required by "
-                           f"{len(gsims)} skipped "
-                           f"model{'' if len(gsims) == 1 else 's'}")
+            self.printwarn(f" - {_param2str(param)} required by {models2str(gsims)}")
+
+
+def models2str(models: list[str, ...]):
+    if len(models) > 2 + 1:
+        # often we have the same model with different suffixes. If we want to display
+        # at most 2 models, let's at least provide two distinct names:
+        model2 = [m for m in models if m[:5] != models[0][:5]]
+        # now print those two models and the rest as "and other N models":
+        return f'{models[0]}, {model2[0] if model2 else models[1]} ' \
+               f'and {len(models)-2} more model{"s" if len(models)-2> 1 else ""}'
+    return ', '.join(models)
 
 
 def populate_imts() -> dict[imt.IMT, models.Imt]:
@@ -126,13 +134,13 @@ def populate_imts() -> dict[imt.IMT, models.Imt]:
 
 
 def populate_gsims(imts: dict[imt.IMT, models.Imt])\
-        -> tuple[int, int, dict[str, list[str]], dict[str, list[str]]]:
+        -> tuple[list[str], list[str], dict[str, list[str]], dict[str, list[str]]]:
     """Write all Gsims from OpenQuake to the db
 
     :param imts: a dict of imt names mapped to the relative db model instance
     """
-    general_errors = 0
-    unsupported_imt_errors = 0
+    general_errors = []
+    unsupported_imt_errors = []
     excluded_params = defaultdict(list)  # model params deliberately excluded (no flatfile col)
     missing_params = defaultdict(list)  # model params missing (not implemented in YAML)
     gsims = []
@@ -151,7 +159,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                 # treat OpenQuake (OQ) deprecation warnings as errors. Note that
                 # the builtin DeprecationWarning is silenced, OQ uses it's own
                 store_gsim_error(gsim_name, warn)
-                general_errors += 1
+                general_errors.append(gsim_name)
                 continue
             except Warning as warn:
                 # A warning has not loaded gsim_inst but raised. Grab the warning
@@ -163,12 +171,12 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                         gsim_warnings.append(str(warn))
                     except Exception as _exc:  # noqa
                         store_gsim_error(gsim_name, warn)
-                        general_errors += 1
+                        general_errors.append(gsim_name)
                         continue
             except (OSError, NotImplementedError, KeyError, IndexError,
                     TypeError) as exc:  # MODEL SKIPPING EXCEPTIONS
                 store_gsim_error(gsim_name, exc)
-                general_errors += 1
+                general_errors.append(gsim_name)
                 continue
             except Exception as _ex:
                 errmsg = (f"The model `{gsim_name}()` raised "
@@ -198,7 +206,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                                          f"supported by the program")
             except AttributeError as exc:
                 store_gsim_error(gsim_name, exc)
-                unsupported_imt_errors += 1
+                unsupported_imt_errors.append(gsim_name)
                 continue
 
             # Parameters. check now because a Gsim with unknown parameters
@@ -242,7 +250,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                         gsim_db_params.append(db_p)
 
                 if not gsim_db_params:
-                    general_errors += 1
+                    general_errors.append(gsim_name)
                     raise ValueError("No parameter (site, rupture, distance) found")
 
             except ValueError as verr:
@@ -333,4 +341,4 @@ def _param2str(param: str):
     attname, pname = param.split(".", 1)
     categ = attname2category[attname]
     return categ.name.replace('_', ' ').capitalize() + \
-        f' "{pname}" (found in Gsim attribute `{attname}`)'
+        f' "{pname}"' # (found in Gsim attribute `{attname}`)'
