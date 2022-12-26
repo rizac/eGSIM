@@ -135,7 +135,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
         if printinfo:
             name = rds.name  # noqa
             self.printinfo(f' - Regionalization "{name}"; {len(printinfo)} '
-                           f"Gsim{'' if len(printinfo) == 1 else 's'} written "
+                           f"model{'' if len(printinfo) == 1 else 's'} written "
                            f'(number of associated GeoPolygons in brackets):\n'
                            f'   {", ".join(printinfo)}')
         return skipped
