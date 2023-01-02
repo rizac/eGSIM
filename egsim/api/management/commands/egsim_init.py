@@ -89,13 +89,17 @@ class Command(EgsimBaseCommand):
 
     def handle(self, *args, **options):
         """Execute the command"""
+        self.printinfo('')
 
         if options.pop('dry-run', False):
+            self.printinfo('Check source data used for initializing the '
+                           'eGSIM database. Inspect the output and then re-run this'
+                           'command without the --dry-run flag to empty and populate '
+                           'the database')
             self.dry_run()
             return
 
-        self.printinfo('')
-        self.printinfo('Empty and re-populate the eGSIM database')
+        self.printinfo('Empty and populate the eGSIM database')
         self.printinfo('Remember that you can always inspect the database on the '
                        'browser via the Django admin panel (see README file for info)')
         try:
@@ -158,7 +162,7 @@ class Command(EgsimBaseCommand):
         self.printinfo(f'')
         self.printinfo(f'[GSIM parameters]')
         self.printinfo('Scanning OpenQuake '
-                       f'model parameters and parameters registered in '
+                       f'flatfile columns and mappings to model parameters registered in '
                        f'{relpath(GSIM_PARAMS_YAML_PATH)}')
         registered_params = read_gsim_params()
         oq_atts = set(_.split('.', 1)[0] for _ in registered_params)

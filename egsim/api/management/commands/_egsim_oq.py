@@ -9,15 +9,15 @@ Created on 6 Apr 2019
 @author: riccardo z. (rizac@github.com)
 """
 import warnings
-import os
+from itertools import chain
+
 import yaml
 import inspect
 from collections import defaultdict
-from typing import Union, Iterable
+from typing import Union
 
 from django.core.management import CommandError
-from openquake.baselib.general import (DeprecationWarning as
-                                       OQDeprecationWarning)
+from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
@@ -49,20 +49,18 @@ class Command(EgsimBaseCommand):
         # populate db:
         self.printinfo('Populating the database with OpenQuake data (models, '
                        'intensity measures) and flatfile columns metadata')
-
-        imts = populate_imts()
+        imts = populate_imts(**options)
         (general_errors, unsupported_imt_errors, excluded_params, missing_params) \
-            = populate_gsims(imts)
-
-        _imtc = models.Imt.objects.count()  # noqa
+            = populate_gsims(imts, **options)
+        _imtc = models.Imt.objects.count()
         self.printsuccess(f"{_imtc} intensity measure{'' if _imtc == 1 else 's'} "
                           f"saved to database")
         _ffcols = models.FlatfileColumn.objects.count()
         self.printsuccess(f"{_ffcols} flatfile columns and their metadata "
                           f"saved to database")
-        _gsimc = models.Gsim.objects.count()  # noqa
-        not_saved = models.GsimWithError.objects.count()  # noqa
-        skipped = sum(len(_) for _ in excluded_params.values())
+        _gsimc = models.Gsim.objects.count()
+        not_saved = models.GsimWithError.objects.count()
+        skipped = len(set(m for mm in excluded_params.values() for m in mm))
         discarded = not_saved - skipped
         self.printsuccess(f"{_gsimc} models saved to database, {not_saved} not saved "
                           f"({skipped} skipped, {discarded} discarded)")
@@ -72,49 +70,56 @@ class Command(EgsimBaseCommand):
                            f'{len(excluded_params)} parameter(s) (see database for '
                            f'more details):')
             for param, gsims in excluded_params.items():
-                self.printwarn(f" - {_param2str(param)} required by {models2str(gsims)}")
+                self.printwarn(f" - {_param2str(param)} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
-                           f'after mapping all model parameter(s) to a flatfile column '
-                           f'in the file:\n'
+                           f'after mapping all model parameter(s) to a flatfile column. '
+                           f'See instructions in:\n'
                            f'  {GSIM_PARAMS_YAML_PATH}')
 
         if len(general_errors):
             self.printwarn(f'WARNING: {len(general_errors)} model(s) discarded because '
                            f'of Python errors (e.g., initialization errors, deprecation '
                            f'warnings):\n'
-                           f'  {models2str(general_errors)}')
+                           f'  {gsims2str(general_errors)}')
         if len(unsupported_imt_errors):
-            self.printwarn(f'WARNING: {len(unsupported_imt_errors)} model(s) discarded '
-                           f'because defined for IMTs not supported by the program:\n'
-                           f'  {models2str(unsupported_imt_errors)}')
+            _models = set(m for mm in unsupported_imt_errors.values() for m in mm)
+            self.printwarn(f'WARNING: {len(_models)} model(s) discarded because defined '
+                           f'for IMTs not supported by the program:\n')
+            for imt, gsims in unsupported_imt_errors.items():
+                self.printwarn(f"  - {imt} required by {gsims2str(gsims)}")
+            self.printwarn(f'  To include a model listed above, re-execute this command '
+                           f'after adding the IMT on top of the file:\n'
+                           f'  {__file__}')
 
         if len(missing_params):
-            self.printwarn(f"WARNING: {sum(len(_) for _ in missing_params.values())} "
-                           f"model(s) discarded because they require any of the "
-                           f"following unknown {len(missing_params)} parameter(s) "
-                           f"(see database for more details):")
+            _models = set(m for mm in missing_params.values() for m in mm)
+            self.printwarn(f"WARNING: {len(_models)} model(s) discarded because they "
+                           f"require any of the following unknown {len(missing_params)} "
+                           f"parameter(s) (see database for more details):")
             for param, gsims in missing_params.items():
-                self.printwarn(f"  - {_param2str(param)} required by {models2str(gsims)}")
+                self.printwarn(f"  - {_param2str(param)} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
-                           f'after mapping all model parameter(s) to a flatfile column '
-                           f'in the file:\n'
+                           f'after mapping all model parameter(s) to a flatfile column. '
+                           f'See instructions in:\n'
                            f'  {GSIM_PARAMS_YAML_PATH}')
 
 
-def models2str(models: list[str, ...]):
-    if len(models) > 2 + 1:
+def gsims2str(gsim_names: list[str, ...]):
+    if len(gsim_names) > 2 + 1:
         # often we have the same model with different suffixes. If we want to display
         # at most 2 models, let's at least provide two distinct names:
-        model2 = [m for m in models if m[:5] != models[0][:5]]
+        model2 = [m for m in gsim_names if m[:5] != gsim_names[0][:5]]
         # now print those two models and the rest as "and other N models":
-        return f'{models[0]}, {model2[0] if model2 else models[1]} ' \
-               f'and {len(models)-2} more model{"s" if len(models)-2> 1 else ""}'
-    return ', '.join(models)
+        return f'{gsim_names[0]}, {model2[0] if model2 else gsim_names[1]} ' \
+               f'and {len(gsim_names)-2} more model{"s" if len(gsim_names)-2> 1 else ""}'
+    return ', '.join(gsim_names)
 
 
-def populate_imts() -> dict[imt.IMT, models.Imt]:
+def populate_imts(**options) -> dict[imt.IMT, models.Imt]:
     """Write all IMTs from OpenQuake to the db, skipping IMTs which need
     arguments as we do not know how to handle them (except SA)
+
+    :param options: options passed to the Command `handle` method calling this function
     """
     imts = {}
     for imt_func in SUPPORTED_IMTS:
@@ -123,8 +128,8 @@ def populate_imts() -> dict[imt.IMT, models.Imt]:
             imt_func()
         except TypeError:
             needs_args = True
-        # Create and save:
-        imts[imt_func] = models.Imt.objects.create(name=imt_func.__name__,  # noqa
+        # save to database:
+        imts[imt_func] = models.Imt.objects.create(name=imt_func.__name__,
                                                    needs_args=needs_args)
     # last check that everything was written:
     not_written = set(SUPPORTED_IMTS) - set(imts)
@@ -135,20 +140,20 @@ def populate_imts() -> dict[imt.IMT, models.Imt]:
     return imts
 
 
-def populate_gsims(imts: dict[imt.IMT, models.Imt])\
-        -> tuple[list[str], list[str], dict[str, list[str]], dict[str, list[str]]]:
+def populate_gsims(imts: dict[imt.IMT, models.Imt], **options)\
+        -> tuple[list[str], dict[str, list[str]], dict[str, list[str]], dict[str, list[str]]]:
     """Write all Gsims from OpenQuake to the db
 
     :param imts: a dict of imt names mapped to the relative db model instance
+    :param options: options passed to the Command `handle` method calling this function
     """
     general_errors = []
-    unsupported_imt_errors = []
-    excluded_params = defaultdict(list)  # model params deliberately excluded (no flatfile col)
-    missing_params = defaultdict(list)  # model params missing (not implemented in YAML)
+    unsupported_imt_errors = defaultdict(list)  # imt -> models
+    excluded_params = defaultdict(list)  # param -> models (param deliberately excluded)
+    missing_params = defaultdict(list)  # param -> models (param not implemented in YAML)
     gsims = []
     # read GSIM parameters:
     model_params = read_gsim_params()
-    saved_params = {}  # paramname -> flatfilename
     with warnings.catch_warnings():
         warnings.filterwarnings('error')  # raise on warnings
         for gsim_name, gsim in get_available_gsims().items():
@@ -160,7 +165,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
             except OQDeprecationWarning as warn:
                 # treat OpenQuake (OQ) deprecation warnings as errors. Note that
                 # the builtin DeprecationWarning is silenced, OQ uses it's own
-                store_gsim_error(gsim_name, warn)
+                store_discarded_gsim(gsim_name, warn, **options)
                 general_errors.append(gsim_name)
                 continue
             except Warning as warn:
@@ -172,12 +177,12 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
                         gsim_inst = gsim()
                         gsim_warnings.append(str(warn))
                     except Exception as _exc:  # noqa
-                        store_gsim_error(gsim_name, warn)
+                        store_discarded_gsim(gsim_name, warn, **options)
                         general_errors.append(gsim_name)
                         continue
             except (OSError, NotImplementedError, KeyError, IndexError,
                     TypeError) as exc:  # MODEL SKIPPING EXCEPTIONS
-                store_gsim_error(gsim_name, exc)
+                store_discarded_gsim(gsim_name, exc, **options)
                 general_errors.append(gsim_name)
                 continue
             except Exception as _ex:
@@ -194,69 +199,73 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
             try:
                 attname = models.Imt.OQ_ATTNAME
                 gsim_imts = getattr(gsim_inst, attname)
-                if not hasattr(gsim_imts, '__iter__'):
-                    # gsim_imts is not iterable, raise (caught below):
-                    # raise AttributeError('%s.%s not iterable' %
-                    #                      (gsim_name, attname))
-                    raise AttributeError(f"Attribute {attname} not iterable")
+                gsim_imts = list(gsim_imts) if hasattr(gsim_imts, '__iter__') else []
+                if not gsim_imts:
+                    raise AttributeError(f"Attribute {attname} empty or not iterable")
                 # convert `gsim_imts` from a sequence of OpenQuake imt (Python
                 # entity) to the relative db model object:
-                gsim_imts = [imts[_] for _ in gsim_imts if _ in imts]
+                u_gsim_imts = [_ for _ in gsim_imts if _ not in imts]
                 # ... and that we have imts:
-                if not gsim_imts:
-                    raise AttributeError(f"Attribute {attname} has no IMT "
-                                         f"supported by the program")
+                if len(u_gsim_imts) == len(gsim_imts):
+                    # convert to strings:
+                    u_gsim_imts = [getattr(i, "__name__", str(i)) for i in u_gsim_imts]
+                    for i in u_gsim_imts:
+                        unsupported_imt_errors[i].append(gsim_name)
+                    raise AttributeError(f"Attribute {attname} contains only IMTs "
+                                         f"not supported by the program: "
+                                         f"{', '.join(u_gsim_imts)}")
+                # clear all unsupported imts (gsim_imts will be used later):
+                gsim_imts = [imts[_] for _ in gsim_imts if _ in imts]
             except AttributeError as exc:
-                store_gsim_error(gsim_name, exc)
-                unsupported_imt_errors.append(gsim_name)
+                store_discarded_gsim(gsim_name, exc, **options)
                 continue
 
-            # Parameters. check now because a Gsim with unknown parameters
-            # OR with no corresponding flatfile name cannot be saved
-            gsim_db_params = []
-            try:
-                # Gsim parameters (site, rupture, distance):
-                for attname in attname2category:
-                    for pname in getattr(gsim_inst, attname, []):
+            # Gsim flatfile columns from Gsim params (site, rupture, distance)
+            gsim_ff_cols = []
+            _errors = []
+            # Gsim parameters (site, rupture, distance):
+            for attname in attname2category:
+                for pname in getattr(gsim_inst, attname, []):
+                    key = "%s.%s" % (attname, pname)
+                    props = model_params.get(key, None)
+                    if props is None:
+                        missing_params[key].append(gsim_name)
+                        _errors.append(f"{_param2str(key)} is unknown")
+                        continue
+                    props = dict(model_params.get(key, {}))  # copy dict (we `pop` below)
+                    ffname = props.pop('flatfile_name', None)
+                    if ffname is None:
+                        excluded_params[key].append(gsim_name)
+                        _errors.append(f"{_param2str(key)} has no "
+                                       f"matching flatfile column")
+                        continue
 
-                        key = "%s.%s" % (attname, pname)
-                        if key not in model_params:
-                            missing_params[key].append(gsim_name)
-                            # this exception is not exiting (see below):
-                            raise ValueError(f"{_param2str(key)} is unknown")
-
-                        if key not in saved_params:
-                            props = model_params[key] or {}
-                            ffname = props.pop('flatfile_name', None)
-                            if ffname is None:
-                                excluded_params[key].append(gsim_name)
-                                # this exception is not exiting (see below):
-                                raise ValueError(f"{_param2str(key)} has no "
-                                                 f"matching flatfile column")
-                            # save to model
-                            help_ = props.pop('help', '')
-                            category = attname2category[attname]
-                            # create (and save) object:
-                            try:
+                    ff_col = models.FlatfileColumn.objects.filter(name=ffname).first()
+                    if ff_col is None:
+                        # save to model
+                        help_ = props.pop('help', '')
+                        category = attname2category[attname]
+                        # create (and save) object:
+                        try:
+                            ff_col = \
                                 models.FlatfileColumn.objects.create(name=ffname,
                                                                      help=help_,
                                                                      properties=props,
                                                                      category=category,
                                                                      oq_name=pname)
-                            except AssertionError as exc:
-                                raise CommandError(str(exc))
-                            saved_params[key] = ffname
+                        except AssertionError as exc:
+                            raise CommandError(str(exc))
 
-                        db_p = models.FlatfileColumn.objects.\
-                            get(name=saved_params[key])
-                        gsim_db_params.append(db_p)
+                        gsim_ff_cols.append(ff_col)
 
-                if not gsim_db_params:
-                    general_errors.append(gsim_name)
-                    raise ValueError("No parameter (site, rupture, distance) found")
-
-            except ValueError as verr:
-                store_gsim_error(gsim_name, verr)
+            if not gsim_ff_cols:
+                general_errors.append(gsim_name)
+                store_discarded_gsim(gsim_name,
+                                     "No parameter (site, rupture, distance) found",
+                                     **options)
+                continue
+            elif _errors:
+                store_discarded_gsim(gsim_name, ", ".join(_errors), **options)
                 continue
 
             # pack the N>=0 warning messages into a single msg.
@@ -290,7 +299,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt])\
             # 1. Set IMTs:
             gsim.imts.set(gsim_imts)
             # 2. Set Gsim parameters:
-            gsim.required_flatfile_columns.set(gsim_db_params)
+            gsim.required_flatfile_columns.set(gsim_ff_cols)
 
             gsims.append(gsim)
 
@@ -308,19 +317,21 @@ def read_gsim_params() -> dict[str, dict]:
     return model_params
 
 
-def store_gsim_error(gsim_name: str, error: Union[str, Exception]):
+def store_discarded_gsim(gsim_name: str, error: Union[str, Exception],
+                         **options):
     """Creates an error from the given entity type (e.g. `DB_ENTITY.GSIM`) and
     key (e.g., the Gsim class name) and saves it to the database.
     Note: if `error_type` is missing or None it is set as:
         1. `error.__class__.__name__` if `error` is an `Exception`
         2. "Error" otherwise
+    :param options: options passed to the Command `handle` method calling this function
     """
     if isinstance(error, Exception):
         error_type, error_msg = error.__class__.__name__, str(error)
     else:
         error_type, error_msg = 'Error', str(error)
 
-    models.GsimWithError.objects.create(name=gsim_name, error_type=error_type,  # noqa
+    models.GsimWithError.objects.create(name=gsim_name, error_type=error_type,
                                         error_message=error_msg)
 
 
