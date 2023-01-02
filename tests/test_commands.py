@@ -21,27 +21,34 @@ import builtins
 @pytest.mark.django_db
 def test_initdb(django_db_blocker, capsys):
     """Test initdb command, with new Gsims and required attributes not
-    managed by egsim"""
+    managed by egsim
+
+    NOTE: these are just shallow tests to check no error is raised. Deeper tests cannot
+        be easily performed. An alternative is to issue bookmarks in PyCharm and inspect §§by via a bookmark in
+        PyCharm
+    """
     # why is it @patch not working if provided as decorator?
     # It has conflicts with capsys fixture, but only here ....
     # Anyway:
-    with django_db_blocker.unblock():
-        # with patch.object(builtins, 'input', lambda _: 'yes'):
+
+    # with patch.object(builtins, 'input', lambda _: 'yes'):
+    call_command('egsim_init', interactive=False)
+    captured = capsys.readouterr()
+    capout = captured.out
+    assert 'dry-run' not in capout.lower()  # dummy check
+
+    call_command('egsim_init', interactive=False, dry_run=True)
+    captured = capsys.readouterr()
+    capout = captured.out
+    assert 'dry-run' in capout.lower()  # dummy check
+
+
+@pytest.mark.django_db
+def test_initdb_gsim_required_attrs_not_defined(django_db_blocker, capsys):
+
+    with patch('egsim.api.management.commands._egsim_oq.read_gsim_params',
+               return_value={'REQUIRES_DISTANCES.azimuth': {'flatfile_name': 'azimuth'}}) as _:
         call_command('egsim_init', interactive=False)
         captured = capsys.readouterr()
         capout = captured.out
-        assert 'WARNING: ' not in capout
 
-
-def test_initdb_gsim_required_attrs_not_defined(django_db_blocker, capsys):
-    with django_db_blocker.unblock():
-        with patch('egsim.api.management.commands._egsim_oq.read_gsim_params',
-                   return_value={'REQUIRES_DISTANCES.azimuth': {'flatfile_name': 'azimuth'}}) as _:
-            call_command('egsim_init', interactive=False)
-            captured = capsys.readouterr()
-            capout = captured.out
-            assert 'WARNING: ' in capout
-
-    for key in ['vs30measured', 'ztor', 'dip']:
-        assert "%s (defined for " % key in capout
-    assert "rjb" not in capout

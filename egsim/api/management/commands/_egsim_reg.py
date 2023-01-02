@@ -120,8 +120,8 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             except models.Gsim.DoesNotExist:  # noqa
                 _nump = models.GsimRegion.num_polygons(geom)
                 skipped.append(f"{_nump:>4} Polygon{'' if _nump == 1 else 's'} "
-                               f'skipped: associated Gsim "{gsim}" unknown '
-                               f'(not written to DB)')
+                               f'skipped: associated model "{gsim}" not found in the '
+                               f'database')
                 continue
 
             rds, _ = models.Regionalization.objects.\
