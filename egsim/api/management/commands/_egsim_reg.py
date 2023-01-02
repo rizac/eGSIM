@@ -41,7 +41,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
-        self.printinfo('Populating DB with Regionalization data:')
+        self.printinfo('Populating the database with Regionalization data:')
         self.empty_db_table(models.GsimRegion, models.Regionalization)
 
         skipped = defaultdict(list)  # regionalization name -> list of warnings

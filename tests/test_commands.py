@@ -7,7 +7,6 @@ Created on 6 Apr 2019
 """
 import pytest
 from unittest.mock import patch
-
 from django.core.management import call_command
 import builtins
 # from pytest_django.plugin import django_db_blocker
@@ -19,7 +18,7 @@ import builtins
 # causing problems in e.g. capturing the stdout. Looking at the code, to grant access
 # to the empty db in the default Django mode, we just need the django_db_blocker fixture:
 
-
+@pytest.mark.django_db
 def test_initdb(django_db_blocker, capsys):
     """Test initdb command, with new Gsims and required attributes not
     managed by egsim"""

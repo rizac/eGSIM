@@ -47,56 +47,58 @@ class Command(EgsimBaseCommand):
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         # populate db:
-        self.printinfo('Populating the database (DB) with OpenQuake data and the config '
-                       'file with the OpenQuake model parameters and their flatfile '
-                       'column mapping:')
-        self.printinfo(GSIM_PARAMS_YAML_PATH)
+        self.printinfo('Populating the database with OpenQuake data (models, '
+                       'intensity measures) and flatfile columns metadata')
 
         imts = populate_imts()
         (general_errors, unsupported_imt_errors, excluded_params, missing_params) \
             = populate_gsims(imts)
 
         _imtc = models.Imt.objects.count()  # noqa
-        self.printsuccess(f"{_imtc} Intensity measure{'' if _imtc == 1 else 's'} "
-                          f"(Imt) written")
-
+        self.printsuccess(f"{_imtc} intensity measure{'' if _imtc == 1 else 's'} "
+                          f"saved to database")
+        _ffcols = models.FlatfileColumn.objects.count()
+        self.printsuccess(f"{_ffcols} flatfile columns and their metadata "
+                          f"saved to database")
         _gsimc = models.Gsim.objects.count()  # noqa
-        self.printsuccess(f"{_gsimc} model{'' if _gsimc == 1 else 's'} (Gsim) written, "
-                          f"{models.GsimWithError.objects.count()} skipped")  # noqa
+        not_saved = models.GsimWithError.objects.count()  # noqa
+        skipped = sum(len(_) for _ in excluded_params.values())
+        discarded = not_saved - skipped
+        self.printsuccess(f"{_gsimc} models saved to database, {not_saved} not saved "
+                          f"({skipped} skipped, {discarded} discarded)")
 
         if len(excluded_params):
-            self.printwarn(f'  note: {sum(len(_) for _ in excluded_params.values())} '
-                           f'models deliberately skipped because they require a '
-                           f'parameter with no flatfile column. To include these '
-                           f'models, open the config file and add the "flatfile_name" '
-                           f'property to any of the following parameter(s):')
+            self.printwarn(f'Skipped models are those requiring any of the following '
+                           f'{len(excluded_params)} parameter(s) (see database for '
+                           f'more details):')
             for param, gsims in excluded_params.items():
                 self.printwarn(f" - {_param2str(param)} required by {models2str(gsims)}")
-                               # f"{len(gsims)} skipped "
-                               # f"model{'' if len(gsims) == 1 else 's'}")
-
-        if sum([len(general_errors), len(unsupported_imt_errors), len(missing_params)]):
-            self.printwarn('WARNING:')
+            self.printwarn(f'  To include a model listed above, re-execute this command '
+                           f'after mapping all model parameter(s) to a flatfile column '
+                           f'in the file:\n'
+                           f'  {GSIM_PARAMS_YAML_PATH}')
 
         if len(general_errors):
-            self.printwarn(f' {len(general_errors)} models skipped because of general '
-                           f'errors (e.g. Python initialization errors, abstract class, '
-                           f'deprecation warnings, no parameter found): '
-                           f'{models2str(general_errors)}')
+            self.printwarn(f'WARNING: {len(general_errors)} model(s) discarded because '
+                           f'of Python errors (e.g., initialization errors, deprecation '
+                           f'warnings):\n'
+                           f'  {models2str(general_errors)}')
         if len(unsupported_imt_errors):
-            self.printwarn(f' {len(unsupported_imt_errors)} models skipped because '
-                           f'defined for IMTs not supported by the program: '
-                           f'{models2str(unsupported_imt_errors)}')
+            self.printwarn(f'WARNING: {len(unsupported_imt_errors)} model(s) discarded '
+                           f'because defined for IMTs not supported by the program:\n'
+                           f'  {models2str(unsupported_imt_errors)}')
 
         if len(missing_params):
-            self.printwarn(f" {sum(len(_) for _ in missing_params.values())} models "
-                           f"skipped because "
-                           f"they require the following unknown {len(missing_params)} "
-                           f"parameter{'' if len(missing_params) == 1 else ''}. "
-                           f"To include these models, add the relative parameter "
-                           f"to the config file")
-        for param, gsims in missing_params.items():
-            self.printwarn(f" - {_param2str(param)} required by {models2str(gsims)}")
+            self.printwarn(f"WARNING: {sum(len(_) for _ in missing_params.values())} "
+                           f"model(s) discarded because they require any of the "
+                           f"following unknown {len(missing_params)} parameter(s) "
+                           f"(see database for more details):")
+            for param, gsims in missing_params.items():
+                self.printwarn(f"  - {_param2str(param)} required by {models2str(gsims)}")
+            self.printwarn(f'  To include a model listed above, re-execute this command '
+                           f'after mapping all model parameter(s) to a flatfile column '
+                           f'in the file:\n'
+                           f'  {GSIM_PARAMS_YAML_PATH}')
 
 
 def models2str(models: list[str, ...]):

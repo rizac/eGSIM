@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from django.forms import Form
 from django.utils.translation import gettext
-from pandas.core.computation.ops import UndefinedVariableError
+from pandas.errors import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
