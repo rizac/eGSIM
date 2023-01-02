@@ -34,8 +34,8 @@ class Command(EgsimBaseCommand):
     def handle(self, *args, **options):
         """Parse each pre-defined flatfile"""
 
-        self.printinfo('Creating pre-defined Flatfiles and storing their '
-                       'metadata to DB:')
+        self.printinfo('Creating pre-defined Flatfiles and populating the databse '
+                       'with their metadata:')
         self.empty_db_table(models.Flatfile)
 
         destdir = DEST_DIR

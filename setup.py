@@ -16,18 +16,21 @@ setup(
     install_requires=[
         # 'openquake.engine>3.5.0',
         'smtk @ git+https://github.com/rizac/gmpe-smtk.git',
-        'Django>=4.1.2'
+        'Django>=4.1.2',
+        'pyyaml>=6.0',
+        'tables>=3.8.0'
     ],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
-    # $ pip install -e .[dev,test]
+    # $ pip install -e .[plotly,test]
     extras_require={
         'plotly': [
             'kaleido>=0.2.1',
             'plotly>=5.10.0'
         ],
         'test': [
+            'pytest',
             'pylint>=2.3.1',
             'pytest-django>=3.4.8',
             'pytest-cov>=2.6.1'

@@ -95,12 +95,9 @@ class Command(EgsimBaseCommand):
             return
 
         self.printinfo('')
-        self.printinfo('Initializing (emptying and re-populating) the eGSIM database '
-                       '(DB)')
-        self.printinfo('The DB will store also most of the '
-                       'information printed hereafter in more details. You can '
-                       'always inspect the DB on the browser via the Django admin '
-                       'panel (see README file for info)')
+        self.printinfo('Empty and re-populate the eGSIM database')
+        self.printinfo('Remember that you can always inspect the database on the '
+                       'browser via the Django admin panel (see README file for info)')
         try:
             call_command('flush', *args, **options)
         except DatabaseError as db_err:
@@ -109,8 +106,6 @@ class Command(EgsimBaseCommand):
             url = "https://docs.djangoproject.com/en/stable/topics/migrations/"
             raise CommandError(f'{str(db_err)}.\nDid you create the db first?'
                                f'\n(for info see: {url})')
-
-
 
         options.pop('interactive', None)
         for cmd in SUBCOMMANDS:

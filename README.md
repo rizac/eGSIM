@@ -84,8 +84,7 @@ activated FIRST**
 
 *Note: if the installation is done for upgrading all dependencies and 
 `pip freeze` into new requirements files,
-please go to [dependency upgrade](#dependencies-upgrade)* 
-
+please go to [dependency upgrade](#dependencies-upgrade)*
 
 On the terminal, execute:
 ```bash
@@ -94,58 +93,24 @@ pip install --upgrade pip setuptools && pip install -r requirements.dev.txt
 (use `requirements.txt` if you don't need to run tests, e.g. you are not 
 installing as developer).
 
-<details>
-
-<summary>Full install (step by step)
-</summary>
-
-Having oq-engine and gmpe-smtk on the same level of the
-egsim directory, you can install the bove in 
-several steps for more control. From egsim directory:
-```console
-pip install --upgrade pip setuptools    
-(cd ../oq-engine && pip install -e .)
-(cd ../gmpe-smtk-rizac && pip install -e .)
-# additional packages (plotly and kaleido are for downloading plot images):
-pip install pyyaml tables plotly kaleido
-# optional: 
-# pip freeze > ./requirements.txt
-pip install pytest pytest-cov pytest-django
-# optional:
-# pip freeze > ./requirements.dev.txt
-```
-</details>
-
-<details>
-
-<summary>
-If you want also to be able to modify `gmpe-smtk`, e.g. 
-fix bug, implement new features and issue Pull Requests to the master branch 
-(click to expand): 
-</summary>
-
-Clone gmpe-smtk, usually on the same level
-of the `egsim directory` into the so-called `smtk directory`:
-
+**If you want to install gmpe-smtk in editable mode**
+(see also [Fixing gmpe-smtk](#Fix-smtk)), 
+you need to have gmpe-smtk on the same level of the
+egsim directory. Thus, from the egsim parent directory, type:
 ```bash
 git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
 ```
+and reinstall smtk from there in editable mode:
 
-**Note** that the current commit hash (`git log -1`) **should be the same** as
-in `requirements.txt` (i.e., the string portion between '@' and '#' of the 
-text line containing "smtk").
-
-Then, (re)install smtk from the cloned directory:
-
-```bash
-cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-pip install -e .
+```console
+(cd ../gmpe-smtk-rizac && pip install -e .)
 ```
 
-and have a look at [Fixing gmpe-smtk](#Fix-smtk)
-for the suggested workflow
-
-</details>
+**Note** check with `pip freese` that the current commit hash 
+of gmpe-smtk (`git log -1`) 
+is the same as in `requirements.txt` (i.e., the 
+string portion between '@' and '#' of the 
+text line containing "smtk")
 
 
 ## Run Test
@@ -160,8 +125,15 @@ export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv --ds=egsim.sett
 ```
 (x=stop at first error, v*=increase verbosity). 
 
-Test with code coverage, i.e.
-showing the amount of code hit by tests:
+For **PyCharm users**, you need to configure the environment variable
+for all tests. Go to:
+  Run -> Edit Configurations -> Edit Configurations templates -> 
+  Python tests -> pytests -> ENVIRONMENT VARIABLES
+
+and add there the environment variable DJANGO_SETTINGS_MODULE
+
+Other test options from the command line: with coverage (
+showing the amount of code hit by tests):
 
 ```bash
 export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv --cov=./egsim/ --cov-report=html ./tests/
@@ -499,6 +471,8 @@ Then install smtk and all dependencies:
 cd ../gmpe-smtk # (or whatever you cloned the forked branch)
 git checkout master && git pull
 pip install -e . # (also installs openquake and django)
+pip install --upgrade --force-reinstall django  # upgrade django (optional)
+pip install plotly kaleido pyyaml tables
 cd ../egsim. # (or wherever egsim is)
 pip freeze > requirements.txt
 ```
@@ -506,7 +480,7 @@ pip freeze > requirements.txt
 And finally install the newest version of the test packages:
 
 ```bash
-pip install pylint pytest-django pytest-cov
+pip install pytest pytest-django pytest-cov pylint
 pip freeze > requirements.dev.txt
 ```
 
