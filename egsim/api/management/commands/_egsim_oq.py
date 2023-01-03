@@ -9,7 +9,6 @@ Created on 6 Apr 2019
 @author: riccardo z. (rizac@github.com)
 """
 import warnings
-from itertools import chain
 
 import yaml
 import inspect
@@ -27,7 +26,7 @@ from ... import models
 
 SUPPORTED_IMTS = (imt.PGA, imt.PGV, imt.SA, imt.PGD, imt.IA, imt.CAV)
 
-GSIM_PARAMS_YAML_PATH = EgsimBaseCommand.data_path("gsim_params.yaml")
+FLATFILE_COLUMNS_YAML_PATH = EgsimBaseCommand.data_path("flatfile-columns.yaml")
 
 
 class Command(EgsimBaseCommand):
@@ -50,14 +49,20 @@ class Command(EgsimBaseCommand):
         self.printinfo('Populating the database with OpenQuake data (models, '
                        'intensity measures) and flatfile columns metadata')
         imts = populate_imts(**options)
+        ffcols, unmapped_ffcols = \
+            populate_flatfile_column_metadata()
         (general_errors, unsupported_imt_errors, excluded_params, missing_params) \
-            = populate_gsims(imts, **options)
+            = populate_gsims(imts, ffcols, **options)
         _imtc = models.Imt.objects.count()
         self.printsuccess(f"{_imtc} intensity measure{'' if _imtc == 1 else 's'} "
                           f"saved to database")
         _ffcols = models.FlatfileColumn.objects.count()
         self.printsuccess(f"{_ffcols} flatfile columns and their metadata "
                           f"saved to database")
+        if unmapped_ffcols:
+            self.printinfo(f" Unused Flatfile column(s): {', '.join(unmapped_ffcols)}\n"
+                           f"can be removed from: "
+                           f'  {FLATFILE_COLUMNS_YAML_PATH}')
         _gsimc = models.Gsim.objects.count()
         not_saved = models.GsimWithError.objects.count()
         skipped = len(set(m for mm in excluded_params.values() for m in mm))
@@ -74,7 +79,7 @@ class Command(EgsimBaseCommand):
             self.printwarn(f'  To include a model listed above, re-execute this command '
                            f'after mapping all model parameter(s) to a flatfile column. '
                            f'See instructions in:\n'
-                           f'  {GSIM_PARAMS_YAML_PATH}')
+                           f'  {FLATFILE_COLUMNS_YAML_PATH}')
 
         if len(general_errors):
             self.printwarn(f'WARNING: {len(general_errors)} model(s) discarded because '
@@ -101,7 +106,7 @@ class Command(EgsimBaseCommand):
             self.printwarn(f'  To include a model listed above, re-execute this command '
                            f'after mapping all model parameter(s) to a flatfile column. '
                            f'See instructions in:\n'
-                           f'  {GSIM_PARAMS_YAML_PATH}')
+                           f'  {FLATFILE_COLUMNS_YAML_PATH}')
 
 
 def gsims2str(gsim_names: list[str, ...]):
@@ -140,11 +145,14 @@ def populate_imts(**options) -> dict[imt.IMT, models.Imt]:
     return imts
 
 
-def populate_gsims(imts: dict[imt.IMT, models.Imt], **options)\
+def populate_gsims(imts: dict[imt.IMT, models.Imt],
+                   ff_cols: dict[str, models.FlatfileColumn], **options)\
         -> tuple[list[str], dict[str, list[str]], dict[str, list[str]], dict[str, list[str]]]:
     """Write all Gsims from OpenQuake to the db
 
     :param imts: a dict of imt names mapped to the relative db model instance
+    :param ff_cols: a dict of OpenQuake parameters (str) mapped to a FlatfileColumn
+        db model instance
     :param options: options passed to the Command `handle` method calling this function
     """
     general_errors = []
@@ -152,8 +160,6 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], **options)\
     excluded_params = defaultdict(list)  # param -> models (param deliberately excluded)
     missing_params = defaultdict(list)  # param -> models (param not implemented in YAML)
     gsims = []
-    # read GSIM parameters:
-    model_params = read_gsim_params()
     with warnings.catch_warnings():
         warnings.filterwarnings('error')  # raise on warnings
         for gsim_name, gsim in get_available_gsims().items():
@@ -224,39 +230,24 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], **options)\
             gsim_ff_cols = []
             _errors = []
             # Gsim parameters (site, rupture, distance):
-            for attname in attname2category:
+            for attname, ff_category in {
+                'REQUIRES_DISTANCES': models.FlatfileColumn.Category.DISTANCE_MEASURE,
+                'REQUIRES_RUPTURE_PARAMETERS': models.FlatfileColumn.Category.RUPTURE_PARAMETER,
+                'REQUIRES_SITES_PARAMETERS': models.FlatfileColumn.Category.SITE_PARAMETER
+            }.items():
                 for pname in getattr(gsim_inst, attname, []):
-                    key = "%s.%s" % (attname, pname)
-                    props = model_params.get(key, None)
-                    if props is None:
+                    key = "%s.%s" % (ff_category.name, pname)
+                    if key not in ff_cols:
                         missing_params[key].append(gsim_name)
                         _errors.append(f"{_param2str(key)} is unknown")
                         continue
-                    props = dict(model_params.get(key, {}))  # copy dict (we `pop` below)
-                    ffname = props.pop('flatfile_name', None)
-                    if ffname is None:
+                    ff_col = ff_cols[key]
+                    if ff_col is None:
                         excluded_params[key].append(gsim_name)
                         _errors.append(f"{_param2str(key)} has no "
                                        f"matching flatfile column")
                         continue
-
-                    ff_col = models.FlatfileColumn.objects.filter(name=ffname).first()
-                    if ff_col is None:
-                        # save to model
-                        help_ = props.pop('help', '')
-                        category = attname2category[attname]
-                        # create (and save) object:
-                        try:
-                            ff_col = \
-                                models.FlatfileColumn.objects.create(name=ffname,
-                                                                     help=help_,
-                                                                     properties=props,
-                                                                     category=category,
-                                                                     oq_name=pname)
-                        except AssertionError as exc:
-                            raise CommandError(str(exc))
-
-                        gsim_ff_cols.append(ff_col)
+                    gsim_ff_cols.append(ff_col)
 
             if not gsim_ff_cols:
                 general_errors.append(gsim_name)
@@ -306,15 +297,58 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt], **options)\
     return general_errors, unsupported_imt_errors, excluded_params, missing_params
 
 
-def read_gsim_params() -> dict[str, dict]:
-    """Returns the GSIM YAML param `gsim_params.yaml into a dict[str, dict]"""
-    model_params = {}
-    with open(GSIM_PARAMS_YAML_PATH) as fpt:
-        root_dict = yaml.safe_load(fpt)
-        for param_type, params in root_dict.items():
-            for param_name, props in params.items():
-                model_params[f'{param_type}.{param_name}'] = props
-    return model_params
+def populate_flatfile_column_metadata() -> \
+        tuple[dict[str, models.FlatfileColumn], list[str]]:
+    ffcolumns = read_registered_flatfile_columns()
+    ret = {}
+    unmatched_ffcols = []
+    for ffcol in ffcolumns:
+        oq_name = ffcol.get('oq_name', None)
+        if not oq_name:
+            unmatched_ffcols.append(ffname)
+            continue
+        full_param_name = f"{ffcol['category'].name}.{oq_name}"
+        if 'name' not in ffcol:
+            ff_col = None
+        else:
+            ffname = ffcol['name']
+            ff_col = models.FlatfileColumn.objects.filter(name=ffname).first()
+            if ff_col is None:
+                # create (and save) object:
+                try:
+                    ff_col = models.FlatfileColumn.objects.create(**ffcol)
+                except AssertionError as exc:
+                    raise CommandError(str(exc))
+        ret[full_param_name] = ff_col
+    return ret, unmatched_ffcols
+
+
+def read_registered_flatfile_columns() -> list[dict]:
+    """Returns the registered flatfile columns soted in the YAML file
+    `FLATFILE_COLUMNS_YAML_PATH`
+    GSIM YAML `gsim_params.yaml into a dict[str, dict]"""
+    ffcolumns = []
+    with open(FLATFILE_COLUMNS_YAML_PATH) as fpt:
+        ff_cols = yaml.safe_load(fpt)
+        oq_params = ff_cols.pop('openquake_models_parameters')
+        for param_type, params in oq_params.items():
+            for param_name, ffcol_name in params.items():
+                category = models.FlatfileColumn.Category[param_type.upper()]
+                ffcolumn = {'oq_name': param_name, 'category': category}
+                if ffcol_name:
+                    ffcolumn['name'] = ffcol_name
+                    props = ff_cols.pop(ffcol_name) or {}
+                    ffcolumn['help'] = props.pop('help', '')
+                    ffcolumn['properties'] = props
+                ffcolumns.append(ffcolumn)
+    for ffcol_name, ffcolumn in ff_cols.items():
+        help_ = ffcolumn.pop('help', '')
+        ffcolumns.append({
+            'name': ffcol_name,
+            'properties': ffcolumn,
+            'help': help_
+        })
+    return ffcolumns
 
 
 def store_discarded_gsim(gsim_name: str, error: Union[str, Exception],
@@ -335,23 +369,14 @@ def store_discarded_gsim(gsim_name: str, error: Union[str, Exception],
                                         error_message=error_msg)
 
 
-# Maps Gsim attribute names to the relative Flatfile category (IntEnum):
-attname2category = {
-    'REQUIRES_DISTANCES': models.FlatfileColumn.Category.DISTANCE_MEASURE,
-    'REQUIRES_RUPTURE_PARAMETERS': models.FlatfileColumn.Category.RUPTURE_PARAMETER,
-    'REQUIRES_SITES_PARAMETERS': models.FlatfileColumn.Category.SITE_PARAMETER
-}
-
-
 def _param2str(param: str):
-    """Makes `param` human readable, e.g. 'REQUIRES_DISTANCES.rcdpp' into:
-    'Distance measure "rcdpp" (found in Gsim attribute `REQUIRES_DISTANCES`)'
+    """Makes `param` human readable, e.g. 'SITE_PARAMETER.PHV' into:
+    'Site parameter "PHV"
 
     :param param: a model parameter name, in the format `category.name`,
-        e.g. 'REQUIRES_DISTANCES.rcdpp' (`category` is one of the keys of
-        `atrname2category`)
+        e.g. 'SITE_PARAMETER.PHV' (`category` is one of the names of the enum
+        `models.FlatfileColumn.Ctegory`
     """
-    attname, pname = param.split(".", 1)
-    categ = attname2category[attname]
-    return categ.name.replace('_', ' ').capitalize() + \
-        f' "{pname}"' # (found in Gsim attribute `{attname}`)'
+    category, name = param.split(".", 1)
+    category = category.replace('_', ' ').capitalize()
+    return f'{category} "{name}"'

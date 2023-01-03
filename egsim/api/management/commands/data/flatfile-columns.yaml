@@ -124,7 +124,7 @@ slope:
 # MODELS REQUIRING IT should be discarded and not implemented in EGSIM
 
 openquake_models_parameters:
-  distance_measures:  # OpenQuake model attribute: REQUIRES_DISTANCES
+  distance_measure:  # OpenQuake model attribute: REQUIRES_DISTANCES
     azimuth: azimuth
     repi: repi
     rrup: rrup
@@ -134,7 +134,7 @@ openquake_models_parameters:
     ry0: ry0
     rvolc: rvolc
     rcdpp:
-  rupture_parameters:  # OpenQuake model attribute: REQUIRES_RUPTURE_PARAMETERS
+  rupture_parameter:  # OpenQuake model attribute: REQUIRES_RUPTURE_PARAMETERS
     hypo_lat: event_latitude
     hypo_lon: event_longitude
     hypo_depth: event_depth
@@ -143,7 +143,7 @@ openquake_models_parameters:
     width: rupture_width
     dip: dip
     rake: rake
-  site_parameters:  # OpenQuake model attribute: REQUIRES_SITES_PARAMETERS
+  site_parameter:  # OpenQuake model attribute: REQUIRES_SITES_PARAMETERS
     z1pt0: z1
     z2pt5: z2pt5
     vs30: vs30
