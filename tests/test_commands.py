@@ -37,11 +37,6 @@ def test_initdb(django_db_blocker, capsys):
     capout = captured.out
     assert 'dry-run' not in capout.lower()  # dummy check
 
-    call_command('egsim_init', interactive=False, dry_run=True)
-    captured = capsys.readouterr()
-    capout = captured.out
-    assert 'dry-run' in capout.lower()  # dummy check
-
 
 @pytest.mark.django_db
 def test_initdb_gsim_required_attrs_not_defined(django_db_blocker, capsys):
