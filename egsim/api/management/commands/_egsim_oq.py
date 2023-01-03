@@ -230,10 +230,11 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt],
             gsim_ff_cols = []
             _errors = []
             # Gsim parameters (site, rupture, distance):
+            flatfile_col_category = models.FlatfileColumn.Category
             for attname, ff_category in {
-                'REQUIRES_DISTANCES': models.FlatfileColumn.Category.DISTANCE_MEASURE,
-                'REQUIRES_RUPTURE_PARAMETERS': models.FlatfileColumn.Category.RUPTURE_PARAMETER,
-                'REQUIRES_SITES_PARAMETERS': models.FlatfileColumn.Category.SITE_PARAMETER
+                'REQUIRES_DISTANCES': flatfile_col_category.DISTANCE_MEASURE,
+                'REQUIRES_RUPTURE_PARAMETERS': flatfile_col_category.RUPTURE_PARAMETER,
+                'REQUIRES_SITES_PARAMETERS': flatfile_col_category.SITE_PARAMETER
             }.items():
                 for pname in getattr(gsim_inst, attname, []):
                     key = "%s.%s" % (ff_category.name, pname)
