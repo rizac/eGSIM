@@ -51,7 +51,7 @@ class Command(EgsimBaseCommand):
         imts = populate_imts(**options)
         ffcols, unmapped_ffcols = \
             populate_flatfile_column_metadata()
-        (general_errors, unsupported_imt_errors, excluded_params, missing_params) \
+        (general_errors, unsupported_imt_errors, unknown_params, missing_ffcols) \
             = populate_gsims(imts, ffcols, **options)
         _imtc = models.Imt.objects.count()
         self.printsuccess(f"{_imtc} intensity measure{'' if _imtc == 1 else 's'} "
@@ -65,16 +65,16 @@ class Command(EgsimBaseCommand):
                            f'  {FLATFILE_COLUMNS_YAML_PATH}')
         _gsimc = models.Gsim.objects.count()
         not_saved = models.GsimWithError.objects.count()
-        skipped = len(set(m for mm in excluded_params.values() for m in mm))
+        skipped = len(set(m for mm in unknown_params.values() for m in mm))
         discarded = not_saved - skipped
         self.printsuccess(f"{_gsimc} models saved to database, {not_saved} not saved "
                           f"({skipped} skipped, {discarded} discarded)")
 
-        if len(excluded_params):
+        if len(unknown_params):
             self.printwarn(f'Skipped models are those requiring any of the following '
-                           f'{len(excluded_params)} parameter(s) (see database for '
+                           f'{len(unknown_params)} parameter(s) (see database for '
                            f'more details):')
-            for param, gsims in excluded_params.items():
+            for param, gsims in unknown_params.items():
                 self.printwarn(f" - {_param2str(param)} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
                            f'after mapping all model parameter(s) to a flatfile column. '
@@ -96,12 +96,12 @@ class Command(EgsimBaseCommand):
                            f'after adding the IMT on top of the file:\n'
                            f'  {__file__}')
 
-        if len(missing_params):
-            _models = set(m for mm in missing_params.values() for m in mm)
+        if len(missing_ffcols):
+            _models = set(m for mm in missing_ffcols.values() for m in mm)
             self.printwarn(f"WARNING: {len(_models)} model(s) discarded because they "
-                           f"require any of the following unknown {len(missing_params)} "
+                           f"require any of the following unknown {len(missing_ffcols)} "
                            f"parameter(s) (see database for more details):")
-            for param, gsims in missing_params.items():
+            for param, gsims in missing_ffcols.items():
                 self.printwarn(f"  - {_param2str(param)} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
                            f'after mapping all model parameter(s) to a flatfile column. '
@@ -157,8 +157,8 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt],
     """
     general_errors = []
     unsupported_imt_errors = defaultdict(list)  # imt -> models
-    excluded_params = defaultdict(list)  # param -> models (param deliberately excluded)
-    missing_params = defaultdict(list)  # param -> models (param not implemented in YAML)
+    unknown_params = defaultdict(list)  # param -> models (param deliberately excluded)
+    missing_ffcols = defaultdict(list)  # ffcol -> models (param not implemented in YAML)
     gsims = []
     with warnings.catch_warnings():
         warnings.filterwarnings('error')  # raise on warnings
@@ -239,12 +239,12 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt],
                 for pname in getattr(gsim_inst, attname, []):
                     key = "%s.%s" % (ff_category.name, pname)
                     if key not in ff_cols:
-                        missing_params[key].append(gsim_name)
+                        unknown_params[key].append(gsim_name)
                         _errors.append(f"{_param2str(key)} is unknown")
                         continue
                     ff_col = ff_cols[key]
                     if ff_col is None:
-                        excluded_params[key].append(gsim_name)
+                        missing_ffcols[key].append(gsim_name)
                         _errors.append(f"{_param2str(key)} has no "
                                        f"matching flatfile column")
                         continue
@@ -295,7 +295,7 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt],
 
             gsims.append(gsim)
 
-    return general_errors, unsupported_imt_errors, excluded_params, missing_params
+    return general_errors, unsupported_imt_errors, unknown_params, missing_ffcols
 
 
 def populate_flatfile_column_metadata() -> \
