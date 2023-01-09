@@ -17,6 +17,8 @@ import builtins
 # This however pre-execute the same custom commands that we want to test here,
 # causing problems in e.g. capturing the stdout. Looking at the code, to grant access
 # to the empty db in the default Django mode, we just need the django_db_blocker fixture:
+from egsim.api.models import FlatfileColumn
+
 
 @pytest.mark.django_db
 def test_initdb(django_db_blocker, capsys):
@@ -41,8 +43,12 @@ def test_initdb(django_db_blocker, capsys):
 @pytest.mark.django_db
 def test_initdb_gsim_required_attrs_not_defined(django_db_blocker, capsys):
 
-    with patch('egsim.api.management.commands._egsim_oq.read_gsim_params',
-               return_value={'REQUIRES_DISTANCES.azimuth': {'flatfile_name': 'azimuth'}}) as _:
+    with patch('egsim.api.management.commands._egsim_oq.read_registered_flatfile_columns',
+               return_value=[
+                   {'name': 'azimuth'},
+                   {'oq_name': 'rx',
+                    'category': FlatfileColumn.Category.DISTANCE_MEASURE}
+               ]) as _:
         call_command('egsim_init', interactive=False)
         captured = capsys.readouterr()
         capout = captured.out
