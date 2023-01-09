@@ -65,16 +65,16 @@ class Command(EgsimBaseCommand):
                            f'  {FLATFILE_COLUMNS_YAML_PATH}')
         _gsimc = models.Gsim.objects.count()
         not_saved = models.GsimWithError.objects.count()
-        skipped = len(set(m for mm in unknown_params.values() for m in mm))
+        skipped = len(set(m for mm in missing_ffcols.values() for m in mm))
         discarded = not_saved - skipped
         self.printsuccess(f"{_gsimc} models saved to database, {not_saved} not saved "
                           f"({skipped} skipped, {discarded} discarded)")
 
-        if len(unknown_params):
+        if len(missing_ffcols):
             self.printwarn(f'Skipped models are those requiring any of the following '
-                           f'{len(unknown_params)} parameter(s) (see database for '
+                           f'{len(missing_ffcols)} parameter(s) (see database for '
                            f'more details):')
-            for param, gsims in unknown_params.items():
+            for param, gsims in missing_ffcols.items():
                 self.printwarn(f" - {_param2str(param)} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
                            f'after mapping all model parameter(s) to a flatfile column. '
@@ -96,12 +96,12 @@ class Command(EgsimBaseCommand):
                            f'after adding the IMT on top of the file:\n'
                            f'  {__file__}')
 
-        if len(missing_ffcols):
-            _models = set(m for mm in missing_ffcols.values() for m in mm)
+        if len(unknown_params):
+            _models = set(m for mm in unknown_params.values() for m in mm)
             self.printwarn(f"WARNING: {len(_models)} model(s) discarded because they "
-                           f"require any of the following unknown {len(missing_ffcols)} "
+                           f"require any of the following unknown {len(unknown_params)} "
                            f"parameter(s) (see database for more details):")
-            for param, gsims in missing_ffcols.items():
+            for param, gsims in unknown_params.items():
                 self.printwarn(f"  - {_param2str(param)} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
                            f'after mapping all model parameter(s) to a flatfile column. '
@@ -228,7 +228,8 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt],
 
             # Gsim flatfile columns from Gsim params (site, rupture, distance)
             gsim_ff_cols = []
-            _errors = []
+            _unknown_params = {}  # param -> error message
+            _missing_ffcols = {}  # param -> error message
             # Gsim parameters (site, rupture, distance):
             flatfile_col_category = models.FlatfileColumn.Category
             for attname, ff_category in {
@@ -239,25 +240,32 @@ def populate_gsims(imts: dict[imt.IMT, models.Imt],
                 for pname in getattr(gsim_inst, attname, []):
                     key = "%s.%s" % (ff_category.name, pname)
                     if key not in ff_cols:
-                        unknown_params[key].append(gsim_name)
-                        _errors.append(f"{_param2str(key)} is unknown")
+                        _unknown_params[key] = f"{_param2str(key)} is unknown"
                         continue
                     ff_col = ff_cols[key]
                     if ff_col is None:
-                        missing_ffcols[key].append(gsim_name)
-                        _errors.append(f"{_param2str(key)} has no "
-                                       f"matching flatfile column")
+                        _missing_ffcols[key] = (f"{_param2str(key)} has no "
+                                                f"matching flatfile column")
                         continue
                     gsim_ff_cols.append(ff_col)
 
-            if not gsim_ff_cols:
+            if _unknown_params:
+                for key in _unknown_params:
+                    unknown_params[key].append(gsim_name)
+                _errors = [*_unknown_params.values(), *_missing_ffcols.values()]
+                store_discarded_gsim(gsim_name, ", ".join(_errors), **options)
+                continue
+            elif _missing_ffcols:
+                for key in _missing_ffcols:
+                    missing_ffcols[key].append(gsim_name)
+                _errors = _missing_ffcols.values()
+                store_discarded_gsim(gsim_name, ", ".join(_errors), **options)
+                continue
+            elif not gsim_ff_cols:
                 general_errors.append(gsim_name)
                 store_discarded_gsim(gsim_name,
                                      "No parameter (site, rupture, distance) found",
                                      **options)
-                continue
-            elif _errors:
-                store_discarded_gsim(gsim_name, ", ".join(_errors), **options)
                 continue
 
             # pack the N>=0 warning messages into a single msg.
@@ -306,9 +314,8 @@ def populate_flatfile_column_metadata() -> \
     for ffcol in ffcolumns:
         oq_name = ffcol.get('oq_name', None)
         if not oq_name:
-            unmatched_ffcols.append(ffname)
+            unmatched_ffcols.append(ffcol['name'])
             continue
-        full_param_name = f"{ffcol['category'].name}.{oq_name}"
         if 'name' not in ffcol:
             ff_col = None
         else:
@@ -320,14 +327,22 @@ def populate_flatfile_column_metadata() -> \
                     ff_col = models.FlatfileColumn.objects.create(**ffcol)
                 except AssertionError as exc:
                     raise CommandError(str(exc))
+        full_param_name = f"{ffcol['category'].name}.{oq_name}"
         ret[full_param_name] = ff_col
     return ret, unmatched_ffcols
 
 
 def read_registered_flatfile_columns() -> list[dict]:
-    """Returns the registered flatfile columns soted in the YAML file
-    `FLATFILE_COLUMNS_YAML_PATH`
-    GSIM YAML `gsim_params.yaml into a dict[str, dict]"""
+    """Read the registered flatfile columns in `FLATFILE_COLUMNS_YAML_PATH`
+
+    :return: as a list of `dict`s, where each dict holds the flatfile column
+        metadata. Important `dict` keys are `name` (the column name) and `oq_name` (the
+        OpenQuake property name). Note that any of those could be empty/missing (but not
+        both): if `name` is given and not empty, the `dict` can be passed as
+        keyword argument(s) to initialize a new `models.FlatfileColumn` instance.
+        Otherwise, the dict denotes an OpenQuake property not mapped to any file column,
+        e.g., to be deliberately skipped alongside the models requiring that property
+    """
     ffcolumns = []
     with open(FLATFILE_COLUMNS_YAML_PATH) as fpt:
         ff_cols = yaml.safe_load(fpt)

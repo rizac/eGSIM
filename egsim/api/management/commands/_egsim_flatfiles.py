@@ -69,4 +69,4 @@ class Command(EgsimBaseCommand):
             models.Flatfile.objects.create(**data_source, expiration=None,
                                            hidden=False, filepath=destfile)
 
-        self.printsuccess(f'{numfiles} models created in "{destdir}"')
+        self.printsuccess(f'{numfiles} flatfile(s) created in "{destdir}"')
