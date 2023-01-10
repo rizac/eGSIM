@@ -1,4 +1,8 @@
 """
+Parse predefined flatfile(s) from the "commands/data" directory into
+flatfiles in HDF format suitable for residuals computation in eGSIM.
+The HDF flatfiles will be stored in: "{models.Flatfile.BASEDIR_PATH}"
+
 Created on 11 Apr 2019
 
 @author: riccardo
@@ -27,14 +31,13 @@ class Command(EgsimBaseCommand):
         join(SRC_DIR, "ESM_flatfile_2018_SA.csv.zip"): EsmFlatfileParser
     }
 
-    help = ('Parse predefined flatfile(s) from the "commands/data" directory into '
-            'flatfiles in HDF format suitable for residuals computation in eGSIM. '
-            'The HDF flatfiles will be stored in: "{models.Flatfile.BASEDIR_PATH}"')
+    # As help, use the module docstring (until the first empty line):
+    help = globals()['__doc__'].split("\n\n")[0]
 
     def handle(self, *args, **options):
         """Parse each pre-defined flatfile"""
 
-        self.printinfo('Creating pre-defined Flatfiles and populating the databse '
+        self.printinfo('Creating pre-defined Flatfiles and populating the database '
                        'with their metadata:')
         self.empty_db_table(models.Flatfile)
 

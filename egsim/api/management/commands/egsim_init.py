@@ -1,20 +1,18 @@
 """
-Empty and (re)populate the database with all eGSIM required data.
-this command should be executed after:
-1. initializing the db (first migration)
-2. OpenQuake upgrade
-3. new data files added (regionalizations, flatfiles).
-See README files on the top level directory and under
-"egsim/management/commands"
-
-Usage:
+Populate the eGSIM database. Example:
 ```
 export DJANGO_SETTINGS_MODULE="..."; python manage.py egsim_init
-export DJANGO_SETTINGS_MODULE="..."; python manage.py egsim_init --dry-run
 ```
+This is the Django admin command handling eGSIM database maintenance
+and should be executed after:
+1. Initializing the database (first migration)
+2. OpenQuake upgrade
+3. New data files added (regionalizations, flatfiles).
 
-For further info see:
-https://django.readthedocs.io/en/2.0.x/howto/custom-management-commands.html
+For developers:
+ - See README file of the project and also in "egsim/management/commands"
+ - Django management commands explained:
+   https://django.readthedocs.io/en/stable/howto/custom-management-commands.html
 
 Created on 6 Apr 2019
 
