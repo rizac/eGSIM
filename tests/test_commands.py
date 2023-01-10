@@ -8,7 +8,6 @@ Created on 6 Apr 2019
 import pytest
 from unittest.mock import patch
 from django.core.management import call_command
-import builtins
 # from pytest_django.plugin import django_db_blocker
 
 # WARNING: tests requiring db access should use the function decorator:
@@ -37,7 +36,7 @@ def test_initdb(django_db_blocker, capsys):
     call_command('egsim_init', interactive=False)
     captured = capsys.readouterr()
     capout = captured.out
-    assert 'dry-run' not in capout.lower()  # dummy check
+    assert "Unused Flatfile column(s)" not in capout
 
 
 @pytest.mark.django_db
@@ -52,4 +51,4 @@ def test_initdb_gsim_required_attrs_not_defined(django_db_blocker, capsys):
         call_command('egsim_init', interactive=False)
         captured = capsys.readouterr()
         capout = captured.out
-
+        assert "Unused Flatfile column(s): azimuth" in capout

@@ -1,5 +1,5 @@
-# PLEASE READ: this YAML document is used in `egsim_init.py` to collect and describe
-# all Flatfile columns (instances of `egsim.api.models.FlatfileColumn`) and the
+# This YAML document is used in `egsim_init.py` to store on the databse the flatfile
+# column(s) metadata (instances of `egsim.api.models.FlatfileColumn`) and register the
 # mapping of OpenQuake models parameters to the corresponding column (scroll at the
 # bottom of this document for details)
 
