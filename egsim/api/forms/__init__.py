@@ -86,11 +86,14 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
-    # Fields of this class are exposed as API parameters via their attribute name. This
-    # default behaviour can be changed here by manually mapping a Field attribute name to
-    # its API param name(s). `_field2params` allows to easily change API params whilst
-    # keeping the Field attribute names immutable, which is needed to avoid breaking the
-    # code. See `egsim.forms.EgsimFormMeta` for details and `self.apifields()`
+    # Fields of this class are exposed as API parameters via their attribute name by
+    # default. Whereas attribute names should be immutable to avoid breaking the code,
+    # API parameter names should be changed easily. To allow this, `cls._field2params`
+    # is dict where each Field attribute name can be mapped to a list of custom API
+    # parameter name(s) (including the same Field attribute name, if needed), where the
+    # first provided parameter name will be considered the default and displayed in e.g.,
+    # missing param errors. `_field2params` of superclasses will be merged into this one.
+    # See `egsim.forms.EgsimFormMeta` and `self.apifields()` for usage.
     _field2params: dict[str, list[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
@@ -103,7 +106,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
         # Create `self.field2param`, a dict mapping *all* class field names with the API
-        # parameter given as input (or the default found in `self.apifields()`). The
+        # parameter given as input (or the default found in `self.apifields()`). This
         # dict will be used to display errors, if needed (see `self.validation_errors`).
         self.field2param = {}
         for params, field_name, field in self.apifields():
@@ -204,11 +207,7 @@ class SHSRForm(EgsimBaseForm):
     """Base class for all Form accepting a list of models in form of location
     (lat lon) and optional list of seismic hazard source regionalizations (SHSR)"""
 
-    # Fields of this class are exposed as API parameters via their attribute name. This
-    # default behaviour can be changed here by manually mapping a Field attribute name to
-    # its API param name(s). `_field2params` allows to easily change API params whilst
-    # keeping the Field attribute names immutable, which is needed to avoid breaking the
-    # code. See `egsim.forms.EgsimFormMeta` for details
+    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {
         'latitude': ['latitude', 'lat'],
         'longitude': ['longitude', 'lon'],
@@ -271,11 +270,7 @@ def _get_imt_choices():  # https://stackoverflow.com/a/57809521
 class GsimImtForm(SHSRForm):
     """Base abstract-like form for any form requiring Gsim+Imt selection"""
 
-    # Fields of this class are exposed as API parameters via their attribute name. This
-    # default behaviour can be changed here by manually mapping a Field attribute name to
-    # its API param name(s). `_field2params` allows to easily change API params whilst
-    # keeping the Field attribute names immutable, which is needed to avoid breaking the
-    # code. See `egsim.forms.EgsimFormMeta` for details
+    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params: dict[str, list[str]] = {'gsim': ['model', 'gsim', 'gmm']}
 
     # Note: both Fields below are required actually (see `clean` for details):

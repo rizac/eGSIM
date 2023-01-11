@@ -29,11 +29,7 @@ MOF_TYPE = {
 class TestingForm(GsimImtFlatfileForm, APIForm):
     """Form for testing Gsims via Measures of Fit"""
 
-    # Fields of this class are exposed as API parameters via their attribute name. This
-    # default behaviour can be changed here by manually mapping a Field attribute name to
-    # its API param name(s). `_field2params` allows to easily change API params whilst
-    # keeping the Field attribute names immutable, which is needed to avoid breaking the
-    # code. See `egsim.forms.EgsimFormMeta` for details
+    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {
         'fit_measure': ['mof', 'measure_of_fit']
     }

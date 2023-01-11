@@ -30,11 +30,7 @@ class _UploadedFlatfile(Form):
 class FlatfileForm(EgsimBaseForm):
     """Base Form for handling Flatfiles"""
 
-    # Fields of this class are exposed as API parameters via their attribute name. This
-    # default behaviour can be changed here by manually mapping a Field attribute name to
-    # its API param name(s). `_field2params` allows to easily change API params whilst
-    # keeping the Field attribute names immutable, which is needed to avoid breaking the
-    # code. See `egsim.forms.EgsimFormMeta` for details
+    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {
         'selexpr': ['data-query', 'selection-expression', 'selexp']
     }
@@ -378,11 +374,7 @@ def _get_gsim_columns_imts() -> Iterable[tuple[str, set[str, ...], set[str, ...]
 class FlatfileRequiredColumnsForm(APIForm):
     """Form for querying the necessary metadata columns from a given list of Gsims"""
 
-    # Fields of this class are exposed as API parameters via their attribute name. This
-    # default behaviour can be changed here by manually mapping a Field attribute name to
-    # its API param name(s). `_field2params` allows to easily change API params whilst
-    # keeping the Field attribute names immutable, which is needed to avoid breaking the
-    # code. See `egsim.forms.EgsimFormMeta` for details
+    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {'gsim' : GsimImtForm._field2params['gsim']}  # noqa
 
     gsim = MultipleChoiceWildcardField(required=False, choices=_get_gsim_choices,
