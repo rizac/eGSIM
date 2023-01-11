@@ -102,20 +102,22 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         # call super:
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
-        # Replace keys of `self.data` (input params) with the field names, when
-        # needed (see `_field2params`), and do some check:
-        self._renamed_fields = {}  # keep track of what will be replaced
-        for field_name, param_names in self._field2params.items():
-            if field_name in self.data:
-                continue
-            params = [p for p in param_names if p in self.data]
-            if not params:
-                continue
-            elif len(params) > 1:
+        # Create `self.field2param`, a dict mapping *all* class field names with the API
+        # parameter given as input (or the default found in `self.apifields()`). The
+        # dict will be used to display errors, if needed (see `self.validation_errors`).
+        self.field2param = {}
+        for params, field_name, field in self.apifields():
+            i_params = [p for p in params if p in self.data]  # params given as input
+            if len(i_params) > 1:
                 raise ValidationError('Conflicting parameter names: '
-                                      f'{", ".join(params)}')
-            self._renamed_fields[field_name] = params[0]
-            self.data[field_name] = self.data.pop(params[0])
+                                      f'{", ".join(i_params)}')
+            self.field2param[field_name] = i_params[0] if i_params else params[0]
+
+        # Rename the keys of `self.data` (API parameters) with the mapped field name.
+        # `self.data` holds the form data and is used to validate it (see `self.clean`):
+        for field_name, param_name in self.field2param.items():
+            if param_name in self.data and field_name != param_name:
+                self.data[field_name] = self.data.pop(param_name)
 
         # check unknown parameters provided by the user:
         if no_unknown_params and (set(self.data) - set(self.declared_fields)):
@@ -159,15 +161,14 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         if not dic:
             return {}
         errors = []
-
         err_param_names = []
         # build errors dict:
-        for err_field_name, errs in dic.items():
-            err_param_name = self._renamed_fields.get(err_field_name, err_field_name)
-            err_param_names.append(err_param_name)
+        for invalid_field_name, errs in dic.items():
+            invalid_param_name = self.field2param[invalid_field_name]
+            err_param_names.append(invalid_param_name)
             # compose dict for detailed error messages:
             for err in errs:
-                errors.append({'location': err_param_name,
+                errors.append({'location': invalid_param_name,
                                'message': err.get('message', ''),
                                'reason': err.get('code', '')})
 
@@ -275,7 +276,7 @@ class GsimImtForm(SHSRForm):
     # its API param name(s). `_field2params` allows to easily change API params whilst
     # keeping the Field attribute names immutable, which is needed to avoid breaking the
     # code. See `egsim.forms.EgsimFormMeta` for details
-    _field2params: dict[str, list[str]] = {'gsim': ['model', 'gmm']}
+    _field2params: dict[str, list[str]] = {'gsim': ['model', 'gsim', 'gmm']}
 
     # Note: both Fields below are required actually (see `clean` for details):
     gsim = MultipleChoiceWildcardField(required=False, choices=_get_gsim_choices)
