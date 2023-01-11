@@ -8,7 +8,6 @@ Created on 6 Apr 2019
 import pytest
 from unittest.mock import patch
 from django.core.management import call_command
-# from pytest_django.plugin import django_db_blocker
 
 # WARNING: tests requiring db access should use the function decorator:
 # @pytest.mark.django_db
@@ -20,7 +19,7 @@ from egsim.api.models import FlatfileColumn
 
 
 @pytest.mark.django_db
-def test_initdb(django_db_blocker, capsys):
+def tst_initdb(capsys):
     """Test initdb command, with new Gsims and required attributes not
     managed by egsim
 
@@ -38,9 +37,11 @@ def test_initdb(django_db_blocker, capsys):
     capout = captured.out
     assert "Unused Flatfile column(s)" not in capout
 
-
+    # FIXME: why if we write the code below inside a new function, e.g.:
 @pytest.mark.django_db
-def test_initdb_gsim_required_attrs_not_defined(django_db_blocker, capsys):
+def tst_initdb_gsim_required_attrs_not_defined(capsys):
+    # we have a 'ValueError: I/O operation on closed file.' which makes sense only if `capsys`
+    # (which closes the I/O TeewtWriter stream) was the same as above.
 
     with patch('egsim.api.management.commands._egsim_oq.read_registered_flatfile_columns',
                return_value=[

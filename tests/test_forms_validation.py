@@ -29,6 +29,24 @@ class Test:
     def test_gsimimt_form_invalid(self, areequal):  # areequal: fixture in conftest.py
         """tests the gsimimt form invalid case. The form is the base class for all
         forms using imt and gsim as input"""
+        # test by providing the 'model' parameter (not gsim, still valid byt 'hidden',
+        # see below)
+        form = GsimImtForm({'model': ['BindiEtAl2011t', 'BindiEtAl2014RJb'],
+                            'imt': ['PGA']})
+        assert not form.is_valid()
+        err = form.validation_errors()
+        expected_err = {
+            'message': 'Invalid parameter: model',
+            'errors': [
+                {
+                    'location': 'model',
+                    'message': 'Select a valid choice. BindiEtAl2011t is not '
+                               'one of the available choices.',
+                    'reason': 'invalid_choice'
+                }
+            ]
+        }
+        assert areequal(err, expected_err)
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
@@ -38,7 +56,7 @@ class Test:
             'errors': [
                 {
                     'location': 'imt',
-                    'message': 'This field is required.',
+                    'message': 'Missing value',
                     'reason': 'required'
                 }
             ]
@@ -59,7 +77,7 @@ class Test:
                 },
                 {
                     'location': 'imt',
-                    'message': 'This field is required.',
+                    'message': 'Missing value',
                     'reason': 'required'
                 }
             ]
@@ -74,7 +92,7 @@ class Test:
             'errors': [
                 {
                     'location': 'gsim',
-                    'message': 'This field is required.',
+                    'message': 'Missing value',
                     'reason': 'required'
                 },
                 {
@@ -84,7 +102,9 @@ class Test:
                 }
             ]
         }
-        assert areequal(err, expected_err)
+        # fix the case of inverted params:
+        expected_err2 = dict(expected_err, message='Invalid parameters: imt, gsim')
+        assert areequal(err, expected_err) or areequal(err, expected_err2)
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA', 'MMI']})
@@ -119,12 +139,23 @@ class Test:
         }
         assert areequal(err, expected_err)
 
-    def test_flatifle_form(self):
-        with pytest.raises(ValidationError) as verr:
-            csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
-            form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
-            form.is_valid()
-        assert verr.value.message == 'Please either select a flatfile, or upload one'
+    def test_flatifle_form(self, areequal):
+        # with pytest.raises(ValidationError) as verr:
+        csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
+        form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
+        assert not form.is_valid()
+        err = form.validation_errors()
+        expected_err = {
+            'message': 'Invalid parameter: flatfile',
+            'errors': [
+                {
+                    'location': 'flatfile',
+                    'message': 'Please either select a flatfile, or upload one',
+                    'reason': 'conflict'}
+            ]
+        }
+        assert areequal(err, expected_err)
+        # assert verr.value.message == 'Please either select a flatfile, or upload one'
 
     def test_provide_unknown_params(self):
         """Test that unknown parameters are ignored"""
@@ -138,12 +169,11 @@ class Test:
 
         with pytest.raises(ValidationError) as verr:
             form = GsimImtForm({
-                'gmm': ['BindiEtAl2011'],
-                GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                'model': ['BindiEtAl2011'],
+                'gmm': ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                 IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
             })
-        assert verr.value.message == 'Multiple parameter provided ' \
-                                     '(name conflict): gsim/gmm'
+        assert verr.value.message == 'Conflicting parameter names: model, gmm'
 
     @pytest.mark.parametrize('data',
                              [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
@@ -366,7 +396,5 @@ class Test:
         form = FlatfileInspectionForm({}, files=files)
         is_valid = form.is_valid()
         assert not is_valid
-
         # Test renaming IMTs lower case:
-
         dfg = 9
