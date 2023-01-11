@@ -88,10 +88,10 @@ class Test:
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
-            'message': 'Invalid parameters: gsim, imt',
+            'message': 'Invalid parameters: model, imt',
             'errors': [
                 {
-                    'location': 'gsim',
+                    'location': 'model',
                     'message': 'Missing value',
                     'reason': 'required'
                 },
@@ -103,7 +103,7 @@ class Test:
             ]
         }
         # fix the case of inverted params:
-        expected_err2 = dict(expected_err, message='Invalid parameters: imt, gsim')
+        expected_err2 = dict(expected_err, message='Invalid parameters: imt, model')
         assert areequal(err, expected_err) or areequal(err, expected_err2)
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
