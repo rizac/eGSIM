@@ -5,7 +5,7 @@ import re
 import json
 import shlex
 from itertools import chain, repeat
-from typing import Collection, Any, Union
+from typing import Collection, Any, Union, Sequence
 
 import numpy as np
 from openquake.hazardlib import imt
@@ -257,10 +257,35 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
     """Extension of Django MultipleChoiceField:
      - Accepts lists of strings or a single string
        (which will be converted to a 1-element list)
-    - Accepts wildcard in strings in order to include all matching elements
+     - Accepts wildcard in strings in order to include all matching elements
     """
+    # Reminder. The central validation method is `Field.clean`, which does the following:
+    # def clean(self, value):
+    #     value = self.to_python(value)
+    #     self.validate(value)
+    #       # in case of MultipleChoiceField, calls self.valid_value(v) for v in value
+    #     self.run_validators(value)
+    #     return value
 
-    def to_python(self, value):
+    # override superclass default messages (provide shorter and better messages):
+    default_error_messages = {
+        "invalid_choice": "Value not found (hint: check typos): %(value)s",
+        "invalid_list": "Enter a list of values",
+    }
+
+    def validate(self, value: Sequence[str]) -> None:
+        """Validate that the input is a list or tuple. Overridden because the super
+        method stops at the first validation error"""
+        try:
+            super().validate(value)
+        except ValidationError as verr:
+            # raise an error with ALL parameters invalid, not only the first one:
+            if verr.code == 'invalid_choice':
+                verr.params['value'] = ", ".join(v for v in value
+                                                 if not self.valid_value(v))
+            raise verr
+
+    def to_python(self, value: Sequence[str]) -> list[str]:
         """convert strings with wildcards to matching elements, and calls the
         super method with the converted value. For valid wildcard characters,
         see https://docs.python.org/3.4/library/fnmatch.html
@@ -290,11 +315,11 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         return new_value
 
     @staticmethod
-    def has_wildcards(string):
+    def has_wildcards(string) -> bool:
         return '*' in string or '?' in string or ('[' in string and ']' in string)
 
     @staticmethod
-    def to_regex(value):
+    def to_regex(value) -> re.Pattern:
         """Convert string (a unix shell string, see
         https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
         will match accounting for the case (ignore case off)
@@ -306,27 +331,53 @@ class ImtField(MultipleChoiceWildcardField):
     """Field for IMT class selection. Provides a further validation for
     SA which is provided as (or with) periods (se meth:`valid_value`)
     """
+    default_error_messages = {
+        "invalid_sa_period": "Missing or invalid period: %(value)s"
+    }
 
-    def to_python(self, value: list):
-        """Coerce value to a valid IMT string"""
+    def to_python(self, value: list[str]) -> list[str]:
+        """Coerce value to a valid IMT string. Also, raise ValidationErrors from
+        here, thus skipping self.validate() that would be called later and is usually
+        responsible for that"""
         value = super().to_python(value)  # assure is a list without regexp(s)
+        invalid_choices = []
+        invalid_sa_period = []
         for i, val in enumerate(value):
             try:
-                # normalize val (e.g.  '0.2' -> 'SA(0.2)'):
-                _ = imt.from_string(val.strip()).string
-                if val != _:
-                    value[i] = _
-            except KeyError as kerr:
-                # raised if `val` a non-imt string, e.g. 'abc'. Provide a better
-                # message than simply "abc":
-                raise ValidationError(f'invalid {str(kerr)}')
-            except Exception as exc:
-                raise ValidationError(str(exc))  # => register error in the form
+                # is IMT well written? (also normalize SA, e.g. '0.2' -> 'SA(0.2)'):
+                value[i] = imt.from_string(val.strip()).string
+                # is IMT supported by the program?
+                if self.valid_value(val):
+                    raise KeyError()  # fallback below
+            except KeyError:
+                # this is raised by OpenQuake in case `val` is invalid, or by us if
+                # the IMT is not available (see above)
+                invalid_choices.append(val)
+            except ValueError:
+                # this is raised by OpenQuake if `val` is numeric-like (e.g. '0.t')
+                # or simply "SA" without period:
+                invalid_sa_period.append(val)
+        validation_errors = []
+        if invalid_choices:
+            validation_errors.append(ValidationError(
+                self.error_messages["invalid_choice"],
+                code="invalid_choice",
+                params={"value": ", ".join(invalid_choices)},
+            ))
+        if invalid_sa_period:
+            validation_errors.append(ValidationError(
+                self.error_messages["invalid_sa_period"],
+                code="invalid_sa_period",
+                params={"value": ", ".join(invalid_sa_period)},
+            ))
+        if validation_errors:
+            raise ValidationError(validation_errors)
         return value
 
-    def valid_value(self, value: str):
-        """Checks that value is in the choices"""
-        # if we have 'SA(...)' we must validate 'SA':
+    def validate(self, value: Sequence[str]) -> None:
+        return None  # no op (see above)
+
+    def valid_value(self, value):
         return super().valid_value('SA' if value.startswith('SA(') else value)
 
 
