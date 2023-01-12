@@ -33,6 +33,9 @@ class Test:
         # see below)
         form = GsimImtForm({'model': ['BindiEtAl2011t', 'BindiEtAl2014RJb'],
                             'imt': ['PGA']})
+        # Note: both models are invalid, as the latter has the last J capitalized
+        # We could provide ignore case fields but we need to think about it
+        # (only for model(s)?)
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
@@ -40,8 +43,7 @@ class Test:
             'errors': [
                 {
                     'location': 'model',
-                    'message': 'Select a valid choice. BindiEtAl2011t is not '
-                               'one of the available choices.',
+                    'message': 'Value not found (hint: check typos): BindiEtAl2011t, BindiEtAl2014RJb',
                     'reason': 'invalid_choice'
                 }
             ]
@@ -71,8 +73,7 @@ class Test:
             'errors': [
                 {
                     'location': 'gsim',
-                    'message': 'Select a valid choice. abcde is not one of '
-                               'the available choices.',
+                    'message': 'Value not found (hint: check typos): abcde',
                     'reason': 'invalid_choice'
                 },
                 {
@@ -97,8 +98,8 @@ class Test:
                 },
                 {
                     'location': 'imt',
-                    'message': "invalid 'abcde'",
-                    'reason': ''
+                    'message': "Value not found (hint: check typos): abcde, BindiEtAl2014Rjb",
+                    'reason': 'invalid_choice'
                 }
             ]
         }
@@ -107,7 +108,7 @@ class Test:
         assert areequal(err, expected_err) or areequal(err, expected_err2)
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                            IMT: ['SA', 'MMI']})
+                            IMT: ['SA', '0.t', 'MMI']})
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
@@ -115,15 +116,20 @@ class Test:
             'errors': [
                 {
                     'location': 'imt',
-                    'message': 'Missing period in SA',
-                    'reason': ''
+                    'message': 'Value not found (hint: check typos): MMI',
+                    'reason': 'invalid_choice'
+                },
+                {
+                    'location': 'imt',
+                    'message': 'Missing or invalid period: SA, 0.t',
+                    'reason': 'invalid_sa_period'
                 }
             ]
         }
         assert areequal(err, expected_err)
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                            IMT: ['MMI']})
+                            IMT: ['MMI', '_T_']})
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
@@ -131,8 +137,7 @@ class Test:
             'errors': [
                 {
                     'location': 'imt',
-                    'message': 'Select a valid choice. MMI is not one of the '
-                               'available choices.',
+                    'message': 'Value not found (hint: check typos): MMI, _T_',
                     'reason': 'invalid_choice'
                 }
             ]
@@ -236,8 +241,7 @@ class Test:
             'errors': [
                 {
                     'location': 'gsim',
-                    'message': 'Select a valid choice. AllenEtAl2012 is not '
-                               'one of the available choices.',
+                    'message': 'Invalid value(s): AllenEtAl2012',
                     'reason': 'invalid_choice'
                 }
             ]
