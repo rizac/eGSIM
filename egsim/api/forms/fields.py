@@ -269,12 +269,12 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
 
     # override superclass default messages (provide shorter and better messages):
     default_error_messages = {
-        "invalid_choice": "Value not found (hint: check typos): %(value)s",
+        "invalid_choice": "Value not found or misspelled: %(value)s",
         "invalid_list": "Enter a list of values",
     }
 
     def validate(self, value: Sequence[str]) -> None:
-        """Validate that the input is a list or tuple. Overridden because the super
+        """Validate the list of values. Overridden because the super
         method stops at the first validation error"""
         try:
             super().validate(value)
@@ -285,46 +285,38 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
                                                  if not self.valid_value(v))
             raise verr
 
-    def to_python(self, value: Sequence[str]) -> list[str]:
+    def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
         """convert strings with wildcards to matching elements, and calls the
         super method with the converted value. For valid wildcard characters,
         see https://docs.python.org/3.4/library/fnmatch.html
         """
-        # value might be None, string, list
-        if value and isinstance(value, str):
-            value = [value]  # no need to call super
-        else:
-            # assure that value is a list/tuple:
-            value = super(MultipleChoiceWildcardField, self).to_python(value)
+        # super call assures that value is a list/tuple and elements are strings
+        value = super().to_python([value] if isinstance(value, str) else value)
+        # Now store items to return as dict keys
+        # (kind of overkill but we need fast search and to preserve insertion order):
+        new_value = {}
+        for val in value:
+            if self.has_wildcards(val):
+                reg = self.to_regex(val)
+                for item, _ in self.choices:
+                    if item not in new_value and reg.match(item):
+                        new_value[item] = None  # the mapped value is irrelevant
+            elif val not in new_value:
+                new_value[val] = None  # the mapped value is irrelevant
 
-        have_wildcard = {_: self.has_wildcards(_) for _ in value}
-        if not any(have_wildcard.values()):
-            return value
-
-        # Convert wildcard strings:
-        choices = [_[0] for _ in self.choices if _[0] not in value]
-        new_value = []
-        for val, has_wildcard in have_wildcard.items():
-            if not has_wildcard:
-                new_value.append(val)
-                continue
-            reg = self.to_regex(val)
-            new_val = [c for c in choices if reg.match(c) and c not in new_value]
-            new_value += new_val
-
-        return new_value
+        return list(new_value.keys())
 
     @staticmethod
     def has_wildcards(string) -> bool:
         return '*' in string or '?' in string or ('[' in string and ']' in string)
 
     @staticmethod
-    def to_regex(value) -> re.Pattern:
+    def to_regex(wildcard_string) -> re.Pattern:
         """Convert string (a unix shell string, see
         https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
         will match accounting for the case (ignore case off)
         """
-        return re.compile(translate(value))
+        return re.compile(translate(wildcard_string))
 
 
 class ImtField(MultipleChoiceWildcardField):
@@ -335,27 +327,38 @@ class ImtField(MultipleChoiceWildcardField):
         "invalid_sa_period": "Missing or invalid period: %(value)s"
     }
 
-    def to_python(self, value: list[str]) -> list[str]:
+    def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
         """Coerce value to a valid IMT string. Also, raise ValidationErrors from
         here, thus skipping self.validate() that would be called later and is usually
         responsible for that"""
         value = super().to_python(value)  # assure is a list without regexp(s)
+        # Now normalize the IMTs. Store each normalized IMT ina dict key in order to
+        # avoid duplicates whilst preserving order (Python sets dont' preserve it):
+        new_val = {}
+        for val in value:
+            try:
+                # Try to normalize the IMT (e.g. '0.2' -> 'SA(0.2)'):
+                new_val[self.normalize_imt(val)] = None
+            except (KeyError, ValueError):
+                # val is invalid, skip (we will handle the error in `self.validate`)
+                new_val[val] = None
+        return list(new_val.keys())
+
+    def validate(self, value: Sequence[str]) -> None:
         invalid_choices = []
         invalid_sa_period = []
-        for i, val in enumerate(value):
+        for val in value:
             try:
-                # is IMT well written? (also normalize SA, e.g. '0.2' -> 'SA(0.2)'):
-                value[i] = imt.from_string(val.strip()).string
+                # is IMT well written?:
+                self.normalize_imt(val)  # noqa
                 # is IMT supported by the program?
-                if self.valid_value(val):
+                if not self.valid_value(val):
                     raise KeyError()  # fallback below
             except KeyError:
-                # this is raised by OpenQuake in case `val` is invalid, or by us if
-                # the IMT is not available (see above)
+                # `val` is invalid in OpenQuake, or not implemented in eGSIM (see above)
                 invalid_choices.append(val)
             except ValueError:
-                # this is raised by OpenQuake if `val` is numeric-like (e.g. '0.t')
-                # or simply "SA" without period:
+                # val not a valid float (e.g. '0.t') or given as 'SA' (without period):
                 invalid_sa_period.append(val)
         validation_errors = []
         if invalid_choices:
@@ -372,10 +375,13 @@ class ImtField(MultipleChoiceWildcardField):
             ))
         if validation_errors:
             raise ValidationError(validation_errors)
-        return value
 
-    def validate(self, value: Sequence[str]) -> None:
-        return None  # no op (see above)
+    @staticmethod
+    def normalize_imt(imt_string):
+        """Checks and return a normalized version of the given imt as string,
+        e.g. '0.1' -> 'SA(0.1)'. Raise KeyError (imt not implemented) or
+        ValueError (SA period missing or invalid)"""
+        return imt.from_string(imt_string.strip()).string  # noqa
 
     def valid_value(self, value):
         return super().valid_value('SA' if value.startswith('SA(') else value)
