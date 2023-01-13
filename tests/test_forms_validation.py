@@ -43,7 +43,7 @@ class Test:
             'errors': [
                 {
                     'location': 'model',
-                    'message': 'Value not found (hint: check typos): BindiEtAl2011t, BindiEtAl2014RJb',
+                    'message': 'Value not found or misspelled: BindiEtAl2011t, BindiEtAl2014RJb',
                     'reason': 'invalid_choice'
                 }
             ]
@@ -73,7 +73,7 @@ class Test:
             'errors': [
                 {
                     'location': 'gsim',
-                    'message': 'Value not found (hint: check typos): abcde',
+                    'message': 'Value not found or misspelled: abcde',
                     'reason': 'invalid_choice'
                 },
                 {
@@ -98,7 +98,7 @@ class Test:
                 },
                 {
                     'location': 'imt',
-                    'message': "Value not found (hint: check typos): abcde, BindiEtAl2014Rjb",
+                    'message': "Value not found or misspelled: abcde, BindiEtAl2014Rjb",
                     'reason': 'invalid_choice'
                 }
             ]
@@ -116,7 +116,7 @@ class Test:
             'errors': [
                 {
                     'location': 'imt',
-                    'message': 'Value not found (hint: check typos): MMI',
+                    'message': 'Value not found or misspelled: MMI',
                     'reason': 'invalid_choice'
                 },
                 {
@@ -137,7 +137,7 @@ class Test:
             'errors': [
                 {
                     'location': 'imt',
-                    'message': 'Value not found (hint: check typos): MMI, _T_',
+                    'message': 'Value not found or misspelled: MMI, _T_',
                     'reason': 'invalid_choice'
                 }
             ]
@@ -222,8 +222,8 @@ class Test:
             'errors': [
                 {
                     'location': 'imt',
-                    'message': "could not convert string to float: 'r'",
-                    'reason': ''
+                    'message': "Missing or invalid period: SA(r)",
+                    'reason': 'invalid_sa_period'
                 }
             ]
         }
@@ -241,7 +241,7 @@ class Test:
             'errors': [
                 {
                     'location': 'gsim',
-                    'message': 'Invalid value(s): AllenEtAl2012',
+                    'message': 'Value not found or misspelled: AllenEtAl2012',
                     'reason': 'invalid_choice'
                 }
             ]
@@ -320,8 +320,8 @@ class Test:
             'errors': [
                 {
                     'location': 'imt',
-                    'message': 'Missing period in SA',
-                    'reason': ''
+                    'message': 'Missing or invalid period: SA',
+                    'reason': 'invalid_sa_period'
                 },
                 {
                     'location': 'plot',
