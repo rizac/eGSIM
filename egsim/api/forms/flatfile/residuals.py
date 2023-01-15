@@ -105,7 +105,7 @@ class ResidualsForm(GsimImtFlatfileForm, APIForm):
         :param processed_data: dict resulting from `self.process_data`
         """
         stats = cls.RESIDUALS_STATS
-        yield chain(['imt', 'type', 'model'], stats)
+        yield chain(['imt', 'residual', 'model'], stats)
         for imt, imts in processed_data.items():
             for type_, types in imts.items():
                 for gsim, res_plot in types.items():

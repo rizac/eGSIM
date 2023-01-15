@@ -288,7 +288,7 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
     def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
         """convert strings with wildcards to matching elements, and calls the
         super method with the converted value. For valid wildcard characters,
-        see https://docs.python.org/3.4/library/fnmatch.html
+        see fnmatch in the Python documentation
         """
         # super call assures that value is a list/tuple and elements are strings
         value = super().to_python([value] if isinstance(value, str) else value)

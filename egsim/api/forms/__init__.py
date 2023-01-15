@@ -112,22 +112,22 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         for params, field_name, field in self.apifields():
             i_params = [p for p in params if p in self.data]  # params given as input
             if len(i_params) > 1:
-                raise ValidationError('Conflicting parameter names: '
+                raise ValidationError('Conflicting parameters: '
                                       f'{", ".join(i_params)}')
             self.field2param[field_name] = i_params[0] if i_params else params[0]
+
+        # check unknown API parameters (additionally provided by the user):
+        if no_unknown_params and (set(self.data) - set(self.field2param.values())):
+            err_names = set(self.data) - set(self.field2param.values())
+            raise ValidationError(f'Unknown parameter'
+                                  f'{"s" if len(err_names) != 1 else ""}: '
+                                  f'{", ".join(err_names)}')
 
         # Rename the keys of `self.data` (API parameters) with the mapped field name.
         # `self.data` holds the form data and is used to validate it (see `self.clean`):
         for field_name, param_name in self.field2param.items():
             if param_name in self.data and field_name != param_name:
                 self.data[field_name] = self.data.pop(param_name)
-
-        # check unknown parameters provided by the user:
-        if no_unknown_params and (set(self.data) - set(self.declared_fields)):
-            err_names = set(self.data) - set(self.declared_fields)
-            raise ValidationError(f'Unknown parameter'
-                                  f'{"s" if len(err_names) != 1 else ""}: '
-                                  f'{", ".join(err_names)}')
 
         # Make fields initial value the default (for details see discussion and
         # code example at https://stackoverflow.com/a/20309754):
@@ -404,7 +404,7 @@ class APIForm(EgsimBaseForm):
         return self.data['format']
 
     format = ChoiceField(required=True, initial=DATA_FORMAT_JSON,
-                         label='The format of the data returned (response data)',
+                         label='The format of the returned data (server response)',
                          choices=[(DATA_FORMAT_JSON, 'json'),
                                   (DATA_FORMAT_CSV, 'text/csv')])
 

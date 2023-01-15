@@ -46,7 +46,7 @@ class Test:
             # this method simply bypasses the files renaming (from the user provided
             # flatfile into 'uploaded_flatfile' in the Form) and calls directly :
             mvd = MultiValueDict({'flatfile': request.FILES['uploaded_flatfile']})
-            return ResidualsView.response(data=request.POST.copy(), files=mvd)
+            return ResidualsView().response(data=request.POST.copy(), files=mvd)
 
         with patch.object(RESTAPIView, 'post', fake_post):
             inputdic['plot_type'] = 'res'
@@ -67,9 +67,16 @@ class Test:
                                             # sel='(vs30 > 800) & (vs30 < 1200)')
                                             sel='(vs30 > 1000) & (vs30 < 1010)'),
                                        baseurl=self.url))
-        assert resp1.status_code == resp1.status_code == 400
-        assert 'selexpr/sel' in resp1.json()['error']['message'] or \
-               'sel/selexpr' in resp1.json()['error']['message']
+        assert resp1.status_code == 400
+        assert 'sel' in resp1.json()['error']['message']
+
+        # test conflicting values:
+        resp1 = client.get(querystring({**inputdic,
+                                        'plot_type': 'res',
+                                        'data-query': '(vs30 > 1000) & (vs30 < 1010)'},
+                                       baseurl=self.url))
+        assert resp1.status_code == 400
+        assert 'sel' in resp1.json()['error']['message']
 
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -113,7 +120,7 @@ class Test:
         assert 'selexpr' in resp2.json()['error']['message']
 
         # test error give in format (text instead of csv):
-        inputdict2 = dict(inputdic, data_format='text')
+        inputdict2 = dict(inputdic, format='text')
         inputdict2.pop('selexpr')
         resp2 = client.post(self.url, data=inputdict2,
                             content_type='text/csv')
@@ -127,7 +134,7 @@ class Test:
                                 testdata, areequal, client, querystring):
         """tests the residuals API service."""
         expected_txt = \
-            re.compile(b'^imt,type,gsim,mean,stddev,median,slope,'
+            re.compile(b'^imt,type,model,mean,stddev,median,slope,'
                        b'intercept,pvalue,,*\r\n')
         base_inputdic = testdata.readyaml(self.request_filename)
         # for restype, _ in ResidualsForm.declared_fields['plot_type'].choices:
@@ -147,7 +154,7 @@ class Test:
         # FIXME: IMPROVE TESTS? what to assert?
 
         # test text format:
-        resp2 = client.post(self.url, data=dict(inputdic, data_format='csv'),
+        resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
                             content_type='text/csv')
         assert resp2.status_code == 200
         assert expected_txt.search(resp2.content)
