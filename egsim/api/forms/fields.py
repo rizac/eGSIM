@@ -273,22 +273,9 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         "invalid_list": "Enter a list of values",
     }
 
-    def validate(self, value: Sequence[str]) -> None:
-        """Validate the list of values. Overridden because the super
-        method stops at the first validation error"""
-        try:
-            super().validate(value)
-        except ValidationError as verr:
-            # raise an error with ALL parameters invalid, not only the first one:
-            if verr.code == 'invalid_choice':
-                verr.params['value'] = ", ".join(v for v in value
-                                                 if not self.valid_value(v))
-            raise verr
-
     def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
-        """convert strings with wildcards to matching elements, and calls the
-        super method with the converted value. For valid wildcard characters,
-        see fnmatch in the Python documentation
+        """Return an unique list of elements after expanding strings with wildcards
+        to matching elements. For wildcard strings, see `fnmatch` in the Python doc
         """
         # super call assures that value is a list/tuple and elements are strings
         value = super().to_python([value] if isinstance(value, str) else value)
@@ -306,12 +293,24 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
 
         return list(new_value.keys())
 
+    def validate(self, value: list[str]) -> None:
+        """Validate the list of values. Same as the super method, but all
+        invalid choice parameters are reported in the ValidationError"""
+        try:
+            super().validate(value)
+        except ValidationError as verr:
+            # raise an error with ALL parameters invalid, not only the first one:
+            if verr.code == 'invalid_choice':
+                verr.params['value'] = ", ".join(v for v in value
+                                                 if not self.valid_value(v))
+            raise verr
+
     @staticmethod
-    def has_wildcards(string) -> bool:
+    def has_wildcards(string: str) -> bool:
         return '*' in string or '?' in string or ('[' in string and ']' in string)
 
     @staticmethod
-    def to_regex(wildcard_string) -> re.Pattern:
+    def to_regex(wildcard_string: str) -> re.Pattern:
         """Convert string (a unix shell string, see
         https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
         will match accounting for the case (ignore case off)
@@ -344,7 +343,7 @@ class ImtField(MultipleChoiceWildcardField):
                 new_val[val] = None
         return list(new_val.keys())
 
-    def validate(self, value: Sequence[str]) -> None:
+    def validate(self, value: list[str]) -> None:
         invalid_choices = []
         invalid_sa_period = []
         for val in value:

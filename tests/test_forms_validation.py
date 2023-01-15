@@ -336,7 +336,7 @@ class Test:
                 },
                 {
                     'location': 'plot',
-                    'message': 'This field is required.',
+                    'message': 'This parameter is required',
                     'reason': 'required'
                 },
                 {
@@ -346,17 +346,17 @@ class Test:
                 },
                 {
                     'location': 'distance',
-                    'message': 'This field is required.',
+                    'message': 'This parameter is required',
                     'reason': 'required'
                 },
                 {
                     'location': 'aspect',
-                    'message': 'This field is required.',
+                    'message': 'This parameter is required',
                     'reason': 'required'
                 },
                 {
                     'location': 'dip',
-                    'message': 'This field is required.',
+                    'message': 'This parameter is required',
                     'reason': 'required'
                 }
             ]
