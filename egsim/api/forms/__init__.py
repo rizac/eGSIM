@@ -116,7 +116,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                                       f'{", ".join(i_params)}')
             self.field2param[field_name] = i_params[0] if i_params else params[0]
 
-        # check unknown API parameters (additionally provided by the user):
+        # check unknown API parameters (i.e., additionally provided by the user):
         if no_unknown_params and (set(self.data) - set(self.field2param.values())):
             err_names = set(self.data) - set(self.field2param.values())
             raise ValidationError(f'Unknown parameter'
@@ -129,9 +129,13 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             if param_name in self.data and field_name != param_name:
                 self.data[field_name] = self.data.pop(param_name)
 
-        # Make fields initial value the default (for details see discussion and
-        # code example at https://stackoverflow.com/a/20309754):
+        # Make fields initial value the default (https://stackoverflow.com/a/20309754)
+        # and adjust some default error messages (e.g. code 'required')
         for name, field in self.fields.items():
+            # replace the required error with a custom one:
+            if 'required' in field.error_messages:
+                field.error_messages['required'] = 'This parameter is required'
+            # provide default if intial is given
             if name not in self.data and field.initial is not None:
                 self.data[name] = field.initial
 
