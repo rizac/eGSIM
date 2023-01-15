@@ -163,7 +163,7 @@ class Test:
         # assert verr.value.message == 'Please either select a flatfile, or upload one'
 
     def test_provide_unknown_params(self):
-        """Test that unknown parameters are ignored"""
+        """Test that unknown and conflicting parameters"""
         with pytest.raises(ValidationError) as verr:
             form = GsimImtForm({
                 'unknown_param': 5,
@@ -172,13 +172,24 @@ class Test:
             })
         assert verr.value.message == 'Unknown parameter: unknown_param'
 
+        # test another unknown parameter, but this time provide a name of an existing
+        # Form Field ('plot_type'):
+        with pytest.raises(ValidationError) as verr:
+            data = {
+                GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+                IMT: ['PGA'],
+                'mag': '9', 'distance': '0', 'aspect': '1', 'dip': '60', 'plot_type': 'm'
+            }
+            form = TrellisForm(data)
+        assert verr.value.message == 'Unknown parameter: plot_type'
+
         with pytest.raises(ValidationError) as verr:
             form = GsimImtForm({
                 'model': ['BindiEtAl2011'],
                 'gmm': ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                 IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
             })
-        assert verr.value.message == 'Conflicting parameter names: model, gmm'
+        assert verr.value.message == 'Conflicting parameters: model, gmm'
 
     @pytest.mark.parametrize('data',
                              [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
@@ -296,7 +307,7 @@ class Test:
             'dist': '0.1',
             'dip': 60,
             'vs30': [60, '76'],
-            'plot_type': 'm',
+            'plot': 'm',
             'aspect': 1
         }
         form = TrellisForm(data)
