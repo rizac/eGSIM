@@ -242,16 +242,16 @@ class Test:
 
     def test_gsim_not_available(self, areequal):
         data = {
-            GSIM: ['AllenEtAl2012'],  # defined for MMI (not an available IMT in egsim2.0)
+            'gmm': ['AllenEtAl2012'],  # defined for MMI (not an available IMT in egsim2.0)
             IMT: ['SA(0.1)', 'SA(0.2)', 'PG*']
         }
         form = GsimImtForm(data)
         assert not form.is_valid()
         expected_err = {
-            'message': 'Invalid parameter: gsim',
+            'message': 'Invalid parameter: gmm',
             'errors': [
                 {
-                    'location': 'gsim',
+                    'location': 'gmm',
                     'message': 'Value not found or misspelled: AllenEtAl2012',
                     'reason': 'invalid_choice'
                 }
@@ -273,13 +273,13 @@ class Test:
             'errors': [
                 {
                     'location': 'gsim',
-                    'message': '2 gsim(s) not defined for all supplied imt(s)',
-                    'reason': 'invalid'
+                    'message': '2 model(s) not defined for all supplied imt(s)',
+                    'reason': 'invalid_model_imt_combination'
                 },
                 {
                     'location': 'imt',
-                    'message': '1 imt(s) not defined for all supplied gsim(s)',
-                    'reason': 'invalid'
+                    'message': '1 imt(s) not defined for all supplied model(s)',
+                    'reason': 'invalid_model_imt_combination'
                 }
             ]
         }
@@ -301,7 +301,7 @@ class Test:
             for all list sub-elements (param imt)
         """
         data = {
-            GSIM: 'BindiEtAl2011',
+            'model': 'BindiEtAl2011',
             IMT: ['PG[AV]'],  # ['SA(0.1)', 'PGA', 'PGV'],
             'mag': 0.5,
             'dist': '0.1',

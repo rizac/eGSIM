@@ -338,14 +338,14 @@ class GsimImtForm(SHSRForm):
             # note: pass only invalid_gsims as the result would be equal
             # than passing all gsims but the loop is faster:
             invalid_imts = set(imts) - set(self.shared_imts(gsims))
-            err_gsim = ValidationError(gettext("%(num)d gsim(s) not defined "
+            err_gsim = ValidationError(gettext("%(num)d model(s) not defined "
                                                "for all supplied imt(s)"),
                                        params={'num': len(invalid_gsims)},
-                                       code='invalid')
+                                       code='invalid_model_imt_combination')
             err_imt = ValidationError(gettext("%(num)d imt(s) not defined for "
-                                              "all supplied gsim(s)"),
+                                              "all supplied model(s)"),
                                       params={'num': len(invalid_imts)},
-                                      code='invalid')
+                                      code='invalid_model_imt_combination')
             # add_error removes also the field from self.cleaned_data:
             gsim, imt = 'gsim', 'imt'
             self.add_error(gsim, err_gsim)
