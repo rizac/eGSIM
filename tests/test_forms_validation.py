@@ -58,7 +58,7 @@ class Test:
             'errors': [
                 {
                     'location': 'imt',
-                    'message': 'Missing value',
+                    'message': 'This parameter is required',
                     'reason': 'required'
                 }
             ]
@@ -78,7 +78,7 @@ class Test:
                 },
                 {
                     'location': 'imt',
-                    'message': 'Missing value',
+                    'message': 'This parameter is required',
                     'reason': 'required'
                 }
             ]
@@ -93,7 +93,7 @@ class Test:
             'errors': [
                 {
                     'location': 'model',
-                    'message': 'Missing value',
+                    'message': 'This parameter is required',
                     'reason': 'required'
                 },
                 {
