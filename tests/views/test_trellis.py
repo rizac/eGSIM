@@ -303,8 +303,8 @@ class Test:
             "ztor": "0.0",
             "strike": "0.0",
             "msr": "WC1994",
-            "initial_point": "0 0",
-            "hypocentre_location": "0.5 0.5",
+            "initial_point": [0, 0],
+            "hypocentre_location": [0.5, 0.5],
             "vs30": "760.0",
             "vs30_measured": True,
             "line_azimuth": "0.0",
@@ -362,13 +362,13 @@ class Test:
             "ztor": "0.0",
             "strike": "0.0",
             "msr": "WC1994",
-            "initial_point": "0 0",
-            "hypocentre_location": "0.5 0.5",
+            "initial_point": [0, 0],
+            "hypocentre_location": [0.5, 0.5],
             "vs30": "760.0",
             "vs30_measured": True,
             "line_azimuth": "0.0",
             "stdev": True,
-            "plot_type": "d"
+            "plot": "d"
         }
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
@@ -406,13 +406,13 @@ class Test:
             "ztor": "0.0",
             "strike": "0.0",
             "msr": "WC1994",
-            "initial_point": "0 0",
-            "hypocentre_location": "0.5 0.5",
+            "initial_point": [0, 0],
+            "hypocentre_location": [0.5, 0.5],
             "vs30": vs30,
             "vs30_measured": True,
             "line_azimuth": "0.0",
             "stdev": True,
-            "plot_type": "d",
+            "plot": "d",
             "z1pt0": z1pt0,
             'z2pt5': z2pt5
         }
@@ -468,13 +468,13 @@ class Test:
             "ztor": "0.0",
             "strike": "0.0",
             "msr": "WC1994",
-            "initial_point": "0 0",
-            "hypocentre_location": "0.5 0.5",
+            "initial_point": [0, 0],
+            "hypocentre_location": [0.5, 0.5],
             "vs30": "760.0",
             "vs30_measured": True,
             "line_azimuth": "0.0",
             "stdev": True,
-            "plot_type": "d"
+            "plot": "d"
         }
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
@@ -489,15 +489,15 @@ class Test:
                 'errors': [
                     {
                         'location': 'gsim',
-                        'message': ('1 gsim(s) not defined for '
+                        'message': ('1 model(s) not defined for '
                                     'all supplied imt(s)'),
-                        'reason': 'invalid'
+                        'reason': 'invalid_model_imt_combination'
                     },
                     {
                         'location': 'imt',
                         'message': ('1 imt(s) not defined for all '
-                                    'supplied gsim(s)'),
-                        'reason': 'invalid'
+                                    'supplied model(s)'),
+                        'reason': 'invalid_model_imt_combination'
                     }
                 ]
             }
