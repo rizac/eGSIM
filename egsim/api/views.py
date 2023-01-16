@@ -11,6 +11,7 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
+from .forms.fields import NArrayField
 from .forms.flatfile import FlatfileForm
 from .forms.trellis import TrellisForm
 from .forms.flatfile.residuals import ResidualsForm
@@ -54,7 +55,7 @@ class RESTAPIView(View):
 
         multi_params = set()
         for param_names, field_name, field in form_cls.apifields():
-            if isinstance(field, MultipleChoiceField):
+            if isinstance(field, (MultipleChoiceField, NArrayField)):
                 multi_params.update(param_names)
 
         ret = {}
