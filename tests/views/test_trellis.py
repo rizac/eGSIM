@@ -21,7 +21,7 @@ class Test:
 
     url = "/" + TrellisView.urls[0]  # '/query/trellis'
     request_filename = 'request_trellis.yaml'
-    csv_expected_text = b'^imt,gsim,magnitude,distance,vs30(,+)\r\n,,,,'
+    csv_expected_text = b'^imt,model,magnitude,distance,vs30(,+)\r\n,,,,'
     GSIM, IMT = 'gsim', 'imt'
 
     def get_figures(self, result):  # noqa
@@ -60,14 +60,14 @@ class Test:
                           st_dev):
         """test trellis distance and distance stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
-                        plot_type='d', stdev=st_dev)
+                        plot='d', stdev=st_dev)
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
         assert resp1.status_code == 200
         assert areequal(result, resp2.json())
-        form = TrellisForm(data=inputdic)
+        form = TrellisForm(data=dict(inputdic))
         assert form.is_valid()
         input_ = form.cleaned_data
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
@@ -205,7 +205,7 @@ class Test:
         """test trellis magnitude-distance spectra and magnitude-distance
         stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
-                        plot_type='s', stdev=st_dev)
+                        plot='s', stdev=st_dev)
         inputdic.pop('imt')
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
@@ -213,7 +213,7 @@ class Test:
         result = resp1.json()
         assert resp1.status_code == 200
         assert areequal(result, resp2.json())
-        form = TrellisForm(data=inputdic)
+        form = TrellisForm(data=dict(inputdic))
         assert form.is_valid()
         input_ = form.cleaned_data
         assert sorted(result.keys()) == ['SA', 'imts', 'xlabel', 'xvalues']
@@ -257,7 +257,6 @@ class Test:
         result = resp1.json()
         assert 'imt' in result['error']['message']
         assert resp1.status_code == 400
-
 
     def test_ok_request(self,
                         # pytest fixtures:
@@ -310,10 +309,10 @@ class Test:
             "vs30_measured": True,
             "line_azimuth": "0.0",
             "stdev": True,
-            "plot_type": "d"
+            "plot": "d"
         }
-
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        qstr = querystring(inputdic, baseurl=self.url)
+        resp1 = client.get(qstr)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
@@ -327,8 +326,7 @@ class Test:
                 'errors': [
                     {
                         'location': 'gsim',
-                        'message': ('Select a valid choice. AkkarEtAl2013 is '
-                                    'not one of the available choices.'),
+                        'message': 'Value not found or misspelled: AkkarEtAl2013',
                         'reason': 'invalid_choice'
                     }
                 ]
