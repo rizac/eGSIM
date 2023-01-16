@@ -103,14 +103,14 @@ class Test:
                          st_dev):
         """test trellis magnitude and magnitude stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
-                        plot_type='m', stdev=st_dev)
+                        plot='m', stdev=st_dev)
         resp1 = client.get(querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
         assert resp1.status_code == 200
         assert areequal(result, resp2.json())
-        form = TrellisForm(data=inputdic)
+        form = TrellisForm(data=dict(inputdic))
         assert form.is_valid()
         input_ = form.cleaned_data
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
