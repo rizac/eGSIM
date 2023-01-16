@@ -1,6 +1,7 @@
 """eGSIM RESTAPI URL Configuration"""
 from django.urls import re_path
 from django.contrib import admin
+from django.views.decorators.csrf import csrf_exempt
 from re import escape as esc
 
 from .views import TrellisView, ResidualsView, TestingView
@@ -10,7 +11,10 @@ from .views import TrellisView, ResidualsView, TestingView
 
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),  # added by default by django
-    *[re_path(r'^%s/?$' % esc(_), TrellisView.as_view()) for _ in TrellisView.urls],
-    *[re_path(r'^%s/?$' % esc(_), ResidualsView.as_view()) for _ in ResidualsView.urls],
-    *[re_path(r'^%s/?$' % esc(_), TestingView.as_view()) for _ in TestingView.urls],
+    *[re_path(r'^%s/?$' % esc(_), csrf_exempt(TrellisView.as_view()))
+      for _ in TrellisView.urls],
+    *[re_path(r'^%s/?$' % esc(_), csrf_exempt(ResidualsView.as_view()))
+      for _ in ResidualsView.urls],
+    *[re_path(r'^%s/?$' % esc(_), csrf_exempt(TestingView.as_view()))
+      for _ in TestingView.urls],
 ]
