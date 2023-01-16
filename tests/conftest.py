@@ -25,6 +25,21 @@ from egsim.api.views import QUERY_PARAMS_SAFE_CHARS
 from egsim.api.forms.fields import isscalar
 
 
+@pytest.fixture()
+def client() -> Client:
+    """A Django test client instance. Overwrite default pytest-django foxture with
+    the same name to provide a client with enforce_csrf_checks=True.
+    This allows to spot when a request would need a csfr token, and fix it by
+    adding the CSFR Token it or making the request @csrf_exempt
+    For info see:
+    https://docs.djangoproject.com/en/stable/ref/csrf/#module-django.views.decorators.csrf
+    """
+    # skip_if_no_django()
+
+    from django.test.client import Client
+    return Client(enforce_csrf_checks=True)
+
+
 @pytest.fixture(scope="function")
 def areequal(request):
     """This fixture allows to *deeply* compare python numbers, lists, dicts,
