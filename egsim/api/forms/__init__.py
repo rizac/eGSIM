@@ -97,6 +97,10 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     # See `egsim.forms.EgsimFormMeta` and `self.apifields()` for usage.
     _field2params: dict[str, list[str]]
 
+    # set of default error messages that will overwrite the Fields default as
+    # dict[error_code:str, error_msg:str]
+    _default_error_messages = {'required': 'This parameter is required'}
+
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
         """Override init: re-arrange `self.data` and set the initial value for
         missing fields
@@ -124,21 +128,23 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                                   f'{"s" if len(err_names) != 1 else ""}: '
                                   f'{", ".join(err_names)}')
 
-        # Rename the keys of `self.data` (API parameters) with the mapped field name.
-        # `self.data` holds the form data and is used to validate it (see `self.clean`):
+        # Adjust `self.data` keys:
         for field_name, param_name in self.field2param.items():
+            # Rename the keys of `self.data` (API parameters) with the mapped field name
+            # (see `self.clean` and in subclasses):
             if param_name in self.data and field_name != param_name:
                 self.data[field_name] = self.data.pop(param_name)
+            # Make fields initial value the default, if provided
+            # (https://stackoverflow.com/a/20309754):
+            if field_name not in self.data and \
+                    self.fields[field_name].initial is not None:
+                self.data[field_name] = self.fields[field_name].initial
 
-        # Make fields initial value the default (https://stackoverflow.com/a/20309754)
-        # and adjust some default error messages (e.g. code 'required')
-        for name, field in self.fields.items():
-            # replace the required error with a custom one:
-            if 'required' in field.error_messages:
-                field.error_messages['required'] = 'This parameter is required'
-            # provide default if intial is given
-            if name not in self.data and field.initial is not None:
-                self.data[name] = field.initial
+        # Adjust Fields default error messages with our one, oif provided:
+        for err_code, err_msg in self._default_error_messages.items():
+            for name, field in self.fields.items():
+                if err_code in field.error_messages:
+                    field.error_messages[err_code] = err_msg
 
     def validation_errors(self, msg: str = None) -> dict:
         """Reformat `self.errors.as_json()` into the following dict:
