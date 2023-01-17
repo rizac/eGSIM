@@ -49,8 +49,16 @@ class RESTAPIView(View):
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
     def get(self, request: HttpRequest):
-        """processes a get request"""
+        """Process a GET request
 
+        Important: multi-values params (MultipleChoiceField, NArrayFields) can be given
+          as JSON Arrays or YAML Sequences or Python lists. Moreover, NArrayFields can
+          also be given as strings formatted as JSON ('[5, 6, 7]'), shlex ('5 6 7') or
+          matlab ("5:7"). In GET requests query strings, we do not have this flexibility,
+          so we simply assume that all multi-param values can be input by either
+          specifying the parameter more than once, or by typing commas or spaces as value
+          separator. NArayFields retain the possibility to use matlab notation ("5:7")
+        """
         form_cls = self.formclass
 
         multi_params = set()
@@ -62,17 +70,28 @@ class RESTAPIView(View):
         # request.GET is a QueryDict object (see Django doc for details)
         # with percent-encoded characters already decoded
         for param_name, values in request.GET.lists():
-            if param_name in multi_params:  # treat commas as element separators:
-                newvalues = []
+            if param_name in multi_params and any(' ' in v or ',' in v for v in values):
+                new_value = []
                 for val in values:
-                    newvalues.extend(val.split(','))
-                ret[param_name] = newvalues
+                    new_value.extend(val.replace(' ', '\n').replace(',', '\n').split('\n'))
             else:
-                ret[param_name] = values[0] if len(values) == 1 else values
+                new_value = values[0] if len(values) == 1 else values
+            if param_name in ret:
+                old_value = ret[param_name]
+                if not isinstance(old_value, list):
+                    old_value = [old_value]
+                if isinstance(new_value, list):
+                    old_value.extend(new_value)
+                else:
+                    old_value.append(new_value)
+                new_value = old_value
+            # assign:
+            ret[param_name] = new_value
+
         return self.response(data=ret)
 
     def post(self, request: HttpRequest):
-        """processes a post request"""
+        """Process a POST request"""
         if request.FILES:
             if not issubclass(self.formclass, FlatfileForm):
                 return error_response("The given URL does not support "

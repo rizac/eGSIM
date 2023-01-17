@@ -469,7 +469,7 @@ class Test:
             "strike": "0.0",
             "msr": "WC1994",
             "initial_point": [0, 0],
-            "hypocentre_location": [0.5, 0.5],
+            "hypocentre_location": "0.5 0.5",
             "vs30": "760.0",
             "vs30_measured": True,
             "line_azimuth": "0.0",
