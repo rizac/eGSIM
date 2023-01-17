@@ -87,12 +87,13 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
     # Fields of this class are exposed as API parameters via their attribute name by
-    # default. Whereas attribute names should be immutable to avoid breaking the code,
-    # API parameter names should be changed easily. To allow this, `cls._field2params`
-    # is dict where each Field attribute name can be mapped to a list of custom API
-    # parameter name(s) (including the same Field attribute name, if needed), where the
-    # first provided parameter name will be considered the default and displayed in e.g.,
-    # missing param errors. `_field2params` of superclasses will be merged into this one.
+    # default. Because attribute names must be immutable to avoid breaking the code
+    # (e.g,, they are used as keys of `self.cleaned_data`) and API parameter names should
+    # be changed easily, the dict `_field2params` below allows to map a Field attribute
+    # name to the list of API parameter name(s) that can be used instead (including the
+    # same Field attribute name, if needed). The first parameter name in the list will be
+    # considered the default and displayed in e.g., missing param errors. `_field2params`
+    # of superclasses will be merged into this one, not overwritten.
     # See `egsim.forms.EgsimFormMeta` and `self.apifields()` for usage.
     _field2params: dict[str, list[str]]
 
