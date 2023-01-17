@@ -72,8 +72,10 @@ class RESTAPIView(View):
         for param_name, values in request.GET.lists():
             if param_name in multi_params and any(' ' in v or ',' in v for v in values):
                 new_value = []
+                # find a safe replacement string for , and ' ', to split later around it:
+                sep = '/\t&\n?'  # (let's be super safe)
                 for val in values:
-                    new_value.extend(val.replace(' ', '\n').replace(',', '\n').split('\n'))
+                    new_value.extend(val.replace(' ', sep).replace(',', sep).split(sep))
             else:
                 new_value = values[0] if len(values) == 1 else values
             if param_name in ret:
