@@ -31,7 +31,7 @@ def main(request, selected_menu=None):
 
 
 def main_page_init_data(request):
-    """view for the main page"""
+    """JSON data requested by the browser app at startup to initialize the HTML page"""
     request_body = json.loads(request.body)
     browser = request_body.get('browser', {})
     selected_menu = request_body.get('selectedMenu', TAB.home.name)
@@ -96,8 +96,8 @@ def download_request(request, key: TAB, filename: str):
     if ext_nodot == 'json':
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,
-        # use text/javascript as 'application/json' does not work (or should we
-        # better text/plain?)
+        # use text/javascript because 'application/json' does not work (or should
+        # we better use text/plain?)
         response = HttpResponse(buffer, content_type='text/javascript')
     else:
         response = HttpResponse(buffer, content_type='application/x-yaml')
