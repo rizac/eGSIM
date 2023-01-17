@@ -117,8 +117,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         for params, field_name, field in self.apifields():
             i_params = [p for p in params if p in self.data]  # params given as input
             if len(i_params) > 1:
-                raise ValidationError('Conflicting parameters: '
-                                      f'{", ".join(i_params)}')
+                raise ValidationError(f'Conflicting parameters: {", ".join(i_params)}')
             self.field2param[field_name] = i_params[0] if i_params else params[0]
 
         # check unknown API parameters (i.e., additionally provided by the user):
