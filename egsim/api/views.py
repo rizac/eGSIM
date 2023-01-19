@@ -49,16 +49,20 @@ class RESTAPIView(View):
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
     def get(self, request: HttpRequest):
-        """Process a GET request
-
-        Important: multi-values params (MultipleChoiceField, NArrayFields) can be given
-          as JSON Arrays or YAML Sequences or Python lists. Moreover, NArrayFields can
-          also be given as strings formatted as JSON ('[5, 6, 7]'), shlex ('5 6 7') or
-          matlab ("5:7"). In GET requests query strings, we do not have this flexibility,
-          so we simply assume that all multi-param values can be input by either
-          specifying the parameter more than once, or by typing commas or spaces as value
-          separator. NArayFields retain the possibility to use matlab notation ("5:7")
+        """Process a GET request.
+        All parameters that accept multiple values can be input by either
+        specifying the parameter more than once, or by typing commas or spaces as value
+        separator. All parameter values are returned as string except the string
+        'null' that will be converted to None
         """
+
+        # Recap: All parameters that accept multiple values (MultipleChoiceField,
+        # NArrayFields) can be given in JSON and YAML files as Array/Sequences
+        # which will be converted to Python lists and passed to the Forms.
+        # In GET request from teh code (actually, the former convert eventually
+        # th input to Python lists.
+        # Moreover, NArrayFields can also be given as strings formatted as JSON
+        # ('[5, 6, 7]'), shlex ('5 6 7') or matlab ("5:7")
         form_cls = self.formclass
 
         multi_params = set()
@@ -72,10 +76,8 @@ class RESTAPIView(View):
         for param_name, values in request.GET.lists():
             if param_name in multi_params and any(' ' in v or ',' in v for v in values):
                 new_value = []
-                # find a safe replacement string for , and ' ', to split later around it:
-                sep = '/\t&\n?'  # (let's be super safe)
                 for val in values:
-                    new_value.extend(val.replace(' ', sep).replace(',', sep).split(sep))
+                    new_value.extend(v for vv in val.split(',') for v in vv.split(' '))
             else:
                 new_value = values[0] if len(values) == 1 else values
             if param_name in ret:
@@ -83,9 +85,9 @@ class RESTAPIView(View):
                 if not isinstance(old_value, list):
                     old_value = [old_value]
                 if isinstance(new_value, list):
-                    old_value.extend(new_value)
+                    old_value.extend(None if v == 'null' else v for v in new_value)
                 else:
-                    old_value.append(new_value)
+                    old_value.append(None if new_value == 'null' else new_value)
                 new_value = old_value
             # assign:
             ret[param_name] = new_value
