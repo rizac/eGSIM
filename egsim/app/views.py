@@ -4,6 +4,7 @@ Created on 17 Jan 2018
 @author: riccardo
 """
 import os
+from os.path import join, dirname, abspath
 from io import StringIO
 import json
 import yaml
@@ -14,10 +15,10 @@ from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import TAB
+from . import URLS
 from . import form_serialization
-from .pages import (ref_and_license_page_renderer_context,
-                    imprint_page_renderer_context, egsim_page_renderer_context,
-                    apidoc_page_renderer_context, home_page_renderer_context)
+from .pages.egsim import get_init_json_data
+from .pages.apidoc import get_apidoc_page_renderer_context
 from ..api.forms.flatfile import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
 from ..api.forms import GsimFromRegionForm
@@ -35,24 +36,25 @@ def main_page_init_data(request):
     request_body = json.loads(request.body)
     browser = request_body.get('browser', {})
     selected_menu = request_body.get('selectedMenu', TAB.home.name)
-    return JsonResponse(egsim_page_renderer_context(browser,
-                                                    selected_menu,
-                                                    settings.DEBUG))
+    return JsonResponse(get_init_json_data(browser, selected_menu, settings.DEBUG))
 
 
 @xframe_options_sameorigin
 def home(request):
     """view for the home page (iframe in browser)"""
     template = 'info_pages/home.html'
-    context = home_page_renderer_context()
-    return render(request, template, context=context)
+    return render(request, template, context=_get_home_page_renderer_context())
+
+
+def _get_home_page_renderer_context():
+    return {'ref_and_license_url': URLS.REF_AND_LICENSE}
 
 
 @xframe_options_sameorigin
 def apidoc(request):
     """view for the home page (iframe in browser)"""
     template = 'apidoc.html'
-    context = apidoc_page_renderer_context(settings.DEBUG)
+    context = get_apidoc_page_renderer_context(settings.DEBUG)
     return render(request, template, context=context)
 
 
@@ -60,15 +62,31 @@ def apidoc(request):
 def ref_and_license(request):
     """view for the home page (iframe in browser)"""
     template = 'info_pages/ref_and_license.html'
-    context = ref_and_license_page_renderer_context()
+    context = _get_ref_and_license_page_renderer_context()
     return render(request, template, context=context)
+
+
+def _get_ref_and_license_page_renderer_context():
+    refs = {}
+    with open(join(dirname(dirname(dirname(abspath(__file__)))), 'api',
+                   'management', 'commands', 'data', 'data_sources.yaml')) as _:
+        for ref in yaml.safe_load(_).values():
+            name = ref.pop('display_name')
+            refs[name] = ref
+    return {'references': refs}
 
 
 @xframe_options_sameorigin
 def imprint(request):
     template = 'info_pages/imprint.html'
-    context = imprint_page_renderer_context()
-    return render(request, template, context=context)
+    return render(request, template, context=_get_imprint_page_renderer_context())
+
+
+def _get_imprint_page_renderer_context():
+    return {
+        'data_protection_url': URLS.DATA_PROTECTION,
+        'ref_and_license_url': URLS.REF_AND_LICENSE
+    }
 
 
 def download_request(request, key: TAB, filename: str):
