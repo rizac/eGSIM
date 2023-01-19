@@ -16,7 +16,7 @@ from ...api.forms.fields import (MultipleChoiceWildcardField, NArrayField,
                                  get_field_docstring)
 
 
-def get_context(debug: bool) -> dict:
+def get_apidoc_page_renderer_context(debug: bool) -> dict:
     """The context to be injected in the template of the api doc HTML page"""
     # baseurl is the base URL for the services explained in the tutorial
     # It is the request.META['HTTP_HOST'] key. But during testing, this

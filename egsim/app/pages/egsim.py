@@ -14,10 +14,11 @@ from ...api.forms.flatfile import FlatfileForm, FlatfileRequiredColumnsForm, MOF
 from ...api.forms.flatfile.inspection import FlatfilePlotForm
 
 
-def get_context(browser: dict = None,
-                selected_menu: str = None,
-                debug=True) -> dict:
-    """The context to be injected in the template of the main HTML page
+def get_init_json_data(browser: dict = None,
+                       selected_menu: str = None,
+                       debug=True) -> dict:
+    """Return the JSON data to be passed to the browser at startup to initialize
+    the page content
 
     :param browser: a dict with 'name':str and 'version': float keys
     """
@@ -296,7 +297,7 @@ def field_to_htmlelement_attrs(field: Field) -> dict:
     # 2. Remove some attributes (e.g. checkbox with the 'checked' attribute are
     #    not compatible with VueJS v-model or v-checked)
     # 3. Some Select with single choice set their initial value as list  (e.g.
-    #    ['value'] instead of 'value') and I guess VueJs prefers strings.
+    #    ['value'] instead of 'value') and I guess VueJs prefers strings
 
     # All in all, instead of complex patching we provide our code here:
     widget = field.widget
