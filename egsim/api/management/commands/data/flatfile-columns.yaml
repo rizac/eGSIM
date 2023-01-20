@@ -116,7 +116,7 @@ slope:
   bounds: [ 1.0e-100, null ]  # 1.0e-100 is a workaround to tell: >0
 
 
-# Here the collection of all parameters required by all OpenQuake models, mapped to their
+# Here the collection of the parameters required by all OpenQuake models, mapped to their
 # corresponding flatfile column. The mappings, stored to the eGSIM database, will be
 # used to know which are the models that can be used with any provided flatfile. As such,
 # remember that a parameter with no mapping (or null) **will programmatically discard
