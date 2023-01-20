@@ -1,7 +1,6 @@
-# This YAML document is used in `egsim_init.py` to store on the databse the flatfile
-# column(s) metadata (instances of `egsim.api.models.FlatfileColumn`) and register the
-# mapping of OpenQuake models parameters to the corresponding column (scroll at the
-# bottom of this document for details)
+# This YAML file contains the flatfile columns metadata to be stored in the database
+# as instances of `egsim.api.models.FlatfileColumn`s, and their mapping with OpenQuake
+# models parameters. See also `egsim_init.py` for usage
 
 # Flatfile column format:
 #
@@ -13,14 +12,13 @@
 #            [null, null], where null means: unbounded / don't check
 #   default: The default value when nothing is provided. When missing,
 #            the default value depends `dtype` or storage (e.g. pandas vs sql).
-#            E.g., with pandas: NaN (float), NaT (datetime), None/null
+#            E.g., with pandas: NaN (for dtype float), NaT (datetime), None/null
 #            (str or categorical), 0 (int), False (bool)
 #   help:    The field help or description (defaults to "" when missing)
 
 # YAML notes:
-#
 # Unless required, strings do not need to be quoted. YAML is a superset of JSON,
-# so you can type lists as JSON Arrays: [...], Mappings as JSON Objects: {...}.
+# so you can type lists as JSON Arrays: [...] and Mappings as JSON Objects: {...}.
 # If you want to type over multiple lines for readability, prefix the text with >-
 # (see examples here below or https://stackoverflow.com/a/3790497)
 
@@ -118,10 +116,11 @@ slope:
   bounds: [ 1.0e-100, null ]  # 1.0e-100 is a workaround to tell: >0
 
 
-# Here the OpenQuake model parameters (nested inside their OpenQuake categories:
-# distance measure, site and rupture parameters) mapped to their corresponding flatfile
-# column. Parameters can also be provided with no mapping if the parameter AS WELL AS ALL
-# MODELS REQUIRING IT should be discarded and not implemented in EGSIM
+# Here the collection of all parameters required by all OpenQuake models, mapped to their
+# corresponding flatfile column. The mappings, stored to the eGSIM database, will be
+# used to know which are the models that can be used with any provided flatfile. As such,
+# remember that a parameter with no mapping (or null) **will programmatically discard
+# from eGSIM all models requiring it**. See `_egsim_oq.py` for usage
 
 openquake_models_parameters:
   distance_measure:  # OpenQuake model attribute: REQUIRES_DISTANCES
