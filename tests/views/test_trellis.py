@@ -24,6 +24,9 @@ class Test:
     csv_expected_text = b'^imt,model,magnitude,distance,vs30(,+)\r\n,,,,'
     GSIM, IMT = 'gsim', 'imt'
 
+    def querystring(self, querystring, **kwargs):
+        return querystring(TrellisView.formclass)
+
     def get_figures(self, result):  # noqa
         """Returns a list of dicts scanning recursively `result` (the json
         output of a trellis request), where each dict represents
@@ -98,13 +101,13 @@ class Test:
     @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis_mag(self,
                          # pytest fixtures:
-                         client, testdata, areequal, querystring,
+                         client, testdata, areequal,
                          # parametrized argument:
                          st_dev):
         """test trellis magnitude and magnitude stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot='m', stdev=st_dev)
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
@@ -199,7 +202,7 @@ class Test:
     @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis_spectra(self,
                              # pytest fixtures:
-                             client, testdata, areequal, querystring,
+                             client, testdata, areequal,
                              # parametrized argument:
                              st_dev):
         """test trellis magnitude-distance spectra and magnitude-distance
@@ -207,7 +210,7 @@ class Test:
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot='s', stdev=st_dev)
         inputdic.pop('imt')
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
@@ -260,7 +263,7 @@ class Test:
 
     def test_ok_request(self,
                         # pytest fixtures:
-                        client, areequal, querystring):
+                        client, areequal):
         data = {
             'aspect': 1,
             'backarc': False,
@@ -289,7 +292,7 @@ class Test:
 
     def test_error(self,
                    # pytest fixtures:
-                   client, areequal, querystring):
+                   client, areequal):
         """tests a special case where we supply a deprecated gsim (not in
         EGSIM list)"""
         inputdic = {
@@ -311,7 +314,7 @@ class Test:
             "stdev": True,
             "plot": "d"
         }
-        qstr = querystring(inputdic, baseurl=self.url)
+        qstr = self.querystring(inputdic, baseurl=self.url)
         resp1 = client.get(qstr)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -336,7 +339,7 @@ class Test:
 
     def test_empty_gsim(self,
                         # pytest fixtures:
-                        areequal, client, querystring):
+                        areequal, client):
         """tests a special case whereby a GSIM is empty (this case raised
         before a PR to smtk repository)"""
         inputdic = {
@@ -370,7 +373,7 @@ class Test:
             "stdev": True,
             "plot": "d"
         }
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
@@ -452,7 +455,7 @@ class Test:
 
     def test_mismatching_imt_gsim(self,
                                   # pytest fixtures:
-                                  areequal, client, querystring):
+                                  areequal, client):
         """tests a special case whereby a GSIM is empty (this case raised
         before a PR to smtk repository)"""
         inputdic = {
@@ -469,14 +472,14 @@ class Test:
             "strike": "0.0",
             "msr": "WC1994",
             "initial_point": [0, 0],
-            "hypocentre_location": "0.5 0.5",
+            "hypocentre_location": [0.5, 0.5],
             "vs30": "760.0",
             "vs30_measured": True,
             "line_azimuth": "0.0",
             "stdev": True,
             "plot": "d"
         }
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic, baseurl=self.url))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
