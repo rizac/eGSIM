@@ -117,10 +117,10 @@ slope:
 
 
 # Here the collection of the parameters required by all OpenQuake models, mapped to their
-# corresponding flatfile column. The mappings, stored in the eGSIM database, will be
-# used to know which are the models that can be used with any provided flatfile. As such,
-# remember that a parameter with no mapping (or null) **will programmatically discard
-# from eGSIM all models requiring it**. See `_egsim_oq.py` for usage
+# corresponding flatfile column. The mappings, stored in the eGSIM database, will allow
+# to know which models can be used for any given flatfile. As such, remember that a
+# parameter with no mapping (or null) **will programmatically discard from eGSIM all
+# models requiring it**. See `_egsim_oq.py` for usage
 
 openquake_models_parameters:
   distance_measure:  # OpenQuake model attribute: REQUIRES_DISTANCES
