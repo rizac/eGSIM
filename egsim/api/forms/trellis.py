@@ -7,7 +7,6 @@ from typing import Iterable, Any
 
 import numpy as np
 from django.core.exceptions import ValidationError
-from django.utils.translation import gettext
 from django.utils.safestring import mark_safe
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
@@ -118,7 +117,7 @@ class TrellisForm(GsimImtForm, APIForm):
         try:
             return _mag_scalerel[value]()
         except Exception as exc:
-            raise ValidationError(gettext(str(exc)), code='invalid')
+            raise ValidationError(str(exc), code='invalid')
 
     def clean_initial_point(self):
         """Clean the "location" field by converting the given value to a
@@ -130,7 +129,7 @@ class TrellisForm(GsimImtForm, APIForm):
         try:
             return Point(*value)
         except Exception as exc:
-            raise ValidationError(gettext(str(exc)), code='invalid')
+            raise ValidationError(str(exc), code='invalid')
 
     def clean_imt(self):
         """Clean the imt Field by checking that it is empty or composed of SA only,
@@ -185,12 +184,8 @@ class TrellisForm(GsimImtForm, APIForm):
                      len(vs30) != len(cleaned_data[name])):
                 str_ = 'scalar' if isscalar(vs30) else \
                     '%d-elements vector' % len(vs30)
-                # instead of raising ValidationError, which is keyed with
-                # '__all__' we add the error keyed to the given field name
-                # `name` via `self.add_error` (see cleaning and validating data
-                # on django docs):
-                error = ValidationError(gettext("value must be consistent with "
-                                                "vs30 (%s)" % str_),
+                # add error for vs30 param:
+                error = ValidationError(f"value must be consistent with vs30 ({str_})",
                                         code='invalid')
                 self.add_error(name, error)
 

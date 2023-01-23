@@ -9,7 +9,6 @@ import pandas as pd
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from django.forms import Form, ModelChoiceField
-from django.utils.translation import gettext
 from pandas.errors import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
 
@@ -97,8 +96,7 @@ class FlatfileForm(EgsimBaseForm):
                 # Use 'flatfile' as error key: users can not be confused
                 # (see __init__), and also 'flatfile' is also the exposed key
                 # for the `files` argument in requests
-                self.add_error("flatfile", ValidationError(gettext(msg),
-                                                           code='invalid'))
+                self.add_error("flatfile", ValidationError(msg, code='invalid'))
                 return cleaned_data  # no need to further process
 
             # check data types:
@@ -107,11 +105,9 @@ class FlatfileForm(EgsimBaseForm):
                 icol_str = ', '.join(str(_[0]) for _ in invalid_cols[:5])
                 if len(invalid_cols) > 5:
                     icol_str += ' ... (showing first 5 only)'
-                # FIXME: gettext?
-                err_gsim = ValidationError(gettext("%(num)d columns(s) have invalid "
-                                                   "data types (e.g., str where "
-                                                   "int is expected): " + icol_str),
-                                           params={'num': len(invalid_cols)},
+                err_gsim = ValidationError(f"{len(invalid_cols)} columns(s) have "
+                                           f"invalid data types (e.g., str where "
+                                           f"int is expected): {icol_str}",
                                            code='invalid')
                 # add_error removes also the field from self.cleaned_data:
                 self.add_error('flatfile', err_gsim)
@@ -318,12 +314,9 @@ class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):
                     inv_str = ', '.join(invalid_gsims[:5])
                     if len(invalid_gsims) > 5:
                         inv_str += ' ... (showing first 5 only)'
-                    # FIXME: gettext?
-                    err_gsim = ValidationError(gettext("%(num)d gsim(s) not supported "
-                                                       "by the given flatfile: " +
-                                                       inv_str),
-                                               params={'num': len(invalid_gsims)},
-                                               code='invalid')
+                    err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not "
+                                               f"supported by the given flatfile: "
+                                               f"{inv_str}", code='invalid')
                     # add_error removes also the field from self.cleaned_data:
                     self.add_error('gsim', err_gsim)
                     cleaned_data.pop('flatfile')

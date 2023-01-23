@@ -13,7 +13,6 @@ from urllib.parse import quote as urlquote
 from shapely.geometry import Polygon, Point
 from django.core.exceptions import ValidationError
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
-from django.utils.translation import gettext
 from django.forms import Form
 
 from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField, Field,
@@ -203,9 +202,8 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
         (API parameter name(s) of the field, field name, Field object).
 
-        By default, the API parameter name(s) is trivially a list with the
-        field name as only element. This is not the case for Field names mapped
-        to different API parameter names in `self._field2params`
+        By default, API parameter name(s) is a list with the field name as only
+        element, unless different parameter name(s) where provided in `self._field2params`
         """
         for field_name, field in cls.declared_fields.items():
             params = cls._field2params.get(field_name, [field_name])
@@ -214,13 +212,13 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     def _get_data(self, compact=True) -> Iterable[tuple[str, Any]]:
         """Yields (field_name, field_value) pairs from `self.data`
 
-        @param compact: if True (the default), non required parameters (i.e., whose
-            value is the same as the Field initial value) are not returned
+        @param compact: if True (the default), optional parameters (either non required
+            or whose value is the same as the Field initial value) are not yielded
         """
         for field_name, value in self.data.items():
             field = self.fields[field_name]
-            if compact and (field.required or field.initial is not None) \
-                    and self.data[field_name] == field.initial:
+            field_optional = not field.required or field.initial is not None
+            if compact and field_optional and self.data[field_name] == field.initial:
                 continue
             yield field_name, value
 
@@ -263,7 +261,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
     def as_querystring(self, compact=True) -> str:
         """Return the `data` argument passed in the constructor as query string
-        to be used with specific URLs for GET requests using this form
+        to be used as URLs suffix for GET requests to this form
 
         @param compact: if True (the default), non required parameters (i.e., whose
             value is the same as the Field initial value) are not returned
@@ -438,14 +436,11 @@ class GsimImtForm(SHSRForm):
             # note: pass only invalid_gsims as the result would be equal
             # than passing all gsims but the loop is faster:
             invalid_imts = set(imts) - set(self.shared_imts(gsims))
-            err_gsim = ValidationError(gettext("%(num)d model(s) not defined "
-                                               "for all supplied imt(s)"),
-                                       params={'num': len(invalid_gsims)},
-                                       code='invalid_model_imt_combination')
-            err_imt = ValidationError(gettext("%(num)d imt(s) not defined for "
-                                              "all supplied model(s)"),
-                                      params={'num': len(invalid_imts)},
-                                      code='invalid_model_imt_combination')
+            code = 'invalid_model_imt_combination'
+            err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not defined "
+                                       "for all supplied imt(s)", code=code)
+            err_imt = ValidationError(f"{len(invalid_imts)} imt(s) not defined for "
+                                      "all supplied model(s)", code=code)
             # add_error removes also the field from self.cleaned_data:
             gsim, imt = 'gsim', 'imt'
             self.add_error(gsim, err_gsim)
@@ -532,8 +527,8 @@ class APIForm(EgsimBaseForm):
             # convert to symbols:
             if cleaned_data[key] == self.DATA_FORMAT_CSV \
                     and cleaned_data[tsep] == cleaned_data[tdec]:
-                msg = gettext(f"'{tsep}' must differ from '{tdec}' in "
-                              f"'{self.DATA_FORMAT_CSV}' format")
+                msg = (f"'{tsep}' must differ from '{tdec}' in "
+                       f"'{self.DATA_FORMAT_CSV}' format")
                 err_ = ValidationError(msg, code='conflicting values')
                 # add_error removes also the field from self.cleaned_data:
                 self.add_error(tsep, err_)
