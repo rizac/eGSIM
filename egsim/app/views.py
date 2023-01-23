@@ -110,15 +110,18 @@ def download_request(request, key: TAB, filename: str):
                               errors=errs['errors'])
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
     if ext_nodot == 'json':
-        buffer = form.as_json()
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,
         # use text/javascript because 'application/json' does not work (or should
         # we better use text/plain?)
-        response = HttpResponse(buffer, content_type='text/javascript')
+        response = HttpResponse(StringIO(form.as_json()),
+                                content_type='text/javascript')
+    elif ext_nodot == 'querystring':
+        response = HttpResponse(StringIO(form.as_querystring()),
+                                content_type='text/plain')
     else:
-        buffer = form.as_yaml()
-        response = HttpResponse(buffer, content_type='application/x-yaml')
+        response = HttpResponse(StringIO(form.as_yaml()),
+                                content_type='application/x-yaml')
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response
 

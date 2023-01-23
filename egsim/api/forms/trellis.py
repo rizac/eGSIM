@@ -139,8 +139,10 @@ class TrellisForm(GsimImtForm, APIForm):
             # check invalid IMTs:
             invalid_imts = [_ for _ in imts if not _.startswith('SA')]
             if invalid_imts:
-                raise ValidationError(f'Invalid value with the chosen plot: remove '
-                                      'this parameter or provide a custom SA periods',
+                raise ValidationError(f'Invalid value(s): {", ".join(invalid_imts)}. '
+                                      f'Omit this parameter or provide a '
+                                      f'custom list of SA periods when selecting '
+                                      f'"spectra" plots',
                                       code='invalid')
             # If no SA is found (with or without period) add "SA": this will not be used
             # in `self.clean` below but in `GsimImtForm.clean()` to check that the models
