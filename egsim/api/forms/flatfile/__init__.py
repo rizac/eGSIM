@@ -8,7 +8,7 @@ from typing import Iterable, Sequence, Any
 import pandas as pd
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
-from django.forms import Form
+from django.forms import Form, ModelChoiceField
 from django.utils.translation import gettext
 from pandas.errors import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
@@ -17,7 +17,7 @@ from ... import models
 from ...flatfile import (read_flatfile, EgsimContextDB, REQUIRED_COLUMNS, get_imt,
                          EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE)
 from .. import EgsimBaseForm, GsimImtForm, APIForm, _get_gsim_choices
-from ..fields import ModelChoiceField, CharField, FileField, MultipleChoiceWildcardField
+from ..fields import CharField, FileField, MultipleChoiceWildcardField
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not

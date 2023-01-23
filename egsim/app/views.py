@@ -16,7 +16,6 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from . import TAB
 from . import URLS
-from . import form_serialization
 from .templates.egsim import get_init_json_data
 from .templates.apidoc import get_apidoc_page_renderer_context
 from ..api.forms.flatfile import FlatfileRequiredColumnsForm
@@ -110,14 +109,15 @@ def download_request(request, key: TAB, filename: str):
         return error_response(errs['message'], RESTAPIView.CLIENT_ERR_CODE,
                               errors=errs['errors'])
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
-    buffer = form_serialization.as_text(input_dict(), form_class, syntax=ext_nodot)
     if ext_nodot == 'json':
+        buffer = form.as_json()
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,
         # use text/javascript because 'application/json' does not work (or should
         # we better use text/plain?)
         response = HttpResponse(buffer, content_type='text/javascript')
     else:
+        buffer = form.as_yaml()
         response = HttpResponse(buffer, content_type='application/x-yaml')
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response

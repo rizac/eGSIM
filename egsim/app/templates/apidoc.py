@@ -10,7 +10,6 @@ from django.forms import (MultipleChoiceField, Field, CharField,
 from .egsim import field_to_dict, get_choices
 from .. import TAB
 from ...api.models import FlatfileColumn
-from ...api.views import QUERY_PARAMS_SAFE_CHARS
 from ...api.forms import EgsimBaseForm
 from ...api.forms.fields import (MultipleChoiceWildcardField, NArrayField,
                                  get_field_docstring)
@@ -46,7 +45,7 @@ def get_apidoc_page_renderer_context(debug: bool) -> dict:
     }
     return {
         'debug': debug,
-        'query_params_safe_chars': QUERY_PARAMS_SAFE_CHARS,
+        # 'query_params_safe_chars': '',
         'egsim_data': egsim_data,
         'baseurl': baseurl,
         'gmt':_get_flatfile_column_desc()

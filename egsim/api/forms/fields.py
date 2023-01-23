@@ -2,8 +2,6 @@
 
 from fnmatch import translate
 import re
-import json
-import shlex
 from itertools import chain, repeat
 from typing import Collection, Any, Union, Sequence
 
@@ -15,29 +13,47 @@ from django.core.exceptions import ValidationError
 # IMPORTS BELOW as they are imported throughout the project:
 from django.forms.fields import (ChoiceField, FloatField, BooleanField, Field,
                                  CharField, MultipleChoiceField, FileField)
-from django.forms.models import ModelChoiceField
 
 
-def vectorize(value):
-    """Return `value` if it is already an iterable, otherwise `[value]`.
-    Note that :class:`str` and :class:`bytes` are considered scalars:
+def vectorize(value: Any) -> Sequence[Any]:
+    """Return a Sequence from `value`. If `value` is already a Sequence (list, tuple),
+    return it. If value is an iterable, return `list(value)`, if value is a scalar
+    (including `str` and `bytes`), return `[value]`. Example
     ```
         vectorize(3) = vectorize([3]) = [3]
         vectorize('a') = vectorize(['a']) = ['a']
     ```
     """
-    return [value] if isscalar(value) else value
+    if isscalar(value):
+        return [value]
+    return value if hasattr(value, '__len__') else list(value)
 
 
-def isscalar(value):
-    """Return True if `value` is a scalar object, i.e. a :class:`str`, a
-    :class:`bytes` or without the attribute '__iter__'. Example:
+def isscalar(value: Any) -> bool:
+    """Return True if `value` is a scalar object, i.e. not iterable. Note that
+    `str` and `bytes` are considered scalars. Example:
     ```
         isscalar(1) == isscalar('a') == True
         isscalar([1]) == isscalar(['a']) == False
     ```
     """
     return not hasattr(value, '__iter__') or isinstance(value, (str, bytes))
+
+
+_split_re = re.compile(r"\s*,\s*|\s+")
+
+
+def split_string(string: str) -> list[str]:
+    """This function is used in all Fields accepting multiple parameters
+    (NArrayField, MultipleChoiceWildcardField) to split a string using commas or
+    spaces as separators.
+    This is the way to provide multiple values in URL query strings and HTML
+    <input> components, and it is extended also to POST request, so that
+    ["a", "b"] can be also typed as "a,b", "a b", "a , b" even in YAML or JSON files
+
+    :return: a list of chunks of the given string
+    """
+    return _split_re.split(string)
 
 
 class ArrayField(CharField):
@@ -72,16 +88,26 @@ class ArrayField(CharField):
     def to_python(self, value):
         if value is None:
             return None
-
-        tokens = self.split(value) if isinstance(value, str) else value
-        is_vector = not isscalar(tokens)
+        # store now if we should try returning a scalar value (e.g. the 1st element
+        # only instead of a 1-element list):
+        return_scalar = isscalar(value)
+        if return_scalar:
+            if isinstance(value, str):  # split around commas and spaces, if possible:
+                tokens = split_string(value)
+                # if value contained commas or spaces (i.e., tokens == [value]), then
+                # the user intended to return a vector, not a scalar:
+                return_scalar = list(tokens) == [value]
+            else:
+                tokens = vectorize(value)
+        else:
+            tokens = value
 
         values = []
-        for val in self.parse_tokens(tokens if is_vector else [tokens]):
+        for val in self.parse_tokens(tokens):
             if isscalar(val):
                 values.append(val)
             else:
-                is_vector = True  # force the return value to be list
+                return_scalar = False  # force the return value to be list
                 values.extend(val)
 
         # check lengths:
@@ -98,19 +124,7 @@ class ArrayField(CharField):
         for val, min_val, max_val in zip(values, min_v, max_v):
             self.checkrange(val, min_val, max_val)
 
-        return values[0] if (len(values) == 1 and not is_vector) else values
-
-    def split(self, value: str):
-        """Split the given value (str) into tokens according to json or shlex,
-        in this order (json accepts arrays without brackets)
-        """
-        try:
-            return json.loads(value)
-        except Exception:  # noqa
-            try:
-                return shlex.split(value.strip())
-            except Exception:
-                raise ValidationError('Input syntax error')
+        return values[0] if (len(values) == 1 and return_scalar) else values
 
     @classmethod
     def parse_tokens(cls, tokens: Collection[str]) -> Any:
@@ -255,8 +269,9 @@ class NArrayField(ArrayField):
 
 class MultipleChoiceWildcardField(MultipleChoiceField):
     """Extension of Django MultipleChoiceField:
-     - Accepts lists of strings or a single string
-       (which will be converted to a 1-element list)
+     - Accepts lists of strings or a single string. In the latter case, if the string
+       contains commas or spaces it is split around those characters and converted to
+       list, otherwise converted to a 1-element list: [string]
      - Accepts wildcard in strings in order to include all matching elements
     """
     # Reminder. The central validation method is `Field.clean`, which does the following:
@@ -277,8 +292,16 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
         """Return an unique list of elements after expanding strings with wildcards
         to matching elements. For wildcard strings, see `fnmatch` in the Python doc
         """
-        # super call assures that value is a list/tuple and elements are strings
-        value = super().to_python([value] if isinstance(value, str) else value)
+        # copied to the super.to_python with slight modifications in case of `str`:
+        if not value:
+            return []
+        elif isinstance(value, str):
+            # convert "a,b" "a b" "a , b" into ["a", "b"], if needed:
+            value = split_string(value)
+        elif not isinstance(value, (list, tuple)):
+            raise ValidationError(
+                self.error_messages["invalid_list"], code="invalid_list"
+            )
         # Now store items to return as dict keys
         # (kind of overkill but we need fast search and to preserve insertion order):
         new_value = {}
@@ -376,7 +399,7 @@ class ImtField(MultipleChoiceWildcardField):
             raise ValidationError(validation_errors)
 
     @staticmethod
-    def normalize_imt(imt_string):
+    def normalize_imt(imt_string) -> str:
         """Checks and return a normalized version of the given imt as string,
         e.g. '0.1' -> 'SA(0.1)'. Raise KeyError (imt not implemented) or
         ValueError (SA period missing or invalid)"""
@@ -388,7 +411,7 @@ class ImtField(MultipleChoiceWildcardField):
 
 def get_field_docstring(field: Field, remove_html_tags=False):
     """Return a docstring from the given Form field `label` and `help_text`
-    attributes. The returned string will have newlines replaced by spaces
+    attributes. The returned string will be a one-line (new newlines) string
     """
     field_label = getattr(field, 'label')
     field_help_text = getattr(field, 'help_text')

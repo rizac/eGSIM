@@ -7,8 +7,6 @@ Created on 3 May 2018
 """
 
 import os
-import shutil
-from os.path import isdir, abspath, dirname
 import json
 
 import pytest
@@ -17,12 +15,6 @@ import numpy as np
 
 from django.core.management import call_command
 from django.test.client import Client
-
-from datetime import date, datetime
-from urllib.parse import quote
-from typing import Union, Iterable
-from egsim.api.views import QUERY_PARAMS_SAFE_CHARS
-from egsim.api.forms.fields import isscalar
 
 
 @pytest.fixture()
@@ -193,81 +185,3 @@ def django_db_setup(django_db_blocker):
         #     shutil.rmtree(ff_path)
         # run command:
         call_command('egsim_init', interactive=False)  # '--noinput')
-
-
-@pytest.fixture(scope='session')
-def querystring():
-    """Returns a query string from a given dict and a base_url"""
-    return get_querystring
-
-
-# utility functions for `querystring`:
-
-
-def get_querystring(query_args: dict, baseurl: str = None):
-    """Convert `query_args` to a query string to be used in URLs. It escapes all
-    unsafe characters (as defined in `QUERY_PARAMS_SAFE_CHARS`) from
-    `query_args` keys (str) and values, which can be any "scalar" type: bool, str,
-    date, datetime, numeric, and iterables of those elements (which will be
-    converted to comma-separated encoded strings), with the exception of `dict`:
-    values of type `dict` are not easily representable and will raise
-    `ValueError` in case
-
-    :param query_args: a dictionary of query arguments (strings) mapped to
-        their values and to be encoded as "<key>=<value>" portions of the query
-        string
-    :param baseurl: if provided, it is the base url which will be prefixed in
-        the returned url string. It does not matter if it ends or not with a
-        '?' character
-    """
-    baseurl = baseurl or ''
-    if baseurl and baseurl[-1:] != '?':
-        baseurl += '?'
-
-    return "%s%s" % (baseurl, "&".join("%s=%s" % (key, escape(val))
-                                       for key, val in query_args.items()))
-
-
-def escape(value: Union[bool, None, str, date, datetime, int, float, Iterable]) -> str:
-    """Percent-escapes `value` with support for iterables and `None`s
-
-    :param value: bool, str, date, datetime, numeric, `None`s
-        (encoded as "null", with no quotes) and any iterables of those elements
-        (which will be converted to comma-separated encoded strings), but not
-        `dict` (raise ValueError in case)
-    """
-    if isinstance(value, dict):
-        raise ValueError('Can not represent nested dictionaries '
-                         'in a query string')
-    return quote(tostr(value), safe=QUERY_PARAMS_SAFE_CHARS) \
-        if isscalar(value) else \
-        ','.join(quote(tostr(_), safe=QUERY_PARAMS_SAFE_CHARS)
-                 for _ in value)
-
-
-def tostr(obj: Union[bool, None, str, date, datetime, int, float], none='null') -> str:
-    """Return a string representation of `obj` for injection into URL query
-    strings. No character is escaped, use :func:`urllib.parse.quote` or
-    :func:`querystring` for that.
-    Return `str(obj)` with these exceptions:
-
-    - `obj` is a `datetime.date` or `datetime.datetime`, return its ISO format
-      representation, either '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S' or
-      '%Y-%m-%dT%H:%M:%S.%f'
-    - `obj` is boolean: return 'true' or 'false' (to lower case)
-    - `obj` is None, return the `none` argument which defaults to "null"
-      (with no leading and trailing quotation character)
-    """
-    if obj is None:
-        return none
-    if obj is True or obj is False:
-        return str(obj).lower()
-    if isinstance(obj, (date, datetime)):
-        # note that datetimes are dates. Avoid isinstance, just simpler check:
-        is_date = not hasattr(obj, 'hour')  # or seconds, so on
-        if is_date or (obj.microsecond == obj.hour == obj.minute == obj.second == 0):
-            return obj.strftime('%Y-%m-%d')
-        if obj.microsecond == 0:
-            return obj.strftime('%Y-%m-%dT%H:%M:%S')
-        return obj.strftime('%Y-%m-%dT%H:%M:%S.%f')
-    return str(obj)

@@ -11,22 +11,12 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-from .forms.fields import NArrayField
+from .forms.fields import NArrayField, split_string
 from .forms.flatfile import FlatfileForm
 from .forms.trellis import TrellisForm
 from .forms.flatfile.residuals import ResidualsForm
 from .forms.flatfile.testing import TestingForm
 from .forms import APIForm
-
-
-# Set the non-encoded characters. Sources:
-# https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#Description
-# NOTE THAT THE LAST 5 CHARACTERS ARE NOT SAFE
-# ACCORDING TO RFC 3986 EVEN THOUGH THESE CHARACTERS HAVE NOT FORMALIZED
-# URI DELIMITING USE. WE MIGHT APPEND [:-5] to QUERY_PARAMS_SAFE_CHARS BUT
-# WE SHOULD CHANGE THEN ALSO encodeURIComponent in the javascript files, to
-# make it consistent
-QUERY_PARAMS_SAFE_CHARS = "-_.~!*'()"
 
 
 class RESTAPIView(View):
@@ -74,10 +64,10 @@ class RESTAPIView(View):
         # request.GET is a QueryDict object (see Django doc for details)
         # with percent-encoded characters already decoded
         for param_name, values in request.GET.lists():
-            if param_name in multi_params and any(' ' in v or ',' in v for v in values):
+            if param_name in multi_params:
                 new_value = []
                 for val in values:
-                    new_value.extend(v for vv in val.split(',') for v in vv.split(' '))
+                    new_value.extend(split_string(val))
             else:
                 new_value = values[0] if len(values) == 1 else values
             if param_name in ret:

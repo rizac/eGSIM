@@ -2,10 +2,13 @@
 
 import re
 from typing import Union, Iterable, Any
+from datetime import date, datetime
 import json
+import yaml
 from itertools import chain, repeat
 from io import StringIO
 import csv
+from urllib.parse import quote as urlquote
 
 from shapely.geometry import Polygon, Point
 from django.core.exceptions import ValidationError
@@ -14,7 +17,7 @@ from django.utils.translation import gettext
 from django.forms import Form
 
 from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField, Field,
-                     FloatField)
+                     FloatField, get_field_docstring, NArrayField)
 from .. import models
 
 
@@ -208,6 +211,94 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             params = cls._field2params.get(field_name, [field_name])
             yield params, field_name, field
 
+    def _get_data(self, compact=True) -> Iterable[tuple[str, Any]]:
+        """Yields (field_name, field_value) pairs from `self.data`
+
+        @param compact: if True (the default), non required parameters (i.e., whose
+            value is the same as the Field initial value) are not returned
+        """
+        for field_name, value in self.data.items():
+            field = self.fields[field_name]
+            if compact and (field.required or field.initial is not None) \
+                    and self.data[field_name] == field.initial:
+                continue
+            yield field_name, value
+
+    def as_json(self, compact=True) -> str:
+        """Return the `data` argument passed in the constructor as JSON formatted
+        string
+
+        @param compact: if True (the default), non required parameters (i.e., whose
+            value is the same as the Field initial value) are not returned
+        """
+        stream = StringIO()
+        json.dump({self.field2param[f]: v for f, v in self._get_data(compact)},
+                  stream, indent=4, separators=(',', ': '), sort_keys=True)
+        return stream.getvalue()
+
+    def as_yaml(self, compact=True) -> str:
+        """Return the `data` argument passed in the constructor as YAML formatted
+        string
+
+        @param compact: if True (the default), non required parameters (i.e., whose
+            value is the same as the Field initial value) are not returned
+        """
+        class Dumper(yaml.SafeDumper):
+            """Force indentation of lists ( https://stackoverflow.com/a/39681672)"""
+
+            def increase_indent(self, flow=False, indentless=False):
+                return super(Dumper, self).increase_indent(flow, False)
+
+        stream = StringIO()
+        for field_name, value in self._get_data(compact):
+            docstr = get_field_docstring(self.fields[field_name]).get(field_name, None)
+            if docstr:
+                stream.write(f'# {docstr}')
+                stream.write('\n')
+            yaml.dump({self.field2param[field_name]: value},
+                      stream=stream, Dumper=Dumper, default_flow_style=False)
+            stream.write('\n')
+
+        return stream.getvalue()
+
+    def as_querystring(self, compact=True) -> str:
+        """Return the `data` argument passed in the constructor as query string
+        to be used with specific URLs for GET requests using this form
+
+        @param compact: if True (the default), non required parameters (i.e., whose
+            value is the same as the Field initial value) are not returned
+        """
+        # Letters, digits, and the characters '_.-~' are never quoted. These are
+        # the additional safe characters (we include the former for safety):
+        safe_chars = "-_.~!*'()"
+        ret = []
+        to_str = self.obj_as_querystr
+        for field_name, value in self._get_data(compact):
+            if isinstance(value, (list, tuple)):
+                val = ','.join(f'{urlquote(to_str(v), safe=safe_chars)}' for v in value)
+            else:
+                val = f'{urlquote(to_str(value), safe=safe_chars)}'
+            ret.append(f'{self.field2param[field_name]}={val}')
+        return '&'.join(ret)
+
+    @staticmethod
+    def obj_as_querystr(obj: Union[bool, None, str, date, datetime, int, float]) -> str:
+        """Return a string representation of `obj` for injection into URL query
+        strings. No character of the returned string is escaped (see
+        :func:`urllib.parse.quote` for that)
+
+        @return "null" if obj is None, "true/false"  if `obj` is `bool`,
+            `obj.isoformat()` if `obj` is `date` or `datetime`, `str(obj)` in any other
+             case
+        """
+        if obj is None:
+            return "null"
+        if obj is True or obj is False:
+            return str(obj).lower()
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+        return str(obj)
+
 
 def _get_regionalizations() -> Iterable[tuple[str, str]]:
     return [(_.name, str(_)) for _ in models.Regionalization.objects.all()]
@@ -293,11 +384,11 @@ class GsimImtForm(SHSRForm):
         selected intensity measure type
         """
         gsim, imt = 'gsim', 'imt'
+        cleaned_data = super().clean()
 
         # gsim is required but first check that we passed the lat, lon arguments,
         # in that case we might have already a list of gsim to merge with the
         # one provided via the classical gsim parameter
-        cleaned_data = super().clean()
         regionalization_based_gsims = cleaned_data.pop(self.SHSR_MODELS_KEY, [])
         if regionalization_based_gsims:
             if cleaned_data.get(gsim, None):
@@ -332,10 +423,9 @@ class GsimImtForm(SHSRForm):
         """
         # (gsims and imts are both validated, non empty lists)
         # we want imt class names merge all SA(...) as one single 'SA'
-        len_ = len(imts)
-        imts = [i for i in imts if not i.startswith('SA')]
-        if len(imts) < len_:
-            imts += ['SA']
+        has_sa = any(i.startswith('SA') for i in imts)
+        if has_sa:
+            imts = ['SA'] + [i for i in imts if not i.startswith('SA')]
 
         invalid_gsims = set(gsims) - set(self.sharing_gsims(imts))
 
