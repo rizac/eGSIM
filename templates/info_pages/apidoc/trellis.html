@@ -43,9 +43,10 @@ Notes:
 		In any case, if <span class='pname'>{{ data.form.plot_type.name }}</span> is
 		<span class='pval str'>{{ data.form.plot_type.choices.2.0 }}</span>
 		({{ data.form.plot_type.choices.2.1 }}), then
-		<span class='pname'>{{ data.form.imt.name }}</span> will
-		default to <span class='pval str'>SA</span> with a set of pre-defined periods: any value
-		explicitly provided by the user will thus be ignored in case
+		<span class='pname'>{{ data.form.imt.name }}</span> can be omitted and will
+		default to a list of pre-defined <span class='pval str'>SA</span> periods.
+		Users can always provide their own list of SA with periods, but any other IMT
+		will raise an error, if provided
 	<li><span class='pname'>{{ data.form.gsim.name }}</span> and 
 		<span class='pname'>{{ data.form.imt.name }}</span> can also be input with
 		<a href="https://docs.python.org/3/library/fnmatch.html" target="_blank">wildcards</a>:

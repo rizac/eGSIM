@@ -105,21 +105,11 @@ class TrellisForm(GsimImtForm, APIForm):
     backarc = BooleanField(label='Backarc Path', initial=False,
                            required=False)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # If the plot_type is spectra, provide default values for imt (which
-        # is optional) and set the field['imt'] as accepting only SA:
-        self._replace_sa_periods_with_default = False
-        if self._is_input_plottype_spectra():
-            imt = 'imt'
-            self.fields[imt].choices = [('SA', 'SA')]
-            if imt not in self.data:
-                self._replace_sa_periods_with_default = True
-                # provide a dummy period that will pass ImtField validation
-                self.data[imt] = 'SA(1)'
+    # All clean_<field> methods below are called in `self.full_clean` after each field
+    # is validated individually in order to perform additional validation or casting:
 
     def clean_msr(self):
-        """Cleans the "msr" field by converting the given value to a
+        """Clean the "msr" field by converting the given value to a
         object of type :class:`openquake.hazardlib.scalerel.base.BaseMSR`.
         """
         value = self.cleaned_data['msr']
@@ -131,7 +121,7 @@ class TrellisForm(GsimImtForm, APIForm):
             raise ValidationError(gettext(str(exc)), code='invalid')
 
     def clean_initial_point(self):
-        """Cleans the "location" field by converting the given value to a
+        """Clean the "location" field by converting the given value to a
         object of type :class:`openquake.hazardlib.geo.point.Point`.
         """
         value = self.cleaned_data['initial_point']
@@ -142,21 +132,41 @@ class TrellisForm(GsimImtForm, APIForm):
         except Exception as exc:
             raise ValidationError(gettext(str(exc)), code='invalid')
 
+    def clean_imt(self):
+        """Clean the imt Field by checking that it is empty or composed of SA only,
+        in cae the magnitude-speactra plots are requested"""
+        imts = self.cleaned_data.get('imt', [])
+        if self._is_input_plottype_spectra():
+            # check invalid IMTs:
+            invalid_imts = [_ for _ in imts if not _.startswith('SA')]
+            if invalid_imts:
+                raise ValidationError(f'Invalid value with the chosen plot: remove '
+                                      'this parameter or provide a custom SA periods',
+                                      code='invalid')
+            # If no SA is found (with or without period) add "SA": this will not be used
+            # in `self.clean` below but in `GsimImtForm.clean()` to check that the models
+            # provided are compatible with SA
+            if not any(_.startswith('SA') for _ in imts):
+                return list(imts) + ['SA']
+        return imts
+
     def _is_input_plottype_spectra(self):
         return self.data.get('plot_type', '') in ('s', 'ss')
 
     def clean(self):
         cleaned_data = super().clean()
-        # Handle spectra plot type (see __init__), but only if 'imt' is valid
-        # (i.e., 'imt' in cleaned_data):
-        if self._is_input_plottype_spectra() and not self.has_error('imt'):
-            if self._replace_sa_periods_with_default:
-                # imt was not in data, for safety, remove it:
-                self.data.pop('imt')
-                cleaned_data['imt'] = self._default_periods_for_spectra()
-            else:
-                cleaned_data['imt'] = sorted(imt.from_string(_).period
-                                             for _ in cleaned_data['imt'])
+
+        if self._is_input_plottype_spectra():
+            # cleaned_data['imt'] is either [] or a list of 'SA', with or without period.
+            # Extract periods cause the trellis code expects 'imt' as float in this case:
+            periods = sorted(imt.from_string(_).period
+                             for _ in cleaned_data.get('imt', [])
+                             if _ != 'SA')
+            if not periods:
+                # provide default periods if none found:
+                periods = self._default_periods_for_spectra()
+            # set the correct value:
+            cleaned_data['imt'] = periods
 
         # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
         vs30 = cleaned_data['vs30']  # surely a list with st least one element

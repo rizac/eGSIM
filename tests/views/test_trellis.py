@@ -24,8 +24,8 @@ class Test:
     csv_expected_text = b'^imt,model,magnitude,distance,vs30(,+)\r\n,,,,'
     GSIM, IMT = 'gsim', 'imt'
 
-    def querystring(self, querystring, **kwargs):
-        return querystring(TrellisView.formclass)
+    def querystring(self, data):
+        return f'{self.url}?{TrellisView.formclass(dict(data)).as_querystring()}'
 
     def get_figures(self, result):  # noqa
         """Returns a list of dicts scanning recursively `result` (the json
@@ -58,13 +58,13 @@ class Test:
     @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis_dist(self,
                           # pytest fixtures:
-                          client, testdata, areequal, querystring,
+                          client, testdata, areequal,
                           # parametrized argument:
                           st_dev):
         """test trellis distance and distance stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot='d', stdev=st_dev)
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
@@ -107,7 +107,7 @@ class Test:
         """test trellis magnitude and magnitude stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot='m', stdev=st_dev)
-        resp1 = client.get(self.querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
@@ -210,7 +210,7 @@ class Test:
         inputdic = dict(testdata.readyaml(self.request_filename),
                         plot='s', stdev=st_dev)
         inputdic.pop('imt')
-        resp1 = client.get(self.querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
@@ -314,7 +314,7 @@ class Test:
             "stdev": True,
             "plot": "d"
         }
-        qstr = self.querystring(inputdic, baseurl=self.url)
+        qstr = self.querystring(inputdic)
         resp1 = client.get(qstr)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -373,7 +373,7 @@ class Test:
             "stdev": True,
             "plot": "d"
         }
-        resp1 = client.get(self.querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
@@ -479,7 +479,7 @@ class Test:
             "stdev": True,
             "plot": "d"
         }
-        resp1 = client.get(self.querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         result = resp1.json()
