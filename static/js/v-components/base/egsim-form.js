@@ -123,7 +123,7 @@ EGSIM.component('egsim-form', {
 			Returns an axios Promise to which a user can attach functions to
 			be executed when the POST request returns successfully
 			*/
-			return this.postFormData(this.downloadUrl + '.json').then(response => {
+			return this.postFormData(this.downloadUrl + '.querystring').then(response => {
 				if (response && response.data){
 					var responseData = response.data;
 					var retUrl = window.location.origin;
@@ -133,11 +133,7 @@ EGSIM.component('egsim-form', {
 							+ (window.location.port ? ':' + window.location.port : '');
 					}
 					retUrl += (this.url.startsWith('/') ? '' : '/') + this.url;
-					var prefix = '?';
-					for (var paramName of Object.keys(responseData)){
-						retUrl += `${prefix}` + encodeURIComponent(paramName) + '=' + encodeURIComponent(responseData[paramName]);
-						prefix = '&';
-					}
+					retUrl += `?${responseData}`;
 					this.requestURL = retUrl;
 				}
 			});

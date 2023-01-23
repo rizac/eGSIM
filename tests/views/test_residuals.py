@@ -24,9 +24,12 @@ class Test:
     url = "/" + ResidualsView.urls[0]  # '/query/residuals'
     request_filename = 'request_residuals.yaml'
 
+    def querystring(self, data):
+        return f'{self.url}?{ResidualsView.formclass(dict(data)).as_querystring()}'
+
     def test_uploaded_flatfile(self,
                                # pytest fixtures:
-                               testdata, areequal, client, querystring):
+                               testdata, areequal, client):
         inputdic = testdata.readyaml(self.request_filename)
         # no flatfile, uploaded flatfile:
         inputdic['plot_type'] = 'res'
@@ -34,7 +37,7 @@ class Test:
         inputdic2.pop('flatfile')
         resp2 = client.post(self.url, data=inputdic2,
                             content_type='application/json')
-        resp1 = client.get(querystring(inputdic2, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic2))
         assert resp1.status_code == resp2.status_code == 400
         assert 'flatfile' in resp1.json()['error']['message']
 
@@ -58,29 +61,26 @@ class Test:
 
     def test_residuals_service_err(self,
                                    # pytest fixtures:
-                                   testdata, areequal, client, querystring):
+                                   testdata, areequal, client):
         """tests errors in the residuals API service."""
         inputdic = testdata.readyaml(self.request_filename)
 
         # test conflicting values:
-        resp1 = client.get(querystring(dict(inputdic, plot_type='res',
+        resp1 = client.get(self.querystring(dict(inputdic, plot_type='res',
                                             # sel='(vs30 > 800) & (vs30 < 1200)')
-                                            sel='(vs30 > 1000) & (vs30 < 1010)'),
-                                       baseurl=self.url))
+                                            sel='(vs30 > 1000) & (vs30 < 1010)')))
         assert resp1.status_code == 400
         assert 'sel' in resp1.json()['error']['message']
 
         # test conflicting values:
-        resp1 = client.get(querystring({**inputdic,
-                                        'plot_type': 'res',
-                                        'data-query': '(vs30 > 1000) & (vs30 < 1010)'},
-                                       baseurl=self.url))
+        resp1 = client.get(self.querystring({**inputdic, 'plot_type': 'res',
+                                            'data-query': '(vs30 > 1000) & (vs30 < 1010)'}))
         assert resp1.status_code == 400
         assert 'sel' in resp1.json()['error']['message']
 
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic))
         assert resp1.status_code == resp2.status_code == 400
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
@@ -105,7 +105,7 @@ class Test:
         inputdic2['plot_type'] = 'XXX'
         resp2 = client.post(self.url, data=inputdic2,
                             content_type='application/json')
-        resp1 = client.get(querystring(inputdic2, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic2))
         assert resp1.status_code == resp2.status_code == 400
         assert 'plot_type' in resp1.json()['error']['message']
         assert 'plot_type' in resp2.json()['error']['message']
@@ -114,7 +114,7 @@ class Test:
         inputdic['selexpr'] = '(magnitude >5'
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
-        resp1 = client.get(querystring(inputdic, baseurl=self.url))
+        resp1 = client.get(self.querystring(inputdic))
         assert resp1.status_code == resp2.status_code == 400
         assert 'selexpr' in resp1.json()['error']['message']
         assert 'selexpr' in resp2.json()['error']['message']
@@ -131,7 +131,7 @@ class Test:
     def test_residuals_service_(self,
                                 restype,
                                 # pytest fixtures:
-                                testdata, areequal, client, querystring):
+                                testdata, areequal, client):
         """tests the residuals API service."""
         expected_txt = \
             re.compile(b'^imt,type,model,mean,stddev,median,slope,'
@@ -147,7 +147,7 @@ class Test:
         if restype == 'res':
             # compute the GET request and compare to POST but only for 1
             # residual plot type case, as this test is time consuming:
-            resp1 = client.get(querystring(inputdic, baseurl=self.url))
+            resp1 = client.get(self.querystring(inputdic))
             assert resp1.status_code == resp2.status_code
             assert areequal(resp1.json(), resp2.json())
 
