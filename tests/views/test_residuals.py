@@ -66,14 +66,14 @@ class Test:
         inputdic = testdata.readyaml(self.request_filename)
 
         # test conflicting values:
-        resp1 = client.get(self.querystring(dict(inputdic, plot_type='res',
-                                            # sel='(vs30 > 800) & (vs30 < 1200)')
-                                            sel='(vs30 > 1000) & (vs30 < 1010)')))
+        resp1 = client.get(self.querystring({**inputdic, 'plot': 'res',
+                                             'selection-expression': '(vs30 > 800) & (vs30 < 1200)',
+                                             'data-query': '(vs30 > 1000) & (vs30 < 1010)'}))
         assert resp1.status_code == 400
-        assert 'sel' in resp1.json()['error']['message']
+        assert 'data-query' in resp1.json()['error']['message']
 
         # test conflicting values:
-        resp1 = client.get(self.querystring({**inputdic, 'plot_type': 'res',
+        resp1 = client.get(self.querystring({**inputdic, 'plot': 'res',
                                             'data-query': '(vs30 > 1000) & (vs30 < 1010)'}))
         assert resp1.status_code == 400
         assert 'sel' in resp1.json()['error']['message']
