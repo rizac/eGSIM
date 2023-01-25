@@ -41,8 +41,9 @@ class FlatfileForm(EgsimBaseForm):
                                               'query string')
 
     def __init__(self, data, files=None, **kwargs):
-        super().__init__(data=data, **kwargs)  # <- normalizes data keys
+        # set now `self._u_ff`, in case `self.clean` is called in `super.__init__` below:
         self._u_ff = None if files is None else _UploadedFlatfile(files=files)
+        super().__init__(data=data, **kwargs)
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
