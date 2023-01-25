@@ -85,8 +85,24 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         return new_class
 
 
+class _DummyRenderer:
+    """As we use Django as REST API (=> no renderer), provide a default renderer for all
+    classes which might speed Form initialization"""
+
+    def get_template(self, template_name):
+        raise NotImplementedError("_DummyRenderer does not support get_template()")
+
+    def render(self, template_name, context, request=None):
+        template = self.get_template(template_name)
+        return template.render(context, request=request).strip()
+
+
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
+
+    # this no-op renderer will be used by all form subclasses (as long as no explicit
+    # `renderer` arg is passed to `__init__`). See `_DummyRenderer` above for details
+    default_renderer = _DummyRenderer()
 
     # Fields of this class are exposed as API parameters via their attribute name by
     # default. Because attribute names must be immutable to avoid breaking the code
@@ -95,7 +111,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     # name to the list of API parameter name(s) that can be used instead (including the
     # same Field attribute name, if needed). The first parameter name in the list will be
     # considered the default and displayed in e.g., missing param errors. `_field2params`
-    # of superclasses will be merged into this one, not overwritten.
+    # of superclasses will be merged into this one, not completely overwritten.
     # See `egsim.forms.EgsimFormMeta` and `self.apifields()` for usage.
     _field2params: dict[str, list[str]]
 
