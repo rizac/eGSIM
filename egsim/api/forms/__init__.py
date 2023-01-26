@@ -90,20 +90,20 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
-    # As we use Django as REST API only, we need no Django renderer. To save some time,
-    # we can tell Django to always use the same renderer in any Form without creating a
-    # new one, by providing the renderer instance in this class attribute:
+    # As we use Django as REST API only, we need no Django renderer. To avoid creating a
+    # new renderer inside each Form `__init__`, we can tell Django to always use the same
+    # renderer by instantiating it once with this class attribute:
     default_renderer = get_default_renderer()
 
-    # Fields of this class are exposed as API parameters via their attribute name by
-    # default. Because attribute names must be immutable to avoid breaking the code
-    # (e.g,, they are used as keys of `self.cleaned_data`) and API parameter names should
+    # Fields of this class are exposed as API request parameters via their attribute name
+    # by default. Because attribute names must be immutable to avoid breaking the code
+    # (e.g,, they are used as keys of `self.cleaned_data`) and parameter names should
     # be changed easily, the dict `_field2params` below allows to map a Field attribute
-    # name to the list of API parameter name(s) that can be used instead (including the
-    # same Field attribute name, if needed). The first parameter name in the list will be
+    # name to the list of parameter name(s) that can be used instead (including the same
+    # Field attribute name, if needed). The first parameter name in the list will be
     # considered the default and displayed in e.g., missing param errors. `_field2params`
-    # of superclasses will be merged into this one, not completely overwritten.
-    # See `egsim.forms.EgsimFormMeta` and `self.apifields()` for usage.
+    # of superclasses will be merged into this one (see `EgsimFormMeta` metaclass). This
+    # is a private-like attribute, to access all parameters and fields, use `apifields()`
     _field2params: dict[str, list[str]]
 
     # set of default error messages that will overwrite the Fields default as
@@ -112,15 +112,18 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
         """Override init: re-arrange `self.data` and set the initial value for
-        missing fields. Note that `data` might be modified inplace
+        missing fields. Note that `data` might be modified inplace.
+        In addition, This Form and subclasses ensure that all fields which have
+        an initial value (not None) and do not get values from user get populated by
+        their initial value
 
-        :param data: the Form data (dict or None)
+        :param data: the Form data (dict or None). Keys should be API parameters:
+            the conversion to Field attribute names is done inside this method
         :param files: the Form files
-        :param no_unknown_params: boolean indicating whether unknown (or misspelled)
-            parameters (`data` keys) should invalidate the Form. The default is True
-            not because of Django requirements but to prevent typos in non required
-            params, where the default value (and not the user defined one) could be set
-            silently
+        :param no_unknown_params: boolean indicating whether unknown parameters (`data`
+            keys) should invalidate the Form. The default is True to prevent that
+            parameters with an initial value set, if misspelled, take the initial value
+            with no warnings
         """
         # remove colon in labels by default in templates:
         kwargs.setdefault('label_suffix', '')
@@ -214,7 +217,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 def_param_names = field2param[field_name]
                 input_param_names = [p for p in def_param_names if p in self._input_data]
                 param_name = (input_param_names or def_param_names)[0]
-            if param_name is not None :
+            if param_name is not None:
                 err_param_names.add(param_name)
             # compose dict for detailed error messages:
             for err in errs:
