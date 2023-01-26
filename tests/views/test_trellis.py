@@ -180,7 +180,8 @@ class Test:
         expected_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid parameters: csv_sep, csv_dec',
+                'message': 'Invalid request. Problems found in: csv_dec, csv_sep. '
+                           'See response data for details',
                 'errors': [
                     {
                         'location': 'csv_sep',
@@ -325,7 +326,8 @@ class Test:
         expected_err_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid parameter: gsim',
+                'message': 'Invalid request. Problems found in: gsim. '
+                           'See response data for details',
                 'errors': [
                     {
                         'location': 'gsim',
@@ -427,7 +429,8 @@ class Test:
         expected_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid parameters: z1pt0, z2pt5',
+                'message': 'Invalid request. Problems found in: z1pt0, z2pt5. '
+                           'See response data for details',
                 'errors': [
                     {
                         'location': 'z1pt0',
@@ -488,7 +491,8 @@ class Test:
         expected_json = {
             'error': {
                 'code': 400,
-                'message': 'Invalid parameters: gsim, imt',
+                'message': 'Invalid request. Problems found in: gsim, imt. '
+                           'See response data for details',
                 'errors': [
                     {
                         'location': 'gsim',

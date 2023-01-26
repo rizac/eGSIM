@@ -90,9 +90,9 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
-    # As we use Django as REST API only (and Vue for JavaScript), we need no Django
-    # renderer. We can tell Django to always use the same renderer in any Form without
-    # creating a new one, by providing the renderer instance in this class attribute:
+    # As we use Django as REST API only, we need no Django renderer. To save some time,
+    # we can tell Django to always use the same renderer in any Form without creating a
+    # new one, by providing the renderer instance in this class attribute:
     default_renderer = get_default_renderer()
 
     # Fields of this class are exposed as API parameters via their attribute name by
@@ -175,15 +175,16 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         super().full_clean()  # this re-initializes self._errors
 
     def validation_errors(self, msg: str = None) -> dict:
-        """Reformat `self.errors.as_json()` into the following dict:
+        """Reformat `self.errors.as_json()` into the following dict (all keys and values
+        are strings):
         ```
         {
-            "message": `msg` or, if None, "Invalid parameter(s) " + param. list
+            "message": `msg` or an auto generated message (see below for details)
             "errors": [
                 {
-                    "location": param. name (str),
-                    "message": error message (str),
-                    "reason": error code, e.g. 'invalid', 'required', 'conflict' (str)
+                    "location": parameter name,
+                    "message": detailed error message,
+                    "reason": error code, e.g. 'invalid', 'required', 'conflict'
                 }
                 ...
             ]
@@ -191,9 +192,8 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         ```
         NOTE: This method should be called if `self.is_valid()` returns False
 
-        :param msg: the global error message. If None, it defaults to
-            "Invalid parameter: " + param_name or
-            "Invalid parameters: " + comma separated list of param names
+        :param msg: the global error message. If None, it defaults to a general
+            message with the parameters with problems (if any is found)
 
         For details see:
         https://cloud.google.com/storage/docs/json_api/v1/status-codes
@@ -261,7 +261,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
     @classmethod
     def apifields(cls) -> Iterable[tuple[list[str, ...], str, Field]]:
-        """Yield the Fields of this form as tuples of
+        """Yield the Fields of this class as tuples of 3 elements:
         ```
         params: list[str], field_name: str, field: Field
         ```
@@ -274,12 +274,12 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             yield params, field_name, field
 
     def _get_data(self, compact=True) -> Iterable[tuple[str, Any]]:
-        """Yield the Fields of this form as tuples of
+        """Yield the Fields of this instance as tuples of 3 elements:
         ```
-        param_name: str, param_value: Any, field: Field
+        param_name: str, param_value: Any, field: Field | None
         ```
-        from the `data` passed in `__init__`. `field` might be None if param_name is
-        unknown (i.e., it does not match any Form parameter)
+        The fields are yielded from the original `data` passed in `__init__`: as such,
+        `field` might be None if `param_name` does not match any Form parameter
 
         @param compact: if True (the default), optional Form parameters (either non
             required or whose value equals the Field initial value) are not yielded
