@@ -1,6 +1,7 @@
 """Base eGSIM forms"""
 
 import re
+from django.forms.utils import ErrorDict
 from typing import Union, Iterable, Any
 from datetime import date, datetime
 import json
@@ -121,47 +122,67 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
         """Override init: re-arrange `self.data` and set the initial value for
-        missing fields
+        missing fields. Note that `data` might be modified inplace
+
+        :param data: the Form data (dict or None)
+        :param files: the Form files
+        :param no_unknown_params: boolean indicating whether unknown (or misspelled)
+            parameters (`data` keys) should invalidate the Form. The default is True
+            not because of Django requirements but to prevent typos in non required
+            params, where the default value (and not the user defined one) could be set
+            silently
         """
         # remove colon in labels by default in templates:
         kwargs.setdefault('label_suffix', '')
+        # store original dict:
+        self._input_data = dict(data or {})
         # call super:
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
-        # Create `self.field2param`, a dict mapping *all* class field names with the API
-        # parameter given as input (or the default found in `self.apifields()`). This
-        # dict will be used to display errors, if needed (see `self.validation_errors`).
-        self.field2param = {}
+        # Fix self.data and store parameter errors in a list of ValidationErrors
+        # (see `self.full_clean`and `self.validation_errors` for details):
+        self._init_errors = []
+        unknowns = set(self.data) if no_unknown_params else None
         for params, field_name, field in self.apifields():
-            i_params = [p for p in params if p in self.data]  # params given as input
-            if len(i_params) > 1:
-                raise ValidationError(f'Conflicting parameters: {", ".join(i_params)}')
-            self.field2param[field_name] = i_params[0] if i_params else params[0]
+            if unknowns is not None:
+                unknowns -= set(params)
+            input_params = tuple(p for p in params if p in self.data)
+            if len(input_params) > 1:  # names conflict, store error:
+                self._init_errors.append(ValidationError(",".join(input_params),
+                                                         code='_conflict_egsim_param_'))
+            elif input_params:
+                param_name = input_params[0]
+                # Rename the keys of `self.data` (API params) with the mapped field name
+                # (see `self.clean` and in subclasses):
+                if field_name != param_name:
+                    self.data[field_name] = self.data.pop(param_name)
+            else:
+                # Make missing fields initial value the default, if provided
+                # (https://stackoverflow.com/a/20309754):
+                if self.fields[field_name].initial is not None:
+                    self.data[field_name] = self.fields[field_name].initial
 
-        # check unknown API parameters (i.e., additionally provided by the user):
-        if no_unknown_params and (set(self.data) - set(self.field2param.values())):
-            err_names = set(self.data) - set(self.field2param.values())
-            raise ValidationError(f'Unknown parameter'
-                                  f'{"s" if len(err_names) != 1 else ""}: '
-                                  f'{", ".join(err_names)}')
-
-        # Adjust `self.data` keys:
-        for field_name, param_name in self.field2param.items():
-            # Rename the keys of `self.data` (API parameters) with the mapped field name
-            # (see `self.clean` and in subclasses):
-            if param_name in self.data and field_name != param_name:
-                self.data[field_name] = self.data.pop(param_name)
-            # Make fields initial value the default, if provided
-            # (https://stackoverflow.com/a/20309754):
-            if field_name not in self.data and \
-                    self.fields[field_name].initial is not None:
-                self.data[field_name] = self.fields[field_name].initial
+        if unknowns:  # unknown (nonexistent) parameters, store error:
+            self._init_errors.append(ValidationError(",".join(unknowns),
+                                                     code='_unknown_egsim_param_'))
 
         # Adjust Fields default error messages with our one, oif provided:
         for err_code, err_msg in self._default_error_messages.items():
             for name, field in self.fields.items():
                 if err_code in field.error_messages:
                     field.error_messages[err_code] = err_msg
+
+    def full_clean(self):
+        """Performs a full clean of this form, but first check if we had initialization
+        errors. In case, put them in `self._errors` and return"""
+        if self._init_errors:
+            self._errors = ErrorDict()
+            self.cleaned_data = {}  # noqa
+            for error in self._init_errors:
+                self.add_error(None, error)
+            return
+
+        super().full_clean()  # this re-initializes self._errors
 
     def validation_errors(self, msg: str = None) -> dict:
         """Reformat `self.errors.as_json()` into the following dict:
@@ -188,25 +209,61 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         https://cloud.google.com/storage/docs/json_api/v1/status-codes
         https://google.github.io/styleguide/jsoncstyleguide.xml
         """
-        dic = json.loads(self.errors.as_json())
-        if not dic:
+        errors_dict: dict[str, list[dict[str, str]]] = json.loads(self.errors.as_json())
+        if not errors_dict:
             return {}
+
+        field2param = {field_name: params for params, field_name, _ in self.apifields()}
+
         errors = []
-        err_param_names = []
+        err_param_names = set()
         # build errors dict:
-        for invalid_field_name, errs in dic.items():
-            invalid_param_name = self.field2param[invalid_field_name]
-            err_param_names.append(invalid_param_name)
+        for field_name, errs in errors_dict.items():
+            param_name = None
+            if field_name in field2param:
+                def_param_names = field2param[field_name]
+                input_param_names = [p for p in def_param_names if p in self._input_data]
+                param_name = (input_param_names or def_param_names)[0]
+            if param_name is not None :
+                err_param_names.add(param_name)
             # compose dict for detailed error messages:
             for err in errs:
-                errors.append({'location': invalid_param_name,
-                               'message': err.get('message', ''),
-                               'reason': err.get('code', '')})
+                err_message = err.get('message', '')
+                err_code = err.get('code', '')
+                # if we have an unknown egsim message, add the unknown parameters in
+                # the main message header:
+                pnames = err_message.split(",")
+                if err_code == "_conflict_egsim_param_":
+                    err_param_names.add("/".join(pnames))
+                    for pname in pnames:
+                        others = ", ".join(p for p in pnames if p != pname)
+                        # store detailed error info as dict:
+                        errors.append({
+                            'location': pname,
+                            'message': f"This parameter conflicts with: {others}",
+                            'reason': "conflict"
+                        })
+                elif err_code == "_unknown_egsim_param_":
+                    for pname in pnames:
+                        err_param_names.add(pname)
+                        # store detailed error info as dict:
+                        errors.append({
+                            'location': pname,
+                            'message': "This parameter does not exist (check typos)",
+                            'reason': "nonexistent"
+                        })
+                else:
+                    errors.append({
+                        'location': param_name or 'unspecified',
+                        'message': err_message,
+                        'reason': err_code
+                    })
 
         if not msg:
-            msg = f'Invalid parameter{"" if len(err_param_names) == 1 else "s"}: ' \
-                  f'{", ".join(err_param_names)}'
-
+            msg = "Invalid request"
+            if err_param_names:
+                msg += f'. Problems found in: {", ".join(sorted(err_param_names))}'
+            msg += ". See response data for details"
         return {
             'message': msg,
             'errors': errors
@@ -214,48 +271,57 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
     @classmethod
     def apifields(cls) -> Iterable[tuple[list[str, ...], str, Field]]:
-        """Yields the Fields of this form as tuples of
-
-        (API parameter name(s) of the field, field name, Field object).
-
-        By default, API parameter name(s) is a list with the field name as only
-        element, unless different parameter name(s) where provided in `self._field2params`
+        """Yield the Fields of this form as tuples of
+        ```
+        params: list[str], field_name: str, field: Field
+        ```
+        where `params` is a list of API parameter names of the Field (1st param is the
+        default), and it is usually a list with the field name as only element,
+        unless different parameter name(s) are provided in `self._field2params`
         """
         for field_name, field in cls.declared_fields.items():
             params = cls._field2params.get(field_name, [field_name])
             yield params, field_name, field
 
     def _get_data(self, compact=True) -> Iterable[tuple[str, Any]]:
-        """Yields (field_name, field_value) pairs from `self.data`
+        """Yield the Fields of this form as tuples of
+        ```
+        param_name: str, param_value: Any, field: Field
+        ```
+        from the `data` passed in `__init__`. `field` might be None if param_name is
+        unknown (i.e., it does not match any Form parameter)
 
-        @param compact: if True (the default), optional parameters (either non required
-            or whose value is the same as the Field initial value) are not yielded
+        @param compact: if True (the default), optional Form parameters (either non
+            required or whose value equals the Field initial value) are not yielded
         """
-        for field_name, value in self.data.items():
-            field = self.fields[field_name]
-            field_optional = not field.required or field.initial is not None
-            if compact and field_optional and self.data[field_name] == field.initial:
-                continue
-            yield field_name, value
+        param2field = {
+            p_name: field for p_names, _, field in self.apifields() for p_name in p_names
+        }
+        for param_name, value in self._input_data.items():
+            field = param2field.get(param_name, None)
+            if compact and field is not None:
+                field_optional = not field.required or field.initial is not None
+                if field_optional and self._input_data[param_name] == field.initial:
+                    continue
+            yield param_name, value, field
 
     def as_json(self, compact=True) -> str:
-        """Return the `data` argument passed in the constructor as JSON formatted
-        string
+        """Return the `data` argument passed in the constructor in a JSON formatted
+        string that can be used in POST requests (if `self.is_valid()` is True)
 
-        @param compact: if True (the default), non required parameters (i.e., whose
-            value is the same as the Field initial value) are not returned
+        @param compact: skip optional parameters (see `compact` in `self._get_data`)
         """
         stream = StringIO()
-        json.dump({self.field2param[f]: v for f, v in self._get_data(compact)},
+        json.dump({p: v for p, v, f in self._get_data(compact)},
                   stream, indent=4, separators=(',', ': '), sort_keys=True)
         return stream.getvalue()
 
     def as_yaml(self, compact=True) -> str:
         """Return the `data` argument passed in the constructor as YAML formatted
-        string
+        string (with parameters docstrings when available) that can be used in POST
+        requests (if `self.is_valid()` is True)
 
-        @param compact: if True (the default), non required parameters (i.e., whose
-            value is the same as the Field initial value) are not returned
+        @param compact: skip optional parameters (see `compact` in `self._get_data`)
         """
         class Dumper(yaml.SafeDumper):
             """Force indentation of lists ( https://stackoverflow.com/a/39681672)"""
@@ -264,35 +330,36 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 return super(Dumper, self).increase_indent(flow, False)
 
         stream = StringIO()
-        for field_name, value in self._get_data(compact):
-            docstr = get_field_docstring(self.fields[field_name]).get(field_name, None)
+        for param_name, value, field in self._get_data(compact):
+            docstr = get_field_docstring(field) if field else ""
             if docstr:
                 stream.write(f'# {docstr}')
                 stream.write('\n')
-            yaml.dump({self.field2param[field_name]: value},
+            yaml.dump({param_name: value},
                       stream=stream, Dumper=Dumper, default_flow_style=False)
             stream.write('\n')
 
         return stream.getvalue()
 
+    QUERY_STRING_SAFE_CHARS = "-_.~!*'()"
+
     def as_querystring(self, compact=True) -> str:
         """Return the `data` argument passed in the constructor as query string
-        to be used as URLs suffix for GET requests to this form
+        that can be used in GET requests (if `self.is_valid()` is True)
 
-        @param compact: if True (the default), non required parameters (i.e., whose
-            value is the same as the Field initial value) are not returned
+        @param compact: skip optional parameters (see `compact` in `self._get_data`)
         """
         # Letters, digits, and the characters '_.-~' are never quoted. These are
         # the additional safe characters (we include the former for safety):
-        safe_chars = "-_.~!*'()"
+        safe_chars = self.QUERY_STRING_SAFE_CHARS
         ret = []
         to_str = self.obj_as_querystr
-        for field_name, value in self._get_data(compact):
+        for param_name, value, field in self._get_data(compact):
             if isinstance(value, (list, tuple)):
                 val = ','.join(f'{urlquote(to_str(v), safe=safe_chars)}' for v in value)
             else:
                 val = f'{urlquote(to_str(value), safe=safe_chars)}'
-            ret.append(f'{self.field2param[field_name]}={val}')
+            ret.append(f'{param_name}={val}')
         return '&'.join(ret)
 
     @staticmethod

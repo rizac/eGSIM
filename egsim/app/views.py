@@ -109,18 +109,19 @@ def download_request(request, key: TAB, filename: str):
         return error_response(errs['message'], RESTAPIView.CLIENT_ERR_CODE,
                               errors=errs['errors'])
     ext_nodot = os.path.splitext(filename)[1][1:].lower()
+    compact = True
     if ext_nodot == 'json':
         # in the frontend the axios library expects bytes data (blob)
         # or bytes strings in order for the data to be correctly saved. Thus,
         # use text/javascript because 'application/json' does not work (or should
         # we better use text/plain?)
-        response = HttpResponse(StringIO(form.as_json()),
+        response = HttpResponse(StringIO(form.as_json(compact=compact)),
                                 content_type='text/javascript')
     elif ext_nodot == 'querystring':
-        response = HttpResponse(StringIO(form.as_querystring()),
+        response = HttpResponse(StringIO(form.as_querystring(compact=compact)),
                                 content_type='text/plain')
     else:
-        response = HttpResponse(StringIO(form.as_yaml()),
+        response = HttpResponse(StringIO(form.as_yaml(compact=compact)),
                                 content_type='application/x-yaml')
     response['Content-Disposition'] = 'attachment; filename=%s' % filename
     return response
