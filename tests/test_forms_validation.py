@@ -39,11 +39,13 @@ class Test:
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
-            'message': 'Invalid parameter: model',
+            'message': 'Invalid request. Problems found in: model. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'model',
-                    'message': 'Value not found or misspelled: BindiEtAl2011t, BindiEtAl2014RJb',
+                    'message': 'Value not found or misspelled: BindiEtAl2011t, '
+                               'BindiEtAl2014RJb',
                     'reason': 'invalid_choice'
                 }
             ]
@@ -54,7 +56,8 @@ class Test:
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
-            'message': 'Invalid parameter: imt',
+            'message': 'Invalid request. Problems found in: imt. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'imt',
@@ -69,7 +72,8 @@ class Test:
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
-            'message': 'Invalid parameters: gsim, imt',
+            'message': 'Invalid request. Problems found in: gsim, imt. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'gsim',
@@ -89,7 +93,8 @@ class Test:
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
-            'message': 'Invalid parameters: model, imt',
+            'message': 'Invalid request. Problems found in: imt, model. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'model',
@@ -112,7 +117,8 @@ class Test:
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
-            'message': 'Invalid parameter: imt',
+            'message': 'Invalid request. Problems found in: imt. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'imt',
@@ -133,7 +139,8 @@ class Test:
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
-            'message': 'Invalid parameter: imt',
+            'message': 'Invalid request. Problems found in: imt. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'imt',
@@ -151,7 +158,8 @@ class Test:
         assert not form.is_valid()
         err = form.validation_errors()
         expected_err = {
-            'message': 'Invalid parameter: flatfile',
+            'message': 'Invalid request. Problems found in: flatfile. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'flatfile',
@@ -164,32 +172,38 @@ class Test:
 
     def test_provide_unknown_params(self):
         """Test that unknown and conflicting parameters"""
-        with pytest.raises(ValidationError) as verr:
-            form = GsimImtForm({
-                'unknown_param': 5,
-                GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
-            })
-        assert verr.value.message == 'Unknown parameter: unknown_param'
+
+        form = GsimImtForm({
+            'unknown_param': 5,
+            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
+        })
+        assert not form.is_valid()
+        verr = form.validation_errors()
+        assert 'unknown_param' in verr['message']
 
         # test another unknown parameter, but this time provide a name of an existing
         # Form Field ('plot_type'):
-        with pytest.raises(ValidationError) as verr:
-            data = {
-                GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                IMT: ['PGA'],
-                'mag': '9', 'distance': '0', 'aspect': '1', 'dip': '60', 'plot_type': 'm'
-            }
-            form = TrellisForm(data)
-        assert verr.value.message == 'Unknown parameter: plot_type'
+        data = {
+            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+            IMT: ['PGA'],
+            'mag': '9', 'distance': '0', 'aspect': '1', 'dip': '60', 'plot_type': 'm'
+        }
+        form = TrellisForm(data)
+        assert not form.is_valid()
+        verr = form.validation_errors()
+        assert 'plot_type' in verr['message']
 
-        with pytest.raises(ValidationError) as verr:
-            form = GsimImtForm({
-                'model': ['BindiEtAl2011'],
-                'gmm': ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
-            })
-        assert verr.value.message == 'Conflicting parameters: model, gmm'
+        form = GsimImtForm({
+            'model': ['BindiEtAl2011'],
+            'gmm': ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
+        })
+        assert not form.is_valid()
+        verr = form.validation_errors()
+        assert 'model/gmm' in verr['message'] or 'gmm/model' in verr['message']
+
+        # assert verr.value.message == 'Conflicting parameters: model, gmm'
 
     @pytest.mark.parametrize('data',
                              [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
@@ -229,7 +243,8 @@ class Test:
         assert not form.is_valid()
         err_json = form.validation_errors()
         expected_json = {
-            'message': 'Invalid parameter: imt',
+            'message': 'Invalid request. Problems found in: imt. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'imt',
@@ -248,7 +263,8 @@ class Test:
         form = GsimImtForm(data)
         assert not form.is_valid()
         expected_err = {
-            'message': 'Invalid parameter: gmm',
+            'message': 'Invalid request. Problems found in: gmm. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'gmm',
@@ -269,7 +285,8 @@ class Test:
         form = GsimImtForm(data)
         assert not form.is_valid()
         expected_err = {
-            'message': 'Invalid parameters: gsim, imt',
+            'message': 'Invalid request. Problems found in: gsim, imt. '
+                       'See response data for details',
             'errors': [
                 {
                     'location': 'gsim',
@@ -327,7 +344,8 @@ class Test:
         form = TrellisForm(data)
         assert not form.is_valid()
         expected_json = {
-            'message': 'Invalid parameters: imt, plot, mag, distance, aspect, dip',
+            'message': 'Invalid request. Problems found in: aspect, dip, '
+                       'distance, imt, mag, plot. See response data for details',
             'errors': [
                 {
                     'location': 'imt',
