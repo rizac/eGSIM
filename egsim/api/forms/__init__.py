@@ -1,6 +1,7 @@
 """Base eGSIM forms"""
 
 import re
+from django.forms.renderers import get_default_renderer
 from django.forms.utils import ErrorDict
 from typing import Union, Iterable, Any
 from datetime import date, datetime
@@ -86,24 +87,13 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         return new_class
 
 
-class _DummyRenderer:
-    """As we use Django as REST API (=> no renderer), provide a default renderer for all
-    classes which might speed Form initialization"""
-
-    def get_template(self, template_name):
-        raise NotImplementedError("_DummyRenderer does not support get_template()")
-
-    def render(self, template_name, context, request=None):
-        template = self.get_template(template_name)
-        return template.render(context, request=request).strip()
-
-
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
-    # this no-op renderer will be used by all form subclasses (as long as no explicit
-    # `renderer` arg is passed to `__init__`). See `_DummyRenderer` above for details
-    default_renderer = _DummyRenderer()
+    # As we use Django as REST API only (and Vue for JavaScript), we need no Django
+    # renderer. We can tell Django to always use the same renderer in any Form without
+    # creating a new one, by providing the renderer instance in this class attribute:
+    default_renderer = get_default_renderer()
 
     # Fields of this class are exposed as API parameters via their attribute name by
     # default. Because attribute names must be immutable to avoid breaking the code
