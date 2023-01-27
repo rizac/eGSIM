@@ -161,7 +161,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
         # Adjust Fields default error messages with our one, oif provided:
         for err_code, err_msg in self._default_error_messages.items():
-            for name, field in self.fields.items():
+            for field in self.fields.values():
                 if err_code in field.error_messages:
                     field.error_messages[err_code] = err_msg
 
@@ -175,7 +175,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 self.add_error(None, error)
             return
 
-        super().full_clean()  # this re-initializes self._errors
+        super().full_clean()  # re-initializes self._errors and self.cleaned_data
 
     def validation_errors(self, msg: str = None) -> dict:
         """Reformat `self.errors.as_json()` into the following dict (all keys and values
@@ -196,13 +196,13 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         NOTE: This method should be called if `self.is_valid()` returns False
 
         :param msg: the global error message. If None, it defaults to a general
-            message with the parameters with problems (if any is found)
+            message with the list of parameters with problems (if any is found)
 
         For details see:
         https://cloud.google.com/storage/docs/json_api/v1/status-codes
         https://google.github.io/styleguide/jsoncstyleguide.xml
         """
-        errors_dict: dict[str, list[dict[str, str]]] = json.loads(self.errors.as_json())
+        errors_dict: dict[str, list[dict[str, str]]] = self.errors.get_json_data()
         if not errors_dict:
             return {}
 
