@@ -32,7 +32,7 @@ class Test:
                                testdata, areequal, client):
         inputdic = testdata.readyaml(self.request_filename)
         # no flatfile, uploaded flatfile:
-        inputdic['plot_type'] = 'res'
+        inputdic['plot'] = 'res'
         inputdic2 = dict(inputdic)
         inputdic2.pop('flatfile')
         resp2 = client.post(self.url, data=inputdic2,
@@ -52,7 +52,7 @@ class Test:
             return ResidualsView().response(data=request.POST.copy(), files=mvd)
 
         with patch.object(RESTAPIView, 'post', fake_post):
-            inputdic['plot_type'] = 'res'
+            inputdic['plot'] = 'res'
             csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
             inputdic2 = dict(inputdic, flatfile='esm2018', uploaded_flatfile=csv)
             resp2 = client.post(self.url, data=inputdic2)

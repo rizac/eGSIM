@@ -42,45 +42,50 @@ def relabel_sa(string):
 
 
 class EgsimFormMeta(DeclarativeFieldsMetaclass):
-    """Inherits from Django Form Metaclass: call superclass (see source) and
-    then setup the Form class public field names
+    """EGSIM Form metaclass. Inherits from `DeclarativeFieldsMetaclass` (base metaclass
+    for all Django Forms) and sets up the defined field -> API params mappings
     """
 
     def __new__(mcs, name, bases, attrs):
         new_class = super().__new__(mcs, name, bases, attrs)
-
+        # Attribute denoting field -> API params mappings:
         attname = '_field2params'
-        # Walk through the MRO to merge all dicts
+        # Dict denoting the field -> API params mappings:
         field2params = {}
-        for cls in reversed(new_class.__mro__):
-            field2params.update(getattr(cls, attname, {}))
+        # Fill `field2params` with the superclass data:
+        for base in bases:
+            # Overwriting is safe, because same key (field) <=> same value (params):
+            field2params.update(getattr(base, attname, {}))
 
-        # Check1: no param provided twice or more:
-        _done_params = set()
-        for field, params in field2params.items():
-            if set(params) & _done_params:
-                raise ValueError(f"Error in `{name}.{attname}['{field}']={params}:"
-                                 f"{', '.join(set(params) & _done_params)} already "
-                                 f"provided")
-            _done_params.update(params)
-
-        # Check2: no param equal to another field name
-        cls_fields = set(new_class.declared_fields)
-        for field, params in field2params.items():
-            for p in params:
-                if p != field and p in cls_fields:
-                    raise ValueError(f"Error in `{name}.{attname}['{field}']={params}:"
-                                     f"`{p}` denotes another Field name")
-
-        # Check 3: all values must be list or tuples:
-        for field in list(field2params):
-            params = field2params[field]
-            if not isinstance(params, tuple):
-                if isinstance(params, list):
-                    field2params[field] = tuple(params)
-                else:
-                    raise ValueError(f"Error in `{name}.{attname}['{field}']={params}:"
-                                     f"`dict values must be lists or tuples")
+        form_fields = set(new_class.declared_fields)
+        # Merge this class `field2params` data into `field2params`, and do some check:
+        for field, params in attrs.get(attname, {}).items():
+            err_msg = f"Error in {name}.{attname}:"
+            # no key already implemented in `field2params`:
+            if field in field2params:
+                raise ValueError(f"{err_msg} '{field}' is already a key of "
+                                 f"`{attname}` in some superclass")
+            # no key that does not denote a Django Form Field name
+            if field not in form_fields:
+                raise ValueError(f"{err_msg}: '{field}' must be a Form Field name")
+            for param in params:
+                # no param equal to another field name:
+                if param != field and param in field2params:
+                    raise ValueError(f"{err_msg} '{field}' cannot be mapped to the "
+                                     f"Field name '{param}'")
+                # no param keyed by multiple field names:
+                dupes = [f for f, p in field2params.items() if param in p]
+                if dupes:
+                    raise ValueError(f"{err_msg} '{field}' cannot be mapped to "
+                                     f"'{param}', as the latter is already keyed by "
+                                     f"{', '.join(dupes)}")
+            # all values must be list or tuples:
+            if isinstance(params, list):
+                params = tuple(params)
+            elif not isinstance(params, tuple):
+                raise ValueError(f"{err_msg} dict values must be lists or tuples")
+            # all good. Merge into `field2params`:
+            field2params[field] = params
 
         # assign new dict of public field name:
         setattr(new_class, attname, field2params)
@@ -99,7 +104,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     # by default. Because attribute names must be immutable to avoid breaking the code
     # (e.g,, they are used as keys of `self.cleaned_data`) and parameter names should
     # be changed easily, the dict `_field2params` below allows to map a Field attribute
-    # name to the list of parameter name(s) that can be used instead (including the same
+    # name to a list of parameter name(s) that can be used instead (including the same
     # Field attribute name, if needed). The first parameter name in the list will be
     # considered the default and displayed in e.g., missing param errors. `_field2params`
     # of superclasses will be merged into this one (see `EgsimFormMeta` metaclass). This
