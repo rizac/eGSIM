@@ -183,3 +183,7 @@ CSRF_USE_SESSIONS = True
 
 # Update to Django 3.2 FIXME: change this in production
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Use a singleton, custom no-op renderer to speed up Forms and Errors initialization
+# FIXME: change this in production
+FORM_RENDERER = 'egsim.api.forms.get_default_renderer'
