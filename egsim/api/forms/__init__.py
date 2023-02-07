@@ -1,7 +1,7 @@
 """Base eGSIM forms"""
 
 import re
-from django.forms.renderers import get_default_renderer
+from django.forms.renderers import BaseRenderer
 from django.forms.utils import ErrorDict
 from typing import Union, Iterable, Any
 from datetime import date, datetime
@@ -92,13 +92,23 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         return new_class
 
 
+_default_renderer = BaseRenderer()
+
+
+def get_default_renderer(*a, **kw):
+    """Default renderer class or function set in FORM_RENDERER settings file. As such
+    `django forms.renderers.get_default_renderer` will call this function (with no args)
+    to get a default Renderer instance when initializing e.g. `forms.Form`,
+    `utils.ErrorDict` and `utils.ErrorList` (all under the package `django.forms`).
+    As we use Django as REST API only, and thus we make no use of Django renderers, this
+    function is implemented for performance reasons to always return the same no-op
+    renderer instance
+    """
+    return _default_renderer
+
+
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
-
-    # As we use Django as REST API only, we need no Django renderer. To avoid creating a
-    # new renderer inside each Form `__init__`, we can tell Django to always use the same
-    # renderer by instantiating it once with this class attribute:
-    default_renderer = get_default_renderer()
 
     # Fields of this class are exposed as API request parameters via their attribute name
     # by default. Because attribute names must be immutable to avoid breaking the code
@@ -175,7 +185,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         errors. In case, put them in `self._errors` and return"""
         if self._init_errors:
             self._errors = ErrorDict()
-            self.cleaned_data = {}  # noqa
+            self.cleaned_data = {}  # noqa (it is required in `add_error` below)
             for error in self._init_errors:
                 self.add_error(None, error)
             return
@@ -183,25 +193,14 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         super().full_clean()  # re-initializes self._errors and self.cleaned_data
 
     def validation_errors(self, msg: str = None) -> dict:
-        """Reformat `self.errors.as_json()` into the following dict (all keys and values
-        are strings):
-        ```
-        {
-            "message": `msg` or an auto generated message (see below for details)
-            "errors": [
-                {
-                    "location": parameter name,
-                    "message": detailed error message,
-                    "reason": error code, e.g. 'invalid', 'required', 'conflict'
-                }
-                ...
-            ]
-        }
-        ```
-        NOTE: This method should be called if `self.is_valid()` returns False
+        """Reformat `self.errors.get_json_data()` and return a JSON serializable dict
+        with keys `message`, a global error message summarizing all errors, and
+        `errors`, a list of `dict[str, str]` elements, where each dict represents
+        a parameter and has keys "location" (the parameter name), "message" (the
+        detailed error message related to the parameter), and "reason" (an error
+        code indicating the type of error, e.g. "required", "invalid")
 
-        :param msg: the global error message. If None, it defaults to a general
-            message with the list of parameters with problems (if any is found)
+        NOTE: This method should be called if `self.is_valid()` returns False
 
         For details see:
         https://cloud.google.com/storage/docs/json_api/v1/status-codes
