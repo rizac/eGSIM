@@ -56,7 +56,7 @@ class RESTAPIView(View):
         form_cls = self.formclass
 
         multi_params = set()
-        for param_names, field_name, field in form_cls.apifields():
+        for field_name, field, param_names in form_cls.field_iterator():
             if isinstance(field, (MultipleChoiceField, NArrayField)):
                 multi_params.update(param_names)
 
@@ -106,7 +106,7 @@ class RESTAPIView(View):
         try:
             form = self.formclass(**form_kwargs)
             if not form.is_valid():
-                err = form.validation_errors()
+                err = form.errors_json_data()
                 return error_response(err['message'], self.CLIENT_ERR_CODE,
                                       errors=err['errors'])
 

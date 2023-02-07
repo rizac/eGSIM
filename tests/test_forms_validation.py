@@ -37,7 +37,7 @@ class Test:
         # We could provide ignore case fields but we need to think about it
         # (only for model(s)?)
         assert not form.is_valid()
-        err = form.validation_errors()
+        err = form.errors_json_data()
         expected_err = {
             'message': 'Invalid request. Problems found in: model. '
                        'See response data for details',
@@ -54,7 +54,7 @@ class Test:
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
-        err = form.validation_errors()
+        err = form.errors_json_data()
         expected_err = {
             'message': 'Invalid request. Problems found in: imt. '
                        'See response data for details',
@@ -70,7 +70,7 @@ class Test:
 
         form = GsimImtForm({GSIM: ['abcde', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
-        err = form.validation_errors()
+        err = form.errors_json_data()
         expected_err = {
             'message': 'Invalid request. Problems found in: gsim, imt. '
                        'See response data for details',
@@ -91,7 +91,7 @@ class Test:
 
         form = GsimImtForm({IMT: ['abcde', 'BindiEtAl2014Rjb']})
         assert not form.is_valid()
-        err = form.validation_errors()
+        err = form.errors_json_data()
         expected_err = {
             'message': 'Invalid request. Problems found in: imt, model. '
                        'See response data for details',
@@ -115,7 +115,7 @@ class Test:
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA', '0.t', 'MMI']})
         assert not form.is_valid()
-        err = form.validation_errors()
+        err = form.errors_json_data()
         expected_err = {
             'message': 'Invalid request. Problems found in: imt. '
                        'See response data for details',
@@ -137,7 +137,7 @@ class Test:
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['MMI', '_T_']})
         assert not form.is_valid()
-        err = form.validation_errors()
+        err = form.errors_json_data()
         expected_err = {
             'message': 'Invalid request. Problems found in: imt. '
                        'See response data for details',
@@ -156,7 +156,7 @@ class Test:
         csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
         form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
         assert not form.is_valid()
-        err = form.validation_errors()
+        err = form.errors_json_data()
         expected_err = {
             'message': 'Invalid request. Problems found in: flatfile. '
                        'See response data for details',
@@ -179,7 +179,7 @@ class Test:
             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
         })
         assert not form.is_valid()
-        verr = form.validation_errors()
+        verr = form.errors_json_data()
         assert 'unknown_param' in verr['message']
 
         # test another unknown parameter, but this time provide a name of an existing
@@ -191,7 +191,7 @@ class Test:
         }
         form = TrellisForm(data)
         assert not form.is_valid()
-        verr = form.validation_errors()
+        verr = form.errors_json_data()
         assert 'plot_type' in verr['message']
 
         form = GsimImtForm({
@@ -200,7 +200,7 @@ class Test:
             IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
         })
         assert not form.is_valid()
-        verr = form.validation_errors()
+        verr = form.errors_json_data()
         assert 'model/gmm' in verr['message'] or 'gmm/model' in verr['message']
 
         # assert verr.value.message == 'Conflicting parameters: model, gmm'
@@ -241,7 +241,7 @@ class Test:
         }
         form = GsimImtForm(data)
         assert not form.is_valid()
-        err_json = form.validation_errors()
+        err_json = form.errors_json_data()
         expected_json = {
             'message': 'Invalid request. Problems found in: imt. '
                        'See response data for details',
@@ -273,7 +273,7 @@ class Test:
                 }
             ]
         }
-        assert areequal(form.validation_errors(), expected_err)
+        assert areequal(form.errors_json_data(), expected_err)
 
     def test_gsimimt_form_notdefinedfor_skip_invalid_periods(self, areequal):
         """tests that mismatching gsim <-> imt has the priority over bad
@@ -300,7 +300,7 @@ class Test:
                 }
             ]
         }
-        assert areequal(form.validation_errors(), expected_err)
+        assert areequal(form.errors_json_data(), expected_err)
 
     def test_arrayfields_all_valid_input_types(self):
         """Tests some valid inputs in the egsim Fields accepting array of values
@@ -379,7 +379,7 @@ class Test:
                 }
             ]
         }
-        assert areequal(form.validation_errors(), expected_json)
+        assert areequal(form.errors_json_data(), expected_json)
 
     def test_flatfile_inspect(self, testdata):
 

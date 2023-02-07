@@ -207,8 +207,8 @@ def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
                  ignore_field: Callable[[str], bool] = None,
                  ignore_choices: Callable[[str], bool] = None) -> dict[str, dict[Any]]:
     """Return a JSON-serializable dictionary of the Form Field names mapped to
-    their properties, in order e.g. to be injected in HTML templates in order
-    to render the Field as HTML component.
+    their properties, in order e.g. to be injected in HTML templates and render the
+    Form Fields as HTML component.
 
     :param form: EgsimBaseForm class or object (class instance)
     :param ignore_field: callable accepting a string (field attribute name)
@@ -232,7 +232,7 @@ def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
     form_data = {}
     # iterate over the field (public) names because we also have the attribute
     # name immediately available:
-    for param_names, field_name, field in form.apifields():
+    for field_name, field, param_names in form.field_iterator():
         if ignore_field(field_name):
             continue
         field_dict = field_to_dict(field, ignore_choices=ignore_choices(field_name))

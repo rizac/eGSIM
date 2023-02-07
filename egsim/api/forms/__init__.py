@@ -151,10 +151,10 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         # (see `self.full_clean`and `self.validation_errors` for details):
         self._init_errors = []
         unknowns = set(self.data) if no_unknown_params else None
-        for params, field_name, field in self.apifields():
+        for field_name, field, param_names in self.field_iterator():
             if unknowns is not None:
-                unknowns -= set(params)
-            input_params = tuple(p for p in params if p in self.data)
+                unknowns -= set(param_names)
+            input_params = tuple(p for p in param_names if p in self.data)
             if len(input_params) > 1:  # names conflict, store error:
                 self._init_errors.append(ValidationError(",".join(input_params),
                                                          code='_conflict_egsim_param_'))
@@ -181,7 +181,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                     field.error_messages[err_code] = err_msg
 
     def full_clean(self):
-        """Performs a full clean of this form, but first check if we had initialization
+        """Perform a full clean of this form, but first check if we had initialization
         errors. In case, put them in `self._errors` and return"""
         if self._init_errors:
             self._errors = ErrorDict()
@@ -192,13 +192,13 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
         super().full_clean()  # re-initializes self._errors and self.cleaned_data
 
-    def validation_errors(self, msg: str = None) -> dict:
+    def errors_json_data(self, msg: str = None) -> dict:
         """Reformat `self.errors.get_json_data()` and return a JSON serializable dict
-        with keys `message`, a global error message summarizing all errors, and
-        `errors`, a list of `dict[str, str]` elements, where each dict represents
-        a parameter and has keys "location" (the parameter name), "message" (the
-        detailed error message related to the parameter), and "reason" (an error
-        code indicating the type of error, e.g. "required", "invalid")
+        with keys `message` (the `msg` argument or - if missing - a global error message
+        summarizing all errors), and `errors`, a list of `dict[str, str]` elements, where
+        each dict represents a parameter and has keys "location" (the parameter name),
+        "message" (the detailed error message related to the parameter), and "reason" (an
+        error code indicating the type of error, e.g. "required", "invalid")
 
         NOTE: This method should be called if `self.is_valid()` returns False
 
@@ -210,13 +210,14 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         if not errors_dict:
             return {}
 
-        field2param = {field_name: params for params, field_name, _ in self.apifields()}
+        field2param = {f: ps for f, _, ps in self.field_iterator()}
 
         errors = []
         err_param_names = set()
         # build errors dict:
         for field_name, errs in errors_dict.items():
             param_name = None
+            # errors keys are Field name, try to infer the parameter name:
             if field_name in field2param:
                 def_param_names = field2param[field_name]
                 input_param_names = [p for p in def_param_names if p in self._input_data]
@@ -267,18 +268,20 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         }
 
     @classmethod
-    def apifields(cls) -> Iterable[tuple[list[str, ...], str, Field]]:
+    def field_iterator(cls) -> Iterable[tuple[str, Field, tuple[str, ...]]]:
         """Yield the Fields of this class as tuples of 3 elements:
         ```
-        params: list[str], field_name: str, field: Field
+        field_name: str, field: Field, params: list[str]
         ```
-        where `params` is a list of API parameter names of the Field (1st param is the
-        default), and it is usually a list with the field name as only element,
-        unless different parameter name(s) are provided in `self._field2params`
+        where field_name and field are the same as returned by
+        `cls.declared_fields.items()` and `params` is a tuple of
+        API parameter names of the Field (1st param is the default), and it is by
+        default a tuple with a single element equal to `field_name`, unless
+        unless different parameter name(s) are provided in `cls._field2params`
         """
         for field_name, field in cls.declared_fields.items():
-            params = cls._field2params.get(field_name, [field_name])
-            yield params, field_name, field
+            params = cls._field2params.get(field_name, (field_name,))
+            yield field_name, field, params
 
     def _get_data(self, compact=True) -> Iterable[tuple[str, Any]]:
         """Yield the Fields of this instance as tuples of 3 elements:
@@ -291,9 +294,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         @param compact: if True (the default), optional Form parameters (either non
             required or whose value equals the Field initial value) are not yielded
         """
-        param2field = {
-            p_name: field for p_names, _, field in self.apifields() for p_name in p_names
-        }
+        param2field = {p: f for _, f, ps in self.field_iterator() for p in ps}
         for param_name, value in self._input_data.items():
             field = param2field.get(param_name, None)
             if compact and field is not None:

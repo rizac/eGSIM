@@ -105,7 +105,7 @@ def download_request(request, key: TAB, filename: str):
 
     form = form_class(data=input_dict())
     if not form.is_valid():
-        errs = form.validation_errors()
+        errs = form.errors_json_data()
         return error_response(errs['message'], RESTAPIView.CLIENT_ERR_CODE,
                               errors=errs['errors'])
     ext_nodot = os.path.splitext(filename)[1][1:].lower()

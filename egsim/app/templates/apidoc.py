@@ -60,7 +60,7 @@ def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
     :param form: EgsimBaseForm class or object (class instance)
     """
     form_data = {}
-    for param_names, field_name, field in form.apifields():
+    for field_name, field, param_names in form.field_iterator():
         field_dict = field_to_dict(field)
         field_dict['name'] = param_names[0]
         field_dict['opt_names'] = param_names[1:]
