@@ -23,25 +23,6 @@ from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField, Field,
 from .. import models
 
 
-def relabel_sa(string):
-    """Simplifies SA string representation removing redundant trailing zeros,
-    if present. Examples:
-    'SA(1)' -> 'SA(1)' (unchanged)
-    'SA(1.0)' -> 'SA(1.0)' (unchanged)
-    'ASA(1.0)' -> 'ASA(1.0)' (unchanged)
-    'SA(1.00)' -> 'SA(1.0)'
-    'SA(1.000)' -> 'SA(1.0)'
-    'SA(.000)' -> 'SA(.0)'
-    """
-    return re.sub(r'((?:^|\s|\()SA\(\d*\.\d\d*?)0+(\))(?=($|\s|\)))', r"\1\2",
-                  string)
-
-
-#########
-# Forms #
-#########
-
-
 class EgsimFormMeta(DeclarativeFieldsMetaclass):
     """EGSIM Form metaclass. Inherits from `DeclarativeFieldsMetaclass` (base metaclass
     for all Django Forms) and sets up the defined field -> API params mappings
@@ -108,14 +89,16 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 _default_renderer = BaseRenderer()
 
 
-def get_default_renderer(*a, **kw):
-    """Default renderer class or function set in FORM_RENDERER settings file. As such
-    `django forms.renderers.get_default_renderer` will call this function (with no args)
-    to get a default Renderer instance when initializing e.g. `forms.Form`,
-    `utils.ErrorDict` and `utils.ErrorList` (all under the package `django.forms`).
-    As we use Django as REST API only, and thus we make no use of Django renderers, this
-    function is implemented for performance reasons to always return the same no-op
-    renderer instance
+def get_default_renderer(*a, **kw) -> BaseRenderer:
+    """Return the default renderer instance which for performance reasons (we use Django
+    as REST API only with HTML rendering delegated to SPA in JavaScript) is a singleton
+    no-op "dummy" renderer instance. This function is called with no argument in
+    `django forms.renderers.get_default_renderer` that searches for the value of the
+    parameter FORM_RENDERER in the settings file (the parameter can also point to a
+    Renderer class, but this would create a useless new instance every time: note that
+    this function is called in the initialization of several frequently used Django
+    objects such as `django.forms.forms.Form`, `django.forms.utils.ErrorDict`,
+    `django.forms.utils.ErrorList`)
     """
     return _default_renderer
 
@@ -724,3 +707,21 @@ class GsimFromRegionForm(SHSRForm, APIForm):
         :param processed_data: dict resulting from `self.process_data`
         """
         yield from processed_data
+
+
+####################################
+# Utilities shared among all Forms #
+####################################
+
+def relabel_sa(string):
+    """Simplifies SA string representation removing redundant trailing zeros,
+    if present. Examples:
+    'SA(1)' -> 'SA(1)' (unchanged)
+    'SA(1.0)' -> 'SA(1.0)' (unchanged)
+    'ASA(1.0)' -> 'ASA(1.0)' (unchanged)
+    'SA(1.00)' -> 'SA(1.0)'
+    'SA(1.000)' -> 'SA(1.0)'
+    'SA(.000)' -> 'SA(.0)'
+    """
+    return re.sub(r'((?:^|\s|\()SA\(\d*\.\d\d*?)0+(\))(?=($|\s|\)))', r"\1\2",
+                  string)
