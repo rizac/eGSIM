@@ -86,21 +86,19 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         return new_class
 
 
-_default_renderer = BaseRenderer()
+_base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
 
-def get_default_renderer(*a, **kw) -> BaseRenderer:
-    """Return the default renderer instance which for performance reasons (we use Django
-    as REST API only with HTML rendering delegated to SPA in JavaScript) is a singleton
-    no-op "dummy" renderer instance. This function is called with no argument in
-    `django forms.renderers.get_default_renderer` that searches for the value of the
-    parameter FORM_RENDERER in the settings file (the parameter can also point to a
-    Renderer class, but this would create a useless new instance every time: note that
-    this function is called in the initialization of several frequently used Django
-    objects such as `django.forms.forms.Form`, `django.forms.utils.ErrorDict`,
-    `django.forms.utils.ErrorList`)
+def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
+    """Return a renderer instance which for performance reasons is a singleton no-op
+    "dummy" renderer instance (we use Django as REST API only with HTML rendering
+    delegated to SPA in JavaScript).
+    As this function path is set in the "FORM_RENDERER" variable of the settings file,
+    it will be called by `django forms.renderers.get_default_renderer` every
+    time a default renderer is needed (See e.g. `django.forms.forms.Form` and `ErrorDict`
+    or `ErrorList` - both in the module `django.forms.utils`)
     """
-    return _default_renderer
+    return _base_singleton_renderer
 
 
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
@@ -134,22 +132,22 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         """
         # remove colon in labels by default in templates:
         kwargs.setdefault('label_suffix', '')
-        # store original dict:
+        # store original dict (we assume the values of data are immutable):
         self._input_data = dict(data or {})
         # call super:
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
-        # Fix self.data and store parameter errors in a list of ValidationErrors
-        # (see `self.full_clean`and `self.validation_errors` for details):
-        self._init_errors = []
+        # Fix self.data and add errors in case:
         unknowns = set(self.data) if no_unknown_params else None
         for field_name, field, param_names in self.field_iterator():
             if unknowns is not None:
                 unknowns -= set(param_names)
             input_params = tuple(p for p in param_names if p in self.data)
             if len(input_params) > 1:  # names conflict, store error:
-                self._init_errors.append(ValidationError(",".join(input_params),
-                                                         code='_conflict_egsim_param_'))
+                for p in input_params:
+                    others = ", ".join(_ for _ in input_params if _ != p)
+                    self._add_error(p, ValidationError(f"This parameter conflicts with: "
+                                                       f"{others}", code='conflict'))
             elif input_params:
                 param_name = input_params[0]
                 # Rename the keys of `self.data` (API params) with the mapped field name
@@ -162,21 +160,70 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 if self.fields[field_name].initial is not None:
                     self.data[field_name] = self.fields[field_name].initial
 
-        if unknowns:  # unknown (nonexistent) parameters, store error:
-            self._init_errors.append(ValidationError(",".join(unknowns),
-                                                     code='_unknown_egsim_param_'))
+        for unk in unknowns:  # unknown (nonexistent) parameters, store error:
+            self._add_error(unk, ValidationError("This parameter does not exist "
+                                                 "(check typos)", code='nonexistent'))
 
-    def full_clean(self):
-        """Perform a full clean of this form, but first check if we had initialization
-        errors. In case, put them in `self._errors` and return"""
-        if self._init_errors:
-            self._errors = ErrorDict()
-            self.cleaned_data = {}  # noqa (it is required in `add_error` below)
-            for error in self._init_errors:
-                self.add_error(None, error)
-            return
+    def add_error(self, field: str, error: ValidationError):
+        """Call `super.add_error` relaxing some Django restrictions:
+         - this method can be safely called at any stage (`super.add_error` raises if
+           the form has not been cleaned beforehand, i.e. `self.full_clean` is called)
+         - the `field` argument does not need to be a Field name (however, if it does,
+           it will be converted to the associated parameter name, if implemented in
+           `self._field2params`)
 
-        super().full_clean()  # re-initializes self._errors and self.cleaned_data
+        :param field: a Form field name
+        :param error: the error as `ValidationError` instance
+        """
+        # first convert `field` to its mapped parameter name, if any:
+        params = self._field2params.get(field, [])
+        if params:
+            params = [p for p in params if p in self._input_data] or params
+            field = params[0]
+        self._add_error(field, error)
+
+    def _add_error(self, param: str, error: ValidationError):
+        """Call `super.add_error` relaxing some Django restrictions:
+         - this method can be safely called at any stage (`super.add_error` raises if
+           the form has not been cleaned beforehand, i.e. `self.full_clean` is called)
+         - the `param` argument does not need to be a Field name
+
+        :param param: a string denoting a param. or field name associated to the error
+        :param error: the error as `ValidationError` instance
+        """
+        # If we did not clean the form yet, `self._errors` is None. So:
+        if self._errors is None:
+            self._errors = ErrorDict()  # code copied from `super().full_clean`
+        # If we do not have the `param` argument in `self._errors`, the `super.add_error`
+        # raises. So:
+        if param not in self._errors:
+            # code copied from `super.add_error`:
+            self._errors[param] = self.error_class(renderer=self.renderer)
+        # If we did not clean the form yet, `self.cleaned_data` does not exist. So:
+        add_attr = not hasattr(self, 'cleaned_data')
+        if add_attr:
+            setattr(self, 'cleaned_data', {})
+        # Now we can safely call the super method:
+        super().add_error(param, error)
+        # remove cleaned_data if needed:
+        if add_attr:
+            delattr(self, 'cleaned_data')
+
+    def has_error(self, field, code=None):
+        """Call `super.has_error` relaxing some Django conditions: this method can be
+        safely called at any stage (`super.has_error` triggers a Form clean if not
+        already done, whereas this method simply returns False in case)
+
+        :param field: a Form field name
+        :param code: an optional error code (e.g. 'invalid')
+        """
+        if not self._errors:
+            return False
+        # convert field name to mapped params, if any (otherwise map to [itself]):
+        for param in self._field2params.get(field, [field]):
+            if super().has_error(param, code):
+                return True
+        return False
 
     def errors_json_data(self, msg: str = None) -> dict:
         """Reformat `self.errors.get_json_data()` and return a JSON serializable dict
@@ -196,57 +243,23 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         if not errors_dict:
             return {}
 
-        field2param = {f: ps for f, _, ps in self.field_iterator()}
-
         errors = []
-        err_param_names = set()
         # build errors dict:
-        for field_name, errs in errors_dict.items():
-            param_name = None
-            # errors keys are Field name, try to infer the parameter name:
-            if field_name in field2param:
-                def_param_names = field2param[field_name]
-                input_param_names = [p for p in def_param_names if p in self._input_data]
-                param_name = (input_param_names or def_param_names)[0]
-            if param_name is not None:
-                err_param_names.add(param_name)
+        for param_name, errs in errors_dict.items():
             # compose dict for detailed error messages:
             for err in errs:
                 err_message = err.get('message', '')
                 err_code = err.get('code', '')
-                # if we have an unknown egsim message, add the unknown parameters in
-                # the main message header:
-                pnames = err_message.split(",")
-                if err_code == "_conflict_egsim_param_":
-                    err_param_names.add("/".join(pnames))
-                    for pname in pnames:
-                        others = ", ".join(p for p in pnames if p != pname)
-                        # store detailed error info as dict:
-                        errors.append({
-                            'location': pname,
-                            'message': f"This parameter conflicts with: {others}",
-                            'reason': "conflict"
-                        })
-                elif err_code == "_unknown_egsim_param_":
-                    for pname in pnames:
-                        err_param_names.add(pname)
-                        # store detailed error info as dict:
-                        errors.append({
-                            'location': pname,
-                            'message': "This parameter does not exist (check typos)",
-                            'reason': "nonexistent"
-                        })
-                else:
-                    errors.append({
-                        'location': param_name or 'unspecified',
-                        'message': err_message,
-                        'reason': err_code
-                    })
-
+                errors.append({
+                    'location': param_name or 'unspecified',
+                    'message': err_message,
+                    'reason': err_code
+                })
         if not msg:
             msg = "Invalid request"
+            err_param_names = sorted(errors_dict.keys())
             if err_param_names:
-                msg += f'. Problems found in: {", ".join(sorted(err_param_names))}'
+                msg += f'. Problems found in: {", ".join(err_param_names)}'
             msg += ". See response data for details"
         return {
             'message': msg,
