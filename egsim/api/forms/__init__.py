@@ -48,6 +48,14 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 
     def __new__(mcs, name, bases, attrs):
         new_class = super().__new__(mcs, name, bases, attrs)
+
+        # Adjust Fields default error messages with our one, if provided:
+        attname = '_default_error_messages'
+        for err_code, err_msg in getattr(new_class, attname, {}).items():
+            for field in new_class.declared_fields.values():  # same as .base_fields
+                if err_code in field.error_messages:
+                    field.error_messages[err_code] = err_msg
+
         # Attribute denoting field -> API params mappings:
         attname = '_field2params'
         # Dict denoting the field -> API params mappings:
@@ -173,12 +181,6 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         if unknowns:  # unknown (nonexistent) parameters, store error:
             self._init_errors.append(ValidationError(",".join(unknowns),
                                                      code='_unknown_egsim_param_'))
-
-        # Adjust Fields default error messages with our one, oif provided:
-        for err_code, err_msg in self._default_error_messages.items():
-            for field in self.fields.values():
-                if err_code in field.error_messages:
-                    field.error_messages[err_code] = err_msg
 
     def full_clean(self):
         """Perform a full clean of this form, but first check if we had initialization
