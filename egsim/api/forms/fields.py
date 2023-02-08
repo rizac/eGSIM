@@ -56,6 +56,16 @@ def split_string(string: str) -> list[str]:
     return _split_re.split(string)
 
 
+# global default error codes mapped to custom messages messages replacing Django default.
+# Keys can be found in the attr. `default_error_messages` of `django.form.fields.Field`s,
+# the setup of these default is performed in `egsim.api.forms.EgsimFormMeta.__new__`:
+_default_error_messages = {
+    "required": "This parameter is required",
+    "invalid_choice": "Value not found or misspelled: %(value)s",
+    "invalid_list": "Enter a list of values",
+}
+
+
 class ArrayField(CharField):
     """Django CharField subclass which parses and validates arrays given as
     string of text in JSON or Unix shell syntax (i.e., with space separated
@@ -274,25 +284,19 @@ class MultipleChoiceWildcardField(MultipleChoiceField):
        list, otherwise converted to a 1-element list: [string]
      - Accepts wildcard in strings in order to include all matching elements
     """
-    # Reminder. The central validation method is `Field.clean`, which does the following:
+    # Reminder. The central validation method of the superclass is:
     # def clean(self, value):
     #     value = self.to_python(value)
-    #     self.validate(value)
-    #       # in case of MultipleChoiceField, calls self.valid_value(v) for v in value
+    #     self.validate(value) # -> calls self.valid_value(v) for v in value
     #     self.run_validators(value)
     #     return value
-
-    # override superclass default messages (provide shorter and better messages):
-    default_error_messages = {
-        "invalid_choice": "Value not found or misspelled: %(value)s",
-        "invalid_list": "Enter a list of values",
-    }
 
     def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
         """Return an unique list of elements after expanding strings with wildcards
         to matching elements. For wildcard strings, see `fnmatch` in the Python doc
         """
-        # copied to the super.to_python with slight modifications in case of `str`:
+        # copied to the super.to_python because in case of str, we split it, and in case
+        # of lists or tuples we do nothing instead of creating: [str(_) for _ in values]
         if not value:
             return []
         elif isinstance(value, str):

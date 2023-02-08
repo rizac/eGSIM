@@ -18,7 +18,8 @@ from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms import Form
 
 from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField, Field,
-                     FloatField, get_field_docstring, NArrayField)
+                     FloatField, get_field_docstring, NArrayField,
+                     _default_error_messages)
 from .. import models
 
 
@@ -50,11 +51,14 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         new_class = super().__new__(mcs, name, bases, attrs)
 
         # Adjust Fields default error messages with our one, if provided:
-        attname = '_default_error_messages'
-        for err_code, err_msg in getattr(new_class, attname, {}).items():
+        if _default_error_messages:
             for field in new_class.declared_fields.values():  # same as .base_fields
-                if err_code in field.error_messages:
-                    field.error_messages[err_code] = err_msg
+                err_messages = field.error_messages
+                for err_code, err_msg in err_messages.items():
+                    if err_code in _default_error_messages:
+                        err_messages[err_code] = _default_error_messages[err_code]
+                    elif err_msg.endswith('.'):  # remove Django msg ending dot, if any:
+                        err_messages[err_code] = err_msg[:-1]
 
         # Attribute denoting field -> API params mappings:
         attname = '_field2params'
@@ -62,7 +66,8 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         field2params = {}
         # Fill `field2params` with the superclass data:
         for base in bases:
-            # Overwriting is safe, because same key (field) <=> same value (params):
+            # reversed(bases) returns the closest superclass last, but we don't care
+            # because overwriting is safe (same key / field <=> same value / params)
             field2params.update(getattr(base, attname, {}))
 
         form_fields = set(new_class.declared_fields)
@@ -128,10 +133,6 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     # of superclasses will be merged into this one (see `EgsimFormMeta` metaclass). This
     # is a private-like attribute, to access all parameters and fields, use `apifields()`
     _field2params: dict[str, list[str]]
-
-    # set of default error messages that will overwrite the Fields default as
-    # dict[error_code:str, error_msg:str]
-    _default_error_messages = {'required': 'This parameter is required'}
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
         """Override init: re-arrange `self.data` and set the initial value for
