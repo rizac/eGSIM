@@ -201,7 +201,7 @@ class Test:
         })
         assert not form.is_valid()
         verr = form.errors_json_data()
-        assert 'model/gmm' in verr['message'] or 'gmm/model' in verr['message']
+        assert 'model' in verr['message'] and 'gmm' in verr['message']
 
         # assert verr.value.message == 'Conflicting parameters: model, gmm'
 
