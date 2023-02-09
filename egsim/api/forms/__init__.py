@@ -31,7 +31,7 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
     def __new__(mcs, name, bases, attrs):
         new_class = super().__new__(mcs, name, bases, attrs)
 
-        # Adjust Fields default error messages with our one, if provided:
+        # Adjust Fields error messages with our defaults:
         if _default_error_messages:
             for field in new_class.declared_fields.values():  # same as .base_fields
                 err_messages = field.error_messages
@@ -45,10 +45,9 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         attname = '_field2params'
         # Dict denoting the field -> API params mappings:
         field2params = {}
-        # Fill `field2params` with the superclass data:
+        # Fill `field2params` with the superclass data. `bases` order is irrelevant
+        # because in all `_field2params`s same key / field <=> same value / params:
         for base in bases:
-            # reversed(bases) returns the closest superclass last, but we don't care
-            # because overwriting is safe (same key / field <=> same value / params)
             field2params.update(getattr(base, attname, {}))
 
         form_fields = set(new_class.declared_fields)
@@ -104,15 +103,15 @@ def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
-    # Fields of this class are exposed as API request parameters via their attribute name
-    # by default. Because attribute names must be immutable to avoid breaking the code
-    # (e.g,, they are used as keys of `self.cleaned_data`) and parameter names should
-    # be changed easily, the dict `_field2params` below allows to map a Field attribute
-    # name to a list of parameter name(s) that can be used instead (including the same
-    # Field attribute name, if needed). The first parameter name in the list will be
-    # considered the default and displayed in e.g., missing param errors. `_field2params`
-    # of superclasses will be merged into this one (see `EgsimFormMeta` metaclass). This
-    # is a private-like attribute, to access all parameters and fields, use `apifields()`
+    # Fields attribute names of this class are also HTTP request parameters by default.
+    # Because attribute names must be immutable to avoid breaking the code (they are used
+    # as keys of `self.cleaned_data`) and parameter names should be changed easily,
+    # `_field2params` below allows to map a Field attribute name to a list of parameter
+    # name(s) that can be used instead (including the same Field attribute name, if
+    # needed). The first parameter name in the list will be considered the default and
+    # displayed in e.g., missing param errors. `_field2params` of superclasses will be
+    # merged into this one (see `EgsimFormMeta` metaclass). This is a private-like
+    # attribute, to access all parameters and fields, use `field_iterator()`
     _field2params: dict[str, list[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
@@ -180,10 +179,8 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         self._add_error(field, error)
 
     def _add_error(self, param: str, error: ValidationError):
-        """Call `super.add_error` relaxing some Django restrictions:
-         - this method can be safely called at any stage (`super.add_error` raises if
-           the form has not been cleaned beforehand, i.e. `self.full_clean` is called)
-         - the `param` argument does not need to be a Field name
+        """private method used in __init__ to performs the same operations as
+        `self.add_error` but storing `param` as it is with no conversion or check
 
         :param param: a string denoting a param. or field name associated to the error
         :param error: the error as `ValidationError` instance
