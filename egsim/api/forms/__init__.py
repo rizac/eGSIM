@@ -116,14 +116,11 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     _field2params: dict[str, list[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
-        """Override init: re-arrange `self.data` and set the initial value for
-        missing fields. Note that `data` might be modified inplace.
-        In addition, This Form and subclasses ensure that all fields which have
-        an initial value (not None) and do not get values from user get populated by
-        their initial value
+        """Override init: re-arrange `self.data` (renaming each key with the
+        corresponding field name, if needed) and treating non None initial values
+        as default values for missing fields..As such, `data` might be modified inplace.
 
-        :param data: the Form data (dict or None). Keys should be API parameters:
-            the conversion to Field attribute names is done inside this method
+        :param data: the Form data (dict or None)
         :param files: the Form files
         :param no_unknown_params: boolean indicating whether unknown parameters (`data`
             keys) should invalidate the Form. The default is True to prevent that
@@ -217,12 +214,11 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         :param field: a Form field name
         :param code: an optional error code (e.g. 'invalid')
         """
-        if not self._errors:
-            return False
-        # convert field name to mapped params, if any (otherwise map to [itself]):
-        for param in self._field2params.get(field, [field]):
-            if super().has_error(param, code):
-                return True
+        if self._errors:
+            # convert field name to mapped params, if any (otherwise map to [itself]):
+            for param in self._field2params.get(field, [field]):
+                if super().has_error(param, code):
+                    return True
         return False
 
     def errors_json_data(self, msg: str = None) -> dict:
