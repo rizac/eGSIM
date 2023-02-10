@@ -103,15 +103,14 @@ def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
-    # Fields attribute names of this class are also HTTP request parameters by default.
-    # Because attribute names must be immutable to avoid breaking the code (they are used
-    # as keys of `self.cleaned_data`) and parameter names should be changed easily,
-    # `_field2params` below allows to map a Field attribute name to a list of parameter
-    # name(s) that can be used instead (including the same Field attribute name, if
-    # needed). The first parameter name in the list will be considered the default and
-    # displayed in e.g., missing param errors. `_field2params` of superclasses will be
-    # merged into this one (see `EgsimFormMeta` metaclass). This is a private-like
-    # attribute, to access all parameters and fields, use `field_iterator()`
+    # The dict below allows to easily change I/O parameters (keys of `data` in __init__`
+    # and `self.errors`) uncoupling them from Field names, which can be kept immutable
+    # and thus used reliably as keys of `self.data` and `self.cleaned_data` internally.
+    # A Field name can be mapped to several parameters (including the same field name if
+    # needed) with the 1st parameter set as primary, and the rest as aliases. Each Field
+    # name not found here will be mapped to itself by default. `_field2params` of all
+    # superclasses will be merged into this one (see `EgsimFormMeta`). This attr should
+    # be private, to access the field and param mapping use `field_iterator()` instead
     _field2params: dict[str, list[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
@@ -165,8 +164,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
          - this method can be safely called at any stage (`super.add_error` raises if
            the form has not been cleaned beforehand, i.e. `self.full_clean` is called)
          - the `field` argument does not need to be a Field name (however, if it does,
-           it will be converted to the associated parameter name, if implemented in
-           `self._field2params`)
+           it will be converted to the associated parameter name, if a mapping is found)
 
         :param field: a Form field name
         :param error: the error as `ValidationError` instance
@@ -175,14 +173,14 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         params = self._field2params.get(field, [])
         if params:
             params = [p for p in params if p in self._input_data] or params
-            field = params[0]
-        self._add_error(field, error)
+        self._add_error(params[0] if params else field, error)
 
     def _add_error(self, param: str, error: ValidationError):
-        """private method used in __init__ to performs the same operations as
-        `self.add_error` but storing `param` as it is with no conversion or check
+        """private method performing the same operations as `self.add_error` but storing
+        `param` as it is with no conversion or check. Used in `__init__` where we deal
+        with input parameters and not Field names
 
-        :param param: a string denoting a param. or field name associated to the error
+        :param param: a string denoting an input parameter
         :param error: the error as `ValidationError` instance
         """
         # If we did not clean the form yet, `self._errors` is None. So:
@@ -226,7 +224,8 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         "message" (the detailed error message related to the parameter), and "reason" (an
         error code indicating the type of error, e.g. "required", "invalid")
 
-        NOTE: This method should be called if `self.is_valid()` returns False
+        NOTE: This method triggers a full Form clean (`self.full_clean`). It should
+        be usually called if `self.is_valid()` returns False
 
         For details see:
         https://cloud.google.com/storage/docs/json_api/v1/status-codes
