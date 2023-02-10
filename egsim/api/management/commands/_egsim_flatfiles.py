@@ -7,12 +7,15 @@ Created on 11 Apr 2019
 
 @author: riccardo
 """
+from typing import Sequence
+
 import os
 from os.path import join, isdir, abspath, dirname, isfile, basename, splitext
 
 from django.core.management.base import CommandError
 
 from . import EgsimBaseCommand
+from ._egsim_oq import read_registered_flatfile_columns
 from ..flatfile_parsers import EsmFlatfileParser
 from ... import models
 
@@ -58,6 +61,9 @@ class Command(EgsimBaseCommand):
                                    f'check `{__name__}.{__class__.__name__}.PARSERS`')
             parsers[fullpath] = parser
 
+        ffcolumns = set(models.FlatfileColumn.objects.only('name').
+                        values_list('name', flat=True))
+        imts = set(models.Imt.objects.only('name').values_list('name', flat=True))
         numfiles = 0
         for filepath, parser in parsers.items():
             dfr = parser.parse(filepath)
@@ -69,7 +75,35 @@ class Command(EgsimBaseCommand):
             self.printinfo(f' - Saving flatfile to "{destfile}"')
             dfr.to_hdf(destfile, key=name, format='table', mode='w')
             numfiles += 1
+            # print some stats:
+            cols, metadata_cols, imt_cols_no_sa, imt_cols_sa, unknown_cols = \
+                self.get_stats(dfr, ffcolumns, imts)
+            info_str = (f'   Flatfile columns: {len(cols)} total, '
+                        f'{len(metadata_cols)} metadata, '
+                        f'{len(imt_cols_no_sa) + len(imt_cols_sa)} IMTs '
+                        f'({len(imt_cols_sa)} SA), '
+                        f'{len(unknown_cols)} user-defined')
+            if unknown_cols:
+                info_str += ":"
+            self.printinfo(info_str)
+            if unknown_cols:
+                self.printinfo(f"   {', '.join(sorted(unknown_cols))}")
+            # store flatfile metadata:
             models.Flatfile.objects.create(**data_source, expiration=None,
                                            hidden=False, filepath=destfile)
 
         self.printsuccess(f'{numfiles} flatfile(s) created in "{destdir}"')
+
+    @staticmethod
+    def get_stats(flatfile_dataframe, db_ff_columns: set[str], db_imts: set[str]):
+        cols = set(flatfile_dataframe.columns)
+        imt_cols_no_sa = cols & db_imts
+        imt_cols_sa = set()
+        if 'SA' in db_imts:
+            imt_cols_no_sa.discard('SA')  # just in case ...
+            for c in cols:
+                if c.startswith('SA('):
+                    imt_cols_sa.add(c)
+        metadata_cols = (cols - imt_cols_no_sa - imt_cols_sa) & db_ff_columns
+        unknown_cols = cols - imt_cols_no_sa - imt_cols_sa - metadata_cols
+        return cols, metadata_cols, imt_cols_no_sa, imt_cols_sa, unknown_cols
