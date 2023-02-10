@@ -19,7 +19,7 @@ from egsim.api.models import FlatfileColumn
 
 
 @pytest.mark.django_db
-def tst_initdb(capsys):
+def test_initdb(capsys):
     """Test initdb command, with new Gsims and required attributes not
     managed by egsim
 
