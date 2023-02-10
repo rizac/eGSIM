@@ -238,14 +238,11 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         errors = []
         # build errors dict:
         for param_name, errs in errors_dict.items():
-            # compose dict for detailed error messages:
             for err in errs:
-                err_message = err.get('message', '')
-                err_code = err.get('code', '')
                 errors.append({
                     'location': param_name or 'unspecified',
-                    'message': err_message,
-                    'reason': err_code
+                    'message': err.get('message', ''),
+                    'reason': err.get('code', '')
                 })
         if not msg:
             msg = "Invalid request"
@@ -262,13 +259,13 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     def field_iterator(cls) -> Iterable[tuple[str, Field, tuple[str, ...]]]:
         """Yield the Fields of this class as tuples of 3 elements:
         ```
-        field_name: str, field: Field, params: list[str]
+        field_name: str, field: Field, params: tuple[str]
         ```
         where field_name and field are the same as returned by
         `cls.declared_fields.items()` and `params` is a tuple of
         API parameter names of the Field (1st param is the default), and it is by
         default a tuple with a single element equal to `field_name`, unless
-        unless different parameter name(s) are provided in `cls._field2params`
+        different parameter name(s) are provided in `cls._field2params`
         """
         for field_name, field in cls.declared_fields.items():
             params = cls._field2params.get(field_name, (field_name,))
