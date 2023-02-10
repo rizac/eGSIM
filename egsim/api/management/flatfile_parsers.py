@@ -42,7 +42,7 @@ class EsmFlatfileParser(FlatfileParser):
         # 'event_id': 'event_name',
         'ev_latitude': 'event_latitude',
         'ev_longitude': 'event_longitude',
-        'ev_depth_km': 'hypocenter_depth',
+        'ev_depth_km': 'event_depth',
         'fm_type_code': 'style_of_faulting',
         'st_nation_code': 'station_country',
         'st_latitude': 'station_latitude',
@@ -163,7 +163,7 @@ class EsmFlatfileParser(FlatfileParser):
         dfr['z2pt5'] = vs30_to_z2pt5_cb14(dfr['vs30'])
 
         # rhyopo is sqrt of repi**2 + event_depth**2 (basic Pitagora)
-        dfr['rhypo'] = np.sqrt((dfr['repi'] ** 2) + dfr['hypocenter_depth'] ** 2)
+        dfr['rhypo'] = np.sqrt((dfr['repi'] ** 2) + dfr['event_depth'] ** 2)
 
         # digital_recording is True <=> instrument_type_code is D
         dfr['digital_recording'] = dfr.pop('instrument_type_code') == 'D'

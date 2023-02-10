@@ -312,7 +312,7 @@ class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):
                 invalid_gsims = \
                     self.get_flatfile_invalid_gsim(flatfile, cleaned_data['gsim'])
                 if invalid_gsims:
-                    inv_str = ', '.join(invalid_gsims[:5])
+                    inv_str = ', '.join(sorted(invalid_gsims)[:5])
                     if len(invalid_gsims) > 5:
                         inv_str += ' ... (showing first 5 only)'
                     err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not "
