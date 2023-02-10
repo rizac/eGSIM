@@ -116,14 +116,14 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
         """Override init: re-arrange `self.data` (renaming each key with the
         corresponding field name, if needed) and treating non None initial values
-        as default values for missing fields..As such, `data` might be modified inplace.
+        as default values for missing fields. As such, `data` might be modified inplace.
 
         :param data: the Form data (dict or None)
         :param files: the Form files
         :param no_unknown_params: boolean indicating whether unknown parameters (`data`
-            keys) should invalidate the Form. The default is True to prevent that
-            parameters with an initial value set, if misspelled, take the initial value
-            with no warnings
+            keys) should invalidate the Form. The default is True to prevent misspelled
+            parameters to be treated as missing and thus potentially assigned a default
+            "wrong" value with no warnings
         """
         # remove colon in labels by default in templates:
         kwargs.setdefault('label_suffix', '')
