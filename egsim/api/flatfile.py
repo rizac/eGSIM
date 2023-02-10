@@ -362,7 +362,7 @@ class EgsimContextDB(context_db.ContextDB):
         ctx.strike = record['strike']
         ctx.dip = record['dip']
         ctx.rake = record['rake']
-        ctx.hypo_depth = record['hypocenter_depth']
+        ctx.hypo_depth = record['event_depth']
 
         ztor = record['depth_top_of_rupture']
         if pd.isna(ztor):

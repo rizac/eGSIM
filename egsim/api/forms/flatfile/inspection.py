@@ -30,10 +30,10 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         cleaned_data = super().clean()
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
         if not x and not y:
-            self.add_error("x", ValidationError('with no "y" specfied, this '
+            self.add_error("x", ValidationError('with no "y" specified, this '
                                                 'parameter is required',
                                                 code='required'))
-            self.add_error("y", ValidationError('with no "x" specfied, this '
+            self.add_error("y", ValidationError('with no "x" specified, this '
                                                 'parameter is required',
                                                 code='required'))
 
