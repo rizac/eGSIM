@@ -1,14 +1,12 @@
 """Forms description to be used in API tutorials"""
 
 from typing import Type, Union
-from collections import defaultdict
 
 from django.forms import (MultipleChoiceField, Field, CharField,
                           ChoiceField, BooleanField, FloatField, IntegerField,
                           ModelChoiceField, ModelMultipleChoiceField)
 
-from .egsim import field_to_dict, get_choices
-from .. import TAB
+from .egsim import TAB, field_to_dict, get_choices
 from ...api.models import FlatfileColumn
 from ...api.forms import EgsimBaseForm
 from ...api.forms.fields import (MultipleChoiceWildcardField, NArrayField,

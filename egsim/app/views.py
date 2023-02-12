@@ -14,9 +14,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from . import TAB
-from . import URLS
-from .templates.egsim import get_init_json_data
+from .templates.egsim import TAB, URLS, get_init_json_data
 from .templates.apidoc import get_apidoc_page_renderer_context
 from ..api.forms.flatfile import FlatfileRequiredColumnsForm
 from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm

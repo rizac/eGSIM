@@ -4,7 +4,7 @@ Django Forms for eGSIM flatfile plot generator
 @author: riccardo
 """
 from itertools import chain
-from typing import Iterable, Any
+from typing import Iterable, Any, Union
 
 import numpy as np
 import pandas as pd
@@ -120,7 +120,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             return pd.isna(values).values
 
     @classmethod
-    def _get_stats(cls, finite_values):
+    def _get_stats(cls, finite_values) -> dict[str, Union[float, None]]:
         values = np.asarray(finite_values)
         try:
             return {

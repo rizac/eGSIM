@@ -1,16 +1,16 @@
 #Test config file for the API residuals service
 
-gsim: ['BindiEtAl2011', 'BindiEtAl2014Rjb']
+model: ['BindiEtAl2011', 'BindiEtAl2014Rjb']
 imt: ['SA(0.2)', 'PGA', 'PGV']
 
 flatfile: 'esm2018'
 
 # selexpr: '(vs30 >= 730) & ((magnitude <=4) | (magnitude>=7))'
-selexpr: '(magnitude >= 6) & ((vs30 <=1050) | (vs30>=1000))'
+data-query: '(magnitude >= 6) & ((vs30 <=1050) | (vs30>=1000))'
 
 mof:
  - "res"
- - "lh"
- - "llh"
- - "mllh"
+ - "l"
+ - "ll"
+ - "mll"
  - "edr"

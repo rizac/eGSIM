@@ -63,11 +63,11 @@ class ResidualsForm(GsimImtFlatfileForm, APIForm):
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
-        params = cleaned_data  # FIXME: legacy code remove?
-        _, func, kwargs = PLOT_TYPE[params["plot_type"]]
+        _, func, kwargs = PLOT_TYPE[cleaned_data["plot_type"]]
 
         # Compute residuals.
-        residuals = get_residuals(params['flatfile'], params["gsim"], params["imt"])
+        residuals = get_residuals(cleaned_data['flatfile'],
+                                  cleaned_data["gsim"], cleaned_data["imt"])
 
         # statistics = residuals.get_residual_statistics()
         ret = defaultdict(lambda: defaultdict(lambda: {}))
