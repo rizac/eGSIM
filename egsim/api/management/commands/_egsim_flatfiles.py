@@ -15,7 +15,6 @@ from os.path import join, isdir, abspath, dirname, isfile, basename, splitext
 from django.core.management.base import CommandError
 
 from . import EgsimBaseCommand
-from ._egsim_oq import read_registered_flatfile_columns
 from ..flatfile_parsers import EsmFlatfileParser
 from ... import models
 
@@ -81,7 +80,7 @@ class Command(EgsimBaseCommand):
             info_str = (f'   Flatfile columns: {len(cols)} total, '
                         f'{len(metadata_cols)} metadata, '
                         f'{len(imt_cols_no_sa) + len(imt_cols_sa)} IMTs '
-                        f'({len(imt_cols_sa)} SA), '
+                        f'({len(imt_cols_sa)} SA periods), '
                         f'{len(unknown_cols)} user-defined')
             if unknown_cols:
                 info_str += ":"

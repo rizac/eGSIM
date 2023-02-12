@@ -31,7 +31,7 @@ class TestingForm(GsimImtFlatfileForm, APIForm):
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {
-        'fit_measure': ['mof', 'measure_of_fit']
+        'fit_measure': ['fit-measure',  'mof', 'measure-of-fit']
     }
 
     fit_measure = MultipleChoiceField(required=True, label="Measure(s) of fit",
@@ -102,7 +102,7 @@ class TestingForm(GsimImtFlatfileForm, APIForm):
         return {
             'Measure of fit': ret,
             'Db records': obs_count,
-            'Gsim skipped': gsim_skipped
+            'Models skipped': gsim_skipped
         }
 
     @classmethod

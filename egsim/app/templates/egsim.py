@@ -1,17 +1,82 @@
 """Module for rendering the main page of the site (single page application)"""
 
 from typing import Any, Type, Callable, Union
-import json
+from enum import Enum
 
 from django.db.models import Prefetch
 from django.forms import (Field, IntegerField, ModelChoiceField)
 from django.forms.widgets import ChoiceWidget, Input
 
-from .. import TAB, URLS
 from ...api import models
-from ...api.forms import EgsimBaseForm
+from ...api.forms import EgsimBaseForm, APIForm
 from ...api.forms.flatfile import FlatfileForm, FlatfileRequiredColumnsForm, MOF
 from ...api.forms.flatfile.inspection import FlatfilePlotForm
+from ...api.views import (ResidualsView, TestingView, TrellisView, RESTAPIView)
+
+
+class URLS:  # noqa
+    """Define global URLs"""
+    # we should put this class in `urls.py` but it is used here and in `views.py`
+    # NOTE NO URL HERE (unless external, i.e., http://) MUST END WITH  "/"
+
+    # Url for getting the gsim list from a given geographic location:
+    GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
+    # inspecting a flatfile:
+    FLATFILE_INSPECTION = 'data/flatfile_inspection'
+    FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
+    FLATFILE_PLOT = 'data/flatfile_plot'
+    DOWNLOAD_REQUEST = 'data/downloadrequest'
+    DOWNLOAD_RESPONSE = 'data/downloadresponse'
+    # info pages:
+    HOME_NO_MENU = 'home_no_menu'
+    API = 'api'
+    DATA_PROTECTION = 'https://www.gfz-potsdam.de/en/data-protection/'
+    IMPRINT = "imprint"
+    REF_AND_LICENSE = "ref_and_license"
+
+
+class TAB(Enum):
+    """Define Tabs/Menus of the Single page Application. A TAB T is an Enum with attr:
+    ```
+    title: str
+    icon: str
+    viewclass: Union[Type[RESTAPIView], None]
+    ```
+    Enum names should be kept constant as they are used as ID also in frontend code.
+    Remember that a Tab element can be obtained from its name via square notation
+    e.g. tab = TAB["trellis"] (and conversely, `tab.name` returns "trellis")
+    """
+    # icons (2nd element) are currently given as font-awesome bootsrap icons
+    home = '', 'fa-home'
+    trellis = 'Model-to-Model Comparison', 'fa-area-chart', TrellisView
+    flatfile = 'Flatfiles', 'fa-database'
+    residuals = 'Model-to-Data Comparison', 'fa-bar-chart', ResidualsView
+    testing = 'Model-to-Data Testing', 'fa-list', TestingView
+
+    def __init__(self, *args):
+        # args is the unpacked tuple passed above (2-elements), set attributes:
+        self.title: str = args[0]
+        self.icon: str = args[1]
+        self.viewclass: Type[RESTAPIView] = args[2] if len(args) > 2 else None
+
+    @property
+    def urls(self) -> list[str]:
+        return self.viewclass.urls if self.viewclass else []
+
+    @property
+    def formclass(self) -> Type[APIForm]:
+        return self.viewclass.formclass if self.viewclass else None
+
+    @property
+    def download_request_filename(self) -> str:
+        return f"egsim-{self.name}-config"
+
+    @property
+    def download_response_filename(self) -> str:
+        return f"egsim-{self.name}-result"
+
+    def __str__(self):
+        return self.name
 
 
 def get_init_json_data(browser: dict = None,
@@ -161,7 +226,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     # FlatfilePlotForm has x and y that must be represented as <select> but cannot
     # be implemented as ChoiceField, because their content is not static but
     # flatfile dependent. So
-    plot_form: dict = components_props[TAB.flatfile.name]['forms'][-1]
+    plot_form: dict = components_props[TAB.flatfile.name]['forms'][-1]  # noqa
     plot_form['x']['type'] = 'select'
     plot_form['y']['type'] = 'select'
     # provide initial value:
