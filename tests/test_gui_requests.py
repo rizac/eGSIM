@@ -15,8 +15,8 @@ from egsim.api.forms.trellis import TrellisForm
 
 # from egsim.api.forms.tools.describe import as_dict
 # from egsim.gui.frontend import get_context, form_to_json
-from egsim.app.pages.apidoc import as_dict
-from egsim.app.pages.egsim import get_context, form_to_json
+from egsim.app.templates.apidoc import as_dict
+from egsim.app.templates.egsim import get_init_json_data, form_to_json
 
 GSIM, IMT = 'gsim', 'imt'
 
@@ -24,7 +24,7 @@ GSIM, IMT = 'gsim', 'imt'
 class Test:
 
     def test_get_component_properties(self):
-        data = get_context(debug=False)
+        data = get_init_json_data(debug=False)
         # test it is json serializable:
         json.dumps(data)
 

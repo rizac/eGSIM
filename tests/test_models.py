@@ -11,11 +11,8 @@ from django.db import IntegrityError
 
 
 @pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
-def test_models(capfd, tmpdir):
-    """Test initdb command."""
-    # @pytest.mark.django_db makes already all operations we need. We anyway check
-    # that all __str__ method of our classes work. The __str__ methods are shown in
-    # the admin panel but not used elsewhere
+def test_models(capfd):
+    """Test the models after initializing the DB with eGSIM management commands"""
 
     # load ESM flatfile to see it's there:
     # dfr = read_flatfile(join(FlatfileCommand.dest_dir(), 'esm2018.hdf'))
@@ -23,6 +20,8 @@ def test_models(capfd, tmpdir):
     # assert len(dfr) == 23014
 
     for _name in dir(models):
+        # check the __str__ method of the 1st instance of each models.Model. This is
+        # to assure the admin panel (which usually uses it) works correctly
         _ = getattr(models, _name)
         try:
             is_class = issubclass(_, models.Model) and not _._meta.abstract and \
