@@ -53,7 +53,8 @@ def split_string(string: str) -> list[str]:
 
     :return: a list of chunks of the given string
     """
-    return _split_re.split(string)
+    _string = string.strip()
+    return [] if not _string else _split_re.split(_string)
 
 
 # global default error codes mapped to custom messages messages replacing Django default.

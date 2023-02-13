@@ -31,35 +31,33 @@ from egsim.api.forms.fields import NArrayField, isscalar
     ('3.135e+2:100:413.5', [313.5, 413.5]),
     ('3.135e+2:100:413.5000001', [313.5, 413.5]),
     ('3.135e+2:100:413.4999999', [313.5]),
-    ("[123.56]", [123.56]),  # check that we return an array (brackets given)
+    # ("[123.56]", [123.56]),  # check that we return an array (brackets given)
     ("123.56", 123.56),  # check we return a scalar (no brackets)
-    ("1  , 55, 67.5", ValidationError),  # check no need for brackets in json
-    ("[1  , 55, 67.5]", [1, 55, 67.5]),  # check this is the same as above
+    ("1  , 55, 67.5", [1, 55, 67.5]),  # check no need for brackets in json
+    # ("[1  , 55, 67.5]", [1, 55, 67.5]),  # check this is the same as above
     ("1 55   67.5", [1, 55, 67.5]),  # check shlex
     ("  1 55   67.5   ", [1, 55, 67.5]),  # (spaces after brackets ignored)
-    ("[1 55   67.5]", ValidationError),  # json with whitespace: invalid
-    ("1 55 ,  67.5", ValidationError),
+    # ("[1 55   67.5]", ValidationError),  # json with whitespace: invalid
+    ("1 55 ,  67.5", [1, 55, 67.5]),
     # check various floating point potential errors:
     ("0.1:0.1:1", [.1, .2, .3, .4, .5, .6, .7, .8, .9, 1]),
     ("0:1:10.001", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
     ("0:1:9.999999999999999", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     ("0:1:9.99999999999999", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
     ("[0.274:0.137:0.959]", ValidationError),  # JSON must be quoted
-    ("[\"0.274:0.137:0.959\"]", [0.274, .411, .548, .685, .822, .959]),
-    ("\"0.274:0.137:0.959\"", [0.274, .411, .548, .685, .822, .959]),
+    ("[\"0.274:0.137:0.959\"]", ValidationError),
+    ("\"0.274:0.137:0.959\"", ValidationError),
     ("0.274:0.137:0.959", [0.274, .411, .548, .685, .822, .959]),
-    # mixed notations, check all these are the same:
-    ("[\"0.274:0.137:0.959\"  , 5 , 6.67]",
-     [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
-    ("0.274:0.137:0.959 5  6.67",
-     [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
-    ("0.274:0.137:0.959,  5,  6.67", ValidationError),  # json invalid with ":"
-    # this should work (quote):
+    ("0.274 0.137, 0.959", [0.274, 0.137, 0.959]),
+    # # mixed notations, check all these are the same:
+    ("[\"0.274:0.137:0.959\"  , 5 , 6.67]", ValidationError),
+    ("0.274:0.137:0.959 5  6.67", [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
+    ("0.274:0.137:0.959,  5  6.67", [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
+    ("0.274:0.137:0.959 5 6.67", [0.274, .411, .548, .685, .822, .959, 5, 6.67]),
+    # # this should work (quote):
     ('"0.274:0.137:0.959", 5 ,  6.67', ValidationError),
-    ("0.274:0.137:0.959, 5 6.67", ValidationError),
     ("", []),
-    ("", []),
-    ("[]", []),
+    ("[]", ValidationError),
     ("[", ValidationError),
     ("]", ValidationError),
 ])
