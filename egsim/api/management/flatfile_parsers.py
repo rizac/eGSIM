@@ -202,11 +202,16 @@ class EsmFlatfileParser(FlatfileParser):
                        '_T4_000', '_T4_500', '_T5_000', '_T6_000',
                        '_T7_000', '_T8_000', '_T9_000', '_T10_000')
 
+        # Store all SA columns in a dict and add them to `dfr` once at the end
+        # (should avoid PandasPerformanceWarning):
+        sa_columns = {}
         for sa_sfx in sa_suffixes:
             imt_components = \
                 dfr.pop('U' + sa_sfx), dfr.pop('V' + sa_sfx), dfr.pop('W' + sa_sfx)
             period = sa_sfx[2:].replace('_', '.')
             float(period)  # just a check
-            dfr['SA(%s)' % period] = geom_mean(imt_components[0], imt_components[1])
-
+            sa_columns['SA(%s)' % period] = geom_mean(imt_components[0],
+                                                      imt_components[1])
+        # concat (side by side "horizontally") `dfr` with the newly created SA dataframe:
+        dfr = pd.concat((dfr, pd.DataFrame(sa_columns)), axis=1)
         return dfr

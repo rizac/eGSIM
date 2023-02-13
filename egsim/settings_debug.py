@@ -115,7 +115,8 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_L10N = True
+# FIXME: remove in egsim 2.0 (https://github.com/django/django/pull/14846#issuecomment-1285375816):
+# USE_L10N = True
 
 USE_TZ = False  # FIXME changed in egsim 2.0
 
