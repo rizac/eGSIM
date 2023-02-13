@@ -9,12 +9,13 @@ from os.path import abspath, join
 import json
 from enum import Enum, IntEnum
 from datetime import datetime, date
-from typing import Union, Any
+from typing import Any
 
-from django.db.models import (Q, Model, TextField, BooleanField, ForeignKey,
-                              ManyToManyField, JSONField, UniqueConstraint,
+from django.db.models import (Model as DjangoModel, Q, TextField, BooleanField,
+                              ForeignKey, ManyToManyField, JSONField, UniqueConstraint,
                               CASCADE, SET_NULL, Index, SmallIntegerField,
-                              DateTimeField, URLField)
+                              DateTimeField, URLField, Manager)
+from django.db.models.options import Options
 from django.conf import settings
 from django.db.utils import IntegrityError
 
@@ -24,47 +25,15 @@ from django.db.utils import IntegrityError
 # in the admin panel (https://<site_url>/admin)
 
 
-# ============================================
-# JSON encoders/ decoders (used in JSONFields)
-# ============================================
+class Model(DjangoModel):
+    """Abstract base class of all Django Models of this module"""
 
+    # notify editors code inspection that these attrs exist (see metaclass for details):
+    objects: Manager
+    _meta: Options
 
-class CompactEncoder(json.JSONEncoder):
-    """JSON encoder that saves space"""
-    def __init__(self, **kwargs):
-        kwargs['separators'] = (',', ':')
-        super(CompactEncoder, self).__init__(**kwargs)
-
-
-class DateTimeEncoder(CompactEncoder):
-    """Encode date times as ISO formatted strings"""
-
-    _KEY = '__iso8601datetime__'  # DO NOT CHANGE or repopulate db
-
-    def default(self, obj):
-        if isinstance(obj, (datetime, date)):
-            obj = {self._KEY: obj.isoformat()}
-        return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
-
-
-class DateTimeDecoder(json.JSONDecoder):
-
-    def __init__(self, **kwargs):
-        super(DateTimeDecoder, self).__init__(object_hook=DateTimeDecoder.object_hook,
-                                              **kwargs)
-
-    @staticmethod
-    def object_hook(dct):
-        key = DateTimeEncoder._KEY  # noqa
-        if key in dct:
-            return datetime.fromisoformat(dct[key])
-        # return dict "normally":
-        return dct
-
-
-# =======================================================
-# Models (abstract, i.e. not represented by any db table)
-# =======================================================
+    class Meta:  # make this class abstract
+        abstract = True
 
 
 class _UniqueNameModel(Model):
@@ -104,11 +73,6 @@ class _DataSource(_UniqueNameModel):
         abstract = True
 
 
-# =================================================
-# Models (concrete, i.e. represented by a db table)
-# =================================================
-
-
 class Flatfile(_DataSource):
     """Class handling flatfiles stored in the file system
     (predefined flatfiles)
@@ -134,6 +98,40 @@ class Flatfile(_DataSource):
         if not hidden:
             qry = qry.filter(hidden=False)
         return qry
+
+
+class CompactEncoder(json.JSONEncoder):
+    """Compact JSON encoder used in JSONFields of this module"""
+    def __init__(self, **kwargs):
+        kwargs['separators'] = (',', ':')
+        super().__init__(**kwargs)
+
+
+class DateTimeEncoder(CompactEncoder):
+    """Encode date times as ISO formatted strings"""
+
+    _KEY = '__iso8601datetime__'  # DO NOT CHANGE, or otherwise repopulate the db
+
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            obj = {self._KEY: obj.isoformat()}
+        return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
+
+
+class DateTimeDecoder(json.JSONDecoder):
+    """Encode date times encoded with the previous class instance"""
+
+    def __init__(self, **kwargs):
+        super(DateTimeDecoder, self).__init__(object_hook=DateTimeDecoder.object_hook,
+                                              **kwargs)
+
+    @staticmethod
+    def object_hook(dct):
+        key = DateTimeEncoder._KEY  # noqa
+        if key in dct:
+            return datetime.fromisoformat(dct[key])
+        # return dict "normally":
+        return dct
 
 
 class FlatfileColumn(_UniqueNameModel):
@@ -178,10 +176,9 @@ class FlatfileColumn(_UniqueNameModel):
         default = 'default'
 
     class BaseDtype(Enum):  # noqa
-        """The base data types of a flatfile, mapped to the Python type that
-        must be JSON or YAML serializable.
-        Supported is also a categorical data type similar to pandas one (see
-        `save` for details)
+        """The base data types of a flatfile column, mapped to their Python type. Columns
+        accept also a categorical data (like pandas) that can be given as list/tuple of
+        possible choices, all of the same base data type value (see `save` for details)
         """
         float = float
         int = int
@@ -387,7 +384,7 @@ class GsimRegion(Model):
                                              'gsim_and_regionalization')]
 
     def save(self, *args, **kwargs):
-        """Overrides save and checks if the flat file name is unique or NULL"""
+        """Override save and checks if the flat file name is unique or NULL"""
         # WARNING: DO NOT set Breakpoints in PyCharm 2021.1.1 and Python 3.9
         # as it seems that the program crashes in debug mode (but it works actually)
         key = 'geometry'
@@ -427,20 +424,20 @@ class Regionalization(_DataSource):
 # UNUSED Legacy functions ====================================================
 
 
-def _is_field_value_unique(instance: Model, field_name: str, ignore_nulls=True):
-    """Return True if the instance field value is unique by querying the db table
-
-    :param instance: a Model instance (or db table row)
-    :param field_name: the instance field name to check (db table column name)
-    :param ignore_nulls: boolean (default True): ignore null. I.e., allow
-        multiple null values
-    """
-    # Rationale: apparently a Django Field(... unique=True, null=True,...) will
-    # force also uniqueness on NULLs (only one NULL can be saved). This is
-    # probably because not all DBs support unique with multiple NULLs
-    # (postgres does). Implement here a function that allows that
-    field_val = getattr(instance, field_name)
-    if field_val is None and ignore_nulls:
-        return True
-    filter_cond = {field_name + '__exact': field_val}  # works for None as well
-    return not instance.__class__.objects.filter(**filter_cond).exists()  # noqa
+# def _is_field_value_unique(instance: Model, field_name: str, ignore_nulls=True):
+#     """Return True if the instance field value is unique by querying the db table
+#
+#     :param instance: a Model instance (or db table row)
+#     :param field_name: the instance field name to check (db table column name)
+#     :param ignore_nulls: boolean (default True): ignore null. I.e., allow
+#         multiple null values
+#     """
+#     # Rationale: apparently a Django Field(... unique=True, null=True,...) will
+#     # force also uniqueness on NULLs (only one NULL can be saved). This is
+#     # probably because not all DBs support unique with multiple NULLs
+#     # (postgres does). Implement here a function that allows that
+#     field_val = getattr(instance, field_name)
+#     if field_val is None and ignore_nulls:
+#         return True
+#     filter_cond = {field_name + '__exact': field_val}  # works for None as well
+#     return not instance.__class__.objects.filter(**filter_cond).exists()  # noqa
