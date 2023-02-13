@@ -312,7 +312,7 @@ class EgsimContextDB(context_db.ContextDB):
         # `return self._data.groupby([EVENT_ID_COL])` should be sufficient, but
         # sometimes in the yielded `(ev_id, dfr)` tuple, `dfr` is empty and
         # `ev_id` is actually not in the dataframe (???). So:
-        yield from (_ for _ in self._data.groupby([EVENT_ID_COL]) if not _[1].empty)
+        yield from (_ for _ in self._data.groupby(EVENT_ID_COL) if not _[1].empty)
 
     def get_observations(self, imtx, records, component="Geometric"):
 
