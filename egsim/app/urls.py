@@ -16,7 +16,7 @@ urlpatterns = [
 
     # main page entry point, valid for all urls implemented in views.KEY:
     re_path(r'^(?P<selected_menu>%s)/?$' % "|".join(_.name for _ in TAB), main),
-    re_path(r'init_data/?', main_page_init_data),
+    re_path(r'%s/?' % URLS.MAIN_PAGE_INIT_DATA, main_page_init_data),
 
     # Imprint, refs (pages with a "normal" static django template associated):
     re_path(r'^%s/?$' % URLS.IMPRINT, imprint),

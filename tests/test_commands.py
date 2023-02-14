@@ -24,8 +24,8 @@ def test_initdb(capsys):
     managed by egsim
 
     NOTE: these are just shallow tests to check no error is raised. Deeper tests cannot
-        be easily performed. An alternative is to issue bookmarks in PyCharm and inspect §§by via a bookmark in
-        PyCharm
+        be easily performed. An alternative is to issue bookmarks in the editor
+        (e.g. PyCharm) and inspect the printout
     """
     # why is it @patch not working if provided as decorator?
     # It has conflicts with capsys fixture, but only here ....

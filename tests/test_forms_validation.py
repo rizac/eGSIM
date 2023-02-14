@@ -5,16 +5,13 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
-import json
 from io import BytesIO
 
 import pytest
-from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.utils.datastructures import MultiValueDict
 from openquake.hazardlib import imt
 
-from egsim.api.forms import GsimImtForm
+from egsim.api.forms import GsimImtForm, GsimFromRegionForm, _get_regionalizations
 from egsim.api.forms.flatfile import FlatfileForm
 from egsim.api.forms.flatfile.inspection import FlatfileInspectionForm
 from egsim.api.forms.trellis import TrellisForm
@@ -431,3 +428,16 @@ class Test:
         assert not is_valid
         # Test renaming IMTs lower case:
         dfg = 9
+
+    def test_get_gsim_from_region(self, areequal):
+        form = GsimFromRegionForm({'lat': 50, 'lon': 7})
+        assert form.is_valid()
+        # query each regionalization singularly and check that we get the same models:
+        resp = set(form.response_data)
+        regs = [_[0] for _ in _get_regionalizations()]
+        resp2 = []
+        for reg in regs:
+            resp_ = set(GsimFromRegionForm({'lat': 50, 'lon': 7, 'shsr': reg}).response_data)
+            assert sorted(resp_ & resp) == sorted(resp_)
+            resp2.extend(resp_)
+        assert sorted(resp) == sorted(resp2)
