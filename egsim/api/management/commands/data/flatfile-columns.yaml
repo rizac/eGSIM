@@ -17,10 +17,11 @@
 #   help:    The field help or description (defaults to "" when missing)
 
 # YAML notes:
-# Unless required, strings do not need to be quoted. YAML is a superset of JSON,
-# so you can type lists as JSON Arrays: [...] and Mappings as JSON Objects: {...}.
-# If you want to type over multiple lines for readability, prefix the text with >-
-# (see examples here below or https://stackoverflow.com/a/3790497)
+# Date-times can be given as ISO formatted text, without quotes (unless required,
+# strings don't need quotes either, but better use them for readability). YAML is a
+# superset of JSON, so you can type lists as JSON Arrays: [...] and Mappings as JSON
+# Objects: {...}. If you want to type over multiple lines for readability, prefix the
+# text with >- (see examples here below or https://stackoverflow.com/a/3790497)
 
 azimuth:
 repi:
