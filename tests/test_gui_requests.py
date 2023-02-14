@@ -5,6 +5,7 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
+import yaml
 from unittest.mock import patch
 
 from itertools import product
@@ -75,3 +76,18 @@ class Test:
                     assert content['invalid_browser_message']
                 else:
                     assert not content['invalid_browser_message']
+
+    def test_download_request(self, #pytest fixture:
+                               testdata):
+        for service in ['trellis', 'residuals', 'testing']:
+            with open(testdata.path(f'request_{service}.yaml')) as _:
+                data = yaml.safe_load(_)
+            if service == 'residuals':
+                data['plot'] = 'res'
+            client = Client()  # do not use the fixture client as we want
+            for filename in ['request.json', 'request.yaml']:
+                # to disable CSRF Token check
+                response = client.post(f"/{URLS.DOWNLOAD_REQUEST}/{service}/{filename}",
+                                       json.dumps(data),
+                                       content_type="application/json")
+                assert response.status_code == 200
