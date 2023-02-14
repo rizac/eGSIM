@@ -59,19 +59,19 @@ class Test:
         _models = list(_get_gsim_for_init_data())
         # then mock it (since it is time consuming) when testing several possible
         # combination of _get_init_data:
-        # with patch('egsim.app.templates.egsim._get_gsim_for_init_data',
-        #            side_effect=lambda *a, **v: _models) as _:
-        data = [{'browser': {'name': bn, 'version': v}, 'selectedMenu': m }
-                for bn, v, m in product(['chrome', 'firefox', 'safari', 'opera'],
-                                        [1, 100000], [_.name for _ in TAB])]
-        for d in data:
-            client = Client()  # do not use the fixture client as we want
-            # to disable CSRF Token check
-            response = client.post('/' + URLS.MAIN_PAGE_INIT_DATA, json.dumps(d),
-                                   content_type="application/json")
-            assert response.status_code == 200
-            content = json.loads(response.content)
-            if d['browser']['version'] == 1 or d['browser']['name'] == 'opera':
-                assert content['invalid_browser_message']
-            else:
-                assert not content['invalid_browser_message']
+        with patch('egsim.app.templates.egsim._get_gsim_for_init_data',
+                   side_effect=lambda *a, **v: _models) as _:
+            data = [{'browser': {'name': bn, 'version': v}, 'selectedMenu': m }
+                    for bn, v, m in product(['chrome', 'firefox', 'safari', 'opera'],
+                                            [1, 100000], [_.name for _ in TAB])]
+            for d in data:
+                client = Client()  # do not use the fixture client as we want
+                # to disable CSRF Token check
+                response = client.post('/' + URLS.MAIN_PAGE_INIT_DATA, json.dumps(d),
+                                       content_type="application/json")
+                assert response.status_code == 200
+                content = json.loads(response.content)
+                if d['browser']['version'] == 1 or d['browser']['name'] == 'opera':
+                    assert content['invalid_browser_message']
+                else:
+                    assert not content['invalid_browser_message']

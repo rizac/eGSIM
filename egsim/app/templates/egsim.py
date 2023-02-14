@@ -169,8 +169,6 @@ def _get_gsim_for_init_data():
     """Get gsim DB model instances and all related data (imts and warnings)"""
     # Try to perform everything in a single more efficient query. Use prefetch_related
     # for this:
-    gsims = []
-    imt_groups = []
     imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
     return models.Gsim.objects.only('name', 'warning').prefetch_related(imts)
 
