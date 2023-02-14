@@ -1,17 +1,17 @@
 # This YAML file contains the flatfile columns metadata to be stored in the database
-# as instances of `egsim.api.models.FlatfileColumn`s, and their mapping with OpenQuake
-# models parameters. See also `egsim_init.py` for usage
+# as instances of `egsim.api.models.FlatfileColumn`s, and - down the page - their
+# mapping with OpenQuake model parameters. See also `egsim_init.py` for usage
 
 # Flatfile column format:
 #
 # <column_name>:
 #   dtype:   The data type (default when missing: float). Supported values are:
-#            float, int, str, datetime, bool, or the list of the possible values
-#            that the field can have (categorical data)
+#            float, int, str, datetime (ISO formatted), bool, or the list of the
+#            possible values that the field can have (like pandas categorical data)
 #   bounds:  The bounds [min, max], endpoints included. Default when missing:
 #            [null, null], where null means: unbounded / don't check
-#   default: The default value when nothing is provided. When missing,
-#            the default value depends `dtype` or storage (e.g. pandas vs sql).
+#   default: The default value when nothing is provided. When missing, the default
+#            value depends on `dtype` and the storage used (e.g. pandas vs sql).
 #            E.g., with pandas: NaN (for dtype float), NaT (datetime), None/null
 #            (str or categorical), 0 (int), False (bool)
 #   help:    The field help or description (defaults to "" when missing)
@@ -118,9 +118,9 @@ slope:
 
 # Here the collection of the parameters required by all OpenQuake models, mapped to their
 # corresponding flatfile column. With this information eGSIM can tell, for any given
-# flatfile, which models can be used for comparison. **As such, remember that a parameter
-# with no mapping (or null) will programmatically discard from eGSIM all models requiring
-# it**. See `_egsim_oq.py` for usage
+# flatfile, which models can be used with it. **As such, a parameter with no mapping (or
+# mapped to null) will programmatically discard all models requiring it**.
+# See `_egsim_oq.py` for usage
 
 openquake_models_parameters:
   distance_measure:  # OpenQuake model attribute: REQUIRES_DISTANCES

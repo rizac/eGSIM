@@ -19,6 +19,8 @@ class URLS:  # noqa
     # we should put this class in `urls.py` but it is used here and in `views.py`
     # NOTE NO URL HERE (unless external, i.e., http://) MUST END WITH  "/"
 
+    # JSON data requested by the main page at startup:
+    MAIN_PAGE_INIT_DATA = "init_data"
     # Url for getting the gsim list from a given geographic location:
     GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
     # inspecting a flatfile:
@@ -105,8 +107,9 @@ def get_init_json_data(browser: dict = None,
     # in a single more efficient query. Use prefetch_related for this:
     gsims = []
     imt_groups = []
-    imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
-    for gsim in models.Gsim.objects.only('name', 'warning').prefetch_related(imts):
+    # imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
+    # for gsim in models.Gsim.objects.only('name', 'warning').prefetch_related(imts):
+    for gsim in _get_gsim_for_init_data():
         imt_names = sorted(i for i in gsim.imts.values_list('name', flat=True))
         try:
             imt_group_index = imt_groups.index(imt_names)
@@ -160,6 +163,16 @@ def get_init_json_data(browser: dict = None,
             'ref_and_license': URLS.REF_AND_LICENSE
         }
     }
+
+
+def _get_gsim_for_init_data():
+    """Get gsim DB model instances and all related data (imts and warnings)"""
+    # Try to perform everything in a single more efficient query. Use prefetch_related
+    # for this:
+    gsims = []
+    imt_groups = []
+    imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
+    return models.Gsim.objects.only('name', 'warning').prefetch_related(imts)
 
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:

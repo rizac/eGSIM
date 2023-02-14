@@ -65,7 +65,7 @@ def ref_and_license(request):
 
 def _get_ref_and_license_page_renderer_context():
     refs = {}
-    with open(join(dirname(dirname(dirname(abspath(__file__)))), 'api',
+    with open(join(dirname(dirname(abspath(__file__))), 'api',
                    'management', 'commands', 'data', 'data_sources.yaml')) as _:
         for ref in yaml.safe_load(_).values():
             name = ref.pop('display_name')
