@@ -388,7 +388,7 @@ class Test:
         # assert is_valid
 
         # now let's test some errors:
-        flatfile_df = FlatfileForm.read_flatfilefrom_csv_bytes(testdata.open('esm2018.hdf.small.csv'))
+        flatfile_df = FlatfileForm.read_flatfilefrom_csv_bytes(testdata.open('Turkey_20230206_flatfile_geometric_mean.csv'))
 
         # Test Cauzzi et al:
         for imt in ['PGA', 'pga']:
