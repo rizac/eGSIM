@@ -130,22 +130,23 @@ def read_flatfile(filepath_or_buffer: str,
     # Check which column is an int or bool, as those columns do not support NA
     # (e.g. a empty CSV cell for a boolean column raises)
     dtype_, dtype_ib, datetime_cols = {}, {}, kwargs.pop('parse_dates', [])
-    for col, dtyp in dtype.items():
-        if dtyp in ('bool', 'int'):
-            # Move the dtype to dtype_ib:
-            dtype_ib[col] = dtyp
-            # Replace dtype with float in order to safely read NA:
-            dtype_[col] = 'float'
-            # Check that a default is set and is of type float, otherwise pandas
-            # might perform useless data conversions to object. As such, when a
-            # default is unset, provide 0, as eventually float(0) = float(False)
-            defaults[col] = float(defaults.get(col, 0))
-        elif dtyp == 'datetime':
-            datetime_cols.append(col)
-        elif isinstance(dtyp, (list, tuple)):
-            dtype_[col] = pd.CategoricalDtype(dtyp)  # noqa
-        else:
-            dtype_[col] = dtyp
+    if dtype:
+        for col, dtyp in dtype.items():
+            if dtyp in ('bool', 'int'):
+                # Move the dtype to dtype_ib:
+                dtype_ib[col] = dtyp
+                # Replace dtype with float in order to safely read NA:
+                dtype_[col] = 'float'
+                # Check that a default is set and is of type float, otherwise pandas
+                # might perform useless data conversions to object. As such, when a
+                # default is unset, provide 0, as eventually float(0) = float(False)
+                defaults[col] = float(defaults.get(col, 0))
+            elif dtyp == 'datetime':
+                datetime_cols.append(col)
+            elif isinstance(dtyp, (list, tuple)):
+                dtype_[col] = pd.CategoricalDtype(dtyp)  # noqa
+            else:
+                dtype_[col] = dtyp
 
     dfr = pd.read_csv(filepath_or_buffer, dtype=dtype_,
                       parse_dates=datetime_cols or None,

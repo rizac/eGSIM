@@ -7,9 +7,10 @@ from datetime import datetime, date
 
 import pytest
 
+from egsim.api.flatfile import read_flatfile
 from egsim.api.forms import relabel_sa
 from egsim.api.forms.fields import NArrayField, vectorize
-
+from egsim.api.management.commands._egsim_oq import read_registered_flatfile_columns
 
 
 def test_vectorize():
@@ -94,3 +95,14 @@ def test_areequal(areequal):
     assert not areequal({'a': 1.0000000000001, 'b': [1, 2, 3], 'c': 'abc'},
                         {'c': 'abc', 'b': [1, 1.9, 3], 'a': 1})
     assert areequal(1.0000000000001, 1)
+
+
+def test_flatfile_turkey(testdata):
+    fpath = testdata.path('Turkey_20230206_flatfile_geometric_mean.csv')
+    dfr = read_flatfile(fpath)
+    flatfile_cols = read_registered_flatfile_columns()
+    asd = 9
+    # in EGSIM flatfile definition and not in Turkey flatfile:
+    # {'fpeak', 'azimuth', 'station_latitude', 'station_longitude'}
+    # In Turkey flatfile and not in eGSIM flatfile definition (excluding PGA, PGV, and SA):
+    # {'gc2t', 'gc2u', 'sta', 'depth_bottom_of_rupture', 'event_id', 'gmid', 'longest_period', 'event_time'}
