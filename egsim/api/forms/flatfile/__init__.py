@@ -101,18 +101,18 @@ class FlatfileForm(EgsimBaseForm):
                 return cleaned_data  # no need to further process
 
             # check data types:
-            invalid_cols = self.get_flatfile_columns_with_invalid_dtypes(dataframe)
-            if invalid_cols:
-                icol_str = ', '.join(str(_[0]) for _ in invalid_cols[:5])
-                if len(invalid_cols) > 5:
-                    icol_str += ' ... (showing first 5 only)'
-                err_gsim = ValidationError(f"{len(invalid_cols)} columns(s) have "
-                                           f"invalid data types (e.g., str where "
-                                           f"int is expected): {icol_str}",
-                                           code='invalid')
-                # add_error removes also the field from self.cleaned_data:
-                self.add_error('flatfile', err_gsim)
-                return cleaned_data
+            # invalid_cols = self.get_flatfile_columns_with_invalid_dtypes(dataframe)
+            # if invalid_cols:
+            #     icol_str = ', '.join(str(_[0]) for _ in invalid_cols[:5])
+            #     if len(invalid_cols) > 5:
+            #         icol_str += ' ... (showing first 5 only)'
+            #     err_gsim = ValidationError(f"{len(invalid_cols)} columns(s) have "
+            #                                f"invalid data types (e.g., str where "
+            #                                f"int is expected): {icol_str}",
+            #                                code='invalid')
+            #     # add_error removes also the field from self.cleaned_data:
+            #     self.add_error('flatfile', err_gsim)
+            #     return cleaned_data
 
         # replace the flatfile parameter with the pandas dataframe:
         cleaned_data['flatfile'] = dataframe
@@ -141,31 +141,31 @@ class FlatfileForm(EgsimBaseForm):
         # imts = models.Imt.objects.only('name').values_list('name', flat=True)
         return read_flatfile(buffer, sep=sep, dtype=dtype, defaults=defaults)
 
-    @classmethod
-    def get_flatfile_columns_with_invalid_dtypes(cls, flatfile: pd.DataFrame) -> \
-            Sequence[tuple[str, Any, Any]]:
-        """return tuple (col, dtype, expected_dtype) elements
-        for the columns with invalid data types
-        """
-        standard_dtypes, _, _ = models.FlatfileColumn.split_props()
-        ff_dtypes: dict[str, str] = cls.get_flatfile_dtypes(flatfile)
-        base_dtype = models.FlatfileColumn.BaseDtype
-        bad_cols = []
-        for col in set(standard_dtypes) & set(ff_dtypes):
-            expected_dtype = standard_dtypes[col]
-            ff_dtype = ff_dtypes[col]
-            if expected_dtype == ff_dtype:
-                continue
-            # type promotion (expected float, found int is still ok):
-            if expected_dtype == base_dtype.float.name and \
-                    ff_dtype == base_dtype.int.name:
-                continue
-            if isinstance(expected_dtype, list) and isinstance(ff_dtype, list) \
-                    and set(expected_dtype) == set(ff_dtype):
-                continue
-            bad_cols.append((col, ff_dtype, expected_dtype))
-
-        return bad_cols
+    # @classmethod
+    # def get_flatfile_columns_with_invalid_dtypes(cls, flatfile: pd.DataFrame) -> \
+    #         Sequence[tuple[str, Any, Any]]:
+    #     """return tuple (col, dtype, expected_dtype) elements
+    #     for the columns with invalid data types
+    #     """
+    #     standard_dtypes, _, _ = models.FlatfileColumn.split_props()
+    #     ff_dtypes: dict[str, str] = cls.get_flatfile_dtypes(flatfile)
+    #     base_dtype = models.FlatfileColumn.BaseDtype
+    #     bad_cols = []
+    #     for col in set(standard_dtypes) & set(ff_dtypes):
+    #         expected_dtype = standard_dtypes[col]
+    #         ff_dtype = ff_dtypes[col]
+    #         if expected_dtype == ff_dtype:
+    #             continue
+    #         # type promotion (expected float, found int is still ok):
+    #         if expected_dtype == base_dtype.float.name and \
+    #                 ff_dtype == base_dtype.int.name:
+    #             continue
+    #         if isinstance(expected_dtype, list) and isinstance(ff_dtype, list) \
+    #                 and set(expected_dtype) == set(ff_dtype):
+    #             continue
+    #         bad_cols.append((col, ff_dtype, expected_dtype))
+    #
+    #     return bad_cols
 
     @classmethod
     def get_flatfile_dtypes(cls, flatfile: pd.DataFrame,

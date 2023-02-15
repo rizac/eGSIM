@@ -416,6 +416,17 @@ class Test:
         is_valid = form.is_valid()
         assert not is_valid
 
+        # Test changing a column data type (magnitude becomes string):
+        flatfile = flatfile_df[[c for c in flatfile_df.columns if c != 'magnitude']].copy()
+        flatfile['magnitude'] = 'A'
+        bio = BytesIO()
+        flatfile.to_csv(bio, sep=',')
+        files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
+        # mvd = MultiValueDict({'flatfile': fp})
+        form = FlatfileInspectionForm({}, files=files)
+        is_valid = form.is_valid()
+        assert not is_valid
+
         # Test removing event_id:
         flatfile = flatfile_df[
             ['rake', 'magnitude', 'rrup', 'vs30', 'PGA']].copy()
