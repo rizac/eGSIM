@@ -72,8 +72,8 @@ class Test:
     def test_flatfile_plot(self,  # pytest fixtures:
                            testdata):
             url = URLS.FLATFILE_PLOT
-            ff = SimpleUploadedFile('flatfile',
-                                    testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'))
+            ff_bytes = testdata.read('Turkey_20230206_flatfile_geometric_mean.csv')
+            ff = SimpleUploadedFile('flatfile',ff_bytes)
             data = {'flatfile': ff}
             client = Client()  # do not use the fixture client as we want
             # to disable CSRF Token check
@@ -88,8 +88,7 @@ class Test:
                 {'x': 'magnitude', 'y': 'PGA'},
                 {'y': 'magnitude', 'x': 'PGA'}
             ]:
-                ff = SimpleUploadedFile('flatfile',
-                                        testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'))
+                ff = SimpleUploadedFile('flatfile', ff_bytes)
                 data['flatfile'] = ff  # noqa
                 client = Client()  # do not use the fixture client as we want
                 # to disable CSRF Token check

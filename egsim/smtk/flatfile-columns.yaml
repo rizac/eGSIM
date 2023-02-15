@@ -1,0 +1,186 @@
+# This YAML file contains the flatfile columns metadata to be stored in the database
+# as instances of `egsim.api.models.FlatfileColumn`s, and - down the page - their
+# mapping with OpenQuake model parameters. See also `egsim_init.py` for usage
+
+# Flatfile column format:
+#
+# <column_name>:
+#   dtype:   The data type (default when missing: float). Supported values are:
+#            float, int, str, datetime (ISO formatted), bool, or the list of the
+#            possible values that the field can have (like pandas categorical data)
+#   bounds:  The bounds [min, max], endpoints included. Default when missing:
+#            [null, null], where null means: unbounded / don't check
+#   default: The default value when nothing is provided. When missing, the default
+#            value depends on `dtype` and the storage used (e.g. pandas vs sql).
+#            E.g., with pandas: NaN (for dtype float), NaT (datetime), None/null
+#            (str or categorical), 0 (int), False (bool)
+#   help:    The field help or description (defaults to "" when missing)
+
+# YAML notes:
+# Date-times can be given as ISO formatted text, without quotes (unless required,
+# strings don't need quotes either, but better use them for readability). YAML is a
+# superset of JSON, so you can type lists as JSON Arrays: [...] and Mappings as JSON
+# Objects: {...}. If you want to type over multiple lines for readability, prefix the
+# text with >- (see examples here below or https://stackoverflow.com/a/3790497)
+
+azimuth:
+repi:
+  help: epicentral distance (in km)
+rrup:
+  help: rupture_distance (in km)
+rjb:
+  help: Joyner-Boore distance (in km)
+rhypo:
+  help: hypocentral distance (in km)
+rx:
+  help: >-
+    Horizontal distance (in km) from the top of the rupture measured
+    perpendicular to strike
+ry0:
+  help: >-
+    Horizontal distance (in km) from the top of the rupture measured parallel
+    to strike
+rvolc:
+  default: 0
+  help: Distance through volcanic zone (km)
+event_latitude:
+  help: Hypocentre latitude (deg)
+  bounds: [ -90, 90 ]
+event_longitude:
+  help: Hypocentre longitude (deg)
+  bounds: [ -180, 180 ]
+magnitude:
+event_depth:
+  help: Hypocentral depth (km)
+depth_top_of_rupture:
+  help: Top of Rupture Depth (km)
+  bounds: [ 0, null ]
+rupture_width:
+  help: Down-dip width of the rupture (km)
+  bounds: [ 0, null ]
+dip:
+  bounds: [ 0, 90 ]
+  help: >-
+    the angle of the fault relative to the horizontal (deg).
+    Hint: in case of more components available (e.g. from web services), the
+    correct one should be inferred by the user from the rupture, or can be chosen
+    randomly if no information is available
+rake:
+  bounds: [ -180, 180 ]
+  help: >-
+    the direction the hanging wall moves, relative to the fault strike (deg).
+    Hint: in case of more components available (e.g. from
+    web services), the correct one should be inferred by the user from the rupture,
+    or can be chosen randomly if no information is available
+z1:
+  help: >-
+    depth of the layer where seismic waves start to propagate with a
+    speed above 1.0 km/sec, in meters
+z2pt5:
+  help: >-
+    depth of the layer where seismic waves start to propagate with a speed
+    above 2.5 km/sec, in km
+vs30:
+  help: Average shear wave velocity in the top 30 m, in m/s
+  bounds: [ 0, null ]
+backarc:
+  dtype: bool
+  default: false
+station_latitude:
+  help: station latitude (deg)
+  bounds: [ -90, 90 ]
+station_longitude:
+  help: station longitude (deg)
+  bounds: [ -180, 180 ]
+vs30measured:
+  help: whether or not the Vs30 is measured (default true)
+  dtype: bool
+  default: true
+xvf:
+  help: distance to the volcanic front (km)
+fpeak:
+  help: >-
+    Frequency that corresponds to the peak of the horizontal to vertical
+    spectral ratio (Hz)
+  bounds: [ 0, null ]
+region:
+  dtype: int
+  bounds: [ 0, 5 ]
+  help: The ESHM2020 cluster region to which the site belongs
+  default: 0
+geology:
+  help: geological classification of the site
+  dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC", "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
+  default: UNKNOWN
+slope:
+  help: The local slope of the station
+  bounds: [ 1.0e-100, null ]  # 1.0e-100 is a workaround to tell: >0
+# IMT columns:
+PGA:
+  help: Peak ground acceleration, in g
+PGV:
+  help: Peak ground velocity, in cm/s
+SA:
+  help: >-
+    Spectral Acceleration, in g. SA must be typed as "SA(P)", where P denotes the
+    period at which it has been computed, in s
+# ID columns:
+event_id:
+  help: >-
+    The unique ID of the recorded seismic event.
+    You can use the id provided by the event event web service
+    used or create your own, as long as it holds: same id <=> same event
+station_id:
+  help: >-
+    The unique ID of the seismic station.
+    You can infer the id by the event event web service used (e.g.,
+    [network_code].[station_code]) or create your own, as
+    long as it holds: same id <=> same station
+
+# Here the collection of the parameters required by all OpenQuake models, mapped to their
+# corresponding flatfile column. With this information eGSIM can tell, for any given
+# flatfile, which models can be used with it. **As such, a parameter with no mapping (or
+# mapped to null) will programmatically discard all models requiring it**.
+# See `_egsim_oq.py` for usage
+
+openquake_models_parameters:
+  distance_measure:  # OpenQuake model attribute: REQUIRES_DISTANCES
+    azimuth: azimuth
+    repi: repi
+    rrup: rrup
+    rjb: rjb
+    rhypo: rhypo
+    rx: rx
+    ry0: ry0
+    rvolc: rvolc
+    rcdpp:
+  rupture_parameter:  # OpenQuake model attribute: REQUIRES_RUPTURE_PARAMETERS
+    hypo_lat: event_latitude
+    hypo_lon: event_longitude
+    hypo_depth: event_depth
+    mag: magnitude
+    ztor: depth_top_of_rupture
+    width: rupture_width
+    dip: dip
+    rake: rake
+  site_parameter:  # OpenQuake model attribute: REQUIRES_SITES_PARAMETERS
+    z1pt0: z1
+    z2pt5: z2pt5
+    vs30: vs30
+    backarc: backarc
+    lat: station_latitude
+    lon: station_longitude
+    vs30measured: vs30measured
+    xvf: xvf
+    fpeak: fpeak
+    region: region
+    geology: geology
+    slope: slope
+    f0:
+    z1pt4:
+    ec8_p18:
+    bas:
+    siteclass:
+    h800:
+    ec8:
+    soiltype:
