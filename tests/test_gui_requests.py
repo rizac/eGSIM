@@ -27,7 +27,6 @@ from egsim.app.templates.apidoc import as_dict
 from egsim.app.templates.egsim import get_init_json_data, form_to_json, URLS, TAB, \
     _get_gsim_for_init_data
 from django.test.client import Client
-# from egsim.app.urls import urlpatterns
 
 GSIM, IMT = 'gsim', 'imt'
 
@@ -58,7 +57,8 @@ class Test:
             response = client.get("/" + url , follow=True)
             assert response.status_code == 200
 
-    def test_main_page_init_data_and_invalid_browser_message(self):
+    def test_main_page_init_data_and_invalid_browser_message(self,
+                                                             settings):
         # first test the method for getting all gsim in init data (uses db prefetch):
         _models = list(_get_gsim_for_init_data())
         # then mock it (since it is time consuming) when testing several possible
@@ -66,9 +66,12 @@ class Test:
         with patch('egsim.app.templates.egsim._get_gsim_for_init_data',
                    side_effect=lambda *a, **v: _models) as _:
             data = [{'browser': {'name': bn, 'version': v}, 'selectedMenu': m }
-                    for bn, v, m in product(['chrome', 'firefox', 'safari', 'opera'],
+                    for bn, v, m in product(['chrome', 'firefox', 'safari'],
                                             [1, 100000], [_.name for _ in TAB])]
+            data += [{'browser': {'name': 'opera', 'version': 100000}}]
             for d in data:
+                # test with settings.DEBUG = True only for opera
+                settings.DEBUG = d['browser']['name'] == 'opera'
                 client = Client()  # do not use the fixture client as we want
                 # to disable CSRF Token check
                 response = client.post('/' + URLS.MAIN_PAGE_INIT_DATA, json.dumps(d),
