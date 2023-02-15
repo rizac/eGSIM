@@ -5,6 +5,8 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
+from io import BytesIO
+
 import yaml
 from unittest.mock import patch
 
@@ -20,6 +22,7 @@ from egsim.api.forms.trellis import TrellisForm
 
 # from egsim.api.forms.tools.describe import as_dict
 # from egsim.gui.frontend import get_context, form_to_json
+from egsim.app.views import _IMG_FORMATS
 from egsim.app.templates.apidoc import as_dict
 from egsim.app.templates.egsim import get_init_json_data, form_to_json, URLS, TAB, \
     _get_gsim_for_init_data
@@ -78,7 +81,7 @@ class Test:
                     assert not content['invalid_browser_message']
 
     def test_download_request(self, #pytest fixture:
-                               testdata):
+                               testdata, areequal):
         for service in ['trellis', 'residuals', 'testing']:
             with open(testdata.path(f'request_{service}.yaml')) as _:
                 data = yaml.safe_load(_)
@@ -89,5 +92,114 @@ class Test:
                 # to disable CSRF Token check
                 response = client.post(f"/{URLS.DOWNLOAD_REQUEST}/{service}/{filename}",
                                        json.dumps(data),
+                                       content_type="application/json")
+                assert response.status_code == 200
+                if service == 'json':
+                    assert areequal(data, json.loads(response.content))
+                else:
+                    assert areequal(data, yaml.safe_load(BytesIO(response.content)))
+
+    def test_download_response_csv_formats(self,  # pytest fixture:
+                                           testdata, areequal):
+        for service in ['trellis', 'residuals', 'testing']:
+            with open(testdata.path(f'request_{service}.yaml')) as _:
+                data = yaml.safe_load(_)
+            if service == 'residuals':
+                data['plot'] = 'res'
+            response_data = {
+                'trellis': TrellisForm,
+                'residuals': ResidualsForm,
+                'testing': TestingForm
+            }[service](data).response_data
+            client = Client()  # do not use the fixture client as we want
+            # Note below: json is not supported because from the browser we simply
+            # serve the already available response_data
+            for filename in ['response.csv', 'response.csv_eu']:
+                # to disable CSRF Token check
+                response = client.post(f"/{URLS.DOWNLOAD_RESPONSE}/{service}/{filename}",
+                                       json.dumps(response_data),
+                                       content_type="application/json")
+                assert response.status_code == 200
+
+    def test_download_response_img_formats(self,  # pytest fixture:
+                                           testdata, areequal):
+        for service in ['trellis']:  # , 'residuals', 'testing']:
+            # for the moment, just provide a global data object regardless of the
+            # service:
+            data = [
+                {
+                    'x': [1, 2],
+                    'y': [1, 2],
+                    'type': 'scatter',
+                    'name': '(1,1)'
+                },
+                {
+                    'x': [1, 2],
+                    'y': [1, 2],
+                    'type': 'bar',
+                    'name': '(1,2)',
+                    'xaxis': 'x2',
+                    'yaxis': 'y2'
+                },
+                {
+                    'x': [1, 2],
+                    'y': [1, 2],
+                    # 'type': 'line',
+                    'name': '(1,2)',
+                    'xaxis': 'x3',
+                    'yaxis': 'y3'
+                },
+                {
+                    'x': [1, 2],
+                    'y': [1, 2],
+                    'type': 'histogram',
+                    'name': '(1,2)',
+                    'xaxis': 'x4',
+                    'yaxis': 'y4'
+                }
+            ]
+            layout = {
+                'title': 'Multiple Custom Sized Subplots',
+                'xaxis': {
+                    'domain': [0, 0.45],
+                    'anchor': 'y1'
+                },
+                'yaxis': {
+                    'domain': [0.5, 1],
+                    'anchor': 'x1'
+                },
+                'xaxis2': {
+                    'domain': [0.55, 1],
+                    'anchor': 'y2'
+                },
+                'yaxis2': {
+                    'domain': [0.8, 1],
+                    'anchor': 'x2'
+                },
+                'xaxis3': {
+                    'domain': [0.55, 1],
+                    'anchor': 'y3'
+                },
+                'yaxis3': {
+                    'domain': [0.5, 0.75],
+                    'anchor': 'x3'
+                },
+                'xaxis4': {
+                    'domain': [0, 1],
+                    'anchor': 'y4'
+                },
+                'yaxis4': {
+                    'domain': [0, 0.45],
+                    'anchor': 'x4'
+                }
+            }
+            client = Client()  # do not use the fixture client as we want
+            # Note below: json is not supported because from the browser we simply
+            # serve the already available response_data
+            for filename in ['response.' + _ for _ in _IMG_FORMATS.keys()]:
+                # to disable CSRF Token check
+                response = client.post(f"/{URLS.DOWNLOAD_RESPONSE}/{service}/{filename}",
+                                       json.dumps({'data': data, 'layout': layout,
+                                                   'width': 100, 'height': 100}),
                                        content_type="application/json")
                 assert response.status_code == 200
