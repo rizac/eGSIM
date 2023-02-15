@@ -5,6 +5,7 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
+from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
 
 import yaml
@@ -57,6 +58,44 @@ class Test:
             response = client.get("/" + url , follow=True)
             assert response.status_code == 200
 
+    def test_flatfile_inspection(self,  # pytest fixtures:
+                                 testdata):
+            url  = URLS.FLATFILE_INSPECTION
+            ff = SimpleUploadedFile('flatfile',
+                                    testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'))
+            data = {'flatfile': ff}
+            client = Client()  # do not use the fixture client as we want
+            # to disable CSRF Token check
+            response = client.post("/" + url, data=data)
+            assert response.status_code == 200
+
+    def test_flatfile_plot(self,  # pytest fixtures:
+                           testdata):
+            url = URLS.FLATFILE_PLOT
+            ff = SimpleUploadedFile('flatfile',
+                                    testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'))
+            data = {'flatfile': ff}
+            client = Client()  # do not use the fixture client as we want
+            # to disable CSRF Token check
+            response = client.post("/" + url, data=data)
+            assert response.status_code == 400  # no x and y
+            msg = response.json()['error']['message']
+            assert "x" in msg and 'y' in msg
+
+            for data in [
+                {'x': 'magnitude'},
+                {'x': 'PGA'},
+                {'x': 'magnitude', 'y': 'PGA'},
+                {'y': 'magnitude', 'x': 'PGA'}
+            ]:
+                ff = SimpleUploadedFile('flatfile',
+                                        testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'))
+                data['flatfile'] = ff  # noqa
+                client = Client()  # do not use the fixture client as we want
+                # to disable CSRF Token check
+                response = client.post("/" + url, data=data)
+                assert response.status_code == 200
+
     def test_main_page_init_data_and_invalid_browser_message(self,
                                                              settings):
         # first test the method for getting all gsim in init data (uses db prefetch):
@@ -91,7 +130,7 @@ class Test:
             if service == 'residuals':
                 data['plot'] = 'res'
             client = Client()  # do not use the fixture client as we want
-            for filename in ['request.json', 'request.yaml']:
+            for filename in ['request.json', 'request.yaml', 'request.querystring']:
                 # to disable CSRF Token check
                 response = client.post(f"/{URLS.DOWNLOAD_REQUEST}/{service}/{filename}",
                                        json.dumps(data),
@@ -99,8 +138,10 @@ class Test:
                 assert response.status_code == 200
                 if service == 'json':
                     assert areequal(data, json.loads(response.content))
-                else:
+                elif service == '.yaml':
                     assert areequal(data, yaml.safe_load(BytesIO(response.content)))
+                else:
+                    assert True
 
     def test_download_response_csv_formats(self,  # pytest fixture:
                                            testdata, areequal):
