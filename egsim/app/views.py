@@ -131,11 +131,8 @@ def download_response(request, key: TAB, filename: str):
         return download_ascsv(request, key, filename)
     elif ext == '.csv_eu':
         return download_ascsv(request, key, basename + '.csv', ';', ',')
-    else:
-        try:
-            return download_asimage(request, filename)
-        except KeyError:  # image format not found
-            pass
+    elif ext[1:] in _IMG_FORMATS:
+        return download_asimage(request, filename)
     return error_response(f'Unsupported format "{ext[1:]}"', RESTAPIView.CLIENT_ERR_CODE)
 
 
@@ -159,7 +156,7 @@ def download_ascsv(request, key: TAB, filename: str, sep=',', dec='.'):
 
 
 _IMG_FORMATS = {
-    'eps': 'application/postscript',
+    # 'eps': 'application/postscript',  # NA (note: requires poppler library in case)
     'pdf': 'application/pdf',
     'svg': 'image/svg+xml',
     'png': 'image/png'
