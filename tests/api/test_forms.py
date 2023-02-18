@@ -11,7 +11,8 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
-from egsim.api.forms import GsimImtForm, GsimFromRegionForm, _get_regionalizations
+from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, _get_regionalizations,
+                             relabel_sa)
 from egsim.api.forms.flatfile import FlatfileForm
 from egsim.api.forms.flatfile.inspection import FlatfileInspectionForm
 from egsim.api.forms.trellis import TrellisForm
@@ -392,7 +393,8 @@ class Test:
 
         # Test Cauzzi et al:
         for imt in ['PGA', 'pga']:
-            flatfile = flatfile_df[['rake', 'magnitude', 'rrup', 'vs30', 'event_id', 'PGA']].copy()
+            flatfile = flatfile_df[['rake', 'station_id',
+                                    'magnitude', 'rrup', 'vs30', 'event_id', 'PGA']].copy()
             if imt != 'PGA':
                 flatfile = flatfile.rename(columns={'PGA': imt})
             bio = BytesIO()
@@ -452,3 +454,37 @@ class Test:
             assert sorted(resp_ & resp) == sorted(resp_)
             resp2.extend(resp_)
         assert sorted(resp) == sorted(resp2)
+
+
+def test_relabel_sa():
+    """tests _relabel_sa, which removes redundant trailing zeroes"""
+    inputs = ['SA(1)', 'SA(1.133)', 'SA(10000)',
+              ' SA(1)', ' SA(1.133)', ' SA(10000)',
+              'SA(1) ', 'SA(1.133) ', 'SA(10000) ',
+              '-SA(.100)', 'aSA(.100)', 'SA(1.1030)r', 'SA(1.1030)-']
+    for string in inputs:
+        assert relabel_sa(string) == string
+
+    assert relabel_sa('SA(.100)') == 'SA(.1)'
+    assert relabel_sa('SA(.100) ') == 'SA(.1) '
+    assert relabel_sa(' SA(.100)') == ' SA(.1)'
+    assert relabel_sa('SA(1.1030)') == 'SA(1.103)'
+    assert relabel_sa(' SA(1.1030)') == ' SA(1.103)'
+    assert relabel_sa('SA(1.1030) ') == 'SA(1.103) '
+    assert relabel_sa('SA(1.1030)') == 'SA(1.103)'
+    assert relabel_sa(' SA(1.1030)') == ' SA(1.103)'
+    assert relabel_sa('SA(1.1030) ') == 'SA(1.103) '
+    assert relabel_sa('SA(1.000)') == 'SA(1.0)'
+    assert relabel_sa(' SA(1.000)') == ' SA(1.0)'
+    assert relabel_sa('SA(1.000) ') == 'SA(1.0) '
+    assert relabel_sa('(SA(1.000))') == '(SA(1.0))'
+    assert relabel_sa(' (SA(1.000))') == ' (SA(1.0))'
+    assert relabel_sa('(SA(1.000)) ') == '(SA(1.0)) '
+    # test some "real" case:
+    assert relabel_sa('Median SA(0.200000) (g)') == \
+        'Median SA(0.2) (g)'
+    assert relabel_sa('Median SA(2.00000) (g)') == \
+        'Median SA(2.0) (g)'
+    assert relabel_sa('Z (SA(2.00000))') == \
+        'Z (SA(2.0))'
+
