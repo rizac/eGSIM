@@ -106,7 +106,6 @@ def gsims2str(gsim_names: list[str, ...]):
 
 
 def populate_flatfile_column_metadata() -> list[models.FlatfileColumn]:
-    # FIXME: return second argument?
     ffcolumns = flatfile.read_registered_flatfile_columns_metadata()
     ret = {}
     for name, column_metadata in ffcolumns.items():
