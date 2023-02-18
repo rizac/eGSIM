@@ -102,12 +102,8 @@ def get_init_json_data(browser: dict = None,
         if a_browser_ver is not None and browser_ver >= a_browser_ver:
             invalid_browser_message = ''
 
-    # Get gsims and all related data (imts and warnings). Try to perform everything
-    # in a single more efficient query. Use prefetch_related for this:
     gsims = []
     imt_groups = []
-    # imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
-    # for gsim in models.Gsim.objects.only('name', 'warning').prefetch_related(imts):
     for gsim_name, gsim_data in _get_gsim_for_init_data().items():
         imt_names = sorted(gsim_data['imts'])
         warning = gsim_data['warning']  # gsim.warning
