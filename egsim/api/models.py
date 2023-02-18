@@ -137,12 +137,6 @@ class DateTimeDecoder(json.JSONDecoder):
 class FlatfileColumn(_UniqueNameModel):
     """Flat file column"""
 
-    # class Category(IntEnum):
-    #     """Flat file category inferred from the relative Gsim attribute(s)"""
-    #     DISTANCE_MEASURE = 0  # Gsim attr: REQUIRES_DISTANCES
-    #     RUPTURE_PARAMETER = 1  # Gsim attr: REQUIRES_RUPTURE_PARAMETERS
-    #     SITE_PARAMETER = 2  # Gsim attr: REQUIRES_SITES_PARAMETERS
-
     oq_name = TextField(null=True, help_text='The OpenQuake name of the GSIM '
                                              'property associated to this '
                                              'column (e.g., as used in '

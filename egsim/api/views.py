@@ -45,14 +45,6 @@ class RESTAPIView(View):
         separator. All parameter values are returned as string except the string
         'null' that will be converted to None
         """
-
-        # Recap: All parameters that accept multiple values (MultipleChoiceField,
-        # NArrayFields) can be given in JSON and YAML files as Array/Sequences
-        # which will be converted to Python lists and passed to the Forms.
-        # In GET request from teh code (actually, the former convert eventually
-        # th input to Python lists.
-        # Moreover, NArrayFields can also be given as strings formatted as JSON
-        # ('[5, 6, 7]'), shlex ('5 6 7') or matlab ("5:7")
         form_cls = self.formclass
 
         multi_params = set()
