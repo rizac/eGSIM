@@ -3,7 +3,6 @@
 from typing import Any, Type, Callable, Union
 from enum import Enum
 
-from django.db.models import Prefetch
 from django.forms import (Field, IntegerField, ModelChoiceField)
 from django.forms.widgets import ChoiceWidget, Input
 
@@ -109,17 +108,19 @@ def get_init_json_data(browser: dict = None,
     imt_groups = []
     # imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
     # for gsim in models.Gsim.objects.only('name', 'warning').prefetch_related(imts):
-    for gsim in _get_gsim_for_init_data():
-        imt_names = sorted(i for i in gsim.imts.values_list('name', flat=True))
+    for gsim_name, gsim_data in _get_gsim_for_init_data().items():
+        imt_names = sorted(gsim_data['imts'])
+        warning = gsim_data['warning']  # gsim.warning
+        # imt_names = sorted(i for i in gsim.imts.values_list('name', flat=True))
         try:
             imt_group_index = imt_groups.index(imt_names)
         except ValueError:
             imt_group_index = len(imt_groups)
             imt_groups.append(imt_names)
-        if gsim.warning:
-            gsims.append([gsim.name, imt_group_index, str(gsim.warning)])
+        if warning:
+            gsims.append([gsim_name, imt_group_index, str(warning)])
         else:
-            gsims.append([gsim.name, imt_group_index])
+            gsims.append([gsim_name, imt_group_index])
 
     # get regionalization data (for selecting models on a map):
     regionalization = {
@@ -167,11 +168,13 @@ def get_init_json_data(browser: dict = None,
 
 def _get_gsim_for_init_data():
     """Get gsim DB model instances and all related data (imts and warnings)"""
-    # Try to perform everything in a single more efficient query. Use prefetch_related
-    # for this:
-    imts = Prefetch('imts', queryset=models.Imt.objects.only('name'))
-    return models.Gsim.objects.only('name', 'warning').prefetch_related(imts)
-
+    ret = {}
+    for model, warning, imt in \
+            models.Gsim.objects.values_list('name', 'warning', 'imts__name'):
+        if model not in ret:
+            ret[model] = {'warning': warning, 'imts': set()}
+        ret[model]['imts'].add(imt)
+    return ret
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     """Return a dict with all the properties to be passed
