@@ -374,7 +374,7 @@ class FlatfileRequiredColumnsForm(APIForm):
                            values_list('name', flat=True))
 
         columns = {}
-        attrs = 'name', 'help', 'properties'
+        attrs = 'name', 'help', 'data_properties'
         for name, help, props in qry.only(*attrs).values_list(*attrs):
             columns[name] = {}
             if not required or name in required:
