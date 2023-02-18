@@ -95,31 +95,24 @@ class Test:
                 response = client.post("/" + url, data=data)
                 assert response.status_code == 200
 
-    def test_main_page_init_data_and_invalid_browser_message(self,
-                                                             settings):
-        # first test the method for getting all gsim in init data (uses db prefetch):
-        _models = list(_get_gsim_for_init_data())
-        # then mock it (since it is time consuming) when testing several possible
-        # combination of _get_init_data:
-        with patch('egsim.app.templates.egsim._get_gsim_for_init_data',
-                   side_effect=lambda *a, **v: _models) as _:
-            data = [{'browser': {'name': bn, 'version': v}, 'selectedMenu': m }
-                    for bn, v, m in product(['chrome', 'firefox', 'safari'],
-                                            [1, 100000], [_.name for _ in TAB])]
-            data += [{'browser': {'name': 'opera', 'version': 100000}}]
-            for d in data:
-                # test with settings.DEBUG = True only for opera
-                settings.DEBUG = d['browser']['name'] == 'opera'
-                client = Client()  # do not use the fixture client as we want
-                # to disable CSRF Token check
-                response = client.post('/' + URLS.MAIN_PAGE_INIT_DATA, json.dumps(d),
-                                       content_type="application/json")
-                assert response.status_code == 200
-                content = json.loads(response.content)
-                if d['browser']['version'] == 1 or d['browser']['name'] == 'opera':
-                    assert content['invalid_browser_message']
-                else:
-                    assert not content['invalid_browser_message']
+    def test_main_page_init_data_and_invalid_browser_message(self, settings):
+        data = [{'browser': {'name': bn, 'version': v}, 'selectedMenu': m }
+                for bn, v, m in product(['chrome', 'firefox', 'safari'],
+                                        [1, 100000], [_.name for _ in TAB])]
+        data += [{'browser': {'name': 'opera', 'version': 100000}}]
+        for d in data:
+            # test with settings.DEBUG = True only for opera
+            settings.DEBUG = d['browser']['name'] == 'opera'
+            client = Client()  # do not use the fixture client as we want
+            # to disable CSRF Token check
+            response = client.post('/' + URLS.MAIN_PAGE_INIT_DATA, json.dumps(d),
+                                   content_type="application/json")
+            assert response.status_code == 200
+            content = json.loads(response.content)
+            if d['browser']['version'] == 1 or d['browser']['name'] == 'opera':
+                assert content['invalid_browser_message']
+            else:
+                assert not content['invalid_browser_message']
 
     def test_download_request(self, #pytest fixture:
                                testdata, areequal):
