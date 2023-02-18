@@ -149,6 +149,7 @@ class FlatfileColumn(_UniqueNameModel):
                                              'Contexts during residuals '
                                              'computation)')
     category = SmallIntegerField(null=False,
+                                 default=flatfile.ColumnMetadata.Category.unknown,
                                  choices=[(c.value,
                                            c.name.replace('_', ' ').capitalize())
                                           for c in flatfile.ColumnMetadata.Category],
@@ -330,25 +331,3 @@ class GsimRegion(Model):
 class Regionalization(_DataSource):
     """Model representing the data source of a given Regionalization"""
     pass
-
-
-# UNUSED Legacy functions ====================================================
-
-
-# def _is_field_value_unique(instance: Model, field_name: str, ignore_nulls=True):
-#     """Return True if the instance field value is unique by querying the db table
-#
-#     :param instance: a Model instance (or db table row)
-#     :param field_name: the instance field name to check (db table column name)
-#     :param ignore_nulls: boolean (default True): ignore null. I.e., allow
-#         multiple null values
-#     """
-#     # Rationale: apparently a Django Field(... unique=True, null=True,...) will
-#     # force also uniqueness on NULLs (only one NULL can be saved). This is
-#     # probably because not all DBs support unique with multiple NULLs
-#     # (postgres does). Implement here a function that allows that
-#     field_val = getattr(instance, field_name)
-#     if field_val is None and ignore_nulls:
-#         return True
-#     filter_cond = {field_name + '__exact': field_val}  # works for None as well
-#     return not instance.__class__.objects.filter(**filter_cond).exists()  # noqa

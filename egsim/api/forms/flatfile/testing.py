@@ -59,19 +59,16 @@ class TestingForm(GsimImtFlatfileForm, APIForm):
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
-
-        params = cleaned_data  # FIXME: legacy code, remove/rename?
-
-        flatfile = params['flatfile']  # already filtered dataframe, in case
+        flatfile = cleaned_data['flatfile']  # already filtered dataframe, in case
 
         ret = {}
         obs_count = defaultdict(int)
         gsim_skipped = {}
-        config = params.get('config', {})
+        config = cleaned_data.get('config', {})
         # columns: "Measure of fit" "imt" "gsim" "value(s)"
-        for gsim in params['gsim']:
+        for gsim in cleaned_data['gsim']:
             try:
-                residuals = get_residuals(flatfile, [gsim], params['imt'])
+                residuals = get_residuals(flatfile, [gsim], cleaned_data['imt'])
 
                 numrecords = sum(c.get('Num. Sites', 0) for c in residuals.contexts)
 
@@ -82,7 +79,7 @@ class TestingForm(GsimImtFlatfileForm, APIForm):
 
                 gsim_values = []
 
-                for key in params["fit_measure"]:
+                for key in cleaned_data["fit_measure"]:
                     name, func = MOF_TYPE[key]
                     result = func(residuals, config)
                     gsim_values.extend(_itervalues(gsim, key, name, result))

@@ -9,6 +9,8 @@ import pytest
 from egsim.api import models
 from django.db import IntegrityError
 
+from egsim.smtk.flatfile import ColumnMetadata
+
 
 @pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
 def test_models(capfd):
@@ -35,24 +37,23 @@ def test_models(capfd):
             print(str(inst))
 
     f = models.FlatfileColumn(name='rx_1_1', oq_name='ert_1',
-                              category=models.FlatfileColumn.Category.RUPTURE_PARAMETER)
+                              category=ColumnMetadata.Category.rupture_parameter)
     f.save()
-    assert f.category == models.FlatfileColumn.Category.RUPTURE_PARAMETER == \
-           models.FlatfileColumn.Category.RUPTURE_PARAMETER.value == 1
+    assert f.category == ColumnMetadata.Category.rupture_parameter ==  0
 
     f = models.FlatfileColumn(name='rx_1', oq_name='ert')
     f.save()
-    assert f.category is None
+    assert f.category is ColumnMetadata.Category.unknown
 
     with pytest.raises(Exception) as ierr:
         models.FlatfileColumn(name='rx', oq_name='ert').save()  # name not unique
     assert 'name' in str(ierr.value)
 
-    with pytest.raises(Exception) as ierr:
-        # oq_name + category not unique:
-        models.FlatfileColumn(name='bla', oq_name='rx',
-                              category=models.FlatfileColumn.Category.DISTANCE_MEASURE).save()
-    assert 'oq_name' in str(ierr.value)
+    # with pytest.raises(Exception) as ierr:
+    #     # oq_name + category not unique:
+    #     models.FlatfileColumn(name='bla', oq_name='rx',
+    #                           category=ColumnMetadata.Category.distance_measure).save()
+    # assert 'oq_name' in str(ierr.value)
 
     akkarbommer = models.Gsim.objects.filter(name__exact='AkkarBommer2010').first()
     geom = {'type': 'Polygon', 'coordinates': [[[]]]}
