@@ -1,20 +1,21 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
+from collections import defaultdict
+
 import re
 from datetime import datetime
 from typing import Iterable, Sequence, Any
 
 import pandas as pd
 from django.core.exceptions import ValidationError
-from django.db.models import Prefetch
+from django.db.models import Q
 from django.forms import Form, ModelChoiceField
 from pandas.errors import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
-from ...flatfile import (read_flatfile, EgsimContextDB, REQUIRED_COLUMNS, get_imt,
-                         EVENT_ID_COL, EVENT_ID_DESC, EVENT_ID_DTYPE)
+from ....smtk.flatfile import (read_flatfile, EgsimContextDB, ColumnMetadata)
 from .. import EgsimBaseForm, GsimImtForm, APIForm, _get_gsim_choices
 from ..fields import CharField, FileField, MultipleChoiceWildcardField
 
@@ -135,11 +136,12 @@ class FlatfileForm(EgsimBaseForm):
 
     @classmethod
     def read_flatfilefrom_csv_bytes(cls, buffer, *, sep=None) -> pd.DataFrame:
-        dtype, defaults, _ = models.FlatfileColumn.split_props()
+        dtype, defaults, _, required = models.FlatfileColumn.get_data_properties()
         # pre rename of IMTs lower case (SA excluded):
         # (skip, just use the default of read_flatfile: PGA, PGV, SA):
         # imts = models.Imt.objects.only('name').values_list('name', flat=True)
-        return read_flatfile(buffer, sep=sep, dtype=dtype, defaults=defaults)
+        return read_flatfile(buffer, sep=sep, dtype=dtype, defaults=defaults,
+                             required=required)
 
     # @classmethod
     # def get_flatfile_columns_with_invalid_dtypes(cls, flatfile: pd.DataFrame) -> \
@@ -169,20 +171,16 @@ class FlatfileForm(EgsimBaseForm):
 
     @classmethod
     def get_flatfile_dtypes(cls, flatfile: pd.DataFrame,
-                            compact=False) -> dict[str, str]:
-        """Return the data types of the given flatfile in eGSIM format:
+                                compact=False) -> dict[str, str]:
+        """Return the data types description of the given flatfile in eGSIM format:
         'str', 'int', 'float', 'bool', 'datetime', list (for categorical data).
-
-        The data types above must be consistent with those implemented in:
-        `api.management.gsim_params.py` which writes data types from the YAML into
-        `models.FlatfileColumn` (`property` column)
 
         :param compact: if True, categorical data will be returned as human
             readable string instead of the list of categories, which might be
             huge in size
         """
         dtypes = {}
-        ff_dtypes = models.FlatfileColumn.BaseDtype  # Enum
+        ff_dtypes = ColumnMetadata.BaseDtype  # Enum
         for col in flatfile.columns:
             pd_dtype = str(flatfile[col].dtype)
             categories = None
@@ -291,11 +289,11 @@ def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, s
     rup, site, dist = {}, {}, {}
     cols = 'name', 'oq_name', 'category'
     for ffname, attname, categ in qry.only(*cols).values_list(*cols):
-        if categ == models.FlatfileColumn.Category.RUPTURE_PARAMETER:
+        if categ == ColumnMetadata.Category.rupture_parameter:
             rup[ffname] = attname
-        elif categ == models.FlatfileColumn.Category.SITE_PARAMETER:
+        elif categ == ColumnMetadata.Category.site_parameter:
             site[ffname] = attname
-        elif categ == models.FlatfileColumn.Category.DISTANCE_MEASURE:
+        elif categ == ColumnMetadata.Category.distance_measure:
             dist[ffname] = attname
     return rup, site, dist
 
@@ -328,42 +326,22 @@ class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):
     @classmethod
     def get_flatfile_invalid_gsim(cls, flatfile: pd.DataFrame,
                                   gsims: Sequence[str]) -> set[str, ...]:
-        return set(gsims) - set(flatfile_supported_gsims(flatfile.columns))
+        return set(gsims) - set(get_gsims_from_flatfile(flatfile.columns))
 
 
-def flatfile_supported_gsims(flatfile_columns: Sequence[str]) -> Iterable[str]:
+def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
     """Yields the GSIM names supported by the given flatfile"""
-    ff_imts = set()
-    ff_metadata = set()
-    for col in flatfile_columns:
-        imt = get_imt(col, ignore_case=False)
-        if imt is not None:
-            ff_imts.add('SA' if imt.startswith('SA(') else imt)
-        elif col not in REQUIRED_COLUMNS:
-            ff_metadata.add(col)
-
-    for gsim, gsim_metadata, gsim_imts in _get_gsim_columns_imts():
-        if gsim_metadata.issubset(ff_metadata) and (gsim_imts & ff_imts):
-            yield gsim
-
-
-def _get_gsim_columns_imts() -> Iterable[tuple[str, set[str, ...], set[str, ...]]]:
-    """Yields tuples of model names and associated flatfile columns and imts.
-    Each yielded tuple is:
-    ```
-    (gsim:str, flatfile_columns:set[str], imts:set[str])
-    ```
-    """
-    qry = models.Gsim.objects.only('name').prefetch_related(
-        Prefetch('required_flatfile_columns',
-                 queryset=models.FlatfileColumn.objects.all().only('name')),
-        Prefetch('imts', queryset=models.Imt.objects.all().only('name')))
-
-    for gsim in qry:
-        ff_cols = set(_.name for _ in gsim.required_flatfile_columns.all())
-        imts = set(_.name for _ in gsim.imts.all())
-        yield gsim.name, ff_cols, imts
-
+    ff_cols = set('SA' if _.startswith('SA(') else _ for _ in flatfile_columns)
+    model2cols = defaultdict(set)
+    # filter models by imts (feasible via SQL) and build a dict of models with the
+    # relatvie required flatfile columns (filter donw below, not possible to do in SQL):
+    for model_name, required_fcol in models.Gsim.objects.filter(imts__name__in=ff_cols).\
+            values_list('name', 'required_flatfile_columns__name'):
+        model2cols[model_name].add(required_fcol)
+    # filter on required flatfile columns and yields supported models:
+    for model_name, cols in model2cols.items():
+        if not cols - ff_cols:
+            yield model_name
 
 class FlatfileRequiredColumnsForm(APIForm):
     """Form for querying the necessary metadata columns from a given list of Gsims"""
@@ -391,10 +369,11 @@ class FlatfileRequiredColumnsForm(APIForm):
         # new attribute, the attribute "Gsim.imts" does not work as expected
         if cleaned_data.get('gsim', []):
             required = set(qry.only('name').
-                           filter(gsims__name__in=cleaned_data['gsim']).
+                           filter(Q(gsims__name__in=cleaned_data['gsim']) |
+                                  Q(required=True)).
                            values_list('name', flat=True))
 
-        columns = {EVENT_ID_COL: {'help': EVENT_ID_DESC, 'dtype': EVENT_ID_DTYPE}}
+        columns = {}
         attrs = 'name', 'help', 'properties'
         for name, help, props in qry.only(*attrs).values_list(*attrs):
             columns[name] = {}

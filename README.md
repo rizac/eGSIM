@@ -136,7 +136,7 @@ Other test options from the command line: with coverage (
 showing the amount of code hit by tests):
 
 ```bash
-export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv --cov=./egsim/ --cov-report=html ./tests/
+export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest --ignore=./tests/tmp/ -xvvv --cov=./egsim/ --cov-report=html ./tests/
 ```
 
 (you can also invoke the commands without `export ...` but 

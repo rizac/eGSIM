@@ -7,7 +7,6 @@ Created on 5 Apr 2019
 """
 from os.path import abspath, join
 import json
-from enum import Enum, IntEnum
 from datetime import datetime, date
 from typing import Any
 
@@ -23,6 +22,7 @@ from django.db.utils import IntegrityError
 # Notes: primary keys are auto added if not present ('id' of type BigInt or so).
 # All models here that are not abstract will be available prefixed with 'api_'
 # in the admin panel (https://<site_url>/admin)
+from egsim.smtk import flatfile
 
 
 class Model(DjangoModel):
@@ -137,54 +137,35 @@ class DateTimeDecoder(json.JSONDecoder):
 class FlatfileColumn(_UniqueNameModel):
     """Flat file column"""
 
-    class Category(IntEnum):
-        """Flat file category inferred from the relative Gsim attribute(s)"""
-        DISTANCE_MEASURE = 0  # Gsim attr: REQUIRES_DISTANCES
-        RUPTURE_PARAMETER = 1  # Gsim attr: REQUIRES_RUPTURE_PARAMETERS
-        SITE_PARAMETER = 2  # Gsim attr: REQUIRES_SITES_PARAMETERS
+    # class Category(IntEnum):
+    #     """Flat file category inferred from the relative Gsim attribute(s)"""
+    #     DISTANCE_MEASURE = 0  # Gsim attr: REQUIRES_DISTANCES
+    #     RUPTURE_PARAMETER = 1  # Gsim attr: REQUIRES_RUPTURE_PARAMETERS
+    #     SITE_PARAMETER = 2  # Gsim attr: REQUIRES_SITES_PARAMETERS
 
-    oq_name = TextField(null=False, help_text='The OpenQuake name of the GSIM '
-                                              'property associated to this '
-                                              'column (e.g., as used in '
-                                              'Contexts during residuals '
-                                              'computation)')
-    category = SmallIntegerField(null=True,
+    oq_name = TextField(null=True, help_text='The OpenQuake name of the GSIM '
+                                             'property associated to this '
+                                             'column (e.g., as used in '
+                                             'Contexts during residuals '
+                                             'computation)')
+    category = SmallIntegerField(null=False,
                                  choices=[(c.value,
                                            c.name.replace('_', ' ').capitalize())
-                                          for c in Category],
+                                          for c in flatfile.ColumnMetadata.Category],
                                  help_text='The (OpenQuake-related) category '
                                            'of the GSIM property associated '
                                            'to this column')
     help = TextField(null=False, default='', help_text="Field help text")
-    properties = JSONField(null=False, encoder=DateTimeEncoder,
-                           decoder=DateTimeDecoder,
-                           help_text=('column data properties as JSON (null: no '
-                                      'properties). Optional keys: "dtype" '
-                                      '("int", "bool", "datetime", "str" or '
-                                      '"float", or list of possible values '
-                                      'the column can have), "bounds": [min or '
-                                      'null, max or null] (null means: '
-                                      'unbounded), "default" (the default when '
-                                      'missing)'))
-
-    class PropertiesKey:
-        """The Field `self.properties` is a JSON dict. Here the relevant keys
-        used throughout the program (see e.g. `save` for usage details)
-        """
-        dtype = 'dtype'
-        bounds = 'bounds'
-        default = 'default'
-
-    class BaseDtype(Enum):  # noqa
-        """The base data types of a flatfile column, mapped to their Python type. Columns
-        accept also a categorical data (like pandas) that can be given as list/tuple of
-        possible choices, all of the same base data type value (see `save` for details)
-        """
-        float = float
-        int = int
-        bool = bool
-        datetime = datetime
-        str = str
+    data_properties = JSONField(null=True, encoder=DateTimeEncoder,
+                                decoder=DateTimeDecoder,
+                                help_text=('The properties of the this column data, '
+                                           'as JSON (null: no properties). Optional '
+                                           'keys: "dtype" ("int", "bool", "datetime", '
+                                           '"str" or "float", or list of possible '
+                                           'values the column data can have), "bounds": '
+                                           '[min or null, max or null] (null means: '
+                                           'unbounded), "default" (the default when '
+                                           'missing), "required" (bool)'))
 
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
@@ -192,110 +173,40 @@ class FlatfileColumn(_UniqueNameModel):
         `self.properties` to be usable with flatfiles
         """
         # perform some check on the data type consistencies:
-        props = self.properties
-        if props is None:
-            props = self.properties = {}
-        prefix = f'Flatfile column "{self.name}"'
-        # this assert is silly but makes pycharm linting not complaining:
-        assert isinstance(props, dict), \
-            f"{prefix}: properties field must be null or dict"
+        try:
+            _ = flatfile.ColumnMetadata(**(self.data_properties or {}),
+                                        oq_name=self.oq_name, help=self.help, # noqa
+                                        category=self.category)
+        except Exception as exc:
+            raise ValueError(f'Flatfile column "{self.name}" error: {exc}')
 
-        # check dtype (set to 'float' if missing):
-        dtype_name = self.PropertiesKey.dtype
-        dtype = props.setdefault(dtype_name, self.BaseDtype.float.name)
-        is_categorical_dtype = isinstance(dtype, (list, tuple))
-        if is_categorical_dtype:
-            # check that all values in the list are of supported dtype
-            assert all(any(isinstance(_, cl.value) for cl in self.BaseDtype)
-                       for _ in dtype),\
-                f"{prefix}: some value in the provided categories is of " \
-                f"unsupported type"
-        else:
-            assert dtype in (_.name for _ in self.BaseDtype), \
-                f"{prefix}: unrecognized data type: {str(dtype)}"
-
-        # check bounds (not required, remove if [None, None])
-        bounds_name = self.PropertiesKey.bounds
-        if bounds_name in props:
-            bounds = props[bounds_name]
-            if isinstance(bounds, tuple):
-                bounds = props[bounds_name] = list(bounds)  # noqa
-            if bounds == [None, None]:
-                props.pop(bounds_name)
-            else:
-                assert isinstance(bounds, list) and len(bounds) == 2, \
-                    f"{prefix}: bounds must be a 2-element list"
-                assert not is_categorical_dtype, \
-                    f"{prefix}: bounds must be [Null, null] or missing with " \
-                    f"categorical data type"
-                py_dtype = self.BaseDtype[dtype].value  # Python type
-                # type promotion (ints are valid floats):
-                if py_dtype == float:
-                    for i in [0, 1]:
-                        if isinstance(bounds[i], int):
-                            bounds[i] = float(bounds[i])
-                assert bounds[0] is None or isinstance(bounds[0], py_dtype), \
-                    f"{prefix}: bounds[0] must be of type {str(py_dtype)}"
-                assert bounds[1] is None or isinstance(bounds[1], py_dtype), \
-                    f"{prefix}: bounds[0] must be of type {str(py_dtype)}"
-                assert any(_ is None for _ in bounds) or bounds[0] < bounds[1], \
-                    f"{prefix}: bounds[0] must be < bounds[1]"
-
-        # check default value (defval, not required):
-        defval_name = self.PropertiesKey.default
-        if defval_name in props:
-            def_val = props[defval_name]
-            if is_categorical_dtype:
-                assert def_val in props[dtype_name], \
-                    f"{prefix}: default is not in the list of possible values"
-            else:
-                py_dtype = self.BaseDtype[dtype].value  # Python type
-                # type promotion (int is a valid float):
-                if py_dtype == float and isinstance(def_val, int):  # noqa
-                    props[defval_name] = float(def_val)
-                else:
-                    assert isinstance(def_val, py_dtype), \
-                        f"{prefix}: default must be of type {str(py_dtype)}"
-
-        super().save(force_insert=force_insert,
-                     force_update=force_update,
-                     using=using,
-                     update_fields=update_fields)
+        super().save(force_insert=force_insert, force_update=force_update,
+                     using=using, update_fields=update_fields)
 
     @classmethod
-    def split_props(cls) -> \
-            tuple[dict[str, str], dict[str, Any], dict[str, list[Any, Any]]]:
+    def get_data_properties(cls) -> \
+            tuple[dict[str, str], dict[str, Any], dict[str, list[Any, Any]], list[str]]:
         """
-        Split each `JSONField` `properties` into three dicts where a Flatfile
-        column name (str) is mapped to its data type, its default value
-        (if given), its bounds (if given).
-        Data types are strings (see the names of the Enum `BaseDtype`) or
-        lists of possible values (categorical data). Default values and bounds,
-        if given, are Python objects of ony supported type (see the values of
-        the Enum `BaseDtype`). Bounds are given in lists of two elements, where
-        None means: unbounded
+        Return the `data_properties` Field as tuples:
+        `dtype` `default` `bounds` `required`
         """
-        dtype, defaults, bounds = {}, {}, {}
-        cols = 'name', 'properties'
+        dtype, defaults, bounds, required = {}, {}, {}, []
+        cols = 'name', 'data_properties'
         for name, props in cls.objects.filter().only(*cols).values_list(*cols):
             if not props:
                 continue
-            dtype[name] = props[cls.PropertiesKey.dtype]
-            if cls.PropertiesKey.default in props:
-                defaults[name] = props[cls.PropertiesKey.default]
-            if cls.PropertiesKey.bounds in props:
-                bounds[name] = props[cls.PropertiesKey.bounds]
+            if props.get("dtype", None):
+                dtype[name] = props["dtype"]
+            if "default" in props:
+                defaults[name] = props["default"]
+            if "bounds" in props:
+                bounds[name] = props["bounds"]
+            if props.get("required", False):
+                required.append(name)
 
-        return dtype, defaults, bounds
+        return dtype, defaults, bounds, required
 
     class Meta(_UniqueNameModel.Meta):
-        constraints = [
-            # unique constraint name must be unique across ALL db tables:
-            # use `app_label` and `class` to achieve that:
-            UniqueConstraint(fields=['oq_name', 'category'],
-                             name='%(app_label)s_%(class)s_unique_oq_name_and_'
-                                  'category'),
-        ]
         indexes = [Index(fields=['name']), ]
 
     def __str__(self):

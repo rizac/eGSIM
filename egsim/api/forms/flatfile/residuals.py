@@ -21,8 +21,6 @@ from ..fields import ChoiceField
 
 
 # For residuals with distance, use labels coded in smtk DISTANCE_LABEL dict:
-from ...flatfile import EgsimContextDB
-
 _DIST_LABEL = dict(DISTANCE_LABEL)
 # But replace 'r_x' with 'rx' (residuals with distance expects the latter as arg):
 _DIST_LABEL['rx'] = _DIST_LABEL.pop('r_x')

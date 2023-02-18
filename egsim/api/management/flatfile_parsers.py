@@ -4,7 +4,7 @@ import numpy as np
 from smtk.sm_utils import MECHANISM_TYPE, DIP_TYPE, SCALAR_XY
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-from egsim.api.flatfile import read_flatfile
+from ...smtk.flatfile import read_flatfile
 from ..models import FlatfileColumn
 
 
@@ -90,17 +90,24 @@ class EsmFlatfileParser(FlatfileParser):
     @classmethod
     def parse(cls, filepath: str) -> pd.DataFrame:
         """Parse ESM flatfile (CSV) and return the pandas DataFrame"""
-        dtype, defaults, _ = FlatfileColumn.split_props()
+        dtype, defaults, bounds, required = FlatfileColumn.get_data_properties()
         dtype |= cls.esm_dtypes
 
-        # dfr = check_flatfile(filepath, col_mapping=esm_col_mapping, sep=';',
-        #                     dtype=dtype, defaults=defaults, usecols=esm_usecols)
+        # remove station_id if in required columns:
+        create_sta_id = 'station_id' in required
+        if create_sta_id:
+            required.remove('station_id')
 
         dfr = read_flatfile(filepath, col_mapping=cls.esm_col_mapping, sep=';',
-                            dtype=dtype, defaults=defaults, usecols=cls.esm_usecols)
+                            dtype=dtype, defaults=defaults, usecols=cls.esm_usecols,
+                            required=required)
+
+        if create_sta_id:  # setup our station_id column as integers:
+            dfr['station_id'] = \
+                dfr['network_code'].str.cat(dfr['station_code']).astype('category').cat.codes
 
         # Post process:
-
+        # -------------
         # magnitude: complete it with
         # Mw -> Ms -> Ml (in this order) where standard mag is NA
         dfr['magnitude_type'] = 'Mw'

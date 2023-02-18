@@ -16,6 +16,7 @@ from django.core.management import call_command
 # causing problems in e.g. capturing the stdout. Looking at the code, to grant access
 # to the empty db in the default Django mode, we just need the django_db_blocker fixture:
 from egsim.api.models import FlatfileColumn
+from egsim.smtk.flatfile import ColumnMetadata
 
 
 @pytest.mark.django_db
@@ -37,19 +38,39 @@ def test_initdb(capsys):
     capout = captured.out
     assert "Unused Flatfile column(s)" not in capout
 
-    # FIXME: why if we write the code below inside a new function, e.g.:
-@pytest.mark.django_db
-def tst_initdb_gsim_required_attrs_not_defined(capsys):
-    # we have a 'ValueError: I/O operation on closed file.' which makes sense only if `capsys`
-    # (which closes the I/O TeewtWriter stream) was the same as above.
 
-    with patch('egsim.api.management.commands._egsim_oq.read_registered_flatfile_columns',
-               return_value=[
-                   {'name': 'azimuth'},
-                   {'oq_name': 'rx',
-                    'category': FlatfileColumn.Category.DISTANCE_MEASURE}
-               ]) as _:
-        call_command('egsim_init', interactive=False)
-        captured = capsys.readouterr()
-        capout = captured.out
-        assert "Unused Flatfile column(s): azimuth" in capout
+def test_areequal(areequal):
+    """tests our fixture areequal used extensively in tests"""
+    obj1 = [{'a': 9, 'b': 120}, 'abc', [1.00000001, 2, 2.000000005]]
+    obj2 = ['abc', [1, 2, 2], {'b': 120, 'a': 9}]
+    assert areequal(obj1, obj2)
+    # make a small perturbation in 'a':
+    obj2 = ['abc', [1, 2, 2], {'b': 120, 'a': 9.00000001}]
+    assert areequal(obj1, obj2)  # still equal
+    assert not areequal([], {})
+    assert not areequal({}, [])
+    assert areequal([1.0000000000001], [1])
+    assert areequal({'a': 1.0000000000001, 'b': [1, 2, 3], 'c': 'abc'},
+                    {'c': 'abc', 'b': [1, 1.99999999998, 3], 'a': 1})
+    # 'b' is now 1.9, retol says: not equal:
+    assert not areequal({'a': 1.0000000000001, 'b': [1, 2, 3], 'c': 'abc'},
+                        {'c': 'abc', 'b': [1, 1.9, 3], 'a': 1})
+    assert areequal(1.0000000000001, 1)
+
+
+    # FIXME: why if we write the code below inside a new function, e.g.:
+# @pytest.mark.django_db
+# def tst_initdb_gsim_required_attrs_not_defined(capsys):
+#     # we have a 'ValueError: I/O operation on closed file.' which makes sense only if `capsys`
+#     # (which closes the I/O TeewtWriter stream) was the same as above.
+#
+#     with patch('egsim.api.management.commands._egsim_oq.read_registered_flatfile_columns',
+#                return_value={
+#                    'azimuth' : ColumnMetadata(),
+#                    # {'oq_name': 'rx',
+#                    #  'category': ColumnMetadata.Category.distance_measure}
+#                 }) as _:
+#         call_command('egsim_init', interactive=False)
+#         captured = capsys.readouterr()
+#         capout = captured.out
+#         assert "Unused Flatfile column(s): azimuth" in capout

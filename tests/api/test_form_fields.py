@@ -11,8 +11,20 @@ import pytest
 
 from django.core.exceptions import ValidationError
 
-from egsim.api.forms.fields import NArrayField, isscalar
+from egsim.api.forms.fields import NArrayField, isscalar, vectorize
 
+
+def test_vectorize():
+    """tests the vectorize function"""
+    for arg in (None, '', 'abc', 1, 1.4005, True):
+        expected = [arg]
+        assert vectorize(arg) == expected
+        assert vectorize(expected) is expected
+    args = ([1, 2, 3], tuple(), range(5))
+    for arg in args:
+        assert list(vectorize(arg)) == list(arg)
+        if hasattr(arg, '__len__'):
+            assert vectorize(arg) is arg
 
 @pytest.mark.parametrize("input,expected", [
     ('1:1:10', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),

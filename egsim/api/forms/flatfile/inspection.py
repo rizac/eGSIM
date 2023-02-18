@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from django.core.exceptions import ValidationError
 
-from . import FlatfileForm, flatfile_supported_gsims
+from . import FlatfileForm, get_gsims_from_flatfile
 from .. import APIForm
 from ..fields import CharField
 
@@ -172,9 +172,9 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
             return cleaned_data
         dataframe = cleaned_data['flatfile']
 
-        cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe,
-                                                                   compact=True)
-        gsims = list(flatfile_supported_gsims(dataframe.columns))
+        cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtype_desc(dataframe,
+                                                                        compact=True)
+        gsims = list(get_gsims_from_flatfile(dataframe.columns))
         if not gsims:
             self.add_error("flatfile",
                            ValidationError("No GSIM can work with the "
@@ -194,7 +194,7 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         """
         # return columns and default columns as dicts of strings mapped to
         # the column data type
-        dtype, _, _ = models.FlatfileColumn.split_props()
+        dtype, _, _, _ = models.FlatfileColumn.get_data_properties()
         return {
             'columns': cleaned_data['flatfile_dtypes'],
             'default_columns': dtype,

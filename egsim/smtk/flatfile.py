@@ -1,6 +1,11 @@
-from typing import Union, Callable, Any, Iterable
+from collections import defaultdict
+from datetime import datetime
+from enum import Enum, IntEnum
+from os.path import join, dirname
+from typing import Union, Callable, Any
 
 # from enum import Enum
+import yaml
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
@@ -10,24 +15,152 @@ from smtk.residuals import context_db
 from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
-# The event_id is not inserted as row in the database because of its particular nature:
-# it is not a flatfile metadata, it is not an intensity measure, and if we want to
-# change quickly its description we can do it here more explicitly:
+class ColumnMetadata:
+    """Class container for flatfile Column Metadata, to be used as help or sanity check
+    of flatfile data"""
 
-EVENT_ID_COL = 'event_id'
+    class Category(IntEnum):
+        """Flatfile column categories"""
+        rupture_parameter = 0
+        site_parameter = 1
+        distance_measure = 2
+        imt = 3
+        unknown = 4
 
-EVENT_ID_DESC = "The unique ID of the record seismic event. " \
-                "You can use the id provided by the event event web service " \
-                "used or create your own, as " \
-                "long as it holds: same id <=> same event"
+    class BaseDtype(Enum):  # noqa
+        """The base column data types (dict key 'dtype'), mapped to their
+        Python type.
+        Names of this enum must be valid strings to be passed as values of the `dtype`
+        argument of `numpy` or `pandas.read_csv` (except for `datetime`)
+        """
+        float = float
+        int = int
+        bool = bool
+        datetime = datetime
+        str = str
 
-EVENT_ID_DTYPE = "Any (usually int or str)"
+    def as_dict(self):
+        return {k: getattr(self, k) for k in self.__slots__ if hasattr(self, k)}
+
+    __slots__ = ('dtype', 'required', 'default', 'bounds', 'help', 'oq_name', 'category')
+
+    def __init__(self, dtype: Union[str, list, tuple] = None,
+                 default: Any = None,
+                 bounds: tuple[Any, Any] = (None, None),
+                 help: str = "",
+                 required: bool = False,
+                 oq_name: str = None, category: Union[str, Category] = Category.unknown):
+
+        self.dtype = dtype
+        # set help:
+        if help:
+            self.help = help
+        if oq_name:
+            self.oq_name = oq_name
+        try:
+            self.category = category if isinstance(category, self.Category) \
+                    else self.Category[category]
+        except KeyError:
+            raise ValueError(f'Invalid category {category}')
+        self.required = required
+
+        # perform some check on the data type consistencies:
+        bounds_are_given = bounds != (None, None) and bounds != [None, None] \
+            and bounds is not None
+
+        # check dtype null and return in case:
+        if dtype is None:
+            if bounds_are_given or default is not None:
+                raise ValueError(f"With `dtype` null or missing, metadata cannot have "
+                                 f"the keys `default` and `bounds`")
+            return
+
+        # handle categorical data:
+        if isinstance(dtype, (list, tuple)):  # categorical data type
+            valid_types = tuple(_.value for _ in self.BaseDtype)
+            invalid_types = [str(v) for v in dtype if not isinstance(v, valid_types)]
+            if invalid_types:
+                raise ValueError(f"Invalid data type(s) in categories: "
+                                 f"{', '.join(invalid_types)}")
+            if bounds_are_given:
+                raise ValueError(f"bounds must be [null, null] or missing with "
+                                 f"categorical data type")
+            if default is not None and default not in dtype:
+                raise ValueError(f"default is not in the list of possible values")
+            return
+
+        # handle non categorical data with a base dtype::
+        try:
+            py_dtype = self.BaseDtype[dtype].value
+        except KeyError:
+            raise ValueError(f"Invalid data type: {str(dtype)}")
+
+        # check bounds:
+        if bounds_are_given:
+            if not isinstance(bounds, (list, tuple)) or len(bounds) != 2:
+                raise ValueError(f"bounds must be a 2-element list or tuple")
+            bmin, bmax = bounds
+            # type promotion (ints are valid floats):
+            if py_dtype == float and isinstance(bmin, int):
+                bmin = float(bmin)
+            if py_dtype == float and isinstance(bmax, int):
+                bmax = float(bmax)
+            if bmin is not None and not isinstance(bmin, py_dtype):
+                raise ValueError(f"bounds[0] must be of type {str(py_dtype)}")
+            if bmax is not None and not isinstance(bmax, py_dtype):
+                raise ValueError(f"bounds[0] must be of type {str(py_dtype)}")
+            if bmin is not None and bmax is not None and bmax <= bmin:
+                raise ValueError(f"bounds[0] must be < bounds[1]")
+            self.bounds = (bmin, bmax)
+
+        # check default value (defval, not required):
+        if default is not None:
+            # type promotion (int is a valid float):
+            if py_dtype == float and isinstance(default, int):  # noqa
+                default = float(default)
+            elif not isinstance(default, py_dtype):
+                raise ValueError(f"default must be of type {str(py_dtype)}")
+            self.default = default
 
 
-REQUIRED_COLUMNS = frozenset([EVENT_ID_COL])
+def read_registered_flatfile_columns_metadata() -> dict[str, ColumnMetadata]:
+    """Returns the Flatfile column metadata (help, category, data properties)
+    registered in this package YAML file
+
+    :return: a dict[str, dict] with each Flatfile column name mapped to its metadata,
+        which is in turn a `dict` with keys 'dtype', 'category' (see `ColumnCategory`
+        enum) and optionally the keys 'help', 'bounds', 'default', 'mandatory'.
+        The returned dict has also the attribute `unmapped_oq_parameters` which is
+        another `dict` of `ColumnCategory` keys mapped to the list of the OpenQuake
+        parameters found in the YAML but not mapped to any flatfile column
+    """
+    ffcolumns = {}
+    with open(join(dirname(__file__), 'flatfile-columns.yaml')) as fpt:
+        ff_cols = yaml.safe_load(fpt)
+        oq_params = ff_cols.pop('openquake_models_parameters')
+        for param_category, params in oq_params.items():
+            for param_name, ffcol_name in params.items():
+                category = ColumnMetadata.Category[param_category]
+                if ffcol_name:
+                    ffcolumns[ffcol_name] = ColumnMetadata(**{
+                        'dtype': None,
+                        **ff_cols.pop(ffcol_name),
+                        'oq_name': param_name,
+                        'category': category,
+                    })
+    for ffcol_name, ffcol_props in ff_cols.items():
+        imt_ = get_imt(ffcol_name, ignore_case=False, accept_sa_without_period=True)
+        cat = ColumnMetadata.Category.imt if imt_ else ColumnMetadata.Category.unknown
+        ffcolumns[ffcol_name] = ColumnMetadata(**{
+            'dtype': None,
+            **ffcol_props,
+            'category': cat
+        })
+    return ffcolumns
 
 
-def get_imt(imt_name: str, ignore_case=False) -> Union[str, None]:
+def get_imt(imt_name: str, ignore_case=False,
+            accept_sa_without_period=False) -> Union[str, None]:
     """Return the OpenQuake formatted IMT CLASS name from string, or None if col does not
     denote a IMT name.
     Wit ignore_case=True:
@@ -36,8 +169,12 @@ def get_imt(imt_name: str, ignore_case=False) -> Union[str, None]:
     With ignore_case=False, the comparison is strict:
     "sa(0.1)" -> None
     """
+    if ignore_case:
+        imt_name = imt_name.upper()
+    if accept_sa_without_period and imt_name == 'SA':
+        return 'SA'
     try:
-        return imt.imt2tup(imt_name.upper() if ignore_case else imt_name)[0]
+        return imt.imt2tup(imt_name)[0]
     except Exception as _:  # noqa
         return None
 
@@ -53,6 +190,7 @@ def read_flatfile(filepath_or_buffer: str,
                   usecols: Union[list[str], Callable[[str], bool]] = None,
                   dtype: dict[str, Union[str, list, tuple]] = None,
                   defaults: dict[str, Any] = None,
+                  required: list[str] = None,
                   **kwargs) -> pd.DataFrame:
     """
     Read a flat file into pandas DataFrame from a given CSV file
@@ -62,13 +200,15 @@ def read_flatfile(filepath_or_buffer: str,
         and inferred from the extension (e.g. 'gzip', 'zip')
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
-    :param col_mapping: dict mapping CSV column names to Flat file column names.
+    :param col_mapping: a dict mapping CSV column names to Flat file column names.
         CSV column names not found in the dict keys are left unchanged.
         **CSV COLUMNS WILL BE RENAMED AS FIRST STEP**: when not otherwise
-        indicated, all arguments below will work on flat file column names, i.e.
-        the CSV columns renamed via this mapping
+        indicated, all arguments of this function will work on flat file column names,
+        i.e. the CSV columns renamed via this mapping
+    :param usecols: flat file column names to load, as list. Can be also a callable
+        accepting a flat file column name and returning True/False (accept/discard)
     :param dtype: dict of *flat file column names* mapped to the data type:
-        either 'int', 'bool', 'float', 'str', 'datetime', 'category'` or list/tuple.
+        either 'int', 'bool', 'float', 'str', 'datetime', 'category'`, list/tuple.
         'category', list or tuples are for data that can take only a limited amount
         of possible values and should be used mostly with string data as it might
         save a lot of memory. With "category", pandas will infer the number of
@@ -82,15 +222,20 @@ def read_flatfile(filepath_or_buffer: str,
         `dtype`=None (the default) means that pandas will try to infer the data
         type of each column (see `read_csv` documentation and `na_values` to see
         what it's considered NA).
-    :param usecols: flat file column names to load, as list or callable accepting
-        a flat file column name and returning True/False
+        If None, data types will be loaded from the column metadata stored
+        in the YAML flatfile of this package
     :param defaults: a dict of flat file column names mapped to the default
         value for missing/NA data. Defaults will be set AFTER the underlying
         `pandas.read_csv` is called, on the returned dataframe before returning
         it. None means: do not replace any NA data. Note however that if int and
         bool columns are specified in `dtype`, then a default is set for those
         columns anyway (0 for int, False for bool), because those data types do
-        not support NA in numpy/pandas
+        not support NA in numpy/pandas. If None, defaults will be loaded from
+        the column metadata stored in the YAML flatfile of this package
+    :param required: list/tuple of flat file column names that must be present
+        in the flatfile. ValueError will be raised if this condition is not satisfied.
+        If None, required columns will be loaded from the column metadata stored
+        in the YAML flatfile of this package
     :param kwargs: additional keyword arguments not provided above that can be
         passed to `pandas.read_csv`. 'header', 'delim_whitespace' and 'names'
         should not be provided as they might be overwritten by this function
@@ -100,6 +245,18 @@ def read_flatfile(filepath_or_buffer: str,
     kwargs['sep'] = sep
     kwargs.setdefault('encoding', 'utf-8-sig')
     kwargs.setdefault('comment', '#')
+
+    if dtype is None or defaults is None or required is None:
+        # assign defaults from our yaml file:
+        columns = read_registered_flatfile_columns_metadata()
+        if dtype is None:
+            dtype = {k: cm.dtype for k, cm in columns.items() if cm.dtype}
+        if defaults is None:
+            defaults = {k: getattr(cm, 'default') for k, cm in columns.items()
+                        if getattr(cm, 'default', None)}
+        if required is None:
+            required = tuple(k for k, cm in columns.items()
+                             if getattr(cm, 'required', False))
 
     # CSV columns can be renamed via `read_csv(..., names=[...], header=0, ...)`
     # or simply by calling afterwards `dataframe.rename(columns={...})`. Both
@@ -153,6 +310,10 @@ def read_flatfile(filepath_or_buffer: str,
                           usecols=usecols, **kwargs)
     except ValueError as exc:
         raise ValueError(f'Error reading the flatfile: {str(exc)}')
+
+    if required and set(required) - set(dfr.columns):
+        missing = sorted(set(required) - set(dfr.columns))
+        raise ValueError(f"Missing required column(s): {', '.join(missing)}")
 
     for col, def_val in defaults.items():
         if col not in dfr.columns:
@@ -225,11 +386,6 @@ def _check(flatfile: pd.DataFrame):
     """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
     Modifications will be done inplace
     """
-    # check required columns:
-    if REQUIRED_COLUMNS - set(flatfile.columns):
-        missing = REQUIRED_COLUMNS - set(flatfile.columns)
-        raise ValueError(f"Missing required column(s): {', '.join(missing)}")
-
     # check IMTs (but allow mixed case, such as 'pga'). So first rename:
     col2rename = {}
     no_imt_col = True
@@ -310,12 +466,14 @@ class EgsimContextDB(context_db.ContextDB):
     # IMPLEMENTS ContextDB ABSTRACT METHODS #
     #########################################
 
+    EVENT_ID_COL = 'event_id'
+
     def get_event_and_records(self):
         # FIXME: pandas bug? flatfile bug?
         # `return self._data.groupby([EVENT_ID_COL])` should be sufficient, but
         # sometimes in the yielded `(ev_id, dfr)` tuple, `dfr` is empty and
         # `ev_id` is actually not in the dataframe (???). So:
-        yield from (_ for _ in self._data.groupby(EVENT_ID_COL) if not _[1].empty)
+        yield from (_ for _ in self._data.groupby(self.EVENT_ID_COL) if not _[1].empty)
 
     def get_observations(self, imtx, records, component="Geometric"):
 
