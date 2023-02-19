@@ -130,52 +130,21 @@ class FlatfileForm(EgsimBaseForm):
                              required=required)
 
     @classmethod
-    def get_flatfile_dtypes(cls, flatfile: pd.DataFrame,
-                                compact=False) -> dict[str, str]:
-        """Return the data types description of the given flatfile in eGSIM format:
-        'str', 'int', 'float', 'bool', 'datetime', list (for categorical data).
-
-        :param compact: if True, categorical data will be returned as human
-            readable string instead of the list of categories, which might be
-            huge in size
+    def get_flatfile_dtypes(cls, flatfile: pd.DataFrame) -> dict[str, str]:
+        """Return the human readable data type description for each column of the given
+        flatfile
         """
+        converter =  {  # see ColumnMetadata.Dtype enums for details
+            'str': 'string of text',
+            'int': 'numeric (int)',
+            'float': 'numeric( float)',
+            'bool': '0 / 1 or true / false',
+            'datetime': 'date time (ISO formatted text)',
+            'category': 'a value from a list of choices'
+        }
         dtypes = {}
-        ff_dtypes = ColumnMetadata.BaseDtype  # Enum
         for col in flatfile.columns:
-            pd_dtype = str(flatfile[col].dtype)
-            categories = None
-            if pd_dtype == 'category':
-                categories = flatfile[col].dtype.categories
-                pd_dtype = str(categories.dtype)
-
-            dtype = None
-            if pd_dtype == 'object':
-                dtype = ff_dtypes.str.name
-            elif pd_dtype.startswith('int'):
-                dtype = ff_dtypes.int.name
-            elif pd_dtype.startswith('float'):
-                dtype = ff_dtypes.float.name
-            elif pd_dtype.startswith('datetime'):
-                dtype = ff_dtypes.datetime.name
-            else:
-                try:
-                    dtype = ff_dtypes[pd_dtype].name
-                except KeyError:
-                    pass
-
-            if dtype is None:
-                suffix = '' if categories is None else ' (categorical)'
-                raise ValueError(f'Unsupported data type for column '
-                                 f'"{col}": {pd_dtype}{suffix}')
-
-            if categories is not None:
-                if compact:
-                    dtype = f'{dtype} (selectable from ' \
-                            f'{len(categories)} discrete values)'
-                else:
-                    dtype = flatfile[col].dtype.categories.tolist()
-
-            dtypes[col] = dtype
+            dtypes[col] = converter[ColumnMetadata.Dtype.get(flatfile[col]).name]
         return dtypes
 
 

@@ -18,7 +18,7 @@ from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, _get_regionalizati
 from egsim.api.forms.flatfile import FlatfileForm
 from egsim.api.forms.flatfile.inspection import FlatfileInspectionForm
 from egsim.api.forms.trellis import TrellisForm
-
+from egsim.smtk.flatfile import ColumnMetadata
 
 GSIM, IMT = 'gsim', 'imt'
 
@@ -498,6 +498,10 @@ def test_get_flatfile_columns():
         'e': [1, 0],
         'f': [1.1, None],
     })
-    d['g'] = d['a'].astype('category')
-    res = FlatfileForm.get_flatfile_dtypes(d)
+    for c in d.columns:
+        d['g'] = d[c].astype('category')
+        res = FlatfileForm.get_flatfile_dtypes(d)
+        ColumnMetadata.Dtype.get(d[c])
+        ColumnMetadata.Dtype.get(d[c].values[0])
+
     asd = 9

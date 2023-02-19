@@ -172,8 +172,7 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
             return cleaned_data
         dataframe = cleaned_data['flatfile']
 
-        cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe,
-                                                                   compact=True)
+        cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
         gsims = list(get_gsims_from_flatfile(dataframe.columns))
         if not gsims:
             self.add_error("flatfile",

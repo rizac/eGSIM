@@ -132,7 +132,7 @@ def get_init_json_data(browser: dict = None,
             'innerHTML': f'{r.name} ({r.display_name})',
             'url': r.url,
             'columns': FlatfileForm.get_flatfile_dtypes(
-                FlatfileForm.read_flatfile_from_db(r), compact=True)
+                FlatfileForm.read_flatfile_from_db(r))
         })
 
     # Get component props (core data needed for Vue rendering):

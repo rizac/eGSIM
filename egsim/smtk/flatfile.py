@@ -1,3 +1,5 @@
+"""flatfile pandas module"""
+
 from datetime import datetime
 from enum import Enum, IntEnum
 from os.path import join, dirname
@@ -16,7 +18,7 @@ from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 class ColumnMetadata:
     """Class container for flatfile Column Metadata, to be used as help or sanity check
-    of flatfile data"""
+    of columns data"""
 
     class Category(IntEnum):
         """Flatfile column categories"""
@@ -26,17 +28,32 @@ class ColumnMetadata:
         imt = 3
         unknown = 4
 
-    class BaseDtype(Enum):  # noqa
+    class Dtype(Enum):  # noqa
         """The base column data types (dict key 'dtype'), mapped to their
         Python type.
         Names of this enum must be valid strings to be passed as values of the `dtype`
         argument of `numpy` or `pandas.read_csv` (except for `datetime`)
         """
-        float = float
-        int = int
-        bool = bool
-        datetime = datetime
-        str = str
+        float = float, np.floating
+        int = int, np.integer
+        bool = bool, np.bool_
+        datetime = datetime, np.datetime64
+        str = str, np.str_, np.object_
+        category = pd.CategoricalDtype.type
+
+        @classmethod
+        def get(cls, obj) -> "ColumnMetadata.Dtype":  # noqa
+            """Return the Enum item of this class matching the given object type
+
+            :param obj: any object suh as Python scalr, numpy array, pandas series
+            (representing flatfile columns)
+            """
+            is_numpy = hasattr(obj, 'dtype') and hasattr(obj.dtype, 'type')
+            for dtype in cls:
+                if (is_numpy and issubclass(obj.dtype.type, dtype.value)) \
+                        or isinstance(obj, dtype.value):
+                    return dtype
+            return None
 
     def as_dict(self):
         return {k: getattr(self, k) for k in self.__slots__ if hasattr(self, k)}
@@ -76,11 +93,9 @@ class ColumnMetadata:
 
         # handle categorical data:
         if isinstance(dtype, (list, tuple)):  # categorical data type
-            valid_types = tuple(_.value for _ in self.BaseDtype)
-            invalid_types = [str(v) for v in dtype if not isinstance(v, valid_types)]
-            if invalid_types:
-                raise ValueError(f"Invalid data type(s) in categories: "
-                                 f"{', '.join(invalid_types)}")
+            if any(self.Dtype.get(_) is None for _ in dtype):
+                raise ValueError(f"Invalid data type(s) in provided categories "
+                                 f"list/tuple")
             if bounds_are_given:
                 raise ValueError(f"bounds must be [null, null] or missing with "
                                  f"categorical data type")
@@ -88,11 +103,11 @@ class ColumnMetadata:
                 raise ValueError(f"default is not in the list of possible values")
             return
 
-        # handle non categorical data with a base dtype::
+        # handle non categorical data with a base dtype:
         try:
-            py_dtype = self.BaseDtype[dtype].value
+            self_dtype = self.Dtype[dtype]
         except KeyError:
-            raise ValueError(f"Invalid data type: {str(dtype)}")
+            raise ValueError(f"Invalid data type: {dtype}")
 
         # check bounds:
         if bounds_are_given:
@@ -100,14 +115,14 @@ class ColumnMetadata:
                 raise ValueError(f"bounds must be a 2-element list or tuple")
             bmin, bmax = bounds
             # type promotion (ints are valid floats):
-            if py_dtype == float and isinstance(bmin, int):
+            if self_dtype == self.Dtype.float and self.Dtype.get(bmin) == self.Dtype.int:
                 bmin = float(bmin)
-            if py_dtype == float and isinstance(bmax, int):
+            if self_dtype == self.Dtype.float and self.Dtype.get(bmax) == self.Dtype.int:
                 bmax = float(bmax)
-            if bmin is not None and not isinstance(bmin, py_dtype):
-                raise ValueError(f"bounds[0] must be of type {str(py_dtype)}")
-            if bmax is not None and not isinstance(bmax, py_dtype):
-                raise ValueError(f"bounds[0] must be of type {str(py_dtype)}")
+            if bmin is not None and not isinstance(bmin, self_dtype.value):
+                raise ValueError(f"bounds[0] must be of type {dtype}")
+            if bmax is not None and not isinstance(bmax,  self_dtype.value):
+                raise ValueError(f"bounds[0] must be of type {dtype}")
             if bmin is not None and bmax is not None and bmax <= bmin:
                 raise ValueError(f"bounds[0] must be < bounds[1]")
             self.bounds = (bmin, bmax)
@@ -115,10 +130,11 @@ class ColumnMetadata:
         # check default value (defval, not required):
         if default is not None:
             # type promotion (int is a valid float):
-            if py_dtype == float and isinstance(default, int):  # noqa
+            if self_dtype == self.Dtype.float and \
+                    self.Dtype.get(default) == self.Dtype.int:
                 default = float(default)
-            elif not isinstance(default, py_dtype):
-                raise ValueError(f"default must be of type {str(py_dtype)}")
+            elif not isinstance(default, self_dtype.value):
+                raise ValueError(f"default must be of type {dtype}")
             self.default = default
 
 
