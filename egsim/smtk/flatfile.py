@@ -1,4 +1,3 @@
-from collections import defaultdict
 from datetime import datetime
 from enum import Enum, IntEnum
 from os.path import join, dirname
