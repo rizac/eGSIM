@@ -5,6 +5,8 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
+from datetime import datetime
+
 from io import BytesIO
 
 import pytest
@@ -488,3 +490,14 @@ def test_relabel_sa():
     assert relabel_sa('Z (SA(2.00000))') == \
         'Z (SA(2.0))'
 
+def test_get_flatfile_columns():
+    import pandas as pd
+    d = pd.DataFrame({
+        'a': ['', None],
+        'b': [datetime.utcnow(), None],
+        'e': [1, 0],
+        'f': [1.1, None],
+    })
+    d['g'] = d['a'].astype('category')
+    res = FlatfileForm.get_flatfile_dtypes(d)
+    asd = 9
