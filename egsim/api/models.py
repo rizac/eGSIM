@@ -142,14 +142,12 @@ class FlatfileColumn(_UniqueNameModel):
                                              'column (e.g., as used in '
                                              'Contexts during residuals '
                                              'computation)')
-    category = SmallIntegerField(null=False,
-                                 default=flatfile.ColumnMetadata.Category.unknown,
-                                 choices=[(c.value,
-                                           c.name.replace('_', ' ').capitalize())
-                                          for c in flatfile.ColumnMetadata.Category],
-                                 help_text='The (OpenQuake-related) category '
-                                           'of the GSIM property associated '
-                                           'to this column')
+    type = SmallIntegerField(null=False,
+                             default=flatfile.ColumnType.unknown,
+                             choices=[(c.value, c.name.replace('_', ' '))
+                                      for c in flatfile.ColumnType],
+                             help_text='The type of Column of this column (e.g., '
+                                       'IMT, OpenQuake parameter, distance measure)')
     help = TextField(null=False, default='', help_text="Field help text")
     data_properties = JSONField(null=True, encoder=DateTimeEncoder,
                                 decoder=DateTimeDecoder,
@@ -169,9 +167,9 @@ class FlatfileColumn(_UniqueNameModel):
         """
         # perform some check on the data type consistencies:
         try:
-            _ = flatfile.ColumnMetadata(**(self.data_properties or {}),
-                                        oq_name=self.oq_name, help=self.help, # noqa
-                                        category=self.category)
+            _ = flatfile._check_column_metadata(**(self.data_properties or {}),
+                                                oq_name=self.oq_name, help=self.help,
+                                                ctype=self.type)
         except Exception as exc:
             raise ValueError(f'Flatfile column "{self.name}" error: {exc}')
 
@@ -205,11 +203,9 @@ class FlatfileColumn(_UniqueNameModel):
         indexes = [Index(fields=['name']), ]
 
     def __str__(self):
-        categ = 'N/A' if self.category is None else \
-            self.get_category_display()  # noqa
+        col_type = 'unknown' if self.type is None else self.get_type_display()  # noqa
         # `get_[field]_display` is added by Django for those fields with choices
-        return '%s (OpenQuake name: %s). %s required by %d Gsims' % \
-               (self.name, self.oq_name, categ, self.gsims.count())  # noqa
+        return f'Column {self.name}, type: {col_type}, OpenQuake name: {self.oq_name})'
 
 
 class Imt(_UniqueNameModel):

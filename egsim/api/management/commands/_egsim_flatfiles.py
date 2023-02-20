@@ -18,7 +18,7 @@ from . import EgsimBaseCommand
 from ..flatfile_parsers import EsmFlatfileParser
 from ... import models
 
-SRC_DIR = EgsimBaseCommand.data_path('predefined_flatfiles')
+SRC_DIR = EgsimBaseCommand.data_path('flatfiles')
 
 DEST_DIR = models.Flatfile.BASEDIR_PATH
 

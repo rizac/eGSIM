@@ -111,12 +111,11 @@ def populate_flatfile_column_metadata() -> list[models.FlatfileColumn]:
     for name, column_metadata in ffcolumns.items():
         ff_col = models.FlatfileColumn.objects.filter(name=name).first()
         if ff_col is None: # create (and save) object:
-            kwarg = column_metadata.as_dict()
-            data_props = {k :kwarg.pop(k)
+            data_props = {k :column_metadata.pop(k)
                           for k in ('dtype', 'bounds', 'default', 'required')
-                          if k in kwarg}
+                          if k in column_metadata}
             ret[name] = \
-                models.FlatfileColumn.objects.create(name=name, **kwarg,
+                models.FlatfileColumn.objects.create(name=name, **column_metadata,
                                                      data_properties=data_props)
     return list(ret.values())
 
@@ -130,7 +129,7 @@ def populate_imts(ffcols: list[models.FlatfileColumn],
     :param options: options passed to the Command `handle` method calling this function
     """
     names = [c.name for c in ffcols
-             if c.category == flatfile.ColumnMetadata.Category.imt]
+             if c.type == flatfile.ColumnType.imt]
     imts = {}
     for imt_name in names:
         ok = callable(getattr(imt, imt_name, None))
@@ -161,7 +160,7 @@ def populate_gsims(imts: dict[str, models.Imt],
     unsupported_imt_errors = defaultdict(list)  # imt -> models
     unknown_params = defaultdict(list)  # param -> models (param deliberately excluded)
     gsims = []
-    oq_param2ff_col = {(c.category, c.oq_name): c for c in ff_cols if c.oq_name}
+    oq_param2ff_col = {(c.type, c.oq_name): c for c in ff_cols if c.oq_name}
     for gsim_name, gsim in get_available_gsims().items():
         if inspect.isabstract(gsim):
             continue
@@ -229,9 +228,9 @@ def populate_gsims(imts: dict[str, models.Imt],
         _unknown_params = {}  # param -> error message
         # Gsim parameters (site, rupture, distance):
         for attname, ff_category in {
-            'REQUIRES_DISTANCES': flatfile.ColumnMetadata.Category.distance_measure,
-            'REQUIRES_RUPTURE_PARAMETERS': flatfile.ColumnMetadata.Category.rupture_parameter,
-            'REQUIRES_SITES_PARAMETERS': flatfile.ColumnMetadata.Category.site_parameter
+            'REQUIRES_DISTANCES': flatfile.ColumnType.distance_measure,
+            'REQUIRES_RUPTURE_PARAMETERS': flatfile.ColumnType.rupture_parameter,
+            'REQUIRES_SITES_PARAMETERS': flatfile.ColumnType.site_parameter
         }.items():
             for pname in getattr(gsim_inst, attname, []):
                 key = (ff_category, pname)
@@ -309,9 +308,9 @@ def store_discarded_gsim(gsim_name: str, error: Union[str, Exception],
                                         error_message=error_msg)
 
 
-def _param2str(category: flatfile.ColumnMetadata.Category, name: str):
-    """Makes `param` and its `category` human readable, e.g. (SITE_PARAMETER, 'PHV')
+def _param2str(col_type: flatfile.ColumnType, name: str):
+    """Makes `param` and its column type human readable, e.g. (SITE_PARAMETER, 'PHV')
     into: 'Site parameter "PHV"'
     """
-    category = category.name.replace('_', ' ').capitalize()
-    return f'{category} "{name}"'
+    col_type_str = col_type.name.replace('_', ' ').capitalize()
+    return f'{col_type_str} "{name}"'

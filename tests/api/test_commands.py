@@ -15,8 +15,6 @@ from django.core.management import call_command
 # This however pre-execute the same custom commands that we want to test here,
 # causing problems in e.g. capturing the stdout. Looking at the code, to grant access
 # to the empty db in the default Django mode, we just need the django_db_blocker fixture:
-from egsim.api.models import FlatfileColumn
-from egsim.smtk.flatfile import ColumnMetadata
 
 
 @pytest.mark.django_db
