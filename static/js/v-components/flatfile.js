@@ -52,20 +52,10 @@ EGSIM.component('flatfile-compilation', {
 		response: {type: Object, default: () => {return {}}}
 	},
 	data() {
-		var supportedIMT = ['PGA', 'PGV', 'SA'];
-		var selectedIMTs = ['PGA', 'SA'];
-		var selectedSAPeriods = [0.1, 0.2, 0.3, 0.5, 1.0];
+		this.form.imt.value = ['PGA', 'PGV', 'SA(0.1)'];
 		this.form.gsim.value = ['AkkarEtAlRjb2014', 'BooreEtAl2014', 'CauzziEtAl2014'];
 		return {
 			responseData: this.response,
-			imts: {
-				value: selectedIMTs.filter(elm => elm != 'SA').concat(selectedSAPeriods.map(p => `SA(${p})`)),
-				error: '',
-				choices: supportedIMT,
-				label: 'Intensity Measure Type(s)',
-				name: 'imt',
-				multiple: true
-			},
 			csvSep: ',',
 			flatfileContent: '',
 			flatfileHeader: []
@@ -73,9 +63,6 @@ EGSIM.component('flatfile-compilation', {
 	},
 	watch: {
 		responseData(newVal, oldVal){
-			this.updateFlatfile();
-		},
-		'imts.value':  function(newVal, oldVal){
 			this.updateFlatfile();
 		},
 		csvSep(newVal, oldVal){
@@ -91,26 +78,21 @@ EGSIM.component('flatfile-compilation', {
 			href="https://en.wikipedia.org/wiki/Comma-separated_values">CSV file</a>.
 			Each line of a flatfile is an observed seismic waveform, each waveform
 			consists of one or more fields (the waveform data and metadata),
-			separated by commas or similar characters (e.g. semicolon).
-			</p>
-			<p>
-			The minimum required fields that must be provided depend on the models to
-			compare and the intensity measures used for comparison, as shown below.
-			The resulting template can then be used to compile your own flatfile.
+			separated by commas or similar characters (e.g. semicolon)
 			</p>
 		</div>
 
 		<div class='d-flex flex-row' style='flex: 1 1 auto;'>
 			<div class='d-flex flex-column'>
 				<div class='mb-3'>
-					<b>Select models</b> ({{ form.gsim.value.length }}) <b>and intensity measures</b> ({{ imts.value.length }})
+					<b>Select models</b> ({{ form.gsim.value.length }}) <b>and intensity measures</b> ({{ form.imt.value.length }})
 					<b>of interest:</b>
 				</div>
 				<gsim-select :field='form.gsim'
 							 @gsim-selected='gsimSelected'
-							 :imt-field="imts"
+							 :imt-field="form.imt"
 							 class='mb-3' style='flex: 1 1 auto' />
-				<imt-select :field='imts' />
+				<imt-select :field='form.imt' @imt-selected='gsimSelected' />
 			</div>
 
 			<div class='mx-3'></div>
@@ -146,62 +128,39 @@ EGSIM.component('flatfile-compilation', {
 			});
 		},
 		updateFlatfile(){
-			var metadataColumns = this.getMetadataColumns();
-			var imtColumns = this.getImtColumns();
-			var columns = metadataColumns.concat(imtColumns);
-			// calculate depths (characters length of each column):
-			var helpHeaders = ['Column:', 'Type:', 'Data type:', 'Description:'];
-			var depths = helpHeaders.map(elm => elm.length);
-			var header = [];
-			var max = Math.max;
-			for (var val of columns){
-				header.push(val[0]);
-				depths = val.map((elm, index) => max(elm.length, depths[index]));
-			}
-			this.flatfileHeader = header;
 			var flatfileContent = [
-				header.join(this.csvSep), '',
+				Object.keys(this.responseData).join(this.csvSep), '',
 				'# This block comment is not part of the CSV: it contains column information to help the compilation:',
 			];
-			for (var val of [helpHeaders].concat(columns)){
-				var row = val.map((elm, index) => elm + " ".repeat(depths[index] - elm.length)).join(" | ");
-				flatfileContent.push(`# ${row}`);
+			var names = ['Column:'];
+			var helps = ['Description:'];
+			var dtypes =['Data type:']
+			var types = ['Type:'];
+			for (var name of Object.keys(this.responseData)){
+				var colMetadata = this.responseData[name];
+				names.push(name)
+				helps.push(colMetadata.help);
+				types.push(colMetadata.type);
+				dtypes.push(colMetadata.dtype);
+			}
+			var namesMaxlen = Math.max(...names.map(elm => elm.length));
+			var helpsMaxlen = Math.max(...helps.map(elm => elm.length));
+			var typesMaxlen = Math.max(...types.map(elm => elm.length));
+			var dtypesMaxlen = Math.max(...dtypes.map(elm => elm.length));
+			for (var i=0; i< names.length; i++){
+				var line = [
+					names[i] + " ".repeat(namesMaxlen - names[i].length),
+					types[i] + " ".repeat(typesMaxlen - types[i].length),
+					dtypes[i] + " ".repeat(dtypesMaxlen - dtypes[i].length),
+					helps[i] + " ".repeat(helpsMaxlen - helps[i].length)
+				];
+				flatfileContent.push(`#  ${line.join(" | ")}`);
 			}
 			var numGsim = this.form.gsim.value.length;
 			var listGsim = this.form.gsim.value.join(' ');
 			flatfileContent.push(`# The metadata columns above are required in eGSIM by ${numGsim} selected model(s):  ${listGsim}`);
 			flatfileContent.push('');
 			this.flatfileContent = flatfileContent.join("\n");
-		},
-		getMetadataColumns(){  // -> Array[Array[str, str, str, str]]
-			// return a list of metadata columns from the response data
-			var data = this.responseData;
-			// the columns are objects that are empty if the column is not needed in the flatfile:
-			var namesOk = Object.keys(data).filter(name => !!Object.keys(data[name]).length);
-			var namesNo = Object.keys(data).filter(name => !Object.keys(data[name]).length);
-			var ret = [];
-			for (var name of namesOk.sort()){
-				var [dtype, help] = [data[name].dtype, data[name].help];
-				if (Array.isArray(dtype)){
-					help += `. Specify a value from: ${dtype.join(", ")}`;
-					dtype = "categorical";
-				}
-				ret.push([name, "Metadata", dtype, help]);
-			}
-			return ret;
-		},
-		getImtColumns(){  // -> Array[Array[str, str, str, str]]
-			var desc = (imt) => {
-				if (imt.startsWith('SA')){
-					return 'Spectral Acceleration, in g (computed at the given period, in s)'
-				}else if (imt == 'PGA'){
-					return 'Peak Ground Acceleration, in cm/s*s'
-				}else if (imt == 'PGV'){
-					return 'Peak Ground Velocity, in cm/s'
-				}
-				return '';
-			}
-			return this.imts.value.map(elm => [elm, 'Intensity measure', 'float', desc(elm)]);
 		}
 	}
 });
@@ -221,7 +180,7 @@ EGSIM.component('flatfile-plot', {
 	},
 	methods: {
 		flatfileSelected(value, columns){  // value: string or File object
-			var vals = value ? Object.keys(columns).map(col => [col, `${col} ${columns[col]}`]) : [];
+			var vals = value ? Object.keys(columns).map(col => [col, `${col} (${columns[col]})`]) : [];
 			vals.sort((a, b) => { return a[0].toLowerCase() > b[0].toLowerCase() ? 1 : -1 });
 			this.form.x.choices = this.form.x.choices.slice(0, 1).concat(vals);
 			this.form.y.choices = this.form.y.choices.slice(0, 1).concat(vals);
