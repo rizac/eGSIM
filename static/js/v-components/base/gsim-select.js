@@ -17,6 +17,7 @@ EGSIM.component('gsim-select', {
 	watch: {
 		'field.value': {
 			immediate: true,
+			deep: true,
 			handler(newVal, oldVal){
 				this.$emit('gsim-selected', newVal)
 			}
@@ -81,7 +82,7 @@ EGSIM.component('gsim-select', {
 				   @click="field.value=[]" ></i>
 			</template>
 		</field-label>
-		<div class='position-relative' class='d-flex flex-column' style="flex: 1 1 auto"
+		<div class='position-relative d-flex flex-column' style="flex: 1 1 auto"
 			 :style='{width: .7*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
 			<div class='form-control position-absolute top-0 bottom-0 start-0 end-0 d-flex flex-column'
 				 :class="field.error ? 'border-danger' : ''">
@@ -114,7 +115,7 @@ EGSIM.component('gsim-select', {
 				</div>
 				<div class='mt-1 d-flex flex-row align-items-baseline'>
 					<input type="text"
-						   aria-label="Select models by double clicking or typing ENTER on a dropdown list of models matching the provided text"
+						   aria-label="Select on a list of models matching the input text (double click or ENTER on the list)"
 						   placeholder="Select by name" v-model='modeltext' class="form-control me-2" ref="modelTextControl"
 						   @keydown.down.prevent="focusSelectComponent()"
 						   @keydown.esc.prevent="modeltext=''">
@@ -126,7 +127,7 @@ EGSIM.component('gsim-select', {
 					<div v-else class='text-nowrap ms-2'>Select by region (click on map):</div>
 				</div>
 				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
-					<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0' ref="modelSelect"
+					<select v-show='!!selectableModels.length' multiple class='form-control rounded-0 border-0' ref="modelSelect"
 							@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
 							@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
 							@keydown.up="focusTextInput($event);"
@@ -303,6 +304,7 @@ EGSIM.component('imt-select', {
 	props: {
 		field: {type: Object},
 	},
+	emits: ['imt-selected'],
 	data() {
 		var fieldCopy = {
 			'style': ['border-bottom-left-radius:0rem !important',
@@ -333,6 +335,13 @@ EGSIM.component('imt-select', {
 		},
 		'SAPeriods': function(newVal, oldVal){
 			this.updateSelectedImts();
+		},
+		'field.value': {
+			immediate: true,
+			deep: true,
+			handler(newVal, oldVal){
+				this.$emit('imt-selected', newVal)
+			}
 		}
 	},
 	template: `<div class='d-flex flex-column'>
@@ -351,7 +360,7 @@ EGSIM.component('imt-select', {
 		getSelectedImts(){
 			var imts = Array.from(this.fieldCopy.value);
 			if (imts.includes('SA')){
-				var saWithPeriods = this.SAPeriods.trim().split(/\s+/).map(p => `SA(${p})`);
+				var saWithPeriods = this.SAPeriods.trim().split(/\s*,\s*|\s+/).map(p => `SA(${p})`);
 				imts = imts.filter(elm => elm!='SA').concat(saWithPeriods);
 			}
 			return imts;

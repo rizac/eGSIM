@@ -2,6 +2,7 @@
 Base Form for to model-to-data operations i.e. flatfile handling
 """
 from collections import defaultdict
+from operator import or_
 
 import re
 from datetime import datetime
@@ -134,17 +135,9 @@ class FlatfileForm(EgsimBaseForm):
         """Return the human readable data type description for each column of the given
         flatfile
         """
-        converter =  {  # see ColumnMetadata.Dtype enums for details
-            'str': 'string of text',
-            'int': 'numeric (int)',
-            'float': 'numeric( float)',
-            'bool': '0 / 1 or true / false',
-            'datetime': 'date time (ISO formatted text)',
-            'category': 'a value from a list of choices'
-        }
         dtypes = {}
         for col in flatfile.columns:
-            dtypes[col] = converter[ColumnDtype.get(flatfile[col]).name]
+            dtypes[col] = ColumnDtype.get(flatfile[col]).name
         return dtypes
 
 
@@ -272,15 +265,8 @@ def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
         if not cols - ff_cols:
             yield model_name
 
-class FlatfileRequiredColumnsForm(APIForm):
+class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
     """Form for querying the necessary metadata columns from a given list of Gsims"""
-
-    # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
-    _field2params = {'gsim' : GsimImtForm._field2params['gsim']}  # noqa
-
-    gsim = MultipleChoiceWildcardField(required=False, choices=_get_gsim_choices,
-                                       label='Ground Shaking Intensity Model(s)')
-
 
     @classmethod
     def process_data(cls, cleaned_data: dict) -> dict:
@@ -290,21 +276,34 @@ class FlatfileRequiredColumnsForm(APIForm):
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
-        qry = models.FlatfileColumn.objects  # noqa
+        query = models.FlatfileColumn.objects  # noqa
 
-        required = set()
+        condition = Q(data_properties__required=True)
         if cleaned_data.get('gsim', []):
-            required = set(qry.only('name').
-                           filter(Q(gsims__name__in=cleaned_data['gsim']) |
-                                  Q(required=True)).
-                           values_list('name', flat=True))
+            condition |= Q(gsims__name__in=cleaned_data['gsim'],
+                           type__in=(ColumnType.rupture_parameter,
+                                     ColumnType.site_parameter,
+                                     ColumnType.distance_measure))
+
+        if cleaned_data.get('imt', []):
+            imts = cleaned_data['imt']
+            imts_to_query = set('SA' if _.startswith('SA(') else _ for _ in imts)
+            condition |= Q(name__in=imts_to_query, type=ColumnType.imt)
 
         columns = {}
-        attrs = 'name', 'help', 'data_properties'
-        for name, help, props in qry.only(*attrs).values_list(*attrs):
-            columns[name] = {}
-            if not required or name in required:
-                columns[name] = {'help': help, 'dtype': props.get('dtype', 'any')}
+        attrs = 'name', 'help', 'type', 'data_properties'
+        for name, help, type, props in query.filter(condition).values_list(*attrs):
+            if name == 'SA' and type == ColumnType.imt:
+                names = [col for col in cleaned_data.get('imt', [])
+                         if col.startswith('SA(')]
+            else:
+                names = [name]
+            for name in names:
+                columns[name] = {
+                    'help': help,
+                    'type': ColumnType(type).name.replace("_", " "),
+                    'dtype': props.get('dtype', 'any')
+                }
 
         return columns
 
