@@ -81,47 +81,55 @@ EGSIM.component('gsim-select', {
 				   @click="field.value=[]" ></i>
 			</template>
 		</field-label>
-		<div class='d-flex flex-column form-control' style="flex: 1 1 auto" :class="field.error ? 'border-danger' : ''" :style='{width: .7*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
-			<div class='d-flex flex-row' style='overflow: auto;max-height:20rem' :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
-				<div class='d-flex flex-column'>
-					<div v-for="model in field.value" class='me-1'
-						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						 aria-label="remove from selection"
-						 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
-						<i class='fa fa-times-circle'></i>
+		<div class='position-relative' class='d-flex flex-column' style="flex: 1 1 auto"
+			 :style='{width: .7*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
+			<div class='form-control position-absolute top-0 bottom-0 start-0 end-0 d-flex flex-column'
+				 :class="field.error ? 'border-danger' : ''">
+				<div class='d-flex flex-row' style='overflow: auto'
+					 :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
+					<!-- div with cancel icons stacked vertically -->
+					<div class='d-flex flex-column'>
+						<div v-for="model in field.value" class='me-1'
+							 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+							 aria-label="remove from selection"
+							 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
+							<i class='fa fa-times-circle'></i>
+						</div>
+					</div>
+					<!-- div with selected model names stacked vertically -->
+					<div class='d-flex flex-column' style='flex: 1 1 auto'>
+						<div v-for="model in field.value"
+							 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+							 :aria-label="errors[model] || warnings[model] || ''">{{ model }}</div>
+					</div>
+					<!-- div with warning icons stacked vertically -->
+					<div class='d-flex flex-column'>
+						<span v-for="model in field.value"
+							  :style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
+							  :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+							  class='me-1'>
+							<i class='fa fa-exclamation-triangle'></i>
+						</span>
 					</div>
 				</div>
-				<div class='d-flex flex-column' style='flex: 1 1 auto'>
-					<div v-for="model in field.value"
-						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						 :aria-label="errors[model] || warnings[model] || ''">{{ model }}</div>
+				<div class='mt-1 d-flex flex-row align-items-baseline'>
+					<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2" ref="modelTextControl"
+						   @keydown.down.prevent="focusSelectComponent()">
+					<div style='flex: 1 1 auto'></div>
+					<div class='text-nowrap ms-2'>Select by region (click on map):</div>
 				</div>
-				<div class='d-flex flex-column'>
-					<span v-for="model in field.value"
-						  :style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
-						  :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						  class='me-1'>
-						<i class='fa fa-exclamation-triangle'></i>
-					</span>
+				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
+					<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0' ref="modelSelect"
+							@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
+							@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
+							@keydown.up="focusTextInput($event);"
+							style='position:absolute;left:0;top:0;bottom:0;right:0;z-index:10000' >
+						<option v-for="m in selectableModels" :value='m.value'>
+							{{ m.innerHTML }}
+						</option>
+					</select>
+					<div ref="mapDiv" style='flex: 1 1 auto;cursor:pointer'></div>
 				</div>
-			</div>
-			<div class='mt-1 d-flex flex-row align-items-baseline'>
-				<input type="text" placeholder="Select by name" v-model='modeltext' class="form-control me-2" ref="modelTextControl"
-					   @keydown.down.prevent="focusSelectComponent()">
-				<div style='flex: 1 1 auto'></div>
-				<div class='text-nowrap ms-2'>Select by region (click on map):</div>
-			</div>
-			<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
-				<select v-show='!!selectableModels.length' multiple class='form-control shadow rounded-0 border-0' ref="modelSelect"
-						@click.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
-						@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
-						@keydown.up="focusTextInput($event);"
-						style='position:absolute;left:0;top:0;bottom:0;right:0;z-index:10000' >
-					<option v-for="m in selectableModels" :value='m.value'>
-						{{ m.innerHTML }}
-					</option>
-				</select>
-				<div ref="mapDiv" style='flex: 1 1 auto;cursor:pointer'></div>
 			</div>
 		</div>
 	</div>`,
