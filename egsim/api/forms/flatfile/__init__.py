@@ -15,7 +15,7 @@ from pandas.errors import UndefinedVariableError
 from smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
-from ....smtk.flatfile import (read_flatfile, EgsimContextDB, ColumnMetadata)
+from ....smtk.flatfile import read_flatfile, EgsimContextDB, ColumnType, ColumnDtype
 from .. import EgsimBaseForm, GsimImtForm, APIForm, _get_gsim_choices
 from ..fields import CharField, FileField, MultipleChoiceWildcardField
 
@@ -144,7 +144,7 @@ class FlatfileForm(EgsimBaseForm):
         }
         dtypes = {}
         for col in flatfile.columns:
-            dtypes[col] = converter[ColumnMetadata.Dtype.get(flatfile[col]).name]
+            dtypes[col] = converter[ColumnDtype.get(flatfile[col]).name]
         return dtypes
 
 
@@ -216,13 +216,13 @@ def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, s
     """
     qry = models.FlatfileColumn.objects  # noqa
     rup, site, dist = {}, {}, {}
-    cols = 'name', 'oq_name', 'category'
+    cols = 'name', 'oq_name', 'type'
     for ffname, attname, categ in qry.only(*cols).values_list(*cols):
-        if categ == ColumnMetadata.Category.rupture_parameter:
+        if categ == ColumnType.rupture_parameter:
             rup[ffname] = attname
-        elif categ == ColumnMetadata.Category.site_parameter:
+        elif categ == ColumnType.site_parameter:
             site[ffname] = attname
-        elif categ == ColumnMetadata.Category.distance_measure:
+        elif categ == ColumnType.distance_measure:
             dist[ffname] = attname
     return rup, site, dist
 
@@ -304,7 +304,7 @@ class FlatfileRequiredColumnsForm(APIForm):
         for name, help, props in qry.only(*attrs).values_list(*attrs):
             columns[name] = {}
             if not required or name in required:
-                columns[name] = {'help': help, 'dtype': props['dtype']}
+                columns[name] = {'help': help, 'dtype': props.get('dtype', 'any')}
 
         return columns
 
