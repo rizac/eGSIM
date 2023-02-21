@@ -13,7 +13,7 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib import imt
 from smtk.sm_utils import DEFAULT_MSR
 from smtk.residuals import context_db
-from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+from ..smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
 class ColumnType(IntEnum):

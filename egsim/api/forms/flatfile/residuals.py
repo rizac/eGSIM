@@ -7,12 +7,12 @@ from collections import defaultdict
 from itertools import chain, repeat
 from typing import Iterable, Any
 
-from smtk.residuals.residual_plots import (residuals_density_distribution,
-                                           residuals_with_depth,
-                                           residuals_with_distance,
-                                           residuals_with_magnitude,
-                                           residuals_with_vs30,
-                                           likelihood)
+from ....smtk.residuals.residual_plots import (residuals_density_distribution,
+                                               residuals_with_depth,
+                                               residuals_with_distance,
+                                               residuals_with_magnitude,
+                                               residuals_with_vs30,
+                                               likelihood)
 from smtk.database_visualiser import DISTANCE_LABEL
 
 from . import MOF, get_residuals, GsimImtFlatfileForm

@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.forms import Form, ModelChoiceField
 from pandas.errors import UndefinedVariableError
-from smtk.residuals.gmpe_residuals import Residuals
+from ....smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
 from ....smtk.flatfile import read_flatfile, EgsimContextDB, ColumnType, ColumnDtype

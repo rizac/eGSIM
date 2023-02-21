@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 from smtk.sm_utils import MECHANISM_TYPE, DIP_TYPE, SCALAR_XY
-from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 from ...smtk.flatfile import read_flatfile
 from ..models import FlatfileColumn
