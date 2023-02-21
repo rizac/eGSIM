@@ -497,13 +497,8 @@ class GsimImtForm(SHSRForm):
         invalid_gsims = set(gsims) - set(self.sharing_gsims(imts))
 
         if invalid_gsims:
-            # instead of raising ValidationError, which is keyed with
-            # '__all__' we add the error keyed to the given field name
-            # `name` via `self.add_error`:
-            # https://docs.djangoproject.com/en/stable/ref/forms/validation/
-            # #cleaning-and-validating-fields-that-depend-on-each-other
-            # note: pass only invalid_gsims as the result would be equal
-            # than passing all gsims but the loop is faster:
+            # For details see "cleaning and validating fields that depend on each other"
+            # on the django doc:
             invalid_imts = set(imts) - set(self.shared_imts(gsims))
             code = 'invalid_model_imt_combination'
             err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not defined "

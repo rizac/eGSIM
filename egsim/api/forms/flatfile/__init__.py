@@ -286,6 +286,8 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
                                      ColumnType.distance_measure))
 
         if cleaned_data.get('imt', []):
+            # we could simply skip querying imts as we already have them, but we need
+            # helpvand dtype info:
             imts = cleaned_data['imt']
             imts_to_query = set('SA' if _.startswith('SA(') else _ for _ in imts)
             condition |= Q(name__in=imts_to_query, type=ColumnType.imt)
@@ -293,6 +295,8 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
         columns = {}
         attrs = 'name', 'help', 'type', 'data_properties'
         for name, help, type, props in query.filter(condition).values_list(*attrs):
+            if name in columns:  # could be (we query with m2m relationship)
+                continue
             if name == 'SA' and type == ColumnType.imt:
                 names = [col for col in cleaned_data.get('imt', [])
                          if col.startswith('SA(')]

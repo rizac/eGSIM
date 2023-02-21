@@ -560,7 +560,7 @@ var PlotsDiv = {
 						// this is the time consuming case (that's why it is better to specify type in subclasses, when possible)
 						// isNaN has been proven to be the fastest check for numeric values.
 						// Also consider that when we have histograms we might have only either x or y, so:
-						tracevalues = traces.map(t => datatypeHist && (!(datakey in t)) ? t[datakey == 'x' ? ' y' : 'x'] : t[datakey]);
+						tracevalues = traces.map(t => datatypeHist && (!(datakey in t)) ? t[datakey == 'x' ? 'y' : 'x'] : t[datakey]);
 						if (tracevalues.every(values => values.every(value => !isNaN(value)))){
 							control.log.disabled = false;
 							control.log.value = false;
