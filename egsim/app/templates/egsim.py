@@ -49,10 +49,10 @@ class TAB(Enum):
     """
     # icons (2nd element) are currently given as font-awesome bootsrap icons
     home = '', 'fa-home'
-    trellis = 'Model-to-Model Comparison', 'fa-area-chart', TrellisView
-    flatfile = 'Flatfiles', 'fa-database'
-    residuals = 'Model-to-Data Comparison', 'fa-bar-chart', ResidualsView
-    testing = 'Model-to-Data Testing', 'fa-list', TestingView
+    trellis = 'Model to Model Comparison', 'fa-area-chart', TrellisView
+    flatfile = 'Data upload and inspection', 'fa-database'
+    residuals = 'Model to Data Comparison', 'fa-bar-chart', ResidualsView
+    testing = 'Model to Data Testing', 'fa-list', TestingView
 
     def __init__(self, *args):
         # args is the unpacked tuple passed above (2-elements), set attributes:

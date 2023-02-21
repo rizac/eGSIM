@@ -15,8 +15,8 @@ EGSIM.component('flatfile', {
 			};
 		}, this);
 		var compLabels = {
-			'flatfile-compilation': 'Compilation',
-			'flatfile-plot': 'Inspection plot'
+			'flatfile-compilation': 'Flatfile compilation',
+			'flatfile-plot': 'Flatfile inspection plots'
 		};
 		return {
 			componentNames: compNames,
@@ -99,7 +99,8 @@ EGSIM.component('flatfile-compilation', {
 
 			<div class='d-flex flex-column' style='flex: 1 1 auto'>
 				<div class='mb-3 position-relative'>
-					<b>Flatfile template</b>&nbsp; ({{ flatfileHeader.length }} columns)
+					<b>Flatfile template</b>&nbsp; ({{ flatfileHeader.length }} columns): fill it with your
+					records or use it to make your flatfile eGSIM-compatible
 					<div class='text-nowrap position-absolute end-0 top-0'>
 						CSV separator
 						<input type="text" v-model="csvSep" class='ms-1' style='max-width:2rem' />
