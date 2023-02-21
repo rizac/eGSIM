@@ -39,7 +39,7 @@ jobs:
       run: |
         pip install --upgrade pip setuptools wheel
         pip install -r requirements.dev.txt
-        pip install -e git+https://github.com/rizac/gmpe-smtk.git@7948682b32ef804a52d266dfcc94512da01149ab#egg=smtk
+        pip install -e git+https://github.com/rizac/gmpe-smtk.git#egg=smtk
     # - name: Cleanup
     #   run: |
     #     find . \( -name '__pycache__' -or -name '*.pyc' \) -delete
