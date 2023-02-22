@@ -18,7 +18,7 @@ from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
                                            SitesContext)
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from .. import check_gsim_list
-import smtk.trellis.trellis_utils as utils
+# import smtk.trellis.trellis_utils as utils
 from .configure import GSIMRupture, DEFAULT_POINT
 
 # from smtk.trellis import trellis_plots
@@ -434,7 +434,7 @@ class MagnitudeIMTTrellis(BaseTrellis):
         Parse the ground motion values to a dictionary
         """
         gmvs = self.get_ground_motion_values()
-        nrow, ncol = utils.best_subplot_dimensions(len(self.imts))
+        nrow, ncol = best_subplot_dimensions(len(self.imts))
         gmv_dict = dict([
             ("xvalues", self.magnitudes.tolist()),
             ("xlabel", "Magnitude")])
@@ -690,7 +690,7 @@ class DistanceIMTTrellis(MagnitudeIMTTrellis):
         Parses the ground motion values to a dictionary
         """
         gmvs = self.get_ground_motion_values()
-        nrow, ncol = utils.best_subplot_dimensions(len(self.imts))
+        nrow, ncol = best_subplot_dimensions(len(self.imts))
         dist_label = "{:s} (km)".format(DISTANCE_LABEL_MAP[self.distance_type])
         gmv_dict = dict([
             ("xvalues", self.distances[self.distance_type].tolist()),
@@ -1108,3 +1108,31 @@ class MagnitudeDistanceSpectraSigmaTrellis(MagnitudeDistanceSpectraTrellis):
                   "Trellis\n" % self.stddev)
         fid.write("%s\n" % sep.join(["{:s}{:s}{:s}".format(key, sep, str(val))
                                      for (key, val) in self.params.items()]))
+
+
+
+def best_subplot_dimensions(nplots):
+    """
+    FIXME REMOVE?
+    Returns the optimum arrangement of number of rows and number of
+    columns given a total number of plots. Converted from the Matlab function
+    "BestArrayDims"
+    :param int nplots:
+        Number of subplots
+    :returns:
+        Number of rows (int)
+        Number of columns (int)
+    """
+    from math import ceil, sqrt
+    if nplots == 1:
+        return 1, 1
+    nplots = float(nplots)
+    d_l = ceil(sqrt(nplots))
+    wdth = np.arange(1., d_l + 1., 1.)
+    hgt = np.ceil(nplots / wdth)
+    waste = (wdth * hgt - nplots) / nplots
+    savr = (2. * wdth + 2. * hgt) / (wdth * hgt)
+    cost = 0.5 * savr + 0.5 * waste
+    num_col = np.argmin(cost)
+    num_row = int(hgt[num_col])
+    return num_row, num_col + 1
