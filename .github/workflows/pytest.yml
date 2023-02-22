@@ -34,10 +34,11 @@ jobs:
     - name: Run Tests
       run: |
         # python manage.py test
-        export DJANGO_SETTINGS_MODULE=egsim.settings_debug; python manage.py egsim_init && pytest --ignore=./tests/tmp/ -xvvv ./tests/
+        export DJANGO_SETTINGS_MODULE=egsim.settings_debug; python manage.py migrate && pytest --ignore=./tests/tmp/ -xvvv ./tests/
 
 
 # pip install --no-binary=h5py h5py
+# python manage.py egsim_init --noinput
 
 # # name: Python >= 3.9
 
