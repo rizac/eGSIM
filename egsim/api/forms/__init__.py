@@ -468,11 +468,13 @@ class GsimImtForm(SHSRForm):
         # Check that both fields are provided. Another reason we do it here instead
         # than simply set `required=True` as Field argument is that sometimes
         # `MultipleChoiceField`s do not raise but puts a def. val, e.g. []
-        if not cleaned_data.get(gsim, None) and not self.has_error(gsim):
+        if not self.accept_empty_gsims and \
+                not cleaned_data.get(gsim, None) and not self.has_error(gsim):
             self.add_error(gsim,
                            ValidationError(self.fields[gsim].error_messages['required'],
                                            code='required'))
-        if not cleaned_data.get(imt, None) and not self.has_error(imt):
+        if not self.accept_empty_imts and \
+                not cleaned_data.get(imt, None) and not self.has_error(imt):
             self.add_error(imt,
                            ValidationError(self.fields[imt].error_messages['required'],
                                            code='required'))
@@ -480,7 +482,10 @@ class GsimImtForm(SHSRForm):
         # cleaned_data. If both are provided, check gsims and imts match:
         if not self.has_error(gsim) and not self.has_error(imt):
             self.validate_gsim_and_imt(cleaned_data[gsim], cleaned_data[imt])
-        return self.cleaned_data
+        return cleaned_data
+
+    accept_empty_gsims = False  # override in subclasses if you accept emopty gsims
+    accept_empty_imts = False  # see above (for imts)
 
     def validate_gsim_and_imt(self, gsims, imts):
         """Validate gsim and imt assuring that all gsims are defined for all

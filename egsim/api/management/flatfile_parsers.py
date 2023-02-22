@@ -1,12 +1,57 @@
 import pandas as pd
 import numpy as np
 
-from smtk.sm_utils import MECHANISM_TYPE, DIP_TYPE, SCALAR_XY
-from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 from ...smtk.flatfile import read_flatfile
 from ..models import FlatfileColumn
 
+
+# mean utilities (geometric, arithmetic, ...):
+SCALAR_XY = {
+    "Geometric": lambda x, y: np.sqrt(x * y),
+    "Arithmetic": lambda x, y: (x + y) / 2.,
+    "Larger": lambda x, y: np.max(np.array([x, y]), axis=0),
+    "Vectorial": lambda x, y: np.sqrt(x ** 2. + y ** 2.)
+}
+
+
+MECHANISM_TYPE = {
+    "Normal": -90.0,
+    "Strike-Slip": 0.0,
+    "Reverse": 90.0,
+    "Oblique": 0.0,
+    "Unknown": 0.0,
+    "N": -90.0,  # Flatfile conventions
+    "S": 0.0,
+    "R": 90.0,
+    "U": 0.0,
+    "NF": -90.,  # ESM flatfile conventions
+    "SS": 0.,
+    "TF": 90.,
+    "NS": -45.,  # Normal with strike-slip component
+    "TS": 45.,  # Reverse with strike-slip component
+    "O": 0.0
+}
+
+
+DIP_TYPE = {
+    "Normal": 60.0,
+    "Strike-Slip": 90.0,
+    "Reverse": 35.0,
+    "Oblique": 60.0,
+    "Unknown": 90.0,
+    "N": 60.0,  # Flatfile conventions
+    "S": 90.0,
+    "R": 35.0,
+    "U": 90.0,
+    "NF": 60.,  # ESM flatfile conventions
+    "SS": 90.,
+    "TF": 35.,
+    "NS": 70.,  # Normal with strike-slip component
+    "TS": 45.,  # Reverse with strike-slip component
+    "O": 90.0
+}
 
 class FlatfileParser:
     """Base class for Flatfile parser (CSV -> HDF conversion)"""

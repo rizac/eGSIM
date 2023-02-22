@@ -7,23 +7,25 @@ from collections import defaultdict
 from itertools import chain, repeat
 from typing import Iterable, Any
 
-from smtk.residuals.residual_plots import (residuals_density_distribution,
-                                           residuals_with_depth,
-                                           residuals_with_distance,
-                                           residuals_with_magnitude,
-                                           residuals_with_vs30,
-                                           likelihood)
-from smtk.database_visualiser import DISTANCE_LABEL
+from ....smtk.residuals.residual_plots import (residuals_density_distribution,
+                                               residuals_with_depth,
+                                               residuals_with_distance,
+                                               residuals_with_magnitude,
+                                               residuals_with_vs30,
+                                               likelihood)
 
 from . import MOF, get_residuals, GsimImtFlatfileForm
 from .. import APIForm, relabel_sa
 from ..fields import ChoiceField
 
 
-# For residuals with distance, use labels coded in smtk DISTANCE_LABEL dict:
-_DIST_LABEL = dict(DISTANCE_LABEL)
-# But replace 'r_x' with 'rx' (residuals with distance expects the latter as arg):
-_DIST_LABEL['rx'] = _DIST_LABEL.pop('r_x')
+DISTANCE_LABEL = {
+    "repi": "Epicentral Distance (km)",
+    "rhypo": "Hypocentral Distance (km)",
+    "rjb": "Joyner-Boore Distance (km)",
+    "rrup": "Rupture Distance (km)",
+    "rx": "R-x Distance (km)"
+}
 
 
 PLOT_TYPE = {
@@ -36,7 +38,7 @@ PLOT_TYPE = {
     'depth': ('Residuals vs. Depth', residuals_with_depth, {}),
     # insert distances related residuals:
     **{n: ("Residuals vs. %s" % l, residuals_with_distance,
-           {'distance_type': n}) for n, l in _DIST_LABEL.items()}
+           {'distance_type': n}) for n, l in DISTANCE_LABEL.items()}
 }
 
 
