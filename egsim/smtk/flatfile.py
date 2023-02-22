@@ -3,6 +3,7 @@
 from datetime import datetime
 from enum import Enum, IntEnum
 from os.path import join, dirname
+
 from typing import Union, Callable, Any
 
 # from enum import Enum
@@ -11,7 +12,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 from openquake.hazardlib import imt
-from smtk.sm_utils import DEFAULT_MSR
+from openquake.hazardlib.scalerel import PeerMSR
 from smtk.residuals import context_db
 from ..smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -417,6 +418,7 @@ def _check(flatfile: pd.DataFrame):
 # ContextDB for Residuals calculation #
 #######################################
 
+DEFAULT_MSR = PeerMSR()
 
 class EgsimContextDB(context_db.ContextDB):
     """This abstract-like class represents a Database (DB) of data capable of

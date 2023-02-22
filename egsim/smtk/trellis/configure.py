@@ -388,7 +388,7 @@ class GSIMRupture(object):
             "Z2.5": z2pt5,
             "BACKARC": backarc}
 
-        self.target_sites = POINT_AT_MAPPING[distance_type].point_at_distance(
+        self.target_sites = POINT_AT_MAPPING[distance_type](
             self,
             distance,
             vs30,
@@ -585,7 +585,6 @@ def vs30_to_z1pt0_cy14(vs30, japan=False):
         return np.exp((-7.15 / 4.0) * np.log((vs30 ** 4. + c1) / (c2 + c1)))
 
 
-
 def vs30_to_z2pt5_cb14(vs30, japan=False):
     """
     Converts vs30 to depth to 2.5 km/s interface using model proposed by
@@ -604,7 +603,6 @@ def vs30_to_z2pt5_cb14(vs30, japan=False):
         return np.exp(5.359 - 1.102 * np.log(vs30))
     else:
         return np.exp(7.089 - 1.144 * np.log(vs30))
-
 
 
 def point_at_rupture_distance(model, distance, vs30, line_azimuth=90.,
@@ -757,8 +755,8 @@ def _setup_site_peripherals(azimuth, origin_point, vs30, z1pt0, z2pt5, strike,
 
 
 POINT_AT_MAPPING = {
-    'rrup': point_at_rupture_distance(),  # PointAtRuptureDistance(),
-    'rjb': point_at_joyner_boore_distance(),  # PointAtJoynerBooreDistance(),
-    'repi': point_at_epicentral_distance(),  # PointAtEpicentralDistance(),
-    'rhypo': point_at_hypocentral_distance()  # PointAtHypocentralDistance()
+    'rrup': point_at_rupture_distance,  # PointAtRuptureDistance(),
+    'rjb': point_at_joyner_boore_distance,  # PointAtJoynerBooreDistance(),
+    'repi': point_at_epicentral_distance,  # PointAtEpicentralDistance(),
+    'rhypo': point_at_hypocentral_distance  # PointAtHypocentralDistance()
 }

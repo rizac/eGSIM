@@ -268,6 +268,12 @@ def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
 class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
     """Form for querying the necessary metadata columns from a given list of Gsims"""
 
+    accept_empty_gsims = True
+    accept_empty_imts = True
+
+    def clean(self):
+        return super().clean()
+
     @classmethod
     def process_data(cls, cleaned_data: dict) -> dict:
         """Process the input data `cleaned_data` returning the response data

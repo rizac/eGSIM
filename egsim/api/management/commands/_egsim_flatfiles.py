@@ -71,7 +71,7 @@ class Command(EgsimBaseCommand):
             name = data_source.get('name', basename(filepath).split(".")[0])
             data_source.setdefault('name', name)
             destfile = abspath(join(destdir, name + '.hdf'))
-            self.printinfo(f' - Saving flatfile to "{destfile}"')
+            self.printinfo(f' - Saving flatfile. Db name: "{name}", dest. file: "{destfile}"')
             dfr.to_hdf(destfile, key=name, format='table', mode='w')
             numfiles += 1
             # print some stats:
