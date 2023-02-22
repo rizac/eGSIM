@@ -11,13 +11,13 @@ from django.utils.safestring import mark_safe
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
-from smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-from smtk.trellis.trellis_plots import (DistanceIMTTrellis,
-                                        MagnitudeIMTTrellis,
-                                        DistanceSigmaIMTTrellis,
-                                        MagnitudeSigmaIMTTrellis,
-                                        MagnitudeDistanceSpectraTrellis,
-                                        MagnitudeDistanceSpectraSigmaTrellis)
+from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+from ...smtk.trellis.trellis_plots import (DistanceIMTTrellis,
+                                           MagnitudeIMTTrellis,
+                                           DistanceSigmaIMTTrellis,
+                                           MagnitudeSigmaIMTTrellis,
+                                           MagnitudeDistanceSpectraTrellis,
+                                           MagnitudeDistanceSpectraSigmaTrellis)
 
 from .fields import (BooleanField, FloatField, ChoiceField, NArrayField,
                      vectorize, isscalar)

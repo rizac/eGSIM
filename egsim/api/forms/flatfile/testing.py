@@ -9,7 +9,7 @@ from typing import Iterable, Any
 import numpy as np
 from django.core.exceptions import ValidationError
 
-from smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
+from ....smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
 
 from . import MOF, get_residuals, GsimImtFlatfileForm
 from .. import APIForm, relabel_sa
