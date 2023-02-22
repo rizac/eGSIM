@@ -15,7 +15,12 @@ import numpy as np
 
 from django.core.management import call_command
 from django.test.client import Client
+from django.conf import settings
 
+@pytest.fixture(scope="session", autouse=True)
+def auto_create_media_root():
+    if not os.path.isdir(settings.MEDIA_ROOT):
+        os.makedirs(settings.MEDIA_ROOT)
 
 @pytest.fixture()
 def client() -> Client:

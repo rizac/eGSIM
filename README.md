@@ -264,10 +264,13 @@ To perform a db reset:
  - delete or rename `db.sqlite3` (or wherever the database is)
  - delete all migrations (currently under "egsim/api/migrations"), i.e.
    all all .py files except `__init__.py`
- - Create and run migrations:
- 
+ - Create migrations (re-generate a new initial migration file):
    ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
+   ```
+ - Run migrations (re-create the DB via the generated migration file):
+
+   ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
    ```
  - [Repopulate the db](#Repopulate-the-DB)
