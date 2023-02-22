@@ -30,7 +30,6 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install --no-binary=h5py h5py
         pip install -r requirements.dev.txt
     - name: Run Tests
       run: |
@@ -38,6 +37,7 @@ jobs:
         export DJANGO_SETTINGS_MODULE=egsim.settings_debug; python manage.py egsim_init && pytest --ignore=./tests/tmp/ -xvvv ./tests/
 
 
+# pip install --no-binary=h5py h5py
 
 # # name: Python >= 3.9
 
