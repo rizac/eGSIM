@@ -18,8 +18,10 @@ from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
                                            SitesContext)
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from .. import check_gsim_list
+import smtk.trellis.trellis_utils as utils
 from .configure import GSIMRupture, DEFAULT_POINT
 
+# from smtk.trellis import trellis_plots
 
 # Generic dictionary of parameters needed for a trellis calculation
 PARAM_DICT = {
@@ -127,6 +129,7 @@ class BaseTrellis(object):
         kwargs.setdefault('ylim', None)
         kwargs.setdefault("legend_fontsize", 14)
         kwargs.setdefault("ncol", 1)
+        kwargs.setdefault('figure_size', (7, 5))
         self.rupture = rupture
         self.magnitudes = magnitudes
         self.distances = distances

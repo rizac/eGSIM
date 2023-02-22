@@ -1,3 +1,7 @@
+import numpy as np
+#from smtk import sm_utils
+from scipy.constants import g
+
 def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
     """
     Converts acceleration from/to different units
