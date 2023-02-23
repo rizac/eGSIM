@@ -136,6 +136,7 @@ class EsmFlatfileParser(FlatfileParser):
     def parse(cls, filepath: str) -> pd.DataFrame:
         """Parse ESM flatfile (CSV) and return the pandas DataFrame"""
         dtype, defaults, bounds, required = FlatfileColumn.get_data_properties()
+        print(required)
         dtype |= cls.esm_dtypes
 
         # remove station_id if in required columns:
@@ -148,6 +149,7 @@ class EsmFlatfileParser(FlatfileParser):
                             required=required)
 
         if create_sta_id:  # setup our station_id column as integers:
+            print("creating sta_id")
             dfr['station_id'] = \
                 dfr['network_code'].str.cat(dfr['station_code']).astype('category').cat.codes
 

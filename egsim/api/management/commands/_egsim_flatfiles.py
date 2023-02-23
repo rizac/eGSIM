@@ -7,8 +7,6 @@ Created on 11 Apr 2019
 
 @author: riccardo
 """
-from typing import Sequence
-
 import os
 from os.path import join, isdir, abspath, dirname, isfile, basename, splitext
 
