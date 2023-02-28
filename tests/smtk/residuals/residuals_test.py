@@ -3,15 +3,11 @@ Core test suite for the database and residuals construction
 """
 import os
 import pandas as pd
-import sys
-import shutil
 import unittest
-# from smtk.parsers.esm_flatfile_parser import ESMFlatfileParser
+
 import egsim.smtk.residuals.gmpe_residuals as res
-
-import pickle
-
 from egsim.smtk.flatfile import ContextDB, read_flatfile
+
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -50,7 +46,7 @@ class ResidualsTestCase(unittest.TestCase):
         """
         Setup constructs the database from the ESM test data
         """
-        ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.csv")
+        ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.hdf.csv")
         cls.database = ContextDB(read_flatfile(ifile))
 
         # ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.hdf")
@@ -68,6 +64,9 @@ class ResidualsTestCase(unittest.TestCase):
         # cls.database = None
         # with open(cls.database_file, "rb") as f:
         #     cls.database = pickle.load(f)
+        cls.num_events = len(pd.unique(cls.database._data['event_id']))
+        cls.num_records = len(cls.database._data)
+
         cls.gsims = ["AkkarEtAlRjb2014",  "ChiouYoungs2014"]
         cls.imts = ["PGA", "SA(1.0)"]
 
@@ -91,18 +90,18 @@ class ResidualsTestCase(unittest.TestCase):
                     # For Akkar et al - inter-event residuals should have
                     # 4 elements and the intra-event residuals 41
                     self.assertEqual(
-                        len(res_dict[gsim][imt]["Inter event"]), 4)
+                        len(res_dict[gsim][imt]["Inter event"]), self.num_events)
                 elif gsim == "ChiouYoungs2014":
                     # For Chiou & Youngs - inter-event residuals should have
                     # 41 elements and the intra-event residuals 41 too
                     self.assertEqual(
-                        len(res_dict[gsim][imt]["Inter event"]), 41)
+                        len(res_dict[gsim][imt]["Inter event"]), self.num_records)
                 else:
                     pass
                 self.assertEqual(
-                        len(res_dict[gsim][imt]["Intra event"]), 41)
+                        len(res_dict[gsim][imt]["Intra event"]), self.num_records)
                 self.assertEqual(
-                        len(res_dict[gsim][imt]["Total"]), 41)
+                        len(res_dict[gsim][imt]["Total"]), self.num_records)
 
     def test_residuals_execution(self):
         """
