@@ -28,7 +28,8 @@ class Command(EgsimBaseCommand):
 
     # flatfiles abs paths (csv or zipped csv) -> :class:`FlatfileParser`:
     PARSERS = {
-        join(SRC_DIR, "ESM_flatfile_2018_SA.csv.zip"): EsmFlatfileParser
+        join(SRC_DIR, "ESM_flatfile_2018_SA.csv.zip"): EsmFlatfileParser,
+        # join(SRC_DIR, "residual_tests_esm_data.original.csv"): EsmFlatfileParser
     }
 
     # As help, use the module docstring (until the first empty line):

@@ -2,7 +2,7 @@
 Base Form for to model-to-data operations i.e. flatfile handling
 """
 from collections import defaultdict
-from operator import or_
+# from operator import or_
 
 import re
 from datetime import datetime
@@ -16,9 +16,9 @@ from pandas.errors import UndefinedVariableError
 from ....smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
-from ....smtk.flatfile import read_flatfile, EgsimContextDB, ColumnType, ColumnDtype
-from .. import EgsimBaseForm, GsimImtForm, APIForm, _get_gsim_choices
-from ..fields import CharField, FileField, MultipleChoiceWildcardField
+from ....smtk.flatfile import read_flatfile, ColumnType, ColumnDtype, ContextDB
+from .. import EgsimBaseForm, GsimImtForm, APIForm  # , _get_gsim_choices
+from ..fields import CharField, FileField  # , MultipleChoiceWildcardField
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not
@@ -185,7 +185,7 @@ def get_residuals(flatfile: pd.DataFrame, gsim: list[str], imt: list[str]) -> Re
     flatfile columns into a ValidationError so that it can be returned as
     "client error" (4xx) response
     """
-    context_db = EgsimContextDB(flatfile, *ctx_flatfile_colnames())
+    context_db = ContextDB(flatfile, *ctx_flatfile_colnames())
     residuals = Residuals(gsim, imt)
     try:
         residuals.get_residuals(context_db)

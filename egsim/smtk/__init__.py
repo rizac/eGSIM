@@ -5,7 +5,7 @@ from openquake.hazardlib.gsim.base import GMPE
 
 
 # Get a list of the available GSIMs (lazy loaded):
-_AVAILABLE_GSIMS = get_available_gsims()
+AVAILABLE_GSIMS = get_available_gsims()
 
 # Regular expression to get a GMPETable from string:
 _gmpetable_regex = re.compile(r'^GMPETable\(([^)]+?)\)$')
@@ -24,15 +24,12 @@ def check_gsim_list(gsim_list) -> dict:
     :param gsim_list: list of GSIM names (str) or OpenQuake Gsims
     :return: a dict of GSIM names (str) mapped to the associated GSIM
     """
-    global _AVAILABLE_GSIMS  # lazy load dict:
-    if _AVAILABLE_GSIMS is None:
-        _AVAILABLE_GSIMS = get_available_gsims()
     output_gsims = {}
     for gs in gsim_list:
         if isinstance(gs, GMPE):
             output_gsims[_get_gmpe_name(gs)] = gs  # get name of GMPE instance
-        elif gs in _AVAILABLE_GSIMS:
-            output_gsims[gs] = _AVAILABLE_GSIMS[gs]()
+        elif gs in AVAILABLE_GSIMS:
+            output_gsims[gs] = AVAILABLE_GSIMS[gs]()
         else:
             match = _gmpetable_regex.match(gs)  # GMPETable ?
             if match:
