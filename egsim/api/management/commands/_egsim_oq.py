@@ -110,7 +110,7 @@ def populate_flatfile_column_metadata() -> list[models.FlatfileColumn]:
     ret = {}
     for name, column_metadata in ffcolumns.items():
         ff_col = models.FlatfileColumn.objects.filter(name=name).first()
-        if ff_col is None: # create (and save) object:
+        if ff_col is None:  # create (and save) object:
             data_props = {k :column_metadata.pop(k)
                           for k in ('dtype', 'bounds', 'default', 'required')
                           if k in column_metadata}

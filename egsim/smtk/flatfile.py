@@ -422,9 +422,9 @@ def _check(flatfile: pd.DataFrame):
 
 DEFAULT_MSR = PeerMSR()
 
+
 class ContextDB:
-    """FIXME REMOVE
-    This abstract-like class represents a Database (DB) of data capable of
+    """This abstract-like class represents a Database (DB) of data capable of
     yielding Contexts and Observations suitable for Residual analysis (see
     argument `ctx_database` of :meth:`gmpe_residuals.Residuals.get_residuals`)
 
@@ -437,6 +437,51 @@ class ContextDB:
 
     Please refer to the functions docstring for further details
     """
+
+    def __init__(self, dataframe: pd.DataFrame,
+                 rupture_columns: dict[str, str] = None,
+                 site_columns: dict[str, str] = None,
+                 distance_columns: dict[str, str] = None):
+        """
+        Initializes a new EgsimContextDB.
+
+        :param dataframe: a dataframe representing a flatfile
+        :param rupture_columns: dataframe column names mapped to the relative
+            Rupture parameter in the Context
+        :param site_columns: dataframe column names mapped to the relative
+            Site parameter in the Context
+        :param distance_columns: dataframe column names mapped to the relative
+            Distance measure in the Context
+        """
+        if not rupture_columns or not site_columns or not distance_columns:
+            # read from yaml:
+            r, s, d = {}, {}, {}
+            for cname, cmetadata in read_registered_flatfile_columns_metadata().items():
+                if cmetadata['type'] == ColumnType.site_parameter:
+                    s[cname] = cname
+                elif cmetadata['type'] == ColumnType.rupture_parameter:
+                    r[cname] = cname
+                elif cmetadata['type'] == ColumnType.distance_measure:
+                    d[cname] = cname
+            if not rupture_columns:
+                rupture_columns = r
+            if not site_columns:
+                site_columns = s
+            if not distance_columns:
+                distance_columns = d
+
+        self._data = dataframe
+        self._rup_columns = rupture_columns
+        self._site_columns = site_columns
+        self._dist_columns = distance_columns
+        self.flatfile_columns = rupture_columns | site_columns | distance_columns
+        sa_columns_and_periods = ((col, imt.from_string(col.upper()).period)
+                                  for col in self._data.columns
+                                  if col.upper().startswith("SA("))
+        sa_columns_and_periods = sorted(sa_columns_and_periods, key=lambda _: _[1])
+        self.sa_columns = [_[0] for _ in sa_columns_and_periods]
+        self.sa_periods = [_[1] for _ in sa_columns_and_periods]
+        self.filter_expression = None
 
     rupture_context_attrs = tuple(RuptureContext._slots_)  # noqa
     distances_context_attrs = tuple(DistancesContext._slots_)  # noqa
@@ -499,6 +544,12 @@ class ContextDB:
             dic["Num. Sites"] = 0
         return dic
 
+    #########################################
+    # IMPLEMENTS ContextDB ABSTRACT METHODS #
+    #########################################
+
+    EVENT_ID_COL = 'event_id'
+
     def get_event_and_records(self):
         """Yield the tuple (event_id:Any, records:Sequence)
 
@@ -511,22 +562,11 @@ class ContextDB:
             a pandas DataFrame, or a list of several data types such as `dict`s
             `h5py` Datasets, `pytables` rows, `django` model instances.
         """
-        raise NotImplementedError('')
-
-    def update_context(self, ctx, records, nodal_plane_index=1):
-        """Update the attributes of the earthquake-based context `ctx` with
-        the data in `records`.
-        See `rupture_context_attrs`, `sites_context_attrs`,
-        `distances_context_attrs`, for a list of possible attributes. Any
-        attribute of `ctx` that is non-scalar should be given as numpy array.
-
-        :param ctx: a :class:`openquake.hazardlib.contexts.RuptureContext`
-            created for a specific event. It is the key 'Ctx' of the Context dict
-            returned by `self.create_context`
-        :param records: sequence (e.g., list, tuple, pandas DataFrame) of records
-            related to the given event (see :meth:`get_event_and_records`)
-        """
-        raise NotImplementedError('')
+        # FIXME: pandas bug? flatfile bug?
+        # `return self._data.groupby([EVENT_ID_COL])` should be sufficient, but
+        # sometimes in the yielded `(ev_id, dfr)` tuple, `dfr` is empty and
+        # `ev_id` is actually not in the dataframe (???). So:
+        yield from (_ for _ in self._data.groupby(self.EVENT_ID_COL) if not _[1].empty)
 
     def get_observations(self, imtx, records, component="Geometric"):
         """Return the observed values of the given IMT `imtx` from `records`,
@@ -543,66 +583,6 @@ class ContextDB:
 
         :return: a numpy array of observations, the same length of `records`
         """
-        # NOTE: imtx, not imt, otherwise it shadows the package imt!!
-        raise NotImplementedError('')
-
-class EgsimContextDB(ContextDB):
-    """This abstract-like class represents a Database (DB) of data capable of
-    yielding Contexts and Observations suitable for Residual analysis (see
-    argument `ctx_database` of :meth:`gmpe_residuals.Residuals.get_residuals`)
-
-    Concrete subclasses of `ContextDB` must implement three abstract methods
-    (e.g. :class:`smtk.sm_database.GroundMotionDatabase`):
-     - get_event_and_records(self)
-     - update_context(self, ctx, records, nodal_plane_index=1)
-     - get_observations(self, imtx, records, component="Geometric")
-       (which is called only if `imts` is given in :meth:`self.get_contexts`)
-
-    Please refer to the functions docstring for further details
-    """
-
-    def __init__(self, dataframe: pd.DataFrame,
-                 rupture_columns: dict[str, str] = None,
-                 site_columns: dict[str, str] = None,
-                 distance_columns: dict[str, str] = None):
-        """
-        Initializes a new EgsimContextDB.
-
-        :param dataframe: a dataframe representing a flatfile
-        :param rupture_columns: dataframe column names mapped to the relative
-            Rupture parameter in the Context
-        :param site_columns: dataframe column names mapped to the relative
-            Site parameter in the Context
-        :param distance_columns: dataframe column names mapped to the relative
-            Distance measure in the Context
-        """
-        self._data = dataframe
-        self._rup_columns = rupture_columns
-        self._site_columns = site_columns
-        self._dist_columns = distance_columns
-        self.flatfile_columns = rupture_columns | site_columns | distance_columns
-        sa_columns_and_periods = ((col, imt.from_string(col.upper()).period)
-                                  for col in self._data.columns
-                                  if col.upper().startswith("SA("))
-        sa_columns_and_periods = sorted(sa_columns_and_periods, key=lambda _: _[1])
-        self.sa_columns = [_[0] for _ in sa_columns_and_periods]
-        self.sa_periods = [_[1] for _ in sa_columns_and_periods]
-        self.filter_expression = None
-
-    #########################################
-    # IMPLEMENTS ContextDB ABSTRACT METHODS #
-    #########################################
-
-    EVENT_ID_COL = 'event_id'
-
-    def get_event_and_records(self):
-        # FIXME: pandas bug? flatfile bug?
-        # `return self._data.groupby([EVENT_ID_COL])` should be sufficient, but
-        # sometimes in the yielded `(ev_id, dfr)` tuple, `dfr` is empty and
-        # `ev_id` is actually not in the dataframe (???). So:
-        yield from (_ for _ in self._data.groupby(self.EVENT_ID_COL) if not _[1].empty)
-
-    def get_observations(self, imtx, records, component="Geometric"):
 
         if imtx.lower().startswith("sa("):
             sa_periods = self.sa_periods
@@ -632,16 +612,28 @@ class EgsimContextDB(ContextDB):
         return values.copy()
 
     def update_context(self, ctx, records, nodal_plane_index=1):
+        """Update the attributes of the earthquake-based context `ctx` with
+        the data in `records`.
+        See `rupture_context_attrs`, `sites_context_attrs`,
+        `distances_context_attrs`, for a list of possible attributes. Any
+        attribute of `ctx` that is non-scalar should be given as numpy array.
+
+        :param ctx: a :class:`openquake.hazardlib.contexts.RuptureContext`
+            created for a specific event. It is the key 'Ctx' of the Context dict
+            returned by `self.create_context`
+        :param records: sequence (e.g., list, tuple, pandas DataFrame) of records
+            related to the given event (see :meth:`get_event_and_records`)
+        """
         self._update_rupture_context(ctx, records, nodal_plane_index)
         self._update_distances_context(ctx, records)
         self._update_sites_context(ctx, records)
-        # add remaining ctx attributes:
-        for ff_colname, ctx_attname in self.flatfile_columns.items():
-            if hasattr(ctx, ctx_attname) or ff_colname not in records.columns:
-                continue
-            val = records[ff_colname].values
-            val = val[0] if ff_colname in self._rup_columns else val.copy()
-            setattr(ctx, ctx_attname, val)
+        # add remaining ctx attributes:  FIXME SHOULD WE?
+        # for ff_colname, ctx_attname in self.flatfile_columns.items():
+        #     if hasattr(ctx, ctx_attname) or ff_colname not in records.columns:
+        #         continue
+        #     val = records[ff_colname].values
+        #     val = val[0] if ff_colname in self._rup_columns else val.copy()
+        #     setattr(ctx, ctx_attname, val)
 
     def _update_rupture_context(self, ctx, records, nodal_plane_index=1):
         """see `self.update_context`"""
@@ -666,7 +658,7 @@ class EgsimContextDB(ContextDB):
 
         ctx.hypo_lat = record['event_latitude']
         ctx.hypo_lon = record['event_longitude']
-        ctx.hypo_loc = np.full((len(record), 2), 0.5)
+        ctx.hypo_loc = np.array([0.5, 0.5])  # <- this is compatible with older smtk. FIXME: it was like this: np.full((len(record), 2), 0.5)
 
     def _update_distances_context(self, ctx, records):
         """see `self.update_context`"""
@@ -710,8 +702,8 @@ class EgsimContextDB(ContextDB):
         # ------------------------------------------------
         # ctx.lons = records['station_longitude'].values.copy()
         # ctx.lats = records['station_latitude'].values.copy()
-        # ctx.depths = records['station_elevation'].values * -1.0E-3 if \
-        #     'station_elevation' in records.columns else np.full((len(records),), 0.0)
+        ctx.depths = records['station_elevation'].values * -1.0E-3 if \
+            'station_elevation' in records.columns else np.full((len(records),), 0.0)
         vs30 = records['vs30'].values.copy()
         ctx.vs30 = vs30
         ctx.vs30measured = records['vs30measured'].values.copy()

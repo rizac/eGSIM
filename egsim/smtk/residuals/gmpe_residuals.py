@@ -15,15 +15,14 @@ import numpy as np
 from scipy.special import erf
 from scipy.stats import norm
 from scipy.linalg import solve
-from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
 # import smtk.intensity_measures as ims
 # from smtk.strong_motion_selector import SMRecordSelector
-from .. import check_gsim_list
+from .. import check_gsim_list, AVAILABLE_GSIMS
 from . import convert_accel_units
 
-GSIM_LIST = get_available_gsims()
+GSIM_LIST = AVAILABLE_GSIMS
 GSIM_KEYS = set(GSIM_LIST)
 
 # SCALAR_IMTS = ["PGA", "PGV", "PGD", "CAV", "Ia"]
