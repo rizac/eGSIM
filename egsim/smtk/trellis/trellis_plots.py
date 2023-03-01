@@ -247,7 +247,7 @@ class BaseTrellis(object):
                         pass
             for mag in self.magnitudes:
                 rup = RuptureContext()
-                setattr(rup, 'mag', mag)
+                rup.mag = mag
                 for attr in required_attributes:
                     setattr(rup, attr, self.params[attr])
                 self.rctx.append(rup)
@@ -434,23 +434,23 @@ class MagnitudeIMTTrellis(BaseTrellis):
         Parse the ground motion values to a dictionary
         """
         gmvs = self.get_ground_motion_values()
-        nrow, ncol = best_subplot_dimensions(len(self.imts))
+        # nrow, ncol = best_subplot_dimensions(len(self.imts))
         gmv_dict = dict([
             ("xvalues", self.magnitudes.tolist()),
             ("xlabel", "Magnitude")])
         nvals = len(self.magnitudes)
         gmv_dict["figures"] = []
-        row_loc = 0
-        col_loc = 0
+        # row_loc = 0
+        # col_loc = 0
         for im in self.imts:
-            if col_loc == ncol:
-                row_loc += 1
-                col_loc = 0
+            # if col_loc == ncol:
+            #     row_loc += 1
+            #     col_loc = 0
             # Set the dictionary of y-values
             ydict = {"ylabel": self._get_ylabel(im),
                      "imt": im,
-                     "row": row_loc,
-                     "column": col_loc,
+                     # "row": row_loc,
+                     # "column": col_loc,
                      "yvalues": {}}
             for gsim in gmvs:
                 if not len(gmvs[gsim][im]):
@@ -465,7 +465,7 @@ class MagnitudeIMTTrellis(BaseTrellis):
                         iml_to_list.append(val)
                     ydict["yvalues"][gsim] = iml_to_list
             gmv_dict["figures"].append(ydict)
-            col_loc += 1
+            # col_loc += 1
         return gmv_dict
 
     def to_json(self):
@@ -690,30 +690,30 @@ class DistanceIMTTrellis(MagnitudeIMTTrellis):
         Parses the ground motion values to a dictionary
         """
         gmvs = self.get_ground_motion_values()
-        nrow, ncol = best_subplot_dimensions(len(self.imts))
+        # nrow, ncol = best_subplot_dimensions(len(self.imts))
         dist_label = "{:s} (km)".format(DISTANCE_LABEL_MAP[self.distance_type])
         gmv_dict = dict([
             ("xvalues", self.distances[self.distance_type].tolist()),
             ("xlabel", dist_label)])
         gmv_dict["figures"] = []
-        row_loc = 0
-        col_loc = 0
+        # row_loc = 0
+        # col_loc = 0
         for im in self.imts:
-            if col_loc == ncol:
-                row_loc += 1
-                col_loc = 0
+            # if col_loc == ncol:
+            #     row_loc += 1
+            #     col_loc = 0
             # Set the dictionary of y-values
             ydict = {"ylabel": self._get_ylabel(im),
                      "imt": im,
-                     "row": row_loc,
-                     "column": col_loc,
+                     # "row": row_loc,
+                     # "column": col_loc,
                      "yvalues": {}}
             for gsim in gmvs:
                 data = [None if np.isnan(val) else val
                         for val in gmvs[gsim][im].flatten()]
                 ydict["yvalues"][gsim] = data
             gmv_dict["figures"].append(ydict)
-            col_loc += 1
+            # col_loc += 1
         return gmv_dict
 
     def to_json(self):
@@ -1110,29 +1110,28 @@ class MagnitudeDistanceSpectraSigmaTrellis(MagnitudeDistanceSpectraTrellis):
                                      for (key, val) in self.params.items()]))
 
 
-
-def best_subplot_dimensions(nplots):
-    """
-    FIXME REMOVE?
-    Returns the optimum arrangement of number of rows and number of
-    columns given a total number of plots. Converted from the Matlab function
-    "BestArrayDims"
-    :param int nplots:
-        Number of subplots
-    :returns:
-        Number of rows (int)
-        Number of columns (int)
-    """
-    from math import ceil, sqrt
-    if nplots == 1:
-        return 1, 1
-    nplots = float(nplots)
-    d_l = ceil(sqrt(nplots))
-    wdth = np.arange(1., d_l + 1., 1.)
-    hgt = np.ceil(nplots / wdth)
-    waste = (wdth * hgt - nplots) / nplots
-    savr = (2. * wdth + 2. * hgt) / (wdth * hgt)
-    cost = 0.5 * savr + 0.5 * waste
-    num_col = np.argmin(cost)
-    num_row = int(hgt[num_col])
-    return num_row, num_col + 1
+# def best_subplot_dimensions(nplots):
+#     """
+#     FIXME REMOVE?
+#     Returns the optimum arrangement of number of rows and number of
+#     columns given a total number of plots. Converted from the Matlab function
+#     "BestArrayDims"
+#     :param int nplots:
+#         Number of subplots
+#     :returns:
+#         Number of rows (int)
+#         Number of columns (int)
+#     """
+#     from math import ceil, sqrt
+#     if nplots == 1:
+#         return 1, 1
+#     nplots = float(nplots)
+#     d_l = ceil(sqrt(nplots))
+#     wdth = np.arange(1., d_l + 1., 1.)
+#     hgt = np.ceil(nplots / wdth)
+#     waste = (wdth * hgt - nplots) / nplots
+#     savr = (2. * wdth + 2. * hgt) / (wdth * hgt)
+#     cost = 0.5 * savr + 0.5 * waste
+#     num_col = np.argmin(cost)
+#     num_row = int(hgt[num_col])
+#     return num_row, num_col + 1

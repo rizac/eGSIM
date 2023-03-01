@@ -7,8 +7,8 @@ from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture as Rupture
 from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.gsim.base import (
-    SitesContext, RuptureContext, DistancesContext)
+from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
+                                           DistancesContext)
 from openquake.hazardlib.contexts import get_distances
 
 TO_RAD = pi / 180.
@@ -77,37 +77,17 @@ class GSIMRupture(object):
         assert isinstance(self.target_sites, SiteCollection)
         # Distances
         dctx = DistancesContext()
-        # Rupture distance
-        setattr(dctx, 'rrup',
-                self.rupture.surface.get_min_distance(self.target_sites.mesh))
-        # Rx
-        setattr(dctx, 'rx',
-                self.rupture.surface.get_rx_distance(self.target_sites.mesh))
-        # Rjb
-        setattr(dctx, 'rjb', self.rupture.surface.get_joyner_boore_distance(
-            self.target_sites.mesh))
-        # Rhypo
-        setattr(dctx,
-                'rhypo',
-                self.rupture.hypocenter.distance_to_mesh(
-                    self.target_sites.mesh))
-        # Repi
-        setattr(dctx, 'repi',
-                self.rupture.hypocenter.distance_to_mesh(
-                    self.target_sites.mesh,
-                    with_depths=False))
-        # Ry0
-        setattr(dctx, 'ry0',
-                self.rupture.surface.get_ry0_distance(self.target_sites.mesh))
-        # Rcdpp - ignored at present
-        setattr(dctx, 'rcdpp', None)
-        # Azimuth
-        setattr(dctx, 'azimuth', get_distances(self.rupture,
-                                               self.target_sites.mesh,
-                                               'azimuth'))
-        setattr(dctx, 'hanging_wall', None)
-        # Rvolc
-        setattr(dctx, "rvolc", np.zeros_like(self.target_sites.mesh.lons))
+        dctx.rrup = self.rupture.surface.get_min_distance(self.target_sites.mesh)
+        dctx.rx = self.rupture.surface.get_rx_distance(self.target_sites.mesh)
+        dctx.rjb = self.rupture.surface.get_joyner_boore_distance(self.target_sites.mesh)
+        dctx.rhypo = self.rupture.hypocenter.distance_to_mesh(self.target_sites.mesh)
+        dctx.repi = self.rupture.hypocenter.distance_to_mesh(self.target_sites.mesh,
+                                                             with_depths=False)
+        dctx.ry0 = self.rupture.surface.get_ry0_distance(self.target_sites.mesh)
+        dctx.rcdpp = None  # ignored at present
+        dctx.azimuth = get_distances(self.rupture, self.target_sites.mesh, 'azimuth')
+        dctx.hanging_wall = None
+        dctx.rvolc = np.zeros_like(self.target_sites.mesh.lons)
         # Sites
         sctx = SitesContext(slots=self.target_sites.array.dtype.names)
         for key in sctx._slots_:
@@ -116,16 +96,16 @@ class GSIMRupture(object):
         # Rupture
         rctx = RuptureContext()
         rctx.sids = np.array(len(sctx.vs30), dtype=np.uint32)
-        setattr(rctx, 'mag', self.magnitude)
-        setattr(rctx, 'strike', self.strike)
-        setattr(rctx, 'dip', self.dip)
-        setattr(rctx, 'rake', self.rake)
-        setattr(rctx, 'ztor', self.ztor)
-        setattr(rctx, 'hypo_depth', self.rupture.hypocenter.depth)
-        setattr(rctx, 'hypo_lat', self.rupture.hypocenter.latitude)
-        setattr(rctx, 'hypo_lon', self.rupture.hypocenter.longitude)
-        setattr(rctx, 'hypo_loc', self.hypo_loc)
-        setattr(rctx, 'width', self.rupture.surface.get_width())
+        rctx.mag = self.magnitude
+        rctx.strike = self.strike
+        rctx.dip = self.dip
+        rctx.rake = self.rake
+        rctx.ztor = self.ztor
+        rctx.hypo_depth = self.rupture.hypocenter.depth
+        rctx.hypo_lat = self.rupture.hypocenter.latitude
+        rctx.hypo_lon = self.rupture.hypocenter.longitude
+        rctx.hypo_loc = self.hypo_loc
+        rctx.width = self.rupture.surface.get_width()
         return sctx, rctx, dctx
 
     def get_target_sites_mesh(self, maximum_distance, spacing, vs30,
@@ -353,7 +333,7 @@ class GSIMRupture(object):
             Vs30 (m / s)
         :param float line_azimuth:
             Aziumth of the source-to-site line
-        :param tuple origin point:
+        :param tuple origin_point:
             Location (along strike, down dip) of the origin of the source-site
             line within the rupture
         :param bool vs30measured:
@@ -559,7 +539,6 @@ def get_hypocentre_on_planar_surface(plane, hypo_loc=None):
     return hypocentre.point_at(horizontal_dist,
                                vertical_dist,
                                down_dip_azimuth)
-
 
 
 def vs30_to_z1pt0_cy14(vs30, japan=False):
