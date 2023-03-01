@@ -5,7 +5,6 @@ Module to get GMPE residuals - total, inter and intra
           'IMT2': { ... }}}
 """
 import sys
-from collections import OrderedDict
 import warnings
 from datetime import datetime
 from math import sqrt, ceil
@@ -142,7 +141,7 @@ class Residuals(object):
         """
         self.gmpe_list = check_gsim_list(gmpe_list)
         self.number_gmpes = len(self.gmpe_list)
-        self.types = OrderedDict([(gmpe, {}) for gmpe in self.gmpe_list])
+        self.types = {gmpe: {} for gmpe in self.gmpe_list}
         self.residuals = []
         self.modelled = []
         self.imts = imts
@@ -150,8 +149,8 @@ class Residuals(object):
         self.gmpe_sa_limits = {}
         self.gmpe_scalars = {}
         for gmpe in self.gmpe_list:
-            gmpe_dict_1 = OrderedDict([])
-            gmpe_dict_2 = OrderedDict([])
+            gmpe_dict_1 = {}
+            gmpe_dict_2 = {}
             self.unique_indices[gmpe] = {}
             # Get the period range and the coefficient types
             # gmpe_i = GSIM_LIST[gmpe]()
@@ -186,8 +185,8 @@ class Residuals(object):
                 gmpe_dict_2[imtx]["Mean"] = []
             self.residuals.append([gmpe, gmpe_dict_1])
             self.modelled.append([gmpe, gmpe_dict_2])
-        self.residuals = OrderedDict(self.residuals)
-        self.modelled = OrderedDict(self.modelled)
+        self.residuals = dict(self.residuals)
+        self.modelled = dict(self.modelled)
         self.number_records = None
         self.contexts = None
 
@@ -279,10 +278,10 @@ class Residuals(object):
         # TODO Rake hack will be removed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if not context["Ctx"].rake:
             context["Ctx"].rake = 0.0
-        expected = OrderedDict([(gmpe, {}) for gmpe in self.gmpe_list])
+        expected = {gmpe: {} for gmpe in self.gmpe_list}
         # Period range for GSIM
         for gmpe in self.gmpe_list:
-            expected[gmpe] = OrderedDict([(imtx, {}) for imtx in self.imts])
+            expected[gmpe] = {imtx: {} for imtx in self.imts}
             for imtx in self.imts:
                 gsim = self.gmpe_list[gmpe]
                 if "SA(" in imtx:
@@ -311,7 +310,7 @@ class Residuals(object):
         # Calculate residual
         residual = {}
         for gmpe in self.gmpe_list:
-            residual[gmpe] = OrderedDict([])
+            residual[gmpe] = {}
             for imtx in self.imts:
                 residual[gmpe][imtx] = {}
                 obs = np.log(context["Observations"][imtx])
@@ -351,8 +350,7 @@ class Residuals(object):
         """
         Retreives the mean and standard deviation values of the residuals
         """
-        statistics = OrderedDict([(gmpe, OrderedDict([]))
-                                  for gmpe in self.gmpe_list])
+        statistics = {gmpe: {} for gmpe in self.gmpe_list}
         for gmpe in self.gmpe_list:
             for imtx in self.imts:
                 if not self.residuals[gmpe][imtx]:
@@ -382,8 +380,7 @@ class Residuals(object):
         residuals according to Equation 9 of Scherbaum et al (2004)
         """
         statistics = self.get_residual_statistics()
-        lh_values = OrderedDict([(gmpe, OrderedDict([]))
-                                 for gmpe in self.gmpe_list])
+        lh_values = {gmpe: {} for gmpe in self.gmpe_list}
         for gmpe in self.gmpe_list:
             for imtx in self.imts:
                 if not self.residuals[gmpe][imtx]:
@@ -431,12 +428,10 @@ class Residuals(object):
         :param imts:
             List of intensity measures for LLH calculation
         """
-        log_residuals = OrderedDict([(gmpe, np.array([]))
-                                     for gmpe in self.gmpe_list])
+        log_residuals = {gmpe: np.array([]) for gmpe in self.gmpe_list}
         imt_list = [(imtx, None) for imtx in imts]
         imt_list.append(("All", None))
-        llh = OrderedDict([(gmpe, OrderedDict(imt_list))
-                           for gmpe in self.gmpe_list])
+        llh = {gmpe: dict(imt_list) for gmpe in self.gmpe_list}
         for gmpe in self.gmpe_list:
             for imtx in imts:
                 if not (imtx in self.imts) or not self.residuals[gmpe][imtx]:
@@ -458,9 +453,7 @@ class Residuals(object):
         weights = np.array([2.0 ** -llh[gmpe]["All"]
                             for gmpe in self.gmpe_list])
         weights = weights / np.sum(weights)
-        model_weights = OrderedDict([
-            (gmpe, weights[iloc]) for iloc, gmpe in enumerate(self.gmpe_list)]
-            )
+        model_weights = {gmpe: weights[i] for i, gmpe in enumerate(self.gmpe_list)}
         return llh, model_weights
 
     # Mak et al multivariate LLH functions
@@ -479,7 +472,7 @@ class Residuals(object):
             values from all imts, otherwise returns sepearate multivariate
             LLH for each imt.
         """
-        multi_llh_values = OrderedDict([(gmpe, {}) for gmpe in self.gmpe_list])
+        multi_llh_values = {gmpe: {} for gmpe in self.gmpe_list}
         # Get number of events and records
         for gmpe in self.gmpe_list:
             print("GMPE = {:s}".format(gmpe))
@@ -581,7 +574,7 @@ class Residuals(object):
         :param float multiplier:
             "Multiplier of standard deviation (equation 8 of Kale and Akkar)
         """
-        edr_values = OrderedDict([(gmpe, {}) for gmpe in self.gmpe_list])
+        edr_values = {gmpe: {} for gmpe in self.gmpe_list}
         for gmpe in self.gmpe_list:
             obs, expected, stddev = self._get_edr_gmpe_information(gmpe)
             results = self._get_edr(obs,
@@ -768,7 +761,7 @@ class SingleStationAnalysis(object):
         self.gmpe_list = check_gsim_list(gmpe_list)
         self.imts = imts
         self.site_residuals = []
-        self.types = OrderedDict([(gmpe, {}) for gmpe in self.gmpe_list])
+        self.types = {gmpe: {} for gmpe in self.gmpe_list}
         for gmpe in self.gmpe_list:
             # if not gmpe in GSIM_LIST:
             #    raise ValueError("%s not supported in OpenQuake" % gmpe)
@@ -805,9 +798,7 @@ class SingleStationAnalysis(object):
         """
         Sets an empty set of nested dictionaries for each GMPE and each IMT
         """
-        return OrderedDict([
-            (gmpe, dict([(imtx, {}) for imtx in self.imts]))
-            for gmpe in self.gmpe_list])
+        return {gmpe: {imtx: {} for imtx in self.imts} for gmpe in self.gmpe_list}
 
     def residual_statistics(self, pretty_print=False, filename=None):
         """
