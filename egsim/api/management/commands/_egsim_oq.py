@@ -169,6 +169,9 @@ def populate_gsims(imts: dict[str, models.Imt],
             gsim_warnings = []
             try:
                 gsim_inst = gsim()
+                # FIXME add this:
+                # from openquake.hazardlib import valid
+                # gsim_inst = valid.gsim(gsim_name)
             except OQDeprecationWarning as warn:
                 # treat OpenQuake (OQ) deprecation warnings as errors. Note that
                 # the builtin DeprecationWarning is silenced, OQ uses it's own

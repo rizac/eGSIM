@@ -1,13 +1,16 @@
 """
 Core test suite for the database and residuals construction
 """
+from itertools import combinations
+
 import os
 import pandas as pd
+import numpy as np
 import unittest
 
 import egsim.smtk.residuals.gmpe_residuals as res
 from egsim.smtk.flatfile import ContextDB, read_flatfile
-
+from egsim.smtk.residuals import convert_accel_units
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -201,3 +204,21 @@ class ResidualsTestCase(unittest.TestCase):
     #     Deletes the database
     #     """
     #     shutil.rmtree(cls.out_location)
+
+
+    def test_convert_accel_units(self):
+        """test convert accel units"""
+        from scipy.constants import g
+        for from_, to_ in combinations(["m/s/s", "m/s**2", "m/s^2",
+                                        "cm/s/s", "cm/s**2", "cm/s^2", "g"], 2):
+            if "cm" in from_:
+                val = g * 100
+                expected = val if "cm" in to_ else 1 if "g" in to_ else g
+            elif "m" in from_:
+                val = g
+                expected = 1 if "g" in to_ else g * 100 if "cm" in to_ else val
+            else: #  "g" in from_:
+                val = 1
+                expected = val if "g" in to_ else 100 * g if "cm" in to_ else g
+
+            self.assertEqual(convert_accel_units(val, from_, to_), expected)

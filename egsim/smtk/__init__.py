@@ -30,6 +30,9 @@ def check_gsim_list(gsim_list) -> dict:
             output_gsims[_get_gmpe_name(gs)] = gs  # get name of GMPE instance
         elif gs in AVAILABLE_GSIMS:
             output_gsims[gs] = AVAILABLE_GSIMS[gs]()
+            # FIXME: add this:
+            # from openquake.hazardlib import valid
+            # output_gsims[gs] = valid.gsim(gs)
         else:
             match = _gmpetable_regex.match(gs)  # GMPETable ?
             if match:

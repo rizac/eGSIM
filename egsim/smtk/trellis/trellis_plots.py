@@ -4,12 +4,8 @@
 Sets up a simple rupture-site configuration to allow for physical comparison
 of GMPEs
 """
-import sys
 import json
-try:  # https://stackoverflow.com/q/53978542
-    from collections.abc import Iterable  # noqa
-except ImportError:
-    from collections import Iterable  # noqa
+from collections.abc import Iterable
 from copy import deepcopy
 
 import numpy as np
@@ -18,10 +14,7 @@ from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
                                            SitesContext)
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from .. import check_gsim_list
-# import smtk.trellis.trellis_utils as utils
 from .configure import GSIMRupture, DEFAULT_POINT
-
-# from smtk.trellis import trellis_plots
 
 # Generic dictionary of parameters needed for a trellis calculation
 PARAM_DICT = {
@@ -58,19 +51,6 @@ DISTANCE_LABEL_MAP = {
     'rrup': 'Rupture Dist.',
     'rx': 'Rx Dist.'
 }
-
-
-def _get_imts(imts):
-    """
-    Reads a list of IMT strings and returns the corresponding
-    openquake.hazardlib.imt class
-    :param list imts:
-        List of IMTs(str)
-    """
-    out_imts = []
-    for imtl in imts:
-        out_imts.append(imt.from_string(imtl))
-    return out_imts
 
 
 class BaseTrellis(object):
