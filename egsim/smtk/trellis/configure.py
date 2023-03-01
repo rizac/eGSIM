@@ -1,8 +1,7 @@
 import numpy as np
 from math import sqrt, pi, sin, cos, fabs
-from copy import deepcopy
 
-from openquake.hazardlib.geo import Point, Line, Polygon, Mesh, PlanarSurface
+from openquake.hazardlib.geo import Point, Mesh, PlanarSurface
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture as Rupture
@@ -95,7 +94,7 @@ class GSIMRupture(object):
 
         # Rupture
         rctx = RuptureContext()
-        rctx.sids = np.array(len(sctx.vs30), dtype=np.uint32)
+        rctx.sids = np.array(len(sctx.vs30), dtype=np.uint32)  # noqa
         rctx.mag = self.magnitude
         rctx.strike = self.strike
         rctx.dip = self.dip
