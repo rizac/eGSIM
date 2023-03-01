@@ -1,7 +1,7 @@
 """
 Core test suite for the database and residuals construction
 """
-from itertools import combinations
+from itertools import combinations, combinations_with_replacement
 
 import os
 import pandas as pd
@@ -162,63 +162,20 @@ class ResidualsTestCase(unittest.TestCase):
                     "MultivariateLLH", "EDR"]:
             _ = res.GSIM_MODEL_DATA_TESTS[key](residuals, config)
 
-    def test_likelihood_execution_old(self):
-        """
-        Tests basic execution of residuals - not correctness of values
-        """
-        lkh = res.Likelihood(self.gsims, self.imts)
-        lkh.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(lkh.residuals)
-        lkh.get_likelihood_values()
-
-    def test_llh_execution_old(self):
-        """
-        Tests execution of LLH - not correctness of values
-        """
-        llh = res.LLH(self.gsims, self.imts)
-        llh.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(llh.residuals)
-        llh.get_loglikelihood_values(self.imts)
-
-    def test_multivariate_llh_execution_old(self):
-        """
-        Tests execution of multivariate llh - not correctness of values
-        """
-        multi_llh = res.MultivariateLLH(self.gsims, self.imts)
-        multi_llh.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(multi_llh.residuals)
-        multi_llh.get_multivariate_loglikelihood_values()
-
-    def test_edr_execution_old(self):
-        """
-        Tests execution of EDR - not correctness of values
-        """
-        edr = res.EDR(self.gsims, self.imts)
-        edr.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(edr.residuals)
-        edr.get_edr_values()
-
-    # @classmethod
-    # def tearDownClass(cls):
-    #     """
-    #     Deletes the database
-    #     """
-    #     shutil.rmtree(cls.out_location)
-
-
     def test_convert_accel_units(self):
         """test convert accel units"""
         from scipy.constants import g
-        for from_, to_ in combinations(["m/s/s", "m/s**2", "m/s^2",
-                                        "cm/s/s", "cm/s**2", "cm/s^2", "g"], 2):
-            if "cm" in from_:
-                val = g * 100
-                expected = val if "cm" in to_ else 1 if "g" in to_ else g
-            elif "m" in from_:
-                val = g
-                expected = 1 if "g" in to_ else g * 100 if "cm" in to_ else val
-            else: #  "g" in from_:
-                val = 1
-                expected = val if "g" in to_ else 100 * g if "cm" in to_ else g
+        for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
+            for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
+                self.assertEqual(convert_accel_units(1, m_sec, cm_sec), 100)
+                self.assertEqual(convert_accel_units(1, cm_sec, m_sec), .01)
+                self.assertEqual(convert_accel_units(g, m_sec, "g"), 1)
+                self.assertEqual(convert_accel_units(g, cm_sec, "g"), .01)
+                self.assertEqual(convert_accel_units(1, "g", m_sec), g)
+                self.assertEqual(convert_accel_units(1, "g", cm_sec), g*100)
+                self.assertEqual(convert_accel_units(1, cm_sec, cm_sec), 1)
+                self.assertEqual(convert_accel_units(1, m_sec, m_sec),1)
 
-            self.assertEqual(convert_accel_units(val, from_, to_), expected)
+        self.assertEqual(convert_accel_units(1, "g", "g"), 1)
+        with self.assertRaises(ValueError):
+            self.assertEqual(convert_accel_units(1, "gf", "gf"), 1)
