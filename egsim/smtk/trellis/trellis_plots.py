@@ -70,46 +70,15 @@ class BaseTrellis(object):
         to representing GMPE names or GMPEs
     :param list imts:
         List of intensity measures
-    :param int nsites:
-        Number of sites
     :param str stddev:
         Standard deviation type
-    :param str filename:
-        Name of output file for exporting the figure
-    :param str filetype:
-        String to indicate file type for exporting the figure
-    :param int dpi:
-        Dots per inch for export figure
-    :param str plot_type:
-        Type of plot (only used in distance Trellis)
     :param str distance_type:
         Type of source-site distance to be used in distances trellis
-    :param tuple figure_size:
-        Size of figure (passed to Matplotlib pyplot.figure() function)
-    :param tuple xlim:
-        Limits on the x-axis (will apply to all subplot axes)
-    :param tuple ylim:
-        Limits on the y-axis (will apply to all subplot axes)
-    :param float legend_fontsize:
-        Controls the fontsize of the legend (default 14)
-    :param int ncol:
-        Number of columns for the legend (default 1)
     """
     magdist = False
 
     def __init__(self, magnitudes, distances, gsims, imts, params,
-                 stddev="Total", rupture=None, **kwargs):
-        # Set default keyword arguments
-        kwargs.setdefault('filename', None)
-        kwargs.setdefault('filetype', "png")
-        kwargs.setdefault('dpi', 300)
-        kwargs.setdefault('plot_type', "loglog")
-        kwargs.setdefault('distance_type', "rjb")
-        kwargs.setdefault('xlim', None)
-        kwargs.setdefault('ylim', None)
-        kwargs.setdefault("legend_fontsize", 14)
-        kwargs.setdefault("ncol", 1)
-        kwargs.setdefault('figure_size', (7, 5))
+                 stddev="Total", rupture=None, distance_type="rjb"):
         self.rupture = rupture
         self.magnitudes = magnitudes
         self.distances = distances
@@ -122,16 +91,7 @@ class BaseTrellis(object):
         self.nsites = 0
         self._build_ctxs()
         self.stddev = stddev
-        self.filename = kwargs['filename']
-        self.filetype = kwargs['filetype']
-        self.dpi = kwargs['dpi']
-        self.plot_type = kwargs['plot_type']
-        self.distance_type = kwargs['distance_type']
-        self.figure_size = kwargs["figure_size"]
-        self.xlim = kwargs["xlim"]
-        self.ylim = kwargs["ylim"]
-        self.legend_fontsize = kwargs["legend_fontsize"]
-        self.ncol = kwargs["ncol"]
+        self.distance_type = distance_type
 
     def _build_ctxs(self):
 
@@ -148,8 +108,7 @@ class BaseTrellis(object):
                         required_dists.append(dist)
             dist_check = False
             for dist in required_dists:
-                if dist_check and not (
-                        len(self.distances[dist]) == self.nsites):
+                if dist_check and len(self.distances[dist]) != self.nsites:
                     raise ValueError("Distances arrays not equal length!")
                 else:
                     self.nsites = len(self.distances[dist])
@@ -160,9 +119,8 @@ class BaseTrellis(object):
             # magdist case: there is a distance dictionary for each magnitude
             if isinstance(self.distances, dict):
                 # Copy the same distances across
-                self.distances = [deepcopy(self.distances)
-                                  for mag in self.magnitudes]
-            assert (len(self.distances) == len(self.magnitudes))
+                self.distances = [deepcopy(self.distances) for mag in self.magnitudes]
+
             # Distances should be a list of dictionaries
             self.dctx = []
             required_distances = []
@@ -191,8 +149,7 @@ class BaseTrellis(object):
                 self.dctx.append(dctx)
 
         # If magnitudes was provided with a list of RuptureContexts
-        if all([isinstance(mag, RuptureContext)
-                for mag in self.magnitudes]):
+        if all([isinstance(mag, RuptureContext) for mag in self.magnitudes]):
             # Get all required rupture attributes
             self.rctx = [mag for mag in self.magnitudes]
             for gmpe_name, gmpe in self.gsims.items():
@@ -271,47 +228,31 @@ class BaseTrellis(object):
                 pass
 
     @classmethod
-    def from_rupture_model(cls, rupture, gsims, imts, stddev='Total',
-                           **kwargs):
+    def from_rupture_model(cls, rupture: GSIMRupture, gsims, imts, stddev='Total',
+                           distance_type='rjb'):
         """
         Constructs the Base Trellis Class from a rupture model
         :param rupture:
             Rupture as instance of the :class:
             smtk.trellis.configure.GSIMRupture
         """
-        kwargs.setdefault('filename', None)
-        kwargs.setdefault('filetype', "png")
-        kwargs.setdefault('dpi', 300)
-        kwargs.setdefault('plot_type', "loglog")
-        kwargs.setdefault('distance_type', "rjb")
-        kwargs.setdefault('xlim', None)
-        kwargs.setdefault('ylim', None)
-        assert isinstance(rupture, GSIMRupture)
         magnitudes = [rupture.magnitude]
         sctx, rctx, dctx = rupture.get_gsim_contexts()
         # Create distances dictionary
         distances = {}
-        for key in dctx._slots_:
+        for key in dctx._slots_:  # noqa
             distances[key] = getattr(dctx, key)
         # Add all other parameters to the dictionary
         params = {}
-        for key in rctx._slots_:
+        for key in rctx._slots_:  # noqa
             params[key] = getattr(rctx, key)
-        for key in sctx._slots_:
+        for key in sctx._slots_:  # noqa
             params[key] = getattr(sctx, key)
         return cls(magnitudes, distances, gsims, imts, params, stddev,
-                   rupture=rupture, **kwargs)
-
-    def plot(self):
-        """
-        Creates the plot!
-        """
-        raise NotImplementedError("Cannot create plot of base class!")
+                   rupture=rupture, distance_type=distance_type)
 
     def _get_ylabel(self, imt):
-        """
-        Returns the label for plotting on a y axis
-        """
+        """Returns the label for plotting on a y axis"""
         raise NotImplementedError
 
 
@@ -334,29 +275,22 @@ class MagnitudeIMTTrellis(BaseTrellis):
 
     @classmethod
     def from_rupture_properties(cls, properties, magnitudes, distance,
-                                gsims, imts, stddev='Total', **kwargs):
-        '''Constructs the Base Trellis Class from a dictionary of
+                                gsims, imts, stddev='Total', distance_type="rjb"):
+        """Constructs the Base Trellis Class from a dictionary of
         properties. In this class, this method is simply an alias of
         `from_rupture_model`
-        '''
+        """
         return cls.from_rupture_model(properties, magnitudes, distance,
                                       gsims, imts, stddev=stddev,
-                                      **kwargs)
+                                      distance_type=distance_type)
 
     @classmethod
     def from_rupture_model(cls, properties, magnitudes, distance, gsims, imts,
-                           stddev='Total', **kwargs):
+                           stddev='Total', distance_type='rjb'):
         """
         Implements the magnitude trellis from a dictionary of properties,
         magnitudes and distance
         """
-        kwargs.setdefault('filename', None)
-        kwargs.setdefault('filetype', "png")
-        kwargs.setdefault('dpi', 300)
-        kwargs.setdefault('plot_type', "loglog")
-        kwargs.setdefault('distance_type', "rjb")
-        kwargs.setdefault('xlim', None)
-        kwargs.setdefault('ylim', None)
         # Properties
         properties.setdefault("tectonic_region", "Active Shallow Crust")
         properties.setdefault("rake", 0.)
@@ -397,7 +331,7 @@ class MagnitudeIMTTrellis(BaseTrellis):
             if getattr(dctx, val) is not None:
                 setattr(dctx, val, getattr(dctx, val)[0])
         return cls(magnitudes, dctx.__dict__, gsims, imts, sctx.__dict__,
-                   **kwargs)
+                   distance_type=distance_type)
 
     def _get_ylabel(self, i_m):
         """
@@ -546,7 +480,7 @@ class DistanceIMTTrellis(MagnitudeIMTTrellis):
 
     @classmethod
     def from_rupture_properties(cls, properties, magnitude, distances,
-                                gsims, imts, stddev='Total', **kwargs):
+                                gsims, imts, stddev='Total', distance_type= "rjb"):
         """Constructs the Base Trellis Class from a rupture properties.
         It internally creates a Rupture object and calls
         `from_rupture_model`. When not listed, arguments take the same
@@ -570,25 +504,17 @@ class DistanceIMTTrellis(MagnitudeIMTTrellis):
                                                            **params)
 
         return cls.from_rupture_model(rupture, gsims, imts,
-                                      stddev=stddev, **kwargs)
+                                      stddev=stddev, distance_type=distance_type)
 
     @classmethod
-    def from_rupture_model(cls, rupture, gsims, imts, stddev='Total',
-                           **kwargs):
+    def from_rupture_model(cls, rupture: GSIMRupture, gsims, imts, stddev='Total',
+                           distance_type= "rjb"):
         """
         Constructs the Base Trellis Class from a rupture model
         :param rupture:
             Rupture as instance of the :class:
             smtk.trellis.configure.GSIMRupture
         """
-        kwargs.setdefault('filename', None)
-        kwargs.setdefault('filetype', "png")
-        kwargs.setdefault('dpi', 300)
-        kwargs.setdefault('plot_type', "loglog")
-        kwargs.setdefault('distance_type', "rjb")
-        kwargs.setdefault('xlim', None)
-        kwargs.setdefault('ylim', None)
-        assert isinstance(rupture, GSIMRupture)
         magnitudes = [rupture.magnitude]
         sctx, rctx, dctx = rupture.get_gsim_contexts()
         # Create distances dictionary
@@ -602,7 +528,7 @@ class DistanceIMTTrellis(MagnitudeIMTTrellis):
         for key in sctx._slots_:
             params[key] = getattr(sctx, key)
         return cls(magnitudes, distances, gsims, imts, params, stddev,
-                   **kwargs)
+                   distance_type=distance_type)
 
     def _get_ylabel(self, i_m):
         """
@@ -710,7 +636,7 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
 
     @classmethod
     def from_rupture_properties(cls, properties, magnitudes, distance,
-                                gsims, periods, stddev='Total', **kwargs):
+                                gsims, periods, stddev='Total', distance_type= "rjb"):
         """Constructs the Base Trellis Class from a dictionary of
         properties. In this class, this method is simply an alias of
         `from_rupture_model`
@@ -723,11 +649,12 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
         """
         return cls.from_rupture_model(properties, magnitudes, distance,
                                       gsims, periods, stddev=stddev,
-                                      **kwargs)
+                                      distance_type=distance_type)
 
     @classmethod
     def from_rupture_model(cls, properties, magnitudes, distances,
-                           gsims, imts, stddev='Total', **kwargs):
+                           gsims, imts, stddev='Total',
+                           distance_type='rjb', **kwargs):
         """
         Constructs the Base Trellis Class from a rupture model
         :param dict properties:
@@ -742,13 +669,6 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
             List of distances (the distance type should be specified in the
             properties dict - rrup, by default)
         """
-        kwargs.setdefault('filename', None)
-        kwargs.setdefault('filetype', "png")
-        kwargs.setdefault('dpi', 300)
-        kwargs.setdefault('plot_type', "loglog")
-        kwargs.setdefault('distance_type', "rjb")
-        kwargs.setdefault('xlim', None)
-        kwargs.setdefault('ylim', None)
         # Defaults for the properties of the rupture and site configuration
         properties.setdefault("tectonic_region", "Active Shallow Crust")
         properties.setdefault("rake", 0.)
@@ -800,7 +720,7 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
             distance_dicts.append(distance_dict)
             rupture_dicts.append(rctx)
         return cls(rupture_dicts, distance_dicts, gsims, imts, properties,
-                   stddev, **kwargs)
+                   stddev, distance_type=distance_type)
 
     def get_ground_motion_values(self):
         """
