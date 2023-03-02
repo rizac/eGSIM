@@ -12,7 +12,7 @@ from openquake.hazardlib import imt
 from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
                                            SitesContext)
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from .. import check_gsim_list
+from .. import check_gsim_list, jsonify1darray
 from .configure import GSIMRupture, DEFAULT_POINT
 
 # Generic dictionary of parameters needed for a trellis calculation
@@ -112,12 +112,12 @@ class BaseTrellis(object):
                     self.nsites = len(self.distances[dist])
                     dist_check = True
                 setattr(dctx, dist, self.distances[dist])
-            self.dctx = [dctx for mag in self.magnitudes]
+            self.dctx = [dctx for _ in self.magnitudes]
         else:
             # magdist case: there is a distance dictionary for each magnitude
             if isinstance(self.distances, dict):
                 # Copy the same distances across
-                self.distances = [deepcopy(self.distances) for mag in self.magnitudes]
+                self.distances = [deepcopy(self.distances) for _ in self.magnitudes]
 
             # Distances should be a list of dictionaries
             self.dctx = []
@@ -351,33 +351,18 @@ class MagnitudeIMTTrellis(BaseTrellis):
         Parse the ground motion values to a dictionary
         """
         gmvs = self.get_ground_motion_values()
-        # nrow, ncol = best_subplot_dimensions(len(self.imts))
         gmv_dict = {
             "xvalues": self.magnitudes.tolist(),
-            "xlabel": "Magnitude"
+            "xlabel": "Magnitude",
+            "figures": []
         }
-        nvals = len(self.magnitudes)
-        gmv_dict["figures"] = []
         for im in self.imts:
             ydict = {
                 "ylabel": self._get_ylabel(im),
                 "imt": im,
-                "yvalues": {}
+                "yvalues": {g: jsonify1darray(gmvs[g][im].flatten()) for g in gmvs}
             }
-            for gsim in gmvs:
-                if not len(gmvs[gsim][im]):
-                    # GSIM missing, set None
-                    ydict["yvalues"][gsim] = [None] * nvals
-                    continue
-                iml_to_list = []
-                for val in gmvs[gsim][im].flatten().tolist():
-                    if np.isnan(val) or (val < 0.0):
-                        iml_to_list.append(None)
-                    else:
-                        iml_to_list.append(val)
-                    ydict["yvalues"][gsim] = iml_to_list
             gmv_dict["figures"].append(ydict)
-            # col_loc += 1
         return gmv_dict
 
 
@@ -509,21 +494,22 @@ class DistanceIMTTrellis(BaseTrellis):
         Parses the ground motion values to a dictionary
         """
         gmvs = self.get_ground_motion_values()
-        # nrow, ncol = best_subplot_dimensions(len(self.imts))
         dist_label = "{:s} (km)".format(DISTANCE_LABEL_MAP[self.distance_type])
-        gmv_dict = dict([
-            ("xvalues", self.distances[self.distance_type].tolist()),
-            ("xlabel", dist_label)])
-        gmv_dict["figures"] = []
+        gmv_dict = {
+            "xvalues": jsonify1darray(self.distances[self.distance_type]),
+            "xlabel": dist_label,
+            "figures": []
+        }
         for im in self.imts:
             # Set the dictionary of y-values
-            ydict = {"ylabel": self._get_ylabel(im),
-                     "imt": im,
-                     "yvalues": {}}
+            ydict = {
+                "ylabel": self._get_ylabel(im),
+                "imt": im,
+                "yvalues": {}
+            }
             for gsim in gmvs:
-                data = [None if np.isnan(val) else val
-                        for val in gmvs[gsim][im].flatten()]
-                ydict["yvalues"][gsim] = data
+                # data = [None if np.isnan(val) else val for val in gmvs[gsim][im].flatten()]
+                ydict["yvalues"][gsim] = jsonify1darray(gmvs[gsim][im].flatten())
             gmv_dict["figures"].append(ydict)
             # col_loc += 1
         return gmv_dict
@@ -706,28 +692,23 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
         Export ground motion values to a dictionary
         """
         gmvs = self.get_ground_motion_values()
-        periods = [float(val.split("SA(")[1].rstrip(")"))
-                   for val in self.imts]
-
-        gmv_dict = dict([
-            ("xlabel", "Period (s)"),
-            ("xvalues", periods),
-            ("figures", [])
-            ])
-
+        periods = [float(val.split("SA(")[1].rstrip(")")) for val in self.imts]
+        gmv_dict = {
+            "xlabel": "Period (s)",
+            "xvalues": periods,
+            "figures": []
+        }
         mags = [rup.mag for rup in self.magnitudes]
         dists = self.distances[0][self.distance_type]
         for i, mag in enumerate(mags):
             for j, dist in enumerate(dists):
-                ydict = dict([
-                    ("ylabel", self._get_ylabel(None)),  # arg 'None' not used
-                    ("magnitude", mag),
-                    ("distance", np.around(dist, 3)),
-                    ("imt", 'SA'),
-                    ("row", i),
-                    ("column", j),
-                    ("yvalues", dict([(gsim, []) for gsim in gmvs]))
-                ])
+                ydict = {
+                    "ylabel": self._get_ylabel(None),  # arg 'None' not used
+                    "magnitude": mag,
+                    "distance": np.around(dist, 3),
+                    "imt": 'SA',
+                    "yvalues": {gsim: [] for gsim in gmvs}
+                }
                 for gsim in gmvs:
                     for im in self.imts:
                         if len(gmvs[gsim][im]):

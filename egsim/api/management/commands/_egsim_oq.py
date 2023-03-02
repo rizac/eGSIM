@@ -21,8 +21,7 @@ from openquake.hazardlib import imt
 
 from . import EgsimBaseCommand
 from ... import models
-from egsim.smtk import flatfile
-
+from egsim.smtk import flatfile, get_gsim_instance
 
 FLATFILE_COLUMNS_YAML_PATH = abspath(join(dirname(dirname(dirname(dirname(__file__)))),
                                           "smtk", "flatfile-columns.yaml"))
@@ -168,10 +167,7 @@ def populate_gsims(imts: dict[str, models.Imt],
             warnings.filterwarnings('error')  # raise on warnings
             gsim_warnings = []
             try:
-                gsim_inst = gsim()
-                # FIXME add this:
-                # from openquake.hazardlib import valid
-                # gsim_inst = valid.gsim(gsim_name)
+                gsim_inst = get_gsim_instance(gsim_name)
             except OQDeprecationWarning as warn:
                 # treat OpenQuake (OQ) deprecation warnings as errors. Note that
                 # the builtin DeprecationWarning is silenced, OQ uses it's own

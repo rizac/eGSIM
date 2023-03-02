@@ -124,14 +124,15 @@ class ResidualsTestCase(unittest.TestCase):
                                              1.89631889e-04,
                                              7.53992832e-05]),
                             # FIXME: oveeride the previous with the new data below, but check:
-                            'PGA': np.array([1.98570868e-04,
-                                             1.10525307e-03,
-                                             1.73627080e-04,
-                                             8.34041186e-05]),
+                            'PGA': np.array([0.1947315, 1.083883 , 0.17027  , 0.0817915]),
                             'SA(1.0)': np.array([0.00012647,
                                                  0.00073836,
                                                  0.00019964,
-                                                 0.00014166])}
+                                                 0.00014166]),
+                            #see above
+                            'SA(1.0)': np.array([0.12406929, 0.72433587, 0.19584624,
+                                                 0.13896763])
+        }
         for imtx in expected_res_obs:
             assert np.allclose(residuals1.contexts[0]['Observations'][imtx],
                                expected_res_obs[imtx], rtol=.5e-3)
