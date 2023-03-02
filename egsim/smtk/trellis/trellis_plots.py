@@ -382,12 +382,6 @@ class MagnitudeIMTTrellis(BaseTrellis):
             # col_loc += 1
         return gmv_dict
 
-    def to_json(self):
-        """
-        Serializes the ground motion values to json
-        """
-        return json.dumps(self.to_dict())
-
     def get_ground_motion_values(self):
         """
         Runs the GMPE calculations to retrieve ground motion values
@@ -570,12 +564,6 @@ class DistanceIMTTrellis(MagnitudeIMTTrellis):
             gmv_dict["figures"].append(ydict)
             # col_loc += 1
         return gmv_dict
-
-    def to_json(self):
-        """
-        Exports ground motion values to json
-        """
-        return json.dumps(self.to_dict())
 
 
 class DistanceSigmaIMTTrellis(DistanceIMTTrellis):
@@ -788,12 +776,6 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
                             ydict["yvalues"][gsim].append(None)
                 gmv_dict["figures"].append(ydict)
         return gmv_dict
-
-    def to_json(self):
-        """
-        Exports the ground motion values to json
-        """
-        return json.dumps(self.to_dict())
 
     def _get_ylabel(self, i_m):
         """
