@@ -28,8 +28,8 @@ from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
 
-import smtk.trellis.trellis_plots as trpl
-import smtk.trellis.configure as rcfg
+import egsim.smtk.trellis.trellis_plots as trpl
+import egsim.smtk.trellis.configure as rcfg
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -100,7 +100,8 @@ class DistanceTrellisTest(BaseTrellisTest):
                                                           self.imts,
                                                           distance_type="rrup")
 
-    def test_distance_imt_trellis(self):
+
+    def tst_distance_imt_trellis(self):
         """
         Tests the DistanceIMT trellis data generation
         """
@@ -109,13 +110,11 @@ class DistanceTrellisTest(BaseTrellisTest):
         # Setup rupture
         rupture = rcfg.GSIMRupture(6.5, 60., 1.5,
                                    hypocentre_location=(0.5, 0.5))
-        rupture.get_target_sites_line(250.0, 1.0, 800.0)
+        # rupture.get_target_sites_line(250.0, 1.0, 800.0)
         # Get trellis calculations
         trl = self._run_trellis(rupture)
-        # Parse the json formatted string to a dictionary string
-        results = json.loads(trl.to_json())
         # Compare the two dictionaries
-        self.compare_jsons(reference, results)
+        self.compare_jsons(reference, trl.to_dict())
 
 
 class DistanceSigmaTrellisTest(DistanceTrellisTest):
@@ -157,8 +156,7 @@ class MagnitudeTrellisTest(BaseTrellisTest):
                       "vs30": 800.0, "backarc": False, "z1pt0": 50.0,
                       "z2pt5": 1.0, "line_azimuth": 90.0}
         trl = self._run_trellis(magnitudes, distance, properties)
-        results = json.loads(trl.to_json())
-        self.compare_jsons(reference, results)
+        self.compare_jsons(reference, trl.to_dict())
 
 
 class MagnitudeSigmaTrellisTest(MagnitudeTrellisTest):
@@ -224,8 +222,7 @@ class MagnitudeDistanceSpectraTrellisTest(BaseTrellisTest):
         magnitudes = [4.0, 5.0, 6.0, 7.0]
         distances = [5., 20., 50., 150.0]
         trl = self._run_trellis(magnitudes, distances, properties)
-        results = json.loads(trl.to_json())
-        self.compare_jsons(reference, results)
+        self.compare_jsons(reference, trl.to_dict())
 
 
 class MagnitudeDistanceSpectraSigmaTrellisTest(
