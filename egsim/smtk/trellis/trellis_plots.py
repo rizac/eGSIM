@@ -4,7 +4,6 @@
 Sets up a simple rupture-site configuration to allow for physical comparison
 of GMPEs
 """
-import json
 from collections.abc import Iterable
 from copy import deepcopy
 
@@ -78,8 +77,7 @@ class BaseTrellis(object):
     magdist = False
 
     def __init__(self, magnitudes, distances, gsims, imts, params,
-                 stddev="Total", rupture=None, distance_type="rjb"):
-        self.rupture = rupture
+                 stddev="Total", distance_type="rjb"):
         self.magnitudes = magnitudes
         self.distances = distances
         self.gsims:dict = check_gsim_list(gsims)
@@ -227,29 +225,34 @@ class BaseTrellis(object):
             else:
                 pass
 
-    @classmethod
-    def from_rupture_model(cls, rupture: GSIMRupture, gsims, imts, stddev='Total',
-                           distance_type='rjb'):
+    def get_ground_motion_values(self):
         """
-        Constructs the Base Trellis Class from a rupture model
-        :param rupture:
-            Rupture as instance of the :class:
-            smtk.trellis.configure.GSIMRupture
+        Runs the GMPE calculations to retrieve ground motion values
+        :returns:
+            Nested dictionary of values
+            {'GMPE1': {'IM1': , 'IM2': },
+             'GMPE2': {'IM1': , 'IM2': }}
         """
-        magnitudes = [rupture.magnitude]
-        sctx, rctx, dctx = rupture.get_gsim_contexts()
-        # Create distances dictionary
-        distances = {}
-        for key in dctx._slots_:  # noqa
-            distances[key] = getattr(dctx, key)
-        # Add all other parameters to the dictionary
-        params = {}
-        for key in rctx._slots_:  # noqa
-            params[key] = getattr(rctx, key)
-        for key in sctx._slots_:  # noqa
-            params[key] = getattr(sctx, key)
-        return cls(magnitudes, distances, gsims, imts, params, stddev,
-                   rupture=rupture, distance_type=distance_type)
+        gmvs = {}
+        for gmpe_name, gmpe in self.gsims.items():
+            gmvs[gmpe_name] = {}
+            for i_m in self.imts:
+                gmvs[gmpe_name][i_m] = np.zeros(
+                    [len(self.rctx), self.nsites], dtype=float)
+                for iloc, (rct, dct) in enumerate(zip(self.rctx, self.dctx)):
+                    try:
+                        means, _ = gmpe.get_mean_and_stddevs(
+                            self.sctx,
+                            rct,
+                            dct,
+                            imt.from_string(i_m),
+                            [self.stddev])
+
+                        gmvs[gmpe_name][i_m][iloc, :] = np.exp(means)
+                    except (KeyError, ValueError):
+                        gmvs[gmpe_name][i_m] = np.array([])
+                        break
+        return gmvs
 
     def _get_ylabel(self, imt):
         """Returns the label for plotting on a y axis"""
@@ -262,7 +265,7 @@ class MagnitudeIMTTrellis(BaseTrellis):
     magnitude
     """
     def __init__(self, magnitudes, distances, gsims, imts, params,
-                 stddev="Total", **kwargs):
+                 stddev="Total", distance_type='rjb'):
         """
         Instantiate with list of magnitude and the corresponding distances
         given in a dictionary
@@ -270,8 +273,8 @@ class MagnitudeIMTTrellis(BaseTrellis):
         for key in distances:
             if isinstance(distances[key], float):
                 distances[key] = np.array([distances[key]])
-        super().__init__(
-            magnitudes, distances, gsims, imts, params, stddev, **kwargs)
+        super().__init__(magnitudes, distances, gsims, imts, params, stddev,
+                         distance_type=distance_type)
 
     @classmethod
     def from_rupture_properties(cls, properties, magnitudes, distance,
@@ -349,23 +352,18 @@ class MagnitudeIMTTrellis(BaseTrellis):
         """
         gmvs = self.get_ground_motion_values()
         # nrow, ncol = best_subplot_dimensions(len(self.imts))
-        gmv_dict = dict([
-            ("xvalues", self.magnitudes.tolist()),
-            ("xlabel", "Magnitude")])
+        gmv_dict = {
+            "xvalues": self.magnitudes.tolist(),
+            "xlabel": "Magnitude"
+        }
         nvals = len(self.magnitudes)
         gmv_dict["figures"] = []
-        # row_loc = 0
-        # col_loc = 0
         for im in self.imts:
-            # if col_loc == ncol:
-            #     row_loc += 1
-            #     col_loc = 0
-            # Set the dictionary of y-values
-            ydict = {"ylabel": self._get_ylabel(im),
-                     "imt": im,
-                     # "row": row_loc,
-                     # "column": col_loc,
-                     "yvalues": {}}
+            ydict = {
+                "ylabel": self._get_ylabel(im),
+                "imt": im,
+                "yvalues": {}
+            }
             for gsim in gmvs:
                 if not len(gmvs[gsim][im]):
                     # GSIM missing, set None
@@ -381,35 +379,6 @@ class MagnitudeIMTTrellis(BaseTrellis):
             gmv_dict["figures"].append(ydict)
             # col_loc += 1
         return gmv_dict
-
-    def get_ground_motion_values(self):
-        """
-        Runs the GMPE calculations to retrieve ground motion values
-        :returns:
-            Nested dictionary of values
-            {'GMPE1': {'IM1': , 'IM2': },
-             'GMPE2': {'IM1': , 'IM2': }}
-        """
-        gmvs = {}
-        for gmpe_name, gmpe in self.gsims.items():
-            gmvs[gmpe_name] = {}
-            for i_m in self.imts:
-                gmvs[gmpe_name][i_m] = np.zeros(
-                    [len(self.rctx), self.nsites], dtype=float)
-                for iloc, (rct, dct) in enumerate(zip(self.rctx, self.dctx)):
-                    try:
-                        means, _ = gmpe.get_mean_and_stddevs(
-                            self.sctx,
-                            rct,
-                            dct,
-                            imt.from_string(i_m),
-                            [self.stddev])
-
-                        gmvs[gmpe_name][i_m][iloc, :] = np.exp(means)
-                    except (KeyError, ValueError):
-                        gmvs[gmpe_name][i_m] = np.array([])
-                        break
-        return gmvs
 
 
 class MagnitudeSigmaIMTTrellis(MagnitudeIMTTrellis):
@@ -453,24 +422,25 @@ class MagnitudeSigmaIMTTrellis(MagnitudeIMTTrellis):
         return self.stddev + " Std. Dev. ({:s})".format(str(i_m))
 
 
-class DistanceIMTTrellis(MagnitudeIMTTrellis):
+class DistanceIMTTrellis(BaseTrellis):
     """
     Trellis class to generate a plot of the GMPE attenuation with distance
     """
     XLABEL = "%s (km)"
     YLABEL = "Median %s (%s)"
 
-    def __init__(self, magnitudes, distances, gsims, imts, params,
-                 stddev="Total", **kwargs):
+    def __init__(self, magnitudes, distances, gsims, imts, params, stddev="Total",
+                 distance_type='rjb'):
         """
         Instantiation
         """
         if isinstance(magnitudes, float):
             magnitudes = [magnitudes]
-
-        super(DistanceIMTTrellis, self).__init__(magnitudes, distances, gsims,
-                                                 imts, params, stddev,
-                                                 **kwargs)
+        for key in distances:
+            if isinstance(distances[key], float):
+                distances[key] = np.array([distances[key]])
+        super().__init__(magnitudes, distances, gsims, imts, params, stddev,
+                         distance_type=distance_type)
 
     @classmethod
     def from_rupture_properties(cls, properties, magnitude, distances,
@@ -545,17 +515,10 @@ class DistanceIMTTrellis(MagnitudeIMTTrellis):
             ("xvalues", self.distances[self.distance_type].tolist()),
             ("xlabel", dist_label)])
         gmv_dict["figures"] = []
-        # row_loc = 0
-        # col_loc = 0
         for im in self.imts:
-            # if col_loc == ncol:
-            #     row_loc += 1
-            #     col_loc = 0
             # Set the dictionary of y-values
             ydict = {"ylabel": self._get_ylabel(im),
                      "imt": im,
-                     # "row": row_loc,
-                     # "column": col_loc,
                      "yvalues": {}}
             for gsim in gmvs:
                 data = [None if np.isnan(val) else val
@@ -606,7 +569,7 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
     magdist = True
 
     def __init__(self, magnitudes, distances, gsims, imts, params,
-                 stddev="Total", **kwargs):
+                 stddev="Total", distance_type='rjb'):
         """
         Builds the trellis plots for variation in response spectra with
         magnitude and distance.
@@ -620,7 +583,7 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
         """
         imts = ["SA(%s)" % i_m for i_m in imts]
         super().__init__(magnitudes, distances, gsims, imts, params,
-                         stddev, **kwargs)
+                         stddev, distance_type=distance_type)
 
     @classmethod
     def from_rupture_properties(cls, properties, magnitudes, distance,
@@ -642,7 +605,7 @@ class MagnitudeDistanceSpectraTrellis(BaseTrellis):
     @classmethod
     def from_rupture_model(cls, properties, magnitudes, distances,
                            gsims, imts, stddev='Total',
-                           distance_type='rjb', **kwargs):
+                           distance_type='rjb'):
         """
         Constructs the Base Trellis Class from a rupture model
         :param dict properties:
