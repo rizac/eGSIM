@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+from ...smtk.residuals import convert_accel_units
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 from ...smtk.flatfile import read_flatfile
@@ -244,6 +245,9 @@ class EsmFlatfileParser(FlatfileParser):
             #                      (cls.__name__, col, cls.esm_col_mapping[col]))
             if imt_name not in dfr.columns:
                 dfr[imt_name] = geom_mean(imt_components[0], imt_components[1])
+
+        # convert PGA from cm/s^2 to g:
+        dfr['PGA'] = convert_accel_units(dfr['PGA'], "cm/s^2", "g")
 
         # SA
         sa_suffixes = ('_T0_010', '_T0_025', '_T0_040', '_T0_050',

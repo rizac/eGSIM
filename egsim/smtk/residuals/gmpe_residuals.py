@@ -181,23 +181,9 @@ class Residuals(object):
         contexts = ctx_database.get_contexts(nodal_plane_index, self.imts,
                                              component)
 
-        # Fetch now outside the loop for efficiency the IMTs which need
-        # acceleration units conversion from cm/s/s to g. Conversion will be
-        # done inside the loop:
-        accel_imts = tuple([imtx for imtx in self.imts if
-                            (imtx == "PGA" or "SA(" in imtx)])
-
         # Contexts is in either case a list of dictionaries
         self.contexts = []
         for context in contexts:
-
-            # convert all IMTS with acceleration units, which are supposed to
-            # be in cm/s/s, to g:
-            for a_imt in accel_imts:
-                context['Observations'][a_imt] = \
-                    convert_accel_units(context['Observations'][a_imt],
-                                        'cm/s/s', 'g')
-
             # Get the expected ground motions
             context = self.get_expected_motions(context)
             context = self.calculate_residuals(context, normalise)

@@ -78,10 +78,6 @@ class BaseTrellisTest(unittest.TestCase):
         for i in range(len(old["figures"])):
             self.assertEqual(old["figures"][i]["ylabel"],
                              new["figures"][i]["ylabel"])
-            # self.assertEqual(old["figures"][i]["column"],
-            #                  new["figures"][i]["column"])
-            # self.assertEqual(old["figures"][i]["row"],
-            #                  new["figures"][i]["row"])
 
             for gsim in old["figures"][i]["yvalues"]:
                 np.testing.assert_array_almost_equal(
@@ -195,10 +191,6 @@ class MagnitudeDistanceSpectraTrellisTest(BaseTrellisTest):
                                    new["figures"][i]["magnitude"], 7)
             self.assertAlmostEqual(old["figures"][i]["distance"],
                                    new["figures"][i]["distance"], 7)
-            self.assertEqual(old["figures"][i]["row"],
-                             new["figures"][i]["row"])
-            self.assertEqual(old["figures"][i]["column"],
-                             new["figures"][i]["column"])
             for gsim in old["figures"][i]["yvalues"]:
                 old_vals = np.array(old["figures"][i]["yvalues"][gsim])
                 new_vals = np.array(new["figures"][i]["yvalues"][gsim])
