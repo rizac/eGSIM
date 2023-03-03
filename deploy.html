@@ -93,10 +93,12 @@
         }
     </style>
     <script type='text/javascript'>
-        var $DOMAIN = '$DOMAIN';
+        var $DOMAIN = 'egsim.gfz-potsdam.de';
         var $DJANGO_PROJECT = '$DJANGO_PROJECT';
         var $DJANGO_USER = '$DJANGO_USER';
-        var $VENV_PATH = '$VENV_PATH';
+        var $SRC_CODE_PATH = '/opt/' + $DJANGO_PROJECT;
+        var $VENV_PATH = $SRC_CODE_PATH + "/pyenv.X.X.X" ;
+        // cp /opt/egsim2.0/eGSIM/egsim/settings_debug.py /etc/opt/egsim2.0/settings.py
     </script>
 </head>
 
@@ -348,10 +350,9 @@ see below. python3-rtree required by gmpe-smtk, see below)
 apt install vim
 </code></pre>
 
-<p>Install python 3.7</p>
+<p>Install Python desired version</p>
 
-[UPDATE 10/2021]: the last line is commented and replaced with a working solution for more recent
-Python versions, e.g. 3.10
+[UPDATE 10/2021]: the last line MUST be replaced with your Python version e.g. 3.11
 
 <pre><code class="language-bash">
 sudo add-apt-repository ppa:deadsnakes/ppa
@@ -362,6 +363,8 @@ sudo apt-get install python3.10 python3.10-dev python3.10-distutils python3.10-v
 
 
 <p>Add django user (It's good practice)</p>
+
+[UPDATE 3/2023]: If you keep the same user as previous versions, skip this section
 
 <pre><code class="language-bash">
 adduser --system --home=/var/opt/$DJANGO_PROJECT --no-create-home --disabled-password --group --shell=/bin/bash $DJANGO_USER
@@ -384,12 +387,13 @@ mkdir $DJANGO_PROJECT
 cd $DJANGO_PROJECT
 </code></pre>
 
-<p>Clone packages</p>
-<p>eGSIM</p>
+<p>Clone package(s)</p>
+eGSIM:
 <pre><code class="language-bash">
 git clone https://github.com/rizac/eGSIM.git
 </code></pre>
 
+<!--
 <p>OpenQuake</p>
 <pre><code class="language-bash">
 git clone https://github.com/gem/oq-engine.git
@@ -402,7 +406,6 @@ cd ./oq-engine
 git reset --hard 570cf1f620
 </code></pre>
 </p>
-
 <p>gmpe-smtk</p>
 <pre><code class="language-bash">
 git clone https://github.com/GEMScienceTools/gmpe-smtk.git
@@ -410,26 +413,20 @@ git clone https://github.com/GEMScienceTools/gmpe-smtk.git
 <p class='note'>
 Reset this repository's master branch to the commit of interest
 (the commit hash is the currently used and might change after future upgrades)
+</p>
 <pre><code class="language-bash">
 cd ./gmpe-smtk/
 git reset --hard 4d01f68aba5c78b5d27c68bb9db7bb93e6cadd61
 </code></pre>
 </pre>
-</p>
+-->
 
 <p>Create the virtual environment</p>
-
-<p>IMPORTANT: from now on, <b>activate virtualenv</b> means switching to the
-Python in the virtual environment we are about to create.
-You activate it by typing (after that, each new terminal line should start with
-the activated virtualenv in parentheses):</p>
-<pre><code class="language-bash">
-source $VENV_PATH/bin/activate
-</code></pre>
 
 [UPDATE 10/2021] IMPORTANT: you need to have python-venv installed
 (e.g. <code>apt-get install python3.10-venv</code>, see above).
 
+<!--
 <div STYLE="text-decoration:line-through">
 <p>Installation #1 (separated pip install) due to a <a href='https://stackoverflow.com/a/26314477' target='_blank'>pip bug (experienced with Ubuntu MATE)</a></p>
 <pre><code class="language-bash">
@@ -441,12 +438,21 @@ curl https://bootstrap.pypa.io/get-pip.py | python
 deactivate
 </code></pre>
 </div>
+-->
 
-
-<p>Installation #2 (standard)</p>
+<!--<p>Installation #2 (standard)</p>-->
+<p>Installation</p>
 <pre><code class="language-bash">
 python3.7 -m venv $VENV_PATH
 </code></pre>
+
+<p>Activation</p>
+<pre><code class="language-bash">
+source $VENV_PATH/bin/activate
+</code></pre>
+
+<p><b>IMPORTANT: from now on, every Python-related operation must be performed
+	thin your activated virtual env</b></p>
 
 <p>Check correct path: activate virtualenv and type</p>
 <pre><code class="language-bash">
@@ -471,6 +477,7 @@ Eventually, we added in the apt-install command above all packages that we
 discovered missing, so hopefully a fresh new installation might work fine
 without any new error</p>
 
+<!--
 <p>Install oq-engine: activate virtualenv, then</p>
 <pre><code class="language-bash">
 cd ./oq-engine
@@ -483,18 +490,22 @@ pip install -e .
 cd ./gmpe-smtk/
 pip install -e .
 </code></pre>
+-->
 
 <p>Install eGSIM: activate virtualenv, then</p>
 <pre><code class="language-bash">
 cd ./eGSIM/
-pip install -r ./requirements.txt
+pip install -r ./requirements.dev.txt
 </code></pre>
 
+<!--
+TEST IS NOT POSSIBLE BEFORE RUNNING MIGRATIONS!
 <p>Test app: activate virtualenv, then</p>
 <pre><code class="language-bash">
 cd ./eGSIM
 pytest -xvvv --ds=egsim.settings_debug ./tests/
 </code></pre>
+-->
 
 <h2>Create project structure</h2>
 
@@ -519,7 +530,7 @@ and execute while the group and others cannot write)</p>
 chmod 750 /etc/opt/$DJANGO_PROJECT
 </code></pre>
 
-
+<!--
 <h3>Fetch flatfiles</h3>
 
 <p>Create the directory for the flatfiles</p>
@@ -557,8 +568,14 @@ give egsim the permission of the whole directory:</b></p>
 cd /var/opt/$DJANGO_PROJECT/flatfiles
 chown -R $DJANGO_USER:$DJANGO_USER .
 </code></pre>
+-->
 
 <h2>Setup the project</h2>
+
+<p>
+Take the settings file in the eGSIM repository (currently `settings_debug.py`) and
+
+</p>
 
 <p>Create the settings file:
 put in in <code>/etc/opt/$DJANGO_PROJECT/settings.py</code> the content below
@@ -580,7 +597,7 @@ variables ("$*") with the corresponding value
 from egsim.settings_debug import *
 
 DEBUG = False  # DO NOT CHANGE THIS!
-ALLOWED_HOSTS = ['$DOMAIN', 'www.$DOMAIN']
+ALLOWED_HOSTS = ['$DOMAIN']
 # $SECRET_KEY CAN BE GENERATED ON THE TERMINAL (WITHIN THE DJANGO VIRUAL ENV)  WITH THE COMMAND:
 # python -c "from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())"
 # COPY THE OTUPUT STRING HERE BELOW
