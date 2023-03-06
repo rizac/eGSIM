@@ -374,7 +374,7 @@ sudo apt-get update
 sudo apt-get install $CURRENT_PYTHON $CURRENT_PYTHON-dev $CURRENT_PYTHON-distutils $CURRENT_PYTHON-venv
 </code></pre>
 
-<p>Add django user (It's good practice)</p>
+<p>Add Django user (It's good practice)</p>
 
 [UPDATE 3/2023]: If you keep the same user as previous versions, skip this section
 
@@ -382,6 +382,22 @@ sudo apt-get install $CURRENT_PYTHON $CURRENT_PYTHON-dev $CURRENT_PYTHON-distuti
 adduser --system --home=$EGSIM_DATA_DIR --no-create-home --disabled-password --group --shell=/bin/bash $DJANGO_USER
 </code></pre>
 
+Optionally, if you need to configure $DJANGO_USER terminal sessions:
+copy the root bashrc into $DJANGO_USER, i.e. typing as root:
+`cp $HOME/.bashrc /var/opt/$DJANGO_USER/.bashrc`
+
+where /var/opt/$DJANGO_USER is the $HOME of $DJANGO_USER
+
+(more precisely, if you need to configure $DJANGO_USER terminal sessions
+such as colors, completion, history, command aliases
+create or edit a `.bashrc` file:
+<pre><code class="language-bash">
+su $DJANGO_USER
+vim $HOME/$DJANGO_USER/.bashrc  # location of the .bashrc file
+</code>
+</pre>
+(what we did was to copy the root bashrc into $DJANGO_USER, i.e. typing as root:
+`cp $HOME/.bashrc /var/opt/$DJANGO_USER/.bashrc`)
 
 <p>Final note: as always, proceed installing
 Python packages being aware that in case of problems, the solution after googling is to

@@ -20,9 +20,6 @@ from ... import models
 
 SRC_DIR = EgsimBaseCommand.data_path('flatfiles')
 
-DEST_DIR = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
-
-
 
 class Command(EgsimBaseCommand):
     """Command to convert predefined flatfiles (usually in CSV format) into HDF
@@ -45,9 +42,9 @@ class Command(EgsimBaseCommand):
                        'with their metadata:')
         self.empty_db_table(models.Flatfile)
 
-        destdir = DEST_DIR
+        destdir = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
         if not isdir(destdir):
-            if isdir(dirname(destdir)):
+            if isdir(destdir):
                 self.printinfo(f'Creating directory {destdir}')
                 os.makedirs(destdir)
             if not isdir(destdir):
@@ -73,7 +70,8 @@ class Command(EgsimBaseCommand):
             name = data_source.get('name', basename(filepath).split(".")[0])
             data_source.setdefault('name', name)
             destfile = abspath(join(destdir, name + '.hdf'))
-            self.printinfo(f' - Saving flatfile. Db name: "{name}", dest. file: "{destfile}"')
+            self.printinfo(f' - Saving flatfile. Database name: "{name}", '
+                           f'file: "{destfile}"')
             dfr.to_hdf(destfile, key=name, format='table', mode='w')
             numfiles += 1
             # print some stats:
