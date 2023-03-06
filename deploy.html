@@ -96,9 +96,7 @@
         var $DOMAIN = 'egsim.gfz-potsdam.de';
         var $DJANGO_PROJECT = '$DJANGO_PROJECT';
         var $DJANGO_USER = '$DJANGO_USER';
-        var $SRC_CODE_PATH = '/opt/' + $DJANGO_PROJECT;
-        var $VENV_PATH = $SRC_CODE_PATH + "/pyenv.X.X.X" ;
-        // cp /opt/egsim2.0/eGSIM/egsim/settings_debug.py /etc/opt/egsim2.0/settings.py
+        var $PYTHON_VERSION = '3.11.2';
     </script>
 </head>
 
@@ -154,14 +152,18 @@ automatically):
     </tr>
     <tr>
         <td>
-            <input type='text' id='VENV_PATH' />
+            <input type='text' id='PYTHON_VERSION' />
         </td>
         <td>
-            the Python virtual environment path <b>usually but not necessarily inside
+            the Python version of the virtual environment (major.medium or major.medium.minor).
+			The relative Python virtual environment should be created by convention
+			under $VENV_PATH
+			(see below)
+			<!-- path <b>usually but not necessarily inside
             the directory where the Django project has been cloned: /opt/$DJANGO_PROJECT/eGSIM</b>:
             If creating the virtual environment with python3 venv,
             it is the argument of `python3 -m venv`:
-            <pre><code class="language-bash">python3 -m venv $VENV_PATH</code></pre>
+            <pre><code class="language-bash">python3 -m venv $VENV_PATH</code></pre>-->
             <b>Safety check: if already created, the directory must contain,
             among others</b>: bin/, lib/, pyvenv.cfg
         </td>
@@ -282,7 +284,7 @@ service $DJANGO_PROJECT stop
 service $DJANGO_PROJECT start
 </code></pre>
 
-
+<!--
 <h3>Create a new Ground motion database (GMDB)</h3>
 
 <p>To create a GMDB in HDF format from an existing flatfile in CSV format
@@ -324,7 +326,7 @@ Note: in development mode, go to the egsim root directory and type:
 <pre style='font-size:smaller'><code class="language-bash">
 python manage.py gmdb_esm --settings "egsim.settings_debug" /path/to/$FLATFILE.csv
 </code></pre>
-
+-->
 
 <h1>Server installation</h1>
 
@@ -352,15 +354,31 @@ apt install vim
 
 <p>Install Python desired version</p>
 
+<!--
 [UPDATE 10/2021]: the last line MUST be replaced with your Python version e.g. 3.11
 
 <pre><code class="language-bash">
 sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt-get update
 # sudo apt-get install python3.7 python3.7-dev
-sudo apt-get install python3.10 python3.10-dev python3.10-distutils python3.10-venv
+# sudo apt-get install python3.10 python3.10-dev python3.10-distutils python3.10-venv
+	sudo apt-get install python3.10 python3.10-dev python3.10-distutils python3.10-venv
+</code></pre>-->
+
+Add repository (one time operation):
+<pre><code class="language-bash">
+sudo add-apt-repository ppa:deadsnakes/ppa
 </code></pre>
 
+Install your Python desired version
+<b>Please check that
+the value of the &lt;input&gt; component on top of this document is a correct Python version
+(e.g. "3.11.2" or "3.10") before running the commands below</b>
+
+<pre><code class="language-bash">
+sudo apt-get update
+sudo apt-get install $CURRENT_PYTHON $CURRENT_PYTHON-dev $CURRENT_PYTHON-distutils $CURRENT_PYTHON-venv
+</code></pre>
 
 <p>Add django user (It's good practice)</p>
 
@@ -424,7 +442,7 @@ git reset --hard 4d01f68aba5c78b5d27c68bb9db7bb93e6cadd61
 <p>Create the virtual environment</p>
 
 [UPDATE 10/2021] IMPORTANT: you need to have python-venv installed
-(e.g. <code>apt-get install python3.10-venv</code>, see above).
+(e.g. <code>apt-get install $CURRENT_PYTHON-venv</code>, see above).
 
 <!--
 <div STYLE="text-decoration:line-through">
@@ -443,7 +461,7 @@ deactivate
 <!--<p>Installation #2 (standard)</p>-->
 <p>Installation</p>
 <pre><code class="language-bash">
-python3.7 -m venv $VENV_PATH
+$CURRENT_PYTHON -m venv $VENV_PATH
 </code></pre>
 
 <p>Activation</p>
@@ -572,17 +590,18 @@ chown -R $DJANGO_USER:$DJANGO_USER .
 
 <h2>Setup the project</h2>
 
-<p>
-Take the settings file in the eGSIM repository (currently `settings_debug.py`) and
-
-</p>
-
 <p>Create the settings file:
-put in in <code>/etc/opt/$DJANGO_PROJECT/settings.py</code> the content below
-and edit all variables starting with "$".
+
+Take from a previous deploy a settings file and `cp` it in:
+<p><code>/etc/opt/$DJANGO_PROJECT/settings.py</code></p> and edit it with `vim`.
+If you do not have a previous deploy, see the template below, which is automatically
+filled according to the variables set in this page:
+
+<!--
 In principle, put in <code>allowed_hosts</code> the variable $DOMAIN and
 whatever you will put in <code>server_name</code> in the NGINX config file
 (see related section below):</p>
+-->
 
 <pre><code class="language-python">
 """
@@ -590,45 +609,34 @@ Django settings for eGSIM project.
 
 Copied from https://djangodeployment.com/wp-content/uploads/2017/03/Django-deployment-cheatsheet.pdf
 
-Copy this file in a specified folder of the server and replace all
-variables ("$*") with the corresponding value
+This file should be copied from previous deployments and modified accordingly
+Listed below are the Django variables that are most likely to be edited. Note that this module
+inherits from the debug settings under the egsim git repository
 """
 
 from egsim.settings_debug import *
 
 DEBUG = False  # DO NOT CHANGE THIS!
 ALLOWED_HOSTS = ['$DOMAIN']
-# $SECRET_KEY CAN BE GENERATED ON THE TERMINAL (WITHIN THE DJANGO VIRUAL ENV)  WITH THE COMMAND:
+# SECRET_KEY SHOULD BE UNIQUE FOR EACH SETTINGS FILE AND CAN BE GENERATED ON THE TERMINAL (WITHIN THE DJANGO VIRUAL ENV)  WITH THE COMMAND:
 # python -c "from django.core.management.utils import get_random_secret_key;print(get_random_secret_key())"
 # COPY THE OTUPUT STRING HERE BELOW
 SECRET_KEY = ''
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': '/var/opt/$DJANGO_PROJECT/$DJANGO_PROJECT.db',
+        'NAME': '/var/opt/$DJANGO_PROJECT/egsim.db',
     }
 }
 # static files root (path on the server)
 STATIC_ROOT = '/var/cache/$DJANGO_PROJECT/static/'
-# static files url:
-STATIC_URL = '/static/'
+# static files url (already set in settings debug, here for ref.):
+# STATIC_URL = '/static/'
 
 # media root (path on the server):
 MEDIA_ROOT = '/var/opt/$DJANGO_PROJECT/media/'
-# static files url:
-MEDIA_URL = '/media/'
-
-# EMAIL configuration (disabled by default, uncomment if needed):
-# SERVER_EMAIL = 'noreply@$DOMAIN'
-# DEFAULT_FROM_EMAIL = 'noreply@$DOMAIN'
-# ADMINS = [
-#     ('$ADMIN_NAME', '$ADMIN_EMAIL_ADDRESS'),
-# ]
-# EMAIL_HOST = '$EMAIL_HOST'
-# EMAIL_HOST_USER = '$EMAIL_USER'
-# EMAIL_HOST_PASSWORD = '$EMAIL_PASSWORD'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
+# static files url (already set in settings debug, here for ref.):
+# MEDIA_URL = '/media/'
 </code></pre>
 
 <!--<pre><code class="language-bash">
@@ -664,6 +672,7 @@ virtualenv, thus re-activate it as <code>$DJANGO_USER</code>)</p>
 export PYTHONPATH=/etc/opt/$DJANGO_PROJECT/;export DJANGO_SETTINGS_MODULE=settings;python manage.py migrate
 </code></pre>
 
+<!--
 <p>Create gmdb (Showing example for esm). Activate the virtualenv and run the
 command below, which will write in $media/gmdb, where $media is the MEDIA_ROOT
 specified in our <code>settings.py</code>.
@@ -677,6 +686,7 @@ export PYTHONPATH=/etc/opt/$DJANGO_PROJECT/;export DJANGO_SETTINGS_MODULE=settin
 <p class='note'>Repeat for all other flatfiles (change last argument).
 Note that currently there are two commands, <code>gmdb_esm</code> (see above)
 and <code>gmdb</code> which parses a "standard" flatfile as implemented in gmpe-smtk.</p>
+-->
 
 <p>Initialize our database (OpenQuake GSIMs IMTs and TRTs).
 Activate virtualenv and then</p>
@@ -856,20 +866,26 @@ window.onload=function(){
     docText = docText.replace(/\$DJANGO_USER/g, '<span data-key="$DJANGO_USER">' + $DJANGO_USER + '</span>');
     docText = docText.replace(/\$DOMAIN/g, '<span data-key="$DOMAIN">' + $DOMAIN + '</span>');
     docText = docText.replace(/\$DJANGO_PROJECT/g, '<span data-key="$DJANGO_PROJECT">' + $DJANGO_PROJECT + '</span>');
-    docText = docText.replace(/\$VENV_PATH/g, '<span data-key="$VENV_PATH">' + $VENV_PATH + '</span>');
+    docText = docText.replace(/\$VENV_PATH/g, '<span data-key="$VENV_PATH">' +   + '</span>');
+    docText = docText.replace(/\$CURRENT_PYTHON/g, '<span data-key="$CURRENT_PYTHON">' +   + '</span>');
     body.innerHTML = docText;
 
     document.getElementById('DJANGO_USER').oninput = function(){
-        setVal(this.id, this.value)
+        setVal(this.id, this.value);
     }
     document.getElementById('DOMAIN').oninput = function(){
-        setVal(this.id, this.value)
+        setVal(this.id, this.value);
     }
     document.getElementById('DJANGO_PROJECT').oninput = function(){
-        setVal(this.id, this.value)
+        setVal(this.id, this.value);
+        setVal('VENV_PATH', '/opt/' + this.value + '/pyenv' + window['$PYTHON_VERSION']);
     }
-    document.getElementById('VENV_PATH').oninput = function(){
-        setVal(this.id, this.value)
+    document.getElementById('PYTHON_VERSION').oninput = function(){
+        setVal(this.id, this.value);
+        setVal('VENV_PATH', '/opt/' + window['$DJANGO_PROJECT'] + '/pyenv' + this.value);
+        var vars = this.value.split('.');
+        var currentPython = 'python' + (vars.length >= 2 ? `${vars[0]}.${vars[1]}` : this.value);
+        setVal('CURRENT_PYTHON', currentPython);
     }
 
     function setVal(id, value){
@@ -879,10 +895,11 @@ window.onload=function(){
         }
     }
 
-    for (var id of ['DJANGO_USER', 'DOMAIN', 'DJANGO_PROJECT', 'VENV_PATH']){
+	// set defaults on input components:
+    for (var id of ['DJANGO_USER', 'DOMAIN', 'DJANGO_PROJECT', 'PYTHON_VERSION']){
         var elm = document.getElementById(id);
-        elm.oninput = function(){ setVal(this.id, this.value); }
         elm.value = window['$'+id];
+        elm.dispatchEvent(new Event('input', {bubbles:true}));  // notify listeners setup above and update doc
     }
     
     // make TOC (table of contents):
