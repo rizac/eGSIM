@@ -51,18 +51,7 @@ class Command(EgsimBaseCommand):
         imts = populate_imts(ffcols, **options)
         (general_errors, unsupported_imt_errors, unknown_params) = \
             populate_gsims(imts, ffcols, **options)
-        _imtc = models.Imt.objects.count()
-        self.printsuccess(f"{_imtc} intensity measure{'' if _imtc == 1 else 's'} "
-                          f"saved to database")
-        _ffcols = models.FlatfileColumn.objects.count()
-        self.printsuccess(f"{_ffcols} flatfile columns and their metadata "
-                          f"saved to database")
-        _gsimc = models.Gsim.objects.count()
-        not_saved = models.GsimWithError.objects.count()
 
-        # discarded = not_saved - skipped
-        self.printsuccess(f"{_gsimc} models saved to database, {not_saved} discarded "
-                          f"(not saved)")
 
         if len(general_errors):
             self.printwarn(f'WARNING: {len(general_errors)} model(s) discarded because '
@@ -72,7 +61,7 @@ class Command(EgsimBaseCommand):
         if len(unsupported_imt_errors):
             _models = set(m for mm in unsupported_imt_errors.values() for m in mm)
             self.printwarn(f'WARNING: {len(_models)} model(s) discarded because defined '
-                           f'for IMTs not supported by the program:\n')
+                           f'for IMTs not supported by the program:')
             for imt, gsims in unsupported_imt_errors.items():
                 self.printwarn(f"  - {imt} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
@@ -92,6 +81,18 @@ class Command(EgsimBaseCommand):
                            f'See instructions in:\n'
                            f'  {FLATFILE_COLUMNS_YAML_PATH}')
 
+        saved_imts = models.Imt.objects.count()
+        if saved_imts:
+            self.printsuccess(f"{saved_imts} intensity measure(s) saved to database")
+        saved_ff_columns = models.FlatfileColumn.objects.count()
+        if saved_ff_columns:
+            self.printsuccess(f"{saved_ff_columns} flatfile columns info and metadata "
+                              f"saved to database")
+        saved_models = models.Gsim.objects.count()
+        if saved_models:
+            not_saved = models.GsimWithError.objects.count()
+            self.printsuccess(f"{saved_models} model(s) saved to database, "
+                              f"{not_saved} discarded (not saved)")
 
 def gsims2str(gsim_names: list[str, ...]):
     if len(gsim_names) > 2 + 1:

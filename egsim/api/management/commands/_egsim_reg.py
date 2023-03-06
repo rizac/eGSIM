@@ -71,6 +71,11 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                 for err in errs:
                     self.printwarn(err)
 
+        saved_regs = models.Regionalization.objects.values_list('name', flat=True).\
+            count()
+        if saved_regs:
+            self.printsuccess(f'{saved_regs} regionalization(s) saved to database')
+
     @classmethod
     def get_data_files(cls) -> dict[str, list[str]]:
         datadir = SRC_DIR
