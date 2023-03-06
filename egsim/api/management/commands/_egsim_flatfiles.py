@@ -44,7 +44,7 @@ class Command(EgsimBaseCommand):
 
         destdir = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
         if not isdir(destdir):
-            if isdir(destdir):
+            if not isdir(destdir):
                 self.printinfo(f'Creating directory {destdir}')
                 os.makedirs(destdir)
             if not isdir(destdir):
