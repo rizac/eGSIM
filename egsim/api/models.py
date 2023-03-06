@@ -263,8 +263,9 @@ class GsimRegion(Model):
     gsim = ForeignKey(Gsim, on_delete=CASCADE, null=False, related_name='regions')
     regionalization = ForeignKey("Regionalization", to_field='name',
                                  on_delete=SET_NULL, null=True,
-                                 help_text="The name of the regionalization "
-                                           "this region derives from")
+                                 help_text="The name of the seismic hazard source "
+                                           "regionalization defining this "
+                                           "region")
 
     GEOM_TYPES = ('Polygon', 'MultiPolygon')
 
