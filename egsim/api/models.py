@@ -5,7 +5,6 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
-from os.path import abspath, join
 import json
 from datetime import datetime, date
 from typing import Any
@@ -15,7 +14,6 @@ from django.db.models import (Model as DjangoModel, Q, TextField, BooleanField,
                               CASCADE, SET_NULL, Index, SmallIntegerField,
                               DateTimeField, URLField, Manager)
 from django.db.models.options import Options
-from django.conf import settings
 from django.db.utils import IntegrityError
 
 
@@ -77,9 +75,6 @@ class Flatfile(_DataSource):
     """Class handling flatfiles stored in the file system
     (predefined flatfiles)
     """
-    # base directory for any uploaded or created flat file:
-    BASEDIR_PATH = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
-
     filepath = TextField(unique=True, null=False)
     hidden = BooleanField(null=False, default=False,
                           help_text="if true, the flatfile is hidden in browsers "
