@@ -11,14 +11,17 @@ import os
 from os.path import join, isdir, abspath, dirname, isfile, basename, splitext
 
 from django.core.management.base import CommandError
+from django.conf import settings
 
 from . import EgsimBaseCommand
 from ..flatfile_parsers import EsmFlatfileParser
 from ... import models
 
+
 SRC_DIR = EgsimBaseCommand.data_path('flatfiles')
 
-DEST_DIR = models.Flatfile.BASEDIR_PATH
+DEST_DIR = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
+
 
 
 class Command(EgsimBaseCommand):
