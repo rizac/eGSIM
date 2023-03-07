@@ -123,11 +123,6 @@ EGSIM.component('flatfile-compilation', {
 	},
 	methods: {
 		gsimSelected(){
-			console.log('gsimSelected')
-//			this.postFormData().then(response => {
-//				this.responseData = response.data;
-//			});
-			/*
 			// query the server and store in response data the metadata columns
 			// required for the current GSIM selection
 			this.$nextTick(() => {
@@ -135,7 +130,6 @@ EGSIM.component('flatfile-compilation', {
 					this.responseData = response.data;
 				});
 			});
-			*/
 		},
 		updateFlatfile(){
 			var flatfileContent = [
