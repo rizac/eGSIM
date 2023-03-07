@@ -52,6 +52,7 @@
 {{ block.super }}
 
 <script>
+axios.defaults.withCredentials = true;
 axios.interceptors.request.use(config => {
 	if (!('headers' in config)){
 		config.headers = {};
