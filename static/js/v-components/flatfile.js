@@ -123,9 +123,10 @@ EGSIM.component('flatfile-compilation', {
 	},
 	methods: {
 		gsimSelected(){
-			this.postFormData().then(response => {
-				this.responseData = response.data;
-			});
+			console.log('gsimSelected')
+//			this.postFormData().then(response => {
+//				this.responseData = response.data;
+//			});
 			/*
 			// query the server and store in response data the metadata columns
 			// required for the current GSIM selection
