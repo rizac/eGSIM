@@ -16,7 +16,7 @@ EGSIM.component('gsim-select', {
 	},
 	watch: {
 		'field.value': {
-			immediate: true,
+			// immediate: true,
 			deep: true,
 			handler(newVal, oldVal){
 				this.$emit('gsim-selected', newVal)
@@ -337,7 +337,7 @@ EGSIM.component('imt-select', {
 			this.updateSelectedImts();
 		},
 		'field.value': {
-			immediate: true,
+			// immediate: true,
 			deep: true,
 			handler(newVal, oldVal){
 				this.$emit('imt-selected', newVal)
