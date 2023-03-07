@@ -120,7 +120,7 @@ EGSIM.component('flatfile-compilation', {
 	</form>`,
 	mounted(){
 		this.gsimSelected();
-	}
+	},
 	methods: {
 		gsimSelected(){
 			this.postFormData().then(response => {
