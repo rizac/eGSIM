@@ -181,7 +181,7 @@ def populate_gsims(imts: dict[str, models.Imt],
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore')  # ignore warning temporarily
                     try:
-                        gsim_inst = gsim()
+                        gsim_inst = get_gsim_instance(gsim_name)
                         gsim_warnings.append(str(warn))
                     except Exception as _exc:  # noqa
                         store_discarded_gsim(gsim_name, warn, **options)
