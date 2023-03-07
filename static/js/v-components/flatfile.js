@@ -58,7 +58,8 @@ EGSIM.component('flatfile-compilation', {
 			responseData: this.response,
 			csvSep: ',',
 			flatfileContent: '',
-			flatfileHeader: []
+			flatfileHeader: [],
+			needsRefresh: true
 		}
 	},
 	watch: {
@@ -89,18 +90,19 @@ EGSIM.component('flatfile-compilation', {
 					<b>of interest:</b>
 				</div>
 				<gsim-select :field='form.gsim'
-							 @gsim-selected='gsimSelected'
+							 @gsim-selected='needsRefresh=true'
 							 :imt-field="form.imt"
 							 class='mb-3' style='flex: 1 1 auto' />
-				<imt-select :field='form.imt' @imt-selected='gsimSelected' />
+				<imt-select :field='form.imt' @imt-selected='needsRefresh=true' />
 			</div>
 
 			<div class='mx-3'></div>
 
 			<div class='d-flex flex-column' style='flex: 1 1 auto'>
 				<div class='mb-3 position-relative'>
-					<b>Flatfile template</b>&nbsp; ({{ flatfileHeader.length }} columns): fill it with your
-					records or use it to make your flatfile eGSIM-compatible
+					<b>Flatfile template</b>&nbsp; ({{ flatfileHeader.length }} columns)
+					<button v-show='needsRefresh' type='button' class='btn btn-primary'
+						    @click='queryRequiredColumns'>Refresh</button>
 					<div class='text-nowrap position-absolute end-0 top-0'>
 						CSV separator
 						<input type="text" v-model="csvSep" class='ms-1' style='max-width:2rem' />
@@ -118,18 +120,16 @@ EGSIM.component('flatfile-compilation', {
 			</div>
 		</div>
 	</form>`,
-	mounted(){
-		this.gsimSelected();
-	},
 	methods: {
-		gsimSelected(){
+		queryRequiredColumns(){
 			// query the server and store in response data the metadata columns
 			// required for the current GSIM selection
-			/* this.$nextTick(() => {
+			this.$nextTick(() => {
 				this.postFormData().then(response => {
 					this.responseData = response.data;
+					this.needsRefresh = false;
 				});
-			}); */
+			});
 		},
 		updateFlatfile(){
 			var flatfileContent = [
