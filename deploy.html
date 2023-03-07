@@ -255,8 +255,10 @@ to be updated or newly installed, NO static files
 <pre><code class="language-bash">
 git pull
 service nginx reload
-service $DJANGO_PROJECT stop
-service $DJANGO_PROJECT start
+<!-- service $DJANGO_PROJECT stop
+service $DJANGO_PROJECT start -->
+service $DJANGO_PROJECT restart
+# Do the same as above for older versions, if still running
 </code></pre>
 
 
@@ -679,7 +681,7 @@ su $DJANGO_USER
 source $VENV_PATH/bin/activate
 </code></pre>
 
-With the Python viertualenv activated, execute:
+With the Python virtualenv activated, execute:
 
 <p>Django migration</p>
 <pre><code class="language-bash">
@@ -710,80 +712,10 @@ export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings;pyth
 
 <h2>Server configuration</h2>
 
-<h3>NGINX</h3>
-
 <p>NGINX is the main application server, however, it delegates Gunicorn for
 serving everything except static and media files.</p>
 
-<p>Create <code>/etc/nginx/sites-available/$DJANGO_PROJECT</code>,
-with the content below. (If you see $ + UPPERCASE strings, remember to
-replace them with the values of your choice. On the other hand <b>$ + lowercase
-variables are NGINX variables and must not be modified)</b>.
-Remember that in principle what is in <code>server_name</code> below should match
-what is in <code>allowed_hosts</code> in the Django <code>settings.py</code>
-file (see above):
-</p>
-
-<pre><code class="language-nginx">
-server {
-    listen 80;
-    listen [::]:80;
-    server_name $DOMAIN www.$DOMAIN;
-    root /var/www/$DJANGO_PROJECT;
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $http_host;
-        proxy_redirect off;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        client_max_body_size 20m;
-    }
-    location /static/ {
-        alias /var/cache/$DJANGO_PROJECT/static/;
-    }
-    location /media/ {
-        alias $EGSIM_DATA_DIR/media/;
-    }
-}
-</code></pre>
-
-<p class='note'>The line <code>proxy_pass http://localhost:8000;</code>
-is the line that forwards to Gunicorn all locations starting with '/' and not
-matching '/static/' or '/media/'</p>
-
-<p>Create symbolik link in sites-enabled:</p>
-<pre><code class="language-bash">
-cd /etc/nginx/sites-enabled
-ln -s ../sites-available/$DJANGO_PROJECT .
-</code></pre>
-
-
-<p class='note' style='text-decoration: line-through;'>
-Create a start page (this step is unnecessary as we will never
-land to the start page. It was in the tutorial we followed which was written
-step-by-step for educational purposes)</p>
-
-<pre style='text-decoration: line-through;'><code class="language-bash">
-mkdir /var/www/$DJANGO_PROJECT
-echo "This is the web site for $DOMAIN." > /var/www/$DJANGO_PROJECT/index.html
-</code></pre>
-
-
-<p>Add $DOMAIN to known host (<b>This should be investigated: it is not mentioned
-in any documentation, but we needed to do it to make the site work</b>):
-open <code>/etc/hosts</code> and add the line</p>
-
-<pre><code class="language-bash">
-127.0.0.1	$DOMAIN
-</code></pre>
-
-<p>IMPORTANT: <b>After any operation, before checking the results online,
-reload the server:</b></p>
-
-<pre><code class="language-bash">
-service nginx reload
-</code></pre>
-
+In the following, we will configure Gunicorn and Nginx
 
 <h3>Gunicorn</h3>
 
@@ -812,8 +744,10 @@ gunicorn --workers=4 --log-file=$EGSIM_LOG_DIR/gunicorn.log --bind=127.0.0.1:800
 su $DJANGO_USER
 </code></pre>
 
-<p>Save the content below as $DJANGO_PROJECT.service in <code>/etc/systemd/system</code>
-by replacing all upper case variables starting with $ with your variables:
+<p>Save the content below in <code>/etc/systemd/system/$DJANGO_PROJECT.service</code>.
+(or copy a previous service file and use the template below as reference).
+<b>NOTE: $DJANGO_PROJECT cannot contain dots. In the file below, note the --bind
+argument: it is the local URL that we will input in the NGNIX config proxy_pass</b>
 </p>
 
 <pre><code class="language-bash">
@@ -838,10 +772,12 @@ WantedBy=multi-user.target
 
 <p>On changes:</p>
 
+<!--
 <p>1) To test the service</p>
 <pre><code class="language-bash">
 systemd-analyze verify $DJANGO_PROJECT
 </code></pre>
+-->
 
 <p>2) To restart the service (second line is mandatory only if the script above has been changed):</p>
 <pre><code class="language-bash">
@@ -853,6 +789,81 @@ service $DJANGO_PROJECT start
 <p>To start the service automatically on boot:</p>
 <pre><code class="language-bash">
 systemctl enable $DJANGO_PROJECT
+</code></pre>
+
+
+<h3>NGINX</h3>
+
+<p>Create <code>/etc/nginx/sites-available/$DJANGO_PROJECT</code> (or edit the existing one).
+See template below with the relevant variables to be overwritten.
+<b> NOTE: proxy_pass below must point to the Gunicorn URL just configured (see above)</b>.
+<p class='note'>The line <code>proxy_pass http://localhost:8000;</code>
+is the line that forwards to Gunicorn all locations starting with '/' and not
+matching '/static/' or '/media/'</p>
+<!--
+with the content below. (If you see $ + UPPERCASE strings, remember to
+replace them with the values of your choice. On the other hand <b>$ + lowercase
+variables are NGINX variables and must not be modified)</b>.
+Remember that in principle what is in <code>server_name</code> below should match
+what is in <code>allowed_hosts</code> in the Django <code>settings.py</code>
+file (see above):-->
+</p>
+
+<pre><code class="language-nginx">
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN www.$DOMAIN;
+    location / {
+        proxy_pass http://localhost:8000;
+        <!-- proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 20m; -->
+    }
+    location /static/ {
+        alias /var/cache/$DJANGO_PROJECT/static/;
+    }
+    location /media/ {
+        alias $EGSIM_DATA_DIR/media/;
+    }
+}
+</code></pre>
+
+
+
+<p>Create symbolik link in sites-enabled:</p>
+<pre><code class="language-bash">
+cd /etc/nginx/sites-enabled
+ln -s ../sites-available/$DJANGO_PROJECT .
+</code></pre>
+
+<!--
+<p class='note' style='text-decoration: line-through;'>
+Create a start page (this step is unnecessary as we will never
+land to the start page. It was in the tutorial we followed which was written
+step-by-step for educational purposes)</p>
+
+<pre style='text-decoration: line-through;'><code class="language-bash">
+mkdir /var/www/$DJANGO_PROJECT
+echo "This is the web site for $DOMAIN." > /var/www/$DJANGO_PROJECT/index.html
+</code></pre>
+-->
+
+<p>Add $DOMAIN to known host (<b>This should be investigated: it is not mentioned
+in any documentation, but we needed to do it to make the site work</b>):
+open <code>/etc/hosts</code> and add the line</p>
+
+<pre><code class="language-bash">
+127.0.0.1	$DOMAIN
+</code></pre>
+
+<p>IMPORTANT: <b>After any operation, before checking the results online,
+reload the server:</b></p>
+
+<pre><code class="language-bash">
+service nginx reload
 </code></pre>
 
 </body>
@@ -883,7 +894,7 @@ window.onload=function(){
     docText = docText.replace(/\$DJANGO_PROJECT/g, '<span data-key="$DJANGO_PROJECT"></span>');
     docText = docText.replace(/\$VENV_PATH/g, '<span data-key="$VENV_PATH"></span>');
     docText = docText.replace(/\$CURRENT_PYTHON/g, '<span data-key="$CURRENT_PYTHON"></span>');
-    docText = docText.replace(/\$EGSIM_DATA_DIR/g, '<span data-key="$EGSIM_DATA_DIR "></span>');
+    docText = docText.replace(/\$EGSIM_DATA_DIR/g, '<span data-key="$EGSIM_DATA_DIR"></span>');
     docText = docText.replace(/\$EGSIM_LOG_DIR/g, '<span data-key="$EGSIM_LOG_DIR"></span>');
     docText = docText.replace(/\$EGSIM_CONFIG_DIR/g, '<span data-key="$EGSIM_CONFIG_DIR"></span>');
 	docText = docText.replace(/\$EGSIM_CWD/g, '<span data-key="$EGSIM_CWD"></span>');
