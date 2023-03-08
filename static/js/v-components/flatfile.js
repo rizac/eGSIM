@@ -357,7 +357,7 @@ EGSIM.component('flatfile-select', {
 				var label = `${file.name} (Uploaded: ${new Date().toLocaleString()})`;
 				var append = true;
 				for (let choice of choices){
-					if (choice.value instanceof File && flatfile.name == file.name){
+					if (choice.value instanceof File && choice.value.name == file.name){
 						this.upload(file).then(response => {
 							choice.value = file;
 							choice.innerHTML = label;  // update label on <select>
