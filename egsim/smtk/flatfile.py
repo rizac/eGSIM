@@ -628,12 +628,12 @@ class ContextDB:
         self._update_distances_context(ctx, records)
         self._update_sites_context(ctx, records)
         # add remaining ctx attributes:  FIXME SHOULD WE?
-        # for ff_colname, ctx_attname in self.flatfile_columns.items():
-        #     if hasattr(ctx, ctx_attname) or ff_colname not in records.columns:
-        #         continue
-        #     val = records[ff_colname].values
-        #     val = val[0] if ff_colname in self._rup_columns else val.copy()
-        #     setattr(ctx, ctx_attname, val)
+        for ff_colname, ctx_attname in self.flatfile_columns.items():
+            if hasattr(ctx, ctx_attname) or ff_colname not in records.columns:
+                continue
+            val = records[ff_colname].values
+            val = val[0] if ff_colname in self._rup_columns else val.copy()
+            setattr(ctx, ctx_attname, val)
 
     def _update_rupture_context(self, ctx, records, nodal_plane_index=1):
         """see `self.update_context`"""
