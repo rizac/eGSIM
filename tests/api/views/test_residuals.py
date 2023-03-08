@@ -62,6 +62,18 @@ class Test:
             assert resp2.status_code == 400
             assert 'flatfile' in resp2.json()['error']['message']
 
+    def test_kotha_turkey(self, client, testdata):
+        # Uploaded flatfile, but not well formed:
+        csv = SimpleUploadedFile("file.csv",
+                                 testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'),
+                                 content_type="text/csv")
+        inputdic2 = {'model': 'KothaEtAl2020ESHM20', 'imt' : 'PGA',
+                     'flatfile':csv, 'plot':'res'}
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 400
+        assert 'flatfile' in resp2.json()['error']['message']
+
     def test_residuals_service_err(self,
                                    # pytest fixtures:
                                    testdata, areequal, client):
