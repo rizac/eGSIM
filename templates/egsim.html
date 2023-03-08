@@ -59,7 +59,8 @@ axios.interceptors.request.use(config => {
 	if (!('headers' in config)){
 		config.headers = {};
 	}
-	config.headers["X-CSRFToken"] = "{{ csrf_token }}";
+	// config.headers["X-CSRFToken"] = "{{ csrf_token }}";
+	config.headers["X-CSRFTOKEN"] = "{{ csrf_token }}";
 	return config;
 });
 </script>
