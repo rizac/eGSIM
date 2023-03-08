@@ -30,10 +30,10 @@ const EGSIM = Vue.createApp({
 		</a>
 		<div style="transform: scaleY(0);z-index:100; transition: transform .25s ease-out; transform-origin: top;"
 			 ref='options-menu' class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
-			<a class="p-2" :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
+			<!-- <a class="p-2" :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
 			   :href='newpageURLs.api' target="_blank">
 				<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
-			</a>
+			</a> -->
 			<a class="p-2" :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
 			   :href='newpageURLs.ref_and_license' target="_blank">
 				<i class="fa fa-address-card-o"></i> <span>References & License</span>
