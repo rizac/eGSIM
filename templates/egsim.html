@@ -53,6 +53,9 @@
 
 <script>
 axios.defaults.withCredentials = true;
+axios.defaults.xsrfHeaderName = "X-CSRFTOKEN";
+axios.defaults.xsrfCookieName = "csrftoken";
+/*
 axios.interceptors.request.use(config => {
 	if (!('headers' in config)){
 		config.headers = {};
@@ -60,6 +63,7 @@ axios.interceptors.request.use(config => {
 	config.headers["X-CSRFToken"] = "{{ csrf_token }}";
 	return config;
 });
+*/
 </script>
 
 <!-- VUE.JS: -->
