@@ -292,7 +292,7 @@ EGSIM.component('flatfile-select', {
 		doc: {
 			'type': String,
 			'default': `Upload a user-defined flatfile (CSV or zipped CSV).
-					  Please consult also the tab "Flatfiles" to inspect your flatfile before usage.
+					  It is recommended to inspect the flatfile before usage (see relative Tab on this website).
 					  An uploaded flatfile will be available in all tabs of this web page`
 		}
 	},
