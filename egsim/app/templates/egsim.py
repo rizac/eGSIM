@@ -50,7 +50,7 @@ class TAB(Enum):
     # icons (2nd element) are currently given as font-awesome bootsrap icons
     home = '', 'fa-home'
     trellis = 'Model to Model Comparison', 'fa-area-chart', TrellisView
-    flatfile = 'Data upload and inspection', 'fa-database'
+    flatfile = 'Data management', 'fa-database'
     residuals = 'Model to Data Comparison', 'fa-bar-chart', ResidualsView
     testing = 'Model to Data Testing', 'fa-list', TestingView
 
