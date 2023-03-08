@@ -89,11 +89,10 @@ _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
 
 def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
-    """Return a renderer instance which for performance reasons is a singleton no-op
-    "dummy" renderer instance (we use Django as REST API only with HTML rendering
-    delegated to SPA in JavaScript).
-    As this function path is set in the "FORM_RENDERER" variable of the settings file,
-    it will be called by `django forms.renderers.get_default_renderer` every
+    """Return a singleton, no-op "dummy" renderer instance (we use Django as REST API
+    only with HTML rendering delegated to SPA in JavaScript).
+    Because this function is set as "FORM_RENDERER" in the settings file, it will be
+    called by `django forms.renderers.get_default_renderer` every
     time a default renderer is needed (See e.g. `django.forms.forms.Form` and `ErrorDict`
     or `ErrorList` - both in the module `django.forms.utils`)
     """
