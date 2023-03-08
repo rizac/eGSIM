@@ -177,7 +177,7 @@ CSRF_COOKIE_HTTPONLY = True
 
 CSRF_TRUSTED_ORIGINS = ["127.0.0.1:8001", "http://localhost:8001", "https://localhost:8001"]
 CSRF_COOKIE_NAME = "csrftoken"
-CSRF_HEADER_NAME = "X-CSRFToken"
+CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"  # "X-CSRFToken"
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
