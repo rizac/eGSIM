@@ -649,6 +649,8 @@ STATIC_ROOT = '/var/cache/$DJANGO_PROJECT/static/'
 MEDIA_ROOT = '$EGSIM_DATA_DIR/media/'
 # static files url (already set in settings debug, here for ref.):
 # MEDIA_URL = '/media/'
+
+CSRF_TRUSTED_ORIGINS = ["$DOMAIN"]  # required in Django 4+
 </code></pre>
 
 <!--<pre><code class="language-bash">
