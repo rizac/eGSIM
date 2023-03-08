@@ -172,10 +172,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/2.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-CSRF_USE_SESSIONS = False
+CSRF_USE_SESSIONS = True
+CSRF_COOKIE_HTTPONLY = True
 
-CSRF_COOKIE_NAME = "csrftoken"
-CSRF_HEADER_NAME = "X-CSRFToken"
+# CSRF_COOKIE_NAME = "csrftoken"
+# CSRF_HEADER_NAME = "X-CSRFToken"
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
