@@ -174,6 +174,9 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 CSRF_USE_SESSIONS = False
 
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_HEADER_NAME = "X-CSRFToken"
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Use a singleton, custom no-op renderer to speed up Forms and Errors initialization
