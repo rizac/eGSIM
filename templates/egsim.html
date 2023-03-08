@@ -55,14 +55,14 @@
 axios.defaults.withCredentials = true;
 axios.defaults.xsrfHeaderName = "HTTP_X_CSRFTOKEN"; // "X-CSRFTOKEN";
 axios.defaults.xsrfCookieName = "csrftoken";
-/*axios.interceptors.request.use(config => {
+axios.interceptors.request.use(config => {
 	if (!('headers' in config)){
 		config.headers = {};
 	}
-	// config.headers["X-CSRFToken"] = "{{ csrf_token }}";
-	config.headers["X-CSRFTOKEN"] = "{{ csrf_token }}";
+	config.headers["X-CSRFToken"] = "{{ csrf_token }}";
+	config.headers["csrftoken"] = "{{ csrf_token }}";
 	return config;
-});*/
+});
 </script>
 
 <!-- VUE.JS: -->
