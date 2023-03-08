@@ -175,7 +175,8 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 CSRF_USE_SESSIONS = True
 CSRF_COOKIE_HTTPONLY = True
 
-CSRF_TRUSTED_ORIGINS = ["127.0.0.1:8001", "http://localhost:8001", "https://localhost:8001"]
+CSRF_TRUSTED_ORIGINS = ["https://egsim.gfz-potsdam.de",
+                        "127.0.0.1:8001", "http://localhost:8001", "https://localhost:8001"]
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_HEADER_NAME = "HTTP_X_CSRFTOKEN"  # "X-CSRFToken"
 
