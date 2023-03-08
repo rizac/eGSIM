@@ -172,7 +172,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/2.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
-CSRF_USE_SESSIONS = True
+CSRF_USE_SESSIONS = False
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
