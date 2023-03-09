@@ -114,8 +114,9 @@ EGSIM.component('gsim-select', {
 				</div>
 				<div class='mt-1 d-flex flex-row align-items-baseline'>
 					<input type="text"
-						   aria-label="Select on a list of models matching the input text (double click or ENTER on the list)"
-						   placeholder="Select by name" v-model='modeltext' class="form-control me-2" ref="modelTextControl"
+						   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): the models matching the given text can be selected via DOUBLE CLICK or typing ENTER"
+						   :placeholder="'Type name (' + field.choices.length + ' models available)'"
+						   v-model='modeltext' class="form-control me-2" ref="modelTextControl"
 						   @keydown.down.prevent="focusSelectComponent()"
 						   @keydown.esc.prevent="modeltext=''">
 					<div style='flex: 1 1 auto'></div>
@@ -126,7 +127,7 @@ EGSIM.component('gsim-select', {
 					<div v-else class='text-nowrap ms-2'>Select by region (click on map):</div>
 				</div>
 				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
-					<select v-show='!!selectableModels.length' multiple class='form-control rounded-0 border-0' ref="modelSelect"
+					<select v-show='!!selectableModels.length' multiple class='form-control border-0' ref="modelSelect"
 							@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
 							@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
 							@keydown.up="focusTextInput($event);"
