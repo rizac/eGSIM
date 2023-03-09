@@ -6,6 +6,7 @@ Created on 22 Oct 2018
 @author: riccardo
 """
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from egsim.api.views import TestingView
 
@@ -47,6 +48,19 @@ class Test:
             }
         }
         assert areequal(json_, exp_json)
+
+    def test_kotha_turkey(self, client, testdata):
+        # Uploaded flatfile, but not well formed:
+        csv = SimpleUploadedFile("file.csv",
+                                 testdata.read(
+                                     'Turkey_20230206_flatfile_geometric_mean.csv'),
+                                 content_type="text/csv")
+        inputdic2 = {'model': 'KothaEtAl2020ESHM20', 'imt': 'PGA',
+                     'flatfile': csv, 'fit-measure': ['res', 'l']}
+        # test wrong flatfile:
+        resp2 = client.post(self.url, data=inputdic2)
+        assert resp2.status_code == 200
+
 
     def test_testing_service(self,
                              # pytest fixtures:
