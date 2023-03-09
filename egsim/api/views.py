@@ -38,8 +38,7 @@ class RESTAPIView(View):
     # error codes for general client and server errors:
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
-    @classmethod
-    def parse_query_dict(cls, querydict: QueryDict, nulls=("null",)) \
+    def parse_query_dict(self, querydict: QueryDict, nulls=("null",)) \
             -> dict[str, Union[str, list[str]]]:
         """parse the given query dict and returns a Python dict
 
@@ -48,7 +47,7 @@ class RESTAPIView(View):
         :param nulls: tuple/list/set of strings to be converted to None. Defaults
             to ("null", )
         """
-        form_cls = cls.formclass
+        form_cls = self.formclass
 
         multi_params = set()
         for field_name, field, param_names in form_cls.field_iterator():
