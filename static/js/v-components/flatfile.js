@@ -321,6 +321,14 @@ EGSIM.component('flatfile-select', {
 				this.fieldProxy.choices = newVal.map((elm, idx) => {
 					return { url: elm.url || "", value: idx, innerHTML: elm.innerHTML };
 				});
+				// automatically select uploaded file, if any (select the last uploaded):
+				for (var i=newVal.length-1; i>=0; i--){
+					var isUploadedFile = newVal[i].value instanceof File;
+					if (isUploadedFile){
+						this.fieldProxy.value = i;
+						break;
+					}
+				}
 			}
 		},
 		'fieldProxy.value': {

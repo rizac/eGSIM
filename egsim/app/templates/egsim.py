@@ -253,7 +253,7 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
     filled with default values for easy testing
     """
     gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
-                 'CauzziEtAl2014']
+                 'CauzziEtAl2014', 'KothaEtAl2020ESHM20']
     val = 'value'
     trellis_form = components_props['trellis']['form']
     trellis_form['gsim'][val] = gsimnames
@@ -272,7 +272,7 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
     residuals_form['plot_type'][val] = MOF.RES
 
     testing_form = components_props['testing']['form']
-    testing_form['gsim'][val] = ['AbrahamsonSilva2008']
+    testing_form['gsim'][val] = ['KothaEtAl2020ESHM20']
     testing_form['imt'][val] = ['PGA']  # , 'PGV', "0.2", "1.0", "2.0"]
     testing_form['selexpr'][val] = "magnitude > 6"
     testing_form['fit_measure'][val] = [MOF.RES]  # , MOF.LH]
