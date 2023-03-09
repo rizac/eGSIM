@@ -87,8 +87,8 @@ EGSIM.component('testing-table', {
 			filterValues: {},  // Object of filterNames -> list of possible values for the filter name
 			filterSelectedValues: {}, // Object of filterNames -> list of chosen values for the filter name
 			tableData: [],
-			gsimsRecords: [], // array of [gsim, records] elements (string, int)
-			gsimsSkipped: {}, //Object of gsims (strings) mapped to its error (e.g., 0 records found)
+			gsimsRecords: {}, // Object of gsim (string): records (int)
+			gsimsSkipped: {}, //Object of gsims (strings): error (string)
 			MAX_NUM_DIGITS: 5,  // 0 or below represent the number as it is
 			MAX_ARRAY_SIZE: 4,  // arrays longer than this will be truncated in their string represenation (in the table)
 			COL_MOF: colnames[0],
@@ -114,11 +114,11 @@ EGSIM.component('testing-table', {
 				this.visible = (typeof newval === 'object') && !!(Object.keys(newval).length);
 				if (this.visible){
 					this.gsimsRecords = newval['Db records'];
-					this.gsimsSkipped = newval['Gsim skipped'];
+					this.gsimsSkipped = newval['Models skipped'];
 					this.tableData = this.init.call(this, newval['Measure of fit']);
 				}else{
-					this.gsimsRecords = [];
-					this.gsimsSkipped = [];
+					this.gsimsRecords = {};
+					this.gsimsSkipped = {};
 					this.tableData = [];
 				}
 			}
