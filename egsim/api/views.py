@@ -6,7 +6,7 @@ from typing import Union, Type
 import yaml
 from django.core.exceptions import ValidationError
 
-from django.http import JsonResponse, HttpRequest
+from django.http import JsonResponse, HttpRequest, QueryDict
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
@@ -38,14 +38,17 @@ class RESTAPIView(View):
     # error codes for general client and server errors:
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
-    def get(self, request: HttpRequest):
-        """Process a GET request.
-        All parameters that accept multiple values can be input by either
-        specifying the parameter more than once, or by typing commas or spaces as value
-        separator. All parameter values are returned as string except the string
-        'null' that will be converted to None
+    @classmethod
+    def parse_query_dict(cls, querydict: QueryDict, nulls=("null",)) \
+            -> dict[str, Union[str, list[str]]]:
+        """parse the given query dict and returns a Python dict
+
+        :param querydict: a QueryDict resulting from an HttpRequest.POST or GET
+            method, with percent-encoded characters already decoded
+        :param nulls: tuple/list/set of strings to be converted to None. Defaults
+            to ("null", )
         """
-        form_cls = self.formclass
+        form_cls = cls.formclass
 
         multi_params = set()
         for field_name, field, param_names in form_cls.field_iterator():
@@ -55,7 +58,7 @@ class RESTAPIView(View):
         ret = {}
         # request.GET is a QueryDict object (see Django doc for details)
         # with percent-encoded characters already decoded
-        for param_name, values in request.GET.lists():
+        for param_name, values in querydict.lists():
             if param_name in multi_params:
                 new_value = []
                 for val in values:
@@ -67,14 +70,21 @@ class RESTAPIView(View):
                 if not isinstance(old_value, list):
                     old_value = [old_value]
                 if isinstance(new_value, list):
-                    old_value.extend(None if v == 'null' else v for v in new_value)
+                    old_value.extend(None if v in nulls else v for v in new_value)
                 else:
-                    old_value.append(None if new_value == 'null' else new_value)
+                    old_value.append(None if new_value in nulls else new_value)
                 new_value = old_value
-            # assign:
             ret[param_name] = new_value
+        return ret
 
-        return self.response(data=ret)
+    def get(self, request: HttpRequest):
+        """Process a GET request.
+        All parameters that accept multiple values can be input by either
+        specifying the parameter more than once, or by typing commas or spaces as value
+        separator. All parameter values are returned as string except the string
+        'null' that will be converted to None
+        """
+        return self.response(data=self.parse_query_dict(request.GET))
 
     def post(self, request: HttpRequest):
         """Process a POST request"""
@@ -82,7 +92,8 @@ class RESTAPIView(View):
             if not issubclass(self.formclass, FlatfileForm):
                 return error_response("The given URL does not support "
                                       "uploaded files", self.CLIENT_ERR_CODE)
-            return self.response(data=request.POST.dict(), files=request.FILES)
+            return self.response(data=self.parse_query_dict(request.POST),
+                                 files=request.FILES)
         else:
             stream = StringIO(request.body.decode('utf-8'))
             inputdict = yaml.safe_load(stream)
