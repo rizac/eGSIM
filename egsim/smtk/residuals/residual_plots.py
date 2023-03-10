@@ -13,6 +13,7 @@ from scipy.stats import linregress
 
 
 def _tojson(*numpy_objs):
+    # FIXME: uniform way to jsonofy numpy
     """Utility function which returns a list where each element of numpy_objs
     is converted to its python equivalent (float or list)"""
     ret = []
@@ -20,14 +21,15 @@ def _tojson(*numpy_objs):
     # NaNs to None. Unfortunately, the conversion must be done element wise
     # in numpy (seems not to exist a pandas na filter):
     for obj in numpy_objs:
-        isscalar = np.isscalar(obj)
-        nan_indices = None if isscalar else \
-            np.argwhere(np.isnan(obj)).flatten()
-        # note: numpy.float64(N).tolist() returns a python float, so:
-        obj = None if isscalar and np.isnan(obj) else obj.tolist()
-        if nan_indices is not None:
-            for idx in nan_indices:
-                obj[idx] = None
+        if not isinstance(obj, (bool, float, int, str)):  # just for safety
+            isscalar = np.isscalar(obj)
+            nan_indices = None if isscalar else \
+                np.argwhere(np.isnan(obj)).flatten()
+            # note: numpy.float64(N).tolist() returns a python float, so:
+            obj = None if isscalar and np.isnan(obj) else obj.tolist()
+            if nan_indices is not None:
+                for idx in nan_indices:
+                    obj[idx] = None
         ret.append(obj)
 
     return ret  # tuple(_.tolist() for _ in numpy_objs)
