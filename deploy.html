@@ -106,11 +106,10 @@ Everything you write here will be overridden -->
 
 <p>
 The following cheatsheet covers two main aspect: Maintenance and Deployment
-(installation on a server). It assumes that you already have access to a remote
-machine either via ssh or VMWare or whatever.
-The following instructions have been tested on Ubuntu 18.04 MATE.
-<!-- Docker installation is beyond the scope of this simple tutorial,
-it might be added in the future if needed. -->
+(no docker container). It assumes that you already have access to a remote
+machine. The following instructions have been tested on Ubuntu 18.04 MATE.
+The procedure to obtain or update an SSL certificate (in order to have
+an http<b>s</b> address) is covered in a separate document
 </p>
 
 <p>
@@ -246,18 +245,12 @@ to be updated or newly installed, NO static files
 
 <p>Inside $EGSIM_CWD, as root user:</p>
 
-<!--
 <pre><code class="language-bash">
 (cd $EGSIM_CWD && git pull)
 service $DJANGO_PROJECT restart
 service nginx restart
 </code></pre>
--->
-<pre><code class="language-bash">
-$GIT_PULL
-$RESTART_EGSIM_SERVICE
-$RESTART_NGINX_SERVICE
-</code></pre>
+
 
 <h3>Update the package and the static files</h3>
 
@@ -267,24 +260,14 @@ to be updated or newly installed</b>
 
 <p>Same as above but we need to run Django collectstatic in the activated virtualenv</p>
 
-<!--
+
 <pre><code class="language-bash">
 source $VENV_PATH/bin/activate
 (cd $EGSIM_CWD && git pull)
-(cd $EGSIM_CWD && export PYTHONPATH=$EGSIM_CONFIG_DIR/;python manage.py collectstatic --settings=settings)
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py collectstatic)
 service $DJANGO_PROJECT restart
 service nginx restart
 deactivate
-</code></pre>
--->
-
-<pre><code class="language-bash">
-$ACTIVATE_VIRTUALENV
-$GIT_PULL
-$COLLECT_STATICFILES
-$RESTART_EGSIM_SERVICE
-service nginx restart
-$RESTART_NGINX_SERVICE
 </code></pre>
 
 
@@ -382,8 +365,7 @@ $CURRENT_PYTHON -m venv $VENV_PATH
 
 <p>Activation</p>
 <pre><code class="language-bash">
-$ACTIVATE_VIRTUALENV
-<!--source $VENV_PATH/bin/activate-->
+source $VENV_PATH/bin/activate
 </code></pre>
 
 <p><b>IMPORTANT: from now on, every Python-related operation must be performed
@@ -499,7 +481,7 @@ Then, inside $EGSIM_CWD:
 <p>Run collectstatic: copy static files to the new location.
 Activate virtualenv and:</p>
 <pre><code class="language-bash">
-$COLLECT_STATICFILES
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py collectstatic)
 <!--export PYTHONPATH=$EGSIM_CONFIG_DIR/;python manage.py collectstatic &#45;&#45;settings=settings-->
 </code></pre>
 
@@ -518,21 +500,22 @@ su $DJANGO_USER
 </code></pre>
 <b>You probably need to re-activate the Python virtual env</b>:
 <pre><code class="language-bash">
-$ACTIVATE_VIRTUALENV
-<!--source $VENV_PATH/bin/activate-->
+source $VENV_PATH/bin/activate
 </code></pre>
 
 With the Python virtualenv activated, execute:
 
 <p>Django migration</p>
 <pre><code class="language-bash">
-export PYTHONPATH=$EGSIM_CONFIG_DIR/;export DJANGO_SETTINGS_MODULE=settings;python manage.py migrate
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py migrate)
+<!--export PYTHONPATH=$EGSIM_CONFIG_DIR/;export DJANGO_SETTINGS_MODULE=settings;python manage.py migrate-->
 </code></pre>
 
 
 <p>Initialize our database (OpenQuake GSIMs IMTs and TRTs)</p>
 <pre><code class="language-bash">
-export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings;python manage.py egsim_init
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init
+<!--export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings;python manage.py egsim_init-->
 </code></pre>
 
 
@@ -562,7 +545,7 @@ external computer) to test:</p>
 
 <pre><code class="language-bash">
 export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings
-gunicorn --workers=4 --log-file=$EGSIM_LOG_DIR/gunicorn.log --bind=127.0.0.1:8000 --bind=[::1]:8000 egsim.wsgi:application
+gunicorn --workers=4 --log-file=$EGSIM_LOG_DIR/gunicorn.log --bind=127.0.0.1:$GUNICORN_PORT --bind=[::1]:$GUNICORN_PORT egsim.wsgi:application
 </code></pre>
 
 <p>Create the systemd task to start automatically egsim django server</p>
@@ -575,6 +558,11 @@ su $DJANGO_USER
 <b>NOTE: $DJANGO_PROJECT cannot contain dots. In the file below, note the --bind
 argument: it is the local URL that we will input in the NGNIX config proxy_pass</b>
 </p>
+The URL port is set as <input type='number' step="1" id='GUNICORN_PORT' style="width:6rem"/>, you can change the
+value in the field to automatically update the templates below. Changing the port is useful if
+you want to run several Gunicorn instances (e.g., previous versions
+alongside the current)
+
 
 <pre><code class="language-bash">
 [Unit]
@@ -589,7 +577,7 @@ WorkingDirectory=$EGSIM_CWD
 ExecStart=$VENV_PATH/bin/gunicorn \
 	--workers=4 \
 	--log-file=$EGSIM_LOG_DIR/gunicorn.log \
-	--bind=127.0.0.1:8000 --bind=[::1]:8000 \
+	--bind=127.0.0.1:$GUNICORN_PORT --bind=[::1]:$GUNICORN_PORT \
 	egsim.wsgi:application
 
 [Install]
@@ -619,7 +607,7 @@ systemctl enable $DJANGO_PROJECT
 <p>Create <code>/etc/nginx/sites-available/$DJANGO_PROJECT</code> (or edit the existing one).
 See template below with the relevant variables to be overwritten.
 <b> NOTE: proxy_pass below must point to the Gunicorn URL just configured (see above)</b>.
-<p class='note'>The line <code>proxy_pass http://localhost:8000;</code>
+<p class='note'>The line <code>proxy_pass http://localhost:$GUNICORN_PORT;</code>
 is the line that forwards to Gunicorn all locations starting with '/' and not
 matching '/static/' or '/media/'</p>
 </p>
@@ -630,7 +618,7 @@ server {
 	listen [::]:80;
 	server_name $DOMAIN www.$DOMAIN;
 	location / {
-		proxy_pass http://localhost:8000;
+		proxy_pass http://localhost:$GUNICORN_PORT;
 	}
 	location /static/ {
 		alias /var/cache/$DJANGO_PROJECT/static/;
@@ -668,18 +656,13 @@ service nginx restart
 
 </body>
 
-<!-- scripts for specific syntax highlighings in prism (is there a reason we have to put them at the bottom?): -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/prism.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-nginx.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-python.min.js"></script>
-
 <script type='text/javascript'>
 // customizable global variables:
 var $DOMAIN = 'egsim.gfz-potsdam.de';
 var $DJANGO_PROJECT = '$DJANGO_PROJECT';
 var $DJANGO_USER = '$DJANGO_USER';
 var $PYTHON_VERSION = '3.11.2';
+var $GUNICORN_PORT = '8001';
 
 // all global variables (the vars listed above plus other inferred from them):
 var allVars = [
@@ -693,11 +676,7 @@ var allVars = [
 	'$EGSIM_LOG_DIR',
 	'$EGSIM_CONFIG_DIR',
 	'$EGSIM_CWD',
-	'$ACTIVATE_VIRTUALENV',
-	'$GIT_PULL',
-	'$COLLECT_STATICFILES',
-	'$RESTART_EGSIM_SERVICE',
-	'$RESTART_NGINX_SERVICE'
+	'$GUNICORN_PORT'
 ];
 
 // script for custom code on page load:
@@ -715,7 +694,7 @@ window.onload=function(){
 	body.innerHTML = docText;
 
 	// set defaults on input components:
-	for (let id of ['DJANGO_USER', 'DOMAIN', 'DJANGO_PROJECT', 'PYTHON_VERSION']){
+	for (let id of ['DJANGO_USER', 'DOMAIN', 'DJANGO_PROJECT', 'PYTHON_VERSION', 'GUNICORN_PORT' ]){
 		let elm = document.getElementById(id);
 		// set input value from var:
 		elm.value = window['$'+id];
@@ -736,13 +715,7 @@ window.onload=function(){
 		$EGSIM_LOG_DIR = "/var/log/" + $DJANGO_PROJECT;
 		$EGSIM_CONFIG_DIR = "/etc/opt/" + $DJANGO_PROJECT;
 		$EGSIM_CWD = "/opt/" + $DJANGO_PROJECT + "/eGSIM";
-		$ACTIVATE_VIRTUALENV = "source " + $VENV_PATH + "/bin/activate";
-		$GIT_PULL = "(cd " + $EGSIM_CWD + "&& git pull)";
-		$COLLECT_STATICFILES = "(cd " + $EGSIM_CWD + " && export PYTHONPATH=" + $EGSIM_CONFIG_DIR + ";python manage.py collectstatic --settings=settings)";
-		$RESTART_EGSIM_SERVICE = "service " + $DJANGO_PROJECT + " restart";
-		$RESTART_NGINX_SERVICE = "service nginx restart";
-
-	  	//update everything:
+		//update everything:
 		for (let v of allVars){
 			var spans = document.querySelectorAll('span[data-key="' + v + '"]');
 			for(var span of spans){
@@ -782,5 +755,11 @@ window.onload=function(){
 	document.getElementById('toc').appendChild(ul);
 }
 </script>
+
+<!-- scripts for specific syntax highlighings in prism (is there a reason we have to put them at the bottom?): -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-nginx.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-python.min.js"></script>
 
 </html>
