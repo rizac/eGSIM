@@ -91,7 +91,7 @@ EGSIM.component('gsim-select', {
 					<div class='d-flex flex-column'>
 						<div v-for="model in field.value" class='me-1'
 							 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-							 aria-label="remove from selection"
+							 aria-label="remove from selection (to remove all models, click this button on the panel top right corner)"
 							 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
 							<i class='fa fa-times-circle'></i>
 						</div>

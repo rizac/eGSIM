@@ -362,7 +362,7 @@ EGSIM.component('flatfile-select', {
 			// var proxyChoices = this.fieldProxy.choices;
 			for(var index = 0; index < files.length; index++){
 				var file = files[index];
-				var label = `${file.name} (Uploaded: ${new Date().toLocaleString()})`;
+				var label = `${file.name} (${new Date().toLocaleString()})`;
 				var append = true;
 				for (let choice of choices){
 					if (choice.value instanceof File && choice.value.name == file.name){
