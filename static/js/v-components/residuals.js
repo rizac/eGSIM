@@ -15,7 +15,7 @@ EGSIM.component('residuals', {
 	},
 	template: `<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
 		<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
-					:show="formVisible" :dialogbox="formAsDialogBox"
+					:show="formVisible" :dialogbox="formAsDialogBox" @closed="formVisible=false"
 					@submitted="(response) => {formVisible=false;formAsDialogBox=true;responseData=response.data}">
 
 			<template v-slot:left-column>
