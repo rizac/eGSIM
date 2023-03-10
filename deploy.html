@@ -132,8 +132,8 @@ automatically):
 		</td>
 		<td>
 			The eGSIM Django project name where all Python packages will be placed
-			(including the eGSIM git repository). <b>As this is the name of the Gunicorn
-			server, please provide only alphanumeric or underscore characters</b>
+			(including the eGSIM git repository). <b>As this also is the name of the Gunicorn
+			service file: please provide only alphanumeric or underscore characters</b>
 		</td>
 	</tr>
 	<tr>
@@ -174,13 +174,42 @@ server installation, scroll down
 	</tr>
 	<tr>
 		<td><i class="fa fa-folder-o"></i></td>
+		<td>$VENV_PATH</td><td>The Python path (virtual environment)
+	</tr>
+	<tr>
+		<td><i class="fa fa-folder-o"></i></td>
 		<td>$EGSIM_CONFIG_DIR/settings.py</td>
 		<td>the settings, keep confidential, root access needed</td>
 	</tr>
 	<tr>
 		<td><i class="fa fa-folder-o"></i></td>
-		<td>/etc/nginx/sites-available/$DJANGO_PROJECT</td>
-		<td>the nginx config for the egsim site</td>
+		<td>/etc/systemd/system/$DJANGO_PROJECT.service</td>
+		<td>the Gunicorn script to start the django production server</td>
+	</tr>
+	<tr>
+		<td><i class="fa fa-folder-o"></i></td>
+		<td>$EGSIM_LOG_DIR/gunicorn.log</td>
+		<td>inspects the django server log<br>
+			Example: sudo tail -30 $EGSIM_LOG_DIR/gunicorn.log</td>
+	</tr>
+	<tr>
+		<td><i class="fa fa-folder-o"></i></td>
+<!--		<td>/etc/nginx/sites-available/$DJANGO_PROJECT</td>-->
+		<td>/etc/nginx/sites-available/egsim</td>
+		<td>the nginx config for the egsim site (new deployment configurations will be added
+		to this file)</td>
+	</tr>
+	<tr>
+		<td><i class="fa fa-folder-o"></i></td>
+		<td>/var/log/nginx/access.log</td>
+		<td>inspects the nginx log (access infos).<br>
+			Example: sudo tail -30 /var/log/nginx/access.log</td>
+	</tr>
+	<tr>
+		<td><i class="fa fa-folder-o"></i></td>
+		<td>/var/log/nginx/error.log</td>
+		<td>inspects the nginx log (error infos)<br>
+			Example: sudo tail -30 /var/log/nginx/error.log</td>
 	</tr>
 	<tr>
 		<td><i class="fa fa-folder-o"></i></td>
@@ -207,29 +236,6 @@ server installation, scroll down
 		frequently, we did it only once to add the domain name
 		(line "127.0.0.1  $DOMAIN", without quotes)
 		</td>
-	</tr>
-	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/etc/systemd/system/$DJANGO_PROJECT.service</td>
-		<td>the Gunicorn script to start the django production server</td>
-	</tr>
-	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/var/log/nginx/access.log</td>
-		<td>inspects the nginx log (access infos).<br>
-			Example: sudo tail -30 /var/log/nginx/access.log</td>
-	</tr>
-	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/var/log/nginx/error.log</td>
-		<td>inspects the nginx log (error infos)<br>
-			Example: sudo tail -30 /var/log/nginx/error.log</td>
-	</tr>
-	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>$EGSIM_LOG_DIR/gunicorn.log</td>
-		<td>inspects the django server log<br>
-			Example: sudo tail -30 $EGSIM_LOG_DIR/gunicorn.log</td>
 	</tr>
 </table>
 
@@ -312,21 +318,23 @@ sudo apt-get update
 sudo apt-get install $CURRENT_PYTHON $CURRENT_PYTHON-dev $CURRENT_PYTHON-distutils $CURRENT_PYTHON-venv
 </code></pre>
 
-<p>Add Django user if not present yet (It's good practice)</p>
+<details>
+<summary>Add Django user if not present yet (click for details)</summary>
 
-[UPDATE 3/2023]: If you keep the same user as previous versions, skip this section
+	[UPDATE 3/2023]: If you keep the same user as previous versions, skip this section
 
-<pre><code class="language-bash">
-adduser --system --home=$EGSIM_DATA_DIR --no-create-home --disabled-password --group --shell=/bin/bash $DJANGO_USER
-</code></pre>
+	<pre><code class="language-bash">
+	adduser --system --home=$EGSIM_DATA_DIR --no-create-home --disabled-password --group --shell=/bin/bash $DJANGO_USER
+	</code></pre>
 
-Optional: to configure $DJANGO_USER terminal sessions
-(e.g. colors, completion, history, command aliases):
-copy the root bashrc into $DJANGO_USER, i.e. typing as root:
-<code>cp $HOME/.bashrc /var/opt/$DJANGO_USER/.bashrc</code>
+	Optional: to configure $DJANGO_USER terminal sessions
+	(e.g. colors, completion, history, command aliases):
+	copy the root bashrc into $DJANGO_USER, i.e. typing as root:
+	<code>cp $HOME/.bashrc /var/opt/$DJANGO_USER/.bashrc</code>
 
-(where <code>/var/opt/$DJANGO_USER</code> is supposed to be the $HOME variable of
-$DJANGO_USER: in case of doubts: <code>su $DJANGO_USER</code> and <code>echo $HOME</code>)
+	(where <code>/var/opt/$DJANGO_USER</code> is supposed to be the $HOME variable of
+	$DJANGO_USER: in case of doubts: <code>su $DJANGO_USER</code> and <code>echo $HOME</code>)
+</details>
 
 <p>Final note: as always, proceed installing
 Python packages being aware that in case of problems, the solution after googling is to
@@ -524,7 +532,15 @@ With the Python virtualenv activated, execute:
 <p>NGINX is the main application server, however, it delegates Gunicorn for
 serving the Python code (everything except static and media files).</p>
 
-In the following, we will configure Gunicorn and Nginx
+In the following, we will configure Gunicorn and Nginx.
+<p>IMPORTANT: <b>remember that After any modification to the code or the config below,
+before checking the results online, is better to restart the services</b></p>
+
+<pre><code class="language-bash">
+service $DJANGO_PROJECT restart
+service nginx restart
+</code></pre>
+
 
 <h3>Gunicorn</h3>
 
@@ -630,29 +646,27 @@ server {
 </code></pre>
 
 
+<details>
+<summary>Add symbolic link to sites-enabled and $DOMAIN to known hosts (click for details)</summary>
 
-<p>Create symbolik link in sites-enabled:</p>
-<pre><code class="language-bash">
-cd /etc/nginx/sites-enabled
-ln -s ../sites-available/$DJANGO_PROJECT .
-</code></pre>
+	[UPDATE 3/2023]: The operations below should be already performed and thus unnecessary
+
+	<p>Create symbolik link in sites-enabled:</p>
+	<pre><code class="language-bash">
+	cd /etc/nginx/sites-enabled
+	ln -s ../sites-available/$DJANGO_PROJECT .
+	</code></pre>
 
 
-<p>Add $DOMAIN to known host (<b>This should be investigated: it is not mentioned
-in any documentation, but we needed to do it to make the site work</b>):
-open <code>/etc/hosts</code> and add the line</p>
+	<p>Add $DOMAIN to known host (<b>This should be investigated: it is not mentioned
+	in any documentation, but we needed to do it to make the site work</b>):
+	open <code>/etc/hosts</code> and add the line</p>
 
-<pre><code class="language-bash">
-127.0.0.1	$DOMAIN
-</code></pre>
+	<pre><code class="language-bash">
+	127.0.0.1	$DOMAIN
+	</code></pre>
 
-<p>IMPORTANT: <b>After any operation, before checking the results online,
-restart the server:</b></p>
-
-<pre><code class="language-bash">
-service $DJANGO_PROJECT restart
-service nginx restart
-</code></pre>
+</details>
 
 </body>
 
@@ -707,6 +721,7 @@ window.onload=function(){
 
 	function updatePageVars(){
 		// update global variables that depend on other
+		$EGSIM_CWD = "/opt/" + $DJANGO_PROJECT + "/eGSIM";
 		$VENV_PATH = '/opt/' + $DJANGO_PROJECT + '/pyenv' + $PYTHON_VERSION;
 		var vars = $PYTHON_VERSION.split('.');
 		var currentPython = 'python' + (vars.length >= 2 ? `${vars[0]}.${vars[1]}` : $PYTHON_VERSION);
@@ -714,7 +729,6 @@ window.onload=function(){
 		$EGSIM_DATA_DIR = "/var/opt/" + $DJANGO_PROJECT;
 		$EGSIM_LOG_DIR = "/var/log/" + $DJANGO_PROJECT;
 		$EGSIM_CONFIG_DIR = "/etc/opt/" + $DJANGO_PROJECT;
-		$EGSIM_CWD = "/opt/" + $DJANGO_PROJECT + "/eGSIM";
 		//update everything:
 		for (let v of allVars){
 			var spans = document.querySelectorAll('span[data-key="' + v + '"]');
