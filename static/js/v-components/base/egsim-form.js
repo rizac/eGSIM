@@ -91,7 +91,7 @@ var FormDataHTTPClient = {
 };
 
 /**Egsim form used in trellis, residuals, testing. Main features:
-- emits a 'submitted' on response successfully received, after submit
+- emits a 'submitted' on response successfully received, after submit and a 'closed' if the X button is clicked
 - implements a toolbar for IO operations such as get Form in YAML or JSON config
 - Deals with hiding and transforming the form into a dialog popup after first submit*/
 EGSIM.component('egsim-form', {
@@ -106,7 +106,7 @@ EGSIM.component('egsim-form', {
 			requestURL: ''
 		}
 	},
-	emits: ['submitted'],
+	emits: ['submitted', 'closed'],
 	methods: {
 		submit(){
 			this.postFormData().then(response => {
@@ -275,7 +275,7 @@ EGSIM.component('egsim-form', {
 					<i class="fa fa-copy"></i>
 				</button>
 
-				<button type="button" v-show='dialogbox' @click="show=!show"
+				<button type="button" v-show='dialogbox' @click="$emit('closed')"
 						aria-label="Close form window" class="btn btn-outline-dark border-0 ms-2">
 					<i class="fa fa-times"></i>
 				</button>
