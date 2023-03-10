@@ -167,71 +167,68 @@ server installation, scroll down
 <table>
 	<tr>
 		<td><i class="fa fa-folder-o"></i></td>
-		<td>$EGSIM_CWD</td><td>where the cloned eGSIM project
-		and (usually) the Python virtual environment resides.
+		<td><span class="token important">$EGSIM_CWD</span><br>
+		where the cloned eGSIM project and (usually) the Python virtual environment resides.
 		This is the place to go to perform <code>git</code> operations and
 		activate the virtual environment</td>
 	</tr>
 	<tr>
 		<td><i class="fa fa-folder-o"></i></td>
-		<td>$VENV_PATH</td><td>The Python path (virtual environment)
+		<td><span class="token important">$VENV_PATH</span><br>
+		The Python path (virtual environment)</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>$EGSIM_CONFIG_DIR/settings.py</td>
-		<td>the settings, keep confidential, root access needed</td>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">$EGSIM_CONFIG_DIR/settings.py</span><br>
+		the settings, keep confidential, root access needed</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/etc/systemd/system/$DJANGO_PROJECT.service</td>
-		<td>the Gunicorn script to start the django production server</td>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">/etc/systemd/system/$DJANGO_PROJECT.service</span><br>
+		the Gunicorn script to start the django production server</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>$EGSIM_LOG_DIR/gunicorn.log</td>
-		<td>inspects the django server log<br>
-			Example: sudo tail -30 $EGSIM_LOG_DIR/gunicorn.log</td>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">$EGSIM_LOG_DIR/gunicorn.log</span><br>
+		inspects the django server log<br>
+		Example: sudo tail -30 $EGSIM_LOG_DIR/gunicorn.log</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-<!--		<td>/etc/nginx/sites-available/$DJANGO_PROJECT</td>-->
-		<td>/etc/nginx/sites-available/egsim</td>
-		<td>the nginx config for the egsim site (new deployment configurations will be added
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">/etc/nginx/sites-available/egsim</span><br>
+		the nginx config for the egsim site (new deployment configurations will be added
 		to this file)</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/var/log/nginx/access.log</td>
-		<td>inspects the nginx log (access infos).<br>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">/var/log/nginx/access.log</span><br>
+		inspects the nginx log (access infos).<br>
 			Example: sudo tail -30 /var/log/nginx/access.log</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/var/log/nginx/error.log</td>
-		<td>inspects the nginx log (error infos)<br>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">/var/log/nginx/error.log</span><br>
+		inspects the nginx log (error infos)<br>
 			Example: sudo tail -30 /var/log/nginx/error.log</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/etc/nginx/sites-available/default</td>
-		<td>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">/etc/nginx/sites-available/default</span><br>
 		the default nginx config. It should be the "fallback" when all
 		other configs are not used. We saved the original not-modified config
 		in <code>default.backup</code> in the same directory
 		</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/etc/nginx/nginx.conf</td>
-		<td>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">/etc/nginx/nginx.conf</span><br>
 		the main nginx configuration (should not be modified frequently
 		and only in rare cases)
 		</td>
 	</tr>
 	<tr>
-		<td><i class="fa fa-folder-o"></i></td>
-		<td>/etc/hosts</td>
-		<td>
+		<td><i class="fa fa-file-o"></i></td>
+		<td><span class="token important">/etc/hosts</span><br>
 		where the maching hosts are written: should not be modified
 		frequently, we did it only once to add the domain name
 		(line "127.0.0.1  $DOMAIN", without quotes)
@@ -266,9 +263,8 @@ to be updated or newly installed</b>
 
 <p>Same as above but we need to run Django collectstatic in the activated virtualenv</p>
 
-
 <pre><code class="language-bash">
-source $VENV_PATH/bin/activate
+source $VENV_ACTIVATE
 (cd $EGSIM_CWD && git pull)
 (cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py collectstatic)
 service $DJANGO_PROJECT restart
@@ -373,7 +369,7 @@ $CURRENT_PYTHON -m venv $VENV_PATH
 
 <p>Activation</p>
 <pre><code class="language-bash">
-source $VENV_PATH/bin/activate
+source $VENV_ACTIVATE
 </code></pre>
 
 <p><b>IMPORTANT: from now on, every Python-related operation must be performed
@@ -508,7 +504,7 @@ su $DJANGO_USER
 </code></pre>
 <b>You probably need to re-activate the Python virtual env</b>:
 <pre><code class="language-bash">
-source $VENV_PATH/bin/activate
+source $VENV_ACTIVATE
 </code></pre>
 
 With the Python virtualenv activated, execute:
@@ -570,15 +566,23 @@ su $DJANGO_USER
 </code></pre>
 
 <p>Save the content below in <code>/etc/systemd/system/$DJANGO_PROJECT.service</code>.
-(or copy a previous service file and use the template below as reference).
-<b>NOTE: $DJANGO_PROJECT cannot contain dots. In the file below, note the --bind
-argument: it is the local URL that we will input in the NGNIX config proxy_pass</b>
-</p>
-The URL port is set as <input type='number' step="1" id='GUNICORN_PORT' style="width:6rem"/>, you can change the
-value in the field to automatically update the templates below. Changing the port is useful if
-you want to run several Gunicorn instances (e.g., previous versions
-alongside the current)
+(or copy a previous service file and use the template below as reference. <b>Remember</b>
+that $DJANGO_PROJECT cannot contain dots)
 
+<p>
+<b>Important</b>: in the file below, note the --bind argument: it is typed twice to
+bind our Django application on localhost both on ipv6 and ipv4 interfaces.
+We will then tell Nginx (see below) to proxy each request to localhost
+(see <code>proxy_pass</code> argument) delegating Gunicorn for everything that is not a
+static file (everything not in media or static directories)
+</p>
+<p>
+The URL port of the <code>--bind</code> arguments is set as
+<input type='number' step="1" id='GUNICORN_PORT' style="width:6rem"/>, you can change the
+value in the field to automatically update the templates below. Changing the port is useful if
+you want to run several Gunicorn instances from Nginx (e.g., previous versions
+alongside the current)
+</p>
 
 <pre><code class="language-bash">
 [Unit]
@@ -670,11 +674,12 @@ server {
 
 </body>
 
+
 <script type='text/javascript'>
 // customizable global variables:
 var $DOMAIN = 'egsim.gfz-potsdam.de';
-var $DJANGO_PROJECT = '$DJANGO_PROJECT';
-var $DJANGO_USER = '$DJANGO_USER';
+var $DJANGO_PROJECT = '[DJANGO_PROJECT]';
+var $DJANGO_USER = '[DJANGO_USER]';
 var $PYTHON_VERSION = '3.11.2';
 var $GUNICORN_PORT = '8001';
 
@@ -685,6 +690,7 @@ var allVars = [
 	'$DJANGO_PROJECT',
 	'$PYTHON_VERSION',
 	'$VENV_PATH',
+	'$VENV_ACTIVATE',
 	'$CURRENT_PYTHON',
 	'$EGSIM_DATA_DIR',
 	'$EGSIM_LOG_DIR',
@@ -723,6 +729,7 @@ window.onload=function(){
 		// update global variables that depend on other
 		$EGSIM_CWD = "/opt/" + $DJANGO_PROJECT + "/eGSIM";
 		$VENV_PATH = '/opt/' + $DJANGO_PROJECT + '/pyenv' + $PYTHON_VERSION;
+		$VENV_ACTIVATE = $VENV_PATH + "/bin/activate";
 		var vars = $PYTHON_VERSION.split('.');
 		var currentPython = 'python' + (vars.length >= 2 ? `${vars[0]}.${vars[1]}` : $PYTHON_VERSION);
 		$CURRENT_PYTHON = currentPython;
@@ -770,10 +777,12 @@ window.onload=function(){
 }
 </script>
 
-<!-- scripts for specific syntax highlighings in prism (is there a reason we have to put them at the bottom?): -->
+
+<!-- scripts for specific syntax highlight in prism (is there a reason we have to put them at the bottom?): -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-bash.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-nginx.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.16.0/components/prism-python.min.js"></script>
+
 
 </html>
