@@ -12,7 +12,7 @@ from openquake.hazardlib import imt
 from openquake.hazardlib.gsim.base import (RuptureContext, DistancesContext,
                                            SitesContext)
 from openquake.hazardlib.scalerel.wc1994 import WC1994
-from .. import check_gsim_list, jsonify1darray
+from .. import check_gsim_list, n_jsonify
 from .configure import GSIMRupture, DEFAULT_POINT
 
 # Generic dictionary of parameters needed for a trellis calculation
@@ -360,7 +360,7 @@ class MagnitudeIMTTrellis(BaseTrellis):
             ydict = {
                 "ylabel": self._get_ylabel(im),
                 "imt": im,
-                "yvalues": {g: jsonify1darray(gmvs[g][im].flatten()) for g in gmvs}
+                "yvalues": {g: n_jsonify(gmvs[g][im].flatten()) for g in gmvs}
             }
             gmv_dict["figures"].append(ydict)
         return gmv_dict
@@ -496,7 +496,7 @@ class DistanceIMTTrellis(BaseTrellis):
         gmvs = self.get_ground_motion_values()
         dist_label = "{:s} (km)".format(DISTANCE_LABEL_MAP[self.distance_type])
         gmv_dict = {
-            "xvalues": jsonify1darray(self.distances[self.distance_type]),
+            "xvalues": n_jsonify(self.distances[self.distance_type]),
             "xlabel": dist_label,
             "figures": []
         }
@@ -509,7 +509,7 @@ class DistanceIMTTrellis(BaseTrellis):
             }
             for gsim in gmvs:
                 # data = [None if np.isnan(val) else val for val in gmvs[gsim][im].flatten()]
-                ydict["yvalues"][gsim] = jsonify1darray(gmvs[gsim][im].flatten())
+                ydict["yvalues"][gsim] = n_jsonify(gmvs[gsim][im].flatten())
             gmv_dict["figures"].append(ydict)
             # col_loc += 1
         return gmv_dict
