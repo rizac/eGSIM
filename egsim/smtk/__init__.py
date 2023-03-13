@@ -1,11 +1,11 @@
-from typing import Union
+from typing import Union, Sequence
 
 import re
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import valid
-
+from math import inf
 import numpy as np
 
 # Get a list of the available GSIMs (lazy loaded):
@@ -74,14 +74,32 @@ def _get_gmpe_name(gsim: GMPE) -> str:
             return gsim_name
 
 
-def jsonify1darray(array: np.ndarray) -> list:
-    """Return a JSON serializable array from array. Basically converts efficiently
-    all NaN/+-Infitnity to None
+def n_jsonify(num: Union[Sequence, int, float, np.generic]) -> \
+        Union[float, int, list, tuple, None]:
+    """Convert the numeric input to a Python object that is JSON serializable, i.e. with
+    NoN or infinite values converted to None.
 
-    :param array: a 1-dimensional numpy array
+    :param num: the numeric input to be converted. It can be a scalar or sequence as
+        plain Python or numpy object. If this argument is non-numeric, this function is
+        not guaranteed to return a JSON serializable object
     """
-    idxs = np.argwhere(~np.isfinite(array)).flatten()
-    py_array: list = array.tolist()  # noqa
-    for idx in idxs:
-        py_array[idx] = None
-    return py_array
+    np_num = np.asarray(num, dtype=float)
+
+    # arrays (check via np_num.shape, or alternatively np.ndim or np.isscalar):
+    if np_num.shape:
+        if not np.issubdtype(np_num.dtype, np.bool_) and not \
+                np.issubdtype(np_num.dtype, np.integer):
+            na = ~np.isfinite(np_num)
+            if na.any():  # has some non-finite numbers:
+                np_num = np_num.astype(object)
+                np_num[na] = None
+                return np_num.tolist()  # noqa
+        return num if isinstance(num, (list, tuple)) else np_num.tolist()
+
+    # scalars:
+    num = np_num.tolist()
+    # define infinity (note that inf == np.inf so the set below is verbose).
+    # NaNs will be checked via `x != x` which works also when x is not numeric
+    if num != num or num in {inf, -inf, np.inf, -np.inf}:
+        return None
+    return num  # noqa
