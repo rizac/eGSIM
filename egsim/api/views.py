@@ -30,10 +30,9 @@ class RESTAPIView(View):
            return RESTAPIView.as_view(formclass=form_cls)(request)
        ```
     """
-    # The APIForm of this view. You can set it at a class level in subclasses,
-    # or pass at instance level via: `__init__(formclass=...)`
+    # The APIForm of this view, to be set in subclasses:
     formclass: Type[APIForm] = None
-    # the URL(s) endpoints of the API (no paths, no slashes, just the name)
+    # the URL(s) endpoints of the API (no paths, no slashes, just the name):
     urls: list[str] = []
     # error codes for general client and server errors:
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
@@ -42,8 +41,8 @@ class RESTAPIView(View):
             -> dict[str, Union[str, list[str]]]:
         """parse the given query dict and returns a Python dict
 
-        :param querydict: a QueryDict resulting from an HttpRequest.POST or GET
-            method, with percent-encoded characters already decoded
+        :param querydict: a QueryDict resulting from an HttpRequest.POST or
+            HttpRequest.GET, with percent-encoded characters already decoded
         :param nulls: tuple/list/set of strings to be converted to None. Defaults
             to ("null", )
         """
@@ -55,8 +54,6 @@ class RESTAPIView(View):
                 multi_params.update(param_names)
 
         ret = {}
-        # request.GET is a QueryDict object (see Django doc for details)
-        # with percent-encoded characters already decoded
         for param_name, values in querydict.lists():
             if param_name in multi_params:
                 new_value = []
