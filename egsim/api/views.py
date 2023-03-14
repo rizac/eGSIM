@@ -48,29 +48,21 @@ class RESTAPIView(View):
         """
         form_cls = self.formclass
 
-        multi_params = set()
+        multi_value_params = set()
         for field_name, field, param_names in form_cls.field_iterator():
             if isinstance(field, (MultipleChoiceField, NArrayField)):
-                multi_params.update(param_names)
+                multi_value_params.update(param_names)
 
         ret = {}
         for param_name, values in querydict.lists():
-            if param_name in multi_params:
-                new_value = []
-                for val in values:
-                    new_value.extend(split_string(val))
+            if param_name in multi_value_params:
+                values = [None if v in nulls else v for val in values
+                          for v in split_string(val)]
             else:
-                new_value = values[0] if len(values) == 1 else values
-            if param_name in ret:
-                old_value = ret[param_name]
-                if not isinstance(old_value, list):
-                    old_value = [old_value]
-                if isinstance(new_value, list):
-                    old_value.extend(None if v in nulls else v for v in new_value)
-                else:
-                    old_value.append(None if new_value in nulls else new_value)
-                new_value = old_value
-            ret[param_name] = new_value
+                values = [None if v in nulls else v for v in values]
+                if len(values) == 1:
+                    values = values[0]
+            ret[param_name] = values
         return ret
 
     def get(self, request: HttpRequest):
@@ -92,8 +84,7 @@ class RESTAPIView(View):
                                  files=request.FILES)
         else:
             stream = StringIO(request.body.decode('utf-8'))
-            inputdict = yaml.safe_load(stream)
-            return self.response(data=inputdict)
+            return self.response(data=yaml.safe_load(stream))
 
     def response(self, **form_kwargs):
         """process an input Response by calling `self.process` if the input is
