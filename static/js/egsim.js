@@ -84,7 +84,7 @@ const EGSIM = Vue.createApp({
 				this.errors[key] = data.invalid_browser_message || "";
 			}
 			this.newpageURLs = data.newpage_urls;
-			this.init(data.gsims, data.imt_groups, data.flatfile, data.regionalization);
+			this.init(data.gsims, data.imt_groups, data.flatfile, data.regionalizations);
 			this.selComponent = data.sel_component;
 		});
 	},
@@ -141,7 +141,7 @@ const EGSIM = Vue.createApp({
 				throw error;
 			});
 		},
-		init(gsims, imtGroups, flatfile, regionalization){
+		init(gsims, imtGroups, flatfile, regionalizations){
 			// Create a "template" Array of gsims and imts, to be copied as field choices
 			var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
 			// converts the gsims received from server from an Array of Arrays to an
@@ -170,11 +170,7 @@ const EGSIM = Vue.createApp({
 					// set form.gsim.choices as a deep copy of gsimObjects:
 					form.gsim.choices = gsimObjects;
 					form.gsim.value || (form.gsim.value = []); // assure empty list (not null)
-					form.gsim['data-regionalization'] = Vue.markRaw({
-						url: regionalization.url,
-						choices: regionalization.names.map(elm => [elm, elm]),
-						value: Array.from(regionalization.names)
-					})
+					form.gsim['data-regionalizations'] = Vue.markRaw(regionalizations)
 				}
 				if (form.imt){
 					// set form.imt as a deep copy of imts:

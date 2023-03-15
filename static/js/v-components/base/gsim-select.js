@@ -12,7 +12,10 @@ EGSIM.component('gsim-select', {
 		}
 	},
 	created(){
-		this.regionalization = this.field['data-regionalization'] || {};  // https://stackoverflow.com/a/69533537
+		// attach non reactive prop (https://stackoverflow.com/a/69533537):
+		this.regionalizations = this.field['data-regionalizations'] || {names: []};
+		this.regionalizations.selected = new Set(this.regionalizations.names);
+		this.regionalizations.selectable = new Set(this.regionalizations.names);
 	},
 	watch: {
 		'field.value': {
@@ -229,10 +232,12 @@ EGSIM.component('gsim-select', {
 			this.addRegionalizationControl(map);
 			this.map = map;
 			map.on("click", this.mapClicked);
+			map.on('zoomend', this.mapBoundsChanged);
+			map.on('moveend', this.mapBoundsChanged);
 		},
 		addRegionalizationControl(map){
 			var field = this.field;
-			var regionalization = this.regionalization;
+			var regionalizations = this.regionalizations;
 			var control = L.control({position: 'topright'});
 			control.onAdd = function (map) {
 				var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded leaflet-control');
@@ -241,29 +246,53 @@ EGSIM.component('gsim-select', {
 				// Add title:
 				var title = L.DomUtil.create('span', '', div);
 				title.innerHTML = '<h6>Regionalization:</h6>';
-				for (var [val, name] of regionalization.choices){
-					var label = L.DomUtil.create('label', 'd-flex flex-row align-items-baseline', div);
+				for (var name of regionalizations.names){
+					var label = L.DomUtil.create('label', 'flex-row align-items-baseline', div);
 					var input = L.DomUtil.create('input',
 												 "leaflet-control-layers-selector",
 												 label);
 					var span = L.DomUtil.create('span', 'ms-2', label);
 					span.innerHTML = name;
 					input.setAttribute('type', 'checkbox');
-					input.setAttribute('value', val);
-					input.checked = regionalization.value.includes(val);
+					input.setAttribute('data-name', name);
+					input.checked = regionalizations.selected.has(name);
 					input.addEventListener('input', function (evt) {
-						var val = evt.target.value;
-						var idx = regionalization.value.indexOf(val);
-						if (idx == -1){
-							regionalization.value.push(val);
+						var name = evt.target.getAttribute('data-name');
+						if (regionalizations.selected.has(name)){
+							regionalizations.selected.delete(name);
 						}else{
-							regionalization.value.splice(idx, 1);
+							regionalizations.selected.add(name);
 						}
 					});
 				}
 				return div;
 			};
 			control.addTo(map);
+		},
+		mapBoundsChanged(event){
+			var mapDiv = this.$refs.mapDiv;
+			var elms = mapDiv.querySelectorAll('input[data-name]');
+			var mapLeafletBounds = this.map.getBounds();
+			var mapBounds = [
+				mapLeafletBounds.getWest(),
+				mapLeafletBounds.getSouth(),
+				mapLeafletBounds.getEast(),
+				mapLeafletBounds.getNorth()
+			];
+			for (var elm of elms){
+				var name = elm.getAttribute('data-name');
+				var regBounds = this.regionalizations.bbox[name];
+				// regBounds: (minLng, minLat, maxLng, maxLat)
+				var outOfBounds = (regBounds[0]>=mapBounds[2] || regBounds[2]<=mapBounds[0] ||
+					regBounds[1]>=mapBounds[3] || regBounds[3]<=mapBounds[1]);
+				if (outOfBounds){
+					this.regionalizations.selectable.delete(name);
+					elm.parentNode.style.display = 'none';
+				}else{
+					this.regionalizations.selectable.add(name);
+					elm.parentNode.style.display = 'flex';
+				}
+			}
 		},
 		mapClicked(event) {
 			var latLng = [event.latlng.lat, event.latlng.lng];
@@ -272,13 +301,16 @@ EGSIM.component('gsim-select', {
 			// ad new marker:
 			L.marker(latLng).addTo(this.map);
 			// query data:
+
 			var data = {
 				'latitude': latLng[0],
 				'longitude': latLng[1],
-				'regionalization': this.regionalization.value
+				'regionalization': Array.from(this.regionalizations.selected).filter(
+				 	name => this.regionalizations.selectable.has(name)
+				 )
 			};
 			// query data and update filter func:
-			axios.post(this.regionalization.url, data).then(response => {
+			axios.post(this.regionalizations.url, data).then(response => {
 				// response.data is an Array of gsim names
 				var selectedModels = new Set(this.field.value || []);
 				var gsims = (response.data || []).filter(m => !selectedModels.has(m));
