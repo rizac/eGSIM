@@ -3,6 +3,8 @@
 from typing import Any, Type, Callable, Union
 from enum import Enum
 
+from shapely.geometry import shape
+
 from django.forms import (Field, IntegerField, ModelChoiceField)
 from django.forms.widgets import ChoiceWidget, Input
 
@@ -119,9 +121,13 @@ def get_init_json_data(browser: dict = None,
             gsims.append([gsim_name, imt_group_index])
 
     # get regionalization data (for selecting models on a map):
-    regionalization = {
+    _r_data = list(models.Regionalization.objects.values_list('name', 'geometry', 'url'))
+    regionalizations = {
         'url': URLS.GET_GSIMS_FROM_REGION,
-        'names': list(models.Regionalization.objects.values_list('name', flat=True))
+        'names': [_[0] for _ in _r_data],
+        # bbox are tuples of the form (min_lng, min_lat, max_lng, max_lat):
+        'bbox': {_[0]: shape(_[1]).bounds for _ in _r_data},
+        'ref': {_[0]: _[2] or "" for _ in _r_data}
     }
 
     # get predefined flatfiles info:
@@ -151,7 +157,7 @@ def get_init_json_data(browser: dict = None,
             'choices': flatfiles,
             'upload_url': URLS.FLATFILE_INSPECTION,
         },
-        'regionalization': regionalization,
+        'regionalizations': regionalizations,
         'invalid_browser_message': invalid_browser_message,
         'newpage_urls': {
             'api': URLS.API,
@@ -244,8 +250,8 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     plot_form['y']['choices'] = [('', 'None: display histogram of X values')]
 
     if debugging:
-        _setup_default_values(components_props)
-    return components_props
+        _setup_default_values(components_props)  # noqa
+    return components_props  # noqa
 
 
 def _setup_default_values(components_props: dict[str, dict[str, Any]]):
