@@ -14,19 +14,19 @@ from django.db.models import (Model as DjangoModel, Q, TextField, BooleanField,
                               CASCADE, SET_NULL, Index, SmallIntegerField,
                               DateTimeField, URLField, Manager)
 from django.db.models.options import Options
-from django.db.utils import IntegrityError
 
+from egsim.smtk import flatfile
 
 # Notes: primary keys are auto added if not present ('id' of type BigInt or so).
 # All models here that are not abstract will be available prefixed with 'api_'
 # in the admin panel (https://<site_url>/admin)
-from egsim.smtk import flatfile
 
 
 class Model(DjangoModel):
     """Abstract base class of all Django Models of this module"""
 
-    # notify editors code inspection that these attrs exist (see metaclass for details):
+    # these two attributes are set by Django (see metaclass for details) and are here
+    # only to silent pylint or editor inspectors
     objects: Manager
     _meta: Options
 
@@ -34,7 +34,7 @@ class Model(DjangoModel):
         abstract = True
 
 
-class _UniqueNameModel(Model):
+class _UniqueName(Model):
     """Abstract class for Table entries identified by a single unique name"""
 
     name = TextField(null=False, unique=True, help_text="Unique name")
@@ -48,9 +48,9 @@ class _UniqueNameModel(Model):
         return self.name
 
 
-class _DataSource(_UniqueNameModel):
-    """Abstract class for Table rows associated to source data with given
-    URL, license, citation and so on"""
+class _Citable(Model):
+    """Abstract class for Table rows which can be cited, e.g. with any info
+    such as URL, license, bib. citation"""
 
     display_name = TextField(default=None, null=True)
     url = URLField(default=None, null=True)
@@ -59,19 +59,13 @@ class _DataSource(_UniqueNameModel):
                          help_text="Bibliographic citation, as text")
     doi = TextField(default=None, null=True)
 
-    def __str__(self):
-        """string representation of this object"""
-        name = self.display_name or self.name
-        url = " (%s)" % self.url if self.url else ""
-        return name + url  # noqa
-
     class Meta:
         # In subclasses, `abstract` is (re)set to False. Everything else is copied
         # (https://docs.djangoproject.com/en/3.2/topics/db/models/#meta-inheritance)
         abstract = True
 
 
-class Flatfile(_DataSource):
+class Flatfile(_UniqueName, _Citable):
     """Class handling flatfiles stored in the file system
     (predefined flatfiles)
     """
@@ -94,6 +88,9 @@ class Flatfile(_DataSource):
             qry = qry.filter(hidden=False)
         return qry
 
+    def __str__(self):
+        """string representation of this object"""
+        return f'{self.name} ({self.filepath})'
 
 class CompactEncoder(json.JSONEncoder):
     """Compact JSON encoder used in JSONFields of this module"""
@@ -129,7 +126,7 @@ class DateTimeDecoder(json.JSONDecoder):
         return dct
 
 
-class FlatfileColumn(_UniqueNameModel):
+class FlatfileColumn(_UniqueName):
     """Flat file column"""
 
     oq_name = TextField(null=True, help_text='The OpenQuake name of the GSIM '
@@ -194,7 +191,7 @@ class FlatfileColumn(_UniqueNameModel):
 
         return dtype, defaults, bounds, required
 
-    class Meta(_UniqueNameModel.Meta):
+    class Meta(_UniqueName.Meta):
         indexes = [Index(fields=['name']), ]
 
     def __str__(self):
@@ -203,7 +200,7 @@ class FlatfileColumn(_UniqueNameModel):
         return f'Column {self.name}, type: {col_type}, OpenQuake name: {self.oq_name})'
 
 
-class Imt(_UniqueNameModel):
+class Imt(_UniqueName):
     """The :mod:`intensity measure types <openquake.hazardlib.imt>` that
     OpenQuake's GSIMs can calculate and that are supported in eGSIM
     """
@@ -212,11 +209,11 @@ class Imt(_UniqueNameModel):
     # OpenQuake's Gsim attribute used to populate this table during db init:
     OQ_ATTNAME = 'DEFINED_FOR_INTENSITY_MEASURE_TYPES'
 
-    class Meta(_UniqueNameModel.Meta):
+    class Meta(_UniqueName.Meta):
         indexes = [Index(fields=['name']), ]
 
 
-class GsimWithError(_UniqueNameModel):
+class GsimWithError(_UniqueName):
     """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake
     that could not be available in eGSIM due errors
     """
@@ -229,7 +226,7 @@ class GsimWithError(_UniqueNameModel):
         return '%s. %s: %s' % (self.name, self.error_type, self.error_message)
 
 
-class Gsim(_UniqueNameModel):
+class Gsim(_UniqueName):
     """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake and
     available in eGSIM
     """
@@ -253,67 +250,48 @@ class Gsim(_UniqueNameModel):
                         help_text='Optional usage warning(s) to be reported '
                                   'before usage (e.g., in GUIs)')
 
-    class Meta(_UniqueNameModel.Meta):
+    class Meta(_UniqueName.Meta):
         indexes = [Index(fields=['name']), ]
 
 
-class GsimRegion(Model):
+class _GeoJsonRegion(Model):
+    """Abstract class representing a db model with an associated Region
+    in GeoJSON coordinates"""
+
+    geometry = JSONField(null=False, encoder=CompactEncoder,
+                         help_text="The region area as geoJSON Geometry object, "
+                                   "with at least the keys \"coordinates\""
+                                   f"and \"type'\" (usually 'Polygon', 'MultiPolygon')."
+                                   f" For details see: "
+                                   "https://en.wikipedia.org/wiki/GeoJSON#Geometries)")
+
+    class Meta:  # make this class abstract
+        abstract = True
+
+class GsimRegion(_GeoJsonRegion):
     """Model representing a GSIM Region"""
 
     gsim = ForeignKey(Gsim, on_delete=CASCADE, null=False, related_name='regions')
     regionalization = ForeignKey("Regionalization", to_field='name',
                                  on_delete=SET_NULL, null=True,
                                  help_text="The name of the seismic hazard source "
-                                           "regionalization defining this "
-                                           "region")
-
-    GEOM_TYPES = ('Polygon', 'MultiPolygon')
-
-    geometry = JSONField(null=False, encoder=CompactEncoder,
-                         help_text="The region as geoJSON Geometry object, "
-                                   "with at least the keys \"coordinates\""
-                                   "and \"type'\" in %s only. For details see: "
-                                   "https://en.wikipedia.org/wiki/GeoJSON"
-                                   "#Geometries)" % str(GEOM_TYPES))
-
+                                           "regionalization that defines and includes "
+                                           "this region")
     class Meta:
         constraints = [UniqueConstraint(fields=['gsim', 'regionalization'],
                                         name='%(app_label)s_%(class)s_unique_'
                                              'gsim_and_regionalization')]
 
-    def save(self, *args, **kwargs):
-        """Override save and checks if the flat file name is unique or NULL"""
-        # WARNING: DO NOT set Breakpoints in PyCharm 2021.1.1 and Python 3.9
-        # as it seems that the program crashes in debug mode (but it works actually)
-        key = 'geometry'
-        val = getattr(self, key)
-        if val is not None:
-            if not val:  # force empty fields to be NULL:
-                setattr(self, key, None)
-            else:
-                key2 = 'type'
-                val2 = val.get(key2, '')
-                if val2 not in self.GEOM_TYPES:
-                    raise IntegrityError('%s["%s"]="%s" must be in %s' %
-                                         (key, key2, val2, self.GEOM_TYPES))
-
-        super(GsimRegion, self).save(*args, **kwargs)
-
-    @staticmethod
-    def num_polygons(geometry: dict):
-        """Return the number of Polygons from the given geometry goJSON geometry"""
-        geom_type = geometry['type']
-        if geom_type != GsimRegion.GEOM_TYPES[0]:
-            return len(geometry['coordinates'])
-        return 1
-
     def __str__(self):
-        npoly = self.num_polygons(self.geometry)  # noqa
-        poly = 'polygon' if npoly == 1 else 'polygons'
-        return 'Region "%s", %d %s, regionalization: %s' % \
-               (str(self.gsim), npoly, poly, self.regionalization)
+        typ = self.geometry.get('type', "unknown")  # noqa
+        return f'Region (type {typ}), model: {str(self.gsim)}, ' \
+               f'regionalization: {self.regionalization}'
 
 
-class Regionalization(_DataSource):
-    """Model representing the data source of a given Regionalization"""
+class Regionalization(_UniqueName, _Citable, _GeoJsonRegion):
+    """Model representing a Regionalization, which is basically a collection
+    of `GsimRegion`s. As such, each regionalization `geometry`
+    attribute should be the union of all `geometry`s of its `GsimRegion`s (to
+    be computed beforehand for performance reasons)
+    """
     pass
