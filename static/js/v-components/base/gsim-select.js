@@ -94,7 +94,7 @@ EGSIM.component('gsim-select', {
 					<div class='d-flex flex-column'>
 						<div v-for="model in field.value" class='me-1'
 							 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-							 aria-label="remove from selection (to remove all models, click this button on the panel top right corner)"
+							 aria-label="remove from selection (to remove all models, click the same button on this panel top right corner)"
 							 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
 							<i class='fa fa-times-circle'></i>
 						</div>
@@ -117,7 +117,7 @@ EGSIM.component('gsim-select', {
 				</div>
 				<div class='mt-1 d-flex flex-row align-items-baseline'>
 					<input type="text"
-						   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): the models matching the given text can be selected via DOUBLE CLICK or typing ENTER"
+						   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
 						   :placeholder="'Type name (' + field.choices.length + ' models available)'"
 						   v-model='modeltext' class="form-control me-2" ref="modelTextControl"
 						   @keydown.down.prevent="focusSelectComponent()"
@@ -127,7 +127,7 @@ EGSIM.component('gsim-select', {
 							@click="modeltext=''">
 						clear text (ESC)
 					</button>
-					<div v-else class='text-nowrap ms-2'>Select by region (click on map):</div>
+					<div v-else class='text-nowrap ms-2'>or select by region (click on map):</div>
 				</div>
 				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
 					<select v-show='!!selectableModels.length' multiple class='form-control border-0' ref="modelSelect"
@@ -247,12 +247,14 @@ EGSIM.component('gsim-select', {
 				var title = L.DomUtil.create('span', '', div);
 				title.innerHTML = '<h6>Regionalization:</h6>';
 				for (var name of regionalizations.names){
+					// For each regionalization create a <label> wrapping several HTML controls
+					// Leaflet syntax is: L.DomUtil.create(tag, classes, parent):
+					// Note: display:flex will be set in mapBoundsChanged (see below)
 					var label = L.DomUtil.create('label', 'flex-row align-items-baseline', div);
+					// add input type=checkbox to label
 					var input = L.DomUtil.create('input',
 												 "leaflet-control-layers-selector",
 												 label);
-					var span = L.DomUtil.create('span', 'ms-2', label);
-					span.innerHTML = name;
 					input.setAttribute('type', 'checkbox');
 					input.setAttribute('data-name', name);
 					input.checked = regionalizations.selected.has(name);
@@ -264,6 +266,17 @@ EGSIM.component('gsim-select', {
 							regionalizations.selected.add(name);
 						}
 					});
+					// add span to label (with regionalization name)
+					var span = L.DomUtil.create('span', 'ms-2', label);
+					span.innerHTML = name;
+					// add anchor to label (with ref. URL, if given):
+					if (regionalizations.ref[name]){
+						var anchor = L.DomUtil.create('a', 'ms-2', label);
+						anchor.setAttribute('href', regionalizations.ref[name]);
+						anchor.setAttribute('target', "_blank");
+						anchor.innerHTML = '<i class="fa fa-link"></i>';
+						anchor.setAttribute('title', 'see ref (open link in new tab)');
+					}
 				}
 				return div;
 			};
