@@ -341,17 +341,16 @@ def _get_depths(residuals, gmpe, imt, res_type):
 
 def _nanlinregress(x, y):
     """Calls scipy linregress only on finite numbers of x and y"""
+    x = np.asarray(x)
+    y = np.asarray(y)
     finite = np.isfinite(x) & np.isfinite(y)
     if not finite.any():
         # empty arrays passed to linreg raise ValueError:
         # force returning an object with nans:
         return linregress([np.nan], [np.nan])
-    if not finite.all():
-        x = np.asarray(x)[finite]
-        y = np.asarray(y)[finite]
     # check if all x are the same and returna a "dummy" result
     if np.all(x == x[0]):
         # scipy's linregress returns a LinregressResult which for backward compatibility
         # can be unpacked into the tuple: (slope, intercept, rvalue, pvalue, stderr). So:
         return 0, np.nanmean(y), np.nan, np.nan, np.nan
-    return linregress(x, y)
+    return linregress(x, y) if finite.all() else linregress(x[finite], y[finite])
