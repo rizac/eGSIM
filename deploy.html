@@ -273,6 +273,61 @@ deactivate
 </code></pre>
 
 
+<h3>Update the db schema</h3>
+This assumes that we created a new migration file with Django `makemigration`.
+Note: we usually just throw away the old migrations and re-create a new migration file, usually
+`api/migrations/0001_initial.py` or something similar. this means that we also delete
+the old database for safety.
+
+<p>IMPORTANT: Execute these command as <code>$DJANGO_USER</code>, thus FIRST type:</p>
+<pre><code class="language-bash">
+su $DJANGO_USER
+</code></pre>
+<b>You probably need to re-activate the Python virtual env</b>:
+<pre><code class="language-bash">
+source $VENV_ACTIVATE
+</code></pre>
+
+Now update the package,
+remove the db (see note above),
+(re)create the database (`migrate`) and populate it with eGSIM data (`egsim_init`):
+<pre><code class="language-bash">
+(cd $EGSIM_CWD && git pull)
+rm $EGSIM_DATA_DIR/egsim.db
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py migrate)
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init)
+service $DJANGO_PROJECT restart
+service nginx restart
+</code></pre>
+
+<h3>Install system fonts (to produce and download the same plots visible on the browser)</h3>
+
+See snippet below (change the font name and the URL in case. The font directory "egsim" should be
+already created, otherwise create it with the name you wish):
+
+<pre><code class="language-bash">
+cd /usr/share/fonts
+mkdir egsim
+cd egsim
+wget "https://fonts.google.com/download?family=Encode%20Sans%20Semi%20Condensed" -O ./Encode_Sans_Semi_Condensed.zip
+unzip -d . ./Encode_Sans_Semi_Condensed.zip
+sudo chmod -R --reference=/usr/share/fonts/opentype /usr/share/fonts/egsim
+fc-cache -fv
+# check if font is installed:
+fc-match EncodeSansSemiCondensed
+</code></pre>
+More details <a target="_blank" href="https://gist.github.com/lightonphiri/5811226a1fba0b3df3be73ff2d5b351c">here (opens in new tab)</a>
+
+<p></p>
+To check the font name, type <code>fc-list</code>
+(optionally with <code>grep</code>) and check the font name which is
+displayed after the first colon ":". E.g.:
+<pre><code class="language-bash">
+fc-list | grep Encode
+</code></pre>
+More details <a target="_blank" href="https://unix.stackexchange.com/a/305934">here (opens in new tab)</a>
+
+
 <h1>Server installation</h1>
 
 <h2>System requirements</h2>
@@ -518,7 +573,7 @@ With the Python virtualenv activated, execute:
 
 <p>Initialize our database (OpenQuake GSIMs IMTs and TRTs)</p>
 <pre><code class="language-bash">
-(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init
+(cd $EGSIM_CWD; export PYTHONPATH=$EGSIM_CONFIG_DIR DJANGO_SETTINGS_MODULE=settings; python manage.py egsim_init)
 <!--export PYTHONPATH=$EGSIM_CONFIG_DIR; export DJANGO_SETTINGS_MODULE=settings;python manage.py egsim_init-->
 </code></pre>
 
