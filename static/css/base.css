@@ -1,6 +1,6 @@
 /* Custom css. Requires bootstrap5 */
 
-html{font-size: 1.65vmin;} /* computed from a font-size=16px and a vheight=vmin=982px*/
+html{font-size: 1.75vmin;} /* computed from a font-size=16px and a vheight=vmin=982px*/
 
 /* redefine bootstrap (bs) global colors */
 :root {
