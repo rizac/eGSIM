@@ -285,13 +285,15 @@ EGSIM.component('egsim-form', {
 			<div class="d-flex flex-row" :class="[dialogbox ? ['mx-4'] : '']"
 				 style="flex: 1 1 auto">
 				<div class="d-flex flex-column" style="flex: 1 1 auto">
-					<slot name="left-column"></slot>
+					<div class="d-flex flex-column" style='flex: 1 1 0; overflow-y: auto'>
+						<slot name="left-column"></slot>
+					</div>
 				</div>
 
 				<div class="d-flex flex-column ms-4" style="flex: 1 1 auto">
-
-					<slot name="right-column"></slot>
-
+					<div class="d-flex flex-column" style='flex: 1 1 0; overflow-y: auto'>
+						<slot name="right-column"></slot>
+					</div>
 					<div class='d-flex flex-row justify-content-center mt-4'>
 						<div style='flex: 1 1 auto'></div>
 						<button type="submit" class="btn btn-primary">
