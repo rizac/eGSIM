@@ -84,9 +84,8 @@ EGSIM.component('gsim-select', {
 				   @click="field.value=[]" ></i>
 			</template>
 		</field-label>
-		<div class='position-relative d-flex flex-column' style="flex: 1 1 auto"
-			 :style='{width: .7*Math.max(...field.choices.map(m => m.value.length)) + "rem"}'>
-			<div class='form-control position-absolute top-0 bottom-0 start-0 end-0 d-flex flex-column'
+		<div class='d-flex flex-column' style="flex: 1 1 auto; min-width: 18rem">
+			<div class='form-control d-flex flex-column' style='flex: 1 1 auto'
 				 :class="field.error ? 'border-danger' : ''">
 				<div class='d-flex flex-row' style='overflow: auto'
 					 :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
@@ -116,20 +115,19 @@ EGSIM.component('gsim-select', {
 					</div>
 				</div>
 				<div class='mt-1 d-flex flex-row align-items-baseline'>
-					<input type="text"
+					<input type="text" style='flex: 1 1 auto'
 						   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
 						   :placeholder="'Type name (' + field.choices.length + ' models available)'"
-						   v-model='modeltext' class="form-control me-2" ref="modelTextControl"
+						   v-model='modeltext' class="form-control" ref="modelTextControl"
 						   @keydown.down.prevent="focusSelectComponent()"
 						   @keydown.esc.prevent="modeltext=''">
-					<div style='flex: 1 1 auto'></div>
 					<button v-if='modeltext && modeltext.length' class='text-nowrap btn btn-outline-secondary ms-2' type='button'
 							@click="modeltext=''">
 						clear text (ESC)
 					</button>
 					<div v-else class='text-nowrap ms-2'>or select by region (click on map):</div>
 				</div>
-				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:15rem'>
+				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:12rem'>
 					<select v-show='!!selectableModels.length' multiple class='form-control border-0' ref="modelSelect"
 							@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
 							@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
