@@ -84,39 +84,42 @@ EGSIM.component('flatfile-compilation', {
 		</div>
 
 		<div class='d-flex flex-row' style='flex: 1 1 auto;'>
-			<div class='d-flex flex-column'>
-				<div class='mb-3'>
-					<b>Select models</b> ({{ form.gsim.value.length }}) <b>and intensity measures</b> ({{ form.imt.value.length }})
-					<b>of interest:</b>
+			<div class='d-flex flex-column' style='flex: 1 1 auto'>
+				<div class="d-flex flex-column" style='flex: 1 1 0; overflow-y: auto'>
+					<div class='mb-3'>
+						<b>Select models</b> ({{ form.gsim.value.length }}) <b>and intensity measures</b> ({{ form.imt.value.length }})
+						<b>of interest:</b>
+					</div>
+					<gsim-select :field='form.gsim'
+								 @gsim-selected='needsRefresh=true'
+								 :imt-field="form.imt"
+								 class='mb-3' style='flex: 1 1 auto' />
+					<imt-select :field='form.imt' @imt-selected='needsRefresh=true' />
 				</div>
-				<gsim-select :field='form.gsim'
-							 @gsim-selected='needsRefresh=true'
-							 :imt-field="form.imt"
-							 class='mb-3' style='flex: 1 1 auto' />
-				<imt-select :field='form.imt' @imt-selected='needsRefresh=true' />
 			</div>
 
 			<div class='mx-3'></div>
 
 			<div class='d-flex flex-column' style='flex: 1 1 auto'>
-				<div class='mb-3 position-relative'>
-					<b>Flatfile template</b>&nbsp; ({{ flatfileHeader.length }} columns)
-					<button v-show='needsRefresh' type='button' class='btn btn-primary'
-						    @click='queryRequiredColumns'>Refresh</button>
-					<div class='text-nowrap position-absolute end-0 top-0'>
-						CSV separator
-						<input type="text" v-model="csvSep" class='ms-1' style='max-width:2rem' />
+				<div class="d-flex flex-column" style='flex: 1 1 0; overflow-y: auto'>
+					<div class='mb-3 position-relative'>
+						<b>Flatfile template</b>&nbsp; ({{ flatfileHeader.length }} columns)
+						<button v-show='needsRefresh' type='button' class='btn btn-primary'
+								@click='queryRequiredColumns'>Refresh</button>
+						<div class='text-nowrap position-absolute end-0 top-0'>
+							CSV separator
+							<input type="text" v-model="csvSep" class='ms-1' style='max-width:2rem' />
+						</div>
+					</div>
+
+					<textarea v-model='flatfileContent' spellcheck="false" class='form-control'
+							  style='resize:none; flex:1 1 auto; white-space: pre; font-family:monospace; background-color: rgb(245, 242, 240);'>
+					</textarea>
+
+					<div class='mt-2 text-muted'>
+					Hint: For performance reasons <b>try to keep uploaded flatfiles size within few tens of Megabytes</b>
 					</div>
 				</div>
-
-				<textarea v-model='flatfileContent' spellcheck="false" class='form-control'
-						  style='resize:none; flex:1 1 auto; white-space: pre; font-family:monospace; background-color: rgb(245, 242, 240);'>
-				</textarea>
-
-				<div class='mt-2 text-muted'>
-				Hint: For performance reasons <b>try to keep uploaded flatfiles size within few tens of Megabytes</b>
-				</div>
-
 			</div>
 		</div>
 	</form>`,
