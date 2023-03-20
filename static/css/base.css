@@ -1,5 +1,7 @@
 /* Custom css. Requires bootstrap5 */
 
+html{font-size: 1.65vmin;} /* computed from a font-size=16px and a vheight=vmin=982px*/
+
 /* redefine bootstrap (bs) global colors */
 :root {
 	--bs-primary-rgb: 7,104,159;  /* overrides .text-primary */
