@@ -383,6 +383,10 @@ var PlotsDiv = {
 					}else{
 						values.sort();
 					}
+					// quick-n-dirty fix to sort residuals and have total as first:
+					if (pname.toLowerCase().startsWith('residual')){
+						values.reverse();  // => Total, Intra event, Inter Event
+					}
 					params.push({
 						values: values,
 						label: pname,
