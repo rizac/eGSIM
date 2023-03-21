@@ -26,8 +26,7 @@ def test_models(capfd):
         # to assure the admin panel (which usually uses it) works correctly
         _ = getattr(models, _name)
         try:
-            is_class = issubclass(_, models.Model) and not _._meta.abstract and \
-                _ not in (models.Model, models._UniqueNameModel)
+            is_class = issubclass(_, models.Model) and not _._meta.abstract
         except:  # noqa
             is_class = False
         if is_class:
@@ -63,11 +62,12 @@ def test_models(capfd):
                           regionalization=regio).save()
     assert 'unique constraint' in str(ierr.value).lower()
 
-    with pytest.raises(IntegrityError) as ierr:
-        # geom type false:
-        geom['type'] = 'invalid'
-        # create a valid and new RegionalizationDataSource to avoid Unique Constraints:
-        regio2, _ = models.Regionalization.objects.get_or_create(name='share2')
-        models.GsimRegion(gsim=akkarbommer, geometry=geom,
-                          regionalization=regio2).save()
-    assert str(models.GsimRegion.GEOM_TYPES) in str(ierr.value)
+    # Here we tested that a geom not of type Polygon (not anymore the case, comment out):
+    # with pytest.raises(IntegrityError) as ierr:
+    #     # geom type false:
+    #     geom['type'] = 'invalid'
+    #     # create a valid and new RegionalizationDataSource to avoid Unique Constraints:
+    #     regio2, _ = models.Regionalization.objects.get_or_create(name='share2', geometry={})
+    #     models.GsimRegion(gsim=akkarbommer, geometry=geom,
+    #                       regionalization=regio2).save()
+    # assert str(models.GsimRegion.GEOM_TYPES) in str(ierr.value)
