@@ -95,102 +95,124 @@ EGSIM.component('residuals-plot-div', {
 			// setup  plots:
 			var data = responseObject;
 			var plots = [];
+			var types = new Set();
+			var gsims = new Set();
+			// Get all residuals types and models (some might be missing):
 			for (var imt of Object.keys(data)){
 				for (var type of Object.keys(data[imt])){
+					types.add(type);
 					for (var gsim of Object.keys(data[imt][type])){
-						var plotdata = data[imt][type][gsim];
-						var hasLinearRegression = plotdata.intercept != null && plotdata.slope != null;
-						var [xlbl, ylbl] = [plotdata.xlabel, plotdata.ylabel];
-						var ptText = `${plotdata.xlabel}=%{x}<br>${plotdata.ylabel}=%{y}`;
+						gsims.add(gsim);
+					}
+				}
+			}
+			// iterate:
+			for (var imt of Object.keys(data)){
+				for (var type of Array.from(types)){
+					for (var gsim of Array.from(gsims)){
+						// setup plot for the case we do not have data (in most of the
+						// cases these default Objects will be deleted or overwritten):
+						var plotdata = {xlabel: "Data N/A", ylabel: ""};
+						// note: adding an annotation (in layout.annotations) showing
+						// "Data N/A" wpuld be better, but layout.annotations will be overwritten
+						// when setting the grid labels (see plotdiv.js)
 						var mainTrace = {
-							x: plotdata.xvalues,
-							y: plotdata.yvalues,
-							type: hasLinearRegression ? 'scatter' : 'bar',
+							x: [],
+							y: [],
 							name: type,
 							// <extra></extra> hides the second tooltip (white):
-							hovertemplate: `${gsim}<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
+							// hovertemplate: `${gsim}<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
 						};
 						mainTrace.legendgroup = mainTrace.name;
-						var color = this.colors.get(mainTrace.legendgroup);
-						mainTrace.marker = {color: this.colors.rgba(color, .5)};
-						// add other stuff (normal distributions, regression lines, ...):
-						if (hasLinearRegression){  // scatter plot
-							mainTrace.mode = 'markers';  // hide connecting lines
-							mainTrace.marker.size = 10;
-							// show linear regression according to slope and intercept:
-							// var [min, max] = endpoints(plotdata.xvalues);
-							var [slope, intercept] = [plotdata.slope, plotdata.intercept];
-							var xreg = resample(plotdata.xvalues);
-							var yreg = xreg.map(x => x*slope+intercept);
-							var linregtrace = {
-								x: xreg,
-								y: yreg,
-								type: 'scatter',
-								mode: 'lines',
-								name: 'Linear regression',
-								hovertemplate: `${gsim} linear regression` +
-									`<br>slope=${slope}<br>intercept=${intercept}<br>pvalue=${plotdata.pvalue}`+
-									`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
-									`<extra></extra>`
-							}
-							linregtrace.legendgroup = linregtrace.name;
-							linregtrace.line = {color: '#331100'};
-							var traces = [mainTrace, linregtrace];
-						}else{
-							// customize more the marker (which are bars in this case):
-							mainTrace.marker.line = {
-								color: color,
-								width: 2
-							};
-							var hasMeanStdev = plotdata.mean != null && plotdata.stddev != null;
-							var hasMedian = plotdata.median != null;
-							if (hasMeanStdev){
-
-								// show normal distribution and reference normal dist. (mean=0 sigma=1)
-								var x = resample(plotdata.xvalues, granularity=5);
-								var normdistline = {
-									x: x,
-									y: normdist(x, plotdata.mean, plotdata.stddev),
+						var traces = [mainTrace];
+						if (data[imt] && data[imt][type] && data[imt][type][gsim]){  // data exists
+							var plotdata = data[imt][type][gsim];
+							var hasLinearRegression = plotdata.intercept != null && plotdata.slope != null;
+							var [xlbl, ylbl] = [plotdata.xlabel, plotdata.ylabel];
+							var ptText = `${plotdata.xlabel}=%{x}<br>${plotdata.ylabel}=%{y}`;
+							mainTrace.x = plotdata.xvalues;
+							mainTrace.y = plotdata.yvalues;
+							mainTrace.type = hasLinearRegression ? 'scatter' : 'bar';
+							// <extra></extra> hides the second tooltip (white):
+							mainTrace.hovertemplate = `${gsim}<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`;
+							var color = this.colors.get(mainTrace.legendgroup);
+							mainTrace.marker = {color: this.colors.rgba(color, .5)};
+							// add other stuff (normal distributions, regression lines, ...):
+							if (hasLinearRegression){  // scatter plot
+								mainTrace.mode = 'markers';  // hide connecting lines
+								mainTrace.marker.size = 10;
+								// show linear regression according to slope and intercept:
+								// var [min, max] = endpoints(plotdata.xvalues);
+								var [slope, intercept] = [plotdata.slope, plotdata.intercept];
+								var xreg = resample(plotdata.xvalues);
+								var yreg = xreg.map(x => x*slope+intercept);
+								var linregtrace = {
+									x: xreg,
+									y: yreg,
 									type: 'scatter',
 									mode: 'lines',
-									name: 'Normal distribution',
-									hovertemplate: `${gsim} normal distribution` +
-										`<br>μ=${plotdata.mean}<br>σ=${plotdata.stddev}` +
+									name: 'Linear regression',
+									hovertemplate: `${gsim} linear regression` +
+										`<br>slope=${slope}<br>intercept=${intercept}<br>pvalue=${plotdata.pvalue}`+
 										`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
 										`<extra></extra>`
+								}
+								linregtrace.legendgroup = linregtrace.name;
+								linregtrace.line = {color: '#331100'};
+								traces.push(linregtrace);
+							}else{
+								// customize more the marker (which are bars in this case):
+								mainTrace.marker.line = {
+									color: color,
+									width: 2
 								};
-								normdistline.legendgroup = normdistline.name;
-								normdistline.line = {color: '#331100'};
+								var hasMeanStdev = plotdata.mean != null && plotdata.stddev != null;
+								var hasMedian = plotdata.median != null;
+								if (hasMeanStdev){
 
-								var refnormdistline = {
-									x: x,
-									y: normdist(x, 0, 1),
-									type: 'scatter',
-									mode: 'lines',
-									name: 'Normal distribution (μ=0, σ=1)',
-									hovertemplate: `Standard normal distribution (μ=0, σ=1)` +
-										`<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
-								};
-								refnormdistline.legendgroup = refnormdistline.name;
-								refnormdistline.line = {color: '#999999'};
+									// show normal distribution and reference normal dist. (mean=0 sigma=1)
+									var x = resample(plotdata.xvalues, granularity=5);
+									var normdistline = {
+										x: x,
+										y: normdist(x, plotdata.mean, plotdata.stddev),
+										type: 'scatter',
+										mode: 'lines',
+										name: 'Normal distribution',
+										hovertemplate: `${gsim} normal distribution` +
+											`<br>μ=${plotdata.mean}<br>σ=${plotdata.stddev}` +
+											`<br><br>${xlbl}=%{x}<br>${ylbl}=%{y}` +
+											`<extra></extra>`
+									};
+									normdistline.legendgroup = normdistline.name;
+									normdistline.line = {color: '#331100'};
 
-								var traces = [mainTrace, normdistline, refnormdistline];
+									var refnormdistline = {
+										x: x,
+										y: normdist(x, 0, 1),
+										type: 'scatter',
+										mode: 'lines',
+										name: 'Normal distribution (μ=0, σ=1)',
+										hovertemplate: `Standard normal distribution (μ=0, σ=1)` +
+											`<br>${xlbl}=%{x}<br>${ylbl}=%{y}<extra></extra>`
+									};
+									refnormdistline.legendgroup = refnormdistline.name;
+									refnormdistline.line = {color: '#999999'};
+									traces.push(normdistline, refnormdistline);
+								}else if(hasMedian){
 
-							}else if(hasMedian){
-
-								var [min, max] = endpoints(plotdata.yvalues);
-								var medianline = {
-									x: [plotdata.median, plotdata.median],
-									y: [0, max],
-									type: 'scatter',
-									mode: 'lines',
-									name: 'Median LH',
-									hovertemplate: `${gsim} median<br>${xlbl}=${plotdata.median}<extra></extra>`
-								};
-								medianline.legendgroup = medianline.name;
-								medianline.line = {color: '#331100', dash: 'dot'};
-
-								var traces = [mainTrace, medianline];
+									var [min, max] = endpoints(plotdata.yvalues);
+									var medianline = {
+										x: [plotdata.median, plotdata.median],
+										y: [0, max],
+										type: 'scatter',
+										mode: 'lines',
+										name: 'Median LH',
+										hovertemplate: `${gsim} median<br>${xlbl}=${plotdata.median}<extra></extra>`
+									};
+									medianline.legendgroup = medianline.name;
+									medianline.line = {color: '#331100', dash: 'dot'};
+									traces.push(medianline);
+								}
 							}
 						}
 						var plotparams = {model: gsim, imt: imt, 'residual type': type};
