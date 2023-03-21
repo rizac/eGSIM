@@ -69,7 +69,6 @@ class Test:
                                  content_type="text/csv")
         inputdic2 = {'model': 'KothaEtAl2020ESHM20', 'imt' : 'PGA',
                      'flatfile':csv, 'plot':'res'}
-        # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
@@ -80,7 +79,6 @@ class Test:
                                  content_type="text/csv")
         inputdic2 = {'model': 'CauzziEtAl2014', 'imt' : 'PGA',
                      'flatfile':csv, 'plot':'rjb'}
-        # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
@@ -91,7 +89,6 @@ class Test:
                                  content_type="text/csv")
         inputdic2 = {'model': 'CauzziEtAl2014', 'imt' : 'PGA',
                      'flatfile':csv, 'plot':'vs30'}
-        # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
