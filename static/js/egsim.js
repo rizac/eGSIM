@@ -66,6 +66,7 @@ const EGSIM = Vue.createApp({
 	</div>`,
 	created(){
 		this.configureHTTPClient();
+		this.addCss();
 	},
 	mounted(){
 		setupTooltipObserver(this.$el.parentNode);   // https://vuejs.org/api/component-instance.html#el
@@ -140,6 +141,48 @@ const EGSIM = Vue.createApp({
 				this.loading = false;
 				throw error;
 			});
+		},
+		addCss(){
+			var style = document.createElement('style');
+			style.type = 'text/css';
+			style.innerHTML = this.getCss();
+			document.head.appendChild(style);
+		},
+		getCss(){
+			// custom css style to be added to <head>. Mainly for transition stuff (progressbar / components)
+			return `
+				@media (max-width: 975px){  /* narrow  screen (< 975px) */
+					nav > .menu-item span { display: none !important; } /* hide menu texts */
+				}
+				/* waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
+				.loader, .loader:before { height: 10px; }
+				.loader {
+					width: 100%;
+					position: relative;
+					overflow: hidden;
+					background-color: #999;
+				}
+				.loader:before{
+					display: block;
+					position: absolute;
+					content: "";
+					left: -200px;
+					width: 200px;
+					background-color: #ffc107; /*#a2cd7e;*/
+					animation: loading 2s linear infinite;
+				}
+				@keyframes loading {
+					from {left: -200px; width: 30%;}
+					50% {width: 30%;}
+					70% {width: 70%;}
+					80% { left: 50%;}
+					95% {left: 120%;}
+					to {left: 100%;}
+				}
+				/* Transitions when activating a main component: https://vuejs.org/guide/built-ins/transition.html */
+				.fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
+				.fade-enter, .fade-leave-to { opacity: 0; }
+			`;
 		},
 		init(gsims, imtGroups, flatfile, regionalizations){
 			// Create a "template" Array of gsims and imts, to be copied as field choices
