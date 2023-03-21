@@ -56,12 +56,16 @@ var PlotsDiv = {
 		// setup non reactive data:
 		this.plots = [];  // populated in `init`
 		// define default font and infer from page if possible:
-		var font = {
-			family: 'Helvetica, Arial, sans-serif',
-			size: 16
-		};
+		var font = {};
 		var fontf = window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-family');
 		if (typeof fontf === 'string' && !!fontf){
+			// Comma-separated font families work in Plotly here, but to download images
+			// Plotly server side needs a single family, so set the 1st declared here:
+			fontf = fontf.split(",")[0].trim();
+			// remove quotes, if present:
+			if ('\'"'.includes(fontf[0]) && fontf[fontf.length -1] == fontf[0]){
+				fontf = fontf.substring(1, fontf.length - 1);
+			}
 			font.family = fontf;
 		}
 		var fonts = parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'));
