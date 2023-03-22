@@ -286,11 +286,11 @@ var PlotsDiv = {
 						</option>
 					</select>
 					<div class='mt-1 d-flex flex-row'>
-						<div>labels</div>
+						<div>Show label</div>
 						 <div v-for="ax in [0, 1]" class='ms-1 d-flex flex-row'>
-							<label class='text-nowrap m-0 ms-2 align-items-baseline'>
-								<input type='checkbox' v-model="grid.visibility[ax]" :disabled="!grid.params[ax].label" >
-								<span class='ms-1 text-nowrap' :class="{'text-muted': !grid.params[ax].label }">
+							<label class='text-nowrap m-0 ms-2 align-items-baseline' v-show="!!grid.params[ax].label">
+								<input type='checkbox' v-model="grid.visibility[ax]">
+								<span class='ms-1 text-nowrap'>
 									{{ grid.params[ax].label }}
 								</span>
 							</label>
@@ -383,9 +383,12 @@ var PlotsDiv = {
 					}else{
 						values.sort();
 					}
-					// quick-n-dirty fix to sort residuals and have total as first:
+					// quick-n-dirty fix to sort residuals and have 'total' as first element:
 					if (pname.toLowerCase().startsWith('residual')){
-						values.reverse();  // => Total, Intra event, Inter Event
+						var idx_ = values.map(e => (""+e).toLowerCase()).indexOf('total');
+						if (idx_ > -1){
+							values = [values[idx_]].concat(values.filter((e, i) => i!=idx_));
+						}
 					}
 					params.push({
 						values: values,
