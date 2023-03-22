@@ -37,18 +37,18 @@ EGSIM.component('testing', {
 		</template>
 
 		<template v-slot:right-column>
-			<imt-select :field="form.imt" style="flex: 1 1 auto" />
+			<imt-select :field="form.imt" style="flex: 1 1 0" />
 
 			<div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
 				<flatfile-select :field="form.flatfile"/>
 				<flatfile-selexpr-input :field="form.selexpr" class='mt-3'/>
 			</div>
 			
-			<div class="mt-4" style="background-color:transparent">
+			<div class="mt-4" style="background-color:transparent; flex: 1 1 0" class='d-flex flex-column'>
 				<field-label :field='form.fit_measure'/>
-				<field-input :field='form.fit_measure' size="5"/>
+				<field-input :field='form.fit_measure' size='5'/>
 
-				<div class='invisible small' :style="{visibility: isEDRSelected ? 'visible !important': 'hidden'}">
+				<div class='small' v-show="isEDRSelected">
 					<field-label :field="form.edr_bandwidth" class='mt-2' />
 					<field-input class='small' :field="form.edr_bandwidth" />
 					<field-label :field="form.edr_multiplier" class='mt-2' />
