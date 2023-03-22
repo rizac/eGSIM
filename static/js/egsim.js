@@ -10,40 +10,33 @@ const EGSIM = Vue.createApp({
 			newpageURLs: {}
 		}
 	},
-	template: `<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav'
-		style='color:lightgray'>
-		<a v-for="n in components.names" class='menu-item ms-3' :style='menuStyle(n)'
-		   @click="setComponent(n)" onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
+	template: `<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav' style='color:lightgray'>
+		<a v-for="n in components.names" class='menu-item' :class='selComponent == n ? "selected" : ""' @click="setComponent(n)">
 			<i :class="['fa', components.tabs[n].icon, 'me-1']"></i>
 			<span>{{ components.tabs[n].title }}</span>
 		</a>
-		<div class='invisible d-flex flex-row m-2 p-2 bg-danger text-white rounded-2 align-items-baseline'
+		<div class='invisible d-flex flex-row px-2 bg-danger text-white rounded-2 align-items-baseline'
 			 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
 			<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
-			<input type="text" :value="errorMsg" readonly
+			<input type="text" :value="errorMsg" readonly class="p-0 m-0"
 				   style="flex: 1 1 auto;background-color: rgba(0,0,0,0);color: white;outline: none;border-width: 0px;"/>
 			<i class="fa fa-times ms-2" @click='setError("")' style="cursor: pointer"></i>
 		</div>
-		<a class="menu-item me-3" href="#" @click="toggleOptionsMenu"
-		   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
+		<a class="menu-item" href="#" @click="toggleOptionsMenu">
 			<i class="fa fa-bars"></i>
 		</a>
 		<div style="transform: scaleY(0);z-index:100; transition: transform .25s ease-out; transform-origin: top;"
-			 ref='options-menu' class="sub-menu d-flex flex-column p-2 bg-dark position-absolute end-0">
-			<a style="display:none" class="p-2" :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
-			   :href='newpageURLs.api' target="_blank">
+			 ref='options-menu' class="m-0 d-flex flex-column p-2 bg-dark position-absolute end-0">
+			<a style="display:none" class="p-2 menu-item" :href='newpageURLs.api' target="_blank">
 				<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
 			</a>
-			<a class="p-2" :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'"
-			   :href='newpageURLs.ref_and_license' target="_blank">
+			<a class="p-2 menu-item" :href='newpageURLs.ref_and_license' target="_blank">
 				<i class="fa fa-address-card-o"></i> <span>References & License</span>
 			</a>
-			<a class='p-2' :href='newpageURLs.imprint' target="_blank"
-			   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
+			<a class='p-2 menu-item' :href='newpageURLs.imprint' target="_blank">
 				Imprint
 			</a>
-			<a class='p-2' :href='newpageURLs.data_protection' target="_blank"
-			   :style='menuStyle()' onmouseover="this.style.color='white'" onmouseout="this.style.color='inherit'">
+			<a class='p-2 menu-item' :href='newpageURLs.data_protection' target="_blank">
 				Data Protection
 			</a>
 		</div>
@@ -98,13 +91,6 @@ const EGSIM = Vue.createApp({
 		}
 	},
 	methods: {
-		menuStyle(componentName){
-			var ret = { color: 'lightgray', cursor: 'pointer' };
-			if (componentName === this.selComponent){
-				ret.color = 'white'
-			}
-			return ret;
-		},
 		setComponent(name){
 			this.selComponent = name;
 			this.setUrlInBrowser(name);
@@ -182,6 +168,10 @@ const EGSIM = Vue.createApp({
 				/* Transitions when activating a main component: https://vuejs.org/guide/built-ins/transition.html */
 				.fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
 				.fade-enter, .fade-leave-to { opacity: 0; }
+				/* nav menus anchors */
+				nav#egsim-nav > * { margin: .375rem; padding: .5rem; }
+				nav#egsim-nav a.menu-item { color: lightgray; cursor: pointer; border-radius: .375rem; }
+				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: black; background-color: rgba(248, 249, 250, 0.33) }
 			`;
 		},
 		init(gsims, imtGroups, flatfile, regionalizations){

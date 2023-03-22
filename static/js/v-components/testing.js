@@ -44,7 +44,7 @@ EGSIM.component('testing', {
 				<flatfile-selexpr-input :field="form.selexpr" class='mt-3'/>
 			</div>
 			
-			<div class="mt-4" style="background-color:transparent; flex: 1 1 0" class='d-flex flex-column'>
+			<div class="mt-4 d-flex flex-column" style="background-color:transparent; flex: 1 1 0">
 				<field-label :field='form.fit_measure'/>
 				<field-input :field='form.fit_measure' size='5'/>
 
