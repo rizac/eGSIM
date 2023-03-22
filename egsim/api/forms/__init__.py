@@ -616,7 +616,9 @@ class APIForm(EgsimBaseForm):
             return None
 
         cleaned_data = self.cleaned_data
-        obj = self.process_data(cleaned_data) or {}  # assure is not None
+        obj = self.process_data(cleaned_data)
+        if obj is None:
+            obj = {}
         if self.data_format == self.DATA_FORMAT_CSV:
             obj = self.to_csv_buffer(obj, cleaned_data['csv_sep'],
                                      cleaned_data['csv_dec'])
