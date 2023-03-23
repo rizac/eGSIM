@@ -171,10 +171,10 @@ const EGSIM = Vue.createApp({
 				.fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
 				.fade-enter, .fade-leave-to { opacity: 0; }
 				/* nav menus anchors */
-				nav#egsim-nav > * { margin: .25rem; }
-				nav#egsim-nav .menu-item { border-radius: .375rem; padding: .5rem; }
+				nav#egsim-nav > * {  }
+				nav#egsim-nav .menu-item { border-radius: .375rem; padding: .5rem; margin: .375rem; }
 				nav#egsim-nav a.menu-item { color: lightgray; cursor: pointer; }
-				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: #ffc107; }
+				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: black; background-color: rgba(202, 214, 222, .8) }
 			`;
 		},
 		init(gsims, imtGroups, flatfile, regionalizations){

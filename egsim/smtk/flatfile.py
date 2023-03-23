@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import Enum, IntEnum
 from os.path import join, dirname
-
+import re
 
 from typing import Union, Callable, Any
 
@@ -414,6 +414,31 @@ def _check(flatfile: pd.DataFrame):
     # rename imts:
     if col2rename:
         flatfile.rename(columns=col2rename, inplace=True)
+
+
+def query(flatfile: pd.DataFrame, query_exprression) -> str:
+    """Same a faltfile.query after reformatting `query_expression`
+    to accept custom function `notmissing`
+    """
+    # `col == col` is the pandas query expression to filter rows that are not NA.
+    # We implement a `notna(col)` expression which is more edible for the users.
+    # Before replacing `notna`, first check that the argument is a column:
+    notna_expr = r'\bmissing\((.*?)\)'
+    for match in re.finditer(notna_expr, sel_expr):
+        # check that the column inside the expression is valid:
+        cname = match.group(1)
+        # if col contains invalid chars, thus i wrapped in ``:
+        if len(cname) > 1 and cname[0] == cname[-1] == '`':
+            cname = cname[1:-1]
+        if cname not in dataframe.columns:
+            # raise the same pandas exception:
+            raise UndefinedVariableError(cname)
+    # now replace `notna(x)` with `x == x` (`isna` can be typed as `~notna`):
+    sel_expr = re.sub(notna_expr, r"(\1==\1)", sel_expr, re.IGNORECASE)
+    # be relaxed about booleans: accept any case (lower, upper, mixed):
+    sel_expr = re.sub(r'\btrue\b', "True", sel_expr, re.IGNORECASE)
+    sel_expr = re.sub(r'\bfalse\b', "False", sel_expr, re.IGNORECASE)
+    return sel_expr
 
 
 #######################################
