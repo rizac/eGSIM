@@ -108,8 +108,8 @@ EGSIM.component('residuals-plot-div', {
 			}
 			// iterate:
 			for (var imt of Object.keys(data)){
-				for (var type of Array.from(types)){
-					for (var gsim of Array.from(gsims)){
+				for (var type of types){
+					for (var gsim of gsims){
 						// setup plot for the case we do not have data (in most of the
 						// cases these default Objects will be deleted or overwritten):
 						var plotdata = {xlabel: "Data N/A", ylabel: ""};
