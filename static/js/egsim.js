@@ -15,30 +15,32 @@ const EGSIM = Vue.createApp({
 			<i :class="['fa', components.tabs[n].icon, 'me-1']"></i>
 			<span>{{ components.tabs[n].title }}</span>
 		</a>
-		<div class='invisible d-flex flex-row px-2 bg-danger text-white rounded-2 align-items-baseline'
+		<div class='menu-item invisible d-flex flex-row bg-danger text-white align-items-baseline'
 			 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
 			<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
 			<input type="text" :value="errorMsg" readonly class="p-0 m-0"
 				   style="flex: 1 1 auto;background-color: rgba(0,0,0,0);color: white;outline: none;border-width: 0px;"/>
 			<i class="fa fa-times ms-2" @click='setError("")' style="cursor: pointer"></i>
 		</div>
-		<a class="menu-item" href="#" @click="toggleOptionsMenu">
-			<i class="fa fa-bars"></i>
-		</a>
-		<div style="transform: scaleY(0);z-index:100; transition: transform .25s ease-out; transform-origin: top;"
-			 ref='options-menu' class="m-0 d-flex flex-column p-2 bg-dark position-absolute end-0">
-			<a style="display:none" class="p-2 menu-item" :href='newpageURLs.api' target="_blank">
-				<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
+		<div>
+			<a class="menu-item" href="#" @click="toggleOptionsMenu">
+				<i class="fa fa-bars"></i>
 			</a>
-			<a class="p-2 menu-item" :href='newpageURLs.ref_and_license' target="_blank">
-				<i class="fa fa-address-card-o"></i> <span>References & License</span>
-			</a>
-			<a class='p-2 menu-item' :href='newpageURLs.imprint' target="_blank">
-				Imprint
-			</a>
-			<a class='p-2 menu-item' :href='newpageURLs.data_protection' target="_blank">
-				Data Protection
-			</a>
+			<div style="transform: scaleY(0);z-index:100; transition: transform .25s ease-out; transform-origin: top;"
+				 ref='options-menu' class="m-0 d-flex flex-column bg-dark position-absolute end-0">
+				<a style="display:none" class="menu-item" :href='newpageURLs.api' target="_blank">
+					<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
+				</a>
+				<a class="menu-item" :href='newpageURLs.ref_and_license' target="_blank">
+					<i class="fa fa-address-card-o"></i> <span>References & License</span>
+				</a>
+				<a class='menu-item' :href='newpageURLs.imprint' target="_blank">
+					Imprint
+				</a>
+				<a class='menu-item' :href='newpageURLs.data_protection' target="_blank">
+					Data Protection
+				</a>
+			</div>
 		</div>
 	</nav>
 
@@ -169,9 +171,10 @@ const EGSIM = Vue.createApp({
 				.fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
 				.fade-enter, .fade-leave-to { opacity: 0; }
 				/* nav menus anchors */
-				nav#egsim-nav > * { margin: .375rem; padding: .5rem; }
-				nav#egsim-nav a.menu-item { color: lightgray; cursor: pointer; border-radius: .375rem; }
-				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: black; background-color: rgba(248, 249, 250, 0.33) }
+				nav#egsim-nav > * { margin: .25rem; }
+				nav#egsim-nav .menu-item { border-radius: .375rem; padding: .5rem; }
+				nav#egsim-nav a.menu-item { color: lightgray; cursor: pointer; }
+				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: #ffc107; }
 			`;
 		},
 		init(gsims, imtGroups, flatfile, regionalizations){
@@ -294,8 +297,9 @@ const EGSIM = Vue.createApp({
 			return {'name': name, 'version': isnan ? null : parseFloat(version)};
 		},
 		toggleOptionsMenu(evt){
-			var elm = this.$refs['options-menu']; // document.getElementById('options-menu');
+			var elm = this.$refs['options-menu'];
 			var isShowing = () => { return elm.getAttribute('data-showing') === '1' };
+			// define a function that hides / shows the popup:
 			function popup(visible, timeout=0){
 				if (isShowing() == visible){ return; }
 				setTimeout(() => {
@@ -308,6 +312,8 @@ const EGSIM = Vue.createApp({
 				// hide component:
 				popup(false);
 			}else{
+				// show popup but attach also a listener to hide the
+				// popup for any keystroke or mouse click everywhere on the document:
 				evt.stopPropagation();
 				// set top (for safety) and show component
 				elm.style.top = `${document.getElementById('egsim-nav').offsetHeight}px`;
