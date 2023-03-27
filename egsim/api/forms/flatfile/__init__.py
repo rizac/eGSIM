@@ -4,7 +4,6 @@ Base Form for to model-to-data operations i.e. flatfile handling
 from collections import defaultdict
 # from operator import or_
 
-import re
 from datetime import datetime
 from typing import Iterable, Sequence, Any
 
@@ -12,7 +11,6 @@ import pandas as pd
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.forms import Form, ModelChoiceField
-from pandas.errors import UndefinedVariableError
 from ....smtk.residuals.gmpe_residuals import Residuals
 
 from ... import models
