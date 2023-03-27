@@ -295,7 +295,7 @@ EGSIM.component('flatfile-select', {
 		doc: {
 			'type': String,
 			'default': `Upload a user-defined flatfile (CSV or zipped CSV).
-					  It is recommended to inspect the flatfile before usage (see relative Tab on this website).
+					  It is recommended to inspect the flatfile before usage (see Data Management Tab).
 					  An uploaded flatfile will be available in all tabs of this web page`
 		}
 	},
@@ -420,15 +420,17 @@ EGSIM.component('flatfile-selexpr-input', {
 		doc: {
 			type: String,
 			default: `Type an expression that operates on arbitrary flatfile columns to select
-					  only rows matching the expression. Comparison operators:
-					  <code style='font-size:105%'>== != &gt; &lt; &gt;= &lt;= </code>, logical operators (and or not):
-					  <code style='font-size:105%'>& | !</code>. Example:
-					  <br><br><code style='font-size:105%'>(magnitude >= 5) & (vs30 > 760)</code><br><br>
-					  Use <code style='font-size:105%'>notna([column])</code> to match rows where the column value is given,
-					  i.e. not 'not available' (na). Example (get records where at rjb or
-					  repi is available):
-					  <br><br><code style='font-size:105%'>(magnitude>5) & (notna(rjb) | notna(repi))</code><br><br>
-					  (notna works for numeric and string columns only)`
+					  only rows matching the expression. Example:
+					  <br><code>(magnitude &gt; 4.5) and ((event_id == "gfd20") or (vs30measured != true))</code>
+					  <p></p>
+					  You can also use specific column methods such as "median", "mean", "max",
+					  "min" (all self-explanatory) or "notna", which selects rows where the column value is not missing,
+					  i.e. not null and not NaN ("notna" works only for columns of type datetime, float or string). Examples:
+					  <br><code>magnitude.notna()</code><br><code>vs30 &lt;= vs30.median()</code><br>(round brackets are optional).
+					  <p></p>
+					  Note: date-time values can be input as Python datetime objects, e.g.:
+					  <br><code>datetime_column_name >= datetime(2016, 12, 31, 23, 59, 59)</code>
+					  `
 		}
 	},
 	template: `<div class='d-flex flex-column' :aria-label="doc">

@@ -11,6 +11,7 @@ from typing import Union, Callable, Any
 import yaml
 import numpy as np
 import pandas as pd
+from pandas.errors import UndefinedVariableError
 from scipy.interpolate import interp1d
 from openquake.hazardlib import imt
 from openquake.hazardlib.scalerel import PeerMSR
@@ -416,29 +417,32 @@ def _check(flatfile: pd.DataFrame):
         flatfile.rename(columns=col2rename, inplace=True)
 
 
-def query(flatfile: pd.DataFrame, query_exprression) -> str:
-    """Same a faltfile.query after reformatting `query_expression`
-    to accept custom function `notmissing`
+def query(flatfile: pd.DataFrame, query_expression) -> pd.DataFrame:
+    """Call `flatfile.query` with some utilities:
+     - datetime can be input in the string, e.g. "datetime(2016, 12, 31)"
+     - boolean can be also lower case ("true" or "false")
+     - serie methods can also be given with no brackets when called with no
+       arguments (e.g. ".notna", ".median")
     """
-    # `col == col` is the pandas query expression to filter rows that are not NA.
-    # We implement a `notna(col)` expression which is more edible for the users.
-    # Before replacing `notna`, first check that the argument is a column:
-    notna_expr = r'\bmissing\((.*?)\)'
-    for match in re.finditer(notna_expr, sel_expr):
-        # check that the column inside the expression is valid:
-        cname = match.group(1)
-        # if col contains invalid chars, thus i wrapped in ``:
-        if len(cname) > 1 and cname[0] == cname[-1] == '`':
-            cname = cname[1:-1]
-        if cname not in dataframe.columns:
-            # raise the same pandas exception:
-            raise UndefinedVariableError(cname)
-    # now replace `notna(x)` with `x == x` (`isna` can be typed as `~notna`):
-    sel_expr = re.sub(notna_expr, r"(\1==\1)", sel_expr, re.IGNORECASE)
-    # be relaxed about booleans: accept any case (lower, upper, mixed):
-    sel_expr = re.sub(r'\btrue\b', "True", sel_expr, re.IGNORECASE)
-    sel_expr = re.sub(r'\bfalse\b', "False", sel_expr, re.IGNORECASE)
-    return sel_expr
+    # Setup custom keyword arguments to dataframe query
+    kwargs = {
+        # add support for `datetime(Y,M,...)` inside expressions:
+        'local_dict': {
+            'datetime': lambda *a, **k: datetime(*a, **k)
+        },
+        'global_dict': {},  # 'pd': pd, 'np': np }
+        # add support for true/false (lower case):
+        'resolvers': [{'true': True, 'false': False}]
+    }
+    # Series methods with no args can also be called with no brackets, add then in case.
+    # Build a regex pattern that matches any column name followed by "." and a method
+    # name ("([a-zA-Z]\\w*)") and not followed by "(" (or another alphanumeric char),
+    # and replace it with "[col_name].[method_name]()" (i.e., "\1.\2()"):
+    query_expression = re.sub(f"\\b({'|'.join(re.escape(_) for _ in flatfile.columns)})"
+                              f"\\.([a-zA-Z]\\w*)(?![\\w\\(])", r"\1.\2()",
+                              query_expression)
+    # evaluate expression:
+    return flatfile.query(query_expression, **kwargs)
 
 
 #######################################
