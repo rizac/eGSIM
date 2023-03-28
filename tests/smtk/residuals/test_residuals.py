@@ -1,12 +1,11 @@
 """
 Core test suite for the database and residuals construction
 """
-from itertools import combinations, combinations_with_replacement
-
 import os
+
 import pandas as pd
-import numpy as np
-import unittest
+from django.test import SimpleTestCase  # https://stackoverflow.com/a/59764739
+
 
 import egsim.smtk.residuals.gmpe_residuals as res
 from egsim.smtk.flatfile import ContextDB, read_flatfile
@@ -39,7 +38,7 @@ EXPECTED_IDS = [
     "EMSC_20130108_0000044_KO_SHAP_0"]
 
 
-class ResidualsTestCase(unittest.TestCase):
+class ResidualsTestCase(SimpleTestCase):
     """
     Core test case for the residuals objects
     """
