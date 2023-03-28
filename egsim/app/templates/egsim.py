@@ -10,8 +10,9 @@ from django.forms.widgets import ChoiceWidget, Input
 
 from ...api import models
 from ...api.forms import EgsimBaseForm, APIForm
-from ...api.forms.flatfile import FlatfileForm, FlatfileRequiredColumnsForm, MOF
-from ...api.forms.flatfile.inspection import FlatfilePlotForm
+from ...api.forms.flatfile import FlatfileForm
+from ...api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
+                                               FlatfilePlotForm)
 from ...api.views import (ResidualsView, TestingView, TrellisView, RESTAPIView)
 
 
@@ -210,7 +211,7 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                                     f"{TAB.trellis.download_response_filename}"
             }
         },
-        TAB.flatfile.name: {  # FIXME REMOVE
+        TAB.flatfile.name: {
             'forms': [form_to_json(FlatfileRequiredColumnsForm, ignore_field,
                                    ignore_choices),
                       form_to_json(FlatfilePlotForm, ignore_field, ignore_choices)],
@@ -258,6 +259,8 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
     """Set up some dict keys and sub-keys so that the frontend FORM is already
     filled with default values for easy testing
     """
+    from egsim.api.forms.flatfile.gsim import MOF
+
     gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
                  'CauzziEtAl2014', 'KothaEtAl2020ESHM20']
     val = 'value'
