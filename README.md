@@ -261,10 +261,10 @@ it is often easier to throw everything away and regenerate all db schema and dat
 from scratch.
 
 To perform a db reset:
- - delete or rename `db.sqlite3` (or wherever the database is)
- - delete all migrations (currently under "egsim/api/migrations"), i.e.
-   all all .py files except `__init__.py`
- - Create migrations (re-generate a new initial migration file):
+ - delete or rename `db.sqlite3` (or wherever the database is. See settings file in case)
+ - [**Optional: skip if the db schema hasn't changed**] delete all migrations,
+   i.e. all `*.py` files except `__init__.py` currently under `egsim/api/migrations`, 
+   and re-generate the initial (and only) migration file:
    ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
    ```
@@ -275,7 +275,7 @@ To perform a db reset:
    ```
  - [Repopulate the db](#Repopulate-the-DB)
  
- - [**Optional**] Re-add the Django admin superuser(s) as explained in the
+ - [**Optional**] re-add the Django admin superuser(s) as explained in the
    [admin panel](#admin-panel) above
    
 

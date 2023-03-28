@@ -9,7 +9,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
 
 import yaml
-# from unittest.mock import patch
 
 from itertools import product
 
