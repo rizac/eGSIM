@@ -240,8 +240,8 @@ def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
 class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
     """Form for querying the necessary metadata columns from a given list of Gsims"""
 
-    accept_empty_gsims = True
-    accept_empty_imts = True
+    accept_empty_gsim_list = True  # see GsimImtForm
+    accept_empty_imt_list = True
 
     def clean(self):
         return super().clean()
