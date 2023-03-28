@@ -137,16 +137,15 @@ EGSIM.component('field-label', {
 			if (this.field.error){
 				return this.field.error + "";
 			}
+			var n = (this.field.name || "").trim();
 			var l = (this.field.label || "").trim();
+			if (l.toLowerCase() == n.toLowerCase()){ l = ""; }
 			var h = (this.field.help || "").trim();
+			if (h.toLowerCase() == n.toLowerCase()){ h = ""; }
 			if (l && h){
 				h = ` (${h})`;
 			}
-			var infoMsg = l + h;
-			if (infoMsg.toLowerCase().trim() === this.field.name.toLowerCase()){
-				infoMsg = "";
-			}
-			return infoMsg;
+			return l + h;
 		},
 		showControlsForSelectMultiple(){
 			return this.isSelectMultiple && (!this.field.error);

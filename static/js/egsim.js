@@ -108,7 +108,6 @@ const EGSIM = Vue.createApp({
 		},
 		configureHTTPClient(){
 			// Configures the HTTPClient (currently axios library)
-
 			axios.interceptors.request.use((config) => {
 				// Do something before request is sent
 				this.setError('');
@@ -119,7 +118,6 @@ const EGSIM = Vue.createApp({
 				this.loading = false;
 				throw error;
 			});
-
 			// Add a response interceptor
 			axios.interceptors.response.use((response) => {
 				this.loading = false;
@@ -176,7 +174,7 @@ const EGSIM = Vue.createApp({
 				nav#egsim-nav a.menu-item { color: lightgray; cursor: pointer; }
 				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: white; background-color: rgba(202, 214, 222, .25) }
 				code{color: inherit;}
-				/* tabs (e.g., flatfile page */
+				/* tabs (e.g., flatfile page) */
 				.nav-tabs .nav-link {color: inherit; opacity: .8;}
 				.nav-tabs .nav-item.show .nav-link, .nav-tabs .nav-link.active {color: var(--bs-primary); opacity: 1; background-color: inherit}
 			`;
@@ -247,17 +245,17 @@ const EGSIM = Vue.createApp({
 		forms(){
 			var ret = [];
 			Object.keys(this.components.props).forEach(name => {
-			   var compProps = this.components.props[name];
-			   if (typeof compProps === 'object'){
-				   Object.keys(compProps).forEach(pname => {
-					   var elm = compProps[pname];
-					   for (element of (Array.isArray(elm) ? elm : [elm])){
-						   if (this.isFormObject(element)){
-							   ret.push([name, element]);
-						   }
-					   }
-				   });
-			   }
+				var compProps = this.components.props[name];
+				if (typeof compProps === 'object'){
+					Object.keys(compProps).forEach(pname => {
+						var elm = compProps[pname];
+						for (element of (Array.isArray(elm) ? elm : [elm])){
+							if (this.isFormObject(element)){
+								ret.push([name, element]);
+							}
+						}
+					});
+				}
 			});
 			return ret;
 		},
