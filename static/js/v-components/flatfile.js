@@ -423,14 +423,13 @@ EGSIM.component('flatfile-selexpr-input', {
 					  only rows matching the expression. Example:
 					  <br><code>(magnitude &gt; 4.5) and ((event_id == "gfd20") or (vs30measured != true))</code>
 					  <p></p>
-					  You can also use specific column methods such as "median", "mean", "max",
-					  "min" (all self-explanatory) or "notna", which selects rows where the column value is not missing,
-					  i.e. not null and not NaN ("notna" works only for columns of type datetime, float or string). Examples:
-					  <br><code>magnitude.notna()</code><br><code>vs30 &lt;= vs30.median()</code><br>(round brackets are optional).
+					  You can also use specific column properties such as "median", "mean", "max",
+					  "min" or "notna" (the latter selects rows where the column value is not missing -
+					  i.e. not null and not NaN - and works only for columns of type datetime, float or string). Examples:
+					  <br><code>magnitude.notna</code><br><code>vs30 &lt;= vs30.median</code>
 					  <p></p>
 					  Note: date-time values can be input as Python datetime objects, e.g.:
-					  <br><code>datetime_column_name >= datetime(2016, 12, 31, 23, 59, 59)</code>
-					  `
+					  <br><code>datetime_column_name &lt;= datetime(2016, 12, 31, 23, 59, 59)</code>`
 		}
 	},
 	template: `<div class='d-flex flex-column' :aria-label="doc">
