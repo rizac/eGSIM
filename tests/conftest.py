@@ -199,5 +199,5 @@ def django_db_setup(django_db_setup, django_db_blocker):
     @param django_db_blocker: fixture used in the code to write custom data on the db
     """
     with django_db_blocker.unblock():
-        call_command('egsim_init', interactive=False)  # '--noinput')
+        call_command('egsim_init', interactive=False)
 
