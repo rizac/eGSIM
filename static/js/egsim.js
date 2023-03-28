@@ -174,8 +174,11 @@ const EGSIM = Vue.createApp({
 				nav#egsim-nav > * {  }
 				nav#egsim-nav .menu-item { border-radius: .375rem; padding: .5rem; margin: .375rem; }
 				nav#egsim-nav a.menu-item { color: lightgray; cursor: pointer; }
-				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: black; background-color: rgba(202, 214, 222, .8) }
+				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: white; background-color: rgba(202, 214, 222, .25) }
 				code{color: inherit;}
+				/* tabs (e.g., flatfile page */
+				.nav-tabs .nav-link {color: inherit; opacity: .8;}
+				.nav-tabs .nav-item.show .nav-link, .nav-tabs .nav-link.active {color: var(--bs-primary); opacity: 1; background-color: inherit}
 			`;
 		},
 		init(gsims, imtGroups, flatfile, regionalizations){
