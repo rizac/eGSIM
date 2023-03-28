@@ -137,7 +137,8 @@ EGSIM.component('flatfile-compilation', {
 		updateFlatfile(){
 			var flatfileContent = [
 				Object.keys(this.responseData).join(this.csvSep), '',
-				'# This block comment is not part of the CSV: it contains column information to help the compilation:',
+				'# Column information (this is a block comment that does not need to be included in the CSV):',
+				'#'
 			];
 			var names = ['Column:'];
 			var helps = ['Description:'];
@@ -165,7 +166,9 @@ EGSIM.component('flatfile-compilation', {
 			}
 			var numGsim = this.form.gsim.value.length;
 			var listGsim = this.form.gsim.value.join(' ');
-			flatfileContent.push(`# The metadata columns above are required in eGSIM by ${numGsim} selected model(s):  ${listGsim}`);
+			flatfileContent.push(`#`);
+			flatfileContent.push(`# This template has been generated to work with the following ${numGsim} model(s):`);
+			flatfileContent.push(`# ${listGsim}`);
 			flatfileContent.push('');
 			this.flatfileContent = flatfileContent.join("\n");
 		}
