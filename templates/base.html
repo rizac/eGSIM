@@ -32,14 +32,14 @@
 	{% block head %}
 	{% if vue %}
 		{% if debug %}
-		<script src="https://unpkg.com/vue@3.2.39/dist/vue.global.js"></script>
+		<script src="https://unpkg.com/vue@3.2.47/dist/vue.global.js"></script>
 		{% else %}
-		<script src="https://unpkg.com/vue@3.2.39/dist/vue.global.prod.js"></script>
+		<script src="https://unpkg.com/vue@3.2.47/dist/vue.global.prod.js"></script>
 		{% endif %}
 	{% endif %}
 	
 	{% if axios %}
-	<script src="https://cdn.jsdelivr.net/npm/axios@0.27.2/dist/axios.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/axios@1.3.4/dist/axios.min.js"></script>
 	{% endif %}
 
 	<!-- BOOTSTRAP CSS must be loaded before custom classes if we want to override it -->
@@ -49,13 +49,10 @@
 		  crossorigin="anonymous">
 
 	{% if leaflet %}
-	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
-		  integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
-		  crossorigin="" />
-	<script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
-			integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
-			crossorigin=""></script>
-	<style>.leaflet-container { font-family: inherit !important; }</style>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+	<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+	<!-- library-related css here: -->
+	<style>/* use our font, not leaflet's: */ .leaflet-container { font-family: inherit !important; }</style>
 	{% endif %}
 
 	{% if fontawesome %}
@@ -71,14 +68,9 @@
 		{% else %}
 			<script src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@2.14.0/plotly-cartesian.min.js"></script>
 		{% endif %}
-		<style>/* hide upper-right toolbar in plots */ div.modebar.modebar--hover{ display: none; }</style>
+		<!-- library-related css here: -->
+		<style>/* hide upper-right toolbar in plots: */ div.modebar.modebar--hover{ display: none; }</style>
 	{% endif %}
-
-	<!-- custom stylesheet to be applied globally: -->
-	<style>
-		a, a:hover, a:visited, a:link, a:active{ text-decoration: none !important; }
-		iframe{ border:0; margin:0; }
-	</style>
 
 	<!-- egsim base css. Load at the real end:  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
