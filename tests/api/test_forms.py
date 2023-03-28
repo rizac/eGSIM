@@ -16,7 +16,7 @@ from openquake.hazardlib import imt
 from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, _get_regionalizations,
                              relabel_sa)
 from egsim.api.forms.flatfile import FlatfileForm
-from egsim.api.forms.flatfile.inspection import FlatfileInspectionForm
+from egsim.api.forms.flatfile.compilation import FlatfileInspectionForm
 from egsim.api.forms.trellis import TrellisForm
 
 GSIM, IMT = 'gsim', 'imt'

@@ -2,22 +2,17 @@
 Base Form for to model-to-data operations i.e. flatfile handling
 """
 from collections import defaultdict
-# from operator import or_
-
 from datetime import datetime
-from typing import Iterable, Sequence, Any
+from typing import Iterable, Sequence
 
 import pandas as pd
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from django.forms import Form, ModelChoiceField
-from ....smtk.residuals.gmpe_residuals import Residuals
+from django.forms.fields import CharField, FileField
 
-from ... import models
-from ....smtk.flatfile import (read_flatfile, ColumnType, ColumnDtype, ContextDB, \
-                               query as flatfile_query)
-from .. import EgsimBaseForm, GsimImtForm, APIForm  # , _get_gsim_choices
-from ..fields import CharField, FileField  # , MultipleChoiceWildcardField
+from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query as flatfile_query)
+from egsim.api import models
+from egsim.api.forms import EgsimBaseForm
 
 
 # Let's provide uploaded flatfile Field in a separate Form as the Field is not
@@ -139,90 +134,6 @@ class FlatfileForm(EgsimBaseForm):
         return dtypes
 
 
-#############
-# Utilities #
-#############
-
-
-class MOF:  # noqa
-    # simple class emulating an Enum
-    RES = 'res'
-    LH = 'l'
-    LLH = "ll"
-    MLLH = "mll"
-    EDR = "edr"
-
-def get_residuals(flatfile: pd.DataFrame, gsim: list[str], imt: list[str]) -> Residuals:
-    """Instantiate a Residuals object with computed residuals. Wrap missing
-    flatfile columns into a ValidationError so that it can be returned as
-    "client error" (4xx) response
-    """
-    context_db = ContextDB(flatfile, *ctx_flatfile_colnames())
-    residuals = Residuals(gsim, imt)
-    try:
-        residuals.get_residuals(context_db)
-        return residuals
-    except KeyError as kerr:
-        # A key error usually involves a missing column. If yes, raise
-        # ValidationError
-        col = str(kerr.args[0]) if kerr.args else ''
-        if col in context_db.flatfile_columns:
-            raise ValidationError('Missing column "%(col)s" in flatfile',
-                                  code='invalid',
-                                  params={'col': col})
-        # raise "normally", as any other exception not caught here
-        raise kerr
-
-
-def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
-    """Return rupture, site distance parameters as three `dict`s of
-    flatfile column names mapped to the relative Context attribute used
-    for residuals computation
-    """
-    qry = models.FlatfileColumn.objects  # noqa
-    rup, site, dist = {}, {}, {}
-    cols = 'name', 'oq_name', 'type'
-    for ffname, attname, categ in qry.only(*cols).values_list(*cols):
-        if categ == ColumnType.rupture_parameter:
-            rup[ffname] = attname
-        elif categ == ColumnType.site_parameter:
-            site[ffname] = attname
-        elif categ == ColumnType.distance_measure:
-            dist[ffname] = attname
-    return rup, site, dist
-
-
-# Form handling Gsims and flatfile:
-
-class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):
-
-    def clean(self):
-        cleaned_data = super().clean()
-        if not self.has_error('flatfile'):
-            flatfile = cleaned_data['flatfile']
-            if 'gsim' in cleaned_data:
-                invalid_gsims = \
-                    self.get_flatfile_invalid_gsim(flatfile, cleaned_data['gsim'])
-                if invalid_gsims:
-                    inv_str = ', '.join(sorted(invalid_gsims)[:5])
-                    if len(invalid_gsims) > 5:
-                        inv_str += ' ... (showing first 5 only)'
-                    err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not "
-                                               f"supported by the given flatfile: "
-                                               f"{inv_str}", code='invalid')
-                    # add_error removes also the field from self.cleaned_data:
-                    self.add_error('gsim', err_gsim)
-                    cleaned_data.pop('flatfile')
-                    return cleaned_data
-
-        return cleaned_data
-
-    @classmethod
-    def get_flatfile_invalid_gsim(cls, flatfile: pd.DataFrame,
-                                  gsims: Sequence[str]) -> set[str, ...]:
-        return set(gsims) - set(get_gsims_from_flatfile(flatfile.columns))
-
-
 def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
     """Yields the GSIM names supported by the given flatfile"""
     ff_cols = set('SA' if _.startswith('SA(') else _ for _ in flatfile_columns)
@@ -236,70 +147,3 @@ def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
     for model_name, cols in model2cols.items():
         if not cols - ff_cols:
             yield model_name
-
-class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
-    """Form for querying the necessary metadata columns from a given list of Gsims"""
-
-    accept_empty_gsim_list = True  # see GsimImtForm
-    accept_empty_imt_list = True
-
-    def clean(self):
-        return super().clean()
-
-    @classmethod
-    def process_data(cls, cleaned_data: dict) -> dict:
-        """Process the input data `cleaned_data` returning the response data
-        of this form upon user request.
-        This method is called by `self.response_data` only if the form is valid.
-
-        :param cleaned_data: the result of `self.cleaned_data`
-        """
-        query = models.FlatfileColumn.objects  # noqa
-
-        condition = Q(data_properties__required=True)
-        if cleaned_data.get('gsim', []):
-            condition |= Q(gsims__name__in=cleaned_data['gsim'],
-                           type__in=(ColumnType.rupture_parameter,
-                                     ColumnType.site_parameter,
-                                     ColumnType.distance_measure))
-
-        if cleaned_data.get('imt', []):
-            # we could simply skip querying imts as we already have them, but we need
-            # helpvand dtype info:
-            imts = cleaned_data['imt']
-            imts_to_query = set('SA' if _.startswith('SA(') else _ for _ in imts)
-            condition |= Q(name__in=imts_to_query, type=ColumnType.imt)
-
-        columns = {}
-        attrs = 'name', 'help', 'type', 'data_properties'
-        for name, help, type, props in query.filter(condition).values_list(*attrs):
-            if name in columns:  # could be (we query with m2m relationship)
-                continue
-            if name == 'SA' and type == ColumnType.imt:
-                names = [col for col in cleaned_data.get('imt', [])
-                         if col.startswith('SA(')]
-            else:
-                names = [name]
-            for name in names:
-                columns[name] = {
-                    'help': help,
-                    'type': ColumnType(type).name.replace("_", " "),
-                    'dtype': props.get('dtype', 'any')
-                }
-
-        return columns
-
-    @classmethod
-    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
-        """Yield CSV rows, where each row is an iterables of Python objects
-        representing a cell value. Each row doesn't need to contain the same
-        number of elements, the caller function `self.to_csv_buffer` will pad
-        columns with Nones, in case (note that None is rendered as "", any other
-        value using its string representation).
-
-        :param processed_data: dict resulting from `self.process_data`
-        """
-        names = processed_data.keys()
-        yield names
-        yield (processed_data[n].get('help', '') for n in names)
-        yield (processed_data[n].get('dtype', '') for n in names)

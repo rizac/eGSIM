@@ -13,7 +13,7 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
-from egsim.api.forms.flatfile.residuals import ResidualsForm
+from egsim.api.forms.flatfile.gsim.residuals import ResidualsForm
 from egsim.api.views import ResidualsView, RESTAPIView
 
 

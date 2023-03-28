@@ -16,8 +16,8 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from .templates.egsim import TAB, URLS, get_init_json_data
 from .templates.apidoc import get_apidoc_page_renderer_context
-from ..api.forms.flatfile import FlatfileRequiredColumnsForm
-from ..api.forms.flatfile.inspection import FlatfileInspectionForm, FlatfilePlotForm
+from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
+                                              FlatfileInspectionForm, FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm
 from ..api.views import error_response, RESTAPIView
 
