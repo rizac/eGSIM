@@ -20,6 +20,8 @@ jobs:
         python-version: ["3.9", "3.10", "3.11"]
 
     steps:
+    - name: update and fix missing packages
+      run: sudo apt-get update --fix-missing 
     - name: Install xmllint
       run: sudo apt-get install python3-dev libhdf5-dev
     - uses: actions/checkout@v3
