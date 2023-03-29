@@ -448,19 +448,18 @@ Implemented flatfiles sources (click on the items below to expand)
 
 ## Dependencies upgrade
 
-Please note that it is safer (from now even 
+Please note that it is safer (even 
 [mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
 with `pip`) to upgrade all dependencies
 instead of single packages in order to avoid conflicts.
 
-Consequently, we recommend to follow this procedure also
-in case of a GitHub security issue (or dependency alert) on a single package.
+Consequently, **we recommend to follow this procedure also
+in case of a GitHub security issue (or dependency alert) on a single package**.
 
-To upgrade all dependencies, we just need to `pull` the newest version
-of `smtk` and relaunch an installation from there (this will fetch
-also the newest OpenQuake version and all dependencies automatically)
-
-First create and activate a new virtualenv:
+First create a new virtual env (in the example below,
+in the git-ignored `.env` inside
+the eGSIM root directory, 
+but you can also create it wherever you want)
 
 ```bash
 python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
@@ -468,87 +467,20 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 pip install --upgrade pip setuptools
 ```
 
-Then install smtk and all dependencies:
-
+Then `cd` into eGSIM if you are not there already 
+(basically, the directory where `setup.py` is located), 
+install and freeze 
+the installed packages into a `requirements.txt` file:
 ```bash
-cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-git checkout master && git pull
-pip install -e . # (also installs openquake and django)
-pip install --upgrade --force-reinstall django  # upgrade django (optional)
-pip install plotly kaleido pyyaml tables
-cd ../egsim. # (or wherever egsim is)
+pip install -e .
 pip freeze > requirements.txt
 ```
 
-And finally install the newest version of the test packages:
-
+Do the same for testing:
 ```bash
-pip install pytest pytest-django pytest-cov pylint
+pip install -e ".[test]"
 pip freeze > requirements.dev.txt
 ```
 
-Finally, proceed with the normal workflow:
-run tests, fix new bugs and eventually `git push`, as always.
-
-
-## Fix smtk
-
-We will refer to smtk as the [forked branch](https://github.com/rizac/gmpe-smtk)
-used by eGSIM. As we have seen during installation, it is a forked repository 
-from the [upstream branch](https://github.com/GEMScienceTools/gmpe-smtk.git).
-
-By convention **the last commit of the `master` branch of smtk is the updated 
-one which can be used in production** (basically, the one written in the 
-`requirements` text files).
-Therefore, when fixing a smtk issue or implementing a new feature, switch to 
-a dev branch (we usually use the branch called ... "dev").
-
-Then simply implement your changes, tests and issue a PR, as usual.
-Meanwhile, because in dev mode smtk is usually installed as editable 
-('-e' flag), you don't need to change anything locally, as the new 
-features/fixes are already available in eGSIM.
-Then, *once the PR is merged in the upstream branch*, you can switch back to 
-the "master" branch in smtk, and merge from the upstream branch, as follows:
-
-<details>
-	<summary>First make sure you added the upstream branch 
-(one-time operation)</summary>
-
-Type:
-
-```bash
-git remote -v
-```
-
-if you see these lines
-
-```bash
-upstream https://github.com/GEMScienceTools/gmpe-smtk.git (fetch)
-upstream https://github.com/GEMScienceTools/gmpe-smtk.git (push)
-```
-
-skip the line below. Otherwise, add the upstream branch by typing:
-
-```bash
-git remote add upstream https://github.com/GEMScienceTools/gmpe-smtk.git
-```
-</details>
-
-Then merge:
-
-```bash
-# Fetch all the branches of that remote into remote-tracking branches, such as upstream/master:
-git fetch upstream
-
-# Switch to master branch if you are not already there
-git checkout master
-
-# Merge:
-git merge upstream/master
-```
-
-Finally, update the smtk version: issue a `git log -1` and copy the commit
-hash into the two `requirements` text files.
-Open them, find the line where `gmpe-smtk` is listed and replace the commit 
-hash in the portion of the line between '@' and '#'. Eventually, issue a 
-`git push`
+Run tests (see above) to check that everything wortks as expected, and then
+commit and push.
