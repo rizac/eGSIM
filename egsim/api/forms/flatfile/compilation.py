@@ -1,5 +1,5 @@
 """
-Django Forms for eGSIM flatfile plot generator
+Django Forms for eGSIM flatfile compilation (inspection, plot, upload)
 
 @author: riccardo
 """
@@ -9,12 +9,81 @@ from typing import Iterable, Any, Union
 import numpy as np
 import pandas as pd
 from django.core.exceptions import ValidationError
+from django.db.models import Q
+from django.forms.fields import CharField
 
-from . import FlatfileForm, get_gsims_from_flatfile
-from .. import APIForm
-from ..fields import CharField
+from egsim.smtk.flatfile import ColumnType
+from egsim.api import models
+from egsim.api.forms import APIForm, GsimImtForm
+from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
 
-from ... import models
+
+class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
+    """Form for querying the necessary metadata columns from a given list of Gsims"""
+
+    accept_empty_gsim_list = True  # see GsimImtForm
+    accept_empty_imt_list = True
+
+    def clean(self):
+        return super().clean()
+
+    @classmethod
+    def process_data(cls, cleaned_data: dict) -> dict:
+        """Process the input data `cleaned_data` returning the response data
+        of this form upon user request.
+        This method is called by `self.response_data` only if the form is valid.
+
+        :param cleaned_data: the result of `self.cleaned_data`
+        """
+        query = models.FlatfileColumn.objects  # noqa
+
+        condition = Q(data_properties__required=True)
+        if cleaned_data.get('gsim', []):
+            condition |= Q(gsims__name__in=cleaned_data['gsim'],
+                           type__in=(ColumnType.rupture_parameter,
+                                     ColumnType.site_parameter,
+                                     ColumnType.distance_measure))
+
+        if cleaned_data.get('imt', []):
+            # we could simply skip querying imts as we already have them, but we need
+            # helpvand dtype info:
+            imts = cleaned_data['imt']
+            imts_to_query = set('SA' if _.startswith('SA(') else _ for _ in imts)
+            condition |= Q(name__in=imts_to_query, type=ColumnType.imt)
+
+        columns = {}
+        attrs = 'name', 'help', 'type', 'data_properties'
+        for name, help, type, props in query.filter(condition).values_list(*attrs):
+            if name in columns:  # could be (we query with m2m relationship)
+                continue
+            if name == 'SA' and type == ColumnType.imt:
+                names = [col for col in cleaned_data.get('imt', [])
+                         if col.startswith('SA(')]
+            else:
+                names = [name]
+            for name in names:
+                columns[name] = {
+                    'help': help,
+                    'type': ColumnType(type).name.replace("_", " "),
+                    'dtype': props.get('dtype', 'any')
+                }
+
+        return columns
+
+    @classmethod
+    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
+        """Yield CSV rows, where each row is an iterables of Python objects
+        representing a cell value. Each row doesn't need to contain the same
+        number of elements, the caller function `self.to_csv_buffer` will pad
+        columns with Nones, in case (note that None is rendered as "", any other
+        value using its string representation).
+
+        :param processed_data: dict resulting from `self.process_data`
+        """
+        names = processed_data.keys()
+        yield names
+        yield (processed_data[n].get('help', '') for n in names)
+        yield (processed_data[n].get('dtype', '') for n in names)
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):

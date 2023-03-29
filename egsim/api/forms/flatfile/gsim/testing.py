@@ -8,12 +8,12 @@ from typing import Iterable, Any
 
 import numpy as np
 from django.core.exceptions import ValidationError
+from django.forms.fields import FloatField
 
-from ....smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
-
-from . import MOF, get_residuals, GsimImtFlatfileForm
-from .. import APIForm, relabel_sa
-from ..fields import MultipleChoiceField, FloatField
+from egsim.smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
+from egsim.api.forms import APIForm, relabel_sa
+from egsim.api.forms.fields import MultipleChoiceField
+from egsim.api.forms.flatfile.gsim import MOF, get_residuals, GsimImtFlatfileForm
 
 
 MOF_TYPE = {

@@ -108,7 +108,6 @@ const EGSIM = Vue.createApp({
 		},
 		configureHTTPClient(){
 			// Configures the HTTPClient (currently axios library)
-
 			axios.interceptors.request.use((config) => {
 				// Do something before request is sent
 				this.setError('');
@@ -119,7 +118,6 @@ const EGSIM = Vue.createApp({
 				this.loading = false;
 				throw error;
 			});
-
 			// Add a response interceptor
 			axios.interceptors.response.use((response) => {
 				this.loading = false;
@@ -174,8 +172,11 @@ const EGSIM = Vue.createApp({
 				nav#egsim-nav > * {  }
 				nav#egsim-nav .menu-item { border-radius: .375rem; padding: .5rem; margin: .375rem; }
 				nav#egsim-nav a.menu-item { color: lightgray; cursor: pointer; }
-				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: black; background-color: rgba(202, 214, 222, .8) }
+				nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: white; background-color: rgba(202, 214, 222, .25) }
 				code{color: inherit;}
+				/* tabs (e.g., flatfile page) */
+				.nav-tabs .nav-link {color: inherit; opacity: .8;}
+				.nav-tabs .nav-item.show .nav-link, .nav-tabs .nav-link.active {color: var(--bs-primary); opacity: 1; background-color: inherit}
 			`;
 		},
 		init(gsims, imtGroups, flatfile, regionalizations){
@@ -244,17 +245,17 @@ const EGSIM = Vue.createApp({
 		forms(){
 			var ret = [];
 			Object.keys(this.components.props).forEach(name => {
-			   var compProps = this.components.props[name];
-			   if (typeof compProps === 'object'){
-				   Object.keys(compProps).forEach(pname => {
-					   var elm = compProps[pname];
-					   for (element of (Array.isArray(elm) ? elm : [elm])){
-						   if (this.isFormObject(element)){
-							   ret.push([name, element]);
-						   }
-					   }
-				   });
-			   }
+				var compProps = this.components.props[name];
+				if (typeof compProps === 'object'){
+					Object.keys(compProps).forEach(pname => {
+						var elm = compProps[pname];
+						for (element of (Array.isArray(elm) ? elm : [elm])){
+							if (this.isFormObject(element)){
+								ret.push([name, element]);
+							}
+						}
+					});
+				}
 			});
 			return ret;
 		},
@@ -412,7 +413,8 @@ function setupTooltipObserver(observedRootElement){
 		if(!tooltipContent){ return; }  // for safety
 		tooltip.innerHTML = tooltipContent + "";
 		// position tooltip
-		var M = 16;  // tooltip margin(s), in px
+		var fsize = parseFloat(window.getComputedStyle(tooltip).getPropertyValue('font-size')); // in px
+		if (isNaN(fsize) || fsize === null){ fsize = 18; }  // set it relatively big
 		var rect = target.getBoundingClientRect();
 		// tooltip vertical dimensions (max-height, top, bottom):
 		var winH = window.innerHeight;   // window (viewport) height
@@ -420,45 +422,33 @@ function setupTooltipObserver(observedRootElement){
 		var spaceAbove = rect.top;
 		var spaceBelow = winH - rect.bottom;  // note: rect.bottom = rect.top + rect.height
 		if (spaceBelow > spaceAbove){  // place tooltip below
-			tooltip.style.top = `${rect.bottom + M}px`;
+			tooltip.style.top = `${rect.bottom + 1.5*fsize}px`;
 			tooltip.style.bottom = '';
-			var tooltipMaxHeightPx = winH- rect.bottom - 2*M;
+			var tooltipMaxHeightPx = winH- rect.bottom - 3*fsize;
 		}else{  // place tooltip above
 			tooltip.style.top = '';
-			tooltip.style.bottom = `${winH - rect.top + M}px`;
-			var tooltipMaxHeightPx = rect.top - 2*M;
+			tooltip.style.bottom = `${winH - rect.top + 1.5*fsize}px`;
+			var tooltipMaxHeightPx = rect.top - 3*fsize;
 		}
 		tooltip.style.maxHeight = `${tooltipMaxHeightPx}px`;
 		// tooltip horizontal dimensions (max-width, left, right):
-		var winW = window.innerWidth;  // window (viewport) width
-		tooltip.style.width = 'auto';
+		var winW = window.innerWidth;  // window (viewport) width, in px
+		var maxWidth = '';  // tooltip max width (px)
 		var spaceLeft = rect.right;  // note: rect.right = rect.left + rect.width
 		var spaceRight = winW - rect.left;
 		if (spaceRight > spaceLeft){  // align tooltip and target left sides
 			tooltip.style.left = `${rect.left}px`;
 			tooltip.style.right = '';
-			var tooltipMaxWidthPx = winW - rect.left -M;
+			maxWidth = winW - rect.left - 1.5 * fsize;
 		}else{  // align tooltip and target right sides
 			tooltip.style.left = '';
 			tooltip.style.right = `${winW - rect.right}px`;
-			var tooltipMaxWidthPx = rect.right - M;
+			maxWidth = rect.right - 1.5 * fsize;
 		}
 		// set max width according to font size, if available:
-		var fsize = parseFloat(window.getComputedStyle(tooltip).getPropertyValue('font-size'));
-		if (fsize && !isNaN(fsize)){
-			var tooltipMaxHeightEm =  tooltipMaxHeightPx / fsize;
-			// compute preferred width, i.e. the width if tooltip stretches all height:
-			var preferredMaxWidthEm = 1 + Math.ceil((tooltipContent + "").length / tooltipMaxHeightEm);
-			// (because width in em is somehow heuristic, add 1 more em character for safety)
-			// avoid having too narrow tooltips:
-			if (preferredMaxWidthEm < 30){ preferredMaxWidthEm = 30; }
-			// is preferredWidth is really preferable?
-			var preferredMaxWidthPx = fsize * preferredMaxWidthEm;
-			if (preferredMaxWidthPx < tooltipMaxWidthPx){
-				tooltipMaxWidthPx = preferredMaxWidthPx;
-			}
-		}
-		tooltip.style.maxWidth = `${tooltipMaxWidthPx}px`;
+		tooltip.style.width = 'auto';
+		tooltip.style.maxWidth = `${parseInt(100*maxWidth/winW)}vw`;
+		// set scale and stop event propagation:
 		tooltip.style.transform = 'scaleY(1)';
 		evt.stopPropagation();  // for safety
 	};

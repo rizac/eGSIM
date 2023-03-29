@@ -1,26 +1,26 @@
 """Base eGSIM forms"""
 
 import re
-from django.forms.renderers import BaseRenderer
-from django.forms.utils import ErrorDict
 from typing import Union, Iterable, Any
 from datetime import date, datetime
 import json
-import yaml
 from itertools import chain, repeat
 from io import StringIO
 import csv
 from urllib.parse import quote as urlquote
 
+import yaml
 from shapely.geometry import Polygon, Point
 from django.core.exceptions import ValidationError
-from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms import Form
+from django.forms.renderers import BaseRenderer
+from django.forms.utils import ErrorDict
+from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
+from django.forms.fields import Field, ChoiceField, FloatField
 
-from .fields import (MultipleChoiceWildcardField, ImtField, ChoiceField, Field,
-                     FloatField, get_field_docstring, NArrayField,
-                     _default_error_messages)
-from .. import models
+from egsim.api import models
+from egsim.api.forms.fields import (MultipleChoiceWildcardField, ImtField, NArrayField,
+                                    get_field_docstring, _default_error_messages)
 
 
 class EgsimFormMeta(DeclarativeFieldsMetaclass):
@@ -467,12 +467,12 @@ class GsimImtForm(SHSRForm):
         # Check that both fields are provided. Another reason we do it here instead
         # than simply set `required=True` as Field argument is that sometimes
         # `MultipleChoiceField`s do not raise but puts a def. val, e.g. []
-        if not self.accept_empty_gsims and \
+        if not self.accept_empty_gsim_list and \
                 not cleaned_data.get(gsim, None) and not self.has_error(gsim):
             self.add_error(gsim,
                            ValidationError(self.fields[gsim].error_messages['required'],
                                            code='required'))
-        if not self.accept_empty_imts and \
+        if not self.accept_empty_imt_list and \
                 not cleaned_data.get(imt, None) and not self.has_error(imt):
             self.add_error(imt,
                            ValidationError(self.fields[imt].error_messages['required'],
@@ -483,8 +483,8 @@ class GsimImtForm(SHSRForm):
             self.validate_gsim_and_imt(cleaned_data[gsim], cleaned_data[imt])
         return cleaned_data
 
-    accept_empty_gsims = False  # override in subclasses if you accept emopty gsims
-    accept_empty_imts = False  # see above (for imts)
+    accept_empty_gsim_list = False  # override in subclasses otherwise
+    accept_empty_imt_list = False  # see above (for imts)
 
     def validate_gsim_and_imt(self, gsims, imts):
         """Validate gsim and imt assuring that all gsims are defined for all

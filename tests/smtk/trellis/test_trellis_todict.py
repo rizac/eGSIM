@@ -29,7 +29,7 @@ Tests for bugfixes in to_dict Trellis methods:
    Javascript, they are not JSON standard and need to
    be encoded as None
 """
-import unittest
+from django.test import SimpleTestCase  # https://stackoverflow.com/a/59764739
 import numpy as np
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -37,7 +37,7 @@ import egsim.smtk.trellis.trellis_plots as trpl
 from egsim.smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
-class BaseTrellisTest(unittest.TestCase):
+class BaseTrellisTest(SimpleTestCase):
     """
     Base test class
     """

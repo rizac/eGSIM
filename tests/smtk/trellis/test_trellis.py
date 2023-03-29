@@ -24,6 +24,8 @@ import os
 import json
 import numpy as np
 
+from django.test import SimpleTestCase  # https://stackoverflow.com/a/59764739
+
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
@@ -34,7 +36,7 @@ import egsim.smtk.trellis.configure as rcfg
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
 
-class BaseTrellisTest(unittest.TestCase):
+class BaseTrellisTest(SimpleTestCase):
     """
     This core test is designed to run a series of trellis plot calculations
     and ensure compatibility with previously generated results

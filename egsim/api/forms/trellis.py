@@ -6,8 +6,6 @@ from itertools import chain, repeat
 from typing import Iterable, Any
 
 import numpy as np
-from django.core.exceptions import ValidationError
-from django.utils.safestring import mark_safe
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
@@ -18,10 +16,13 @@ from ...smtk.trellis.trellis_plots import (DistanceIMTTrellis,
                                            MagnitudeSigmaIMTTrellis,
                                            MagnitudeDistanceSpectraTrellis,
                                            MagnitudeDistanceSpectraSigmaTrellis)
+from django.core.exceptions import ValidationError
+from django.utils.safestring import mark_safe
+from django.forms.fields import BooleanField, FloatField, ChoiceField
 
-from .fields import (BooleanField, FloatField, ChoiceField, NArrayField,
-                     vectorize, isscalar)
-from . import APIForm, GsimImtForm, relabel_sa
+from egsim.api.forms import APIForm, GsimImtForm, relabel_sa
+from egsim.api.forms.fields import NArrayField, vectorize, isscalar
+
 
 PLOT_TYPE = {
     # key: (display label, trellis class, stddev trellis class)

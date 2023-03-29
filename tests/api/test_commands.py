@@ -6,7 +6,6 @@ Created on 6 Apr 2019
 @author: riccardo
 """
 import pytest
-from unittest.mock import patch
 from django.core.management import call_command
 
 # WARNING: tests requiring db access should use the function decorator:
