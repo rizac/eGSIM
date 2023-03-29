@@ -17,6 +17,7 @@ from django.core.management import call_command
 from django.test.client import Client
 from django.conf import settings
 
+
 @pytest.fixture(scope="session", autouse=True)
 def auto_create_media_root():
     if not os.path.isdir(settings.MEDIA_ROOT):
@@ -179,14 +180,24 @@ def testdata(request):  # noqa
     return Data()
 
 
+@pytest.mark.django_db
 @pytest.fixture(scope='session')
-def django_db_setup(django_db_blocker):
+def django_db_setup(django_db_setup, django_db_blocker):
+    """Setup the database. This fixture acts as a subclass of the default pytest django
+    db setup, executing custom code on top of it.
+
+    Details here:
+        https://github.com/pytest-dev/pytest-django/issues/343#issuecomment-230394740
+        https://pytest-django.readthedocs.io/en/latest/database.html#django-db-setup
+        https://pytest-django.readthedocs.io/en/latest/database.html#django-db-blocker
+
+    @param django_db_setup: fixture ensuring that the test databases are created and
+        available before calling this fixture. Note that by simply declaring this
+        argument, the code of `pytest_django.fixtures.django_db_setup` is automatically
+        executed. This is a feature of some pytest fixtures that is worth mentioning as
+        it causes the argument not to be used and mistakenly treated as unnecessary
+    @param django_db_blocker: fixture used in the code to write custom data on the db
+    """
     with django_db_blocker.unblock():
-        # delete flatfile subdirectory (no, we do not prompt the user too much
-        # work and it's safe he/she deletes the dir in case)
-        # from egsim.api.management.commands._egsim_flatfiles import Command as FlatfileCommand
-        # ff_path = abspath(FlatfileCommand.dest_dir())
-        # if isdir(ff_path) and ff_path.startswith(abspath(dirname(dirname(__file__)))):
-        #     shutil.rmtree(ff_path)
-        # run command:
-        call_command('egsim_init', interactive=False)  # '--noinput')
+        call_command('egsim_init', interactive=False)
+

@@ -9,24 +9,20 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
 
 import yaml
-from unittest.mock import patch
 
 from itertools import product
 
 import json
 import pytest
 
-# from egsim.api.forms import GsimFromRegionForm, _get_regionalizations
-from egsim.api.forms.flatfile.residuals import ResidualsForm
-from egsim.api.forms.flatfile.testing import TestingForm
+from egsim.api.forms.flatfile.gsim.residuals import ResidualsForm
+from egsim.api.forms.flatfile.gsim.testing import TestingForm
 from egsim.api.forms.trellis import TrellisForm
 
-# from egsim.api.forms.tools.describe import as_dict
-# from egsim.gui.frontend import get_context, form_to_json
+
 from egsim.app.views import _IMG_FORMATS
 from egsim.app.templates.apidoc import as_dict
-from egsim.app.templates.egsim import get_init_json_data, form_to_json, URLS, TAB, \
-    _get_gsim_for_init_data
+from egsim.app.templates.egsim import get_init_json_data, form_to_json, URLS, TAB
 from django.test.client import Client
 
 GSIM, IMT = 'gsim', 'imt'

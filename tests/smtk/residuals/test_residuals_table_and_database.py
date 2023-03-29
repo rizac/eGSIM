@@ -5,7 +5,7 @@ sm_table.GroundMotionTable (contexts should be equal)
 """
 import os
 import pandas as pd
-import unittest
+from django.test import SimpleTestCase  # https://stackoverflow.com/a/59764739
 
 import numpy as np
 
@@ -40,7 +40,7 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 #     "EMSC_20130108_0000044_KO_SHAP_0"]
 
 
-class ResidualsTestCase(unittest.TestCase):
+class ResidualsTestCase(SimpleTestCase):
     """
     Core test case for the residuals objects
     """

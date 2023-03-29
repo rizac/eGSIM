@@ -421,28 +421,28 @@ def query(flatfile: pd.DataFrame, query_expression) -> pd.DataFrame:
     """Call `flatfile.query` with some utilities:
      - datetime can be input in the string, e.g. "datetime(2016, 12, 31)"
      - boolean can be also lower case ("true" or "false")
-     - serie methods can also be given with no brackets when called with no
-       arguments (e.g. ".notna", ".median")
+     - Some series methods with all args optional can also be given with no brackets
+       (e.g. ".notna", ".median")
     """
     # Setup custom keyword arguments to dataframe query
-    kwargs = {
+    __kwargs = {
         # add support for `datetime(Y,M,...)` inside expressions:
         'local_dict': {
             'datetime': lambda *a, **k: datetime(*a, **k)
         },
         'global_dict': {},  # 'pd': pd, 'np': np }
-        # add support for true/false (lower case):
+        # add support for bools lower case (why doesn't work if set in local_dict?):
         'resolvers': [{'true': True, 'false': False}]
     }
-    # Series methods with no args can also be called with no brackets, add then in case.
-    # Build a regex pattern that matches any column name followed by "." and a method
-    # name ("([a-zA-Z]\\w*)") and not followed by "(" (or another alphanumeric char),
-    # and replace it with "[col_name].[method_name]()" (i.e., "\1.\2()"):
-    query_expression = re.sub(f"\\b({'|'.join(re.escape(_) for _ in flatfile.columns)})"
-                              f"\\.([a-zA-Z]\\w*)(?![\\w\\(])", r"\1.\2()",
+    # methods which can be input without brackets (regex pattern group):
+    __meths = '(mean|median|min|max|notna)'
+    # flatfile columns (as regex pattern group):
+    __ff_cols = f"({'|'.join(re.escape(_) for _ in flatfile.columns)})"
+    # Append brackets to methods in query expression, if needed:
+    query_expression = re.sub(f"\\b{__ff_cols}\\.{__meths}(?![\\w\\(])", r"\1.\2()",
                               query_expression)
     # evaluate expression:
-    return flatfile.query(query_expression, **kwargs)
+    return flatfile.query(query_expression, **__kwargs)
 
 
 #######################################

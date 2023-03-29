@@ -14,8 +14,8 @@ from django.forms.fields import MultipleChoiceField
 from .forms.fields import NArrayField, split_string
 from .forms.flatfile import FlatfileForm
 from .forms.trellis import TrellisForm
-from .forms.flatfile.residuals import ResidualsForm
-from .forms.flatfile.testing import TestingForm
+from .forms.flatfile.gsim.residuals import ResidualsForm
+from .forms.flatfile.gsim.testing import TestingForm
 from .forms import APIForm
 
 

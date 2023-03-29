@@ -1,18 +1,14 @@
 """eGSIM Django Fields"""
 
-from fnmatch import translate
 import re
+from fnmatch import translate
 from itertools import chain, repeat
 from typing import Collection, Any, Union, Sequence
 
 import numpy as np
 from openquake.hazardlib import imt
 from django.core.exceptions import ValidationError
-
-# Use this module as common namespace for all Fields. As such, DO NOT REMOVE UNUSED
-# IMPORTS BELOW as they are imported throughout the project:
-from django.forms.fields import (ChoiceField, FloatField, BooleanField, Field,
-                                 CharField, MultipleChoiceField, FileField)
+from django.forms.fields import Field, CharField, MultipleChoiceField
 
 
 def vectorize(value: Any) -> Sequence[Any]:
