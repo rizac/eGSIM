@@ -50,8 +50,8 @@ def _get_home_page_renderer_context():
 @xframe_options_sameorigin
 def apidoc(request):
     """view for the home page (iframe in browser)"""
-    template = 'apidoc.html'
-    context = get_apidoc_page_renderer_context(settings.DEBUG)
+    template = 'info_pages/apidoc/base.html'
+    context = {}  # get_apidoc_page_renderer_context(settings.DEBUG)
     return render(request, template, context=context)
 
 
