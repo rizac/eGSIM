@@ -51,7 +51,7 @@ def _get_home_page_renderer_context():
 def apidoc(request):
     """view for the home page (iframe in browser)"""
     template = 'info_pages/apidoc/base.html'
-    context = {}  # get_apidoc_page_renderer_context(settings.DEBUG)
+    context = _get_home_page_renderer_context()
     return render(request, template, context=context)
 
 
