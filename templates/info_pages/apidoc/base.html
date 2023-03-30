@@ -1,22 +1,16 @@
 {% extends '../base.html' %}
 
-{% block head %}
-	{% with fontawesome=False leaflet=False plotly=False vue=False %}
-		{{ block.super }}
-	{% endwith %}
-{% endblock %}
-
 {% block extra-head %}
+{{ block.super }}
 <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/themes/prism.min.css">
-<link rel="stylesheet" type="text/css" href="{% static 'css/apidoc.css' %}">
 {% endblock %}
 
 <!--  IMPORTANT NOTE WHEN ADDING NEW CONTENT: every <h2> <h3> or <h4> element WITH AN ID
 WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bottom of the page) -->
 
 
-{% block body %}
+{% block page-content %}
 <div class='d-flex flex-row' style='flex: 1 1 auto;overflow-y:auto;'>
 	<div id='toc' class='shadow px-2 pt-3' style='overflow-y:auto;z-index:10'></div>
 	<div class='px-5 pt-3 bg-white' style='flex: 1 1 auto;overflow-x:auto;text-align:justify'>
@@ -26,7 +20,13 @@ WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bott
 			<p style='font-size:50%;text-align:right;'>Last modified: June 2019</p>
 			{% endif %}
 			<p>
-			eGSIM is a web service for selecting and testing Ground
+			eGSIM is a web service implemented on top of
+			<a target="_blank" href="https://github.com/gem/oq-engine/#openquake-engine">OpenQuake</a>
+			for the analysis of strong Motions and interpretation of Ground Shaking Intensity Models (GSIM).
+
+			As server-side <a target="_blank" href="https://en.wikipedia.org/wiki/Web_API">web API</a>,
+
+			<!-- eGSIM is a web service for selecting and testing Ground
 			Shaking Intensity Models (GSIM) on top of  
 			<a target="_blank" href="https://github.com/GEMScienceTools/gmpe-smtk#gmpe-smtk">GMPE-SMTK</a>,
 			a Python and
@@ -35,11 +35,9 @@ WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bott
 			As server-side web application programming interface
 			(<a target="_blank" href="https://en.wikipedia.org/wiki/Web_API#Server_side">API</a>), the goal
 			of eGSIM is to easily provide most of the toolkit functionalities via 
-			web requests performed through client software code or the browser Graphical User Interface (GUI).
+			web requests performed through client software code or the browser Graphical User Interface (GUI). -->
 			</p>
-			
-			<p class='footnote'>Note: throughout this document, for simplicity
-			the terms GSIM and GMPE are used interchangeably</p>
+
 			
 			
 			<h2 id="generalfeatures">Introduction</h2>
@@ -62,12 +60,12 @@ WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bott
 {% endblock %}
 
 {% block after-body %}
+{{ block.super }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-json.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/components/prism-yaml.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.15.0/plugins/data-uri-highlight/prism-data-uri-highlight.min.js"></script>
-
 <script type='text/javascript'>
 // Custom js. Just include the few lines here avoiding external javascript loading
 
