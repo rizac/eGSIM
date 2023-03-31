@@ -214,12 +214,12 @@ schema (see `egsim.api.models.py`), e.g. a table, a column, a constraint.
 The usual way to change a DB in a web app is to create and run
 migrations ([Django full details here](https://docs.djangoproject.com/en/stable/topics/migrations/)),
 which allow to keep track of all changes (moving back and forth if necessary) 
-whilst keeping the data in the DB. 
-However, eGSIM DB data is predefined and would be 
-regenerated from scratch in any case (see details below),
-so a complete DB reset is an easier procedure.
+whilst preserving the data stored in the DB. 
+However, none of those features is required in eGSIM: DB data is predefined
+and would be regenerated from scratch in any case after any new migration.
+Consequently, **upon changes in the DB, a complete DB reset is an easier procedure**.
 
-Just for reference (**as said, not recommended**), the steps to create and run migrations 
+In any case (**just for reference**), the steps to create and run migrations 
 in eGSIM are the following:
 
 ```bash

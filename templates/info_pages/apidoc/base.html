@@ -22,22 +22,48 @@ WILL BE SHOWN IN THE TABLE OF CONTENT <DIV> (for details, see script at the bott
 			<p>
 			eGSIM is a web service implemented on top of
 			<a target="_blank" href="https://github.com/gem/oq-engine/#openquake-engine">OpenQuake</a>
-			for the analysis of strong Motions and interpretation of Ground Shaking Intensity Models (GSIM).
-
-			As server-side <a target="_blank" href="https://en.wikipedia.org/wiki/Web_API">web API</a>,
-
-			<!-- eGSIM is a web service for selecting and testing Ground
-			Shaking Intensity Models (GSIM) on top of  
-			<a target="_blank" href="https://github.com/GEMScienceTools/gmpe-smtk#gmpe-smtk">GMPE-SMTK</a>,
-			a Python and
-			<a target="_blank" href="https://github.com/gem/oq-engine/#openquake-engine">OpenQuake</a>-based
-			toolkit for analysis of strong Motions and interpretation of Ground Motion Prediciton Equations (GMPE).
-			As server-side web application programming interface
-			(<a target="_blank" href="https://en.wikipedia.org/wiki/Web_API#Server_side">API</a>), the goal
-			of eGSIM is to easily provide most of the toolkit functionalities via 
-			web requests performed through client software code or the browser Graphical User Interface (GUI). -->
+			for the analysis of strong Motions and interpretation of Ground Shaking Intensity Models (GSIM)
 			</p>
 
+			<p>
+			In a nutshell, a web service is a program running on a remote computer that processes
+			users <i>requests</i>, configurable with request parameters, and returns
+			the analysis results in form of <i>response</i> through the internet network.
+
+			The advantages of using a web service instead of software libraries are manifold:
+			</p>
+			<ul>
+				<li> Free the user from local software maintenance (e.g. installation, update)</li>
+				<li> Perform the same analysis with less code required and no knowledge of the
+					underlying software libraries, functions and signatures</li>
+				<li> Allow access to the data from anywhere through the internet</li>
+			</ul>
+			<p class="small">
+			(By the way eGSIM is also a software library - re-using legacy code of a OpenQuake-based
+			Python package, <a href="https://github.com/GEMScienceTools/gmpe-smtk" target="_blank">SMTK</a>
+			that can be installed locally)
+			</p>
+
+			<p>
+			This portal represents an example of accessing the web service through a so-called
+			browser Graphical User Interface (GUI): HTML forms and controls (e.g., buttons)
+			provide an easy way to configure and submit requests, that are then processed
+			and visualized in form of plots and tables on the browser.
+			</p>
+			<p>
+			Nevertheless, user can access the service also through client software code,
+			e.g. Python notebook running on the user computer. This usage is more indicated
+			when human interaction through
+			the web page controls is unfeasible or inefficient, e.g. when the service is
+			accessed routinely or automatically (e.g., from a data center operation),
+			or used in custom code not only for visualization purposes (e.g.,
+			as input for further processing).
+			</p>
+			<p>
+			In the following, we will describe basic concept of eGSIM
+			for usage in custom code, digging into more details of the underlying
+			server-side
+			<a target='_blank' href='https://en.wikipedia.org/wiki/Web_API'>web API</a>
 			
 			
 			<h2 id="generalfeatures">Introduction</h2>
