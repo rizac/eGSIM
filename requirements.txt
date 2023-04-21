@@ -35,7 +35,7 @@ scipy==1.10.0
 shapely==2.0.0
 six==1.16.0
 # -e git+https://github.com/rizac/gmpe-smtk.git@7948682b32ef804a52d266dfcc94512da01149ab#egg=smtk
-sqlparse==0.4.3
+sqlparse==0.4.4
 tables==3.8.0
 tenacity==8.1.0
 toml==0.10.2
