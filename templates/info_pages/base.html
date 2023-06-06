@@ -28,23 +28,27 @@ a.logo img{
 	margin-top:0px;
 	height:3.5vmin;
 }
+#page-content{
+	margin: auto;  /* center horizontally */
+	max-width: 50em;
+	transition:visibility .1s ease;
+	padding-top: 2rem;
+	text-align: justify;
+}
 #page-header {
 	transform:scaleY(1);
 	transition: transform .1s ease;
+	transform-origin: top;
 }
-#page-header { transform-origin: top; }
-#page-footer { transform-origin: bottom; }
-body{
-	align-items: center !important;
-}
-#page-footer{
+#page-footer {
+	transform-origin: bottom;
 	background-image: linear-gradient(180deg, rgb(248, 249, 250, 0), rgba(248, 249, 250, 1));
 }
 </style>
 {% endblock %}
 
 {% block body %}
-<div id='page-header' class='border-bottom position-fixed top-0 start-0 end-0 py-4 d-flex flex-column bg-body'>
+<div id='page-header' class='border-bottom py-4 d-flex flex-column bg-body' style="width:100%">
 	<div class='d-flex flex-row position-relative align-items-baseline'>
 		<a target="_blank" class='logo' href='https://www.epos-ip.org/'>
 			<img src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" />
@@ -68,7 +72,7 @@ body{
 		a web service to explore, select and test Ground-Shaking Intensity Models
 	</h5>
 </div>
-<div id="page-content" class="font-readable" style="visibility:hidden;transition:visibility .1s ease;padding-top: 2rem;max-width: 50em;text-align: justify;">
+<div id="page-content" class="font-readable">
 {% block page-content %}
 {% endblock %}
 </div>
@@ -108,12 +112,6 @@ body{
 		header.style.transform = `scaleY(${scale})`;
 		footer.style.transform = `scaleY(${scale})`;
 	};
-
-	window.addEventListener('load', () => {
-		var pageContent = document.getElementById('page-content');
-		pageContent.style.marginTop = `${mTop}px`;
-		pageContent.style.visibility = 'visible';
-	});
 	window.addEventListener('scroll', scrolled);
 
 })();
