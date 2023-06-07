@@ -7,16 +7,13 @@ import re
 
 from typing import Union, Callable, Any
 
-# from enum import Enum
 import yaml
 import numpy as np
 import pandas as pd
-from pandas.errors import UndefinedVariableError
 from scipy.interpolate import interp1d
 from openquake.hazardlib import imt
 from openquake.hazardlib.scalerel import PeerMSR
-from openquake.hazardlib.contexts import DistancesContext, RuptureContext, BaseContext, \
-    SitesContext
+from openquake.hazardlib.contexts import RuptureContext
 
 from ..smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -468,55 +465,19 @@ class ContextDB:
     Please refer to the functions docstring for further details
     """
 
-    def __init__(self, dataframe: pd.DataFrame,
-                 rupture_columns: dict[str, str] = None,
-                 site_columns: dict[str, str] = None,
-                 distance_columns: dict[str, str] = None):
+    def __init__(self, dataframe: pd.DataFrame):
         """
         Initializes a new EgsimContextDB.
 
         :param dataframe: a dataframe representing a flatfile
-        :param rupture_columns: dataframe column names mapped to the relative
-            Rupture parameter in the Context
-        :param site_columns: dataframe column names mapped to the relative
-            Site parameter in the Context
-        :param distance_columns: dataframe column names mapped to the relative
-            Distance measure in the Context
         """
-        if not rupture_columns or not site_columns or not distance_columns:
-            # read from yaml:
-            r, s, d = {}, {}, {}
-            for cname, cmetadata in read_registered_flatfile_columns_metadata().items():
-                if cmetadata['type'] == ColumnType.site_parameter:
-                    s[cname] = cname
-                elif cmetadata['type'] == ColumnType.rupture_parameter:
-                    r[cname] = cname
-                elif cmetadata['type'] == ColumnType.distance_measure:
-                    d[cname] = cname
-            if not rupture_columns:
-                rupture_columns = r
-            if not site_columns:
-                site_columns = s
-            if not distance_columns:
-                distance_columns = d
-
         self._data = dataframe
-        self._rup_columns = rupture_columns
-        self._site_columns = site_columns
-        self._dist_columns = distance_columns
-        self.flatfile_columns = rupture_columns | site_columns | distance_columns
         sa_columns_and_periods = ((col, imt.from_string(col.upper()).period)
                                   for col in self._data.columns
                                   if col.upper().startswith("SA("))
         sa_columns_and_periods = sorted(sa_columns_and_periods, key=lambda _: _[1])
         self.sa_columns = [_[0] for _ in sa_columns_and_periods]
         self.sa_periods = [_[1] for _ in sa_columns_and_periods]
-        self.filter_expression = None
-
-    rupture_context_attrs = tuple(RuptureContext._slots_)  # noqa
-    distances_context_attrs = tuple(DistancesContext._slots_)  # noqa
-    sites_context_attrs = ('vs30', 'lons', 'lats', 'depths',
-                           'vs30measured', 'z1pt0', 'z2pt5', 'backarc')
 
     def get_contexts(self, nodal_plane_index=1,
                      imts=None, component="Geometric"):
@@ -573,10 +534,6 @@ class ContextDB:
             dic["Observations"] = {imt: [] for imt in imts}  # OrderedDict([(imt, []) for imt in imts])
             dic["Num. Sites"] = 0
         return dic
-
-    #########################################
-    # IMPLEMENTS ContextDB ABSTRACT METHODS #
-    #########################################
 
     EVENT_ID_COL = 'event_id'
 
@@ -640,6 +597,69 @@ class ContextDB:
                 else:
                     raise ValueError("'%s' is not a recognized IMT" % imtx) from None
         return values.copy()
+
+
+class EventContext(RuptureContext):
+
+    _rupture_slots =  {
+        "mag": "magnitude",
+        'strike': 'strike',
+        'dip': 'dip',
+        'rake': 'rake',
+        'ztor': "depth_top_of_rupture",
+        'hypo_lon': "event_longitude",
+        'hypo_lat': "event_latitude",
+        'hypo_depth': 'event_depth',
+        'width': "rupture_width",
+        'hypo_loc': 'hypo_loc',
+        'src_id': 'src_id',
+        'rup_id': 'rup_id'  # fixme: what is this? event_id?
+    }
+
+    _sites_slots = {
+        "vs30": "vs30",
+        "vs30measured": "vs30measured",
+        "z1pt0": "z1",
+        "z2pt5": "z2pt5"
+    }
+
+    _distances_slots = {
+        'repi': 'repi',
+        'rhypo': 'rhypo',
+        'azimuth': 'azimuth',
+        'rrup': 'rrup',
+        'rx': 'rx',
+        'rjb': 'rjb',
+        'ry0': 'ry0',
+        'rcdpp': 'rcdpp',
+        'hanging_wall': 'hanging_wall',
+        'rvolc': 'rvolc'
+    }
+
+    _replacements = _distances_slots | _sites_slots | _rupture_slots
+
+    def __init__(self, data: pd.DataFrame):
+        super().__init__()
+        self._data = data
+
+    def __eq__(self, other):
+        assert isinstance(other, EventContext) and self._data.equals(other._data)
+
+    @property
+    def sids(self):
+        return self._data.index
+
+    def __getattr__(self, item):
+        try:
+            column_series = self._data[self._replacements.get(item, item)]
+        except KeyError:
+            raise AttributeError(item)
+        if item in self._rupture_slots:
+            return column_series.values[0]
+        return column_series.values.copy()
+
+
+# FIXME REMOVE LEGACY STUFF CHECK WITH GW:
 
     # def update_context(self, ctx, records, nodal_plane_index=1):
     #     """Update the attributes of the earthquake-based context `ctx` with
@@ -745,72 +765,3 @@ class ContextDB:
     #         ctx.backarc = records['backarc'].values.copy()
     #     else:
     #         ctx.backarc = np.full(shape=ctx.vs30.shape, fill_value=False)
-
-
-class EventContext(RuptureContext):
-
-    _rupture_slots =  {
-        "mag": "magnitude",
-        'strike': 'strike',
-        'dip': 'dip',
-        'rake': 'rake',
-        'ztor': "depth_top_of_rupture",
-        'hypo_lon': "event_longitude",
-        'hypo_lat': "event_latitude",
-        'hypo_depth': 'event_depth',
-        'width': "rupture_width",
-        'hypo_loc': 'hypo_loc',
-        'src_id': 'src_id',
-        'rup_id': 'rup_id'  # fixme: what is this? event_id?
-    }
-
-    _sites_slots = {
-        "vs30": "vs30",
-        "vs30measured": "vs30measured",
-        "z1pt0": "z1",
-        "z2pt5": "z2pt5"
-    }
-
-    _distances_slots = {
-        'repi': 'repi',
-        'rhypo': 'rhypo',
-        'azimuth': 'azimuth',
-        'rrup': 'rrup',
-        'rx': 'rx',
-        'rjb': 'rjb',
-        'ry0': 'ry0',
-        'rcdpp': 'rcdpp',
-        'hanging_wall': 'hanging_wall',
-        'rvolc': 'rvolc'
-    }
-
-    _replacements = _distances_slots | _sites_slots | _rupture_slots
-
-    def __init__(self, data: pd.DataFrame):
-        self._data = data
-
-    def __eq__(self, other):
-        assert isinstance(other, EventContext) and self._data.equals(other._data)
-
-    # def __len__(self):
-    #     return len(self._data)
-
-    @property
-    def sids(self):
-        return self._data.index
-
-    def __getattr__(self, item):
-        try:
-            column_series = self._data[self._replacements.get(item, item)]
-        except KeyError:
-            if item in ['rjb', 'rx', 'ry0'] and 'repi' in self._data.columns:
-                column_series = self._data['repi']
-            elif item in {'rrup'} and 'rhypo' in self._data.columns:
-                column_series = self._data['rhypo']
-            else:
-                raise AttributeError(item)
-        if item in self._rupture_slots:
-            return column_series.values[0]
-        return column_series.values.copy()
-
-
