@@ -15,11 +15,11 @@ from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from .templates.egsim import TAB, URLS, get_init_json_data
-from .templates.apidoc import get_apidoc_page_renderer_context
 from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
                                               FlatfileInspectionForm, FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm
-from ..api.views import error_response, RESTAPIView
+from ..api.views import (error_response, RESTAPIView, TrellisView, ResidualsView,
+                         TestingView)
 
 
 def main(request, selected_menu=None):
@@ -50,8 +50,22 @@ def _get_home_page_renderer_context():
 @xframe_options_sameorigin
 def apidoc(request):
     """view for the home page (iframe in browser)"""
-    template = 'apidoc.html'
-    context = get_apidoc_page_renderer_context(settings.DEBUG)
+    template = 'info_pages/apidoc/base.html'
+    context = {
+        'baseurl': 'https://egsim.gfz-potsdam.de',
+        'egsim_data': {
+            'TRELLIS': {
+                'path': TrellisView.urls[0]
+            },
+            'RESIDUALS': {
+                'path': ResidualsView.urls[0]
+            },
+            'TESTING': {
+                'path': TestingView.urls[0]
+            }
+        },
+        **_get_home_page_renderer_context()
+    }
     return render(request, template, context=context)
 
 

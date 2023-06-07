@@ -14,21 +14,18 @@ setup(
     python_requires='>=3.9.7',  # as of Jan 2023 is 3.11.0
     # Minimal requirements, for a complete list see requirements-*.txt
     install_requires=[
-        # 'openquake.engine>3.5.0',
-        'smtk @ git+https://github.com/rizac/gmpe-smtk.git',
+        'openquake.engine>3.5.0',
         'Django>=4.1.2',
         'pyyaml>=6.0',
-        'tables>=3.8.0'
+        'tables>=3.8.0',
+        'plotly>=5.10.0',
+        'kaleido>=0.2.1',  # required by plotly to save images
     ],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
-    # $ pip install -e .[plotly,test]
+    # $ pip install -e .[test]
     extras_require={
-        'plotly': [
-            'kaleido>=0.2.1',
-            'plotly>=5.10.0'
-        ],
         'test': [
             'pytest',
             'pylint>=2.3.1',
@@ -37,8 +34,8 @@ setup(
         ],
     },
     author='r. zaccarelli',
-    author_email='',  # FIXME: what to provide?
-    maintainer='Section 2.6 (Seismic Hazard and Risk Dynamics), GFZ Potsdam',  # FIXME
+    author_email='',
+    maintainer='r. zaccarelli',
     maintainer_email='',
     classifiers=[
         'Development Status :: 1 - Beta',

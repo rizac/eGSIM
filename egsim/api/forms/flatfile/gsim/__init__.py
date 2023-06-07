@@ -25,39 +25,10 @@ def get_residuals(flatfile: pd.DataFrame, gsim: list[str], imt: list[str]) -> Re
     flatfile columns into a ValidationError so that it can be returned as
     "client error" (4xx) response
     """
-    context_db = ContextDB(flatfile, *ctx_flatfile_colnames())
+    context_db = ContextDB(flatfile)
     residuals = Residuals(gsim, imt)
-    try:
-        residuals.get_residuals(context_db)
-        return residuals
-    except KeyError as kerr:
-        # A key error usually involves a missing column. If yes, raise
-        # ValidationError
-        col = str(kerr.args[0]) if kerr.args else ''
-        if col in context_db.flatfile_columns:
-            raise ValidationError('Missing column "%(col)s" in flatfile',
-                                  code='invalid',
-                                  params={'col': col})
-        # raise "normally", as any other exception not caught here
-        raise kerr
-
-
-def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
-    """Return rupture, site distance parameters as three `dict`s of
-    flatfile column names mapped to the relative Context attribute used
-    for residuals computation
-    """
-    qry = models.FlatfileColumn.objects  # noqa
-    rup, site, dist = {}, {}, {}
-    cols = 'name', 'oq_name', 'type'
-    for ffname, attname, categ in qry.only(*cols).values_list(*cols):
-        if categ == ColumnType.rupture_parameter:
-            rup[ffname] = attname
-        elif categ == ColumnType.site_parameter:
-            site[ffname] = attname
-        elif categ == ColumnType.distance_measure:
-            dist[ffname] = attname
-    return rup, site, dist
+    residuals.get_residuals(context_db)
+    return residuals
 
 
 class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):
