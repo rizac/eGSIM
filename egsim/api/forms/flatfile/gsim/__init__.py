@@ -27,19 +27,8 @@ def get_residuals(flatfile: pd.DataFrame, gsim: list[str], imt: list[str]) -> Re
     """
     context_db = ContextDB(flatfile, *ctx_flatfile_colnames())
     residuals = Residuals(gsim, imt)
-    try:
-        residuals.get_residuals(context_db)
-        return residuals
-    except KeyError as kerr:
-        # A key error usually involves a missing column. If yes, raise
-        # ValidationError
-        col = str(kerr.args[0]) if kerr.args else ''
-        if col in context_db.flatfile_columns:
-            raise ValidationError('Missing column "%(col)s" in flatfile',
-                                  code='invalid',
-                                  params={'col': col})
-        # raise "normally", as any other exception not caught here
-        raise kerr
+    residuals.get_residuals(context_db)
+    return residuals
 
 
 def ctx_flatfile_colnames() -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
