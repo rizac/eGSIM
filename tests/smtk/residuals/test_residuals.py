@@ -50,22 +50,10 @@ class ResidualsTestCase(SimpleTestCase):
         """
         ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.hdf.csv")
         cls.database = ContextDB(read_flatfile(ifile))
+        # fix distances required for these tests (rjb and rrup are all NaNs):
+        cls.database._data['rjb'] = cls.database._data['repi'].copy()
+        cls.database._data['rrup'] = cls.database._data['rhypo'].copy()
 
-        # ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.hdf")
-        # cls.database = ContextDB(pd.read_hdf(ifile))
-
-        # ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.csv")
-        # cls.out_location = os.path.join(BASE_DATA_PATH, "residual_tests")
-        # if os.path.exists(cls.out_location):
-        #     shutil.rmtree(cls.out_location)
-        # parser = ESMFlatfileParser.autobuild("000", "ESM ALL",
-        #                                      cls.out_location, ifile)
-        # del parser
-        # cls.database_file = os.path.join(cls.out_location,
-        #                                  "metadatafile.pkl")
-        # cls.database = None
-        # with open(cls.database_file, "rb") as f:
-        #     cls.database = pickle.load(f)
         cls.num_events = len(pd.unique(cls.database._data['event_id']))
         cls.num_records = len(cls.database._data)
 

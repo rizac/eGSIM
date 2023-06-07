@@ -7,15 +7,13 @@ import re
 
 from typing import Union, Callable, Any
 
-# from enum import Enum
 import yaml
 import numpy as np
 import pandas as pd
-from pandas.errors import UndefinedVariableError
 from scipy.interpolate import interp1d
 from openquake.hazardlib import imt
 from openquake.hazardlib.scalerel import PeerMSR
-from openquake.hazardlib.contexts import DistancesContext, RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
 
 from ..smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -467,55 +465,19 @@ class ContextDB:
     Please refer to the functions docstring for further details
     """
 
-    def __init__(self, dataframe: pd.DataFrame,
-                 rupture_columns: dict[str, str] = None,
-                 site_columns: dict[str, str] = None,
-                 distance_columns: dict[str, str] = None):
+    def __init__(self, dataframe: pd.DataFrame):
         """
         Initializes a new EgsimContextDB.
 
         :param dataframe: a dataframe representing a flatfile
-        :param rupture_columns: dataframe column names mapped to the relative
-            Rupture parameter in the Context
-        :param site_columns: dataframe column names mapped to the relative
-            Site parameter in the Context
-        :param distance_columns: dataframe column names mapped to the relative
-            Distance measure in the Context
         """
-        if not rupture_columns or not site_columns or not distance_columns:
-            # read from yaml:
-            r, s, d = {}, {}, {}
-            for cname, cmetadata in read_registered_flatfile_columns_metadata().items():
-                if cmetadata['type'] == ColumnType.site_parameter:
-                    s[cname] = cname
-                elif cmetadata['type'] == ColumnType.rupture_parameter:
-                    r[cname] = cname
-                elif cmetadata['type'] == ColumnType.distance_measure:
-                    d[cname] = cname
-            if not rupture_columns:
-                rupture_columns = r
-            if not site_columns:
-                site_columns = s
-            if not distance_columns:
-                distance_columns = d
-
         self._data = dataframe
-        self._rup_columns = rupture_columns
-        self._site_columns = site_columns
-        self._dist_columns = distance_columns
-        self.flatfile_columns = rupture_columns | site_columns | distance_columns
         sa_columns_and_periods = ((col, imt.from_string(col.upper()).period)
                                   for col in self._data.columns
                                   if col.upper().startswith("SA("))
         sa_columns_and_periods = sorted(sa_columns_and_periods, key=lambda _: _[1])
         self.sa_columns = [_[0] for _ in sa_columns_and_periods]
         self.sa_periods = [_[1] for _ in sa_columns_and_periods]
-        self.filter_expression = None
-
-    rupture_context_attrs = tuple(RuptureContext._slots_)  # noqa
-    distances_context_attrs = tuple(DistancesContext._slots_)  # noqa
-    sites_context_attrs = ('vs30', 'lons', 'lats', 'depths',
-                           'vs30measured', 'z1pt0', 'z2pt5', 'backarc')
 
     def get_contexts(self, nodal_plane_index=1,
                      imts=None, component="Geometric"):
@@ -530,9 +492,9 @@ class ContextDB:
         """
         compute_observations = imts is not None and len(imts)
         for evt_id, records in self.get_event_and_records():
-            dic = self.create_context(evt_id, imts)
-            ctx = dic['Ctx']
-            self.update_context(ctx, records, nodal_plane_index)
+            dic = self.create_context(evt_id, records, imts)
+            # ctx = dic['Ctx']
+            # self.update_context(ctx, records, nodal_plane_index)
             if compute_observations:
                 observations = dic['Observations']
                 for imtx, values in observations.items():
@@ -540,10 +502,10 @@ class ContextDB:
                     observations[imtx] = np.asarray(values, dtype=float)
                 dic["Num. Sites"] = len(records)
             # Legacy code??  FIXME: kind of redundant with "Num. Sites" above
-            dic['Ctx'].sids = np.arange(len(records), dtype=np.uint32)
+            # dic['Ctx'].sids = np.arange(len(records), dtype=np.uint32)
             yield dic
 
-    def create_context(self, evt_id, imts=None):
+    def create_context(self, evt_id, records: pd.DataFrame, imts=None):
         """Create a new Context `dict`. Objects of this type will be yielded
         by `get_context`.
 
@@ -566,16 +528,12 @@ class ContextDB:
         """
         dic = {
             'EventID': evt_id,
-            'Ctx': RuptureContext()
+            'Ctx': EventContext(records)
         }
         if imts is not None and len(imts):
             dic["Observations"] = {imt: [] for imt in imts}  # OrderedDict([(imt, []) for imt in imts])
             dic["Num. Sites"] = 0
         return dic
-
-    #########################################
-    # IMPLEMENTS ContextDB ABSTRACT METHODS #
-    #########################################
 
     EVENT_ID_COL = 'event_id'
 
@@ -640,107 +598,170 @@ class ContextDB:
                     raise ValueError("'%s' is not a recognized IMT" % imtx) from None
         return values.copy()
 
-    def update_context(self, ctx, records, nodal_plane_index=1):
-        """Update the attributes of the earthquake-based context `ctx` with
-        the data in `records`.
-        See `rupture_context_attrs`, `sites_context_attrs`,
-        `distances_context_attrs`, for a list of possible attributes. Any
-        attribute of `ctx` that is non-scalar should be given as numpy array.
 
-        :param ctx: a :class:`openquake.hazardlib.contexts.RuptureContext`
-            created for a specific event. It is the key 'Ctx' of the Context dict
-            returned by `self.create_context`
-        :param records: sequence (e.g., list, tuple, pandas DataFrame) of records
-            related to the given event (see :meth:`get_event_and_records`)
-        """
-        self._update_rupture_context(ctx, records, nodal_plane_index)
-        self._update_distances_context(ctx, records)
-        self._update_sites_context(ctx, records)
-        # add remaining ctx attributes:  FIXME SHOULD WE?
-        for ff_colname, ctx_attname in self.flatfile_columns.items():
-            if hasattr(ctx, ctx_attname) or ff_colname not in records.columns:
-                continue
-            val = records[ff_colname].values
-            val = val[0] if ff_colname in self._rup_columns else val.copy()
-            setattr(ctx, ctx_attname, val)
+class EventContext(RuptureContext):
 
-    def _update_rupture_context(self, ctx, records, nodal_plane_index=1):
-        """see `self.update_context`"""
-        record = records.iloc[0]  # pandas Series
-        ctx.mag = record['magnitude']
-        ctx.strike = record['strike']
-        ctx.dip = record['dip']
-        ctx.rake = record['rake']
-        ctx.hypo_depth = record['event_depth']
+    _rupture_slots =  {
+        "mag": "magnitude",
+        'strike': 'strike',
+        'dip': 'dip',
+        'rake': 'rake',
+        'ztor': "depth_top_of_rupture",
+        'hypo_lon': "event_longitude",
+        'hypo_lat': "event_latitude",
+        'hypo_depth': 'event_depth',
+        'width': "rupture_width",
+        'hypo_loc': 'hypo_loc',
+        'src_id': 'src_id',
+        'rup_id': 'rup_id'  # fixme: what is this? event_id?
+    }
 
-        ztor = record['depth_top_of_rupture']
-        if pd.isna(ztor):
-            ztor = ctx.hypo_depth
-        ctx.ztor = ztor
+    _sites_slots = {
+        "vs30": "vs30",
+        "vs30measured": "vs30measured",
+        "z1pt0": "z1",
+        "z2pt5": "z2pt5"
+    }
 
-        rup_width = record['rupture_width']
-        if pd.isna(rup_width):
-            # Use the PeerMSR to define the area and assuming an aspect ratio
-            # of 1 get the width
-            rup_width = np.sqrt(DEFAULT_MSR.get_median_area(ctx.mag, 0))
-        ctx.width = rup_width
+    _distances_slots = {
+        'repi': 'repi',
+        'rhypo': 'rhypo',
+        'azimuth': 'azimuth',
+        'rrup': 'rrup',
+        'rx': 'rx',
+        'rjb': 'rjb',
+        'ry0': 'ry0',
+        'rcdpp': 'rcdpp',
+        'hanging_wall': 'hanging_wall',
+        'rvolc': 'rvolc'
+    }
 
-        ctx.hypo_lat = record['event_latitude']
-        ctx.hypo_lon = record['event_longitude']
-        ctx.hypo_loc = np.array([0.5, 0.5])  # <- this is compatible with older smtk. FIXME: it was like this: np.full((len(record), 2), 0.5)
+    _replacements = _distances_slots | _sites_slots | _rupture_slots
 
-    def _update_distances_context(self, ctx, records):
-        """see `self.update_context`"""
+    def __init__(self, data: pd.DataFrame):
+        super().__init__()
+        self._data = data
 
-        # TODO Setting Rjb == Repi and Rrup == Rhypo when missing value
-        # is a hack! Need feedback on how to fix
-        ctx.repi = records['repi'].values.copy()
-        ctx.rhypo = records['rhypo'].values.copy()
+    def __eq__(self, other):
+        assert isinstance(other, EventContext) and self._data.equals(other._data)
 
-        ctx.rcdpp = np.full((len(records),), 0.0)
-        ctx.rvolc = np.full((len(records),), 0.0)
-        ctx.azimuth = records['azimuth'].values.copy()
+    @property
+    def sids(self):
+        return self._data.index
 
-        dists = records['rjb'].values.copy()
-        isna = pd.isna(dists)
-        if isna.any():
-            dists[isna] = records.loc[isna, 'repi']
-        ctx.rjb = dists
+    def __getattr__(self, item):
+        try:
+            column_series = self._data[self._replacements.get(item, item)]
+        except KeyError:
+            raise AttributeError(item)
+        if item in self._rupture_slots:
+            return column_series.values[0]
+        return column_series.values.copy()
 
-        dists = records['rrup'].values.copy()
-        isna = pd.isna(dists)
-        if isna.any():
-            dists[isna] = records.loc[isna, 'rhypo']
-        ctx.rrup = dists
 
-        dists = records['rx'].values.copy()
-        isna = pd.isna(dists)
-        if isna.any():
-            dists[isna] = -records.loc[isna, 'repi']
-        ctx.rx = dists
+# FIXME REMOVE LEGACY STUFF CHECK WITH GW:
 
-        dists = records['ry0'].values.copy()
-        isna = pd.isna(dists)
-        if isna.any():
-            dists[isna] = records.loc[isna, 'repi']
-        ctx.ry0 = dists
+    # def update_context(self, ctx, records, nodal_plane_index=1):
+    #     """Update the attributes of the earthquake-based context `ctx` with
+    #     the data in `records`.
+    #     See `rupture_context_attrs`, `sites_context_attrs`,
+    #     `distances_context_attrs`, for a list of possible attributes. Any
+    #     attribute of `ctx` that is non-scalar should be given as numpy array.
+    #
+    #     :param ctx: a :class:`openquake.hazardlib.contexts.RuptureContext`
+    #         created for a specific event. It is the key 'Ctx' of the Context dict
+    #         returned by `self.create_context`
+    #     :param records: sequence (e.g., list, tuple, pandas DataFrame) of records
+    #         related to the given event (see :meth:`get_event_and_records`)
+    #     """
+    #     self._update_rupture_context(ctx, records, nodal_plane_index)
+    #     self._update_distances_context(ctx, records)
+    #     self._update_sites_context(ctx, records)
+    #     # add remaining ctx attributes:  FIXME SHOULD WE?
+    #     for ff_colname, ctx_attname in self.flatfile_columns.items():
+    #         if hasattr(ctx, ctx_attname) or ff_colname not in records.columns:
+    #             continue
+    #         val = records[ff_colname].values
+    #         val = val[0] if ff_colname in self._rup_columns else val.copy()
+    #         setattr(ctx, ctx_attname, val)
 
-    def _update_sites_context(self, ctx, records):
-        """see `self.update_context`"""
-        # Legacy code not used please check in the future:
-        # ------------------------------------------------
-        # ctx.lons = records['station_longitude'].values.copy()
-        # ctx.lats = records['station_latitude'].values.copy()
-        ctx.depths = records['station_elevation'].values * -1.0E-3 if \
-            'station_elevation' in records.columns else np.full((len(records),), 0.0)
-        vs30 = records['vs30'].values.copy()
-        ctx.vs30 = vs30
-        ctx.vs30measured = records['vs30measured'].values.copy()
-        ctx.z1pt0 = records['z1'].values.copy() if 'z1' in records.columns else \
-            vs30_to_z1pt0_cy14(vs30)
-        ctx.z2pt5 = records['z2pt5'].values.copy() if 'z2pt5' in records.columns else \
-            vs30_to_z2pt5_cb14(vs30)
-        if 'backarc' in records.columns:
-            ctx.backarc = records['backarc'].values.copy()
-        else:
-            ctx.backarc = np.full(shape=ctx.vs30.shape, fill_value=False)
+    # def _update_rupture_context(self, ctx, records, nodal_plane_index=1):
+    #     """see `self.update_context`"""
+    #     record = records.iloc[0]  # pandas Series
+    #     ctx.mag = record['magnitude']
+    #     ctx.strike = record['strike']
+    #     ctx.dip = record['dip']
+    #     ctx.rake = record['rake']
+    #     ctx.hypo_depth = record['event_depth']
+    #
+    #     ztor = record['depth_top_of_rupture']
+    #     if pd.isna(ztor):
+    #         ztor = ctx.hypo_depth
+    #     ctx.ztor = ztor
+    #
+    #     rup_width = record['rupture_width']
+    #     if pd.isna(rup_width):
+    #         # Use the PeerMSR to define the area and assuming an aspect ratio
+    #         # of 1 get the width
+    #         rup_width = np.sqrt(DEFAULT_MSR.get_median_area(ctx.mag, 0))
+    #     ctx.width = rup_width
+    #
+    #     ctx.hypo_lat = record['event_latitude']
+    #     ctx.hypo_lon = record['event_longitude']
+    #     ctx.hypo_loc = np.array([0.5, 0.5])  # <- this is compatible with older smtk. FIXME: it was like this: np.full((len(record), 2), 0.5)
+
+    # def _update_distances_context(self, ctx, records):
+    #     """see `self.update_context`"""
+    #
+    #     # TODO Setting Rjb == Repi and Rrup == Rhypo when missing value
+    #     # is a hack! Need feedback on how to fix
+    #     ctx.repi = records['repi'].values.copy()
+    #     ctx.rhypo = records['rhypo'].values.copy()
+    #
+    #     ctx.rcdpp = np.full((len(records),), 0.0)
+    #     ctx.rvolc = np.full((len(records),), 0.0)
+    #     ctx.azimuth = records['azimuth'].values.copy()
+    #
+    #     dists = records['rjb'].values.copy()
+    #     isna = pd.isna(dists)
+    #     if isna.any():
+    #         dists[isna] = records.loc[isna, 'repi']
+    #     ctx.rjb = dists
+    #
+    #     dists = records['rrup'].values.copy()
+    #     isna = pd.isna(dists)
+    #     if isna.any():
+    #         dists[isna] = records.loc[isna, 'rhypo']
+    #     ctx.rrup = dists
+    #
+    #     dists = records['rx'].values.copy()
+    #     isna = pd.isna(dists)
+    #     if isna.any():
+    #         dists[isna] = -records.loc[isna, 'repi']
+    #     ctx.rx = dists
+    #
+    #     dists = records['ry0'].values.copy()
+    #     isna = pd.isna(dists)
+    #     if isna.any():
+    #         dists[isna] = records.loc[isna, 'repi']
+    #     ctx.ry0 = dists
+
+    # def _update_sites_context(self, ctx, records):
+    #     """see `self.update_context`"""
+    #     # Legacy code not used please check in the future:
+    #     # ------------------------------------------------
+    #     # ctx.lons = records['station_longitude'].values.copy()
+    #     # ctx.lats = records['station_latitude'].values.copy()
+    #     ctx.depths = records['station_elevation'].values * -1.0E-3 if \
+    #         'station_elevation' in records.columns else np.full((len(records),), 0.0)
+    #     vs30 = records['vs30'].values.copy()
+    #     ctx.vs30 = vs30
+    #     ctx.vs30measured = records['vs30measured'].values.copy()
+    #     ctx.z1pt0 = records['z1'].values.copy() if 'z1' in records.columns else \
+    #         vs30_to_z1pt0_cy14(vs30)
+    #     ctx.z2pt5 = records['z2pt5'].values.copy() if 'z2pt5' in records.columns else \
+    #         vs30_to_z2pt5_cb14(vs30)
+    #     if 'backarc' in records.columns:
+    #         ctx.backarc = records['backarc'].values.copy()
+    #     else:
+    #         ctx.backarc = np.full(shape=ctx.vs30.shape, fill_value=False)

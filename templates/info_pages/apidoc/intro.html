@@ -1,45 +1,23 @@
 <p>
-eGSIM is a
-<a target='_blank' href='https://en.wikipedia.org/wiki/Representational_state_transfer#Applied_to_Web_services'>REST API</a>:
-i.e., along the lines of popular seismological web services (see e.g. the
+Along the lines of popular seismological web services (see e.g. the
 <a target="_blank" href="https://www.fdsn.org/webservices/FDSN-WS-Specifications-1.1.pdf">FDSN protocol</a>),
-it can be used via <i>requests</i> issued by a client (eGSIM user) in several ways such as e.g.
-the browser GUI, command line applications like <code>wget</code> or client code 
-(e.g. Python's <code>urllib.request</code>). Requests require:
+an eGSIM request requires:
 </p>
 <ol>
 <li>An endpoint, i.e. an URL denoting a specific service
 <li>A method (GET vs POST) defining the type of request
 <li>Parameters for customizing the desired response data
 </ol>
-<p>
-The web server processes the request and returns a <i>response</i> to the client in specific
-formats.
-This document describes eGSIM request and responses in details to help the user working
-with the API.
-</p>
 
 
-<h3 id="requestendpoints">Requests endpoints</h3> 
-<p>
-The following base URI pattern has to be used for each request:
-</p>
+<h3 id="requestendpoints">Requests endpoints</h3>
+eGSIM implements three endpoints which perform three different types of analysis:
 
-<p>
-<span class='url'>{{ baseurl }}/&lt;service&gt;</span>
-</p>
 
-<p>
-where {{ baseurl }} is the base eGSIM URL (if you are viewing this document online, {{ baseurl }}
-is the browser address without the last "/apidoc" part)
-
-and <span class='url'>&lt;service&gt;</span> is one of the following:
-</p>
 <ul>
-	<li><span class='url'>{{ egsim_data.GSIMS.path }}</span> for <a href="#gsimselection"> Model Selection</a> </li>
-	<li><span class='url'>{{ egsim_data.TRELLIS.path }}</span> for <a href="#trellisplots"> Model-to-Model Comparison</a> </li>
-	<li><span class='url'>{{ egsim_data.RESIDUALS.path }}</span> for <a href="#residualanalysis"> Model-to-Data Comparison</a> </li>
-	<li><span class='url'>{{ egsim_data.TESTING.path }}</span> for <a href="#testing"> Model-to-Data Testing</a> </li>
+	<li><span class='url'>{{ baseurl }}/{{ egsim_data.TRELLIS.path }}</span> for <a href="#trellisplots"> Model-to-Model Comparison</a> </li>
+	<li><span class='url'>{{ baseurl }}/{{ egsim_data.RESIDUALS.path }}</span> for <a href="#residualanalysis"> Model-to-Data Comparison</a> </li>
+	<li><span class='url'>{{ baseurl }}/{{ egsim_data.TESTING.path }}</span> for <a href="#testing"> Model-to-Data Testing</a> </li>
 </ul>
 
 
@@ -48,7 +26,7 @@ and <span class='url'>&lt;service&gt;</span> is one of the following:
 eGSIM services can be invoked using the two standard HTTP methods: GET or POST.
 Typically, POST request are defined to send data to create/update a resource on the server.
 In eGSIM, both methods perform the same task of querying data. We suggest to use
-the GET method for simple reuqests with few parameters, and POST otherwise.
+the GET method for simple requests with few parameters and no uploaded file, and POST otherwise.
 </p>
 
 <h4>GET method</h4>
@@ -287,7 +265,7 @@ dictate the response format:
 </p>
 
 <table class='request'>
-	{% include "apidoc/request_template.html" with form=egsim_data.FORMAT.form %}
+	{% include "./request_template.html" with form=egsim_data.FORMAT.form %}
 </table>
 
 (the parameters above will be omitted for simplicity in the remainder of the document)

@@ -106,7 +106,7 @@ class RESTAPIView(View):
             else:
                 return self.response_json(response_data)
         except ValidationError as v_err:
-            return error_response(v_err.message, self.CLIENT_ERR_CODE)
+            return error_response("; ".join(v_err.messages), self.CLIENT_ERR_CODE)
         except Exception as err:
             msg = f'Server error ({err.__class__.__name__}): {str(err)}'
             return error_response(msg, self.SERVER_ERR_CODE)

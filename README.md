@@ -22,14 +22,13 @@ The web portal (and API documentation) is available at:
    * [Usage](#usage)
    * [Maintenance](#maintenance)
      * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
-     * [Admin panel](#admin-panel)
      * [Complete DB reset](#Complete-DB-reset)
-     * [~~Migrate and populate the db~~](#Migrate-and-populate-the-db)
+     * [Repopulate the DB](#Repopulate-the-DB)
+     * [Admin panel](#admin-panel)
      * [Create a custom management command](#Create-a-custom-management-command)  
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
      * [Add new regionalization](#Add-new-regionalization)
      * [Dependencies upgrade](#Dependencies-upgrade)
-     * [Fix smtk](#Fix-smtk)
 
      
 # Installation
@@ -38,8 +37,7 @@ DISCLAIMER: **This document covers installation in development (or debug)
 mode, i.e. when the program is deployed locally, usually for testing, 
 fixing bug or adding features.**
 
-For installation in **production** mode, see `deploy.html` (note however
-that the document was last updated in 2019)
+For installation in **production** mode, see `deploy.html`
 
 ## Requirements
 
@@ -91,27 +89,7 @@ On the terminal, execute:
 pip install --upgrade pip setuptools && pip install -r requirements.dev.txt
 ```
 (use `requirements.txt` if you don't need to run tests, e.g. you are not 
-installing as developer).
-
-**If you want to install gmpe-smtk in editable mode**
-(see also [Fixing gmpe-smtk](#Fix-smtk)), 
-you need to have gmpe-smtk on the same level of the
-egsim directory. Thus, from the egsim parent directory, type:
-```bash
-git clone https://github.com/rizac/gmpe-smtk.git gmpe-smtk
-```
-and reinstall smtk from there in editable mode:
-
-```console
-(cd ../gmpe-smtk-rizac && pip install -e .)
-```
-
-**Note** check with `pip freese` that the current commit hash 
-of gmpe-smtk (`git log -1`) 
-is the same as in `requirements.txt` (i.e., the 
-string portion between '@' and '#' of the 
-text line containing "smtk")
-
+installing as developer)
 
 ## Run Test
 
@@ -187,7 +165,6 @@ Brief Introduction to some important concepts and key terms (click to show)
    ```bash
    export DJANGO_SETTINGS_MODULE=<settings_file_path> python manage.py <command>
    ```
-   (see examples in this document).
    Django allows also the implementation of custom management commands.
    eGSIM implements `egsim-init` in order to populate the db (more details 
    below)
@@ -223,44 +200,52 @@ command does this:
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell 
 ```
 
-## Admin panel
-
-**Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
-must be changed in production**
-
-This command allows the user to check database data from the 
-web browser. For further details, check the 
-[Django doc](https://docs.djangoproject.com/en/stable/ref/django-admin/)
-
-The database must have been created and populated (see [Usage](#usage)). 
-
-Create a super user (to be done **once only** ):
-```bash
-export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py createsuperuser
-```
-and follow the instructions.
-
-Start the program (see [Usage](Usage)) and then navigate in the browser to 
-`[SITE_URL]/admin` (in development mode, `http://127.0.0.1:8000/admin/`)
-
-*Note: Theoretically, you can modify db data from the browser, but to make 
-changes persistent after a database reset you should implement them in 
-the management command `egsim_init` (see [Repopulate the DB](#Repopulate-the-DB))*
-
 ## Complete DB reset
 
 **Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
 must be changed in production**
 
-Every time you change something in the Database schema, e.g. 
-a table, a column, a constraint
-(see `egsim.api.models.py`), you need to run DB migrations.
+We perform a complete DB reset every time we change something in the Database 
+schema (see `egsim.api.models.py`), e.g. a table, a column, a constraint.
 
-However, as eGSIM does not need to store user-defined data in the database, 
-it is often easier to throw everything away and regenerate all db schema and data 
-from scratch.
+<details>
+<summary>(if you wonder why we do not use DB migrations, click here</summary>
 
-To perform a db reset:
+The usual way to change a DB in a web app is to create and run
+migrations ([Django full details here](https://docs.djangoproject.com/en/stable/topics/migrations/)),
+which allow to keep track of all changes (moving back and forth if necessary) 
+whilst preserving the data stored in the DB. 
+However, none of those features is required in eGSIM: DB data is predefined
+and would be regenerated from scratch in any case after any new migration.
+Consequently, **upon changes in the DB, a complete DB reset is an easier procedure**.
+
+In any case (**just for reference**), the steps to create and run migrations 
+in eGSIM are the following:
+
+```bash
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim
+```
+And then remember to [Repopulate the db](#Repopulate-the-DB)
+
+Notes: 
+  - The `make_migration` command just generates a migration file, it doesn't 
+    change the db. The `migrate` command does that, by means of the migration 
+    files generated. For details on Django migrations, see:
+    - https://realpython.com/django-migrations-a-primer/#changing-models
+    - https://docs.djangoproject.com/en/3.2/topics/migrations/#workflow 
+  - <migration_name> will be a suffix appended to the migration file, use it
+    like you would use a commit message in `git`).
+  - When running `migrate`, if the migration 
+    will introduce new non-nullable fields, maybe better to run 
+    `manage.py flush` first to empty all tables, to avoid conflicts
+    "egsim" above is the app name. If you omit the app, all apps will be 
+    migrated. The command `migrate` does nothing if it detects that there is 
+    nothing to migrate
+</details>
+
+To perform a complete db reset:
+
  - delete or rename `db.sqlite3` (or wherever the database is. See settings file in case)
  - [**Optional: skip if the db schema hasn't changed**] delete all migrations,
    i.e. all `*.py` files except `__init__.py` currently under `egsim/api/migrations`, 
@@ -293,75 +278,32 @@ Execute the custom management command `egsim_init`:
 ```bash
    export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
 ```
- 
 
-## Migrate and populate the db
 
-**DISCLAIMER**: Consider
-performing a [Complete db reset](#complete-db-reset)
-instead.
 
-<details>
+## Admin panel
 
-<summary>Details (click to expand)</summary>
+**Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below
+must be changed in production**
 
-Before reading, remember:
+This command allows the user to check database data from the 
+web browser. For further details, check the 
+[Django doc](https://docs.djangoproject.com/en/stable/ref/django-admin/)
 
- - **the value of `DJANGO_SETTINGS_MODULE` in the examples below 
-   must be changed in production**
- - The `make_migration` command just generates a migration file, it doesn't 
-   change the db. The `migrate` command does that, by means of the migration 
-   files generated. For details on Django migrations, see:
-   - https://realpython.com/django-migrations-a-primer/#changing-models
-   - https://docs.djangoproject.com/en/3.2/topics/migrations/#workflow
+The database must have been created and populated (see [Usage](#usage)). 
 
-   
-#### Steps:   
+Create a super user (to be done **once only** ):
+```bash
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py createsuperuser
+```
+and follow the instructions.
 
-1. Edit the eGSIM models (module `egsim.models.py`. **In production,
-   just run** `git pull`)
-2. Make a migration (**This does not run a migration, see note above**):
-   
-   ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>
-   ```
+Start the program (see [Usage](Usage)) and then navigate in the browser to 
+`[SITE_URL]/admin` (in development mode, `http://127.0.0.1:8000/admin/`)
 
-   (<migration_name> will be a suffix appended to the migration file, use it
-   like you would use a commit message in `git`).
-   
-   **NOTE**: Django might ask you how to fill non-nullable 
-   fields (db columns), if added. Just provide whatever default, because a 
-   migration is supposed to be followed by a `egsim_init` execution that will
-   re-populate all egsim tables. However, you might need to empty
-   the database manually before running `migrate` (see below), otherwise
-   the migration might not work if e.g., the field is unique
-   
-3. Should the db be repopulated differently in account of the new 
-   changes (probably yes)?
-   Then implement these changes in the existing 
-   commands, or create a new one, see `README.md` in 
-   `egsim/api/management/commands`
-   
-4. Run `test_initdb` in `/tests/test_commands.py` (it re-creates
-   from scratch a test db, runs all migrations and `egsim_init`)
-
-4. (optional) Make a backup of the database
-   
-5. Run migration (command `migrate`). **Note**: if the migration 
-   will introduce new non-nullable fields, maybe better to run 
-   `manage.py flush` first to empty all tables, to avoid conflicts
-   
-   ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim
-   ```
-
-   ("egsim" above is the app name. If you omit the app, all apps will be 
-   migrated. The command `migrate` does nothing if it detects that there is 
-   nothing to migrate)
-   
-6. Repopulate all eGSIM tables (command `egsim_init`)
-
-</details>
+*Note: Theoretically, you can modify db data from the browser, but to make 
+changes persistent after a database reset you should implement them in 
+the management command `egsim_init` (see [Repopulate the DB](#Repopulate-the-DB))*
 
 
 ## Create a custom management command
@@ -370,7 +312,7 @@ See `egsim/api/management/commands/README.md`.
 
 The next two sections will describe how to store
 new data (regionalizations and flatfiles) that will be
-made available in eGSIM by means of two management commands
+made available in eGSIM when [repopulating the db](#Repopulate-the-DB)
 
 
 ## Add new predefined flatfiles
@@ -448,19 +390,18 @@ Implemented flatfiles sources (click on the items below to expand)
 
 ## Dependencies upgrade
 
-Please note that it is safer (from now even 
+Please note that it is safer (even 
 [mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
 with `pip`) to upgrade all dependencies
 instead of single packages in order to avoid conflicts.
 
-Consequently, we recommend to follow this procedure also
-in case of a GitHub security issue (or dependency alert) on a single package.
+Consequently, **we recommend to follow this procedure also
+in case of a GitHub security issue (or dependency alert) on a single package**.
 
-To upgrade all dependencies, we just need to `pull` the newest version
-of `smtk` and relaunch an installation from there (this will fetch
-also the newest OpenQuake version and all dependencies automatically)
-
-First create and activate a new virtualenv:
+First create a new virtual env (in the example below,
+in the git-ignored `.env` inside
+the eGSIM root directory, 
+but you can also create it wherever you want)
 
 ```bash
 python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
@@ -468,87 +409,20 @@ source .env/<ENVNAME>/bin/activate  # activate venv
 pip install --upgrade pip setuptools
 ```
 
-Then install smtk and all dependencies:
-
+Then `cd` into eGSIM if you are not there already 
+(basically, the directory where `setup.py` is located), 
+install and freeze 
+the installed packages into a `requirements.txt` file:
 ```bash
-cd ../gmpe-smtk # (or whatever you cloned the forked branch)
-git checkout master && git pull
-pip install -e . # (also installs openquake and django)
-pip install --upgrade --force-reinstall django  # upgrade django (optional)
-pip install plotly kaleido pyyaml tables
-cd ../egsim. # (or wherever egsim is)
+pip install -e .
 pip freeze > requirements.txt
 ```
 
-And finally install the newest version of the test packages:
-
+Do the same for testing:
 ```bash
-pip install pytest pytest-django pytest-cov pylint
+pip install -e ".[test]"
 pip freeze > requirements.dev.txt
 ```
 
-Finally, proceed with the normal workflow:
-run tests, fix new bugs and eventually `git push`, as always.
-
-
-## Fix smtk
-
-We will refer to smtk as the [forked branch](https://github.com/rizac/gmpe-smtk)
-used by eGSIM. As we have seen during installation, it is a forked repository 
-from the [upstream branch](https://github.com/GEMScienceTools/gmpe-smtk.git).
-
-By convention **the last commit of the `master` branch of smtk is the updated 
-one which can be used in production** (basically, the one written in the 
-`requirements` text files).
-Therefore, when fixing a smtk issue or implementing a new feature, switch to 
-a dev branch (we usually use the branch called ... "dev").
-
-Then simply implement your changes, tests and issue a PR, as usual.
-Meanwhile, because in dev mode smtk is usually installed as editable 
-('-e' flag), you don't need to change anything locally, as the new 
-features/fixes are already available in eGSIM.
-Then, *once the PR is merged in the upstream branch*, you can switch back to 
-the "master" branch in smtk, and merge from the upstream branch, as follows:
-
-<details>
-	<summary>First make sure you added the upstream branch 
-(one-time operation)</summary>
-
-Type:
-
-```bash
-git remote -v
-```
-
-if you see these lines
-
-```bash
-upstream https://github.com/GEMScienceTools/gmpe-smtk.git (fetch)
-upstream https://github.com/GEMScienceTools/gmpe-smtk.git (push)
-```
-
-skip the line below. Otherwise, add the upstream branch by typing:
-
-```bash
-git remote add upstream https://github.com/GEMScienceTools/gmpe-smtk.git
-```
-</details>
-
-Then merge:
-
-```bash
-# Fetch all the branches of that remote into remote-tracking branches, such as upstream/master:
-git fetch upstream
-
-# Switch to master branch if you are not already there
-git checkout master
-
-# Merge:
-git merge upstream/master
-```
-
-Finally, update the smtk version: issue a `git log -1` and copy the commit
-hash into the two `requirements` text files.
-Open them, find the line where `gmpe-smtk` is listed and replace the commit 
-hash in the portion of the line between '@' and '#'. Eventually, issue a 
-`git push`
+Run tests (see above) to check that everything wortks as expected, and then
+commit and push.

@@ -16,7 +16,7 @@ database (GMDB) and the desired plot type
 </p>
 
 <table class='request'>
-	{% include "apidoc/request_template.html" with form=data.form %}
+	{% include "./request_template.html" with form=data.form %}
 </table>
 
 <div class='footnote'>
@@ -39,7 +39,7 @@ Notes:
 
 <h4 id="selexpr">Selection expression</h4>
 
-{% include "apidoc/selexpr_help.html" %}
+{% include "./selexpr_help.html" %}
 
 <h3 id="{{ data.key }}_response">Response</h3>
 <p>
