@@ -92,13 +92,14 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
-    def test_bindi17_turkey(self, client, testdata):
+    @pytest.mark.parametrize('plot_type', ['mag', 'res'])
+    def test_bindi17_turkey(self, client, testdata, plot_type):
         # Uploaded flatfile, but not well-formed:
         csv = SimpleUploadedFile("file.csv",
                                  testdata.read('PGA_BindiEtAl17.csv'),
                                  content_type="text/csv")
         inputdic2 = {'model': 'BindiEtAl2017Rhypo', 'imt' : 'PGA',
-                     'flatfile':csv, 'plot':'res'}
+                     'flatfile':csv, 'plot': plot_type}
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
         resp_json = resp2.json()
