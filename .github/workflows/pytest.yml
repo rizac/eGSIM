@@ -6,7 +6,7 @@ name: Python >= 3.10
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "dev" ]
   pull_request:
     branches: [ "master" ]
 
