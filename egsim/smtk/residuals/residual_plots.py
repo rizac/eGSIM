@@ -170,8 +170,11 @@ def _get_magnitudes(residuals, gmpe, imt, res_type):
                 len(residuals.unique_indices[gmpe][imt][i])
                 )
         else:
-            nval = np.ones(len(ctxt["Ctx"].repi))
+            # FIXME: it was like this, looks like we do not need repi: np.ones(len(ctxt["Ctx"].repi))
+            nval = np.ones(len(ctxt["Ctx"]))
 
+        # FIXME: this below actually measn that the flatfile requested columns depend
+        # also on the plot, not only the model right?
         magnitudes = np.hstack([magnitudes, ctxt["Ctx"].mag * nval])
 
     return magnitudes
