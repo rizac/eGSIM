@@ -5,8 +5,7 @@ import pandas as pd
 from django.core.exceptions import ValidationError
 
 from egsim.smtk.residuals.gmpe_residuals import Residuals
-from egsim.smtk.flatfile import ColumnType, ContextDB
-from egsim.api import models
+from egsim.smtk.flatfile import ContextDB
 from egsim.api.forms import GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
 

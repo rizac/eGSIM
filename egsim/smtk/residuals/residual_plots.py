@@ -165,12 +165,8 @@ def _get_magnitudes(residuals, gmpe, imt, res_type):
     magnitudes = np.array([])
     for i, ctxt in enumerate(residuals.contexts):
         if res_type == "Inter event":
-
-            nval = np.ones(
-                len(residuals.unique_indices[gmpe][imt][i])
-                )
+            nval = np.ones(len(residuals.unique_indices[gmpe][imt][i]))
         else:
-            # FIXME: it was like this, looks like we do not need repi: np.ones(len(ctxt["Ctx"].repi))
             nval = np.ones(len(ctxt["Ctx"]))
 
         # FIXME: this below actually measn that the flatfile requested columns depend
@@ -333,7 +329,7 @@ def _get_depths(residuals, gmpe, imt, res_type):
         if res_type == "Inter event":
             nvals = np.ones(len(residuals.unique_indices[gmpe][imt][i]))
         else:
-            nvals = np.ones(len(ctxt["Ctx"].repi))
+            nvals = np.ones(len(ctxt["Ctx"]))
         # TODO This hack needs to be fixed!!!
         if not ctxt["Ctx"].hypo_depth:
             depths = np.hstack([depths, 10.0 * nvals])
