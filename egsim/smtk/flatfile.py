@@ -18,13 +18,13 @@ from openquake.hazardlib.contexts import RuptureContext
 from ..smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
-class ColumnType(IntEnum):
+class ColumnType(Enum):
     """Flatfile column type / family"""
-    rupture_parameter = 0
-    site_parameter = 1
-    distance_measure = 2
-    imt = 3
-    unknown = 4
+    rupture_parameter = 'r'
+    site_parameter = 's'
+    distance_measure = 'd'
+    imt = 'i'
+    unknown = 'u'
 
 class ColumnDtype(Enum):  # noqa
     """Column **data** type. Names of this enum must be valid strings to be passed as
@@ -187,14 +187,12 @@ def get_imt(imt_name: str, ignore_case=False,
 ############
 
 
-def read_flatfile(filepath_or_buffer: str,
-                  sep: str = None,
-                  col_mapping: dict[str, str] = None,
-                  usecols: Union[list[str], Callable[[str], bool]] = None,
-                  dtype: dict[str, Union[str, list, tuple]] = None,
-                  defaults: dict[str, Any] = None,
-                  required: list[str] = None,
-                  **kwargs) -> pd.DataFrame:
+_ff_dtype: dict[str, Union[str, list, tuple]] = None  # noqa
+_ff_defaults: dict[str, Any] = None  # noqa
+_ff_required: list[str] = None  # noqa
+
+
+def read_flatfile(filepath_or_buffer: str, sep: str = None, **kwargs) -> pd.DataFrame:
     """
     Read a flat file into pandas DataFrame from a given CSV file
 
@@ -203,14 +201,94 @@ def read_flatfile(filepath_or_buffer: str,
         and inferred from the extension (e.g. 'gzip', 'zip')
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
-    :param col_mapping: a dict mapping CSV column names to Flat file column names.
-        CSV column names not found in the dict keys are left unchanged.
-        **CSV COLUMNS WILL BE RENAMED AS FIRST STEP**: when not otherwise
-        indicated, all arguments of this function will work on flat file column names,
-        i.e. the CSV columns renamed via this mapping
-    :param usecols: flat file column names to load, as list. Can be also a callable
-        accepting a flat file column name and returning True/False (accept/discard)
-    :param dtype: dict of *flat file column names* mapped to the data type:
+    """
+    global _ff_dtype, _ff_required, _ff_defaults
+
+    if _ff_dtype is None or _ff_defaults is None or _ff_required is None:
+        # assign defaults from our yaml file:
+        cols = read_registered_flatfile_columns_metadata()
+        if _ff_dtype is None:
+            _ff_dtype = {c: cm['dtype'] for c, cm in cols.items() if 'dtype' in cm}
+        if _ff_defaults is None:
+            _ff_defaults = {c: cm['default'] for c, cm in cols.items() if 'default' in cm}
+        if _ff_required is None:
+            # skip event and station cols from required for now (see _check_flatfile):
+            skip = set(_EVENT_COLUMNS) | set(_STATION_COLUMNS)
+            _ff_required = tuple(c for c, cm in cols.items()
+                                 if cm.get('required', False) and c not in skip)
+
+    flatfile = read_csv(filepath_or_buffer, sep=sep, dtype=_ff_dtype,
+                        defaults=_ff_defaults, required=_ff_required, **kwargs)
+    _check_flatfile(flatfile)
+
+    return flatfile
+
+
+_EVENT_COLUMNS = ['event_id', 'event_latitude', 'event_longitude', 'event_depth',
+                  'event_time']
+_STATION_COLUMNS = ['station_id', 'station_latitude', 'station_longitude']
+
+
+def _check_flatfile(flatfile: pd.DataFrame):
+    """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
+    Modifications will be done inplace
+    """
+    ff_columns = set(flatfile.columns)
+    required = [
+        _EVENT_COLUMNS,
+        # _STATION_COLUMNS  # uncomment if you want to make stations also mandatory
+    ]
+    for cols in required:
+        if cols[0] not in ff_columns and not set(cols[1:]).issubset(ff_columns):
+            col_str = f"'{cols[0]}' or " + ", ".join(f"'{c}'" for c in cols[1:])
+            raise ValueError(f'Missing required column: {col_str}')
+
+    # check IMTs (but allow mixed case, such as 'pga'). So first rename:
+    col2rename = {}
+    no_imt_col = True
+    imt_invalid_dtype = []
+    for col in ff_columns:
+        imtx = get_imt(col, ignore_case=True)
+        if imtx is None:
+            continue
+        no_imt_col = False
+        if not str(flatfile[col].dtype).lower().startswith('float'):
+            imt_invalid_dtype.append(col)
+        if imtx != col:
+            col2rename[col] = imtx
+            # do we actually have the imt provided? (conflict upper/lower case):
+            if imtx in ff_columns:
+                raise ValueError(f'Column conflict, please rename: '
+                                 f'"{col}" vs. "{imtx}"')
+    # ok but regardless of all, do we have imt columns at all?
+    if no_imt_col:
+        raise ValueError(f"No IMT column found (e.g. 'PGA', 'PGV', 'SA(0.1)')")
+    if imt_invalid_dtype:
+        raise ValueError(f"Invalid data type ('float' required) in IMT column(s): "
+                         f"{', '.join(imt_invalid_dtype)}")
+    # rename imts:
+    if col2rename:
+        flatfile.rename(columns=col2rename, inplace=True)
+
+
+def read_csv(filepath_or_buffer: str,
+             sep: str = None,
+             usecols: Union[list[str], Callable[[str], bool]] = None,
+             dtype: dict[str, Union[str, list, tuple]] = None,
+             defaults: dict[str, Any] = None,
+             required: list[str] = None,
+             **kwargs) -> pd.DataFrame:
+    """
+    Read a flat file into pandas DataFrame from a given CSV file
+
+    :param filepath_or_buffer: str, path object or file-like object of the CSV
+        formatted data. If string, compressed files are also supported
+        and inferred from the extension (e.g. 'gzip', 'zip')
+    :param sep: the separator (or delimiter). None means 'infer' (it might
+        take more time)
+    :param usecols: column names to load, as list. Can be also a callable
+        accepting a column name and returning True/False (accept/discard)
+    :param dtype: dict of column names mapped to the data type:
         either 'int', 'bool', 'float', 'str', 'datetime', 'category'`, list/tuple.
         'category', list or tuples are for data that can take only a limited amount
         of possible values and should be used mostly with string data as it might
@@ -245,41 +323,12 @@ def read_flatfile(filepath_or_buffer: str,
 
     :return: pandas DataFrame representing a Flat file
     """
-    kwargs['sep'] = sep
+
     kwargs.setdefault('encoding', 'utf-8-sig')
     kwargs.setdefault('comment', '#')
-
-    if dtype is None or defaults is None or required is None:
-        # assign defaults from our yaml file:
-        cols = read_registered_flatfile_columns_metadata()
-        if dtype is None:
-            dtype = {c: cm['dtype'] for c, cm in cols.items() if 'dtype' in cm}
-        if defaults is None:
-            defaults = {c: cm['default'] for c, cm in cols.items() if 'default' in cm}
-        if required is None:
-            required = tuple(c for c, cm in cols.items() if cm.get('required', False))
-
-    # CSV columns can be renamed via `read_csv(..., names=[...], header=0, ...)`
-    # or simply by calling afterwards `dataframe.rename(columns={...})`. Both
-    # approaches have drawbacks: in the first case we need to open the file
-    # twice, in the latter we have to modify all arguments, such as `dtype`,
-    # working on renamed columns.
-    # We opt for the former for simplicity, as we need to open the file twice
-    # also in case `sep` is not given (infer CSV separator). Note that we should
-    # never need to open the file twice for user uploaded flat files: `col_mapping`
-    # should not be given (it makes no sense) and we could simply recommend
-    # passing explicitly `sep`
-
     if sep is None:
-        kwargs |= _infer_csv_sep(filepath_or_buffer, col_mapping is not None)
-    elif col_mapping:
-        kwargs['names'] = _read_csv_header(filepath_or_buffer, sep)
-
-    if col_mapping is not None:
-        kwargs['header'] = 0
-        # replace names with the new names of the mapping (if found) or leave
-        # the name as it is if a mapping is not found:
-        kwargs['names'] = [col_mapping.get(n, n) for n in kwargs['names']]
+        sep = _infer_csv_sep(filepath_or_buffer)
+    kwargs['sep'] = sep
 
     # initialize the defaults dict if None and needs to be populated:
     if defaults is None:
@@ -323,23 +372,18 @@ def read_flatfile(filepath_or_buffer: str,
         if col in dtype_ib:
             dfr[col] = dfr[col].astype(dtype_ib[col])
 
-    _check(dfr)  # rename imts lower / upper case, check mandatory columns ...
     return dfr
 
 
-def _infer_csv_sep(filepath_or_buffer: str, return_col_names=False) -> dict[str, Any]:
+def _infer_csv_sep(filepath_or_buffer: str) -> str:
     """Prepares the CSV for reading by inspecting the header and inferring the
-    separator `sep`, if the latter is None.
+    separator `sep` returning it.
 
     :param filepath_or_buffer: str, path object or file-like object. If it has
         the attribute `seek` (e.g., file like object like `io.BytesIO`, then
         `filepath_or_buffer.seek(0)` is called before returning (reset the
         file-like object position at the start of the stream)
-    :return: the arguments needed for pd.read_csv as dict (e.g. `{'sep': ','}`).
-        if `return_colnames` is True, the dict also contains the key 'names'
-        with the CSV column header names
     """
-    params = {}
     # infer separator: pandas suggests to use the engine='python' argument,
     # but this takes approx 4.5 seconds with the ESM flatfile 2018
     # whereas the method below is around 1.5 (load headers and count).
@@ -348,25 +392,17 @@ def _infer_csv_sep(filepath_or_buffer: str, return_col_names=False) -> dict[str,
     comma_cols = _read_csv_header(filepath_or_buffer, sep=',')
     semicolon_cols = _read_csv_header(filepath_or_buffer, sep=';')
     if len(comma_cols) > 1 and len(comma_cols) >= len(semicolon_cols):
-        params['sep'] = ','
-        names = comma_cols.tolist()
-    elif len(semicolon_cols) > 1:
-        params['sep'] = ';'
-        names = semicolon_cols.tolist()
-    else:
-        # try with spaces:
-        space_cols = _read_csv_header(filepath_or_buffer, sep=r'\s+')
-        if len(space_cols) > max(len(comma_cols), len(semicolon_cols)):
-            params['sep'] = r'\s+'
-            names = space_cols.tolist()
-        else:
-            raise ValueError('CSV separator could not be inferred by trying '
-                             '",", ";" and "\\s+" (whitespaces)')
+        return ','
+    if len(semicolon_cols) > 1:
+        return ';'
 
-    if return_col_names:
-        params['names'] = names
+    # try with spaces:
+    space_cols = _read_csv_header(filepath_or_buffer, sep=r'\s+')
+    if len(space_cols) > max(len(comma_cols), len(semicolon_cols)):
+        return r'\s+'
 
-    return params
+    raise ValueError('CSV separator could not be inferred by trying '
+                     '",", ";" and "\\s+" (whitespaces)')
 
 
 def _read_csv_header(filepath_or_buffer, sep: str, reset_if_stream=True) -> pd.Index:
@@ -381,38 +417,6 @@ def _read_csv_header(filepath_or_buffer, sep: str, reset_if_stream=True) -> pd.I
     if reset_if_stream and hasattr(filepath_or_buffer, 'seek'):
         filepath_or_buffer.seek(0)
     return columns
-
-
-def _check(flatfile: pd.DataFrame):
-    """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
-    Modifications will be done inplace
-    """
-    # check IMTs (but allow mixed case, such as 'pga'). So first rename:
-    col2rename = {}
-    no_imt_col = True
-    imt_invalid_dtype = []
-    for col in flatfile.columns:
-        imtx = get_imt(col, ignore_case=True)
-        if imtx is None:
-            continue
-        no_imt_col = False
-        if not str(flatfile[col].dtype).lower().startswith('float'):
-            imt_invalid_dtype.append(col)
-        if imtx != col:
-            col2rename[col] = imtx
-            # do we actually have the imt provided? (conflict upper/lower case):
-            if imtx in flatfile.columns:
-                raise ValueError(f'Column conflict, please rename: '
-                                 f'"{col}" vs. "{imtx}"')
-    # ok but regardless of all, do we have imt columns at all?
-    if no_imt_col:
-        raise ValueError(f"No IMT column found (e.g. 'PGA', 'PGV', 'SA(0.1)')")
-    if imt_invalid_dtype:
-        raise ValueError(f"Invalid data type ('float' required) in IMT column(s): "
-                         f"{', '.join(imt_invalid_dtype)}")
-    # rename imts:
-    if col2rename:
-        flatfile.rename(columns=col2rename, inplace=True)
 
 
 def query(flatfile: pd.DataFrame, query_expression) -> pd.DataFrame:
@@ -535,10 +539,8 @@ class ContextDB:
             dic["Num. Sites"] = 0
         return dic
 
-    EVENT_ID_COL = 'event_id'
-
     def get_event_and_records(self):
-        """Yield the tuple (event_id:Any, records:Sequence)
+        """Yield the tuple (event_id:Any, records:DataFrame)
 
         where:
          - `event_id` is a scalar denoting the unique earthquake id, and
@@ -549,11 +551,14 @@ class ContextDB:
             a pandas DataFrame, or a list of several data types such as `dict`s
             `h5py` Datasets, `pytables` rows, `django` model instances.
         """
-        # FIXME: pandas bug? flatfile bug?
-        # `return self._data.groupby([EVENT_ID_COL])` should be sufficient, but
-        # sometimes in the yielded `(ev_id, dfr)` tuple, `dfr` is empty and
-        # `ev_id` is actually not in the dataframe (???). So:
-        yield from (_ for _ in self._data.groupby(self.EVENT_ID_COL) if not _[1].empty)
+        columns = _EVENT_COLUMNS[0]
+        if columns not in self._data:  # build event id:
+            self._data[columns] = self._data.groupby(list(_EVENT_COLUMNS[1:])).ngroup()
+
+        for ev_id, dfr in  self._data.groupby(columns):
+            if not dfr.empty:
+                # FIXME: pandas bug? flatfile bug? sometimes dfr is empty, skip
+                yield ev_id, dfr
 
     def get_observations(self, imtx, records, component="Geometric"):
         """Return the observed values of the given IMT `imtx` from `records`,

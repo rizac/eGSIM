@@ -8,7 +8,7 @@
 # <column_name>:
 #   required: Tells if the column should be always present in flatfiles (default when
 #            missing: false). Applications should reject flatfiles not containing all
-#            required columns
+#            required columns, or infer the column value
 #   dtype:   The data type (default when missing: null). Supported values are: null, int,
 #            float, str, datetime (ISO formatted), bool, or the list of the possible
 #            values of the column data (see pandas categorical data). null means
@@ -24,6 +24,10 @@
 #            NaT (datetime), None/null
 #            (str or categorical), 0 (int), False (bool).
 #   help:    The field help or description (defaults to "" when missing)
+#   alias:   The name to be used in OpenQuake
+#   type:    The column type. Supported values are: i (intensity measure), d
+#            (distance measure), r (rupture parameter), s (site parameter).
+#            When missing, default to 'u' (unknown)
 
 # YAML notes:
 # Date-times can be given as ISO formatted text, without quotes. Unless required,
@@ -34,53 +38,73 @@
 
 azimuth:
   dtype: float
+  type: d
 repi:
   dtype: float
   help: epicentral distance (in km)
+  type: d
 rrup:
   dtype: float
   help: rupture_distance (in km)
+  type: d
 rjb:
   dtype: float
   help: Joyner-Boore distance (in km)
+  type: d
 rhypo:
   dtype: float
   help: hypocentral distance (in km)
+  type: d
 rx:
   dtype: float
   help: >-
     Horizontal distance (in km) from the top of the rupture measured
     perpendicular to strike
+  type: d
 ry0:
   dtype: float
   help: >-
     Horizontal distance (in km) from the top of the rupture measured parallel
     to strike
+  type: d
 rvolc:
   dtype: float
   default: 0
   help: Distance through volcanic zone (km)
+  type: d
 event_latitude:
   dtype: float
   bounds: [ -90, 90 ]
   help: Hypocentre latitude (deg)
+  alias: hypo_lat
+  type: r
 event_longitude:
   dtype: float
   bounds: [ -180, 180 ]
   help: Hypocentre longitude (deg)
+  alias: hypo_lon
+  type: r
 magnitude:
   dtype: float
+  alias: mag
+  type: r
 event_depth:
   dtype: float
   help: Hypocentral depth (km)
+  alias: hypo_depth
+  type: r
 depth_top_of_rupture:
   dtype: float
   bounds: [ 0, null ]
   help: Top of Rupture Depth (km)
+  alias: ztor
+  type: r
 rupture_width:
   dtype: float
   bounds: [ 0, null ]
   help: Down-dip width of the rupture (km)
+  alias: width
+  type: r
 dip:
   dtype: float
   bounds: [ 0, 90 ]
@@ -89,6 +113,7 @@ dip:
     Hint: in case of more components available (e.g. from web services), the
     correct one should be inferred by the user from the rupture, or can be chosen
     randomly if no information is available
+  type: r
 rake:
   dtype: float
   bounds: [ -180, 180 ]
@@ -97,93 +122,121 @@ rake:
     Hint: in case of more components available (e.g. from
     web services), the correct one should be inferred by the user from the rupture,
     or can be chosen randomly if no information is available
-z1:
+  type: r
+z1pt0:
   dtype: float
   help: >-
     depth of the layer where seismic waves start to propagate with a
     speed above 1.0 km/sec, in meters
+  type: s
 z2pt5:
   dtype: float
   help: >-
     depth of the layer where seismic waves start to propagate with a speed
     above 2.5 km/sec, in km
+  type: s
 vs30:
   dtype: float
   bounds: [ 0, null ]
   help: Average shear wave velocity in the top 30 m, in m/s
+  type: s
 backarc:
   dtype: bool
   default: false
+  type: s
 station_latitude:
   dtype: float
   bounds: [ -90, 90 ]
   help: station latitude (deg)
+  alias: lat
+  type: s
 station_longitude:
   dtype: float
   bounds: [ -180, 180 ]
   help: station longitude (deg)
+  alias: lon
+  type: s
 vs30measured:
   dtype: bool
   default: true
   help: whether or not the Vs30 is measured (default true)
+  type: s
 xvf:
   dtype: float
   help: distance to the volcanic front (km)
+  type: s
 fpeak:
   dtype: float
   bounds: [ 0, null ]
   help: >-
     Frequency that corresponds to the peak of the horizontal to vertical
     spectral ratio (Hz)
+  type: s
 region:
   dtype: int
   bounds: [ 0, 5 ]
   default: 0
   help: The ESHM2020 cluster region to which the site belongs
+  type: s
 geology:
   dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC", "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
   default: UNKNOWN
   help: geological classification of the site
+  type: s
 slope:
   dtype: float
   bounds: [ 1.0e-100, null ]  # 1.0e-100 is a workaround to tell: >0
   help: The local slope of the station
-# IMT columns:
+  type: s
 PGA:
   dtype: float
   help: Peak ground acceleration, in g
+  type: i
 PGV:
   dtype: float
   help: Peak ground velocity, in cm/s
+  type: i
 SA:
   dtype: float
   help: >-
     Spectral Acceleration, in g. SA columns are in the form "SA(P)",
     where P denotes the period at which it has been computed, in s
+  type: i
 PGD:
   dtype: float
   help: Peak ground displacement during an earthquake measured, in cm
+  type: i
 CAV:
   dtype: float
   help: Cumulative Absolute Velocity, in g-sec
+  type: i
 IA:
   dtype: float
   help: Arias intensity, in m/s
+  type: i
 # ID columns:
 event_id:
   required: true
   help: >-
-    The unique ID of the recorded seismic event.
-    You can use the id provided by the event catalog or web service,
+    The unique ID of the recorded seismic event. If missing, an id is inferred
+    from the columns event_latitude, event_longitude, event_depth and event_time 
+    (ISO date time), which must all be present.
+    In general, you can use the id provided by the event catalog or web service,
     or create your own, as long as it holds: same id <=> same event. IDs should
     be preferably of type integer for performance reasons
 station_id:
   required: true
   help: >-
-    The unique ID of the seismic station.
-    You can infer the id via the tuple (network_code, station_code)
+    The unique ID of the seismic station. If missing, an id is inferred
+    from the columns station_latitude, station_longitude, which must all be present.
+    In general, you can infer the id via the tuple (network_code, station_code)
     or create your own, as long as it holds: same id <=> same station. IDs should
     be preferably of type integer for performance reasons
+event_time:
+  required: false
+  dtype: datetime
+  help: >-
+    the event time as ISO formatted string
 
 # Here the collection of the parameters required by all OpenQuake models, mapped to their
 # corresponding flatfile column. With this information programs can tell, for any given
