@@ -45,7 +45,7 @@ class ColumnDtype(Enum):
     category = pd.CategoricalDtype.type
 
     @classmethod
-    def of(cls, obj) -> Union[ColumnDtype, None]:  # noqa
+    def of(cls, obj) -> Union["ColumnDtype", None]:  # noqa
         """Return the Enum item of this class matching the given object data type
 
         :param obj: any object suh as Python scalr, numpy array, pandas series
