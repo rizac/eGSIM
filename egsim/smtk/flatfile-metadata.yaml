@@ -1,6 +1,6 @@
-# This YAML file contains the flatfile columns metadata for checking flatfiles.
-# The metadata stored here will be used in the eGSIM/smtk package.
-# A Flatfile column is a YAML mapping with the following optional properties:
+# This YAML file contains the flatfile metadata that will be used in this package.
+# Metadata is provided based on columns, where a Flatfile column or Field is represented
+# here as YAML Mapping with the following optional properties:
 #
 # <column_name>:
 #   dtype:    The data type (default when missing: null). Supported values are: null,
