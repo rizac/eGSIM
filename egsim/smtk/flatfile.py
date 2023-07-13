@@ -1,7 +1,7 @@
 """flatfile pandas module"""
 
 from datetime import datetime
-from enum import Enum, IntEnum
+from enum import Enum
 from os.path import join, dirname
 import re
 
@@ -18,149 +18,199 @@ from openquake.hazardlib.contexts import RuptureContext
 from ..smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
-class ColumnType(Enum):
-    """Flatfile column type / family"""
-    rupture_parameter = 'r'
-    site_parameter = 's'
-    distance_measure = 'd'
-    imt = 'i'
-    unknown = 'u'
+class Column:
+    """class representing flatfile column metadata"""
 
-class ColumnDtype(Enum):  # noqa
-    """Column **data** type. Names of this enum must be valid strings to be passed as
-    values of the `dtype` argument of `numpy` or `pandas.read_csv` (except for
-    `datetime`), values are all Python classes that are compatible with the data type
-    """
-    float = float, np.floating
-    int = int, np.integer
-    bool = bool, np.bool_
-    datetime = datetime, np.datetime64
-    str = str, np.str_, np.object_
-    category = pd.CategoricalDtype.type
+    class Type(Enum):
+        """Flatfile column type / family (to know a type from a specific column, call
+        `init_column_metadata` and use `cls.type[column]`, which returns an item of this
+        enum)
+        """
+        rupture_parameter = 'r'
+        site_parameter = 's'
+        distance_measure = 'd'
+        imt = 'i'
+        unknown = 'u'
+
+    class Dtype(Enum):
+        """Flatfile column **data** type enum (to know a type from a specific column,
+        call `init_column_metadata` and use `cls.dtype[column]`, which returns an item
+        **name** of this enum, e.g. "float").
+        Names of this enum must be valid strings to be passed as values of the `dtype`
+        argument of `numpy` or `pandas.read_csv` (except for `datetime`), values are
+        all Python classes that are compatible with the data type
+        """
+        float = float, np.floating
+        int = int, np.integer
+        bool = bool, np.bool_
+        datetime = datetime, np.datetime64
+        str = str, np.str_, np.object_
+        category = pd.CategoricalDtype.type
+
+
+    # class specific dicts storing column names and their properties:
+
+    dtype: dict[str, Union[str, list]]  # flatfile column -> data type name
+    default: dict[str, Any]  # flatfile column -> default value when missing
+    required: list[str]  # required flatfile column names
+    alias: dict[str, str]  # OpenQuake parameter name -> flatfile column name
+    type: dict[str, Type]  # flatfile column -> Column type
+
+    _initialized = False
 
     @classmethod
-    def get(cls, obj) -> Union["ColumnDtype", None]:  # noqa
+    def init_column_metadata(cls, force_reload=False):
+        if cls._initialized and not force_reload:
+            return
+
+        cols = {}
+        # read YAML and setup custom attributes:
+        with open(join(dirname(__file__), 'flatfile-columns.yaml')) as fpt:
+            for ffcol_name, ffcol_props in yaml.safe_load(fpt).items():
+                cols[ffcol_name] = cls._check_column_metadata(**ffcol_props)
+
+        cls.dtype.clear()
+        cls.default.clear()
+        cls.required.clear()
+        cls.alias.clear()
+        cls.type.clear()
+
+        for c, cm in cols.items():
+            if 'dtype' in cm:
+                cls.dtype[c] = cm['dtype']
+            if 'default' in cm:
+                cls.default[c] = cm['default']
+            if cm.get('required', False):
+                cls.required.append(c)
+            if 'alias' in cm:
+                cls.alias[cm['alias']] = c
+            cls.type[c] = cm['type']
+
+        cls._initialized = True
+
+    @classmethod
+    def get_dtype(cls, obj) -> Union[Dtype, None]:  # noqa
         """Return the Enum item of this class matching the given object type
 
         :param obj: any object suh as Python scalr, numpy array, pandas series
-        (representing flatfile columns)
+            (representing flatfile columns)
         """
         is_numpy = hasattr(obj, 'dtype') and hasattr(obj.dtype, 'type')
-        for dtype in cls:
+        for dtype in cls.Dtype:
             if (is_numpy and issubclass(obj.dtype.type, dtype.value)) \
                     or isinstance(obj, dtype.value):
                 return dtype
         return None
 
+    # @staticmethod
+    # def _read_registered_flatfile_columns_metadata() -> dict[str, dict[str, Any]]:
+    #     """Returns the Flatfile column metadata registered in this package YAML file
+    #
+    #     :return: a dict of column names mapped top their metadata. Each column metaedata
+    #         is in turn a dict[str, dict] with keys 'dtype', 'type', 'help', 'bounds',
+    #         'default', 'mandatory' (all optional)
+    #     """
+    #     ffcolumns = {}
+    #     with open(join(dirname(__file__), 'flatfile-columns.yaml')) as fpt:
+    #         # ff_cols = yaml.safe_load(fpt)
+    #         # oq_params = ff_cols.pop('openquake_models_parameters')
+    #         # for param_category, params in oq_params.items():
+    #         #     for param_name, ffcol_name in params.items():
+    #         #         if ffcol_name:
+    #         #             ffcolumns[ffcol_name] = Column._check_column_metadata(
+    #         #                 **ff_cols.pop(ffcol_name),
+    #         #                 oq_name=param_name, ctype=Column.Type[param_category]
+    #         #             )
+    #
+    #         for ffcol_name, ffcol_props in yaml.safe_load(fpt).items():
+    #             ffcolumns[ffcol_name] = _check_column_metadata(**ffcol_props)
+    #
+    #     return ffcolumns
 
-def read_registered_flatfile_columns_metadata() -> dict[str, dict[str, Any]]:
-    """Returns the Flatfile column metadata registered in this package YAML file
+    @staticmethod
+    def _check_column_metadata(dtype: Union[str, list, tuple] = None,
+                               default: Any = None,
+                               bounds: tuple[Any, Any] = (None, None),
+                               help: str = "",  # noqa
+                               required: bool = False,
+                               alias: str = None,
+                               type: str = 'u') \
+            -> dict[str, Any]:
 
-    :return: a dict of column names mapped top their metadata. Each column metaedata
-        is in turn a dict[str, dict] with keys 'dtype', 'type', 'help', 'bounds',
-        'default', 'mandatory' (all optional)
-    """
-    ffcolumns = {}
-    with open(join(dirname(__file__), 'flatfile-columns.yaml')) as fpt:
-        ff_cols = yaml.safe_load(fpt)
-        oq_params = ff_cols.pop('openquake_models_parameters')
-        for param_category, params in oq_params.items():
-            for param_name, ffcol_name in params.items():
-                if ffcol_name:
-                    ffcolumns[ffcol_name] = _check_column_metadata(
-                        **ff_cols.pop(ffcol_name),
-                        oq_name=param_name, ctype=ColumnType[param_category]
-                    )
+        ret = {}
+        # set help:
+        if help:
+            ret['help'] = help
+        if alias:
+            ret['alias'] = alias
+        try:
+            ret['type'] = Column.Type(type)
+        except KeyError:
+            raise ValueError(f'Invalid Column type: {type}')
+        if required:
+            ret['required'] = True
 
-    for ffcol_name, ffcol_props in ff_cols.items():
-        imt_ = get_imt(ffcol_name, ignore_case=False, accept_sa_without_period=True)
-        typ = ColumnType.imt if imt_ else ColumnType.unknown
-        ffcolumns[ffcol_name] = _check_column_metadata(**ffcol_props, ctype=typ)
+        # perform some check on the data type consistencies:
+        bounds_are_given = bounds != (None, None) and bounds != [None, None] \
+            and bounds is not None
 
-    return ffcolumns
+        # check dtype null and return in case:
+        if dtype is None:
+            if bounds_are_given or default is not None:
+                raise ValueError(f"With `dtype` null or missing, metadata cannot have "
+                                 f"the keys `default` and `bounds`")
+            return ret
 
+        ret['dtype'] = dtype
 
-def _check_column_metadata(dtype: Union[str, list, tuple] = None,
-                           default: Any = None,
-                           bounds: tuple[Any, Any] = (None, None),
-                           help: str = "",  # noqa
-                           required: bool = False,
-                           oq_name: str = None,
-                           ctype: Union[str, ColumnType] = ColumnType.unknown) \
-        -> dict[str, Any]:
+        # handle categorical data:
+        if isinstance(dtype, (list, tuple)):  # categorical data type
+            if any(Column.get_dtype(_) is None for _ in dtype):
+                raise ValueError(f"Invalid data type(s) in provided categorical data")
+            if bounds_are_given:
+                raise ValueError(f"bounds must be [null, null] or missing with "
+                                 f"categorical data type")
+            if default is not None and default not in dtype:
+                raise ValueError(f"default is not in the list of possible values")
+            return ret
 
-    ret = {}
-    # set help:
-    if help:
-        ret['help'] = help
-    if oq_name:
-        ret['oq_name'] = oq_name
-    try:
-        ret['type'] = ctype if isinstance(ctype, ColumnType) else ColumnType[ctype]
-    except KeyError:
-        raise ValueError(f'Invalid Column type: {ctype}')
-    if required:
-        ret['required'] = True
+        # handle non categorical data with a base dtype:
+        try:
+            self_dtype = Column.Dtype[dtype]
+        except KeyError:
+            raise ValueError(f"Invalid data type: {dtype}")
 
-    # perform some check on the data type consistencies:
-    bounds_are_given = bounds != (None, None) and bounds != [None, None] \
-        and bounds is not None
-
-    # check dtype null and return in case:
-    if dtype is None:
-        if bounds_are_given or default is not None:
-            raise ValueError(f"With `dtype` null or missing, metadata cannot have "
-                             f"the keys `default` and `bounds`")
-        return ret
-
-    ret['dtype'] = dtype
-
-    # handle categorical data:
-    if isinstance(dtype, (list, tuple)):  # categorical data type
-        if any(ColumnDtype.get(_) is None for _ in dtype):
-            raise ValueError(f"Invalid data type(s) in provided categorical data")
+        # check bounds:
         if bounds_are_given:
-            raise ValueError(f"bounds must be [null, null] or missing with "
-                             f"categorical data type")
-        if default is not None and default not in dtype:
-            raise ValueError(f"default is not in the list of possible values")
+            if not isinstance(bounds, (list, tuple)) or len(bounds) != 2:
+                raise ValueError(f"bounds must be a 2-element list or tuple")
+            bmin, bmax = bounds
+            # type promotion (ints are valid floats):
+            if self_dtype == Column.Dtype.float and \
+                    Column.get_dtype(bmin) == Column.Dtype.int:
+                bmin = float(bmin)
+            if self_dtype == Column.Dtype.float and \
+                    Column.get_dtype(bmax) == Column.Dtype.int:
+                bmax = float(bmax)
+            if bmin is not None and not isinstance(bmin, self_dtype.value):
+                raise ValueError(f"bounds[0] must be of type {dtype}")
+            if bmax is not None and not isinstance(bmax,  self_dtype.value):
+                raise ValueError(f"bounds[0] must be of type {dtype}")
+            if bmin is not None and bmax is not None and bmax <= bmin:
+                raise ValueError(f"bounds[0] must be < bounds[1]")
+            ret['bounds'] = (bmin, bmax)
+
+        # check default value (defval, not required):
+        if default is not None:
+            # type promotion (int is a valid float):
+            if self_dtype == Column.Dtype.float and \
+                    Column.get_dtype(default) == Column.Dtype.int:
+                default = float(default)
+            elif not isinstance(default, self_dtype.value):
+                raise ValueError(f"default must be of type {dtype}")
+            ret['default'] = default
+
         return ret
-
-    # handle non categorical data with a base dtype:
-    try:
-        self_dtype = ColumnDtype[dtype]
-    except KeyError:
-        raise ValueError(f"Invalid data type: {dtype}")
-
-    # check bounds:
-    if bounds_are_given:
-        if not isinstance(bounds, (list, tuple)) or len(bounds) != 2:
-            raise ValueError(f"bounds must be a 2-element list or tuple")
-        bmin, bmax = bounds
-        # type promotion (ints are valid floats):
-        if self_dtype == ColumnDtype.float and ColumnDtype.get(bmin) == ColumnDtype.int:
-            bmin = float(bmin)
-        if self_dtype == ColumnDtype.float and ColumnDtype.get(bmax) == ColumnDtype.int:
-            bmax = float(bmax)
-        if bmin is not None and not isinstance(bmin, self_dtype.value):
-            raise ValueError(f"bounds[0] must be of type {dtype}")
-        if bmax is not None and not isinstance(bmax,  self_dtype.value):
-            raise ValueError(f"bounds[0] must be of type {dtype}")
-        if bmin is not None and bmax is not None and bmax <= bmin:
-            raise ValueError(f"bounds[0] must be < bounds[1]")
-        ret['bounds'] = (bmin, bmax)
-
-    # check default value (defval, not required):
-    if default is not None:
-        # type promotion (int is a valid float):
-        if self_dtype == ColumnDtype.float and \
-                ColumnDtype.get(default) ==ColumnDtype.int:
-            default = float(default)
-        elif not isinstance(default, self_dtype.value):
-            raise ValueError(f"default must be of type {dtype}")
-        ret['default'] = default
-
-    return ret
 
 def get_imt(imt_name: str, ignore_case=False,
             accept_sa_without_period=False) -> Union[str, None]:
@@ -187,11 +237,6 @@ def get_imt(imt_name: str, ignore_case=False,
 ############
 
 
-_ff_dtype: dict[str, Union[str, list, tuple]] = None  # noqa
-_ff_defaults: dict[str, Any] = None  # noqa
-_ff_required: list[str] = None  # noqa
-
-
 def read_flatfile(filepath_or_buffer: str, sep: str = None, **kwargs) -> pd.DataFrame:
     """
     Read a flat file into pandas DataFrame from a given CSV file
@@ -202,23 +247,13 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None, **kwargs) -> pd.Data
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
     """
-    global _ff_dtype, _ff_required, _ff_defaults
+    Column.init_column_metadata()
 
-    if _ff_dtype is None or _ff_defaults is None or _ff_required is None:
-        # assign defaults from our yaml file:
-        cols = read_registered_flatfile_columns_metadata()
-        if _ff_dtype is None:
-            _ff_dtype = {c: cm['dtype'] for c, cm in cols.items() if 'dtype' in cm}
-        if _ff_defaults is None:
-            _ff_defaults = {c: cm['default'] for c, cm in cols.items() if 'default' in cm}
-        if _ff_required is None:
-            # skip event and station cols from required for now (see _check_flatfile):
-            skip = set(_EVENT_COLUMNS) | set(_STATION_COLUMNS)
-            _ff_required = tuple(c for c, cm in cols.items()
-                                 if cm.get('required', False) and c not in skip)
+    # skip event and station cols from required for now (see _check_flatfile):
+    required = set(Column.required) - (set(_EVENT_COLUMNS) | set(_STATION_COLUMNS))
 
-    flatfile = read_csv(filepath_or_buffer, sep=sep, dtype=_ff_dtype,
-                        defaults=_ff_defaults, required=_ff_required, **kwargs)
+    flatfile = read_csv(filepath_or_buffer, sep=sep, dtype=Column.dtype,
+                        defaults=Column.default, required=list(required), **kwargs)
     _check_flatfile(flatfile)
 
     return flatfile
@@ -419,7 +454,7 @@ def _read_csv_header(filepath_or_buffer, sep: str, reset_if_stream=True) -> pd.I
     return columns
 
 
-def query(flatfile: pd.DataFrame, query_expression) -> pd.DataFrame:
+def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     """Call `flatfile.query` with some utilities:
      - datetime can be input in the string, e.g. "datetime(2016, 12, 31)"
      - boolean can be also lower case ("true" or "false")
@@ -445,6 +480,89 @@ def query(flatfile: pd.DataFrame, query_expression) -> pd.DataFrame:
                               query_expression)
     # evaluate expression:
     return flatfile.query(query_expression, **__kwargs)
+
+
+def get_column(flatfile: pd.DataFrame, column: str) -> pd.Series:
+    series = flatfile.get(column, None)
+    if column == _EVENT_COLUMNS[0] and series is None:
+        if set(_EVENT_COLUMNS[1:]).issubset(flatfile.columns):
+            series = flatfile.groupby(list(_EVENT_COLUMNS[1:])).ngroup()
+        return series
+    if column == _STATION_COLUMNS[0] and series is None:
+        if set(_STATION_COLUMNS[1:]).issubset(flatfile.columns):
+            series = flatfile.groupby(list(_STATION_COLUMNS[1:])).ngroup()
+        return series
+    if column == 'depth_top_of_rupture':
+        fill_nan_values(series, flatfile, 'event_depth')
+    if column == 'rupture_width':
+        # Use the PeerMSR to define the area and assuming an aspect ratio
+        # of 1 get the width
+        mag = flatfile.get('magnitude', None)
+        if mag is not None:
+            if series is None:
+                return pd.Series(np.sqrt(DEFAULT_MSR.get_median_area(mag, 0)))
+            na = pd.isna(series)
+            if na.any():
+                series = series.copy()
+                series[na] = np.sqrt(DEFAULT_MSR.get_median_area(mag[na], 0))
+        return series
+    if column in ['rjb', 'ry0']:
+        return fill_nan_values(series, flatfile, 'repi')
+    if column == 'rx':  # same as above, but -repi
+        values = fill_nan_values(series, flatfile, 'repi')
+        if values is not None:
+            values = -values
+        return values
+    if column == 'rrup':
+        return fill_nan_values(series, flatfile, 'rhypo')
+    if column == 'z1pt0':
+        vs30 = flatfile.get('vs30', None)
+        if vs30 is not None:
+            if series is None:
+                return pd.Series(vs30_to_z1pt0_cy14(vs30))
+            na = pd.isna(series)
+            if na.any():
+                series = series.copy()
+                series[na] = vs30_to_z1pt0_cy14(vs30[na])
+        return series
+    if column == 'z2pt5':
+        vs30 = flatfile.get('vs30', None)
+        if vs30 is not None:
+            if series is None:
+                return pd.Series(vs30_to_z2pt5_cb14(vs30))
+            na = pd.isna(series)
+            if na.any():
+                series = series.copy()
+                series[na] = vs30_to_z2pt5_cb14(vs30[na])
+        return series
+    if column == 'backarc':
+        if series is None:
+            return pd.Series(np.full(len(flatfile), fill_value=False))
+        return series
+    if column == 'rvolc':
+        if series is None:
+            return pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
+        return series
+    return series
+
+
+def fill_nan_values(array: Union[None, np.ndarray, pd.Series],
+                    flatfile: pd.DataFrame,
+                    column: str) -> Union[None, np.ndarray, pd.Series]:
+    """Fill NAs (NaNs/Nulls) in `array` with the values of `flatfile[column]`.
+    If the column does not exist in the flatfile, or `array` has no NA, return `array`
+    Otherwise, if `array` is None, a copy of `flatfile[column]` will be returned
+    """
+    series = flatfile.get(column, None)
+    if series is None:
+        return array
+    if array is None:
+        return series.copy()
+    na = pd.isna(array)
+    if na.any():
+        array = array.copy()
+        array[na] = series[na]
+    return array
 
 
 #######################################
@@ -606,46 +724,47 @@ class ContextDB:
 
 class EventContext(RuptureContext):
 
-    _rupture_slots =  {
-        "mag": "magnitude",
-        'strike': 'strike',
-        'dip': 'dip',
-        'rake': 'rake',
-        'ztor': "depth_top_of_rupture",
-        'hypo_lon': "event_longitude",
-        'hypo_lat': "event_latitude",
-        'hypo_depth': 'event_depth',
-        'width': "rupture_width",
-        'hypo_loc': 'hypo_loc',
-        'src_id': 'src_id',
-        'rup_id': 'rup_id'  # fixme: what is this? event_id?
-    }
-
-    _sites_slots = {
-        "vs30": "vs30",
-        "vs30measured": "vs30measured",
-        "z1pt0": "z1",
-        "z2pt5": "z2pt5"
-    }
-
-    _distances_slots = {
-        'repi': 'repi',
-        'rhypo': 'rhypo',
-        'azimuth': 'azimuth',
-        'rrup': 'rrup',
-        'rx': 'rx',
-        'rjb': 'rjb',
-        'ry0': 'ry0',
-        'rcdpp': 'rcdpp',
-        'hanging_wall': 'hanging_wall',
-        'rvolc': 'rvolc'
-    }
-
-    _replacements = _distances_slots | _sites_slots | _rupture_slots
+    # _rupture_slots =  {
+    #     "mag": "magnitude",
+    #     'strike': 'strike',
+    #     'dip': 'dip',
+    #     'rake': 'rake',
+    #     'ztor': "depth_top_of_rupture",
+    #     'hypo_lon': "event_longitude",
+    #     'hypo_lat': "event_latitude",
+    #     'hypo_depth': 'event_depth',
+    #     'width': "rupture_width",
+    #     'hypo_loc': 'hypo_loc',
+    #     'src_id': 'src_id',
+    #     'rup_id': 'rup_id'  # fixme: what is this? event_id?
+    # }
+    #
+    # _sites_slots = {
+    #     "vs30": "vs30",
+    #     "vs30measured": "vs30measured",
+    #     "z1pt0": "z1",
+    #     "z2pt5": "z2pt5"
+    # }
+    #
+    # _distances_slots = {
+    #     'repi': 'repi',
+    #     'rhypo': 'rhypo',
+    #     'azimuth': 'azimuth',
+    #     'rrup': 'rrup',
+    #     'rx': 'rx',
+    #     'rjb': 'rjb',
+    #     'ry0': 'ry0',
+    #     'rcdpp': 'rcdpp',
+    #     'hanging_wall': 'hanging_wall',
+    #     'rvolc': 'rvolc'
+    # }
+    #
+    # _replacements = _distances_slots | _sites_slots | _rupture_slots
 
     def __init__(self, data: pd.DataFrame):
         super().__init__()
         self._data = data
+        Column.init_column_metadata()
 
     def __eq__(self, other):
         assert isinstance(other, EventContext) and self._data.equals(other._data)
@@ -655,13 +774,24 @@ class EventContext(RuptureContext):
         return self._data.index
 
     def __getattr__(self, item):
-        try:
-            column_series = self._data[self._replacements.get(item, item)]
-        except KeyError:
+        """Return a non-found Context attribute by searching in the underlying
+        flatfile column. Performs some substitutions(columns name alias or NA
+        replacements in the values)
+        """
+        ff_column = Column.alias.get(item, item)
+        series = get_column(self._data, ff_column)
+        if series is None:
             raise AttributeError(item)
-        if item in self._rupture_slots:
-            return column_series.values[0]
-        return column_series.values.copy()
+        # we created a new array, or we modified the array filling NA:
+        array_is_modified = series is not self._data.get(ff_column, None)
+        values = series.values  # access underlying np array
+        if Column.type[ff_column] == Column.Type.rupture_parameter:
+            # rupture parameter, return a scalar (note: all values should be the same)
+            values = values[0]
+        if array_is_modified:
+            # next time just return the value and do not fall back here:
+            setattr(self, item, values)
+        return values
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
