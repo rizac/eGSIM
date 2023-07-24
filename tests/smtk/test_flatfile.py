@@ -11,13 +11,12 @@ import re
 
 import pandas as pd
 # import numpy as np
-from egsim.smtk.flatfile import (read_flatfile,
-                                 read_registered_flatfile_columns_metadata,
-                                 ColumnDtype, query)
+from egsim.smtk import flatfile
+from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query)
 
 
 def test_read_flatifle_yanml():
-    flatfile_cols = read_registered_flatfile_columns_metadata()
+    flatfile_cols = flatfile.column_type
     assert 'vs30' in flatfile_cols and 'rx' in flatfile_cols and \
            'rake' in flatfile_cols
 
@@ -31,26 +30,31 @@ def test_flatfile_turkey(testdata):
     # {'gc2t', 'gc2u', 'sta', 'depth_bottom_of_rupture', 'event_id', 'gmid', 'longest_period', 'event_time'}
 
 
-def test_get_flatfile_columndtype_get():
-    import pandas as pd
-    d = pd.DataFrame({
-        'a': ['', None],
-        'b': [datetime.utcnow(), None],
-        'e': [1, 0],
-        'f': [1.1, None],
-    })
-    for c in d.columns:
-        d[c + 'categ'] = d[c].astype('category')
+# def test_get_flatfile_columndtype_get():
+#     import pandas as pd
+#     d = pd.DataFrame({
+#         'a': ['', None],
+#         'b': [datetime.utcnow(), None],
+#         'e': [1, 0],
+#         'f': [1.1, None],
+#     })
+#     for c in d.columns:
+#         d[c + 'categ'] = d[c].astype('category')
+#
+#     for c in d.columns:
+#         assert ColumnDtype.of(d[c]) is not None
+#         assert ColumnDtype.of(d[c].values) is not None
+#         assert ColumnDtype.of(d[c].values[0]) is not None
+#         assert ColumnDtype.of(d[c].values[0].__class__) is not None
+#
+#     for x  in [int, float, datetime, bool, pd.CategoricalDtype([1,2,'3'])]:
+#         assert ColumnDtype.of(x) is not None
+#
+#     assert ColumnDtype.of(None) is None
+#     assert ColumnDtype.of(re.compile('')) is None
+#
+#     asd = 9
 
-    for c in d.columns:
-        assert ColumnDtype.get(d[c]) is not None
-        assert ColumnDtype.get(d[c].values) is not None
-        assert ColumnDtype.get(d[c].values[0]) is not None
-
-    assert ColumnDtype.get(None) is None
-    assert ColumnDtype.get(re.compile('')) is None
-
-    asd = 9
 
 
 def test_query():

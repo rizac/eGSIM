@@ -116,21 +116,25 @@ class FlatfileForm(EgsimBaseForm):
 
     @classmethod
     def read_flatfilefrom_csv_bytes(cls, buffer, *, sep=None) -> pd.DataFrame:
-        dtype, defaults, _, required = models.FlatfileColumn.get_data_properties()
-        # pre rename of IMTs lower case (SA excluded):
-        # (skip, just use the default of read_flatfile: PGA, PGV, SA):
-        # imts = models.Imt.objects.only('name').values_list('name', flat=True)
-        return read_flatfile(buffer, sep=sep, dtype=dtype, defaults=defaults,
-                             required=required)
+        return read_flatfile(buffer, sep=sep)
 
     @classmethod
     def get_flatfile_dtypes(cls, flatfile: pd.DataFrame) -> dict[str, str]:
-        """Return the human readable data type description for each column of the given
+        """Return the human-readable data type description for each column of the given
         flatfile
         """
         dtypes = {}
         for col in flatfile.columns:
-            dtypes[col] = ColumnDtype.get(flatfile[col]).name
+            dtype_name = 'unknown'
+            if isinstance(col.dtype, pd.CategoricalDtype):
+                dtype_name = "categorical data"
+            else:
+                dtype = flatfile[col].dtype.type
+                for cdtype in ColumnDtype:
+                    if issubclass(dtype, cdtype.value):
+                        dtype_name = cdtype.name
+                        break
+            dtypes[col] = dtype_name
         return dtypes
 
 
