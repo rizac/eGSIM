@@ -1,4 +1,4 @@
-from typing import Union, Sequence
+from typing import Union, Sequence, Type
 
 import re
 from openquake.hazardlib.gsim import get_available_gsims
@@ -9,7 +9,7 @@ from math import inf
 import numpy as np
 
 # Get a list of the available GSIMs (lazy loaded):
-AVAILABLE_GSIMS = get_available_gsims()
+AVAILABLE_GSIMS: dict[str, Type[GMPE]] = get_available_gsims()
 
 # Regular expression to get a GMPETable from string:
 _gmpetable_regex = re.compile(r'^GMPETable\(([^)]+?)\)$')

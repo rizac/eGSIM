@@ -8,23 +8,20 @@ Created on 6 Apr 2019
 
 @author: riccardo z. (rizac@github.com)
 """
+import pandas as pd
 import warnings
 
-from os.path import abspath, dirname, join, isfile
 import inspect
 from collections import defaultdict
 from typing import Union
 
 from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
-from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib import imt
 
 from . import EgsimBaseCommand
 from ... import models
-from egsim.smtk import flatfile, get_gsim_instance
+from egsim.smtk import get_gsim_instance, flatfile, AVAILABLE_GSIMS
 
-FLATFILE_COLUMNS_YAML_PATH = abspath(join(dirname(dirname(dirname(dirname(__file__)))),
-                                          "smtk", "flatfile-columns.yaml"))
 
 class Command(EgsimBaseCommand):
     """Class implementing the command functionality"""
@@ -42,8 +39,6 @@ class Command(EgsimBaseCommand):
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
-        assert isfile(FLATFILE_COLUMNS_YAML_PATH), f"{FLATFILE_COLUMNS_YAML_PATH} " \
-                                                   f"does not denote an existing file"
         # populate db:
         self.printinfo('Populating the database with OpenQuake data (models, '
                        'intensity measures) and flatfile columns metadata')
@@ -51,7 +46,6 @@ class Command(EgsimBaseCommand):
         imts = populate_imts(ffcols, **options)
         (general_errors, unsupported_imt_errors, unknown_params) = \
             populate_gsims(imts, ffcols, **options)
-
 
         if len(general_errors):
             self.printwarn(f'WARNING: {len(general_errors)} model(s) discarded because '
@@ -66,7 +60,7 @@ class Command(EgsimBaseCommand):
                 self.printwarn(f"  - {imt} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
                            f'after adding the IMT as flatfile column in the file:\n'
-                           f'  {FLATFILE_COLUMNS_YAML_PATH}')
+                           f'  {flatfile._ff_metadata_path}')
 
         if len(unknown_params):
             _models = set(m for mm in unknown_params.values() for m in mm)
@@ -74,12 +68,11 @@ class Command(EgsimBaseCommand):
                            f"require any of the following unknown {len(unknown_params)} "
                            f"parameter(s) (see database for more details):")
             for param, gsims in unknown_params.items():
-                self.printwarn(f"  - {_param2str(*param)} required by "
-                               f"{gsims2str(gsims)}")
+                self.printwarn(f"  - {param} required by {gsims2str(gsims)}")
             self.printwarn(f'  To include a model listed above, re-execute this command '
                            f'after mapping all model parameter(s) to a flatfile column. '
                            f'See instructions in:\n'
-                           f'  {FLATFILE_COLUMNS_YAML_PATH}')
+                           f'  {flatfile._ff_metadata_path}')
 
         saved_imts = models.Imt.objects.count()
         if saved_imts:
@@ -106,17 +99,21 @@ def gsims2str(gsim_names: list[str, ...]):
 
 
 def populate_flatfile_column_metadata() -> list[models.FlatfileColumn]:
-    ffcolumns = flatfile.read_registered_flatfile_columns_metadata()
     ret = {}
-    for name, column_metadata in ffcolumns.items():
-        ff_col = models.FlatfileColumn.objects.filter(name=name).first()
+    for col_name, col_type in flatfile.column_type.items():
+        ff_col = models.FlatfileColumn.objects.filter(name=col_name).first()
         if ff_col is None:  # create (and save) object:
-            data_props = {k :column_metadata.pop(k)
-                          for k in ('dtype', 'bounds', 'default', 'required')
-                          if k in column_metadata}
-            ret[name] = \
-                models.FlatfileColumn.objects.create(name=name, **column_metadata,
-                                                     data_properties=data_props)
+            dtype = flatfile.column_dtype.get(col_name, "any")
+            if isinstance(dtype, pd.CategoricalDtype):
+                from datetime import datetime, date
+                import json
+                cats = [_.isoformat() if isinstance(_, (datetime, date)) else _ for _
+                        in dtype.categories]
+                dtype = f'categorical: any value in {json.dumps(cats)}'
+            help = flatfile.column_help.get(col_name, "")
+            ret[col_name] = \
+                models.FlatfileColumn.objects.create(name=col_name, dtype=dtype,
+                                                     type=col_type, help=help)
     return list(ret.values())
 
 
@@ -129,7 +126,7 @@ def populate_imts(ffcols: list[models.FlatfileColumn],
     :param options: options passed to the Command `handle` method calling this function
     """
     names = [c.name for c in ffcols
-             if c.type == flatfile.ColumnType.imt]
+             if c.type == flatfile.ColumnType.intensity_measure.name]
     imts = {}
     for imt_name in names:
         ok = callable(getattr(imt, imt_name, None))
@@ -156,12 +153,17 @@ def populate_gsims(imts: dict[str, models.Imt],
         db model instance
     :param options: options passed to the Command `handle` method calling this function
     """
+    p2f = {v: k for k, v in flatfile.column_alias.items()}  # flatfile column -> oq name
+    ff_columns = {}
+    for ff_col in ff_cols:
+        oq_name = p2f.get(ff_col.name, ff_col.name)
+        ff_columns[(flatfile.column_type[ff_col.name], oq_name)] = ff_col
+
     general_errors = []
     unsupported_imt_errors = defaultdict(list)  # imt -> models
     unknown_params = defaultdict(list)  # param -> models (param deliberately excluded)
     gsims = []
-    oq_param2ff_col = {(c.type, c.oq_name): c for c in ff_cols if c.oq_name}
-    for gsim_name, gsim in get_available_gsims().items():
+    for gsim_name, gsim in AVAILABLE_GSIMS.items():
         if inspect.isabstract(gsim):
             continue
         with warnings.catch_warnings():
@@ -225,24 +227,27 @@ def populate_gsims(imts: dict[str, models.Imt],
 
         # Gsim flatfile columns from Gsim params (site, rupture, distance)
         gsim_ff_cols = []
-        _unknown_params = {}  # param -> error message
+        _unknown_params = []  # unknown params error messages
         # Gsim parameters (site, rupture, distance):
         for attname, ff_category in {
-            'REQUIRES_DISTANCES': flatfile.ColumnType.distance_measure,
-            'REQUIRES_RUPTURE_PARAMETERS': flatfile.ColumnType.rupture_parameter,
-            'REQUIRES_SITES_PARAMETERS': flatfile.ColumnType.site_parameter
+            'REQUIRES_DISTANCES': flatfile.ColumnType.distance_measure.name,
+            'REQUIRES_RUPTURE_PARAMETERS': flatfile.ColumnType.rupture_parameter.name,
+            'REQUIRES_SITES_PARAMETERS': flatfile.ColumnType.site_parameter.name
         }.items():
             for pname in getattr(gsim_inst, attname, []):
                 key = (ff_category, pname)
-                if key not in oq_param2ff_col:
-                    _unknown_params[key] = f"{_param2str(*key)} is unknown"
+                if key not in ff_columns:
+                    _unknown_params.append(ff_category.replace('_', ' ').capitalize() +
+                                           f' "{pname}"')
                 else:
-                    gsim_ff_cols.append(oq_param2ff_col[key])
+                    gsim_ff_cols.append(ff_columns[key])
 
         if _unknown_params:
-            for key in _unknown_params:
-                unknown_params[key].append(gsim_name)
-            store_discarded_gsim(gsim_name, ", ".join(_unknown_params.values()),
+            for msg in _unknown_params:
+                unknown_params[msg].append(gsim_name)
+            store_discarded_gsim(gsim_name, "Gsim has unknown / unsupported " 
+                                            "parameter or measure: " 
+                                            ", ".join(_unknown_params),
                                  **options)
             continue
         elif not gsim_ff_cols:
@@ -306,11 +311,3 @@ def store_discarded_gsim(gsim_name: str, error: Union[str, Exception],
 
     models.GsimWithError.objects.create(name=gsim_name, error_type=error_type,
                                         error_message=error_msg)
-
-
-def _param2str(col_type: flatfile.ColumnType, name: str):
-    """Makes `param` and its column type human readable, e.g. (SITE_PARAMETER, 'PHV')
-    into: 'Site parameter "PHV"'
-    """
-    col_type_str = col_type.name.replace('_', ' ').capitalize()
-    return f'{col_type_str} "{name}"'

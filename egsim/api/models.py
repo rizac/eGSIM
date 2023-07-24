@@ -6,13 +6,12 @@ Created on 5 Apr 2019
 @author: riccardo
 """
 import json
-from datetime import datetime, date
-from typing import Any
+from datetime import datetime
 
 from django.db.models import (Model as DjangoModel, Q, TextField, BooleanField,
                               ForeignKey, ManyToManyField, JSONField, UniqueConstraint,
                               CASCADE, SET_NULL, Index, SmallIntegerField,
-                              DateTimeField, URLField, Manager)
+                              DateTimeField, URLField, Manager, CharField)
 from django.db.models.options import Options
 
 from egsim.smtk import flatfile
@@ -99,105 +98,26 @@ class CompactEncoder(json.JSONEncoder):
         super().__init__(**kwargs)
 
 
-class DateTimeEncoder(CompactEncoder):
-    """Encode date times as ISO formatted strings"""
-
-    _KEY = '__iso8601datetime__'  # DO NOT CHANGE, or otherwise repopulate the db
-
-    def default(self, obj):
-        if isinstance(obj, (datetime, date)):
-            obj = {self._KEY: obj.isoformat()}
-        return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
-
-
-class DateTimeDecoder(json.JSONDecoder):
-    """Encode date times encoded with the previous class instance"""
-
-    def __init__(self, **kwargs):
-        super(DateTimeDecoder, self).__init__(object_hook=DateTimeDecoder.object_hook,
-                                              **kwargs)
-
-    @staticmethod
-    def object_hook(dct):
-        key = DateTimeEncoder._KEY  # noqa
-        if key in dct:
-            return datetime.fromisoformat(dct[key])
-        # return dict "normally":
-        return dct
-
-
 class FlatfileColumn(_UniqueName):
     """Flat file column"""
-
-    oq_name = TextField(null=True, help_text='The OpenQuake name of the GSIM '
-                                             'property associated to this '
-                                             'column (e.g., as used in '
-                                             'Contexts during residuals '
-                                             'computation)')
-    type = SmallIntegerField(null=False,
-                             default=flatfile.ColumnType.unknown,
-                             choices=[(c.value, c.name.replace('_', ' '))
-                                      for c in flatfile.ColumnType],
-                             help_text='The type of Column of this column (e.g., '
-                                       'IMT, OpenQuake parameter, distance measure)')
+    type = CharField(null=False,
+                     max_length=max(len(c.name) for c in flatfile.ColumnType),
+                     default=flatfile.ColumnType.unknown.name,
+                     choices=[(c.name, c.name.replace('_', ' ').capitalize())
+                              for c in flatfile.ColumnType],
+                     help_text='The type of Column (e.g., '
+                               'IMT, OpenQuake parameter, distance measure)')
     help = TextField(null=False, default='', help_text="Field help text")
-    data_properties = JSONField(null=True, encoder=DateTimeEncoder,
-                                decoder=DateTimeDecoder,
-                                help_text=('The properties of the this column data, '
-                                           'as JSON (null: no properties). Optional '
-                                           'keys: "dtype" ("int", "bool", "datetime", '
-                                           '"str" or "float", or list of possible '
-                                           'values the column data can have), "bounds": '
-                                           '[min or null, max or null] (null means: '
-                                           'unbounded), "default" (the default when '
-                                           'missing), "required" (bool)'))
-
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        """Call `super.save` after checking and harmonizing the values of
-        `self.properties` to be usable with flatfiles
-        """
-        # perform some check on the data type consistencies:
-        try:
-            _ = flatfile._check_column_metadata(**(self.data_properties or {}),
-                                                oq_name=self.oq_name, help=self.help,
-                                                ctype=self.type)
-        except Exception as exc:
-            raise ValueError(f'Flatfile column "{self.name}" error: {exc}')
-
-        super().save(force_insert=force_insert, force_update=force_update,
-                     using=using, update_fields=update_fields)
-
-    @classmethod
-    def get_data_properties(cls) -> \
-            tuple[dict[str, str], dict[str, Any], dict[str, list[Any, Any]], list[str]]:
-        """
-        Return the `data_properties` Field as tuples:
-        `dtype` `default` `bounds` `required`
-        """
-        dtype, defaults, bounds, required = {}, {}, {}, []
-        cols = 'name', 'data_properties'
-        for name, props in cls.objects.filter().only(*cols).values_list(*cols):
-            if not props:
-                continue
-            if props.get("dtype", None):
-                dtype[name] = props["dtype"]
-            if "default" in props:
-                defaults[name] = props["default"]
-            if "bounds" in props:
-                bounds[name] = props["bounds"]
-            if props.get("required", False):
-                required.append(name)
-
-        return dtype, defaults, bounds, required
+    dtype = TextField(null=False, help_text=('The datat type of the column ("int", '
+                                             '"bool", "datetime", '
+                                             '"str" or "float", or list of possible '
+                                             'values the column data can have)'))
 
     class Meta(_UniqueName.Meta):
         indexes = [Index(fields=['name']), ]
 
     def __str__(self):
-        col_type = 'unknown' if self.type is None else self.get_type_display()  # noqa
-        # `get_[field]_display` is added by Django for those fields with choices
-        return f'Column {self.name}, type: {col_type}, OpenQuake name: {self.oq_name})'
+        return f'Column "{self.name}" ({self.get_type_display()} type)'  # noqa
 
 
 class Imt(_UniqueName):

@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.forms.fields import CharField
 
-from egsim.smtk.flatfile import ColumnType
+from egsim.smtk.flatfile import ColumnType, column_dtype
 from egsim.api import models
 from egsim.api.forms import APIForm, GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
@@ -52,8 +52,8 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
             condition |= Q(name__in=imts_to_query, type=ColumnType.imt)
 
         columns = {}
-        attrs = 'name', 'help', 'type', 'data_properties'
-        for name, help, type, props in query.filter(condition).values_list(*attrs):
+        attrs = 'name', 'help', 'type', 'dtype'
+        for name, help, type, dtype in query.filter(condition).values_list(*attrs):
             if name in columns:  # could be (we query with m2m relationship)
                 continue
             if name == 'SA' and type == ColumnType.imt:
@@ -65,7 +65,7 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
                 columns[name] = {
                     'help': help,
                     'type': ColumnType(type).name.replace("_", " "),
-                    'dtype': props.get('dtype', 'any')
+                    'dtype': dtype or 'any'
                 }
 
         return columns
@@ -260,12 +260,9 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
-        # return columns and default columns as dicts of strings mapped to
-        # the column data type
-        dtype, _, _, _ = models.FlatfileColumn.get_data_properties()
         return {
             'columns': cleaned_data['flatfile_dtypes'],
-            'default_columns': dtype,
+            'default_columns': column_dtype,
             'gsim': cleaned_data['gsim']
         }
 

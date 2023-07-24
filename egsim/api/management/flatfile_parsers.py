@@ -4,7 +4,7 @@ import numpy as np
 from ...smtk.residuals import convert_accel_units
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-from ...smtk.flatfile import read_flatfile
+from ...smtk.flatfile import read_csv, column_dtype, column_default, column_required
 from ..models import FlatfileColumn
 
 
@@ -136,21 +136,25 @@ class EsmFlatfileParser(FlatfileParser):
     @classmethod
     def parse(cls, filepath: str) -> pd.DataFrame:
         """Parse ESM flatfile (CSV) and return the pandas DataFrame"""
-        dtype, defaults, bounds, required = FlatfileColumn.get_data_properties()
-        dtype |= cls.esm_dtypes
+        dtype = dict(cls.esm_dtypes)
+        required = set()
+        defaults= {}
+        for esm_col, ff_col in cls.esm_col_mapping.items():
+            if ff_col in column_default:
+                defaults[esm_col] = column_default[ff_col]
+            if ff_col in column_required:
+                required.add(esm_col)
+            if ff_col in column_dtype:
+                dtype[esm_col] = column_dtype[ff_col]
 
-        # Do not check for station_id (we will create the column after reading the file):
-        create_sta_id = 'station_id' in required
-        if create_sta_id:
-            required.remove('station_id')
+        dfr = read_csv(filepath, sep=';', required=required, defaults=defaults,
+                       dtype=dtype, usecols=cls.esm_usecols)
 
-        dfr = read_flatfile(filepath, col_mapping=cls.esm_col_mapping, sep=';',
-                            dtype=dtype, defaults=defaults, usecols=cls.esm_usecols,
-                            required=required)
+        dfr.rename(columns=cls.esm_col_mapping, inplace=True)
 
-        if create_sta_id:  # setup our station_id column as integers:
-            dfr['station_id'] = \
-                dfr['network_code'].str.cat(dfr['station_code']).astype('category').cat.codes
+        dfr['station_id'] = \
+            dfr['network_code'].str.cat(dfr['station_code'], sep='.').\
+                astype('category').cat.codes
 
         # Post process:
         # -------------
@@ -212,7 +216,7 @@ class EsmFlatfileParser(FlatfileParser):
         dfr.loc[filter_, 'vs30measured'] = False
 
         # set z1 and z2:
-        dfr['z1'] = vs30_to_z1pt0_cy14(dfr['vs30'])
+        dfr['z1pt0'] = vs30_to_z1pt0_cy14(dfr['vs30'])
         dfr['z2pt5'] = vs30_to_z2pt5_cb14(dfr['vs30'])
 
         # rhyopo is sqrt of repi**2 + event_depth**2 (basic Pitagora)
