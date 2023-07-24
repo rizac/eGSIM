@@ -13,7 +13,8 @@
 #             When missing, the default value depends on `dtype` and the storage used
 #             (e.g. pandas vs sql). E.g., with pandas: NaN (for dtype float),
 #             NaT (datetime), None/null (str or categorical), 0 (int), False (bool).
-#   help:     The field help or description (defaults to "" when missing)
+#   help:     The field help or description. Depending on the application, a default
+#             might be provided (e.g.g "")
 #   alias:    The column name used in OpenQuake. If missing, it defaults to <column_name>
 #   type:     The column type. Supported values are: i (intensity measure), d
 #             (distance measure), r (rupture parameter), s (site parameter).
@@ -40,14 +41,15 @@ repi:
   type: d
 rrup:
   dtype: float
-  help: rupture_distance (in km). Any missing or NaN value will be replace with the 
-    record hypocentral distance, if the flatfile column "rhypo" is provided
+  help: rupture_distance (in km). Missing data (empty or NaN values, column not provided) 
+    will be replaced with the hypocentral distance, if the column "rhypo" 
+    is provided
   type: d
 rjb:
   dtype: float
   help: >-
-    Joyner-Boore distance (in km). Any missing or NaN value will be replace with the 
-    record epicentral distance, if the flatfile column "repi" is provided
+    Joyner-Boore distance (in km). Missing data (empty or NaN values, column not provided)  
+    will be replaced with the epicentral distance, if the column "repi" is provided
   type: d
 rhypo:
   dtype: float
@@ -56,16 +58,16 @@ rhypo:
 rx:
   dtype: float
   help: >-
-    Horizontal distance (in km) from the top of the rupture measured
-    perpendicular to strike. Any missing or NaN value will be replace with the inverse
-    of the record epicentral distance, if the flatfile column "repi" is provided
+    Horizontal distance (in km) from the top of the rupture measured perpendicular to 
+    strike. Missing data (empty or NaN values, column not provided) will be replaced 
+    with the epicentral distance, if the column "repi" is provided
   type: d
 ry0:
   dtype: float
   help: >-
-    Horizontal distance (in km) from the top of the rupture measured parallel
-    to strike. Any missing or NaN value will be replace with the 
-    record epicentral distance, if the flatfile column "repi" is provided
+    Horizontal distance (in km) from the top of the rupture measured parallel to strike. 
+    Missing data (empty or NaN values, column not provided) will be replaced with the 
+    epicentral distance, if the column "repi" is provided
   type: d
 rvolc:
   dtype: float
@@ -104,9 +106,9 @@ rupture_width:
   dtype: float
   bounds: [ 0, null ]
   help: >-
-    Down-dip width of the rupture (km). Any missing or NaN value will be derived from
-    the record magnitude using a Magnitude-Scaling Relationship defined for PEER PSHA 
-    test cases, and assuming an aspect ratio of 1
+    Down-dip width of the rupture (km). Missing data (empty or NaN values, column not 
+    provided) will be derived from the record magnitude using a Magnitude-Scaling 
+    Relationship defined for PEER PSHA test cases, and assuming an aspect ratio of 1
   alias: width
   type: r
 dip:
@@ -130,18 +132,18 @@ rake:
 z1pt0:
   dtype: float
   help: >-
-    depth of the layer where seismic waves start to propagate with a
-    speed above 1.0 km/sec, in meters. Any missing or NaN value will be derived from
-    the record vs30 using the Chiou & Youngs (2014) California model, if the flatfile 
-    column "vs30" is provided
+    depth of the layer where seismic waves start to propagate with a speed above 1.0 
+    km/sec, in meters. Missing data (empty or NaN values, column not provided) will be 
+    derived from the record vs30 using the Chiou & Youngs (2014) California model, if 
+    the flatfile column "vs30" is provided
   type: s
 z2pt5:
   dtype: float
   help: >-
-    depth of the layer where seismic waves start to propagate with a speed
-    above 2.5 km/sec, in km. Any missing or NaN value will be derived from
-    the record vs30 using the Campbell & Bozorgnia (2014) model, if the flatfile 
-    column "vs30" is provided
+    depth of the layer where seismic waves start to propagate with a speed above 
+    2.5 km/sec, in km. Missing data (empty or NaN values, column not provided) will be 
+    derived from the record vs30 using the Campbell & Bozorgnia (2014) model, if the 
+    flatfile column "vs30" is provided
   type: s
 vs30:
   dtype: float
