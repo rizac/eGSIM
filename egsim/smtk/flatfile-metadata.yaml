@@ -5,8 +5,8 @@
 # <column_name>:
 #   dtype:    The data type (default when missing: null). Supported values are: null,
 #             int, float, str, datetime (ISO formatted), bool, or the list of the
-#             possible values of the column data (see pandas categorical data). null
-#             means "not specified" and should be used by applications to skip checks.
+#             possible values of the column data (which must be all of the same dtype).
+#             null or missing means "not specified" and is used to skip data type check.
 #             Data not conforming to the assigned dtype might be coerced or rejected,
 #             depending on the application
 #   default:  The default value that applications should set when nothing is provided.
@@ -21,9 +21,10 @@
 #             When missing, defaults to 'u' (unknown)
 #   required: Tells if the column should be always present in flatfiles (default when
 #             missing: false)
-#   bounds:   The bounds [min, max], endpoints included. Default when missing:
-#             [null, null], where null means: unbounded / don't check. Out-of-bound data
-#             might be rejected or coerced to their default, depending on the application
+#   bounds:   A quoted string with comma-separated conditions defining the column bounds,
+#             e.g.: ">0", ">=0,<5.5", ">2006-01-01T00:12:23". Bounds might be used to
+#             simply improve help or to reject data or coerce data to their default,
+#             depending on the application
 
 # YAML notes:
 # Date-times can be given as ISO formatted text, without quotes. Unless required,
@@ -41,7 +42,8 @@ repi:
   type: d
 rrup:
   dtype: float
-  help: rupture_distance (in km). Missing data (empty or NaN values, column not provided) 
+  help: >-
+    rupture_distance (in km). Missing data (empty or NaN values, column not provided) 
     will be replaced with the hypocentral distance, if the column "rhypo" 
     is provided
   type: d
@@ -76,13 +78,13 @@ rvolc:
   type: d
 event_latitude:
   dtype: float
-  bounds: [ -90, 90 ]
+  bounds: ">=-90, <=90"
   help: Hypocentre latitude (deg)
   alias: hypo_lat
   type: r
 event_longitude:
   dtype: float
-  bounds: [ -180, 180 ]
+  bounds: ">=-180, <=180"
   help: Hypocentre longitude (deg)
   alias: hypo_lon
   type: r
@@ -98,13 +100,13 @@ event_depth:
   type: r
 depth_top_of_rupture:
   dtype: float
-  bounds: [ 0, null ]
+  bounds: ">=0"
   help: Top of Rupture Depth (km)
   alias: ztor
   type: r
 rupture_width:
   dtype: float
-  bounds: [ 0, null ]
+  bounds: ">=0"
   help: >-
     Down-dip width of the rupture (km). Missing data (empty or NaN values, column not 
     provided) will be derived from the record magnitude using a Magnitude-Scaling 
@@ -113,7 +115,7 @@ rupture_width:
   type: r
 dip:
   dtype: float
-  bounds: [ 0, 90 ]
+  bounds: ">=0, <=90"
   help: >-
     the angle of the fault relative to the horizontal (deg).
     Hint: in case of more components available (e.g. from web services), the
@@ -122,7 +124,7 @@ dip:
   type: r
 rake:
   dtype: float
-  bounds: [ -180, 180 ]
+  bounds: ">=-180, <=180"
   help: >-
     the direction the hanging wall moves, relative to the fault strike (deg).
     Hint: in case of more components available (e.g. from
@@ -147,7 +149,7 @@ z2pt5:
   type: s
 vs30:
   dtype: float
-  bounds: [ 0, null ]
+  bounds: ">=0"
   help: Average shear wave velocity in the top 30 m, in m/s
   type: s
 backarc:
@@ -159,13 +161,13 @@ backarc:
     the site is assumed to be unknown or in the subduction forearc
 station_latitude:
   dtype: float
-  bounds: [ -90, 90 ]
+  bounds: ">=-90, <=90"
   help: station latitude (deg)
   alias: lat
   type: s
 station_longitude:
   dtype: float
-  bounds: [ -180, 180 ]
+  bounds: ">=-180, <=180"
   help: station longitude (deg)
   alias: lon
   type: s
@@ -180,14 +182,14 @@ xvf:
   type: s
 fpeak:
   dtype: float
-  bounds: [ 0, null ]
+  bounds: ">=0"
   help: >-
     Frequency that corresponds to the peak of the horizontal to vertical
     spectral ratio (Hz)
   type: s
 region:
   dtype: int
-  bounds: [ 0, 5 ]
+  bounds: ">=0, <=5"
   default: 0
   help: The ESHM2020 cluster region to which the site belongs
   type: s
@@ -198,7 +200,7 @@ geology:
   type: s
 slope:
   dtype: float
-  bounds: [ 1.0e-100, null ]  # 1.0e-100 is a workaround to tell: >0
+  bounds: ">0"
   help: The local slope of the station
   type: s
 PGA:

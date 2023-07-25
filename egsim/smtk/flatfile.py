@@ -71,6 +71,9 @@ def _check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
     if isinstance(dtype, (list, tuple)):  # categorical data type
         if not all(any(isinstance(_, d.value) for d in ColumnDtype) for _ in dtype):
             raise ValueError(f"Invalid data type(s) in provided categorical data")
+        if len(set(type(_) for _ in dtype)) != 1:
+            raise ValueError(f"Categorical values must all be of the same type, found: "
+                             f"{set(type(_) for _ in dtype)}")
         if bounds_are_given:
             raise ValueError(f"bounds cannot be provided with "
                              f"categorical data type")
@@ -88,20 +91,10 @@ def _check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
     # check bounds:
     if bounds_are_given:
         try:
-            bmin, bmax = column['bounds']
-        except (TypeError, ValueError):
-            raise ValueError(f"bounds must be a 2-element list or tuple")
-        # type promotion (ints are valid floats):
-        if py_dtype == float and isinstance(bmin, int):
-            bmin = column['bounds'][0] = float(bmin)
-        if py_dtype == float and isinstance(bmax, int):
-            bmax = column['bounds'][1] = float(bmax)
-        if bmin is not None and not isinstance(bmin, py_dtype):
-            raise ValueError(f"bounds[0] must be of type {dtype}")
-        if bmax is not None and not isinstance(bmax,  py_dtype):
-            raise ValueError(f"bounds[0] must be of type {dtype}")
-        if bmin is not None and bmax is not None and bmax <= bmin:
-            raise ValueError(f"bounds[0] must be < bounds[1]")
+            column['bounds'] = _parse_bounds_str(column['bounds'], py_dtype)
+        except Exception as exc:
+            raise ValueError(f"invalid bounds: {str(exc)}")
+
 
     # check default value:
     if default_is_given:
@@ -113,6 +106,25 @@ def _check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"default must be of type {dtype}")
 
     return column
+
+
+def _parse_bounds_str(bounds_string, py_dtype):
+    bounds = []
+    for chunk in bounds_string.split(','):
+        chunk = chunk.strip()
+        symbol = chunk[:2] if chunk[:2] in ('>=', '<=') else chunk[:1]
+        assert symbol in ('>', '<', '>=', '<='), 'comparison operator should be ' \
+                                                 '<, >, <= or >='
+        try:
+            value = yaml.safe_load(chunk[len(symbol):])
+        except Exception:
+            raise ValueError(f'Invalid chunk "{chunk[len(symbol):]}"')
+        if py_dtype is float and isinstance(value, int):
+            value = float(value)
+        if not isinstance(value, py_dtype):
+            raise ValueError(f'{str(value)} does not match {str(py_dtype)}')
+        bounds.append([symbol, value])
+    return bounds
 
 
 _ff_metadata_path = join(dirname(__file__), 'flatfile-metadata.yaml')
