@@ -10,6 +10,8 @@ from datetime import datetime
 import re
 
 import pandas as pd
+from docutils.nodes import error
+
 # import numpy as np
 from egsim.smtk import flatfile
 from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query)
@@ -55,6 +57,61 @@ def test_flatfile_turkey(testdata):
 #
 #     asd = 9
 
+from io import StringIO
+
+def test_read_flatfile_wrong_data():
+
+    def to_numeric(values):
+        return pd.to_numeric(values, errors='coerce')
+
+    def to_datetime(values):
+        return pd.to_datetime(values, error='coerce')
+
+
+    args = {
+        'dtype': { "str": "str",
+                  "category": pd.CategoricalDtype(['a', 'b'])},
+        # 'parse_dates': ['datetime'],
+        'converters': {'int': to_numeric, 'bool': to_numeric, 'datetime': to_datetime, 'float': to_numeric}
+    }
+
+    print("\nData ok")
+    csv = ("int,bool,float,datetime,str,category"
+           "\n"
+           "1,true,1.1,2006-01-01T00:00:00,x,a"
+           "\n"
+           "1,true,1.1,2006-01-01T00:00:00,x,ax")
+    d = pd.read_csv(StringIO(csv), **args)  # noqa
+    print(d.dtypes)
+
+    print("\nSome data empty")
+    csv = ("int,bool,float,datetime,str,category"
+           "\n"
+           "1,true,1.1,2006-01-01T00:00:00,x,a"
+           "\n"
+           ",,,,"
+           )
+    d = pd.read_csv(StringIO(csv), **args)  # noqa
+    print(d.dtypes)
+
+    print("\nSome data empty, some wrong")
+    csv = ("int,bool,float,datetime,str,category"
+           "\n"
+           ",,,,"
+           "\n"
+           "1x,1.1x,truex,2006x-05-t,e,a"
+           "\n"
+           "1,true,1.1,2006-01-01T00:00:00,x,x")
+    d = pd.read_csv(StringIO(csv), **args)  # noqa
+    print(d.dtypes)
+
+
+def test_categorical():
+    print()
+    print(pd.read_csv(StringIO('a\nb\n1'), dtype={'a': pd.CategoricalDtype(['b', '1'])}))
+
+    print()
+    print(pd.read_csv(StringIO('a\nb\n1'), dtype={'a': 'category'}))
 
 
 def test_query():
