@@ -184,7 +184,7 @@ def get_imt(imt_name: str, ignore_case=False,
 ############
 
 
-def read_flatfile(filepath_or_buffer: str, sep: str = None, **kwargs) -> pd.DataFrame:
+def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
     """
     Read a flat file into pandas DataFrame from a given CSV file
 
@@ -196,7 +196,7 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None, **kwargs) -> pd.Data
     """
     flatfile = read_csv(filepath_or_buffer, sep=sep, dtype=column_dtype,
                         defaults=column_default,
-                        required=column_required, **kwargs)
+                        required=column_required)
     _check_flatfile(flatfile)
 
     return flatfile
@@ -251,10 +251,10 @@ def _check_flatfile(flatfile: pd.DataFrame):
         flatfile.rename(columns=col2rename, inplace=True)
 
 
-flatfile_na_values = ("", "null", "NULL", "None",
-                      "nan", "-nan", "NaN", "-NaN",
-                      "NA", "N/A", "n/a",  "<NA>", "#N/A", "#NA",
-                      "+inf", "-inf", "+Inf", "-Inf", "+Infinity", "-Infinity")
+missing_values = ("", "null", "NULL", "None",
+                  "nan", "-nan", "NaN", "-NaN",
+                  "NA", "N/A", "n/a",  "<NA>", "#N/A", "#NA",
+                  "+inf", "-inf", "+Inf", "-Inf", "+Infinity", "-Infinity")
 
 
 def read_csv(filepath_or_buffer: str,
@@ -299,15 +299,16 @@ def read_csv(filepath_or_buffer: str,
 
     :return: pandas DataFrame representing a Flat file
     """
-    kwargs.setdefault('na_values', flatfile_na_values)
+    kwargs.setdefault('na_values', missing_values)
     kwargs.setdefault('keep_default_na', False)
     kwargs.setdefault('encoding', 'utf-8-sig')
     kwargs.setdefault('comment', '#')
+    kwargs.setdefault('true_values', ['1'])
+    kwargs.setdefault('false_values', ['0'])
     if sep is None:
         sep = _infer_csv_sep(filepath_or_buffer)
     kwargs['sep'] = sep
-    true_values = kwargs.setdefault('true_values', ['1'])
-    false_values = kwargs.setdefault('false_values', ['0'])
+    datetime_columns = kwargs.setdefault('parse_dates', [])
 
     # initialize the defaults dict if None and needs to be populated:
     if defaults is None:
@@ -315,45 +316,53 @@ def read_csv(filepath_or_buffer: str,
     if dtype is None:
         dtype = {}
 
-    # convert categorical dtypes into their categories dtype, and put categorical data
+    # `dtype` will be split into several `dict`s:
+
+    # `dtype` entries that can not be passed to `pd.read_csv` (e.g. bool, int, float)
+    # because they raise errors that we want to handle after reading the csv, will be
+    # put here:
+    post_dtype = {}
+    # `dtype` entries that can be passed to `pd.read_csv` ('category', 'str', 'datetime')
+    # will be put here:
+    pre_dtype = {}
+    # Also convert categorical dtypes into their categories dtype, and put categorical data
     # in a separate dict
     categorical_dtypes = {}
-    for col, cat_dtype in dtype.items():
-        if isinstance(cat_dtype, (list, tuple)):  # covert lists and tuples beforehand
-            cat_dtype = categorical_dtypes[col] = pd.CategoricalDtype(cat_dtype)
-        if isinstance(cat_dtype, pd.CategoricalDtype):
-            categorical_dtypes[col] = cat_dtype
-            values_dtype = cat_dtype.categories.dtype.type
+    for col, col_dtype in dtype.items():
+        if isinstance(col_dtype, (list, tuple)):  # covert lists and tuples beforehand
+            col_dtype = categorical_dtypes[col] = pd.CategoricalDtype(col_dtype)
+        if isinstance(col_dtype, pd.CategoricalDtype):
+            values_dtype = col_dtype.categories.dtype.type
             # get the column data type (string) from the categories data type,
             # (using ColumnDtype):
-            column_dtype_name: str = ''
-            for col_dtype in ColumnDtype:
-                if issubclass(values_dtype, col_dtype.value):
-                    column_dtype_name = col_dtype.name
+            col_dtype_name: str = ''
+            for c_dtype in ColumnDtype:
+                if issubclass(values_dtype, c_dtype.value):
+                    col_dtype_name = c_dtype.name
                     break
-            if not column_dtype_name:
+            if not col_dtype_name:
                 raise ValueError(f'Column "{col}": unsupported type {str(values_dtype)} '
                                  f'in categorical values ')
-            dtype[col] = column_dtype_name
+            # categorical data with str values can be safely passed to read_csv:
+            if col_dtype_name == ColumnDtype.str.name:
+                pre_dtype[col] = col_dtype
+                continue
+            # categorical data with non-str values will be stored in categorical_dtypes:
+            categorical_dtypes[col] = col_dtype
+            # and their string repr (col_dtype_name) handled "normally" few lines below:
+            col_dtype = col_dtype_name
 
-    # Setup the column to be parsed with read_csv ('dtype' argument):
-    read_csv_dtypes = {}
-    # We put in `read_csv_dtypes` the data types that do not raise:
-    # 'category', 'str' and ideally 'datetime', but the latter has to be supplied via
-    # the 'parse_dates' argument, so:
-    datetime_columns = kwargs.setdefault('parse_dates', [])
-    for col, dtype_ in dtype.items():
-        # dype is 'str' or ;'category':
-        if dtype in (ColumnDtype.str.name, 'category'):
-            read_csv_dtypes[col] = dtype_
-            continue
-        if dtype[col] == ColumnDtype.datetime.name and col not in datetime_columns:
-            datetime_columns.append(col)
+        if col_dtype in (ColumnDtype.str.name, 'category'):
+            pre_dtype[col] = dtype[col]
+        elif col_dtype == ColumnDtype.datetime.name:
+            if col not in datetime_columns:
+                datetime_columns.append(col)
+        else:
+            post_dtype[col] = col_dtype
 
     # Read flatfile:
     try:
-        dfr = pd.read_csv(filepath_or_buffer, dtype={}, usecols=usecols,
-                          **kwargs)
+        dfr = pd.read_csv(filepath_or_buffer, dtype=pre_dtype, usecols=usecols, **kwargs)
     except ValueError as exc:
         raise ValueError(f'Error reading the flatfile: {str(exc)}')
 
@@ -363,17 +372,25 @@ def read_csv(filepath_or_buffer: str,
         missing = sorted(required - dfr_columns)
         raise ValueError(f"Missing required column(s): {', '.join(missing)}")
 
-    # check dtypes correctness (in few cases try to cast, e.g. int bool):
+    # check dtypes correctness (in few cases try to cast, e.g. int bool), avoid
+    # already processed dtypes (read_csv_dtypes)
     invalid_columns = []
-    for col in set(dtype) & dfr_columns:
+    for col in set(post_dtype) & dfr_columns:
         # check all data type here because passing them to dtype above would raise
         # (except CategoricalDtype)
-        col_dtype = dtype[col]
-        if issubclass(dfr[col].dtype.type, ColumnDtype[col_dtype].value):
+        expected_col_dtype_name:str = post_dtype[col]
+        col_dtype = dfr[col].dtype.type
+        if issubclass(col_dtype, ColumnDtype[expected_col_dtype_name].value):
             continue
-        # coerce for bools and ints:
-        if col_dtype == 'int':
-            if issubclass(dfr[col].dtype.type, ColumnDtype.float.value):
+
+        # convert int columns that should be float:
+        if expected_col_dtype_name == ColumnDtype.float.name:  # "float"
+            if issubclass(col_dtype, ColumnDtype.int.value):
+                dfr[col] = dfr[col] .astype(float)
+                continue
+        # try to convert float columns that should be int:
+        if expected_col_dtype_name == ColumnDtype.int.name:   # "int"
+            if issubclass(col_dtype, ColumnDtype.float.value):
                 series = dfr[col].copy()
                 na_values = pd.isna(series)
                 series.loc[na_values] = defaults.pop(col, 0)
@@ -384,30 +401,45 @@ def read_csv(filepath_or_buffer: str,
                         continue
                 except Exception:  # noqa
                     pass
-        elif col_dtype == 'bool':
-            if issubclass(dfr[col].dtype.type, ColumnDtype.str.value):
+        # try to convert str/int/float columns that should be bool:
+        if expected_col_dtype_name == ColumnDtype.bool.name:  # "bool"
+            new_values = None
+            if issubclass(col_dtype, ColumnDtype.int.value):
+                new_values = dfr[col]
+                if sorted(pd.unique(new_values)) != [0, 1]:
+                    new_values = None
+            elif issubclass(col_dtype, ColumnDtype.int.value):
                 na_values = pd.isna(dfr[col])
-                series = dfr[col].astype(str).str.lower()  # it is unclear why we have to
-                # set astype(str), but this way it works ...
-                series.loc[na_values] = defaults.pop(col, False)
+                new_values = dfr[col]
+                new_values.loc[na_values] = defaults.pop(col, False)
+                if sorted(pd.unique(new_values)) != [0, 1]:
+                    new_values = None
+            elif issubclass(col_dtype, ColumnDtype.str.value):
+                na_values = pd.isna(dfr[col])
+                new_values = dfr[col].astype(str).str.lower()
+                new_values.loc[na_values] = defaults.pop(col, False)
                 true_values = ['true'] + list(kwargs.get('true_values', []))
-                series.loc[series.isin(true_values)] = True
+                new_values.loc[new_values.isin(true_values)] = True
                 false_values = ['false'] + list(kwargs.get('false_values', []))
-                series.loc[series.isin(false_values)] = False
+                new_values.loc[new_values.isin(false_values)] = False
+            if new_values is not None:
                 try:
-                    dfr[col] = series.astype(bool)
+                    dfr[col] = new_values.astype(bool)
                     continue
                 except Exception:  # noqa
                     pass
         invalid_columns.append(col)
 
-    if invalid_columns:
-        raise ValueError(f'Invalid value found in column: '
-                         f'{", ". join(invalid_columns)}')
-
     # set categorical columns:
     for col in set(categorical_dtypes) & dfr_columns:
-        dfr[col] = dfr[col].astype(categorical_dtypes[col])
+        try:
+            dfr[col] = dfr[col].astype(categorical_dtypes[col])
+        except Exception:  # noqa
+            invalid_columns.append(col)
+
+    if invalid_columns:
+        raise ValueError(f'Invalid values in column: '
+                         f'{", ". join(invalid_columns)}')
 
     # set defaults:
     invalid_defaults = []

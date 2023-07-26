@@ -22,37 +22,6 @@ def test_read_flatifle_yanml():
 def test_flatfile_turkey(testdata):
     fpath = testdata.path('Turkey_20230206_flatfile_geometric_mean.csv')
     dfr = read_flatfile(fpath)
-    asd = 9
-    # in EGSIM flatfile definition and not in Turkey flatfile:
-    # {'fpeak', 'azimuth', 'station_latitude', 'station_longitude'}
-    # In Turkey flatfile and not in eGSIM flatfile definition (excluding PGA, PGV, and SA):
-    # {'gc2t', 'gc2u', 'sta', 'depth_bottom_of_rupture', 'event_id', 'gmid', 'longest_period', 'event_time'}
-
-
-# def test_get_flatfile_columndtype_get():
-#     import pandas as pd
-#     d = pd.DataFrame({
-#         'a': ['', None],
-#         'b': [datetime.utcnow(), None],
-#         'e': [1, 0],
-#         'f': [1.1, None],
-#     })
-#     for c in d.columns:
-#         d[c + 'categ'] = d[c].astype('category')
-#
-#     for c in d.columns:
-#         assert ColumnDtype.of(d[c]) is not None
-#         assert ColumnDtype.of(d[c].values) is not None
-#         assert ColumnDtype.of(d[c].values[0]) is not None
-#         assert ColumnDtype.of(d[c].values[0].__class__) is not None
-#
-#     for x  in [int, float, datetime, bool, pd.CategoricalDtype([1,2,'3'])]:
-#         assert ColumnDtype.of(x) is not None
-#
-#     assert ColumnDtype.of(None) is None
-#     assert ColumnDtype.of(re.compile('')) is None
-#
-#     asd = 9
 
 
 def test_read_csv():
@@ -99,22 +68,16 @@ def test_read_csv():
         assert pd.isna(d[c]).sum() == expected_na_count[c]
 
     # print("\nSome data ok, empty and wrong")
-    # expected_na_count = {
-    #     'int': 0, 'bool': 0, 'float': 2, 'datetime': 2, 'str': 1, 'category': 1
-    # }
-    # csv = ("int,bool,float,datetime,str,category"
-    #        "\n"
-    #        "1,true,1.1,2006-01-01T00:00:00,x,a"
-    #        "\n"
-    #        ",,,,"
-    #        "\n"
-    #        "1x,truex,1.1x,2006-01-01T00:00:00x,xx,axx"
-    #        )
-    # d = read_csv(StringIO(csv), **args)  # noqa
-    # pd.testing.assert_series_equal(d.dtypes.sort_values(),
-    #                                pd.Series(expected).sort_values())
-    # for c in d.columns:
-    #     assert pd.isna(d[c]).sum() == expected_na_count[c]
+    csv = ("int,bool,float,datetime,str,category"
+           "\n"
+           "1,true,1.1,2006-01-01T00:00:00,x,a"
+           )
+    for header, val in zip(csv.split("\n")[0].split(","), csv.split("\n")[1].split(",")):
+        csv2 = f"{header}\n{val}\n{val}x"
+        with pytest.raises(ValueError) as verr:
+            d = read_csv(StringIO(csv2), **args)  # noqa
+            # check that the column is in the exception message:
+            assert header in str(verr.value)
 
 
 def test_read_csv_categorical():
@@ -125,10 +88,7 @@ def test_read_csv_categorical():
         "datetime": datetime.fromisoformat('2006-01-01T00:00:00'),
         "bool": True,
     }
-    args = {
-        'dtype': { x: pd.CategoricalDtype([defaults[x]]) for x in defaults }
-    }
-
+    dtypes = { x: pd.CategoricalDtype([defaults[x]]) for x in defaults }
 
     # print("\nData ok")
     csv = ("int,bool,float,datetime,str"
@@ -136,29 +96,33 @@ def test_read_csv_categorical():
            "1,true,1.1,2006-01-01T00:00:00,a"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,a")
-    d = read_csv(StringIO(csv), **args)  # noqa
+    d = read_csv(StringIO(csv), dtype=dict(dtypes))  # noqa
     for c in d.columns:
-        assert d[c].dtype == args['dtype'][c]
+        assert d[c].dtype == dtypes[c]
         assert sorted(d[c].dtype.categories.tolist()) == \
-               sorted(args['dtype'][c].categories.tolist())
+               sorted(dtypes[c].categories.tolist())
         assert not pd.isna(d[c]).any()
 
-        # print("\nData ok")
-        csv = ("int,bool,float,datetime,str"
-               "\n"
-               "1,true,1.1,2006-01-01T00:00:00,a"
-               "\n"
-               "1r,truer,1.1r,2006-01-01T00:00:00r,ar"
-               "\n"
-               ",,,,"
-               )
-        d = read_csv(StringIO(csv), **args)  # noqa
-        for c in d.columns:
-            assert d[c].dtype == args['dtype'][c]
-            assert sorted(d[c].dtype.categories.tolist()) == \
-                   sorted(args['dtype'][c].categories.tolist())
-            assert pd.isna(d[c]).sum() == 2
+    # print("\nData ok")
+    csv = ("int,bool,float,datetime,str"
+           "\n"
+           "1,true,1.1,2006-01-01T00:00:00,a"
+           "\n"
+           ",,,,")
+    d = read_csv(StringIO(csv), dtype=dict(dtypes))  # noqa
+    for c in d.columns:
+        assert d[c].dtype == dtypes[c]
+        assert sorted(d[c].dtype.categories.tolist()) == \
+               sorted(dtypes[c].categories.tolist())
+        assert pd.isna(d[c]).sum() == 1
 
+    # print("\nSome missing data, some data wrong")
+    for header, val in zip(csv.split("\n")[0].split(","), csv.split("\n")[1].split(",")):
+        csv2 = f"{header}\n{val}\n{val}x"
+        with pytest.raises(ValueError) as verr:
+            d = read_csv(StringIO(csv2), dtype=dict(dtypes))  # noqa
+            # check that the column is in the exception message:
+            assert header in str(verr.value)
 
 
 def test_query():

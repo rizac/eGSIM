@@ -1,13 +1,12 @@
-# This YAML file contains the flatfile metadata that will be used in this package.
-# Metadata is provided based on columns, where a Flatfile column or Field is represented
-# here as YAML Mapping with the following optional properties:
+# Register here all supported flatfile columns and their metadata which will be used to
+# perform flatfile IO operations. The syntax for each column (in YAML) is:
 #
 # <column_name>:
 #   dtype:    The data type (default when missing: null). Supported values are: null,
 #             int, float, str, datetime (ISO formatted), bool, or the list of the
 #             possible values of the column data (which must be all the same dtype).
 #             null or missing means "not specified" and is used to skip data type check.
-#             Data that has missing values (e.g. '', null, NaN) will be filled with the
+#             Data that has missing values (e.g. '', null, NaN) might be filled with the
 #             default (see below), data that is not parsable to the given type (e.g. 'x'
 #             for float) will raise Exceptions
 #   default:  The default value to replace missing data (e.g. '', null, NaN). When a
