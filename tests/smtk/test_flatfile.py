@@ -3,18 +3,15 @@ Created on 16 Feb 2018
 
 @author: riccardo
 """
-import io
+from io import StringIO
+import numpy as np
 import pytest
-
 from datetime import datetime
-import re
-
 import pandas as pd
-from docutils.nodes import error
 
 # import numpy as np
 from egsim.smtk import flatfile
-from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query)
+from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query, read_csv)
 
 
 def test_read_flatifle_yanml():
@@ -57,61 +54,111 @@ def test_flatfile_turkey(testdata):
 #
 #     asd = 9
 
-from io import StringIO
 
-def test_read_flatfile_wrong_data():
-
-    def to_numeric(values):
-        return pd.to_numeric(values, errors='coerce')
-
-    def to_datetime(values):
-        return pd.to_datetime(values, error='coerce')
-
+def test_read_csv():
 
     args = {
-        'dtype': { "str": "str",
-                  "category": pd.CategoricalDtype(['a', 'b'])},
-        # 'parse_dates': ['datetime'],
-        'converters': {'int': to_numeric, 'bool': to_numeric, 'datetime': to_datetime, 'float': to_numeric}
+        'dtype': {"str": "str", "float": "float",
+                  "int": "int", "datetime": "datetime", "bool": "bool"},
     }
 
-    print("\nData ok")
+    expected = {
+        'int': np.dtype('int64'),
+        'float': np.dtype('float64'),
+        'bool': np.dtype('bool'),
+        'datetime': np.dtype('<M8[ns]'),
+        'str': np.dtype('O'),
+        'category': np.dtype('O')
+    }
+
+    # print("\nData ok")
     csv = ("int,bool,float,datetime,str,category"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,a"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,ax")
-    d = pd.read_csv(StringIO(csv), **args)  # noqa
-    print(d.dtypes)
+    d = read_csv(StringIO(csv), **args)  # noqa
+    pd.testing.assert_series_equal(d.dtypes.sort_values(),
+                                   pd.Series(expected).sort_values())
+    for c in d.columns:
+        assert not pd.isna(d[c]).any()
 
-    print("\nSome data empty")
+    # print("\nData ok and empty")
+    expected_na_count = {
+        'int': 0, 'bool': 0, 'float':1, 'datetime': 1, 'str': 1, 'category': 1
+    }
     csv = ("int,bool,float,datetime,str,category"
            "\n"
-           "1,true,1.1,2006-01-01T00:00:00,x,a"
+           ",,,,,"
            "\n"
-           ",,,,"
-           )
-    d = pd.read_csv(StringIO(csv), **args)  # noqa
-    print(d.dtypes)
+           "1,true,1.1,2006-01-01T00:00:00,x,ax")
+    d = read_csv(StringIO(csv), **args)  # noqa
+    pd.testing.assert_series_equal(d.dtypes.sort_values(),
+                                   pd.Series(expected).sort_values())
+    for c in d.columns:
+        assert pd.isna(d[c]).sum() == expected_na_count[c]
 
-    print("\nSome data empty, some wrong")
-    csv = ("int,bool,float,datetime,str,category"
+    # print("\nSome data ok, empty and wrong")
+    # expected_na_count = {
+    #     'int': 0, 'bool': 0, 'float': 2, 'datetime': 2, 'str': 1, 'category': 1
+    # }
+    # csv = ("int,bool,float,datetime,str,category"
+    #        "\n"
+    #        "1,true,1.1,2006-01-01T00:00:00,x,a"
+    #        "\n"
+    #        ",,,,"
+    #        "\n"
+    #        "1x,truex,1.1x,2006-01-01T00:00:00x,xx,axx"
+    #        )
+    # d = read_csv(StringIO(csv), **args)  # noqa
+    # pd.testing.assert_series_equal(d.dtypes.sort_values(),
+    #                                pd.Series(expected).sort_values())
+    # for c in d.columns:
+    #     assert pd.isna(d[c]).sum() == expected_na_count[c]
+
+
+def test_read_csv_categorical():
+    defaults = {
+        "str": "a",
+        "int": 1,
+        "float": 1.1,
+        "datetime": datetime.fromisoformat('2006-01-01T00:00:00'),
+        "bool": True,
+    }
+    args = {
+        'dtype': { x: pd.CategoricalDtype([defaults[x]]) for x in defaults }
+    }
+
+
+    # print("\nData ok")
+    csv = ("int,bool,float,datetime,str"
            "\n"
-           ",,,,"
+           "1,true,1.1,2006-01-01T00:00:00,a"
            "\n"
-           "1x,1.1x,truex,2006x-05-t,e,a"
-           "\n"
-           "1,true,1.1,2006-01-01T00:00:00,x,x")
-    d = pd.read_csv(StringIO(csv), **args)  # noqa
-    print(d.dtypes)
+           "1,true,1.1,2006-01-01T00:00:00,a")
+    d = read_csv(StringIO(csv), **args)  # noqa
+    for c in d.columns:
+        assert d[c].dtype == args['dtype'][c]
+        assert sorted(d[c].dtype.categories.tolist()) == \
+               sorted(args['dtype'][c].categories.tolist())
+        assert not pd.isna(d[c]).any()
 
+        # print("\nData ok")
+        csv = ("int,bool,float,datetime,str"
+               "\n"
+               "1,true,1.1,2006-01-01T00:00:00,a"
+               "\n"
+               "1r,truer,1.1r,2006-01-01T00:00:00r,ar"
+               "\n"
+               ",,,,"
+               )
+        d = read_csv(StringIO(csv), **args)  # noqa
+        for c in d.columns:
+            assert d[c].dtype == args['dtype'][c]
+            assert sorted(d[c].dtype.categories.tolist()) == \
+                   sorted(args['dtype'][c].categories.tolist())
+            assert pd.isna(d[c]).sum() == 2
 
-def test_categorical():
-    print()
-    print(pd.read_csv(StringIO('a\nb\n1'), dtype={'a': pd.CategoricalDtype(['b', '1'])}))
-
-    print()
-    print(pd.read_csv(StringIO('a\nb\n1'), dtype={'a': 'category'}))
 
 
 def test_query():
