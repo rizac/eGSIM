@@ -438,8 +438,7 @@ def read_csv(filepath_or_buffer: str,
             invalid_columns.append(col)
 
     if invalid_columns:
-        raise ValueError(f'Invalid values in column: '
-                         f'{", ". join(invalid_columns)}')
+        raise ValueError(f'Invalid values in column: {", ".join(invalid_columns)}')
 
     # set defaults:
     invalid_defaults = []
@@ -544,7 +543,7 @@ def get_column(flatfile: pd.DataFrame, column: str) -> pd.Series:
             series = flatfile.groupby(list(_STATION_COLUMNS[1:])).ngroup()
         return series
     if column == 'depth_top_of_rupture':
-        fill_nan_values(series, flatfile, 'event_depth')
+        return fill_nan_values(series, flatfile, 'event_depth')
     if column == 'rupture_width':
         # Use the PeerMSR to define the area and assuming an aspect ratio
         # of 1 get the width
@@ -586,14 +585,10 @@ def get_column(flatfile: pd.DataFrame, column: str) -> pd.Series:
                 series = series.copy()
                 series[na] = vs30_to_z2pt5_cb14(vs30[na])
         return series
-    if column == 'backarc':
-        if series is None:
-            return pd.Series(np.full(len(flatfile), fill_value=False))
-        return series
-    if column == 'rvolc':
-        if series is None:
-            return pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
-        return series
+    if column == 'backarc' and series is None:
+        return pd.Series(np.full(len(flatfile), fill_value=False))
+    if column == 'rvolc' and series is None:
+        return pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     return series
 
 
