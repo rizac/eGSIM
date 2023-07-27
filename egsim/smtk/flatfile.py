@@ -533,82 +533,74 @@ def get_column(flatfile: pd.DataFrame, column: str) -> pd.Series:
     might be filled with values from other flatfile columns according to the
     substitution rules implemented here
     """
-    series = flatfile.get(column, None)
-    if column == _EVENT_COLUMNS[0] and series is None:
-        if set(_EVENT_COLUMNS[1:]).issubset(flatfile.columns):
-            series = flatfile.groupby(list(_EVENT_COLUMNS[1:])).ngroup()
-        return series
-    if column == _STATION_COLUMNS[0] and series is None:
-        if set(_STATION_COLUMNS[1:]).issubset(flatfile.columns):
-            series = flatfile.groupby(list(_STATION_COLUMNS[1:])).ngroup()
-        return series
-    if column == 'depth_top_of_rupture':
-        return fill_nan_values(series, flatfile, 'event_depth')
-    if column == 'rupture_width':
+    series = flatfile.get(column)  # -> None if column not found
+    if column == _EVENT_COLUMNS[0] and series is None and \
+            set(_EVENT_COLUMNS[1:]).issubset(flatfile.columns):
+        series = flatfile.groupby(list(_EVENT_COLUMNS[1:])).ngroup()
+    elif column == _STATION_COLUMNS[0] and series is None and \
+            set(_STATION_COLUMNS[1:]).issubset(flatfile.columns):
+        series = flatfile.groupby(list(_STATION_COLUMNS[1:])).ngroup()
+    elif column == 'depth_top_of_rupture':
+        series = fill_na(flatfile.get('event_depth'), series)
+    elif column == 'rupture_width':
         # Use the PeerMSR to define the area and assuming an aspect ratio
         # of 1 get the width
-        mag = flatfile.get('magnitude', None)
+        mag = flatfile.get('magnitude')
         if mag is not None:
             if series is None:
-                return pd.Series(np.sqrt(DEFAULT_MSR.get_median_area(mag, 0)))
-            na = pd.isna(series)
-            if na.any():
-                series = series.copy()
-                series[na] = np.sqrt(DEFAULT_MSR.get_median_area(mag[na], 0))
-        return series
-    if column in ['rjb', 'ry0']:
-        return fill_nan_values(series, flatfile, 'repi')
-    if column == 'rx':  # same as above, but -repi
-        values = fill_nan_values(series, flatfile, 'repi')
-        if values is not None:
-            values = -values
-        return values
-    if column == 'rrup':
-        return fill_nan_values(series, flatfile, 'rhypo')
-    if column == 'z1pt0':
-        vs30 = flatfile.get('vs30', None)
+                series = pd.Series(np.sqrt(DEFAULT_MSR.get_median_area(mag, 0)))
+            else:
+                na = pd.isna(series)
+                if na.any():
+                    series = series.copy()
+                    series[na] = np.sqrt(DEFAULT_MSR.get_median_area(mag[na], 0))
+    elif column in ['rjb', 'ry0']:
+        series = fill_na(flatfile.get('repi'), series)
+    elif column == 'rx':  # same as above, but -repi
+        series = fill_na(flatfile.get('repi'), series)
+        if series is not None:
+            series = -series
+    elif column == 'rrup':
+        series = fill_na(flatfile.get('rhypo'), series)
+    elif column == 'z1pt0':
+        vs30 = flatfile.get('vs30')
         if vs30 is not None:
             if series is None:
-                return pd.Series(vs30_to_z1pt0_cy14(vs30))
-            na = pd.isna(series)
-            if na.any():
-                series = series.copy()
-                series[na] = vs30_to_z1pt0_cy14(vs30[na])
-        return series
-    if column == 'z2pt5':
-        vs30 = flatfile.get('vs30', None)
+                series = pd.Series(vs30_to_z1pt0_cy14(vs30))
+            else:
+                na = pd.isna(series)
+                if na.any():
+                    series = series.copy()
+                    series[na] = vs30_to_z1pt0_cy14(vs30[na])
+    elif column == 'z2pt5':
+        vs30 = flatfile.get('vs30')
         if vs30 is not None:
             if series is None:
-                return pd.Series(vs30_to_z2pt5_cb14(vs30))
-            na = pd.isna(series)
-            if na.any():
-                series = series.copy()
-                series[na] = vs30_to_z2pt5_cb14(vs30[na])
-        return series
-    if column == 'backarc' and series is None:
-        return pd.Series(np.full(len(flatfile), fill_value=False))
-    if column == 'rvolc' and series is None:
-        return pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
+                series = pd.Series(vs30_to_z2pt5_cb14(vs30))
+            else:
+                na = pd.isna(series)
+                if na.any():
+                    series = series.copy()
+                    series[na] = vs30_to_z2pt5_cb14(vs30[na])
+    elif column == 'backarc' and series is None:
+        series = pd.Series(np.full(len(flatfile), fill_value=False))
+    elif column == 'rvolc' and series is None:
+        series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     return series
 
 
-def fill_nan_values(array: Union[None, np.ndarray, pd.Series],
-                    flatfile: pd.DataFrame,
-                    column: str) -> Union[None, np.ndarray, pd.Series]:
-    """Fill NAs (NaNs/Nulls) in `array` with the values of `flatfile[column]`.
-    If the column does not exist in the flatfile, or `array` has no NA, return `array`
-    Otherwise, if `array` is None, a copy of `flatfile[column]` will be returned
+def fill_na(src: Union[None, np.ndarray, pd.Series],
+            dest: Union[None, np.ndarray, pd.Series]) -> \
+        Union[None, np.ndarray, pd.Series]:
+    """Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.
+    Return `dest` or a copy of it.
     """
-    series = flatfile.get(column, None)
-    if series is None:
-        return array
-    if array is None:
-        return series.copy()
-    na = pd.isna(array)
-    if na.any():
-        array = array.copy()
-        array[na] = series[na]
-    return array
+    if src is not None and dest is not None:
+        na = pd.isna(dest)
+        if na.any():
+            dest = dest.copy()
+            dest[na] = src[na]
+    return dest
 
 
 #######################################
