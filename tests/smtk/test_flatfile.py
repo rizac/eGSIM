@@ -25,6 +25,9 @@ def test_flatfile_turkey(testdata):
 
 
 def test_read_csv():
+    # we rely on the fact that dataframe get returns none when column not found:
+    assert pd.DataFrame().get('a') is None
+    assert pd.DataFrame({'a': [1,2]}).get('b') is None
 
     args = {
         'dtype': {"str": "str", "float": "float",
