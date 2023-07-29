@@ -18,7 +18,7 @@ from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
 from .. import check_gsim_list
-from ..flatfile_ import get_column, _EVENT_COLUMNS, EventContext
+from ..flatfile_new import get_column, _EVENT_COLUMNS, EventContext
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -63,7 +63,8 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
 
 def get_residuals(gsim_names: list[str], imt_names: list[str],
                   flatfile: pd.DataFrame, nodal_plane_index=1,
-                  component="Geometric", normalise=True) -> pd.DataFrame:
+                  component="Geometric", compute_lh=False,
+                  normalise=True) -> pd.DataFrame:
     """
     Calculate the residuals for a set of ground motion records, returning a new
     DataFrame from `flatfile` with the column filled with residuals
@@ -74,7 +75,7 @@ def get_residuals(gsim_names: list[str], imt_names: list[str],
     expected = flatfile[ev_columns].copy()
     for context in yield_event_contexts(flatfile):
         # Get the expected ground motions by event
-        ev_expected = get_expected_motions(gsims, imt_names, context)
+        ev_expected = calculate_expected_motions(gsims, imt_names, context)
         # Put the above in the expected motions, index based:
         for col in ev_expected.columns:
             if col not in expected.columns:  # initialize column if needed
@@ -83,11 +84,14 @@ def get_residuals(gsim_names: list[str], imt_names: list[str],
         expected.loc[ev_expected.index, ev_expected.columns] = \
             ev_expected[ev_expected.columns]
 
-    return calculate_residuals(gsims, imt_names, expected, normalise)
+    new_flatfile = calculate_residuals(gsims, imt_names, expected, normalise)
+    if compute_lh:
+        return get_likelihood_from_residuals(gsim_names, imt_names, new_flatfile)
+    return new_flatfile
 
 
-def get_expected_motions(gsims: Sequence[GMPE], imt_names: Sequence[str],
-                         ctx: EventContext) -> pd.DataFrame:
+def calculate_expected_motions(gsims: Sequence[GMPE], imt_names: Sequence[str],
+                               ctx: EventContext) -> pd.DataFrame:
     """
     Calculate the expected ground motions from the context
     """
@@ -166,10 +170,14 @@ class labels:
     intra_ev = const.StdDev.INTRA_EVENT.replace(" ", "-").capitalize()
     expected_motion_column = {total, inter_ev, intra_ev}
     _res = "residuals"
-    total_res = total + f"-{_res}"
-    inter_ev_res = inter_ev + f"-{_res}"
-    intra_ev_res = intra_ev + f"-{_res}"
+    total_res = total + f" {_res}"
+    inter_ev_res = inter_ev + f" {_res}"
+    intra_ev_res = intra_ev + f" {_res}"
     residuals_columns = {total_res, inter_ev_res, intra_ev_res}
+    _lh = "LH"
+    total_lh = total + f" {_lh}"
+    inter_ev_lh = inter_ev + f" {_lh}"
+    intra_ev_lh = intra_ev + f" {_lh}"
 
 
 def column_label(gsim: GMPE, imtx: str, label: str):
@@ -224,9 +232,15 @@ def get_likelihood_from_residuals(gsim_names: list[str], imt_names: list[str],
     """
     result = pd.DataFrame(index=flatfile.index)
     for col, gsim, imtx, label in get_gsim_imt_columns(gsim_names, imt_names, flatfile):
-        if label not in labels.residuals_columns:
+        if label == labels.total_res:
+            new_label = labels.total_lh
+        if label == labels.inter_ev_res:
+            new_label = labels.inter_ev_lh
+        if label == labels.intra_ev_res:
+            new_label = labels.intra_ev_lh
+        else:
             continue
-        result[col + "-likelihood"] = get_likelihood(flatfile[col])
+        result[column_label(gsim, imtx, new_label)] = get_likelihood(flatfile[col])
     return result
 
 
