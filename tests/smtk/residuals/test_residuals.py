@@ -292,7 +292,17 @@ class ResidualsTestCase(SimpleTestCase):
         multi_llh = res.Residuals(self.gsims, self.imts)
         multi_llh.get_residuals(self.database, component="Geometric")
         self._check_residual_dictionary_correctness(multi_llh.residuals)
-        multi_llh.get_multivariate_loglikelihood_values()
+        res_dict = multi_llh.get_multivariate_loglikelihood_values()
+        file = "residual_mllh_tests_esm_data.json"
+        with open(os.path.join(BASE_DATA_PATH, file)) as _:
+            exp_dict = json.load(_)
+        for gsim in res_dict:
+            self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
+            for imt in res_dict[gsim]:
+                # check values
+                values = res_dict[gsim][imt]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt])
+                self.assertTrue(vals_ok)
 
     def test_edr_execution(self):
         """
