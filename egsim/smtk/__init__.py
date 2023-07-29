@@ -74,30 +74,44 @@ def _get_gmpe_name(gsim: GMPE) -> str:
             return gsim_name
 
 
-def n_jsonify(num: Union[Sequence, int, float, np.generic]) -> \
+def n_jsonify(obj: Union[Sequence, int, float, np.generic]) -> \
         Union[float, int, list, tuple, None]:
-    """Convert the numeric input to a Python object that is JSON serializable, i.e. with
-    NoN or infinite values converted to None.
+    """Attempt to convert the numeric input to a Python object that is JSON serializable,
+    i.e. same as `obj.tolist()` but - in case `obj` is a list/tuple, with NoN or
+    infinite values converted to None.
 
-    :param num: the numeric input to be converted. It can be a scalar or sequence as
+    :param obj: the numeric input to be converted. It can be a scalar or sequence as
         plain Python or numpy object. If this argument is non-numeric, this function is
         not guaranteed to return a JSON serializable object
     """
-    np_num = np.asarray(num, dtype=float)
+    # we could simply perform an iteration over `obj` but with numpy is faster. Convert
+    # to numpy object if needed:
+    np_obj = np.asarray(obj)
 
-    # arrays (check via np_num.shape, or alternatively np.ndim or np.isscalar):
-    if np_num.shape:
-        if not np.issubdtype(np_num.dtype, np.bool_) and not \
-                np.issubdtype(np_num.dtype, np.integer):
-            na = ~np.isfinite(np_num)
+    if np_obj.shape:  # np_obj is array
+        # `np_obj.dtype` is not float: try to cast it to float. This will be successful
+        # if obj contains `None`s and numeric values only:
+        if np.issubdtype(np_obj.dtype, np.object_):
+            try:
+                np_obj = np_obj.astype(float)
+            except ValueError:
+                # np_obj is a non-numeric array, leave it as it is
+                pass
+        # if obj is a numeric list tuples, convert non-finite (nan, inf) to None:
+        if np.issubdtype(np_obj.dtype, np.floating):
+            na = ~np.isfinite(np_obj)
             if na.any():  # has some non-finite numbers:
-                np_num = np_num.astype(object)
-                np_num[na] = None
-                return np_num.tolist()  # noqa
-        return num if isinstance(num, (list, tuple)) else np_num.tolist()
+                np_obj = np_obj.astype(object)
+                np_obj[na] = None
+                return np_obj.tolist()  # noqa
+        # there were only finite values:
+        if isinstance(np_obj, (list, tuple)):  # we passed a list/tuple: return it
+            return obj
+        # we passed something else (e.g. a np array):
+        return np_obj.tolist()  # noqa
 
-    # scalars:
-    num = np_num.tolist()
+    # np_obj is scalar:
+    num = np_obj.tolist()
     # define infinity (note that inf == np.inf so the set below is verbose).
     # NaNs will be checked via `x != x` which works also when x is not numeric
     if num != num or num in {inf, -inf, np.inf, -np.inf}:
