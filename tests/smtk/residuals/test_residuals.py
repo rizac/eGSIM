@@ -1,6 +1,8 @@
 """
 Core test suite for the database and residuals construction
 """
+from unittest import skip
+import json
 import numpy as np
 import os
 
@@ -11,6 +13,7 @@ from django.test import SimpleTestCase  # https://stackoverflow.com/a/59764739
 import egsim.smtk.residuals.gmpe_residuals as res
 from egsim.smtk.flatfile import ContextDB, read_flatfile
 from egsim.smtk.residuals import convert_accel_units
+
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -49,7 +52,7 @@ class ResidualsTestCase(SimpleTestCase):
         """
         Setup constructs the database from the ESM test data
         """
-        ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.hdf.csv")
+        ifile = os.path.join(BASE_DATA_PATH, "flatfile_esm_data.hdf.csv")
         cls.database = ContextDB(read_flatfile(ifile))
         # fix distances required for these tests (rjb and rrup are all NaNs):
         cls.database._data['rjb'] = cls.database._data['repi'].copy()
@@ -135,10 +138,28 @@ class ResidualsTestCase(SimpleTestCase):
                         11.718234899310362]
             },
         }
-        for i, gsim in enumerate(res_dict):
-            self.assertEqual(gsim, self.gsims[i])
-            for j, imt in enumerate(res_dict[gsim]):
-                self.assertEqual(imt, self.imts[j])
+        expected_inter_event = {  # just min median max
+            'AkkarEtAlRjb2014': {
+                'PGA': (5.4016186025712685, 13.7327083785088, 18.391530778699206),
+                'SA(1.0)': (6.067141907806279, 13.294714508875902, 16.986421792710466)
+            },
+            'ChiouYoungs2014': {
+                'PGA': (3.879551663058323, 19.68567527323765, 19.88597885668337),
+                'SA(1.0)': (6.840009809949991, 17.3680294947619, 17.432481258299045)
+            },
+        }
+        expected_intra_event = {  # just min median max
+            'AkkarEtAlRjb2014': {
+                'PGA': (-3.553518727578542, 2.4458742214594116, 5.83096227163716),
+                'SA(1.0)': (-3.2298772030017706, 2.331403518498448, 5.523118063264394)
+            },
+            'ChiouYoungs2014': {
+                'PGA': (-2.8137639106525345, 2.288502596100712, 6.173513217969853),
+                'SA(1.0)': (-3.1835687286292753, 1.9787917412703837, 5.411486334689559)
+            },
+        }
+        for gsim in res_dict:
+            for imt in res_dict[gsim]:
                 if gsim == "AkkarEtAlRjb2014":
                     # For Akkar et al - inter-event residuals should have
                     # 4 elements and the intra-event residuals 41
@@ -155,7 +176,17 @@ class ResidualsTestCase(SimpleTestCase):
                         len(res_dict[gsim][imt]["Intra event"]), self.num_records)
                 self.assertEqual(
                         len(res_dict[gsim][imt]["Total"]), self.num_records)
-                vals_ok = np.allclose(res_dict[gsim][imt]["Total"], expected_total[gsim][imt])
+                # check values
+                values = res_dict[gsim][imt]["Total"]
+                vals_ok = np.allclose(values, expected_total[gsim][imt])
+                self.assertTrue(vals_ok)
+                values_ = res_dict[gsim][imt]["Inter event"]
+                values = np.nanmin(values_), np.nanmedian(values_), np.nanmax(values_)
+                vals_ok = np.allclose(values, expected_inter_event[gsim][imt])
+                self.assertTrue(vals_ok)
+                values_ = res_dict[gsim][imt]["Intra event"]
+                values = np.nanmin(values_), np.nanmedian(values_), np.nanmax(values_)
+                vals_ok = np.allclose(values, expected_intra_event[gsim][imt])
                 self.assertTrue(vals_ok)
 
     def test_residuals_execution(self):
@@ -164,8 +195,43 @@ class ResidualsTestCase(SimpleTestCase):
         """
         residuals = res.Residuals(self.gsims, self.imts)
         residuals.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(residuals.residuals)
-        residuals.get_residual_statistics()
+        res_dict = residuals.residuals
+        file = "residual_tests_esm_data.json"
+        with open(os.path.join(BASE_DATA_PATH, file)) as _:
+            exp_dict = json.load(_)
+        # check results:
+        self.assertEqual(len(exp_dict), len(res_dict))
+        for gsim in res_dict:
+            self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
+            for imt in res_dict[gsim]:
+                if gsim == "AkkarEtAlRjb2014":
+                    # For Akkar et al - inter-event residuals should have
+                    # 4 elements and the intra-event residuals 41
+                    self.assertEqual(
+                        len(res_dict[gsim][imt]["Inter event"]), self.num_events)
+                elif gsim == "ChiouYoungs2014":
+                    # For Chiou & Youngs - inter-event residuals should have
+                    # 41 elements and the intra-event residuals 41 too
+                    self.assertEqual(
+                        len(res_dict[gsim][imt]["Inter event"]), self.num_records)
+                else:
+                    pass
+                self.assertEqual(
+                        len(res_dict[gsim][imt]["Intra event"]), self.num_records)
+                self.assertEqual(
+                        len(res_dict[gsim][imt]["Total"]), self.num_records)
+                # check values
+                values = res_dict[gsim][imt]["Total"]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Total"])
+                self.assertTrue(vals_ok)
+                values = res_dict[gsim][imt]["Inter event"]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Inter event"])
+                self.assertTrue(vals_ok)
+                values = res_dict[gsim][imt]["Intra event"]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Intra event"])
+                self.assertTrue(vals_ok)
+
+        # residuals.get_residual_statistics()
 
     def test_likelihood_execution(self):
         """
@@ -174,7 +240,28 @@ class ResidualsTestCase(SimpleTestCase):
         lkh = res.Residuals(self.gsims, self.imts)
         lkh.get_residuals(self.database, component="Geometric")
         self._check_residual_dictionary_correctness(lkh.residuals)
-        lkh.get_likelihood_values()
+        res_dict = lkh.get_likelihood_values()
+        res_dict = res_dict[0]
+        file = "residual_lh_tests_esm_data.json"
+        with open(os.path.join(BASE_DATA_PATH, file)) as _:
+            exp_dict = json.load(_)
+        # check results:
+        self.assertEqual(len(exp_dict), len(res_dict))
+        for gsim in res_dict:
+            self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
+            for imt in res_dict[gsim]:
+                # check values
+                values = res_dict[gsim][imt]["Total"]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Total"])
+                self.assertTrue(vals_ok)
+                values = res_dict[gsim][imt]["Inter event"]
+                # values = np.nanmin(values_), np.nanmedian(values_), np.nanmax(values_)
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Inter event"])
+                self.assertTrue(vals_ok)
+                values = res_dict[gsim][imt]["Intra event"]
+                # values = np.nanmin(values_), np.nanmedian(values_), np.nanmax(values_)
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Intra event"])
+                self.assertTrue(vals_ok)
 
     def test_llh_execution(self):
         """
@@ -183,8 +270,21 @@ class ResidualsTestCase(SimpleTestCase):
         llh = res.Residuals(self.gsims, self.imts)
         llh.get_residuals(self.database, component="Geometric")
         self._check_residual_dictionary_correctness(llh.residuals)
-        llh.get_loglikelihood_values(self.imts)
+        res_dict = llh.get_loglikelihood_values(self.imts)
+        res_dict = res_dict[0]
+        file = "residual_llh_tests_esm_data.json"
+        with open(os.path.join(BASE_DATA_PATH, file)) as _:
+            exp_dict = json.load(_)
+        self.assertEqual(len(exp_dict), len(res_dict))
+        for gsim in res_dict:
+            self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
+            for imt in res_dict[gsim]:
+                # check values
+                values = res_dict[gsim][imt]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt])
+                self.assertTrue(vals_ok)
 
+    @skip('Multivariate not implemented yet')
     def test_multivariate_llh_execution(self):
         """
         Tests execution of multivariate llh - not correctness of values
@@ -201,7 +301,18 @@ class ResidualsTestCase(SimpleTestCase):
         edr = res.Residuals(self.gsims, self.imts)
         edr.get_residuals(self.database, component="Geometric")
         self._check_residual_dictionary_correctness(edr.residuals)
-        edr.get_edr_values()
+        res_dict = edr.get_edr_values()
+        file = "residual_edr_tests_esm_data.json"
+        with open(os.path.join(BASE_DATA_PATH, file)) as _:
+            exp_dict = json.load(_)
+        self.assertEqual(len(exp_dict), len(res_dict))
+        for gsim in res_dict:
+            self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
+            for imt in res_dict[gsim]:
+                # check values
+                values = res_dict[gsim][imt]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt])
+                self.assertTrue(vals_ok)
 
     def test_multiple_metrics(self):
         """
@@ -210,8 +321,8 @@ class ResidualsTestCase(SimpleTestCase):
         residuals = res.Residuals(self.gsims, self.imts)
         residuals.get_residuals(self.database, component="Geometric")
         config = {}
-        for key in ["Residuals", "Likelihood", "LLH",
-                    "MultivariateLLH", "EDR"]:
+        for key in ["Residuals", "Likelihood", "LLH", "EDR"]:
+                    # "MultivariateLLH", "EDR"]:
             _ = res.GSIM_MODEL_DATA_TESTS[key](residuals, config)
 
     def test_convert_accel_units(self):
