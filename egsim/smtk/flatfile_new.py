@@ -4,13 +4,13 @@ from datetime import datetime
 from enum import Enum
 from os.path import join, dirname
 import re
+from pandas.core.indexes.numeric import IntegerIndex
 
 from typing import Union, Callable, Any, Sequence
 
 import yaml
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d
 from openquake.hazardlib import imt
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
@@ -527,7 +527,7 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     return flatfile.query(query_expression, **__kwargs)
 
 
-def get_column(flatfile: pd.DataFrame, column: str) -> pd.Series:
+def get_column_values(flatfile: pd.DataFrame, column: str) -> pd.Series:
     """Return a pandas Series from the given flatfile.
     Same as `flatfile[column]` but the returned Series missing values
     might be filled with values from other flatfile columns according to the
@@ -610,196 +610,195 @@ def fill_na(src: Union[None, np.ndarray, pd.Series],
 DEFAULT_MSR = PeerMSR()
 
 
-class ContextDB:
-    """This abstract-like class represents a Database (DB) of data capable of
-    yielding Contexts and Observations suitable for Residual analysis (see
-    argument `ctx_database` of :meth:`gmpe_residuals.Residuals.get_residuals`)
-
-    Concrete subclasses of `ContextDB` must implement three abstract methods
-    (e.g. :class:`smtk.sm_database.GroundMotionDatabase`):
-     - get_event_and_records(self)
-     - update_context(self, ctx, records, nodal_plane_index=1)
-     - get_observations(self, imtx, records, component="Geometric")
-       (which is called only if `imts` is given in :meth:`self.get_contexts`)
-
-    Please refer to the functions docstring for further details
-    """
-
-    def __init__(self, dataframe: pd.DataFrame):
-        """
-        Initializes a new EgsimContextDB.
-
-        :param dataframe: a dataframe representing a flatfile
-        """
-        self._data = dataframe
-        sa_columns_and_periods = ((col, imt.from_string(col.upper()).period)
-                                  for col in self._data.columns
-                                  if col.upper().startswith("SA("))
-        sa_columns_and_periods = sorted(sa_columns_and_periods, key=lambda _: _[1])
-        self.sa_columns = [_[0] for _ in sa_columns_and_periods]
-        self.sa_periods = [_[1] for _ in sa_columns_and_periods]
-
-    def get_contexts(self, nodal_plane_index=1,
-                     imts=None, component="Geometric"):
-        """Return an iterable of Contexts. Each Context is a `dict` with
-        earthquake, sites and distances information (`dict["Ctx"]`)
-        and optionally arrays of observed IMT values (`dict["Observations"]`).
-        See `create_context` for details.
-
-        This is the only method required by
-        :meth:`gmpe_residuals.Residuals.get_residuals`
-        and should not be overwritten only in very specific circumstances.
-        """
-        compute_observations = imts is not None and len(imts)
-        for evt_id, records in self.get_event_and_records():
-            dic = self.create_context(evt_id, records, imts)
-            # ctx = dic['Ctx']
-            # self.update_context(ctx, records, nodal_plane_index)
-            if compute_observations:
-                observations = dic['Observations']
-                for imtx, values in observations.items():
-                    values = self.get_observations(imtx, records, component)
-                    observations[imtx] = np.asarray(values, dtype=float)
-                dic["Num. Sites"] = len(records)
-            # Legacy code??  FIXME: kind of redundant with "Num. Sites" above
-            # dic['Ctx'].sids = np.arange(len(records), dtype=np.uint32)
-            yield dic
-
-    def create_context(self, evt_id, records: pd.DataFrame, imts=None):
-        """Create a new Context `dict`. Objects of this type will be yielded
-        by `get_context`.
-
-        :param evt_id: the earthquake id (e.g. int, or str)
-        :param imts: a list of strings denoting the IMTs to be included in the
-            context. If missing or None, the returned dict **will NOT** have
-            the keys "Observations" and "Num. Sites"
-
-        :return: the dict with keys:
-            ```
-            {
-            'EventID': evt_id,
-            'Ctx: a new :class:`openquake.hazardlib.contexts.RuptureContext`
-            'Observations": dict[str, list] # (each imt in imts mapped to `[]`)
-            'Num. Sites': 0
-            }
-            ```
-            NOTE: Remember 'Observations' and 'Num. Sites' are missing if `imts`
-            is missing, None or an emtpy sequence.
-        """
-        dic = {
-            'EventID': evt_id,
-            'Ctx': EventContext(records)
-        }
-        if imts is not None and len(imts):
-            dic["Observations"] = {imt: [] for imt in imts}  # OrderedDict([(imt, []) for imt in imts])
-            dic["Num. Sites"] = 0
-        return dic
-
-    def get_event_and_records(self):
-        """Yield the tuple (event_id:Any, records:DataFrame)
-
-        where:
-         - `event_id` is a scalar denoting the unique earthquake id, and
-         - `records` are the database records related to the given event: it
-            must be a sequence with given length (i.e., `len(records)` must
-            work) and its elements can be any user-defined data type according
-            to the current user implementations. For instance, `records` can be
-            a pandas DataFrame, or a list of several data types such as `dict`s
-            `h5py` Datasets, `pytables` rows, `django` model instances.
-        """
-        ev_id_name = _EVENT_COLUMNS[0]
-        if ev_id_name not in self._data.columns:
-            self._data[ev_id_name] = get_column(self._data, ev_id_name)
-
-        for ev_id, dfr in  self._data.groupby(ev_id_name):
-            if not dfr.empty:
-                # FIXME: pandas bug? flatfile bug? sometimes dfr is empty, skip
-                yield ev_id, dfr
-
-    def get_observations(self, imtx, records, component="Geometric"):
-        """Return the observed values of the given IMT `imtx` from `records`,
-        as numpy array. This method is not called if `get_contexts`is called
-        with the `imts` argument missing or `None`.
-
-        *IMPORTANT*: IMTs in acceleration units (e.g. PGA, SA) are supposed to
-        return their values in cm/s/s (which should be by convention the unit
-        in which they are stored)
-
-        :param imtx: a string denoting a given Intensity measure type.
-        :param records: sequence (e.g., list, tuple, pandas DataFrame) of records
-            related to a given event (see :meth:`get_event_and_records`)
-
-        :return: a numpy array of observations, the same length of `records`
-        """
-
-        if imtx.lower().startswith("sa("):
-            sa_periods = self.sa_periods
-            target_period = imt.from_string(imtx).period
-            spectrum = np.log10(records[self.sa_columns])
-            # we need to interpolate row wise
-            # build the interpolation function
-            interp = interp1d(sa_periods, spectrum, axis=1)
-            # and interpolate
-            values = 10 ** interp(target_period)
-        else:
-            try:
-                values = records[imtx].values
-            except KeyError:
-                # imtx not found, try ignoring case: first `lower()`, more likely
-                # (IMTs mainly upper case), then `upper()`, otherwise: raise
-                for _ in (imtx.lower() if imtx.lower() != imtx else None,
-                          imtx.upper() if imtx.upper() != imtx else None):
-                    if _ is not None:
-                        try:
-                            values = records[_].values
-                            break
-                        except KeyError:
-                            pass
-                else:
-                    raise ValueError("'%s' is not a recognized IMT" % imtx) from None
-        return values.copy()
-
-
 class EventContext(RuptureContext):
 
-    def __init__(self, flatfile: pd.DataFrame, flatfile_indices: Sequence[int]):
+    def __init__(self, flatfile: pd.DataFrame):
         super().__init__()
-        self._data = flatfile
-        self._indices = flatfile_indices
+        if not isinstance(flatfile.index, IntegerIndex) \
+                or len(pd.unique(flatfile.index)) != len(flatfile.index):
+            raise ValueError('flatfile index should be made of unique integers')
+        self._flatfile = flatfile
 
     def __eq__(self, other):
         assert isinstance(other, EventContext) and \
                self._flatfile is other._flatfile and \
-               np.array_equal(self._flatfile_indices, other._flatfile_indices)
+               np.array_equal(self.record_ids, other.record_ids)
 
     @property
-    def sids(self):
-        return self._data.index
+    def record_ids(self) -> Sequence[int]:
+        """Return the ids (iterable of ints) of the records used to build this context.
+        The returned object is a pandas RangeIndex relative to the source flatfile used,
+        so that the records (flatfile rows) can always be retrieved via
+        `flatfile,loc[record_ids, :]`
+        """
+        return self._flatfile.index
 
     def __getattr__(self, item):
         """Return a non-found Context attribute by searching in the underlying
         flatfile column. Performs some substitutions (columns name alias or NA
         replacements in the values)
         """
-        ff_column = column_alias.get(item, item)
-        series = get_column(self._flatfile, ff_column)
-        if series is None:
+        try:
+            ff_column = column_alias.get(item, item)
+            values = self._flatfile[ff_column].values
+        except KeyError:
             raise AttributeError(item)
-        # we created a new array, or we modified the array filling NA:
-        array_is_modified = series is not self._flatfile.get(ff_column, None)
-        if array_is_modified:
-            # this should prevent other Contexs using the same flatfile to re-caclulate
-            # the column PROVIDED that this code is executed in the same thread/process
-            # for all Contexts
-            self._flatfile[ff_column] = series
-        values = self._flatfile.loc[self._flatfile_indices, ff_column].values  # access underlying np array
         if column_type[ff_column] == ColumnType.rupture_parameter:
             # rupture parameter, return a scalar (note: all values should be the same)
             values = values[0]
         return values
 
-
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
+
+# class ContextDB:
+#     """This abstract-like class represents a Database (DB) of data capable of
+#     yielding Contexts and Observations suitable for Residual analysis (see
+#     argument `ctx_database` of :meth:`gmpe_residuals.Residuals.get_residuals`)
+#
+#     Concrete subclasses of `ContextDB` must implement three abstract methods
+#     (e.g. :class:`smtk.sm_database.GroundMotionDatabase`):
+#      - get_event_and_records(self)
+#      - update_context(self, ctx, records, nodal_plane_index=1)
+#      - get_observations(self, imtx, records, component="Geometric")
+#        (which is called only if `imts` is given in :meth:`self.get_contexts`)
+#
+#     Please refer to the functions docstring for further details
+#     """
+#
+#     def __init__(self, dataframe: pd.DataFrame):
+#         """
+#         Initializes a new EgsimContextDB.
+#
+#         :param dataframe: a dataframe representing a flatfile
+#         """
+#         self._data = dataframe
+#         sa_columns_and_periods = ((col, imt.from_string(col.upper()).period)
+#                                   for col in self._data.columns
+#                                   if col.upper().startswith("SA("))
+#         sa_columns_and_periods = sorted(sa_columns_and_periods, key=lambda _: _[1])
+#         self.sa_columns = [_[0] for _ in sa_columns_and_periods]
+#         self.sa_periods = [_[1] for _ in sa_columns_and_periods]
+#
+#     def get_contexts(self, nodal_plane_index=1,
+#                      imts=None, component="Geometric"):
+#         """Return an iterable of Contexts. Each Context is a `dict` with
+#         earthquake, sites and distances information (`dict["Ctx"]`)
+#         and optionally arrays of observed IMT values (`dict["Observations"]`).
+#         See `create_context` for details.
+#
+#         This is the only method required by
+#         :meth:`gmpe_residuals.Residuals.get_residuals`
+#         and should not be overwritten only in very specific circumstances.
+#         """
+#         compute_observations = imts is not None and len(imts)
+#         for evt_id, records in self.get_event_and_records():
+#             dic = self.create_context(evt_id, records, imts)
+#             # ctx = dic['Ctx']
+#             # self.update_context(ctx, records, nodal_plane_index)
+#             if compute_observations:
+#                 observations = dic['Observations']
+#                 for imtx, values in observations.items():
+#                     values = self.get_observations(imtx, records, component)
+#                     observations[imtx] = np.asarray(values, dtype=float)
+#                 dic["Num. Sites"] = len(records)
+#             # Legacy code??  FIXME: kind of redundant with "Num. Sites" above
+#             # dic['Ctx'].sids = np.arange(len(records), dtype=np.uint32)
+#             yield dic
+#
+#     def create_context(self, evt_id, records: pd.DataFrame, imts=None):
+#         """Create a new Context `dict`. Objects of this type will be yielded
+#         by `get_context`.
+#
+#         :param evt_id: the earthquake id (e.g. int, or str)
+#         :param imts: a list of strings denoting the IMTs to be included in the
+#             context. If missing or None, the returned dict **will NOT** have
+#             the keys "Observations" and "Num. Sites"
+#
+#         :return: the dict with keys:
+#             ```
+#             {
+#             'EventID': evt_id,
+#             'Ctx: a new :class:`openquake.hazardlib.contexts.RuptureContext`
+#             'Observations": dict[str, list] # (each imt in imts mapped to `[]`)
+#             'Num. Sites': 0
+#             }
+#             ```
+#             NOTE: Remember 'Observations' and 'Num. Sites' are missing if `imts`
+#             is missing, None or an emtpy sequence.
+#         """
+#         dic = {
+#             'EventID': evt_id,
+#             'Ctx': EventContext(records)
+#         }
+#         if imts is not None and len(imts):
+#             dic["Observations"] = {imt: [] for imt in imts}  # OrderedDict([(imt, []) for imt in imts])
+#             dic["Num. Sites"] = 0
+#         return dic
+#
+#     def get_event_and_records(self):
+#         """Yield the tuple (event_id:Any, records:DataFrame)
+#
+#         where:
+#          - `event_id` is a scalar denoting the unique earthquake id, and
+#          - `records` are the database records related to the given event: it
+#             must be a sequence with given length (i.e., `len(records)` must
+#             work) and its elements can be any user-defined data type according
+#             to the current user implementations. For instance, `records` can be
+#             a pandas DataFrame, or a list of several data types such as `dict`s
+#             `h5py` Datasets, `pytables` rows, `django` model instances.
+#         """
+#         ev_id_name = _EVENT_COLUMNS[0]
+#         if ev_id_name not in self._data.columns:
+#             self._data[ev_id_name] = get_column(self._data, ev_id_name)
+#
+#         for ev_id, dfr in  self._data.groupby(ev_id_name):
+#             if not dfr.empty:
+#                 # FIXME: pandas bug? flatfile bug? sometimes dfr is empty, skip
+#                 yield ev_id, dfr
+#
+#     def get_observations(self, imtx, records, component="Geometric"):
+#         """Return the observed values of the given IMT `imtx` from `records`,
+#         as numpy array. This method is not called if `get_contexts`is called
+#         with the `imts` argument missing or `None`.
+#
+#         *IMPORTANT*: IMTs in acceleration units (e.g. PGA, SA) are supposed to
+#         return their values in cm/s/s (which should be by convention the unit
+#         in which they are stored)
+#
+#         :param imtx: a string denoting a given Intensity measure type.
+#         :param records: sequence (e.g., list, tuple, pandas DataFrame) of records
+#             related to a given event (see :meth:`get_event_and_records`)
+#
+#         :return: a numpy array of observations, the same length of `records`
+#         """
+#
+#         if imtx.lower().startswith("sa("):
+#             sa_periods = self.sa_periods
+#             target_period = imt.from_string(imtx).period
+#             spectrum = np.log10(records[self.sa_columns])
+#             # we need to interpolate row wise
+#             # build the interpolation function
+#             interp = interp1d(sa_periods, spectrum, axis=1)
+#             # and interpolate
+#             values = 10 ** interp(target_period)
+#         else:
+#             try:
+#                 values = records[imtx].values
+#             except KeyError:
+#                 # imtx not found, try ignoring case: first `lower()`, more likely
+#                 # (IMTs mainly upper case), then `upper()`, otherwise: raise
+#                 for _ in (imtx.lower() if imtx.lower() != imtx else None,
+#                           imtx.upper() if imtx.upper() != imtx else None):
+#                     if _ is not None:
+#                         try:
+#                             values = records[_].values
+#                             break
+#                         except KeyError:
+#                             pass
+#                 else:
+#                     raise ValueError("'%s' is not a recognized IMT" % imtx) from None
+#         return values.copy()
+
 
     # def update_context(self, ctx, records, nodal_plane_index=1):
     #     """Update the attributes of the earthquake-based context `ctx` with
