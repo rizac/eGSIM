@@ -18,7 +18,7 @@ from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
 from .. import check_gsim_list
-from ..flatfile_new import get_column, _EVENT_COLUMNS, EventContext
+from ..flatfile_new import get_column_values, _EVENT_COLUMNS, EventContext, column_alias
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -54,7 +54,7 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     # check event id column and compute ea new one if possible:
     ev_id_name = _EVENT_COLUMNS[0]  # FIXME: move variable?
     if ev_id_name not in flatfile.columns:
-        flatfile[ev_id_name] = get_column(flatfile, ev_id_name)
+        flatfile[ev_id_name] = get_column_values(flatfile, ev_id_name)
 
     for ev_id, dfr in flatfile.groupby(ev_id_name):
         if not dfr.empty:
@@ -70,12 +70,53 @@ def get_residuals(gsim_names: list[str], imt_names: list[str],
     DataFrame from `flatfile` with the column filled with residuals
     """
     gsims = check_gsim_list(gsim_names)
+    flatfile = prepare_flatfile_for_residuals(flatfile, gsims.values())
     ev_columns:list[str] = _EVENT_COLUMNS[:1] if _EVENT_COLUMNS[0] in flatfile.columns \
         else _EVENT_COLUMNS[1:]
-    expected = flatfile[ev_columns].copy()
+    expected = calculate_expected_motions(gsim_names, imt_names, flatfile)
+    new_flatfile = pd.concat([flatfile[ev_columns], expected], axis="columns")
+    new_flatfile = calculate_residuals(gsims, imt_names, new_flatfile, normalise)
+    if compute_lh:
+        return get_likelihood_from_residuals(gsim_names, imt_names, new_flatfile)
+    return new_flatfile
+
+
+def prepare_flatfile_for_residuals(flatfile: pd.DataFrame, gsims: Sequence[GMPE]):
+    required = {'event_id',}
+    # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
+    for gsim in gsims:
+        # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
+        required.update(gsim.REQUIRES_DISTANCES | {'rrup'})
+        required.update(gsim.REQUIRES_RUPTURE_PARAMETERS or [])
+        required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
+
+    needs_copy = True
+    for attr in required:
+        ff_column = column_alias.get(attr, attr)
+        series = get_column_values(flatfile, ff_column)
+        if series is None:
+            continue
+        # we created a new array, or we modified the array filling NA:
+        array_is_modified = series is not flatfile.get(ff_column, None)
+        if array_is_modified:
+            if needs_copy:
+                flatfile = flatfile.copy()
+                needs_copy = False
+            # this should prevent other Context using the same flatfile to re-calculate
+            # the column, PROVIDED that this code is executed in the same thread/process
+            # for all Contexts
+            flatfile[ff_column] = series
+
+    return flatfile
+
+
+def calculate_expected_motions(gsim_names: list[str], imt_names: list[str],
+                               flatfile: pd.DataFrame) -> pd.DataFrame:
+    gsims = check_gsim_list(gsim_names)
+    expected:pd.DataFrame = pd.DataFrame(index=flatfile.index)
     for context in yield_event_contexts(flatfile):
         # Get the expected ground motions by event
-        ev_expected = calculate_expected_motions(gsims, imt_names, context)
+        ev_expected = calculate_expected_motions_for_event(gsims, imt_names, context)
         # Put the above in the expected motions, index based:
         for col in ev_expected.columns:
             if col not in expected.columns:  # initialize column if needed
@@ -84,18 +125,15 @@ def get_residuals(gsim_names: list[str], imt_names: list[str],
         expected.loc[ev_expected.index, ev_expected.columns] = \
             ev_expected[ev_expected.columns]
 
-    new_flatfile = calculate_residuals(gsims, imt_names, expected, normalise)
-    if compute_lh:
-        return get_likelihood_from_residuals(gsim_names, imt_names, new_flatfile)
-    return new_flatfile
+    return expected
 
 
-def calculate_expected_motions(gsims: Sequence[GMPE], imt_names: Sequence[str],
-                               ctx: EventContext) -> pd.DataFrame:
+def calculate_expected_motions_for_event(gsims: Sequence[GMPE], imt_names: Sequence[str],
+                                         ctx: EventContext) -> pd.DataFrame:
     """
     Calculate the expected ground motions from the context
     """
-    expected:pd.DataFrame = pd.DataFrame(index=ctx.index)
+    expected:pd.DataFrame = pd.DataFrame(index=ctx.sids)
     label_of = {
         const.StdDev.TOTAL: labels.total,
         const.StdDev.INTER_EVENT: labels.inter_ev,
