@@ -54,6 +54,9 @@ def _check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
     except KeyError:
         raise ValueError(f"Invalid type: {column['type']}")
 
+    if column['type'] == ColumnType.intensity_measure.name and 'alias' in column:
+        raise ValueError(f"Intensity measure columns cannot have an alias")
+
     # perform some check on the data type consistencies:
     bounds_are_given = 'bounds' in column
     default_is_given = 'default' in column
@@ -171,25 +174,16 @@ with open(_ff_metadata_path) as fpt:
             column_alias[props['alias']] = name
 
 
-
-def get_imt(imt_name: str, ignore_case=False,   # FIXME is it USED?
-            accept_sa_without_period=False) -> Union[str, None]:
-    """Return the OpenQuake formatted IMT CLASS name from string, or None if col does not
-    denote a IMT name.
-    Wit ignore_case=True:
-    "sa(0.1)"  and "SA(0.1)" will be returned as "SA(0.1)"
-    "pga"  and "pGa" will be returned as "PGA"
-    With ignore_case=False, the comparison is strict:
-    "sa(0.1)" -> None
-    """
-    if ignore_case:
-        imt_name = imt_name.upper()
-    if accept_sa_without_period and imt_name == 'SA':
-        return 'SA'
-    try:
-        return imt.imt2tup(imt_name)[0]
-    except Exception as _:  # noqa
-        return None
+# def is_imt(column_name: str, require_sa_with_periods=True):
+#     if column_type[column_name] != ColumnType.intensity_measure.name:
+#         if column_name.startswith('SA('):
+#             try:
+#                  imt.from_string(column_name)
+#                  return True
+#             except Exception:  # noqa
+#                 pass
+#         return False
+#     return True if column_name != 'SA' or not require_sa_with_periods else False
 
 
 ############
@@ -210,53 +204,6 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
     return read_csv(filepath_or_buffer, sep=sep, dtype=column_dtype,
                     defaults=column_default,
                     required=column_required)
-
-
-# FIXME: remove columns checks will be done when reading the flatfile and
-# computing the residuals
-
-# def _check_flatfile(flatfile: pd.DataFrame):
-#     """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
-#     Modifications will be done inplace
-#     """
-#     ff_columns = set(flatfile.columns)
-#
-#     ev_col, ev_cols = _EVENT_COLUMNS[0], _EVENT_COLUMNS[1:]
-#     if get_column(flatfile, ev_col) is None:
-#         raise ValueError(f'Missing required column: {ev_col} or ' + ", ".join(ev_cols))
-#
-#     st_col, st_cols = _STATION_COLUMNS[0], _STATION_COLUMNS[1:]
-#     if get_column(flatfile, st_col) is None:
-#         # raise ValueError(f'Missing required column: {st_col} or ' + ", ".join(st_cols))
-#         # do not check for station id (no operation requiring it implemented yet):
-#         pass
-#
-#     # check IMTs (but allow mixed case, such as 'pga'). So first rename:
-#     col2rename = {}
-#     no_imt_col = True
-#     imt_invalid_dtype = []
-#     for col in ff_columns:
-#         imtx = get_imt(col, ignore_case=True)
-#         if imtx is None:
-#             continue
-#         no_imt_col = False
-#         if not str(flatfile[col].dtype).lower().startswith('float'):
-#             imt_invalid_dtype.append(col)
-#         if imtx != col:
-#             col2rename[col] = imtx
-#             # do we actually have the imt provided? (conflict upper/lower case):
-#             if imtx in ff_columns:
-#                 raise ValueError(f'Column conflict, please rename: '
-#                                  f'"{col}" vs. "{imtx}"')
-#     # ok but regardless of all, do we have imt columns at all?
-#     if no_imt_col:
-#         raise ValueError(f"No IMT column found (e.g. 'PGA', 'PGV', 'SA(0.1)')")
-#     if imt_invalid_dtype:
-#         raise ValueError(f"Invalid data type ('float' required) in IMT column(s): "
-#                          f"{', '.join(imt_invalid_dtype)}")
-#     # rename imts:
-#     if col2rename:
-#         flatfile.rename(columns=col2rename, inplace=True)
 
 
 missing_values = ("", "null", "NULL", "None",
@@ -537,6 +484,7 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     return flatfile.query(query_expression, **__kwargs)
 
 
+
 ##################################
 # Residuals calculation function #
 ##################################
@@ -664,13 +612,79 @@ class EventContext(RuptureContext):
             values = self._flatfile[item].values
         except KeyError:
             raise MissingColumnError(item)
-        if self.col_type[item] == ColumnType.rupture_parameter:
+        if self.col_type[item] == ColumnType.rupture_parameter.name:
             # rupture parameter, return a scalar (note: all values should be the same)
             values = values[0]
         return values
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
+
+# FIXME: remove columns checks will be done when reading the flatfile and
+# computing the residuals
+
+# def _check_flatfile(flatfile: pd.DataFrame):
+#     """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
+#     Modifications will be done inplace
+#     """
+#     ff_columns = set(flatfile.columns)
+#
+#     ev_col, ev_cols = _EVENT_COLUMNS[0], _EVENT_COLUMNS[1:]
+#     if get_column(flatfile, ev_col) is None:
+#         raise ValueError(f'Missing required column: {ev_col} or ' + ", ".join(ev_cols))
+#
+#     st_col, st_cols = _STATION_COLUMNS[0], _STATION_COLUMNS[1:]
+#     if get_column(flatfile, st_col) is None:
+#         # raise ValueError(f'Missing required column: {st_col} or ' + ", ".join(st_cols))
+#         # do not check for station id (no operation requiring it implemented yet):
+#         pass
+#
+#     # check IMTs (but allow mixed case, such as 'pga'). So first rename:
+#     col2rename = {}
+#     no_imt_col = True
+#     imt_invalid_dtype = []
+#     for col in ff_columns:
+#         imtx = get_imt(col, ignore_case=True)
+#         if imtx is None:
+#             continue
+#         no_imt_col = False
+#         if not str(flatfile[col].dtype).lower().startswith('float'):
+#             imt_invalid_dtype.append(col)
+#         if imtx != col:
+#             col2rename[col] = imtx
+#             # do we actually have the imt provided? (conflict upper/lower case):
+#             if imtx in ff_columns:
+#                 raise ValueError(f'Column conflict, please rename: '
+#                                  f'"{col}" vs. "{imtx}"')
+#     # ok but regardless of all, do we have imt columns at all?
+#     if no_imt_col:
+#         raise ValueError(f"No IMT column found (e.g. 'PGA', 'PGV', 'SA(0.1)')")
+#     if imt_invalid_dtype:
+#         raise ValueError(f"Invalid data type ('float' required) in IMT column(s): "
+#                          f"{', '.join(imt_invalid_dtype)}")
+#     # rename imts:
+#     if col2rename:
+#         flatfile.rename(columns=col2rename, inplace=True)
+
+
+# def get_imt(imt_name: str, ignore_case=False,   # FIXME is it USED?
+#             accept_sa_without_period=False) -> Union[str, None]:
+#     """Return the OpenQuake formatted IMT CLASS name from string, or None if col does not
+#     denote a IMT name.
+#     Wit ignore_case=True:
+#     "sa(0.1)"  and "SA(0.1)" will be returned as "SA(0.1)"
+#     "pga"  and "pGa" will be returned as "PGA"
+#     With ignore_case=False, the comparison is strict:
+#     "sa(0.1)" -> None
+#     """
+#     if ignore_case:
+#         imt_name = imt_name.upper()
+#     if accept_sa_without_period and imt_name == 'SA':
+#         return 'SA'
+#     try:
+#         return imt.imt2tup(imt_name)[0]
+#     except Exception as _:  # noqa
+#         return None
 
 
 # class ContextDB:
