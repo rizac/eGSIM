@@ -6,7 +6,7 @@ from os.path import join, dirname
 import re
 from pandas.core.indexes.numeric import IntegerIndex
 
-from typing import Union, Callable, Any, Sequence
+from typing import Union, Callable, Any
 
 import yaml
 import numpy as np
@@ -118,11 +118,12 @@ def _parse_bounds_str(bounds_string, py_dtype):
         try:
             value = yaml.safe_load(chunk[len(symbol):])
         except Exception:
-            raise ValueError(f'Invalid chunk "{chunk[len(symbol):]}"')
+            raise ValueError(f'Invalid bound: {chunk[len(symbol):]}')
         if py_dtype is float and isinstance(value, int):
             value = float(value)
         if not isinstance(value, py_dtype):
-            raise ValueError(f'{str(value)} does not match {str(py_dtype)}')
+            raise ValueError(f'Invalid bound type (expected {str(py_dtype)}): '
+                             f'{str(value)}')
         bounds.append([symbol, value])
     return bounds
 
@@ -132,10 +133,12 @@ _ff_metadata_path = join(dirname(__file__), 'flatfile-metadata.yaml')
 
 # global variables (initialized below from YAML file):
 column_type: dict[str, str] = {} # flatfile column -> one of ColumnType names
+# the above dict contains ALL defined flatfile columns as keys. All other globals
+# below do not assure that (see code below)
 column_dtype: dict[str, Union[str, pd.CategoricalDtype]] = {} # flatfile column -> data type name
 column_default: dict[str, Any] = {} # flatfile column -> default value when missing
 column_required: set[str] = set() # required flatfile column names
-column_alias: dict[str, str] = {} # OpenQuake parameter name -> flatfile column name
+column_alias: dict[str, str] = {} # Gsim required attr. name -> flatfile column name
 column_help: dict[str, str] ={}  # flatfile column -> Column type
 
 
@@ -146,6 +149,9 @@ with open(_ff_metadata_path) as fpt:
             props = _check_column_metadata(props)
         except Exception as exc:
             raise ValueError(f'Error in metadata for column "{name}": {str(exc)}')
+        if name in column_type:
+            raise ValueError(f'Error in metadata for column "{name}": multiple '
+                             f'instances of the column provided')
         column_type[name] = props['type']
         if props.get('help', ''):
             column_help[name] = props['help']
@@ -156,10 +162,17 @@ with open(_ff_metadata_path) as fpt:
         if props.get('required', False):
             column_required.add(name)
         if 'alias' in props:
+            if props['alias'] in column_type:
+                raise ValueError(f'Error in metadata for column "{name}": alias '
+                                 f"'{props['alias']}' already defined as column name")
+            if props['alias'] in column_alias:
+                raise ValueError(f'Error in metadata for column "{name}": alias '
+                                 f"'{props['alias']}' already defined")
             column_alias[props['alias']] = name
 
 
-def get_imt(imt_name: str, ignore_case=False,
+
+def get_imt(imt_name: str, ignore_case=False,   # FIXME is it USED?
             accept_sa_without_period=False) -> Union[str, None]:
     """Return the OpenQuake formatted IMT CLASS name from string, or None if col does not
     denote a IMT name.
@@ -194,61 +207,56 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
     """
-    flatfile = read_csv(filepath_or_buffer, sep=sep, dtype=column_dtype,
-                        defaults=column_default,
-                        required=column_required)
-    _check_flatfile(flatfile)
-
-    return flatfile
+    return read_csv(filepath_or_buffer, sep=sep, dtype=column_dtype,
+                    defaults=column_default,
+                    required=column_required)
 
 
-_EVENT_COLUMNS = ['event_id', 'event_latitude', 'event_longitude', 'event_depth',
-                  'event_time']
-_STATION_COLUMNS = ['station_id', 'station_latitude', 'station_longitude']
+# FIXME: remove columns checks will be done when reading the flatfile and
+# computing the residuals
 
-
-def _check_flatfile(flatfile: pd.DataFrame):
-    """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
-    Modifications will be done inplace
-    """
-    ff_columns = set(flatfile.columns)
-
-    ev_col, ev_cols = _EVENT_COLUMNS[0], _EVENT_COLUMNS[1:]
-    if get_column(flatfile, ev_col) is None:
-        raise ValueError(f'Missing required column: {ev_col} or ' + ", ".join(ev_cols))
-
-    st_col, st_cols = _STATION_COLUMNS[0], _STATION_COLUMNS[1:]
-    if get_column(flatfile, st_col) is None:
-        # raise ValueError(f'Missing required column: {st_col} or ' + ", ".join(st_cols))
-        # do not check for station id (no operation requiring it implemented yet):
-        pass
-
-    # check IMTs (but allow mixed case, such as 'pga'). So first rename:
-    col2rename = {}
-    no_imt_col = True
-    imt_invalid_dtype = []
-    for col in ff_columns:
-        imtx = get_imt(col, ignore_case=True)
-        if imtx is None:
-            continue
-        no_imt_col = False
-        if not str(flatfile[col].dtype).lower().startswith('float'):
-            imt_invalid_dtype.append(col)
-        if imtx != col:
-            col2rename[col] = imtx
-            # do we actually have the imt provided? (conflict upper/lower case):
-            if imtx in ff_columns:
-                raise ValueError(f'Column conflict, please rename: '
-                                 f'"{col}" vs. "{imtx}"')
-    # ok but regardless of all, do we have imt columns at all?
-    if no_imt_col:
-        raise ValueError(f"No IMT column found (e.g. 'PGA', 'PGV', 'SA(0.1)')")
-    if imt_invalid_dtype:
-        raise ValueError(f"Invalid data type ('float' required) in IMT column(s): "
-                         f"{', '.join(imt_invalid_dtype)}")
-    # rename imts:
-    if col2rename:
-        flatfile.rename(columns=col2rename, inplace=True)
+# def _check_flatfile(flatfile: pd.DataFrame):
+#     """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
+#     Modifications will be done inplace
+#     """
+#     ff_columns = set(flatfile.columns)
+#
+#     ev_col, ev_cols = _EVENT_COLUMNS[0], _EVENT_COLUMNS[1:]
+#     if get_column(flatfile, ev_col) is None:
+#         raise ValueError(f'Missing required column: {ev_col} or ' + ", ".join(ev_cols))
+#
+#     st_col, st_cols = _STATION_COLUMNS[0], _STATION_COLUMNS[1:]
+#     if get_column(flatfile, st_col) is None:
+#         # raise ValueError(f'Missing required column: {st_col} or ' + ", ".join(st_cols))
+#         # do not check for station id (no operation requiring it implemented yet):
+#         pass
+#
+#     # check IMTs (but allow mixed case, such as 'pga'). So first rename:
+#     col2rename = {}
+#     no_imt_col = True
+#     imt_invalid_dtype = []
+#     for col in ff_columns:
+#         imtx = get_imt(col, ignore_case=True)
+#         if imtx is None:
+#             continue
+#         no_imt_col = False
+#         if not str(flatfile[col].dtype).lower().startswith('float'):
+#             imt_invalid_dtype.append(col)
+#         if imtx != col:
+#             col2rename[col] = imtx
+#             # do we actually have the imt provided? (conflict upper/lower case):
+#             if imtx in ff_columns:
+#                 raise ValueError(f'Column conflict, please rename: '
+#                                  f'"{col}" vs. "{imtx}"')
+#     # ok but regardless of all, do we have imt columns at all?
+#     if no_imt_col:
+#         raise ValueError(f"No IMT column found (e.g. 'PGA', 'PGV', 'SA(0.1)')")
+#     if imt_invalid_dtype:
+#         raise ValueError(f"Invalid data type ('float' required) in IMT column(s): "
+#                          f"{', '.join(imt_invalid_dtype)}")
+#     # rename imts:
+#     if col2rename:
+#         flatfile.rename(columns=col2rename, inplace=True)
 
 
 missing_values = ("", "null", "NULL", "None",
@@ -308,7 +316,7 @@ def read_csv(filepath_or_buffer: str,
     if sep is None:
         sep = _infer_csv_sep(filepath_or_buffer)
     kwargs['sep'] = sep
-    datetime_columns = kwargs.setdefault('parse_dates', [])
+    datetime_columns = set(kwargs.pop('parse_dates', []))
 
     # initialize the defaults dict if None and needs to be populated:
     if defaults is None:
@@ -323,9 +331,9 @@ def read_csv(filepath_or_buffer: str,
     # put here:
     post_dtype = {}
     # `dtype` entries that can be passed to `pd.read_csv` ('category', 'str', 'datetime')
-    # will be put here:
+    # will be put here (or in `datetime_columns`):
     pre_dtype = {}
-    # Also convert categorical dtypes into their categories dtype, and put categorical data
+    # Also, convert categorical dtypes into their categories dtype, and put categorical data
     # in a separate dict
     categorical_dtypes = {}
     for col, col_dtype in dtype.items():
@@ -352,17 +360,19 @@ def read_csv(filepath_or_buffer: str,
             # and their string repr (col_dtype_name) handled "normally" few lines below:
             col_dtype = col_dtype_name
 
-        if col_dtype in (ColumnDtype.str.name, 'category'):
+        if col_dtype == 'category':
+            categorical_dtypes[col] = dtype[col]
+        elif col_dtype == ColumnDtype.str.name:
             pre_dtype[col] = dtype[col]
         elif col_dtype == ColumnDtype.datetime.name:
-            if col not in datetime_columns:
-                datetime_columns.append(col)
+            datetime_columns.add(col)
         else:
             post_dtype[col] = col_dtype
 
     # Read flatfile:
     try:
-        dfr = pd.read_csv(filepath_or_buffer, dtype=pre_dtype, usecols=usecols, **kwargs)
+        dfr = pd.read_csv(filepath_or_buffer, dtype=pre_dtype, usecols=usecols,
+                          parse_dates=list(datetime_columns), **kwargs)
     except ValueError as exc:
         raise ValueError(f'Error reading the flatfile: {str(exc)}')
 
@@ -527,20 +537,24 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     return flatfile.query(query_expression, **__kwargs)
 
 
-def get_column_values(flatfile: pd.DataFrame, column: str) -> pd.Series:
-    """Return a pandas Series from the given flatfile.
-    Same as `flatfile[column]` but the returned Series missing values
-    might be filled with values from other flatfile columns according to the
-    substitution rules implemented here
+##################################
+# Residuals calculation function #
+##################################
+
+
+def prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
+    """Modify inplace the given flatfile to contain a column named
+    `att_name` and be compliant with the specified Gsim required attribute.
+    If the input `flatfile` does not have a column `att_name`, several rules -
+    documented in the metadata YAML file - are applied to try to infer the column
+    values (e.g., rename an existing column whose name is an `att_name` alias, fill
+    missing values from functions or other columns).
+    Eventually, if the column `att_name` cannot be set on `flatfile`, this function
+    raises :ref:`MissingColumn` error.
     """
+    column = column_alias.get(att_name, att_name)
     series = flatfile.get(column)  # -> None if column not found
-    if column == _EVENT_COLUMNS[0] and series is None and \
-            set(_EVENT_COLUMNS[1:]).issubset(flatfile.columns):
-        series = flatfile.groupby(list(_EVENT_COLUMNS[1:])).ngroup()
-    elif column == _STATION_COLUMNS[0] and series is None and \
-            set(_STATION_COLUMNS[1:]).issubset(flatfile.columns):
-        series = flatfile.groupby(list(_STATION_COLUMNS[1:])).ngroup()
-    elif column == 'depth_top_of_rupture':
+    if column == 'depth_top_of_rupture':
         series = fill_na(flatfile.get('event_depth'), series)
     elif column == 'rupture_width':
         # Use the PeerMSR to define the area and assuming an aspect ratio
@@ -586,7 +600,19 @@ def get_column_values(flatfile: pd.DataFrame, column: str) -> pd.Series:
         series = pd.Series(np.full(len(flatfile), fill_value=False))
     elif column == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
-    return series
+    if series is None:
+        raise MissingColumnError(att_name)
+    if column != att_name:
+        flatfile.rename(columns={column: att_name}, inplace=True)
+    if series is not flatfile.get(column):
+        flatfile[column] = series
+
+
+class MissingColumnError(AttributeError):
+
+    def __init__(self, gsim_att_name):
+        super().__init__(f'Missing flatfile column '
+                         f'"{column_alias.get(gsim_att_name, gsim_att_name)}"')
 
 
 def fill_na(src: Union[None, np.ndarray, pd.Series],
@@ -603,19 +629,16 @@ def fill_na(src: Union[None, np.ndarray, pd.Series],
     return dest
 
 
-#######################################
-# ContextDB for Residuals calculation #
-#######################################
-
 DEFAULT_MSR = PeerMSR()
 
 
 class EventContext(RuptureContext):
+    # Increase `column_type` including also aliases (gsim required attributes) as keys:
+    col_type = {**column_type, **{a : column_type[c] for a, c in column_alias.items()}}
 
     def __init__(self, flatfile: pd.DataFrame):
         super().__init__()
-        if not isinstance(flatfile.index, IntegerIndex) \
-                or len(pd.unique(flatfile.index)) != len(flatfile.index):
+        if not isinstance(flatfile.index, IntegerIndex):
             raise ValueError('flatfile index should be made of unique integers')
         self._flatfile = flatfile
 
@@ -625,30 +648,30 @@ class EventContext(RuptureContext):
                np.array_equal(self.record_ids, other.record_ids)
 
     @property
-    def record_ids(self) -> Sequence[int]:
-        """Return the ids (iterable of ints) of the records used to build this context.
-        The returned object is a pandas RangeIndex relative to the source flatfile used,
-        so that the records (flatfile rows) can always be retrieved via
-        `flatfile,loc[record_ids, :]`
+    def record_ids(self) -> IntegerIndex:
+        """Return the ids (iterable of integers) of the records used to build this
+        context. The returned pandas `IntegerIndex` must have unique values so that
+        the records (flatfile rows) can always be retrieved from the source flatfile via
+        `flatfile.loc[self.record_ids, :]`
         """
         return self._flatfile.index
 
     def __getattr__(self, item):
         """Return a non-found Context attribute by searching in the underlying
-        flatfile column. Performs some substitutions (columns name alias or NA
-        replacements in the values)
+        flatfile column. Raises AttributeError (as usual) if `item` is not found
         """
         try:
-            ff_column = column_alias.get(item, item)
-            values = self._flatfile[ff_column].values
+            values = self._flatfile[item].values
         except KeyError:
-            raise AttributeError(item)
-        if column_type[ff_column] == ColumnType.rupture_parameter:
+            raise MissingColumnError(item)
+        if self.col_type[item] == ColumnType.rupture_parameter:
             # rupture parameter, return a scalar (note: all values should be the same)
             values = values[0]
         return values
 
+
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
+
 
 # class ContextDB:
 #     """This abstract-like class represents a Database (DB) of data capable of
