@@ -18,9 +18,10 @@ _gmpetable_regex = re.compile(r'^GMPETable\(([^)]+?)\)$')
 def get_gsim_instance(gsim_name: str) -> GMPE:
     return valid.gsim(gsim_name)
 
-def check_gsim_list(gsim_list) -> dict:
+
+def check_gsim_list(gsims) -> dict[str, GMPE]:
     """
-    Check the GSIM models or strings in `gsim_list`, and return a dict of
+    Check the GSIM models or strings in `gsims`, and return a dict of
     gsim names (str) mapped to their :class:`openquake.hazardlib.Gsim`.
     Raises error if any Gsim in the list is supported in OpenQuake.
 
@@ -28,13 +29,13 @@ def check_gsim_list(gsim_list) -> dict:
     from the class name and optional arguments. If a Gsim is passed as string,
     the associated class name is fetched from the OpenQuake available Gsims.
 
-    :param gsim_list: list of GSIM names (str) or OpenQuake Gsims
+    :param gsims: list of GSIM names (str) or OpenQuake Gsim classes
     :return: a dict of GSIM names (str) mapped to the associated GSIM
     """
     output_gsims = {}
-    for gs in gsim_list:
+    for gs in gsims:
         if isinstance(gs, GMPE):
-            output_gsims[_get_gmpe_name(gs)] = gs  # get name of GMPE instance
+            output_gsims[get_gsim_name(gs)] = gs  # get name of GMPE instance
         elif gs in AVAILABLE_GSIMS:
             output_gsims[gs] = get_gsim_instance(gs)
         else:
@@ -48,7 +49,7 @@ def check_gsim_list(gsim_list) -> dict:
     return output_gsims
 
 
-def _get_gmpe_name(gsim: GMPE) -> str:
+def get_gsim_name(gsim: GMPE) -> str:  # FIXME
     """
     Returns the name of the GMPE given an instance of the class
     """
@@ -58,20 +59,24 @@ def _get_gmpe_name(gsim: GMPE) -> str:
         return 'GMPETable(gmpe_table=%s)' % filepath
     else:
         gsim_name = gsim.__class__.__name__
-        additional_args = []
-        # Build the GSIM string by showing name and arguments. Keep things
-        # simple (no replacements, no case changes) as we might want to be able
-        # to get back the GSIM from its string in the future.
-        for key in gsim.__dict__:
-            if key.startswith("kwargs"):
-                continue
-            val = str(gsim.__dict__[key])  # quoting strings with json maybe?
-            additional_args.append("{:s}={:s}".format(key, val))
-        if len(additional_args):
-            gsim_name_str = "({:s})".format(", ".join(additional_args))
-            return gsim_name + gsim_name_str
-        else:
-            return gsim_name
+        return gsim_name
+        # parse GMPE argument disabled, as it has the side effect to return
+        # not what users might have input as string FIXME handle with GW
+        #
+        # additional_args = []
+        # # Build the GSIM string by showing name and arguments. Keep things
+        # # simple (no replacements, no case changes) as we might want to be able
+        # # to get back the GSIM from its string in the future.
+        # for key in gsim.__dict__:
+        #     if key.startswith("kwargs"):
+        #         continue
+        #     val = str(gsim.__dict__[key])  # quoting strings with json maybe?
+        #     additional_args.append("{:s}={:s}".format(key, val))
+        # if len(additional_args):
+        #     gsim_name_str = "({:s})".format(", ".join(additional_args))
+        #     return gsim_name + gsim_name_str
+        # else:
+        #     return gsim_name
 
 
 def n_jsonify(obj: Union[Sequence, int, float, np.generic]) -> \
