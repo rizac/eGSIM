@@ -18,7 +18,7 @@ from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
 from .. import check_gsim_list
-from ..flatfile_new import get_column_values, _EVENT_COLUMNS, EventContext, column_alias
+from ..flatfile_new import EventContext, prepare_for_gsim_required_attribute
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -44,6 +44,11 @@ def check_sa_limits(gsim: GMPE, im: str):  # FIXME remove? is it used?
     return limits[0] < period < limits[1]
 
 
+_EVENT_COLUMNS = ['event_id', 'event_latitude', 'event_longitude', 'event_depth',
+                  'event_time']
+_STATION_COLUMNS = ['station_id', 'station_latitude', 'station_longitude']
+
+
 def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     """Group the flatfile by events, and yield `EventContext`s objects, one for
     each event"""
@@ -51,14 +56,13 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     if not isinstance(flatfile.index, RangeIndex):
         flatfile.reset_index(drop=True, inplace=True)
 
-    # check event id column and compute ea new one if possible:
-    ev_id_name = _EVENT_COLUMNS[0]  # FIXME: move variable?
-    if ev_id_name not in flatfile.columns:
-        flatfile[ev_id_name] = get_column_values(flatfile, ev_id_name)
+    # check event id column or use the event location to group events:
+    ev_columns = _EVENT_COLUMNS[0]  if _EVENT_COLUMNS[0] in flatfile.columns else \
+        _EVENT_COLUMNS[1:]
 
-    for ev_id, dfr in flatfile.groupby(ev_id_name):
-        if not dfr.empty:
-            yield EventContext(flatfile, dfr.index.copy())
+    for ev_id, dfr in flatfile.groupby(ev_columns):
+        if not dfr.empty:  # for safety ...
+            yield EventContext(dfr)
 
 
 def get_residuals(gsim_names: list[str], imt_names: list[str],
@@ -81,8 +85,8 @@ def get_residuals(gsim_names: list[str], imt_names: list[str],
     return new_flatfile
 
 
-def prepare_flatfile_for_residuals(flatfile: pd.DataFrame, gsims: Sequence[GMPE]):
-    required = {'event_id',}
+def prepare_flatfile_for_residuals(flatfile: pd.DataFrame, gsims: Iterable[GMPE]):
+    required = set()
     # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
     for gsim in gsims:
         # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
@@ -90,22 +94,9 @@ def prepare_flatfile_for_residuals(flatfile: pd.DataFrame, gsims: Sequence[GMPE]
         required.update(gsim.REQUIRES_RUPTURE_PARAMETERS or [])
         required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
 
-    needs_copy = True
+    flatfile = flatfile.copy()
     for attr in required:
-        ff_column = column_alias.get(attr, attr)
-        series = get_column_values(flatfile, ff_column)
-        if series is None:
-            continue
-        # we created a new array, or we modified the array filling NA:
-        array_is_modified = series is not flatfile.get(ff_column, None)
-        if array_is_modified:
-            if needs_copy:
-                flatfile = flatfile.copy()
-                needs_copy = False
-            # this should prevent other Context using the same flatfile to re-calculate
-            # the column, PROVIDED that this code is executed in the same thread/process
-            # for all Contexts
-            flatfile[ff_column] = series
+        prepare_for_gsim_required_attribute(flatfile, attr)
 
     return flatfile
 
@@ -133,7 +124,7 @@ def calculate_expected_motions_for_event(gsims: Sequence[GMPE], imt_names: Seque
     """
     Calculate the expected ground motions from the context
     """
-    expected:pd.DataFrame = pd.DataFrame(index=ctx.sids)
+    expected:pd.DataFrame = pd.DataFrame(index=ctx.record_ids)
     label_of = {
         const.StdDev.TOTAL: labels.total,
         const.StdDev.INTER_EVENT: labels.inter_ev,
