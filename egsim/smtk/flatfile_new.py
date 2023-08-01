@@ -570,7 +570,7 @@ class MissingColumnError(AttributeError):
         # when retrieving Context attributes (see usage in :ref:`EventContext` below)
         column = None
         if arg in column_alias:
-            # passed arg. is gsim required param, convert to flatfile column
+            # passed arg. is a gsim required param, convert to flatfile column
             column = column_alias[arg]
         elif arg in column_type:
             # passed arg. is a flatfile column
