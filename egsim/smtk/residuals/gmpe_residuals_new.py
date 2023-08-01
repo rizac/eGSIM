@@ -18,8 +18,7 @@ from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
 from .. import check_gsim_list, get_gsim_name
-from ..flatfile_new import EventContext, prepare_for_gsim_required_attribute, \
-    MissingColumnError
+from ..flatfile_new import EventContext, prepare_for_residuals, MissingColumnError
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -79,43 +78,29 @@ def get_residuals(gsims: list[str], imts: list[str],
                   component="Geometric", compute_lh=False,
                   normalise=True) -> pd.DataFrame:
     """
-    Calculate the residuals for a set of ground motion records, returning a new
-    DataFrame from `flatfile` with the column filled with residuals
+    Calculate the residuals from a given flatfile gsim(s) and imt(s). This function
+    modifies the passed flatfile inplace (e.g. by adding all residuals-related computed
+    columns, see :ref:`c_labels` for details)
+
+    :return: the passed flatfile with all residuals computed columns added
     """
     gsims = check_gsim_list(gsims)
-    flatfile = prepare_flatfile_for_residuals(flatfile, gsims.values())
-    ev_columns:list[str] = _EVENT_COLUMNS[:1] if _EVENT_COLUMNS[0] in flatfile.columns \
-        else _EVENT_COLUMNS[1:]
+    prepare_for_residuals(flatfile, gsims.values(), imts)
     expected = calculate_expected_motions(gsims.values(), imts, flatfile)
-    new_flatfile = pd.concat([flatfile[ev_columns], expected], axis="columns")
-    new_flatfile = calculate_residuals(gsims, imts, new_flatfile, normalise)
+    # concatenate expected in flatfile (add new columns):
+    flatfile[expected.columns] = expected
+    calculate_residuals(gsims, imts, flatfile, normalise)
     if compute_lh:
-        get_residuals_likelihood(gsims, imts, new_flatfile)
-    return new_flatfile
-
-
-def prepare_flatfile_for_residuals(flatfile: pd.DataFrame, gsims: Iterable[GMPE]):
-    required = set()
-    # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
-    for gsim in gsims:
-        # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
-        required.update(gsim.REQUIRES_DISTANCES | {'rrup'})
-        required.update(gsim.REQUIRES_RUPTURE_PARAMETERS or [])
-        required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
-
-    flatfile = flatfile.copy()
-    for attr in required:
-        prepare_for_gsim_required_attribute(flatfile, attr)
-
+        get_residuals_likelihood(gsims, imts, flatfile)
     return flatfile
 
 
-def calculate_expected_motions(gsims: Iterable[GMPE], imt_names: list[str],
+def calculate_expected_motions(gsims: Iterable[GMPE], imts: list[str],
                                flatfile: pd.DataFrame) -> pd.DataFrame:
     expected:pd.DataFrame = pd.DataFrame(index=flatfile.index)
     for context in yield_event_contexts(flatfile):
         # Get the expected ground motions by event
-        ev_expected = calculate_expected_motions_for_event(gsims, imt_names, context)
+        ev_expected = calculate_expected_motions_for_event(gsims, imts, context)
         # Put the above in the expected motions, index based:
         for col in ev_expected.columns:
             if col not in expected.columns:  # initialize column if needed
@@ -127,7 +112,7 @@ def calculate_expected_motions(gsims: Iterable[GMPE], imt_names: list[str],
     return expected
 
 
-def calculate_expected_motions_for_event(gsims: Iterable[GMPE], imt_names: Iterable[str],
+def calculate_expected_motions_for_event(gsims: Iterable[GMPE], imts: Iterable[str],
                                          ctx: EventContext) -> pd.DataFrame:
     """
     Calculate the expected ground motions from the context
@@ -141,7 +126,7 @@ def calculate_expected_motions_for_event(gsims: Iterable[GMPE], imt_names: Itera
     # Period range for GSIM
     for gsim in gsims:
         types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        for imt_name in imt_names:
+        for imt_name in imts:
             imtx = imt.from_string(imt_name)
             if "SA(" in imt_name:
                 period = imtx.period
@@ -150,20 +135,19 @@ def calculate_expected_motions_for_event(gsims: Iterable[GMPE], imt_names: Itera
                         (sa_period_limits[0] < period < sa_period_limits[1]):
                     continue
             mean, stddev = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imtx, types)
-            imt_name = str(imt)
             expected[column_label(gsim, imt_name, c_labels.mean)] = mean
             for std_type, values in zip(types, stddev):
                 expected[column_label(gsim, imt_name, label_of[std_type])] = values
     return expected
 
 
-def calculate_residuals(gsims: Iterable[str], imt_names: Iterable[str],
-                        flatfile: pd.DataFrame, normalise=True) -> pd.DataFrame:
+def calculate_residuals(gsims: Iterable[str], imts: Iterable[str],
+                        flatfile: pd.DataFrame, normalise=True):
     """
-    Calculate the residual terms
+    Calculate the residual terms, modifies `flatfile` inplace
     """
     for gsim in gsims:
-        for imtx in imt_names:
+        for imtx in imts:
             obs = flatfile.get(imtx)
             if obs is None:
                 continue
@@ -182,8 +166,6 @@ def calculate_residuals(gsims: Iterable[str], imt_names: Iterable[str],
                                                          intra_ev, normalise)
             flatfile[column_label(gsim, imtx, c_labels.inter_ev_res)] = inter
             flatfile[column_label(gsim, imtx, c_labels.intra_ev_res)] = intra
-
-    return flatfile
 
 
 def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
@@ -208,14 +190,14 @@ class c_labels:
     intra_ev = const.StdDev.INTRA_EVENT.replace(" ", "-").capitalize()
     expected_motion_column = {total, inter_ev, intra_ev}
     res = "residuals"
-    total_res = total + f" {res}"
-    inter_ev_res = inter_ev + f" {res}"
-    intra_ev_res = intra_ev + f" {res}"
+    total_res = total + f"-{res}"
+    inter_ev_res = inter_ev + f"-{res}"
+    intra_ev_res = intra_ev + f"-{res}"
     residuals_columns = {total_res, inter_ev_res, intra_ev_res}
     lh = "LH"
-    total_lh = total_res + f" {lh}"
-    inter_ev_lh = inter_ev_res + f" {lh}"
-    intra_ev_lh = intra_ev_res + f" {lh}"
+    total_lh = total + f"-{lh}"
+    inter_ev_lh = inter_ev + f"-{lh}"
+    intra_ev_lh = intra_ev + f"-{lh}"
     lh_columns = {total_res, inter_ev_res, intra_ev_res}
 
 
@@ -263,8 +245,8 @@ def get_residuals_stats(gsim_names: Iterable[str], imt_names: Iterable[str],
             stats[gsim] = {}
         if imtx not in stats[gsim]:
             stats[gsim][imtx] = {}
-        stats[gsim][imtx]["Mean"] = flatfile[col].mean()
-        stats[gsim][imtx]["Stddev"] = flatfile[col].std()
+        stats[gsim][imtx][f"{label} Mean"] = flatfile[col].mean()
+        stats[gsim][imtx][f"{label} Stddev"] = flatfile[col].std()
     return stats
 
 
@@ -291,6 +273,7 @@ def get_residuals_likelihood(gsims: Iterable[str], imts: Iterable[str],
             # add new flatfile column:
             result[column_label(gsim, imtx, lh_label)] = values
         elif label in c_labels.lh_columns:
+            lh_label = label
             values = flatfile[col]
         else:
             continue
@@ -299,8 +282,8 @@ def get_residuals_likelihood(gsims: Iterable[str], imts: Iterable[str],
         if imtx not in result[gsim]:
             result[gsim][imtx] = {}
         p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
-        result[f"{c_labels.lh} Median"] = p50
-        result[f"{c_labels.lh} IQR"] = p75 - p25
+        result[f"{lh_label} Median"] = p50
+        result[f"{lh_label} IQR"] = p75 - p25
     return result
 
 
