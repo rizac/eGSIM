@@ -4,9 +4,12 @@ from datetime import datetime
 from enum import Enum
 from os.path import join, dirname
 import re
+from openquake.hazardlib import imt
+from openquake.hazardlib.gsim.base import GMPE
 from pandas.core.indexes.numeric import IntegerIndex
+from scipy.interpolate import interp1d
 
-from typing import Union, Callable, Any
+from typing import Union, Callable, Any, Iterable
 
 import yaml
 import numpy as np
@@ -482,16 +485,64 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     return flatfile.query(query_expression, **__kwargs)
 
 
-
 ##################################
 # Residuals calculation function #
 ##################################
 
 
+def prepare_for_residuals(flatfile: pd.DataFrame,
+                          gsims: Iterable[GMPE], imts: Iterable[str]):
+    """Modify inplace the flatfile assuring that the attribute required by the given
+    models and the SA periods passed in the given imts are present in the flatfile
+    columns.
+    Raise `MissingColumn` if the flatfile cannot be made compliant to the given arguments
+    """
+    required = set()
+    # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
+    for gsim in gsims:
+        # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
+        required.update(gsim.REQUIRES_DISTANCES | {'rrup'})
+        required.update(gsim.REQUIRES_RUPTURE_PARAMETERS or [])
+        required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
+    for attr in required:
+        _prepare_for_gsim_required_attribute(flatfile, attr)
+    _prepare_for_sa(flatfile, [i for i in imts if i.startswith('SA(')])
+
+
+def _prepare_for_sa(flatfile: pd.DataFrame, target_sa: Iterable[str]):
+    """Modify inplace the flatfile assuring the SA columns identified by `target_sa`
+    are present. The SA column present in the flatfile will be used to obtain
+    the target SA via interpolation, and removed if not necessary
+    """
+    target_sa_columns = sorted(target_sa, key=lambda c: imt.from_string(c).period)
+    if not target_sa_columns:
+        return flatfile
+    target_sa_periods = [imt.from_string(c).period for c in target_sa_columns]
+    sa_columns = sorted((col for col in flatfile.columns if col.startswith("SA(")),
+                        key=lambda c: imt.from_string(c).period)
+    if len(sa_columns) < 2:
+        raise MissingColumnError('Two or more SA columns required for interpolation, '
+                                 f'found {len(sa_columns)}')
+    sa_periods = [imt.from_string(c).period for c in sa_columns]
+
+
+    spectrum = np.log10(flatfile[sa_columns])
+    # we need to interpolate row wise
+    # build the interpolation function:
+    interp = interp1d(sa_periods, spectrum, axis=1)
+    # and interpolate:
+    values = 10 ** interp(target_sa_periods)
+    # values is a matrix where each column represents the values of the target period.
+    # First drop old SA:
+    flatfile.drop(sa_columns, axis='columns', inplace=True)
+    # add new Sa:
+    flatfile[target_sa_columns] = values
+
+
 DEFAULT_MSR = PeerMSR()
 
 
-def prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
+def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
     """Modify inplace the given flatfile to contain a column named
     `att_name` and be compliant with the specified Gsim required attribute.
     If the input `flatfile` does not have a column `att_name`, several rules -
@@ -556,6 +607,7 @@ def prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
         flatfile.rename(columns={column: att_name}, inplace=True)
     if series is not flatfile.get(column):
         flatfile[column] = series
+    return flatfile
 
 
 class MissingColumnError(AttributeError):
