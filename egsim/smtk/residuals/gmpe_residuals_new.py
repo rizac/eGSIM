@@ -18,7 +18,8 @@ from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
 from .. import check_gsim_list, get_gsim_name
-from ..flatfile_new import EventContext, prepare_for_gsim_required_attribute
+from ..flatfile_new import EventContext, prepare_for_gsim_required_attribute, \
+    MissingColumnError
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -57,10 +58,18 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
         flatfile.reset_index(drop=True, inplace=True)
 
     # check event id column or use the event location to group events:
-    ev_columns = _EVENT_COLUMNS[0]  if _EVENT_COLUMNS[0] in flatfile.columns else \
-        _EVENT_COLUMNS[1:]
+    try:
+        # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
+        # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
+        ev_sub_flatfiles = flatfile.groupby(_EVENT_COLUMNS[0]
+                                            if _EVENT_COLUMNS[0] in flatfile.columns
+                                            else _EVENT_COLUMNS[1:])
+    except KeyError:
+        raise MissingColumnError(f'Missing flatfile event id column(s): Provide '
+                                 f'"{_EVENT_COLUMNS[0]}" or ' +
+                                 ", ".join('"{c}"' for c in _EVENT_COLUMNS[1:]))
 
-    for ev_id, dfr in flatfile.groupby(ev_columns):
+    for ev_id, dfr in ev_sub_flatfiles:
         if not dfr.empty:  # for safety ...
             yield EventContext(dfr)
 
@@ -81,7 +90,7 @@ def get_residuals(gsims: list[str], imts: list[str],
     new_flatfile = pd.concat([flatfile[ev_columns], expected], axis="columns")
     new_flatfile = calculate_residuals(gsims, imts, new_flatfile, normalise)
     if compute_lh:
-        return get_likelihood_from_residuals(gsims, imts, new_flatfile)
+        get_residuals_likelihood(gsims, imts, new_flatfile)
     return new_flatfile
 
 
@@ -192,21 +201,22 @@ def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
 
 
 class c_labels:
-    """Flatfile column labels denoting computations (e.g. expected motion, residual)"""
+    """Flatfile computed column labels (e.g. expected motion, residual)"""
     mean = "Mean"
     total = const.StdDev.TOTAL.capitalize()
     inter_ev = const.StdDev.INTER_EVENT.replace(" ", "-").capitalize()
     intra_ev = const.StdDev.INTRA_EVENT.replace(" ", "-").capitalize()
     expected_motion_column = {total, inter_ev, intra_ev}
-    _res = "residuals"
-    total_res = total + f" {_res}"
-    inter_ev_res = inter_ev + f" {_res}"
-    intra_ev_res = intra_ev + f" {_res}"
+    res = "residuals"
+    total_res = total + f" {res}"
+    inter_ev_res = inter_ev + f" {res}"
+    intra_ev_res = intra_ev + f" {res}"
     residuals_columns = {total_res, inter_ev_res, intra_ev_res}
-    _lh = "LH"
-    total_lh = total + f" {_lh}"
-    inter_ev_lh = inter_ev + f" {_lh}"
-    intra_ev_lh = intra_ev + f" {_lh}"
+    lh = "LH"
+    total_lh = total_res + f" {lh}"
+    inter_ev_lh = inter_ev_res + f" {lh}"
+    intra_ev_lh = intra_ev_res + f" {lh}"
+    lh_columns = {total_res, inter_ev_res, intra_ev_res}
 
 
 def column_label(gsim: Union[str, GMPE], imtx: str, c_label: str):
@@ -237,10 +247,11 @@ def get_computed_columns(gsims: Iterable[str],
             yield col, chunks[0], chunks[1], chunks[2]
 
 
-def get_stats_from_residuals(gsim_names: Iterable[str], imt_names: Iterable[str],
-                             flatfile: pd.DataFrame) -> dict[str, float]:
+def get_residuals_stats(gsim_names: Iterable[str], imt_names: Iterable[str],
+                        flatfile: pd.DataFrame) -> \
+        dict[str, dict[str, dict[str, float]]]:
     """
-    Retrieves the mean and standard deviation values of the residuals
+    Retrieve the mean and standard deviation values of the residuals
 
     :flatfile: the result of :ref:`get_residuals`
     """
@@ -250,32 +261,46 @@ def get_stats_from_residuals(gsim_names: Iterable[str], imt_names: Iterable[str]
             continue
         if gsim not in stats:
             stats[gsim] = {}
-        if imt not in stats[gsim]:
-            stats[gsim] = {}
-        stats[col + " mean"] = flatfile[col].mean()
-        stats[col + " stddev"] = flatfile[col].std()
+        if imtx not in stats[gsim]:
+            stats[gsim][imtx] = {}
+        stats[gsim][imtx]["Mean"] = flatfile[col].mean()
+        stats[gsim][imtx]["Stddev"] = flatfile[col].std()
     return stats
 
 
-def get_likelihood_from_residuals(gsims: Iterable[str], imts: Iterable[str],
-                                  flatfile: pd.DataFrame) -> pd.DataFrame:
+def get_residuals_likelihood(gsims: Iterable[str], imts: Iterable[str],
+                             flatfile: pd.DataFrame) -> \
+        dict[str, dict[str, dict[str, float]]]:
     """
-    Returns the likelihood values for the residuals column found in `flatfile`
+    Return the likelihood values for the residuals column found in `flatfile`
     (e.g. Total, inter- intra-event) according to Equation 9 of Scherbaum et al (2004)
 
-    :param flatfile: a pandas DataFrame resulting from :ref:`get_residuals`
+    :param flatfile: a pandas DataFrame resulting from :ref:`get_residuals`.
+        NOTE: the flatfile might be modified inplace (new likelihood columns added)
     """
-    result = pd.DataFrame(index=flatfile.index)
+    result = {}
     for col, gsim, imtx, label in get_computed_columns(gsims, imts, flatfile):
-        if label == c_labels.total_res:
-            new_label = c_labels.total_lh
-        elif label == c_labels.inter_ev_res:
-            new_label = c_labels.inter_ev_lh
-        elif label == c_labels.intra_ev_res:
-            new_label = c_labels.intra_ev_lh
+        if label in c_labels.residuals_columns:
+            values = get_likelihood(flatfile[col])
+            # get LH label corresponding to residuals:
+            lh_label = c_labels.total_lh
+            if label == c_labels.inter_ev_res:
+                lh_label = c_labels.inter_ev_lh
+            elif label == c_labels.intra_ev_res:
+                lh_label = c_labels.intra_ev_lh
+            # add new flatfile column:
+            result[column_label(gsim, imtx, lh_label)] = values
+        elif label in c_labels.lh_columns:
+            values = flatfile[col]
         else:
             continue
-        result[column_label(gsim, imtx, new_label)] = get_likelihood(flatfile[col])
+        if gsim not in result:
+            result[gsim] = {}
+        if imtx not in result[gsim]:
+            result[gsim][imtx] = {}
+        p25, p50, p75 = np.nanpercentile(values, [25, 50, 75])
+        result[f"{c_labels.lh} Median"] = p50
+        result[f"{c_labels.lh} IQR"] = p75 - p25
     return result
 
 
@@ -288,8 +313,9 @@ def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd
     return 1.0 - erf(zvals / sqrt(2.))
 
 
-def get_loglikelihood_from_residuals(gsims: Iterable[str], imts: Iterable[str],
-                                     flatfile: pd.DataFrame):
+def get_residuals_loglikelihood(gsims: Iterable[str], imts: Iterable[str],
+                                flatfile: pd.DataFrame) -> \
+        dict[str, dict[str, float]]:
     """
     Return the loglikelihood fit for the "Total residuals" columns found in `flatfile`
     using the loglikehood (LLH) function described in Scherbaum et al. (2009)
@@ -299,35 +325,28 @@ def get_loglikelihood_from_residuals(gsims: Iterable[str], imts: Iterable[str],
 
     :param flatfile: a pandas DataFrame resulting from :ref:`get_residuals`
     """
-    result = pd.DataFrame(index=flatfile.index)
+    result = {}
+    log_residuals = {}
     for col, gsim, imtx, label in get_computed_columns(gsims, imts, flatfile):
         if label != c_labels.total_res:
             continue
-        result[col+"-loglikelihood"] = get_loglikelihood(flatfile[col])
+        asll = np.log2(norm.pdf(flatfile[col], 0., 1.0))
+        if gsim not in result:
+            result[gsim] = {}
+        result[imtx] = -(1.0 / len(asll)) * np.sum(asll)
+        log_residuals[gsim] = np.hstack([log_residuals[gsim], asll])
+    for gsim, asll in log_residuals.items():
+        result[gsim]["All"] = -(1.0 / len(asll)) * np.sum(asll)
     return result
 
 
-def get_loglikelihood(values: Union[np.ndarray, pd.Series]) -> \
-        Union[np.ndarray, pd.Series]:
-    """
-    Return the loglikelihood from `values` using the
-    loglikehood (LLH) function described in Scherbaum et al. (2009)
-    Scherbaum, F., Delavaud, E., Riggelsen, C. (2009) "Model Selection in
-    Seismic Hazard Analysis: An Information-Theoretic Perspective",
-    Bulletin of the Seismological Society of America, 99(6), 3234-3247
-    """
-    asll = np.log2(norm.pdf(values, 0., 1.0))
-    return -(1.0 / float(len(asll))) * np.sum(asll)
-
-
-def get_edr_values_from_expected_motions(gsims: Iterable[str], imts: Iterable[str],
-                                         flatfile: pd.DataFrame,
-                                         bandwidth=0.01, multiplier=3.0) -> \
+def get_residuals_edr_values(gsims: Iterable[str], imts: Iterable[str],
+                             flatfile: pd.DataFrame, bandwidth=0.01,
+                             multiplier=3.0) -> \
         dict[str, dict[str, float]]:
     """
-    Calculates the EDR values for each Gsim found in `flatfile` (with relative expected
-    motions computed) according to the Euclidean Distance Ranking method of Kale &
-    Akkar (2013)
+    Calculates the EDR values for each Gsim found in `flatfile` with computed residuals
+    according to the Euclidean Distance Ranking method of Kale & Akkar (2013)
 
     Kale, O., and Akkar, S. (2013) "A New Procedure for Selecting and
     Ranking Ground Motion Predicion Equations (GMPEs): The Euclidean
@@ -377,9 +396,9 @@ def _get_edr_gsim_information(gsim: str, imts: Iterable[str], flatfile:pd.Datafr
 
 
 def get_edr(obs: Union[np.ndarray, pd.Series],
-             expected: Union[np.ndarray, pd.Series],
-             stddev: Union[np.ndarray, pd.Series],
-             bandwidth=0.01, multiplier=3.0) -> tuple[np.float, np.float, np.float]:
+            expected: Union[np.ndarray, pd.Series],
+            stddev: Union[np.ndarray, pd.Series],
+            bandwidth=0.01, multiplier=3.0) -> tuple[np.float, np.float, np.float]:
     """
     Calculated the Euclidean Distanced-Based Rank for a set of
     observed and expected values from a particular Gsim
@@ -433,7 +452,7 @@ def _get_edr_kappa(obs: Union[np.ndarray, pd.Series],
 
 
 # Mak et al multivariate LLH functions
-def get_multivariate_loglikelihood_values(gsim_names: list[str], imt_names: list[str],
+def get_residuals_multivariate_loglikelihood(gsim_names: list[str], imt_names: list[str],
                                           flatfile: pd.DataFrame, contexts=None):
     """
     Calculates the multivariate LLH for a set of GMPEs and IMTS according

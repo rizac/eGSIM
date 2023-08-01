@@ -142,7 +142,7 @@ column_dtype: dict[str, Union[str, pd.CategoricalDtype]] = {} # flatfile column 
 column_default: dict[str, Any] = {} # flatfile column -> default value when missing
 column_required: set[str] = set() # required flatfile column names
 column_alias: dict[str, str] = {} # Gsim required attr. name -> flatfile column name
-column_help: dict[str, str] ={}  # flatfile column -> Column type
+column_help: dict[str, str] = {}  # flatfile column -> Column type
 
 
 # read YAML and setup custom attributes:
@@ -208,8 +208,7 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
 
 missing_values = ("", "null", "NULL", "None",
                   "nan", "-nan", "NaN", "-NaN",
-                  "NA", "N/A", "n/a",  "<NA>", "#N/A", "#NA",
-                  "+inf", "-inf", "+Inf", "-Inf", "+Infinity", "-Infinity")
+                  "NA", "N/A", "n/a",  "<NA>", "#N/A", "#NA")
 
 
 def read_csv(filepath_or_buffer: str,
@@ -297,7 +296,7 @@ def read_csv(filepath_or_buffer: str,
                     break
             if not col_dtype_name:
                 raise ValueError(f'Column "{col}": unsupported type {str(values_dtype)} '
-                                 f'in categorical values ')
+                                 f'in categorical values')
             # categorical data with str values can be safely passed to read_csv:
             if col_dtype_name == ColumnDtype.str.name:
                 pre_dtype[col] = col_dtype
@@ -549,7 +548,8 @@ def prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
     elif column == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     if series is None:
-        raise MissingColumnError(att_name)
+        raise MissingColumnError(f'Missing flatfile column "{att_name}", '
+                                 f'no inference possible')
     if column != att_name:
         flatfile.rename(columns={column: att_name}, inplace=True)
     if series is not flatfile.get(column):
@@ -558,9 +558,28 @@ def prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
 
 class MissingColumnError(AttributeError):
 
-    def __init__(self, gsim_att_name):
-        super().__init__(f'Missing flatfile column '
-                         f'"{column_alias.get(gsim_att_name, gsim_att_name)}"')
+    def __init__(self, arg: str):
+        """
+        Attribute error displaying missing flatfile column(s) massages
+
+        :param arg: gsim required attribute (e.g. 'z1pt0'), flatfile column
+            (e.g. 'event_time') or custom message (in this latter case, the argument
+            will be displayed as it is)
+        """
+        # NOTE: this class MUST subclass AttributeError as it is required by OpenQuake
+        # when retrieving Context attributes (see usage in :ref:`EventContext` below)
+        column = None
+        if arg in column_alias:
+            # passed arg. is gsim required param, convert to flatfile column
+            column = column_alias[arg]
+        elif arg in column_type:
+            # passed arg. is a flatfile column
+            column = arg
+        if column:
+            msg = f'Missing flatfile column "{column}"'
+        else:
+            msg = arg
+        super().__init__(msg)
 
 
 def fill_na(src: Union[None, np.ndarray, pd.Series],
@@ -592,8 +611,7 @@ class EventContext(RuptureContext):
 
     def __eq__(self, other):
         assert isinstance(other, EventContext) and \
-               self._flatfile is other._flatfile and \
-               np.array_equal(self.record_ids, other.record_ids)
+               self._flatfile is other._flatfile
 
     @property
     def record_ids(self) -> IntegerIndex:
