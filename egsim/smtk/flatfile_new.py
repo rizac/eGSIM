@@ -11,7 +11,6 @@ from typing import Union, Callable, Any
 import yaml
 import numpy as np
 import pandas as pd
-from openquake.hazardlib import imt
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
 
@@ -489,6 +488,9 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
 ##################################
 
 
+DEFAULT_MSR = PeerMSR()
+
+
 def prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
     """Modify inplace the given flatfile to contain a column named
     `att_name` and be compliant with the specified Gsim required attribute.
@@ -594,9 +596,6 @@ def fill_na(src: Union[None, np.ndarray, pd.Series],
             dest = dest.copy()
             dest[na] = src[na]
     return dest
-
-
-DEFAULT_MSR = PeerMSR()
 
 
 class EventContext(RuptureContext):
