@@ -17,8 +17,8 @@ from scipy.stats import norm
 from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
-from .. import check_gsim_list, get_gsim_name
-from ..flatfile_new import EventContext, prepare_for_residuals, MissingColumnError
+from . import check_gsim_list, get_gsim_name
+from .flatfile import EventContext, prepare_for_residuals, MissingColumnError
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -117,7 +117,7 @@ def calculate_expected_motions_for_event(gsims: Iterable[GMPE], imts: Iterable[s
     """
     Calculate the expected ground motions from the context
     """
-    expected:pd.DataFrame = pd.DataFrame(index=ctx.record_ids)
+    expected:pd.DataFrame = pd.DataFrame(index=ctx.sids)
     label_of = {
         const.StdDev.TOTAL: c_labels.total,
         const.StdDev.INTER_EVENT: c_labels.inter_ev,
@@ -190,14 +190,14 @@ class c_labels:
     intra_ev = const.StdDev.INTRA_EVENT.replace(" ", "-").capitalize()
     expected_motion_column = {total, inter_ev, intra_ev}
     res = "residuals"
-    total_res = total + f"-{res}"
-    inter_ev_res = inter_ev + f"-{res}"
-    intra_ev_res = intra_ev + f"-{res}"
+    total_res = total + f" {res}"
+    inter_ev_res = inter_ev + f" {res}"
+    intra_ev_res = intra_ev + f" {res}"
     residuals_columns = {total_res, inter_ev_res, intra_ev_res}
-    lh = "LH"
-    total_lh = total + f"-{lh}"
-    inter_ev_lh = inter_ev + f"-{lh}"
-    intra_ev_lh = intra_ev + f"-{lh}"
+    lh = "LH"  # likelihood
+    total_lh = total + f" {lh}"
+    inter_ev_lh = inter_ev + f" {lh}"
+    intra_ev_lh = intra_ev + f" {lh}"
     lh_columns = {total_res, inter_ev_res, intra_ev_res}
 
 
@@ -353,7 +353,7 @@ def get_residuals_edr_values(gsims: Iterable[str], imts: Iterable[str],
     return result
 
 
-def _get_edr_gsim_information(gsim: str, imts: Iterable[str], flatfile:pd.Dataframe) -> \
+def _get_edr_gsim_information(gsim: str, imts: Iterable[str], flatfile:pd.DataFrame) -> \
         tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Extract the observed ground motions, expected and total standard
@@ -381,7 +381,7 @@ def _get_edr_gsim_information(gsim: str, imts: Iterable[str], flatfile:pd.Datafr
 def get_edr(obs: Union[np.ndarray, pd.Series],
             expected: Union[np.ndarray, pd.Series],
             stddev: Union[np.ndarray, pd.Series],
-            bandwidth=0.01, multiplier=3.0) -> tuple[np.float, np.float, np.float]:
+            bandwidth=0.01, multiplier=3.0) -> tuple[float, float, float]:
     """
     Calculated the Euclidean Distanced-Based Rank for a set of
     observed and expected values from a particular Gsim
@@ -412,11 +412,11 @@ def get_edr(obs: Union[np.ndarray, pd.Series],
     inv_n = 1.0 / float(nvals)
     mde_norm = np.sqrt(inv_n * np.sum(mde ** 2.))
     edr = np.sqrt(kappa * inv_n * np.sum(mde ** 2.))
-    return mde_norm, np.sqrt(kappa), edr
+    return float(mde_norm), float(np.sqrt(kappa)), float(edr)
 
 
 def _get_edr_kappa(obs: Union[np.ndarray, pd.Series],
-                   expected: Union[np.ndarray, pd.Series]) -> np.float:
+                   expected: Union[np.ndarray, pd.Series]) -> np.floating:
     """
     Returns the correction factor kappa
     """
