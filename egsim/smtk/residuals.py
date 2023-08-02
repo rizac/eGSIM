@@ -17,7 +17,7 @@ from scipy.stats import norm
 from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
-from . import check_gsim_list, get_gsim_name
+from . import check_gsim_list, get_gsim_name, get_SA_period
 from .flatfile import EventContext, prepare_for_residuals, MissingColumnError
 
 
@@ -35,12 +35,12 @@ def check_sa_limits(gsim: GMPE, im: str):  # FIXME remove? is it used?
     SA limits defined for the given model (`gsim`). Return True in any other case
     (period within limits, gsim not defining any SA limit, `im` not representing SA)
     """
-    if 'SA(' not in im:
+    period = get_SA_period(im)
+    if period is None:
         return True
     limits = get_sa_limits(gsim)
     if limits is None:
         return True
-    period = imt.from_string(im).period
     return limits[0] < period < limits[1]
 
 
@@ -64,9 +64,7 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
                                             if _EVENT_COLUMNS[0] in flatfile.columns
                                             else _EVENT_COLUMNS[1:])
     except KeyError:
-        raise MissingColumnError(f'Missing flatfile event id column(s): Provide '
-                                 f'"{_EVENT_COLUMNS[0]}" or ' +
-                                 ", ".join('"{c}"' for c in _EVENT_COLUMNS[1:]))
+        raise MissingColumnError(_EVENT_COLUMNS[0])
 
     for ev_id, dfr in ev_sub_flatfiles:
         if not dfr.empty:  # for safety ...
@@ -76,7 +74,7 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
 def get_residuals(gsims: list[str], imts: list[str],
                   flatfile: pd.DataFrame, nodal_plane_index=1,
                   component="Geometric", compute_lh=False,
-                  normalise=True) -> pd.DataFrame:
+                  normalise=True) -> pd.DataFrame:  # FIXME remove unused arguments?
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s). This function
     modifies the passed flatfile inplace (e.g. by adding all residuals-related computed
@@ -92,7 +90,7 @@ def get_residuals(gsims: list[str], imts: list[str],
     calculate_residuals(gsims, imts, flatfile, normalise)
     if compute_lh:
         get_residuals_likelihood(gsims, imts, flatfile)
-    return flatfile
+    return compacted(flatfile, columns=None)
 
 
 def calculate_expected_motions(gsims: Iterable[GMPE], imts: list[str],
@@ -123,13 +121,13 @@ def calculate_expected_motions_for_event(gsims: Iterable[GMPE], imts: Iterable[s
         const.StdDev.INTER_EVENT: c_labels.inter_ev,
         const.StdDev.INTRA_EVENT: c_labels.intra_ev
     }
+    imts_dict = {i: imt.from_string(i) for i in imts}
     # Period range for GSIM
     for gsim in gsims:
         types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        for imt_name in imts:
-            imtx = imt.from_string(imt_name)
-            if "SA(" in imt_name:
-                period = imtx.period
+        for imt_name, imtx in imts_dict.items():
+            period = get_SA_period(imtx)
+            if period is not None:
                 sa_period_limits = get_sa_limits(gsim)
                 if sa_period_limits is not None and not \
                         (sa_period_limits[0] < period < sa_period_limits[1]):
@@ -429,6 +427,39 @@ def _get_edr_kappa(obs: Union[np.ndarray, pd.Series],
     de_orig = np.sum((obs - expected) ** 2.)
     de_corr = np.sum((obs - y_c) ** 2.)
     return de_orig / de_corr
+
+
+def compacted(flatfile:pd.DataFrame,
+              observed_columns:Union[Iterable[str], None]=None,
+              computed_columns:Union[Iterable[str], None]=None) \
+        -> pd.DataFrame:
+    """Return a compact form of the given flatfile with the given columns
+    (observed: provided by the user as data, computed: computed by this module).
+    The columns denoting event ids (or event coordinates) and station ids
+    do not need to be specified, as this function will try to include them anyway.
+
+    :param flatfile: a flatfile resulting from :ref:`get_residuals`
+    :param observed_columns: the observed columns to keep. None will set a default list
+        including magnitude, vs30, event_depth and all provided distances
+    :param computed_columns: the computed columns to keep. None will set a default list
+        of residuals (total inter intra) and likelihood (total inter intra). See
+        :ref:`c_labels` for details
+    """
+    f_cols = set(flatfile.columns)
+    columns = _EVENT_COLUMNS[:1] if _EVENT_COLUMNS[0] in f_cols else _EVENT_COLUMNS[1:]
+    if _STATION_COLUMNS[0] in f_cols:
+        columns.append(_STATION_COLUMNS[0])
+    if observed_columns is None:
+        observed_columns = [
+            col for col in ['magnitude', 'vs30', 'repi', 'rrup', 'rhypo',
+                             'rjb', 'rx', 'event_depth'] if col in f_cols
+        ]
+    if computed_columns is None:
+        computed_columns = [
+            col for col, gsim, imtx, lbl in get_computed_columns(flatfile)
+            if lbl in c_labels.residuals_columns or lbl in c_labels.lh_columns
+        ]
+    return flatfile[columns + observed_columns + computed_columns]
 
 
 # FIXME: from here on multivariate_llh need to be fixed with GW
