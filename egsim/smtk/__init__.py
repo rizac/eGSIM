@@ -4,6 +4,7 @@ import re
 from scipy.constants import g
 import numpy as np
 from openquake.hazardlib.gsim import get_available_gsims
+from openquake.hazardlib import imt
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import valid
@@ -167,3 +168,23 @@ def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
 
     raise ValueError("Unrecognised time history units. "
                      "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
+
+
+def get_SA_period(obj: Union[str, imt.IMT]) -> Union[float, None]:
+    """Return the period from the given argument, returns None if the latter does not
+     indicate a valid Spectral acceleration object.
+
+    :arg: str or instance of IMT, such as "SA(1.0)" or `imt.SA(1.0)`
+    """
+    if isinstance(obj, str):
+        if not obj.startswith('SA('):  # fast check to return immediately in case
+            return None
+        try:
+            return imt.from_string(obj).period
+        except ValueError:
+            return None
+
+    if isinstance(obj, imt.IMT):
+        return obj.period if obj.string.startswith('SA(') else None
+
+    return None

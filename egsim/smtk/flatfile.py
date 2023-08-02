@@ -17,6 +17,7 @@ import pandas as pd
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
 
+from . import get_SA_period
 from ..smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
@@ -506,37 +507,7 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
         required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
     for attr in required:
         _prepare_for_gsim_required_attribute(flatfile, attr)
-    _prepare_for_sa(flatfile, [i for i in imts if i.startswith('SA(')])
-
-
-def _prepare_for_sa(flatfile: pd.DataFrame, target_sa: Iterable[str]):
-    """Modify inplace the flatfile assuring the SA columns identified by `target_sa`
-    are present. The SA column present in the flatfile will be used to obtain
-    the target SA via interpolation, and removed if not necessary
-    """
-    target_sa_columns = sorted(target_sa, key=lambda c: imt.from_string(c).period)
-    if not target_sa_columns:
-        return flatfile
-    target_sa_periods = [imt.from_string(c).period for c in target_sa_columns]
-    sa_columns = sorted((col for col in flatfile.columns if col.startswith("SA(")),
-                        key=lambda c: imt.from_string(c).period)
-    if len(sa_columns) < 2:
-        raise MissingColumnError('Two or more SA columns required for interpolation, '
-                                 f'found {len(sa_columns)}')
-    sa_periods = [imt.from_string(c).period for c in sa_columns]
-
-
-    spectrum = np.log10(flatfile[sa_columns])
-    # we need to interpolate row wise
-    # build the interpolation function:
-    interp = interp1d(sa_periods, spectrum, axis=1)
-    # and interpolate:
-    values = 10 ** interp(target_sa_periods)
-    # values is a matrix where each column represents the values of the target period.
-    # First drop old SA:
-    flatfile.drop(sa_columns, axis='columns', inplace=True)
-    # add new Sa:
-    flatfile[target_sa_columns] = values
+    _prepare_for_sa(flatfile, imts)
 
 
 DEFAULT_MSR = PeerMSR()
@@ -601,39 +572,60 @@ def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
     elif column == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     if series is None:
-        raise MissingColumnError(f'Missing flatfile column "{att_name}", '
-                                 f'no inference possible')
-    if column != att_name:
-        flatfile.rename(columns={column: att_name}, inplace=True)
+        raise MissingColumnError(column)
     if series is not flatfile.get(column):
         flatfile[column] = series
     return flatfile
 
 
+def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]):
+    """Modify inplace the flatfile assuring the SA columns in `imts` (e.g. "SA(0.2)")
+    are present. The SA column of the flatfile will be used to obtain
+    the target SA via interpolation, and removed if not necessary
+    """
+    src_sa = []
+    for c in flatfile.columns:
+        p = get_SA_period(c)
+        if p is not None:
+            src_sa.append((p, c))
+    # source_sa: period [float] -> mapped to the relative column:
+    source_sa: dict[float, str] = {p: c for p, c in sorted(src_sa, key=lambda t: t[0])}
+
+    tgt_sa = []
+    for i in imts:
+        p = get_SA_period(i)
+        if p is not None and p not in source_sa:
+            tgt_sa.append((p, i))
+    # source_sa: period [float] -> mapped to the relative column:
+    target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
+
+    if not source_sa or not target_sa:
+        return
+
+    # source_sa_periods = sorted(p for p in source_sa if p is not None)
+    source_spectrum = np.log10(flatfile[list(source_sa.values())])
+    # we need to interpolate row wise
+    # build the interpolation function:
+    interp = interp1d(list(source_sa), source_spectrum, axis=1)
+    # and interpolate:
+    values = 10 ** interp(list(target_sa))
+    # values is a matrix where each column represents the values of the target period.
+    # Add it to the dataframe:
+    flatfile[list(target_sa.values())] = values
+
+
 class MissingColumnError(AttributeError):
 
-    def __init__(self, arg: str):
+    def __init__(self, column: str):
         """
         Attribute error displaying missing flatfile column(s) massages
 
-        :param arg: gsim required attribute (e.g. 'z1pt0'), flatfile column
-            (e.g. 'event_time') or custom message (in this latter case, the argument
-            will be displayed as it is)
+        :param column: gsim required attribute (e.g. 'z1pt0') or flatfile column
+            (e.g. 'event_time')
         """
         # NOTE: this class MUST subclass AttributeError as it is required by OpenQuake
         # when retrieving Context attributes (see usage in :ref:`EventContext` below)
-        column = None
-        if arg in column_alias:
-            # passed arg. is a gsim required param, convert to flatfile column
-            column = column_alias[arg]
-        elif arg in column_type:
-            # passed arg. is a flatfile column
-            column = arg
-        if column:
-            msg = f'Missing flatfile column "{column}"'
-        else:
-            msg = arg
-        super().__init__(msg)
+        super().__init__(f'Missing column "{column_alias.get(column, column)}"')
 
 
 def fill_na(src: Union[None, np.ndarray, pd.Series],
@@ -685,10 +677,11 @@ class EventContext(RuptureContext):
         """Return a non-found Context attribute by searching in the underlying
         flatfile column. Raises AttributeError (as usual) if `item` is not found
         """
+        column_name = column_alias.get(item, item)
         try:
-            values = self._flatfile[item].values
+            values = self._flatfile[column_name].values
         except KeyError:
-            raise MissingColumnError(item)
+            raise MissingColumnError(column_name)
         if self.col_type[item] == ColumnType.rupture_parameter.name:
             # rupture parameter, return a scalar (note: all values should be the same)
             values = values[0]
