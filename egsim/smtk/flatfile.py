@@ -4,7 +4,6 @@ from datetime import datetime
 from enum import Enum
 from os.path import join, dirname
 import re
-from openquake.hazardlib import imt
 from openquake.hazardlib.gsim.base import GMPE
 from pandas.core.indexes.numeric import IntegerIndex
 from scipy.interpolate import interp1d
@@ -514,14 +513,12 @@ DEFAULT_MSR = PeerMSR()
 
 
 def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
-    """Modify inplace the given flatfile to contain a column named
-    `att_name` and be compliant with the specified Gsim required attribute.
-    If the input `flatfile` does not have a column `att_name`, several rules -
-    documented in the metadata YAML file - are applied to try to infer the column
-    values (e.g., rename an existing column whose name is an `att_name` alias, fill
-    missing values from functions or other columns).
-    Eventually, if the column `att_name` cannot be set on `flatfile`, this function
-    raises :ref:`MissingColumn` error.
+    """Attempt to include in the given flatfile the column associated to
+    the Gsim required attribute `att_name`.
+    Replacement and inference rule might be applied and mofify the passed
+    flatfile (p)ass a copy of a flatfile to avoid inplace modifications).
+    Eventually, if the column cannot be set on `flatfile`, this function
+    raises :ref:`MissingColumn` error notifying the required missing column.
     """
     column = column_alias.get(att_name, att_name)
     series = flatfile.get(column)  # -> None if column not found
@@ -643,8 +640,7 @@ def fill_na(src: Union[None, np.ndarray, pd.Series],
 
 
 class EventContext(RuptureContext):
-    # Increase `column_type` including also aliases (gsim required attributes) as keys:
-    col_type = {**column_type, **{a : column_type[c] for a, c in column_alias.items()}}
+    """A RuptureContext accepting a flatfile (pandas DataFrame) as input"""
 
     def __init__(self, flatfile: pd.DataFrame):
         super().__init__()
@@ -652,13 +648,7 @@ class EventContext(RuptureContext):
             raise ValueError('flatfile index should be made of unique integers')
         self._flatfile = flatfile
 
-    # def __len__(self):
-    #     """Required by the model while computing residuals, returns the number of
-    #     sites (records) of this context
-    #     """
-    #     return len(self.sids)
-
-    def __eq__(self, other):
+    def __eq__(self, other):  # FIXME: legacy code, is it still used?
         assert isinstance(other, EventContext) and \
                self._flatfile is other._flatfile
 
@@ -667,7 +657,7 @@ class EventContext(RuptureContext):
         """Return the ids (iterable of integers) of the records (or sites) used to build
         this context. The returned pandas `IntegerIndex` must have unique values so that
         the records (flatfile rows) can always be retrieved from the source flatfile via
-        `flatfile.loc[self.record_ids, :]`
+        `flatfile.loc[self.sids, :]`
         """
         # note that this attribute is used also when calculating `len(self)` so do not
         # delete or rename. See superclass for details
@@ -682,7 +672,7 @@ class EventContext(RuptureContext):
             values = self._flatfile[column_name].values
         except KeyError:
             raise MissingColumnError(column_name)
-        if self.col_type[item] == ColumnType.rupture_parameter.name:
+        if column_type[item] == ColumnType.rupture_parameter.name:
             # rupture parameter, return a scalar (note: all values should be the same)
             values = values[0]
         return values
