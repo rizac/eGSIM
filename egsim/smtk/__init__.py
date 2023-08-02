@@ -171,29 +171,26 @@ def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
 
 
 def get_SA_period(obj: Union[str, imt.IMT]) -> Union[float, None]:
-    """Return the period (float) from the given argument, or None if the latter does not
-     indicate a Spectral Acceleration object with a finite period.
+    """Return the period (float) from the given `obj` argument, or None if `obj`
+    does not indicate a Spectral Acceleration object/string with a finite period
+    (e.g. "SA(NaN)", "SA(inf)", "SA" return None).
 
-    :arg: str or instance of IMT, such as "SA(1.0)" or `imt.SA(1.0)`
+    :arg: str or `imt.IMT` instance, such as "SA(1.0)" or `imt.SA(1.0)`
     """
-    period = None
-
     if isinstance(obj, str):
         if not obj.startswith('SA('):  # fast check to return immediately in case
             return None
         try:
-            period = imt.from_string(obj).period
+            obj = imt.from_string(obj)
         except ValueError:
             return None
-
-    if isinstance(obj, imt.IMT):
+    elif isinstance(obj, imt.IMT):
         if not obj.string.startswith('SA('):
             return None
-        period = obj.period
+    else:
+        return None
 
-    if period is not None and np.isfinite(period):
-        # check also that the period is finite (SA('inf') and SA('nan') are possible,
-        # and this function is intended to return a "workable" period):
-        period = float(period)
-
-    return period
+    period = obj.period
+    # check also that the period is finite (SA('inf') and SA('nan') are possible,
+    # and this function is intended to return a "workable" period):
+    return float(period) if np.isfinite(period) else None

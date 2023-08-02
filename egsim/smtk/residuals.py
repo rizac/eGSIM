@@ -71,7 +71,7 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
             yield EventContext(dfr)
 
 
-def get_residuals(gsims: list[str], imts: list[str],
+def get_residuals(gsims: Iterable[str], imts: Iterable[str],
                   flatfile: pd.DataFrame, nodal_plane_index=1,
                   component="Geometric", compute_lh=False,
                   normalise=True) -> pd.DataFrame:  # FIXME remove unused arguments?
@@ -90,7 +90,7 @@ def get_residuals(gsims: list[str], imts: list[str],
     calculate_residuals(gsims, imts, flatfile, normalise)
     if compute_lh:
         get_residuals_likelihood(gsims, imts, flatfile)
-    return compacted(flatfile, columns=None)
+    return compacted(flatfile, gsims, imts)
 
 
 def calculate_expected_motions(gsims: Iterable[GMPE], imts: list[str],
@@ -430,20 +430,18 @@ def _get_edr_kappa(obs: Union[np.ndarray, pd.Series],
 
 
 def compacted(flatfile:pd.DataFrame,
-              observed_columns:Union[Iterable[str], None]=None,
-              computed_columns:Union[Iterable[str], None]=None) \
+              gsims: Iterable[str], imts: Iterable[str],
+              observed_columns:Union[Iterable[str], None]=None) \
         -> pd.DataFrame:
     """Return a compact form of the given flatfile with the given columns
-    (observed: provided by the user as data, computed: computed by this module).
+    (observed: provided by the user as data, computed: computed for the given gsims and
+    imts).
     The columns denoting event ids (or event coordinates) and station ids
     do not need to be specified, as this function will try to include them anyway.
 
     :param flatfile: a flatfile resulting from :ref:`get_residuals`
     :param observed_columns: the observed columns to keep. None will set a default list
         including magnitude, vs30, event_depth and all provided distances
-    :param computed_columns: the computed columns to keep. None will set a default list
-        of residuals (total inter intra) and likelihood (total inter intra). See
-        :ref:`c_labels` for details
     """
     f_cols = set(flatfile.columns)
     columns = _EVENT_COLUMNS[:1] if _EVENT_COLUMNS[0] in f_cols else _EVENT_COLUMNS[1:]
@@ -454,11 +452,10 @@ def compacted(flatfile:pd.DataFrame,
             col for col in ['magnitude', 'vs30', 'repi', 'rrup', 'rhypo',
                              'rjb', 'rx', 'event_depth'] if col in f_cols
         ]
-    if computed_columns is None:
-        computed_columns = [
-            col for col, gsim, imtx, lbl in get_computed_columns(flatfile)
-            if lbl in c_labels.residuals_columns or lbl in c_labels.lh_columns
-        ]
+    computed_columns = [
+        col for col, gsim, imtx, lbl in get_computed_columns(gsims, imts, flatfile)
+        if lbl in c_labels.residuals_columns or lbl in c_labels.lh_columns
+    ]
     return flatfile[columns + observed_columns + computed_columns]
 
 

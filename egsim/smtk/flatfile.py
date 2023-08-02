@@ -308,9 +308,14 @@ def read_csv(filepath_or_buffer: str,
             # and their string repr (col_dtype_name) handled "normally" few lines below:
             col_dtype = col_dtype_name
 
-        if col_dtype == 'category':
-            categorical_dtypes[col] = dtype[col]
-        elif col_dtype == ColumnDtype.str.name:
+        if col_dtype == ColumnDtype.str.name:
+            pre_dtype[col] = dtype[col]
+        elif col_dtype == 'category':
+            # By passing 'category' in `pre_dtype` (no post process), `read_csv` will
+            # produce a categorical column of `str` categories. This limitation could be
+            # circumvented by passing 'category' in `post_dtype`. However, this would
+            # introduce other dtype issues such as creating categories of mixed types
+            # which cannot be saved to file by pandas
             pre_dtype[col] = dtype[col]
         elif col_dtype == ColumnDtype.datetime.name:
             datetime_columns.add(col)
@@ -672,7 +677,7 @@ class EventContext(RuptureContext):
             values = self._flatfile[column_name].values
         except KeyError:
             raise MissingColumnError(column_name)
-        if column_type[item] == ColumnType.rupture_parameter.name:
+        if column_type[column_name] == ColumnType.rupture_parameter.name:
             # rupture parameter, return a scalar (note: all values should be the same)
             values = values[0]
         return values
