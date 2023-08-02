@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
 
-from ...smtk.residuals import convert_accel_units
+from ...smtk import convert_accel_units
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 from ...smtk.flatfile import read_csv, column_dtype, column_default, column_required
-from ..models import FlatfileColumn
 
 
 # mean utilities (geometric, arithmetic, ...):

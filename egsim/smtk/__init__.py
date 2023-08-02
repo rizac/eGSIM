@@ -1,15 +1,17 @@
 from typing import Union, Sequence, Type
-
+from math import inf
 import re
+from scipy.constants import g
+import numpy as np
 from openquake.hazardlib.gsim import get_available_gsims
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import valid
-from math import inf
-import numpy as np
+
 
 # Get a list of the available GSIMs (lazy loaded):
 AVAILABLE_GSIMS: dict[str, Type[GMPE]] = get_available_gsims()
+
 
 # Regular expression to get a GMPETable from string:
 _gmpetable_regex = re.compile(r'^GMPETable\(([^)]+?)\)$')
@@ -122,3 +124,46 @@ def n_jsonify(obj: Union[Sequence, int, float, np.generic]) -> \
     if num != num or num in {inf, -inf, np.inf, -np.inf}:
         return None
     return num  # noqa
+
+
+def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
+    """
+    Legacy function which can still be used to convert acceleration from/to
+    different units
+
+    :param acceleration: the acceleration (numeric or numpy array)
+    :param from_: unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
+        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2"
+    :param to_: new unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
+        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2". When missing, it defaults
+        to "cm/s/s"
+
+    :return: acceleration converted to the given units (by default, 'cm/s/s')
+    """
+    m_sec_square = ("m/s/s", "m/s**2", "m/s^2")
+    cm_sec_square = ("cm/s/s", "cm/s**2", "cm/s^2")
+    acceleration = np.asarray(acceleration)
+    if from_ == 'g':
+        if to_ == 'g':
+            return acceleration
+        if to_ in m_sec_square:
+            return acceleration * g
+        if to_ in cm_sec_square:
+            return acceleration * (100 * g)
+    elif from_ in m_sec_square:
+        if to_ == 'g':
+            return acceleration / g
+        if to_ in m_sec_square:
+            return acceleration
+        if to_ in cm_sec_square:
+            return acceleration * 100
+    elif from_ in cm_sec_square:
+        if to_ == 'g':
+            return acceleration / (100 * g)
+        if to_ in m_sec_square:
+            return acceleration / 100
+        if to_ in cm_sec_square:
+            return acceleration
+
+    raise ValueError("Unrecognised time history units. "
+                     "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
