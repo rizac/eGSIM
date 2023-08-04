@@ -377,8 +377,8 @@ def read_csv(filepath_or_buffer: str,
                 dfr[col] = dfr[col] .astype(float)
                 continue
 
-        # try to convert float columns that should be int. For instance, an int
-        # column with missing values (replace the latter with the default, or 0)
+        # try to convert float columns that should be int (e.g. ints with missing
+        # values: replace the latter with the default (or 0)
         if expected_col_dtype_name == ColumnDtype.int.name:   # "int"
             if issubclass(col_dtype, ColumnDtype.float.value):
                 series = dfr[col].copy()
@@ -386,6 +386,7 @@ def read_csv(filepath_or_buffer: str,
                 series.loc[na_values] = defaults.pop(col, 0)
                 try:
                     series = series.astype(int)
+                    # check all elements are int (if yes, go on)
                     if (dfr[col][~na_values] == series[~na_values]).all():  # noqa
                         dfr[col] = series
                         continue
