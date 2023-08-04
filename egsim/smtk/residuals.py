@@ -17,7 +17,7 @@ from scipy.stats import norm
 from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
-from . import check_gsim_list, get_gsim_name, get_SA_period
+from . import check_gsim_list, get_gsim_name, get_SA_period, convert_accel_units
 from .flatfile import EventContext, prepare_for_residuals, MissingColumnError
 
 
@@ -84,34 +84,40 @@ def get_residuals(gsims: Iterable[str], imts: Iterable[str],
     """
     gsims = check_gsim_list(gsims)
     prepare_for_residuals(flatfile, gsims.values(), imts)
-    expected = calculate_expected_motions(gsims.values(), imts, flatfile)
+    residuals = calculate_flatfile_residuals(gsims, imts, flatfile)
     # concatenate expected in flatfile (add new columns):
-    flatfile[expected.columns] = expected
-    calculate_residuals(gsims, imts, flatfile, normalise)
+    flatfile[residuals.columns] = residuals
     if compute_lh:
         get_residuals_likelihood(gsims, imts, flatfile)
     return compacted(flatfile, gsims, imts)
 
 
-def calculate_expected_motions(gsims: Iterable[GMPE], imts: Iterable[str],
-                               flatfile: pd.DataFrame) -> pd.DataFrame:
-    expected:pd.DataFrame = pd.DataFrame(index=flatfile.index)
+def calculate_flatfile_residuals(gsims: dict[str, GMPE], imts: Iterable[str],
+                                 flatfile: pd.DataFrame) -> pd.DataFrame:
+    residuals:pd.DataFrame = pd.DataFrame(index=flatfile.index)
+    imts = list(imts)
+    # computget the observations (compute the log for all once here):
+    observations = pd.DataFrame(index=flatfile.index,
+                                columns=imts,
+                                data=np.log(flatfile[imts]))
     for context in yield_event_contexts(flatfile):
         # Get the expected ground motions by event
-        ev_expected = calculate_expected_motions_for_event(gsims, imts, context)
-        # Put the above in the expected motions, index based:
-        for col in ev_expected.columns:
-            if col not in expected.columns:  # initialize column if needed
-                expected[col] = np.nan
+        expected = calculate_expected_motions(gsims.values(), imts, context)
+        # Get residuals:
+        res = calculate_residuals(gsims, imts, observations.loc[expected.index, :],
+                                  expected)
+        if residuals.empty:
+            for col in list(expected.columns) + list(res.columns):
+                residuals[col] = np.nan
         # copy values:
-        expected.loc[ev_expected.index, ev_expected.columns] = \
-            ev_expected[ev_expected.columns]
+        residuals.loc[expected.index, expected.columns] = expected
+        residuals.loc[res.index, res.columns] = res
 
-    return expected
+    return residuals
 
 
-def calculate_expected_motions_for_event(gsims: Iterable[GMPE], imts: Iterable[str],
-                                         ctx: EventContext) -> pd.DataFrame:
+def calculate_expected_motions(gsims: Iterable[GMPE], imts: Iterable[str],
+                               ctx: EventContext) -> pd.DataFrame:
     """
     Calculate the expected ground motions from the context
     """
@@ -140,30 +146,35 @@ def calculate_expected_motions_for_event(gsims: Iterable[GMPE], imts: Iterable[s
 
 
 def calculate_residuals(gsims: Iterable[str], imts: Iterable[str],
-                        flatfile: pd.DataFrame, normalise=True):
+                        observations: pd.DataFrame, expected_motions: pd.DataFrame,
+                        normalise=True):
     """
     Calculate the residual terms, modifies `flatfile` inplace
+
+    :param observations: the flatfile of the (natural logarithm of) the
+        observed ground motions
     """
+    residuals: pd.DataFrame = pd.DataFrame(index=observations.index)
     for gsim in gsims:
         for imtx in imts:
-            obs = flatfile.get(imtx)
+            obs = observations.get(imtx)
             if obs is None:
                 continue
-            mean = flatfile.get(column_label(gsim, imtx, c_labels.mean))
-            total_stddev = flatfile.get(column_label(gsim, imtx, c_labels.total))
+            mean = expected_motions.get(column_label(gsim, imtx, c_labels.mean))
+            total_stddev = expected_motions.get(column_label(gsim, imtx, c_labels.total))
             if mean is None or total_stddev is None:
                 continue
-            obs = np.log(obs)
-            flatfile[column_label(gsim, imtx, c_labels.total_res)] = \
+            residuals[column_label(gsim, imtx, c_labels.total_res)] = \
                 (obs - mean) / total_stddev
-            inter_ev = flatfile.get(column_label(gsim, imtx, c_labels.inter_ev))
-            intra_ev = flatfile.get(column_label(gsim, imtx, c_labels.intra_ev))
+            inter_ev = expected_motions.get(column_label(gsim, imtx, c_labels.inter_ev))
+            intra_ev = expected_motions.get(column_label(gsim, imtx, c_labels.intra_ev))
             if inter_ev is None or intra_ev is None:
                 continue
             inter, intra = _get_random_effects_residuals(obs, mean, inter_ev,
                                                          intra_ev, normalise)
-            flatfile[column_label(gsim, imtx, c_labels.inter_ev_res)] = inter
-            flatfile[column_label(gsim, imtx, c_labels.intra_ev_res)] = intra
+            residuals[column_label(gsim, imtx, c_labels.inter_ev_res)] = inter
+            residuals[column_label(gsim, imtx, c_labels.intra_ev_res)] = intra
+    return residuals
 
 
 def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
@@ -210,8 +221,8 @@ def column_label(gsim: Union[str, GMPE], imtx: str, c_label: str):
     return f"{gsim} {imtx} {c_label}"
 
 
-def get_computed_columns(gsims: Iterable[str],
-                         imts: Iterable[str],
+def get_computed_columns(gsims: Union[None, Iterable[str]],
+                         imts: Union[None, Iterable[str]],
                          flatfile: pd.DataFrame):
     """Yield tuples from columns of `flatfile` denoting computed columns
     (expected motions, residuals) for the given `gsims` and `imts`. A computed column
@@ -219,11 +230,15 @@ def get_computed_columns(gsims: Iterable[str],
     Each yielded tuple is:
         `column name, gsim name, imt name, residual label`
     """
-    gsims = set(gsims)
-    imts = set(imts)
+    if gsims is not None:
+        gsims = set(gsims)
+    if imts is not None:
+        imts = set(imts)
     for col in flatfile.columns:
         chunks = col.split(" ", 2)
-        if len(chunks) == 3 and chunks[0] in gsims and chunks[1] in imts:
+        if len(chunks) == 3 and \
+                (gsims is None or chunks[0] in gsims) and \
+                (imts is None or chunks[1] in imts):
             yield col, chunks[0], chunks[1], chunks[2]
 
 

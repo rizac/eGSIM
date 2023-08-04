@@ -264,7 +264,6 @@ def read_csv(filepath_or_buffer: str,
     if sep is None:
         sep = _infer_csv_sep(filepath_or_buffer)
     kwargs['sep'] = sep
-    datetime_columns = set(kwargs.pop('parse_dates', []))
 
     # initialize the defaults dict if None and needs to be populated:
     if defaults is None:
@@ -274,7 +273,7 @@ def read_csv(filepath_or_buffer: str,
 
     # `dtype` will be split into several `dict`s:
 
-    # `dtype` entries that can not be passed to `pd.read_csv` (e.g. bool, int, float)
+    # `dtype` entries that can not be passed to `pd.read_csv` (e.g. bool, int, float, datetime)
     # because they raise errors that we want to handle after reading the csv, will be
     # put here:
     post_dtype = {}
@@ -317,19 +316,39 @@ def read_csv(filepath_or_buffer: str,
             # introduce other dtype issues such as creating categories of mixed types
             # which cannot be saved to file by pandas
             pre_dtype[col] = dtype[col]
-        elif col_dtype == ColumnDtype.datetime.name:
-            datetime_columns.add(col)
         else:
             post_dtype[col] = col_dtype
+
+    # put date-times passed as parse_dates in post_dtype. remove `parse_dates` as it will
+    # raise if we provide columns not present in the flatfile:
+    for col in kwargs.pop('parse_dates', []):
+        if col not in post_dtype:  # priority to dtype argument
+            post_dtype[col] = ColumnDtype.datetime.name
 
     # Read flatfile:
     try:
         dfr = pd.read_csv(filepath_or_buffer, dtype=pre_dtype, usecols=usecols,
-                          parse_dates=list(datetime_columns), **kwargs)
+                          **kwargs)
     except ValueError as exc:
         raise ValueError(f'Error reading the flatfile: {str(exc)}')
 
     dfr_columns = set(dfr.columns)
+
+    # accept column alias, i.e. openquake parameters (this is not documented publicly
+    # to not confuse the users), so rename in case, but only if the source:
+    # duplicated_cols = []
+    # rename_cols = {}
+    # for c in set(column_alias) & dfr_columns:
+    #     if column_alias[c] in dfr_columns:
+    #         duplicated_cols.append(f'"{column_alias[c]}" or "{c}"')
+    #     else:
+    #         rename_cols[c] = column_alias[c]
+    # if duplicated_cols:
+    #     raise ValueError("Column conflict(s), please provide only one of: "
+    #                      f"{', '.join(duplicated_cols)}")
+    # if rename_cols:
+    #     dfr.rename(columns=rename_cols, inplace=True)
+
     # check required columns first:
     if required and required - dfr_columns:
         missing = sorted(required - dfr_columns)
@@ -344,6 +363,11 @@ def read_csv(filepath_or_buffer: str,
         expected_col_dtype_name:str = post_dtype[col]
         col_dtype = dfr[col].dtype.type
         if issubclass(col_dtype, ColumnDtype[expected_col_dtype_name].value):
+            continue
+
+        # convert datetimes:
+        if expected_col_dtype_name == ColumnDtype.datetime.name:
+            dfr[col] = pd.to_datetime(dfr[col], errors='coerce')
             continue
 
         # convert int columns that should be float:
