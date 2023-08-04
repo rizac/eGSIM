@@ -198,7 +198,7 @@ class c_labels:
     inter_ev = const.StdDev.INTER_EVENT.replace(" ", "-").capitalize()
     intra_ev = const.StdDev.INTRA_EVENT.replace(" ", "-").capitalize()
     expected_motion_column = {total, inter_ev, intra_ev}
-    res = "residuals"
+    res = "residual"
     total_res = total + f" {res}"
     inter_ev_res = inter_ev + f" {res}"
     intra_ev_res = intra_ev + f" {res}"

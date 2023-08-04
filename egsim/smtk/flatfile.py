@@ -280,8 +280,8 @@ def read_csv(filepath_or_buffer: str,
     # `dtype` entries that can be passed to `pd.read_csv` ('category', 'str', 'datetime')
     # will be put here (or in `datetime_columns`):
     pre_dtype = {}
-    # Also, convert categorical dtypes into their categories dtype, and put categorical data
-    # in a separate dict
+    # Also, convert categorical dtypes into their categories dtype, and put categorical
+    # data in a separate dict
     categorical_dtypes = {}
     for col, col_dtype in dtype.items():
         if isinstance(col_dtype, (list, tuple)):  # covert lists and tuples beforehand
@@ -334,21 +334,6 @@ def read_csv(filepath_or_buffer: str,
 
     dfr_columns = set(dfr.columns)
 
-    # accept column alias, i.e. openquake parameters (this is not documented publicly
-    # to not confuse the users), so rename in case, but only if the source:
-    # duplicated_cols = []
-    # rename_cols = {}
-    # for c in set(column_alias) & dfr_columns:
-    #     if column_alias[c] in dfr_columns:
-    #         duplicated_cols.append(f'"{column_alias[c]}" or "{c}"')
-    #     else:
-    #         rename_cols[c] = column_alias[c]
-    # if duplicated_cols:
-    #     raise ValueError("Column conflict(s), please provide only one of: "
-    #                      f"{', '.join(duplicated_cols)}")
-    # if rename_cols:
-    #     dfr.rename(columns=rename_cols, inplace=True)
-
     # check required columns first:
     if required and required - dfr_columns:
         missing = sorted(required - dfr_columns)
@@ -365,16 +350,32 @@ def read_csv(filepath_or_buffer: str,
         if issubclass(col_dtype, ColumnDtype[expected_col_dtype_name].value):
             continue
 
-        # convert datetimes:
+        # convert date-times:
         if expected_col_dtype_name == ColumnDtype.datetime.name:
-            dfr[col] = pd.to_datetime(dfr[col], errors='coerce')
-            continue
+            datetime_parsed = False
+            if issubclass(col_dtype, ColumnDtype.str.value):
+                try:
+                    dfr[col] = pd.to_datetime(dfr[col])
+                    datetime_parsed = True
+                except ValueError:
+                    missing = dfr[col].isin(missing_values)
+                    if missing.any():
+                        values = dfr[col].copy()
+                        values[missing] = pd.NaT
+                        try:
+                            dfr[col] = pd.to_datetime(values)
+                            datetime_parsed = True
+                        except ValueError:
+                            pass
+                if datetime_parsed:
+                    continue
 
         # convert int columns that should be float:
         if expected_col_dtype_name == ColumnDtype.float.name:  # "float"
             if issubclass(col_dtype, ColumnDtype.int.value):
                 dfr[col] = dfr[col] .astype(float)
                 continue
+
         # try to convert float columns that should be int:
         if expected_col_dtype_name == ColumnDtype.int.name:   # "int"
             if issubclass(col_dtype, ColumnDtype.float.value):
