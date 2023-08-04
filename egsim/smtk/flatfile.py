@@ -350,7 +350,7 @@ def read_csv(filepath_or_buffer: str,
         if issubclass(col_dtype, ColumnDtype[expected_col_dtype_name].value):
             continue
 
-        # convert date-times:
+        # try to convert date-times
         if expected_col_dtype_name == ColumnDtype.datetime.name:
             datetime_parsed = False
             if issubclass(col_dtype, ColumnDtype.str.value):
@@ -358,6 +358,7 @@ def read_csv(filepath_or_buffer: str,
                     dfr[col] = pd.to_datetime(dfr[col])
                     datetime_parsed = True
                 except ValueError:
+                    # be relaxed on missing values, if any, and retry:
                     missing = dfr[col].isin(missing_values)
                     if missing.any():
                         values = dfr[col].copy()
@@ -370,13 +371,14 @@ def read_csv(filepath_or_buffer: str,
                 if datetime_parsed:
                     continue
 
-        # convert int columns that should be float:
+        # convert int columns that should be float
         if expected_col_dtype_name == ColumnDtype.float.name:  # "float"
             if issubclass(col_dtype, ColumnDtype.int.value):
                 dfr[col] = dfr[col] .astype(float)
                 continue
 
-        # try to convert float columns that should be int:
+        # try to convert float columns that should be int. For instance, an int
+        # column with missing values (replace the latter with the default, or 0)
         if expected_col_dtype_name == ColumnDtype.int.name:   # "int"
             if issubclass(col_dtype, ColumnDtype.float.value):
                 series = dfr[col].copy()
@@ -389,6 +391,7 @@ def read_csv(filepath_or_buffer: str,
                         continue
                 except Exception:  # noqa
                     pass
+
         # try to convert str/int/float columns that should be bool:
         if expected_col_dtype_name == ColumnDtype.bool.name:  # "bool"
             new_values = None
@@ -396,7 +399,7 @@ def read_csv(filepath_or_buffer: str,
                 new_values = dfr[col]
                 if sorted(pd.unique(new_values)) != [0, 1]:
                     new_values = None
-            elif issubclass(col_dtype, ColumnDtype.int.value):
+            elif issubclass(col_dtype, ColumnDtype.float.value):
                 na_values = pd.isna(dfr[col])
                 new_values = dfr[col]
                 new_values.loc[na_values] = defaults.pop(col, False)
