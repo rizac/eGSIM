@@ -93,7 +93,7 @@ def get_residuals(gsims: Iterable[str], imts: Iterable[str],
     return compacted(flatfile, gsims, imts)
 
 
-def calculate_expected_motions(gsims: Iterable[GMPE], imts: list[str],
+def calculate_expected_motions(gsims: Iterable[GMPE], imts: Iterable[str],
                                flatfile: pd.DataFrame) -> pd.DataFrame:
     expected:pd.DataFrame = pd.DataFrame(index=flatfile.index)
     for context in yield_event_contexts(flatfile):
@@ -452,9 +452,12 @@ def compacted(flatfile:pd.DataFrame,
             col for col in ['magnitude', 'vs30', 'repi', 'rrup', 'rhypo',
                              'rjb', 'rx', 'event_depth'] if col in f_cols
         ]
+    computed_labels = c_labels.residuals_columns | c_labels.lh_columns | \
+                      {c_labels.total, c_labels.inter_ev, c_labels.intra_ev,
+                       c_labels.mean}
     computed_columns = [
         col for col, gsim, imtx, lbl in get_computed_columns(gsims, imts, flatfile)
-        if lbl in c_labels.residuals_columns or lbl in c_labels.lh_columns
+        if lbl in computed_labels
     ]
     return flatfile[columns + observed_columns + computed_columns]
 
