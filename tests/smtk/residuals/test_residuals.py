@@ -100,7 +100,7 @@ class ResidualsTestCase(SimpleTestCase):
                 # check values
             expected = np.array(exp_dict[lbl], dtype=float)
             # computed dataframes have different labelling:
-            lbl += " residuals"
+            lbl += " " + c_labels.res
             computed = res_dict[lbl].values
             if 'Inter-event' in lbl:
                 # Are all inter events (per event) are close enough?
