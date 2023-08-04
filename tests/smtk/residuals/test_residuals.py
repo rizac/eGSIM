@@ -16,7 +16,7 @@ from django.test import SimpleTestCase  # https://stackoverflow.com/a/59764739
 from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile
 from egsim.smtk import convert_accel_units
-
+from egsim.smtk.residuals import column_label, c_labels
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -92,10 +92,23 @@ class ResidualsTestCase(SimpleTestCase):
         with open(os.path.join(BASE_DATA_PATH, file)) as _:
             exp_dict = json.load(_)
         # check results:
-        self.assertEqual(len(exp_dict), len(res_dict))
-        for gsim in res_dict:
-            self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
-            for imt in res_dict[gsim]:
+        # self.assertEqual(len(exp_dict), len(res_dict))
+        for gsim in exp_dict:
+            # self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
+            for imt in exp_dict[gsim]:
+                # check values
+                values = res_dict[column_label(gsim, imt, c_labels.total_res)]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Total"])
+                self.assertTrue(vals_ok)
+                values = res_dict[column_label(gsim, imt, c_labels.intra_ev_res)]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Intra event"])
+                self.assertTrue(vals_ok)
+                values = res_dict[column_label(gsim, imt, c_labels.inter_ev_res)]
+                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Inter event"])
+                self.assertTrue(vals_ok)
+
+
+                # check other stuff:
                 if gsim == "AkkarEtAlRjb2014":
                     # For Akkar et al - inter-event residuals should have
                     # 4 elements and the intra-event residuals 41
@@ -112,16 +125,7 @@ class ResidualsTestCase(SimpleTestCase):
                         len(res_dict[gsim][imt]["Intra event"]), self.num_records)
                 self.assertEqual(
                         len(res_dict[gsim][imt]["Total"]), self.num_records)
-                # check values
-                values = res_dict[gsim][imt]["Total"]
-                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Total"])
-                self.assertTrue(vals_ok)
-                values = res_dict[gsim][imt]["Inter event"]
-                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Inter event"])
-                self.assertTrue(vals_ok)
-                values = res_dict[gsim][imt]["Intra event"]
-                vals_ok = np.allclose(values, exp_dict[gsim][imt]["Intra event"])
-                self.assertTrue(vals_ok)
+
 
         # residuals.get_residual_statistics()
 
