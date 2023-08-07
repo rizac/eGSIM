@@ -5,20 +5,20 @@ Created on 16 Feb 2018
 """
 from typing import Any
 
-import yaml
+# import yaml
 import pandas as pd
 
 # import numpy as np
-from egsim.smtk import flatfile
-from egsim.smtk.flatfile import (ColumnType, ColumnDtype, _ff_metadata_path,
-                                 read_column_metadata)
+# from egsim.smtk import flatfile
+from egsim.smtk.flatfile import (ColumnType, ColumnDtype, read_column_metadata)
 
 
 def test_flatfile_metadata_from_yaml():
-    c_type, c_dtype, c_required, c_default, c_help, _c_alias = \
-        {}, {}, set(), {}, {}, {}
+    c_type, c_dtype, c_required, c_default, c_help, _c_alias, c_bounds = \
+        {}, {}, set(), {}, {}, {}, {}
     read_column_metadata(type=c_type, dtype=c_dtype, required=c_required,
-                         default=c_default, help=c_help, alias=_c_alias)
+                         default=c_default, help=c_help, alias=_c_alias,
+                         bounds=c_bounds)
 
     if any(len(_) > len(c_type) for _ in [c_required, c_dtype, _c_alias, c_help,
                                           c_default]):
@@ -33,9 +33,8 @@ def test_flatfile_metadata_from_yaml():
         raise ValueError(f'Error in metadata some alias is already defined as '
                          f'column name, please check YAML file')
 
-    props = dict(c_type)
-    for c, t in props.items():
-        props = {}
+    for c, t in c_type.items():
+        props = {'type': t, 'name': c}
         if c in c_dtype:
             props['dtype'] = c_dtype.pop(c)
         if c in c_required:
@@ -46,16 +45,18 @@ def test_flatfile_metadata_from_yaml():
         if c in c_help:
             props['help'] = c_help.pop(c)
         if c in set(c_alias.values()):
-            props['dtype'] = c_dtype.pop(c)
+            props['alias'] = c_dtype.pop(c)
+        if c in c_bounds:
+            props['bounds'] = c_bounds.pop(c)
 
-    check_column_metadata(props)
+        check_column_metadata(props)
 
 
-def check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
+def check_column_metadata(column: dict[str, Any]):
     """checks the Column metadata dict issued from the YAML flatfile"""
     # convert type to corresponding Enum:
     try:
-        column['type'] = ColumnType(column['type']).name
+        column['type'] = ColumnType[column['type']]
     except KeyError:
         raise ValueError(f"Invalid type: {column['type']}")
 
@@ -76,7 +77,11 @@ def check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
     dtype = column['dtype']
 
     # handle categorical data:
-    if isinstance(dtype, (list, tuple)):  # categorical data type
+    if isinstance(dtype, (list, tuple, pd.CategoricalDtype)):  # categorical data type
+        if not isinstance(dtype, pd.CategoricalDtype):
+            pd.CategoricalDtype(dtype)  # check it's not raising
+        else:
+            dtype = dtype.categories.tolist()
         if not all(any(isinstance(_, d.value) for d in ColumnDtype) for _ in dtype):
             raise ValueError(f"Invalid data type(s) in provided categorical data")
         if len(set(type(_) for _ in dtype)) != 1:
@@ -98,11 +103,30 @@ def check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
 
     # check bounds:
     if bounds_are_given:
-        try:
-            parse_bounds_str(column['bounds'], py_dtype)
-        except Exception as exc:
-            raise ValueError(f"invalid bounds: {str(exc)}")
-
+        bounds = column['bounds']
+        symbols = {"<", ">", ">=", "<="}
+        assert (k in {"<", ">", ">=", "<="} for k in bounds), \
+            f"Some bound symbols not in {str(symbols)}, check flatfile Python" \
+            f"and flatfile metadata YAML file"
+        if len(bounds) > 2:
+            raise ValueError(f'Error in column "{column}" too many bounds: '
+                             f'{list(bounds)}')
+        if (">" in bounds and ">=" in bounds) or \
+                ("<" in bounds and "<=" in bounds):
+            raise ValueError(f'Error in column "{column}" invalid bounds combination: '
+                             f'{list(bounds)}')
+        max_val = bounds.get("<", bounds.get("<=", None))
+        min_val = bounds.get(">", bounds.get(">=", None))
+        for val in [max_val, min_val]:
+            if val is None:
+                pass
+            elif py_dtype == float and isinstance(val, int):
+                pass
+            elif not isinstance(val, py_dtype):
+                raise ValueError(f"bound {str(val)} must be of type {dtype}")
+        if max_val is not None and min_val is not None and max_val <= min_val:
+            raise ValueError(f'Error in column "{column}" invalid bounds value: '
+                             f'minimum must be lower than maximum')
 
     # check default value:
     if default_is_given:
@@ -114,21 +138,21 @@ def check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"default must be of type {dtype}")
 
 
-def parse_bounds_str(bounds_string, py_dtype):
-    bounds = []
-    for chunk in bounds_string.split(','):
-        chunk = chunk.strip()
-        symbol = chunk[:2] if chunk[:2] in ('>=', '<=') else chunk[:1]
-        assert symbol in ('>', '<', '>=', '<='), 'comparison operator should be ' \
-                                                 '<, >, <= or >='
-        try:
-            value = yaml.safe_load(chunk[len(symbol):])
-        except Exception:
-            raise ValueError(f'Invalid bound: {chunk[len(symbol):]}')
-        if py_dtype is float and isinstance(value, int):
-            value = float(value)
-        if not isinstance(value, py_dtype):
-            raise ValueError(f'Invalid bound type (expected {str(py_dtype)}): '
-                             f'{str(value)}')
-        bounds.append([symbol, value])
-    return bounds
+# def parse_bounds_str(bounds_string, py_dtype):
+#     bounds = []
+#     for chunk in bounds_string.split(','):
+#         chunk = chunk.strip()
+#         symbol = chunk[:2] if chunk[:2] in ('>=', '<=') else chunk[:1]
+#         assert symbol in ('>', '<', '>=', '<='), 'comparison operator should be ' \
+#                                                  '<, >, <= or >='
+#         try:
+#             value = yaml.safe_load(chunk[len(symbol):])
+#         except Exception:
+#             raise ValueError(f'Invalid bound: {chunk[len(symbol):]}')
+#         if py_dtype is float and isinstance(value, int):
+#             value = float(value)
+#         if not isinstance(value, py_dtype):
+#             raise ValueError(f'Invalid bound type (expected {str(py_dtype)}): '
+#                              f'{str(value)}')
+#         bounds.append([symbol, value])
+#     return bounds
