@@ -24,9 +24,12 @@
 #             Columns of type i (intensity measure) cannot have a aliases
 #   required: Tells if the column should be always present in flatfiles (default when
 #             missing: false)
-#   bounds:   A quoted string with comma-separated conditions defining the column bounds,
-#             e.g.: ">0", ">=0,<5.5", ">2006-01-01T00:12:23". Bounds are currently not
-#             used to reject data (they might be in future releases)
+#   ">"       (Note the quotation marks because > and < alone are special characters in
+#             YAML) The minimum value (endpoint excluded) of the column data.
+#             Data bounds are not currently checked, but they might be in the future
+#   ">="      The min. value (endpoint included) of the column data (see ">" for details)
+#   "<"       The max. value (endpoint excluded) of the column data (see ">" for details)
+#   "<="      The max. value (endpoint included) of the column data (see ">" for details)
 
 # YAML notes:
 # Date-times can be given as ISO formatted text, without quotes. Unless required,
@@ -80,13 +83,15 @@ rvolc:
   type: d
 event_latitude:
   dtype: float
-  bounds: ">=-90, <=90"
+  ">=": -90
+  "<=": 90
   help: Hypocentre latitude (deg)
   alias: hypo_lat
   type: r
 event_longitude:
   dtype: float
-  bounds: ">=-180, <=180"
+  ">=": -180
+  "<=": 180
   help: Hypocentre longitude (deg)
   alias: hypo_lon
   type: r
@@ -102,13 +107,13 @@ event_depth:
   type: r
 depth_top_of_rupture:
   dtype: float
-  bounds: ">=0"
+  ">=": 0
   help: Top of Rupture Depth (km)
   alias: ztor
   type: r
 rupture_width:
   dtype: float
-  bounds: ">=0"
+  ">=": 0
   help: >-
     Down-dip width of the rupture (km). Missing data (empty or NaN values, column not 
     provided) will be derived from the record magnitude using a Magnitude-Scaling 
@@ -117,7 +122,8 @@ rupture_width:
   type: r
 dip:
   dtype: float
-  bounds: ">=0, <=90"
+  ">=": 0
+  "<=": 90
   help: >-
     the angle of the fault relative to the horizontal (deg).
     Hint: in case of more components available (e.g. from web services), the
@@ -126,7 +132,8 @@ dip:
   type: r
 rake:
   dtype: float
-  bounds: ">=-180, <=180"
+  ">=": -180
+  "<=": 180
   help: >-
     the direction the hanging wall moves, relative to the fault strike (deg).
     Hint: in case of more components available (e.g. from
@@ -151,7 +158,7 @@ z2pt5:
   type: s
 vs30:
   dtype: float
-  bounds: ">=0"
+  ">=": 0
   help: Average shear wave velocity in the top 30 m, in m/s
   type: s
 backarc:
@@ -163,13 +170,15 @@ backarc:
     the site is assumed to be unknown or in the subduction forearc
 station_latitude:
   dtype: float
-  bounds: ">=-90, <=90"
+  ">=": -90
+  "<=": 90
   help: station latitude (deg)
   alias: lat
   type: s
 station_longitude:
   dtype: float
-  bounds: ">=-180, <=180"
+  ">=": -180
+  "<=": 180
   help: station longitude (deg)
   alias: lon
   type: s
@@ -184,14 +193,15 @@ xvf:
   type: s
 fpeak:
   dtype: float
-  bounds: ">=0"
+  ">=": 0
   help: >-
     Frequency that corresponds to the peak of the horizontal to vertical
     spectral ratio (Hz)
   type: s
 region:
   dtype: int
-  bounds: ">=0, <=5"
+  ">=": 0
+  "<=": 5
   default: 0
   help: The ESHM2020 cluster region to which the site belongs
   type: s
@@ -202,7 +212,7 @@ geology:
   type: s
 slope:
   dtype: float
-  bounds: ">0"
+  ">": 0
   help: The local slope of the station
   type: s
 PGA:

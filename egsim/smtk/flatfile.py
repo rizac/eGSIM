@@ -55,7 +55,7 @@ def read_column_metadata(*, type:dict[str, str]=None,
                          alias:dict[str, str]=None, # param name -> flatfile col name
                          default:dict[str, Any]=None,
                          required:set[str,...]=None,
-                         bounds:dict=None,
+                         bounds:dict[str, dict[str, Any]]=None,
                          help:dict=None):
     """Read the YAML file storing column metadata into the given (optional)
     arguments:
@@ -80,7 +80,10 @@ def read_column_metadata(*, type:dict[str, str]=None,
     with open(_ff_metadata_path) as fpt:
         for name, props in yaml.safe_load(fpt).items():
             if type is not None:
-                type[name] = props.get('type', ColumnType.unknown.name)
+                if 'type' in props:
+                    type[name] = ColumnType(props['type']).name
+                else:
+                    type[name] = ColumnType.unknown.name
             if dtype is not None and 'dtype' in props:
                 dtype[name] = props['dtype']
                 if isinstance(dtype[name], (list, tuple)):
@@ -91,16 +94,16 @@ def read_column_metadata(*, type:dict[str, str]=None,
                 alias[props['alias']] = name
             if default is not None and 'default' in props:
                 default[name] = props['default']
-            if bounds is not None and 'bounds' in props:
-                pass
+            if bounds is not None:
+                _bounds = {k: props[k] for k in ["<", "<=", ">", ">="] if k in props}
+                if _bounds:
+                    bounds[name] = _bounds
             if help is not None and props.get('help', ''):
                 help[name] = props['help']
 
 
 # global variables (initialized below from YAML file):
 column_type: dict[str, str] = {} # flatfile column -> one of ColumnType names
-# the above dict contains ALL defined flatfile columns as keys. All other globals
-# below do not assure that (see code below)
 column_dtype: dict[str, Union[str, pd.CategoricalDtype]] = {} # flatfile column -> data type name
 column_default: dict[str, Any] = {} # flatfile column -> default value when missing
 column_required: set[str] = set() # required flatfile column names
