@@ -47,93 +47,54 @@ class ColumnDtype(Enum):
     str = str, np.str_, np.object_
 
 
-def _check_column_metadata(column: dict[str, Any]) -> dict[str, Any]:
-    """checks the Column metadata dict issued from the YAML flatfile"""
-    # convert type to corresponding Enum:
-    column.setdefault('type', ColumnType.unknown.value)
-    try:
-        column['type'] = ColumnType(column['type']).name
-    except KeyError:
-        raise ValueError(f"Invalid type: {column['type']}")
-
-    if column['type'] == ColumnType.intensity_measure.name and 'alias' in column:
-        raise ValueError(f"Intensity measure columns cannot have an alias")
-
-    # perform some check on the data type consistencies:
-    bounds_are_given = 'bounds' in column
-    default_is_given = 'default' in column
-
-    # check dtype null and return in case:
-    if 'dtype' not in column:
-        if bounds_are_given or default_is_given:
-            raise ValueError(f"With `dtype` null or missing, metadata cannot have "
-                             f"the keys `default` and `bounds`")
-        return column
-
-    dtype = column['dtype']
-
-    # handle categorical data:
-    if isinstance(dtype, (list, tuple)):  # categorical data type
-        if not all(any(isinstance(_, d.value) for d in ColumnDtype) for _ in dtype):
-            raise ValueError(f"Invalid data type(s) in provided categorical data")
-        if len(set(type(_) for _ in dtype)) != 1:
-            raise ValueError(f"Categorical values must all be of the same type, found: "
-                             f"{set(type(_) for _ in dtype)}")
-        if bounds_are_given:
-            raise ValueError(f"bounds cannot be provided with "
-                             f"categorical data type")
-        if default_is_given and column['default'] not in dtype:
-            raise ValueError(f"default is not in the list of possible values")
-        column['dtype'] = pd.CategoricalDtype(dtype)
-        return column
-
-    # handle non-categorical data with a base dtype:
-    try:
-        py_dtype = ColumnDtype[dtype].value[0]
-    except KeyError:
-        raise ValueError(f"Invalid data type: {dtype}")
-
-    # check bounds:
-    if bounds_are_given:
-        try:
-            column['bounds'] = _parse_bounds_str(column['bounds'], py_dtype)
-        except Exception as exc:
-            raise ValueError(f"invalid bounds: {str(exc)}")
-
-
-    # check default value:
-    if default_is_given:
-        default = column['default']
-        # type promotion (int is a valid float):
-        if py_dtype == float and isinstance(column['default'], int):
-            column['default'] = float(default)
-        elif not isinstance(default, py_dtype):
-            raise ValueError(f"default must be of type {dtype}")
-
-    return column
-
-
-def _parse_bounds_str(bounds_string, py_dtype):
-    bounds = []
-    for chunk in bounds_string.split(','):
-        chunk = chunk.strip()
-        symbol = chunk[:2] if chunk[:2] in ('>=', '<=') else chunk[:1]
-        assert symbol in ('>', '<', '>=', '<='), 'comparison operator should be ' \
-                                                 '<, >, <= or >='
-        try:
-            value = yaml.safe_load(chunk[len(symbol):])
-        except Exception:
-            raise ValueError(f'Invalid bound: {chunk[len(symbol):]}')
-        if py_dtype is float and isinstance(value, int):
-            value = float(value)
-        if not isinstance(value, py_dtype):
-            raise ValueError(f'Invalid bound type (expected {str(py_dtype)}): '
-                             f'{str(value)}')
-        bounds.append([symbol, value])
-    return bounds
-
-
 _ff_metadata_path = join(dirname(__file__), 'flatfile-metadata.yaml')
+
+
+def read_column_metadata(*, type:dict[str, str]=None,
+                         dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
+                         alias:dict[str, str]=None, # param name -> flatfile col name
+                         default:dict[str, Any]=None,
+                         required:set[str,...]=None,
+                         bounds:dict=None,
+                         help:dict=None):
+    """Read the YAML file storing column metadata into the given (optional)
+    arguments:
+
+    :param type: dict or None. If dict, it will be populated with all flatfile columns
+        (keys), mapped to their type (str, a name of an enum item of :ref:`ColumnType`).
+        Because columns with a dtype have a default set (`ColumnType.unknown`), this dict
+        is guaranteed to contain all defined flatfile columns
+    :param dtype: dict or None. If dict, it will be populated with the flatfile columns
+        (keys) which have a defined data type (str - a name of an item of the enum
+        :ref:`ColumnDtype` - or pandas `CategoricalDtype`)
+    :param alias: dict or None. If dict, it will be populated of name aliases (str)
+        mapped to the associated flatfile column. Name aliases are the Gsim parameter
+        name(s), when the latter does not match the column name (e.g. the column
+        "event_latitude" defined in OpenQuake as "ev_lat")
+    :param default: dict or None. If dict, it will be populated with the
+        flatfile columns (str) that have a default defined (to be used when replacing
+        missing values)
+    :param required: set or None. If set, it will be populated with the flatfile columns
+        that are required
+    """
+    with open(_ff_metadata_path) as fpt:
+        for name, props in yaml.safe_load(fpt).items():
+            if type is not None:
+                type[name] = props.get('type', ColumnType.unknown.name)
+            if dtype is not None and 'dtype' in props:
+                dtype[name] = props['dtype']
+                if isinstance(dtype[name], (list, tuple)):
+                    dtype[name] = pd.CategoricalDtype(dtype[name])
+            if required is not None and props.get('required', False):
+                required.add(name)
+            if alias is not None and 'alias' in props:
+                alias[props['alias']] = name
+            if default is not None and 'default' in props:
+                default[name] = props['default']
+            if bounds is not None and 'bounds' in props:
+                pass
+            if help is not None and props.get('help', ''):
+                help[name] = props['help']
 
 
 # global variables (initialized below from YAML file):
@@ -144,48 +105,10 @@ column_dtype: dict[str, Union[str, pd.CategoricalDtype]] = {} # flatfile column 
 column_default: dict[str, Any] = {} # flatfile column -> default value when missing
 column_required: set[str] = set() # required flatfile column names
 column_alias: dict[str, str] = {} # Gsim required attr. name -> flatfile column name
-column_help: dict[str, str] = {}  # flatfile column -> Column type
 
 
-# read YAML and setup custom attributes:
-with open(_ff_metadata_path) as fpt:
-    for name, props in yaml.safe_load(fpt).items():
-        try:
-            props = _check_column_metadata(props)
-        except Exception as exc:
-            raise ValueError(f'Error in metadata for column "{name}": {str(exc)}')
-        if name in column_type:
-            raise ValueError(f'Error in metadata for column "{name}": multiple '
-                             f'instances of the column provided')
-        column_type[name] = props['type']
-        if props.get('help', ''):
-            column_help[name] = props['help']
-        if 'dtype' in props:
-            column_dtype[name] = props['dtype']
-        if 'default' in props:
-            column_default[name] = props['default']
-        if props.get('required', False):
-            column_required.add(name)
-        if 'alias' in props:
-            if props['alias'] in column_type:
-                raise ValueError(f'Error in metadata for column "{name}": alias '
-                                 f"'{props['alias']}' already defined as column name")
-            if props['alias'] in column_alias:
-                raise ValueError(f'Error in metadata for column "{name}": alias '
-                                 f"'{props['alias']}' already defined")
-            column_alias[props['alias']] = name
-
-
-# def is_imt(column_name: str, require_sa_with_periods=True):
-#     if column_type[column_name] != ColumnType.intensity_measure.name:
-#         if column_name.startswith('SA('):
-#             try:
-#                  imt.from_string(column_name)
-#                  return True
-#             except Exception:  # noqa
-#                 pass
-#         return False
-#     return True if column_name != 'SA' or not require_sa_with_periods else False
+read_column_metadata(type=column_type, dtype=column_dtype, alias=column_alias,
+                     required=column_required, default=column_default)
 
 
 ############
@@ -204,8 +127,7 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
         take more time)
     """
     return read_csv(filepath_or_buffer, sep=sep, dtype=column_dtype,
-                    defaults=column_default,
-                    required=column_required)
+                    defaults=column_default, required=column_required)
 
 
 missing_values = ("", "null", "NULL", "None",
@@ -270,8 +192,6 @@ def read_csv(filepath_or_buffer: str,
         defaults = {}
     if dtype is None:
         dtype = {}
-
-    # `dtype` will be split into several `dict`s:
 
     # `dtype` entries that can not be passed to `pd.read_csv` (e.g. bool, int, float, datetime)
     # because they raise errors that we want to handle after reading the csv, will be
