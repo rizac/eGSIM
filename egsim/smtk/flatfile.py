@@ -57,8 +57,7 @@ def read_column_metadata(*, type:dict[str, str]=None,
                          required:set[str,...]=None,
                          bounds:dict[str, dict[str, Any]]=None,
                          help:dict=None):
-    """Read the YAML file storing column metadata into the given (optional)
-    arguments:
+    """Put columns metadata stored in the YAML file into the passed function arguments.
 
     :param type: dict or None. If dict, it will be populated with all flatfile columns
         (keys), mapped to their type (str, a name of an enum item of :ref:`ColumnType`).
@@ -80,10 +79,8 @@ def read_column_metadata(*, type:dict[str, str]=None,
     with open(_ff_metadata_path) as fpt:
         for name, props in yaml.safe_load(fpt).items():
             if type is not None:
-                if 'type' in props:
-                    type[name] = ColumnType(props['type']).name
-                else:
-                    type[name] = ColumnType.unknown.name
+                type_enum_value = props.get('type', ColumnType.unknown.value)
+                type[name] = ColumnType(type_enum_value).name
             if dtype is not None and 'dtype' in props:
                 dtype[name] = props['dtype']
                 if isinstance(dtype[name], (list, tuple)):
@@ -109,7 +106,7 @@ column_default: dict[str, Any] = {} # flatfile column -> default value when miss
 column_required: set[str] = set() # required flatfile column names
 column_alias: dict[str, str] = {} # Gsim required attr. name -> flatfile column name
 
-
+# populate the global variables above from the YAML file:
 read_column_metadata(type=column_type, dtype=column_dtype, alias=column_alias,
                      required=column_required, default=column_default)
 
@@ -157,26 +154,28 @@ def read_csv(filepath_or_buffer: str,
         names to load, as list. Can be also a callable
         accepting a column name and returning True/False (keep/discard)
     :param dtype: dict of column names mapped to the data type:
-        either 'int', 'bool', 'float', 'str', 'datetime', 'category'`, list, tuple or
-        pandas `CategoricalDtype` (the last four data types are for data that can take
+        either 'int', 'bool', 'float', 'str', 'datetime', 'category'`, list, tuple,
+        pandas `CategoricalDtype`: the last four data types are for data that can take
         only a limited amount of possible values and should be used mostly with string
         data as it might save a lot of memory. With "category", pandas will infer the
-        number of categories from the data, with all other the categories are
-        specified and the column will replace values nopt found in categories with
-        missing values (NA) for categories not found in categories).
-        Columns of type 'int' and 'bool' do not support NA data and must have a
-        default in `defaults`, otherwise NA data will be replaced with 0 for int
-        and False for bool.
+        categories from the data - note that each category will be of type `str` - with
+        all others, the categories can be any type input by the user. Flatfile values not
+        found in the categories will be replaced with missing values (NA in pandas, see
+        e.g. `pandas.isna`).
+        Columns of type 'int' and 'bool' do not support missing values: NA data will be
+        replaced with the default set in `defaults` (see doc), or with 0 for int and
+        False for bool if no default is set for the column.
     :param defaults: a dict of flat file column names mapped to the default
         value for missing/NA data. Defaults will be set AFTER the underlying
         `pandas.read_csv` is called. Note that if int and bool columns are specified in
         `dtype`, then a default is set for those columns anyway (0 for int, False for
-        bool), because those data types do not support NA in numpy/pandas
+        bool. See `dtype` doc)
     :param required: set of flat file column names that must be present
         in the flatfile. ValueError will be raised if this condition is not satisfied
-    :param kwargs: additional keyword arguments not provided above that can be
-        passed to `pandas.read_csv`. 'header', 'delim_whitespace' and 'names'
-        should not be provided as they might be overwritten by this function
+    :param kwargs: additional keyword arguments that can be passed to `pandas.read_csv`.
+        Be careful when providing the following arguments because they have defaults in
+        this function: `na_values`, `keep_default_na`, `encoding`, `true_values`,
+        `false_values`, `sep` (a csv separator will be inferred if not provided)
 
     :return: pandas DataFrame representing a Flat file
     """
@@ -190,7 +189,7 @@ def read_csv(filepath_or_buffer: str,
         sep = _infer_csv_sep(filepath_or_buffer)
     kwargs['sep'] = sep
 
-    # initialize the defaults dict if None and needs to be populated:
+    # initialize arguments that could be passed as None:
     if defaults is None:
         defaults = {}
     if dtype is None:
@@ -262,18 +261,18 @@ def read_csv(filepath_or_buffer: str,
         missing = sorted(required - dfr_columns)
         raise ValueError(f"Missing required column(s): {', '.join(missing)}")
 
-    # check dtypes correctness (in few cases try to cast, e.g. int bool), avoid
-    # already processed dtypes (read_csv_dtypes)
+    # check dtypes correctness for those types that must be processed after read
     invalid_columns = []
     for col in set(post_dtype) & dfr_columns:
-        # check all data type here because passing them to dtype above would raise
-        # (except CategoricalDtype)
+        # if dtype is already ok, continue:
         expected_col_dtype_name:str = post_dtype[col]
         col_dtype = dfr[col].dtype.type
         if issubclass(col_dtype, ColumnDtype[expected_col_dtype_name].value):
             continue
 
-        # try to convert date-times
+        # date-times: try to convert columns of type str.
+        # Note: Remember that we do not use pandas parse_dates arg as
+        # it raises if we put columns that eventually are not in the flatfile):
         if expected_col_dtype_name == ColumnDtype.datetime.name:
             datetime_parsed = False
             if issubclass(col_dtype, ColumnDtype.str.value):
@@ -294,14 +293,15 @@ def read_csv(filepath_or_buffer: str,
                 if datetime_parsed:
                     continue
 
-        # convert int columns that should be float
+        # float: convert columns of type int:
         if expected_col_dtype_name == ColumnDtype.float.name:  # "float"
             if issubclass(col_dtype, ColumnDtype.int.value):
-                dfr[col] = dfr[col] .astype(float)
+                dfr[col] = dfr[col].astype(float)
                 continue
 
-        # try to convert float columns that should be int (e.g. ints with missing
-        # values: replace the latter with the default (or 0)
+        # int: convert columns of type float as long as they are float with either int
+        # or missing values (replace the latter with the column default, or 0), e.g.
+        # [NaN, 1] becomes [<default_or_zero>, 1], [NaN, 1.2] raises:
         if expected_col_dtype_name == ColumnDtype.int.name:   # "int"
             if issubclass(col_dtype, ColumnDtype.float.value):
                 series = dfr[col].copy()
@@ -309,14 +309,14 @@ def read_csv(filepath_or_buffer: str,
                 series.loc[na_values] = defaults.pop(col, 0)
                 try:
                     series = series.astype(int)
-                    # check all elements are int (if yes, go on)
+                    # check all non missing elements are int:
                     if (dfr[col][~na_values] == series[~na_values]).all():  # noqa
                         dfr[col] = series
                         continue
                 except Exception:  # noqa
                     pass
 
-        # try to convert str/int/float columns that should be bool:
+        # bool: try to convert str/int/float columns:
         if expected_col_dtype_name == ColumnDtype.bool.name:  # "bool"
             new_values = None
             if issubclass(col_dtype, ColumnDtype.int.value):
@@ -353,7 +353,7 @@ def read_csv(filepath_or_buffer: str,
             invalid_columns.append(col)
 
     if invalid_columns:
-        raise ValueError(f'Invalid values in column: {", ".join(invalid_columns)}')
+        raise ValueError(f'Invalid values in column(s): {", ".join(invalid_columns)}')
 
     # set defaults:
     invalid_defaults = []
