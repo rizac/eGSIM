@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 from datetime import datetime
 import pandas as pd
+from pandas.io.parsers import TextFileReader
 
 # import numpy as np
 from egsim.smtk import flatfile
@@ -130,7 +131,6 @@ def test_read_csv_bool():
         # float series must have only 0 and 1:
         csv_str += "\n0.1"
         d = read_csv(StringIO("bool\n1.0\n1.0\n1.0\n0.0\n0.0\n0.1"), **args)  # noqa
-
 
 
 def test_read_csv_categorical():
