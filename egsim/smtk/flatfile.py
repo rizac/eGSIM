@@ -8,7 +8,7 @@ from openquake.hazardlib.gsim.base import GMPE
 from pandas.core.indexes.numeric import IntegerIndex
 from scipy.interpolate import interp1d
 
-from typing import Union, Callable, Any, Iterable
+from typing import Union, Callable, Any, Iterable, IO
 
 import yaml
 import numpy as np
@@ -135,7 +135,7 @@ missing_values = ("", "null", "NULL", "None",
                   "NA", "N/A", "n/a",  "<NA>", "#N/A", "#NA")
 
 
-def read_csv(filepath_or_buffer: str,
+def read_csv(filepath_or_buffer: Union[str, IO],
              sep: str = None,
              dtype: dict[str, Union[str, pd.CategoricalDtype]]  = None,
              defaults: dict[str, Any] = None,
@@ -150,8 +150,8 @@ def read_csv(filepath_or_buffer: str,
         and inferred from the extension (e.g. 'gzip', 'zip')
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
-    :param usecols: pandas `read_csv` parameter (exposed for clarity) column
-        names to load, as list. Can be also a callable
+    :param usecols: pandas `read_csv` parameter (exposed explicitly here for clarity)
+        the column names to load, as list. Can be also a callable
         accepting a column name and returning True/False (keep/discard)
     :param dtype: dict of column names mapped to the data type:
         either 'int', 'bool', 'float', 'str', 'datetime', 'category'`, list, tuple,
@@ -195,13 +195,13 @@ def read_csv(filepath_or_buffer: str,
     if dtype is None:
         dtype = {}
 
-    # `dtype` entries that can not be passed to `pd.read_csv` (e.g. bool, int, float, datetime)
-    # because they raise errors that we want to handle after reading the csv, will be
-    # put here:
-    post_dtype = {}
-    # `dtype` entries that can be passed to `pd.read_csv` ('category', 'str', 'datetime')
-    # will be put here (or in `datetime_columns`):
+    # split dtype into two dicts: entries that can be passed to `pd.read_csv` `dtype`
+    # arg because they do not raise ('category', 'str'):
     pre_dtype = {}
+    # `and entries that can not be passed to `pd.read_csv` (e.g. bool, int, float,
+    # datetime) because they raise errors that we want to handle after reading the csv:
+    post_dtype = {}
+
     # Also, convert categorical dtypes into their categories dtype, and put categorical
     # data in a separate dict
     categorical_dtypes = {}
@@ -270,37 +270,31 @@ def read_csv(filepath_or_buffer: str,
         if issubclass(col_dtype, ColumnDtype[expected_col_dtype_name].value):
             continue
 
+        # parsed column is not of the expect type. Try to convert its values
         old_series = dfr[col]
-        # if old_series contains value that can be converted to the proper dtype, put it
-        # in new_series (None means data type is not convertible, i.e. invalid column):
         new_series = None
 
-        # date-times: try to convert columns of type str.
-        # Note: Remember that we do not use pandas parse_dates arg as
+        # expected dtype: date-time. Try to convert if actual dtype is str/object
+        # (Note: Remember that we do not use pandas `parse_dates` arg as
         # it raises if we put columns that eventually are not in the flatfile):
         if expected_col_dtype_name == ColumnDtype.datetime.name:
             if issubclass(col_dtype, ColumnDtype.str.value):
                 try:
+                    # any missing value in old_series is None/nan and to_datetime
+                    # handles them converting to pd.NaT)
                     new_series = pd.to_datetime(old_series)
                 except ValueError:
-                    # be relaxed on missing values, if any, and retry:
-                    missing = old_series.isin(missing_values)
-                    if missing.any():
-                        old_series = old_series.copy()
-                        old_series[missing] = pd.NaT
-                        try:
-                            new_series = pd.to_datetime(old_series)
-                        except ValueError:
-                            pass
+                    # something wrong (e.g. invalid and not na value)
+                    pass
 
-        # float: convert columns of type int:
+        # expected dtype: float. Convert if actual dtype is int:
         elif expected_col_dtype_name == ColumnDtype.float.name:  # "float"
             if issubclass(col_dtype, ColumnDtype.int.value):
                 new_series = old_series.astype(float)
 
-        # int: convert columns of type float as long as they are float with either int
-        # or missing values (replace the latter with the column default, or 0), e.g.
-        # [NaN, 1] becomes [<default_or_zero>, 1], [NaN, 1.2] is invalid:
+        # expected dtype int: try to convert if actual dtype float
+        # (as long as the float values are all integer or nan, e.g.
+        # [NaN, 7.0] becomes [<default_or_zero>, 7], but [NaN, 7.2] is invalid):
         elif expected_col_dtype_name == ColumnDtype.int.name:   # "int"
             if issubclass(col_dtype, ColumnDtype.float.value):
                 na_values = pd.isna(old_series)
@@ -314,8 +308,7 @@ def read_csv(filepath_or_buffer: str,
                 except Exception:  # noqa
                     pass
 
-        # bool: try to convert str/int/float columns. Try to convert to numeric
-        # and then cast to bool if the values are either 0 or 1
+        # expected dtype bool: try to convert if actual dtype is str/int/float:
         elif expected_col_dtype_name == ColumnDtype.bool.name:  # "bool"
             if issubclass(col_dtype, ColumnDtype.float.value):
                 # float: convert missing values to 0
@@ -337,8 +330,8 @@ def read_csv(filepath_or_buffer: str,
 
             if old_series is not None and \
                     pd.unique(old_series).tolist() in ([0,1], [1, 0]):
-                # note: the above holds also if old_series values are bool (True == 1,
-                # np.array(True) == 1, the same for False and 0)
+                # note: the above holds also if old_series has bool values (in Python,
+                # True == 1, np.array(True) == 1, and the same for False and 0)
                 try:
                     new_series = old_series.astype(bool)
                 except Exception:  # noqa
