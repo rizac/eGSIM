@@ -83,6 +83,56 @@ def test_read_csv():
             assert header in str(verr.value)
 
 
+def test_read_csv_bool():
+    args = {
+        'sep': ';',
+        'skip_blank_lines': False,
+        # the above arg is needed (default is True) because
+        # we have a single column
+        # and missing values are input as blank lines
+        'dtype': {"str": "str", "float": "float",
+                  "int": "int", "datetime": "datetime", "bool": "bool"},
+    }
+    expected = [True, True, True, False, False, False]
+    csv_str = "bool\n1\nTrue\ntrue\n0\nFalse\nfalse"
+    d = read_csv(StringIO(csv_str), **args)  # noqa
+    assert (d['bool'] == expected).all()
+
+    # Insert a missing value at the beginning (defaults to False).
+    # NOTE: appending a missing value (empty line) is skipped even if skip_blank_lines is
+    # True (as it is probably interpreted as ending newline of the previous csv row?)
+    csv_str = csv_str.replace("bool\n", "bool\n\n")
+    d = read_csv(StringIO(csv_str), **args)  # noqa
+    assert (d['bool'] == [False] + expected).all()
+
+    # Append invalid value (float not in [0, 1]):
+    with pytest.raises(ValueError):
+        d = read_csv(StringIO("bool\n1\nTrue\ntrue\nFalse\nfalse\n1.1"), **args)  # noqa
+
+    # Append invalid value ("X"):
+    with pytest.raises(ValueError):
+        d = read_csv(StringIO("bool\n1\nTrue\ntrue\nFalse\nfalse\nX"), **args)  # noqa
+
+    # int series is ok
+    csv_str = "bool\n1\n1\n1\n0\n0\n0"
+    d = read_csv(StringIO(csv_str), **args)  # noqa
+    assert (d['bool'] == expected).all()
+    with pytest.raises(ValueError):
+        # int series must have only 0 and 1:
+        csv_str += "\n2"
+        d = read_csv(StringIO(csv_str), **args)  # noqa
+
+    # float series is ok
+    csv_str = "bool\n1.0\n1.0\n1.0\n0.0\n0.0\n0.0"
+    d = read_csv(StringIO(csv_str), **args)  # noqa
+    assert (d['bool'] == expected).all()
+    with pytest.raises(ValueError):
+        # float series must have only 0 and 1:
+        csv_str += "\n0.1"
+        d = read_csv(StringIO("bool\n1.0\n1.0\n1.0\n0.0\n0.0\n0.1"), **args)  # noqa
+
+
+
 def test_read_csv_categorical():
     defaults = {
         "str": "a",
