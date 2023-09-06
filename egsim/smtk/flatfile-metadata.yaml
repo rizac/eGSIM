@@ -5,12 +5,12 @@
 #   dtype:    The data type (default when missing: null). Supported values are: null,
 #             int, float, str, datetime (ISO formatted), bool, or the list of the
 #             possible values of the column data (which must be all the same dtype).
-#             null or missing means "not specified" and is used to skip data type check.
-#             Data that has missing values (e.g. '', null, NaN) might be filled with the
-#             default (see below), data that is not parsable to the given type (e.g. 'x'
-#             for float) will raise Exceptions
+#             null or missing means "not specified" and will skip data type checks.
+#             The dtype determines also how to fill missing values (e.g. '', null, NaN)
+#             (see `default` below for details), data that is not parsable to the given
+#             dtype (e.g. 'x' for float) will raise Exceptions
 #   default:  The default value to replace missing data (e.g. '', null, NaN). When a
-#             default missing, it will be `dtype` dependent: NaN (for
+#             default is missing, it will be `dtype` dependent: NaN (for
 #             dtype float), NaT (datetime), None/null (str or categorical), 0 (int),
 #             False (bool). As such, please note that int and bool do not actually
 #             support missing data, as 0 and False also denote valid values for the dtype
@@ -24,9 +24,9 @@
 #             Columns of type i (intensity measure) cannot have a aliases
 #   required: Tells if the column should be always present in flatfiles (default when
 #             missing: false)
-#   ">"       (Note the quotation marks because > and < alone are special characters in
-#             YAML) The minimum value (endpoint excluded) of the column data.
-#             Data bounds are not currently checked, but they might be in the future
+#   ">"       (with quotation marks because > and < are special characters in YAML)
+#             The minimum value (endpoint excluded) of the column data. Currently used
+#             for info and not to validate or discard data (it might be in the future)
 #   ">="      The min. value (endpoint included) of the column data (see ">" for details)
 #   "<"       The max. value (endpoint excluded) of the column data (see ">" for details)
 #   "<="      The max. value (endpoint included) of the column data (see ">" for details)
@@ -36,7 +36,7 @@
 # strings don't need quotes either, but can be used for readability. YAML is a
 # superset of JSON, so you can type lists as JSON Arrays: [...] and Mappings as JSON
 # Objects: {...}. If you want to type over multiple lines for readability, prefix the
-# text with >- (see examples here below or https://stackoverflow.com/a/3790497)
+# text with >- (see examples here below or at https://stackoverflow.com/a/3790497)
 
 azimuth:
   dtype: float

@@ -106,12 +106,15 @@ class FlatfileColumn(_UniqueName):
                      choices=[(c.name, c.name.replace('_', ' ').capitalize())
                               for c in flatfile.ColumnType],
                      help_text='The type of Column (e.g., '
-                               'IMT, OpenQuake parameter, distance measure)')
-    help = TextField(null=False, default='', help_text="Field help text")
-    dtype = TextField(null=False, help_text=('The datat type of the column ("int", '
-                                             '"bool", "datetime", '
+                               'intensity measure, rupture parameter, '
+                               'distance measure)')
+    dtype = TextField(null=False, help_text=('The data type of the column, as text '
+                                             '(e.g.: "int", "bool", "datetime", '
                                              '"str" or "float", or list of possible '
                                              'values the column data can have)'))
+    description = TextField(null=False, default='', help_text="Field description")
+    bounds = TextField(null=False, default='', help_text="Field bounds (as text, "
+                                                         "e.g.: \"≥0 and <90\"")
 
     class Meta(_UniqueName.Meta):
         indexes = [Index(fields=['name']), ]
