@@ -10,7 +10,8 @@ Created on 6 Apr 2019
 """
 import pandas as pd
 import warnings
-
+from datetime import datetime, date
+import json
 import inspect
 from collections import defaultdict
 from typing import Union
@@ -100,21 +101,30 @@ def gsims2str(gsim_names: list[str, ...]):
 
 def populate_flatfile_column_metadata() -> list[models.FlatfileColumn]:
     ret = {}
+    col_desc, col_bounds = {}, {}
+    flatfile.read_column_metadata(bounds=col_bounds, help=col_desc)
     for col_name, col_type in flatfile.column_type.items():
         ff_col = models.FlatfileColumn.objects.filter(name=col_name).first()
         if ff_col is None:  # create (and save) object:
-            dtype = flatfile.column_dtype.get(col_name, "any")
+            dtype = flatfile.column_dtype.get(col_name)
             if isinstance(dtype, pd.CategoricalDtype):
-                from datetime import datetime, date
-                import json
-                cats = [_.isoformat() if isinstance(_, (datetime, date)) else _ for _
-                        in dtype.categories]
-                dtype = f'categorical: any value in {json.dumps(cats)}'
-            help = flatfile.column_help.get(col_name, "")
+                dtype = (f'categorical: a value from ' 
+                         f'{", ".join(flatfile._val2str(_) for _ in dtype.categories)}')
+            desc = col_desc.get(col_name, "")
+            bounds = " and ".join(
+                {">=": "≥", "<=": "≤"}.get(k, k) + ' ' + flatfile._val2str(v)
+                for k, v in col_bounds.get(col_name, {})
+            )
+
             ret[col_name] = \
                 models.FlatfileColumn.objects.create(name=col_name, dtype=dtype,
-                                                     type=col_type, help=help)
+                                                     bounds=bounds,
+                                                     type=col_type, description=desc)
     return list(ret.values())
+
+
+def _str(val):
+    if isinstance(val, (date, datetime)):
 
 
 def populate_imts(ffcols: list[models.FlatfileColumn],
