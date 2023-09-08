@@ -1,6 +1,6 @@
 """flatfile pandas module"""
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from os.path import join, dirname
 import re
@@ -415,8 +415,8 @@ def _val2str(val):
     """Return the string representation of the given val.
     See also :ref:`query` for consistency (therein, we expose functions
     and variables for flatfile selection)"""
-    if isinstance(val, datetime):
-        return '"{val.isoformat(}"'
+    if isinstance(val, (date, datetime)):
+        return f'datetime({"val.isoformat()"})'
     elif val is True or val is False:
         return str(val).lower()
     elif isinstance(val, str):
@@ -436,9 +436,9 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     # Setup custom keyword arguments to dataframe query. See also
     # val2str for consistency (e.f. datetime, bools)
     __kwargs = {
-        # add support for `datetime(Y,M,...)` inside expressions:
+        # add support for `datetime("<iso_string>")` inside expressions:
         'local_dict': {
-            'datetime': lambda *a, **k: datetime(*a, **k)
+            'datetime': lambda a: datetime.fromisoformat(a)
         },
         'global_dict': {},  # 'pd': pd, 'np': np }
         # add support for bools lower case (why doesn't work if set in local_dict?):

@@ -6,14 +6,14 @@
 #             int, float, str, datetime (ISO formatted), bool, or the list of the
 #             possible values of the column data (which must be all the same dtype).
 #             null or missing means "not specified" and will skip data type checks.
-#             The dtype determines also how to fill missing values (e.g. '', null, NaN)
-#             (see `default` below for details), data that is not parsable to the given
-#             dtype (e.g. 'x' for float) will raise Exceptions
+#             The dtype determines also how to fill missing data (e.g.: an empty CSV
+#             cell. See `default` below for details), whereas data that is not parsable
+#             to the given dtype (e.g.: 'x' for float) will always raise Exceptions
 #   default:  The default value to replace missing data (e.g. '', null, NaN). When a
-#             default is missing, it will be `dtype` dependent: NaN (for
-#             dtype float), NaT (datetime), None/null (str or categorical), 0 (int),
-#             False (bool). As such, please note that int and bool do not actually
-#             support missing data, as 0 and False also denote valid values for the dtype
+#             default is not provided, it will be `dtype` dependent: NaN (for dtype
+#             float), NaT (datetime), None/null (str or categorical), 0 (int), False
+#             (bool). As such, please note that int and bool do not really support
+#             missing data, as 0 and False also denote valid values for the dtype
 #   help:     The field help or description. Depending on the application, a default
 #             might be provided (e.g. "")
 #   type:     The column type. Supported values are: i (intensity measure), d
@@ -21,8 +21,8 @@
 #             When missing, defaults to 'u' (unknown)
 #   alias:    A column alias, usually the column name used by OpenQuake (any name listed
 #             in Gsims REQUIRED_* attributes). If missing, it defaults to <column_name>.
-#             Columns of type i (intensity measure) cannot have a aliases
-#   required: Tells if the column should be always present in flatfiles (default when
+#             Columns of type i (intensity measure) cannot have aliases
+#   required: Tells if the column should be always present in flatfile (default when
 #             missing: false)
 #   ">"       (with quotation marks because > and < are special characters in YAML)
 #             The minimum value (endpoint excluded) of the column data. Currently used
