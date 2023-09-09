@@ -19,8 +19,8 @@
 #   type:     The column type. Supported values are: i (intensity measure), d
 #             (distance measure), r (rupture parameter), s (site parameter).
 #             When missing, defaults to 'u' (unknown)
-#   alias:    A column alias, usually the column name used by OpenQuake (any name listed
-#             in Gsims REQUIRED_* attributes). If missing, it defaults to <column_name>.
+#   alias:    A column alias, usually the OpenQuake corresponding name, if it differs
+#             from <column name>. If missing, it defaults to <column_name>.
 #             Columns of type i (intensity measure) cannot have aliases
 #   required: Tells if the column should be always present in flatfile (default when
 #             missing: false)
