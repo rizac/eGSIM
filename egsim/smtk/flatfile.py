@@ -467,6 +467,12 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
     columns.
     Raise `MissingColumn` if the flatfile cannot be made compliant to the given arguments
     """
+    for attr in get_gsim_required_attributes(gsims):
+        _prepare_for_gsim_required_attribute(flatfile, attr)
+    _prepare_for_sa(flatfile, imts)
+
+
+def get_gsim_required_attributes(gsims: Iterable[GMPE]):
     required = set()
     # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
     for gsim in gsims:
@@ -474,9 +480,7 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
         required.update(gsim.REQUIRES_DISTANCES | {'rrup'})
         required.update(gsim.REQUIRES_RUPTURE_PARAMETERS or [])
         required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
-    for attr in required:
-        _prepare_for_gsim_required_attribute(flatfile, attr)
-    _prepare_for_sa(flatfile, imts)
+    return required
 
 
 DEFAULT_MSR = PeerMSR()
@@ -569,7 +573,7 @@ def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]):
     if not source_sa or not target_sa:
         return
 
-    # source_sa_periods = sorted(p for p in source_sa if p is not None)
+    # Take the log10 of all SA:
     source_spectrum = np.log10(flatfile[list(source_sa.values())])
     # we need to interpolate row wise
     # build the interpolation function:
