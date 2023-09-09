@@ -416,7 +416,7 @@ def _val2str(val):
     See also :ref:`query` for consistency (therein, we expose functions
     and variables for flatfile selection)"""
     if isinstance(val, (date, datetime)):
-        return f'datetime({"val.isoformat()"})'
+        return f'datetime("{val.isoformat()}")'
     elif val is True or val is False:
         return str(val).lower()
     elif isinstance(val, str):
