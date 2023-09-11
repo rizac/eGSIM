@@ -1,4 +1,5 @@
 """flatfile pandas module"""
+from contextlib import contextmanager
 
 from datetime import date, datetime
 from enum import Enum
@@ -50,16 +51,16 @@ class ColumnDtype(Enum):
 _ff_metadata_path = join(dirname(__file__), 'flatfile-metadata.yaml')
 
 
-def read_column_metadata(*, type:dict[str, str]=None,
+def read_column_metadata(*, ctype:dict[str, str]=None,
                          dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
-                         alias:dict[str, str]=None, # param name -> flatfile col name
+                         alias:dict[str, set[str, ...]]=None,
                          default:dict[str, Any]=None,
-                         required:set[str,...]=None,
+                         required:list[set[str,...],...]=None,
                          bounds:dict[str, dict[str, Any]]=None,
                          help:dict=None):
     """Put columns metadata stored in the YAML file into the passed function arguments.
 
-    :param type: dict or None. If dict, it will be populated with all flatfile columns
+    :param ctype: dict or None. If dict, it will be populated with all flatfile columns
         (keys), mapped to their type (str, a name of an enum item of :ref:`ColumnType`).
         Because columns with a dtype have a default set (`ColumnType.unknown`), this dict
         is guaranteed to contain all defined flatfile columns
@@ -77,37 +78,51 @@ def read_column_metadata(*, type:dict[str, str]=None,
         that are required
     """
     with open(_ff_metadata_path) as fpt:
-        for name, props in yaml.safe_load(fpt).items():
-            if type is not None:
+        for c_name, props in yaml.safe_load(fpt).items():
+            if ctype is not None:
                 type_enum_value = props.get('type', ColumnType.unknown.value)
-                type[name] = ColumnType(type_enum_value).name
-            if dtype is not None and 'dtype' in props:
-                dtype[name] = props['dtype']
-                if isinstance(dtype[name], (list, tuple)):
-                    dtype[name] = pd.CategoricalDtype(dtype[name])
+                ctype[c_name] = ColumnType(type_enum_value).name
+            aliases = props.get('alias', [])
+            if isinstance(aliases, str):
+                aliases = {aliases}
+            else:
+                aliases = set(aliases)
+            aliases.add(c_name)
             if required is not None and props.get('required', False):
-                required.add(name)
-            if alias is not None and 'alias' in props:
-                alias[props['alias']] = name
-            if default is not None and 'default' in props:
-                default[name] = props['default']
-            if bounds is not None:
-                _bounds = {k: props[k] for k in ["<", "<=", ">", ">="] if k in props}
-                if _bounds:
-                    bounds[name] = _bounds
-            if help is not None and props.get('help', ''):
-                help[name] = props['help']
+                required.append(aliases)
+            for name in aliases:
+                if alias is not None:
+                    alias[name] = aliases
+                if dtype is not None and 'dtype' in props:
+                    dtype[name] = props['dtype']
+                    if isinstance(dtype[name], (list, tuple)):
+                        dtype[name] = pd.CategoricalDtype(dtype[name])
+                if default is not None and 'default' in props:
+                    default[name] = props['default']
+                if bounds is not None:
+                    _bounds = {k: props[k] for k in ["<", "<=", ">", ">="] if k in props}
+                    if _bounds:
+                        bounds[name] = _bounds
+                if help is not None and props.get('help', ''):
+                    help[name] = props['help']
 
 
-# global variables (initialized below from YAML file):
-column_type: dict[str, str] = {} # flatfile column -> one of ColumnType names
-column_dtype: dict[str, Union[str, pd.CategoricalDtype]] = {} # flatfile column -> data type name
-column_default: dict[str, Any] = {} # flatfile column -> default value when missing
-column_required: set[str] = set() # required flatfile column names
-column_alias: dict[str, str] = {} # Gsim required attr. name -> flatfile column name
+# global variables
+# Column names mapped to their type (`ColumnType` name):
+column_type: dict[str, str] = {}
+# Column names and aliases, mapped to their dtype:
+column_dtype: dict[str, Union[str, pd.CategoricalDtype]] = {}
+# Column names and aliases, mapped to their default:
+column_default: dict[str, Any] = {}  # flatfile column -> default value when missing
+# Column name and aliases, mapped to the set of all possible aliases
+# for a column, including the column name itself (the dict values are thus not unique):
+column_alias: dict[str, set[str, ...]] = {} # every column name -> its aliases
+# Required column names (each item in the list is a set of all possible aliases for a
+# column, including the column name itself):
+column_required: list[set[str,...],...] = []
 
 # populate the global variables above from the YAML file:
-read_column_metadata(type=column_type, dtype=column_dtype, alias=column_alias,
+read_column_metadata(ctype=column_type, dtype=column_dtype, alias=column_alias,
                      required=column_required, default=column_default)
 
 
@@ -126,6 +141,7 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
     """
+    # required columns need to be post-processed:
     return read_csv(filepath_or_buffer, sep=sep, dtype=column_dtype,
                     defaults=column_default, required=column_required)
 
@@ -139,7 +155,7 @@ def read_csv(filepath_or_buffer: Union[str, IO],
              sep: str = None,
              dtype: dict[str, Union[str, pd.CategoricalDtype]]  = None,
              defaults: dict[str, Any] = None,
-             required: set[str] = None,
+             required: list[Union[str, set[str]],...] = None,
              usecols: Union[list[str], Callable[[str], bool]] = None,
              **kwargs) -> pd.DataFrame:
     """
@@ -153,25 +169,28 @@ def read_csv(filepath_or_buffer: Union[str, IO],
     :param usecols: pandas `read_csv` parameter (exposed explicitly here for clarity)
         the column names to load, as list. Can be also a callable
         accepting a column name and returning True/False (keep/discard)
-    :param dtype: dict of column names mapped to the data type:
-        either 'int', 'bool', 'float', 'str', 'datetime', 'category'`, list, tuple,
-        pandas `CategoricalDtype`: the last four data types are for data that can take
-        only a limited amount of possible values and should be used mostly with string
-        data as it might save a lot of memory. With "category", pandas will infer the
-        categories from the data - note that each category will be of type `str` - with
-        all others, the categories can be any type input by the user. Flatfile values not
-        found in the categories will be replaced with missing values (NA in pandas, see
-        e.g. `pandas.isna`).
+    :param dtype: dict of column names mapped to the data type. Columns not present
+        in the flatfile will be ignored. Dtypes can be either 'int', 'bool', 'float',
+        'str', 'datetime', 'category'`, list, tuple, pandas `CategoricalDtype`:
+        the last four data types are for data that can take only a limited amount of
+        possible values and should be used mostly with string data as it might save
+        a lot of memory. With "category", pandas will infer the categories from the
+        data - note that each category will be of type `str` - with all others,
+        the categories can be any type input by the user. Flatfile values not
+        found in the categories will be replaced with missing values (NA in pandas,
+        see e.g. `pandas.isna`).
         Columns of type 'int' and 'bool' do not support missing values: NA data will be
         replaced with the default set in `defaults` (see doc), or with 0 for int and
         False for bool if no default is set for the column.
     :param defaults: a dict of flat file column names mapped to the default
-        value for missing/NA data. Defaults will be set AFTER the underlying
-        `pandas.read_csv` is called. Note that if int and bool columns are specified in
-        `dtype`, then a default is set for those columns anyway (0 for int, False for
-        bool. See `dtype` doc)
-    :param required: set of flat file column names that must be present
-        in the flatfile. ValueError will be raised if this condition is not satisfied
+        value for missing/NA data.  Columns not present in the flatfile will be ignored.
+        Note that if int and bool columns are specified in `dtype`, then a default is
+        set for those columns anyway (0 for int, False for bool. See `dtype` doc)
+    :param required: iterable of flat file column names that must be present
+        in the flatfile. The iterable values can not only be strings but also other
+        iterables of strings, denoting all columns name aliases: in this case at least
+        one element of the strings must be provided. ValueError will be raised if this
+        condition is not satisfied
     :param kwargs: additional keyword arguments that can be passed to `pandas.read_csv`.
         Be careful when providing the following arguments because they have defaults in
         this function: `na_values`, `keep_default_na`, `encoding`, `true_values`,
@@ -257,9 +276,17 @@ def read_csv(filepath_or_buffer: Union[str, IO],
     dfr_columns = set(dfr.columns)
 
     # check required columns first:
-    if required and required - dfr_columns:
-        missing = sorted(required - dfr_columns)
-        raise ValueError(f"Missing required column(s): {', '.join(missing)}")
+    missing_required = []
+    for req_columns in required:
+        if isinstance(req_columns, str):
+            req_columns = {req_columns}
+        elif not isinstance(req_columns, set):
+            req_columns = set(req_columns)
+        if not (dfr_columns & req_columns):
+            missing_required.append("/".join(req_columns))
+    if missing_required:
+        raise ValueError(f"Missing required column(s): "
+                         f"{', '.join(missing_required)}")
 
     # check dtypes correctness for those types that must be processed after read
     invalid_columns = []
@@ -460,16 +487,67 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
 ##################################
 
 
+def _get_column(flatfile:pd.DataFrame, columns:set[str, ...]):
+    ff_cols = set(flatfile.columns)
+    cols = columns & ff_cols
+    if len(cols) > 1:
+        raise ConflictingColumns(*cols)
+    elif len(cols) == 0:
+        raise MissingColumn(*columns)
+    else:
+        return next(iter(cols))
+
+
+def get_event_id_columns(flatfile: pd.Dataframe) -> list[str, ...]:
+    cols = column_alias['event_id']
+    try:
+        return [_get_column(flatfile, cols)]
+    except MissingColumn:
+        cols = ['event_latitude', 'event_longitude', 'event_depth', 'event_time']
+        return [_get_column(flatfile, column_alias[c]) for c in cols]
+
+
+def get_station_id_columns(flatfile: pd.Dataframe) -> list[str, ...]:
+    cols = column_alias['station_id']
+    try:
+        return [_get_column(flatfile, cols)]
+    except MissingColumn:
+        cols = ['station_latitude', 'station_longitude']
+        return [_get_column(flatfile, column_alias[c]) for c in cols]
+
+
+@contextmanager
 def prepare_for_residuals(flatfile: pd.DataFrame,
                           gsims: Iterable[GMPE], imts: Iterable[str]):
-    """Modify inplace the flatfile assuring that the attribute required by the given
-    models and the SA periods passed in the given imts are present in the flatfile
-    columns.
-    Raise `MissingColumn` if the flatfile cannot be made compliant to the given arguments
+    """Context manager to be used when computing residuals on a given flatfile:
+     Inside a with statement, it releases the flatfile passed as argument
+     with columns renamed or created according to the passed gsims and imts,
+     and restores the old column names before exiting.
+    Raise `InvalidColumn` and subclasses
     """
+    mappings = {}  # flatfile name -> OpenQuake param or distance
     for attr in get_gsim_required_attributes(gsims):
-        _prepare_for_gsim_required_attribute(flatfile, attr)
-    _prepare_for_sa(flatfile, imts)
+        col_name = _get_column(flatfile, column_alias[attr])
+        mappings[col_name] = attr
+
+    flatfile.rename(columns=mappings, inplace=True)
+    for col_name, attr_name in mappings.items():
+       _prepare_for_gsim_required_attribute(flatfile, attr_name)
+
+    new_sa_columns = _prepare_for_sa(flatfile, imts)
+    # "backward" mappings (to restore column names later):
+    _mappings = {v: k for k, v in mappings.items()}
+    try:
+        yield flatfile
+    except InvalidColumn as i_col:
+        # restore the names provided by the user to display them in the error:
+        i_col.column_names = [_mappings.get(k, k) for k in i_col.column_names]
+        raise i_col
+    finally:
+        if _mappings:
+            flatfile.rename(columns=_mappings, inplace=True)
+        if new_sa_columns:
+            flatfile.drop(columns=new_sa_columns, inplace=True)
 
 
 def get_gsim_required_attributes(gsims: Iterable[GMPE]):
@@ -486,22 +564,21 @@ def get_gsim_required_attributes(gsims: Iterable[GMPE]):
 DEFAULT_MSR = PeerMSR()
 
 
-def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
-    """Attempt to include in the given flatfile the column associated to
-    the Gsim required attribute `att_name`.
-    Replacement and inference rule might be applied and mofify the passed
+def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, column: str):
+    """Attempt to include in the given flatfile the column, given as
+     OpenQuake model parameter or distance.
+    Replacement and inference rule might be applied and modify the passed
     flatfile (p)ass a copy of a flatfile to avoid inplace modifications).
     Eventually, if the column cannot be set on `flatfile`, this function
     raises :ref:`MissingColumn` error notifying the required missing column.
     """
-    column = column_alias.get(att_name, att_name)
     series = flatfile.get(column)  # -> None if column not found
-    if column == 'depth_top_of_rupture':
+    if column == 'ztor':
         series = fill_na(flatfile.get('event_depth'), series)
-    elif column == 'rupture_width':
+    elif column == 'width':  # rupture_width
         # Use the PeerMSR to define the area and assuming an aspect ratio
         # of 1 get the width
-        mag = flatfile.get('magnitude')
+        mag = flatfile.get('mag')
         if mag is not None:
             if series is None:
                 series = pd.Series(np.sqrt(DEFAULT_MSR.get_median_area(mag, 0)))
@@ -543,16 +620,18 @@ def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, att_name: str):
     elif column == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     if series is None:
-        raise MissingColumnError(column)
+        raise MissingColumn(column)
     if series is not flatfile.get(column):
         flatfile[column] = series
     return flatfile
 
 
-def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]):
+def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]) -> list[str, ...]:
     """Modify inplace the flatfile assuring the SA columns in `imts` (e.g. "SA(0.2)")
     are present. The SA column of the flatfile will be used to obtain
-    the target SA via interpolation, and removed if not necessary
+    the target SA via interpolation, and removed if not necessary.
+
+    Return the newly created Sa columns, as tuple of strings
     """
     src_sa = []
     for c in flatfile.columns:
@@ -571,7 +650,7 @@ def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]):
     target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
 
     if not source_sa or not target_sa:
-        return
+        return []
 
     # Take the log10 of all SA:
     source_spectrum = np.log10(flatfile[list(source_sa.values())])
@@ -582,21 +661,10 @@ def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]):
     values = 10 ** interp(list(target_sa))
     # values is a matrix where each column represents the values of the target period.
     # Add it to the dataframe:
-    flatfile[list(target_sa.values())] = values
+    new_sa_columns = list(target_sa.values())
+    flatfile[new_sa_columns] = values
 
-
-class MissingColumnError(AttributeError):
-
-    def __init__(self, column: str):
-        """
-        Attribute error displaying missing flatfile column(s) massages
-
-        :param column: gsim required attribute (e.g. 'z1pt0') or flatfile column
-            (e.g. 'event_time')
-        """
-        # NOTE: this class MUST subclass AttributeError as it is required by OpenQuake
-        # when retrieving Context attributes (see usage in :ref:`EventContext` below)
-        super().__init__(f'Missing column "{column_alias.get(column, column)}"')
+    return new_sa_columns
 
 
 def fill_na(src: Union[None, np.ndarray, pd.Series],
@@ -637,19 +705,46 @@ class EventContext(RuptureContext):
         # delete or rename. See superclass for details
         return self._flatfile.index
 
-    def __getattr__(self, item):
+    def __getattr__(self, column_name):
         """Return a non-found Context attribute by searching in the underlying
         flatfile column. Raises AttributeError (as usual) if `item` is not found
         """
-        column_name = column_alias.get(item, item)
         try:
             values = self._flatfile[column_name].values
-        except KeyError:
-            raise MissingColumnError(column_name)
+        except KeyError as err:
+            raise MissingColumn(column_name)
         if column_type[column_name] == ColumnType.rupture_parameter.name:
             # rupture parameter, return a scalar (note: all values should be the same)
             values = values[0]
         return values
+
+
+class InvalidColumn(Exception):
+    """
+    General flatfile column(s) error. See subclasses for details
+    """
+    def __init__(self, *names):
+        super().__init__()
+        self.column_names = tuple(names)
+
+    def __str__(self):
+        """Make str(self) more clear"""
+        name, alias = self.column_names[:1], self.column_names[1:]
+        alias_str = f" (alias{'' if len(alias) ==1 else 'es'}: {', '.join(alias)})"
+        return f"{self.__class__.__name__}: {name}{'' if not alias else alias_str}"
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class MissingColumn(InvalidColumn, AttributeError, KeyError):
+    def __init__(self, *names):
+        InvalidColumn.__init__(self, *names)
+
+
+class ConflictingColumns(InvalidColumn):
+    def __init__(self, name1, name2, *other_names):
+        InvalidColumn.__init__(self, *([name1, name2] + [other_names]))
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:

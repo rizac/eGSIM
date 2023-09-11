@@ -163,7 +163,7 @@ def populate_gsims(imts: dict[str, models.Imt],
         db model instance
     :param options: options passed to the Command `handle` method calling this function
     """
-    p2f = {v: k for k, v in flatfile.column_alias.items()}  # flatfile column -> oq name
+    p2f = {v: k for k, v in flatfile._column_alias.items()}  # flatfile column -> oq name
     ff_columns = {}
     for ff_col in ff_cols:
         oq_name = p2f.get(ff_col.name, ff_col.name)
