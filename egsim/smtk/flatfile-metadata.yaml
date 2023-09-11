@@ -16,12 +16,14 @@
 #             missing data, as 0 and False also denote valid values for the dtype
 #   help:     The field help or description. Depending on the application, a default
 #             might be provided (e.g. "")
+#   alias:    A column alias, as string or list of strings. You can put here the
+#             Openuake name related to <column_name>, if the two differ.
+#             Columns of type i (intensity measure) cannot have aliases
 #   type:     The column type. Supported values are: i (intensity measure), d
 #             (distance measure), r (rupture parameter), s (site parameter).
-#             When missing, defaults to 'u' (unknown)
-#   alias:    A column alias, usually the OpenQuake corresponding name, if it differs
-#             from <column name>. If missing, it defaults to <column_name>.
-#             Columns of type i (intensity measure) cannot have aliases
+#             When missing, defaults to 'u' (unknown). In the first 4 cases,
+#             <column_name> (or one name defined in alias>) must match the relative
+#             OpenQuake implementation.
 #   required: Tells if the column should be always present in flatfile (default when
 #             missing: false)
 #   ">"       (with quotation marks because > and < are special characters in YAML)
@@ -81,35 +83,36 @@ rvolc:
   default: 0
   help: Distance through volcanic zone (km). When missing, it defaults to 0
   type: d
-event_latitude:
+ev_lat:
   dtype: float
   ">=": -90
   "<=": 90
-  help: Hypocentre latitude (deg)
-  alias: hypo_lat
+  help: Event latitude (hypocentre latitude, in deg)
+  alias: [hypo_lat, event_latitude]
   type: r
-event_longitude:
+ev_lon:
   dtype: float
   ">=": -180
   "<=": 180
-  help: Hypocentre longitude (deg)
-  alias: hypo_lon
+  help: Event longitude (hypocentre longitude, in deg)
+  alias: [hypo_lon, event_longitude]
   type: r
-magnitude:
+mag:
   dtype: float
-  alias: mag
+  alias: magnitude
+  help: event magnitude
   type: r
   required: true
-event_depth:
+ev_depth:
   dtype: float
-  help: Hypocentral depth (km)
-  alias: hypo_depth
+  help: event depth (hypocentral depth, in km)
+  alias: [hypo_depth, event_depth]
   type: r
-depth_top_of_rupture:
+rupture_top_depth:
   dtype: float
   ">=": 0
   help: Top of Rupture Depth (km)
-  alias: ztor
+  alias: [ztor, depth_top_of_rupture]
   type: r
 rupture_width:
   dtype: float
@@ -147,6 +150,7 @@ z1pt0:
     km/sec, in meters. Missing data (empty or NaN values, column not provided) will be 
     derived from the record vs30 using the Chiou & Youngs (2014) California model, if 
     the flatfile column "vs30" is provided
+  alias: z1
   type: s
 z2pt5:
   dtype: float
@@ -168,19 +172,19 @@ backarc:
   help: >-
     boolean indicating if the site is in the subduction backarc. When missing or false, 
     the site is assumed to be unknown or in the subduction forearc
-station_latitude:
+st_lat:
   dtype: float
   ">=": -90
   "<=": 90
   help: station latitude (deg)
-  alias: lat
+  alias: [station_latitude, lat]
   type: s
-station_longitude:
+st_lon:
   dtype: float
   ">=": -180
   "<=": 180
   help: station longitude (deg)
-  alias: lon
+  alias: [station_longitude, lon]
   type: s
 vs30measured:
   dtype: bool
@@ -242,8 +246,8 @@ IA:
   help: Arias intensity, in m/s
   type: i
 # ID columns:
-event_id:
-  # required: true
+ev_id:
+  alias: event_id
   help: >-
     The unique ID of the recorded seismic event. If missing, an id is inferred
     from the columns event_latitude, event_longitude, event_depth and event_time 
@@ -251,18 +255,18 @@ event_id:
     In general, you can use the id provided by the event catalog or web service,
     or create your own, as long as it holds: same id <=> same event. IDs should
     be preferably of type integer for performance reasons
-station_id:
-  # required: true
+st_id:
+  alias: station_id
   help: >-
     The unique ID of the seismic station. If missing, an id is inferred
     from the columns station_latitude, station_longitude, which must all be present.
     In general, you can infer the id via the tuple (network_code, station_code)
     or create your own, as long as it holds: same id <=> same station. IDs should
     be preferably of type integer for performance reasons
-event_time:
+ev_time:
+  alias: event_time
   dtype: datetime
-  help: >-
-    the event time as ISO formatted string
+  help: the event time (as ISO formatted string, e.g. 2006-03-31T00:12:24)
 
 
 # FIXME: REMOVE:

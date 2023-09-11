@@ -17,8 +17,8 @@ from scipy.stats import norm
 from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
-from . import check_gsim_list, get_gsim_name, get_SA_period, convert_accel_units
-from .flatfile import EventContext, prepare_for_residuals, MissingColumnError
+from . import check_gsim_list, get_gsim_name, get_SA_period  #, convert_accel_units
+from .flatfile import EventContext, prepare_for_residuals, get_event_id_columns
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -44,11 +44,6 @@ def check_sa_limits(gsim: GMPE, im: str):  # FIXME remove? is it used?
     return limits[0] < period < limits[1]
 
 
-_EVENT_COLUMNS = ['event_id', 'event_latitude', 'event_longitude', 'event_depth',
-                  'event_time']
-_STATION_COLUMNS = ['station_id', 'station_latitude', 'station_longitude']
-
-
 def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     """Group the flatfile by events, and yield `EventContext`s objects, one for
     each event"""
@@ -57,14 +52,9 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
         flatfile.reset_index(drop=True, inplace=True)
 
     # check event id column or use the event location to group events:
-    try:
-        # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
-        # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
-        ev_sub_flatfiles = flatfile.groupby(_EVENT_COLUMNS[0]
-                                            if _EVENT_COLUMNS[0] in flatfile.columns
-                                            else _EVENT_COLUMNS[1:])
-    except KeyError:
-        raise MissingColumnError(_EVENT_COLUMNS[0])
+    # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
+    # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
+    ev_sub_flatfiles = flatfile.groupby(get_event_id_columns(flatfile))
 
     for ev_id, dfr in ev_sub_flatfiles:
         if not dfr.empty:  # for safety ...
@@ -83,17 +73,18 @@ def get_residuals(gsims: Iterable[str], imts: Iterable[str],
     :return: the passed flatfile with all residuals computed columns added
     """
     gsims = check_gsim_list(gsims)
-    prepare_for_residuals(flatfile, gsims.values(), imts)
-    residuals = calculate_flatfile_residuals(gsims, imts, flatfile)
+    with prepare_for_residuals(flatfile, gsims.values(), imts) as tmp_flatfile:
+        residuals = calculate_flatfile_residuals(gsims, imts, tmp_flatfile,
+                                                 normalise=normalise)
     # concatenate expected in flatfile (add new columns):
     flatfile[residuals.columns] = residuals
     if compute_lh:
         get_residuals_likelihood(gsims, imts, flatfile)
-    return compacted(flatfile, gsims, imts)
+    return flatfile
 
 
 def calculate_flatfile_residuals(gsims: dict[str, GMPE], imts: Iterable[str],
-                                 flatfile: pd.DataFrame) -> pd.DataFrame:
+                                 flatfile: pd.DataFrame, normalise=True) -> pd.DataFrame:
     residuals:pd.DataFrame = pd.DataFrame(index=flatfile.index)
     imts = list(imts)
     # computget the observations (compute the log for all once here):
@@ -105,7 +96,7 @@ def calculate_flatfile_residuals(gsims: dict[str, GMPE], imts: Iterable[str],
         expected = calculate_expected_motions(gsims.values(), imts, context)
         # Get residuals:
         res = calculate_residuals(gsims, imts, observations.loc[expected.index, :],
-                                  expected)
+                                  expected, normalise=normalise)
         if residuals.empty:
             for col in list(expected.columns) + list(res.columns):
                 residuals[col] = np.nan
@@ -444,37 +435,37 @@ def _get_edr_kappa(obs: Union[np.ndarray, pd.Series],
     return de_orig / de_corr
 
 
-def compacted(flatfile:pd.DataFrame,
-              gsims: Iterable[str], imts: Iterable[str],
-              observed_columns:Union[Iterable[str], None]=None) \
-        -> pd.DataFrame:
-    """Return a compact form of the given flatfile with the given columns
-    (observed: provided by the user as data, computed: computed for the given gsims and
-    imts).
-    The columns denoting event ids (or event coordinates) and station ids
-    do not need to be specified, as this function will try to include them anyway.
-
-    :param flatfile: a flatfile resulting from :ref:`get_residuals`
-    :param observed_columns: the observed columns to keep. None will set a default list
-        including magnitude, vs30, event_depth and all provided distances
-    """
-    f_cols = set(flatfile.columns)
-    columns = _EVENT_COLUMNS[:1] if _EVENT_COLUMNS[0] in f_cols else _EVENT_COLUMNS[1:]
-    if _STATION_COLUMNS[0] in f_cols:
-        columns.append(_STATION_COLUMNS[0])
-    if observed_columns is None:
-        observed_columns = [
-            col for col in ['magnitude', 'vs30', 'repi', 'rrup', 'rhypo',
-                             'rjb', 'rx', 'event_depth'] if col in f_cols
-        ]
-    computed_labels = c_labels.residuals_columns | c_labels.lh_columns | \
-                      {c_labels.total, c_labels.inter_ev, c_labels.intra_ev,
-                       c_labels.mean}
-    computed_columns = [
-        col for col, gsim, imtx, lbl in get_computed_columns(gsims, imts, flatfile)
-        if lbl in computed_labels
-    ]
-    return flatfile[columns + observed_columns + computed_columns]
+# def compacted(flatfile:pd.DataFrame,
+#               gsims: Iterable[str], imts: Iterable[str],
+#               observed_columns:Union[Iterable[str], None]=None) \
+#         -> pd.DataFrame:
+#     """Return a compact form of the given flatfile with the given columns
+#     (observed: provided by the user as data, computed: computed for the given gsims and
+#     imts).
+#     The columns denoting event ids (or event coordinates) and station ids
+#     do not need to be specified, as this function will try to include them anyway.
+#
+#     :param flatfile: a flatfile resulting from :ref:`get_residuals`
+#     :param observed_columns: the observed columns to keep. None will set a default list
+#         including magnitude, vs30, event_depth and all provided distances
+#     """
+#     f_cols = set(flatfile.columns)
+#     columns = _EVENT_COLUMNS[:1] if _EVENT_COLUMNS[0] in f_cols else _EVENT_COLUMNS[1:]
+#     if _STATION_COLUMNS[0] in f_cols:
+#         columns.append(_STATION_COLUMNS[0])
+#     if observed_columns is None:
+#         observed_columns = [
+#             col for col in ['magnitude', 'vs30', 'repi', 'rrup', 'rhypo',
+#                              'rjb', 'rx', 'event_depth'] if col in f_cols
+#         ]
+#     computed_labels = c_labels.residuals_columns | c_labels.lh_columns | \
+#                       {c_labels.total, c_labels.inter_ev, c_labels.intra_ev,
+#                        c_labels.mean}
+#     computed_columns = [
+#         col for col, gsim, imtx, lbl in get_computed_columns(gsims, imts, flatfile)
+#         if lbl in computed_labels
+#     ]
+#     return flatfile[columns + observed_columns + computed_columns]
 
 
 # FIXME: from here on multivariate_llh need to be fixed with GW
