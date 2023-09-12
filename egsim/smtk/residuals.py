@@ -18,7 +18,7 @@ from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
 from . import check_gsim_list, get_gsim_name, get_SA_period  #, convert_accel_units
-from .flatfile import EventContext, prepare_for_residuals, get_event_id_columns
+from .flatfile import EventContext, prepare_for_residuals, get_event_id_column_names
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -54,7 +54,7 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     # check event id column or use the event location to group events:
     # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
     # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
-    ev_sub_flatfiles = flatfile.groupby(get_event_id_columns(flatfile))
+    ev_sub_flatfiles = flatfile.groupby(get_event_id_column_names(flatfile))
 
     for ev_id, dfr in ev_sub_flatfiles:
         if not dfr.empty:  # for safety ...

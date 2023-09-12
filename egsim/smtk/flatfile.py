@@ -51,7 +51,8 @@ class ColumnDtype(Enum):
 _ff_metadata_path = join(dirname(__file__), 'flatfile-metadata.yaml')
 
 
-def read_column_metadata(*, ctype:dict[str, str]=None,
+def read_column_metadata(*, names:set[str, ...],
+                         ctype:dict[str, str]=None,
                          dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
                          alias:dict[str, set[str, ...]]=None,
                          default:dict[str, Any]=None,
@@ -60,28 +61,26 @@ def read_column_metadata(*, ctype:dict[str, str]=None,
                          help:dict=None):
     """Put columns metadata stored in the YAML file into the passed function arguments.
 
+    :param names: set or None. If set, it will be populated with the names of
+        the flatfile columns registered in the YAML, aliases excluded
     :param ctype: dict or None. If dict, it will be populated with all flatfile columns
-        (keys), mapped to their type (str, a name of an enum item of :ref:`ColumnType`).
-        Because columns with a dtype have a default set (`ColumnType.unknown`), this dict
-        is guaranteed to contain all defined flatfile columns
+        and aliases (keys), mapped to their type (str, a name of an enum item of
+        :ref:`ColumnType`)
     :param dtype: dict or None. If dict, it will be populated with the flatfile columns
-        (keys) which have a defined data type (str - a name of an item of the enum
-        :ref:`ColumnDtype` - or pandas `CategoricalDtype`)
-    :param alias: dict or None. If dict, it will be populated of name aliases (str)
-        mapped to the associated flatfile column. Name aliases are the Gsim parameter
-        name(s), when the latter does not match the column name (e.g. the column
-        "event_latitude" defined in OpenQuake as "ev_lat")
+        and aliases (keys) which have a defined data type ( a name of an item of
+        the enum :ref:`ColumnDtype` - or pandas `CategoricalDtype`)
+    :param alias: dict or None. If dict, it will be populated with the flatfile column
+        and aliases (keys) mapped to the set of all aliases. The set contains at least
+        the associated key
     :param default: dict or None. If dict, it will be populated with the
-        flatfile columns (str) that have a default defined (to be used when replacing
-        missing values)
-    :param required: set or None. If set, it will be populated with the flatfile columns
-        that are required
+        flatfile columns and aliases (keys) mapped to their default, if defined
+    :param required: list or None. If list, it will contain all required columns in
+        form of sets, where each set contains a column names (name + aliases)
     """
     with open(_ff_metadata_path) as fpt:
         for c_name, props in yaml.safe_load(fpt).items():
-            if ctype is not None:
-                type_enum_value = props.get('type', ColumnType.unknown.value)
-                ctype[c_name] = ColumnType(type_enum_value).name
+            if names is not None:
+                names.add(c_name)
             aliases = props.get('alias', [])
             if isinstance(aliases, str):
                 aliases = {aliases}
@@ -91,6 +90,9 @@ def read_column_metadata(*, ctype:dict[str, str]=None,
             if required is not None and props.get('required', False):
                 required.append(aliases)
             for name in aliases:
+                if ctype is not None:
+                    type_enum_value = props.get('type', ColumnType.unknown.value)
+                    ctype[name] = ColumnType(type_enum_value).name
                 if alias is not None:
                     alias[name] = aliases
                 if dtype is not None and 'dtype' in props:
@@ -108,22 +110,25 @@ def read_column_metadata(*, ctype:dict[str, str]=None,
 
 
 # global variables
-# Column names mapped to their type (`ColumnType` name):
+# the set of column names (top level keys of the YAML file):
+column_names: set[str, ...] = set()
+# Column names and aliases, mapped to their type (`ColumnType` name):
 column_type: dict[str, str] = {}
 # Column names and aliases, mapped to their dtype:
 column_dtype: dict[str, Union[str, pd.CategoricalDtype]] = {}
 # Column names and aliases, mapped to their default:
 column_default: dict[str, Any] = {}  # flatfile column -> default value when missing
-# Column name and aliases, mapped to the set of all possible aliases
-# for a column, including the column name itself (the dict values are thus not unique):
+# Column name and aliases, mapped to the set of all possible column aliases
+# (the set will always include at least the column name itself):
 column_alias: dict[str, set[str, ...]] = {} # every column name -> its aliases
 # Required column names (each item in the list is a set of all possible aliases for a
-# column, including the column name itself):
+# column. The set will always include at least the column name itself):
 column_required: list[set[str,...],...] = []
 
 # populate the global variables above from the YAML file:
-read_column_metadata(ctype=column_type, dtype=column_dtype, alias=column_alias,
-                     required=column_required, default=column_default)
+read_column_metadata(names=column_names, ctype=column_type, dtype=column_dtype,
+                     alias=column_alias, required=column_required,
+                     default=column_default)
 
 
 ############
@@ -487,70 +492,81 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
 ##################################
 
 
-def _get_column(flatfile:pd.DataFrame, columns:set[str, ...]):
+def get_column_name(flatfile:pd.DataFrame, column:str) -> str:
     ff_cols = set(flatfile.columns)
+    columns = column_alias[column]  # it's a set[str]
     cols = columns & ff_cols
     if len(cols) > 1:
         raise ConflictingColumns(*cols)
     elif len(cols) == 0:
-        raise MissingColumn(*columns)
+        # provide first the "standard" name, then  the aliases:
+        raise MissingColumn(column)
     else:
         return next(iter(cols))
 
 
-def get_event_id_columns(flatfile: pd.Dataframe) -> list[str, ...]:
-    cols = column_alias['event_id']
+def get_event_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
     try:
-        return [_get_column(flatfile, cols)]
-    except MissingColumn:
+        return [get_column_name(flatfile, 'event_id')]
+    except MissingColumn as missing_col:
         cols = ['event_latitude', 'event_longitude', 'event_depth', 'event_time']
-        return [_get_column(flatfile, column_alias[c]) for c in cols]
+        try:
+            return [get_column_name(flatfile, c) for c in cols]
+        except MissingColumn:
+            raise missing_col
 
 
-def get_station_id_columns(flatfile: pd.Dataframe) -> list[str, ...]:
-    cols = column_alias['station_id']
+def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
     try:
-        return [_get_column(flatfile, cols)]
-    except MissingColumn:
-        cols = ['station_latitude', 'station_longitude']
-        return [_get_column(flatfile, column_alias[c]) for c in cols]
+        return [get_column_name(flatfile, 'station_id')]
+    except MissingColumn as missing_col:
+        try:
+            cols = ['station_latitude', 'station_longitude']
+            return [get_column_name(flatfile, c) for c in cols]
+        except MissingColumn:
+            raise missing_col
 
 
 @contextmanager
 def prepare_for_residuals(flatfile: pd.DataFrame,
                           gsims: Iterable[GMPE], imts: Iterable[str]):
     """Context manager to be used when computing residuals on a given flatfile:
-     Inside a with statement, it releases the flatfile passed as argument
-     with columns renamed or created according to the passed gsims and imts,
-     and restores the old column names before exiting.
-    Raise `InvalidColumn` and subclasses
+    Inside a with statement, it releases the flatfile passed as argument
+    with columns renamed or created according to the passed gsims and imts,
+    and restores the old column names before exiting.
+    Raise `InvalidColumn` (and subclasses)
     """
-    mappings = {}  # flatfile name -> OpenQuake param or distance
-    for attr in get_gsim_required_attributes(gsims):
-        col_name = _get_column(flatfile, column_alias[attr])
-        mappings[col_name] = attr
+    to_rename = {}
+    to_delete = set()
+    param_or_dist_done = set()
+    for param_or_dist in get_gsim_required_params_or_dists(gsims):
+        if param_or_dist in param_or_dist_done:
+            continue
+        col_name = _prepare_for_gsim_required_param_or_dist(flatfile, param_or_dist)
+        if col_name is None:
+            to_delete.add(param_or_dist)
+        elif param_or_dist != col_name:
+            to_rename[col_name] = param_or_dist
 
-    flatfile.rename(columns=mappings, inplace=True)
-    for col_name, attr_name in mappings.items():
-       _prepare_for_gsim_required_attribute(flatfile, attr_name)
+    if to_rename:
+        flatfile.rename(columns=to_rename, inplace=True)
+        # invert dict (to restore naming, see below):
+        to_rename = {p: c for c, p in to_rename.items()}
 
-    new_sa_columns = _prepare_for_sa(flatfile, imts)
-    # "backward" mappings (to restore column names later):
-    _mappings = {v: k for k, v in mappings.items()}
+    # prepare the flatfile for SA, and add to `to_delete` the
+    # return value (list of newly added SA columns via interpolation)
+    to_delete |= set(_prepare_for_sa(flatfile, imts))
+
     try:
         yield flatfile
-    except InvalidColumn as i_col:
-        # restore the names provided by the user to display them in the error:
-        i_col.column_names = [_mappings.get(k, k) for k in i_col.column_names]
-        raise i_col
     finally:
-        if _mappings:
-            flatfile.rename(columns=_mappings, inplace=True)
-        if new_sa_columns:
-            flatfile.drop(columns=new_sa_columns, inplace=True)
+        if to_rename:
+            flatfile.rename(columns=to_rename, inplace=True)
+        if to_delete:
+            flatfile.drop(columns=to_delete, inplace=True)
 
 
-def get_gsim_required_attributes(gsims: Iterable[GMPE]):
+def get_gsim_required_params_or_dists(gsims: Iterable[GMPE]):
     required = set()
     # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
     for gsim in gsims:
@@ -564,7 +580,8 @@ def get_gsim_required_attributes(gsims: Iterable[GMPE]):
 DEFAULT_MSR = PeerMSR()
 
 
-def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, column: str):
+def _prepare_for_gsim_required_param_or_dist(flatfile: pd.DataFrame,
+                                             param_or_dist: str):
     """Attempt to include in the given flatfile the column, given as
      OpenQuake model parameter or distance.
     Replacement and inference rule might be applied and modify the passed
@@ -572,10 +589,14 @@ def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, column: str):
     Eventually, if the column cannot be set on `flatfile`, this function
     raises :ref:`MissingColumn` error notifying the required missing column.
     """
-    series = flatfile.get(column)  # -> None if column not found
-    if column == 'ztor':
-        series = fill_na(flatfile.get('event_depth'), series)
-    elif column == 'width':  # rupture_width
+    try:
+        column_name = get_column_name(flatfile, param_or_dist)
+    except MissingColumn as missing_col_exc:  # might be reused later
+        column_name = None
+    series = None if column_name is None else flatfile[column_name]
+    if param_or_dist == 'ztor':
+        series = fill_na(flatfile, 'hypo_depth', series)
+    elif param_or_dist == 'width':  # rupture_width
         # Use the PeerMSR to define the area and assuming an aspect ratio
         # of 1 get the width
         mag = flatfile.get('mag')
@@ -587,15 +608,15 @@ def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, column: str):
                 if na.any():
                     series = series.copy()
                     series[na] = np.sqrt(DEFAULT_MSR.get_median_area(mag[na], 0))
-    elif column in ['rjb', 'ry0']:
-        series = fill_na(flatfile.get('repi'), series)
-    elif column == 'rx':  # same as above, but -repi
-        series = fill_na(flatfile.get('repi'), series)
+    elif param_or_dist in ['rjb', 'ry0']:
+        series = fill_na(flatfile, 'repi', series)
+    elif param_or_dist == 'rx':  # same as above, but -repi
+        series = fill_na(flatfile, 'repi', series)
         if series is not None:
             series = -series
-    elif column == 'rrup':
-        series = fill_na(flatfile.get('rhypo'), series)
-    elif column == 'z1pt0':
+    elif param_or_dist == 'rrup':
+        series = fill_na(flatfile, 'rhypo', series)
+    elif param_or_dist == 'z1pt0':
         vs30 = flatfile.get('vs30')
         if vs30 is not None:
             if series is None:
@@ -605,7 +626,7 @@ def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, column: str):
                 if na.any():
                     series = series.copy()
                     series[na] = vs30_to_z1pt0_cy14(vs30[na])
-    elif column == 'z2pt5':
+    elif param_or_dist == 'z2pt5':
         vs30 = flatfile.get('vs30')
         if vs30 is not None:
             if series is None:
@@ -615,15 +636,22 @@ def _prepare_for_gsim_required_attribute(flatfile: pd.DataFrame, column: str):
                 if na.any():
                     series = series.copy()
                     series[na] = vs30_to_z2pt5_cb14(vs30[na])
-    elif column == 'backarc' and series is None:
+    elif param_or_dist == 'backarc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=False))
-    elif column == 'rvolc' and series is None:
+    elif param_or_dist == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     if series is None:
-        raise MissingColumn(column)
-    if series is not flatfile.get(column):
-        flatfile[column] = series
-    return flatfile
+        raise missing_col_exc
+    if column_name != param_or_dist or series is not flatfile.get(column_name):
+        flatfile[param_or_dist] = series
+    return column_name
+
+#
+# def get_column(flatfile: pd.DataFrame, column:str) -> Union[pd.Series, None]:
+#     try:
+#         return flatfile[get_column_name(flatfile, column)]
+#     except MissingColumn:
+#         return None
 
 
 def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]) -> list[str, ...]:
@@ -667,17 +695,24 @@ def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]) -> list[str, ..
     return new_sa_columns
 
 
-def fill_na(src: Union[None, np.ndarray, pd.Series],
+def fill_na(flatfile:pd.DataFrame,
+            src_col: str,
             dest: Union[None, np.ndarray, pd.Series]) -> \
         Union[None, np.ndarray, pd.Series]:
     """Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.
-    Return `dest` or a copy of it.
+    :return: a numpy array or pandas Series (the same type of `dest`, whenever
+        possible) which might be a new object or `dest`, unchanged
     """
-    if src is not None and dest is not None:
-        na = pd.isna(dest)
-        if na.any():
-            dest = dest.copy()
-            dest[na] = src[na]
+    try:
+        src = flatfile[get_column_name(flatfile, src_col)]
+        if dest is None:
+            return src.copy()
+    except MissingColumn:
+        return dest
+    na = pd.isna(dest)
+    if na.any():
+        dest = dest.copy()
+        dest[na] = src[na]
     return dest
 
 
@@ -711,7 +746,7 @@ class EventContext(RuptureContext):
         """
         try:
             values = self._flatfile[column_name].values
-        except KeyError as err:
+        except KeyError:
             raise MissingColumn(column_name)
         if column_type[column_name] == ColumnType.rupture_parameter.name:
             # rupture parameter, return a scalar (note: all values should be the same)
@@ -723,28 +758,42 @@ class InvalidColumn(Exception):
     """
     General flatfile column(s) error. See subclasses for details
     """
-    def __init__(self, *names):
-        super().__init__()
-        self.column_names = tuple(names)
+    def __init__(self, name):
+        super().__init__(name)
 
     def __str__(self):
         """Make str(self) more clear"""
-        name, alias = self.column_names[:1], self.column_names[1:]
-        alias_str = f" (alias{'' if len(alias) ==1 else 'es'}: {', '.join(alias)})"
-        return f"{self.__class__.__name__}: {name}{'' if not alias else alias_str}"
+        # prefix is by default the class name:
+        prefix_str = self.__class__.__name__
+        # suffix is by default the argument passed in __init__
+        suffix_str = self.args[0]
+        # If we passed a valid column name to __init__, change suffix_str
+        # to include all column aliases:
+        col_names = column_alias.get(suffix_str, None)
+        if col_names is not None:
+            # the passed name to __init__ is a flatfile column or alias, display
+            # all names but first the column names, and then the aliases:
+            sorted_names = [c for c in col_names if c in column_names] + \
+                           [c for c in col_names if c not in column_names]
+            suffix_str = sorted_names[0].__repr__()
+            if len(sorted_names) > 1:
+                suffix_str += " (alias" if len(sorted_names) == 2 else " (aliases"
+                suffix_str += f": {', '.join(_.__repr__() for _ in sorted_names[1:])})"
+        return f"{prefix_str} {suffix_str}"
 
     def __repr__(self):
         return self.__str__()
 
 
 class MissingColumn(InvalidColumn, AttributeError, KeyError):
-    def __init__(self, *names):
-        InvalidColumn.__init__(self, *names)
+    """MissingColumnError. It inherits also from AttributeError and
+    KeyError to be compliant with pandas and OpenQuake"""
+    pass
 
 
 class ConflictingColumns(InvalidColumn):
-    def __init__(self, name1, name2, *other_names):
-        InvalidColumn.__init__(self, *([name1, name2] + [other_names]))
+    def __init__(self, *names):
+        InvalidColumn.__init__(self, " vs. ".join(_.__repr__() for _ in names))
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
