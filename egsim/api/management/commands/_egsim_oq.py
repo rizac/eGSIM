@@ -103,7 +103,8 @@ def populate_flatfile_column_metadata() -> list[models.FlatfileColumn]:
     ret = {}
     col_desc, col_bounds = {}, {}
     flatfile.read_column_metadata(bounds=col_bounds, help=col_desc)
-    for col_name, col_type in flatfile.column_type.items():
+    for col_name in flatfile.column_names:
+        col_type = flatfile.column_type[col_name]
         ff_col = models.FlatfileColumn.objects.filter(name=col_name).first()
         if ff_col is None:  # create (and save) object:
             dtype = flatfile.column_dtype.get(col_name)

@@ -14,10 +14,9 @@
 #             float), NaT (datetime), None/null (str or categorical), 0 (int), False
 #             (bool). As such, please note that int and bool do not really support
 #             missing data, as 0 and False also denote valid values for the dtype
-#   help:     The field help or description. Depending on the application, a default
-#             might be provided (e.g. "")
-#   alias:    A column alias, as string or list of strings. You can put here the
-#             Openuake name related to <column_name>, if the two differ.
+#   alias:    The column alias(es), as string or list of strings. You can put here
+#             any additional name, e.g. the OpenQuake name (either parameter or distance)
+#             related to <column_name>, if the two differ.
 #             Columns of type i (intensity measure) cannot have aliases
 #   type:     The column type. Supported values are: i (intensity measure), d
 #             (distance measure), r (rupture parameter), s (site parameter).
@@ -26,6 +25,8 @@
 #             OpenQuake implementation.
 #   required: Tells if the column should be always present in flatfile (default when
 #             missing: false)
+#   help:     The field help or description. Depending on the application, a default
+#             might be provided (e.g. "")
 #   ">"       (with quotation marks because > and < are special characters in YAML)
 #             The minimum value (endpoint excluded) of the column data. Currently used
 #             for info and not to validate or discard data (it might be in the future)
