@@ -1,25 +1,33 @@
-from typing import Union, Sequence, Type
+from typing import Union, Sequence, Iterable
 from math import inf
 import re
+import warnings
 from scipy.constants import g
 import numpy as np
-from openquake.hazardlib.gsim import get_available_gsims
+from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
 from openquake.hazardlib import imt
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
-from openquake.hazardlib.gsim.base import GMPE
+from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 from openquake.hazardlib import valid
-
-
-# Get a list of the available GSIMs (lazy loaded):
-AVAILABLE_GSIMS: dict[str, Type[GMPE]] = get_available_gsims()
 
 
 # Regular expression to get a GMPETable from string:
 _gmpetable_regex = re.compile(r'^GMPETable\(([^)]+?)\)$')
 
 
-def get_gsim_instance(gsim_name: str) -> GMPE:
-    return valid.gsim(gsim_name)
+def get_gsim_names(sort=False) -> Iterable[str]:
+    if not sort:
+        yield from registry  # it's a dict, yield just the keys (names)
+    else:
+        yield from sorted(registry)
+
+
+def get_gsim_instance(gsim_name: str, raise_deprecated=True) -> GMPE:
+    if not raise_deprecated:
+        return valid.gsim(gsim_name)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error', category=OQDeprecationWarning)  # raise on warnings
+        return valid.gsim(gsim_name)
 
 
 def check_gsim_list(gsims) -> dict[str, GMPE]:
@@ -39,7 +47,7 @@ def check_gsim_list(gsims) -> dict[str, GMPE]:
     for gs in gsims:
         if isinstance(gs, GMPE):
             output_gsims[get_gsim_name(gs)] = gs  # get name of GMPE instance
-        elif gs in AVAILABLE_GSIMS:
+        elif gs in registry:
             output_gsims[gs] = get_gsim_instance(gs)
         else:
             match = _gmpetable_regex.match(gs)  # GMPETable ?
@@ -47,7 +55,7 @@ def check_gsim_list(gsims) -> dict[str, GMPE]:
                 filepath = match.group(1).split("=")[1]  # get table filename
                 output_gsims[gs] = GMPETable(gmpe_table=filepath)
             else:
-                raise ValueError('%s Not supported by OpenQuake' % gs)
+                raise ValueError('%s not supported by OpenQuake' % str(gs))
 
     return output_gsims
 
@@ -61,25 +69,49 @@ def get_gsim_name(gsim: GMPE) -> str:  # FIXME
         filepath = match.group(1).split("=")[1][1:-1]
         return 'GMPETable(gmpe_table=%s)' % filepath
     else:
-        gsim_name = gsim.__class__.__name__
-        return gsim_name
-        # parse GMPE argument disabled, as it has the side effect to return
-        # not what users might have input as string FIXME handle with GW
-        #
-        # additional_args = []
-        # # Build the GSIM string by showing name and arguments. Keep things
-        # # simple (no replacements, no case changes) as we might want to be able
-        # # to get back the GSIM from its string in the future.
-        # for key in gsim.__dict__:
-        #     if key.startswith("kwargs"):
-        #         continue
-        #     val = str(gsim.__dict__[key])  # quoting strings with json maybe?
-        #     additional_args.append("{:s}={:s}".format(key, val))
-        # if len(additional_args):
-        #     gsim_name_str = "({:s})".format(", ".join(additional_args))
-        #     return gsim_name + gsim_name_str
-        # else:
-        #     return gsim_name
+        gsim_toml_repr = str(gsim)
+        # gsim_toml_repr should be a TOML version of the gsim. We could return it,
+        # but we want to return the name that allows us to make this function the
+        # opposite of `get_gsim_instance`. So:
+        # 1. `gsim_toml_repr` is actually "[<gsim_class_name>]": in this case
+        # just return <class_name>:
+        gsim_class_name = gsim.__class__.__name__
+        if gsim_toml_repr == f'[{gsim_class_name}]':
+            return gsim_class_name
+        # 2. gsim is an aliased version of some model M. In this case, `gsim_toml_repr` can be reduced
+        # to the simple class name of M:
+        gsim_src = _get_src_name_from_aliased_version(gsim_toml_repr)  # might be None
+        return gsim_src or gsim_toml_repr
+
+
+_gsim_aliases: Union[dict[str, str], None] = None
+
+
+def _get_src_name_from_aliased_version(gsim_toml_repr: str):
+    global _gsim_aliases
+    if _gsim_aliases is None:
+        _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
+    return _gsim_aliases.get(gsim_toml_repr, None)
+
+
+def get_rupture_params_required_by(gsim: GMPE) -> Union[set[str], frozenset[str]]:
+    # return getattr(gsim, 'REQUIRES_RUPTURE_PARAMETERS', set())
+    return gsim.REQUIRES_RUPTURE_PARAMETERS
+
+
+def get_sites_params_required_by(gsim: GMPE) -> Union[set[str], frozenset[str]]:
+    # return getattr(gsim, 'REQUIRES_SITES_PARAMETERS', set())
+    return gsim.REQUIRES_SITES_PARAMETERS
+
+
+def get_distances_required_by(gsim: GMPE) -> Union[set[str], frozenset[str]]:
+    # return getattr(gsim, 'REQUIRES_DISTANCES', set())
+    return gsim.REQUIRES_DISTANCES
+
+
+def get_imts_defined_for(gsim: GMPE) -> frozenset[str]:
+    return frozenset(_.__name__ for _ in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+            # getattr(gsim, 'DEFINED_FOR_INTENSITY_MEASURE_TYPES', [])}
 
 
 def n_jsonify(obj: Union[Sequence, int, float, np.generic]) -> \
@@ -194,3 +226,15 @@ def get_SA_period(obj: Union[str, imt.IMT]) -> Union[float, None]:
     # check also that the period is finite (SA('inf') and SA('nan') are possible,
     # and this function is intended to return a "workable" period):
     return float(period) if np.isfinite(period) else None
+
+
+# def imt_to_string(imtx: Union[str, imt.IMT]) -> Union[str, None]:
+#     try:
+#         if isinstance(imtx, str):
+#             return imt.from_string(imtx)
+#         else:
+#             return imt.repr(imtx)
+#     except Exception:  # noqa
+#         return None
+#
+# imt_from_string = imt.from_string
