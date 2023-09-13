@@ -8,17 +8,16 @@ import numpy as np
 import pytest
 from datetime import datetime
 import pandas as pd
-from pandas.io.parsers import TextFileReader
 
-# import numpy as np
-from egsim.smtk import flatfile
-from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query, read_csv)
+from egsim.smtk.flatfile import (read_flatfile, query, read_csv, colmeta)
 
 
 def test_read_flatifle_yanml():
-    flatfile_cols = flatfile.column_type
-    assert 'vs30' in flatfile_cols and 'rx' in flatfile_cols and \
-           'rake' in flatfile_cols
+    assert len({'rrup', 'rhypo'} & set(colmeta.distances)) == 2
+    assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
+               set(colmeta.rupture_params)) == 4
+    assert len({'st_lat', 'station_latitude', 'lat' , 'vs30'} &
+               set(colmeta.sites_params)) == 4
 
 def test_flatfile_turkey(testdata):
     fpath = testdata.path('Turkey_20230206_flatfile_geometric_mean.csv')
@@ -224,7 +223,7 @@ def test_query():
         elif col == 's':
             query_expr = f'{col} == "{d[col].values.tolist()[0]}"'
         elif col == 'd':
-            query_expr = f'{col} < datetime({now.year +1}, {now.month}, {now.day})'
+            query_expr = f'{col} <= datetime("{now.isoformat()}")'
         # test equality with first line
         new_d = query(d, query_expr)
         assert len(new_d) == 1

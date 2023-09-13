@@ -2,8 +2,6 @@
 from contextlib import contextmanager
 
 from datetime import date, datetime
-from enum import Enum
-from os.path import join, dirname
 import re
 from openquake.hazardlib.gsim.base import GMPE
 from pandas.core.indexes.numeric import IntegerIndex
@@ -11,129 +9,14 @@ from scipy.interpolate import interp1d
 
 from typing import Union, Callable, Any, Iterable, IO
 
-import yaml
 import numpy as np
 import pandas as pd
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
 
-from . import get_SA_period
-from ..smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-
-
-class ColumnType(Enum):
-    """Flatfile column type / family (to know a type from a specific column, use
-    `column_type[column]`, which returns an item of this enum)
-    """
-    rupture_parameter = 'r'
-    site_parameter = 's'
-    distance_measure = 'd'
-    intensity_measure = 'i'
-    unknown = 'u'
-
-
-class ColumnDtype(Enum):
-    """Flatfile column **data** type enum. Enum names are the string values to be used
-    as descriptors (e.g., the supported values of a column `dtype` in the YAML file.
-    Note that categorical dtypes have to be given as list), enum values are the relative
-    Python/numpy classes (NOTE: Python native class must be the 1st ELEMENT)
-    """
-    # Note: to get if the dtype of flatfile column `c` (pandas Series) is supported:
-    # isinstance(c.dtype, pd.CategoricalDtype) or \
-    #     any(issubclass(c.dtype.type, e.value) for e in ColumnDtype)
-    float = float, np.floating
-    int = int, np.integer
-    bool = bool, np.bool_
-    datetime = datetime, np.datetime64
-    str = str, np.str_, np.object_
-
-
-_ff_metadata_path = join(dirname(__file__), 'flatfile-metadata.yaml')
-
-
-def read_column_metadata(*, names:set[str, ...],
-                         ctype:dict[str, str]=None,
-                         dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
-                         alias:dict[str, set[str, ...]]=None,
-                         default:dict[str, Any]=None,
-                         required:list[set[str,...],...]=None,
-                         bounds:dict[str, dict[str, Any]]=None,
-                         help:dict=None):
-    """Put columns metadata stored in the YAML file into the passed function arguments.
-
-    :param names: set or None. If set, it will be populated with the names of
-        the flatfile columns registered in the YAML, aliases excluded
-    :param ctype: dict or None. If dict, it will be populated with all flatfile columns
-        and aliases (keys), mapped to their type (str, a name of an enum item of
-        :ref:`ColumnType`)
-    :param dtype: dict or None. If dict, it will be populated with the flatfile columns
-        and aliases (keys) which have a defined data type ( a name of an item of
-        the enum :ref:`ColumnDtype` - or pandas `CategoricalDtype`)
-    :param alias: dict or None. If dict, it will be populated with the flatfile column
-        and aliases (keys) mapped to the set of all aliases. The set contains at least
-        the associated key
-    :param default: dict or None. If dict, it will be populated with the
-        flatfile columns and aliases (keys) mapped to their default, if defined
-    :param required: list or None. If list, it will contain all required columns in
-        form of sets, where each set contains a column names (name + aliases)
-    """
-    with open(_ff_metadata_path) as fpt:
-        for c_name, props in yaml.safe_load(fpt).items():
-            if names is not None:
-                names.add(c_name)
-            aliases = props.get('alias', [])
-            if isinstance(aliases, str):
-                aliases = {aliases}
-            else:
-                aliases = set(aliases)
-            aliases.add(c_name)
-            if required is not None and props.get('required', False):
-                required.append(aliases)
-            for name in aliases:
-                if ctype is not None:
-                    type_enum_value = props.get('type', ColumnType.unknown.value)
-                    ctype[name] = ColumnType(type_enum_value).name
-                if alias is not None:
-                    alias[name] = aliases
-                if dtype is not None and 'dtype' in props:
-                    dtype[name] = props['dtype']
-                    if isinstance(dtype[name], (list, tuple)):
-                        dtype[name] = pd.CategoricalDtype(dtype[name])
-                if default is not None and 'default' in props:
-                    default[name] = props['default']
-                if bounds is not None:
-                    _bounds = {k: props[k] for k in ["<", "<=", ">", ">="] if k in props}
-                    if _bounds:
-                        bounds[name] = _bounds
-                if help is not None and props.get('help', ''):
-                    help[name] = props['help']
-
-
-# global variables
-# the set of column names (top level keys of the YAML file):
-column_names: set[str, ...] = set()
-# Column names and aliases, mapped to their type (`ColumnType` name):
-column_type: dict[str, str] = {}
-# Column names and aliases, mapped to their dtype:
-column_dtype: dict[str, Union[str, pd.CategoricalDtype]] = {}
-# Column names and aliases, mapped to their default:
-column_default: dict[str, Any] = {}  # flatfile column -> default value when missing
-# Column name and aliases, mapped to the set of all possible column aliases
-# (the set will always include at least the column name itself):
-column_alias: dict[str, set[str, ...]] = {} # every column name -> its aliases
-# Required column names (each item in the list is a set of all possible aliases for a
-# column. The set will always include at least the column name itself):
-column_required: list[set[str,...],...] = []
-
-# populate the global variables above from the YAML file:
-read_column_metadata(names=column_names, ctype=column_type, dtype=column_dtype,
-                     alias=column_alias, required=column_required,
-                     default=column_default)
-
-
-############
-# Flatfile #
-############
+from . import colmeta
+from .. import get_SA_period
+from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
 def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
@@ -147,8 +30,8 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
         take more time)
     """
     # required columns need to be post-processed:
-    return read_csv(filepath_or_buffer, sep=sep, dtype=column_dtype,
-                    defaults=column_default, required=column_required)
+    return read_csv(filepath_or_buffer, sep=sep, dtype=colmeta.dtype,
+                    defaults=colmeta.default, required=colmeta.required)
 
 
 missing_values = ("", "null", "NULL", "None",
@@ -218,6 +101,8 @@ def read_csv(filepath_or_buffer: Union[str, IO],
         defaults = {}
     if dtype is None:
         dtype = {}
+    if required is None:
+        required = []
 
     # split dtype into two dicts: entries that can be passed to `pd.read_csv` `dtype`
     # arg because they do not raise ('category', 'str'):
@@ -226,9 +111,10 @@ def read_csv(filepath_or_buffer: Union[str, IO],
     # datetime) because they raise errors that we want to handle after reading the csv:
     post_dtype = {}
 
-    # Also, convert categorical dtypes into their categories dtype, and put categorical
-    # data in a separate dict
+    # Also, convert categorical dtypes into their categories dtype, and put
+    # categorical data in a separate dict
     categorical_dtypes = {}
+    ColumnDtype = colmeta.ColumnDtype
     for col, col_dtype in dtype.items():
         if isinstance(col_dtype, (list, tuple)):  # covert lists and tuples beforehand
             col_dtype = categorical_dtypes[col] = pd.CategoricalDtype(col_dtype)
@@ -494,7 +380,7 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
 
 def get_column_name(flatfile:pd.DataFrame, column:str) -> str:
     ff_cols = set(flatfile.columns)
-    columns = column_alias[column]  # it's a set[str]
+    columns = colmeta.alias[column]  # it's a set[str]
     cols = columns & ff_cols
     if len(cols) > 1:
         raise ConflictingColumns(*cols)
@@ -748,8 +634,7 @@ class EventContext(RuptureContext):
             values = self._flatfile[column_name].values
         except KeyError:
             raise MissingColumn(column_name)
-        if column_type[column_name] == ColumnType.rupture_parameter.name:
-            # rupture parameter, return a scalar (note: all values should be the same)
+        if column_name in colmeta.rupture_params:
             values = values[0]
         return values
 
@@ -763,6 +648,7 @@ class InvalidColumn(Exception):
 
     def __str__(self):
         """Make str(self) more clear"""
+        column_alias, column_names = colmeta.alias, colmeta.names
         # prefix is by default the class name:
         prefix_str = self.__class__.__name__
         # suffix is by default the argument passed in __init__

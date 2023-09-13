@@ -10,11 +10,11 @@ from datetime import datetime
 
 from django.db.models import (Model as DjangoModel, Q, TextField, BooleanField,
                               ForeignKey, ManyToManyField, JSONField, UniqueConstraint,
-                              CASCADE, SET_NULL, Index, SmallIntegerField,
+                              CASCADE, SET_NULL, Index,
                               DateTimeField, URLField, Manager, CharField)
 from django.db.models.options import Options
 
-from egsim.smtk import flatfile
+from egsim.smtk.flatfile import colmeta
 
 # Notes: primary keys are auto added if not present ('id' of type BigInt or so).
 # All models here that are not abstract will be available prefixed with 'api_'
@@ -101,10 +101,9 @@ class CompactEncoder(json.JSONEncoder):
 class FlatfileColumn(_UniqueName):
     """Flat file column"""
     type = CharField(null=False,
-                     max_length=max(len(c.name) for c in flatfile.ColumnType),
-                     default=flatfile.ColumnType.unknown.name,
-                     choices=[(c.name, c.name.replace('_', ' ').capitalize())
-                              for c in flatfile.ColumnType],
+                     max_length=max(len(c.name) for c in colmeta.ColumnType),
+                     default=colmeta.ColumnType.unknown.name,
+                     choices=[(c.name, c.value) for c in colmeta.ColumnType],
                      help_text='The type of Column (e.g., '
                                'intensity measure, rupture parameter, '
                                'distance measure)')
