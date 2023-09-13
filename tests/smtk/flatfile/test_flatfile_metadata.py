@@ -8,7 +8,7 @@ from typing import Any, Union
 import yaml
 import pandas as pd
 
-from egsim.smtk import _gsim_names, get_gsim_names, get_gsim_instance
+
 from egsim.smtk.flatfile import (ColumnType, ColumnDtype, read_column_metadata,
                                  _ff_metadata_path)
 

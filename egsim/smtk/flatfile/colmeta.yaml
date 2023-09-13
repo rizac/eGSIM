@@ -1,5 +1,4 @@
-# Register here all supported flatfile columns and their metadata which will be used to
-# perform flatfile IO operations. The syntax for each column (in YAML) is:
+# Flatfile (Col)umn (Meta)data information. The syntax for each column (in YAML) is:
 #
 # <column_name>:
 #   dtype:    The data type (default when missing: null). Supported values are: null,
