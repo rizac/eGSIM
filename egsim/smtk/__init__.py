@@ -1,4 +1,4 @@
-from typing import Union, Sequence, Iterable
+from typing import Union, Sequence, Iterable, Type
 from math import inf
 import re
 import warnings
@@ -26,7 +26,7 @@ def get_gsim_instance(gsim_name: str, raise_deprecated=True) -> GMPE:
     if not raise_deprecated:
         return valid.gsim(gsim_name)
     with warnings.catch_warnings():
-        warnings.filterwarnings('error', category=OQDeprecationWarning)  # raise on warnings
+        warnings.filterwarnings('error', category=OQDeprecationWarning)
         return valid.gsim(gsim_name)
 
 
@@ -94,24 +94,28 @@ def _get_src_name_from_aliased_version(gsim_toml_repr: str):
     return _gsim_aliases.get(gsim_toml_repr, None)
 
 
-def get_rupture_params_required_by(gsim: GMPE) -> Union[set[str], frozenset[str]]:
-    # return getattr(gsim, 'REQUIRES_RUPTURE_PARAMETERS', set())
-    return gsim.REQUIRES_RUPTURE_PARAMETERS
+def get_rupture_params_required_by(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
+    if isinstance(gsim, str):
+        gsim = registry[gsim]
+    return gsim.REQUIRES_RUPTURE_PARAMETERS or frozenset()  # "cast" to set if '' or (,)
 
 
-def get_sites_params_required_by(gsim: GMPE) -> Union[set[str], frozenset[str]]:
-    # return getattr(gsim, 'REQUIRES_SITES_PARAMETERS', set())
-    return gsim.REQUIRES_SITES_PARAMETERS
+def get_sites_params_required_by(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
+    if isinstance(gsim, str):
+        gsim = registry[gsim]
+    return gsim.REQUIRES_SITES_PARAMETERS or frozenset()  # "cast" to set if '' or (,)
 
 
-def get_distances_required_by(gsim: GMPE) -> Union[set[str], frozenset[str]]:
-    # return getattr(gsim, 'REQUIRES_DISTANCES', set())
-    return gsim.REQUIRES_DISTANCES
+def get_distances_required_by(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
+    if isinstance(gsim, str):
+        gsim = registry[gsim]
+    return gsim.REQUIRES_DISTANCES or frozenset()  # "cast" to set if '' or (,)
 
 
-def get_imts_defined_for(gsim: GMPE) -> frozenset[str]:
+def get_imts_defined_for(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
+    if isinstance(gsim, str):
+        gsim = registry[gsim]
     return frozenset(_.__name__ for _ in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-            # getattr(gsim, 'DEFINED_FOR_INTENSITY_MEASURE_TYPES', [])}
 
 
 def n_jsonify(obj: Union[Sequence, int, float, np.generic]) -> \

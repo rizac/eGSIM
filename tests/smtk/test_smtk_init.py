@@ -3,13 +3,11 @@ Created on 16 Feb 2018
 
 @author: riccardo
 """
-from openquake.hazardlib.gsim.base import gsim_aliases
-from typing import Any, Union
+from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
+import warnings
+import pytest
 
-import yaml
-import pandas as pd
-
-from egsim.smtk import get_gsim_names, get_gsim_instance, \
+from egsim.smtk import get_gsim_names, get_gsim_instance, registry, \
     get_imts_defined_for, get_distances_required_by, \
     get_rupture_params_required_by, get_sites_params_required_by, get_gsim_name,\
     OQDeprecationWarning
@@ -20,26 +18,90 @@ from egsim.smtk import get_gsim_names, get_gsim_instance, \
 def test_me():
     pass
 
+
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
 
-def test_requires():
+
+def test_load_models():
     """Test the flatfile metadata"""
+
+    # raise DeprecationWarnings (all other warnings behave as default):
+    with warnings.catch_warnings(record=True) as w:
+        count, ok = read_gsims()
+        # hacky check to see that everything was ok:
+        assert count > ok > 650
+        # warnings might not be unique, get the unique ones:
+        w = set(str(_) for _ in w)
+        assert len(w) > 50  # hacky check as well
+
+    # don't raise DeprecationWarnings (all other warnings behave as default):
+    with warnings.catch_warnings(record=True) as w3:
+        count3, ok3 = read_gsims(False)
+        # we have more model loaded but the overall models available is the same:
+        assert ok3 > ok and count3 == count
+        # warnings might not be unique, get the unique ones:
+        w3 = set(str(_) for _ in w3)
+        # we should have N more warning, and  N more successfully loaded models
+        warnings_more = len(w3) - len(w)
+        ok_models_more = ok3 - ok
+        assert  warnings_more == ok_models_more
+
+    # don't raise DeprecationWarnings (ignore all warnings overall):
+    with warnings.catch_warnings(record=True) as w4:
+        # don't raise DeprecationWarnings (all other warnings behave as default):
+        warnings.simplefilter('ignore')
+        count4, ok4 = read_gsims(False)
+        # we have more model loaded but the overall models available is the same:
+        assert ok4 == ok3 and count4 == count3
+        # warnings might not be unique, get the unique ones:
+        assert not w4
+
+
+def test_load_model_with_deprecation_warnings():
+    model = 'AkkarEtAl2013'
+    with pytest.raises(OQDeprecationWarning) as exc:
+        get_gsim_instance(model)
+    gsim = get_gsim_instance(model, raise_deprecated=False)
+    assert isinstance(gsim, GMPE)
+    # now check that the behavior is the same if we set a warning filter beforehand:
+    for ignore_warnings in [True, False]:
+        with warnings.catch_warnings(record=True) as w:
+            if ignore_warnings:
+                warnings.simplefilter('ignore')
+            with pytest.raises(OQDeprecationWarning) as exc:
+                get_gsim_instance(model)
+            assert len(w) == 0
+        with warnings.catch_warnings(record=True) as w:
+            if ignore_warnings:
+                warnings.simplefilter('ignore')
+            gsim = get_gsim_instance(model, raise_deprecated=False)
+            assert isinstance(gsim, GMPE)
+            assert len(w) == 0 if ignore_warnings else 1
+
+
+def read_gsims(raise_deprecated=True, catch_deprecated=True):
     count, ok = 0, 0
+    errors = [TypeError, KeyError, IndexError]
+    if catch_deprecated:
+        errors.append(OQDeprecationWarning)
+    errors = tuple(errors)
     for model in get_gsim_names():
         count += 1
         try:
-            ok += 1
-            gsim = get_gsim_instance(model)
+            gsim = get_gsim_instance(model, raise_deprecated=raise_deprecated)
             model_name_back = get_gsim_name(gsim)
             assert model == model_name_back
-        except (TypeError, KeyError, IndexError, OQDeprecationWarning) as exc:
+            ok += 1
+        except errors as exc:
             continue
+    return count, ok
+
+def test_requires():
+    for gsim_cls in registry.values():
         for func in [get_distances_required_by,
                 get_rupture_params_required_by,
                 get_sites_params_required_by,
                 get_imts_defined_for]:
-            res = func(gsim)
-            assert isinstance(res, (set, frozenset))
+            res = func(gsim_cls)
+            assert isinstance(res, frozenset)
             assert not res or all(isinstance(_, str) for _ in res)
-    # simple check to see if get_gsim_instance did not raise too much:
-    assert count > 700 and ok > 650
