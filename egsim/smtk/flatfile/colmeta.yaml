@@ -57,7 +57,7 @@ rrup:
 rjb:
   dtype: float
   help: >-
-    Joyner-Boore distance (in km). Missing data (empty or NaN values, column not provided)  
+    Joyner-Boore distance (in km). Missing data (empty or NaN values, column not provided) 
     will be replaced with the epicentral distance, if the column "repi" is provided
   type: d
 rhypo:

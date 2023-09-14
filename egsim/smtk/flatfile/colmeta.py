@@ -6,7 +6,12 @@ from os.path import join, dirname
 
 from typing import Union, Any
 
-import yaml
+from yaml import load as yaml_load
+try:
+    from yaml import CSafeLoader as default_yaml_loader
+except ImportError:
+    from yaml import SafeLoader as default_yaml_loader
+
 import numpy as np
 import pandas as pd
 
@@ -98,7 +103,7 @@ def read_column_metadata(*, names:set[str],
             'i': ColumnType.imt,
             'd': ColumnType.distance
         }
-        for c_name, props in yaml.load(fpt, yaml.BaseLoader).items():
+        for c_name, props in yaml_load(fpt, default_yaml_loader).items():
             if names is not None:
                 names.add(c_name)
             aliases = props.get('alias', [])
