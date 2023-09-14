@@ -1,16 +1,19 @@
-"""module container of all column metadata information stored in the associated
-YAML file"""
-from datetime import datetime
+"""
+module containing all column metadata information stored in the associated
+YAML file
+"""
+from datetime import datetime, date
 from enum import Enum
 from os.path import join, dirname
 
 from typing import Union, Any
 
+# try to speed up yaml.safe_load (https://pyyaml.org/wiki/PyYAMLDocumentation):
 from yaml import load as yaml_load
 try:
-    from yaml import CSafeLoader as default_yaml_loader
+    from yaml import CSafeLoader as default_yaml_loader  # faster, if available
 except ImportError:
-    from yaml import SafeLoader as default_yaml_loader
+    from yaml import SafeLoader as default_yaml_loader  # same as using yaml.safe_load
 
 import numpy as np
 import pandas as pd
@@ -44,30 +47,7 @@ class ColumnDtype(Enum):
     str = str, np.str_, np.object_
 
 
-# global variables (populated at module first import - see code below):
-# the set of column names (top level keys of the YAML file):
-names: set[str] = set()
-# Column names and alies denoting rupture params:
-rupture_params: set[str] = set()
-# Column names and aliases denoting sites params:
-sites_params: set[str] = set()
-# Column names and aliases denoting distances:
-distances: set[str] = set()
-# Column names denoting intensity measures:
-imts: set[str] = set()
-# Column names and aliases, mapped to their dtype:
-dtype: dict[str, Union[str, pd.CategoricalDtype]] = {}
-# Column names and aliases, mapped to their default:
-default: dict[str, Any] = {}  # flatfile column -> default value when missing
-# Column name and aliases, mapped to the set of all possible column aliases
-# (the set will always include at least the column name itself):
-alias: dict[str, set[str]] = {} # every column name -> its aliases
-# Required column names (each item in the list is a set of all possible aliases for a
-# column. The set will always include at least the column name itself):
-required: list[set[str]] = []
-
-
-_ff_metadata_path = join(dirname(__file__), 'colmeta.yaml')
+_ff_metadata_path = join(dirname(__file__), 'columns.yaml')
 
 
 def read_column_metadata(*, names:set[str],
@@ -78,7 +58,6 @@ def read_column_metadata(*, names:set[str],
                          dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
                          alias:dict[str, set[str]]=None,
                          default:dict[str, Any]=None,
-                         required:list[set[str]]=None,
                          bounds:dict[str, dict[str, Any]]=None,
                          help:dict=None):
     """Put columns metadata stored in the YAML file into the passed function arguments.
@@ -93,9 +72,16 @@ def read_column_metadata(*, names:set[str],
         the associated key
     :param default: dict or None. If dict, it will be populated with the
         flatfile columns and aliases (keys) mapped to their default, if defined
-    :param required: list or None. If list, it will contain all required columns in
-        form of sets, where each set contains a column names (name + aliases)
     """
+
+    def _upcast(val, dtype):
+        """allow for some dtypes in certain cases"""
+        if dtype == ColumnDtype.float.name and isinstance(val, int):
+            return float(val)
+        elif dtype == ColumnDtype.datetime.name and isinstance(val, date):
+            return datetime(val.year, val.month, val.day)
+        return val
+
     with open(_ff_metadata_path) as fpt:
         types = {
             'r': ColumnType.rupture_param,
@@ -112,8 +98,6 @@ def read_column_metadata(*, names:set[str],
             else:
                 aliases = set(aliases)
             aliases.add(c_name)
-            if required is not None and props.get('required', False):
-                required.append(aliases)
             for name in aliases:
                 if 'type' in props:
                     ctype = types[props['type']]
@@ -136,23 +120,12 @@ def read_column_metadata(*, names:set[str],
                     if isinstance(dtype[name], (list, tuple)):
                         dtype[name] = pd.CategoricalDtype(dtype[name])
                 if default is not None and 'default' in props:
-                    default[name] = props['default']
+                    default[name] = _upcast(props['default'], props['dtype'])
                 if bounds is not None:
-                    _bounds = {k: props[k] for k in ["<", "<=", ">", ">="]
+                    _bounds = {k: _upcast(props[k], props['dtype'])
+                               for k in ["<", "<=", ">", ">="]
                                if k in props}
                     if _bounds:
                         bounds[name] = _bounds
                 if help is not None and props.get('help', ''):
                     help[name] = props['help']
-
-
-# initialize the above class with data from the YAMl file:
-read_column_metadata(names=names,
-                     rupture_params=rupture_params,
-                     sites_params=sites_params,
-                     distances=distances,
-                     imts=imts,
-                     dtype=dtype,
-                     alias=alias,
-                     required=required,
-                     default=default)
