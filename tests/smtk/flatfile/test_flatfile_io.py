@@ -9,15 +9,21 @@ import pytest
 from datetime import datetime
 import pandas as pd
 
-from egsim.smtk.flatfile import (read_flatfile, query, read_csv, colmeta)
+from egsim.smtk.flatfile import (read_flatfile, query, read_csv, cmeta)
+from egsim.smtk.flatfile.columns import read_column_metadata
 
 
 def test_read_flatifle_yanml():
-    assert len({'rrup', 'rhypo'} & set(colmeta.distances)) == 2
     assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
-               set(colmeta.rupture_params)) == 4
+               set(cmeta.rupture_params)) == 4
+
+    rup, dists, sites = set(), set(), set()
+    read_column_metadata(rupture_params=rup, sites_params=sites, distances=dists)
+    assert len({'rrup', 'rhypo'} & set(dists)) == 2
     assert len({'st_lat', 'station_latitude', 'lat' , 'vs30'} &
-               set(colmeta.sites_params)) == 4
+               set(sites)) == 4
+    assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
+               set(cmeta.rupture_params)) == 4
 
 def test_flatfile_turkey(testdata):
     fpath = testdata.path('Turkey_20230206_flatfile_geometric_mean.csv')

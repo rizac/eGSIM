@@ -50,7 +50,7 @@ class ColumnDtype(Enum):
 _ff_metadata_path = join(dirname(__file__), 'columns.yaml')
 
 
-def read_column_metadata(*, names:set[str],
+def read_column_metadata(*, names:set[str]=None,
                          rupture_params:set[str]=None,
                          sites_params: set[str] = None,
                          distances: set[str] = None,
@@ -64,14 +64,27 @@ def read_column_metadata(*, names:set[str],
 
     :param names: set or None. If set, it will be populated with the names of
         the flatfile columns registered in the YAML, aliases excluded
+    :param rupture_params: set or None. If set, it will be populated with the flatfile
+        columns that denote an OpenQuake rupture parameter
+    :param sites_params: set or None. If set, it will be populated with the flatfile
+        columns that denote an OpenQuake sites parameter
+    :param distances: set or None. If set, it will be populated with the flatfile
+        columns that denote an OpenQuake distance measure
+    :param imts: set or None. If set, it will be populated with the flatfile
+        columns that denote an OpenQuake intensity parameter
     :param dtype: dict or None. If dict, it will be populated with the flatfile columns
-        and aliases (keys) which have a defined data type ( a name of an item of
+        and aliases mapped to their data type (a name of an item of
         the enum :ref:`ColumnDtype` - or pandas `CategoricalDtype`)
-    :param alias: dict or None. If dict, it will be populated with the flatfile column
-        and aliases (keys) mapped to the set of all aliases. The set contains at least
-        the associated key
+    :param alias: dict or None. If dict, it will be populated with the flatfile columns
+        and aliases mapped to the set of their aliases. A dict value might be therefore
+        keyed by more than one dict key, and contains at least its key
     :param default: dict or None. If dict, it will be populated with the
-        flatfile columns and aliases (keys) mapped to their default, if defined
+        flatfile columns and aliases mapped to their default, if defined
+    :param bounds: dict or None, of dict, it will be populated with the flatfile
+        columns and aliases mapped to a dict with keys "<=", "<" ">=", ">" mapped
+        in turn to a value
+    :param help: dict or None, if dict, it will be populated with all column names
+        and aliases mapped to their description
     """
 
     def _upcast(val, dtype):
