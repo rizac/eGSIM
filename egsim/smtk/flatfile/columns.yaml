@@ -17,10 +17,10 @@
 #             any additional name, e.g., depending on the column type (see below) the
 #             name used in OpenQuake, if different. Columns of type i (intensity
 #             measure) must be typed exactly as in OpenQuake and cannot have aliases
-#   type:     The column type. Supported values are: i (intensity measure), d
-#             (distance measure), r (rupture parameter), s (site parameter): in all of
-#             these cases the column name or any of its aliases must correspond to the
-#             name implemented in OpenQuake. When missing, defaults to 'u' (unknown)
+#   type:     The column type (optional). Type either rupture (rupture parameter), sites
+#             (sites parameter), intensity (intensity measure) or distance (distance
+#             measure). If a type is given, the column name or any of its aliases
+#             must match the parameter / measure name implemented in OpenQuake
 #   help:     The field description, used for help. Depending on the application, a
 #             default might be provided (e.g. "")
 #   ">"       (with quotation marks because > and < are special characters in YAML)
@@ -39,76 +39,76 @@
 
 azimuth:
   dtype: float
-  type: d
+  type: distance
 repi:
   dtype: float
   help: epicentral distance (in km)
-  type: d
+  type: distance
 rrup:
   dtype: float
   help: >-
     rupture_distance (in km). Missing data (empty or NaN values, column not provided) 
     will be replaced with the hypocentral distance values, if present
-  type: d
+  type: distance
 rjb:
   dtype: float
   help: >-
     Joyner-Boore distance (in km). Missing data (empty or NaN values, column not provided) 
     will be replaced with the epicentral distance values, if present
-  type: d
+  type: distance
 rhypo:
   dtype: float
   help: hypocentral distance (in km)
-  type: d
+  type: distance
 rx:
   dtype: float
   help: >-
     Horizontal distance (in km) from the top of the rupture measured perpendicular to 
     strike. Missing data (empty or NaN values, column not provided) will be replaced 
     with the epicentral distance values, if present
-  type: d
+  type: distance
 ry0:
   dtype: float
   help: >-
     Horizontal distance (in km) from the top of the rupture measured parallel to strike. 
     Missing data (empty or NaN values, column not provided) will be replaced with the 
     epicentral distance values, if present
-  type: d
+  type: distance
 rvolc:
   dtype: float
   default: 0
   help: Distance through volcanic zone (km). When missing, it defaults to 0
-  type: d
+  type: distance
 ev_lat:
   dtype: float
   ">=": -90
   "<=": 90
   help: Event latitude (hypocentre latitude, in deg)
   alias: [hypo_lat, event_latitude]
-  type: r
+  type: rupture
 ev_lon:
   dtype: float
   ">=": -180
   "<=": 180
   help: Event longitude (hypocentre longitude, in deg)
   alias: [hypo_lon, event_longitude]
-  type: r
+  type: rupture
 mag:
   dtype: float
   alias: magnitude
   help: event magnitude
-  type: r
+  type: rupture
 ev_depth:
   dtype: float
   help: event depth (hypocentral depth, in km)
   alias: [hypo_depth, event_depth]
-  type: r
+  type: rupture
 rupture_top_depth:
   dtype: float
   ">=": 0
   help: Top of Rupture Depth (km)
   alias: [ztor, depth_top_of_rupture]
-  type: r
+  type: rupture
 rupture_width:
   dtype: float
   ">=": 0
@@ -117,7 +117,7 @@ rupture_width:
     provided) will be derived from the record magnitude using a Magnitude-Scaling 
     Relationship defined for PEER PSHA test cases, and assuming an aspect ratio of 1
   alias: width
-  type: r
+  type: rupture
 dip:
   dtype: float
   ">=": 0
@@ -127,7 +127,7 @@ dip:
     Hint: in case of more components available (e.g. from web services), the
     correct one should be inferred by the user from the rupture, or can be chosen
     randomly if no information is available
-  type: r
+  type: rupture
 rake:
   dtype: float
   ">=": -180
@@ -137,7 +137,7 @@ rake:
     Hint: in case of more components available (e.g. from
     web services), the correct one should be inferred by the user from the rupture,
     or can be chosen randomly if no information is available
-  type: r
+  type: rupture
 z1pt0:
   dtype: float
   help: >-
@@ -146,7 +146,7 @@ z1pt0:
     derived from the vs30 values (if present) using the Chiou & Youngs (2014) California 
     model
   alias: z1
-  type: s
+  type: sites
 z2pt5:
   dtype: float
   help: >-
@@ -154,16 +154,16 @@ z2pt5:
     2.5 km/sec, in km. Missing data (empty or NaN values, column not provided) will be 
     derived from the record vs30 values (if present) using the Campbell & Bozorgnia 
     (2014) model
-  type: s
+  type: sites
 vs30:
   dtype: float
   ">=": 0
   help: Average shear wave velocity in the top 30 m, in m/s
-  type: s
+  type: sites
 backarc:
   dtype: bool
   default: false
-  type: s
+  type: sites
   help: >-
     boolean indicating if the site is in the subduction backarc. When missing or false, 
     the site is assumed to be unknown or in the subduction forearc
@@ -173,73 +173,73 @@ st_lat:
   "<=": 90
   help: station latitude (deg)
   alias: [station_latitude, lat]  # lat is for compatibility with OpenQuake
-  type: s
+  type: sites
 st_lon:
   dtype: float
   ">=": -180
   "<=": 180
   help: station longitude (deg)
   alias: [station_longitude, lon]  # lon is for compatibility with OpenQuake
-  type: s
+  type: sites
 vs30measured:
   dtype: bool
   default: true
   help: whether or not the Vs30 is measured (default true)
-  type: s
+  type: sites
 xvf:
   dtype: float
   help: distance to the volcanic front (km)
-  type: s
+  type: sites
 fpeak:
   dtype: float
   ">=": 0
   help: >-
     Frequency that corresponds to the peak of the horizontal to vertical
     spectral ratio (Hz)
-  type: s
+  type: sites
 region:
   dtype: int
   ">=": 0
   "<=": 5
   default: 0
   help: The ESHM2020 cluster region to which the site belongs
-  type: s
+  type: sites
 geology:
   dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC", "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
   default: UNKNOWN
   help: geological classification of the site
-  type: s
+  type: sites
 slope:
   dtype: float
   ">": 0
   help: The local slope of the station
-  type: s
+  type: sites
 PGA:
   dtype: float
   help: Peak ground acceleration, in g
-  type: i
+  type: intensity
 PGV:
   dtype: float
   help: Peak ground velocity, in cm/s
-  type: i
+  type: intensity
 SA:
   dtype: float
   help: >-
     Spectral Acceleration, in g. SA columns are in the form "SA(P)",
     where P denotes the period at which it has been computed, in s
-  type: i
+  type: intensity
 PGD:
   dtype: float
   help: Peak ground displacement during an earthquake measured, in cm
-  type: i
+  type: intensity
 CAV:
   dtype: float
   help: Cumulative Absolute Velocity, in g-sec
-  type: i
+  type: intensity
 IA:
   dtype: float
   help: Arias intensity, in m/s
-  type: i
+  type: intensity
 # ID columns:
 ev_id:
   alias: event_id

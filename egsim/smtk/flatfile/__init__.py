@@ -29,9 +29,8 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
     """
-    # required columns need to be post-processed:
     return read_csv(filepath_or_buffer, sep=sep, dtype=cmeta.dtype,
-                    defaults=cmeta.default)  # , required=cmeta.required)
+                    defaults=cmeta.default)
 
 
 missing_values = ("", "null", "NULL", "None",
@@ -43,7 +42,6 @@ def read_csv(filepath_or_buffer: Union[str, IO],
              sep: str = None,
              dtype: dict[str, Union[str, pd.CategoricalDtype]]  = None,
              defaults: dict[str, Any] = None,
-             required: list[Union[str, set[str]],...] = None,
              usecols: Union[list[str], Callable[[str], bool]] = None,
              **kwargs) -> pd.DataFrame:
     """
@@ -74,11 +72,6 @@ def read_csv(filepath_or_buffer: Union[str, IO],
         value for missing/NA data.  Columns not present in the flatfile will be ignored.
         Note that if int and bool columns are specified in `dtype`, then a default is
         set for those columns anyway (0 for int, False for bool. See `dtype` doc)
-    :param required: iterable of flat file column names that must be present
-        in the flatfile. The iterable values can not only be strings but also other
-        iterables of strings, denoting all columns name aliases: in this case at least
-        one element of the strings must be provided. ValueError will be raised if this
-        condition is not satisfied
     :param kwargs: additional keyword arguments that can be passed to `pandas.read_csv`.
         Be careful when providing the following arguments because they have defaults in
         this function: `na_values`, `keep_default_na`, `encoding`, `true_values`,
@@ -101,8 +94,6 @@ def read_csv(filepath_or_buffer: Union[str, IO],
         defaults = {}
     if dtype is None:
         dtype = {}
-    if required is None:
-        required = []
 
     # split dtype into two dicts: entries that can be passed to `pd.read_csv` `dtype`
     # arg because they do not raise ('category', 'str'):
@@ -164,19 +155,6 @@ def read_csv(filepath_or_buffer: Union[str, IO],
         raise ValueError(f'Error reading the flatfile: {str(exc)}')
 
     dfr_columns = set(dfr.columns)
-
-    # check required columns first:
-    missing_required = []
-    for req_columns in required:
-        if isinstance(req_columns, str):
-            req_columns = {req_columns}
-        elif not isinstance(req_columns, set):
-            req_columns = set(req_columns)
-        if not (dfr_columns & req_columns):
-            missing_required.append("/".join(req_columns))
-    if missing_required:
-        raise ValueError(f"Missing required column(s): "
-                         f"{', '.join(missing_required)}")
 
     # check dtypes correctness for those types that must be processed after read
     invalid_columns = []
