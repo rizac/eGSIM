@@ -679,7 +679,12 @@ class ConflictingColumns(InvalidColumn):
 
 
 class _CMeta:
-    """class lazy loading required column metadata from YAML"""
+    """
+    Class of the `cmeta` module variable (see below)
+    for accessing column metadata from YAML
+    """
+
+    # Declare instance variables at class level (just for annotation):
 
     # the set of column names (top level keys of the YAML file):
     names: set[str]
@@ -687,23 +692,23 @@ class _CMeta:
     dtype: dict[str, Union[str, pd.CategoricalDtype]]
     # Column names and aliases, mapped to their default:
     default: dict[str, Any]
-    # Column name and aliases, mapped to the set of all possible column aliases
+    # Column name and aliases, mapped to all their aliases
     # (the set will always include at least the column name itself):
     alias: dict[str, set[str]]
     # Column names and alies denoting rupture params:
     rupture_params: set[str]
 
-    def __getattr__(self, name):
+    def __getattr__(self, att_name):
+        """lazy load attributes on access from YAML"""
         args = {'alias': {}, 'default': {}, 'dtype': {},
                 'rupture_params': set(), 'names': set()}
-        if name in args:
+        if att_name in args:
             read_column_metadata(**args)
-            for name in args:
-                setattr(self, name, args[name])
-            return getattr(self, name)
+            for name, val in args.items():
+                setattr(self, name, val)
+            return getattr(self, att_name)
         raise AttributeError(f"type object '{self.__class__.__name__}' "
-                             f"has no attribute '{name}'")
-
+                             f"has no attribute '{att_name}'")
 
 
 cmeta = _CMeta()
