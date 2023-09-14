@@ -100,9 +100,9 @@ class CompactEncoder(json.JSONEncoder):
 
 class FlatfileColumn(_UniqueName):
     """Flat file column"""
-    type = CharField(null=False,
+    type = CharField(null=True,
                      max_length=max(len(c.name) for c in ColumnType),
-                     default=ColumnType.unknown.name,
+                     default=None,
                      choices=[(c.name, c.value) for c in ColumnType],
                      help_text='The type of Column (e.g., '
                                'intensity measure, rupture parameter, '
