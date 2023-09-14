@@ -9,7 +9,7 @@ import pytest
 from egsim.api import models
 from django.db import IntegrityError
 
-from egsim.smtk.flatfile import ColumnType
+from egsim.smtk.flatfile.columns import ColumnType
 
 
 @pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
@@ -36,9 +36,9 @@ def test_models(capfd):
             print(str(inst))
 
     f = models.FlatfileColumn(name='rx_1_1', oq_name='ert_1',
-                              type=ColumnType.rupture_parameter)
+                              type=ColumnType.rupture_param)
     f.save()
-    assert f.type == ColumnType.rupture_parameter ==  0
+    assert f.type == ColumnType.rupture_param ==  0
 
     f = models.FlatfileColumn(name='rx_1', oq_name='ert')
     f.save()

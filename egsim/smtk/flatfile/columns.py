@@ -21,11 +21,10 @@ import pandas as pd
 
 class ColumnType(Enum):
     """Flatfile column type"""
-    rupture_param = 'Rupture parameter'
-    sites_param = 'Sites parameter'
+    rupture = 'Rupture parameter'
+    sites = 'Sites parameter'
     distance = 'Distance measure'
-    imt = 'Intensity measure'
-    unknown = 'Unknown'
+    intensity = 'Intensity measure'
 
 
 class ColumnDtype(Enum):
@@ -96,12 +95,6 @@ def read_column_metadata(*, names:set[str]=None,
         return val
 
     with open(_ff_metadata_path) as fpt:
-        types = {
-            'r': ColumnType.rupture_param,
-            's': ColumnType.sites_param,
-            'i': ColumnType.imt,
-            'd': ColumnType.distance
-        }
         for c_name, props in yaml_load(fpt, default_yaml_loader).items():
             if names is not None:
                 names.add(c_name)
@@ -113,18 +106,14 @@ def read_column_metadata(*, names:set[str]=None,
             aliases.add(c_name)
             for name in aliases:
                 if 'type' in props:
-                    ctype = types[props['type']]
-                    if rupture_params is not None and \
-                            ctype == ColumnType.rupture_param:
+                    ctype = ColumnType[props['type']]
+                    if rupture_params is not None and ctype == ColumnType.rupture:
                         rupture_params.add(name)
-                    if sites_params is not None and \
-                            ctype == ColumnType.sites_param:
+                    if sites_params is not None and ctype == ColumnType.sites:
                         sites_params.add(name)
-                    if distances is not None and \
-                            ctype == ColumnType.distance:
+                    if distances is not None and ctype == ColumnType.distance:
                         distances.add(name)
-                    if imts is not None and \
-                            ctype == ColumnType.imt:
+                    if imts is not None and ctype == ColumnType.intensity:
                         imts.add(name)
                 if alias is not None:
                     alias[name] = aliases
