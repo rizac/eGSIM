@@ -14,7 +14,7 @@ from django.db.models import (Model as DjangoModel, Q, TextField, BooleanField,
                               DateTimeField, URLField, Manager, CharField)
 from django.db.models.options import Options
 
-from egsim.smtk.flatfile import colmeta
+from egsim.smtk.flatfile.columns import ColumnType
 
 # Notes: primary keys are auto added if not present ('id' of type BigInt or so).
 # All models here that are not abstract will be available prefixed with 'api_'
@@ -101,9 +101,9 @@ class CompactEncoder(json.JSONEncoder):
 class FlatfileColumn(_UniqueName):
     """Flat file column"""
     type = CharField(null=False,
-                     max_length=max(len(c.name) for c in colmeta.ColumnType),
-                     default=colmeta.ColumnType.unknown.name,
-                     choices=[(c.name, c.value) for c in colmeta.ColumnType],
+                     max_length=max(len(c.name) for c in ColumnType),
+                     default=ColumnType.unknown.name,
+                     choices=[(c.name, c.value) for c in ColumnType],
                      help_text='The type of Column (e.g., '
                                'intensity measure, rupture parameter, '
                                'distance measure)')

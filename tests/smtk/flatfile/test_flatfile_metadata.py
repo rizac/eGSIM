@@ -8,9 +8,10 @@ from typing import Any, Union
 import yaml
 import pandas as pd
 
-
-from egsim.smtk.flatfile import (ColumnType, ColumnDtype, read_column_metadata,
-                                 _ff_metadata_path)
+from egsim.smtk import get_gsim_names, get_rupture_params_required_by, \
+    get_sites_params_required_by, get_distances_required_by
+from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype, read_column_metadata,
+                                         _ff_metadata_path)
 
 
 def test_flatfile_metadata_from_yaml():
@@ -40,14 +41,26 @@ def test_flatfile_metadata_from_yaml():
                 raise ValueError(f"alias(es) {dupes} already defined as name")
 
     c_name, c_type, c_alias = set(), {}, {}
-    c_dtype, c_required, c_default, c_help, c_bounds = {}, [], {}, {}, {}
-    read_column_metadata(names=c_name, ctype=c_type, dtype=c_dtype,
-                         required=c_required, default=c_default, help=c_help,
+    c_rupture, c_sites, c_dist, c_imts = set(), set(), set(), set()
+    c_dtype, c_default, c_help, c_bounds = {}, {}, {}, {}
+    read_column_metadata(names=c_name, rupture_params=c_rupture,
+                         sites_params=c_sites,
+                         distances=c_dist, imts=c_imts,
+                         dtype=c_dtype, default=c_default, help=c_help,
                          alias=c_alias, bounds=c_bounds)
 
     # Check column properties within itself (no info on other columns required):
     for c in c_name:
-        props = {'ctype': c_type[c], 'name': c}
+        c_type = None
+        if c_name in c_rupture:
+            c_type = ColumnType.rupture_param
+        elif c_name in c_sites:
+            c_type = ColumnType.sites_param
+        elif c_name in c_dist:
+            c_type = ColumnType.distance
+        elif c_name in c_imts:
+            c_type = ColumnType.imt
+        props = {'ctype': c_type, 'name': c}
         if c in c_dtype:
             props['dtype'] = c_dtype.pop(c)
         if c in c_default:
@@ -59,12 +72,30 @@ def test_flatfile_metadata_from_yaml():
             props['bounds'] = c_bounds.pop(c)
         check_column_metadata(**props)
 
+    # Check that the columns we defined as rupture param, sites param,  distance
+    # and intensity measure are implemented in OpenQuake (e.g. no typos).
+    # Before that however, note that we cannot use
+    # c_rupture, c_sites and c_distances because they are set containing all names
+    # and aliases mixed up. As such, separate names and aliases in the following
+    # dicts (column name as dict key, column aliases as dict values):
+    rup, site, dist = {}, {}, {}
+    for n in c_name:
+        if n in c_rupture:
+            rup[n] = c_alias[n]
+        elif n in c_sites:
+            site[n] = c_alias[n]
+        elif n in c_dist:
+            dist[n] = c_alias[n]
+    # now check names with openquake names:
+    check_with_openquake(rup, site, dist, c_imts)
+
 
 class missingarg:
     pass
 
 
-def check_column_metadata(*, name: str, ctype: str, alias:set[str, ...],
+def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
+                          alias:set[str, ...],
                           dtype:Union[str, pd.CategoricalDtype]=missingarg,
                           default:Any=missingarg,
                           bounds:dict[str, Any]=missingarg,
@@ -75,15 +106,10 @@ def check_column_metadata(*, name: str, ctype: str, alias:set[str, ...],
     # so that we can easily track typos
     prefix = f'Column "{name}" metadata error (check YAML): '
     # convert type to corresponding Enum:
-    try:
-        ctype = ColumnType[ctype]
-    except KeyError:
-        raise ValueError(f"{prefix} invalid type: {ctype}")
-
     assert name in alias
     alias_is_missing = alias == {name}
 
-    if ctype == ColumnType.intensity_measure.name and not alias_is_missing:
+    if ctype == ColumnType.imt.name and not alias_is_missing:
         raise ValueError(f"{prefix} Intensity measure cannot have alias(es)")
 
     if chelp is not missingarg and (not isinstance(chelp, str) or not chelp):
@@ -142,8 +168,6 @@ def check_column_metadata(*, name: str, ctype: str, alias:set[str, ...],
         for val in [max_val, min_val]:
             if val is None:
                 pass
-            elif py_dtype == float and isinstance(val, int):
-                pass
             elif not isinstance(val, py_dtype):
                 raise ValueError(f"{prefix} bound {str(val)} must be of "
                                  f"type {dtype}")
@@ -153,8 +177,37 @@ def check_column_metadata(*, name: str, ctype: str, alias:set[str, ...],
 
     # check default value:
     if default_is_given:
-        # type promotion (int is a valid float):
-        if py_dtype == float and isinstance(default, int):
-            pass
-        elif not isinstance(default, py_dtype):
+        if not isinstance(default, py_dtype):
             raise ValueError(f"default must be of type {dtype}")
+
+
+def check_with_openquake(rupture_params: dict[str, set[str]],
+                         sites_params: dict[str, set[str]],
+                         distances: dict[str, set[str]],
+                         imts: set[str]):
+    oq_rupture_params = set()
+    oq_sites_params = set()
+    oq_distances = set()
+
+    for name in get_gsim_names():
+        oq_rupture_params.update(get_rupture_params_required_by(name))
+        oq_sites_params.update(get_sites_params_required_by(name))
+        oq_distances.update(get_distances_required_by(name))
+
+    for name in rupture_params:
+        if name not in oq_rupture_params:
+            assert len(set(rupture_params[name]) & oq_rupture_params) == 1
+
+    for name in sites_params:
+        if name not in oq_sites_params:
+            assert len(set(sites_params[name]) & oq_sites_params) == 1
+
+    for name in distances:
+        if name not in distances:
+            assert len(set(distances[name]) & oq_distances) == 1
+
+    from openquake.hazardlib import imt
+
+    for ix in imts:
+        x = getattr(imt, ix)
+        assert callable(x)

@@ -14,7 +14,7 @@ import pandas as pd
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
 
-from . import colmeta
+from .columns import read_column_metadata, ColumnDtype
 from .. import get_SA_period
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -30,8 +30,8 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
         take more time)
     """
     # required columns need to be post-processed:
-    return read_csv(filepath_or_buffer, sep=sep, dtype=colmeta.dtype,
-                    defaults=colmeta.default, required=colmeta.required)
+    return read_csv(filepath_or_buffer, sep=sep, dtype=cmeta.dtype,
+                    defaults=cmeta.default)  # , required=cmeta.required)
 
 
 missing_values = ("", "null", "NULL", "None",
@@ -114,7 +114,6 @@ def read_csv(filepath_or_buffer: Union[str, IO],
     # Also, convert categorical dtypes into their categories dtype, and put
     # categorical data in a separate dict
     categorical_dtypes = {}
-    ColumnDtype = colmeta.ColumnDtype
     for col, col_dtype in dtype.items():
         if isinstance(col_dtype, (list, tuple)):  # covert lists and tuples beforehand
             col_dtype = categorical_dtypes[col] = pd.CategoricalDtype(col_dtype)
@@ -380,8 +379,7 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
 
 def get_column_name(flatfile:pd.DataFrame, column:str) -> str:
     ff_cols = set(flatfile.columns)
-    columns = colmeta.alias[column]  # it's a set[str]
-    cols = columns & ff_cols
+    cols = cmeta.alias[column] & ff_cols
     if len(cols) > 1:
         raise ConflictingColumns(*cols)
     elif len(cols) == 0:
@@ -634,7 +632,7 @@ class EventContext(RuptureContext):
             values = self._flatfile[column_name].values
         except KeyError:
             raise MissingColumn(column_name)
-        if column_name in colmeta.rupture_params:
+        if column_name in cmeta.rupture_params:
             values = values[0]
         return values
 
@@ -648,19 +646,17 @@ class InvalidColumn(Exception):
 
     def __str__(self):
         """Make str(self) more clear"""
-        column_alias, column_names = colmeta.alias, colmeta.names
         # prefix is by default the class name:
         prefix_str = self.__class__.__name__
         # suffix is by default the argument passed in __init__
         suffix_str = self.args[0]
         # If we passed a valid column name to __init__, change suffix_str
         # to include all column aliases:
-        col_names = column_alias.get(suffix_str, None)
+        col_names = cmeta.alias.get(suffix_str, None)
         if col_names is not None:
-            # the passed name to __init__ is a flatfile column or alias, display
-            # all names but first the column names, and then the aliases:
-            sorted_names = [c for c in col_names if c in column_names] + \
-                           [c for c in col_names if c not in column_names]
+            # now sort (first col name, then alias(es)):
+            sorted_names = [c for c in col_names if c in cmeta.names] + \
+                           [c for c in col_names if c not in cmeta.names]
             suffix_str = sorted_names[0].__repr__()
             if len(sorted_names) > 1:
                 suffix_str += " (alias" if len(sorted_names) == 2 else " (aliases"
@@ -680,6 +676,37 @@ class MissingColumn(InvalidColumn, AttributeError, KeyError):
 class ConflictingColumns(InvalidColumn):
     def __init__(self, *names):
         InvalidColumn.__init__(self, " vs. ".join(_.__repr__() for _ in names))
+
+
+class _CMeta:
+    """class lazy loading required column metadata from YAML"""
+
+    # the set of column names (top level keys of the YAML file):
+    names: set[str]
+    # Column names and aliases, mapped to their dtype:
+    dtype: dict[str, Union[str, pd.CategoricalDtype]]
+    # Column names and aliases, mapped to their default:
+    default: dict[str, Any]
+    # Column name and aliases, mapped to the set of all possible column aliases
+    # (the set will always include at least the column name itself):
+    alias: dict[str, set[str]]
+    # Column names and alies denoting rupture params:
+    rupture_params: set[str]
+
+    def __getattr__(self, name):
+        args = {'alias': {}, 'default': {}, 'dtype': {},
+                'rupture_params': set(), 'names': set()}
+        if name in args:
+            read_column_metadata(**args)
+            for name in args:
+                setattr(self, name, args[name])
+            return getattr(self, name)
+        raise AttributeError(f"type object '{self.__class__.__name__}' "
+                             f"has no attribute '{name}'")
+
+
+
+cmeta = _CMeta()
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
