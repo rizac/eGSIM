@@ -14,7 +14,8 @@ import pandas as pd
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
 
-from .columns import read_column_metadata, ColumnDtype
+from .columns import (ColumnDtype, get_rupture_param_columns,
+                      get_dtypes_and_defaults, get_column_names)
 from .. import get_SA_period
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -29,14 +30,8 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
     """
-    return read_csv(filepath_or_buffer, sep=sep, dtype=_c_dtype,
-                    defaults=_c_default)
-
-
-# Column names and aliases, mapped to their dtype (lazy loaded, see __getattr__):
-_c_dtype: dict[str, Union[str, pd.CategoricalDtype]]
-# Column names and aliases, mapped to their default (lazy loaded, see __getattr__):
-_c_default: dict[str, Any]
+    dtypes, defaults = get_dtypes_and_defaults()
+    return read_csv(filepath_or_buffer, sep=sep, dtype=dtypes, defaults=defaults)
 
 
 missing_values = ("", "null", "NULL", "None",
@@ -363,7 +358,7 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
 
 def get_column_name(flatfile:pd.DataFrame, column:str) -> str:
     ff_cols = set(flatfile.columns)
-    cols = _c_alias[column] & ff_cols
+    cols = get_column_names(column) & ff_cols
     if len(cols) > 1:
         raise ConflictingColumns(*cols)
     elif len(cols) == 0:
@@ -371,11 +366,6 @@ def get_column_name(flatfile:pd.DataFrame, column:str) -> str:
         raise MissingColumn(column)
     else:
         return next(iter(cols))
-
-
-# Column name and aliases, mapped to all their aliases (lazy loaded, see __getattr__).
-# The dict values will always include at least the column name itself:
-_c_alias: dict[str, set[str]]
 
 
 def get_event_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
@@ -592,11 +582,16 @@ def fill_na(flatfile:pd.DataFrame,
 class EventContext(RuptureContext):
     """A RuptureContext accepting a flatfile (pandas DataFrame) as input"""
 
+    rupture_params:set[str] = None
+
     def __init__(self, flatfile: pd.DataFrame):
         super().__init__()
         if not isinstance(flatfile.index, IntegerIndex):
             raise ValueError('flatfile index should be made of unique integers')
         self._flatfile = flatfile
+        if self.__class__.rupture_params is None:
+            # get rupture params once for all instances the first time only:
+            self.__class__.rupture_params = get_rupture_param_columns()
 
     def __eq__(self, other):  # FIXME: legacy code, is it still used?
         assert isinstance(other, EventContext) and \
@@ -613,6 +608,7 @@ class EventContext(RuptureContext):
         # delete or rename. See superclass for details
         return self._flatfile.index
 
+
     def __getattr__(self, column_name):
         """Return a non-found Context attribute by searching in the underlying
         flatfile column. Raises AttributeError (as usual) if `item` is not found
@@ -621,13 +617,9 @@ class EventContext(RuptureContext):
             values = self._flatfile[column_name].values
         except KeyError:
             raise MissingColumn(column_name)
-        if column_name in _c_rupture_params:
+        if column_name in self.rupture_params:
             values = values[0]
         return values
-
-
-# Column names and alies denoting rupture params (lazy loaded, see __getattr__):
-_c_rupture_params: set[str]
 
 
 class InvalidColumn(Exception):
@@ -645,23 +637,15 @@ class InvalidColumn(Exception):
         suffix_str = self.args[0]
         # If we passed a valid column name to __init__, change suffix_str
         # to include all column aliases:
-        col_names = _c_alias.get(suffix_str, None)
-        if col_names is not None:
-            # now sort (first col name, then alias(es)):
-            sorted_names = [c for c in col_names if c in _c_names] + \
-                           [c for c in col_names if c not in _c_names]
-            suffix_str = sorted_names[0].__repr__()
-            if len(sorted_names) > 1:
-                suffix_str += " (alias" if len(sorted_names) == 2 else " (aliases"
-                suffix_str += f": {', '.join(_.__repr__() for _ in sorted_names[1:])})"
+        sorted_names = get_column_names(suffix_str, sort=True)
+        suffix_str = sorted_names[0].__repr__()
+        if len(sorted_names) > 1:
+            suffix_str += " (alias" if len(sorted_names) == 2 else " (aliases"
+            suffix_str += f": {', '.join(_.__repr__() for _ in sorted_names[1:])})"
         return f"{prefix_str} {suffix_str}"
 
     def __repr__(self):
         return self.__str__()
-
-
-# the set of column names (no aliases. lazy loaded, see __getattr__):
-_c_names: set[str]
 
 
 class MissingColumn(InvalidColumn, AttributeError, KeyError):
@@ -673,19 +657,6 @@ class MissingColumn(InvalidColumn, AttributeError, KeyError):
 class ConflictingColumns(InvalidColumn):
     def __init__(self, *names):
         InvalidColumn.__init__(self, " vs. ".join(_.__repr__() for _ in names))
-
-
-def __getattr__(name):
-    """lazy load global module variables from YAML"""
-    args = {'_c_alias': {}, '_c_default': {}, '_c_dtype': {},
-            '_c_rupture_params': set(), '_c_names': set()}
-    if name in args:
-        read_column_metadata(**{k[3:] :v for k, v in args.items()})
-        for n, v in args.items():
-            globals()[f'{n}'] = v
-        return globals()[name]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
