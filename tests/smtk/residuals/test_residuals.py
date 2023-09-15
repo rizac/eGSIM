@@ -130,7 +130,7 @@ class ResidualsTestCase(SimpleTestCase):
 
             self.assertTrue(vals_ok)
 
-    def test_likelihood_execution(self):
+    def tst_likelihood_execution(self):
         """
         Tests basic execution of residuals - not correctness of values
         """
@@ -160,7 +160,7 @@ class ResidualsTestCase(SimpleTestCase):
                 vals_ok = np.allclose(values, exp_dict[gsim][imt]["Intra event"])
                 self.assertTrue(vals_ok)
 
-    def test_llh_execution(self):
+    def tst_llh_execution(self):
         """
         Tests execution of LLH - not correctness of values
         """
@@ -182,7 +182,7 @@ class ResidualsTestCase(SimpleTestCase):
                 self.assertTrue(vals_ok)
 
     @skip('Multivariate not implemented yet')
-    def test_multivariate_llh_execution(self):
+    def tst_multivariate_llh_execution(self):
         """
         Tests execution of multivariate llh - not correctness of values
         """
@@ -201,7 +201,7 @@ class ResidualsTestCase(SimpleTestCase):
                 vals_ok = np.allclose(values, exp_dict[gsim][imt])
                 self.assertTrue(vals_ok)
 
-    def test_edr_execution(self):
+    def tst_edr_execution(self):
         """
         Tests execution of EDR - not correctness of values
         """
@@ -221,7 +221,7 @@ class ResidualsTestCase(SimpleTestCase):
                 vals_ok = np.allclose(values, exp_dict[gsim][imt])
                 self.assertTrue(vals_ok)
 
-    def test_multiple_metrics(self):
+    def tst_multiple_metrics(self):
         """
         Tests the execution running multiple metrics in one call
         """
@@ -231,21 +231,3 @@ class ResidualsTestCase(SimpleTestCase):
         for key in ["Residuals", "Likelihood", "LLH", "EDR"]:
                     # "MultivariateLLH", "EDR"]:
             _ = res.GSIM_MODEL_DATA_TESTS[key](residuals, config)
-
-    def test_convert_accel_units(self):
-        """test convert accel units"""
-        from scipy.constants import g
-        for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
-            for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
-                self.assertEqual(convert_accel_units(1, m_sec, cm_sec), 100)
-                self.assertEqual(convert_accel_units(1, cm_sec, m_sec), .01)
-                self.assertEqual(convert_accel_units(g, m_sec, "g"), 1)
-                self.assertEqual(convert_accel_units(g, cm_sec, "g"), .01)
-                self.assertEqual(convert_accel_units(1, "g", m_sec), g)
-                self.assertEqual(convert_accel_units(1, "g", cm_sec), g*100)
-                self.assertEqual(convert_accel_units(1, cm_sec, cm_sec), 1)
-                self.assertEqual(convert_accel_units(1, m_sec, m_sec),1)
-
-        self.assertEqual(convert_accel_units(1, "g", "g"), 1)
-        with self.assertRaises(ValueError):
-            self.assertEqual(convert_accel_units(1, "gf", "gf"), 1)

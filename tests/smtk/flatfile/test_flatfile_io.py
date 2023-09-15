@@ -9,7 +9,6 @@ import pytest
 from datetime import datetime
 import pandas as pd
 
-from egsim.smtk import flatfile
 from egsim.smtk.flatfile import (read_flatfile, query, read_csv)
 
 

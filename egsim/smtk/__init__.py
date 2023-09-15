@@ -23,6 +23,11 @@ def get_gsim_names(sort=False) -> Iterable[str]:
 
 
 def get_gsim_instance(gsim_name: str, raise_deprecated=True) -> GMPE:
+    """Return a Gsim from the given name
+
+    :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
+        (`egsim.smtk.OQDeprecationWarning`) will raise as normal exceptions
+    """
     if not raise_deprecated:
         return valid.gsim(gsim_name)
     with warnings.catch_warnings():
@@ -60,7 +65,7 @@ def check_gsim_list(gsims) -> dict[str, GMPE]:
     return output_gsims
 
 
-def get_gsim_name(gsim: GMPE) -> str:  # FIXME
+def get_gsim_name(gsim: GMPE) -> str:
     """
     Returns the name of the GMPE given an instance of the class
     """

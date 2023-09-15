@@ -18,7 +18,8 @@ from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
 from . import check_gsim_list, get_gsim_name, get_SA_period  #, convert_accel_units
-from .flatfile import EventContext, prepare_for_residuals, get_event_id_column_names
+from .flatfile import EventContext, prepare_for_residuals, get_event_id_column_names, \
+    InvalidColumn, get_station_id_column_names
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -44,23 +45,6 @@ def check_sa_limits(gsim: GMPE, im: str):  # FIXME remove? is it used?
     return limits[0] < period < limits[1]
 
 
-def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
-    """Group the flatfile by events, and yield `EventContext`s objects, one for
-    each event"""
-    # assure each row has a unique int id from 0 until row_count-1:
-    if not isinstance(flatfile.index, RangeIndex):
-        flatfile.reset_index(drop=True, inplace=True)
-
-    # check event id column or use the event location to group events:
-    # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
-    # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
-    ev_sub_flatfiles = flatfile.groupby(get_event_id_column_names(flatfile))
-
-    for ev_id, dfr in ev_sub_flatfiles:
-        if not dfr.empty:  # for safety ...
-            yield EventContext(dfr)
-
-
 def get_residuals(gsims: Iterable[str], imts: Iterable[str],
                   flatfile: pd.DataFrame, nodal_plane_index=1,
                   component="Geometric", compute_lh=False,
@@ -70,14 +54,26 @@ def get_residuals(gsims: Iterable[str], imts: Iterable[str],
     modifies the passed flatfile inplace (e.g. by adding all residuals-related computed
     columns, see :ref:`c_labels` for details)
 
+    :poram: imts iterable of strings denoting intensity measures (Sa must be
+        given with period, e.g. "SA(0.2)")
     :return: the passed flatfile with all residuals computed columns added
     """
     gsims = check_gsim_list(gsims)
-    with prepare_for_residuals(flatfile, gsims.values(), imts) as tmp_flatfile:
-        residuals = calculate_flatfile_residuals(gsims, imts, tmp_flatfile,
-                                                 normalise=normalise)
+    flatfile2 = prepare_for_residuals(flatfile, gsims.values(), imts)
+    # copy event columns (raises if columns not found):
+    ev_cols = get_event_id_column_names(flatfile)
+    flatfile2[ev_cols] = flatfile[ev_cols]
+    # copy station columns (for the moment not used, so skip if no station columns)
+    try:
+        st_cols = get_station_id_column_names()
+        flatfile2[st_cols] = flatfile[st_cols]
+    except InvalidColumn:
+        pass
+    # compute residuals:
+    residuals = calculate_flatfile_residuals(gsims, imts, flatfile2,
+                                             normalise=normalise)
     # concatenate expected in flatfile (add new columns):
-    flatfile[residuals.columns] = residuals
+    flatfile[list(residuals.columns)] = residuals
     if compute_lh:
         get_residuals_likelihood(gsims, imts, flatfile)
     return flatfile
@@ -105,6 +101,23 @@ def calculate_flatfile_residuals(gsims: dict[str, GMPE], imts: Iterable[str],
         residuals.loc[res.index, res.columns] = res
 
     return residuals
+
+
+def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
+    """Group the flatfile by events, and yield `EventContext`s objects, one for
+    each event"""
+    # assure each row has a unique int id from 0 until row_count-1:
+    if not isinstance(flatfile.index, RangeIndex):
+        flatfile.reset_index(drop=True, inplace=True)
+
+    # check event id column or use the event location to group events:
+    # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
+    # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
+    ev_sub_flatfiles = flatfile.groupby(get_event_id_column_names(flatfile))
+
+    for ev_id, dfr in ev_sub_flatfiles:
+        if not dfr.empty:  # for safety ...
+            yield EventContext(dfr)
 
 
 def calculate_expected_motions(gsims: Iterable[GMPE], imts: Iterable[str],
