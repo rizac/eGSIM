@@ -1,5 +1,4 @@
 """flatfile pandas module"""
-from contextlib import contextmanager
 
 from datetime import date, datetime
 import re
@@ -15,7 +14,8 @@ from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
 
 from .columns import (ColumnDtype, get_rupture_param_columns,
-                      get_dtypes_and_defaults, get_column_names)
+                      get_dtypes_and_defaults, get_column_names,
+                      get_intensity_measure_columns)
 from .. import get_SA_period
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -356,80 +356,72 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
 ##################################
 
 
-def get_column_name(flatfile:pd.DataFrame, column:str) -> str:
+def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:
+    """Return the flatfile column matching `column`. This could be `column`
+     itself, or any of its aliases (see `columns` module and YAML file)
+     Returns None if no column is found, raise `ConflictingColumns` if more than
+     a matching column is found"""
     ff_cols = set(flatfile.columns)
     cols = get_column_names(column) & ff_cols
     if len(cols) > 1:
         raise ConflictingColumns(*cols)
     elif len(cols) == 0:
-        # provide first the "standard" name, then  the aliases:
-        raise MissingColumn(column)
+        return None
     else:
         return next(iter(cols))
 
 
 def get_event_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
-    try:
-        return [get_column_name(flatfile, 'event_id')]
-    except MissingColumn as missing_col:
-        cols = ['event_latitude', 'event_longitude', 'event_depth', 'event_time']
-        try:
-            return [get_column_name(flatfile, c) for c in cols]
-        except MissingColumn:
-            raise missing_col
+    default_col_name = 'event_id'
+    col_name = get_column_name(flatfile, default_col_name)
+    if col_name is not None:
+        return [col_name]
+    cols = ['event_latitude', 'event_longitude', 'event_depth', 'event_time']
+    col_names = [get_column_name(flatfile, c) for c in cols]
+    if any(c is None for c in col_names):
+        raise MissingColumn(default_col_name)
+    return col_names
 
 
 def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
-    try:
-        return [get_column_name(flatfile, 'station_id')]
-    except MissingColumn as missing_col:
-        try:
-            cols = ['station_latitude', 'station_longitude']
-            return [get_column_name(flatfile, c) for c in cols]
-        except MissingColumn:
-            raise missing_col
+    default_col_name = 'station_id'
+    col_name = get_column_name(flatfile, default_col_name)
+    if col_name is not None:
+        return [col_name]
+    cols = ['station_latitude', 'station_longitude']
+    col_names = [get_column_name(flatfile, c) for c in cols]
+    if any(c is None for c in col_names):
+        raise MissingColumn(default_col_name)
+    return col_names
 
 
-@contextmanager
 def prepare_for_residuals(flatfile: pd.DataFrame,
-                          gsims: Iterable[GMPE], imts: Iterable[str]):
-    """Context manager to be used when computing residuals on a given flatfile:
-    Inside a with statement, it releases the flatfile passed as argument
-    with columns renamed or created according to the passed gsims and imts,
-    and restores the old column names before exiting.
-    Raise `InvalidColumn` (and subclasses)
+                          gsims: Iterable[GMPE], imts: Iterable[str]) -> pd.Dataframe:
+    """Return a new dataframe with all columns required to compute residuals
+    from the given models (`gsim`) and intensity measures (`imts`) given with
+    periods, when needed (e.g. "SA(0.2)")
     """
-    to_rename = {}
-    to_delete = set()
-    param_or_dist_done = set()
+    new_flatfile = pd.DataFrame(index=flatfile.index)
+
     for param_or_dist in get_gsim_required_params_or_dists(gsims):
-        if param_or_dist in param_or_dist_done:
-            continue
-        col_name = _prepare_for_gsim_required_param_or_dist(flatfile, param_or_dist)
-        if col_name is None:
-            to_delete.add(param_or_dist)
-        elif param_or_dist != col_name:
-            to_rename[col_name] = param_or_dist
+        new_flatfile[param_or_dist] = \
+            get_values_for_param_or_dist(flatfile, param_or_dist)
 
-    if to_rename:
-        flatfile.rename(columns=to_rename, inplace=True)
-        # invert dict (to restore naming, see below):
-        to_rename = {p: c for c, p in to_rename.items()}
+    imts = set(imts)
+    non_sa = {_ for _ in imts if not _.startswith('SA(')}
+    supported_imts = get_intensity_measure_columns()
+    if non_sa - supported_imts:
+        raise InvalidColumn(*{non_sa - supported_imts})
+    sa = imts - non_sa
+    # prepare the flatfile for SA (create new columns by interpolation if necessary):
+    sa_dataframe = _prepare_for_sa(flatfile, sa)
+    if not sa_dataframe.empty:
+        new_flatfile[list(sa_dataframe.columns)] = sa_dataframe
 
-    # prepare the flatfile for SA, and add to `to_delete` the
-    # return value (list of newly added SA columns via interpolation)
-    to_delete |= set(_prepare_for_sa(flatfile, imts))
-
-    try:
-        yield flatfile
-    finally:
-        if to_rename:
-            flatfile.rename(columns=to_rename, inplace=True)
-        if to_delete:
-            flatfile.drop(columns=to_delete, inplace=True)
+    return new_flatfile
 
 
-def get_gsim_required_params_or_dists(gsims: Iterable[GMPE]):
+def get_gsim_required_params_or_dists(gsims: Iterable[GMPE]) -> set[str]:
     required = set()
     # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
     for gsim in gsims:
@@ -443,27 +435,24 @@ def get_gsim_required_params_or_dists(gsims: Iterable[GMPE]):
 DEFAULT_MSR = PeerMSR()
 
 
-def _prepare_for_gsim_required_param_or_dist(flatfile: pd.DataFrame,
-                                             param_or_dist: str):
-    """Attempt to include in the given flatfile the column, given as
-     OpenQuake model parameter or distance.
+def get_values_for_param_or_dist(flatfile: pd.DataFrame, param_or_dist: str) -> pd.Series:
+    """Gets the values (pandas Series) relative to the given parameter (rupture, sites)
+     or distance measure in the passed flatfile.
     Replacement and inference rule might be applied and modify the passed
     flatfile (p)ass a copy of a flatfile to avoid inplace modifications).
     Eventually, if the column cannot be set on `flatfile`, this function
     raises :ref:`MissingColumn` error notifying the required missing column.
     """
-    try:
-        column_name = get_column_name(flatfile, param_or_dist)
-    except MissingColumn as missing_col_exc:  # might be reused later
-        column_name = None
+    column_name = get_column_name(flatfile, param_or_dist)
     series = None if column_name is None else flatfile[column_name]
     if param_or_dist == 'ztor':
         series = fill_na(flatfile, 'hypo_depth', series)
     elif param_or_dist == 'width':  # rupture_width
         # Use the PeerMSR to define the area and assuming an aspect ratio
         # of 1 get the width
-        mag = flatfile.get('mag')
+        mag = get_column_name(flatfile, 'mag')
         if mag is not None:
+            mag = flatfile[mag]  # convert string to column (pd.Series)
             if series is None:
                 series = pd.Series(np.sqrt(DEFAULT_MSR.get_median_area(mag, 0)))
             else:
@@ -480,8 +469,9 @@ def _prepare_for_gsim_required_param_or_dist(flatfile: pd.DataFrame,
     elif param_or_dist == 'rrup':
         series = fill_na(flatfile, 'rhypo', series)
     elif param_or_dist == 'z1pt0':
-        vs30 = flatfile.get('vs30')
+        vs30 = get_column_name(flatfile, 'vs30')
         if vs30 is not None:
+            vs30 = flatfile[vs30]  # convert string to column (pd.Series)
             if series is None:
                 series = pd.Series(vs30_to_z1pt0_cy14(vs30))
             else:
@@ -490,8 +480,9 @@ def _prepare_for_gsim_required_param_or_dist(flatfile: pd.DataFrame,
                     series = series.copy()
                     series[na] = vs30_to_z1pt0_cy14(vs30[na])
     elif param_or_dist == 'z2pt5':
-        vs30 = flatfile.get('vs30')
+        vs30 = get_column_name(flatfile, 'vs30')
         if vs30 is not None:
+            vs30 = flatfile[vs30]  # convert string to column (pd.Series)
             if series is None:
                 series = pd.Series(vs30_to_z2pt5_cb14(vs30))
             else:
@@ -504,21 +495,33 @@ def _prepare_for_gsim_required_param_or_dist(flatfile: pd.DataFrame,
     elif param_or_dist == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     if series is None:
-        raise missing_col_exc
-    if column_name != param_or_dist or series is not flatfile.get(column_name):
-        flatfile[param_or_dist] = series
-    return column_name
-
-#
-# def get_column(flatfile: pd.DataFrame, column:str) -> Union[pd.Series, None]:
-#     try:
-#         return flatfile[get_column_name(flatfile, column)]
-#     except MissingColumn:
-#         return None
+        raise MissingColumn(param_or_dist)
+    return series
 
 
-def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]) -> list[str, ...]:
-    """Modify inplace the flatfile assuring the SA columns in `imts` (e.g. "SA(0.2)")
+def fill_na(flatfile:pd.DataFrame,
+            src_col: str,
+            dest: Union[None, np.ndarray, pd.Series]) -> \
+        Union[None, np.ndarray, pd.Series]:
+    """Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.
+    :return: a numpy array or pandas Series (the same type of `dest`, whenever
+        possible) which might be a new object or `dest`, unchanged
+    """
+    col_name = get_column_name(flatfile, src_col)
+    if col_name is None:
+        return dest
+    src = flatfile[col_name]
+    if dest is None:
+        return src.copy()
+    na = pd.isna(dest)
+    if na.any():
+        dest = dest.copy()
+        dest[na] = src[na]
+    return dest
+
+
+def _prepare_for_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFrame:
+    """Modify inplace the flatfile assuring the SA columns in `sa_imts` (e.g. "SA(0.2)")
     are present. The SA column of the flatfile will be used to obtain
     the target SA via interpolation, and removed if not necessary.
 
@@ -533,15 +536,22 @@ def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]) -> list[str, ..
     source_sa: dict[float, str] = {p: c for p, c in sorted(src_sa, key=lambda t: t[0])}
 
     tgt_sa = []
-    for i in imts:
+    invalid_sa = []
+    for i in sa_imts:
         p = get_SA_period(i)
-        if p is not None and p not in source_sa:
+        if p is None:
+            invalid_sa.append(i)
+            continue
+        if p not in source_sa:
             tgt_sa.append((p, i))
+    if invalid_sa:
+        raise InvalidColumn(*invalid_sa)
+
     # source_sa: period [float] -> mapped to the relative column:
     target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
 
     if not source_sa or not target_sa:
-        return []
+        return pd.DataFrame(index=flatfile.index, data=[])
 
     # Take the log10 of all SA:
     source_spectrum = np.log10(flatfile[list(source_sa.values())])
@@ -552,31 +562,10 @@ def _prepare_for_sa(flatfile: pd.DataFrame, imts: Iterable[str]) -> list[str, ..
     values = 10 ** interp(list(target_sa))
     # values is a matrix where each column represents the values of the target period.
     # Add it to the dataframe:
-    new_sa_columns = list(target_sa.values())
-    flatfile[new_sa_columns] = values
+    new_flatfile = pd.DataFrame(index=flatfile.index)
+    new_flatfile[list(target_sa.values())] = values
 
-    return new_sa_columns
-
-
-def fill_na(flatfile:pd.DataFrame,
-            src_col: str,
-            dest: Union[None, np.ndarray, pd.Series]) -> \
-        Union[None, np.ndarray, pd.Series]:
-    """Fill NAs (NaNs/Nulls) of `dest` with relative values from `src`.
-    :return: a numpy array or pandas Series (the same type of `dest`, whenever
-        possible) which might be a new object or `dest`, unchanged
-    """
-    try:
-        src = flatfile[get_column_name(flatfile, src_col)]
-        if dest is None:
-            return src.copy()
-    except MissingColumn:
-        return dest
-    na = pd.isna(dest)
-    if na.any():
-        dest = dest.copy()
-        dest[na] = src[na]
-    return dest
+    return new_flatfile
 
 
 class EventContext(RuptureContext):
@@ -626,23 +615,18 @@ class InvalidColumn(Exception):
     """
     General flatfile column(s) error. See subclasses for details
     """
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, *names, sep=', '):
+        super().__init__(*names)
+        self._sep = sep
 
     def __str__(self):
         """Make str(self) more clear"""
-        # prefix is by default the class name:
-        prefix_str = self.__class__.__name__
-        # suffix is by default the argument passed in __init__
-        suffix_str = self.args[0]
-        # If we passed a valid column name to __init__, change suffix_str
-        # to include all column aliases:
-        sorted_names = get_column_names(suffix_str, sort=True)
-        suffix_str = sorted_names[0].__repr__()
-        if len(sorted_names) > 1:
-            suffix_str += " (alias" if len(sorted_names) == 2 else " (aliases"
-            suffix_str += f": {', '.join(_.__repr__() for _ in sorted_names[1:])})"
-        return f"{prefix_str} {suffix_str}"
+        prefix = self.__class__.__name__
+        # replace upper cases with space + lower case letter
+        prefix = re.sub("([A-Z])", " \\1", prefix).strip().capitalize()
+        names = self.args
+        suffix = self._sep.join(repr(_) for _ in names)
+        return f"{prefix}{'s' if len(names) > 1 else ''} {suffix}"
 
     def __repr__(self):
         return self.__str__()
@@ -651,12 +635,20 @@ class InvalidColumn(Exception):
 class MissingColumn(InvalidColumn, AttributeError, KeyError):
     """MissingColumnError. It inherits also from AttributeError and
     KeyError to be compliant with pandas and OpenQuake"""
-    pass
+
+    def __init__(self, name):
+        sorted_names = get_column_names(name, sort=True)
+        suffix_str = repr(sorted_names[0] or name)
+        if len(sorted_names) > 1:
+            suffix_str += " (alias" if len(sorted_names) == 2 else " (aliases"
+            suffix_str += f": {', '.join(repr(_) for _ in sorted_names[1:])})"
+        super().__init__(suffix_str)
 
 
 class ConflictingColumns(InvalidColumn):
+
     def __init__(self, *names):
-        InvalidColumn.__init__(self, " vs. ".join(_.__repr__() for _ in names))
+        InvalidColumn.__init__(self, *names, sep=" vs. ")
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:

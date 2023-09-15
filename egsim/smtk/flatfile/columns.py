@@ -56,6 +56,15 @@ def get_rupture_param_columns() -> set[str]:
     return rup
 
 
+def get_intensity_measure_columns() -> set[str]:
+    """Return a set of strings with all column names
+    denoting an intensity measure. Sa, if given, is returned without period
+    """
+    imts = set()
+    _extract_from_columns(load_from_yaml(), imts=imts)
+    return imts
+
+
 # Column name and aliases, mapped to all their aliases
 # The dict values will always include at least the column name itself:
 _alias: dict[str, set[str]] = None  # noqa

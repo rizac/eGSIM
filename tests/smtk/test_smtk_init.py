@@ -10,13 +10,7 @@ import pytest
 from egsim.smtk import get_gsim_names, get_gsim_instance, registry, \
     get_imts_defined_for, get_distances_required_by, \
     get_rupture_params_required_by, get_sites_params_required_by, get_gsim_name,\
-    OQDeprecationWarning
-
-# from egsim.smtk.flatfile import (ColumnType, ColumnDtype, read_column_metadata,
-#                                  _ff_metadata_path)
-
-def test_me():
-    pass
+    OQDeprecationWarning, convert_accel_units
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
@@ -105,3 +99,22 @@ def test_requires():
             res = func(gsim_cls)
             assert isinstance(res, frozenset)
             assert not res or all(isinstance(_, str) for _ in res)
+
+
+    def test_convert_accel_units(self):
+        """test convert accel units"""
+        from scipy.constants import g
+        for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
+            for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
+                self.assertEqual(convert_accel_units(1, m_sec, cm_sec), 100)
+                self.assertEqual(convert_accel_units(1, cm_sec, m_sec), .01)
+                self.assertEqual(convert_accel_units(g, m_sec, "g"), 1)
+                self.assertEqual(convert_accel_units(g, cm_sec, "g"), .01)
+                self.assertEqual(convert_accel_units(1, "g", m_sec), g)
+                self.assertEqual(convert_accel_units(1, "g", cm_sec), g*100)
+                self.assertEqual(convert_accel_units(1, cm_sec, cm_sec), 1)
+                self.assertEqual(convert_accel_units(1, m_sec, m_sec),1)
+
+        self.assertEqual(convert_accel_units(1, "g", "g"), 1)
+        with self.assertRaises(ValueError):
+            self.assertEqual(convert_accel_units(1, "gf", "gf"), 1)
