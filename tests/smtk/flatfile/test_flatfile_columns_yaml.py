@@ -10,11 +10,11 @@ import pandas as pd
 
 from egsim.smtk import get_gsim_names, get_rupture_params_required_by, \
     get_sites_params_required_by, get_distances_required_by
-from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype, read_column_metadata,
+from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype, _extract_from_columns,
                                          _ff_metadata_path)
 
 
-def test_flatfile_metadata_from_yaml():
+def test_flatfile_extract_from_yaml():
     """Test the flatfile metadata"""
 
     with open(_ff_metadata_path) as _:
@@ -40,26 +40,26 @@ def test_flatfile_metadata_from_yaml():
             if dupes:
                 raise ValueError(f"alias(es) {dupes} already defined as name")
 
-    c_name, c_type, c_alias = set(), {}, {}
+    c_type, c_alias = {}, {}
     c_rupture, c_sites, c_dist, c_imts = set(), set(), set(), set()
     c_dtype, c_default, c_help, c_bounds = {}, {}, {}, {}
-    read_column_metadata(names=c_name, rupture_params=c_rupture,
+    _extract_from_columns(dic, rupture_params=c_rupture,
                          sites_params=c_sites,
                          distances=c_dist, imts=c_imts,
                          dtype=c_dtype, default=c_default, help=c_help,
                          alias=c_alias, bounds=c_bounds)
 
     # Check column properties within itself (no info on other columns required):
-    for c in c_name:
+    for c in dic:
         c_type = None
-        if c_name in c_rupture:
-            c_type = ColumnType.rupture_param
-        elif c_name in c_sites:
-            c_type = ColumnType.sites_param
-        elif c_name in c_dist:
+        if c in c_rupture:
+            c_type = ColumnType.rupture
+        elif c in c_sites:
+            c_type = ColumnType.sites
+        elif c in c_dist:
             c_type = ColumnType.distance
-        elif c_name in c_imts:
-            c_type = ColumnType.imt
+        elif c in c_imts:
+            c_type = ColumnType.intensity
         props = {'ctype': c_type, 'name': c}
         if c in c_dtype:
             props['dtype'] = c_dtype.pop(c)
@@ -79,7 +79,7 @@ def test_flatfile_metadata_from_yaml():
     # and aliases mixed up. As such, separate names and aliases in the following
     # dicts (column name as dict key, column aliases as dict values):
     rup, site, dist = {}, {}, {}
-    for n in c_name:
+    for n in dic:
         if n in c_rupture:
             rup[n] = c_alias[n]
         elif n in c_sites:
@@ -109,7 +109,7 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
     assert name in alias
     alias_is_missing = alias == {name}
 
-    if ctype == ColumnType.imt.name and not alias_is_missing:
+    if ctype == ColumnType.intensity.name and not alias_is_missing:
         raise ValueError(f"{prefix} Intensity measure cannot have alias(es)")
 
     if chelp is not missingarg and (not isinstance(chelp, str) or not chelp):
@@ -185,6 +185,9 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
                          sites_params: dict[str, set[str]],
                          distances: dict[str, set[str]],
                          imts: set[str]):
+    """Checks that the flatfile columns with a specific Type set
+    (columns.ColumnType) match the OpenQuake corresponding name
+    """
     oq_rupture_params = set()
     oq_sites_params = set()
     oq_distances = set()

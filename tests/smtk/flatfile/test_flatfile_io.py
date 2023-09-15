@@ -11,15 +11,18 @@ import pandas as pd
 
 from egsim.smtk import flatfile
 from egsim.smtk.flatfile import (read_flatfile, query, read_csv)
-from egsim.smtk.flatfile.columns import read_column_metadata
 
 
 def test_read_flatifle_yanml():
+    from egsim.smtk.flatfile.columns import _extract_from_columns, load_from_yaml, \
+        get_rupture_param_columns
+
+    dic = load_from_yaml(False)
     assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
-               set(flatfile._c_rupture_params)) == 4
+               get_rupture_param_columns()) == 4
 
     rup, dists, sites = set(), set(), set()
-    read_column_metadata(rupture_params=rup, sites_params=sites, distances=dists)
+    _extract_from_columns(dic, rupture_params=rup, sites_params=sites, distances=dists)
     assert len({'rrup', 'rhypo'} & set(dists)) == 2
     assert len({'st_lat', 'station_latitude', 'lat' , 'vs30'} &
                set(sites)) == 4
