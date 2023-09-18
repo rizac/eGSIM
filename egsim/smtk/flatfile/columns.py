@@ -48,7 +48,7 @@ class ColumnDtype(Enum):
     str = str, np.str_, np.object_
 
 
-def get_rupture_param_columns() -> set[str]:
+def get_rupture_params() -> set[str]:
     """Return a set of strings with all column names (including aliases)
     denoting a rupture parameter
     """
@@ -57,7 +57,7 @@ def get_rupture_param_columns() -> set[str]:
     return rup
 
 
-def get_intensity_measure_columns() -> set[str]:
+def get_intensity_measures() -> set[str]:
     """Return a set of strings with all column names
     denoting an intensity measure. Sa, if given, is returned without period
     """
@@ -109,7 +109,7 @@ class InvalidColumn(Exception):
         return [repr(_) for _ in self.args]
 
     def __str__(self):
-        """Make str(self) more clear"""
+        """Make `str(self)` more clear"""
         # get prefix (e.g. 'Missing column(s)'):
         prefix = self.__class__.__name__
         # replace upper cases with space + lower case letter

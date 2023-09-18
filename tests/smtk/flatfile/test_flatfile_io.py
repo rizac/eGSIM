@@ -10,15 +10,15 @@ from datetime import datetime
 import pandas as pd
 
 from egsim.smtk.flatfile import (read_flatfile, query, read_csv)
+from egsim.smtk.flatfile.columns import _extract_from_columns, load_from_yaml, \
+        get_rupture_params
 
 
 def test_read_flatifle_yanml():
-    from egsim.smtk.flatfile.columns import _extract_from_columns, load_from_yaml, \
-        get_rupture_param_columns
 
     dic = load_from_yaml(False)
     assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
-               get_rupture_param_columns()) == 4
+               get_rupture_params()) == 4
 
     rup, dists, sites = set(), set(), set()
     _extract_from_columns(dic, rupture_params=rup, sites_params=sites, distances=dists)
@@ -29,7 +29,7 @@ def test_read_flatifle_yanml():
                set(rup)) == 4
 
 def test_flatfile_turkey(testdata):
-    fpath = testdata.path('Turkey_20230206_flatfile_geometric_mean.csv')
+    fpath = testdata.path('tk_20230206_flatfile_geometric_mean.csv')
     dfr = read_flatfile(fpath)
 
 

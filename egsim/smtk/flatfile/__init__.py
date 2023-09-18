@@ -13,9 +13,9 @@ import pandas as pd
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
 
-from .columns import (ColumnDtype, get_rupture_param_columns,
+from .columns import (ColumnDtype, get_rupture_params,
                       get_dtypes_and_defaults, get_all_names_of,
-                      get_intensity_measure_columns, MissingColumn,
+                      get_intensity_measures, MissingColumn,
                       InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
 from .. import get_SA_period
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
@@ -417,7 +417,7 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
     non_sa_imts = {_ for _ in imts if get_SA_period(_) is None}
     # get supported imts but does not allow 'SA' alone to be valid:
     if non_sa_imts:
-        supported_imts = get_intensity_measure_columns() - {'SA'}
+        supported_imts = get_intensity_measures() - {'SA'}
         if non_sa_imts - supported_imts:
             raise InvalidColumnName(*list(non_sa_imts - supported_imts))
         # raise if some imts are not in the flatfile:
@@ -608,7 +608,7 @@ class EventContext(RuptureContext):
         self._flatfile = flatfile
         if self.__class__.rupture_params is None:
             # get rupture params once for all instances the first time only:
-            self.__class__.rupture_params = get_rupture_param_columns()
+            self.__class__.rupture_params = get_rupture_params()
 
     def __eq__(self, other):  # FIXME: legacy code, is it still used?
         assert isinstance(other, EventContext) and \
