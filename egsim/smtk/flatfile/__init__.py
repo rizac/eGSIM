@@ -402,18 +402,19 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
     periods, when needed (e.g. "SA(0.2)")
     """
     new_flatfile = pd.DataFrame(index=flatfile.index)
-
-    for param_or_dist in get_gsim_required_params_or_dists(gsims):
-        new_flatfile[param_or_dist] = \
-            get_values_for_param_or_dist(flatfile, param_or_dist)
-
+    # prepare the flatfile for the required ground motion properties:
+    for prop in get_required_ground_motion_properties(gsims):
+        new_flatfile[prop] = \
+            get_ground_motion_property_values(flatfile, prop)
+    # validate imts:
     imts = set(imts)
-    non_sa = {_ for _ in imts if not _.startswith('SA(')}
-    supported_imts = get_intensity_measure_columns()
+    non_sa = {_ for _ in imts if not get_SA_period(_) is None}
+    # get supported imts but does not allow 'SA' alone to be valid:
+    supported_imts = get_intensity_measure_columns() - {'SA'}
     if non_sa - supported_imts:
         raise InvalidColumn(*{non_sa - supported_imts})
-    sa = imts - non_sa
     # prepare the flatfile for SA (create new columns by interpolation if necessary):
+    sa = imts - non_sa
     sa_dataframe = _prepare_for_sa(flatfile, sa)
     if not sa_dataframe.empty:
         new_flatfile[list(sa_dataframe.columns)] = sa_dataframe
@@ -421,7 +422,11 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
     return new_flatfile
 
 
-def get_gsim_required_params_or_dists(gsims: Iterable[GMPE]) -> set[str]:
+def get_required_ground_motion_properties(gsims: Iterable[GMPE]) -> set[str]:
+    """Return a Python set containing the required ground motion properties
+    (rupture or sites parameter, distance measure, all as `str`) for the given
+    ground motion models `gsims`
+    """
     required = set()
     # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
     for gsim in gsims:
@@ -435,12 +440,14 @@ def get_gsim_required_params_or_dists(gsims: Iterable[GMPE]) -> set[str]:
 DEFAULT_MSR = PeerMSR()
 
 
-def get_values_for_param_or_dist(flatfile: pd.DataFrame, param_or_dist: str) -> pd.Series:
-    """Gets the values (pandas Series) relative to the given parameter (rupture, sites)
-     or distance measure in the passed flatfile.
-    Replacement and inference rule might be applied and modify the passed
-    flatfile (p)ass a copy of a flatfile to avoid inplace modifications).
-    Eventually, if the column cannot be set on `flatfile`, this function
+def get_ground_motion_property_values(flatfile: pd.DataFrame,
+                                      param_or_dist: str) -> pd.Series:
+    """Get the values (pandas Series) relative to the ground motion property
+    (rupture or sites parameter, distance measure) extracted from the given
+    flatfile.
+    The returned value might be a column of the flatfile or a new pandas Series
+    depending on missing-data replacement rules.
+    If the column cannot be retrieved or created, this function
     raises :ref:`MissingColumn` error notifying the required missing column.
     """
     column_name = get_column_name(flatfile, param_or_dist)
