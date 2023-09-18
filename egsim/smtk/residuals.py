@@ -65,7 +65,7 @@ def get_residuals(gsims: Iterable[str], imts: Iterable[str],
     flatfile2[ev_cols] = flatfile[ev_cols]
     # copy station columns (for the moment not used, so skip if no station columns)
     try:
-        st_cols = get_station_id_column_names()
+        st_cols = get_station_id_column_names(flatfile)
         flatfile2[st_cols] = flatfile[st_cols]
     except InvalidColumn:
         pass

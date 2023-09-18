@@ -2,19 +2,20 @@
 module containing all column metadata information stored in the associated
 YAML file
 """
+import re
 from datetime import datetime, date
 from enum import Enum
 from os.path import join, dirname
 
-from typing import Union, Any, Iterable
+from typing import Union, Any
 
 # try to speed up yaml.safe_load (https://pyyaml.org/wiki/PyYAMLDocumentation):
 from yaml import load as yaml_load
 
 try:
-    from yaml import CSafeLoader as default_yaml_loader  # faster, if available
+    from yaml import CSafeLoader as SafeLoader  # faster, if available
 except ImportError:
-    from yaml import SafeLoader as default_yaml_loader  # same as using yaml.safe_load
+    from yaml import SafeLoader  # same as using yaml.safe_load
 
 import numpy as np
 import pandas as pd
@@ -70,21 +71,15 @@ def get_intensity_measure_columns() -> set[str]:
 _alias: dict[str, set[str]] = None  # noqa
 
 
-def get_column_names(column, sort=False) -> Union[set[str], list[str]]:
-    """Return all possible names of the given column, as set of strings. If sort is
-    True, a list is returned where the first element is the primary column name (one of
-    the top-level keys defined in the YAML dict)
+def get_all_names_of(column) -> set[str]:
+    """Return all possible names of the given column, as set of strings. The set
+    will be empty if `column` does not denote a flatfile column
     """
     global _alias
     if _alias is None:
         _alias = {}
         _extract_from_columns(load_from_yaml(), alias=_alias)
-    names = _alias.get(column, set())
-    if not sort:
-        return names
-    else:
-        return [n for n in names if n in _columns] + \
-               [n for n in names if n in _columns]
+    return _alias.get(column, set())
 
 
 def get_dtypes_and_defaults() -> \
@@ -96,6 +91,81 @@ def get_dtypes_and_defaults() -> \
     _dtype, _default = {}, {}
     _extract_from_columns(load_from_yaml(), dtype=_dtype, default=_default)
     return _dtype, _default
+
+
+class InvalidColumn(Exception):
+    """
+    General flatfile column(s) error. See subclasses for details
+    """
+    def __init__(self, *names, sep=', ', plural_suffix='s'):
+        super().__init__(*names)
+        self._sep = sep
+        self._plural_suffix = plural_suffix
+
+    @property
+    def names(self):
+        """return the names (usually column names) raising this Exception
+        and passed in `__init__`"""
+        return [repr(_) for _ in self.args]
+
+    def __str__(self):
+        """Make str(self) more clear"""
+        # get prefix (e.g. 'Missing column(s)'):
+        prefix = self.__class__.__name__
+        # replace upper cases with space + lower case letter
+        prefix = re.sub("([A-Z])", " \\1", prefix).strip().capitalize()
+        names = self.names
+        if len(names) != 1:
+            prefix += self._plural_suffix
+        # return full string:
+        return f"{prefix} {self._sep.join(names)}"
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class MissingColumn(InvalidColumn, AttributeError, KeyError):
+    """MissingColumnError. It inherits also from AttributeError and
+    KeyError to be compliant with pandas and OpenQuake"""
+
+    @property
+    def names(self):
+        """return the names with their alias(es), if any"""
+        _names = []
+        for name in self.args:
+            sorted_names = self.get_all_names_of(name)
+            suffix_str = repr(sorted_names[0])
+            if len(sorted_names) > 1:
+                suffix_str += f" (or {', '.join(repr(_) for _ in sorted_names[1:])})"
+            _names.append(suffix_str)
+        return _names
+
+    @classmethod
+    def get_all_names_of(cls, col_name) -> list[str]:
+        """Return a list of all column names of the argument, with the first element
+        being the flatfile primary name. Returns `[col_name]` if the argument does not
+        denote any flatfile column"""
+        names = get_all_names_of(col_name)
+        if len(names) <= 1:
+            return [col_name]
+        global _columns  # not needed, just as reminder
+        return [n for n in names if n in _columns] + \
+               [n for n in names if n not in _columns]
+
+
+class ConflictingColumns(InvalidColumn):
+
+    def __init__(self, name1, name2, *other_names):
+        InvalidColumn.__init__(self, name1, name2, *other_names,
+                               sep=" vs. ", plural_suffix='')
+
+
+class InvalidDataInColumn(InvalidColumn, ValueError, TypeError):
+    pass
+
+
+class InvalidColumnName(InvalidColumn):
+    pass
 
 
 # YAML file path:
@@ -116,7 +186,7 @@ def load_from_yaml(cache=True) -> dict[str, dict[str, Any]]:
     if cache and _columns:
         return _columns
     with open(_ff_metadata_path) as fpt:
-        _cols = yaml_load(fpt, default_yaml_loader)
+        _cols = yaml_load(fpt, SafeLoader)
     if cache:
         _columns = _cols
     return _cols

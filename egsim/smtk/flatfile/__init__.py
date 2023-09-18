@@ -14,8 +14,9 @@ from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.contexts import RuptureContext
 
 from .columns import (ColumnDtype, get_rupture_param_columns,
-                      get_dtypes_and_defaults, get_column_names,
-                      get_intensity_measure_columns)
+                      get_dtypes_and_defaults, get_all_names_of,
+                      get_intensity_measure_columns, MissingColumn,
+                      InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
 from .. import get_SA_period
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -246,7 +247,7 @@ def read_csv(filepath_or_buffer: Union[str, IO],
             invalid_columns.append(col)
 
     if invalid_columns:
-        raise ValueError(f'Invalid values in column(s): {", ".join(invalid_columns)}')
+        raise InvalidDataInColumn(*invalid_columns)
 
     # set defaults:
     invalid_defaults = []
@@ -260,6 +261,8 @@ def read_csv(filepath_or_buffer: Union[str, IO],
             pass
         invalid_defaults.append(col)
 
+    if not isinstance(dfr, pd.RangeIndex):
+        dfr.reset_index(drop=True, inplace=True)
     return dfr
 
 
@@ -362,7 +365,7 @@ def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:
      Returns None if no column is found, raise `ConflictingColumns` if more than
      a matching column is found"""
     ff_cols = set(flatfile.columns)
-    cols = get_column_names(column) & ff_cols
+    cols = get_all_names_of(column) & ff_cols
     if len(cols) > 1:
         raise ConflictingColumns(*cols)
     elif len(cols) == 0:
@@ -396,30 +399,44 @@ def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
 
 
 def prepare_for_residuals(flatfile: pd.DataFrame,
-                          gsims: Iterable[GMPE], imts: Iterable[str]) -> pd.Dataframe:
+                          gsims: Iterable[GMPE], imts: Iterable[str]) -> pd.DataFrame:
     """Return a new dataframe with all columns required to compute residuals
     from the given models (`gsim`) and intensity measures (`imts`) given with
     periods, when needed (e.g. "SA(0.2)")
     """
-    new_flatfile = pd.DataFrame(index=flatfile.index)
+    new_dataframes = []
     # prepare the flatfile for the required ground motion properties:
+    props_flatfile = pd.DataFrame(index=flatfile.index)
     for prop in get_required_ground_motion_properties(gsims):
-        new_flatfile[prop] = \
+        props_flatfile[prop] = \
             get_ground_motion_property_values(flatfile, prop)
+    if not props_flatfile.empty:
+        new_dataframes.append(props_flatfile)
     # validate imts:
     imts = set(imts)
-    non_sa = {_ for _ in imts if not get_SA_period(_) is None}
+    non_sa_imts = {_ for _ in imts if get_SA_period(_) is None}
     # get supported imts but does not allow 'SA' alone to be valid:
-    supported_imts = get_intensity_measure_columns() - {'SA'}
-    if non_sa - supported_imts:
-        raise InvalidColumn(*{non_sa - supported_imts})
+    if non_sa_imts:
+        supported_imts = get_intensity_measure_columns() - {'SA'}
+        if non_sa_imts - supported_imts:
+            raise InvalidColumnName(*list(non_sa_imts - supported_imts))
+        # raise if some imts are not in the flatfile:
+        if non_sa_imts - set(flatfile.columns):
+            raise MissingColumn(*list(non_sa_imts - set(flatfile.columns)))
+        # add non SA imts:
+        new_dataframes.append(flatfile[sorted(non_sa_imts)])
     # prepare the flatfile for SA (create new columns by interpolation if necessary):
-    sa = imts - non_sa
-    sa_dataframe = _prepare_for_sa(flatfile, sa)
-    if not sa_dataframe.empty:
-        new_flatfile[list(sa_dataframe.columns)] = sa_dataframe
+    sa_imts = imts - non_sa_imts
+    if sa_imts:
+        sa_dataframe = _prepare_for_sa(flatfile, sa_imts)
+        if not sa_dataframe.empty:
+            new_dataframes.append(sa_dataframe)
 
-    return new_flatfile
+    if not new_dataframes:
+        return pd.DataFrame(columns=flatfile.columns)  # empty dataframe
+
+    return pd.concat(new_dataframes, axis=1)
+
 
 
 def get_required_ground_motion_properties(gsims: Iterable[GMPE]) -> set[str]:
@@ -528,10 +545,12 @@ def fill_na(flatfile:pd.DataFrame,
 
 
 def _prepare_for_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFrame:
-    """Modify inplace the flatfile assuring the SA columns in `sa_imts` (e.g. "SA(0.2)")
-    are present. The SA column of the flatfile will be used to obtain
-    the target SA via interpolation, and removed if not necessary.
+    """Return a new Dataframe with the SA columns defined in `sa_imts`
+    The returned DataFrame will have all strings supplied in `sa_imts` as columns,
+    with relative values copied (or inferred via interpolation) from the given flatfile
 
+    :param flatfile: the flatfile
+    :param sa_imts: Iterable of strings denoting SA (e.g. "SA(0.2)")
     Return the newly created Sa columns, as tuple of strings
     """
     src_sa = []
@@ -552,16 +571,18 @@ def _prepare_for_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
         if p not in source_sa:
             tgt_sa.append((p, i))
     if invalid_sa:
-        raise InvalidColumn(*invalid_sa)
+        raise InvalidDataInColumn(*invalid_sa)
 
     # source_sa: period [float] -> mapped to the relative column:
     target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
 
-    if not source_sa or not target_sa:
-        return pd.DataFrame(index=flatfile.index, data=[])
+    source_sa_flatfile = flatfile[list(source_sa.values())]
+
+    if not target_sa:
+        return source_sa_flatfile
 
     # Take the log10 of all SA:
-    source_spectrum = np.log10(flatfile[list(source_sa.values())])
+    source_spectrum = np.log10(source_sa_flatfile)
     # we need to interpolate row wise
     # build the interpolation function:
     interp = interp1d(list(source_sa), source_spectrum, axis=1)
@@ -616,46 +637,6 @@ class EventContext(RuptureContext):
         if column_name in self.rupture_params:
             values = values[0]
         return values
-
-
-class InvalidColumn(Exception):
-    """
-    General flatfile column(s) error. See subclasses for details
-    """
-    def __init__(self, *names, sep=', '):
-        super().__init__(*names)
-        self._sep = sep
-
-    def __str__(self):
-        """Make str(self) more clear"""
-        prefix = self.__class__.__name__
-        # replace upper cases with space + lower case letter
-        prefix = re.sub("([A-Z])", " \\1", prefix).strip().capitalize()
-        names = self.args
-        suffix = self._sep.join(repr(_) for _ in names)
-        return f"{prefix}{'s' if len(names) > 1 else ''} {suffix}"
-
-    def __repr__(self):
-        return self.__str__()
-
-
-class MissingColumn(InvalidColumn, AttributeError, KeyError):
-    """MissingColumnError. It inherits also from AttributeError and
-    KeyError to be compliant with pandas and OpenQuake"""
-
-    def __init__(self, name):
-        sorted_names = get_column_names(name, sort=True)
-        suffix_str = repr(sorted_names[0] or name)
-        if len(sorted_names) > 1:
-            suffix_str += " (alias" if len(sorted_names) == 2 else " (aliases"
-            suffix_str += f": {', '.join(repr(_) for _ in sorted_names[1:])})"
-        super().__init__(suffix_str)
-
-
-class ConflictingColumns(InvalidColumn):
-
-    def __init__(self, *names):
-        InvalidColumn.__init__(self, *names, sep=" vs. ")
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
