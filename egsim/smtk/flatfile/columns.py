@@ -6,7 +6,7 @@ from datetime import datetime, date
 from enum import Enum
 from os.path import join, dirname
 
-from typing import Union, Any
+from typing import Union, Any, Iterable
 
 # try to speed up yaml.safe_load (https://pyyaml.org/wiki/PyYAMLDocumentation):
 from yaml import load as yaml_load
