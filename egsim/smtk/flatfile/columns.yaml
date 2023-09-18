@@ -6,21 +6,22 @@
 #             possible values of the column data (which must be all the same dtype).
 #             null or missing means "not specified" and will skip data type checks.
 #             The dtype determines also how to fill missing data (See `default` below
-#             for details), whereas data that is not parsable
-#             to the given dtype (e.g.: 'x' for float) will always raise Exceptions
+#             for details), whereas data that is not parsable to the given dtype
+#             (e.g.: 'x' for float) will always raise Exceptions
 #   default:  The default value to replace missing data (e.g. '', null, NaN). When a
 #             default is not provided, it will be `dtype` dependent: NaN (for dtype
 #             float), NaT (datetime), None/null (str or categorical), 0 (int), False
 #             (bool). As such, please note that int and bool do not really support
 #             missing data, as 0 and False also denote valid values for the dtype
 #   alias:    The column alias(es), as string or list of strings. You can put here
-#             any additional name, e.g., depending on the column type (see below) the
-#             name used in OpenQuake, if different. Columns of type i (intensity
-#             measure) must be typed exactly as in OpenQuake and cannot have aliases
-#   type:     The column type (optional). Type either rupture (rupture parameter), sites
-#             (sites parameter), intensity (intensity measure) or distance (distance
-#             measure). If a type is given, the column name or any of its aliases
-#             must match the parameter / measure name implemented in OpenQuake
+#             any additional name, e.g., the name of the ground motion property defined
+#             in OpenQuake that corresponds to this column, if the names are different.
+#             Note that intensity measure columns (see `type` below) must be spelled
+#             exactly as in OpenQuake and cannot have aliases
+#   type:     The column type (optional): rupture, sites, distance, intensity (rupture
+#             parameter, sites parameter, distance measure, intensity measure,
+#             respectively). If a type is given, the column name or any of its aliases
+#             must match the relative OpenQuake name
 #   help:     The field description, used for help. Depending on the application, a
 #             default might be provided (e.g. "")
 #   ">"       (with quotation marks because > and < are special characters in YAML)
@@ -262,60 +263,3 @@ ev_time:
   alias: event_time
   dtype: datetime
   help: the event time (as ISO formatted string, e.g. 2006-03-31T00:12:24)
-
-
-# FIXME: REMOVE:
-
-# Here the collection of the parameters required by all OpenQuake models, mapped to their
-# corresponding flatfile column. With this information programs can tell, for any given
-# flatfile, which Ground motion models can be used with it. **As such, a parameter with
-# no mapping (or mapped to null) will programmatically discard all models requiring it**.
-
-#openquake_models_parameters:
-#  distance_measure:  # OpenQuake model attribute: REQUIRES_DISTANCES
-#    azimuth: azimuth
-#    repi: repi
-#    rrup: rrup
-#    rjb: rjb
-#    rhypo: rhypo
-#    rx: rx
-#    ry0: ry0
-#    rvolc: rvolc
-#    rcdpp:
-#  rupture_parameter:  # OpenQuake model attribute: REQUIRES_RUPTURE_PARAMETERS
-#    hypo_lat: event_latitude
-#    hypo_lon: event_longitude
-#    hypo_depth: event_depth
-#    mag: magnitude
-#    ztor: depth_top_of_rupture
-#    width: rupture_width
-#    dip: dip
-#    rake: rake
-#    in_cshm:
-#  site_parameter:  # OpenQuake model attribute: REQUIRES_SITES_PARAMETERS
-#    z1pt0: z1
-#    z2pt5: z2pt5
-#    vs30: vs30
-#    backarc: backarc
-#    lat: station_latitude
-#    lon: station_longitude
-#    vs30measured: vs30measured
-#    xvf: xvf
-#    fpeak: fpeak
-#    region: region
-#    geology: geology
-#    slope: slope
-#    f0:
-#    z1pt4:
-#    ec8_p18:
-#    bas:
-#    siteclass:
-#    h800:
-#    ec8:
-#    soiltype:
-#    THV:
-#    PHV:
-#    T_15:
-#    F_15:
-#    D50_15:
-#    freeface_ratio:
