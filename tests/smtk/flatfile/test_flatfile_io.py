@@ -9,7 +9,7 @@ import pytest
 from datetime import datetime
 import pandas as pd
 
-from egsim.smtk.flatfile import (read_flatfile, query, read_csv)
+from egsim.smtk.flatfile import (read_flatfile, query, read_csv, read_csv2, read_flatfile2)
 from egsim.smtk.flatfile.columns import _extract_from_columns, load_from_yaml, \
         get_rupture_params
 
@@ -84,13 +84,23 @@ def test_read_csv():
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,a"
            )
+    # loop throguh all CSV columns defined above (int, then bool, and so on):
     for header, val in zip(csv.split("\n")[0].split(","), csv.split("\n")[1].split(",")):
+        # append an x to the last value
         csv2 = f"{header}\n{val}\n{val}x"
-        with pytest.raises(ValueError) as verr:
-            d = read_csv(StringIO(csv2), **args)  # noqa
-            # check that the column is in the exception message:
+        if header in ('int', 'bool', 'float', 'datetime'):
+        # try:
+        #     d = read_csv(StringIO(csv2), **args)
+        #     asd = 9
+        # except Exception as exc:
+        #     pass
+        # continue
+            with pytest.raises(ValueError) as verr:
+                d = read_csv(StringIO(csv2), **args)  # noqa
+                # check that the column is in the exception message:
             assert header in str(verr.value)
-
+            continue
+        d = read_csv(StringIO(csv2), **args)
 
 def test_read_csv_bool():
     args = {
@@ -138,7 +148,7 @@ def test_read_csv_bool():
     with pytest.raises(ValueError):
         # float series must have only 0 and 1:
         csv_str += "\n0.1"
-        d = read_csv(StringIO("bool\n1.0\n1.0\n1.0\n0.0\n0.0\n0.1"), **args)  # noqa
+        d = read_csv(StringIO(csv_str), **args)  # noqa
 
 
 def test_read_csv_categorical():
@@ -183,7 +193,7 @@ def test_read_csv_categorical():
         with pytest.raises(ValueError) as verr:
             d = read_csv(StringIO(csv2), dtype=dict(dtypes))  # noqa
             # check that the column is in the exception message:
-            assert header in str(verr.value)
+        assert header in str(verr.value)
 
 
 def test_query():
@@ -248,3 +258,15 @@ def test_query():
             prev_expr += f' & ({query_expr})'
             new_d2 = query(d, prev_expr)
             pd.testing.assert_frame_equal(new_d, new_d2)
+
+
+def test_read_flatfiles():
+    path = ('/Users/rizac/work/gfz/projects/sources/python/egsim/tests/data/'
+            'tk_20230206_flatfile_geometric_mean.csv')
+    dfr1 = read_flatfile2(path)
+    dfr2 = read_flatfile(path)
+    pd.testing.assert_frame_equal(dfr1, dfr2, check_categorical=False)
+    for c in set(dfr1.columns) | set(dfr2.columns):
+        if str(dfr1[c].dtype) == 'category':
+            assert (dfr1[c].astype(str) == dfr2[c].astype(str)).all()
+            assert set(dfr1[c].cat.categories) == set(dfr2[c].cat.categories)
