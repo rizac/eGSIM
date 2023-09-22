@@ -73,7 +73,7 @@ def test_read_csv():
            ",,,,,"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,ax")
-    d = read_csv(StringIO(csv), **args)  # noqa
+    d = read_csv(StringIO(csv), **args, defaults={'int':0, 'bool':False})  # noqa
     pd.testing.assert_series_equal(d.dtypes.sort_values(),
                                    pd.Series(expected).sort_values())
     for c in d.columns:
@@ -121,7 +121,7 @@ def test_read_csv_bool():
     # NOTE: appending a missing value (empty line) is skipped even if skip_blank_lines is
     # True (as it is probably interpreted as ending newline of the previous csv row?)
     csv_str = csv_str.replace("bool\n", "bool\n\n")
-    d = read_csv(StringIO(csv_str), **args)  # noqa
+    d = read_csv(StringIO(csv_str), **args, defaults={'bool': False})  # noqa
     assert (d['bool'] == [False] + expected).all()
 
     # Append invalid value (float not in [0, 1]):

@@ -492,82 +492,60 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
 
         actual_dtype = dfr[col].dtype.type  # can NOT be categorical
 
-        not_ok = not issubclass(actual_dtype, ColumnDtype[expected_dtype_name].value)
-
-        na_values = None
+        dtype_ok = issubclass(actual_dtype, ColumnDtype[expected_dtype_name].value)
 
         # expected dtype int: try to convert if actual dtype float
         # (as long as the float values are all integer or nan, e.g.
         # [NaN, 7.0] becomes [<default_or_zero>, 7], but [NaN, 7.2] is invalid):
-        if not_ok and expected_dtype_name == ColumnDtype.int.name:   # "int"
-            if issubclass(actual_dtype, ColumnDtype.float.value):
-                values = dfr[col].copy()
-                na_values = pd.isna(values)
-                values.loc[na_values] = defaults.pop(col, 0)
+        if not dtype_ok:
+            if expected_dtype_name == ColumnDtype.int.name:   # "int"
                 try:
-                    values = values.astype(int)
-                    # check all non missing elements are int:
-                    if (dfr[col][~na_values] == values[~na_values]).all():
-                        dfr[col] = values
-                        not_ok = False
+                    not_na = pd.notna(dfr[col])
+                    values = dfr[col][not_na]
+                    if (values == values.astype(int)).all():
+                        dtype_ok = int  # cast later
                 except Exception:  # noqa
                     pass
-
-        # expected dtype bool: try to convert if actual dtype is str/int/float:
-        elif not_ok and expected_dtype_name == ColumnDtype.bool.name:  # "bool"
-            values = dfr[col].copy()
-            na_values = pd.isna(values)
-            unique_vals = pd.unique(values[~na_values])
-            if issubclass(actual_dtype, ColumnDtype.str.value):
-                mapping = {}
-                for val in unique_vals:
-                    if isinstance(val, str):
-                        if val.lower() in {'0', 'false'}:
-                            mapping[val] = False
-                        elif val.lower() in {'1', 'true'}:
-                            mapping[val] = True
-                if mapping:
-                    values.replace(mapping, inplace=True)
-                    unique_vals = pd.unique(values[~na_values])
-            if 0 < len(unique_vals) <= 2 and set(unique_vals).issubset({0, 1}):
-                try:
-                    values.loc[na_values] = defaults.pop(col, False)
-                    dfr[col] = values.astype(bool)
-                    not_ok = False
-                except Exception:  # noqa
-                    pass
-
-        if not_ok:
-            invalid_columns.append(col)
+            elif expected_dtype_name == ColumnDtype.bool.name:  # "bool"
+                not_na = pd.notna(dfr[col])
+                unique_vals = pd.unique(dfr[col][not_na])
+                if issubclass(actual_dtype, ColumnDtype.str.value):
+                    mapping = {}
+                    for val in unique_vals:
+                        if isinstance(val, str):
+                            if val.lower() in {'0', 'false'}:
+                                mapping[val] = False
+                            elif val.lower() in {'1', 'true'}:
+                                mapping[val] = True
+                    if mapping:
+                        dfr[col].replace(mapping, inplace=True)
+                        unique_vals = pd.unique(dfr[col][not_na])
+                if set(unique_vals).issubset({0, 1}):
+                    dtype_ok = bool
 
         if col in defaults:
-            na = pd.isna(dfr[col]) if na_values is None else na_values
-            dfr.loc[na, col] = defaults[col]
+            is_na = pd.isna(dfr[col])
+            dfr.loc[is_na, col] = defaults[col]
 
         if expected_categorical:
-            notna = pd.notna(dfr[col]) if na_values is None else ~na_values
+            dtype_ok = False
+            not_na = pd.notna(dfr[col])
             # if all non-null values are in the categories, then set as categorical:
-            if dfr[col][notna].isin(expected_categorical.categories).all():
+            if dfr[col][not_na].isin(expected_categorical.categories).all():
                 dfr[col] = dfr[col].astype(expected_categorical)
-                if na_values is not None:
-                    dfr[col][na_values] = None
-            else:
-                invalid_columns.append(col)
+                dtype_ok = True
+        elif dtype_ok in (bool, int):
+            try:
+                dfr[col] = dfr[col].astype(dtype_ok)
+                dtype_ok = True
+            except Exception:
+                dtype_ok = False
+
+        if not dtype_ok:
+            invalid_columns.append(col)
 
     if invalid_columns:
         raise InvalidDataInColumn(*invalid_columns)
-
-    # set defaults:
-    invalid_defaults = []
-    for col in dfr.columns:
-        pre_dtype = dfr[col].dtype
-        try:
-            dfr.loc[dfr[col].isna(), col] = defaults[col]
-            if dfr[col].dtype == pre_dtype:
-                continue
-        except Exception:  # noqa
-            pass
-        invalid_defaults.append(col)
 
     return dfr
 
