@@ -6,9 +6,11 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, date
-from enum import Enum
+from enum import Enum, StrEnum
 from os.path import join, dirname
 
+from pandas.core.arrays import PandasArray
+from pandas.core.dtypes.base import ExtensionDtype
 from typing import Union, Any
 
 # try to speed up yaml.safe_load (https://pyyaml.org/wiki/PyYAMLDocumentation):
@@ -31,29 +33,28 @@ class ColumnType(Enum):
     intensity = 'Intensity measure'
 
 
-class ColumnDtype(Enum):
-    """Flatfile column data type. Names are used as dtype values in
-    the YAML file (note that categorical dtypes have to be given as list),
-    enum values are the relative Python/numpy classes to be used in Python code.
-    E.g., to get if the dtype of flatfile column `c` (pandas Series) is supported:
-    ```
-    isinstance(c.dtype, pd.CategoricalDtype) or \
-         any(issubclass(c.dtype.type, e.value) for e in ColumnDtype)
-    ```
+class ColumnDtype(StrEnum):
+    """Enum denoting the supported data types for flatfile columns:
+    each member behaves exactly as a string compatible to pandas `astype`,
+    e.g.: `[series|array].astype(ColumnDtype.datetime)`
     """
-    # NOTE: the FIRST VALUE MUST BE THE PYTHON TYPE (e.g. int, not np.int64), AS
-    # IT WILL BE USED TO CHECK THE CONSISTENCY OF DEFAULT / BOUNDS IN THE YAML
-    float = float, np.floating
-    int = int, np.integer
-    bool = bool, np.bool_
-    datetime = datetime, np.datetime64
-    str = str, np.str_, np.object_
+    def __new__(cls, value, *classes:type):
+        """Constructs a new ColumnDtype member"""
+        obj = str.__new__(cls, value)
+        obj._value_ = classes
+        return obj
 
-    @property
-    def type_str(self):
-        """Return the Python class denoting this enum item. The value can be used
-        in numpy `astype` functions to cast values"""
-        return 'datetime64' if self == ColumnDtype.datetime else self.name
+    # each member below must be mapped to the numpy name (see `numpy.sctypeDict.keys()`
+    # for a list of supported names. Exception is 'string' that is pandas only) and
+    # one or more Python classes that will be used
+    # to get if an object (Python, numpy or pandas) is instance of a particular
+    # `ColumnDtype` (see `ColumnDtype.of`)
+
+    float = "float",  float, np.floating
+    int = "int", int, np.integer
+    bool = "bool", bool, np.bool_
+    datetime = "datetime64", datetime, np.datetime64
+    str = "string", str, np.str_  # , np.object_
 
     @classmethod
     def of(cls, obj: Union[int, float, datetime, bool, str,
@@ -63,9 +64,9 @@ class ColumnDtype(Enum):
             -> Union[ColumnDtype, None]:
         """Return the ColumnDtype of the given argument
 
-        :param obj: a Python object( e.g. 4.5), a Python class (`float`),
+        :param obj: a Python object(e.g. 4.5), a Python class (`float`),
             a numpy array or pandas Series, a numpy dtype
-            (e.g as returned from a pandas dataframe `dataframe[column].dtype`)
+            (e.g., as returned from a pandas dataframe `dataframe[column].dtype`)
             or a pandas CategoricalDtype. In this last case, return the ColumnDtype
             of all categories, if they are of the same type. E.g.:
             `ColumnDtype.of(pd.CategoricalDtype([1,2])  = ColumnDtype.int`
@@ -76,9 +77,9 @@ class ColumnDtype(Enum):
             if len(dtypes) == 1:
                 return next(iter(dtypes))
         else:
-            if isinstance(obj, (pd.Series, np.ndarray)):
+            if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
                 obj = obj.dtype  # will fall back in the next "if"
-            if isinstance(obj, np.dtype):
+            if isinstance(obj, (np.dtype, ExtensionDtype)):
                 obj = obj.type  # will NOT fall back into the next "if"
             if not isinstance(obj, type):
                 obj = type(obj)
@@ -91,46 +92,59 @@ class ColumnDtype(Enum):
                     return c_dtype
         return None
 
-    @classmethod
-    def get(cls, dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]) \
-            -> Union[ColumnDtype, pd.CategoricalDtype]:
-        """Return the ColumnDtype or the pandas CategoricalDtype from the given
-        argument, converting it if necessary
-        """
-        try:
-            if isinstance(dtype, ColumnDtype):
-                return dtype
-            if isinstance(dtype, (list, tuple)):
-                dtype = pd.CategoricalDtype(dtype)
-            if isinstance(dtype, pd.CategoricalDtype):
-                # check that the categories are all of the same supported data type:
-                if ColumnDtype.of(dtype) is not None:
-                    return dtype
-            else:
-                return ColumnDtype[dtype]
-        except (KeyError, ValueError, TypeError):
-            pass
-        raise ValueError(f'Invalid flatfile data type: {str(dtype)}')
+    def __repr__(self):
+        # fix error in repr(self) expecting value to be a string
+        return self.__str__()
 
-    @classmethod
-    def cast(cls, val: Any, dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
-        """cast `val` to the given dtype or pandas CategoricalDtype, raise
-        ValueError if unsuccessful
-        """
+
+
+
+def to_pandas_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]) \
+        -> Union[ColumnDtype, pd.CategoricalDtype]:
+    """Return a value from the given argument that is suitable to be used as data type in
+    pandas, i.e., either a `ColumnDtype` (str-like enum) or a pandas `CategoricalDtype`
+    """
+    try:
+        if isinstance(dtype, ColumnDtype):
+            return dtype
+        if isinstance(dtype, str):
+            for val in ColumnDtype:
+                if val == dtype or val.name == dtype:
+                    return val
+        if isinstance(dtype, (list, tuple)):
+            dtype = pd.CategoricalDtype(dtype)
         if isinstance(dtype, pd.CategoricalDtype):
-            if val in dtype.categories:
-                return val
-            dtype_name = 'categorical'
-        else:
-            actual_dtype = ColumnDtype.of(val)
-            if actual_dtype == dtype:
-                return val
-            if dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
-                return float(val)
-            elif dtype == ColumnDtype.datetime and isinstance(val, date):
-                return datetime(val.year, val.month, val.day)
-            dtype_name = dtype.name
-        raise ValueError(f'Invalid value for type {dtype_name}: {str(val)}')
+            # check that the categories are all of the same supported data type:
+            if ColumnDtype.of(dtype) is not None:
+                return dtype
+    except (KeyError, ValueError, TypeError):
+        pass
+    raise ValueError(f'Invalid data type: {str(dtype)}')
+
+
+def cast_to_dtype(val: Any, pd_dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
+    """cast `val` to the given pandas dtype, raise ValueError if unsuccessful
+
+    :param val: any Python object
+    :param pd_dtype: the result of `to_pandas_dtype: either a `ColumnDtype` or
+        pandas `CategoricalDtype` object
+    """
+    if pd_dtype is None:
+        raise ValueError(f'Invalid dtype: {str(pd_dtype)}')
+    if isinstance(pd_dtype, pd.CategoricalDtype):
+        if val in pd_dtype.categories:
+            return val
+        dtype_name = 'categorical'
+    else:
+        actual_dtype = ColumnDtype.of(val)
+        if actual_dtype == pd_dtype:
+            return val
+        if pd_dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
+            return float(val)
+        elif pd_dtype == ColumnDtype.datetime and isinstance(val, date):
+            return datetime(val.year, val.month, val.day)
+        dtype_name = pd_dtype.name
+    raise ValueError(f'Invalid value for type {dtype_name}: {str(val)}')
 
 
 def get_rupture_params() -> set[str]:
@@ -327,10 +341,10 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
         else:
             aliases = set(aliases)
         aliases.add(c_name)
-        cdtype = None
+        pd_dtype = None
         if ((dtype is not None or default is not None or bounds is not None)
                 and 'dtype' in props):
-            cdtype = ColumnDtype.get(props['dtype'])
+            pd_dtype = to_pandas_dtype(props['dtype'])
         for name in aliases:
             if check_type and 'type' in props:
                 ctype = ColumnType[props['type']]
@@ -344,12 +358,12 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
                     imts.add(name)
             if alias is not None:
                 alias[name] = aliases
-            if dtype is not None and cdtype is not None:
-                dtype[name] = cdtype
+            if dtype is not None and pd_dtype is not None:
+                dtype[name] = pd_dtype
             if default is not None and 'default' in props:
-                default[name] = ColumnDtype.cast(props['default'], cdtype)
+                default[name] = cast_to_dtype(props['default'], pd_dtype)
             if bounds is not None:
-                _bounds = {k: ColumnDtype.cast(props[k], cdtype)
+                _bounds = {k: cast_to_dtype(props[k], pd_dtype)
                            for k in ["<", "<=", ">", ">="]
                            if k in props}
                 if _bounds:

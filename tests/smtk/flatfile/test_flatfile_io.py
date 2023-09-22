@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 from datetime import datetime
 import pandas as pd
+from pandas import StringDtype
 
 from egsim.smtk.flatfile import (read_flatfile, query, read_csv)
 from egsim.smtk.flatfile.columns import _extract_from_columns, load_from_yaml, \
@@ -48,7 +49,7 @@ def test_read_csv():
         'float': np.dtype('float64'),
         'bool': np.dtype('bool'),
         'datetime': np.dtype('<M8[ns]'),
-        'str': np.dtype('O'),
+        'str': StringDtype(),  # np.dtype('O'),
         'category': np.dtype('O')
     }
 
@@ -59,8 +60,7 @@ def test_read_csv():
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,ax")
     d = read_csv(StringIO(csv), **args)  # noqa
-    pd.testing.assert_series_equal(d.dtypes.sort_values(),
-                                   pd.Series(expected).sort_values())
+    assert d.dtypes.to_dict() == expected
     for c in d.columns:
         assert not pd.isna(d[c]).any()
 
@@ -74,8 +74,7 @@ def test_read_csv():
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,ax")
     d = read_csv(StringIO(csv), **args, defaults={'int':0, 'bool':False})  # noqa
-    pd.testing.assert_series_equal(d.dtypes.sort_values(),
-                                   pd.Series(expected).sort_values())
+    assert d.dtypes.to_dict() == expected
     for c in d.columns:
         assert pd.isna(d[c]).sum() == expected_na_count[c]
 
@@ -101,6 +100,7 @@ def test_read_csv():
             assert header in str(verr.value)
             continue
         d = read_csv(StringIO(csv2), **args)
+
 
 def test_read_csv_bool():
     args = {

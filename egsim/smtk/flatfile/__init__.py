@@ -18,7 +18,8 @@ from openquake.hazardlib.contexts import RuptureContext
 from .columns import (ColumnDtype, get_rupture_params,
                       get_dtypes_and_defaults, get_all_names_of,
                       get_intensity_measures, MissingColumn,
-                      InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
+                      InvalidDataInColumn, InvalidColumnName, ConflictingColumns,
+                      to_pandas_dtype, cast_to_dtype)
 from .. import get_SA_period
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -99,9 +100,9 @@ def _check_dtypes_and_defaults(
         -> tuple[dict[str, ColumnDtype], dict[str, Any]]:
 
     for col, col_dtype in dtype.items():
-        dtype[col] = ColumnDtype.get(col_dtype)
+        dtype[col] = to_pandas_dtype(col_dtype)
         if col in defaults:
-            defaults[col] = ColumnDtype.cast(defaults[col], dtype[col])
+            defaults[col] = cast_to_dtype(defaults[col], dtype[col])
 
     if set(defaults) - set(dtype):
         raise ValueError('Invalid defaults for columns without an explicit '
@@ -173,14 +174,14 @@ def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
                 # int will be parsed as floats, so that NaN are still possible
                 # (e.g. '' in CSV) whilst raising in case of invalid values ('x').
                 # The conversion to int will be handled later
-                kwargs['dtype'][col] = ColumnDtype.float.type_str
+                kwargs['dtype'][col] = ColumnDtype.float
             elif col_dtype == ColumnDtype.datetime:
                 # date times in pandas csv must be given in a separate arg. Note that
                 # read_csv does not raise for invalid dates but returns the column
                 # with an inferred data type (usually object)
                 parse_dates.add(col)
             else:
-                kwargs['dtype'][col] = col_dtype.type_str
+                kwargs['dtype'][col] = col_dtype
 
         if parse_dates:
             kwargs['parse_dates'] = list(parse_dates)
@@ -194,8 +195,7 @@ def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
         # explicitly passed and int dtypes are converted to float (see above). So
         # just check for floats. Note: get dtypes from kwargs['dtype'] because we
         # want to check the real dtype passed, all given as numpy str:
-        cols2check = [c for c, v in kwargs['dtype'].items()
-                      if v == ColumnDtype.float.type_str]
+        cols2check = [c for c, v in kwargs['dtype'].items() if v == ColumnDtype.float]
         invalid_columns = []
         for c in cols2check:
             try:
@@ -255,17 +255,16 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
             elif expected_dtype == ColumnDtype.bool:
                 not_na = pd.notna(dfr[col])
                 unique_vals = pd.unique(dfr[col][not_na])
-                if actual_dtype == ColumnDtype.str:
-                    mapping = {}
-                    for val in unique_vals:
-                        if isinstance(val, str):
-                            if val.lower() in {'0', 'false'}:
-                                mapping[val] = False
-                            elif val.lower() in {'1', 'true'}:
-                                mapping[val] = True
-                    if mapping:
-                        dfr[col].replace(mapping, inplace=True)
-                        unique_vals = pd.unique(dfr[col][not_na])
+                mapping = {}
+                for val in unique_vals:
+                    if isinstance(val, str):
+                        if val.lower() in {'0', 'false'}:
+                            mapping[val] = False
+                        elif val.lower() in {'1', 'true'}:
+                            mapping[val] = True
+                if mapping:
+                    dfr[col].replace(mapping, inplace=True)
+                    unique_vals = pd.unique(dfr[col][not_na])
                 if set(unique_vals).issubset({0, 1}):
                     dtype_ok = True
                     do_type_cast = True
@@ -284,7 +283,7 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
                     dtype_ok = False
             elif do_type_cast:
                 try:
-                    dfr[col] = dfr[col].astype(expected_dtype.type_str)
+                    dfr[col] = dfr[col].astype(expected_dtype)
                 except (ValueError, TypeError):
                     dtype_ok = False
 

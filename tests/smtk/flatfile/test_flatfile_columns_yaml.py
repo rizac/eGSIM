@@ -13,7 +13,9 @@ import numpy as np
 
 from egsim.smtk import get_gsim_names, get_rupture_params_required_by, \
     get_sites_params_required_by, get_distances_required_by
-from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype, _extract_from_columns,
+from egsim.smtk.flatfile import cast_to_dtype
+from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype,
+                                         _extract_from_columns,
                                          _ff_metadata_path)
 
 
@@ -138,7 +140,7 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
             raise ValueError(f"{prefix} bounds cannot be provided with "
                              f"categorical data type")
         if default_is_given:
-            ColumnDtype.cast(default, dtype)  # raise if not in categories
+            cast_to_dtype(default, dtype)  # raise if not in categories
         return
 
     assert isinstance(dtype, ColumnDtype)
@@ -158,7 +160,7 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
         min_val = bounds.get(">", bounds.get(">=", None))
         for val in [max_val, min_val]:
             if val is not None:
-                ColumnDtype.cast(val, dtype)
+                cast_to_dtype(val, dtype)
         if max_val is not None and min_val is not None and max_val <= min_val:
             raise ValueError(f'{prefix} min. bound must be lower than '
                              f'max. bound')
@@ -166,7 +168,7 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
     # check default value:
     if default_is_given:
         # this should already been done but for dafety:
-        ColumnDtype.cast(default, dtype)
+        cast_to_dtype(default, dtype)
 
 
 def check_with_openquake(rupture_params: dict[str, set[str]],
@@ -224,12 +226,13 @@ def test_Column_dtype():
         'bool': [True, False],
         'str': [None, "x"]
     })
+    d.str = d.str.astype('string')
     for c in d.columns:
         dtyp = d[c].dtype
         assert ColumnDtype.of(dtyp) == ColumnDtype[c]
         assert ColumnDtype.of(d[c]) == ColumnDtype[c]
         assert ColumnDtype.of(d[c].values) == ColumnDtype[c]
-        assert all(ColumnDtype.of(_) == ColumnDtype[c] for _ in d[c] if _ is not None)
-        assert all(ColumnDtype.of(_) == ColumnDtype[c] for _ in d[c].values if _ is not None)
+        assert all(ColumnDtype.of(_) == ColumnDtype[c] for _ in d[c] if pd.notna(_))
+        assert all(ColumnDtype.of(_) == ColumnDtype[c] for _ in d[c].values if pd.notna(_))
 
     assert ColumnDtype.of(None) is None
