@@ -149,24 +149,8 @@ def get_dtypes_and_defaults() -> \
     if _dtype is None or _default is None:
         _dtype, _default = {}, {}
         _extract_from_columns(load_from_yaml(), dtype=_dtype, default=_default)
-        _dtype, _default = check_dtypes_and_defaults(_dtype, _default)
     return _dtype, _default
 
-
-def check_dtypes_and_defaults(
-        dtype: dict[str, Union[str, list, tuple, pd.CategoricalDtype, ColumnDtype]],
-        defaults: dict[str, Any]) \
-        -> tuple[dict[str, Union[pd.CategoricalDtype, ColumnDtype]], dict[str, Any]]:
-
-    for col, col_dtype in dtype.items():
-        dtype[col] = _cast_dtype(col_dtype)
-        if col in defaults:
-            defaults[col] = _cast_value(defaults[col], dtype[col])
-
-    if set(defaults) - set(dtype):
-        raise ValueError('Invalid defaults for columns without an explicit '
-                         f'dtype set: {set(defaults) - set(dtype)}')
-    return dtype, defaults
 
 
 # YAML file path:
@@ -236,6 +220,9 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
     """
     check_type = rupture_params is not None or sites_params is not None \
                  or distances is not None or imts is not None
+    get_dtype = dtype is not None or default is not None or bounds is not None
+    if get_dtype and dtype is None:
+        dtype = {}
     for c_name, props in columns.items():
         aliases = props.get('alias', [])
         if isinstance(aliases, str):
@@ -268,6 +255,30 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
                     bounds[name] = _bounds
             if help is not None and props.get('help', ''):
                 help[name] = props['help']
+
+        if dtype is not None and (default is not None or bounds is not None):
+            check_dtypes_defaults_and_bounds(dtype, default, bounds)
+
+
+def check_dtypes_defaults_and_bounds(
+        dtype: dict[str, Union[str, list, tuple, pd.CategoricalDtype, ColumnDtype]],
+        defaults: dict[str, Any] = None,
+        bounds: dict[str, dict[str, Any]] = None) \
+        -> tuple[dict[str, Union[pd.CategoricalDtype, ColumnDtype]], dict[str, Any]]:
+
+    for col, col_dtype in dtype.items():
+        dtype[col] = _cast_dtype(col_dtype)
+
+    if defaults:
+        for col in defaults:
+            defaults[col] = _cast_value(defaults[col], dtype[col])
+
+    if bounds:
+        for col, col_bounds in bounds.items():
+            for key, val in col_bounds.items():
+                col_bounds[key] = _cast_value(val, dtype[col])
+
+    return dtype, defaults
 
 
 def _cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]) \
