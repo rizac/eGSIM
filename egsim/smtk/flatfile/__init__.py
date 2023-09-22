@@ -19,7 +19,7 @@ from .columns import (ColumnDtype, get_rupture_params,
                       get_dtypes_and_defaults, get_all_names_of,
                       get_intensity_measures, MissingColumn,
                       InvalidDataInColumn, InvalidColumnName, ConflictingColumns,
-                      to_pandas_dtype, cast_to_dtype)
+                      check_dtypes_and_defaults)
 from .. import get_SA_period
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -86,28 +86,12 @@ def read_csv(filepath_or_buffer: Union[str, IO],
     if not defaults:
         defaults = {}
     if kwargs.pop('_check_dtypes_and_defaults', True):
-        dtype, defaults = _check_dtypes_and_defaults(dtype, defaults)
+        dtype, defaults = check_dtypes_and_defaults(dtype, defaults)
     dfr = _read_csv(filepath_or_buffer, sep=sep, dtype=dtype, usecols=usecols, **kwargs)
     _adjust_dtypes_and_defaults(dfr, dtype, defaults)
     if not isinstance(dfr.index, pd.RangeIndex):
         dfr.reset_index(drop=True, inplace=True)
     return dfr
-
-
-def _check_dtypes_and_defaults(
-        dtype: dict[str, Union[str, list, tuple, pd.CategoricalDtype, ColumnDtype]],
-        defaults: dict[str, Any]) \
-        -> tuple[dict[str, ColumnDtype], dict[str, Any]]:
-
-    for col, col_dtype in dtype.items():
-        dtype[col] = to_pandas_dtype(col_dtype)
-        if col in defaults:
-            defaults[col] = cast_to_dtype(defaults[col], dtype[col])
-
-    if set(defaults) - set(dtype):
-        raise ValueError('Invalid defaults for columns without an explicit '
-                         f'dtype set: {set(defaults) - set(dtype)}')
-    return dtype, defaults
 
 
 def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
