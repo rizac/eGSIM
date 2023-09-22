@@ -9,7 +9,7 @@ import pytest
 from datetime import datetime
 import pandas as pd
 
-from egsim.smtk.flatfile import (read_flatfile, query, read_csv, read_csv2, read_flatfile2)
+from egsim.smtk.flatfile import (read_flatfile, query, read_csv)
 from egsim.smtk.flatfile.columns import _extract_from_columns, load_from_yaml, \
         get_rupture_params
 
