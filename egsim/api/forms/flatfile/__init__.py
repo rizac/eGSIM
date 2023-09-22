@@ -129,11 +129,9 @@ class FlatfileForm(EgsimBaseForm):
             if isinstance(col.dtype, pd.CategoricalDtype):
                 dtype_name = "categorical data"
             else:
-                dtype = flatfile[col].dtype.type
-                for cdtype in ColumnDtype:
-                    if issubclass(dtype, cdtype.value):
-                        dtype_name = cdtype.name
-                        break
+                col_dtype = ColumnDtype.of(flatfile[col])
+                if col_dtype is not None:
+                    dtype_name = col_dtype.name
             dtypes[col] = dtype_name
         return dtypes
 
