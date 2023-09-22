@@ -493,6 +493,7 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
         actual_dtype = dfr[col].dtype.type  # can NOT be categorical
 
         dtype_ok = issubclass(actual_dtype, ColumnDtype[expected_dtype_name].value)
+        do_type_cast = False
 
         # expected dtype int: try to convert if actual dtype float
         # (as long as the float values are all integer or nan, e.g.
@@ -503,7 +504,8 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
                     not_na = pd.notna(dfr[col])
                     values = dfr[col][not_na]
                     if (values == values.astype(int)).all():
-                        dtype_ok = int  # cast later
+                        dtype_ok = True
+                        do_type_cast = True
                 except Exception:  # noqa
                     pass
             elif expected_dtype_name == ColumnDtype.bool.name:  # "bool"
@@ -521,25 +523,27 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
                         dfr[col].replace(mapping, inplace=True)
                         unique_vals = pd.unique(dfr[col][not_na])
                 if set(unique_vals).issubset({0, 1}):
-                    dtype_ok = bool
+                    dtype_ok = True
+                    do_type_cast = True
 
-        if col in defaults:
-            is_na = pd.isna(dfr[col])
-            dfr.loc[is_na, col] = defaults[col]
+        if dtype_ok:
+            if col in defaults:
+                is_na = pd.isna(dfr[col])
+                dfr.loc[is_na, col] = defaults[col]
 
-        if expected_categorical:
-            dtype_ok = False
-            not_na = pd.notna(dfr[col])
-            # if all non-null values are in the categories, then set as categorical:
-            if dfr[col][not_na].isin(expected_categorical.categories).all():
-                dfr[col] = dfr[col].astype(expected_categorical)
-                dtype_ok = True
-        elif dtype_ok in (bool, int):
-            try:
-                dfr[col] = dfr[col].astype(dtype_ok)
-                dtype_ok = True
-            except Exception:
-                dtype_ok = False
+            if expected_categorical:
+                not_na = pd.notna(dfr[col])
+                # if all non-null values are in the categories, then set as categorical:
+                if dfr[col][not_na].isin(expected_categorical.categories).all():
+                    dfr[col] = dfr[col].astype(expected_categorical)
+                else:
+                    dtype_ok = False
+            elif do_type_cast:
+                try:
+                    dtyp = ColumnDtype[expected_dtype_name].value[0]
+                    dfr[col] = dfr[col].astype(dtyp)
+                except Exception:
+                    dtype_ok = False
 
         if not dtype_ok:
             invalid_columns.append(col)
