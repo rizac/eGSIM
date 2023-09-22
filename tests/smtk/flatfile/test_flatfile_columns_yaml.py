@@ -99,7 +99,7 @@ class missingarg:
 
 def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
                           alias:set[str, ...],
-                          dtype:Union[str, pd.CategoricalDtype]=missingarg,
+                          dtype:Union[ColumnDtype, pd.CategoricalDtype]=None,
                           default:Any=missingarg,
                           bounds:dict[str, Any]=missingarg,
                           chelp:str = missingarg
@@ -124,36 +124,24 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
     default_is_given = default is not missingarg
 
     # check dtype null and return in case:
-    if dtype is missingarg:
+    if dtype is None:
         if bounds_are_given or default_is_given:
             raise ValueError(f"{prefix}  with `dtype` null or missing, "
                              f"you cannot supply `default` and `bounds`")
         return
 
     # handle categorical data:
-    if isinstance(dtype, (list, tuple, pd.CategoricalDtype)):  # categorical data type
-        if not isinstance(dtype, pd.CategoricalDtype):
-            pd.CategoricalDtype(dtype)  # check it's not raising
-        else:
-            dtype = dtype.categories.tolist()
-        if not all(any(isinstance(_, d.value) for d in ColumnDtype) for _ in dtype):
+    if isinstance(dtype, pd.CategoricalDtype):  # categorical data type
+        if ColumnDtype.of(dtype) is None:
             raise ValueError(f"{prefix} invalid data type(s) in categorical data")
-        if len(set(type(_) for _ in dtype)) != 1:
-            raise ValueError(f"{prefix}  categorical values must all be of the same "
-                             f"type, found: {set(type(_) for _ in dtype)}")
         if bounds_are_given:
             raise ValueError(f"{prefix} bounds cannot be provided with "
                              f"categorical data type")
-        if default_is_given and default not in dtype:
-            raise ValueError(f"{prefix} default is not in the list of possible values")
-        pd.CategoricalDtype(dtype)  # check it's not raising
+        if default_is_given:
+            ColumnDtype.cast(default, dtype)  # raise if not in categories
         return
 
-    # handle non-categorical data with a base dtype:
-    try:
-        py_dtype = ColumnDtype[dtype].value[0]
-    except KeyError:
-        raise ValueError(f"{prefix} invalid data type: {dtype}")
+    assert isinstance(dtype, ColumnDtype)
 
     # check bounds:
     if bounds_are_given:
@@ -169,19 +157,16 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
         max_val = bounds.get("<", bounds.get("<=", None))
         min_val = bounds.get(">", bounds.get(">=", None))
         for val in [max_val, min_val]:
-            if val is None:
-                pass
-            elif not isinstance(val, py_dtype):
-                raise ValueError(f"{prefix} bound {str(val)} must be of "
-                                 f"type {dtype}")
+            if val is not None:
+                ColumnDtype.cast(val, dtype)
         if max_val is not None and min_val is not None and max_val <= min_val:
             raise ValueError(f'{prefix} min. bound must be lower than '
                              f'max. bound')
 
     # check default value:
     if default_is_given:
-        if not isinstance(default, py_dtype):
-            raise ValueError(f"default must be of type {dtype}")
+        # this should already been done but for dafety:
+        ColumnDtype.cast(default, dtype)
 
 
 def check_with_openquake(rupture_params: dict[str, set[str]],
