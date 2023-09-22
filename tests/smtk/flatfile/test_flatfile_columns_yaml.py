@@ -13,7 +13,6 @@ import numpy as np
 
 from egsim.smtk import get_gsim_names, get_rupture_params_required_by, \
     get_sites_params_required_by, get_distances_required_by
-from egsim.smtk.flatfile import cast_to_dtype
 from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype,
                                          _extract_from_columns,
                                          _ff_metadata_path)

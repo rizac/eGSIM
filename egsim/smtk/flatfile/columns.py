@@ -41,7 +41,7 @@ class ColumnDtype(StrEnum):
     def __new__(cls, value, *classes:type):
         """Constructs a new ColumnDtype member"""
         obj = str.__new__(cls, value)
-        obj._value_ = classes
+        obj._value_ = tuple(classes)
         return obj
 
     # each member below must be mapped to the numpy name (see `numpy.sctypeDict.keys()`
@@ -84,67 +84,21 @@ class ColumnDtype(StrEnum):
             if not isinstance(obj, type):
                 obj = type(obj)
             for c_dtype in cls:
-                if issubclass(obj, c_dtype.value):
+                if issubclass(obj, c_dtype.value):  # noqa
                     # bool is a subclass of int in Python, so:
                     if c_dtype == ColumnDtype.int and \
                             issubclass(obj, ColumnDtype.bool.value):
                         return ColumnDtype.bool
-                    return c_dtype
+                    return c_dtype  # noqa
         return None
 
     def __repr__(self):
         # fix error in repr(self) expecting value to be a string
         return self.__str__()
 
-
-
-
-def to_pandas_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]) \
-        -> Union[ColumnDtype, pd.CategoricalDtype]:
-    """Return a value from the given argument that is suitable to be used as data type in
-    pandas, i.e., either a `ColumnDtype` (str-like enum) or a pandas `CategoricalDtype`
-    """
-    try:
-        if isinstance(dtype, ColumnDtype):
-            return dtype
-        if isinstance(dtype, str):
-            for val in ColumnDtype:
-                if val == dtype or val.name == dtype:
-                    return val
-        if isinstance(dtype, (list, tuple)):
-            dtype = pd.CategoricalDtype(dtype)
-        if isinstance(dtype, pd.CategoricalDtype):
-            # check that the categories are all of the same supported data type:
-            if ColumnDtype.of(dtype) is not None:
-                return dtype
-    except (KeyError, ValueError, TypeError):
-        pass
-    raise ValueError(f'Invalid data type: {str(dtype)}')
-
-
-def cast_to_dtype(val: Any, pd_dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
-    """cast `val` to the given pandas dtype, raise ValueError if unsuccessful
-
-    :param val: any Python object
-    :param pd_dtype: the result of `to_pandas_dtype: either a `ColumnDtype` or
-        pandas `CategoricalDtype` object
-    """
-    if pd_dtype is None:
-        raise ValueError(f'Invalid dtype: {str(pd_dtype)}')
-    if isinstance(pd_dtype, pd.CategoricalDtype):
-        if val in pd_dtype.categories:
-            return val
-        dtype_name = 'categorical'
-    else:
-        actual_dtype = ColumnDtype.of(val)
-        if actual_dtype == pd_dtype:
-            return val
-        if pd_dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
-            return float(val)
-        elif pd_dtype == ColumnDtype.datetime and isinstance(val, date):
-            return datetime(val.year, val.month, val.day)
-        dtype_name = pd_dtype.name
-    raise ValueError(f'Invalid value for type {dtype_name}: {str(val)}')
+    @property
+    def value(self) -> tuple[type]:  # just for better annotations or the return type
+        return super().value  # noqa
 
 
 def get_rupture_params() -> set[str]:
@@ -181,90 +135,38 @@ def get_all_names_of(column) -> set[str]:
     return _alias.get(column, set())
 
 
+_dtype: dict[str, Union[ColumnDtype, pd.CategoricalDtype]] = None  # noqa
+_default: dict[str, Any] = None  # noqa
+
+
 def get_dtypes_and_defaults() -> \
         tuple[dict[str, Union[ColumnDtype, pd.CategoricalDtype]], dict[str, Any]]:
     """Return the column data types and defaults. Dict keys are all columns names
      (including aliases) mapped to their data type or default. Columns with no data
      type or default are not present.
     """
-    _dtype, _default = {}, {}
-    _extract_from_columns(load_from_yaml(), dtype=_dtype, default=_default)
+    global _dtype, _default
+    if _dtype is None or _default is None:
+        _dtype, _default = {}, {}
+        _extract_from_columns(load_from_yaml(), dtype=_dtype, default=_default)
+        _dtype, _default = check_dtypes_and_defaults(_dtype, _default)
     return _dtype, _default
 
 
-class InvalidColumn(Exception):
-    """
-    General flatfile column(s) error. See subclasses for details
-    """
-    def __init__(self, *names, sep=', ', plural_suffix='s'):
-        super().__init__(*names)
-        self._sep = sep
-        self._plural_suffix = plural_suffix
+def check_dtypes_and_defaults(
+        dtype: dict[str, Union[str, list, tuple, pd.CategoricalDtype, ColumnDtype]],
+        defaults: dict[str, Any]) \
+        -> tuple[dict[str, Union[pd.CategoricalDtype, ColumnDtype]], dict[str, Any]]:
 
-    @property
-    def names(self):
-        """return the names (usually column names) raising this Exception
-        and passed in `__init__`"""
-        return [repr(_) for _ in self.args]
+    for col, col_dtype in dtype.items():
+        dtype[col] = _cast_dtype(col_dtype)
+        if col in defaults:
+            defaults[col] = _cast_value(defaults[col], dtype[col])
 
-    def __str__(self):
-        """Make `str(self)` more clear"""
-        # get prefix (e.g. 'Missing column(s)'):
-        prefix = self.__class__.__name__
-        # replace upper cases with space + lower case letter
-        prefix = re.sub("([A-Z])", " \\1", prefix).strip().capitalize()
-        names = self.names
-        if len(names) != 1:
-            prefix += self._plural_suffix
-        # return full string:
-        return f"{prefix} {self._sep.join(names)}"
-
-    def __repr__(self):
-        return self.__str__()
-
-
-class MissingColumn(InvalidColumn, AttributeError, KeyError):
-    """MissingColumnError. It inherits also from AttributeError and
-    KeyError to be compliant with pandas and OpenQuake"""
-
-    @property
-    def names(self):
-        """return the names with their alias(es), if any"""
-        _names = []
-        for name in self.args:
-            sorted_names = self.get_all_names_of(name)
-            suffix_str = repr(sorted_names[0])
-            if len(sorted_names) > 1:
-                suffix_str += f" (or {', '.join(repr(_) for _ in sorted_names[1:])})"
-            _names.append(suffix_str)
-        return _names
-
-    @classmethod
-    def get_all_names_of(cls, col_name) -> list[str]:
-        """Return a list of all column names of the argument, with the first element
-        being the flatfile primary name. Returns `[col_name]` if the argument does not
-        denote any flatfile column"""
-        names = get_all_names_of(col_name)
-        if len(names) <= 1:
-            return [col_name]
-        global _columns  # not needed, just as reminder
-        return [n for n in names if n in _columns] + \
-               [n for n in names if n not in _columns]
-
-
-class ConflictingColumns(InvalidColumn):
-
-    def __init__(self, name1, name2, *other_names):
-        InvalidColumn.__init__(self, name1, name2, *other_names,
-                               sep=" vs. ", plural_suffix='')
-
-
-class InvalidDataInColumn(InvalidColumn, ValueError, TypeError):
-    pass
-
-
-class InvalidColumnName(InvalidColumn):
-    pass
+    if set(defaults) - set(dtype):
+        raise ValueError('Invalid defaults for columns without an explicit '
+                         f'dtype set: {set(defaults) - set(dtype)}')
+    return dtype, defaults
 
 
 # YAML file path:
@@ -341,10 +243,6 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
         else:
             aliases = set(aliases)
         aliases.add(c_name)
-        pd_dtype = None
-        if ((dtype is not None or default is not None or bounds is not None)
-                and 'dtype' in props):
-            pd_dtype = to_pandas_dtype(props['dtype'])
         for name in aliases:
             if check_type and 'type' in props:
                 ctype = ColumnType[props['type']]
@@ -358,15 +256,140 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
                     imts.add(name)
             if alias is not None:
                 alias[name] = aliases
-            if dtype is not None and pd_dtype is not None:
-                dtype[name] = pd_dtype
+            if dtype is not None and 'dtype' in props:
+                dtype[name] = props['dtype']
             if default is not None and 'default' in props:
-                default[name] = cast_to_dtype(props['default'], pd_dtype)
+                default[name] = props['default']
             if bounds is not None:
-                _bounds = {k: cast_to_dtype(props[k], pd_dtype)
+                _bounds = {k: props[k]
                            for k in ["<", "<=", ">", ">="]
                            if k in props}
                 if _bounds:
                     bounds[name] = _bounds
             if help is not None and props.get('help', ''):
                 help[name] = props['help']
+
+
+def _cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]) \
+        -> Union[ColumnDtype, pd.CategoricalDtype]:
+    """Return a value from the given argument that is suitable to be used as data type in
+    pandas, i.e., either a `ColumnDtype` (str-like enum) or a pandas `CategoricalDtype`
+    """
+    try:
+        if isinstance(dtype, ColumnDtype):
+            return dtype
+        if isinstance(dtype, str):
+            for val in ColumnDtype:
+                if val == dtype or val.name == dtype:  # noqa
+                    return val  # noqa
+        if isinstance(dtype, (list, tuple)):
+            dtype = pd.CategoricalDtype(dtype)
+        if isinstance(dtype, pd.CategoricalDtype):
+            # check that the categories are all of the same supported data type:
+            if ColumnDtype.of(dtype) is not None:
+                return dtype
+    except (KeyError, ValueError, TypeError):
+        pass
+    raise ValueError(f'Invalid data type: {str(dtype)}')
+
+
+def _cast_value(val: Any, pd_dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
+    """cast `val` to the given pandas dtype, raise ValueError if unsuccessful
+
+    :param val: any Python object
+    :param pd_dtype: the result of `to_pandas_dtype: either a `ColumnDtype` or
+        pandas `CategoricalDtype` object
+    """
+    if pd_dtype is None:
+        raise ValueError(f'Invalid dtype: {str(pd_dtype)}')
+    if isinstance(pd_dtype, pd.CategoricalDtype):
+        if val in pd_dtype.categories:
+            return val
+        dtype_name = 'categorical'
+    else:
+        actual_dtype = ColumnDtype.of(val)
+        if actual_dtype == pd_dtype:
+            return val
+        if pd_dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
+            return float(val)
+        elif pd_dtype == ColumnDtype.datetime and isinstance(val, date):
+            return datetime(val.year, val.month, val.day)
+        dtype_name = pd_dtype.name
+    raise ValueError(f'Invalid value for type {dtype_name}: {str(val)}')
+
+
+# Exceptions:
+
+class InvalidColumn(Exception):
+    """
+    General flatfile column(s) error. See subclasses for details
+    """
+    def __init__(self, *names, sep=', ', plural_suffix='s'):
+        super().__init__(*names)
+        self._sep = sep
+        self._plural_suffix = plural_suffix
+
+    @property
+    def names(self):
+        """return the names (usually column names) raising this Exception
+        and passed in `__init__`"""
+        return [repr(_) for _ in self.args]
+
+    def __str__(self):
+        """Make `str(self)` more clear"""
+        # get prefix (e.g. 'Missing column(s)'):
+        prefix = self.__class__.__name__
+        # replace upper cases with space + lower case letter
+        prefix = re.sub("([A-Z])", " \\1", prefix).strip().capitalize()
+        names = self.names
+        if len(names) != 1:
+            prefix += self._plural_suffix
+        # return full string:
+        return f"{prefix} {self._sep.join(names)}"
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class MissingColumn(InvalidColumn, AttributeError, KeyError):
+    """MissingColumnError. It inherits also from AttributeError and
+    KeyError to be compliant with pandas and OpenQuake"""
+
+    @property
+    def names(self):
+        """return the names with their alias(es), if any"""
+        _names = []
+        for name in self.args:
+            sorted_names = self.get_all_names_of(name)
+            suffix_str = repr(sorted_names[0])
+            if len(sorted_names) > 1:
+                suffix_str += f" (or {', '.join(repr(_) for _ in sorted_names[1:])})"
+            _names.append(suffix_str)
+        return _names
+
+    @classmethod
+    def get_all_names_of(cls, col_name) -> list[str]:
+        """Return a list of all column names of the argument, with the first element
+        being the flatfile primary name. Returns `[col_name]` if the argument does not
+        denote any flatfile column"""
+        names = get_all_names_of(col_name)
+        if len(names) <= 1:
+            return [col_name]
+        global _columns  # not needed, just as reminder
+        return [n for n in names if n in _columns] + \
+               [n for n in names if n not in _columns]
+
+
+class ConflictingColumns(InvalidColumn):
+
+    def __init__(self, name1, name2, *other_names):
+        InvalidColumn.__init__(self, name1, name2, *other_names,
+                               sep=" vs. ", plural_suffix='')
+
+
+class InvalidDataInColumn(InvalidColumn, ValueError, TypeError):
+    pass
+
+
+class InvalidColumnName(InvalidColumn):
+    pass
