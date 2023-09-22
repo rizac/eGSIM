@@ -3,10 +3,13 @@ Created on 16 Feb 2018
 
 @author: riccardo
 """
+from datetime import datetime
+
 from typing import Any, Union
 
 import yaml
 import pandas as pd
+import numpy as np
 
 from egsim.smtk import get_gsim_names, get_rupture_params_required_by, \
     get_sites_params_required_by, get_distances_required_by
@@ -214,3 +217,34 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
     for ix in imts:
         x = getattr(imt, ix)
         assert callable(x)
+
+
+def test_Column_dtype():
+    vals = {
+        datetime.utcnow(): ColumnDtype.datetime,
+        2: ColumnDtype.int,
+        1.2: ColumnDtype.float,
+        True: ColumnDtype.bool,
+        'a': ColumnDtype.str
+    }
+    for val, ctype in vals.items():
+        assert ColumnDtype.of(val) == ctype
+        assert ColumnDtype.of(type(val)) == ctype
+        assert ColumnDtype.of(pd.CategoricalDtype([val])) == ctype
+
+    d = pd.DataFrame({
+        'int': [4, 5],
+        'float': [1.1, np.nan],
+        'datetime': [datetime.utcnow(), datetime.utcnow()],
+        'bool': [True, False],
+        'str': [None, "x"]
+    })
+    for c in d.columns:
+        dtyp = d[c].dtype
+        assert ColumnDtype.of(dtyp) == ColumnDtype[c]
+        assert ColumnDtype.of(d[c]) == ColumnDtype[c]
+        assert ColumnDtype.of(d[c].values) == ColumnDtype[c]
+        assert all(ColumnDtype.of(_) == ColumnDtype[c] for _ in d[c] if _ is not None)
+        assert all(ColumnDtype.of(_) == ColumnDtype[c] for _ in d[c].values if _ is not None)
+
+    assert ColumnDtype.of(None) is None

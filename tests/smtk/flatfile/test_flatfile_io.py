@@ -258,15 +258,3 @@ def test_query():
             prev_expr += f' & ({query_expr})'
             new_d2 = query(d, prev_expr)
             pd.testing.assert_frame_equal(new_d, new_d2)
-
-
-def test_read_flatfiles():
-    path = ('/Users/rizac/work/gfz/projects/sources/python/egsim/tests/data/'
-            'tk_20230206_flatfile_geometric_mean.csv')
-    dfr1 = read_flatfile2(path)
-    dfr2 = read_flatfile(path)
-    pd.testing.assert_frame_equal(dfr1, dfr2, check_categorical=False)
-    for c in set(dfr1.columns) | set(dfr2.columns):
-        if str(dfr1[c].dtype) == 'category':
-            assert (dfr1[c].astype(str) == dfr2[c].astype(str)).all()
-            assert set(dfr1[c].cat.categories) == set(dfr2[c].cat.categories)

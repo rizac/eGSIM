@@ -47,6 +47,44 @@ class ColumnDtype(Enum):
     datetime = datetime, np.datetime64
     str = str, np.str_, np.object_
 
+    @property
+    def type_str(self):
+        """Return the Python class denoting this enum item. The value can be used
+        in numpy `astype` functions to cast values"""
+        return 'datetime64' if self == ColumnDtype.datetime else self.name
+
+    @classmethod
+    def of(cls, obj: Union[object, type, np.dtype, pd.CategoricalDtype]):
+        """Return the ColumnDtype of the given argument
+
+        :param obj: a Python object( e.g. 4.5), a Python class (`float`),
+            a numpy array or pandas Series, a numpy dtype
+            (e.g as returned from a pandas dataframe `dataframe[column].dtype`)
+            or a pandas CategoricalDtype. In this last case, return the ColumnDtype
+            of all categories, if they are of the same type. E.g.:
+            `ColumnDtype.of(pd.CategoricalDtype([1,2])  = ColumnDtype.int`
+            If a ColumndDtype can not be inferred, return None
+        """
+        if isinstance(obj, pd.CategoricalDtype):
+            dtypes = {cls.of(val) for val in obj.categories}
+            if len(dtypes) == 1:
+                return next(iter(dtypes))
+        else:
+            if isinstance(obj, (pd.Series, np.ndarray)):
+                obj = obj.dtype  # will fall back in the next "if"
+            if isinstance(obj, np.dtype):
+                obj = obj.type  # will NOT fall back into the next "if"
+            if not isinstance(obj, type):
+                obj = type(obj)
+            for c_dtype in cls:
+                if issubclass(obj, c_dtype.value):
+                    # bool is a subclass of int in Python, so:
+                    if c_dtype == ColumnDtype.int and \
+                            issubclass(obj, ColumnDtype.bool.value):
+                        return ColumnDtype.bool
+                    return c_dtype
+        return None
+
 
 def get_rupture_params() -> set[str]:
     """Return a set of strings with all column names (including aliases)
