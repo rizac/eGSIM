@@ -450,12 +450,14 @@ def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
     try:
         return pd.read_csv(filepath_or_buffer, **kwargs)
     except ValueError as exc:
-        # dtypes that raise are bool, int and float. But boolean dtypes are not
-        # explicitly passed (see above), so we check only ints and floats:
-        dtypes2check = {ColumnDtype.float, ColumnDtype.int}
-        # now re-load the csv with single columns, to check those which raised
-        # (maybe profile if time-consuming whilst keeping an eye on providing good info)
-        cols2check = [c for c, v in dtype.items() if v in dtypes2check]
+        # Provide only the invalid columns. to do so, we call read_csv by reading
+        # every column singularly. To narrow down the choice of suspects,
+        # dtypes that might raise are bool, int and float, but bool dtypes are not
+        # explicitly passed and int dtypes are converted to float (see above). So
+        # just check for floats. Note: get dtypes from kwargs['dtype'] because we
+        # want to check the real dtype passed, all given as numpy str:
+        cols2check = [c for c, v in kwargs['dtype'].items()
+                      if v == ColumnDtype.float.type_str]
         invalid_columns = []
         for c in cols2check:
             try:
@@ -535,7 +537,7 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
                 is_na = pd.isna(dfr[col])
                 dfr.loc[is_na, col] = defaults[col]
 
-            if expected_categorical:
+            if expected_categorical is not None:
                 not_na = pd.notna(dfr[col])
                 # if all non-null values are in the categories, then set as categorical:
                 if dfr[col][not_na].isin(expected_categorical.categories).all():
