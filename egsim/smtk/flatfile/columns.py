@@ -11,7 +11,7 @@ from os.path import join, dirname
 
 from pandas.core.arrays import PandasArray
 from pandas.core.dtypes.base import ExtensionDtype
-from typing import Union, Any
+from typing import Union, Any, Iterable
 
 # try to speed up yaml.safe_load (https://pyyaml.org/wiki/PyYAMLDocumentation):
 from yaml import load as yaml_load
@@ -60,39 +60,46 @@ class ColumnDtype(str, ReprEnum):
     str = "string", str, np.str_  # , np.object_
 
     @classmethod
+    def of_all(cls, items: Iterable[Any]) -> Union[ColumnDtype, None]:
+        """Return the ColumnDtype of all given items, or None if the items
+        ColumnDType is not the same for all items
+
+        :param items: a Python iterable / pandas Series / numpy array. You can
+            also pass pandas a pandas `CategoricalDtype` `C` via `C.cetegories`.
+            If they are of the same type. E.g.:
+            `ColumnDtype.of(pd.CategoricalDtype([1,2])  = ColumnDtype.int`
+            If a ColumndDtype can not be inferred, return None
+        """
+        dtypes = {cls.of(val) for val in items}
+        if len(dtypes) == 1:
+            return next(iter(dtypes))
+        return None
+
+    @classmethod
     def of(cls, obj: Union[int, float, datetime, bool, str,
+                           np.array, pd.Series, PandasArray,
                            type[int, float, datetime, bool, str],
-                           np.array, np.dtype,
-                           pd.Series, pd.CategoricalDtype]) \
-            -> Union[ColumnDtype, None]:
+                           np.dtype, ExtensionDtype]) -> Union[ColumnDtype, None]:
         """Return the ColumnDtype of the given argument
 
         :param obj: a Python object(e.g. 4.5), a Python class (`float`),
             a numpy array, pandas Series / Array, a numpy dtype, pandas ExtensionDtype
-            (e.g., as returned from a pandas dataframe `dataframe[column].dtype`)
-            or a pandas CategoricalDtype. In this last case, return the ColumnDtype
-            of all categories, if they are of the same type. E.g.:
-            `ColumnDtype.of(pd.CategoricalDtype([1,2])  = ColumnDtype.int`
+            (e.g., as returned from a pandas dataframe `dataframe[column].dtype`).
             If a ColumndDtype can not be inferred, return None
         """
-        if isinstance(obj, pd.CategoricalDtype):
-            dtypes = {cls.of(val) for val in obj.categories}
-            if len(dtypes) == 1:
-                return next(iter(dtypes))
-        else:
-            if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
-                obj = obj.dtype  # will fall back in the next "if"
-            if isinstance(obj, (np.dtype, ExtensionDtype)):
-                obj = obj.type  # will NOT fall back into the next "if"
-            if not isinstance(obj, type):
-                obj = type(obj)
-            for c_dtype in cls:
-                if issubclass(obj, c_dtype.py_types):
-                    # bool is a subclass of int in Python, so:
-                    if c_dtype == ColumnDtype.int and \
-                            issubclass(obj, ColumnDtype.bool.py_types):
-                        return ColumnDtype.bool
-                    return c_dtype
+        if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
+            obj = obj.dtype  # will fall back in the next "if"
+        if isinstance(obj, (np.dtype, ExtensionDtype)):
+            obj = obj.type  # will NOT fall back into the next "if"
+        if not isinstance(obj, type):
+            obj = type(obj)
+        for c_dtype in cls:
+            if issubclass(obj, c_dtype.py_types):
+                # bool is a subclass of int in Python, so:
+                if c_dtype == ColumnDtype.int and \
+                        issubclass(obj, ColumnDtype.bool.py_types):
+                    return ColumnDtype.bool
+                return c_dtype
         return None
 
 
@@ -293,7 +300,7 @@ def _cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]
             dtype = pd.CategoricalDtype(dtype)
         if isinstance(dtype, pd.CategoricalDtype):
             # check that the categories are all of the same supported data type:
-            if ColumnDtype.of(dtype) is not None:
+            if ColumnDtype.of_all(dtype.categories) is not None:
                 return dtype
     except (KeyError, ValueError, TypeError):
         pass

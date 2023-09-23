@@ -148,7 +148,7 @@ def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
             if col_dtype is None:
                 continue
             if isinstance(col_dtype, pd.CategoricalDtype):
-                col_dtype = ColumnDtype.of(col_dtype)
+                col_dtype = ColumnDtype.of_all(col_dtype.categories)
 
             if col_dtype == ColumnDtype.bool:
                 # let pandas handle booleans, so that we can have NaN.
@@ -216,7 +216,7 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
         expected_categorical = None
         if isinstance(expected_dtype, pd.CategoricalDtype):
             expected_categorical = expected_dtype
-            expected_dtype = ColumnDtype.of(expected_dtype)
+            expected_dtype = ColumnDtype.of_all(expected_dtype.categories)
 
         actual_dtype: ColumnDtype = ColumnDtype.of(dfr[col])  # can NOT be categorical
 
