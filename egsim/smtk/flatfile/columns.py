@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, date
-from enum import Enum, StrEnum
+from enum import Enum, StrEnum, ReprEnum
 from os.path import join, dirname
 
 from pandas.core.arrays import PandasArray
@@ -33,14 +33,15 @@ class ColumnType(Enum):
     intensity = 'Intensity measure'
 
 
-class ColumnDtype(StrEnum):
-    """Enum denoting the supported data types for flatfile columns:
-    each member behaves exactly as a string compatible to pandas `astype`,
-    e.g.: `[series|array].astype(ColumnDtype.datetime)`
+class ColumnDtype(str, ReprEnum):
+    """Enum where members are also strings representing supported data types for
+    flatfile columns. E.g.: `pd_series.astype(ColumnDtype.datetime)`. Use the class
+    method `ColumnDtype.of` to get the ColumnDType corresponding to any given Python
+    / numpy/ pandas object or type
     """
     def __new__(cls, value, *py_types:type):
         """Constructs a new ColumnDtype member"""
-        # copied from StrEnum (calling StrEnum.__new__ raises)
+        # subclassing StrEnum does not work, so we copy from StreEnum.__new__:
         member = str.__new__(cls, value)
         member._value_ = value
         member.py_types = tuple(py_types)
@@ -67,7 +68,7 @@ class ColumnDtype(StrEnum):
         """Return the ColumnDtype of the given argument
 
         :param obj: a Python object(e.g. 4.5), a Python class (`float`),
-            a numpy array or pandas Series, a numpy dtype
+            a numpy array, pandas Series / Array, a numpy dtype, pandas ExtensionDtype
             (e.g., as returned from a pandas dataframe `dataframe[column].dtype`)
             or a pandas CategoricalDtype. In this last case, return the ColumnDtype
             of all categories, if they are of the same type. E.g.:
