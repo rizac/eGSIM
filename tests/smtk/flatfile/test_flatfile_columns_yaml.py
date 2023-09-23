@@ -15,7 +15,7 @@ from egsim.smtk import get_gsim_names, get_rupture_params_required_by, \
     get_sites_params_required_by, get_distances_required_by
 from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype,
                                          _extract_from_columns,
-                                         _ff_metadata_path, _cast_value)
+                                         _ff_metadata_path, cast_value)
 
 
 def test_flatfile_extract_from_yaml():
@@ -139,7 +139,7 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
             raise ValueError(f"{prefix} bounds cannot be provided with "
                              f"categorical data type")
         if default_is_given:
-            _cast_value(default, dtype)  # raise if not in categories
+            assert default is cast_value(default, dtype)  # raise if not in categories
         return
 
     assert isinstance(dtype, ColumnDtype)
@@ -159,15 +159,14 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
         min_val = bounds.get(">", bounds.get(">=", None))
         for val in [max_val, min_val]:
             if val is not None:
-                _cast_value(val, dtype)
+                assert val is cast_value(val, dtype)
         if max_val is not None and min_val is not None and max_val <= min_val:
             raise ValueError(f'{prefix} min. bound must be lower than '
                              f'max. bound')
 
     # check default value:
     if default_is_given:
-        # this should already been done but for dafety:
-        _cast_value(default, dtype)
+        assert default is cast_value(default, dtype)
 
 
 def check_with_openquake(rupture_params: dict[str, set[str]],

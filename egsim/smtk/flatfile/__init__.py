@@ -19,7 +19,7 @@ from .columns import (ColumnDtype, get_rupture_params,
                       get_dtypes_and_defaults, get_all_names_of,
                       get_intensity_measures, MissingColumn,
                       InvalidDataInColumn, InvalidColumnName, ConflictingColumns,
-                      check_dtypes_defaults_and_bounds)
+                      cast_dtype, cast_value)
 from .. import get_SA_period
 from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
@@ -85,8 +85,12 @@ def read_csv(filepath_or_buffer: Union[str, IO],
         dtype = {}
     if not defaults:
         defaults = {}
+    # hidden arg defaulting True: check and cast dtype and defaults:
     if kwargs.pop('_check_dtypes_and_defaults', True):
-        dtype, defaults = check_dtypes_defaults_and_bounds(dtype, defaults)
+        for col, _dtype in dtype.items():
+            dtype[col] = cast_dtype(_dtype)
+            if col in defaults:
+                defaults[col] = cast_value(defaults[col], dtype[col])
     dfr = _read_csv(filepath_or_buffer, sep=sep, dtype=dtype, usecols=usecols, **kwargs)
     _adjust_dtypes_and_defaults(dfr, dtype, defaults)
     if not isinstance(dfr.index, pd.RangeIndex):
