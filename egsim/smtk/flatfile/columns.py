@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, date
-from enum import Enum, StrEnum, ReprEnum
+from enum import Enum, ReprEnum
 from os.path import join, dirname
 
 from pandas.core.arrays import PandasArray
@@ -223,9 +223,6 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
     """
     check_type = rupture_params is not None or sites_params is not None \
                  or distances is not None or imts is not None
-    get_dtype = dtype is not None or default is not None or bounds is not None
-    if get_dtype and dtype is None:
-        dtype = {}
     for c_name, props in columns.items():
         aliases = props.get('alias', [])
         if isinstance(aliases, str):
@@ -233,6 +230,7 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
         else:
             aliases = set(aliases)
         aliases.add(c_name)
+        _dtype = None  # cache value, see below
         for name in aliases:
             if check_type and 'type' in props:
                 ctype = ColumnType[props['type']]
@@ -247,44 +245,22 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
             if alias is not None:
                 alias[name] = aliases
             if dtype is not None and 'dtype' in props:
-                dtype[name] = props['dtype']
+                dtype[name] = _dtype = cast_dtype(props['dtype'])
             if default is not None and 'default' in props:
-                default[name] = props['default']
+                default[name] = props['default'] if dtype is None else \
+                    cast_value(props['default'], _dtype)
             if bounds is not None:
-                _bounds = {k: props[k]
-                           for k in ["<", "<=", ">", ">="]
-                           if k in props}
-                if _bounds:
-                    bounds[name] = _bounds
+                keys = [k for k in ["<", "<=", ">", ">="] if k in props]
+                if keys:
+                    bounds[name] = {}
+                    for k in keys:
+                        bounds[name][k] = props[k] if _dtype is None else \
+                            cast_value(props[k], _dtype)
             if help is not None and props.get('help', ''):
                 help[name] = props['help']
 
-        if dtype is not None and (default is not None or bounds is not None):
-            check_dtypes_defaults_and_bounds(dtype, default, bounds)
 
-
-def check_dtypes_defaults_and_bounds(
-        dtype: dict[str, Union[str, list, tuple, pd.CategoricalDtype, ColumnDtype]],
-        defaults: dict[str, Any] = None,
-        bounds: dict[str, dict[str, Any]] = None) \
-        -> tuple[dict[str, Union[pd.CategoricalDtype, ColumnDtype]], dict[str, Any]]:
-
-    for col, col_dtype in dtype.items():
-        dtype[col] = _cast_dtype(col_dtype)
-
-    if defaults:
-        for col in defaults:
-            defaults[col] = _cast_value(defaults[col], dtype[col])
-
-    if bounds:
-        for col, col_bounds in bounds.items():
-            for key, val in col_bounds.items():
-                col_bounds[key] = _cast_value(val, dtype[col])
-
-    return dtype, defaults
-
-
-def _cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]) \
+def cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]) \
         -> Union[ColumnDtype, pd.CategoricalDtype]:
     """Return a value from the given argument that is suitable to be used as data type in
     pandas, i.e., either a `ColumnDtype` (str-like enum) or a pandas `CategoricalDtype`
@@ -308,7 +284,7 @@ def _cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]
     raise ValueError(f'Invalid data type: {str(dtype)}')
 
 
-def _cast_value(val: Any, pd_dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
+def cast_value(val: Any, pd_dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
     """cast `val` to the given pandas dtype, raise ValueError if unsuccessful
 
     :param val: any Python object
