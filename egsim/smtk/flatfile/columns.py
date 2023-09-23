@@ -293,9 +293,10 @@ def _cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]
         if isinstance(dtype, ColumnDtype):
             return dtype
         if isinstance(dtype, str):
-            for val in ColumnDtype:
-                if val == dtype or val.name == dtype:  # noqa
-                    return val  # noqa
+            try:
+                return ColumnDtype[dtype]  # try enum name (raise KeyError)
+            except KeyError:
+                return ColumnDtype(dtype)  # try enum value (raises ValueError)
         if isinstance(dtype, (list, tuple)):
             dtype = pd.CategoricalDtype(dtype)
         if isinstance(dtype, pd.CategoricalDtype):
