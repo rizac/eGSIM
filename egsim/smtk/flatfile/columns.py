@@ -38,11 +38,13 @@ class ColumnDtype(StrEnum):
     each member behaves exactly as a string compatible to pandas `astype`,
     e.g.: `[series|array].astype(ColumnDtype.datetime)`
     """
-    def __new__(cls, value, *classes:type):
+    def __new__(cls, value, *py_types:type):
         """Constructs a new ColumnDtype member"""
-        obj = str.__new__(cls, value)
-        obj._value_ = tuple(classes)
-        return obj
+        # copied from StrEnum (calling StrEnum.__new__ raises)
+        member = str.__new__(cls, value)
+        member._value_ = value
+        member.py_types = tuple(py_types)
+        return member
 
     # each member below must be mapped to the numpy name (see `numpy.sctypeDict.keys()`
     # for a list of supported names. Exception is 'string' that is pandas only) and
@@ -84,21 +86,14 @@ class ColumnDtype(StrEnum):
             if not isinstance(obj, type):
                 obj = type(obj)
             for c_dtype in cls:
-                if issubclass(obj, c_dtype.value):  # noqa
+                if issubclass(obj, c_dtype.py_types):
                     # bool is a subclass of int in Python, so:
                     if c_dtype == ColumnDtype.int and \
-                            issubclass(obj, ColumnDtype.bool.value):
+                            issubclass(obj, ColumnDtype.bool.py_types):
                         return ColumnDtype.bool
-                    return c_dtype  # noqa
+                    return c_dtype
         return None
 
-    def __repr__(self):
-        # fix error in repr(self) expecting value to be a string
-        return self.__str__()
-
-    @property
-    def value(self) -> tuple[type]:  # just for better annotations or the return type
-        return super().value  # noqa
 
 
 def get_rupture_params() -> set[str]:
