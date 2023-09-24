@@ -16,7 +16,7 @@ from django.test import SimpleTestCase  # https://stackoverflow.com/a/59764739
 from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile
 from egsim.smtk import convert_accel_units
-from egsim.smtk.residuals import column_label, c_labels
+from egsim.smtk.residuals import c_labels
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 

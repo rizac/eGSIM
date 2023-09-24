@@ -240,7 +240,7 @@ def _read_csv_finalize(dfr: pd.DataFrame,
         defaults = {}
     # check dtypes correctness (actual vs expected) and try to fix mismatching ones:
     for col in dfr.columns:
-        expected_dtype: ColumnDtype = dtype.get(col, None)
+        expected_dtype = dtype.get(col, None)  # ColumnDtype or pd.CategoricalDtype
         if expected_dtype is None:
             continue
         # is expected dtype a pandas CategoricalDtype?
@@ -260,7 +260,7 @@ def _read_csv_finalize(dfr: pd.DataFrame,
                 try:
                     not_na = pd.notna(dfr[col])
                     values = dfr[col][not_na]
-                    if (values == values.astype(int)).all():
+                    if (values == values.astype(int)).all():  # noqa
                         dtype_ok = True
                         do_type_cast = True
                 except Exception:  # noqa
@@ -404,75 +404,35 @@ def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
     return col_names
 
 
-def prepare_for_residuals(flatfile: pd.DataFrame,
-                          gsims: Iterable[GMPE], imts: Iterable[str]) -> pd.DataFrame:
+def setup_flatfile_for_residuals(flatfile: pd.DataFrame,
+                                 gsims: Iterable[GMPE],
+                                 imts: Iterable[str]) -> pd.DataFrame:
     """Return a new dataframe with all columns required to compute residuals
     from the given models (`gsim`) and intensity measures (`imts`) given with
     periods, when needed (e.g. "SA(0.2)")
     """
-    # concat all new dataframes in this list, then return a ne one from it:
-    new_dataframes = []
-    # prepare the flatfile for the required ground motion properties:
-    props_flatfile = pd.DataFrame(index=flatfile.index)
-    for prop in get_required_ground_motion_properties(gsims):
-        props_flatfile[prop] = \
-            get_ground_motion_property_values(flatfile, prop)
-    if not props_flatfile.empty:
-        new_dataframes.append(props_flatfile)
-    # validate imts:
-    imts = set(imts)
-    non_sa_imts = {_ for _ in imts if get_SA_period(_) is None}
-    sa_imts = imts - non_sa_imts
-    # check if all models are defined for the given imts"
-    required_imt_names = non_sa_imts | {'SA'} if sa_imts else non_sa_imts
+    # check first that all models are defined for the given imts:
+    required_imt_names = {'SA' if get_SA_period(_) is not None else _ for _ in imts}
     invalid_models = [f'"{m.__class__.__name__}"' for m in gsims
-                      if required_imt_names - get_imts_defined_for(m)]
+                     if required_imt_names - get_imts_defined_for(m)]
     if invalid_models:
         raise ValueError('Model(s) not defined for all given imt(s): '
                          f'", '.join(invalid_models))
-    # get supported imts but does not allow 'SA' alone to be valid:
-    if non_sa_imts:
-        # get the imts supported by this program, and raise if some unsupported IMT
-        # was requested:
-        supported_imts = get_intensity_measures() - {'SA'}
-        if non_sa_imts - supported_imts:
-            raise InvalidColumnName(*list(non_sa_imts - supported_imts))
-        # from the requested imts, raise if some are not in the flatfile:
-        if non_sa_imts - set(flatfile.columns):
-            raise MissingColumn(*list(non_sa_imts - set(flatfile.columns)))
-        # add non SA imts:
-        new_dataframes.append(flatfile[sorted(non_sa_imts)])
-    # prepare the flatfile for SA (create new columns by interpolation if necessary):
-    if sa_imts:
-        sa_dataframe = _prepare_for_sa(flatfile, sa_imts)
-        if not sa_dataframe.empty:
-            new_dataframes.append(sa_dataframe)
+    # concat all new dataframes in this list, then return a ne one from it:
+    new_dataframes = []
+    # prepare the flatfile for the required imts:
+    imts_flatfile = setup_flatfile_for_imts(flatfile, imts)
+    if not imts_flatfile.empty:
+        new_dataframes.append(imts_flatfile)
+    # prepare the flatfile for the required ground motion properties:
+    props_flatfile = setup_flatfile_for_gsims(flatfile, gsims)
+    if not props_flatfile.empty:
+        new_dataframes.append(props_flatfile)
+
     # return the new dataframe or an empty one:
     if not new_dataframes:
         return pd.DataFrame(columns=flatfile.columns)  # empty dataframe
     return pd.concat(new_dataframes, axis=1)
-
-
-
-def get_required_ground_motion_properties(gsims: Union[GMPE, Iterable[GMPE]]) \
-        -> set[str]:
-    """Return a Python set containing the required ground motion properties
-    (rupture or sites parameter, distance measure, all as `str`) for the given
-    ground motion models `gsims`
-
-    :param gsims a ground motion model (OpenQuake `GMPE`) or iterable of models
-        (e.g. list of `GMPE`s)
-    """
-    required = set()
-    if isinstance(gsims, GMPE):
-        gsims = [gsims]
-    # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
-    for gsim in gsims:
-        # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
-        required.update(gsim.REQUIRES_DISTANCES | {'rrup'})
-        required.update(gsim.REQUIRES_RUPTURE_PARAMETERS or [])
-        required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
-    return required
 
 
 def get_imts_defined_for(gsims: Union[GMPE, Iterable[GMPE]]) -> set[str]:
@@ -498,6 +458,72 @@ def get_imts_defined_for(gsims: Union[GMPE, Iterable[GMPE]]) -> set[str]:
     return required
 
 
+def setup_flatfile_for_imts(flatfile: pd.DataFrame, imts: Iterable[str]) -> pd.DataFrame:
+    """Return a new dataframe with all columns required to compute residuals
+    for the given intensity measures (`imts`) given with
+    periods, when needed (e.g. "SA(0.2)")
+    """
+    # concat all new dataframes in this list, then return a ne one from it:
+    new_dataframes = []
+    imts = set(imts)
+    non_sa_imts = {_ for _ in imts if get_SA_period(_) is None}
+    sa_imts = imts - non_sa_imts
+    # get supported imts but does not allow 'SA' alone to be valid:
+    if non_sa_imts:
+        # get the imts supported by this program, and raise if some unsupported IMT
+        # was requested:
+        supported_imts = get_intensity_measures() - {'SA'}
+        if non_sa_imts - supported_imts:
+            raise InvalidColumnName(*list(non_sa_imts - supported_imts))
+        # from the requested imts, raise if some are not in the flatfile:
+        if non_sa_imts - set(flatfile.columns):
+            raise MissingColumn(*list(non_sa_imts - set(flatfile.columns)))
+        # add non SA imts:
+        new_dataframes.append(flatfile[sorted(non_sa_imts)])
+    # prepare the flatfile for SA (create new columns by interpolation if necessary):
+    if sa_imts:
+        sa_dataframe = _prepare_for_sa(flatfile, sa_imts)
+        if not sa_dataframe.empty:
+            new_dataframes.append(sa_dataframe)
+    if not new_dataframes:
+        return pd.DataFrame(columns=flatfile.columns)  # empty dataframe
+    return pd.concat(new_dataframes, axis=1)
+
+
+def setup_flatfile_for_gsims(flatfile: pd.DataFrame,
+                             gsims: Iterable[GMPE]) -> pd.DataFrame:
+    """Return a new dataframe with all columns required to compute residuals
+    from the given models (`gsim`), i.e. all columns denoting ground motion
+    properties required by the passed models
+    """
+    props_flatfile = pd.DataFrame(index=flatfile.index)
+    for prop in get_required_ground_motion_properties(gsims):
+        props_flatfile[prop] = \
+            get_ground_motion_property_values(flatfile, prop)
+    return props_flatfile
+
+
+def get_required_ground_motion_properties(gsims: Union[GMPE, Iterable[GMPE]]) \
+        -> set[str]:
+    """Return a Python set containing the required ground motion properties
+    (rupture or sites parameter, distance measure, all as `str`) for the given
+    ground motion models `gsims`
+
+    :param gsims a ground motion model (OpenQuake `GMPE`) or iterable of models
+        (e.g. list of `GMPE`s)
+    """
+    required = set()
+    if isinstance(gsims, GMPE):
+        gsims = [gsims]
+    # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
+    for gsim in gsims:
+        # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
+        required.update(gsim.REQUIRES_DISTANCES | {'rrup'})
+        required.update(gsim.REQUIRES_RUPTURE_PARAMETERS or [])
+        required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
+    return required
+
+
 DEFAULT_MSR = PeerMSR()
 
 
@@ -507,7 +533,8 @@ def get_ground_motion_property_values(flatfile: pd.DataFrame,
     (rupture or sites parameter, distance measure) extracted from the given
     flatfile.
     The returned value might be a column of the flatfile or a new pandas Series
-    depending on missing-data replacement rules.
+    depending on missing-data replacement rules hardcoded in this function and
+    documented in the associated YAML file.
     If the column cannot be retrieved or created, this function
     raises :ref:`MissingColumn` error notifying the required missing column.
     """

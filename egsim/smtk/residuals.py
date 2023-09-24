@@ -18,8 +18,8 @@ from scipy.linalg import solve
 from openquake.hazardlib import imt, const
 
 from . import check_gsim_list, get_gsim_name, get_SA_period  #, convert_accel_units
-from .flatfile import EventContext, prepare_for_residuals, get_event_id_column_names, \
-    get_station_id_column_names
+from .flatfile import (EventContext, get_event_id_column_names,
+                       get_station_id_column_names, setup_flatfile_for_residuals)
 from .flatfile.columns import InvalidColumn
 
 
@@ -60,7 +60,7 @@ def get_residuals(gsims: Iterable[str], imts: Iterable[str],
     :return: the passed flatfile with all residuals computed columns added
     """
     gsims = check_gsim_list(gsims)
-    flatfile2 = prepare_for_residuals(flatfile, gsims.values(), imts)
+    flatfile2 = setup_flatfile_for_residuals(flatfile, gsims.values(), imts)
     # copy event columns (raises if columns not found):
     ev_cols = get_event_id_column_names(flatfile)
     flatfile2[ev_cols] = flatfile[ev_cols]
