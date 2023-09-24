@@ -46,12 +46,19 @@ missing_values = ("", "null", "NULL", "None",
 
 def read_csv(filepath_or_buffer: Union[str, IO],
              sep: str = None,
-             dtype: dict[str, Union[str, ColumnDtype, pd.CategoricalDtype]]  = None,
+             dtype: dict[str, Union[str, list, ColumnDtype, pd.CategoricalDtype]]  = None,
              defaults: dict[str, Any] = None,
              usecols: Union[list[str], Callable[[str], bool]] = None,
              **kwargs) -> pd.DataFrame:
     """
-    Read a flat file into pandas DataFrame from a given CSV file
+    Read a comma-separated values (csv) file into DataFrame, behaving as pandas
+    `read_csv` with some additional features:
+
+    - int and bool columns can support missing values, as long as a default
+      is explicitly set
+    - bool columns recognize 0, 1 and all case-insensitive forms of true and false
+    - categorical columns are allowed as long as the categories are all the
+      same type. Missing values are allowed, nvalid categories will raise
 
     :param filepath_or_buffer: str, path object or file-like object of the CSV
         formatted data. If string, compressed files are also supported
@@ -63,7 +70,7 @@ def read_csv(filepath_or_buffer: Union[str, IO],
         accepting a column name and returning True/False (keep/discard)
     :param dtype: dict of column names mapped to the data type. Columns not present
         in the flatfile will be ignored. Dtypes can be either 'int', 'bool', 'float',
-        'str', 'datetime', 'category'`, list, tuple, pandas `CategoricalDtype`:
+        'str', 'datetime', 'category'`, list, pandas `CategoricalDtype`:
         the last four data types are for data that can take only a limited amount of
         possible values and should be used mostly with string data as it might save
         a lot of memory. With "category", pandas will infer the categories from the
@@ -81,46 +88,61 @@ def read_csv(filepath_or_buffer: Union[str, IO],
 
     :return: pandas DataFrame representing a Flat file
     """
-    if not dtype:
-        dtype = {}
-    if not defaults:
-        defaults = {}
-    # hidden arg defaulting True: check and cast dtype and defaults:
-    if kwargs.pop('_check_dtypes_and_defaults', True):
+    # convert the file input to a stream (IOBase): if already a stream, do not close
+    # it at the end but restore the position with `seek`:
+    buf_pos = None
+    buf_detach = False
+    encoding = kwargs.pop('encoding', 'utf-8-sig')
+    if isinstance(filepath_or_buffer, IOBase):
+        if not isinstance(filepath_or_buffer, TextIOBase):
+            filepath_or_buffer = TextIOWrapper(filepath_or_buffer, encoding=encoding)
+            buf_detach = True
+        buf_pos = filepath_or_buffer.tell()
+    else:
+        filepath_or_buffer = open(filepath_or_buffer, 'rt', encoding=encoding)
+
+    check_dtypes_and_defaults = kwargs.pop('_check_dtypes_and_defaults', True)
+    if check_dtypes_and_defaults:
         for col, _dtype in dtype.items():
             dtype[col] = cast_dtype(_dtype)
-            if col in defaults:
-                defaults[col] = cast_value(defaults[col], dtype[col])
-    dfr = _read_csv(filepath_or_buffer, sep=sep, dtype=dtype, usecols=usecols, **kwargs)
-    _adjust_dtypes_and_defaults(dfr, dtype, defaults)
+
+    kwargs = _read_csv_prepare(filepath_or_buffer, sep=sep, dtype=dtype,
+                               usecols=usecols, **kwargs)
+    try:
+        dfr = pd.read_csv(filepath_or_buffer, **kwargs)
+    except ValueError as exc:
+        invalid_columns = _read_csv_inspect_failure(filepath_or_buffer, **kwargs)
+        raise InvalidDataInColumn(*invalid_columns) from None
+    finally:
+        if buf_pos is not None:
+            filepath_or_buffer.seek(buf_pos)
+            if buf_detach:
+                filepath_or_buffer.detach()
+        else:
+            filepath_or_buffer.close()
+
+    # finalize and return
+    _read_csv_finalize(dfr, dtype, defaults, check_dtypes_and_defaults)
     if not isinstance(dfr.index, pd.RangeIndex):
         dfr.reset_index(drop=True, inplace=True)
     return dfr
 
 
-def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
-    """Internal read_csv"""
+def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
+    """prepare the arguments for pandas read_csv: take tha passed **kwargs
+    and return a modified version of it after checking some keys and values
+    """
+    buf_pos = filepath_or_buffer.tell()
     # remove args that might not be suitable yet to be passed to `read_csv`:
     dtype = kwargs.pop('dtype', {})
     parse_dates = set(kwargs.pop('parse_dates', []))
-
-    kwargs.setdefault('encoding', 'utf-8-sig')
-    buf_pos = None
-    buf_detach = False
-    if isinstance(filepath_or_buffer, IOBase):
-        encoding = kwargs.pop('encoding', 'utf-8')
-        if not isinstance(filepath_or_buffer, TextIOBase):
-            filepath_or_buffer = TextIOWrapper(filepath_or_buffer, encoding=encoding)
-            buf_detach = True
-        buf_pos = filepath_or_buffer.tell()
-
-    # kwargs.setdefault('true_values', ['1'])
-    # kwargs.setdefault('false_values', ['0'])
     kwargs.setdefault('na_values', missing_values)
     kwargs.setdefault('keep_default_na', False)
     kwargs.setdefault('comment', '#')
 
-    # get the flatfile columns `header` (and the separator if not passed):
+    # infer `sep` by reading the CSV header with several separator strings. If `serp`
+    # is given, read the header anyway once: we might need to know the columns anyway
+    # (`dtype` keys not columns are skipped, whereas `parse_dates` raises in case)
     _separators = kwargs.pop('sep', None) or [';', ',', r'\s+']
     sep, headers = '', []
     for _sep in _separators:
@@ -132,6 +154,7 @@ def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
             sep = _sep
     kwargs['sep'] = sep
 
+    # mix usecols with the flatfile columns just retrieved (it might speed up read):
     usecols = kwargs.pop('usecols', None)
     if callable(usecols):
         csv_columns = set(f for f in headers if usecols(f))
@@ -142,31 +165,36 @@ def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
     else:
         csv_columns = set(headers)
 
-    # Also, convert categorical dtypes into their categories dtype, and put
-    # categorical data in a separate dict
-
+    # Now set the dtype and parse_dates arguments of read_csv from our `dtype`
+    # argument:
     if dtype:
         kwargs['dtype'] = {}
         for col in csv_columns:
             col_dtype = dtype.get(col, None)
             if col_dtype is None:
                 continue
+
+            # categorical data cannot be passed as they are to kwargs['dtype'] because
+            # they silently convert invalid categories to N/A, whereas N/A should
+            # be set only for missing values (e.g. empty CSV cells). As such, let's pass
+            # the dtype of the categories (which must be all the same type):
             if isinstance(col_dtype, pd.CategoricalDtype):
                 col_dtype = ColumnDtype.of_all(col_dtype.categories)
 
-            if col_dtype == ColumnDtype.bool:
-                # let pandas handle booleans, so that we can have NaN.
-                # The conversion to boolean will be handled later
-                continue
             if col_dtype == ColumnDtype.int:
-                # int will be parsed as floats, so that NaN are still possible
-                # (e.g. '' in CSV) whilst raising in case of invalid values ('x').
-                # The conversion to int will be handled later
+                # let pandas handle ints as floats, so that we can have NaN and check
+                # later if we can replace them with the column default, if set
                 kwargs['dtype'][col] = ColumnDtype.float
+            elif col_dtype == ColumnDtype.bool:
+                # let pandas handle bools automatically (no dtype), so that we can have
+                # NaN and check later if we can replace them with the column default, if
+                # set. We cannot set float here because we might have str (e.g. 'FALSE')
+                continue
             elif col_dtype == ColumnDtype.datetime:
-                # date times in pandas csv must be given in a separate arg. Note that
-                # read_csv does not raise for invalid dates but returns the column
-                # with an inferred data type (usually object)
+                # date times in pandas csv must be given in the `parse_dates` arg. Note
+                # that invalid datetime values will not raise but the column will have
+                # more general dtype (usually object), whereas missing values will still
+                # preserve the dtype and be set as NaT
                 parse_dates.add(col)
             else:
                 kwargs['dtype'][col] = col_dtype
@@ -174,62 +202,59 @@ def _read_csv(filepath_or_buffer: Union[str, IO], **kwargs) -> pd.DataFrame:
         if parse_dates:
             kwargs['parse_dates'] = list(parse_dates)
 
-    try:
-        return pd.read_csv(filepath_or_buffer, **kwargs)
-    except ValueError as exc:
-        # Provide only the invalid columns. to do so, we call read_csv by reading
-        # every column singularly. To narrow down the choice of suspects,
-        # dtypes that might raise are bool, int and float, but bool dtypes are not
-        # explicitly passed and int dtypes are converted to float (see above). So
-        # just check for floats. Note: get dtypes from kwargs['dtype'] because we
-        # want to check the real dtype passed, all given as numpy str:
-        cols2check = [c for c, v in kwargs['dtype'].items() if v == ColumnDtype.float]
-        invalid_columns = []
-        for c in cols2check:
-            try:
-                kwargs['usecols'] = [c]
-                if buf_pos is not None:
-                    filepath_or_buffer.seek(buf_pos)
-                pd.read_csv(filepath_or_buffer , **kwargs)
-            except ValueError:
-                invalid_columns.append(c)
-        # if no columns raised, just put everything in the message:
-        if not invalid_columns:
-            invalid_columns = cols2check
-        raise InvalidDataInColumn(*invalid_columns) from None
-    finally:
-        if buf_pos is not None:
+    return kwargs
+
+
+def _read_csv_inspect_failure(filepath_or_buffer: IOBase, **kwargs) -> list[str]:
+    """Check the flatifle after failure returning the list of invalid columns"""
+    buf_pos = filepath_or_buffer.tell()
+    # To narrow down the choice of suspects, dtypes that might raise are bool, int and
+    # float, but bool dtypes are not explicitly passed and int dtypes are converted to
+    # float (see `_read_csv_prepare`):
+    cols2check = [c for c, v in kwargs['dtype'].items() if v == ColumnDtype.float]
+    invalid_columns = []
+    for c in cols2check:
+        try:
+            kwargs['usecols'] = [c]
             filepath_or_buffer.seek(buf_pos)
-            if buf_detach:
-                filepath_or_buffer.detach()
+            pd.read_csv(filepath_or_buffer , **kwargs)
+        except ValueError:
+            invalid_columns.append(c)
+    # if no columns raised, just put everything in the message:
+    return invalid_columns or cols2check
 
 
-def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
-                                dtype: dict[str, Union[ColumnDtype, pd.CategoricalDtype]],
-                                defaults: dict[str, Any]):
+def _read_csv_finalize(dfr: pd.DataFrame,
+                       dtype: dict[str, Union[ColumnDtype, pd.CategoricalDtype]],
+                       defaults: dict[str, Any],
+                       check_defaults: bool):
+    """Finalize `read_csv` by adjusting the values and dtypes of the given dataframe
+    `dfr`, and return it
+
+    :return: a pandas DataFrame (the same `dfr` passed as argument, with some
+        modifications if needed)
+    """
     # post-process:
     invalid_columns = []
-
-    # check dtypes correctness for those types that must be processed after read
+    if defaults is None:
+        defaults = {}
+    # check dtypes correctness (actual vs expected) and try to fix mismatching ones:
     for col in dfr.columns:
-        # if dtype is already ok, continue:
         expected_dtype: ColumnDtype = dtype.get(col, None)
         if expected_dtype is None:
             continue
-
-        expected_categorical = None
+        # is expected dtype a pandas CategoricalDtype?
+        expected_categories = None
         if isinstance(expected_dtype, pd.CategoricalDtype):
-            expected_categorical = expected_dtype
+            expected_categories = expected_dtype
+            # expected_dtype is the dtype of all categories
             expected_dtype = ColumnDtype.of_all(expected_dtype.categories)
-
-        actual_dtype: ColumnDtype = ColumnDtype.of(dfr[col])  # can NOT be categorical
-
+        # actual dtype. NOTE: cannot be categorical (see `_read_csv_prepare`)
+        actual_dtype: ColumnDtype = ColumnDtype.of(dfr[col])
+        # check matching dtypes:
         dtype_ok = actual_dtype == expected_dtype
         do_type_cast = False
-
-        # expected dtype int: try to convert if actual dtype float
-        # (as long as the float values are all integer or nan, e.g.
-        # [NaN, 7.0] becomes [<default_or_zero>, 7], but [NaN, 7.2] is invalid):
+        # handle mismatching dtypes (bool and int):
         if not dtype_ok:
             if expected_dtype == ColumnDtype.int:
                 try:
@@ -256,20 +281,27 @@ def _adjust_dtypes_and_defaults(dfr: pd.DataFrame,
                 if set(unique_vals).issubset({0, 1}):
                     dtype_ok = True
                     do_type_cast = True
-
+        # if expected and actual dtypes match, set defaults (if any) and cast (if needed)
         if dtype_ok:
+            #set default
             if col in defaults:
+                default = defaults[col]
+                if check_defaults:
+                    default = cast_value(default,
+                                         expected_categories or expected_dtype)
                 is_na = pd.isna(dfr[col])
-                dfr.loc[is_na, col] = defaults[col]
-
-            if expected_categorical is not None:
+                dfr.loc[is_na, col] = default
+            # if we expected categories, set the categories, nut be sure that we do not
+            # have invalid values (pandas automatically set them to N/A):
+            if expected_categories is not None:
                 not_na = pd.notna(dfr[col])
-                # if all non-null values are in the categories, then set as categorical:
-                if dfr[col][not_na].isin(expected_categorical.categories).all():
-                    dfr[col] = dfr[col].astype(expected_categorical)
-                else:
+                dfr[col] = dfr[col].astype(expected_categories)
+                # check that we still have the same N/A (=> all values in dfr[col] are
+                # valid categories):
+                not_na_after = pd.notna(dfr[col])
+                if len(not_na) != len(not_na_after) or (not_na!=not_na_after).any():
                     dtype_ok = False
-            elif do_type_cast:
+            elif do_type_cast:  # type-cast bool and int columns, if needed:
                 try:
                     dfr[col] = dfr[col].astype(expected_dtype)
                 except (ValueError, TypeError):
@@ -413,18 +445,45 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
 
 
 
-def get_required_ground_motion_properties(gsims: Iterable[GMPE]) -> set[str]:
+def get_required_ground_motion_properties(gsims: Union[GMPE, Iterable[GMPE]]) \
+        -> set[str]:
     """Return a Python set containing the required ground motion properties
     (rupture or sites parameter, distance measure, all as `str`) for the given
     ground motion models `gsims`
+
+    :param gsims a ground motion model (OpenQuake `GMPE`) or iterable of models
+        (e.g. list of `GMPE`s)
     """
     required = set()
+    if isinstance(gsims, GMPE):
+        gsims = [gsims]
     # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
     for gsim in gsims:
         # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
         required.update(gsim.REQUIRES_DISTANCES | {'rrup'})
         required.update(gsim.REQUIRES_RUPTURE_PARAMETERS or [])
         required.update(gsim.REQUIRES_SITES_PARAMETERS or [])
+    return required
+
+
+def get_supported_imts(gsims: Iterable[GMPE]) -> set[str]:
+    """Return a Python set containing the imts names (e.g. 'SA', 'PGA')
+     which are defined for *all* the supplied Ground motion models `gsims`
+
+         :param gsims a ground motion model (OpenQuake `GMPE`) or iterable of models
+        (e.g. list of `GMPE`s)
+    """
+    required = None
+    # each intensity measure type is a function implemented in openquake,hazardlib.imt
+    # we use the __name__ attribute which will return 'SA', 'PGA' and so on:
+    for gsim in gsims:
+        _imts = set(func.__name__ for func in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+        if required is None:
+            required = _imts
+        else:
+            required &= _imts
+        if not required:  # no common imt, no need to proceed further
+            break
     return required
 
 
