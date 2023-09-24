@@ -410,6 +410,7 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
     from the given models (`gsim`) and intensity measures (`imts`) given with
     periods, when needed (e.g. "SA(0.2)")
     """
+    # concat all new dataframes in this list, then return a ne one from it:
     new_dataframes = []
     # prepare the flatfile for the required ground motion properties:
     props_flatfile = pd.DataFrame(index=flatfile.index)
@@ -421,26 +422,34 @@ def prepare_for_residuals(flatfile: pd.DataFrame,
     # validate imts:
     imts = set(imts)
     non_sa_imts = {_ for _ in imts if get_SA_period(_) is None}
+    sa_imts = imts - non_sa_imts
+    # check if all models are defined for the given imts"
+    required_imt_names = non_sa_imts | {'SA'} if sa_imts else non_sa_imts
+    invalid_models = [f'"{m.__class__.__name__}"' for m in gsims
+                      if required_imt_names - get_imts_defined_for(m)]
+    if invalid_models:
+        raise ValueError('Model(s) not defined for all given imt(s): '
+                         f'", '.join(invalid_models))
     # get supported imts but does not allow 'SA' alone to be valid:
     if non_sa_imts:
+        # get the imts supported by this program, and raise if some unsupported IMT
+        # was requested:
         supported_imts = get_intensity_measures() - {'SA'}
         if non_sa_imts - supported_imts:
             raise InvalidColumnName(*list(non_sa_imts - supported_imts))
-        # raise if some imts are not in the flatfile:
+        # from the requested imts, raise if some are not in the flatfile:
         if non_sa_imts - set(flatfile.columns):
             raise MissingColumn(*list(non_sa_imts - set(flatfile.columns)))
         # add non SA imts:
         new_dataframes.append(flatfile[sorted(non_sa_imts)])
     # prepare the flatfile for SA (create new columns by interpolation if necessary):
-    sa_imts = imts - non_sa_imts
     if sa_imts:
         sa_dataframe = _prepare_for_sa(flatfile, sa_imts)
         if not sa_dataframe.empty:
             new_dataframes.append(sa_dataframe)
-
+    # return the new dataframe or an empty one:
     if not new_dataframes:
         return pd.DataFrame(columns=flatfile.columns)  # empty dataframe
-
     return pd.concat(new_dataframes, axis=1)
 
 
@@ -466,14 +475,16 @@ def get_required_ground_motion_properties(gsims: Union[GMPE, Iterable[GMPE]]) \
     return required
 
 
-def get_supported_imts(gsims: Iterable[GMPE]) -> set[str]:
+def get_imts_defined_for(gsims: Union[GMPE, Iterable[GMPE]]) -> set[str]:
     """Return a Python set containing the imts names (e.g. 'SA', 'PGA')
      which are defined for *all* the supplied Ground motion models `gsims`
 
-         :param gsims a ground motion model (OpenQuake `GMPE`) or iterable of models
+    :param gsims a ground motion model (OpenQuake `GMPE`) or iterable of models
         (e.g. list of `GMPE`s)
     """
     required = None
+    if isinstance(gsims, GMPE):
+        gsims = [gsims]
     # each intensity measure type is a function implemented in openquake,hazardlib.imt
     # we use the __name__ attribute which will return 'SA', 'PGA' and so on:
     for gsim in gsims:
@@ -482,7 +493,7 @@ def get_supported_imts(gsims: Iterable[GMPE]) -> set[str]:
             required = _imts
         else:
             required &= _imts
-        if not required:  # no common imt, no need to proceed further
+        if not required:  # no need to proceed further (if several Gsims are provided)
             break
     return required
 

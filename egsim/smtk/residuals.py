@@ -19,7 +19,8 @@ from openquake.hazardlib import imt, const
 
 from . import check_gsim_list, get_gsim_name, get_SA_period  #, convert_accel_units
 from .flatfile import EventContext, prepare_for_residuals, get_event_id_column_names, \
-    InvalidColumn, get_station_id_column_names
+    get_station_id_column_names
+from .flatfile.columns import InvalidColumn
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
