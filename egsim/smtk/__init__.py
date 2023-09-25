@@ -1,4 +1,7 @@
-from typing import Union, Sequence, Iterable, Type
+"""Root module for the strong motion modeller toolkit (smtk) package of eGSIM"""
+
+from typing import Union, Type
+from collections.abc import Iterable, Collection
 from math import inf
 import re
 import warnings
@@ -83,8 +86,8 @@ def get_gsim_name(gsim: GMPE) -> str:
         gsim_class_name = gsim.__class__.__name__
         if gsim_toml_repr == f'[{gsim_class_name}]':
             return gsim_class_name
-        # 2. gsim is an aliased version of some model M. In this case, `gsim_toml_repr` can be reduced
-        # to the simple class name of M:
+        # 2. gsim is an aliased version of some model M. In this case, `
+        # gsim_toml_repr` can be reduced to the simple class name of M:
         gsim_src = _get_src_name_from_aliased_version(gsim_toml_repr)  # might be None
         return gsim_src or gsim_toml_repr
 
@@ -123,7 +126,7 @@ def get_imts_defined_for(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
     return frozenset(_.__name__ for _ in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
 
 
-def n_jsonify(obj: Union[Sequence, int, float, np.generic]) -> \
+def n_jsonify(obj: Union[Collection, int, float, np.generic]) -> \
         Union[float, int, list, tuple, None]:
     """Attempt to convert the numeric input to a Python object that is JSON serializable,
     i.e. same as `obj.tolist()` but - in case `obj` is a list/tuple, with NoN or
@@ -235,15 +238,3 @@ def get_SA_period(obj: Union[str, imt.IMT]) -> Union[float, None]:
     # check also that the period is finite (SA('inf') and SA('nan') are possible,
     # and this function is intended to return a "workable" period):
     return float(period) if np.isfinite(period) else None
-
-
-# def imt_to_string(imtx: Union[str, imt.IMT]) -> Union[str, None]:
-#     try:
-#         if isinstance(imtx, str):
-#             return imt.from_string(imtx)
-#         else:
-#             return imt.repr(imtx)
-#     except Exception:  # noqa
-#         return None
-#
-# imt_from_string = imt.from_string
