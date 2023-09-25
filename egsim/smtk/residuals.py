@@ -1,26 +1,31 @@
-# Copyright (C) 2014-2017 GEM Foundation and G. Weatherill
 """
-Module to get GMPE residuals - total, inter and intra
-{'GMPE': {'IMT1': {'Total': [], 'Inter event': [], 'Intra event': []},
-          'IMT2': { ... }}}
+Residuals module
 """
+
+from collections.abc import Iterable, Collection
+
 from pandas import RangeIndex
-from typing import Union, Iterable
+from typing import Union
 
 from math import sqrt, ceil
 
 import numpy as np
 import pandas as pd
-from openquake.hazardlib.gsim.base import GMPE
+from pandas.core.indexes.numeric import IntegerIndex
+
 from scipy.special import erf
 from scipy.stats import norm
 from scipy.linalg import solve
+
+from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
+from openquake.hazardlib.contexts import RuptureContext
 
 from . import check_gsim_list, get_gsim_name, get_SA_period  #, convert_accel_units
-from .flatfile import (EventContext, get_event_id_column_names,
-                       get_station_id_column_names, setup_flatfile_for_residuals)
-from .flatfile.columns import InvalidColumn
+from .flatfile.preparation import (get_event_id_column_names,
+                                   get_station_id_column_names,
+                                   setup_flatfile_for_residuals)
+from .flatfile.columns import InvalidColumn, MissingColumn, get_rupture_params
 
 
 def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
@@ -46,7 +51,7 @@ def check_sa_limits(gsim: GMPE, im: str):  # FIXME remove? is it used?
     return limits[0] < period < limits[1]
 
 
-def get_residuals(gsims: Iterable[str], imts: Iterable[str],
+def get_residuals(gsims: Iterable[str], imts: Collection[str],
                   flatfile: pd.DataFrame, nodal_plane_index=1,
                   component="Geometric", compute_lh=False,
                   normalise=True) -> pd.DataFrame:  # FIXME remove unused arguments?
@@ -102,6 +107,49 @@ def calculate_flatfile_residuals(gsims: dict[str, GMPE], imts: Iterable[str],
         residuals.loc[res.index, res.columns] = res
 
     return residuals
+
+
+class EventContext(RuptureContext):
+    """A RuptureContext accepting a flatfile (pandas DataFrame) as input"""
+
+    rupture_params:set[str] = None
+
+    def __init__(self, flatfile: pd.DataFrame):
+        super().__init__()
+        if not isinstance(flatfile.index, IntegerIndex):
+            raise ValueError('flatfile index should be made of unique integers')
+        self._flatfile = flatfile
+        if self.__class__.rupture_params is None:
+            # get rupture params once for all instances the first time only:
+            self.__class__.rupture_params = get_rupture_params()
+
+    def __eq__(self, other):  # FIXME: legacy code, is it still used?
+        assert isinstance(other, EventContext) and \
+               self._flatfile is other._flatfile
+
+    @property
+    def sids(self) -> IntegerIndex:
+        """Return the ids (iterable of integers) of the records (or sites) used to build
+        this context. The returned pandas `IntegerIndex` must have unique values so that
+        the records (flatfile rows) can always be retrieved from the source flatfile via
+        `flatfile.loc[self.sids, :]`
+        """
+        # note that this attribute is used also when calculating `len(self)` so do not
+        # delete or rename. See superclass for details
+        return self._flatfile.index
+
+
+    def __getattr__(self, column_name):
+        """Return a non-found Context attribute by searching in the underlying
+        flatfile column. Raises AttributeError (as usual) if `item` is not found
+        """
+        try:
+            values = self._flatfile[column_name].values
+        except KeyError:
+            raise MissingColumn(column_name)
+        if column_name in self.rupture_params:
+            values = values[0]
+        return values
 
 
 def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
@@ -447,39 +495,6 @@ def _get_edr_kappa(obs: Union[np.ndarray, pd.Series],
     de_orig = np.sum((obs - expected) ** 2.)
     de_corr = np.sum((obs - y_c) ** 2.)
     return de_orig / de_corr
-
-
-# def compacted(flatfile:pd.DataFrame,
-#               gsims: Iterable[str], imts: Iterable[str],
-#               observed_columns:Union[Iterable[str], None]=None) \
-#         -> pd.DataFrame:
-#     """Return a compact form of the given flatfile with the given columns
-#     (observed: provided by the user as data, computed: computed for the given gsims and
-#     imts).
-#     The columns denoting event ids (or event coordinates) and station ids
-#     do not need to be specified, as this function will try to include them anyway.
-#
-#     :param flatfile: a flatfile resulting from :ref:`get_residuals`
-#     :param observed_columns: the observed columns to keep. None will set a default list
-#         including magnitude, vs30, event_depth and all provided distances
-#     """
-#     f_cols = set(flatfile.columns)
-#     columns = _EVENT_COLUMNS[:1] if _EVENT_COLUMNS[0] in f_cols else _EVENT_COLUMNS[1:]
-#     if _STATION_COLUMNS[0] in f_cols:
-#         columns.append(_STATION_COLUMNS[0])
-#     if observed_columns is None:
-#         observed_columns = [
-#             col for col in ['magnitude', 'vs30', 'repi', 'rrup', 'rhypo',
-#                              'rjb', 'rx', 'event_depth'] if col in f_cols
-#         ]
-#     computed_labels = c_labels.residuals_columns | c_labels.lh_columns | \
-#                       {c_labels.total, c_labels.inter_ev, c_labels.intra_ev,
-#                        c_labels.mean}
-#     computed_columns = [
-#         col for col, gsim, imtx, lbl in get_computed_columns(gsims, imts, flatfile)
-#         if lbl in computed_labels
-#     ]
-#     return flatfile[columns + observed_columns + computed_columns]
 
 
 # FIXME: from here on multivariate_llh need to be fixed with GW
