@@ -257,14 +257,11 @@ def _read_csv_finalize(dfr: pd.DataFrame,
         # handle mismatching dtypes (bool and int):
         if not dtype_ok:
             if expected_dtype == ColumnDtype.int:
-                try:
-                    not_na = pd.notna(dfr[col])
-                    values = dfr[col][not_na]
-                    if (values == values.astype(int)).all():  # noqa
-                        dtype_ok = True
-                        do_type_cast = True
-                except Exception:  # noqa
-                    pass
+                not_na = pd.notna(dfr[col])
+                values = dfr[col][not_na]
+                if (values == values.astype(int)).all():  # noqa
+                    dtype_ok = True
+                    do_type_cast = True
             elif expected_dtype == ColumnDtype.bool:
                 not_na = pd.notna(dfr[col])
                 unique_vals = pd.unique(dfr[col][not_na])
@@ -294,12 +291,12 @@ def _read_csv_finalize(dfr: pd.DataFrame,
             # if we expected categories, set the categories, nut be sure that we do not
             # have invalid values (pandas automatically set them to N/A):
             if expected_categories is not None:
-                not_na = pd.notna(dfr[col])
+                is_na = pd.isna(dfr[col])
                 dfr[col] = dfr[col].astype(expected_categories)
                 # check that we still have the same N/A (=> all values in dfr[col] are
                 # valid categories):
-                not_na_after = pd.notna(dfr[col])
-                if len(not_na) != len(not_na_after) or (not_na!=not_na_after).any():
+                is_na_after = pd.isna(dfr[col])
+                if len(is_na) != len(is_na_after) or (is_na != is_na_after).any():
                     dtype_ok = False
             elif do_type_cast:  # type-cast bool and int columns, if needed:
                 try:
@@ -482,12 +479,65 @@ def setup_flatfile_for_imts(flatfile: pd.DataFrame, imts: Iterable[str]) -> pd.D
         new_dataframes.append(flatfile[sorted(non_sa_imts)])
     # prepare the flatfile for SA (create new columns by interpolation if necessary):
     if sa_imts:
-        sa_dataframe = _prepare_for_sa(flatfile, sa_imts)
+        sa_dataframe = setup_flatfile_for_sa(flatfile, sa_imts)
         if not sa_dataframe.empty:
             new_dataframes.append(sa_dataframe)
     if not new_dataframes:
         return pd.DataFrame(columns=flatfile.columns)  # empty dataframe
     return pd.concat(new_dataframes, axis=1)
+
+
+def setup_flatfile_for_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) \
+        -> pd.DataFrame:
+    """Return a new Dataframe with the SA columns defined in `sa_imts`
+    The returned DataFrame will have all strings supplied in `sa_imts` as columns,
+    with relative values copied (or inferred via interpolation) from the given flatfile
+
+    :param flatfile: the flatfile
+    :param sa_imts: Iterable of strings denoting SA (e.g. "SA(0.2)")
+    Return the newly created Sa columns, as tuple of strings
+    """
+    src_sa = []
+    for c in flatfile.columns:
+        p = get_SA_period(c)
+        if p is not None:
+            src_sa.append((p, c))
+    # source_sa: period [float] -> mapped to the relative column:
+    source_sa: dict[float, str] = {p: c for p, c in sorted(src_sa, key=lambda t: t[0])}
+
+    tgt_sa = []
+    invalid_sa = []
+    for i in sa_imts:
+        p = get_SA_period(i)
+        if p is None:
+            invalid_sa.append(i)
+            continue
+        if p not in source_sa:
+            tgt_sa.append((p, i))
+    if invalid_sa:
+        raise InvalidDataInColumn(*invalid_sa)
+
+    # source_sa: period [float] -> mapped to the relative column:
+    target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
+
+    source_sa_flatfile = flatfile[list(source_sa.values())]
+
+    if not target_sa:
+        return source_sa_flatfile
+
+    # Take the log10 of all SA:
+    source_spectrum = np.log10(source_sa_flatfile)
+    # we need to interpolate row wise
+    # build the interpolation function:
+    interp = interp1d(list(source_sa), source_spectrum, axis=1)
+    # and interpolate:
+    values = 10 ** interp(list(target_sa))
+    # values is a matrix where each column represents the values of the target period.
+    # Add it to the dataframe:
+    new_flatfile = pd.DataFrame(index=flatfile.index)
+    new_flatfile[list(target_sa.values())] = values
+
+    return new_flatfile
 
 
 def setup_flatfile_for_gsims(flatfile: pd.DataFrame,
@@ -613,58 +663,6 @@ def fill_na(flatfile:pd.DataFrame,
         dest = dest.copy()
         dest[na] = src[na]
     return dest
-
-
-def _prepare_for_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFrame:
-    """Return a new Dataframe with the SA columns defined in `sa_imts`
-    The returned DataFrame will have all strings supplied in `sa_imts` as columns,
-    with relative values copied (or inferred via interpolation) from the given flatfile
-
-    :param flatfile: the flatfile
-    :param sa_imts: Iterable of strings denoting SA (e.g. "SA(0.2)")
-    Return the newly created Sa columns, as tuple of strings
-    """
-    src_sa = []
-    for c in flatfile.columns:
-        p = get_SA_period(c)
-        if p is not None:
-            src_sa.append((p, c))
-    # source_sa: period [float] -> mapped to the relative column:
-    source_sa: dict[float, str] = {p: c for p, c in sorted(src_sa, key=lambda t: t[0])}
-
-    tgt_sa = []
-    invalid_sa = []
-    for i in sa_imts:
-        p = get_SA_period(i)
-        if p is None:
-            invalid_sa.append(i)
-            continue
-        if p not in source_sa:
-            tgt_sa.append((p, i))
-    if invalid_sa:
-        raise InvalidDataInColumn(*invalid_sa)
-
-    # source_sa: period [float] -> mapped to the relative column:
-    target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
-
-    source_sa_flatfile = flatfile[list(source_sa.values())]
-
-    if not target_sa:
-        return source_sa_flatfile
-
-    # Take the log10 of all SA:
-    source_spectrum = np.log10(source_sa_flatfile)
-    # we need to interpolate row wise
-    # build the interpolation function:
-    interp = interp1d(list(source_sa), source_spectrum, axis=1)
-    # and interpolate:
-    values = 10 ** interp(list(target_sa))
-    # values is a matrix where each column represents the values of the target period.
-    # Add it to the dataframe:
-    new_flatfile = pd.DataFrame(index=flatfile.index)
-    new_flatfile[list(target_sa.values())] = values
-
-    return new_flatfile
 
 
 class EventContext(RuptureContext):
