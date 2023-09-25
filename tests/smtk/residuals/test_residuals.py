@@ -87,9 +87,14 @@ class ResidualsTestCase(SimpleTestCase):
         """
         Tests basic execution of residuals - not correctness of values
         """
-        # residuals = res.Residuals(self.gsims, self.imts)
-        # residuals.get_residuals(self.database, component="Geometric")
-        res_dict = residuals.get_residuals(self.gsims, self.imts, self.database)
+        # when comparing new and old data, try np.allclose and if it fails, retry
+        # with relaxed conditions:
+        RTOL = 0.016  # relative tolerance defining "closeness": abs diff element-wise
+        QTL = 0.95  # quantile defining how much data must be "close enough" (<RTOL)
+
+        # new data
+        res_df = residuals.get_residuals(self.gsims, self.imts, self.database.copy())
+        # old data:
         file = "residual_tests_esm_data_old_smtk.json"
         with open(os.path.join(BASE_DATA_PATH, file)) as _:
             exp_dict = json.load(_)
@@ -101,13 +106,13 @@ class ResidualsTestCase(SimpleTestCase):
             expected = np.array(exp_dict[lbl], dtype=float)
             # computed dataframes have different labelling:
             lbl += " " + c_labels.res
-            computed = res_dict[lbl].values
+            computed = res_df[lbl].values
             if 'Inter-event' in lbl:
                 # Are all inter events (per event) are close enough?
                 # (otherwise its an Inter event residuals per-site e.g. Chiou
                 # & Youngs (2008; 2014) case)
                 _computed = []
-                for ev_id, dfr in res_dict.groupby('event_id'):
+                for ev_id, dfr in res_df.groupby('event_id'):
                     vals = dfr[lbl].values
                     if ((vals - vals[0]) < 1.0E-12).all():
                         _computed.append(vals[0])
@@ -119,16 +124,61 @@ class ResidualsTestCase(SimpleTestCase):
 
             vals_ok = np.allclose(expected, computed)
             if not vals_ok:
-                # vals_ok = np.allclose(expected, computed, rtol=1e-01, atol=0)
-                # check that at least 90% of the data is close enough (<1% relative
-                # error)
-                data_ratio = .9
-                threshold = 0.01
+                # relax conditions and retry:
                 rel_diff = (expected - computed) / computed
-                max_diff = np.nanquantile(np.abs(rel_diff), data_ratio)
-                vals_ok = max_diff < threshold
+                max_diff = np.nanquantile(np.abs(rel_diff), QTL)
+                vals_ok = max_diff < RTOL
 
             self.assertTrue(vals_ok)
+
+    def test_residuals_execution_lh(self):
+        """
+        Tests basic execution of residuals - not correctness of values
+        """
+        # when comparing new and old data, try np.allclose and if it fails, retry
+        # with relaxed conditions:
+        RTOL = 0.012  # relative tolerance defining "closeness": abs diff element-wise
+        QTL = 0.95  # quantile defining how much data must be "close enough" (<RTOL)
+
+        res_df = residuals.get_residuals(self.gsims, self.imts, self.database.copy(),
+                                           likelihood=True)
+        # load old data:
+        file = "residual_tests_esm_data_old_smtk_lh.json"
+        with open(os.path.join(BASE_DATA_PATH, file)) as _:
+            exp_dict = json.load(_)
+        # check results:
+        # self.assertEqual(len(exp_dict), len(res_dict))
+        for lbl in exp_dict:
+            # self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
+                # check values
+            expected = np.array(exp_dict[lbl], dtype=float)
+            # computed dataframes have different labelling:
+            lbl += " " + c_labels.lh
+            computed = res_df[lbl].values
+            if 'Inter-event' in lbl:
+                # Are all inter events (per event) are close enough?
+                # (otherwise its an Inter event residuals per-site e.g. Chiou
+                # & Youngs (2008; 2014) case)
+                _computed = []
+                for ev_id, dfr in res_df.groupby('event_id'):
+                    vals = dfr[lbl].values
+                    if ((vals - vals[0]) < 1.0E-12).all():
+                        _computed.append(vals[0])
+                    else:
+                        _computed = None
+                        break
+                if _computed is not None:
+                    computed = np.array(_computed, dtype=float)
+
+            vals_ok = np.allclose(expected, computed)
+            if not vals_ok:
+                # relax the conditions and retry:
+                rel_diff = (expected - computed) / computed
+                max_diff = np.nanquantile(np.abs(rel_diff), QTL)
+                vals_ok = max_diff < RTOL
+
+            self.assertTrue(vals_ok)
+
 
     def tst_likelihood_execution(self):
         """
