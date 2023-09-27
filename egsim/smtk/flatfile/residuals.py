@@ -1,19 +1,14 @@
-"""flatfile pandas module"""
+"""flatfile functions for residuals analysis"""
 from collections.abc import Collection, Iterable
-
-from pandas.core.indexes.numeric import IntegerIndex
-from scipy.interpolate import interp1d
-
-from typing import Union  # , Iterable
+from typing import Union
 
 import numpy as np
 import pandas as pd
+from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.scalerel import PeerMSR
-from openquake.hazardlib.contexts import RuptureContext
 
-from .columns import (get_rupture_params, get_all_names_of,
-                      get_intensity_measures, MissingColumn,
+from .columns import (get_all_names_of, get_intensity_measures, MissingColumn,
                       InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
 from .. import (get_SA_period, get_imts_defined_for, get_distances_required_by,
                 get_rupture_params_required_by, get_sites_params_required_by)
@@ -59,9 +54,9 @@ def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
     return col_names
 
 
-def setup_flatfile_for_residuals(flatfile: pd.DataFrame,
-                                 gsims: Collection[GMPE],
-                                 imts: Collection[str]) -> pd.DataFrame:
+def get_flatfile_for_residual_analysis(flatfile: pd.DataFrame,
+                                       gsims: Collection[GMPE],
+                                       imts: Collection[str]) -> pd.DataFrame:
     """Return a new dataframe with all columns required to compute residuals
     from the given models (`gsim`) and intensity measures (`imts`) given with
     periods, when needed (e.g. "SA(0.2)")
@@ -76,11 +71,11 @@ def setup_flatfile_for_residuals(flatfile: pd.DataFrame,
     # concat all new dataframes in this list, then return a ne one from it:
     new_dataframes = []
     # prepare the flatfile for the required imts:
-    imts_flatfile = setup_flatfile_for_imts(flatfile, imts)
+    imts_flatfile = get_required_imts(flatfile, imts)
     if not imts_flatfile.empty:
         new_dataframes.append(imts_flatfile)
     # prepare the flatfile for the required ground motion properties:
-    props_flatfile = setup_flatfile_for_gsims(flatfile, gsims)
+    props_flatfile = get_required_ground_motion_properties(flatfile, gsims)
     if not props_flatfile.empty:
         new_dataframes.append(props_flatfile)
 
@@ -90,7 +85,7 @@ def setup_flatfile_for_residuals(flatfile: pd.DataFrame,
     return pd.concat(new_dataframes, axis=1)
 
 
-def setup_flatfile_for_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataFrame:
+def get_required_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataFrame:
     """Return a new dataframe with all columns required to compute residuals
     for the given intensity measures (`imts`) given with
     periods, when needed (e.g. "SA(0.2)")
@@ -114,7 +109,7 @@ def setup_flatfile_for_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd
         new_dataframes.append(flatfile[sorted(non_sa_imts)])
     # prepare the flatfile for SA (create new columns by interpolation if necessary):
     if sa_imts:
-        sa_dataframe = setup_flatfile_for_sa(flatfile, sa_imts)
+        sa_dataframe = get_required_sa(flatfile, sa_imts)
         if not sa_dataframe.empty:
             new_dataframes.append(sa_dataframe)
     if not new_dataframes:
@@ -122,8 +117,7 @@ def setup_flatfile_for_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd
     return pd.concat(new_dataframes, axis=1)
 
 
-def setup_flatfile_for_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) \
-        -> pd.DataFrame:
+def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFrame:
     """Return a new Dataframe with the SA columns defined in `sa_imts`
     The returned DataFrame will have all strings supplied in `sa_imts` as columns,
     with relative values copied (or inferred via interpolation) from the given flatfile
@@ -175,20 +169,20 @@ def setup_flatfile_for_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) \
     return new_flatfile
 
 
-def setup_flatfile_for_gsims(flatfile: pd.DataFrame,
+def get_required_ground_motion_properties(flatfile: pd.DataFrame,
                              gsims: Iterable[GMPE]) -> pd.DataFrame:
     """Return a new dataframe with all columns required to compute residuals
     from the given models (`gsim`), i.e. all columns denoting ground motion
     properties required by the passed models
     """
     props_flatfile = pd.DataFrame(index=flatfile.index)
-    for prop in get_required_ground_motion_properties(gsims):
+    for prop in get_required_ground_motion_property_names(gsims):
         props_flatfile[prop] = \
             get_ground_motion_property_values(flatfile, prop)
     return props_flatfile
 
 
-def get_required_ground_motion_properties(gsims: Union[GMPE, Iterable[GMPE]]) \
+def get_required_ground_motion_property_names(gsims: Union[GMPE, Iterable[GMPE]]) \
         -> set[str]:
     """Return a Python set containing the required ground motion properties
     (rupture or sites parameter, distance measure, all as `str`) for the given

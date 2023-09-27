@@ -1,4 +1,4 @@
-"""flatfile pandas root module"""
+"""flatfile root module"""
 
 from io import IOBase, TextIOBase, TextIOWrapper
 from datetime import date, datetime
