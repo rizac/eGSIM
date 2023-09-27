@@ -144,6 +144,10 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
 
     assert isinstance(dtype, ColumnDtype)
 
+    if dtype in (ColumnDtype.int, ColumnDtype.bool) and not default_is_given:
+        raise ValueError('int or bool with no default')
+
+
     # check bounds:
     if bounds_are_given:
         symbols = {"<", ">", ">=", "<="}
