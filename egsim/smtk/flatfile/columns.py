@@ -8,7 +8,7 @@ from datetime import datetime, date
 from enum import Enum, ReprEnum
 from os.path import join, dirname
 from typing import Union, Any
-from collections.abc import Iterable
+from collections.abc import Collection
 
 import numpy as np
 import pandas as pd
@@ -57,47 +57,42 @@ class ColumnDtype(str, ReprEnum):
     str = "string", str, np.str_  # , np.object_
 
     @classmethod
-    def of_all(cls, items: Iterable[Any]) -> Union[ColumnDtype, None]:
-        """Return the ColumnDtype of all given items, or None if the items
-        ColumnDType is not the same for all items
-
-        :param items: a Python iterable / pandas Series / numpy array. You can
-            also pass pandas a pandas `CategoricalDtype` `C` via `C.cetegories`.
-            If they are of the same type. E.g.:
-            `ColumnDtype.of(pd.CategoricalDtype([1,2])  = ColumnDtype.int`
-            If a ColumndDtype can not be inferred, return None
-        """
-        dtypes = {cls.of(val) for val in items}
-        if len(dtypes) == 1:
-            return next(iter(dtypes))
-        return None
-
-    @classmethod
-    def of(cls, obj: Union[int, float, datetime, bool, str,
+    def of(cls, *item: Union[int, float, datetime, bool, str,
                            np.array, pd.Series, PandasArray,
                            type[int, float, datetime, bool, str],
                            np.dtype, ExtensionDtype]) -> Union[ColumnDtype, None]:
-        """Return the ColumnDtype of the given argument
+        """Return the ColumnDtype of the given argument, or None if no associated
+        dtype is found.
+        If several arguments are passed, return None also if the arguments are
+        not all the same dtype
 
-        :param obj: a Python object(e.g. 4.5), a Python class (`float`),
-            a numpy array, pandas Series / Array, a numpy dtype, pandas ExtensionDtype
-            (e.g., as returned from a pandas dataframe `dataframe[column].dtype`).
-            If a ColumndDtype can not be inferred, return None
+        :param item: one or more Python objects, such as object instance (e.g. 4.5),
+            object class (`float`), a numpy array, pandas Series / Array, a numpy dtype,
+            pandas ExtensionDtype (e.g., as returned from a pandas dataframe
+            `dataframe[column].dtype`).
         """
-        if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
-            obj = obj.dtype  # will fall back in the next "if"
-        if isinstance(obj, (np.dtype, ExtensionDtype)):
-            obj = obj.type  # will NOT fall back into the next "if"
-        if not isinstance(obj, type):
-            obj = type(obj)
-        for c_dtype in cls:
-            if issubclass(obj, c_dtype.py_types):
-                # bool is a subclass of int in Python, so:
-                if c_dtype == ColumnDtype.int and \
-                        issubclass(obj, ColumnDtype.bool.py_types):
-                    return ColumnDtype.bool
-                return c_dtype
-        return None
+        ret_type = None
+        for obj in item:
+            if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
+                obj = obj.dtype  # will fall back in the next "if"
+            if isinstance(obj, (np.dtype, ExtensionDtype)):
+                obj = obj.type  # will NOT fall back into the next "if"
+            if not isinstance(obj, type):
+                obj = type(obj)
+            for c_dtype in cls:
+                if issubclass(obj, c_dtype.py_types):  # noqa
+                    # bool is a subclass of int in Python, so:
+                    if c_dtype == ColumnDtype.int and \
+                            issubclass(obj, ColumnDtype.bool.py_types):
+                        c_dtype = ColumnDtype.bool
+                    if ret_type is None:
+                        ret_type = c_dtype
+                    elif ret_type != c_dtype:
+                        return None
+                    break
+            else:
+                return None
+        return ret_type
 
 
 
@@ -257,7 +252,7 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
                 help[name] = props['help']
 
 
-def cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype]) \
+def cast_dtype(dtype: Union[Collection, str, pd.CategoricalDtype, ColumnDtype]) \
         -> Union[ColumnDtype, pd.CategoricalDtype]:
     """Return a value from the given argument that is suitable to be used as data type in
     pandas, i.e., either a `ColumnDtype` (str-like enum) or a pandas `CategoricalDtype`
@@ -273,36 +268,36 @@ def cast_dtype(dtype: Union[list, tuple, str, pd.CategoricalDtype, ColumnDtype])
         if isinstance(dtype, (list, tuple)):
             dtype = pd.CategoricalDtype(dtype)
         if isinstance(dtype, pd.CategoricalDtype):
-            # check that the categories are all of the same supported data type:
-            if ColumnDtype.of_all(dtype.categories) is not None:
+            # check that the categories are *all* of the same supported data type:
+            if ColumnDtype.of(*dtype.categories) is not None:
                 return dtype
     except (KeyError, ValueError, TypeError):
         pass
     raise ValueError(f'Invalid data type: {str(dtype)}')
 
 
-def cast_value(val: Any, pd_dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
-    """cast `val` to the given pandas dtype, raise ValueError if unsuccessful
+def cast_value(val: Any, dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
+    """Cast the given value to the given dtype, raise ValueError if unsuccessful
 
     :param val: any Python object
-    :param pd_dtype: the result of `to_pandas_dtype: either a `ColumnDtype` or
-        pandas `CategoricalDtype` object
+    :param dtype: either a `ColumnDtype` or pandas `CategoricalDtype` object.
+        See `cast_dtype` for details
     """
-    if pd_dtype is None:
-        raise ValueError(f'Invalid dtype: {str(pd_dtype)}')
-    if isinstance(pd_dtype, pd.CategoricalDtype):
-        if val in pd_dtype.categories:
+    if dtype is None:
+        raise ValueError(f'Invalid dtype: {str(dtype)}')
+    if isinstance(dtype, pd.CategoricalDtype):
+        if val in dtype.categories:
             return val
         dtype_name = 'categorical'
     else:
         actual_dtype = ColumnDtype.of(val)
-        if actual_dtype == pd_dtype:
+        if actual_dtype == dtype:
             return val
-        if pd_dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
+        if dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
             return float(val)
-        elif pd_dtype == ColumnDtype.datetime and isinstance(val, date):
+        elif dtype == ColumnDtype.datetime and isinstance(val, date):
             return datetime(val.year, val.month, val.day)
-        dtype_name = pd_dtype.name
+        dtype_name = dtype.name
     raise ValueError(f'Invalid value for type {dtype_name}: {str(val)}')
 
 

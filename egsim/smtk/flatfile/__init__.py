@@ -124,16 +124,16 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
     and return a modified version of it after checking some keys and values
     """
     buf_pos = filepath_or_buffer.tell()
-    # remove args that might not be suitable yet to be passed to `read_csv`:
-    dtype = kwargs.pop('dtype', {})
-    parse_dates = set(kwargs.pop('parse_dates', []))
+    dtype = kwargs.pop('dtype', {})  # removed and handled later
+    parse_dates = set(kwargs.pop('parse_dates', []))  # see above
     kwargs.setdefault('na_values', missing_values)
     kwargs.setdefault('keep_default_na', False)
     kwargs.setdefault('comment', '#')
 
-    # infer `sep` by reading the CSV header with several separator strings. If `serp`
-    # is given, read the header anyway once: we might need to know the columns anyway
-    # (`dtype` keys not columns are skipped, whereas `parse_dates` raises in case)
+    # infer `sep` by reading the CSV header with several separator strings. If `sep`
+    # is given, read the header anyway once, as we might need to know the columns anyway
+    # because some arguments of `read_csv` (e.g. `parse_dates`) cannot contain columns
+    # not present in the flatfile
     _separators = kwargs.pop('sep', None) or [';', ',', r'\s+']
     sep, headers = '', []
     for _sep in _separators:
@@ -156,36 +156,38 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
     else:
         csv_columns = set(headers)
 
-    # Now set the dtype and parse_dates arguments of read_csv from our `dtype`
-    # argument:
-    if dtype:
+    # Set the `dtype` and `parse_dates` arguments of read_csv. NOTE: dtypes that will
+    # be changed here will be restored later (see `_read_csv_finalize`)
+    if dtype:  # did we provide a dtype?
         kwargs['dtype'] = {}
         for col in csv_columns:
             col_dtype = dtype.get(col, None)
             if col_dtype is None:
                 continue
 
-            # categorical data cannot be passed as they are to kwargs['dtype'] because
-            # they silently convert invalid categories to N/A, whereas N/A should
-            # be set only for missing values (e.g. empty CSV cells). As such, let's pass
-            # the dtype of the categories (which must be all the same type):
+            # categorical dtypes cannot be passed as they are to kwargs['dtype'] because
+            # `read_csv` will silently convert values not found in categories to N/A,
+            # making invalid and missing values indistinguishable. As such, let's pass
+            # for now the dtype of the categories (which must be all the same type):
             if isinstance(col_dtype, pd.CategoricalDtype):
-                col_dtype = ColumnDtype.of_all(col_dtype.categories)
+                col_dtype = ColumnDtype.of(*col_dtype.categories)
 
             if col_dtype == ColumnDtype.int:
-                # let pandas handle ints as floats, so that we can have NaN and check
-                # later if we can replace them with the column default, if set
+                # let `read_csv` treat ints as floats, so that we can have NaN and
+                # check later if we can replace them with the column default, if set
                 kwargs['dtype'][col] = ColumnDtype.float
             elif col_dtype == ColumnDtype.bool:
-                # let pandas handle bools automatically (no dtype), so that we can have
-                # NaN and check later if we can replace them with the column default, if
-                # set. We cannot set float here because we might have str (e.g. 'FALSE')
+                # let `read_csv` infer the data type of bools by not passing a dtype at
+                # all. We will check later if we can cast the values to bool, not only
+                # in terms of replacing N/A with the column default, if set, but also
+                # string values (e.g. 'FALSE') to valid values
                 continue
             elif col_dtype == ColumnDtype.datetime:
-                # date times in pandas csv must be given in the `parse_dates` arg. Note
-                # that invalid datetime values will not raise but the column will have
-                # more general dtype (usually object), whereas missing values will still
-                # preserve the dtype and be set as NaT
+                # date times in `read_csv` must be given in the `parse_dates` arg. Note
+                # that, whereas missing values will still preserve the dtype and be set
+                # as `NaT` (not a time), invalid datetime values will simply result in a
+                # column with a more general dtype set (usually object): this will be
+                # checked later
                 parse_dates.add(col)
             else:
                 kwargs['dtype'][col] = col_dtype
@@ -197,11 +199,15 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
 
 
 def _read_csv_inspect_failure(filepath_or_buffer: IOBase, **kwargs) -> list[str]:
-    """Check the flatifle after failure returning the list of invalid columns"""
+    """Called upon failure of `pandas_read_csv`, check and return the flatifle
+    invalid flatfile columns
+    """
     buf_pos = filepath_or_buffer.tell()
-    # To narrow down the choice of suspects, dtypes that might raise are bool, int and
-    # float, but bool dtypes are not explicitly passed and int dtypes are converted to
-    # float (see `_read_csv_prepare`):
+    # As `read_csv` exception messages do not convey any column information, let's call
+    # `read_csv` for each singular column, and collect those which raise.
+    # To narrow down the choice of suspects let's pass only float columns: dtypes that
+    # might raise are also bool and int, but we do not have those stypes here
+    # (see `_read_csv_prepare` for details):
     cols2check = [c for c, v in kwargs['dtype'].items() if v == ColumnDtype.float]
     invalid_columns = []
     for c in cols2check:
@@ -239,7 +245,7 @@ def _read_csv_finalize(dfr: pd.DataFrame,
         if isinstance(expected_dtype, pd.CategoricalDtype):
             expected_categories = expected_dtype
             # expected_dtype is the dtype of all categories
-            expected_dtype = ColumnDtype.of_all(expected_dtype.categories)
+            expected_dtype = ColumnDtype.of(*expected_dtype.categories)
         # actual dtype. NOTE: cannot be categorical (see `_read_csv_prepare`)
         actual_dtype: ColumnDtype = ColumnDtype.of(dfr[col])
         # check matching dtypes:
