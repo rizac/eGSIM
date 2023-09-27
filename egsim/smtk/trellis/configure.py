@@ -10,6 +10,8 @@ from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
 from openquake.hazardlib.contexts import get_distances
 
+from ...smtk import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+
 TO_RAD = pi / 180.
 FROM_RAD = 180. / pi
 # Default point - some random location on Earth
@@ -348,49 +350,6 @@ def get_hypocentre_on_planar_surface(plane, hypo_loc=None):
     return hypocentre.point_at(horizontal_dist,
                                vertical_dist,
                                down_dip_azimuth)
-
-
-def vs30_to_z1pt0_cy14(vs30, japan=False):
-    """
-    Returns the estimate depth to the 1.0 km/s velocity layer based on Vs30
-    from Chiou & Youngs (2014) California model
-
-    :param numpy.ndarray vs30:
-        Input Vs30 values in m/s
-    :param bool japan:
-        If true returns the Japan model, otherwise the California model
-    :returns:
-        Z1.0 in m
-    """
-    if japan:
-        c1 = 412. ** 2.
-        c2 = 1360.0 ** 2.
-        return np.exp((-5.23 / 2.0) * np.log((np.power(vs30, 2.) + c1) / (
-            c2 + c1)))
-    else:
-        c1 = 571 ** 4.
-        c2 = 1360.0 ** 4.
-        return np.exp((-7.15 / 4.0) * np.log((vs30 ** 4. + c1) / (c2 + c1)))
-
-
-def vs30_to_z2pt5_cb14(vs30, japan=False):
-    """
-    Converts vs30 to depth to 2.5 km/s interface using model proposed by
-    Campbell & Bozorgnia (2014)
-
-    :param vs30:
-        Vs30 values (numpy array or float)
-
-    :param bool japan:
-        Use Japan formula (True) or California formula (False)
-
-    :returns:
-        Z2.5 in km
-    """
-    if japan:
-        return np.exp(5.359 - 1.102 * np.log(vs30))
-    else:
-        return np.exp(7.089 - 1.144 * np.log(vs30))
 
 
 def point_at_rupture_distance(model, distance, vs30, line_azimuth=90.,

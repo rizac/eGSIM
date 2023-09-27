@@ -133,7 +133,7 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
 
     # handle categorical data:
     if isinstance(dtype, pd.CategoricalDtype):  # categorical data type
-        if ColumnDtype.of_all(dtype.categories) is None:
+        if ColumnDtype.of(*dtype.categories) is None:
             raise ValueError(f"{prefix} invalid data type(s) in categorical data")
         if bounds_are_given:
             raise ValueError(f"{prefix} bounds cannot be provided with "
@@ -219,7 +219,7 @@ def test_Column_dtype():
     for val, ctype in vals.items():
         assert ColumnDtype.of(val) == ctype
         assert ColumnDtype.of(type(val)) == ctype
-        assert ColumnDtype.of_all(pd.CategoricalDtype([val]).categories) == ctype
+        assert ColumnDtype.of(*pd.CategoricalDtype([val]).categories) == ctype
 
     d = pd.DataFrame({
         'int': [4, 5],
