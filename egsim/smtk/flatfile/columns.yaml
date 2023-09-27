@@ -2,41 +2,35 @@
 #
 # <column_name>:
 #   dtype:    The data type (default when missing: null). Supported values are: null,
-#             int, float, str, datetime (ISO formatted), bool, or the list of the
-#             possible values of the column data (which must be all the same dtype).
-#             null or missing means "not specified" and will skip data type checks.
-#             The dtype determines also how to fill missing data (See `default` below
-#             for details), whereas data that is not parsable to the given dtype
-#             (e.g.: 'x' for float) will always raise Exceptions
-#   default:  The default value to replace missing data (e.g. '', null, NaN). When a
-#             default is not provided, it will be `dtype` dependent: NaN (for dtype
-#             float), NaT (datetime), None/null (str or categorical), 0 (int), False
-#             (bool). As such, please note that int and bool do not really support
-#             missing data, as 0 and False also denote valid values for the dtype
-#   alias:    The column alias(es), as string or list of strings. You can put here
-#             any additional name, e.g., the name of the ground motion property defined
-#             in OpenQuake that corresponds to this column, if the names are different.
-#             Note that intensity measure columns (see `type` below) must be spelled
-#             exactly as in OpenQuake and cannot have aliases
-#   type:     The column type (optional): rupture, sites, distance, intensity (rupture
-#             parameter, sites parameter, distance measure, intensity measure,
-#             respectively). If a type is given, the column name or any of its aliases
-#             must match the relative OpenQuake name
-#   help:     The field description, used for help. Depending on the application, a
-#             default might be provided (e.g. "")
+#             int, float, str, bool, datetime (ISO formatted) or, if the column can
+#             take only a fixed number of possible values (aka "categories"), the list
+#             of values, which must be all the same supported data type. If non-null,
+#             the data type will be used for data validation
+#   default:  The default value used to fill missing data (e.g. empty cell, null, NaN).
+#             Note that in Python pandas, missing data in int and bool dtypes is invalid.
+#             In these cases, the presence or not of a default (usually 0 for int and
+#             false for bool) will also affect data validation
+#   type:     The column type (optional). Supported values are: rupture, sites, distance,
+#             intensity (rupture and sites parameter, distance and intensity measure,
+#             respectively). If a type is given, the column name must match exactly the
+#             OpenQuake name in case of intensity measure (e.g. PGA, not pga), whereas
+#             for all other types the OpenQuake name can be added as alias (see below)
+#   alias:    The column alias(es), as string or list of strings. Any additional name
+#             allowed for the column, e.g., the OpenQuake name (see `type` above)
+#   help:     The field help (optional), used to provide documentation
 #   ">"       (with quotation marks because > and < are special characters in YAML)
 #             The minimum value (endpoint excluded) of the column data. Currently used
-#             for info and not to validate or discard data (it might be in the future)
+#             for info and not to validate data (it might be in the future)
 #   ">="      The min. value (endpoint included) of the column data (see ">" for details)
 #   "<"       The max. value (endpoint excluded) of the column data (see ">" for details)
 #   "<="      The max. value (endpoint included) of the column data (see ">" for details)
 
 # YAML notes:
-# Date-times can be given as ISO formatted text, without quotes. Unless required,
-# strings don't need quotes either, but can be used for readability. YAML is a
-# superset of JSON, so you can type lists as JSON Arrays: [...] and Mappings as JSON
-# Objects: {...}. If you want to type over multiple lines for readability, prefix the
-# text with >- (see examples here below or at https://stackoverflow.com/a/3790497)
+# Unless required, strings (text sequences) don't need quotes ("'). Date-times must be
+# given as ISO-formatted strings (e.g.: 2006-01-01T12:31:21). YAML is a superset of JSON,
+# so you can type sequences and mappings as JSON Arrays and Objects, respectively. If
+# you want to type over multiple lines for readability, prefix the text with >-
+# (see examples here below or at https://stackoverflow.com/a/3790497)
 
 azimuth:
   dtype: float
@@ -48,14 +42,14 @@ repi:
 rrup:
   dtype: float
   help: >-
-    rupture_distance (in km). Missing data (empty or NaN values, column not provided) 
-    will be replaced with the hypocentral distance values, if present
+    rupture_distance (in km). Missing data (e.g., empty cell, NaN, column not provided) 
+    will be replaced with the hypocentral distance, if present
   type: distance
 rjb:
   dtype: float
   help: >-
-    Joyner-Boore distance (in km). Missing data (empty or NaN values, column not provided) 
-    will be replaced with the epicentral distance values, if present
+    Joyner-Boore distance (in km). Missing data (e.g., empty cell, NaN, column not provided) 
+    will be replaced with the epicentral distance, if present
   type: distance
 rhypo:
   dtype: float
@@ -65,15 +59,15 @@ rx:
   dtype: float
   help: >-
     Horizontal distance (in km) from the top of the rupture measured perpendicular to 
-    strike. Missing data (empty or NaN values, column not provided) will be replaced 
-    with the epicentral distance values, if present
+    strike. Missing data (e.g., empty cell, NaN, column not provided) will be replaced 
+    with the epicentral distance, if present
   type: distance
 ry0:
   dtype: float
   help: >-
     Horizontal distance (in km) from the top of the rupture measured parallel to strike. 
-    Missing data (empty or NaN values, column not provided) will be replaced with the 
-    epicentral distance values, if present
+    Missing data (e.g., empty cell, NaN, column not provided) will be replaced with the 
+    epicentral distance, if present
   type: distance
 rvolc:
   dtype: float
@@ -114,7 +108,7 @@ rupture_width:
   dtype: float
   ">=": 0
   help: >-
-    Down-dip width of the rupture (km). Missing data (empty or NaN values, column not 
+    Down-dip width of the rupture (km). Missing data (e.g., empty cell, NaN, column not 
     provided) will be derived from the record magnitude using a Magnitude-Scaling 
     Relationship defined for PEER PSHA test cases, and assuming an aspect ratio of 1
   alias: width
@@ -143,8 +137,8 @@ z1pt0:
   dtype: float
   help: >-
     depth of the layer where seismic waves start to propagate with a speed above 1.0 
-    km/sec, in meters. Missing data (empty or NaN values, column not provided) will be 
-    derived from the vs30 values (if present) using the Chiou & Youngs (2014) California 
+    km/sec, in meters. Missing data (e.g., empty cell, NaN, column not provided) will be 
+    derived from the vs30 (if present) using the Chiou & Youngs (2014) California 
     model
   alias: z1
   type: sites
@@ -152,9 +146,8 @@ z2pt5:
   dtype: float
   help: >-
     depth of the layer where seismic waves start to propagate with a speed above 
-    2.5 km/sec, in km. Missing data (empty or NaN values, column not provided) will be 
-    derived from the record vs30 values (if present) using the Campbell & Bozorgnia 
-    (2014) model
+    2.5 km/sec, in km. Missing data (e.g., empty cell, NaN, column not provided) will 
+    be derived from the vs30 (if present) using the Campbell & Bozorgnia (2014) model
   type: sites
 vs30:
   dtype: float
@@ -246,17 +239,17 @@ ev_id:
   alias: event_id
   help: >-
     The unique ID of the recorded seismic event. If missing, an id is inferred
-    from the columns event_latitude, event_longitude, event_depth and event_time 
-    (ISO date time), which must all be present.
+    from the event coordinates (latitude, longitude, depth and time) 
+    which must all be present.
     In general, you can use the id provided by the event catalog or web service,
     or create your own, as long as it holds: same id <=> same event. IDs should
     be preferably of type integer for performance reasons
 st_id:
   alias: station_id
   help: >-
-    The unique ID of the seismic station. If missing, an id is inferred
-    from the columns station_latitude, station_longitude, which must all be present.
-    In general, you can infer the id via the tuple (network_code, station_code)
+    The unique ID of the seismic station. If missing, an id is inferred from
+    the station spatial coordinates (latitude, longitude), which must all be present.
+    In general, you can infer the id from the tuple (network_code, station_code)
     or create your own, as long as it holds: same id <=> same station. IDs should
     be preferably of type integer for performance reasons
 ev_time:

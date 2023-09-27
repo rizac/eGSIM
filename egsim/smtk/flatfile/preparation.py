@@ -213,7 +213,7 @@ DEFAULT_MSR = PeerMSR()
 
 
 def get_ground_motion_property_values(flatfile: pd.DataFrame,
-                                      param_or_dist: str) -> pd.Series:
+                                      gm_property: str) -> pd.Series:
     """Get the values (pandas Series) relative to the ground motion property
     (rupture or sites parameter, distance measure) extracted from the given
     flatfile.
@@ -223,11 +223,11 @@ def get_ground_motion_property_values(flatfile: pd.DataFrame,
     If the column cannot be retrieved or created, this function
     raises :ref:`MissingColumn` error notifying the required missing column.
     """
-    column_name = get_column_name(flatfile, param_or_dist)
+    column_name = get_column_name(flatfile, gm_property)
     series = None if column_name is None else flatfile[column_name]
-    if param_or_dist == 'ztor':
+    if gm_property == 'ztor':
         series = fill_na(flatfile, 'hypo_depth', series)
-    elif param_or_dist == 'width':  # rupture_width
+    elif gm_property == 'width':  # rupture_width
         # Use the PeerMSR to define the area and assuming an aspect ratio
         # of 1 get the width
         mag = get_column_name(flatfile, 'mag')
@@ -240,15 +240,15 @@ def get_ground_motion_property_values(flatfile: pd.DataFrame,
                 if na.any():
                     series = series.copy()
                     series[na] = np.sqrt(DEFAULT_MSR.get_median_area(mag[na], 0))
-    elif param_or_dist in ['rjb', 'ry0']:
+    elif gm_property in ['rjb', 'ry0']:
         series = fill_na(flatfile, 'repi', series)
-    elif param_or_dist == 'rx':  # same as above, but -repi
+    elif gm_property == 'rx':  # same as above, but -repi
         series = fill_na(flatfile, 'repi', series)
         if series is not None:
             series = -series
-    elif param_or_dist == 'rrup':
+    elif gm_property == 'rrup':
         series = fill_na(flatfile, 'rhypo', series)
-    elif param_or_dist == 'z1pt0':
+    elif gm_property == 'z1pt0':
         vs30 = get_column_name(flatfile, 'vs30')
         if vs30 is not None:
             vs30 = flatfile[vs30]  # convert string to column (pd.Series)
@@ -259,7 +259,7 @@ def get_ground_motion_property_values(flatfile: pd.DataFrame,
                 if na.any():
                     series = series.copy()
                     series[na] = vs30_to_z1pt0_cy14(vs30[na])
-    elif param_or_dist == 'z2pt5':
+    elif gm_property == 'z2pt5':
         vs30 = get_column_name(flatfile, 'vs30')
         if vs30 is not None:
             vs30 = flatfile[vs30]  # convert string to column (pd.Series)
@@ -270,12 +270,12 @@ def get_ground_motion_property_values(flatfile: pd.DataFrame,
                 if na.any():
                     series = series.copy()
                     series[na] = vs30_to_z2pt5_cb14(vs30[na])
-    elif param_or_dist == 'backarc' and series is None:
+    elif gm_property == 'backarc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=False))
-    elif param_or_dist == 'rvolc' and series is None:
+    elif gm_property == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     if series is None:
-        raise MissingColumn(param_or_dist)
+        raise MissingColumn(gm_property)
     return series
 
 
@@ -298,49 +298,6 @@ def fill_na(flatfile:pd.DataFrame,
         dest = dest.copy()
         dest[na] = src[na]
     return dest
-
-
-class EventContext(RuptureContext):
-    """A RuptureContext accepting a flatfile (pandas DataFrame) as input"""
-
-    rupture_params:set[str] = None
-
-    def __init__(self, flatfile: pd.DataFrame):
-        super().__init__()
-        if not isinstance(flatfile.index, IntegerIndex):
-            raise ValueError('flatfile index should be made of unique integers')
-        self._flatfile = flatfile
-        if self.__class__.rupture_params is None:
-            # get rupture params once for all instances the first time only:
-            self.__class__.rupture_params = get_rupture_params()
-
-    def __eq__(self, other):  # FIXME: legacy code, is it still used?
-        assert isinstance(other, EventContext) and \
-               self._flatfile is other._flatfile
-
-    @property
-    def sids(self) -> IntegerIndex:
-        """Return the ids (iterable of integers) of the records (or sites) used to build
-        this context. The returned pandas `IntegerIndex` must have unique values so that
-        the records (flatfile rows) can always be retrieved from the source flatfile via
-        `flatfile.loc[self.sids, :]`
-        """
-        # note that this attribute is used also when calculating `len(self)` so do not
-        # delete or rename. See superclass for details
-        return self._flatfile.index
-
-
-    def __getattr__(self, column_name):
-        """Return a non-found Context attribute by searching in the underlying
-        flatfile column. Raises AttributeError (as usual) if `item` is not found
-        """
-        try:
-            values = self._flatfile[column_name].values
-        except KeyError:
-            raise MissingColumn(column_name)
-        if column_name in self.rupture_params:
-            values = values[0]
-        return values
 
 
 # FIXME REMOVE LEGACY STUFF CHECK WITH GW:
