@@ -238,3 +238,38 @@ def get_SA_period(obj: Union[str, imt.IMT]) -> Union[float, None]:
     # check also that the period is finite (SA('inf') and SA('nan') are possible,
     # and this function is intended to return a "workable" period):
     return float(period) if np.isfinite(period) else None
+
+
+def vs30_to_z1pt0_cy14(vs30: Union[float, np.ndarray], japan=False):
+    """Return the estimate depth to the 1.0 km/s velocity layer based on Vs30
+    from Chiou & Youngs (2014) California model
+
+    :param vs30: Vs30 value(s) in m/s
+    :param bool japan: if true returns the Japan model, otherwise the California model
+
+    :return:Z1.0 in m
+    """
+    if japan:
+        c1 = 412. ** 2.
+        c2 = 1360.0 ** 2.
+        return np.exp((-5.23 / 2.0) * np.log((np.power(vs30, 2.) + c1) / (
+            c2 + c1)))
+    else:
+        c1 = 571 ** 4.
+        c2 = 1360.0 ** 4.
+        return np.exp((-7.15 / 4.0) * np.log((vs30 ** 4. + c1) / (c2 + c1)))
+
+
+def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
+    """Convert vs30 to depth to 2.5 km/s interface using model proposed by
+    Campbell & Bozorgnia (2014)
+
+    :param vs30: Vs30 value(s)
+    :param bool japan: Use Japan formula (True) or California formula (False)
+
+    :return: Z2.5 in km
+    """
+    if japan:
+        return np.exp(5.359 - 1.102 * np.log(vs30))
+    else:
+        return np.exp(7.089 - 1.144 * np.log(vs30))
