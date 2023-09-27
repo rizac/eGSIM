@@ -1,6 +1,5 @@
 """
-module containing all column metadata information stored in the associated
-YAML file
+flatfile columns functions. see associated YAML file for info
 """
 from __future__ import annotations
 
@@ -8,21 +7,19 @@ import re
 from datetime import datetime, date
 from enum import Enum, ReprEnum
 from os.path import join, dirname
+from typing import Union, Any
+from collections.abc import Iterable
 
+import numpy as np
+import pandas as pd
 from pandas.core.arrays import PandasArray
 from pandas.core.dtypes.base import ExtensionDtype
-from typing import Union, Any, Iterable
-
 # try to speed up yaml.safe_load (https://pyyaml.org/wiki/PyYAMLDocumentation):
 from yaml import load as yaml_load
-
 try:
     from yaml import CSafeLoader as SafeLoader  # faster, if available
 except ImportError:
     from yaml import SafeLoader  # same as using yaml.safe_load
-
-import numpy as np
-import pandas as pd
 
 
 class ColumnType(Enum):

@@ -1,28 +1,24 @@
 """
 Residuals module
 """
-
+from __future__ import annotations  # https://peps.python.org/pep-0563/
 from collections.abc import Iterable, Collection
-
-from pandas import RangeIndex
 from typing import Union
-
 from math import sqrt
 
 import numpy as np
 import pandas as pd
+from pandas import RangeIndex
 from pandas.core.indexes.numeric import IntegerIndex
-
 from scipy.special import erf
-
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext
 
-from .. import check_gsim_list, get_gsim_name, get_SA_period  #, convert_accel_units
-from ..flatfile.preparation import (get_event_id_column_names,
-                                   get_station_id_column_names,
-                                   setup_flatfile_for_residuals)
+from .. import check_gsim_list, get_gsim_name, get_SA_period
+from ..flatfile.residuals import (get_event_id_column_names,
+                                  get_station_id_column_names,
+                                  get_flatfile_for_residual_analysis)
 from ..flatfile.columns import InvalidColumn, MissingColumn, get_rupture_params
 
 
@@ -64,18 +60,18 @@ def get_residuals(gsims: Iterable[str], imts: Collection[str],
         (according to Equation 9 of Scherbaum et al (2004)) should be computed
     """
     gsims = check_gsim_list(gsims)
-    flatfile2 = setup_flatfile_for_residuals(flatfile, gsims.values(), imts)
+    flatfile_r = get_flatfile_for_residual_analysis(flatfile, gsims.values(), imts)
     # copy event columns (raises if columns not found):
     ev_cols = get_event_id_column_names(flatfile)
-    flatfile2[ev_cols] = flatfile[ev_cols]
+    flatfile_r[ev_cols] = flatfile[ev_cols]
     # copy station columns (for the moment not used, so skip if no station columns)
     try:
         st_cols = get_station_id_column_names(flatfile)
-        flatfile2[st_cols] = flatfile[st_cols]
+        flatfile_r[st_cols] = flatfile[st_cols]
     except InvalidColumn:
         pass
     # compute residuals:
-    residuals = calculate_flatfile_residuals(gsims, imts, flatfile2,
+    residuals = calculate_flatfile_residuals(gsims, imts, flatfile_r,
                                              normalise=normalise)
     # concatenate expected in flatfile (add new columns):
     flatfile[list(residuals.columns)] = residuals
@@ -88,7 +84,7 @@ def calculate_flatfile_residuals(gsims: dict[str, GMPE], imts: Iterable[str],
                                  flatfile: pd.DataFrame, normalise=True) -> pd.DataFrame:
     residuals:pd.DataFrame = pd.DataFrame(index=flatfile.index)
     imts = list(imts)
-    # computget the observations (compute the log for all once here):
+    # compute the observations (compute the log for all once here):
     observations = pd.DataFrame(index=flatfile.index,
                                 columns=imts,
                                 data=np.log(flatfile[imts]))
@@ -106,6 +102,23 @@ def calculate_flatfile_residuals(gsims: dict[str, GMPE], imts: Iterable[str],
         residuals.loc[res.index, res.columns] = res
 
     return residuals
+
+
+def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
+    """Group the flatfile by events, and yield `EventContext`s objects, one for
+    each event"""
+    # assure each row has a unique int id from 0 until row_count-1:
+    if not isinstance(flatfile.index, RangeIndex):
+        flatfile.reset_index(drop=True, inplace=True)
+
+    # check event id column or use the event location to group events:
+    # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
+    # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
+    ev_sub_flatfiles = flatfile.groupby(get_event_id_column_names(flatfile))
+
+    for ev_id, dfr in ev_sub_flatfiles:
+        if not dfr.empty:  # for safety ...
+            yield EventContext(dfr)
 
 
 class EventContext(RuptureContext):
@@ -149,23 +162,6 @@ class EventContext(RuptureContext):
         if column_name in self.rupture_params:
             values = values[0]
         return values
-
-
-def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
-    """Group the flatfile by events, and yield `EventContext`s objects, one for
-    each event"""
-    # assure each row has a unique int id from 0 until row_count-1:
-    if not isinstance(flatfile.index, RangeIndex):
-        flatfile.reset_index(drop=True, inplace=True)
-
-    # check event id column or use the event location to group events:
-    # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
-    # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
-    ev_sub_flatfiles = flatfile.groupby(get_event_id_column_names(flatfile))
-
-    for ev_id, dfr in ev_sub_flatfiles:
-        if not dfr.empty:  # for safety ...
-            yield EventContext(dfr)
 
 
 def calculate_expected_motions(gsims: Iterable[GMPE], imts: Iterable[str],
