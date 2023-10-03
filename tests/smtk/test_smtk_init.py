@@ -7,7 +7,7 @@ from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
 import warnings
 import pytest
 
-from egsim.smtk import get_gsim_names, get_gsim_instance, registry, \
+from egsim.smtk import get_registered_gsim_names, get_gsim_instance, registry, \
     get_imts_defined_for, get_distances_required_by, \
     get_rupture_params_required_by, get_sites_params_required_by, get_gsim_name,\
     OQDeprecationWarning, convert_accel_units
@@ -79,7 +79,7 @@ def read_gsims(raise_deprecated=True, catch_deprecated=True):
     if catch_deprecated:
         errors.append(OQDeprecationWarning)
     errors = tuple(errors)
-    for model in get_gsim_names():
+    for model in get_registered_gsim_names():
         count += 1
         try:
             gsim = get_gsim_instance(model, raise_deprecated=raise_deprecated)
