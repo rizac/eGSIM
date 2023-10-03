@@ -1,6 +1,6 @@
 """Root module for the strong motion modeller toolkit (smtk) package of eGSIM"""
 
-from typing import Union, Type
+from typing import Union
 from collections.abc import Iterable, Collection
 from math import inf
 import re
@@ -18,7 +18,8 @@ from openquake.hazardlib import valid
 _gmpetable_regex = re.compile(r'^GMPETable\(([^)]+?)\)$')
 
 
-def get_gsim_names(sort=False) -> Iterable[str]:
+def get_registered_gsim_names(sort=False) -> Iterable[str]:
+    """Return all Gsim names registered in OpenQuake"""
     if not sort:
         yield from registry  # it's a dict, yield just the keys (names)
     else:
@@ -38,19 +39,27 @@ def get_gsim_instance(gsim_name: str, raise_deprecated=True) -> GMPE:
         return valid.gsim(gsim_name)
 
 
-def check_gsim_list(gsims) -> dict[str, GMPE]:
-    """
-    Check the GSIM models or strings in `gsims`, and return a dict of
-    gsim names (str) mapped to their :class:`openquake.hazardlib.Gsim`.
-    Raises error if any Gsim in the list is supported in OpenQuake.
+def harmonize_input_gsims(
+        gsims: Iterable[Union[str, type[GMPE], GMPE]]) -> dict[str, GMPE]:
+    """harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
+    (:class:`GMPE`) into a dict[str, GMPE] where each name is mapped to
+    the relative Gsim instance.
 
-    If a Gsim is passed as instance, its string representation is inferred
-    from the class name and optional arguments. If a Gsim is passed as string,
-    the associated class name is fetched from the OpenQuake available Gsims.
+    This method accounts for Gsim aliases stored in OpenQuake, and assures
+    that each key, value of the returned dict:
+    ```
+        get_gsim_instance(key) == value
+        get_gsim_name(value) == key
+    ```
 
-    :param gsims: list of GSIM names (str) or OpenQuake Gsim classes
+    :param gsims: iterable of GSIM names (str), OpenQuake Gsim classes or instances
     :return: a dict of GSIM names (str) mapped to the associated GSIM
     """
+    if isinstance(gsims, dict):
+        if all(isinstance(k, str) and isinstance(v, GMPE) for k, v in gsims.items()):
+            return gsims
+        raise ValueError('Invalid dict type, expected `dict[str, GMPE]`')
+    
     output_gsims = {}
     for gs in gsims:
         if isinstance(gs, GMPE):
@@ -102,25 +111,38 @@ def _get_src_name_from_aliased_version(gsim_toml_repr: str):
     return _gsim_aliases.get(gsim_toml_repr, None)
 
 
-def get_rupture_params_required_by(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
+def harmonize_input_imts(imts: Iterable[Union[str, imt.IMT]]) -> dict[str, imt.IMT]:
+    """harmonize IMTs given as names (str) or instances (IMT) to a dict[str, IMT]
+    where each name is mapped to the relative instance
+    """
+    ret = {}
+    for imtx in imts:
+        if isinstance(imtx, str):
+            ret[imtx] = imt.from_string(imtx)
+        else:
+            ret[repr(imtx)] = imtx
+    return ret
+
+
+def get_rupture_params_required_by(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     if isinstance(gsim, str):
         gsim = registry[gsim]
     return gsim.REQUIRES_RUPTURE_PARAMETERS or frozenset()  # "cast" to set if '' or (,)
 
 
-def get_sites_params_required_by(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
+def get_sites_params_required_by(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     if isinstance(gsim, str):
         gsim = registry[gsim]
     return gsim.REQUIRES_SITES_PARAMETERS or frozenset()  # "cast" to set if '' or (,)
 
 
-def get_distances_required_by(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
+def get_distances_required_by(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     if isinstance(gsim, str):
         gsim = registry[gsim]
     return gsim.REQUIRES_DISTANCES or frozenset()  # "cast" to set if '' or (,)
 
 
-def get_imts_defined_for(gsim: Union[str, GMPE, Type[GMPE]]) -> frozenset[str]:
+def get_imts_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     if isinstance(gsim, str):
         gsim = registry[gsim]
     return frozenset(_.__name__ for _ in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)

@@ -11,7 +11,7 @@ import yaml
 import pandas as pd
 import numpy as np
 
-from egsim.smtk import get_gsim_names, get_rupture_params_required_by, \
+from egsim.smtk import get_registered_gsim_names, get_rupture_params_required_by, \
     get_sites_params_required_by, get_distances_required_by
 from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype,
                                          _extract_from_columns,
@@ -184,7 +184,7 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
     oq_sites_params = set()
     oq_distances = set()
 
-    for name in get_gsim_names():
+    for name in get_registered_gsim_names():
         oq_rupture_params.update(get_rupture_params_required_by(name))
         oq_sites_params.update(get_sites_params_required_by(name))
         oq_distances.update(get_distances_required_by(name))
