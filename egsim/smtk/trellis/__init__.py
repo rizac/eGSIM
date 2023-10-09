@@ -1,4 +1,6 @@
 """trellis plots module"""
+from itertools import product
+
 from collections.abc import Collection, Iterable
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
@@ -9,7 +11,7 @@ import pandas as pd
 from openquake.hazardlib.contexts import ContextMaker
 
 from .rupture import GSIMRupture, NULL_OQ_PARAM, DEFAULT_POINT, WC1994
-from .. import harmonize_input_imts, harmonize_input_gsims
+from .. import harmonize_input_imts, harmonize_input_gsims, get_SA_period
 
 
 class REQUIRED:
@@ -102,28 +104,58 @@ def calculate_trellis(
     if not distances.shape:   # convert to a 1-length array if scalar:
         distances = distances.reshape(1,)
 
+    is_spectra = trellis_type == "Magnitude-Distance-Spectra"
+    if is_spectra:
+        # sort keys according to SA period:
+        imts = {i: imts[i] for i in sorted(imts, key=lambda i: get_SA_period(i))}
+
     # Get the context objects as a numpy recarray
     ctxts = build_contexts(
         gsims, magnitudes, distances, rupture_properties, site_properties)
 
+    # prepare dataframe
+    dist_label = site_properties['distance_type']
+
+    trellis_df = prepare_dataframe(imts, gsims, magnitudes, distances,
+                                   dist_label, is_spectra)
+
     # Get the ground motion values
-    trellis_data = get_ground_motion_values(gsims, imts, ctxts)
+    for gsim_label, medians, sigmas in get_ground_motion_values(gsims, imts, ctxts):
+        # both medians and spectra are numpy matrices of
+        # `len(imt)` rows X `len(ctxts) columns`. Convert them to
+        # `len(ctxts) rows X len(imt)`columns` matrices
+        medians = medians.T
+        sigmas = sigmas.T
+        if is_spectra:
+            medians = medians.reshape(1, len(ctxts) * len(imts)).flatten()
+            sigmas = sigmas.reshape(1, len(ctxts) * len(imts)).flatten()
+            trellis_df.loc[:,  (labels.MEDIAN, 'SA', gsim_label)] = medians
+            trellis_df.loc[:, (labels.SIGMA, 'SA', gsim_label)] = sigmas
+        else:
+            trellis_df.loc[:, (labels.MEDIAN, list(imts), gsim_label)] = medians
+            trellis_df.loc[:, (labels.SIGMA, list(imts), gsim_label)] = sigmas
+            # for i, mag in enumerate(magnitudes):
+            #     row_filter = trellis_df['mag'] == mag
+            #     start, end = i*len(distances), (i+1)*len(distances)
+            #     trellis_df.loc[row_filter, medians_col] = medians[start:end, :]
+            #     trellis_df.loc[row_filter, sigmas_col] = sigmas[start:end, :]
 
-    # columns = product(magnitudes, distances, imts, models)
-
-    # Export to dictionary
-    if trellis_type == "Magnitude-IMT":
-        trellis_data['mag']  = np.tile(magnitudes, len(ctxts) / len(magnitudes))
-
-    elif trellis_type == "Distance-IMT":
-        dist_label = site_properties['distance_type']
-        trellis_data[dist_label] = np.tile(distances, len(ctxts) / len(distances))
-
-    elif trellis_type == "Magnitude-Distance-Spectra":
-        return self.magnitude_distance_spectra_trellis_output(medians, sigmas,
-                                                              magnitudes,
-                                                              distances, ctxts)
-    return trellis_data
+    return trellis_df
+    # if trellis_type == "Magnitude-IMT":
+    #     # make array [mag1, ..., mag1, mag2, ..., mag2, ..., magN, ..., magN]:
+    #     trellis_data[('mag', '', '')] = np.hstack((np.full(step_len, m) for m in magnitudes))
+    #
+    #
+    # elif trellis_type == "Distance-IMT":
+    #     # make array [dist1, ..., distN, dist1, ..., distN, ..., dist1, ..., distN]:
+    #     dist_label = site_properties['distance_type']
+    #     trellis_data[(dist_label, '', '')] = pd.Series(np.tile(distances, step_len), name=dist_label)
+    #
+    # elif trellis_type == "Magnitude-Distance-Spectra":
+    #     return self.magnitude_distance_spectra_trellis_output(medians, sigmas,
+    #                                                           magnitudes,
+    #                                                           distances, ctxts)
+    # return trellis_data
     #
     # else:
     #     pass
@@ -142,7 +174,8 @@ def build_contexts(gsims: dict[str, GMPE],
     :param magnitudes: the magnitudes
     :param distances: the distances
 
-    :return: Context objects in the form of a single numpy recarray
+    :return: Context objects in the form of a single numpy recarray of length:
+        len(magnitudes) * len(distances)
     """
     ctxts = []
     for i, mag in enumerate(magnitudes):
@@ -158,24 +191,53 @@ def build_contexts(gsims: dict[str, GMPE],
     return cmaker.recarray(ctxts)
 
 
+def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label, is_spectra):
+
+    # get columns:
+    columns = [('mag', '', ''), (dist_label, '', ''), ('period', '', '')] + \
+              list(product([labels.MEDIAN, labels.SIGMA], imts, gsims))
+    columns = pd.MultiIndex.from_tuples(columns, names=["name", "imt", "model"])
+    ret = pd.DataFrame(columns=columns)
+    # get the values for magnitudes, distances and periods:
+    if is_spectra:
+        periods = np.tile([i.period for i in imts.values()],
+                          len(magnitudes) * len(distances))
+        dists = np.hstack((np.full(len(imts), m) for m in distances))
+        mags = np.hstack((np.full(len(imts) * len(distances), m)
+                          for m in magnitudes))
+    else:
+        periods = np.full(len(magnitudes) * len(distances), np.nan)
+        dists = np.tile(distances, len(magnitudes))
+        mags = np.hstack((np.full(len(distances), m) for m in magnitudes))
+    # assign:
+    ret['period'] = periods
+    ret[dist_label] = dists
+    ret['mag'] = mags
+    return ret
+
+
 def get_ground_motion_values(
         gsims: dict[str, GMPE],
         imts: dict[str, IMT],
-        ctxts: np.recarray) -> pd.DataFrame:
+        ctxts: np.recarray) -> Iterable[tuple[np.ndarray, np.ndarray]]:
     """Return the ground motion values for the expected scenarios
 
     :param gsims: dict of GSIM names mapped to a GSIM instance (class `GMPE`)
-    :param imts: dict of IMT names mapped to a IMT instance (class `IMT`)
-    :param ctxts: Scenarios as numpy recarray (output from context maker)
+    :param imts: dict of IMT names mapped to an IMT instance (class `IMT`)
+    :param ctxts: Scenarios as numpy recarray (output from context maker) as
+        N (rows) x M (columns) matrix where N is the number of magnitudes
+        and M the number of distances
 
-    :return: pandas DataFrame
+    :return: Iterable of tuples:
+        `gsim_label, medians, sigmas`
+        where `medians` and `sigmas` are two matrices
+        (`len(imt)` rows X `len(ctxts)` columns)
+        denoting the medians and standard deviations of the motions, respectively
     """
     # Get the GMVs
     # imts_values = list(imts.values())
     # n_gmvs = len(ctxts)
     # n_imts = len(imts)
-    ret = pd.DataFrame()
-
     for gsim_label, gsim in gsims.items():
         # Need to pre-allocate arrays for median, sigma, tau and phi
         median = np.zeros([len(imts), len(ctxts)])
@@ -184,12 +246,9 @@ def get_ground_motion_values(
         phi = np.zeros_like(median)
         # Call OpenQuake GSIM
         gsim.compute(ctxts, imts.values(), median, sigma, tau, phi)
-
         median = np.exp(median)
-        ret[[f'{gsim_label} {i} {labels.MEDIAN}' for i in imts]] = median.T
-        ret[[f'{gsim_label} {i} {labels.SIGMA}' for i in imts]] = sigma.T
+        yield gsim_label, median, sigma
 
-    return ret
 
 
 class labels:
