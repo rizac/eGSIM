@@ -86,17 +86,16 @@ def get_gsim_name(gsim: GMPE) -> str:
         filepath = match.group(1).split("=")[1][1:-1]
         return 'GMPETable(gmpe_table=%s)' % filepath
     else:
-        gsim_toml_repr = str(gsim)
-        # gsim_toml_repr should be a TOML version of the gsim. We could return it,
-        # but we want to return the name that allows us to make this function the
-        # opposite of `get_gsim_instance`. So:
+        gsim_toml_repr = str(gsim)  # TOML version of the gsim (see source code)
+        # We want to return a string representation of gsim (called `s`) such as
+        # `get_gsim_instance(s) = gsim`. `gsim_toml_repr` might not be such a string:
         # 1. `gsim_toml_repr` is actually "[<gsim_class_name>]": in this case
         # just return <class_name>:
         gsim_class_name = gsim.__class__.__name__
         if gsim_toml_repr == f'[{gsim_class_name}]':
             return gsim_class_name
-        # 2. gsim is an aliased version of some model M. In this case, `
-        # gsim_toml_repr` can be reduced to the simple class name of M:
+        # 2. gsim is an aliased version of some other gsim. In this case, `
+        # gsim_toml_repr` can be reduced to the simple class name of that gsim:
         gsim_src = _get_src_name_from_aliased_version(gsim_toml_repr)  # might be None
         return gsim_src or gsim_toml_repr
 

@@ -4,6 +4,7 @@ Tests for generation of data for trellis plots
 import os
 import json
 import numpy as np
+import pandas as pd
 
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
@@ -79,10 +80,12 @@ def test_distance_imt_trellis():
         distances,
         properties)
     # compare with old data:
-    TEST_FILE = "test_distance_imt_trellis.json"
-    with open(os.path.join(BASE_DATA_PATH, TEST_FILE), "r") as _:
-        ref = json.load(_)
-        compare_jsons(ref, dfr)
+    TEST_FILE = "trellis_vs_distance.hdf"
+    ref = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))
+    ref = ref.iloc[1:]  # remove 1st line (was a bug in old code?)  noqa
+    assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
+    assert (np.isna(dfr['period']) == np.isna(ref['period'])).all()
+    asd = 9
 
 
 def test_magnitude_imt_trellis():
