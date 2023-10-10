@@ -2,14 +2,15 @@
 Tests for generation of data for trellis plots
 """
 import os
-import json
 import numpy as np
 import pandas as pd
+from openquake.hazardlib.geo import Point
 
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
-
+from openquake.hazardlib.scalerel import WC1994
+from scipy.interpolate import interpolate
 
 from egsim.smtk.trellis import get_trellis
 
@@ -25,9 +26,7 @@ periods = [0.05, 0.075, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16,
            3.0, 4.001, 5.0, 7.5, 10.0]
 
 
-# note below some GSIMS are passed as strings, some as instances (both
-# types are valid, in the second case the str representation is
-# inferred, see trellis_plot.py for details):
+# the Gsims to test (mix strings and instances to test both):
 gsims = ["AkkarBommer2010", "CauzziFaccioli2008",
          "ChiouYoungs2008", "ZhaoEtAl2006Asc", AkkarEtAlRjb2014(),
          BindiEtAl2014Rjb(), "CauzziEtAl2014", "DerrasEtAl2014",
@@ -37,36 +36,30 @@ gsims = ["AkkarBommer2010", "CauzziFaccioli2008",
          "ZhaoEtAl2016Asc", BindiEtAl2017Rjb()]
 
 
-def compare_jsons(self, old, new):
-    """
-    Compares the json data from file with the new data from trellis plot
+def allclose(actual, expected, *, q=None,
+             rtol=1e-05, atol=1e-08, equal_nan=True):
+    """Same as numpy `allclose` but with the possibility to remove outliers using
+    the quantile parameter `q` in [0, 1]. Also note that `equal_nan is True by
+    default. E.g., to check if the arrays `a` and `b` are close, ignoring the elements
+    whose abs. difference is in the highest 5%: `allclose(a, b, q=0.95)`
 
-    This version works with the magnitude IMT and distance IMT trellis
-    plots. Magnitude-distance Spectra has a slightly different means of
-    comparison, so this will be over-ridden in that test
-    """
-    # Check x-labels are the same
-    self.assertEqual(old["xlabel"], new["xlabel"])
-    # Check x-values are the same
-    np.testing.assert_array_almost_equal(old["xvalues"], new["xvalues"], 7)
-    for i in range(len(old["figures"])):
-        self.assertEqual(old["figures"][i]["ylabel"],
-                         new["figures"][i]["ylabel"])
-        # self.assertEqual(old["figures"][i]["column"],
-        #                  new["figures"][i]["column"])
-        # self.assertEqual(old["figures"][i]["row"],
-        #                  new["figures"][i]["row"])
+    :param q: quantile in [0, 1] or None. If not None, the elements of
+        `actual` and `expected` for which abs(expected-actual) is above the `q`
+        quantile (e.g., 0.95) will be discarded before applying numpy `allclose`
+    and `expected`, element-wise
 
-        oldys = old["figures"][i]["yvalues"].values()
-        newys = new["figures"][i]["yvalues"].values()
-        for oldy, newy in zip(oldys, newys):
-            np.testing.assert_array_almost_equal(oldy, newy, 7)
+    """
+    if q is not None:
+        diffs = np.abs(actual - expected)
+        filter = np.isnan(diffs) | (diffs < np.nanquantile(diffs, q))
+        expected = expected[filter]
+        actual = actual[filter]
+
+    return np.allclose(actual, expected, atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
 def test_distance_imt_trellis():
-    """
-    Tests the DistanceIMT trellis data generation
-    """
+    """test trellis vs distance"""
     # Setup rupture
     properties = dict(dip=60.0, aspect=1.5, hypocentre_location=(0.5, 0.5),
                       vs30=800)
@@ -82,21 +75,63 @@ def test_distance_imt_trellis():
     # compare with old data:
     TEST_FILE = "trellis_vs_distance.hdf"
     ref = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))
-    ref = ref.iloc[1:]  # remove 1st line (was a bug in old code?)  noqa
+    # columns are the same:
+    assert not set(ref.columns) ^ set(dfr.columns)  # noqa
+    # remove 1st line (was a bug in old code?) whose rrup equals to the 2nd,
+    ref = ref.iloc[1:]  # noqa
+    # few checks:
+    assert len(ref) == len(dfr)
     assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
-    assert (np.isna(dfr['period']) == np.isna(ref['period'])).all()
-    asd = 9
+    assert dfr['period'].isna().sum() == ref['period'].isna().sum() == len(dfr)
+
+    # Now compare trellis values:
+    # keep data only within the new data range, to avoid errors due to extrapolation of
+    # out-of-bound values:
+    ref = ref[(ref['rrup'] >= dfr['rrup'].min()) &
+              (ref['rrup'] <= dfr['rrup'].max())]
+    # compare trellis values:
+    for c in dfr.columns:
+        if all(_ for _ in c):  # columns denoting medians and sttdev
+            # all series are monotonically decreasing:
+            if 'Median' in c and not 'ChiouYoungs2008' in c:
+                values = dfr[c]
+                if 'AbrahamsonEtAl2014' or 'ChiouYoungs2008' in c:
+                    # these gsims have increasing values at the beginning,
+                    # then decrease. Remove first 20 values
+                    values = dfr[c][20:]
+                assert (np.diff(values) <= 0).all()
+            # create interpolation function from new data
+            interp = interpolate.interp1d(dfr['rrup'].values, dfr[c].values,
+                                          fill_value="extrapolate", kind="cubic")
+            # interpolate the old values
+            expected = interp(ref['rrup'].values)
+            # and here are the old values:
+            actual = ref[c].values
+            # Now check diffs (The if below are unnecessary but allow to set
+            # breakpoints in PyCharm):
+            # assert data is close enough:
+            if not allclose(actual, expected, rtol=0.04):
+                assert False
+            # assert data is really close if we exclude some sparse outlier (keep data
+            # below the 95-th percentile calculated the diffs):
+            if not allclose(actual, expected, rtol=0.0002, q=0.95):
+                assert False
 
 
 def test_magnitude_imt_trellis():
-    """
-    Tests the MagnitudeIMT trellis data generation
-    """
+    """Test trellis vs magnitudes"""
     magnitudes = np.arange(4., 8.1, 0.1)
     distance = 20.
-    properties = {"dip": 60.0, "rake": -90.0, "aspect": 1.5, "ztor": 0.0,
-                  "vs30": 800.0, "backarc": False, "z1pt0": 50.0,
-                  "z2pt5": 1.0, "line_azimuth": 90.0}
+    properties = {'dip': 60.0, 'rake': -90.0, 'aspect': 1.5, 'ztor': 0.0,
+                  'vs30': 800.0, 'backarc': False, 'z1pt0': 50.0, 'z2pt5': 1.0,
+                  'line_azimuth': 90.0, 'tectonic_region': 'Active Shallow Crust',
+                  'strike': 0.0, 'msr': WC1994(),
+                  'initial_point': Point(longitude=45.183330, latitude=9.150000,
+                                         depth=0.0000),
+                  'hypocentre_location': None, 'origin_point': (0.5, 0.5),
+                  'vs30measured': True,
+                  'distance_type': 'rrup'}
+
     dfr = get_trellis(
         gsims,
         imts,
@@ -105,10 +140,48 @@ def test_magnitude_imt_trellis():
         properties
     )
     # compare with old data:
-    TEST_FILE = "test_magnitude_imt_trellis.json"
-    with open(os.path.join(BASE_DATA_PATH, TEST_FILE), "r") as _:
-        ref = json.load(_)
-        compare_jsons(ref, dfr)
+    TEST_FILE = "trellis_vs_magnitude.hdf"
+    ref = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))
+    # columns are the same:
+    assert not set(ref.columns) ^ set(dfr.columns)  # noqa
+    # few checks:
+    assert len(ref) == len(dfr)
+    assert (ref['rrup'].values == dfr['rrup'].values).all()
+    assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
+    assert dfr['period'].isna().sum() == ref['period'].isna().sum() == len(dfr)
+
+    # Now compare trellis values:
+    # keep data only within the new data range, to avoid errors due to extrapolation of
+    # out-of-bound values:
+    ref = ref[(ref['mag'] >= dfr['mag'].min()) &
+              (ref['mag'] <= dfr['mag'].max())]
+    # compare trellis values:
+    for c in dfr.columns:
+        if all(_ for _ in c):  # columns denoting medians and sttdev
+            # all series are monotonically increasing:
+            if 'Median' in c:
+                try:
+                    assert (np.diff(dfr[c]) >= 0).all()
+                except AssertionError:
+                    # assert that at least 92% of the points are increasing
+                    # (hacky test heuristically calculated):
+                    assert (np.diff(dfr[c]) >= 0).sum() > 0.92 * len(dfr[c])
+            # create interpolation function from new data
+            interp = interpolate.interp1d(dfr['mag'].values, dfr[c].values,
+                                          fill_value="extrapolate", kind="cubic")
+            # interpolate the old values
+            expected = interp(ref['mag'].values)
+            # and here are the old values:
+            actual = ref[c].values
+            # Now check diffs (The if below are unnecessary but allow to set
+            # breakpoints in PyCharm):
+            # assert data is close enough:
+            # if not allclose(actual, expected, rtol=0.75):
+            #     assert False
+            # assert data is really close if we exclude some sparse outlier (keep data
+            # below the 50-th percentile calculated the diffs):
+            if not allclose(actual, expected, rtol=0.1, q=0.5):
+                assert False
 
 
 def test_magnitude_distance_spectra_trellis():
@@ -128,7 +201,46 @@ def test_magnitude_distance_spectra_trellis():
         properties,
     )
     # compare with old data:
-    TEST_FILE = "test_magnitude_distance_spectra_trellis.json"
-    with open(os.path.join(BASE_DATA_PATH, TEST_FILE), "r") as _:
-        ref = json.load(_)
-        compare_jsons(ref, dfr)
+    TEST_FILE = "trellis_spectra.hdf"
+    ref = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))
+    # columns are the same:
+    assert not set(ref.columns) ^ set(dfr.columns)  # noqa
+    # few checks:
+    assert len(ref) == len(dfr)
+    assert (ref['rrup'].values == dfr['rrup'].values).all()
+    assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
+    assert dfr['period'].isna().sum() == ref['period'].isna().sum() == len(dfr)
+
+    # Now compare trellis values:
+    # keep data only within the new data range, to avoid errors due to extrapolation of
+    # out-of-bound values:
+    ref = ref[(ref['mag'] >= dfr['mag'].min()) &
+              (ref['mag'] <= dfr['mag'].max())]
+    # compare trellis values:
+    for c in dfr.columns:
+        if all(_ for _ in c):  # columns denoting medians and sttdev
+            # all series are monotonically increasing:
+            if 'Median' in c:
+                try:
+                    assert (np.diff(dfr[c]) >= 0).all()
+                except AssertionError:
+                    # assert that at least 92% of the points are increasing
+                    # (hacky test heuristically calculated):
+                    assert (np.diff(dfr[c]) >= 0).sum() > 0.92 * len(dfr[c])
+            # create interpolation function from new data
+            interp = interpolate.interp1d(dfr['mag'].values, dfr[c].values,
+                                          fill_value="extrapolate", kind="cubic")
+            # interpolate the old values
+            expected = interp(ref['mag'].values)
+            # and here are the old values:
+            actual = ref[c].values
+            # Now check diffs (The if below are unnecessary but allow to set
+            # breakpoints in PyCharm):
+            # assert data is close enough:
+            # if not allclose(actual, expected, rtol=0.75):
+            #     assert False
+            # assert data is really close if we exclude some sparse outlier (keep data
+            # below the 50-th percentile calculated the diffs):
+            if not allclose(actual, expected, rtol=0.1, q=0.5):
+                assert False
+
