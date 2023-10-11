@@ -1,28 +1,23 @@
 """
-set-up the source and site configuration for comparing the trellis plots
+source and site configuration functions for comparing the trellis plots
 """
 from __future__ import annotations
-from collections.abc import Collection, Iterable
+from collections.abc import Iterable
 
 from math import sqrt, pi, sin, cos, fabs
 from copy import deepcopy
-from typing import Union, Optional
-
+from typing import Optional
 import numpy as np
-from openquake.hazardlib.geo import Point, Mesh, PlanarSurface  # Line, Polygon,
 
+from openquake.hazardlib.geo import Point, Mesh, PlanarSurface  # Line, Polygon,
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.point import PointSource
 
 from egsim.smtk import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-TO_RAD = pi / 180.
-FROM_RAD = 180. / pi
 # Default point - some random location on Earth
 DEFAULT_POINT = Point(45.18333, 9.15, 0.)
-SUPPORTED_DISTANCE_TYPES = ("rrup", "rjb", "repi", "rhypo",)  # FIXME CONVERT TO ENUM
-NULL_OQ_PARAM = {"imtls": {"PGA": []}}  # FIXME: why so convoluted?
 
 
 def create_rupture(id:int, magnitude, rake, tectonic_region, hypocenter, surface) \
@@ -76,54 +71,6 @@ def create_planar_surface(top_centroid: Point, strike: float, dip: float,
                          bottom_right, bottom_left)
 
 
-def get_hypocentre_on_planar_surface(
-        plane: PlanarSurface,
-        hypo_loc: Optional[tuple[float, float]] = None) -> Point:
-    """
-    Determine the location of the hypocentre within the plane
-
-    :param plane: Rupture plane as instance of
-        :class:`openquake.hazardlib.geo.surface.planar.PlanarSurface`
-    :param tuple hypo_loc: Hypocentre location as fraction of rupture plane,
-        as a tuple of (Along Strike, Down Dip), e.g. a hypocentre located in
-        the centroid of the rupture plane would be input as (0.5, 0.5), whereas
-        a hypocentre located in a position 3/4 along the length, and 1/4 of the
-        way down dip of the rupture plane would be entered as (0.75, 0.25)
-
-    :return: Hypocentre location as instance of
-        :class:`openquake.hazardlib.geo.point.Point`
-    """
-
-    centroid = plane.get_middle_point()
-    if hypo_loc is None:
-        return centroid
-
-    along_strike_dist = (hypo_loc[0] * plane.length) - (0.5 * plane.length)
-    down_dip_dist = (hypo_loc[1] * plane.width) - (0.5 * plane.width)
-    if along_strike_dist >= 0.:
-        along_strike_azimuth = plane.strike
-    else:
-        along_strike_azimuth = (plane.strike + 180.) % 360.
-        along_strike_dist = (0.5 - hypo_loc[0]) * plane.length
-    # Translate along strike
-    hypocentre = centroid.point_at(along_strike_dist,
-                                   0.,
-                                   along_strike_azimuth)
-    # Translate down dip
-    horizontal_dist = down_dip_dist * cos(TO_RAD * plane.dip)
-    vertical_dist = down_dip_dist * sin(TO_RAD * plane.dip)
-    if down_dip_dist >= 0.:
-        down_dip_azimuth = (plane.strike + 90.) % 360.
-    else:
-        down_dip_azimuth = (plane.strike - 90.) % 360.
-        down_dip_dist = (0.5 - hypo_loc[1]) * plane.width
-        horizontal_dist = down_dip_dist * cos(TO_RAD * plane.dip)
-
-    return hypocentre.point_at(horizontal_dist,
-                               vertical_dist,
-                               down_dip_azimuth)
-
-
 def get_target_sites(hypocenter: Point,
         surface: PlanarSurface,
         distances: Iterable[float],
@@ -161,10 +108,6 @@ def sites_at_distance(
     """Determine the locations of the target sites according to their specified
     distances and distance configuration
     """
-    # FIXME REMOVE ASSERT BELOW
-    assert dist_type in SUPPORTED_DISTANCE_TYPES, \
-        "Distance type %s not supported" % dist_type
-
     azimuth = (surface.get_strike() + azimuth) % 360.
     origin_location = get_hypocentre_on_planar_surface(surface,
                                                        origin_point)
@@ -173,10 +116,8 @@ def sites_at_distance(
     locations = []
     for dist in distances:
         if dist_type == "repi":
-            locations.append(hypocenter.point_at(dist, 0.0,
-                                                      azimuth))  # FIXME: it was line_azimuth
+            locations.append(hypocenter.point_at(dist, 0.0, azimuth))
         elif dist_type == "rhypo":
-
             if dist < hypocenter.depth:
                 raise ValueError(
                     "Required hypocentral distance %.1f km less than "
@@ -190,13 +131,15 @@ def sites_at_distance(
             locations.append(
                 _rup_to_point(dist, surface, origin_location, azimuth, 'rjb')
             )
-        else:
+        elif dist_type == "rrup":
             # FIXME (horrible hack): dist 0 is buggy, set it to 0.0075 (the smallest
             # dist which gives results consistent with cloe by distances
             dist = max(dist, 0.0075)
             locations.append(
                 _rup_to_point(dist, surface, origin_location, azimuth, 'rrup')
             )
+        else:
+            raise ValueError(f"Unsupported distance type '{dist_type}'")
     return locations
 
 
@@ -217,7 +160,6 @@ def get_hypocentre_on_planar_surface(
     :return: Hypocentre location as instance of
         :class:`openquake.hazardlib.geo.point.Point`
     """
-
     centroid = plane.get_middle_point()
     if hypo_loc is None:
         return centroid
@@ -230,10 +172,10 @@ def get_hypocentre_on_planar_surface(
         along_strike_azimuth = (plane.strike + 180.) % 360.
         along_strike_dist = (0.5 - hypo_loc[0]) * plane.length
     # Translate along strike
-    hypocentre = centroid.point_at(along_strike_dist,
-                                   0.,
+    hypocentre = centroid.point_at(along_strike_dist, 0.,
                                    along_strike_azimuth)
     # Translate down dip
+    TO_RAD = pi / 180.  # noqa
     horizontal_dist = down_dip_dist * cos(TO_RAD * plane.dip)
     vertical_dist = down_dip_dist * sin(TO_RAD * plane.dip)
     if down_dip_dist >= 0.:
@@ -290,7 +232,7 @@ def _rup_to_point(
                 pt1 = pt0.point_at(np.fabs(r_diff), 0.,
                                    (azimuth + 180.) % 360.)
         else:
-            raise ValueError('Distance type must be rrup or rjb!')
+            raise ValueError('Distance type must be rrup or rjb')
         iterval += 1
     return pt1
 

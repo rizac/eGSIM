@@ -1,18 +1,18 @@
 """trellis plots module"""
 from itertools import product
-
 from collections.abc import Collection, Iterable
-from openquake.hazardlib.gsim.base import GMPE
-from openquake.hazardlib.imt import IMT
 from typing import Union
 
 import numpy as np
 import pandas as pd
+from openquake.hazardlib.gsim.base import GMPE
+from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.scalerel.wc1994 import WC1994
+from openquake.hazardlib.geo import Point
 
-from .rupture import (NULL_OQ_PARAM, DEFAULT_POINT, get_target_sites,
-                      create_planar_surface, get_hypocentre_on_planar_surface,
+from .rupture import (get_target_sites, create_planar_surface,
+                      get_hypocentre_on_planar_surface,
                       create_rupture)
 from .. import harmonize_input_imts, harmonize_input_gsims, get_SA_period
 
@@ -28,7 +28,7 @@ RUPTURE_DEFAULTS = {
     "ztor": 0.,
     "strike":0.,
     "msr": WC1994(),
-    "initial_point": DEFAULT_POINT,
+    "initial_point": Point(45.18333, 9.15, 0.),  # random location on Earth
     "hypocenter_location": None
 }
 
@@ -182,7 +182,7 @@ def build_contexts(gsims: dict[str, GMPE],
     :return: Context objects in the form of a single numpy recarray of length:
         len(magnitudes) * len(distances)
     """
-    cmaker = ContextMaker(tectonic_region, gsims.values(), NULL_OQ_PARAM)
+    cmaker = ContextMaker(tectonic_region, gsims.values(), oq={"imtls": {"PGA": []}})
     ctxts = []
     for i, magnitude in enumerate(magnitudes):
         area = msr.get_median_area(magnitude, rake)
