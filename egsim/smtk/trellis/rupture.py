@@ -16,9 +16,6 @@ from openquake.hazardlib.source.point import PointSource
 
 from egsim.smtk import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-# Default point - some random location on Earth
-DEFAULT_POINT = Point(45.18333, 9.15, 0.)
-
 
 def create_rupture(id:int, magnitude, rake, tectonic_region, hypocenter, surface) \
         -> BaseRupture:
@@ -75,27 +72,22 @@ def get_target_sites(hypocenter: Point,
         surface: PlanarSurface,
         distances: Iterable[float],
         vs30: float,
-        **properties: dict):
+        line_azimuth=90.0,
+        origin_point=(0.5, 0.0),
+        distance_type="rrup",
+        z1pt0=None, z2pt5=None, **extras):
     """Sets a set of target sites in the class"""
-    site_properties = {**properties, 'vs30': vs30}
-    # Extract the target information related to the configuration
-    line_azimuth = site_properties.pop("line_azimuth", 90.0)
-    origin_point = site_properties.pop("origin_point", (0.5, 0.0))
-    as_log = site_properties.pop("as_log", "False")
-    dist_type = site_properties.pop("distance_type", "rrup")
-    # ... this leaves site_properties as only containing site attributes
-    if "z1pt0" not in site_properties or site_properties["z1pt0"] is None:
-        site_properties["z1pt0"] = vs30_to_z1pt0_cy14(site_properties["vs30"])
-    if "z2pt5" not in site_properties or site_properties["z2pt5"] is None:
-        site_properties["z2pt5"] = vs30_to_z2pt5_cb14(site_properties["vs30"])
-
     # Get the site locations
     site_locations = sites_at_distance(hypocenter, surface, distances,
-                                       line_azimuth, origin_point, dist_type)
+                                       line_azimuth, origin_point, distance_type)
     # Turn them into OpenQuake Site objects, adding in the site properties
+    if z1pt0 is None:
+        z1pt0 = vs30_to_z1pt0_cy14(vs30)
+    if z2pt5 is None:
+        z2pt5 = vs30_to_z2pt5_cb14(vs30)
     target_sites = []
     for locn in site_locations:
-        target_sites.append(Site(locn, **site_properties))
+        target_sites.append(Site(locn, vs30=vs30, z1pt0=z1pt0, z2pt5=z2pt5, **extras))
     # Convert to a SiteCollection
     return SiteCollection(target_sites)
 
@@ -103,8 +95,10 @@ def get_target_sites(hypocenter: Point,
 def sites_at_distance(
         hypocenter: Point,
         surface: PlanarSurface,
-        distances: Iterable[float], azimuth: float,
-        origin_point: tuple[float, float], dist_type: str = "rrup") -> list:
+        distances: Iterable[float],
+        azimuth: float,
+        origin_point: tuple[float, float],
+        dist_type: str = "rrup") -> list[Point]:
     """Determine the locations of the target sites according to their specified
     distances and distance configuration
     """

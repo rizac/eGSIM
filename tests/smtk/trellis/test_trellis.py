@@ -12,7 +12,7 @@ from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
 from openquake.hazardlib.scalerel import WC1994
 from scipy.interpolate import interpolate
 
-from egsim.smtk.trellis import get_trellis
+from egsim.smtk.trellis import get_trellis, RuptureProperties, SiteProperties
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -60,9 +60,6 @@ def allclose(actual, expected, *, q=None,
 
 def test_distance_imt_trellis():
     """test trellis vs distance"""
-    # Setup rupture
-    properties = dict(dip=60.0, aspect=1.5, hypocentre_location=(0.5, 0.5),
-                      vs30=800)
     distances = np.arange(0, 250.5, 1)
     magnitude = 6.5
     # Get trellis calculations
@@ -71,7 +68,8 @@ def test_distance_imt_trellis():
         imts,
         magnitude,
         distances,
-        properties)
+        RuptureProperties(dip=60.0, aspect=1.5, hypocenter_location=(0.5, 0.5)),
+        SiteProperties(vs30=800))
     # compare with old data:
     TEST_FILE = "trellis_vs_distance.hdf"
     ref = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))
@@ -122,22 +120,14 @@ def test_magnitude_imt_trellis():
     """Test trellis vs magnitudes"""
     magnitudes = np.arange(4., 8.1, 0.1)
     distance = 20.
-    properties = {'dip': 60.0, 'rake': -90.0, 'aspect': 1.5, 'ztor': 0.0,
-                  'vs30': 800.0, 'backarc': False, 'z1pt0': 50.0, 'z2pt5': 1.0,
-                  'line_azimuth': 90.0, 'tectonic_region': 'Active Shallow Crust',
-                  'strike': 0.0, 'msr': WC1994(),
-                  'initial_point': Point(longitude=45.183330, latitude=9.150000,
-                                         depth=0.0000),
-                  'hypocentre_location': None, 'origin_point': (0.5, 0.5),
-                  'vs30measured': True,
-                  'distance_type': 'rrup'}
 
     dfr = get_trellis(
         gsims,
         imts,
         magnitudes,
         distance,
-        properties
+        RuptureProperties(dip=60.0, aspect=1.5, rake=-90),
+        SiteProperties(vs30=800, z1pt0=50., z2pt5=1.)
     )
     # compare with old data:
     TEST_FILE = "trellis_vs_magnitude.hdf"
@@ -188,17 +178,20 @@ def test_magnitude_distance_spectra_trellis():
     """
     Tests the MagnitudeDistanceSpectra Trellis data generation
     """
-    properties = {"dip": 60.0, "rake": -90.0, "aspect": 1.5, "ztor": 0.0,
-                  "vs30": 800.0, "backarc": False, "z1pt0": 50.0,
-                  "z2pt5": 1.0}
+    # properties = {"dip": 60.0, "rake": -90.0, "aspect": 1.5, "ztor": 0.0,
+    #               "vs30": 800.0, "backarc": False, "z1pt0": 50.0,
+    #               "z2pt5": 1.0}
     magnitudes = [4.0, 5.0, 6.0, 7.0]
     distances = [5., 20., 50., 150.0]
     dfr = get_trellis(
         gsims,
-        imts,
+        periods,
         magnitudes,
         distances,
-        properties,
+        RuptureProperties(dip=60., rake=-90., aspect=1.5, ztor=0.0),
+        SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0,
+                       z2pt5=1.0),
+        spectra=True
     )
     # compare with old data:
     TEST_FILE = "trellis_spectra.hdf"

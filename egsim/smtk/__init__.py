@@ -115,11 +115,13 @@ def harmonize_input_imts(imts: Iterable[Union[str, imt.IMT]]) -> dict[str, imt.I
     where each name is mapped to the relative instance
     """
     ret = {}
-    for imtx in imts:
-        if isinstance(imtx, str):
-            ret[imtx] = imt.from_string(imtx)
-        else:
-            ret[repr(imtx)] = imtx
+    for imt_item in imts:
+        imt_inst = imt_item
+        if not isinstance(imt_inst, imt.IMT):
+            imt_inst = imt.from_string(str(imt_inst))
+            if not isinstance(imt_inst, imt.IMT):
+                raise ValueError(f'Invalid imt: {str(imt_inst)}')
+        ret[repr(imt_inst)] = imt_inst
     return ret
 
 
