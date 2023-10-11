@@ -9,8 +9,11 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.scalerel.wc1994 import WC1994
 
-from .rupture import GSIMRupture, NULL_OQ_PARAM, DEFAULT_POINT, WC1994
+from .rupture import (NULL_OQ_PARAM, DEFAULT_POINT, get_target_sites,
+                      create_planar_surface, get_hypocentre_on_planar_surface,
+                      create_rupture)
 from .. import harmonize_input_imts, harmonize_input_gsims, get_SA_period
 
 
@@ -26,7 +29,7 @@ RUPTURE_DEFAULTS = {
     "strike":0.,
     "msr": WC1994(),
     "initial_point": DEFAULT_POINT,
-    "hypocentre_location": None
+    "hypocenter_location": None
 }
 
 SITE_DEFAULT = {
@@ -111,7 +114,7 @@ def calculate_trellis(
 
     # Get the context objects as a numpy recarray
     ctxts = build_contexts(
-        gsims, magnitudes, distances, rupture_properties, site_properties)
+        gsims, magnitudes, distances, **rupture_properties, **site_properties)
 
     # prepare dataframe
     dist_label = site_properties['distance_type']
@@ -165,8 +168,10 @@ def calculate_trellis(
 def build_contexts(gsims: dict[str, GMPE],
                    magnitudes: Collection[float],
                    distances: Collection[float],
-                   rupture_properties:dict,
-                   site_properties:dict) -> np.recarray:
+                   *,
+                   msr, rake, initial_point, strike, dip, aspect, tectonic_region,
+                   hypocenter_location,
+                   vs30, ztor, **site_properties) -> np.recarray:
     """Build the context objects from the set of magnitudes and distances and
     then returns them as a numpy recarray
 
@@ -177,17 +182,24 @@ def build_contexts(gsims: dict[str, GMPE],
     :return: Context objects in the form of a single numpy recarray of length:
         len(magnitudes) * len(distances)
     """
+    cmaker = ContextMaker(tectonic_region, gsims.values(), NULL_OQ_PARAM)
     ctxts = []
-    for i, mag in enumerate(magnitudes):
-        # Construct the rupture
-        rup = GSIMRupture(i, mag, **rupture_properties)
-        # Set the target sites
-        rup.set_target_sites(distances, **site_properties)
-        ctx = rup.build_context(gsims.values())
+    for i, magnitude in enumerate(magnitudes):
+        area = msr.get_median_area(magnitude, rake)
+        surface = create_planar_surface(initial_point, strike,
+                                        dip, area, aspect, ztor)
+        hypocenter = get_hypocentre_on_planar_surface(surface, hypocenter_location)
+        # this is the old rupture.target.sites:
+        target_sites = get_target_sites(hypocenter, surface,
+                                        distances, vs30, **site_properties)
+
+        rupture = create_rupture(i, magnitude, rake, tectonic_region,
+                                 hypocenter, surface)
+        ctx = cmaker.get_ctx(rupture, target_sites)
         ctxts.append(ctx)
+
     # Convert to recarray
-    cmaker = ContextMaker(rupture_properties["tectonic_region"], gsims.values(),
-                          NULL_OQ_PARAM)
+
     return cmaker.recarray(ctxts)
 
 
