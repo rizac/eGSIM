@@ -43,7 +43,7 @@ def harmonize_input_gsims(
         gsims: Iterable[Union[str, type[GMPE], GMPE]]) -> dict[str, GMPE]:
     """harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
     (:class:`GMPE`) into a dict[str, GMPE] where each name is mapped to
-    the relative Gsim instance.
+    the relative Gsim instance. Names will be sorted ascending.
 
     This method accounts for Gsim aliases stored in OpenQuake, and assures
     that each key, value of the returned dict:
@@ -53,7 +53,8 @@ def harmonize_input_gsims(
     ```
 
     :param gsims: iterable of GSIM names (str), OpenQuake Gsim classes or instances
-    :return: a dict of GSIM names (str) mapped to the associated GSIM
+    :return: a dict of GSIM names (str) mapped to the associated GSIM. Names (dict
+        keys) are sorted ascending
     """
     if isinstance(gsims, dict):
         if all(isinstance(k, str) and isinstance(v, GMPE) for k, v in gsims.items()):
@@ -74,7 +75,7 @@ def harmonize_input_gsims(
             else:
                 raise ValueError('%s not supported by OpenQuake' % str(gs))
 
-    return output_gsims
+    return {k: output_gsims[k] for k in sorted(output_gsims)}
 
 
 def get_gsim_name(gsim: GMPE) -> str:
@@ -111,18 +112,83 @@ def _get_src_name_from_aliased_version(gsim_toml_repr: str):
 
 
 def harmonize_input_imts(imts: Iterable[Union[str, imt.IMT]]) -> dict[str, imt.IMT]:
-    """harmonize IMTs given as names (str) or instances (IMT) to a dict[str, IMT]
-    where each name is mapped to the relative instance
+    """harmonize IMTs given as names (str) or instances (IMT) returning a
+    dict[str, IMT] where each name is mapped to the relative instance. Dict keys will
+    be sorted ascending comparing SAs using their period. E.g.: 'PGA' 'SA(2)' 'SA(10)'
     """
-    ret = {}
+    ret = []
     for imt_item in imts:
         imt_inst = imt_item
         if not isinstance(imt_inst, imt.IMT):
             imt_inst = imt.from_string(str(imt_inst))
             if not isinstance(imt_inst, imt.IMT):
                 raise ValueError(f'Invalid imt: {str(imt_inst)}')
-        ret[repr(imt_inst)] = imt_inst
-    return ret
+        ret.append(imt_inst)
+
+    return {repr(i): i for i in sorted(ret, key=_imtkey)}
+
+
+def _imtkey(imt_inst) -> tuple[str, float]:
+    period = get_SA_period(imt_inst)
+    if period is not None:
+        return 'SA', period
+    else:
+        return imt_inst.string, -np.inf
+
+
+def check_compatibility(gsims: dict[str, GMPE], imts: dict[str, imt.IMT]):
+    periods = {}
+    imtz = set()
+    # get SA periods, and put in imtz just the imt names (e.g. 'SA' not 'SA(2.0)'):
+    for imt_name, imtx in imts.items():
+        period = get_SA_period(imtx)
+        if period is not None:
+            periods[period] = imt_name
+            imt_name = imt_name[:imt_name.index('(')]
+        imtz.add(imt_name)
+    invalid = {}  # dict[str, set[str]] (model name -> incompatible imts)
+    for gsim_name, gsim in gsims.items():
+        invalid_imts = imtz - get_imts_defined_for(gsim)
+        if 'SA' not in invalid_imts and periods:
+            for p in get_invalid_sa_periods(gsim, periods):
+                invalid_imts.add(periods[p])
+        if not invalid_imts:
+            continue
+        invalid[gsim_name] = invalid_imts
+
+    if invalid:
+        unique_imts = len(set(i for imts in invalid.values() for i in imts))
+        err = ValueError(f'{len(invalid)} '
+                         f'model{"s are" if len(invalid) !=1 else " is"} '
+                         f'not compatible with all IMTs (vice versa, {unique_imts} '
+                         f'IMT{"s" if unique_imts != 1 else ""} '
+                         f'are not compatible with all models)')
+        err.invalid = invalid
+        raise err from None
+
+
+def get_invalid_sa_periods(
+        gsim: GMPE, sa_periods: Iterable[float]) -> Iterable[float]:
+    """Return the SA periods in `sa_periods` that are NOT supported by the
+    model `gsim`
+    """
+    if 'SA' not in get_imts_defined_for(gsim):
+        yield from sa_periods
+    else:
+        limits = get_sa_limits(gsim)
+        if limits is not None:
+            for period in sa_periods:
+                if period < limits[0] or period > limits[1]:
+                    yield period
+
+
+def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
+    pers = None
+    for c in dir(gsim):
+        if 'COEFFS' in c:
+            pers = [sa.period for sa in getattr(gsim, c).sa_coeffs]
+            break
+    return (min(pers), max(pers)) if pers is not None else None
 
 
 def get_rupture_params_required_by(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
@@ -147,94 +213,6 @@ def get_imts_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     if isinstance(gsim, str):
         gsim = registry[gsim]
     return frozenset(_.__name__ for _ in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-
-
-def n_jsonify(obj: Union[Collection, int, float, np.generic]) -> \
-        Union[float, int, list, tuple, None]:
-    """Attempt to convert the numeric input to a Python object that is JSON serializable,
-    i.e. same as `obj.tolist()` but - in case `obj` is a list/tuple, with NoN or
-    infinite values converted to None.
-
-    :param obj: the numeric input to be converted. It can be a scalar or sequence as
-        plain Python or numpy object. If this argument is non-numeric, this function is
-        not guaranteed to return a JSON serializable object
-    """
-    # we could simply perform an iteration over `obj` but with numpy is faster. Convert
-    # to numpy object if needed:
-    np_obj = np.asarray(obj)
-
-    if np_obj.shape:  # np_obj is array
-        # `np_obj.dtype` is not float: try to cast it to float. This will be successful
-        # if obj contains `None`s and numeric values only:
-        if np.issubdtype(np_obj.dtype, np.object_):
-            try:
-                np_obj = np_obj.astype(float)
-            except ValueError:
-                # np_obj is a non-numeric array, leave it as it is
-                pass
-        # if obj is a numeric list tuples, convert non-finite (nan, inf) to None:
-        if np.issubdtype(np_obj.dtype, np.floating):
-            na = ~np.isfinite(np_obj)
-            if na.any():  # has some non-finite numbers:
-                np_obj = np_obj.astype(object)
-                np_obj[na] = None
-                return np_obj.tolist()  # noqa
-        # there were only finite values:
-        if isinstance(np_obj, (list, tuple)):  # we passed a list/tuple: return it
-            return obj
-        # we passed something else (e.g. a np array):
-        return np_obj.tolist()  # noqa
-
-    # np_obj is scalar:
-    num = np_obj.tolist()
-    # define infinity (note that inf == np.inf so the set below is verbose).
-    # NaNs will be checked via `x != x` which works also when x is not numeric
-    if num != num or num in {inf, -inf, np.inf, -np.inf}:
-        return None
-    return num  # noqa
-
-
-def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
-    """
-    Legacy function which can still be used to convert acceleration from/to
-    different units
-
-    :param acceleration: the acceleration (numeric or numpy array)
-    :param from_: unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
-        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2"
-    :param to_: new unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
-        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2". When missing, it defaults
-        to "cm/s/s"
-
-    :return: acceleration converted to the given units (by default, 'cm/s/s')
-    """
-    m_sec_square = ("m/s/s", "m/s**2", "m/s^2")
-    cm_sec_square = ("cm/s/s", "cm/s**2", "cm/s^2")
-    acceleration = np.asarray(acceleration)
-    if from_ == 'g':
-        if to_ == 'g':
-            return acceleration
-        if to_ in m_sec_square:
-            return acceleration * g
-        if to_ in cm_sec_square:
-            return acceleration * (100 * g)
-    elif from_ in m_sec_square:
-        if to_ == 'g':
-            return acceleration / g
-        if to_ in m_sec_square:
-            return acceleration
-        if to_ in cm_sec_square:
-            return acceleration * 100
-    elif from_ in cm_sec_square:
-        if to_ == 'g':
-            return acceleration / (100 * g)
-        if to_ in m_sec_square:
-            return acceleration / 100
-        if to_ in cm_sec_square:
-            return acceleration
-
-    raise ValueError("Unrecognised time history units. "
-                     "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
 
 
 def get_SA_period(obj: Union[str, imt.IMT]) -> Union[float, None]:
@@ -296,3 +274,94 @@ def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
         return np.exp(5.359 - 1.102 * np.log(vs30))
     else:
         return np.exp(7.089 - 1.144 * np.log(vs30))
+
+
+# FIXME REMOVE UNUSED
+
+# def n_jsonify(obj: Union[Collection, int, float, np.generic]) -> \
+#         Union[float, int, list, tuple, None]:
+#     """Attempt to convert the numeric input to a Python object that is JSON serializable,
+#     i.e. same as `obj.tolist()` but - in case `obj` is a list/tuple, with NoN or
+#     infinite values converted to None.
+#
+#     :param obj: the numeric input to be converted. It can be a scalar or sequence as
+#         plain Python or numpy object. If this argument is non-numeric, this function is
+#         not guaranteed to return a JSON serializable object
+#     """
+#     # we could simply perform an iteration over `obj` but with numpy is faster. Convert
+#     # to numpy object if needed:
+#     np_obj = np.asarray(obj)
+#
+#     if np_obj.shape:  # np_obj is array
+#         # `np_obj.dtype` is not float: try to cast it to float. This will be successful
+#         # if obj contains `None`s and numeric values only:
+#         if np.issubdtype(np_obj.dtype, np.object_):
+#             try:
+#                 np_obj = np_obj.astype(float)
+#             except ValueError:
+#                 # np_obj is a non-numeric array, leave it as it is
+#                 pass
+#         # if obj is a numeric list tuples, convert non-finite (nan, inf) to None:
+#         if np.issubdtype(np_obj.dtype, np.floating):
+#             na = ~np.isfinite(np_obj)
+#             if na.any():  # has some non-finite numbers:
+#                 np_obj = np_obj.astype(object)
+#                 np_obj[na] = None
+#                 return np_obj.tolist()  # noqa
+#         # there were only finite values:
+#         if isinstance(np_obj, (list, tuple)):  # we passed a list/tuple: return it
+#             return obj
+#         # we passed something else (e.g. a np array):
+#         return np_obj.tolist()  # noqa
+#
+#     # np_obj is scalar:
+#     num = np_obj.tolist()
+#     # define infinity (note that inf == np.inf so the set below is verbose).
+#     # NaNs will be checked via `x != x` which works also when x is not numeric
+#     if num != num or num in {inf, -inf, np.inf, -np.inf}:
+#         return None
+#     return num  # noqa
+#
+#
+# def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
+#     """
+#     Legacy function which can still be used to convert acceleration from/to
+#     different units
+#
+#     :param acceleration: the acceleration (numeric or numpy array)
+#     :param from_: unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
+#         "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2"
+#     :param to_: new unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
+#         "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2". When missing, it defaults
+#         to "cm/s/s"
+#
+#     :return: acceleration converted to the given units (by default, 'cm/s/s')
+#     """
+#     m_sec_square = ("m/s/s", "m/s**2", "m/s^2")
+#     cm_sec_square = ("cm/s/s", "cm/s**2", "cm/s^2")
+#     acceleration = np.asarray(acceleration)
+#     if from_ == 'g':
+#         if to_ == 'g':
+#             return acceleration
+#         if to_ in m_sec_square:
+#             return acceleration * g
+#         if to_ in cm_sec_square:
+#             return acceleration * (100 * g)
+#     elif from_ in m_sec_square:
+#         if to_ == 'g':
+#             return acceleration / g
+#         if to_ in m_sec_square:
+#             return acceleration
+#         if to_ in cm_sec_square:
+#             return acceleration * 100
+#     elif from_ in cm_sec_square:
+#         if to_ == 'g':
+#             return acceleration / (100 * g)
+#         if to_ in m_sec_square:
+#             return acceleration / 100
+#         if to_ in cm_sec_square:
+#             return acceleration
+#
+#     raise ValueError("Unrecognised time history units. "
+#                      "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
+

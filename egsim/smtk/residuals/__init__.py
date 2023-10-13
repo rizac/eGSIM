@@ -15,40 +15,19 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext
 
-from .. import check_gsim_list, get_gsim_name, get_SA_period
+from .. import harmonize_input_gsims, get_gsim_name, get_SA_period, check_compatibility, \
+    harmonize_input_imts
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
 from ..flatfile.columns import InvalidColumn, MissingColumn, get_rupture_params
 
 
-def get_sa_limits(gsim: GMPE) -> Union[tuple[float, float], None]:
-    pers = None
-    for c in dir(gsim):
-        if 'COEFFS' in c:
-            pers = [sa.period for sa in getattr(gsim, c).sa_coeffs]
-            break
-    return (min(pers), max(pers)) if pers is not None else None
-
-
-def check_sa_limits(gsim: GMPE, im: str):  # FIXME remove? is it used?
-    """Return False if the period defined for the SA given in `im` does not match the
-    SA limits defined for the given model (`gsim`). Return True in any other case
-    (period within limits, gsim not defining any SA limit, `im` not representing SA)
-    """
-    period = get_SA_period(im)
-    if period is None:
-        return True
-    limits = get_sa_limits(gsim)
-    if limits is None:
-        return True
-    return limits[0] < period < limits[1]
-
-
-def get_residuals(gsims: Iterable[str], imts: Collection[str],
-                  flatfile: pd.DataFrame, nodal_plane_index=1,
-                  component="Geometric", likelihood=False,
-                  normalise=True) -> pd.DataFrame:  # FIXME remove unused arguments?
+def get_residuals(
+        gsims: Iterable[str], imts: Collection[str],
+        flatfile: pd.DataFrame, nodal_plane_index=1,
+        component="Geometric", likelihood=False,
+        normalise=True) -> pd.DataFrame:  # FIXME remove unused arguments?
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s). This function
     modifies the passed flatfile inplace (e.g. by adding all residuals-related computed
@@ -59,7 +38,10 @@ def get_residuals(gsims: Iterable[str], imts: Collection[str],
     :param likelihood: boolean telling if also the likelihood of the residuals
         (according to Equation 9 of Scherbaum et al (2004)) should be computed
     """
-    gsims = check_gsim_list(gsims)
+    gsims = harmonize_input_gsims(gsims)
+    imts = harmonize_input_imts(imts)
+    check_compatibility(gsims, imts)
+
     flatfile_r = get_flatfile_for_residual_analysis(flatfile, gsims.values(), imts)
     # copy event columns (raises if columns not found):
     ev_cols = get_event_id_column_names(flatfile)
