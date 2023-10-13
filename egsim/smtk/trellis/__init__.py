@@ -1,12 +1,12 @@
 """trellis plots module"""
 from itertools import product
 from collections.abc import Collection, Iterable
-from openquake.hazardlib.scalerel import BaseMSR
 from typing import Union, Optional
 from dataclasses import dataclass, field, asdict
 
 import numpy as np
 import pandas as pd
+from openquake.hazardlib.scalerel import BaseMSR
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.contexts import ContextMaker
@@ -16,7 +16,8 @@ from openquake.hazardlib.geo import Point
 from .rupture import (get_target_sites, create_planar_surface,
                       get_hypocentre_on_planar_surface,
                       create_rupture)
-from .. import harmonize_input_imts, harmonize_input_gsims, check_compatibility
+from ..helpers import (harmonize_input_imts, harmonize_input_gsims,
+                       check_compatibility)
 
 
 @dataclass
