@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from math import sqrt, pi, sin, cos, fabs
-from copy import deepcopy
 from typing import Optional
 import numpy as np
 
@@ -191,7 +190,6 @@ def _rup_to_point(
     """
     Place a point at a given distance from a rupture along a specified azimuth
     """
-    pt0 = deepcopy(origin)
     pt1 = origin.point_at(distance, 0., azimuth)
     r_diff = np.inf
     dip = surface.dip
