@@ -10,9 +10,13 @@ from openquake.hazardlib.scalerel import PeerMSR
 
 from .columns import (get_all_names_of, get_intensity_measures, MissingColumn,
                       InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
-from .. import (get_SA_period, get_imts_defined_for, get_distances_required_by,
-                get_rupture_params_required_by, get_sites_params_required_by)
-from ...smtk import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+from ..helpers import (get_SA_period,
+                       get_imts_defined_for,
+                       get_distances_required_by,
+                       get_rupture_params_required_by,
+                       get_sites_params_required_by,
+                       vs30_to_z1pt0_cy14,
+                       vs30_to_z2pt5_cb14)
 
 
 def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:

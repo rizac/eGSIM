@@ -12,7 +12,7 @@ import pandas as pd
 from scipy.stats import norm
 from scipy.linalg import solve
 
-from egsim.smtk.residuals import get_computed_columns, c_labels, column_label
+from ..residuals import get_computed_columns, c_labels, column_label
 
 
 def get_residuals_stats(gsim_names: Iterable[str], imt_names: Iterable[str],

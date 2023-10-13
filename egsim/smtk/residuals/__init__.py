@@ -15,8 +15,8 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext
 
-from .. import harmonize_input_gsims, get_gsim_name, get_SA_period, check_compatibility, \
-    harmonize_input_imts
+from ..helpers import (harmonize_input_gsims, get_gsim_name, get_SA_period,
+                       check_compatibility, harmonize_input_imts)
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)

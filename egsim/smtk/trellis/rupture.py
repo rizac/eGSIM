@@ -13,7 +13,7 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.source.point import PointSource
 
-from egsim.smtk import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+from ..helpers import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
 def create_rupture(id:int, magnitude, rake, tectonic_region, hypocenter, surface) \
