@@ -16,8 +16,7 @@ from openquake.hazardlib.geo import Point
 from .rupture import (get_target_sites, create_planar_surface,
                       get_hypocentre_on_planar_surface,
                       create_rupture)
-from ..helpers import (harmonize_input_imts, harmonize_input_gsims,
-                       check_compatibility)
+from ..helpers import harmonize_and_validate_inputs
 
 
 @dataclass
@@ -63,10 +62,7 @@ def get_trellis(
 
     :return: pandas DataFrame
     """
-    gsims = harmonize_input_gsims(gsims)
-    imts = harmonize_input_imts(imts)
-
-    check_compatibility(gsims, imts)
+    gsims, imts = harmonize_and_validate_inputs(gsims, imts)
 
     magnitudes = np.asarray(magnitudes)
     if not magnitudes.shape:  # convert to a 1-length array if scalar:

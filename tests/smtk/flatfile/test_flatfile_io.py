@@ -4,9 +4,11 @@ Created on 16 Feb 2018
 @author: riccardo
 """
 from io import StringIO
+import os
+from datetime import datetime
+
 import numpy as np
 import pytest
-from datetime import datetime
 import pandas as pd
 from pandas import StringDtype
 
@@ -15,7 +17,7 @@ from egsim.smtk.flatfile.columns import _extract_from_columns, load_from_yaml, \
         get_rupture_params
 
 
-def test_read_flatifle_yanml():
+def test_read_flatifle_yaml():
 
     dic = load_from_yaml(False)
     assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
@@ -29,8 +31,10 @@ def test_read_flatifle_yanml():
     assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
                set(rup)) == 4
 
-def test_flatfile_turkey(testdata):
-    fpath = testdata.path('tk_20230206_flatfile_geometric_mean.csv')
+def test_flatfile_turkey():
+    # FIXME handle paths, fixtures wrt django tests. HArdcoding path for the moment:
+    root = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    fpath = os.path.join(root, 'data', 'tk_20230206_flatfile_geometric_mean.csv')
     dfr = read_flatfile(fpath)
 
 
