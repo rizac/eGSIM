@@ -6,14 +6,10 @@ import re
 import warnings
 import numpy as np
 from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
-from openquake.hazardlib import imt
+from openquake.hazardlib.imt import IMT, from_string as imt_from_string
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 from openquake.hazardlib import valid
-
-
-# Regular expression to get a GMPETable from string:
-_gmpetable_regex = re.compile(r'^GMPETable\(([^)]+?)\)$')
 
 
 def get_registered_gsim_names(sort=False) -> Iterable[str]:
@@ -24,17 +20,68 @@ def get_registered_gsim_names(sort=False) -> Iterable[str]:
         yield from sorted(registry)
 
 
-def get_gsim_instance(gsim_name: str, raise_deprecated=True) -> GMPE:
-    """Return a Gsim from the given name
+def harmonize_and_validate_inputs(
+        gsims: Union[Iterable[str, GMPE, type[GMPE]], dict[str, GMPE]],
+        imts: Union[Iterable[str, IMT], dict[str, IMT]]) -> \
+        tuple[dict[str, GMPE], dict[str, IMT]]:
+    """Harmonize and validate the input ground motion models (`gsims`)
+    and intensity measures types (`imts`) returning a tuple of two dicts
+    `gsim, imts` with sorted ascending keys mapping each model / intensity
+    measure name to the relative OpenQuake instance.
 
-    :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
-        (`egsim.smtk.OQDeprecationWarning`) will raise as normal exceptions
+    The dicts will be returned after validating the inputs and assuring
+    that the given models and imts can be used together, otherwise a
+    ValueError is raised (the exception will have a special attribute
+    `invalid` with all invalid model name mapped to thr incompatible imt names)
+
+    :param gsims: an iterable of str (model name, see `get_registered_gsim_names`),
+        Gsim classes or instances. It can also be a dict, in this case the argument
+        is returned as-it-is, after checking that keys and values types are ok
+    :param imts: an iterable of str (e.g. 'SA(0.1)' ,'PGV',  'PGA'),
+        or IMT instances. It can also be a dict, in this case the argument is
+        returned as-it-is, after checking that keys and values types are ok
     """
-    if not raise_deprecated:
-        return valid.gsim(gsim_name)
-    with warnings.catch_warnings():
-        warnings.filterwarnings('error', category=OQDeprecationWarning)
-        return valid.gsim(gsim_name)
+    if not isinstance(gsims, dict):
+        gsims = harmonize_input_gsims(gsims)
+    else:
+        assert all(isinstance(k, str) and isinstance(v, GMPE)
+                   for k, v in gsims.items()), "Input gsims must be a dict[str, GMPE]"
+    if not isinstance(imts, dict):
+        imts = harmonize_input_imts(imts)
+    else:
+        assert all(isinstance(k, str) and isinstance(v, IMT)
+                   for k, v in imts.items()), "Input imts must be a dict[str, IMT]"
+
+    periods = {}
+    imtz = set()
+    # get SA periods, and put in imtz just the imt names (e.g. 'SA' not 'SA(2.0)'):
+    for imt_name, imtx in imts.items():
+        period = get_SA_period(imtx)
+        if period is not None:
+            periods[period] = imt_name
+            imt_name = imt_name[:imt_name.index('(')]
+        imtz.add(imt_name)
+    invalid = {}  # dict[str, set[str]] (model name -> incompatible imts)
+    for gsim_name, gsim in gsims.items():
+        invalid_imts = imtz - get_imts_defined_for(gsim)
+        if periods and 'SA' not in invalid_imts:
+            for p in get_invalid_sa_periods(gsim, periods):
+                invalid_imts.add(periods[p])
+        if not invalid_imts:
+            continue
+        invalid[gsim_name] = invalid_imts
+
+    if invalid:
+        unique_imts = len(set(i for imts in invalid.values() for i in imts))
+        err = ValueError(f'{len(invalid)} '
+                         f'model{"s are" if len(invalid) !=1 else " is"} '
+                         f'not compatible with all IMTs (vice versa, {unique_imts} '
+                         f'IMT{"s" if unique_imts != 1 else ""} '
+                         f'are not compatible with all models)')
+        err.invalid = invalid
+        raise err from None
+
+    return gsims, imts
 
 
 def harmonize_input_gsims(
@@ -44,7 +91,7 @@ def harmonize_input_gsims(
     the relative Gsim instance. Names will be sorted ascending.
 
     This method accounts for Gsim aliases stored in OpenQuake, and assures
-    that each key, value of the returned dict:
+    that for each `(key, value)` of the returned dict items:
     ```
         get_gsim_instance(key) == value
         get_gsim_name(value) == key
@@ -54,26 +101,29 @@ def harmonize_input_gsims(
     :return: a dict of GSIM names (str) mapped to the associated GSIM. Names (dict
         keys) are sorted ascending
     """
-    if isinstance(gsims, dict):
-        if all(isinstance(k, str) and isinstance(v, GMPE) for k, v in gsims.items()):
-            return gsims
-        raise ValueError('Invalid dict type, expected `dict[str, GMPE]`')
-    
     output_gsims = {}
     for gs in gsims:
+        if isinstance(gs, type) and issubclass(gs, GMPE):
+            gs = gs()  # try to init with no args
         if isinstance(gs, GMPE):
             output_gsims[get_gsim_name(gs)] = gs  # get name of GMPE instance
-        elif gs in registry:
+            continue
+        if gs in registry:
             output_gsims[gs] = get_gsim_instance(gs)
-        else:
+            continue
+        if isinstance(gs, str):
             match = _gmpetable_regex.match(gs)  # GMPETable ?
             if match:
                 filepath = match.group(1).split("=")[1]  # get table filename
                 output_gsims[gs] = GMPETable(gmpe_table=filepath)
-            else:
-                raise ValueError('%s not supported by OpenQuake' % str(gs))
+                continue
+        raise ValueError(f'Invalid Gsim: {str(gs)}')
 
     return {k: output_gsims[k] for k in sorted(output_gsims)}
+
+
+# Regular expression to get a GMPETable from string:
+_gmpetable_regex = re.compile(r'^GMPETable\(([^)]+?)\)$')
 
 
 def get_gsim_name(gsim: GMPE) -> str:
@@ -109,7 +159,20 @@ def _get_src_name_from_aliased_version(gsim_toml_repr: str):
     return _gsim_aliases.get(gsim_toml_repr, None)
 
 
-def harmonize_input_imts(imts: Iterable[Union[str, imt.IMT]]) -> dict[str, imt.IMT]:
+def get_gsim_instance(gsim_name: str, raise_deprecated=True) -> GMPE:
+    """Return a Gsim from the given name
+
+    :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
+        (`egsim.smtk.OQDeprecationWarning`) will raise as normal exceptions
+    """
+    if not raise_deprecated:
+        return valid.gsim(gsim_name)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error', category=OQDeprecationWarning)
+        return valid.gsim(gsim_name)
+
+
+def harmonize_input_imts(imts: Iterable[Union[str, IMT]]) -> dict[str, IMT]:
     """harmonize IMTs given as names (str) or instances (IMT) returning a
     dict[str, IMT] where each name is mapped to the relative instance. Dict keys will
     be sorted ascending comparing SAs using their period. E.g.: 'PGA' 'SA(2)' 'SA(10)'
@@ -117,9 +180,9 @@ def harmonize_input_imts(imts: Iterable[Union[str, imt.IMT]]) -> dict[str, imt.I
     ret = []
     for imt_item in imts:
         imt_inst = imt_item
-        if not isinstance(imt_inst, imt.IMT):
-            imt_inst = imt.from_string(str(imt_inst))
-            if not isinstance(imt_inst, imt.IMT):
+        if not isinstance(imt_inst, IMT):
+            imt_inst = imt_from_string(str(imt_inst))
+            if not isinstance(imt_inst, IMT):
                 raise ValueError(f'Invalid imt: {str(imt_inst)}')
         ret.append(imt_inst)
 
@@ -134,35 +197,30 @@ def _imtkey(imt_inst) -> tuple[str, float]:
         return imt_inst.string, -np.inf
 
 
-def check_compatibility(gsims: dict[str, GMPE], imts: dict[str, imt.IMT]):
-    periods = {}
-    imtz = set()
-    # get SA periods, and put in imtz just the imt names (e.g. 'SA' not 'SA(2.0)'):
-    for imt_name, imtx in imts.items():
-        period = get_SA_period(imtx)
-        if period is not None:
-            periods[period] = imt_name
-            imt_name = imt_name[:imt_name.index('(')]
-        imtz.add(imt_name)
-    invalid = {}  # dict[str, set[str]] (model name -> incompatible imts)
-    for gsim_name, gsim in gsims.items():
-        invalid_imts = imtz - get_imts_defined_for(gsim)
-        if 'SA' not in invalid_imts and periods:
-            for p in get_invalid_sa_periods(gsim, periods):
-                invalid_imts.add(periods[p])
-        if not invalid_imts:
-            continue
-        invalid[gsim_name] = invalid_imts
+def get_SA_period(obj: Union[str, IMT]) -> Union[float, None]:
+    """Return the period (float) from the given `obj` argument, or None if `obj`
+    does not indicate a Spectral Acceleration object/string with a finite period
+    (e.g. "SA(NaN)", "SA(inf)", "SA" return None).
 
-    if invalid:
-        unique_imts = len(set(i for imts in invalid.values() for i in imts))
-        err = ValueError(f'{len(invalid)} '
-                         f'model{"s are" if len(invalid) !=1 else " is"} '
-                         f'not compatible with all IMTs (vice versa, {unique_imts} '
-                         f'IMT{"s" if unique_imts != 1 else ""} '
-                         f'are not compatible with all models)')
-        err.invalid = invalid
-        raise err from None
+    :arg: str or `IMT` instance, such as "SA(1.0)" or `imt.SA(1.0)`
+    """
+    if isinstance(obj, str):
+        if not obj.startswith(f'SA('):  # fast check to return immediately in case
+            return None
+        try:
+            obj = imt_from_string(obj)
+        except ValueError:
+            return None
+    elif isinstance(obj, IMT):
+        if not obj.string.startswith(f'SA('):
+            return None
+    else:
+        return None
+
+    period = obj.period
+    # check also that the period is finite (SA('inf') and SA('nan') are possible:
+    # this function is intended to return a "workable" period):
+    return float(period) if np.isfinite(period) else None
 
 
 def get_invalid_sa_periods(
@@ -212,32 +270,6 @@ def get_imts_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     if isinstance(gsim, str):
         gsim = registry[gsim]
     return frozenset(_.__name__ for _ in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-
-
-def get_SA_period(obj: Union[str, imt.IMT]) -> Union[float, None]:
-    """Return the period (float) from the given `obj` argument, or None if `obj`
-    does not indicate a Spectral Acceleration object/string with a finite period
-    (e.g. "SA(NaN)", "SA(inf)", "SA" return None).
-
-    :arg: str or `imt.IMT` instance, such as "SA(1.0)" or `imt.SA(1.0)`
-    """
-    if isinstance(obj, str):
-        if not obj.startswith('SA('):  # fast check to return immediately in case
-            return None
-        try:
-            obj = imt.from_string(obj)
-        except ValueError:
-            return None
-    elif isinstance(obj, imt.IMT):
-        if not obj.string.startswith('SA('):
-            return None
-    else:
-        return None
-
-    period = obj.period
-    # check also that the period is finite (SA('inf') and SA('nan') are possible:
-    # this function is intended to return a "workable" period):
-    return float(period) if np.isfinite(period) else None
 
 
 def vs30_to_z1pt0_cy14(vs30: Union[float, np.ndarray], japan=False):
@@ -322,45 +354,3 @@ def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
 #     return num  # noqa
 #
 #
-# def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
-#     """
-#     Legacy function which can still be used to convert acceleration from/to
-#     different units
-#
-#     :param acceleration: the acceleration (numeric or numpy array)
-#     :param from_: unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
-#         "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2"
-#     :param to_: new unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
-#         "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2". When missing, it defaults
-#         to "cm/s/s"
-#
-#     :return: acceleration converted to the given units (by default, 'cm/s/s')
-#     """
-#     m_sec_square = ("m/s/s", "m/s**2", "m/s^2")
-#     cm_sec_square = ("cm/s/s", "cm/s**2", "cm/s^2")
-#     acceleration = np.asarray(acceleration)
-#     if from_ == 'g':
-#         if to_ == 'g':
-#             return acceleration
-#         if to_ in m_sec_square:
-#             return acceleration * g
-#         if to_ in cm_sec_square:
-#             return acceleration * (100 * g)
-#     elif from_ in m_sec_square:
-#         if to_ == 'g':
-#             return acceleration / g
-#         if to_ in m_sec_square:
-#             return acceleration
-#         if to_ in cm_sec_square:
-#             return acceleration * 100
-#     elif from_ in cm_sec_square:
-#         if to_ == 'g':
-#             return acceleration / (100 * g)
-#         if to_ in m_sec_square:
-#             return acceleration / 100
-#         if to_ in cm_sec_square:
-#             return acceleration
-#
-#     raise ValueError("Unrecognised time history units. "
-#                      "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
-

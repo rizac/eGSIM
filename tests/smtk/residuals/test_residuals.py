@@ -7,7 +7,7 @@ import os
 
 from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile
-from egsim.smtk import convert_accel_units
+from scipy.constants import g
 from egsim.smtk.residuals import c_labels
 
 
@@ -23,7 +23,8 @@ def get_gsims_imts_flatfile():
     imts = ["PGA", "SA(1.0)"]
     flatfile = _flatfile.copy()
     for i in imts:
-        flatfile[i] = convert_accel_units(flatfile[i], 'cm/s/s', 'g')
+        # convert cm/sec^2 to g:
+        flatfile[i] = flatfile[i] / (100 *g)  # convert_accel_units(flatfile[i], 'cm/s/s', 'g')
     return gsims, imts, flatfile
 
 

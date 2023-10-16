@@ -7,10 +7,10 @@ from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
 import warnings
 import pytest
 
-from egsim.smtk import get_registered_gsim_names, get_gsim_instance, registry, \
+from egsim.smtk.helpers import get_registered_gsim_names, get_gsim_instance, registry, \
     get_imts_defined_for, get_distances_required_by, \
     get_rupture_params_required_by, get_sites_params_required_by, get_gsim_name,\
-    OQDeprecationWarning, convert_accel_units
+    OQDeprecationWarning
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
@@ -101,20 +101,72 @@ def test_requires():
             assert not res or all(isinstance(_, str) for _ in res)
 
 
-    def test_convert_accel_units(self):
-        """test convert accel units"""
-        from scipy.constants import g
-        for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
-            for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
-                self.assertEqual(convert_accel_units(1, m_sec, cm_sec), 100)
-                self.assertEqual(convert_accel_units(1, cm_sec, m_sec), .01)
-                self.assertEqual(convert_accel_units(g, m_sec, "g"), 1)
-                self.assertEqual(convert_accel_units(g, cm_sec, "g"), .01)
-                self.assertEqual(convert_accel_units(1, "g", m_sec), g)
-                self.assertEqual(convert_accel_units(1, "g", cm_sec), g*100)
-                self.assertEqual(convert_accel_units(1, cm_sec, cm_sec), 1)
-                self.assertEqual(convert_accel_units(1, m_sec, m_sec),1)
+# legacy code and relative tests (convert acceleration units). See notes function below
 
-        self.assertEqual(convert_accel_units(1, "g", "g"), 1)
-        with self.assertRaises(ValueError):
-            self.assertEqual(convert_accel_units(1, "gf", "gf"), 1)
+def test_convert_accel_units():
+    """test convert accel units"""
+    from scipy.constants import g
+    for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
+        for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
+            assert convert_accel_units(1, m_sec, cm_sec) == 100
+            assert convert_accel_units(1, cm_sec, m_sec) == .01
+            assert convert_accel_units(g, m_sec, "g") == 1
+            assert convert_accel_units(g, cm_sec, "g") == .01
+            assert convert_accel_units(1, "g", m_sec) == g
+            assert convert_accel_units(1, "g", cm_sec) == g*100
+            assert convert_accel_units(1, cm_sec, cm_sec) == 1
+            assert convert_accel_units(1, m_sec, m_sec) == 1
+
+    assert convert_accel_units(1, "g", "g") == 1
+    with pytest.raises(ValueError):
+        assert convert_accel_units(1, "gf", "gf") == 1
+
+
+# this function is not longer part of the lib, moved here
+# in case needed in the future:
+import numpy as np
+from scipy.constants import g
+
+
+def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
+    """
+    Legacy function which can still be used to convert acceleration from/to
+    different units
+
+    :param acceleration: the acceleration (numeric or numpy array)
+    :param from_: unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
+        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2"
+    :param to_: new unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
+        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2". When missing, it defaults
+        to "cm/s/s"
+
+    :return: acceleration converted to the given units (by default, 'cm/s/s')
+    """
+    m_sec_square = ("m/s/s", "m/s**2", "m/s^2")
+    cm_sec_square = ("cm/s/s", "cm/s**2", "cm/s^2")
+    acceleration = np.asarray(acceleration)
+    if from_ == 'g':
+        if to_ == 'g':
+            return acceleration
+        if to_ in m_sec_square:
+            return acceleration * g
+        if to_ in cm_sec_square:
+            return acceleration * (100 * g)
+    elif from_ in m_sec_square:
+        if to_ == 'g':
+            return acceleration / g
+        if to_ in m_sec_square:
+            return acceleration
+        if to_ in cm_sec_square:
+            return acceleration * 100
+    elif from_ in cm_sec_square:
+        if to_ == 'g':
+            return acceleration / (100 * g)
+        if to_ in m_sec_square:
+            return acceleration / 100
+        if to_ in cm_sec_square:
+            return acceleration
+
+    raise ValueError("Unrecognised time history units. "
+                     "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
+

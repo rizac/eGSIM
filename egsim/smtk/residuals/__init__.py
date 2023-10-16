@@ -15,8 +15,7 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext
 
-from ..helpers import (harmonize_input_gsims, get_gsim_name, get_SA_period,
-                       check_compatibility, harmonize_input_imts)
+from ..helpers import (harmonize_and_validate_inputs, get_gsim_name, get_SA_period)
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
@@ -38,9 +37,7 @@ def get_residuals(
     :param likelihood: boolean telling if also the likelihood of the residuals
         (according to Equation 9 of Scherbaum et al (2004)) should be computed
     """
-    gsims = harmonize_input_gsims(gsims)
-    imts = harmonize_input_imts(imts)
-    check_compatibility(gsims, imts)
+    gsims, imts = harmonize_and_validate_inputs(gsims, imts)
 
     flatfile_r = get_flatfile_for_residual_analysis(flatfile, gsims.values(), imts)
     # copy event columns (raises if columns not found):
@@ -162,12 +159,14 @@ def calculate_expected_motions(gsims: Iterable[GMPE], imts: Iterable[str],
     for gsim in gsims:
         types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
         for imt_name, imtx in imts_dict.items():
-            period = get_SA_period(imtx)
-            if period is not None:
-                sa_period_limits = get_sa_limits(gsim)
-                if sa_period_limits is not None and not \
-                        (sa_period_limits[0] < period < sa_period_limits[1]):
-                    continue
+            # FIXME: periods check is stricter now (all gsim must match) and
+            #  done once at the beginning. Check with GW
+            # period = get_SA_period(imtx)
+            # if period is not None:
+            #     sa_period_limits = get_sa_limits(gsim)
+            #     if sa_period_limits is not None and not \
+            #             (sa_period_limits[0] < period < sa_period_limits[1]):
+            #         continue
             mean, stddev = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imtx, types)
             expected[column_label(gsim, imt_name, c_labels.mean)] = mean
             for std_type, values in zip(types, stddev):
