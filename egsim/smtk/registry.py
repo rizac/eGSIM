@@ -38,38 +38,20 @@ def _registered_imt_names() -> Iterable[str]:
 registered_imt_names = frozenset(_registered_imt_names())
 
 
+# invert `gsim_aliases` (see `gsim_name` below)
+_gsim_aliases = {v: k for k, v in gsim_aliases.items()}
+
+
 def gsim_name(gsim: GMPE) -> str:
     """
     Returns the name of the GMPE given an instance of the class
     """
-    gsim_toml_repr = str(gsim)  # TOML version of the gsim (see source code)
-    # We want to return a string representation of gsim (called `s`) such as
-    # `get_gsim_instance(s) = gsim`. `gsim_toml_repr` might not be such a string:
-    # 1. `gsim_toml_repr` is actually "[<gsim_class_name>]": in this case
-    # just return <class_name>:
-    gsim_class_name = gsim.__class__.__name__
-    if gsim_toml_repr == f'[{gsim_class_name}]':
-        return gsim_class_name
-    # 2. gsim is an aliased version of some other gsim. In this case, `
-    # gsim_toml_repr` can be reduced to the simple class name of that gsim:
-    gsim_src = _get_src_name_from_aliased_version(gsim_toml_repr)  # might be None
-    if not gsim_src:
-        # no alias found. If GMPETable, return the string:
-        if isinstance(gsim, GMPETable):
-            return f'GMPETable(gmpe_table={str(gsim.filename)})'
-        # otherwise, return the TOML representation:
-        return gsim_toml_repr
-    return gsim_src
-
-
-_gsim_aliases: Union[dict[str, str], None] = None
-
-
-def _get_src_name_from_aliased_version(gsim_toml_repr: str):
-    global _gsim_aliases
-    if _gsim_aliases is None:
-        _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
-    return _gsim_aliases.get(gsim_toml_repr, None)
+    name = str(gsim)
+    # if name is "[" + gsim.__class__.__name__ + "]", return the class name:
+    if name == f"[{gsim.__class__.__name__}]":
+        return gsim.__class__.__name__
+    # name is the TOML representation of gsim. Use _gsim_aliases to return the name:
+    return _gsim_aliases[name]
 
 
 def gsim(name: str, raise_deprecated=True) -> GMPE:
