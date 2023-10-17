@@ -163,7 +163,7 @@ def imt(arg: Union[float, str, IMT]) -> IMT:
         return arg
     try:
         return imt_from_string(str(arg))
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, KeyError) as exc:
         raise InvalidImt(arg, exc)
 
 
@@ -175,42 +175,40 @@ def _imtkey(imt_inst) -> tuple[str, float]:
         return imt_inst.string, -np.inf
 
 
-def sa_period(obj: Union[str, IMT]) -> Union[float, None]:
+def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
     """Return the period (float) from the given `obj` argument, or None if `obj`
     does not indicate a Spectral Acceleration object/string with a finite period
     (e.g. "SA(NaN)", "SA(inf)", "SA" return None).
 
     :arg: str or `IMT` instance, such as "SA(1.0)" or `imt.SA(1.0)`
     """
-    if isinstance(obj, str):
-        if not obj.startswith(f'SA('):  # fast check to return immediately in case
+    try:
+        imt_inst = imt(obj)
+        if not imt_inst.string.startswith('SA('):
             return None
-        try:
-            obj = imt_from_string(obj)
-        except ValueError:
-            return None
-    elif isinstance(obj, IMT):
-        if not obj.string.startswith(f'SA('):
-            return None
-    else:
+    except InvalidImt:
         return None
 
-    period = obj.period
+    period = imt_inst.period
     # check also that the period is finite (SA('inf') and SA('nan') are possible:
     # this function is intended to return a "workable" period):
     return float(period) if np.isfinite(period) else None
 
 
-def invalid_sa_periods(gsim: GMPE, periods: Iterable[float]) -> Iterable[float]:
+def invalid_sa_periods(gsim: GMPE, periods: Iterable[float, str, IMT]) \
+        -> Iterable[float]:
     """Yield the SA periods in `periods` NOT supported by the model `gsim`"""
     limits = sa_limits(gsim)
     if limits is not None:
-        for period in periods:
+        for p in periods:
+            period = sa_period(p)
+            if period is None:
+                continue
             if period < limits[0] or period > limits[1]:
                 yield period
 
 
-# Exceptions:
+# Custom Exceptions:
 
 
 class InvalidInput(Exception):
