@@ -10,7 +10,7 @@ import pytest
 from egsim.smtk.registry import (registered_gsim_names, gsim, registry, \
                                  imts_defined_for, distances_required_by, \
                                  rupture_params_required_by, site_params_required_by,
-                                 gsim_name, OQDeprecationWarning, GsimInitError)
+                                 gsim_name, GsimInitError)
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
@@ -73,7 +73,7 @@ def test_load_model_with_deprecation_warnings():
             assert len(w) == 0 if ignore_warnings else 1
 
 def test_gsim_name_1to1_relation():
-    for model in registered_gsim_names():
+    for model in registered_gsim_names:
         try:
             gsim_ = gsim(model, raise_deprecated=False)
             model_name_back = gsim_name(gsim_)
@@ -90,7 +90,7 @@ def read_gsims(raise_deprecated=True, catch_deprecated=True):
     # if catch_deprecated:
     #     errors.append(OQDeprecationWarning)
     # errors = tuple(errors)
-    for model in registered_gsim_names():
+    for model in registered_gsim_names:
         count += 1
         try:
             gsim_ = gsim(model, raise_deprecated=raise_deprecated)
