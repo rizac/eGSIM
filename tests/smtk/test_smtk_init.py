@@ -7,10 +7,10 @@ from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
 import warnings
 import pytest
 
-from egsim.smtk.helpers import get_registered_gsim_names, get_gsim_instance, registry, \
-    get_imts_defined_for, get_distances_required_by, \
-    get_rupture_params_required_by, get_sites_params_required_by, get_gsim_name,\
-    OQDeprecationWarning
+from egsim.smtk.registry import (registered_gsim_names, gsim, registry, \
+                                 imts_defined_for, distances_required_by, \
+                                 rupture_params_required_by, site_params_required_by,
+                                 gsim_name, OQDeprecationWarning, GsimInitError)
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
@@ -53,49 +53,58 @@ def test_load_models():
 
 def test_load_model_with_deprecation_warnings():
     model = 'AkkarEtAl2013'
-    with pytest.raises(OQDeprecationWarning) as exc:
-        get_gsim_instance(model)
-    gsim = get_gsim_instance(model, raise_deprecated=False)
-    assert isinstance(gsim, GMPE)
+    with pytest.raises(GsimInitError) as exc:
+        gsim(model)
+    gsim_ = gsim(model, raise_deprecated=False)
+    assert isinstance(gsim_, GMPE)
     # now check that the behavior is the same if we set a warning filter beforehand:
     for ignore_warnings in [True, False]:
         with warnings.catch_warnings(record=True) as w:
             if ignore_warnings:
                 warnings.simplefilter('ignore')
-            with pytest.raises(OQDeprecationWarning) as exc:
-                get_gsim_instance(model)
+            with pytest.raises(GsimInitError) as exc:
+                gsim(model)
             assert len(w) == 0
         with warnings.catch_warnings(record=True) as w:
             if ignore_warnings:
                 warnings.simplefilter('ignore')
-            gsim = get_gsim_instance(model, raise_deprecated=False)
-            assert isinstance(gsim, GMPE)
+            gsim_ = gsim(model, raise_deprecated=False)
+            assert isinstance(gsim_, GMPE)
             assert len(w) == 0 if ignore_warnings else 1
+
+def test_gsim_name_1to1_relation():
+    for model in registered_gsim_names():
+        try:
+            gsim_ = gsim(model, raise_deprecated=False)
+            model_name_back = gsim_name(gsim_)
+            if model == 'Boore2015NGAEastA04':
+                asd = 9
+            assert model == model_name_back
+        except GsimInitError as exc:
+            continue
 
 
 def read_gsims(raise_deprecated=True, catch_deprecated=True):
     count, ok = 0, 0
-    errors = [TypeError, KeyError, IndexError]
-    if catch_deprecated:
-        errors.append(OQDeprecationWarning)
-    errors = tuple(errors)
-    for model in get_registered_gsim_names():
+    # errors = [TypeError, KeyError, IndexError]
+    # if catch_deprecated:
+    #     errors.append(OQDeprecationWarning)
+    # errors = tuple(errors)
+    for model in registered_gsim_names():
         count += 1
         try:
-            gsim = get_gsim_instance(model, raise_deprecated=raise_deprecated)
-            model_name_back = get_gsim_name(gsim)
-            assert model == model_name_back
+            gsim_ = gsim(model, raise_deprecated=raise_deprecated)
             ok += 1
-        except errors as exc:
+        except GsimInitError as exc:
             continue
     return count, ok
 
 def test_requires():
     for gsim_cls in registry.values():
-        for func in [get_distances_required_by,
-                get_rupture_params_required_by,
-                get_sites_params_required_by,
-                get_imts_defined_for]:
+        for func in [distances_required_by,
+                     rupture_params_required_by,
+                     site_params_required_by,
+                     imts_defined_for]:
             res = func(gsim_cls)
             assert isinstance(res, frozenset)
             assert not res or all(isinstance(_, str) for _ in res)

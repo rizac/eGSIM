@@ -10,13 +10,12 @@ from openquake.hazardlib.scalerel import PeerMSR
 
 from .columns import (get_all_names_of, get_intensity_measures, MissingColumn,
                       InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
-from ..helpers import (get_SA_period,
-                       get_imts_defined_for,
-                       get_distances_required_by,
-                       get_rupture_params_required_by,
-                       get_sites_params_required_by,
-                       vs30_to_z1pt0_cy14,
-                       vs30_to_z2pt5_cb14)
+from ..validators import sa_period
+from ..registry import (imts_defined_for,
+                        distances_required_by,
+                        rupture_params_required_by,
+                        site_params_required_by)
+from ..converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
 def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:
@@ -66,9 +65,9 @@ def get_flatfile_for_residual_analysis(flatfile: pd.DataFrame,
     periods, when needed (e.g. "SA(0.2)")
     """
     # check first that all models are defined for the given imts:
-    required_imt_names = {'SA' if get_SA_period(_) is not None else _ for _ in imts}
+    required_imt_names = {'SA' if sa_period(_) is not None else _ for _ in imts}
     invalid_models = [f'"{m.__class__.__name__}"' for m in gsims
-                     if required_imt_names - get_imts_defined_for(m)]
+                     if required_imt_names - imts_defined_for(m)]
     if invalid_models:
         raise ValueError('Model(s) not defined for all given imt(s): '
                          f'", '.join(invalid_models))
@@ -97,7 +96,7 @@ def get_required_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataF
     # concat all new dataframes in this list, then return a ne one from it:
     new_dataframes = []
     imts = set(imts)
-    non_sa_imts = {_ for _ in imts if get_SA_period(_) is None}
+    non_sa_imts = {_ for _ in imts if sa_period(_) is None}
     sa_imts = imts - non_sa_imts
     # get supported imts but does not allow 'SA' alone to be valid:
     if non_sa_imts:
@@ -132,7 +131,7 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
     """
     src_sa = []
     for c in flatfile.columns:
-        p = get_SA_period(c)
+        p = sa_period(c)
         if p is not None:
             src_sa.append((p, c))
     # source_sa: period [float] -> mapped to the relative column:
@@ -141,7 +140,7 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
     tgt_sa = []
     invalid_sa = []
     for i in sa_imts:
-        p = get_SA_period(i)
+        p = sa_period(i)
         if p is None:
             invalid_sa.append(i)
             continue
@@ -201,9 +200,9 @@ def get_required_ground_motion_property_names(gsims: Union[GMPE, Iterable[GMPE]]
     # code copied from openquake,hazardlib.contexts.ContextMaker.__init__:
     for gsim in gsims:
         # NB: REQUIRES_DISTANCES is empty when gsims = [FromFile]
-        required.update(get_distances_required_by(gsim) | {'rrup'})
-        required.update(get_rupture_params_required_by(gsim))
-        required.update(get_sites_params_required_by(gsim))
+        required.update(distances_required_by(gsim) | {'rrup'})
+        required.update(rupture_params_required_by(gsim))
+        required.update(site_params_required_by(gsim))
     return required
 
 
