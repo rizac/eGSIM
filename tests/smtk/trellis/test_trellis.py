@@ -5,15 +5,14 @@ import os
 import numpy as np
 import pandas as pd
 from pytest import raises
-from openquake.hazardlib.geo import Point
 
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
-from openquake.hazardlib.scalerel import WC1994
 from scipy.interpolate import interpolate
 
 from egsim.smtk.trellis import get_trellis, RuptureProperties, SiteProperties
+from egsim.smtk.validators import IncompatibleGsimImt
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -126,12 +125,12 @@ def test_magnitude_imt_trellis():
     )
     # compare with old data:
     TEST_FILE = "trellis_vs_magnitude.hdf"
-    ref = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))
+    ref:pd.DataFrame = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))  # noqa
     # columns are the same:
     assert not set(ref.columns) ^ set(dfr.columns)  # noqa
     # few checks:
     assert len(ref) == len(dfr)
-    assert (ref['rrup'].values == dfr['rrup'].values).all()
+    assert (ref['rrup'].values == dfr['rrup'].values).all()  # noqa
     assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
 
     # Now compare trellis values:
@@ -172,7 +171,7 @@ def test_magnitude_distance_spectra_trellis():
     #               "z2pt5": 1.0}
     magnitudes = [4.0, 5.0, 6.0, 7.0]
     distances = [5., 20., 50., 150.0]
-    with raises(ValueError) as verr:
+    with raises(IncompatibleGsimImt) as verr:
         dfr = get_trellis(
             gsims,
             list(periods) + [4.001, 5.0, 7.5, 10.0],
@@ -194,13 +193,13 @@ def test_magnitude_distance_spectra_trellis():
     )
     # compare with old data:
     TEST_FILE = "trellis_spectra.hdf"
-    ref = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))
+    ref:pd.DataFrame = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))  # noqa
     # columns are the same:
     assert not set(ref.columns) ^ set(dfr.columns)  # noqa
     # few checks:
     assert len(ref) == len(dfr)
 
-    assert (ref['rrup'].values == dfr['rrup'].values).all()
+    assert (ref['rrup'].values == dfr['rrup'].values).all()  # noqa
     assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
 
     # compare trellis values:
