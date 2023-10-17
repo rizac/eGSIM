@@ -172,7 +172,7 @@ def _imtkey(imt_inst) -> tuple[str, float]:
     if period is not None:
         return 'SA', period
     else:
-        return imt_inst.string, -np.inf
+        return repr(imt_inst), -np.inf
 
 
 def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
@@ -184,7 +184,7 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
     """
     try:
         imt_inst = imt(obj)
-        if not imt_inst.string.startswith('SA('):
+        if not repr(imt_inst).startswith('SA('):
             return None
     except InvalidImt:
         return None
