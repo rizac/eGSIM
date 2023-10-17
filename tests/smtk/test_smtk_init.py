@@ -6,12 +6,14 @@ Created on 16 Feb 2018
 from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
 import warnings
 import pytest
+from openquake.hazardlib.imt import IMT, SA
 
+from egsim.smtk import InvalidImt
 from egsim.smtk.registry import (registered_gsim_names, registry, \
                                  imts_defined_for, distances_required_by, \
                                  rupture_params_required_by, site_params_required_by,
                                  gsim_name)
-from egsim.smtk.validators import InvalidGsim, gsim
+from egsim.smtk.validators import InvalidGsim, gsim, imt
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
@@ -109,6 +111,15 @@ def test_requires():
             res = func(gsim_cls)
             assert isinstance(res, frozenset)
             assert not res or all(isinstance(_, str) for _ in res)
+
+
+def test_imt_as_float_is_converted_to_sa():
+    for val in [0, .0, 1, 1.]:
+        assert isinstance(imt(val), IMT)
+        assert imt(val) == SA(val)
+    for val in [np.nan, np.inf, -np.inf, -1]:
+        with pytest.raises(InvalidImt):
+            imt(val)
 
 
 # legacy code and relative tests (convert acceleration units). See notes function below
