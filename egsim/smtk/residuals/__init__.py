@@ -15,7 +15,8 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext
 
-from ..helpers import (harmonize_and_validate_inputs, get_gsim_name, get_SA_period)
+from ..validators import harmonize_and_validate_inputs
+from ..registry import gsim_name
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
@@ -246,7 +247,7 @@ def column_label(gsim: Union[str, GMPE], imtx: str, c_label: str):
     supposed to denote a residual computed with the observed IMT stored in another column
     """
     if isinstance(gsim, GMPE):
-        gsim = get_gsim_name(gsim)
+        gsim = gsim_name(gsim)
     return f"{gsim} {imtx} {c_label}"
 
 

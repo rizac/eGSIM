@@ -11,10 +11,13 @@ import yaml
 import pandas as pd
 import numpy as np
 
-from egsim.smtk.helpers import (get_registered_gsim_names,
-                                get_rupture_params_required_by,
-                                get_sites_params_required_by,
-                                get_distances_required_by)
+from openquake.hazardlib import imt
+from egsim.smtk import registered_imt_names
+
+from egsim.smtk import (registered_gsim_names,
+                        rupture_params_required_by,
+                        site_params_required_by,
+                        distances_required_by)
 from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype,
                                          _extract_from_columns,
                                          _ff_metadata_path, cast_value)
@@ -186,10 +189,10 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
     oq_sites_params = set()
     oq_distances = set()
 
-    for name in get_registered_gsim_names():
-        oq_rupture_params.update(get_rupture_params_required_by(name))
-        oq_sites_params.update(get_sites_params_required_by(name))
-        oq_distances.update(get_distances_required_by(name))
+    for name in registered_gsim_names():
+        oq_rupture_params.update(rupture_params_required_by(name))
+        oq_sites_params.update(site_params_required_by(name))
+        oq_distances.update(distances_required_by(name))
 
     for name in rupture_params:
         if name not in oq_rupture_params:
@@ -203,11 +206,10 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
         if name not in distances:
             assert len(set(distances[name]) & oq_distances) == 1
 
-    from openquake.hazardlib import imt
-
+    imtz = set(registered_imt_names())
     for ix in imts:
         x = getattr(imt, ix)
-        assert callable(x)
+        assert callable(x) and x.__name__ in imtz
 
 
 def test_Column_dtype():
