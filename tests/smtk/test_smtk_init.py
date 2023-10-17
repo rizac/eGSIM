@@ -76,12 +76,12 @@ def test_gsim_name_1to1_relation():
     for model in registered_gsim_names:
         try:
             gsim_ = gsim(model, raise_deprecated=False)
-            model_name_back = gsim_name(gsim_)
-            if model == 'Boore2015NGAEastA04':
-                asd = 9
-            assert model == model_name_back
         except GsimInitError as exc:
             continue
+        model_name_back = gsim_name(gsim_)
+        if model == 'Boore2015NGAEastA04':
+            asd = 9
+        assert model == model_name_back
 
 
 def read_gsims(raise_deprecated=True, catch_deprecated=True):
