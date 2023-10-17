@@ -4,10 +4,7 @@ from typing import Union, Iterable
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 
-
 registered_gsim_names = frozenset(registry)
-registered_imt_names:frozenset  # initialized below
-
 
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
 def _registered_imt_names() -> Iterable[str]:
@@ -26,13 +23,10 @@ def _registered_imt_names() -> Iterable[str]:
         except (ValueError, TypeError, AttributeError):
             pass
 
-
 registered_imt_names = frozenset(_registered_imt_names())
-
 
 # invert `gsim_aliases` (see `gsim_name` below)
 _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
-
 
 def gsim_name(gsim: GMPE) -> str:
     """
