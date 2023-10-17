@@ -6,8 +6,7 @@ import numpy as np
 from openquake.hazardlib.imt import IMT, from_string as imt_from_string
 from openquake.hazardlib.gsim.base import GMPE
 
-from .registry import (registered_gsim_names, gsim_name, imts_defined_for,
-                       gsim, sa_limits)
+from .registry import (gsim_name, imts_defined_for, gsim, sa_limits)
 
 
 def harmonize_and_validate_inputs(
@@ -94,11 +93,16 @@ def harmonize_input_gsims(
     output_gsims = {}
     for gs in gsims:
         if isinstance(gs, type) and issubclass(gs, GMPE):
-            gs = gs()  # try to init with no args
+            try:
+                # try to init with no args:
+                gs_inst = gs()
+                gs = gs_inst
+            except Exception:
+                pass
         if isinstance(gs, GMPE):
             output_gsims[gsim_name(gs)] = gs  # get name of GMPE instance
             continue
-        if isinstance(gs, str) and gs in registered_gsim_names():
+        if isinstance(gs, str):
             output_gsims[gs] = gsim(gs)  ## noqa
             continue
         raise ValueError(f'Invalid Gsim: {str(gs)}')
@@ -106,7 +110,7 @@ def harmonize_input_gsims(
     return {k: output_gsims[k] for k in sorted(output_gsims)}
 
 
-def harmonize_input_imts(imts: Iterable[Union[str, IMT]]) -> dict[str, IMT]:
+def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IMT]:
     """harmonize IMTs given as names (str) or instances (IMT) returning a
     dict[str, IMT] where each name is mapped to the relative instance. Dict keys will
     be sorted ascending comparing SAs using their period. E.g.: 'PGA' 'SA(2)' 'SA(10)'

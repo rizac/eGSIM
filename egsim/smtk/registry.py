@@ -10,19 +10,13 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib import valid
 
 
-def registered_gsim_names(sort=False) -> Iterable[str]:
-    """Return all Gsim names registered in OpenQuake"""
-    if not sort:
-        yield from registry  # it's a dict, yield just the keys (names)
-    else:
-        yield from sorted(registry)
+registered_gsim_names = frozenset(registry)
+registered_imt_names:frozenset  # initialized below
 
 
-def registered_imt_names() -> list[str]:
+# OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
+def _registered_imt_names() -> Iterable[str]:
     """Return all IMT names registered in OpenQuake"""
-    # Note: This function is not used but exposed for convenience
-    # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
-    imts = []
     for name in dir(imt_module):
         if name[0].upper() != name[0]:  # only upper-case module elements
             continue
@@ -36,10 +30,12 @@ def registered_imt_names() -> list[str]:
         try:
             imt_obj = func(*[1. for _ in range(f_code.co_argcount)])  # noqa
             if isinstance(imt_obj, imt_module.IMT):
-                imts.append(name)
+                yield name
         except (ValueError, TypeError, AttributeError):
             pass
-    return imts
+
+
+registered_imt_names = frozenset(_registered_imt_names())
 
 
 def gsim_name(gsim: GMPE) -> str:

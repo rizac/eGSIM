@@ -189,7 +189,7 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
     oq_sites_params = set()
     oq_distances = set()
 
-    for name in registered_gsim_names():
+    for name in registered_gsim_names:
         oq_rupture_params.update(rupture_params_required_by(name))
         oq_sites_params.update(site_params_required_by(name))
         oq_distances.update(distances_required_by(name))
@@ -206,10 +206,9 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
         if name not in distances:
             assert len(set(distances[name]) & oq_distances) == 1
 
-    imtz = set(registered_imt_names())
     for ix in imts:
         x = getattr(imt, ix)
-        assert callable(x) and x.__name__ in imtz
+        assert callable(x) and x.__name__ in registered_imt_names
 
 
 def test_Column_dtype():
