@@ -7,10 +7,11 @@ from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
 import warnings
 import pytest
 
-from egsim.smtk.registry import (registered_gsim_names, gsim, registry, \
+from egsim.smtk.registry import (registered_gsim_names, registry, \
                                  imts_defined_for, distances_required_by, \
                                  rupture_params_required_by, site_params_required_by,
-                                 gsim_name, GsimInitError)
+                                 gsim_name)
+from egsim.smtk.validators import InvalidGsim, gsim
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
@@ -53,7 +54,7 @@ def test_load_models():
 
 def test_load_model_with_deprecation_warnings():
     model = 'AkkarEtAl2013'
-    with pytest.raises(GsimInitError) as exc:
+    with pytest.raises(InvalidGsim) as exc:
         gsim(model)
     gsim_ = gsim(model, raise_deprecated=False)
     assert isinstance(gsim_, GMPE)
@@ -62,7 +63,7 @@ def test_load_model_with_deprecation_warnings():
         with warnings.catch_warnings(record=True) as w:
             if ignore_warnings:
                 warnings.simplefilter('ignore')
-            with pytest.raises(GsimInitError) as exc:
+            with pytest.raises(InvalidGsim) as exc:
                 gsim(model)
             assert len(w) == 0
         with warnings.catch_warnings(record=True) as w:
@@ -76,7 +77,7 @@ def test_gsim_name_1to1_relation():
     for model in registered_gsim_names:
         try:
             gsim_ = gsim(model, raise_deprecated=False)
-        except GsimInitError as exc:
+        except InvalidGsim as exc:
             continue
         model_name_back = gsim_name(gsim_)
         if model == 'Boore2015NGAEastA04':
@@ -95,7 +96,7 @@ def read_gsims(raise_deprecated=True, catch_deprecated=True):
         try:
             gsim_ = gsim(model, raise_deprecated=raise_deprecated)
             ok += 1
-        except GsimInitError as exc:
+        except InvalidGsim as exc:
             continue
     return count, ok
 
