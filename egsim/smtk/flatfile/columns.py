@@ -95,7 +95,6 @@ class ColumnDtype(str, ReprEnum):
         return ret_type
 
 
-
 def get_rupture_params() -> set[str]:
     """Return a set of strings with all column names (including aliases)
     denoting a rupture parameter
@@ -116,18 +115,31 @@ def get_intensity_measures() -> set[str]:
 
 # Column name and aliases, mapped to all their aliases
 # The dict values will always include at least the column name itself:
-_alias: dict[str, set[str]] = None  # noqa
+_alias: dict[str, frozenset[str]] = None  # noqa
 
 
-def get_all_names_of(column) -> set[str]:
-    """Return all possible names of the given column, as set of strings. The set
-    will be empty if `column` does not denote a flatfile column
+def get_all_names_of(column, ordered=False) -> Union[frozenset[str], list[str]]:
+    """Return all possible names of the given column, as set of strings (if ordered is
+    False, the default). If ordered is True, a list is returned where the first element
+    is assured to be the flatfile default column name (primary name) and all remaining
+    the secondary names. The set/list will be empty if `column` does not denote a
+    flatfile column
     """
     global _alias
     if _alias is None:
         _alias = {}
         _extract_from_columns(load_from_yaml(), alias=_alias)
-    return _alias.get(column, set())
+    all_names = _alias.get(column, frozenset())
+    if not ordered:
+        return all_names
+    # re-order putting the primary name in the 1st position:
+    all_names = list(all_names)
+    for i in range(len(all_names)):
+        if all_names[i] in _columns:
+            if i > 0:
+                all_names.insert(0, all_names.pop(i))
+            break
+    return all_names
 
 
 _dtype: dict[str, Union[ColumnDtype, pd.CategoricalDtype]] = None  # noqa
@@ -178,7 +190,7 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
                           distances: set[str] = None,
                           imts: set[str] = None,
                           dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
-                          alias:dict[str, set[str]]=None,
+                          alias:dict[str, frozenset[str]]=None,
                           default:dict[str, Any]=None,
                           bounds:dict[str, dict[str, Any]]=None,
                           help:dict=None):
@@ -198,10 +210,8 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
         the enum :ref:`ColumnDtype` - or pandas `CategoricalDtype`). Columns with no
         data type will not be present
     :param alias: dict or None. If dict, it will be populated with all flatfile columns
-        (aliases included) mapped to their aliases. E.g., a column that can take N
-        additional names will have N+1 entries, all of them mapped to same the set of
-        N+1 names. All columns will be present: if a column has no alias, it will be
-        mapped to itself (1-element set).
+        (aliases included) mapped to their aliases. A column with N aliases will be
+        mapped to a set of N+1 names (if N=0, the column will be mapped to itself).
     :param default: dict or None. If dict, it will be populated with all flatfile
         columns (aliases included) mapped to their default, if defined. Columns with no
         default will not be present
@@ -222,6 +232,7 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
         else:
             aliases = set(aliases)
         aliases.add(c_name)
+        aliases = frozenset(aliases)
         _dtype = None  # cache value, see below
         for name in aliases:
             if check_type and 'type' in props:
@@ -355,12 +366,10 @@ class MissingColumn(InvalidColumn, AttributeError, KeyError):
         """Return a list of all column names of the argument, with the first element
         being the flatfile primary name. Returns `[col_name]` if the argument does not
         denote any flatfile column"""
-        names = get_all_names_of(col_name)
+        names = get_all_names_of(col_name, True)
         if len(names) <= 1:
             return [col_name]
-        global _columns  # not needed, just as reminder
-        return [n for n in names if n in _columns] + \
-               [n for n in names if n not in _columns]
+        return names
 
 
 class ConflictingColumns(InvalidColumn):
