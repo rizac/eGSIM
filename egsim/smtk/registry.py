@@ -4,7 +4,11 @@ from typing import Union, Iterable
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 
+from .flatfile.columns import get_all_names_of
+
+
 registered_gsim_names = frozenset(registry)
+
 
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
 def _registered_imt_names() -> Iterable[str]:
@@ -52,25 +56,34 @@ def sa_limits(gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, float], 
     return (min(pers), max(pers)) if pers is not None else None
 
 
-def rupture_params_required_by(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-    """Return the rupture parameters required by the given model"""
-    if isinstance(gsim, str):
-        gsim = registry[gsim]
-    return gsim.REQUIRES_RUPTURE_PARAMETERS or frozenset()  # "cast" to set if '' or (,)
+def rupture_params_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+    """Return the rupture parameters required by the given model(s)"""
+    ret = []
+    for model in gsim:
+        if isinstance(model, str):
+            model = registry[model]
+        ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
+    return frozenset(ret)
 
 
-def site_params_required_by(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-    """Return the site parameters required by the given model"""
-    if isinstance(gsim, str):
-        gsim = registry[gsim]
-    return gsim.REQUIRES_SITES_PARAMETERS or frozenset()  # "cast" to set if '' or (,)
+def site_params_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+    """Return the site parameters required by the given model(s)"""
+    ret = []
+    for model in gsim:
+        if isinstance(model, str):
+            model = registry[model]
+        ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
+    return frozenset(ret)
 
 
-def distances_required_by(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-    """Return the distance measures required by the given model"""
-    if isinstance(gsim, str):
-        gsim = registry[gsim]
-    return gsim.REQUIRES_DISTANCES or frozenset()  # "cast" to set if '' or (,)
+def distances_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+    """Return the distance measures required by the given model(s)"""
+    ret = []
+    for model in gsim:
+        if isinstance(model, str):
+            model = registry[model]
+        ret.extend(model.REQUIRES_DISTANCES or [])
+    return frozenset(ret)
 
 
 def imts_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
@@ -78,3 +91,24 @@ def imts_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     if isinstance(gsim, str):
         gsim = registry[gsim]
     return frozenset(_.__name__ for _ in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+
+
+def ground_motion_properties_required_by(
+        *gsim: Union[str, GMPE, Iterable[GMPE]],
+        as_ff_column=False) -> frozenset[str]:
+    """Return the required ground motion properties (distance measures,
+       rupture and site params all together)
+
+    :param as_ff_column: True if the ground motion properties name should be
+        returned as flatfile columns instead oif properties (False by default)
+    """
+    ret = []
+    for model in gsim:
+        if isinstance(model, str):
+            model = registry[model]
+        ret.extend(model.REQUIRES_DISTANCES or [])
+        ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
+        ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
+    if as_ff_column:
+        return frozenset(get_all_names_of(c, ordered=True)[0] for c in ret)
+    return frozenset(ret)
