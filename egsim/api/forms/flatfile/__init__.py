@@ -10,7 +10,10 @@ from django.core.exceptions import ValidationError
 from django.forms import Form, ModelChoiceField
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query as flatfile_query)
+from egsim.smtk import (gsim_registry, ground_motion_properties_required_by,
+                        imts_defined_for)
+from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query as flatfile_query,
+                                 get_all_names_of)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm
 
@@ -137,15 +140,25 @@ class FlatfileForm(EgsimBaseForm):
 
 
 def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
-    """Yields the GSIM names supported by the given flatfile"""
+    """Yield the GSIM names supported by the given flatfile"""
     ff_cols = set('SA' if _.startswith('SA(') else _ for _ in flatfile_columns)
-    model2cols = defaultdict(set)
-    # filter models by imts (feasible via SQL) and build a dict of models with the
-    # relatvie required flatfile columns (filter donw below, not possible to do in SQL):
-    for model_name, required_fcol in models.Gsim.objects.filter(imts__name__in=ff_cols).\
-            values_list('name', 'required_flatfile_columns__name'):
-        model2cols[model_name].add(required_fcol)
-    # filter on required flatfile columns and yields supported models:
-    for model_name, cols in model2cols.items():
-        if not cols - ff_cols:
-            yield model_name
+    for name, model_cls in gsim_registry.items():
+        imts = imts_defined_for(model_cls)
+        if not imts.intersection(ff_cols):
+            continue
+        for gm_prop in ground_motion_properties_required_by(model_cls):
+            if not get_all_names_of(gm_prop) & ff_cols:
+                continue
+        yield name
+
+    # FIXME: REMOVE
+    # model2cols = defaultdict(set)
+    # # filter models by imts (feasible via SQL) and build a dict of models with the
+    # # relatvie required flatfile columns (filter donw below, not possible to do in SQL):
+    # for model_name, required_fcol in models.Gsim.objects.filter(imts__name__in=ff_cols).\
+    #         values_list('name', 'required_flatfile_columns__name'):
+    #     model2cols[model_name].add(required_fcol)
+    # # filter on required flatfile columns and yields supported models:
+    # for model_name, cols in model2cols.items():
+    #     if not cols - ff_cols:
+    #         yield model_name

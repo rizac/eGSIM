@@ -15,7 +15,8 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext
 
-from ..validators import harmonize_and_validate_inputs
+from ..validators import validate_inputs, harmonize_input_gsims, \
+    harmonize_input_imts
 from ..registry import gsim_name
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
@@ -38,7 +39,9 @@ def get_residuals(
     :param likelihood: boolean telling if also the likelihood of the residuals
         (according to Equation 9 of Scherbaum et al (2004)) should be computed
     """
-    gsims, imts = harmonize_and_validate_inputs(gsims, imts)
+    gsims = harmonize_input_gsims(gsims)
+    imts = harmonize_input_imts(imts)
+    validate_inputs(gsims, imts)
 
     flatfile_r = get_flatfile_for_residual_analysis(flatfile, gsims.values(), imts)
     # copy event columns (raises if columns not found):

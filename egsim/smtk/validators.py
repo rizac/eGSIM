@@ -14,65 +14,6 @@ from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
 from .registry import gsim_name, imts_defined_for, sa_limits
 
 
-def harmonize_and_validate_inputs(
-        gsims: Union[Iterable[str, GMPE, type[GMPE]], dict[str, GMPE]],
-        imts: Union[Iterable[str, IMT], dict[str, IMT]]) -> \
-        tuple[dict[str, GMPE], dict[str, IMT]]:
-    """Harmonize and validate the input ground motion models (`gsims`)
-    and intensity measures types (`imts`) returning a tuple of two dicts
-    `gsim, imts` with sorted ascending keys mapping each model / intensity
-    measure name to the relative OpenQuake instance.
-
-    The dicts will be returned after validating the inputs and assuring
-    that the given models and imts can be used together, otherwise a
-    ValueError is raised (the exception will have a special attribute
-    `invalid` with all invalid model name mapped to thr incompatible imt names)
-
-    :param gsims: an iterable of str (model name, see `get_registered_gsim_names`),
-        Gsim classes or instances. It can also be a dict, in this case the argument
-        is returned as-it-is, after checking that keys and values types are ok
-    :param imts: an iterable of str (e.g. 'SA(0.1)' ,'PGV',  'PGA'),
-        or IMT instances. It can also be a dict, in this case the argument is
-        returned as-it-is, after checking that keys and values types are ok
-    """
-    if not isinstance(gsims, dict):
-        gsims = harmonize_input_gsims(gsims)
-    else:
-        assert all(isinstance(k, str) and isinstance(v, GMPE)
-                   for k, v in gsims.items()), "Input gsims must be a dict[str, GMPE]"
-    if not isinstance(imts, dict):
-        imts = harmonize_input_imts(imts)
-    else:
-        assert all(isinstance(k, str) and isinstance(v, IMT)
-                   for k, v in imts.items()), "Input imts must be a dict[str, IMT]"
-
-    periods = {}
-    imtz = set()
-    # get SA periods, and put in imtz just the imt names (e.g. 'SA' not 'SA(2.0)'):
-    for imt_name, imtx in imts.items():
-        period = sa_period(imtx)
-        if period is not None:
-            periods[period] = imt_name
-            imt_name = imt_name[:imt_name.index('(')]
-        imtz.add(imt_name)
-
-    # create an IncompatibleGsmImt exception, adn populate it with errors if any:
-    exc = IncompatibleGsimImt()
-    for gsim_name, gsim in gsims.items():
-        invalid_imts = imtz - imts_defined_for(gsim)
-        if periods and 'SA' not in invalid_imts:
-            for p in invalid_sa_periods(gsim, periods):
-                invalid_imts.add(periods[p])
-        if not invalid_imts:
-            continue
-        exc.add(gsim_name, invalid_imts)
-
-    if not exc.empty:
-        raise exc from None
-
-    return gsims, imts
-
-
 def harmonize_input_gsims(
         gsims: Iterable[Union[str, type[GMPE], GMPE]]) -> dict[str, GMPE]:
     """harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
@@ -118,10 +59,10 @@ def gsim(gmm: Union[str, type[GMPE], GMPE], raise_deprecated=True) -> GMPE:
             # try to init with no args:
             gmm = gmm()
         except Exception as exc:
-            raise InvalidGsim(gmm, exc)
+            raise InvalidInput(gmm, exc)
     if isinstance(gmm, GMPE):
         if raise_deprecated and gmm.superseded_by:
-            raise InvalidGsim(gmm, OQDeprecationWarning())
+            raise InvalidInput(gmm, OQDeprecationWarning())
         return gmm
     if isinstance(gmm, str):
         is_table = gmm.startswith('GMPETable')
@@ -132,19 +73,20 @@ def gsim(gmm: Union[str, type[GMPE], GMPE], raise_deprecated=True) -> GMPE:
                 return GMPETable(gmpe_table=filepath)
             except (TypeError, ValueError, FileNotFoundError, OSError,
                     AttributeError) as exc:
-                raise InvalidGsim(gmm, exc)
+                raise InvalidInput(gmm, exc)
         elif not raise_deprecated:  # registered Gsims (relaxed: allow deprecated)
             try:
                 return valid_gsim(gmm)
-            except (TypeError, IndexError, KeyError) as exc:
-                raise InvalidGsim(gmm, exc)
+            except (TypeError, IndexError, KeyError, ValueError) as exc:
+                raise InvalidInput(gmm, exc)
         else:  # "normal" case: registered Gsims but raise DeprecationWarning
             try:
                 with warnings.catch_warnings():
                     warnings.filterwarnings('error', category=OQDeprecationWarning)
                     return valid_gsim(gmm)
-            except (TypeError, IndexError, KeyError, OQDeprecationWarning) as exc:
-                raise InvalidGsim(gmm, exc)
+            except (TypeError, IndexError, KeyError, ValueError,
+                    OQDeprecationWarning) as exc:
+                raise InvalidInput(gmm, exc)
     raise TypeError(gmm)
 
 
@@ -164,7 +106,7 @@ def imt(arg: Union[float, str, IMT]) -> IMT:
     try:
         return imt_from_string(str(arg))
     except (TypeError, ValueError, KeyError) as exc:
-        raise InvalidImt(arg, exc)
+        raise InvalidInput(arg, exc)
 
 
 def _imtkey(imt_inst) -> tuple[str, float]:
@@ -186,13 +128,60 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
         imt_inst = imt(obj)
         if not repr(imt_inst).startswith('SA('):
             return None
-    except InvalidImt:
+    except InvalidInput:
         return None
 
     period = imt_inst.period
     # check also that the period is finite (SA('inf') and SA('nan') are possible:
     # this function is intended to return a "workable" period):
     return float(period) if np.isfinite(period) else None
+
+
+def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
+        tuple[dict[str, GMPE], dict[str, IMT]]:
+    """Harmonize and validate the input ground motion models (`gsims`)
+    and intensity measures types (`imts`) returning a tuple of two dicts
+    `gsim, imts` with sorted ascending keys mapping each model / intensity
+    measure name to the relative OpenQuake instance.
+
+    The dicts will be returned after validating the inputs and assuring
+    that the given models and imts can be used together, otherwise a
+    ValueError is raised (the exception will have a special attribute
+    `invalid` with all invalid model name mapped to thr incompatible imt names)
+
+    :param gsims: an iterable of str (model name, see `get_registered_gsim_names`),
+        Gsim classes or instances. It can also be a dict, in this case the argument
+        is returned as-it-is, after checking that keys and values types are ok
+    :param imts: an iterable of str (e.g. 'SA(0.1)' ,'PGV',  'PGA'),
+        or IMT instances. It can also be a dict, in this case the argument is
+        returned as-it-is, after checking that keys and values types are ok
+    """
+    periods = {}
+    imt_names = set()
+    # get SA periods, and put in imtz just the imt names (e.g. 'SA' not 'SA(2.0)'):
+    for imt_name, imtx in imts.items():
+        period = sa_period(imtx)
+        if period is not None:
+            periods[period] = imt_name
+        imt_names.add(imt_name)
+    if periods:
+        imt_names.add('SA')
+
+    # create an IncompatibleGsmImt exception, adn populate it with errors if any:
+    errors = {}
+    for gm_name, gsim_inst in gsims.items():
+        invalid_imts = imt_names - imts_defined_for(gsim_inst)
+        if periods and 'SA' not in invalid_imts:
+            for p in invalid_sa_periods(gsim_inst, periods):
+                invalid_imts.add(periods[p])
+        if not invalid_imts:
+            continue
+        errors[gm_name] = ImtIncompatibilityError(*invalid_imts)
+
+    if errors:
+        raise InvalidInput(*errors.items()) from None
+
+    return gsims, imts
 
 
 def invalid_sa_periods(gsim: GMPE, periods: Iterable[float, str, IMT]) \
@@ -212,49 +201,16 @@ def invalid_sa_periods(gsim: GMPE, periods: Iterable[float, str, IMT]) \
 
 
 class InvalidInput(Exception):
-    """Input initialization error. Abstract-like class, use subclasses instead"""
+    """Input initialization error. Accepts a list of arguments / exceptions
+    E.g. ("invalid_model_1", ValueError(...), "invalid_model_2", IndexError(...))
+    """
 
-    def __init__(self, input:Any=None, error:Any=None):
-        self._data = []
-        super().__init__()
-        if input is not None and error is not None:
-            self.add(input, error)
-
-    def add(self, input:Any, error:Any):
-        """Add an invalid input and the corresponding error"""
-        self._data.append((input, error))
-        # customize the error message (stored in the `args` attribute)
-        self.args = (self._build_msg(self._data),)
-
-    def _build_msg(self, data:list[tuple[Any, Any]]) -> str:
-        raise NotImplementedError()
-
-    @property
-    def empty(self):
-        return not self._data
-
-    @property
-    def errors(self) -> tuple[Any, Any]:
-        """Yield the tuple [input, error] for all inputs added to this object"""
-        yield from self._data
+    def __init__(self, *args_and_errors: [Any, Exception, ...]):
+        self.inputs = args_and_errors[::2]
+        self.errors = args_and_errors[1::2]
+        super().__init__(", ".join(f'{str(i)} ({e.__class__.__name__})'
+                         for i, e in zip(self.inputs, self.errors)))
 
 
-class InvalidGsim(InvalidInput):
-
-    def _build_msg(self, data: list[tuple[Any, Any]]) -> str:
-        arg = f"Invalid model{'s' if len(self._data) != 1 else ''}"
-        return f'{arg}: {", ".join(str(err[0]) for err in self.errors)}'
-
-
-class InvalidImt(InvalidInput):
-
-    def _build_msg(self, data: list[tuple[Any, Any]]) -> str:
-        arg = f"Invalid imt{'s' if len(self._data) != 1 else ''}"
-        return f'{arg}: {", ".join(str(err[0]) for err in self.errors)}'
-
-
-class IncompatibleGsimImt(InvalidInput):
-
-    def _build_msg(self, data: list[tuple[Any, Any]]) -> str:
-        return f"{len(data)} model{'s are' if len(data) != 1 else ' is'} " \
-              f"not defined for all input imts"
+class ImtIncompatibilityError(Exception):
+    pass

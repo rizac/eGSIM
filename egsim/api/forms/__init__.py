@@ -16,11 +16,12 @@ from django.forms import Form
 from django.forms.renderers import BaseRenderer
 from django.forms.utils import ErrorDict
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
-from django.forms.fields import Field, ChoiceField, FloatField
+from django.forms.fields import Field, ChoiceField, FloatField, MultipleChoiceField
 
 from egsim.api import models
-from egsim.api.forms.fields import (MultipleChoiceWildcardField, ImtField, NArrayField,
+from egsim.api.forms.fields import (GsimField, ImtField, NArrayField,
                                     get_field_docstring, _default_error_messages)
+from egsim.smtk import validate_inputs, InvalidInput
 
 
 class EgsimFormMeta(DeclarativeFieldsMetaclass):
@@ -385,17 +386,14 @@ class SHSRForm(EgsimBaseForm):
                           required=False)
     longitude = FloatField(label='Longitude', min_value=-180., max_value=180.,
                            required=False)
-    regionalization = MultipleChoiceWildcardField(choices=_get_regionalizations,
-                                                  label='The Seimsic Hazard '
-                                                        'Source Regionalizations '
-                                                        'to use',
-                                                  required=False)
+    regionalization = MultipleChoiceField(choices=_get_regionalizations,
+                                          label='The Seimsic Hazard '
+                                                 'Source Regionalizations '
+                                                 'to use',
+                                          required=False)
 
-    # the key of `cleaned_data:dict` mapped to the regionalization-selected models:
-    SHSR_MODELS_KEY = 'shsr_gsim'
-
-    def clean(self):
-        cleaned_data = super().clean()
+    @classmethod
+    def get_regioselected_models(cls, cleaned_data) -> set[str]:
         lon = cleaned_data.get('longitude', None)
         lat = cleaned_data.get('latitude', None)
         if lat is None or lon is None:
@@ -418,20 +416,7 @@ class SHSRForm(EgsimBaseForm):
                 if polygon.contains(point):
                     gsims.add(gsim_name)
                     break
-        if gsims:
-            cleaned_data[self.SHSR_MODELS_KEY] = sorted(gsims)
-
-        return cleaned_data
-
-
-def _get_gsim_choices():  # https://stackoverflow.com/a/57809521
-    return [(_, _) for _ in models.Gsim.objects.only('name').values_list('name',
-                                                                         flat=True)]
-
-
-def _get_imt_choices():  # https://stackoverflow.com/a/57809521
-    return [(_, _) for _ in models.Imt.objects.only('name').values_list('name',
-                                                                        flat=True)]
+        return gsims
 
 
 class GsimImtForm(SHSRForm):
@@ -441,9 +426,18 @@ class GsimImtForm(SHSRForm):
     _field2params: dict[str, list[str]] = {'gsim': ['model', 'gsim', 'gmm']}
 
     # Note: both Fields below are required actually (see `clean` for details):
-    gsim = MultipleChoiceWildcardField(required=False, choices=_get_gsim_choices)
-    imt = ImtField(required=False, choices=_get_imt_choices,
-                   label='Intensity Measure Type(s)')
+    gsim = GsimField(required=False, label="Model(s)")
+    imt = ImtField(required=False, label='Intensity Measure Type(s)')
+
+    accept_empty_gsim_list = False  # override in subclasses if needed
+    accept_empty_imt_list = False  # see above (for imts)
+
+    def clean_regionalization(self):
+        """Called after cleaning the regionalization field, which means we successfully
+        cleande lat lon regionalization but not yet gsim and imt"""
+        new_model_names = self.get_regioselected_models(self.cleaned_data)
+        if new_model_names:
+            self.data['gsim'] = self.data.get('gsim', []) + list(new_model_names)
 
     def clean(self):
         """Run validation where we must validate selected gsim(s) based on
@@ -455,14 +449,15 @@ class GsimImtForm(SHSRForm):
         # gsim is required but first check that we passed the lat, lon arguments,
         # in that case we might have already a list of gsim to merge with the
         # one provided via the classical gsim parameter
-        regionalization_based_gsims = cleaned_data.pop(self.SHSR_MODELS_KEY, [])
-        if regionalization_based_gsims:
-            if cleaned_data.get(gsim, None):
-                unique_gsims = sorted(set(list(cleaned_data[gsim]) +
-                                          regionalization_based_gsims))
-                cleaned_data[gsim] = unique_gsims
-            else:
-                cleaned_data[gsim] = regionalization_based_gsims
+        regionalization_based_models = self.get_regioselected_models(cleaned_data)
+        if regionalization_based_models:
+            gsim_data:dict = cleaned_data.get(gsim, {})
+            new_models = regionalization_based_models - set(gsim_data)
+            new_gsim_data = self.gsim.clean(new_models)
+            all_models = sorted(list(gsim_data) + list(new_gsim_data))
+            cleaned_data[gsim] = {
+                k: gsim_data.get(k, new_gsim_data[k]) for k in all_models
+            }
 
         # Check that both fields are provided. Another reason we do it here instead
         # than simply set `required=True` as Field argument is that sometimes
@@ -480,71 +475,23 @@ class GsimImtForm(SHSRForm):
         # if any of the if above was true, then the parameter has been removed from
         # cleaned_data. If both are provided, check gsims and imts match:
         if not self.has_error(gsim) and not self.has_error(imt):
-            self.validate_gsim_and_imt(cleaned_data[gsim], cleaned_data[imt])
+            try:
+                validate_inputs(cleaned_data[gsim], cleaned_data[imt])
+            except InvalidInput as err:
+                # add error to form:
+                invalid_gsims = err.inputs
+                invalid_imts = set(i for ex in err.errors for i in ex.args)
+                code = 'invalid_model_imt_combination'
+                err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not defined "
+                                           "for all supplied imt(s)", code=code)
+                err_imt = ValidationError(f"{len(invalid_imts)} imt(s) not defined for "
+                                          "all supplied model(s)", code=code)
+                # add_error removes also the field from self.cleaned_data:
+                gsim, imt = 'gsim', 'imt'
+                self.add_error(gsim, err_gsim)
+                self.add_error(imt, err_imt)
+
         return cleaned_data
-
-    accept_empty_gsim_list = False  # override in subclasses otherwise
-    accept_empty_imt_list = False  # see above (for imts)
-
-    def validate_gsim_and_imt(self, gsims, imts):
-        """Validate gsim and imt assuring that all gsims are defined for all
-        supplied imts, and all imts are defined for all supplied gsim.
-        This method calls self.add_error and works on self.cleaned_data, thus
-        it should be called after super().clean()
-        """
-        # (gsims and imts are both validated, non empty lists)
-        # we want imt class names merge all SA(...) as one single 'SA'
-        has_sa = any(i.startswith('SA') for i in imts)
-        if has_sa:
-            imts = ['SA'] + [i for i in imts if not i.startswith('SA')]
-
-        invalid_gsims = set(gsims) - set(self.sharing_gsims(imts))
-
-        if invalid_gsims:
-            # For details see "cleaning and validating fields that depend on each other"
-            # on the django doc:
-            invalid_imts = set(imts) - set(self.shared_imts(gsims))
-            code = 'invalid_model_imt_combination'
-            err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not defined "
-                                       "for all supplied imt(s)", code=code)
-            err_imt = ValidationError(f"{len(invalid_imts)} imt(s) not defined for "
-                                      "all supplied model(s)", code=code)
-            # add_error removes also the field from self.cleaned_data:
-            gsim, imt = 'gsim', 'imt'
-            self.add_error(gsim, err_gsim)
-            self.add_error(imt, err_imt)
-
-    @staticmethod
-    def shared_imts(gsim_names):
-        """Returns a list of IMT names shared by *all* the given GSIMs
-
-        :param gsim_names: list of strings denoting GSIM names
-        """
-        if not gsim_names:
-            return []
-
-        # https://stackoverflow.com/a/8637972
-        objs = models.Imt.objects  # noqa
-        for gsim in gsim_names:
-            objs = objs.filter(gsims__name=gsim)
-
-        return objs.values_list('name', flat=True).distinct()
-
-    @staticmethod
-    def sharing_gsims(imt_names):
-        """Returns a list of GSIM names sharing *all* the given IMTs
-
-        :param imt_names: list of strings denoting GSIM names
-        """
-        if not imt_names:
-            return []
-
-        # https://stackoverflow.com/a/8637972
-        objs = models.Gsim.objects  # noqa
-        for imtx in imt_names:
-            objs = objs.filter(imts__name=imtx)
-
-        return objs.values_list('name', flat=True).distinct()
 
 
 class APIForm(EgsimBaseForm):
@@ -697,6 +644,7 @@ class GsimFromRegionForm(SHSRForm, APIForm):
 
         :param cleaned_data: the result of `self.cleaned_data`
         """
+        # FIXME WHAT TO RETURN? IS THIS USED?
         return cleaned_data.get(SHSRForm.SHSR_MODELS_KEY, [])
 
     @classmethod
