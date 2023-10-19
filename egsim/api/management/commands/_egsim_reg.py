@@ -170,6 +170,7 @@ def merge_geojson_geometries(*geometries: dict) -> dict:
     whole_shape = unary_union(shapes)
     return json.loads(to_geojson(whole_shape))
 
+
 def round_geojson_geometry(geometry: dict, decimal_digits=4):
     def _round(val):
         try:

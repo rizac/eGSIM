@@ -1,33 +1,35 @@
 """Registry with helper functions to access OpenQuake entities and properties"""
-from typing import Union, Iterable
+from typing import Union, Iterable, Callable
 
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import imt as imt_mod
 from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 
 from .flatfile.columns import get_all_names_of
 
 
-registered_gsim_names = frozenset(registry)
+gsim_registry:dict[str, type[GMPE]] = dict(registry)
 
 
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
-def _registered_imt_names() -> Iterable[str]:
+def _registered_imts() -> Iterable[tuple[str, Callable]]:
     """Return all IMT names registered in OpenQuake"""
-    for name in dir(imt_module):
+    for name in dir(imt_mod):
         if name[0].upper() != name[0]:  # only upper-case module elements
             continue
-        func = getattr(imt_module, name)
+        func = getattr(imt_mod, name)
         if not callable(func):  # only callable
             continue
         # call the function with the required arguments, assuming all floats
         try:
             imt_obj = func(*[1. for _ in range(func.__code__.co_argcount)])  # noqa
-            if isinstance(imt_obj, imt_module.IMT):
-                yield name
+            if isinstance(imt_obj, imt_mod.IMT):
+                yield name, func
         except (ValueError, TypeError, AttributeError):
             pass
 
-registered_imt_names = frozenset(_registered_imt_names())
+
+imt_registry:dict[str, Callable] = dict(_registered_imts())
+
 
 # invert `gsim_aliases` (see `gsim_name` below)
 _gsim_aliases = {v: k for k, v in gsim_aliases.items()}

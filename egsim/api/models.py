@@ -25,7 +25,7 @@ class Model(DjangoModel):
     """Abstract base class of all Django Models of this module"""
 
     # these two attributes are set by Django (see metaclass for details) and are here
-    # only to silent pylint or editor inspectors
+    # only to silent lint warnings
     objects: Manager
     _meta: Options
 
@@ -42,6 +42,10 @@ class _UniqueName(Model):
         # In subclasses, `abstract` is (re)set to False. Everything else is copied
         # (https://docs.djangoproject.com/en/3.2/topics/db/models/#meta-inheritance)
         abstract = True
+
+    @property
+    def names(self):
+        return self.objects.only('name').values_list('name', flat=True)
 
     def __str__(self):
         return self.name
@@ -91,6 +95,7 @@ class Flatfile(_UniqueName, _Citable):
         """string representation of this object"""
         return f'{self.name} ({self.filepath})'
 
+
 class CompactEncoder(json.JSONEncoder):
     """Compact JSON encoder used in JSONFields of this module"""
     def __init__(self, **kwargs):
@@ -100,20 +105,9 @@ class CompactEncoder(json.JSONEncoder):
 
 class FlatfileColumn(_UniqueName):
     """Flat file column"""
-    type = CharField(null=True,
-                     max_length=max(len(c.name) for c in ColumnType),
-                     default=None,
-                     choices=[(c.name, c.value) for c in ColumnType],
-                     help_text='The type of Column (e.g., '
-                               'intensity measure, rupture parameter, '
-                               'distance measure)')
-    dtype = TextField(null=False, help_text=('The data type of the column, as text '
-                                             '(e.g.: "int", "bool", "datetime", '
-                                             '"str" or "float", or list of possible '
-                                             'values the column data can have)'))
-    description = TextField(null=False, default='', help_text="Field description")
-    bounds = TextField(null=False, default='', help_text="Field bounds (as text, "
-                                                         "e.g.: \"≥0 and <90\"")
+    alias_of = TextField(null=True, help_text=('The alias, or null (meaning this'
+                                               'is the primary name for the column'))
+    description = JSONField(null=False, default='', help_text="Field description")
 
     class Meta(_UniqueName.Meta):
         indexes = [Index(fields=['name']), ]
@@ -135,19 +129,6 @@ class Imt(_UniqueName):
         indexes = [Index(fields=['name']), ]
 
 
-class GsimWithError(_UniqueName):
-    """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake
-    that could not be available in eGSIM due errors
-    """
-
-    error_type = TextField(help_text="Error type, usually the class name of "
-                                     "the Exception raised")
-    error_message = TextField(help_text="Error message")
-
-    def __str__(self):
-        return '%s. %s: %s' % (self.name, self.error_type, self.error_message)
-
-
 class Gsim(_UniqueName):
     """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake and
     available in eGSIM
@@ -158,16 +139,6 @@ class Gsim(_UniqueName):
                                                 related_name='gsims',
                                                 help_text='Required flatfile '
                                                           'column(s)')
-    init_parameters = JSONField(null=True, encoder=CompactEncoder,
-                                help_text="The parameters used to "
-                                          "initialize this GSIM in "
-                                          "Python, as JSON object of "
-                                          "names mapped to their "
-                                          "default value. Included "
-                                          "here are only parameters "
-                                          "whose default value type "
-                                          "is a Python int, float, "
-                                          "bool or str")
     warning = TextField(default=None, null=True,
                         help_text='Optional usage warning(s) to be reported '
                                   'before usage (e.g., in GUIs)')

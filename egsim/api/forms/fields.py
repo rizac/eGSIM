@@ -10,6 +10,9 @@ from openquake.hazardlib import imt
 from django.core.exceptions import ValidationError
 from django.forms.fields import Field, CharField, MultipleChoiceField
 
+from egsim.smtk import InvalidInput
+from egsim.smtk.validators import harmonize_input_gsims, harmonize_input_imts
+
 
 def vectorize(value: Any) -> Sequence[Any]:
     """Return a Sequence from `value`. If `value` is already a Sequence (list, tuple),
@@ -274,140 +277,168 @@ class NArrayField(ArrayField):
         return max(0, dec_dot + dec_exp)
 
 
-class MultipleChoiceWildcardField(MultipleChoiceField):
-    """Extension of Django MultipleChoiceField:
-     - Accepts lists of strings or a single string. In the latter case, if the string
-       contains commas or spaces it is split around those characters and converted to
-       list, otherwise converted to a 1-element list: [string]
-     - Accepts wildcard in strings in order to include all matching elements
-    """
-    # Reminder. The central validation method of the superclass is:
-    # def clean(self, value):
-    #     value = self.to_python(value)
-    #     self.validate(value) # -> calls self.valid_value(v) for v in value
-    #     self.run_validators(value)
-    #     return value
+class GsimField(MultipleChoiceField):
 
-    def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
-        """Return an unique list of elements after expanding strings with wildcards
-        to matching elements. For wildcard strings, see `fnmatch` in the Python doc
-        """
-        # copied to the super.to_python because in case of str, we split it, and in case
-        # of lists or tuples we do nothing instead of creating: [str(_) for _ in values]
-        if not value:
-            return []
-        elif isinstance(value, str):
-            # convert "a,b" "a b" "a , b" into ["a", "b"], if needed:
-            value = split_string(value)
-        elif not isinstance(value, (list, tuple)):
-            raise ValidationError(
-                self.error_messages["invalid_list"], code="invalid_list"
-            )
-        # Now store items to return as dict keys
-        # (kind of overkill but we need fast search and to preserve insertion order):
-        new_value = {}
-        for val in value:
-            if self.has_wildcards(val):
-                reg = self.to_regex(val)
-                for item, _ in self.choices:
-                    if item not in new_value and reg.match(item):
-                        new_value[item] = None  # the mapped value is irrelevant
-            elif val not in new_value:
-                new_value[val] = None  # the mapped value is irrelevant
-
-        return list(new_value.keys())
-
-    def validate(self, value: list[str]) -> None:
-        """Validate the list of values. Same as the super method, but all
-        invalid choice parameters are reported in the ValidationError"""
+    def clean(self, value):
+        """Custom clean, bypasses self.to_python, self.validate and self.run_validators"""
         try:
-            super().validate(value)
-        except ValidationError as verr:
-            # raise an error with ALL parameters invalid, not only the first one:
-            if verr.code == 'invalid_choice':
-                verr.params['value'] = ", ".join(v for v in value
-                                                 if not self.valid_value(v))
-            raise verr
-
-    @staticmethod
-    def has_wildcards(string: str) -> bool:
-        return '*' in string or '?' in string or ('[' in string and ']' in string)
-
-    @staticmethod
-    def to_regex(wildcard_string: str) -> re.Pattern:
-        """Convert string (a unix shell string, see
-        https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
-        will match accounting for the case (ignore case off)
-        """
-        return re.compile(translate(wildcard_string))
-
-
-class ImtField(MultipleChoiceWildcardField):
-    """Field for IMT class selection. Provides a further validation for
-    SA which is provided as (or with) periods (se meth:`valid_value`)
-    """
-    default_error_messages = {
-        "invalid_sa_period": "Missing or invalid period: %(value)s"
-    }
-
-    def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
-        """Coerce value to a valid IMT string. Also, raise ValidationErrors from
-        here, thus skipping self.validate() that would be called later and is usually
-        responsible for that"""
-        value = super().to_python(value)  # assure is a list without regexp(s)
-        # Now normalize the IMTs. Store each normalized IMT ina dict key in order to
-        # avoid duplicates whilst preserving order (Python sets dont' preserve it):
-        new_val = {}
-        for val in value:
-            try:
-                # Try to normalize the IMT (e.g. '0.2' -> 'SA(0.2)'):
-                new_val[self.normalize_imt(val)] = None
-            except (KeyError, ValueError):
-                # val is invalid, skip (we will handle the error in `self.validate`)
-                new_val[val] = None
-        return list(new_val.keys())
-
-    def validate(self, value: list[str]) -> None:
-        invalid_choices = []
-        invalid_sa_period = []
-        for val in value:
-            try:
-                # is IMT well written?:
-                self.normalize_imt(val)  # noqa
-                # is IMT supported by the program?
-                if not self.valid_value(val):
-                    raise KeyError()  # fallback below
-            except KeyError:
-                # `val` is invalid in OpenQuake, or not implemented in eGSIM (see above)
-                invalid_choices.append(val)
-            except ValueError:
-                # val not a valid float (e.g. '0.t') or given as 'SA' (without period):
-                invalid_sa_period.append(val)
-        validation_errors = []
-        if invalid_choices:
-            validation_errors.append(ValidationError(
+            return harmonize_input_gsims(value or [])
+        except InvalidInput as err:
+            raise ValidationError(
                 self.error_messages["invalid_choice"],
                 code="invalid_choice",
-                params={"value": ", ".join(invalid_choices)},
-            ))
-        if invalid_sa_period:
-            validation_errors.append(ValidationError(
-                self.error_messages["invalid_sa_period"],
-                code="invalid_sa_period",
-                params={"value": ", ".join(invalid_sa_period)},
-            ))
-        if validation_errors:
-            raise ValidationError(validation_errors)
+                params={"value": str(err)},
+            )
 
-    @staticmethod
-    def normalize_imt(imt_string) -> str:
-        """Checks and return a normalized version of the given imt as string,
-        e.g. '0.1' -> 'SA(0.1)'. Raise KeyError (imt not implemented) or
-        ValueError (SA period missing or invalid)"""
-        return imt.from_string(imt_string.strip()).string  # noqa
 
-    def valid_value(self, value):
-        return super().valid_value('SA' if value.startswith('SA(') else value)
+class ImtField(MultipleChoiceField):
+
+    def clean(self, value):
+        """Custom clean, bypasses self.to_python, self.validate and self.run _validators"""
+        try:
+            return harmonize_input_imts(value or [])
+        except InvalidInput as err:
+            raise ValidationError(
+                self.error_messages["invalid_choice"],
+                code="invalid_choice",
+                params={"value": str(err)},
+            )
+
+
+# class MultipleChoiceWildcardField(MultipleChoiceField):
+#     """Extension of Django MultipleChoiceField:
+#      - Accepts lists of strings or a single string. In the latter case, if the string
+#        contains commas or spaces it is split around those characters and converted to
+#        list, otherwise converted to a 1-element list: [string]
+#      - Accepts wildcard in strings in order to include all matching elements
+#     """
+#     # Reminder. The central validation method of the superclass is:
+#     # def clean(self, value):
+#     #     value = self.to_python(value)
+#     #     self.validate(value) # -> calls self.valid_value(v) for v in value
+#     #     self.run_validators(value)
+#     #     return value
+#
+#     def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
+#         """Return an unique list of elements after expanding strings with wildcards
+#         to matching elements. For wildcard strings, see `fnmatch` in the Python doc
+#         """
+#         # copied to the super.to_python because in case of str, we split it, and in case
+#         # of lists or tuples we do nothing instead of creating: [str(_) for _ in values]
+#         if not value:
+#             return []
+#         elif isinstance(value, str):
+#             # convert "a,b" "a b" "a , b" into ["a", "b"], if needed:
+#             value = split_string(value)
+#         elif not isinstance(value, (list, tuple)):
+#             raise ValidationError(
+#                 self.error_messages["invalid_list"], code="invalid_list"
+#             )
+#         # Now store items to return as dict keys
+#         # (kind of overkill but we need fast search and to preserve insertion order):
+#         new_value = {}
+#         for val in value:
+#             if self.has_wildcards(val):
+#                 reg = self.to_regex(val)
+#                 for item, _ in self.choices:
+#                     if item not in new_value and reg.match(item):
+#                         new_value[item] = None  # the mapped value is irrelevant
+#             elif val not in new_value:
+#                 new_value[val] = None  # the mapped value is irrelevant
+#
+#         return list(new_value.keys())
+#
+#     def validate(self, value: list[str]) -> None:
+#         """Validate the list of values. Same as the super method, but all
+#         invalid choice parameters are reported in the ValidationError"""
+#         try:
+#             super().validate(value)
+#         except ValidationError as verr:
+#             # raise an error with ALL parameters invalid, not only the first one:
+#             if verr.code == 'invalid_choice':
+#                 verr.params['value'] = ", ".join(v for v in value
+#                                                  if not self.valid_value(v))
+#             raise verr
+#
+#     @staticmethod
+#     def has_wildcards(string: str) -> bool:
+#         return '*' in string or '?' in string or ('[' in string and ']' in string)
+#
+#     @staticmethod
+#     def to_regex(wildcard_string: str) -> re.Pattern:
+#         """Convert string (a unix shell string, see
+#         https://docs.python.org/3/library/fnmatch.html) to regexp. The latter
+#         will match accounting for the case (ignore case off)
+#         """
+#         return re.compile(translate(wildcard_string))
+#
+#
+# class ImtField(MultipleChoiceWildcardField):
+#     """Field for IMT class selection. Provides a further validation for
+#     SA which is provided as (or with) periods (se meth:`valid_value`)
+#     """
+#     default_error_messages = {
+#         "invalid_sa_period": "Missing or invalid period: %(value)s"
+#     }
+#
+#     def to_python(self, value: Union[str, Sequence[Any]]) -> list[str]:
+#         """Coerce value to a valid IMT string. Also, raise ValidationErrors from
+#         here, thus skipping self.validate() that would be called later and is usually
+#         responsible for that"""
+#         value = super().to_python(value)  # assure is a list without regexp(s)
+#         # Now normalize the IMTs. Store each normalized IMT ina dict key in order to
+#         # avoid duplicates whilst preserving order (Python sets don't preserve it):
+#         new_val = {}
+#         for val in value:
+#             try:
+#                 # Try to normalize the IMT (e.g. '0.2' -> 'SA(0.2)'):
+#                 new_val[self.normalize_imt(val)] = None
+#             except (KeyError, ValueError):
+#                 # val is invalid, skip (we will handle the error in `self.validate`)
+#                 new_val[val] = None
+#         return list(new_val.keys())
+#
+#     def validate(self, value: list[str]) -> None:
+#         invalid_choices = []
+#         invalid_sa_period = []
+#         for val in value:
+#             try:
+#                 # is IMT well written?:
+#                 self.normalize_imt(val)  # noqa
+#                 # is IMT supported by the program?
+#                 if not self.valid_value(val):
+#                     raise KeyError()  # fallback below
+#             except KeyError:
+#                 # `val` is invalid in OpenQuake, or not implemented in eGSIM (see above)
+#                 invalid_choices.append(val)
+#             except ValueError:
+#                 # val not a valid float (e.g. '0.t') or given as 'SA' (without period):
+#                 invalid_sa_period.append(val)
+#         validation_errors = []
+#         if invalid_choices:
+#             validation_errors.append(ValidationError(
+#                 self.error_messages["invalid_choice"],
+#                 code="invalid_choice",
+#                 params={"value": ", ".join(invalid_choices)},
+#             ))
+#         if invalid_sa_period:
+#             validation_errors.append(ValidationError(
+#                 self.error_messages["invalid_sa_period"],
+#                 code="invalid_sa_period",
+#                 params={"value": ", ".join(invalid_sa_period)},
+#             ))
+#         if validation_errors:
+#             raise ValidationError(validation_errors)
+#
+#     @staticmethod
+#     def normalize_imt(imt_string) -> str:
+#         """Checks and return a normalized version of the given imt as string,
+#         e.g. '0.1' -> 'SA(0.1)'. Raise KeyError (imt not implemented) or
+#         ValueError (SA period missing or invalid)"""
+#         return imt.from_string(imt_string.strip()).string  # noqa
+#
+#     def valid_value(self, value):
+#         return super().valid_value('SA' if value.startswith('SA(') else value)
 
 
 def get_field_docstring(field: Field, remove_html_tags=False):
