@@ -7,11 +7,10 @@ Created on 11 Apr 2019
 
 @author: riccardo
 """
-import os
-from os.path import join, isdir, abspath, dirname, isfile, basename, splitext
+from os.path import join, abspath, isfile, basename
 
 from django.core.management.base import CommandError
-from django.conf import settings
+from openquake.hazardlib import valid
 
 from . import EgsimBaseCommand
 from ..flatfile_parsers import EsmFlatfileParser
@@ -20,7 +19,7 @@ from ... import models
 
 SRC_DIR = EgsimBaseCommand.data_path('flatfiles')
 
-
+valid
 class Command(EgsimBaseCommand):
     """Command to convert predefined flatfiles (usually in CSV format) into HDF
     files suitable for the eGSIM API
@@ -42,15 +41,7 @@ class Command(EgsimBaseCommand):
                        'with their metadata:')
         self.empty_db_table(models.Flatfile)
 
-        destdir = abspath(join(settings.MEDIA_ROOT, 'flatfiles'))
-        if not isdir(destdir):
-            if not isdir(destdir):
-                self.printinfo(f'Creating directory {destdir}')
-                os.makedirs(destdir)
-            if not isdir(destdir):
-                raise CommandError(f"'{destdir}' does not exist and could not "
-                                   f"be created. NOTE: In DEBUG mode, the parent "
-                                   f"directory should be git-ignored")
+        destdir = self.output_dir('flatfiles')
 
         parsers = {}
         for fullpath, parser in self.PARSERS.items():
@@ -65,10 +56,9 @@ class Command(EgsimBaseCommand):
         numfiles = 0
         for filepath, parser in parsers.items():
             dfr = parser.parse(filepath)
-            data_source = self.data_source(filepath)
+            ref = self.get_ref(filepath)
             # ff name: use str.split to remove all extensions (e.g. ".csv.zip"):
-            name = data_source.get('name', basename(filepath).split(".")[0])
-            data_source.setdefault('name', name)
+            name = ref['name']
             destfile = abspath(join(destdir, name + '.hdf'))
             self.printinfo(f' - Saving flatfile. Database name: "{name}", '
                            f'file: "{destfile}"')
@@ -88,7 +78,7 @@ class Command(EgsimBaseCommand):
             if unknown_cols:
                 self.printinfo(f"   {', '.join(sorted(unknown_cols))}")
             # store flatfile metadata:
-            models.Flatfile.objects.create(**data_source, expiration=None,
+            models.Flatfile.objects.create(**ref, expiration=None,
                                            hidden=False, filepath=destfile)
 
         self.printsuccess(f'{numfiles} flatfile(s) created in "{destdir}"')
