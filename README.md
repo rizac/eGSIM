@@ -18,7 +18,7 @@ The web portal (and API documentation) is available at:
 
 ## Citation
 
-> Zaccarelli, R., & Graeme, W. (2020). eGSIM - a Python library and web application to select and test Ground Motion models. GFZ Data Services. https://doi.org/10.5880/GFZ.2.6.2023.007  
+> Zaccarelli, Riccardo; Weatherill, Graeme (2020): eGSIM - a Python library and web application to select and test Ground Motion models. GFZ Data Services. https://doi.org/10.5880/GFZ.2.6.2023.007
 
 # Table of contents
 
