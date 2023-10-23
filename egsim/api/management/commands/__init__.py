@@ -1,8 +1,10 @@
-from os.path import abspath, join, dirname
+import os
+from os.path import abspath, join, dirname, isdir, splitext, basename
 import yaml
 
 from argparse import RawTextHelpFormatter
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 
@@ -23,17 +25,34 @@ class EgsimBaseCommand(BaseCommand):  # noqa
         return join(abspath(dirname(__file__)), 'data', *paths)
 
     @staticmethod
-    def data_source(datafile_path) -> dict:
-        """Return a data source information from the given data file"""
+    def get_ref(datafile_path) -> dict:
+        """Return references (e.g., source, citation, links)
+        for the given data file. The returned dict has at least the key 'name'
+        (set to the file basename by default)
+        """
         base_dir = EgsimBaseCommand.data_path()
-        with open(join(base_dir, 'data_sources.yaml')) as _:
+        with open(join(base_dir, 'references.yaml')) as _:
             data_sources = yaml.safe_load(_)
-
+        ref = {}
         datafile_abspath = abspath(datafile_path)
         for path, data_source in data_sources.items():
             if datafile_abspath == abspath(join(base_dir, path)):
-                return data_source
-        return {}
+                ref = data_source
+                break
+        ref.setdefault('name', splitext(basename(datafile_abspath))[0])
+        return ref
+
+    @classmethod
+    def output_dir(cls, name, root=settings.MEDIA_ROOT):
+        destdir = abspath(join(root, name))
+        if not isdir(destdir):
+            if not isdir(destdir):
+                cls.printinfo(f'Creating directory {destdir}')
+                os.makedirs(destdir)
+            if not isdir(destdir):
+                raise CommandError(f"'{destdir}' does not exist and could not "
+                                   f"be created. NOTE: In DEBUG mode, the parent "
+                                   f"directory should be git-ignored")
 
     @staticmethod
     def empty_db_table(*models):
