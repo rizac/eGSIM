@@ -10,20 +10,21 @@ import numpy as np
 from django.core.exceptions import ValidationError
 from django.forms.fields import FloatField
 
-from egsim.smtk.residuals.gmpe_residuals import GSIM_MODEL_DATA_TESTS as TEST
+from egsim.smtk import get_residuals
 from egsim.api.forms import APIForm, relabel_sa
 from egsim.api.forms.fields import MultipleChoiceField
-from egsim.api.forms.flatfile.gsim import MOF, get_residuals, GsimImtFlatfileForm
+from egsim.api.forms.flatfile.gsim import MOF, GsimImtFlatfileForm
 
 
-MOF_TYPE = {
-    # key -> display name, test_function(residuals, config)
-    MOF.RES: ('Residuals', TEST['Residuals']),
-    MOF.LH: ("Likelihood", TEST["Likelihood"]),
-    MOF.LLH: ("Log-Likelihood", TEST["LLH"]),
-    MOF.MLLH: ("Multivariate Log-Likelihood", TEST["MultivariateLLH"]),
-    MOF.EDR: ("Euclidean Distance-Based Ranking", TEST["EDR"])
-}
+# FIXME REMOVE
+MOF_TYPE = {}
+#     # key -> display name, test_function(residuals, config)
+#     MOF.RES: ('Residuals', TEST['Residuals']),
+#     MOF.LH: ("Likelihood", TEST["Likelihood"]),
+#     MOF.LLH: ("Log-Likelihood", TEST["LLH"]),
+#     MOF.MLLH: ("Multivariate Log-Likelihood", TEST["MultivariateLLH"]),
+#     MOF.EDR: ("Euclidean Distance-Based Ranking", TEST["EDR"])
+# }
 
 
 class TestingForm(GsimImtFlatfileForm, APIForm):
@@ -68,7 +69,7 @@ class TestingForm(GsimImtFlatfileForm, APIForm):
         # columns: "Measure of fit" "imt" "gsim" "value(s)"
         for gsim in cleaned_data['gsim']:
             try:
-                residuals = get_residuals(flatfile, [gsim], cleaned_data['imt'])
+                residuals = get_residuals([gsim], cleaned_data['imt'], flatfile)
 
                 numrecords = sum(c.get('Num. Sites', 0) for c in residuals.contexts)
 

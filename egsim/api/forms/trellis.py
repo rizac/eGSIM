@@ -9,28 +9,16 @@ import numpy as np
 from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
-from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-from ...smtk.trellis.trellis_plots import (DistanceIMTTrellis,
-                                           MagnitudeIMTTrellis,
-                                           DistanceSigmaIMTTrellis,
-                                           MagnitudeSigmaIMTTrellis,
-                                           MagnitudeDistanceSpectraTrellis,
-                                           MagnitudeDistanceSpectraSigmaTrellis)
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
 from django.forms.fields import BooleanField, FloatField, ChoiceField
 
 from egsim.api.forms import APIForm, GsimImtForm, relabel_sa
 from egsim.api.forms.fields import NArrayField, vectorize, isscalar
+# FIXME: IS THIS IMPORT BELOW neeed?
+from egsim.smtk.converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+from egsim.smtk import get_trellis
 
-
-PLOT_TYPE = {
-    # key: (display label, trellis class, stddev trellis class)
-    'd': ('IMT vs. Distance', DistanceIMTTrellis, DistanceSigmaIMTTrellis),
-    'm': ('IMT vs. Magnitude', MagnitudeIMTTrellis, MagnitudeSigmaIMTTrellis),
-    's': ('Magnitude-Distance Spectra', MagnitudeDistanceSpectraTrellis,
-          MagnitudeDistanceSpectraSigmaTrellis)
-}
 
 _mag_scalerel = get_available_magnitude_scalerel()
 
@@ -55,9 +43,9 @@ class TrellisForm(GsimImtForm, APIForm):
         'line_azimuth': ['line-azimuth', 'line_azimuth'],
     }
 
-    plot_type = ChoiceField(label='Plot type',
+    plot_type = ChoiceField(label='Plot type',  # FIXME REMOVE or FIX!!!
                             choices=[(k, f'{v[0]} [{k}]')
-                                     for k, v in PLOT_TYPE.items()])
+                                     for k, v in {}.items()])
     stdev = BooleanField(label='Compute Standard Deviation(s)', required=False,
                          initial=False)
 

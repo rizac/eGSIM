@@ -8,6 +8,7 @@ Created on 6 Apr 2019
 import pytest
 from django.core.management import call_command
 
+
 # WARNING: tests requiring db access should use the function decorator:
 # @pytest.mark.django_db
 # which we overwrite to auto populate the db (see django_db_setup in conftest.py).
@@ -30,7 +31,7 @@ def test_initdb(capsys):
     # Anyway:
 
     # with patch.object(builtins, 'input', lambda _: 'yes'):
-    call_command('egsim_init', interactive=False)
+    call_command('egsim_init', interactive=False, flush_only=True)
     captured = capsys.readouterr()
     capout = captured.out
     assert "Unused Flatfile column(s)" not in capout

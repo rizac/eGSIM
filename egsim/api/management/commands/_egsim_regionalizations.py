@@ -46,7 +46,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
         self.printinfo('Populating the database with Regionalization data:')
-        self.empty_db_table(models.GsimRegion, models.Regionalization)
+        self.empty_db_table(models.Regionalization, models.Regionalization)
 
         destdir = self.output_dir('regionalizations')
 
@@ -62,15 +62,15 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                 with open(filepath, 'w') as _:
                     json.dump(regions, _)
                 # save db entry:
-                refs = self.data_ref(mapping_file) or \
-                           self.data_ref(regionalization_file)
+                refs = self.get_ref(mapping_file) or \
+                           self.get_ref(regionalization_file)
                 refs.setdefault('name', name)
                 models.Regionalization.objects.create(filepath=filepath, **refs)
 
             except Exception as exc:
                 raise CommandError(exc)
 
-        saved_regs = models.Regionalization.names.count()  # noqa
+        saved_regs = models.Regionalization.objects.count()
         if saved_regs:
             self.printsuccess(f'{saved_regs} regionalization(s) saved to database')
 

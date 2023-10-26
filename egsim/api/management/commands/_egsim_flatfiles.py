@@ -7,11 +7,12 @@ Created on 11 Apr 2019
 
 @author: riccardo
 """
-from os.path import join, abspath, isfile, basename
+from os.path import join, abspath, isfile
 
 from django.core.management.base import CommandError
-from openquake.hazardlib import valid
 
+from egsim.smtk.flatfile.columns import load_from_yaml
+from egsim.smtk.registry import registered_imts
 from . import EgsimBaseCommand
 from ..flatfile_parsers import EsmFlatfileParser
 from ... import models
@@ -19,7 +20,7 @@ from ... import models
 
 SRC_DIR = EgsimBaseCommand.data_path('flatfiles')
 
-valid
+
 class Command(EgsimBaseCommand):
     """Command to convert predefined flatfiles (usually in CSV format) into HDF
     files suitable for the eGSIM API
@@ -50,9 +51,8 @@ class Command(EgsimBaseCommand):
                                    f'check `{__name__}.{__class__.__name__}.PARSERS`')
             parsers[fullpath] = parser
 
-        ffcolumns = set(models.FlatfileColumn.objects.only('name').
-                        values_list('name', flat=True))
-        imts = set(models.Imt.objects.only('name').values_list('name', flat=True))
+        ffcolumns = set(load_from_yaml())
+        imts = set(registered_imts)
         numfiles = 0
         for filepath, parser in parsers.items():
             dfr = parser.parse(filepath)
@@ -78,8 +78,7 @@ class Command(EgsimBaseCommand):
             if unknown_cols:
                 self.printinfo(f"   {', '.join(sorted(unknown_cols))}")
             # store flatfile metadata:
-            models.Flatfile.objects.create(**ref, expiration=None,
-                                           hidden=False, filepath=destfile)
+            models.Flatfile.objects.create(**ref, filepath=destfile)
 
         self.printsuccess(f'{numfiles} flatfile(s) created in "{destdir}"')
 

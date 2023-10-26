@@ -12,7 +12,6 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.forms.fields import CharField
 
-from egsim.smtk.flatfile import ColumnType
 from egsim.api import models
 from egsim.api.forms import APIForm, GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
