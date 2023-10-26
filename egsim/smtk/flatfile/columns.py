@@ -272,17 +272,21 @@ def cast_dtype(dtype: Union[Collection, str, pd.CategoricalDtype, ColumnDtype]) 
         if isinstance(dtype, ColumnDtype):
             return dtype
         if isinstance(dtype, str):
-            if dtype == 'category':  # => we want to auto set categories based on data
-                return pd.CategoricalDtype()  # equivalent to 'category' in read_csv
-            try:
-                return ColumnDtype[dtype]  # try enum name (raise KeyError)
-            except KeyError:
-                return ColumnDtype(dtype)  # try enum value (raises ValueError)
+            if dtype == 'category':  # infer categories from data
+                dtype = pd.CategoricalDtype() # see below
+            else:
+                try:
+                    return ColumnDtype[dtype]  # try enum name (raise KeyError)
+                except KeyError:
+                    return ColumnDtype(dtype)  # try enum value (raises ValueError)
         if isinstance(dtype, (list, tuple)):
             dtype = pd.CategoricalDtype(dtype)
         if isinstance(dtype, pd.CategoricalDtype):
-            # check that the categories are *all* of the same supported data type:
-            if ColumnDtype.of(*dtype.categories) is not None:
+            # CategoricalDtype with no categories or categories=None (<=> infer
+            # categories from data) needs no check. Otherwise, check that the categories
+            # are *all* of the same supported dtype:
+            if dtype.categories is None or \
+                    ColumnDtype.of(*dtype.categories) is not None:
                 return dtype
     except (KeyError, ValueError, TypeError):
         pass

@@ -60,7 +60,7 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
                 regions = self.create_geojson(geometries, mapping)
                 filepath = join(destdir, name) + ".geo.json"
                 with open(filepath, 'w') as _:
-                    json.dump(regions, _)
+                    json.dump(regions, _, separators=(',', ':'))
                 # save db entry:
                 refs = self.get_ref(mapping_file) or \
                            self.get_ref(regionalization_file)

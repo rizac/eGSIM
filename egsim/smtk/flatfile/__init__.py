@@ -81,36 +81,19 @@ def read_csv(filepath_or_buffer: Union[str, IOBase],
     """
     # convert the file input to a stream (IOBase): if already a stream, do not close
     # it at the end but restore the position with `seek`:
-    buf_pos = None
-    buf_detach = False
-    encoding = kwargs.pop('encoding', 'utf-8-sig')
-    if isinstance(filepath_or_buffer, IOBase):
-        if not isinstance(filepath_or_buffer, TextIOBase):
-            filepath_or_buffer = TextIOWrapper(filepath_or_buffer, encoding=encoding)
-            buf_detach = True
-        buf_pos = filepath_or_buffer.tell()
-    else:
-        filepath_or_buffer = open(filepath_or_buffer, 'rt', encoding=encoding)
-
+    kwargs.setdefault('encoding', 'utf-8-sig')
     check_dtypes_and_defaults = kwargs.pop('_check_dtypes_and_defaults', True)
     if check_dtypes_and_defaults:
         for col, _dtype in dtype.items():
             dtype[col] = cast_dtype(_dtype)
 
-    kwargs = _read_csv_prepare(filepath_or_buffer, sep=sep, dtype=dtype,
-                               usecols=usecols, **kwargs)
+    kwargs =  _read_csv_prepare(filepath_or_buffer, sep=sep, dtype=dtype,
+                                usecols=usecols, **kwargs)
     try:
         dfr = pd.read_csv(filepath_or_buffer, **kwargs)
     except ValueError as exc:
         invalid_columns = _read_csv_inspect_failure(filepath_or_buffer, **kwargs)
         raise InvalidDataInColumn(*invalid_columns) from None
-    finally:
-        if buf_pos is not None:
-            filepath_or_buffer.seek(buf_pos)
-            if buf_detach:
-                filepath_or_buffer.detach()
-        else:
-            filepath_or_buffer.close()
 
     # finalize and return
     _read_csv_finalize(dfr, dtype, defaults, check_dtypes_and_defaults)
@@ -123,38 +106,40 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
     """prepare the arguments for pandas read_csv: take tha passed **kwargs
     and return a modified version of it after checking some keys and values
     """
-    buf_pos = filepath_or_buffer.tell()
     dtype = kwargs.pop('dtype', {})  # removed and handled later
     parse_dates = set(kwargs.pop('parse_dates', []))  # see above
     kwargs.setdefault('na_values', missing_values)
     kwargs.setdefault('keep_default_na', False)
     kwargs.setdefault('comment', '#')
 
-    # infer `sep` by reading the CSV header with several separator strings. If `sep`
-    # is given, read the header anyway once, as we might need to know the columns anyway
-    # because some arguments of `read_csv` (e.g. `parse_dates`) cannot contain columns
-    # not present in the flatfile
-    _separators = kwargs.pop('sep', None) or [';', ',', r'\s+']
-    sep, headers = '', []
-    for _sep in _separators:
-        _headers = pd.read_csv(filepath_or_buffer, nrows=0, sep=_sep).columns
-        if buf_pos is not None:
-            filepath_or_buffer.seek(buf_pos)
-        if len(_headers) > len(headers):
-            headers = _headers
-            sep = _sep
-    kwargs['sep'] = sep
+    # infer `sep` and read the CSV header (dataframe columns), as some args of
+    # `read_csv` (e.g. `parse_dates`) cannot contain columns not present in the flatfile
+    header = []
+    sep = kwargs.get('sep', None)
+    nrows = kwargs.pop('nrows', None)
+    if sep is None:
+        kwargs.pop('sep')  # if it was None needs removal
+        for _sep in [';', ',', r'\s+']:
+            _header = pd.read_csv(filepath_or_buffer, nrows=0, **kwargs).columns  # noqa
+            if len(_header) > len(header):
+                sep = _sep
+                header = _header
+        kwargs['sep'] = sep
+    else:
+        header = pd.read_csv(filepath_or_buffer, nrows=0, **kwargs).columns  # noqa
+    if nrows is not None:
+        kwargs['nrows'] = nrows
 
     # mix usecols with the flatfile columns just retrieved (it might speed up read):
     usecols = kwargs.pop('usecols', None)
     if callable(usecols):
-        csv_columns = set(f for f in headers if usecols(f))
+        csv_columns = set(f for f in header if usecols(f))
         kwargs['usecols'] = csv_columns
     elif hasattr(usecols, "__iter__"):
-        csv_columns = set(headers) & set(usecols)
+        csv_columns = set(header) & set(usecols)
         kwargs['usecols'] = csv_columns
     else:
-        csv_columns = set(headers)
+        csv_columns = set(header)
 
     # Set the `dtype` and `parse_dates` arguments of read_csv. NOTE: dtypes that will
     # be changed here will be restored later (see `_read_csv_finalize`)
@@ -165,12 +150,16 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
             if col_dtype is None:
                 continue
 
-            # categorical dtypes cannot be passed as they are to kwargs['dtype'] because
-            # `read_csv` will silently convert values not found in categories to N/A,
-            # making invalid and missing values indistinguishable. As such, let's pass
-            # for now the dtype of the categories (which must be all the same type):
             if isinstance(col_dtype, pd.CategoricalDtype):
-                col_dtype = ColumnDtype.of(*col_dtype.categories)
+                # if `col_dtype.categories=None` or `col_dtype='category'`, then
+                # `read_csv` will infer the categories from the data. Otherwise,
+                # it will silently convert values not found in categories to N/A,
+                # making invalid and missing values indistinguishable. To do that, we
+                # set now `col_dtype` as the dtype of the categories (which must be all
+                # the same type) to get missing values, checking invalid values
+                # after reading:
+                if col_dtype.categories is not None:
+                    col_dtype = ColumnDtype.of(*col_dtype.categories)
 
             if col_dtype == ColumnDtype.int:
                 # let `read_csv` treat ints as floats, so that we can have NaN and
@@ -243,6 +232,9 @@ def _read_csv_finalize(dfr: pd.DataFrame,
         # is expected dtype a pandas CategoricalDtype?
         expected_categories = None
         if isinstance(expected_dtype, pd.CategoricalDtype):
+            if expected_dtype.categories is None:
+                # categories inferred from data, no dtype to check
+                continue
             expected_categories = expected_dtype
             # expected_dtype is the dtype of all categories
             expected_dtype = ColumnDtype.of(*expected_dtype.categories)
