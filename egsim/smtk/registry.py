@@ -14,7 +14,7 @@ registered_gsims:dict[str, type[GMPE]] = registry.copy()
 def _registered_imts() -> Iterable[tuple[str, Callable]]:
     """Return all IMT names registered in OpenQuake"""
     for name in dir(imt_mod):
-        if 'A' <= name[:1] <= 'Z':  # only upper-case module elements
+        if not ('A' <= name[:1] <= 'Z'):  # only upper-case module elements
             continue
         func = getattr(imt_mod, name)
         if not callable(func):  # only callable
@@ -33,6 +33,7 @@ registered_imts:dict[str, Callable] = dict(_registered_imts())
 
 # invert `gsim_aliases` (see `gsim_name` below)
 _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
+
 
 def gsim_name(gsim: GMPE) -> str:
     """

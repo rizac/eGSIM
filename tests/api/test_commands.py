@@ -31,7 +31,7 @@ def test_initdb(capsys):
     # Anyway:
 
     # with patch.object(builtins, 'input', lambda _: 'yes'):
-    call_command('egsim_init', interactive=False, flush_only=True)
+    call_command('egsim_init', interactive=False)
     captured = capsys.readouterr()
     capout = captured.out
     assert "Unused Flatfile column(s)" not in capout
