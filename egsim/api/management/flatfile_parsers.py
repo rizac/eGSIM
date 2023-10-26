@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
 
-from ...smtk import convert_accel_units
-from ...smtk.trellis.configure import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
-from ...smtk.flatfile import read_csv, column_dtype, column_default, column_required
+from egsim.smtk.converters import (vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14,
+                                   convert_accel_units)
+
+from egsim.smtk.flatfile import read_csv
+from egsim.smtk.flatfile.columns import get_dtypes_and_defaults
 
 
 # mean utilities (geometric, arithmetic, ...):
@@ -136,17 +138,15 @@ class EsmFlatfileParser(FlatfileParser):
     def parse(cls, filepath: str) -> pd.DataFrame:
         """Parse ESM flatfile (CSV) and return the pandas DataFrame"""
         dtype = dict(cls.esm_dtypes)
-        required = set()
         defaults= {}
+        column_dtype, column_default = get_dtypes_and_defaults()
         for esm_col, ff_col in cls.esm_col_mapping.items():
             if ff_col in column_default:
                 defaults[esm_col] = column_default[ff_col]
-            if ff_col in column_required:
-                required.add(esm_col)
             if ff_col in column_dtype:
                 dtype[esm_col] = column_dtype[ff_col]
 
-        dfr = read_csv(filepath, sep=';', required=required, defaults=defaults,
+        dfr = read_csv(filepath, sep=';', defaults=defaults,
                        dtype=dtype, usecols=cls.esm_usecols)
 
         dfr.rename(columns=cls.esm_col_mapping, inplace=True)

@@ -1,7 +1,9 @@
 """Converter functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
+from collections.abc import Collection
 
 from typing import Union
 import numpy as np
+from scipy.constants import g
 
 
 def vs30_to_z1pt0_cy14(vs30: Union[float, np.ndarray], japan=False):
@@ -37,6 +39,50 @@ def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
         return np.exp(5.359 - 1.102 * np.log(vs30))
     else:
         return np.exp(7.089 - 1.144 * np.log(vs30))
+
+
+def convert_accel_units(
+        acceleration: Union[Collection[float], float], from_, to_) \
+        -> Union[Collection[float], float]:
+    """
+    Convert units of number or numeric array representing acceleration
+
+    :param acceleration: the acceleration (numeric or numpy array)
+    :param from_: unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
+        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2"
+    :param to_: new unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
+        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2". When missing, it defaults
+        to "cm/s/s"
+
+    :return: acceleration converted to the given units (by default, 'cm/s/s')
+    """
+    m_sec_square = ("m/s/s", "m/s**2", "m/s^2")
+    cm_sec_square = ("cm/s/s", "cm/s**2", "cm/s^2")
+    acceleration = np.asarray(acceleration)
+    if from_ == 'g':
+        if to_ == 'g':
+            return acceleration
+        if to_ in m_sec_square:
+            return acceleration * g
+        if to_ in cm_sec_square:
+            return acceleration * (100 * g)
+    elif from_ in m_sec_square:
+        if to_ == 'g':
+            return acceleration / g
+        if to_ in m_sec_square:
+            return acceleration
+        if to_ in cm_sec_square:
+            return acceleration * 100
+    elif from_ in cm_sec_square:
+        if to_ == 'g':
+            return acceleration / (100 * g)
+        if to_ in m_sec_square:
+            return acceleration / 100
+        if to_ in cm_sec_square:
+            return acceleration
+
+    raise ValueError("Unrecognised time history units. "
+                     "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
 
 
 # FIXME REMOVE UNUSED

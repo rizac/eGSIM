@@ -7,14 +7,14 @@ from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 from .flatfile.columns import get_all_names_of
 
 
-gsim_registry:dict[str, type[GMPE]] = dict(registry)
+registered_gsims:dict[str, type[GMPE]] = registry.copy()
 
 
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
 def _registered_imts() -> Iterable[tuple[str, Callable]]:
     """Return all IMT names registered in OpenQuake"""
     for name in dir(imt_mod):
-        if name[0].upper() != name[0]:  # only upper-case module elements
+        if 'A' <= name[:1] <= 'Z':  # only upper-case module elements
             continue
         func = getattr(imt_mod, name)
         if not callable(func):  # only callable
@@ -28,7 +28,7 @@ def _registered_imts() -> Iterable[tuple[str, Callable]]:
             pass
 
 
-imt_registry:dict[str, Callable] = dict(_registered_imts())
+registered_imts:dict[str, Callable] = dict(_registered_imts())
 
 
 # invert `gsim_aliases` (see `gsim_name` below)

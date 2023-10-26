@@ -42,17 +42,16 @@ class EgsimBaseCommand(BaseCommand):  # noqa
         ref.setdefault('name', splitext(basename(datafile_abspath))[0])
         return ref
 
-    @classmethod
-    def output_dir(cls, name, root=settings.MEDIA_ROOT):
+    def output_dir(self, name, root=settings.MEDIA_ROOT) -> str:
         destdir = abspath(join(root, name))
         if not isdir(destdir):
             if not isdir(destdir):
-                cls.printinfo(f'Creating directory {destdir}')
+                self.printinfo(f'Creating directory {destdir}')
                 os.makedirs(destdir)
             if not isdir(destdir):
                 raise CommandError(f"'{destdir}' does not exist and could not "
-                                   f"be created. NOTE: In DEBUG mode, the parent "
-                                   f"directory should be git-ignored")
+                                   f"be created")
+        return destdir
 
     @staticmethod
     def empty_db_table(*models):

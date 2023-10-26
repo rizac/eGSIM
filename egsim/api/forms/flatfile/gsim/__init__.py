@@ -4,12 +4,11 @@ from typing import Sequence
 import pandas as pd
 from django.core.exceptions import ValidationError
 
-from egsim.smtk.residuals.gmpe_residuals import Residuals
-from egsim.smtk.flatfile import ContextDB
 from egsim.api.forms import GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
 
 
+# FIXME: REMOVE
 class MOF:  # noqa
     # simple class emulating an Enum
     RES = 'res'
@@ -17,17 +16,6 @@ class MOF:  # noqa
     LLH = "ll"
     MLLH = "mll"
     EDR = "edr"
-
-
-def get_residuals(flatfile: pd.DataFrame, gsim: list[str], imt: list[str]) -> Residuals:
-    """Instantiate a Residuals object with computed residuals. Wrap missing
-    flatfile columns into a ValidationError so that it can be returned as
-    "client error" (4xx) response
-    """
-    context_db = ContextDB(flatfile)
-    residuals = Residuals(gsim, imt)
-    residuals.get_residuals(context_db)
-    return residuals
 
 
 class GsimImtFlatfileForm(GsimImtForm, FlatfileForm):

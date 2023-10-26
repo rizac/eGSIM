@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.forms import Form, ModelChoiceField
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk import (gsim_registry, ground_motion_properties_required_by,
+from egsim.smtk import (registered_gsims, ground_motion_properties_required_by,
                         imts_defined_for)
 from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query as flatfile_query,
                                  get_all_names_of)
@@ -33,7 +33,7 @@ class FlatfileForm(EgsimBaseForm):
         'selexpr': ['data-query', 'selection-expression']
     }
 
-    flatfile = ModelChoiceField(queryset=models.Flatfile.get_flatfiles(),
+    flatfile = ModelChoiceField(queryset=models.Flatfile.objects,
                                 to_field_name="name", label='Flatfile',
                                 empty_label=None, required=False)
     selexpr = CharField(required=False, label='Filter flatfile records via a '
@@ -142,7 +142,7 @@ class FlatfileForm(EgsimBaseForm):
 def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
     """Yield the GSIM names supported by the given flatfile"""
     ff_cols = set('SA' if _.startswith('SA(') else _ for _ in flatfile_columns)
-    for name, model_cls in gsim_registry.items():
+    for name, model_cls in registered_gsims.items():
         imts = imts_defined_for(model_cls)
         if not imts.intersection(ff_cols):
             continue

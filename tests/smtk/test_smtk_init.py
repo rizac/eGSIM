@@ -9,6 +9,7 @@ import pytest
 from openquake.hazardlib.imt import IMT, SA
 
 from egsim.smtk import InvalidImt
+from egsim.smtk.converters import convert_accel_units
 from egsim.smtk.registry import (registered_gsim_names, registry, \
                                  imts_defined_for, distances_required_by, \
                                  rupture_params_required_by, site_params_required_by,
@@ -141,53 +142,3 @@ def test_convert_accel_units():
     assert convert_accel_units(1, "g", "g") == 1
     with pytest.raises(ValueError):
         assert convert_accel_units(1, "gf", "gf") == 1
-
-
-# this function is not longer part of the lib, moved here
-# in case needed in the future:
-import numpy as np
-from scipy.constants import g
-
-
-def convert_accel_units(acceleration, from_, to_='cm/s/s'):  # noqa
-    """
-    Legacy function which can still be used to convert acceleration from/to
-    different units
-
-    :param acceleration: the acceleration (numeric or numpy array)
-    :param from_: unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
-        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2"
-    :param to_: new unit of `acceleration`: string in "g", "m/s/s", "m/s**2",
-        "m/s^2", "cm/s/s", "cm/s**2" or "cm/s^2". When missing, it defaults
-        to "cm/s/s"
-
-    :return: acceleration converted to the given units (by default, 'cm/s/s')
-    """
-    m_sec_square = ("m/s/s", "m/s**2", "m/s^2")
-    cm_sec_square = ("cm/s/s", "cm/s**2", "cm/s^2")
-    acceleration = np.asarray(acceleration)
-    if from_ == 'g':
-        if to_ == 'g':
-            return acceleration
-        if to_ in m_sec_square:
-            return acceleration * g
-        if to_ in cm_sec_square:
-            return acceleration * (100 * g)
-    elif from_ in m_sec_square:
-        if to_ == 'g':
-            return acceleration / g
-        if to_ in m_sec_square:
-            return acceleration
-        if to_ in cm_sec_square:
-            return acceleration * 100
-    elif from_ in cm_sec_square:
-        if to_ == 'g':
-            return acceleration / (100 * g)
-        if to_ in m_sec_square:
-            return acceleration / 100
-        if to_ in cm_sec_square:
-            return acceleration
-
-    raise ValueError("Unrecognised time history units. "
-                     "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
-

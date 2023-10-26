@@ -9,14 +9,9 @@ from typing import Iterable, Any
 
 from django.forms.fields import ChoiceField
 
-from egsim.smtk.residuals.residual_plots import (residuals_density_distribution,
-                                                 residuals_with_depth,
-                                                 residuals_with_distance,
-                                                 residuals_with_magnitude,
-                                                 residuals_with_vs30,
-                                                 likelihood)
+from egsim.smtk import get_residuals
 from egsim.api.forms import APIForm, relabel_sa
-from egsim.api.forms.flatfile.gsim import MOF, get_residuals, GsimImtFlatfileForm
+from egsim.api.forms.flatfile.gsim import GsimImtFlatfileForm
 
 
 DISTANCE_LABEL = {
@@ -28,18 +23,19 @@ DISTANCE_LABEL = {
 }
 
 
-PLOT_TYPE = {
-    # key: display name, residuals function, function kwargs
-    MOF.RES: ('Residuals (density distribution)',
-              residuals_density_distribution, {}),
-    MOF.LH: ('Likelihood', likelihood, {}),
-    'mag': ('Residuals vs. Magnitude', residuals_with_magnitude, {}),
-    'vs30': ('Residuals vs. Vs30', residuals_with_vs30, {}),
-    'depth': ('Residuals vs. Depth', residuals_with_depth, {}),
-    # insert distances related residuals:
-    **{n: ("Residuals vs. %s" % l, residuals_with_distance,
-           {'distance_type': n}) for n, l in DISTANCE_LABEL.items()}
-}
+# FIXME: REMOVE OR CHANGE
+PLOT_TYPE = { }
+#     # key: display name, residuals function, function kwargs
+#     MOF.RES: ('Residuals (density distribution)',
+#               residuals_density_distribution, {}),
+#     MOF.LH: ('Likelihood', likelihood, {}),
+#     'mag': ('Residuals vs. Magnitude', residuals_with_magnitude, {}),
+#     'vs30': ('Residuals vs. Vs30', residuals_with_vs30, {}),
+#     'depth': ('Residuals vs. Depth', residuals_with_depth, {}),
+#     # insert distances related residuals:
+#     **{n: ("Residuals vs. %s" % l, residuals_with_distance,
+#            {'distance_type': n}) for n, l in DISTANCE_LABEL.items()}
+# }
 
 
 class ResidualsForm(GsimImtFlatfileForm, APIForm):
@@ -66,8 +62,9 @@ class ResidualsForm(GsimImtFlatfileForm, APIForm):
         _, func, kwargs = PLOT_TYPE[cleaned_data["plot_type"]]
 
         # Compute residuals.
-        residuals = get_residuals(cleaned_data['flatfile'],
-                                  cleaned_data["gsim"], cleaned_data["imt"])
+        # FIXME THIS RETURNS A DATAFRAME NOW
+        residuals = get_residuals(cleaned_data["gsim"], cleaned_data["imt"],
+                                  cleaned_data['flatfile'])
 
         # statistics = residuals.get_residual_statistics()
         ret = defaultdict(lambda: defaultdict(lambda: {}))

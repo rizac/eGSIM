@@ -48,7 +48,7 @@ SUBCOMMANDS = [load_command_class(APPNAME, _) for _ in
                # ====================================================
                # IMPORTANT: TO AD NEW COMMANDS UPDATE THE LIST BELOW:
                # ====================================================
-               ['_egsim_oq', '_egsim_reg', '_egsim_flatfiles']]
+               ['_egsim_oq', '_egsim_regionalizations', '_egsim_flatfiles']]
 
 
 class Command(EgsimBaseCommand):

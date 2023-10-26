@@ -5,10 +5,10 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
-from enum import IntFlag, auto
+from typing import Any
 
-from django.db.models import (Model as DjangoModel, TextField, BooleanField,
-                              Index, URLField, Manager, QuerySet, IntegerField)
+from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
+                              Index, URLField, Manager, QuerySet)
 from django.db.models.options import Options
 
 
@@ -17,25 +17,31 @@ from django.db.models.options import Options
 # in the admin panel (https://<site_url>/admin)
 
 
-class Model(DjangoModel):
-    """Abstract base class of all Django Models of this module"""
+class EgsimManager(Manager):
+    """Defines a base custom manager filtering out hidden elements. Details here:
+    https://docs.djangoproject.com/en/stable/topics/db/managers
+    """
+    def get_queryset(self):
+        return super().get_queryset().filter(hidden=False)
 
-    # these two attributes are set by Django (see metaclass for details) and are here
-    # only to silent lint warnings
-    objects: Manager
+
+class EgsimDbModel(DjangoDbModel):
+    """Abstract base class of Egsim Db models"""
+
+    # Explicitly set the `objects` `Manager` that does not return hidden elements:
+    objects = EgsimManager()
+    # _meta is dynamically set by Django. declare it here just to silent lint warnings:
     _meta: Options
 
-    class Meta:
-        # this attr makes this class abstract but note it's not inherited in subclasses,
-        # where it will be False by default:
-        abstract = True
-
-
-class _UniqueName(Model):
-    """Abstract class for Table entries identified by a single unique name"""
-
     name = TextField(null=False, unique=True, help_text="Unique name")
-
+    hidden = BooleanField(default=False,
+                          help_text="Hide this item. This will make the item publicly "
+                                    "unavailable through the `names`"
+                                    "and `items` properties (which are supposed to be "
+                                    "used to publicly expose API). This field is "
+                                    "intended to temporarily hide/show items quickly "
+                                    "from the admin panel without executing management "
+                                    "scrips")
     class Meta:
         abstract = True
         # index the name attr:
@@ -43,13 +49,28 @@ class _UniqueName(Model):
 
     @property
     def names(self) -> QuerySet[str]:
+        """Return all the names of the items (db rows) of this model, filtering out
+        hidden rows."""
         return self.objects.only('name').values_list('name', flat=True)
 
     def __str__(self):
         return self.name
 
 
-class _Citable(Model):
+class Gsim(EgsimDbModel):
+    """The Ground Shaking Intensity Models (GSIMs) available in eGSIM. This table
+    simply makes responses faster when querying all available and valid models"""
+
+    unverified = BooleanField(default=False, help_text="not independently verified")
+    experimental = BooleanField(default=False, help_text="experimental, may "
+                                                         "change in future versions")
+    adapted = BooleanField(default=False, help_text="not intended for general use, "
+                                                    "the behaviour may not be "
+                                                    "as expected")
+    # Note: `superseded_by` is not used (we do not save deprecated Gsims)
+
+
+class Citable(DjangoDbModel):
     """Abstract class for Table rows which can be cited, e.g. with any info
     such as URL, license, bib. citation"""
 
@@ -64,8 +85,8 @@ class _Citable(Model):
         abstract = True
 
 
-class _DataFile(_UniqueName):
-    """Class handling any data file used by eGSIM"""
+class DataFile(EgsimDbModel):
+    """Abstract class handling any data file used by eGSIM"""
     # Note: the unique name is usually used as display name in GUIs
     filepath = TextField(unique=True, null=False)
 
@@ -77,34 +98,12 @@ class _DataFile(_UniqueName):
         return f'{self.name} ({self.filepath})'
 
 
-class Flatfile(_UniqueName, _Citable, _DataFile):
+class Flatfile(DataFile, Citable):
     """Class handling flatfiles stored in the file system
     (predefined flatfiles)
     """
 
-class Regionalization(_UniqueName, _Citable, _DataFile):
+class Regionalization(DataFile, Citable):
     """Class handling flatfiles stored in the file system
     (predefined flatfiles)
     """
-
-
-class Gsim(_UniqueName):
-    """The Ground Shaking Intensity Models (GSIMs) available in eGSIM"""
-    # Note: we use a DB table to check beforehand which models can be initialized
-    # and made available, saving up to 1-2 sec of time for each request
-
-    class Attr(IntFlag):
-        # superseded_by = auto()
-        unverified = auto()
-        experimental = auto()
-        adapted = auto()
-
-    special_attributes = \
-        IntegerField(default=0, null=False,
-                     choices=[(0, '')] + [(Attr(a), Attr(a).name.replace('|', ', '))
-                                          for a in range(1, 2 ** len(Attr))],
-                     help_text='Model special attribute(s)')
-
-    class Meta(_UniqueName.Meta):
-        indexes = [Index(fields=['name']), ]
-
