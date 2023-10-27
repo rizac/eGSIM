@@ -1,59 +1,12 @@
 import pandas as pd
 import numpy as np
 
-
 from egsim.smtk.converters import (vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14,
                                    convert_accel_units)
 
 from egsim.smtk.flatfile import read_csv
 from egsim.smtk.flatfile.columns import get_dtypes_and_defaults
 
-
-# mean utilities (geometric, arithmetic, ...):
-SCALAR_XY = {
-    "Geometric": lambda x, y: np.sqrt(x * y),
-    "Arithmetic": lambda x, y: (x + y) / 2.,
-    "Larger": lambda x, y: np.max(np.array([x, y]), axis=0),
-    "Vectorial": lambda x, y: np.sqrt(x ** 2. + y ** 2.)
-}
-
-
-MECHANISM_TYPE = {
-    "Normal": -90.0,
-    "Strike-Slip": 0.0,
-    "Reverse": 90.0,
-    "Oblique": 0.0,
-    "Unknown": 0.0,
-    "N": -90.0,  # Flatfile conventions
-    "S": 0.0,
-    "R": 90.0,
-    "U": 0.0,
-    "NF": -90.,  # ESM flatfile conventions
-    "SS": 0.,
-    "TF": 90.,
-    "NS": -45.,  # Normal with strike-slip component
-    "TS": 45.,  # Reverse with strike-slip component
-    "O": 0.0
-}
-
-
-DIP_TYPE = {
-    "Normal": 60.0,
-    "Strike-Slip": 90.0,
-    "Reverse": 35.0,
-    "Oblique": 60.0,
-    "Unknown": 90.0,
-    "N": 60.0,  # Flatfile conventions
-    "S": 90.0,
-    "R": 35.0,
-    "U": 90.0,
-    "NF": 60.,  # ESM flatfile conventions
-    "SS": 90.,
-    "TF": 35.,
-    "NS": 70.,  # Normal with strike-slip component
-    "TS": 45.,  # Reverse with strike-slip component
-    "O": 90.0
-}
 
 class FlatfileParser:
     """Base class for Flatfile parser (CSV -> HDF conversion)"""
@@ -85,16 +38,20 @@ class EsmFlatfileParser(FlatfileParser):
         return True
 
     esm_col_mapping = {
-        'ev_nation_code': 'event_country',
-        # 'event_id': 'event_name',
-        'ev_latitude': 'event_latitude',
-        'ev_longitude': 'event_longitude',
-        'ev_depth_km': 'event_depth',
+        'ev_nation_code': 'evt_country',
+        'event_id': 'evt_id',
+        'ev_latitude': 'evt_lat',
+        'ev_longitude': 'evt_lon',
+        'event_time': 'evt_time',
+        'ev_depth_km': 'evt_depth',
         'fm_type_code': 'style_of_faulting',
-        'st_nation_code': 'station_country',
-        'st_latitude': 'station_latitude',
-        'st_longitude': 'station_longitude',
-        'st_elevation': 'station_elevation',
+        'st_nation_code': 'sta_nation_code',
+        'st_latitude': 'sta_lat',
+        'st_longitude': 'sta_lon',
+        'network_code': 'net_code',
+        'station_code': 'sta_code',
+        'location_code': 'loc_code',
+        'st_elevation': 'sta_elevation',
         'epi_dist': 'repi',
         'epi_az': 'azimuth',
         'JB_dist': 'rjb',
@@ -105,8 +62,9 @@ class EsmFlatfileParser(FlatfileParser):
         'es_dip': 'dip',
         'es_rake': 'rake',
         'vs30_m_sec': 'vs30',
-        'EMEC_Mw': 'magnitude',
-        'es_z_top': 'depth_top_of_rupture',
+        'EMEC_Mw': 'mag',
+        # 'magnitude_type': 'mag_type',
+        'es_z_top': 'rupture_top_depth',
         'es_length': 'rupture_length',
         'es_width': 'rupture_width',
         'U_hp': 'highpass_h1',
@@ -122,22 +80,20 @@ class EsmFlatfileParser(FlatfileParser):
         'rotD50_T90': 'duration_5_95_components',  # FIXME: IMT???
     }
 
-    esm_dtypes = {
-        'event_id': 'category',
-        'event_country': 'category',
-        'event_time': 'datetime',
-        'network_code': 'category',
-        'station_code': 'category',
-        'location_code': 'category',
-        'station_country': 'category',
-        'housing_code': 'category',
-        'ec8_code': 'category'
-    }
 
     @classmethod
     def parse(cls, filepath: str) -> pd.DataFrame:
         """Parse ESM flatfile (CSV) and return the pandas DataFrame"""
-        dtype = dict(cls.esm_dtypes)
+        dtype = {
+            'event_id': 'category',
+            'ev_nation_code': 'category',
+            'st_nation_code': 'category',
+            'network_code': 'category',
+            'station_code': 'category',
+            'location_code': 'category',
+            'housing_code': 'category',
+            'ec8_code': 'category'
+        }
         defaults= {}
         column_dtype, column_default = get_dtypes_and_defaults()
         for esm_col, ff_col in cls.esm_col_mapping.items():
@@ -148,49 +104,82 @@ class EsmFlatfileParser(FlatfileParser):
 
         dfr = read_csv(filepath, sep=';', defaults=defaults,
                        dtype=dtype, usecols=cls.esm_usecols)
-
+        # rename:
         dfr.rename(columns=cls.esm_col_mapping, inplace=True)
 
-        dfr['station_id'] = \
-            dfr['network_code'].str.cat(dfr['station_code'], sep='.').\
+        dfr['sta_id'] = \
+            dfr['net_code'].str.cat(dfr['sta_code'], sep='.').\
                 astype('category').cat.codes
 
         # Post process:
         # -------------
         # magnitude: complete it with
         # Mw -> Ms -> Ml (in this order) where standard mag is NA
-        dfr['magnitude_type'] = 'Mw'
-        mag_types = ('ML', 'Mw', 'Ms')
+        dfr['mag_type'] = 'Mw'
         # convert to categorical (save space):
-        dfr['magnitude_type'] = dfr['magnitude_type'].astype(
-            pd.CategoricalDtype(mag_types))
+        dfr['mag_type'] = dfr['mag_type'].astype(
+            pd.CategoricalDtype(('ML', 'Mw', 'Ms')))
 
         # Set Mw where magnitude is na:
-        mag_na = pd.isna(dfr['magnitude'])
         new_mag = dfr.pop('Mw')
-        dfr.loc[mag_na, 'magnitude'] = new_mag
-        # Set Ms where magnitude is na:
-        mag_na = pd.isna(dfr['magnitude'])
+        idxs = new_mag.notna() & dfr['mag'].isna()
+        dfr.loc[idxs, 'mag'] = new_mag[idxs]
+        # Set Ms where magnitude is still na:
         new_mag = dfr.pop('Ms')
-        dfr.loc[mag_na, 'magnitude'] = new_mag
-        dfr.loc[mag_na, 'magnitude_type'] = 'Ms'
-        # Set Ml where magnitude is na:
-        mag_na = pd.isna(dfr['magnitude'])
+        idxs = new_mag.notna() & dfr['mag'].isna()
+        dfr.loc[idxs, 'mag'] = new_mag[idxs]
+        dfr.loc[idxs, 'mag_type'] = 'Ms'
+        # Set Ml where magnitude is still na:
         new_mag = dfr.pop('ML')
-        dfr.loc[mag_na, 'magnitude'] = new_mag
-        dfr.loc[mag_na, 'magnitude_type'] = 'ML'
+        idxs = new_mag.notna() & dfr['mag'].isna()
+        dfr.loc[idxs, 'mag'] = new_mag[idxs]
+        dfr.loc[idxs, 'mag_type'] = 'ML'
 
         # Use focal mechanism for those cases where All strike dip rake is NaN
         # (see smtk.sm_table.update_rupture_context)
         # FIXME: before we replaced if ANY was NaN, but it makes no sense to me
         # (why replacing  dip, strike and rake if e.g. only the latter is NaN?)
+        mechanism_type = {
+            "Normal": -90.0,
+            "Strike-Slip": 0.0,
+            "Reverse": 90.0,
+            "Oblique": 0.0,
+            "Unknown": 0.0,
+            "N": -90.0,  # Flatfile conventions
+            "S": 0.0,
+            "R": 90.0,
+            "U": 0.0,
+            "NF": -90.,  # ESM flatfile conventions
+            "SS": 0.,
+            "TF": 90.,
+            "NS": -45.,  # Normal with strike-slip component
+            "TS": 45.,  # Reverse with strike-slip component
+            "O": 0.0
+        }
+        dip_type = {
+            "Normal": 60.0,
+            "Strike-Slip": 90.0,
+            "Reverse": 35.0,
+            "Oblique": 60.0,
+            "Unknown": 90.0,
+            "N": 60.0,  # Flatfile conventions
+            "S": 90.0,
+            "R": 35.0,
+            "U": 90.0,
+            "NF": 60.,  # ESM flatfile conventions
+            "SS": 90.,
+            "TF": 35.,
+            "NS": 70.,  # Normal with strike-slip component
+            "TS": 45.,  # Reverse with strike-slip component
+            "O": 90.0
+        }
         sofs = dfr.pop('style_of_faulting')
         is_na = dfr[['strike', 'dip', 'rake']].isna().any(axis=1)
         if is_na.any():
             for sof in pd.unique(sofs):
-                rake = MECHANISM_TYPE.get(sof, 0.0)
+                rake = mechanism_type.get(sof, 0.0)
                 strike = 0.0
-                dip = DIP_TYPE.get(sof, 90.0)
+                dip = dip_type.get(sof, 90.0)
                 filter_ = is_na & (sofs == sof)
                 if filter_.any():
                     dfr.loc[filter_, 'rake'] = rake
@@ -219,14 +208,12 @@ class EsmFlatfileParser(FlatfileParser):
         dfr['z2pt5'] = vs30_to_z2pt5_cb14(dfr['vs30'])
 
         # rhyopo is sqrt of repi**2 + event_depth**2 (basic Pitagora)
-        dfr['rhypo'] = np.sqrt((dfr['repi'] ** 2) + dfr['event_depth'] ** 2)
+        dfr['rhypo'] = np.sqrt((dfr['repi'] ** 2) + dfr['evt_depth'] ** 2)
 
         # digital_recording is True <=> instrument_type_code is D
         dfr['digital_recording'] = dfr.pop('instrument_type_code') == 'D'
 
         # IMTS:
-        geom_mean = SCALAR_XY['Geometric']
-
         # Note: ESM not reporting correctly some values: PGA, PGV, PGD and SA
         # should always be positive (absolute value)
 
@@ -245,7 +232,8 @@ class EsmFlatfileParser(FlatfileParser):
             #     raise ValueError('%s.esm_col_mapping["%s"]="%s" is not a valid IMT' %
             #                      (cls.__name__, col, cls.esm_col_mapping[col]))
             if imt_name not in dfr.columns:
-                dfr[imt_name] = geom_mean(imt_components[0], imt_components[1])
+                # geometric mean:
+                dfr[imt_name] = np.sqrt(imt_components[0] * imt_components[1])
 
         # convert PGA from cm/s^2 to g:
         dfr['PGA'] = convert_accel_units(dfr['PGA'], "cm/s^2", "g")
@@ -269,8 +257,9 @@ class EsmFlatfileParser(FlatfileParser):
                 dfr.pop('U' + sa_sfx), dfr.pop('V' + sa_sfx), dfr.pop('W' + sa_sfx)
             period = sa_sfx[2:].replace('_', '.')
             float(period)  # just a check
-            sa_columns['SA(%s)' % period] = geom_mean(imt_components[0],
-                                                      imt_components[1])
+            # geometric mean:
+            sa_columns['SA(%s)' % period] = \
+                np.sqrt(imt_components[0] * imt_components[1])
         # concat (side by side "horizontally") `dfr` with the newly created SA dataframe:
         dfr = pd.concat((dfr, pd.DataFrame(sa_columns)), axis=1)
         return dfr

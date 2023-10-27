@@ -74,14 +74,14 @@ rvolc:
   default: 0
   help: Distance through volcanic zone (km). When missing, it defaults to 0
   type: distance
-ev_lat:
+evt_lat:
   dtype: float
   ">=": -90
   "<=": 90
   help: Event latitude (hypocentre latitude, in deg)
   alias: [hypo_lat, event_latitude]
   type: rupture
-ev_lon:
+evt_lon:
   dtype: float
   ">=": -180
   "<=": 180
@@ -93,7 +93,7 @@ mag:
   alias: magnitude
   help: event magnitude
   type: rupture
-ev_depth:
+evt_depth:
   dtype: float
   help: event depth (hypocentral depth, in km)
   alias: [hypo_depth, event_depth]
@@ -161,14 +161,14 @@ backarc:
   help: >-
     boolean indicating if the site is in the subduction backarc. When missing or false, 
     the site is assumed to be unknown or in the subduction forearc
-st_lat:
+sta_lat:
   dtype: float
   ">=": -90
   "<=": 90
   help: station latitude (deg)
   alias: [station_latitude, lat]  # lat is for compatibility with OpenQuake
   type: sites
-st_lon:
+sta_lon:
   dtype: float
   ">=": -180
   "<=": 180
@@ -235,7 +235,7 @@ IA:
   help: Arias intensity, in m/s
   type: intensity
 # ID columns:
-ev_id:
+evt_id:
   alias: event_id
   help: >-
     The unique ID of the recorded seismic event. If missing, an id is inferred
@@ -244,7 +244,7 @@ ev_id:
     In general, you can use the id provided by the event catalog or web service,
     or create your own, as long as it holds: same id <=> same event. IDs should
     be preferably of type integer for performance reasons
-st_id:
+sta_id:
   alias: station_id
   help: >-
     The unique ID of the seismic station. If missing, an id is inferred from
@@ -252,7 +252,7 @@ st_id:
     In general, you can infer the id from the tuple (network_code, station_code)
     or create your own, as long as it holds: same id <=> same station. IDs should
     be preferably of type integer for performance reasons
-ev_time:
+evt_time:
   alias: event_time
   dtype: datetime
   help: the event time (as ISO formatted string, e.g. 2006-03-31T00:12:24)
