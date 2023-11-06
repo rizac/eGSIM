@@ -1,3 +1,11 @@
+"""Module to parse a published CSV flatfile into an eGSIM compatible flatfile.
+
+To implement a new parser, copy this module, rename it as needed and change all
+functions and global variables according to your needs **except the `parse` function**,
+which is the only function intended to be publicly accessible
+
+See `flatfile.parse_flatfile` for details
+"""
 import pandas as pd
 import numpy as np
 
@@ -9,9 +17,9 @@ from egsim.smtk.flatfile import parse_flatfile
 
 def parse(file) -> pd.DataFrame:
     """Return a standard flatfile in form of pandas DataFrame from the input.
-    This method calls pandas `read_csv` and can be tuned via several optional
-    class attributes (`rename`, `sep`, `dtype`, `defaults`, `usecols`, `kwargs`,
-    `postprocess`)
+    This is the only function intended to be publicly accessible and **should not
+    be changed**: to tune the parsing process, see all other global functions and
+    variables of this module
 
     :param file: str, path object or file-like object denoting the input to be
         read and parsed
@@ -19,13 +27,106 @@ def parse(file) -> pd.DataFrame:
     dfr = parse_flatfile(file, sep=sep, rename=rename, extra_dtype=extra_dtype,
                          extra_defaults={}, usecols=usecols)
 
-    ################
-    # post process #
-    ################
+    return post_process(dfr)
+
+
+###################################################################
+# tune `parse` by changing the following variables and functions: #
+###################################################################
+
+
+# csv separator:
+sep = ';'
+
+
+def usecols(colname):
+    """Function used to define which CSV column should be loaded"""
+    if colname.endswith('_ref') or colname.endswith("_housner"):
+        return False
+    if colname.startswith('rotD'):
+        return colname in rename  # global var
+    if colname in ("instrument_code", "U_channel_code",
+                   "V_channel_code", "W_channel_code", "ec8_code_method",
+                   "ec8_code_ref", "U_azimuth_deg", "V_azimuth_deg",
+                   "EMEC_Mw_type", "installation_code", "proximity_code",
+                   "late_triggered_flag_01", "W_hp", "W_lp",
+                   "vs30_calc_method"):
+        return False
+    if colname.endswith('_id'):
+        return colname == "event_id"
+    return True
+
+
+# CSV column -> flatfile column mapping:
+rename = {
+    'ev_nation_code': 'evt_country',
+    'event_id': 'evt_id',
+    'ev_latitude': 'evt_lat',
+    'ev_longitude': 'evt_lon',
+    'event_time': 'evt_time',
+    'ev_depth_km': 'evt_depth',
+    'fm_type_code': 'style_of_faulting',
+    'st_nation_code': 'sta_nation_code',
+    'st_latitude': 'sta_lat',
+    'st_longitude': 'sta_lon',
+    'network_code': 'net_code',
+    'station_code': 'sta_code',
+    'location_code': 'loc_code',
+    'st_elevation': 'sta_elevation',
+    'epi_dist': 'repi',
+    'epi_az': 'azimuth',
+    'JB_dist': 'rjb',
+    'rup_dist': 'rrup',
+    'Rx_dist': 'rx',
+    'Ry0_dist': 'ry0',
+    'es_strike': 'strike',
+    'es_dip': 'dip',
+    'es_rake': 'rake',
+    'vs30_m_sec': 'vs30',
+    'EMEC_Mw': 'mag',
+    # 'magnitude_type': 'mag_type',
+    'es_z_top': 'rupture_top_depth',
+    'es_length': 'rupture_length',
+    'es_width': 'rupture_width',
+    'U_hp': 'highpass_h1',
+    'V_hp': 'highpass_h2',
+    'U_lp': 'lowpass_h1',
+    'V_lp': 'lowpass_h2',
+    # IMTS:
+    'rotD50_pga': 'PGA',
+    'rotD50_pgv': 'PGV',
+    'rotD50_pgd': 'PGD',
+    'rotD50_CAV': 'CAV',
+    'rotD50_ia': 'IA',
+    'rotD50_T90': 'duration_5_95_components',  # FIXME: IMT???
+}
+
+
+# additional data types for CSV columns that are not in `rename` and not standard
+# flatfile columns:
+extra_dtype = {
+    'event_id': 'category',
+    'ev_nation_code': 'category',
+    'st_nation_code': 'category',
+    'network_code': 'category',
+    'station_code': 'category',
+    'location_code': 'category',
+    'housing_code': 'category',
+    'ec8_code': 'category'
+}
+
+
+def post_process(flatfile: pd.Dataframe) -> pd.DataFrame:
+    """Defines post process on an already parsed flatfile, just before returning it.
+    Implement here any complex operation that are not possible with eGSIM
+    `parse_flatfile`
+    """
+
+    dfr = flatfile  # legacy code below use `dfr`, too tired to rename
 
     # set station id as int:
     dfr['sta_id'] = \
-        dfr['net_code'].str.cat(dfr['sta_code'], sep='.').\
+        dfr['net_code'].str.cat(dfr['sta_code'], sep='.'). \
             astype('category').cat.codes
 
     # magnitude: complete it with
@@ -178,90 +279,5 @@ def parse(file) -> pd.DataFrame:
     # concat (side by side "horizontally") `dfr` with the newly created SA dataframe:
     dfr = pd.concat((dfr, pd.DataFrame(sa_columns)), axis=1)
     return dfr
-
-
-############################################################################
-# global variables and functions (see flatfile.parse_flatfile for details) #
-############################################################################
-
-
-# csv separator:
-sep = ';'
-
-
-def usecols(colname):
-    """Function used to define which CSV column should be loaded"""
-    if colname.endswith('_ref') or colname.endswith("_housner"):
-        return False
-    if colname.startswith('rotD'):
-        return colname in rename  # global var
-    if colname in ("instrument_code", "U_channel_code",
-                   "V_channel_code", "W_channel_code", "ec8_code_method",
-                   "ec8_code_ref", "U_azimuth_deg", "V_azimuth_deg",
-                   "EMEC_Mw_type", "installation_code", "proximity_code",
-                   "late_triggered_flag_01", "W_hp", "W_lp",
-                   "vs30_calc_method"):
-        return False
-    if colname.endswith('_id'):
-        return colname == "event_id"
-    return True
-
-
-# CSV column -> flatfile column mapping:
-rename = {
-    'ev_nation_code': 'evt_country',
-    'event_id': 'evt_id',
-    'ev_latitude': 'evt_lat',
-    'ev_longitude': 'evt_lon',
-    'event_time': 'evt_time',
-    'ev_depth_km': 'evt_depth',
-    'fm_type_code': 'style_of_faulting',
-    'st_nation_code': 'sta_nation_code',
-    'st_latitude': 'sta_lat',
-    'st_longitude': 'sta_lon',
-    'network_code': 'net_code',
-    'station_code': 'sta_code',
-    'location_code': 'loc_code',
-    'st_elevation': 'sta_elevation',
-    'epi_dist': 'repi',
-    'epi_az': 'azimuth',
-    'JB_dist': 'rjb',
-    'rup_dist': 'rrup',
-    'Rx_dist': 'rx',
-    'Ry0_dist': 'ry0',
-    'es_strike': 'strike',
-    'es_dip': 'dip',
-    'es_rake': 'rake',
-    'vs30_m_sec': 'vs30',
-    'EMEC_Mw': 'mag',
-    # 'magnitude_type': 'mag_type',
-    'es_z_top': 'rupture_top_depth',
-    'es_length': 'rupture_length',
-    'es_width': 'rupture_width',
-    'U_hp': 'highpass_h1',
-    'V_hp': 'highpass_h2',
-    'U_lp': 'lowpass_h1',
-    'V_lp': 'lowpass_h2',
-    # IMTS:
-    'rotD50_pga': 'PGA',
-    'rotD50_pgv': 'PGV',
-    'rotD50_pgd': 'PGD',
-    'rotD50_CAV': 'CAV',
-    'rotD50_ia': 'IA',
-    'rotD50_T90': 'duration_5_95_components',  # FIXME: IMT???
-}
-
-
-# additional CSV columns data types for non-standard columns without a data type:
-extra_dtype = {
-    'event_id': 'category',
-    'ev_nation_code': 'category',
-    'st_nation_code': 'category',
-    'network_code': 'category',
-    'station_code': 'category',
-    'location_code': 'category',
-    'housing_code': 'category',
-    'ec8_code': 'category'
-}
 
 
