@@ -11,10 +11,11 @@ from os.path import join, abspath, isfile
 
 from django.core.management.base import CommandError
 
+
 from egsim.smtk.flatfile.columns import load_from_yaml
 from egsim.smtk.registry import registered_imts
+from .flatfile_parsers import esm2018
 from . import EgsimBaseCommand
-from ..flatfile_parsers import EsmFlatfileParser
 from ... import models
 
 
@@ -26,9 +27,9 @@ class Command(EgsimBaseCommand):
     files suitable for the eGSIM API
     """
 
-    # flatfiles abs paths (csv or zipped csv) -> :class:`FlatfileParser`:
+    # flatfiles abs paths (csv or zipped csv) -> :parser function
     PARSERS = {
-        join(SRC_DIR, "ESM_flatfile_2018_SA.csv.zip"): EsmFlatfileParser,
+        join(SRC_DIR, "ESM_flatfile_2018_SA.csv.zip"): esm2018.parse,
         # join(SRC_DIR, "residual_tests_esm_data.original.csv"): EsmFlatfileParser
     }
 
@@ -54,8 +55,8 @@ class Command(EgsimBaseCommand):
         ffcolumns = set(load_from_yaml())
         imts = set(registered_imts)
         numfiles = 0
-        for filepath, parser in parsers.items():
-            dfr = parser.parse(filepath)
+        for filepath, parser_function in parsers.items():
+            dfr = parser_function(filepath)
             ref = self.get_ref(filepath)
             # ff name: use str.split to remove all extensions (e.g. ".csv.zip"):
             name = ref['name']
@@ -95,3 +96,4 @@ class Command(EgsimBaseCommand):
         metadata_cols = (cols - imt_cols_no_sa - imt_cols_sa) & db_ff_columns
         unknown_cols = cols - imt_cols_no_sa - imt_cols_sa - metadata_cols
         return cols, metadata_cols, imt_cols_no_sa, imt_cols_sa, unknown_cols
+

@@ -25,14 +25,69 @@ def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
     """
+    kwargs = dict(_flatfile_default_args)
     dtypes, defaults = get_dtypes_and_defaults()
     return read_csv(filepath_or_buffer, sep=sep, dtype=dtypes, defaults=defaults,
-                     _check_dtypes_and_defaults=False)
+                     _check_dtypes_and_defaults=False, **kwargs)
 
 
-missing_values = ("", "null", "NULL", "None",
-                  "nan", "-nan", "NaN", "-NaN",
-                  "NA", "N/A", "n/a",  "<NA>", "#N/A", "#NA")
+def parse_flatfile(filepath_or_buffer: str, sep: str = None,
+                   rename:dict[str,str]= None,
+                   extra_dtype: dict[
+                       str, Union[str, list, ColumnDtype, pd.CategoricalDtype]] = None,
+                   extra_defaults: dict[str, Any] = None,
+                   usecols: Union[list[str], Callable[[str], bool]] = None,
+                   **kwargs) -> pd.DataFrame:
+    """
+    Read a flatfile not in standard format
+
+    :param filepath_or_buffer: str, path object or file-like object of the CSV
+        formatted data. If string, compressed files are also supported
+        and inferred from the extension (e.g. 'gzip', 'zip')
+    :param sep: the separator (or delimiter). None means 'infer' (it might
+        take more time)
+    :param rename: optional dict specifying as keys the CSV fieldnames that
+        correspond to a standard flatfile column (dict values). Keys of this
+        dict will have data type and default automatically set from the registered
+        flatfile columns (see `columns.yaml` for details)
+    :param extra_dtype: optional dict specifying the data type of CSV
+        fieldnames that are not standard  flatfile columns and are not implemented
+        in `rename`. Dict values can be: 'float', 'datetime', 'bool', 'int', 'str',
+        'category', `ColumnDType`s, list/tuples or pandas CategoricalDtype
+    :param extra_defaults: optional dict of with the defaults for missing values.
+        Keys are extra CSV fieldnames that are not standard flatfile columns and
+        are not implemented in `rename`
+    :param usecols: pandas `read_csv` parameter (exposed explicitly here for clarity)
+        the column names to load, as list. Can be also a callable
+        accepting a column name and returning True/False (keep/discard)
+    """
+    # get registered dtypes and defaults:
+    kwargs |= dict(_flatfile_default_args)
+    extra_dtype = extra_dtype or {}
+    extra_defaults = extra_defaults or {}
+    dtype, defaults = get_dtypes_and_defaults()
+    for csv_col, ff_col in (rename or {}).items():
+        if ff_col in defaults:
+            extra_defaults[csv_col] = defaults[ff_col]
+        if ff_col in dtype:
+            extra_dtype[csv_col] = dtype[ff_col]
+
+    dfr = read_csv(filepath_or_buffer, sep=sep, dtype=extra_dtype,
+                   defaults=extra_defaults, usecols=usecols,
+                   _check_dtypes_and_defaults=True, **kwargs)
+    if rename:
+        dfr.rename(columns=rename, inplace=True)
+    return dfr
+
+
+_flatfile_default_args = (
+    ('na_values', ("", "null", "NULL", "None",
+                   "nan", "-nan", "NaN", "-NaN",
+                   "NA", "N/A", "n/a",  "<NA>", "#N/A", "#NA")),
+    ('keep_default_na', False),
+    ('comment', '#'),
+    ('encoding', 'utf-8-sig')
+)
 
 
 def read_csv(filepath_or_buffer: Union[str, IOBase],
@@ -81,14 +136,11 @@ def read_csv(filepath_or_buffer: Union[str, IOBase],
     """
     # convert the file input to a stream (IOBase): if already a stream, do not close
     # it at the end but restore the position with `seek`:
-    kwargs.setdefault('encoding', 'utf-8-sig')
     check_dtypes_and_defaults = kwargs.pop('_check_dtypes_and_defaults', True)
-    if check_dtypes_and_defaults:
-        for col, _dtype in dtype.items():
-            dtype[col] = cast_dtype(_dtype)
 
     kwargs =  _read_csv_prepare(filepath_or_buffer, sep=sep, dtype=dtype,
-                                usecols=usecols, **kwargs)
+                                usecols=usecols, check_dtypes=check_dtypes_and_defaults,
+                                **kwargs)
     try:
         dfr = pd.read_csv(filepath_or_buffer, **kwargs)
     except ValueError as exc:
@@ -102,15 +154,17 @@ def read_csv(filepath_or_buffer: Union[str, IOBase],
     return dfr
 
 
-def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
+def _read_csv_prepare(filepath_or_buffer: IOBase, check_dtypes:bool, **kwargs) -> dict:
     """prepare the arguments for pandas read_csv: take tha passed **kwargs
     and return a modified version of it after checking some keys and values
     """
     dtype = kwargs.pop('dtype', {})  # removed and handled later
+
+    if check_dtypes:
+        for col, _dtype in dtype.items():
+            dtype[col] = cast_dtype(_dtype)
+
     parse_dates = set(kwargs.pop('parse_dates', []))  # see above
-    kwargs.setdefault('na_values', missing_values)
-    kwargs.setdefault('keep_default_na', False)
-    kwargs.setdefault('comment', '#')
 
     # infer `sep` and read the CSV header (dataframe columns), as some args of
     # `read_csv` (e.g. `parse_dates`) cannot contain columns not present in the flatfile
@@ -120,7 +174,7 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
     if sep is None:
         kwargs.pop('sep')  # if it was None needs removal
         for _sep in [';', ',', r'\s+']:
-            _header = pd.read_csv(filepath_or_buffer, nrows=0, **kwargs).columns  # noqa
+            _header = pd.read_csv(filepath_or_buffer, nrows=0, sep=_sep, **kwargs).columns  # noqa
             if len(_header) > len(header):
                 sep = _sep
                 header = _header

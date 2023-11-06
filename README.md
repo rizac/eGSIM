@@ -322,28 +322,26 @@ made available in eGSIM when [repopulating the db](#Repopulate-the-DB)
 ## Add new predefined flatfiles
 
 - Add the file (CSV or zipped CSV) in
-  `managements/commands/data/predefined_flatfiles`. 
-  Do **not** commit files too big (**max few tens of Mb**). When zipping in 
-  macOS you will probably need to
-  [exclude or remove (after zipping) the ___MACOSX folder](https://stackoverflow.com/q/10924236)
-  
+  `managements/commands/data/flatfiles`. 
+  If the file is too big try to zip it. 
+  **If it is more than few tens of Mb, then do not commit it** (explain in 
+  the section `details` - see below - how to get the source file). 
+  When zipping in macOS you will probably need to
+  [exclude or remove (after zipping) the MACOSX folder](https://stackoverflow.com/q/10924236)~~
+- 
 - Implement a new `FlatfileParser` class in 
-  `management/commands/flatfile_parsers.py`
+  `management/commands/flatfile_parsers`. Take another parser, copy it 
+  and follow instructions.
   The parser goal is to read the file and convert it into a harmonized HDF 
-  table (see ESM parser in the Python file)
+  table
 
 - Add binding file -> parser in the Python `dict`:
   `management.commands._egsim_flatfiles.Command.PARSER`
 
-- (Optional) Add the file data source 
-  in `management/commands/data/data_sources.yaml`, e.g. data reference, url, 
-  (see examples in the YAML file). 
-
-  *NOTE: In the data source you can also set the 
-  data name, i.e. a unique, usually short alphanumeric string that will 
-  identify the flatfile in user requests. If no 
-  data source or name is provided, the public name will be the file name 
-  before the first ".".*
+- (Optional) Add the file refs 
+  in `management/commands/data/references.yaml`, e.g. reference, url, the 
+  file name that will be used in the API (if missing, defaults to the file 
+  name without extension)
 
 - Repopulate all eGSIM tables (command `egsim_init`)
 
@@ -370,24 +368,18 @@ Implemented flatfiles sources (click on the items below to expand)
 
 ## Add new regionalization
 
-- Add two files *with the same basename* and extensions 
-  - .geojson (regionalization, aka regions collection) and
-  - .json (region -> gsim mapping)
+- Add two files *with the same basename* and extensions in 
+  `managements/commands/data/regionalization_files`:
+
+  - <name>.geojson (regionalization, aka regions collection) and
+  - <name>.json (region -> gsim mapping)
   
-  in `managements/commands/data/regionalization_files`. Usually, these files 
-  are copied and pasted from the `shakyground2` project (see GFZ gitlab), but 
-  if you neeed to implement your own see examples in the given directory 
-  or ask the developers
+  See already implemented files for an example
 
-- (Optional) Add the file data source 
-  in `management/commands/data/data_sources.yaml`, e.g. data reference, url, 
-  (see examples in the YAML file). 
-
-  *NOTE: In the data source you can also set the 
-  data name, i.e. a unique, usually short alphanumeric string that will 
-  identify the regionalization in user requests. If no 
-  data source or name is provided, the public name will be the file name 
-  before the first ".".*
+- (Optional) Add the file refs 
+  in `management/commands/data/references.yaml`, e.g. reference, url, the 
+  file name that will be used in the API (if missing, defaults to the file 
+  name without extension)
 
 - Repopulate all eGSIM tables (command `egsim_init`)
 

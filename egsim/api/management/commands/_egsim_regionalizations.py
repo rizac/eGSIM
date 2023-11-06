@@ -26,7 +26,7 @@ from . import EgsimBaseCommand
 from ... import models
 
 
-SRC_DIR = EgsimBaseCommand.data_path('regionalization_files')
+SRC_DIR = EgsimBaseCommand.data_path('regionalizations')
 
 
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
