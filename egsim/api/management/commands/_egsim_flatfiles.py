@@ -7,31 +7,19 @@ Created on 11 Apr 2019
 
 @author: riccardo
 """
-from os.path import join, abspath, isfile
-
-from django.core.management.base import CommandError
-
+from os.path import join, abspath
 
 from egsim.smtk.flatfile.columns import load_from_yaml
 from egsim.smtk.registry import registered_imts
-from .flatfile_parsers import esm2018
 from . import EgsimBaseCommand
 from ... import models
-
-
-SRC_DIR = EgsimBaseCommand.data_path('flatfiles')
+from ...data.flatfiles import get_flatfiles, REFS
 
 
 class Command(EgsimBaseCommand):
     """Command to convert predefined flatfiles (usually in CSV format) into HDF
     files suitable for the eGSIM API
     """
-
-    # flatfiles abs paths (csv or zipped csv) -> :parser function
-    PARSERS = {
-        join(SRC_DIR, "ESM_flatfile_2018_SA.csv.zip"): esm2018.parse,
-        # join(SRC_DIR, "residual_tests_esm_data.original.csv"): EsmFlatfileParser
-    }
 
     # As help, use the module docstring (until the first empty line):
     help = globals()['__doc__'].split("\n\n")[0]
@@ -44,22 +32,13 @@ class Command(EgsimBaseCommand):
         self.empty_db_table(models.Flatfile)
 
         destdir = self.output_dir('flatfiles')
-
-        parsers = {}
-        for fullpath, parser in self.PARSERS.items():
-            if not isfile(fullpath):
-                raise CommandError(f'File does not exist: "{fullpath}".\nPlease '
-                                   f'check `{__name__}.{__class__.__name__}.PARSERS`')
-            parsers[fullpath] = parser
-
         ffcolumns = set(load_from_yaml())
         imts = set(registered_imts)
         numfiles = 0
-        for filepath, parser_function in parsers.items():
-            dfr = parser_function(filepath)
-            ref = self.get_ref(filepath)
+        for name, dfr in get_flatfiles():
+            ref = REFS.get(name, {})
             # ff name: use str.split to remove all extensions (e.g. ".csv.zip"):
-            name = ref['name']
+            ref['name'] = name
             destfile = abspath(join(destdir, name + '.hdf'))
             self.printinfo(f' - Saving flatfile. Database name: "{name}", '
                            f'file: "{destfile}"')

@@ -116,7 +116,7 @@ extra_dtype = {
 }
 
 
-def post_process(flatfile: pd.Dataframe) -> pd.DataFrame:
+def post_process(flatfile: pd.DataFrame) -> pd.DataFrame:
     """Defines post process on an already parsed flatfile, just before returning it.
     Implement here any complex operation that are not possible with eGSIM
     `parse_flatfile`
