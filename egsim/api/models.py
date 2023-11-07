@@ -5,8 +5,6 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
-from typing import Any
-
 from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
                               Index, URLField, Manager, QuerySet)
 from django.db.models.options import Options
@@ -102,8 +100,11 @@ class Flatfile(DataFile, Citable):
     """Class handling flatfiles stored in the file system
     (predefined flatfiles)
     """
+    pass
+
 
 class Regionalization(DataFile, Citable):
     """Class handling flatfiles stored in the file system
     (predefined flatfiles)
     """
+    pass

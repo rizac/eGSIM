@@ -1,6 +1,6 @@
 """
-Module for parsing CSV flatfiles into standard eGSIM flatfiles
-`dict`s. See `get_flatfiles` for usage
+Module parsing CSV flatfiles in `sources` into standardized pandas DataFrame(s).
+See `get_flatfiles` for usage
 
 Created on 11 Apr 2019
 
@@ -15,24 +15,23 @@ from .parsers import esm2018
 
 
 def get_flatfiles() -> Iterable[tuple[str, pd.DataFrame]]:
-    """Yield tuples of `(flatfile_name, flatfile_data)`.
+    """Yield flatfiles stored in this package
 
-    :return: a tuple of the form `(flatfile_metadata, flatfile_data)`
-        where the first item is a dict holding the flatfile metadata
-        (e.g., URL, DOI) and has at least the key 'name' (the publicly exposed
-        flatfile name), and `flatfile_data` is the flatfile data (pandas dataframe)
+    :return: a generator yielding tuples of the form `name:str, flatfile:DataFrame`
+        where the first item is the flatfile name and the second
+        is the `DataFrame` representing the flatfile
     """
-    datadir = join(dirname(__file__), 'sources')
-    data = (
-        ('esm2018', join(datadir, "ESM_flatfile_2018_SA.csv.zip"), esm2018.parse),
-        # join(SRC_DIR, "residual_tests_esm_data.original.csv"): EsmFlatfileParser
-    )
-    for name, flatfile_path, parser_function in data:
-        yield name, parser_function(flatfile_path)
+    for name, data in DATA.items():
+        yield name, data['parser'](data['sources'][0])
 
 
-REFS = {
+datadir = join(dirname(__file__), 'sources')
+
+
+DATA = {
     'esm2018': {
+        'sources': [join(datadir, "ESM_flatfile_2018_SA.csv.zip")],
+        "parser": esm2018.parse,
         'display_name': "Engineering strong-motion flat-file 2018",
         'url': "https://esm-db.eu/#/products/flat_file",
         'license': "Creative Commons Attribution-NonCommercial 4.0 International "

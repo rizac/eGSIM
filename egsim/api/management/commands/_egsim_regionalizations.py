@@ -19,7 +19,7 @@ from django.core.management import CommandError
 
 from . import EgsimBaseCommand
 from ... import models
-from ...data.regionalizations import get_regionalizations, REFS
+from ...data.regionalizations import get_regionalizations, DATA
 
 
 class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
@@ -38,24 +38,27 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
-        self.printinfo('Populating the database with Regionalization data:')
+        self.printinfo('Parsing Regionalizations from sources:')
         self.empty_db_table(models.Regionalization)
 
         destdir = self.output_dir('regionalizations')
 
         for name, regionalization in get_regionalizations():
-            refs = REFS.get('name', {})
-            refs['name'] = name
-            self.printinfo(f'  Regionalization "{name}":')
-            try:
-                filepath = join(destdir, name) + ".geo.json"
-                with open(filepath, 'w') as _:
-                    json.dump(regionalization, _, separators=(',', ':'))
-                models.Regionalization.objects.create(filepath=filepath, **refs)
-
-            except Exception as exc:
-                raise CommandError(exc)
+            filepath = join(destdir, name) + ".geo.json"
+            with open(filepath, 'w') as _:
+                json.dump(regionalization, _, separators=(',', ':'))
+            # store flatfile refs, if any:
+            ref_keys = set(DATA.get(name, {})) & \
+                set(f.name for f in models.Citable._meta.get_fields())  # noqa
+            refs = {f: DATA[name][f] for f in ref_keys}
+            models.Regionalization.objects.create(name=name, filepath=filepath,
+                                                  **refs)
+            self.printinfo(f'  Regionalization "{name}" ({filepath}), {len(regionalization)} region(s):')
+            for region, val in regionalization.items():
+                self.printinfo(f"    {region}: "
+                               f"{len(val['properties']['models'])} model(s), "
+                               f"geometry type: {val['geometry']['type']}")
 
         saved_regs = models.Regionalization.objects.count()
         if saved_regs:
-            self.printsuccess(f'{saved_regs} regionalization(s) saved to database')
+            self.printsuccess(f'  {saved_regs} regionalization(s) saved to {destdir}')

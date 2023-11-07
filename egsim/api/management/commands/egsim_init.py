@@ -81,10 +81,13 @@ class Command(EgsimBaseCommand):
 
     def handle(self, *args, **options):
         """Execute the command"""
+
         self.printinfo('')
         self.printinfo('Empty and populate the eGSIM database')
         self.printinfo('Remember that you can always inspect the database on the '
                        'browser via the Django admin panel (see README file for info)')
+        self.printinfo('')
+
         try:
             call_command('flush', *args, **options)
         except DatabaseError as db_err:
@@ -96,5 +99,5 @@ class Command(EgsimBaseCommand):
 
         options.pop('interactive', None)
         for cmd in SUBCOMMANDS:
-            self.printinfo('')
             call_command(cmd, *args, **options)
+            self.printinfo('')
