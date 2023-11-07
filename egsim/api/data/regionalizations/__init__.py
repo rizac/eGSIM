@@ -1,6 +1,8 @@
 """
-Module for parsing regionalization files in source_data into regionalization
-`dict`s. See `get_regionalizations` for usage
+Module parsing regionalization files in `sources` into a standardized `dict`
+of region:str mapped to its geoJSON:dict object. The models associated to a
+region can be retrieved in the ["properties"]["models'].
+See `get_regionalizations` for usage
 
 Created on 7 Dec 2020
 
@@ -9,8 +11,7 @@ Created on 7 Dec 2020
 import warnings
 
 from collections.abc import Iterable
-from os import listdir
-from os.path import abspath, splitext, join, isfile, dirname
+from os.path import join, dirname
 from typing import Any, Union
 
 import json
@@ -23,27 +24,34 @@ from egsim.smtk import registered_gsims
 
 
 def get_regionalizations() -> Iterable[str, dict[str, dict[str, Any]]]:
-    """Yield tuples of `(regionalization_metadata, regionalization_data)`.
-    See `source_data` dir and global var `REFS` for details
+    """Yield regionalizations stored in this package
 
-    :return: a tuple of the form `(regionalization_metadata, regionalization_data)`
-        where the first item is a dict holding the regionalization metadata
-        (e.g., URL, DOI) and has at least the key 'name' (the publicly exposed
-        regionalization name), and `regionalization_data` is the `dict`
-        returned from `get_regionalization` (see docstring for details)
+    :return: a generator yielding tuples of the form `name:str, regionalization:dict`
+        where the first item is the regionalization name and the second
+        is the `dict` of the form (see `get_regionalization` for details):
+        ```
+        {
+            "<region>": {
+                "type": "Feature",
+                "geometry":dict,  # geoJSON geometry
+                "properties":dict {
+                    "models":list[str]  # the list of region-selected models
+                },
+            ...
+        }
+        ```
     """
-    datadir = join(dirname(__file__), 'sources')
-    data = [
-        (name, join(datadir, f'{name}.geo.json'), join(datadir, f'{name}.json'))
-        for name in ('share', 'eshm20', 'germany', 'global_stable',
-                     'global_volcanic')
-    ]
-    for name, geometries_file, mapping_file in data:
-        yield name, get_regionalization(geometries_file, mapping_file)
+    for name, data in DATA.items():
+        yield name, get_regionalization(*data['sources'])
 
 
-REFS = {
-    'share':{
+datadir = join(dirname(__file__), 'sources')
+
+
+DATA = {
+    'share': {
+        'sources': [join(datadir, 'share.geo.json'),
+                    join(datadir, 'share.json')],
         'display_name': "Seismic Hazard Harmonization in Europe (SHARE)",
         'url': "http://hazard.efehr.org/en/Documentation/specific-hazard-models/"
                "europe/overview/seismogenic-sources/",
@@ -58,6 +66,22 @@ REFS = {
                     "A. Rovida, Seismic Hazard Harmonization in Europe (SHARE): "
                     "Online Data Resource, doi: 10.12686/SED-00000001-SHARE, 2013.",
         "doi": "10.12686/SED-00000001-SHARE"
+    },
+    'eshm20': {
+        'sources': [join(datadir, 'eshm20.geo.json'),
+                    join(datadir, 'eshm20.json')],
+    },
+    'germany': {
+        'sources': [join(datadir, 'germany.geo.json'),
+                    join(datadir, 'germany.json')],
+    },
+    'global_stable': {
+        'sources': [join(datadir, 'global_stable.geo.json'),
+                    join(datadir, 'global_stable.json')],
+    },
+    'global_volcanic': {
+        'sources': [join(datadir, 'global_volcanic.geo.json'),
+                    join(datadir, 'global_volcanic.json')],
     }
 }
 

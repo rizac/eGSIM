@@ -13,7 +13,7 @@ from egsim.smtk.flatfile.columns import load_from_yaml
 from egsim.smtk.registry import registered_imts
 from . import EgsimBaseCommand
 from ... import models
-from ...data.flatfiles import get_flatfiles, REFS
+from ...data.flatfiles import get_flatfiles, DATA
 
 
 class Command(EgsimBaseCommand):
@@ -27,8 +27,7 @@ class Command(EgsimBaseCommand):
     def handle(self, *args, **options):
         """Parse each pre-defined flatfile"""
 
-        self.printinfo('Creating pre-defined Flatfiles and populating the database '
-                       'with their metadata:')
+        self.printinfo('Parsing Flatfiles from sources:')
         self.empty_db_table(models.Flatfile)
 
         destdir = self.output_dir('flatfiles')
@@ -36,18 +35,17 @@ class Command(EgsimBaseCommand):
         imts = set(registered_imts)
         numfiles = 0
         for name, dfr in get_flatfiles():
-            ref = REFS.get(name, {})
+            ref = DATA.get(name, {})
             # ff name: use str.split to remove all extensions (e.g. ".csv.zip"):
             ref['name'] = name
             destfile = abspath(join(destdir, name + '.hdf'))
-            self.printinfo(f' - Saving flatfile. Database name: "{name}", '
-                           f'file: "{destfile}"')
             dfr.to_hdf(destfile, key=name, format='table', mode='w')
             numfiles += 1
+            self.printinfo(f'  Flatfile "{name}" ({destfile})')
             # print some stats:
             cols, metadata_cols, imt_cols_no_sa, imt_cols_sa, unknown_cols = \
                 self.get_stats(dfr, ffcolumns, imts)
-            info_str = (f'   Flatfile columns: {len(cols)} total, '
+            info_str = (f'    Columns: {len(cols)} total, '
                         f'{len(metadata_cols)} metadata, '
                         f'{len(imt_cols_no_sa) + len(imt_cols_sa)} IMTs '
                         f'({len(imt_cols_sa)} SA periods), '
@@ -57,10 +55,13 @@ class Command(EgsimBaseCommand):
             self.printinfo(info_str)
             if unknown_cols:
                 self.printinfo(f"   {', '.join(sorted(unknown_cols))}")
-            # store flatfile metadata:
-            models.Flatfile.objects.create(**ref, filepath=destfile)
+            # store flatfile refs, if any:
+            ref_keys = set(DATA.get(name, {})) & \
+                set(f.name for f in models.Citable._meta.get_fields())  # noqa
+            refs = {f : DATA[name][f] for f in ref_keys}
+            models.Flatfile.objects.create(name=name, filepath=destfile, **refs)
 
-        self.printsuccess(f'{numfiles} flatfile(s) created in "{destdir}"')
+        self.printsuccess(f'{numfiles} flatfile(s) saved to {destdir}')
 
     @staticmethod
     def get_stats(flatfile_dataframe, db_ff_columns: set[str], db_imts: set[str]):
