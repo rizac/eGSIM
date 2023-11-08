@@ -12,11 +12,11 @@ from urllib.parse import quote as urlquote
 import yaml
 from shapely.geometry import Polygon, Point
 from django.core.exceptions import ValidationError
-from django.forms import Form
+from django.forms import Form, ModelChoiceField
 from django.forms.renderers import BaseRenderer
 from django.forms.utils import ErrorDict
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
-from django.forms.fields import Field, ChoiceField, FloatField, MultipleChoiceField
+from django.forms.fields import Field, ChoiceField, FloatField
 
 from egsim.api import models
 from egsim.api.forms.fields import (GsimField, ImtField, NArrayField,
@@ -249,7 +249,6 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             err_param_names = sorted(errors_dict.keys())
             if err_param_names:
                 msg += f'. Problems found in: {", ".join(err_param_names)}'
-            msg += ". See response data for details"
         return {
             'message': msg,
             'errors': errors
@@ -367,10 +366,6 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         return str(obj)
 
 
-def _get_regionalizations() -> Iterable[tuple[str, str]]:
-    return [(_.name, str(_)) for _ in models.Regionalization.objects.all()]
-
-
 class SHSRForm(EgsimBaseForm):
     """Base class for all Form accepting a list of models in form of location
     (lat lon) and optional list of seismic hazard source regionalizations (SHSR)"""
@@ -386,37 +381,36 @@ class SHSRForm(EgsimBaseForm):
                           required=False)
     longitude = FloatField(label='Longitude', min_value=-180., max_value=180.,
                            required=False)
-    regionalization = MultipleChoiceField(choices=_get_regionalizations,
-                                          label='The Seimsic Hazard '
-                                                 'Source Regionalizations '
-                                                 'to use',
-                                          required=False)
+    regionalization = ModelChoiceField(queryset=models.Regionalization.objects,
+                                to_field_name="name", label='Regionalization',
+                                empty_label=None, required=False)
 
     @classmethod
     def get_regioselected_models(cls, cleaned_data) -> set[str]:
+        ret = set()
         lon = cleaned_data.get('longitude', None)
         lat = cleaned_data.get('latitude', None)
         if lat is None or lon is None:
-            return cleaned_data
-        fields = ('gsim__name', 'regionalization__name', 'geometry')
-        qry = models.GsimRegion.objects.\
-            select_related('gsim', 'regionalization').\
-            only(*fields).values_list(*fields)
-        rgnz = cleaned_data['regionalization'] or []
-        if rgnz:
-            qry = qry.filter(regionalization__name__in=rgnz)
-        gsims = set()
-        point = Point(lon, lat)
-        for gsim_name, regionalization_name, geometry in qry.all():
-            if gsim_name in gsims:
-                continue
-            type, coords = geometry['type'], geometry['coordinates']
-            for coord in coords if type == 'MultiPolygon' else [coords]:
-                polygon = Polygon((tuple(l) for l in coord[0]))
-                if polygon.contains(point):
-                    gsims.add(gsim_name)
-                    break
-        return gsims
+            return ret
+        for dic in models.Regionalization.data(cleaned_data.get('regionalization', None)):
+            pass
+        return ret
+        # namez = set(models.Regionalization.names)
+        # if cleaned_data.get('regionalization', None):
+        #     namez &= set(cleaned_data['regionalization'])
+        #
+        # gsims = set()
+        # point = Point(lon, lat)
+        # for name in namez:
+        #     if gsim_name in gsims:
+        #         continue
+        #     type, coords = geometry['type'], geometry['coordinates']
+        #     for coord in coords if type == 'MultiPolygon' else [coords]:
+        #         polygon = Polygon((tuple(l) for l in coord[0]))
+        #         if polygon.contains(point):
+        #             gsims.add(gsim_name)
+        #             break
+        # return gsims
 
 
 class GsimImtForm(SHSRForm):

@@ -5,6 +5,11 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
+from typing import Optional
+import json
+
+from collections.abc import Iterable
+
 from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
                               Index, URLField, Manager, QuerySet)
 from django.db.models.options import Options
@@ -42,11 +47,6 @@ class EgsimDbModel(DjangoDbModel):
         hidden rows"""
         return self.objects.only('name').filter(hidden=False).\
             values_list('name', flat=True)
-
-    def hidden_elements(self, names: list[str]) -> QuerySet[str]:
-        """Return which of the given name(s) is hidden"""
-        return self.objects.filter(name__in=names).filter(hidden=True).\
-            only('name').values_list('name', flat=True)
 
     def __str__(self):
         return self.name
@@ -119,3 +119,12 @@ class Flatfile(MediaFile, Reference):
 
 class Regionalization(MediaFile, Reference):
     """Class handling regionalizations stored in the file system"""
+
+    @classmethod
+    def data(cls, regionalizations: Optional[Iterable[str]] = None) -> Iterable[dict]:
+        query = cls.objects.filter(hidden=False)
+        if regionalizations:
+            query = query.filter(name__in=regionalizations)
+        for obj in query.only('media_root_path').all():
+            with open(obj.filepath, 'r') as _:
+                yield json.load(_)

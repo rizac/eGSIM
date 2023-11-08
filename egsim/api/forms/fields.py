@@ -287,7 +287,7 @@ class GsimField(MultipleChoiceField):
             raise ValidationError(
                 self.error_messages["invalid_choice"],
                 code="invalid_choice",
-                params={"value": str(err)},
+                params={"value": ", ".join(err.inputs)},
             )
 
 
@@ -301,7 +301,7 @@ class ImtField(MultipleChoiceField):
             raise ValidationError(
                 self.error_messages["invalid_choice"],
                 code="invalid_choice",
-                params={"value": str(err)},
+                params={"value": ", ".join(err.inputs)},
             )
 
 
