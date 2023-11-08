@@ -1,5 +1,5 @@
 """
-eGSIM management commnand. See `Command.help` for details
+eGSIM management command. See `Command.help` for details
 """
 import warnings
 

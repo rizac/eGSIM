@@ -1,5 +1,5 @@
 """
-eGSIM management commnand. See `Command.help` for details
+eGSIM management command. See `Command.help` for details
 """
 from os.path import join, dirname, isdir
 from os import makedirs
