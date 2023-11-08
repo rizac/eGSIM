@@ -5,17 +5,14 @@ internal data in JSON and geoJSON format.
 A regionalization is a set of Geographic regions with coordinates defined by
 one or more Polygons, and a mapping is a list of GSIMs selected for a region
 
-See package shakyground2 (ask maintainers) and copy its regionalization_files
-folder in data. then re-run the command
-
 Created on 7 Dec 2020
 
 @author: riccardo
 """
-from os.path import join
+from os.path import join, dirname, isdir
+from os import makedirs
 import json
-
-from django.core.management import CommandError
+import warnings
 
 from . import EgsimBaseCommand
 from ... import models
@@ -40,25 +37,38 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
         """
         self.printinfo('Parsing Regionalizations from sources:')
         self.empty_db_table(models.Regionalization)
-
-        destdir = self.output_dir('regionalizations')
-
+        destdir = 'regionalizations'
+        # redirect warning to self.printsoftwarn:
+        showwarning = warnings.showwarning
+        warnings.showwarning = lambda m, *k, **kw: self.printwarn(m)
+        # warnings.simplefilter("ignore")
         for name, regionalization in get_regionalizations():
-            filepath = join(destdir, name) + ".geo.json"
+            # save object metadata to db:
+            relpath = join(destdir, name) + ".geo.json"
+            # store object refs, if any:
+            ref_keys = set(DATA.get(name, {})) & \
+                       set(f.name for f in models.Reference._meta.get_fields())  # noqa
+            refs = {f: DATA[name][f] for f in ref_keys}
+            db_obj = models.Regionalization.objects.create(name=name,
+                                                           media_root_path=relpath,
+                                                           **refs)
+            # save object to disk:
+            filepath = db_obj.filepath  # abspath
+            if not isdir(dirname(filepath)):
+                makedirs(dirname(filepath))
             with open(filepath, 'w') as _:
                 json.dump(regionalization, _, separators=(',', ':'))
-            # store flatfile refs, if any:
-            ref_keys = set(DATA.get(name, {})) & \
-                set(f.name for f in models.Citable._meta.get_fields())  # noqa
-            refs = {f: DATA[name][f] for f in ref_keys}
-            models.Regionalization.objects.create(name=name, filepath=filepath,
-                                                  **refs)
-            self.printinfo(f'  Regionalization "{name}" ({filepath}), {len(regionalization)} region(s):')
+
+            self.printinfo(f'  Regionalization "{name}" ({filepath}), '
+                           f'{len(regionalization)} region(s):')
             for region, val in regionalization.items():
                 self.printinfo(f"    {region}: "
                                f"{len(val['properties']['models'])} model(s), "
                                f"geometry type: {val['geometry']['type']}")
 
+
         saved_regs = models.Regionalization.objects.count()
         if saved_regs:
-            self.printsuccess(f'  {saved_regs} regionalization(s) saved to {destdir}')
+            self.printsuccess(f'{saved_regs} regionalization(s) saved to {destdir}')
+        # restore default func
+        warnings.showwarning = showwarning

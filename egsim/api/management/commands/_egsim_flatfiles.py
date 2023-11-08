@@ -7,7 +7,8 @@ Created on 11 Apr 2019
 
 @author: riccardo
 """
-from os.path import join, abspath
+from os.path import join, dirname, isdir
+from os import makedirs
 
 from egsim.smtk.flatfile.columns import load_from_yaml
 from egsim.smtk.registry import registered_imts
@@ -30,18 +31,27 @@ class Command(EgsimBaseCommand):
         self.printinfo('Parsing Flatfiles from sources:')
         self.empty_db_table(models.Flatfile)
 
-        destdir = self.output_dir('flatfiles')
+        destdir = 'flatfiles'
         ffcolumns = set(load_from_yaml())
         imts = set(registered_imts)
         numfiles = 0
         for name, dfr in get_flatfiles():
-            ref = DATA.get(name, {})
-            # ff name: use str.split to remove all extensions (e.g. ".csv.zip"):
-            ref['name'] = name
-            destfile = abspath(join(destdir, name + '.hdf'))
-            dfr.to_hdf(destfile, key=name, format='table', mode='w')
+            # save object metadata to db:
+            relpath = join(destdir, name) + '.hdf'
+            # store object refs, if any:
+            ref_keys = set(DATA.get(name, {})) & \
+                       set(f.name for f in models.Reference._meta.get_fields())  # noqa
+            refs = {f: DATA[name][f] for f in ref_keys}
+            db_obj = models.Flatfile.objects.create(name=name,
+                                                    media_root_path=relpath,
+                                                    **refs)
+            # store object to disk:
+            filepath = db_obj.filepath  # abspath
+            if not isdir(dirname(filepath)):
+                makedirs(dirname(filepath))
+            dfr.to_hdf(filepath, key=name, format='table', mode='w')
             numfiles += 1
-            self.printinfo(f'  Flatfile "{name}" ({destfile})')
+            self.printinfo(f'  Flatfile "{name}" ({filepath})')
             # print some stats:
             cols, metadata_cols, imt_cols_no_sa, imt_cols_sa, unknown_cols = \
                 self.get_stats(dfr, ffcolumns, imts)
@@ -55,11 +65,7 @@ class Command(EgsimBaseCommand):
             self.printinfo(info_str)
             if unknown_cols:
                 self.printinfo(f"   {', '.join(sorted(unknown_cols))}")
-            # store flatfile refs, if any:
-            ref_keys = set(DATA.get(name, {})) & \
-                set(f.name for f in models.Citable._meta.get_fields())  # noqa
-            refs = {f : DATA[name][f] for f in ref_keys}
-            models.Flatfile.objects.create(name=name, filepath=destfile, **refs)
+
 
         self.printsuccess(f'{numfiles} flatfile(s) saved to {destdir}')
 

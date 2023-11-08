@@ -10,7 +10,7 @@
 ## Introduction and basic usage
 
 This directory contains the user-defined Django-admin
-command `egsim-init`. 
+command `egsim_init`. 
 
 Django will register an admin command for each Python 
 module in this directory ("management/commands") whose 

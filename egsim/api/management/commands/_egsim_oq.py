@@ -45,15 +45,12 @@ class Command(EgsimBaseCommand):
                     warnings.simplefilter('ignore')
                 else:
                     warnings.simplefilter('error')
-                try:
-                    # try to see if we can initialize it:
-                    ok += write_model(name, model_cls)
 
-                except Exception as exc:
-                    raise CommandError(f'Unexpected exception in model {name}: {exc}')
+                # try to see if we can initialize it:
+                ok += write_model(name, model_cls)
 
         discarded = len(registered_gsims) - ok
-        self.printinfo(f'Models saved: {ok}, discarded: {discarded}')
+        self.printsuccess(f'Models saved: {ok}, discarded: {discarded}')
 
 
 def write_model(name, cls):
