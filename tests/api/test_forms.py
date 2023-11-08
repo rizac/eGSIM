@@ -42,7 +42,8 @@ class Test:
             'errors': [
                 {
                     'location': 'model',
-                    'message': 'Value not found or misspelled: BindiEtAl2011t',
+                    'message': 'Value not found or misspelled: BindiEtAl2011t, '
+                               'BindiEtAl2014RJb',
                     'reason': 'invalid_choice'
                 }
             ]

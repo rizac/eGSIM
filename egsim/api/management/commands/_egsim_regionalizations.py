@@ -34,36 +34,35 @@ class Command(BaseCommand):
 
         destdir = 'regionalizations'
         # redirect warning to self.printsoftwarn:
-        showwarning = warnings.showwarning
-        warnings.showwarning = lambda m, *k, **kw: self.stdout.write(self.style.WARNING(m))  # noqa
-        # warnings.simplefilter("ignore")
-        for name, regionalization in get_regionalizations():
-            # save object metadata to db:
-            relpath = join(destdir, name) + ".geo.json"
-            # store object refs, if any:
-            ref_keys = set(DATA.get(name, {})) & \
-                       set(f.name for f in models.Reference._meta.get_fields())  # noqa
-            refs = {f: DATA[name][f] for f in ref_keys}
-            db_obj = models.Regionalization.objects.create(name=name,
-                                                           media_root_path=relpath,
-                                                           **refs)
-            # save object to disk:
-            filepath = db_obj.filepath  # abspath
-            if not isdir(dirname(filepath)):
-                makedirs(dirname(filepath))
-            with open(filepath, 'w') as _:
-                json.dump(regionalization, _, separators=(',', ':'))
+        with warnings.catch_warnings():
+            warnings.showwarning = \
+                lambda m, *k, **kw: self.stdout.write(self.style.WARNING(m))
+            # warnings.simplefilter("ignore")
+            for name, regionalization in get_regionalizations():
+                # save object metadata to db:
+                relpath = join(destdir, name) + ".geo.json"
+                # store object refs, if any:
+                ref_keys = set(DATA.get(name, {})) & \
+                           set(f.name for f in models.Reference._meta.get_fields())  # noqa
+                refs = {f: DATA[name][f] for f in ref_keys}
+                db_obj = models.Regionalization.objects.create(name=name,
+                                                               media_root_path=relpath,
+                                                               **refs)
+                # save object to disk:
+                filepath = db_obj.filepath  # abspath
+                if not isdir(dirname(filepath)):
+                    makedirs(dirname(filepath))
+                with open(filepath, 'w') as _:
+                    json.dump(regionalization, _, separators=(',', ':'))
 
-            self.stdout.write(f'  Regionalization "{name}" ({filepath}), '
-                           f'{len(regionalization)} region(s):')
-            for region, val in regionalization.items():
-                self.stdout.write(f"    {region}: "
-                               f"{len(val['properties']['models'])} model(s), "
-                               f"geometry type: {val['geometry']['type']}")
+                self.stdout.write(f'  Regionalization "{name}" ({filepath}), '
+                               f'{len(regionalization)} region(s):')
+                for region, val in regionalization.items():
+                    self.stdout.write(f"    {region}: "
+                                   f"{len(val['properties']['models'])} model(s), "
+                                   f"geometry type: {val['geometry']['type']}")
 
-        saved_regs = models.Regionalization.objects.count()
-        if saved_regs:
-            self.stdout.write(self.style.SUCCESS(f'{saved_regs} regionalization(s) '
-                                                 f'saved to {destdir}'))
-        # restore default func
-        warnings.showwarning = showwarning
+            saved_regs = models.Regionalization.objects.count()
+            if saved_regs:
+                self.stdout.write(self.style.SUCCESS(f'{saved_regs} regionalization(s) '
+                                                     f'saved to {destdir}'))

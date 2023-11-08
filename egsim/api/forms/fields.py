@@ -1,12 +1,10 @@
 """eGSIM Django Fields"""
 
 import re
-from fnmatch import translate
 from itertools import chain, repeat
 from typing import Collection, Any, Union, Sequence
 
 import numpy as np
-from openquake.hazardlib import imt
 from django.core.exceptions import ValidationError
 from django.forms.fields import Field, CharField, MultipleChoiceField
 
@@ -287,7 +285,7 @@ class GsimField(MultipleChoiceField):
             raise ValidationError(
                 self.error_messages["invalid_choice"],
                 code="invalid_choice",
-                params={"value": ", ".join(err.inputs)},
+                params={"value": str(err)},
             )
 
 
@@ -301,7 +299,7 @@ class ImtField(MultipleChoiceField):
             raise ValidationError(
                 self.error_messages["invalid_choice"],
                 code="invalid_choice",
-                params={"value": ", ".join(err.inputs)},
+                params={"value": str(err)},
             )
 
 
