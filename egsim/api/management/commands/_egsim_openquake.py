@@ -1,27 +1,19 @@
 """
-Populate the eGSIM database with all OpenQuake data
-
-This command is invoked by `egsim_init.py` and is currently hidden from Django
-(because of the leading underscore in the module name)
-
-Created on 6 Apr 2019
-
-@author: riccardo z. (rizac@github.com)
+eGSIM management commnand. See `Command.help` for details
 """
 import warnings
 
-from django.core.management import CommandError
+from django.core.management import CommandError, BaseCommand
 
 from egsim.smtk import registered_gsims, InvalidInput, gsim
-from . import EgsimBaseCommand
 from ... import models
 
 
-class Command(EgsimBaseCommand):
+class Command(BaseCommand):
     """Class implementing the command functionality"""
 
     # As help, use the module docstring (until the first empty line):
-    help = globals()['__doc__'].split("\n\n")[0]
+    help = """Populate the Database with all valid OpenQuake models"""
 
     def handle(self, *args, **options):
         """Executes the command
@@ -33,8 +25,10 @@ class Command(EgsimBaseCommand):
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
-        # populate db:
-        self.printinfo('Populating the database with OpenQuake models')
+        self.stdout.write('Populating the database with OpenQuake models')
+        models.Gsim.objects.all().delete()
+        if models.Gsim.objects.all().count():
+            raise CommandError('Table is not empty (deletion failed?), check the DB')
         ok = 0
         with warnings.catch_warnings():
             for name, model_cls in registered_gsims.items():
@@ -50,7 +44,8 @@ class Command(EgsimBaseCommand):
                 ok += write_model(name, model_cls)
 
         discarded = len(registered_gsims) - ok
-        self.printsuccess(f'Models saved: {ok}, discarded: {discarded}')
+        self.stdout.write(self.style.SUCCESS(f'Models saved: {ok}, '
+                                             f'discarded: {discarded}'))
 
 
 def write_model(name, cls):

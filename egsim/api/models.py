@@ -82,7 +82,7 @@ class Reference(DjangoDbModel):
         abstract = True
 
 
-class DataFile(EgsimDbModel):
+class MediaFile(EgsimDbModel):
     """Abstract class handling any data file in the MEDIA directory of eGSIM"""
     # for safety, do not store full file paths in the db (see `filepath` for details):
     media_root_path = TextField(unique=True, null=False,
@@ -113,13 +113,9 @@ class DataFile(EgsimDbModel):
         return f'{self.name} ({self.filepath})'
 
 
-class Flatfile(DataFile, Reference):
-    """Class handling flatfiles stored in the file system
-    (predefined flatfiles)
-    """
+class Flatfile(MediaFile, Reference):
+    """Class handling flatfiles stored in the file system"""
 
 
-class Regionalization(DataFile, Reference):
-    """Class handling flatfiles stored in the file system
-    (predefined flatfiles)
-    """
+class Regionalization(MediaFile, Reference):
+    """Class handling regionalizations stored in the file system"""
