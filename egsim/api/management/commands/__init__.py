@@ -1,10 +1,5 @@
-import os
-from os.path import abspath, join, dirname, isdir, splitext, basename
-import yaml
-
 from argparse import RawTextHelpFormatter
 
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 
@@ -13,45 +8,6 @@ class EgsimBaseCommand(BaseCommand):  # noqa
     utilities. All eGSIM commands should inherit from this class and implement,
     as usual the :meth:`handle` method
     """
-
-    @staticmethod
-    def data_path(*paths) -> str:
-        """Return the full absolute path to a data file. Same as:
-        ```
-        os.path.join("./data", *paths)
-        ```
-        :param paths: a series of paths relative to "./data"
-        """
-        return join(abspath(dirname(__file__)), 'data', *paths)
-
-    @staticmethod
-    def get_ref(datafile_path) -> dict:
-        """Return references (e.g., source, citation, links)
-        for the given data file. The returned dict has at least the key 'name'
-        (set to the file basename by default)
-        """
-        base_dir = EgsimBaseCommand.data_path()
-        with open(join(base_dir, 'references.yaml')) as _:
-            data_sources = yaml.safe_load(_)
-        ref = {}
-        datafile_abspath = abspath(datafile_path)
-        for path, data_source in data_sources.items():
-            if datafile_abspath == abspath(join(base_dir, path)):
-                ref = data_source
-                break
-        ref.setdefault('name', splitext(basename(datafile_abspath))[0])
-        return ref
-
-    def output_dir(self, name, root=settings.MEDIA_ROOT) -> str:
-        destdir = abspath(join(root, name))
-        if not isdir(destdir):
-            if not isdir(destdir):
-                self.printinfo(f'Creating directory {destdir}')
-                os.makedirs(destdir)
-            if not isdir(destdir):
-                raise CommandError(f"'{destdir}' does not exist and could not "
-                                   f"be created")
-        return destdir
 
     @staticmethod
     def empty_db_table(*models):
@@ -76,10 +32,6 @@ class EgsimBaseCommand(BaseCommand):  # noqa
 
     def printwarn(self, msg):
         """Shortcut for `self.stdout.write(self.style.ERROR(msg))`"""
-        self.stdout.write(self.style.ERROR(msg))
-
-    def printsoftwarn(self, msg):
-        """Shortcut for `self.stdout.write(self.style.WARNING(msg))`"""
         self.stdout.write(self.style.WARNING(msg))
 
     def printsuccess(self, msg):

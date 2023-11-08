@@ -136,7 +136,7 @@ def get_regionalization(geometries: Union[str, dict],
                 "models": model_names
             }
         }
-        unsupported_models = [m for m in model_names if _ not in registered_gsims]
+        unsupported_models = [m for m in model_names if m not in registered_gsims]
         if unsupported_models:
             warnings.warn(f'Region "{region_name}" is mapped to unsupported model(s): '
                           f'{unsupported_models}')

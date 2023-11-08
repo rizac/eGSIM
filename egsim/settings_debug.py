@@ -154,7 +154,7 @@ STATIC_ROOT = ''
 # STATICFILES_DIRS is used to include additional directories for collectstatic
 # to look for, and in development (debug=True) to search for static files
 # in *addition* to the default djangoproject/appname/static.
-# To keep things simple because we have just onedjango  project and one app
+# To keep things simple because we have just one django  project and one app
 # (both named 'egsim') we do not want to tie any static file to a particular app,
 # thus we adopt a very common approach: store static files under
 # 'djangoproject/static' folder, which has the only drawback that we have to
