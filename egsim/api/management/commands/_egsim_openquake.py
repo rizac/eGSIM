@@ -5,7 +5,7 @@ import warnings
 
 from django.core.management import CommandError, BaseCommand
 
-from egsim.smtk import registered_gsims, InvalidInput, gsim
+from egsim.smtk import registered_gsims, gsim
 from ... import models
 
 
@@ -56,6 +56,6 @@ def write_model(name, cls):
             unverified=cls.non_verified,
             adapted=cls.adapted,
             experimental=cls.experimental)
-    except InvalidInput:
+    except (TypeError, KeyError, IndexError, ValueError, AttributeError):
         return False
     return True

@@ -35,16 +35,25 @@ registered_imts:dict[str, Callable] = dict(_registered_imts())
 _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
 
 
-def gsim_name(gsim: GMPE) -> str:
+def gsim_name(gsim: Union[type[GMPE], GMPE]) -> str:
     """
     Returns the name of the GMPE given an instance of the class
     """
+    if isinstance(gsim, type) and issubclass(gsim, GMPE):  # is a class
+        return gsim.__name__
     name = str(gsim)
     # if name is "[" + gsim.__class__.__name__ + "]", return the class name:
     if name == f"[{gsim.__class__.__name__}]":
         return gsim.__class__.__name__
     # name is the TOML representation of gsim. Use _gsim_aliases to return the name:
     return _gsim_aliases[name]
+
+
+def imt_name(imtx: Union[Callable, imt_mod.IMT]) -> str:
+    if isinstance(imtx, imt_mod.IMT):
+        return repr(imtx)
+    # it's a callable (e.g. a function defined in the openquake `imt` module):
+    return imtx.__name__
 
 
 def sa_limits(gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, float], None]:

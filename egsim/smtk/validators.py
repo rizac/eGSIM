@@ -1,17 +1,17 @@
 """Validation functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
+from __future__ import annotations
+
 from typing import Union, Any
-from collections.abc import Iterable
+from collections.abc import Iterable, Callable
 import re
-import warnings
 
 import numpy as np
 from openquake.hazardlib.imt import IMT, from_string as imt_from_string
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.valid import gsim as valid_gsim
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
-from openquake.baselib.general import DeprecationWarning as OQDeprecationWarning
 
-from .registry import gsim_name, imts_defined_for, sa_limits
+from .registry import gsim_name, imts_defined_for, sa_limits, imt_name
 
 
 def harmonize_input_gsims(
@@ -31,12 +31,19 @@ def harmonize_input_gsims(
     :return: a dict of GSIM names (str) mapped to the associated GSIM. Names (dict
         keys) are sorted ascending
     """
+    errors = []
     output_gsims = {}
     for gs in gsims:
-        gsim_inst = gsim(gs)
-        if not isinstance(gs, str):
-            gs = gsim_name(gsim_inst)
-        output_gsims[gs] = gsim_inst
+        try:
+            gsim_inst = gsim(gs)
+            if not isinstance(gs, str):
+                gs = gsim_name(gsim_inst)
+            output_gsims[gs] = gsim_inst
+        except (TypeError, ValueError, IndexError, KeyError, FileNotFoundError,
+                OSError,AttributeError, DeprecationWarning) as _:
+            errors.append(gs)
+    if errors:
+        raise InvalidInput(*errors)
 
     return {k: output_gsims[k] for k in sorted(output_gsims)}
 
@@ -48,45 +55,30 @@ def gsim(gmm: Union[str, type[GMPE], GMPE], raise_deprecated=True) -> GMPE:
         returned). If str, it can also denote a GMPETable in the form
         "GMPETable(gmpe_table=filepath)"
     :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
-        (`egsim.smtk.OQDeprecationWarning`) will raise as normal exceptions
-    :raise: a `(TypeError, ValueError, FileNotFoundError, OSError) if name starts
-        with "GMPETable", otherwise (TypeError, IndexError, KeyError) otherwise. If
-        raise_deprecated is True (the default), it might also raise
-        `openquake.baselib.general.DeprecationWarning`
+        will raise (as normal Python  `DeprecationWarning`)
+    :raise: a `(TypeError, ValueError, FileNotFoundError, OSError, AttributeError)`
+        if name starts with "GMPETable", otherwise a
+        `(TypeError, IndexError, KeyError, ValueError, DeprecationWarning)`
+        (the last one only if `raise_deprecated` is True, the default)
     """
     if isinstance(gmm, type) and issubclass(gmm, GMPE):
-        try:
-            # try to init with no args:
-            gmm = gmm()
-        except Exception as exc:
-            raise InvalidInput(gmm, exc)
-    if isinstance(gmm, GMPE):
-        if raise_deprecated and gmm.superseded_by:
-            raise InvalidInput(gmm, OQDeprecationWarning())
-        return gmm
+        gmm = gsim(gmm.__name__)
     if isinstance(gmm, str):
         is_table = gmm.startswith('GMPETable')
-        if is_table:  # GMPETable
-            try:
-                filepath = re.match(r'^GMPETable\(([^)]+?)\)$', gmm).\
-                    group(1).split("=")[1]  # get table filename
-                return GMPETable(gmpe_table=filepath)
-            except (TypeError, ValueError, FileNotFoundError, OSError,
-                    AttributeError) as exc:
-                raise InvalidInput(gmm, exc)
-        elif not raise_deprecated:  # registered Gsims (relaxed: allow deprecated)
-            try:
-                return valid_gsim(gmm)
-            except (TypeError, IndexError, KeyError, ValueError) as exc:
-                raise InvalidInput(gmm, exc)
-        else:  # "normal" case: registered Gsims but raise DeprecationWarning
-            try:
-                with warnings.catch_warnings():
-                    warnings.filterwarnings('error', category=OQDeprecationWarning)
-                    return valid_gsim(gmm)
-            except (TypeError, IndexError, KeyError, ValueError,
-                    OQDeprecationWarning) as exc:
-                raise InvalidInput(gmm, exc)
+        if is_table:
+            # GMPETable. raises: TypeError, ValueError, FileNotFoundError, OSError,
+            # AttributeError
+            filepath = re.match(r'^GMPETable\(([^)]+?)\)$', gmm).\
+                group(1).split("=")[1]  # get table filename
+            return GMPETable(gmpe_table=filepath)
+        else:
+            # "normal" str case, calls valid_gsim which raises:
+            # TypeError, IndexError, KeyError, ValueError
+            gmm = valid_gsim(gmm)
+    if isinstance(gmm, GMPE):
+        if raise_deprecated and gmm.superseded_by:
+            raise DeprecationWarning(f'Use {gmm.superseded_by} instead')
+        return gmm
     raise TypeError(gmm)
 
 
@@ -95,18 +87,26 @@ def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IM
     dict[str, IMT] where each name is mapped to the relative instance. Dict keys will
     be sorted ascending comparing SAs using their period. E.g.: 'PGA' 'SA(2)' 'SA(10)'
     """
-    ret = (imt(imtx) for imtx in imts)
-    return {repr(i): i for i in sorted(ret, key=_imtkey)}
+    errors = []
+    ret = []
+    for imtx in imts:
+        try:
+            ret.append(imt(imtx))
+        except (TypeError, ValueError, KeyError) as exc:
+            errors.append(imtx)
+    if errors:
+        raise InvalidInput(*errors)
+    return {imt_name(i): i for i in sorted(ret, key=_imtkey)}
 
 
 def imt(arg: Union[float, str, IMT]) -> IMT:
-    """Return a IMT object from the given argument"""
+    """Return a IMT object from the given argument
+
+    :raise: TypeError, ValueError, KeyError
+    """
     if isinstance(arg, IMT):
         return arg
-    try:
-        return imt_from_string(str(arg))
-    except (TypeError, ValueError, KeyError) as exc:
-        raise InvalidInput(arg, exc)
+    return imt_from_string(str(arg))
 
 
 def _imtkey(imt_inst) -> tuple[str, float]:
@@ -114,7 +114,7 @@ def _imtkey(imt_inst) -> tuple[str, float]:
     if period is not None:
         return 'SA', period
     else:
-        return repr(imt_inst), -np.inf
+        return imt_name(imt_inst), -np.inf
 
 
 def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
@@ -126,7 +126,7 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
     """
     try:
         imt_inst = imt(obj)
-        if not repr(imt_inst).startswith('SA('):
+        if not imt_name(imt_inst).startswith('SA('):
             return None
     except InvalidInput:
         return None
@@ -139,7 +139,7 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
 
 def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
         tuple[dict[str, GMPE], dict[str, IMT]]:
-    """Harmonize and validate the input ground motion models (`gsims`)
+    """Validate the input ground motion models (`gsims`)
     and intensity measures types (`imts`) returning a tuple of two dicts
     `gsim, imts` with sorted ascending keys mapping each model / intensity
     measure name to the relative OpenQuake instance.
@@ -199,18 +199,28 @@ def invalid_sa_periods(gsim: GMPE, periods: Iterable[float, str, IMT]) \
 
 # Custom Exceptions:
 
+class InvalidInput(ValueError):
+    """InvalidInput(*inputs: Any) describes any invalid input (GSIM class, instance,
+    IMT, or any str representation of them"""
 
-class InvalidInput(Exception):
-    """Input initialization error. Accepts a list of arguments / exceptions
-    E.g. ("invalid_model_1", ValueError(...), "invalid_model_2", IndexError(...))
-    """
+    @property
+    def inputs(self) -> tuple[Any]:
+        return self.args
 
-    def __init__(self, *args_and_errors: [Any, Exception, ...]):
-        self.inputs = args_and_errors[::2]
-        self.errors = args_and_errors[1::2]
-        super().__init__(", ".join(f'{str(i)} ({e.__class__.__name__})'
-                         for i, e in zip(self.inputs, self.errors)))
-
+    def __str__(self):
+        z = []
+        for a in self.args:
+            if isinstance(a, GMPE):
+                a = gsim_name(a)
+            elif isinstance(a, IMT):
+                a = imt_name(a)
+            elif isinstance(a, (Callable, type)):
+                a = a.__name__
+            else:
+                a = str(a)
+            if a not in z:
+                z.append(a)
+        return ", ".join(z)
 
 class ImtIncompatibilityError(Exception):
     pass
