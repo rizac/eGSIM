@@ -1,35 +1,29 @@
 """
-Parse predefined flatfile(s) from the "commands/data" directory into
-flatfiles in HDF format suitable for residuals computation in eGSIM.
-The HDF flatfiles will be stored in: "{models.Flatfile.BASEDIR_PATH}"
-
-Created on 11 Apr 2019
-
-@author: riccardo
+eGSIM management commnand. See `Command.help` for details
 """
 from os.path import join, dirname, isdir
 from os import makedirs
 
+from django.core.management import BaseCommand, CommandError
+
 from egsim.smtk.flatfile.columns import load_from_yaml
 from egsim.smtk.registry import registered_imts
-from . import EgsimBaseCommand
 from ... import models
 from ...data.flatfiles import get_flatfiles, DATA
 
 
-class Command(EgsimBaseCommand):
-    """Command to convert predefined flatfiles (usually in CSV format) into HDF
-    files suitable for the eGSIM API
-    """
+class Command(BaseCommand):
 
-    # As help, use the module docstring (until the first empty line):
-    help = globals()['__doc__'].split("\n\n")[0]
+    help = "Parse CSV flatfiles stored in the API source data into standardized eGSIM " \
+           "flatfiles. Store each parsed flatfile as HDF in the API MEDIA directory " \
+           "and the flatfile metadata in the Database"
 
     def handle(self, *args, **options):
         """Parse each pre-defined flatfile"""
-
-        self.printinfo('Parsing Flatfiles from sources:')
-        self.empty_db_table(models.Flatfile)
+        self.stdout.write('Parsing Flatfiles from sources:')
+        models.Flatfile.objects.all().delete()
+        if models.Flatfile.objects.all().count():
+            raise CommandError('Table is not empty (deletion failed?), check the DB')
 
         destdir = 'flatfiles'
         ffcolumns = set(load_from_yaml())
@@ -51,7 +45,7 @@ class Command(EgsimBaseCommand):
                 makedirs(dirname(filepath))
             dfr.to_hdf(filepath, key=name, format='table', mode='w')
             numfiles += 1
-            self.printinfo(f'  Flatfile "{name}" ({filepath})')
+            self.stdout.write(f'  Flatfile "{name}" ({filepath})')
             # print some stats:
             cols, metadata_cols, imt_cols_no_sa, imt_cols_sa, unknown_cols = \
                 self.get_stats(dfr, ffcolumns, imts)
@@ -62,12 +56,12 @@ class Command(EgsimBaseCommand):
                         f'{len(unknown_cols)} user-defined')
             if unknown_cols:
                 info_str += ":"
-            self.printinfo(info_str)
+            self.stdout.write(info_str)
             if unknown_cols:
-                self.printinfo(f"   {', '.join(sorted(unknown_cols))}")
+                self.stdout.write(f"   {', '.join(sorted(unknown_cols))}")
 
-
-        self.printsuccess(f'{numfiles} flatfile(s) saved to {destdir}')
+        self.stdout.write(self.style.SUCCESS(f'{numfiles} flatfile(s) '
+                                             f'saved to {destdir}'))
 
     @staticmethod
     def get_stats(flatfile_dataframe, db_ff_columns: set[str], db_imts: set[str]):

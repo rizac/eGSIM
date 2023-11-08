@@ -27,7 +27,6 @@ The web portal (and API documentation) is available at:
    * [Maintenance](#maintenance)
      * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
      * [Complete DB reset](#Complete-DB-reset)
-     * [Repopulate the DB](#Repopulate-the-DB)
      * [Admin panel](#admin-panel)
      * [Create a custom management command](#Create-a-custom-management-command)  
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
@@ -230,7 +229,10 @@ in eGSIM are the following:
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations egsim --name <migration_name>
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate egsim
 ```
-And then remember to [Repopulate the db](#Repopulate-the-DB)
+And then repopulate the db:
+```bash
+export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
+```
 
 Notes: 
   - The `make_migration` command just generates a migration file, it doesn't 
@@ -250,39 +252,28 @@ Notes:
 
 To perform a complete db reset:
 
- - delete or rename `db.sqlite3` (or wherever the database is. See settings file in case)
- - [**Optional: skip if the db schema hasn't changed**] delete all migrations,
-   i.e. all `*.py` files except `__init__.py` currently under `egsim/api/migrations`, 
-   and re-generate the initial (and only) migration file:
+ - delete or rename the database of the settings file used and *all* migration files. 
+   In dev mode they are:
+   - `egsim/db.sqlite3`
+   - `egsim/api/migrations/0001_initial.py` (just one migration file. If there are 
+     others, delete all of them)
+ - Execute:
    ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations
+   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py makemigrations && python manage.py migrate && python manage.py egsim_init
    ```
- - Run migrations (re-create the DB via the generated migration file):
-
-   ```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate
-   ```
- - [Repopulate the db](#Repopulate-the-DB)
- 
+ - `git add` the newly created migration file `egsim/api/migrations/0001_initial.py`
  - [**Optional**] re-add the Django admin superuser(s) as explained in the
    [admin panel](#admin-panel) above
-   
 
-## Repopulate the DB
-
-NOTE: If you don't have created and initialized the db yet, go to 
-[Complete DB reset](#Complete-DB-reset)
-
-When the db is created for the first time or reset, 
-OpenQuake is upgraded, or new data is implemented (new regionalization 
-or flatfile), you need to repopulate the database and the filesystem, 
-to make changes available to eGSIM users.
-Execute the custom management command `egsim_init`:
-
-```bash
-   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py egsim_init
-```
-
+Notes:
+ - `makemigrations` creates the necessary migration file(s) from Python code and
+   existing migration file(s), `migrate` re-create the DB via the generated 
+   migration file(s), `egsim_init` repopulates the db with eGSIM data. 
+ - If the db schema has **not** changed:
+   - You can run `egsim_init` alone to update the DB after OpenQuake is upgraded, 
+     or new data is implemented (new regionalization or flatfile)
+   - One could keep the migration file(s) and skip commit at the end (as no new 
+     file will be generated)
 
 
 ## Admin panel
@@ -305,9 +296,9 @@ and follow the instructions.
 Start the program (see [Usage](Usage)) and then navigate in the browser to 
 `[SITE_URL]/admin` (in development mode, `http://127.0.0.1:8000/admin/`)
 
-*Note: Theoretically, you can modify db data from the browser, but to make 
-changes persistent after a database reset you should implement them in 
-the management command `egsim_init` (see [Repopulate the DB](#Repopulate-the-DB))*
+*Note: Theoretically, you can modify db data from the browser, e.g., hide some 
+model, regionalization or predefined flatfile. Persistent changes should be
+implemented in Python code and then run a [Complete DB reset](#Complete-DB-reset)*
 
 
 ## Create a custom management command
@@ -316,7 +307,8 @@ See `egsim/api/management/commands/README.md`.
 
 The next two sections will describe how to store
 new data (regionalizations and flatfiles) that will be
-made available in eGSIM when [repopulating the db](#Repopulate-the-DB)
+made available in eGSIM with the `egsim_init` command
+(see [Complete DB reset](#Complete-DB-reset) for details)
 
 
 ## Add new predefined flatfiles

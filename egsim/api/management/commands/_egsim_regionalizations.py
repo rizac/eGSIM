@@ -1,29 +1,21 @@
 """
-Populate the database with regionalizations provided from
-internal data in JSON and geoJSON format.
-
-A regionalization is a set of Geographic regions with coordinates defined by
-one or more Polygons, and a mapping is a list of GSIMs selected for a region
-
-Created on 7 Dec 2020
-
-@author: riccardo
+eGSIM management commnand. See `Command.help` for details
 """
 from os.path import join, dirname, isdir
 from os import makedirs
 import json
 import warnings
+from django.core.management import BaseCommand, CommandError
 
-from . import EgsimBaseCommand
 from ... import models
 from ...data.regionalizations import get_regionalizations, DATA
 
 
-class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
-    """Class implementing the command functionality"""
+class Command(BaseCommand):
 
-    # As help, use the module docstring (until the first empty line):
-    help = globals()['__doc__'].split("\n\n")[0]
+    help = "Parse of JSON+geoJSON regionalization files stored in the API source data " \
+           "into single standardized regionalization files. Store each parsed file as " \
+           "JSON in the API MEDIA directory and the file metadata in the Database"
 
     def handle(self, *args, **options):
         """Executes the command
@@ -35,12 +27,15 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             as options[<paramname>]. For info see:
             https://docs.djangoproject.com/en/2.2/howto/custom-management-commands/
         """
-        self.printinfo('Parsing Regionalizations from sources:')
-        self.empty_db_table(models.Regionalization)
+        self.stdout.write('Parsing Regionalizations from sources:')
+        models.Regionalization.objects.all().delete()
+        if models.Regionalization.objects.all().count():
+            raise CommandError('Table is not empty (deletion failed?), check the DB')
+
         destdir = 'regionalizations'
         # redirect warning to self.printsoftwarn:
         showwarning = warnings.showwarning
-        warnings.showwarning = lambda m, *k, **kw: self.printwarn(m)
+        warnings.showwarning = lambda m, *k, **kw: self.stdout.write(self.style.WARNING(m))  # noqa
         # warnings.simplefilter("ignore")
         for name, regionalization in get_regionalizations():
             # save object metadata to db:
@@ -59,16 +54,16 @@ class Command(EgsimBaseCommand):  # <- see _utils.EgsimBaseCommand for details
             with open(filepath, 'w') as _:
                 json.dump(regionalization, _, separators=(',', ':'))
 
-            self.printinfo(f'  Regionalization "{name}" ({filepath}), '
+            self.stdout.write(f'  Regionalization "{name}" ({filepath}), '
                            f'{len(regionalization)} region(s):')
             for region, val in regionalization.items():
-                self.printinfo(f"    {region}: "
+                self.stdout.write(f"    {region}: "
                                f"{len(val['properties']['models'])} model(s), "
                                f"geometry type: {val['geometry']['type']}")
 
-
         saved_regs = models.Regionalization.objects.count()
         if saved_regs:
-            self.printsuccess(f'{saved_regs} regionalization(s) saved to {destdir}')
+            self.stdout.write(self.style.SUCCESS(f'{saved_regs} regionalization(s) '
+                                                 f'saved to {destdir}'))
         # restore default func
         warnings.showwarning = showwarning
