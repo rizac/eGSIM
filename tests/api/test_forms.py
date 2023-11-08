@@ -13,8 +13,8 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
-from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, _get_regionalizations,
-                             relabel_sa)
+from egsim.api import models
+from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, relabel_sa)
 from egsim.api.forms.flatfile import FlatfileForm
 from egsim.api.forms.flatfile.compilation import FlatfileInspectionForm
 from egsim.api.forms.trellis import TrellisForm
@@ -38,13 +38,11 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: model. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: model',
             'errors': [
                 {
                     'location': 'model',
-                    'message': 'Value not found or misspelled: BindiEtAl2011t, '
-                               'BindiEtAl2014RJb',
+                    'message': 'Value not found or misspelled: BindiEtAl2011t',
                     'reason': 'invalid_choice'
                 }
             ]
@@ -55,8 +53,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: imt. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: imt',
             'errors': [
                 {
                     'location': 'imt',
@@ -71,8 +68,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: gsim, imt. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: gsim, imt',
             'errors': [
                 {
                     'location': 'gsim',
@@ -92,8 +88,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: imt, model. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: imt, model',
             'errors': [
                 {
                     'location': 'model',
@@ -102,7 +97,7 @@ class Test:
                 },
                 {
                     'location': 'imt',
-                    'message': "Value not found or misspelled: abcde, BindiEtAl2014Rjb",
+                    'message': "Value not found or misspelled: abcde",
                     'reason': 'invalid_choice'
                 }
             ]
@@ -116,8 +111,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: imt. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: imt',
             'errors': [
                 {
                     'location': 'imt',
@@ -138,8 +132,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: imt. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: imt',
             'errors': [
                 {
                     'location': 'imt',
@@ -157,8 +150,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: flatfile. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: flatfile',
             'errors': [
                 {
                     'location': 'flatfile',
@@ -242,8 +234,7 @@ class Test:
         assert not form.is_valid()
         err_json = form.errors_json_data()
         expected_json = {
-            'message': 'Invalid request. Problems found in: imt. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: imt',
             'errors': [
                 {
                     'location': 'imt',
@@ -262,8 +253,7 @@ class Test:
         form = GsimImtForm(data)
         assert not form.is_valid()
         expected_err = {
-            'message': 'Invalid request. Problems found in: gmm. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: gmm',
             'errors': [
                 {
                     'location': 'gmm',
@@ -284,8 +274,7 @@ class Test:
         form = GsimImtForm(data)
         assert not form.is_valid()
         expected_err = {
-            'message': 'Invalid request. Problems found in: gsim, imt. '
-                       'See response data for details',
+            'message': 'Invalid request. Problems found in: gsim, imt',
             'errors': [
                 {
                     'location': 'gsim',
@@ -344,7 +333,7 @@ class Test:
         assert not form.is_valid()
         expected_json = {
             'message': 'Invalid request. Problems found in: aspect, dip, '
-                       'distance, imt, mag, plot. See response data for details',
+                       'distance, imt, mag, plot',
             'errors': [
                 {
                     'location': 'imt',
@@ -448,7 +437,7 @@ class Test:
         assert form.is_valid()
         # query each regionalization singularly and check that we get the same models:
         resp = set(form.response_data)
-        regs = [_[0] for _ in _get_regionalizations()]
+        regs = models.Regionalization.names
         resp2 = []
         for reg in regs:
             resp_ = set(GsimFromRegionForm({'lat': 50, 'lon': 7, 'shsr': reg}).response_data)
