@@ -1,11 +1,10 @@
 """
-eGSIM management commnand. See `Command.help` for details
+eGSIM management command. See `Command.help` for details
 """
 import sys
 
 from django.core.management import (call_command, load_command_class,
-                                    BaseCommand, CommandError)
-from django.db import DatabaseError
+                                    BaseCommand)
 
 # check JSON1 extension (it should be enabled in all newest OSs and Python versions):
 from django.conf import settings
