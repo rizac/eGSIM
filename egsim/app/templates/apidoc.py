@@ -7,10 +7,9 @@ from django.forms import (MultipleChoiceField, Field, CharField,
                           ModelChoiceField, ModelMultipleChoiceField)
 
 from .egsim import TAB, field_to_dict, get_choices
+from ...api.forms.trellis import ArrayField
 from ...api.models import FlatfileColumn
 from ...api.forms import EgsimBaseForm
-from ...api.forms.fields import (MultipleChoiceWildcardField, NArrayField,
-                                 get_field_docstring)
 
 
 def get_apidoc_page_renderer_context(debug: bool) -> dict:
@@ -62,7 +61,7 @@ def as_dict(form: Union[Type[EgsimBaseForm], EgsimBaseForm]) -> dict:
         field_dict = field_to_dict(field)
         field_dict['name'] = param_names[0]
         field_dict['opt_names'] = param_names[1:]
-        desc = get_field_docstring(field)
+        desc = EgsimBaseForm.get_field_docstring(field)
         type_desc = get_field_dtype_description(field)
         field_dict['description'] = f'{desc}{". " if desc else ""}{type_desc}'
         field_dict['is_optional'] = not field.required or field.initial is not None
@@ -78,14 +77,14 @@ def get_field_dtype_description(field: Field) -> str:
         `api.forms.fields`)
     """
     # call get_field_dtype but consider egsim specific fields:
-    if isinstance(field, NArrayField):
-        if field.min_count is not None and field.min_count > 1:
+    if isinstance(field, ArrayField):
+        if len(field.base_fields) > 1:
             dtype = list[float]
         else:
             dtype = Union[float, list[float]]
     else:
         dtype = get_field_dtype(field)
-        if isinstance(field, MultipleChoiceWildcardField):
+        if isinstance(field, MultipleChoiceField):
             # convert list[T] into Union[T, list[T]] (T = int, float, str, bool)
             dtype = Union[dtype.__args__[0], dtype]  # noqa
 
@@ -140,8 +139,7 @@ def get_field_dtype(field: Field) -> Type:
             raise ValueError(f'Field choices must be all of the same '
                              f'Python type, found: {_types}')
         field_dtype = next(iter(_types))
-        if isinstance(field, (MultipleChoiceWildcardField,
-                              ModelMultipleChoiceField)):
+        if isinstance(field,ModelMultipleChoiceField):
             return list[field_dtype]
         return field_dtype
     elif isinstance(field, BooleanField):

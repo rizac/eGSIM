@@ -57,10 +57,10 @@ class Command(BaseCommand):
 
                 self.stdout.write(f'  Regionalization "{name}" ({filepath}), '
                                f'{len(regionalization)} region(s):')
-                for region, val in regionalization.items():
-                    self.stdout.write(f"    {region}: "
-                                   f"{len(val['properties']['models'])} model(s), "
-                                   f"geometry type: {val['geometry']['type']}")
+                for feat in regionalization['features']:
+                    self.stdout.write(f"    {feat['properties']['region']}: "
+                                   f"{len(feat['properties']['models'])} model(s), "
+                                   f"geometry type: {feat['geometry']['type']}")
 
             saved_regs = models.Regionalization.objects.count()
             if saved_regs:

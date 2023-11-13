@@ -1,8 +1,8 @@
 """Validation functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
 from __future__ import annotations
 
-from typing import Union, Any
-from collections.abc import Iterable, Callable
+from typing import Union
+from collections.abc import Iterable
 import re
 
 import numpy as np
@@ -41,7 +41,7 @@ def harmonize_input_gsims(
             output_gsims[gs] = gsim_inst
         except (TypeError, ValueError, IndexError, KeyError, FileNotFoundError,
                 OSError,AttributeError, DeprecationWarning) as _:
-            errors.append(gs)
+            errors.append(gs if isinstance(gs, str) else gsim_name(gs))
     if errors:
         raise InvalidInput(*errors)
 
@@ -93,7 +93,7 @@ def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IM
         try:
             ret.append(imt(imtx))
         except (TypeError, ValueError, KeyError) as exc:
-            errors.append(imtx)
+            errors.append(imtx if isinstance(imtx, str) else imt_name(imtx))
     if errors:
         raise InvalidInput(*errors)
     return {imt_name(i): i for i in sorted(ret, key=_imtkey)}
@@ -163,23 +163,28 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
         period = sa_period(imtx)
         if period is not None:
             periods[period] = imt_name
-        imt_names.add(imt_name)
+        else:
+            imt_names.add(imt_name)
     if periods:
         imt_names.add('SA')
 
     # create an IncompatibleGsmImt exception, adn populate it with errors if any:
-    errors = {}
+    errors = []
     for gm_name, gsim_inst in gsims.items():
         invalid_imts = imt_names - imts_defined_for(gsim_inst)
-        if periods and 'SA' not in invalid_imts:
-            for p in invalid_sa_periods(gsim_inst, periods):
-                invalid_imts.add(periods[p])
+        if periods:
+            if 'SA' in invalid_imts:
+                invalid_imts.remove('SA')
+                invalid_imts.update(periods.values())
+            else:
+                for p in invalid_sa_periods(gsim_inst, periods):
+                    invalid_imts.add(periods[p])
         if not invalid_imts:
             continue
-        errors[gm_name] = ImtIncompatibilityError(*invalid_imts)
+        errors.append([gm_name] + list(invalid_imts))
 
     if errors:
-        raise InvalidInput(*errors.items()) from None
+        raise IncompatibleInput(*errors) from None
 
     return gsims, imts
 
@@ -200,27 +205,25 @@ def invalid_sa_periods(gsim: GMPE, periods: Iterable[float, str, IMT]) \
 # Custom Exceptions:
 
 class InvalidInput(ValueError):
-    """InvalidInput(*inputs: Any) describes any invalid input (GSIM class, instance,
-    IMT, or any str representation of them"""
-
-    @property
-    def inputs(self) -> tuple[Any]:
-        return self.args
+    """Exception describing any invalid ground motion model or intensity measure
+    that was given as input in a routine.
+    `self.args: tuple[str]` will return the list of invalid input names
+    """
 
     def __str__(self):
-        z = []
-        for a in self.args:
-            if isinstance(a, GMPE):
-                a = gsim_name(a)
-            elif isinstance(a, IMT):
-                a = imt_name(a)
-            elif isinstance(a, (Callable, type)):
-                a = a.__name__
-            else:
-                a = str(a)
-            if a not in z:
-                z.append(a)
-        return ", ".join(z)
+        # print each input separated by comma:
+        return ", ".join(self.args)
 
-class ImtIncompatibilityError(Exception):
-    pass
+
+class IncompatibleInput(InvalidInput):
+    """Exception describing any invalid ground motion model or intensity measure
+    that was given as input in a routine.
+    `self.args` will yield all incompatible inputs as `tuple[str, list[str]]`
+    (the model name and the list of incompatible IMT names)
+    """
+
+    def __str__(self):
+        # print each input separated by comma, where each input has the form:
+        # "({model}, {imt1}, {imt2}, ...)"
+        return ", ".join(f"({', '.join(a)})" for a in self.args)
+

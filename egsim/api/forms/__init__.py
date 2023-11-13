@@ -1,6 +1,8 @@
 """Base eGSIM forms"""
 
 import re
+from openquake.hazardlib.gsim.base import GMPE
+from openquake.hazardlib.imt import IMT
 from typing import Union, Iterable, Any
 from datetime import date, datetime
 import json
@@ -10,18 +12,18 @@ import csv
 from urllib.parse import quote as urlquote
 
 import yaml
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Point, shape
 from django.core.exceptions import ValidationError
-from django.forms import Form, ModelChoiceField
+from django.forms import Form, ModelMultipleChoiceField
 from django.forms.renderers import BaseRenderer
 from django.forms.utils import ErrorDict
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, ChoiceField, FloatField
 
 from egsim.api import models
-from egsim.api.forms.fields import (GsimField, ImtField, NArrayField,
-                                    get_field_docstring, _default_error_messages)
-from egsim.smtk import validate_inputs, InvalidInput
+from egsim.smtk import validate_inputs, InvalidInput, harmonize_input_gsims, \
+    harmonize_input_imts, gsim
+from egsim.smtk.validators import IncompatibleInput
 
 
 class EgsimFormMeta(DeclarativeFieldsMetaclass):
@@ -32,15 +34,18 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
     def __new__(mcs, name, bases, attrs):
         new_class = super().__new__(mcs, name, bases, attrs)
 
-        # Adjust Fields error messages with our defaults:
-        if _default_error_messages:
-            for field in new_class.declared_fields.values():  # same as .base_fields
-                err_messages = field.error_messages
-                for err_code, err_msg in err_messages.items():
-                    if err_code in _default_error_messages:
-                        err_messages[err_code] = _default_error_messages[err_code]
-                    elif err_msg.endswith('.'):  # remove Django msg ending dot, if any:
-                        err_messages[err_code] = err_msg[:-1]
+        # Set standardized default error messages for each Form field
+        _default_error_messages = {
+            "required": "This parameter is required",
+            "invalid_choice": "Value not found or misspelled: %(value)s",
+            "invalid": "Invalid value(s): %(value)s",
+            # "invalid_list": "Enter a list of values",
+        }
+        for field in new_class.declared_fields.values():  # same as .base_fields
+            field.error_messages |= _default_error_messages
+            for err_code, err_msg in field.error_messages.items():
+                if err_msg.endswith('.'):  # remove Django msg ending dot, if any:
+                    field.error_messages[err_code] = err_msg[:-1]
 
         # Attribute denoting field -> API params mappings:
         attname = '_field2params'
@@ -316,7 +321,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
         stream = StringIO()
         for param_name, value, field in self._get_data(compact):
-            docstr = get_field_docstring(field) if field else ""
+            docstr = self.get_field_docstring(field) if field else ""
             if docstr:
                 stream.write(f'# {docstr}')
                 stream.write('\n')
@@ -325,6 +330,27 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             stream.write('\n')
 
         return stream.getvalue()
+
+    @staticmethod
+    def get_field_docstring(field: Field, remove_html_tags=False):
+        """Return a docstring from the given Form field `label` and `help_text`
+        attributes. The returned string will be a one-line (new newlines) string
+        FIXME: remove? remove HTML in Fields help_text so that this method is simpler?
+        """
+        field_label = getattr(field, 'label')
+        field_help_text = getattr(field, 'help_text')
+        label = (field_label or '') + \
+                ('' if not field_help_text else f' ({field_help_text})')
+        if label and remove_html_tags:
+            # replace html tags, e.g.: "<a href='#'>X</a>" -> "X",
+            # "V<sub>s30</sub>" -> "Vs30"
+            _html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)</\\1>')
+            # replace html characters with their content
+            # (or empty str if no content):
+            label = _html_tags_re.sub(r'\2', label)
+        # replace newlines for safety:
+        label = label.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+        return label
 
     QUERY_STRING_SAFE_CHARS = "-_.~!*'()"
 
@@ -381,36 +407,39 @@ class SHSRForm(EgsimBaseForm):
                           required=False)
     longitude = FloatField(label='Longitude', min_value=-180., max_value=180.,
                            required=False)
-    regionalization = ModelChoiceField(queryset=models.Regionalization.objects,
-                                to_field_name="name", label='Regionalization',
-                                empty_label=None, required=False)
+    regionalization = ModelMultipleChoiceField(
+        queryset=models.Regionalization.objects.only('name', 'media_root_path').
+            filter(hidden=False),
+        initial=models.Regionalization.objects.only('name', 'media_root_path').
+            filter(hidden=False),
+        to_field_name="name",
+        label='Regionalization',
+        required=False)
 
-    @classmethod
-    def get_regioselected_models(cls, cleaned_data) -> set[str]:
-        ret = set()
+    def get_region_selected_model_names(self) -> set[str]:
+        gsims = set()
+        cleaned_data = self.cleaned_data
         lon = cleaned_data.get('longitude', None)
         lat = cleaned_data.get('latitude', None)
         if lat is None or lon is None:
-            return ret
-        for dic in models.Regionalization.data(cleaned_data.get('regionalization', None)):
-            pass
-        return ret
-        # namez = set(models.Regionalization.names)
-        # if cleaned_data.get('regionalization', None):
-        #     namez &= set(cleaned_data['regionalization'])
-        #
-        # gsims = set()
-        # point = Point(lon, lat)
-        # for name in namez:
-        #     if gsim_name in gsims:
-        #         continue
-        #     type, coords = geometry['type'], geometry['coordinates']
-        #     for coord in coords if type == 'MultiPolygon' else [coords]:
-        #         polygon = Polygon((tuple(l) for l in coord[0]))
-        #         if polygon.contains(point):
-        #             gsims.add(gsim_name)
-        #             break
-        # return gsims
+            return gsims
+        point = Point(lon, lat)
+        for obj in cleaned_data['regionalization']:
+            with open(obj.filepath, 'r') as _:
+                features = json.load(_)['features']
+            for feat in features:
+                geometry, models = feat['geometry'], feat['properties']['models']
+                # if we already have all models, skip check:
+                if set(models) - gsims:
+                    if shape(geometry).contains(point):
+                        gsims.update(models)
+                    # type, coords = geometry['type'], geometry['coordinates']
+                    # for coord in coords if type == 'MultiPolygon' else [coords]:
+                    #     polygon = Polygon((tuple(l) for l in coord[0]))
+                    #     if polygon.contains(point):
+                    #         gsims.update(models)
+                    #         break
+        return gsims
 
 
 class GsimImtForm(SHSRForm):
@@ -419,19 +448,59 @@ class GsimImtForm(SHSRForm):
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params: dict[str, list[str]] = {'gsim': ['model', 'gsim', 'gmm']}
 
-    # Note: both Fields below are required actually (see `clean` for details):
-    gsim = GsimField(required=False, label="Model(s)")
-    imt = ImtField(required=False, label='Intensity Measure Type(s)')
+    # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
+    gsim = Field(required=False, label="Model(s)",
+                 widget=ModelMultipleChoiceField.widget)
+    imt = Field(required=False, label='Intensity Measure Type(s)',
+                widget=ModelMultipleChoiceField.widget)
 
     accept_empty_gsim_list = False  # override in subclasses if needed
     accept_empty_imt_list = False  # see above (for imts)
 
-    def clean_regionalization(self):
-        """Called after cleaning the regionalization field, which means we successfully
-        cleande lat lon regionalization but not yet gsim and imt"""
-        new_model_names = self.get_regioselected_models(self.cleaned_data)
-        if new_model_names:
-            self.data['gsim'] = self.data.get('gsim', []) + list(new_model_names)
+    def clean_gsim(self) -> dict[str, GMPE]:
+        key = 'gsim'
+        value = self.cleaned_data.pop(key, None)
+        if not value:
+            if not self.accept_empty_gsim_list:
+                raise ValidationError(
+                    self.fields[key].error_messages['required'],
+                    code='required')
+            return {}
+        if type(value) not in (list, tuple):
+            value = [value]
+        try:
+            ret = harmonize_input_gsims(value)
+            for name in self.get_region_selected_model_names():
+                if name not in ret:
+                    ret[name] = gsim(name)
+            return ret
+        except InvalidInput as err:
+            # FIXME handle error messages and also in clean_imt below:
+            raise ValidationError(
+                self.fields[key].error_messages["invalid_choice"],
+                code="invalid_choice",
+                params={"value": str(err)},
+            )
+
+    def clean_imt(self) -> dict[str, IMT]:
+        key = 'imt'
+        value = self.cleaned_data.pop(key, None)
+        if not value:
+            if not self.accept_empty_imt_list:
+                raise ValidationError(
+                    self.fields[key].error_messages['required'],
+                    code='required')
+            return {}
+        if type(value) not in (list, tuple):
+            value = [value]
+        try:
+            return harmonize_input_imts(value)
+        except InvalidInput as err:
+            raise ValidationError(
+                self.fields[key].error_messages["invalid_choice"],
+                code="invalid_choice",
+                params={"value": str(err)},
+            )
 
     def clean(self):
         """Run validation where we must validate selected gsim(s) based on
@@ -443,45 +512,46 @@ class GsimImtForm(SHSRForm):
         # gsim is required but first check that we passed the lat, lon arguments,
         # in that case we might have already a list of gsim to merge with the
         # one provided via the classical gsim parameter
-        regionalization_based_models = self.get_regioselected_models(cleaned_data)
-        if regionalization_based_models:
-            gsim_data:dict = cleaned_data.get(gsim, {})
-            new_models = regionalization_based_models - set(gsim_data)
-            new_gsim_data = self.gsim.clean(new_models)
-            all_models = sorted(list(gsim_data) + list(new_gsim_data))
-            cleaned_data[gsim] = {
-                k: gsim_data.get(k, new_gsim_data[k]) for k in all_models
-            }
+        # regionalization_based_models = self.get_regioselected_models(cleaned_data)
+        # if regionalization_based_models:
+        #     gsim_data:dict = cleaned_data.get(gsim, {})
+        #     new_models = regionalization_based_models - set(gsim_data)
+        #     new_gsim_data = self.gsim.clean(new_models)
+        #     all_models = sorted(list(gsim_data) + list(new_gsim_data))
+        #     cleaned_data[gsim] = {
+        #         k: gsim_data.get(k, new_gsim_data[k]) for k in all_models
+        #     }
 
+        # FIXME: remove
         # Check that both fields are provided. Another reason we do it here instead
         # than simply set `required=True` as Field argument is that sometimes
         # `MultipleChoiceField`s do not raise but puts a def. val, e.g. []
-        if not self.accept_empty_gsim_list and \
-                not cleaned_data.get(gsim, None) and not self.has_error(gsim):
-            self.add_error(gsim,
-                           ValidationError(self.fields[gsim].error_messages['required'],
-                                           code='required'))
-        if not self.accept_empty_imt_list and \
-                not cleaned_data.get(imt, None) and not self.has_error(imt):
-            self.add_error(imt,
-                           ValidationError(self.fields[imt].error_messages['required'],
-                                           code='required'))
+        # if not self.accept_empty_gsim_list and \
+        #         not cleaned_data.get(gsim, None) and not self.has_error(gsim):
+        #     self.add_error(gsim,
+        #                    ValidationError(self.fields[gsim].error_messages['required'],
+        #                                    code='required'))
+        # if not self.accept_empty_imt_list and \
+        #         not cleaned_data.get(imt, None) and not self.has_error(imt):
+        #     self.add_error(imt,
+        #                    ValidationError(self.fields[imt].error_messages['required'],
+        #                                    code='required'))
+
         # if any of the if above was true, then the parameter has been removed from
         # cleaned_data. If both are provided, check gsims and imts match:
         if not self.has_error(gsim) and not self.has_error(imt):
             try:
                 validate_inputs(cleaned_data[gsim], cleaned_data[imt])
-            except InvalidInput as err:
+            except IncompatibleInput as err:
                 # add error to form:
-                invalid_gsims = err.inputs
-                invalid_imts = set(i for ex in err.errors for i in ex.args)
+                invalid_gsims = [i[0] for i in err.args]
+                invalid_imts = set(i for v in err.args for i in v[1:])
                 code = 'invalid_model_imt_combination'
                 err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not defined "
                                            "for all supplied imt(s)", code=code)
                 err_imt = ValidationError(f"{len(invalid_imts)} imt(s) not defined for "
                                           "all supplied model(s)", code=code)
                 # add_error removes also the field from self.cleaned_data:
-                gsim, imt = 'gsim', 'imt'
                 self.add_error(gsim, err_gsim)
                 self.add_error(imt, err_imt)
 

@@ -1,5 +1,6 @@
 """Module with the views for the web API (no GUI)"""
 import os
+import re
 from io import StringIO
 from typing import Union, Type
 
@@ -11,9 +12,9 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-from .forms.fields import NArrayField, split_string
+# from .forms.fields import NArrayField, split_string
 from .forms.flatfile import FlatfileForm
-from .forms.trellis import TrellisForm
+from .forms.trellis import TrellisForm, ArrayField
 from .forms.flatfile.gsim.residuals import ResidualsForm
 from .forms.flatfile.gsim.testing import TestingForm
 from .forms import APIForm
@@ -37,6 +38,7 @@ class RESTAPIView(View):
     # error codes for general client and server errors:
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
+
     def parse_query_dict(self, querydict: QueryDict, nulls=("null",)) \
             -> dict[str, Union[str, list[str]]]:
         """parse the given query dict and returns a Python dict
@@ -50,20 +52,31 @@ class RESTAPIView(View):
 
         multi_value_params = set()
         for field_name, field, param_names in form_cls.field_iterator():
-            if isinstance(field, (MultipleChoiceField, NArrayField)):
+            if isinstance(field, (MultipleChoiceField, ArrayField)):
                 multi_value_params.update(param_names)
 
         ret = {}
         for param_name, values in querydict.lists():
             if param_name in multi_value_params:
                 values = [None if v in nulls else v for val in values
-                          for v in split_string(val)]
+                          for v in self.split_string(val)]
             else:
                 values = [None if v in nulls else v for v in values]
                 if len(values) == 1:
                     values = values[0]
             ret[param_name] = values
         return ret
+
+    @staticmethod
+    def split_string(string: str) -> list[str]:
+        """
+        :param string: a query-string value (e.g. '6' in '?param=6&...')
+        :return: a list of chunks by comma-splitting the given string
+        """
+        _string = string.strip()
+        if not _string:
+            return []
+        return re.split(r"\s*,\s*|\s+", _string)
 
     def get(self, request: HttpRequest):
         """Process a GET request.

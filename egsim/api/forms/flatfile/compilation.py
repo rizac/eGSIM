@@ -15,6 +15,7 @@ from django.forms.fields import CharField
 from egsim.api import models
 from egsim.api.forms import APIForm, GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
+from egsim.smtk.flatfile import get_dtypes_and_defaults
 
 
 class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
@@ -239,16 +240,13 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         if self.has_error('flatfile'):
             return cleaned_data
         dataframe = cleaned_data['flatfile']
-
-        cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
         gsims = list(get_gsims_from_flatfile(dataframe.columns))
         if not gsims:
             self.add_error("flatfile",
-                           ValidationError("No GSIM can work with the "
-                                           "provided columns. Rename or add "
-                                           "new columns", code='invalid'))
+                           ValidationError("Invalid or missing column names",
+                                           code='invalid'))
         cleaned_data['gsim'] = gsims
-
+        cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
         return cleaned_data
 
     @classmethod
@@ -261,7 +259,7 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         """
         return {
             'columns': cleaned_data['flatfile_dtypes'],
-            'default_columns': column_dtype,
+             'default_columns': get_dtypes_and_defaults()[0],
             'gsim': cleaned_data['gsim']
         }
 
