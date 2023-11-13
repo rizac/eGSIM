@@ -2,7 +2,7 @@
 import os
 import re
 from io import StringIO
-from typing import Union, Type
+from typing import Union, Type, Any
 
 import yaml
 from django.core.exceptions import ValidationError
@@ -12,7 +12,6 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-# from .forms.fields import NArrayField, split_string
 from .forms.flatfile import FlatfileForm
 from .forms.trellis import TrellisForm, ArrayField
 from .forms.flatfile.gsim.residuals import ResidualsForm
@@ -114,37 +113,19 @@ class RESTAPIView(View):
                                       errors=err['errors'])
 
             response_data = form.response_data
-            if form.data_format == form.DATA_FORMAT_CSV:
-                return self.response_text(response_data)
-            else:
-                return self.response_json(response_data)
+            mime_type = form.mime_type
+            return self.create_response(response_data, mime_type)
         except ValidationError as v_err:
             return error_response("; ".join(v_err.messages), self.CLIENT_ERR_CODE)
+        except NotImplementedError as ni_err:
+            return error_response(str(ni_err), 501)
         except Exception as err:
             msg = f'Server error ({err.__class__.__name__}): {str(err)}'
             return error_response(msg, self.SERVER_ERR_CODE)
 
     @classmethod
-    def response_json(cls, response_data: dict):
-        """Return a JSON response
-
-        :param response_data: dict representing the form processed data
-        """
-        return JsonResponse(response_data, safe=False)
-
-    @classmethod
-    def response_text(cls, response_data: StringIO):
-        """Return a text/csv response
-
-        :param response_data: dict representing the form processed data
-        """
-        # calculate the content length. FIXME: DO WE NEEED THIS? WHY?
-        response_data.seek(0, os.SEEK_END)
-        contentlength = response_data.tell()
-        response_data.seek(0)
-        response = HttpResponse(response_data, content_type='text/csv')
-        response['Content-Length'] = str(contentlength)
-        return response
+    def create_response(cls, response_data: Any, content_type, **kwargs):
+        return HttpResponse(response_data, content_type=content_type, **kwargs)
 
 
 # we need to provide the full URL of the views here, because the frontend need

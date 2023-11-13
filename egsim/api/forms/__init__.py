@@ -6,9 +6,7 @@ from openquake.hazardlib.imt import IMT
 from typing import Union, Iterable, Any
 from datetime import date, datetime
 import json
-from itertools import chain, repeat
 from io import StringIO
-import csv
 from urllib.parse import quote as urlquote
 
 import yaml
@@ -433,12 +431,6 @@ class SHSRForm(EgsimBaseForm):
                 if set(models) - gsims:
                     if shape(geometry).contains(point):
                         gsims.update(models)
-                    # type, coords = geometry['type'], geometry['coordinates']
-                    # for coord in coords if type == 'MultiPolygon' else [coords]:
-                    #     polygon = Polygon((tuple(l) for l in coord[0]))
-                    #     if polygon.contains(point):
-                    #         gsims.update(models)
-                    #         break
         return gsims
 
 
@@ -509,34 +501,6 @@ class GsimImtForm(SHSRForm):
         gsim, imt = 'gsim', 'imt'
         cleaned_data = super().clean()
 
-        # gsim is required but first check that we passed the lat, lon arguments,
-        # in that case we might have already a list of gsim to merge with the
-        # one provided via the classical gsim parameter
-        # regionalization_based_models = self.get_regioselected_models(cleaned_data)
-        # if regionalization_based_models:
-        #     gsim_data:dict = cleaned_data.get(gsim, {})
-        #     new_models = regionalization_based_models - set(gsim_data)
-        #     new_gsim_data = self.gsim.clean(new_models)
-        #     all_models = sorted(list(gsim_data) + list(new_gsim_data))
-        #     cleaned_data[gsim] = {
-        #         k: gsim_data.get(k, new_gsim_data[k]) for k in all_models
-        #     }
-
-        # FIXME: remove
-        # Check that both fields are provided. Another reason we do it here instead
-        # than simply set `required=True` as Field argument is that sometimes
-        # `MultipleChoiceField`s do not raise but puts a def. val, e.g. []
-        # if not self.accept_empty_gsim_list and \
-        #         not cleaned_data.get(gsim, None) and not self.has_error(gsim):
-        #     self.add_error(gsim,
-        #                    ValidationError(self.fields[gsim].error_messages['required'],
-        #                                    code='required'))
-        # if not self.accept_empty_imt_list and \
-        #         not cleaned_data.get(imt, None) and not self.has_error(imt):
-        #     self.add_error(imt,
-        #                    ValidationError(self.fields[imt].error_messages['required'],
-        #                                    code='required'))
-
         # if any of the if above was true, then the parameter has been removed from
         # cleaned_data. If both are provided, check gsims and imts match:
         if not self.has_error(gsim) and not self.has_error(imt):
@@ -562,61 +526,24 @@ class APIForm(EgsimBaseForm):
     """Basic API Form: handle user request in different media types (json, text)
      and returning the relative response"""
 
-    DATA_FORMAT_CSV = 'csv'
-    DATA_FORMAT_JSON = 'json'
-
-    _textcsv_sep = {
-        'comma': ',',
-        'semicolon': ';',
-        'space': ' ',
-        'tab': '\t'
-    }
-
-    _dec_sep = {
-        'period': '.',
-        'comma': ','
+    MIME_TYPE = {
+        'csv': "text/csv",
+        'json': "application/json",
+        'hdf': "application/x-hdf",
+        'gzip': "application/gzip"
     }
 
     @property
-    def data_format(self):
-        return self.data['format']
+    def mime_type(self):
+        if not self.is_valid():
+            return None
+        return self.cleaned_data['format']
 
-    format = ChoiceField(required=True, initial=DATA_FORMAT_JSON,
+    default_format='json'  # change in subclasses if needed
+
+    format = ChoiceField(required=False,
                          label='The format of the returned data (server response)',
-                         choices=[(DATA_FORMAT_JSON, 'json'),
-                                  (DATA_FORMAT_CSV, 'text/csv')])
-
-    csv_sep = ChoiceField(required=False, initial='comma',
-                          choices=[(_, _) for _ in _textcsv_sep],
-                          label='The (column) separator character',
-                          help_text=('Ignored if the requested '
-                                     'format is not text'))
-
-    csv_dec = ChoiceField(required=False, initial='period',
-                          choices=[(_, _) for _ in _dec_sep],
-                          label='The decimal separator character',
-                          help_text=('Ignored if the requested '
-                                     'format is not text'))
-
-    def clean(self):
-        cleaned_data = super().clean()
-        keys = 'format', 'csv_sep', 'csv_dec'
-        if all(_ in cleaned_data for _ in keys):
-            key, tsep, tdec = keys
-            # convert to symbols:
-            if cleaned_data[key] == self.DATA_FORMAT_CSV \
-                    and cleaned_data[tsep] == cleaned_data[tdec]:
-                msg = (f"'{tsep}' must differ from '{tdec}' in "
-                       f"'{self.DATA_FORMAT_CSV}' format")
-                err_ = ValidationError(msg, code='conflicting values')
-                # add_error removes also the field from self.cleaned_data:
-                self.add_error(tsep, err_)
-                self.add_error(tdec, err_)
-            else:
-                cleaned_data[tsep] = self._textcsv_sep[cleaned_data[tsep]]
-                cleaned_data[tdec] = self._dec_sep[cleaned_data[tdec]]
-
-        return cleaned_data
+                         choices=MIME_TYPE.items())
 
     @property
     def response_data(self) -> Union[dict, StringIO, None]:
@@ -625,118 +552,19 @@ class APIForm(EgsimBaseForm):
         """
         if not self.is_valid():
             return None
-
-        cleaned_data = self.cleaned_data
-        obj = self.process_data(cleaned_data)
-        # if obj is None:
-        #     obj = {}
-        if self.data_format == self.DATA_FORMAT_CSV:
-            obj = self.to_csv_buffer(obj, cleaned_data['csv_sep'],
-                                     cleaned_data['csv_dec'])
-        return obj
-
-    @classmethod
-    def process_data(cls, cleaned_data: dict) -> dict:
-        """Process the input data `cleaned_data` returning the response data
-        of this form upon user request.
-        This method is called by `self.response_data` only if the form is valid.
-
-        :param cleaned_data: the result of `self.cleaned_data`
-        """
-        raise NotImplementedError(":meth:%s.process_data" % cls.__name__)
-
-    @classmethod
-    def to_csv_buffer(cls, processed_data: dict, sep=',', dec='.') -> StringIO:
-        """Convert the given processed data to a StringIO with CSV data
-        as string
-
-        :param processed_data: the output of `self.get_processed_data`
-        :param sep: string default ',' the text separator
-        :param dec: string default '.' the decimal separator
-        """
-        # code copied from: https://stackoverflow.com/a/41706831
-        buffer = StringIO()  # python 2 needs io.BytesIO() instead
-        wrt = csv.writer(buffer, delimiter=sep, quotechar='"',
-                         quoting=csv.QUOTE_MINIMAL)
-
-        # first build a list to get the maximum number of columns (for safety):
-        rowsaslist = []
-        maxcollen = 0
-        comma_decimal = dec == ','
-        for row in cls.csv_rows(processed_data):
-            if not isinstance(row, list):
-                row = list(row)
-            if comma_decimal:
-                # convert dot to comma in floats:
-                for i, cell in enumerate(row):
-                    if isinstance(cell, float):
-                        row[i] = str(cell).replace('.', ',')
-            rowsaslist.append(row)
-            maxcollen = max(maxcollen, len(row))
-
-        # Write matrix to csv. Pad each row with None (which will be written
-        # as empty string, see csv doc. All non-string data are stringified
-        # with str() before being written).
-        wrt.writerows(chain(r, repeat(None, maxcollen - len(r)))
-                      for r in rowsaslist)
-
-        return buffer
-
-    @classmethod
-    def csv_rows(cls, processed_data) -> Iterable[Iterable[Any]]:
-        """Yield CSV rows, where each row is an iterables of Python objects
-        representing a cell value. Each row doesn't need to contain the same
-        number of elements, the caller function `self.to_csv_buffer` will pad
-        columns with Nones, in case (note that None is rendered as "", any other
-        value using its string representation).
-
-        :param processed_data: dict resulting from `self.process_data`
-        """
-        raise NotImplementedError(":meth:%s.csv_rows" % cls.__name__)
+        dformat = self.cleaned_data.get('format', self.__class__.default_format)
+        func = getattr(self, f'response_data_{dformat}', None)
+        if callable(func):
+            return func(self.cleaned_data)
+        raise NotImplementedError(f'Format "{dformat}" not implemented')
 
 
 class GsimFromRegionForm(SHSRForm, APIForm):
     """API Form returning a list of models from a given location and optional
     seismic hazard source regionalizations (SHSR)"""
 
-    @classmethod
-    def process_data(cls, cleaned_data: dict) -> dict[str, str]:
-        """Process the input data `cleaned_data` returning the response data
-        of this form upon user request, ie.e a dict of gsim name mapped to its
-        regionalization name.
-        This method is called by `self.response_data` only if the form is valid.
-
+    def process_data_json(self, cleaned_data: dict) -> list[str]:
+        """Process the input data in JSON format
         :param cleaned_data: the result of `self.cleaned_data`
         """
-        # FIXME WHAT TO RETURN? IS THIS USED?
-        return cleaned_data.get(SHSRForm.SHSR_MODELS_KEY, [])
-
-    @classmethod
-    def csv_rows(cls, processed_data) -> Iterable[Iterable[Any]]:
-        """Yield CSV rows, where each row is an iterables of Python objects
-        representing a cell value. Each row doesn't need to contain the same
-        number of elements, the caller function `self.to_csv_buffer` will pad
-        columns with Nones, in case (note that None is rendered as "", any other
-        value using its string representation).
-
-        :param processed_data: dict resulting from `self.process_data`
-        """
-        yield from processed_data
-
-
-####################################
-# Utilities shared among all Forms #
-####################################
-
-def relabel_sa(string):
-    """Simplifies SA string representation removing redundant trailing zeros,
-    if present. Examples:
-    'SA(1)' -> 'SA(1)' (unchanged)
-    'SA(1.0)' -> 'SA(1.0)' (unchanged)
-    'ASA(1.0)' -> 'ASA(1.0)' (unchanged)
-    'SA(1.00)' -> 'SA(1.0)'
-    'SA(1.000)' -> 'SA(1.0)'
-    'SA(.000)' -> 'SA(.0)'
-    """
-    return re.sub(r'((?:^|\s|\()SA\(\d*\.\d\d*?)0+(\))(?=($|\s|\)))', r"\1\2",
-                  string)
+        return sorted(self.get_region_selected_model_names())
