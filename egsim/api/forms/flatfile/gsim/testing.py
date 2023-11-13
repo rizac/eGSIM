@@ -4,15 +4,16 @@ Django Forms for eGSIM model-to-data testing
 @author: riccardo
 """
 from collections import defaultdict
-from typing import Iterable, Any
+from typing import Any
+from collections.abc import Iterable
 
 import numpy as np
 from django.core.exceptions import ValidationError
-from django.forms.fields import FloatField
+from django.forms.fields import FloatField, MultipleChoiceField
 
 from egsim.smtk import get_residuals
 from egsim.api.forms import APIForm, relabel_sa
-from egsim.api.forms.fields import MultipleChoiceField
+# from egsim.api.forms.fields import MultipleChoiceField
 from egsim.api.forms.flatfile.gsim import MOF, GsimImtFlatfileForm
 
 

@@ -1,7 +1,8 @@
 """Registry with helper functions to access OpenQuake entities and properties"""
 from typing import Union, Iterable, Callable
 
-from openquake.hazardlib import imt as imt_mod
+from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 
 from .flatfile.columns import get_all_names_of
@@ -13,16 +14,16 @@ registered_gsims:dict[str, type[GMPE]] = registry.copy()
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
 def _registered_imts() -> Iterable[tuple[str, Callable]]:
     """Return all IMT names registered in OpenQuake"""
-    for name in dir(imt_mod):
+    for name in dir(imt_module):
         if not ('A' <= name[:1] <= 'Z'):  # only upper-case module elements
             continue
-        func = getattr(imt_mod, name)
+        func = getattr(imt_module, name)
         if not callable(func):  # only callable
             continue
         # call the function with the required arguments, assuming all floats
         try:
             imt_obj = func(*[1. for _ in range(func.__code__.co_argcount)])  # noqa
-            if isinstance(imt_obj, imt_mod.IMT):
+            if isinstance(imt_obj, IMT):
                 yield name, func
         except (ValueError, TypeError, AttributeError):
             pass
@@ -49,8 +50,8 @@ def gsim_name(gsim: Union[type[GMPE], GMPE]) -> str:
     return _gsim_aliases[name]
 
 
-def imt_name(imtx: Union[Callable, imt_mod.IMT]) -> str:
-    if isinstance(imtx, imt_mod.IMT):
+def imt_name(imtx: Union[Callable, IMT]) -> str:
+    if isinstance(imtx, IMT):
         return repr(imtx)
     # it's a callable (e.g. a function defined in the openquake `imt` module):
     return imtx.__name__
@@ -106,7 +107,7 @@ def imts_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
 
 
 def ground_motion_properties_required_by(
-        *gsim: Union[str, GMPE, Iterable[GMPE]],
+        *gsim: Union[str, GMPE, type[GMPE]],
         as_ff_column=False) -> frozenset[str]:
     """Return the required ground motion properties (distance measures,
        rupture and site params all together)

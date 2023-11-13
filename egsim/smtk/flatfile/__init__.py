@@ -1,6 +1,6 @@
 """flatfile root module"""
 
-from io import IOBase, TextIOBase, TextIOWrapper
+from io import IOBase
 from datetime import date, datetime
 import re
 from typing import Union, Any
@@ -174,13 +174,14 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, check_dtypes:bool, **kwargs) -
     if sep is None:
         kwargs.pop('sep')  # if it was None needs removal
         for _sep in [';', ',', r'\s+']:
-            _header = pd.read_csv(filepath_or_buffer, nrows=0, sep=_sep, **kwargs).columns  # noqa
+            _header = _read_csv_get_header(filepath_or_buffer, sep=_sep,
+                                           **kwargs)
             if len(_header) > len(header):
                 sep = _sep
                 header = _header
         kwargs['sep'] = sep
     else:
-        header = pd.read_csv(filepath_or_buffer, nrows=0, **kwargs).columns  # noqa
+        header = _read_csv_get_header(filepath_or_buffer, **kwargs)
     if nrows is not None:
         kwargs['nrows'] = nrows
 
@@ -239,6 +240,17 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, check_dtypes:bool, **kwargs) -
             kwargs['parse_dates'] = list(parse_dates)
 
     return kwargs
+
+
+def _read_csv_get_header(filepath_or_buffer: IOBase, sep=None, **kwargs) -> list[str]:
+    _pos = None
+    if isinstance(filepath_or_buffer, IOBase):
+        _pos = filepath_or_buffer.tell()
+    kwargs['nrows'] = 0  # read just header
+    ret = pd.read_csv(filepath_or_buffer, sep=sep, **kwargs).columns  # noqa
+    if _pos is not None:
+        filepath_or_buffer.seek(_pos)
+    return ret
 
 
 def _read_csv_inspect_failure(filepath_or_buffer: IOBase, **kwargs) -> list[str]:

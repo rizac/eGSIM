@@ -42,7 +42,8 @@ def get_regionalizations() -> Iterable[str, dict[str, dict[str, Any]]]:
         ```
     """
     for name, data in DATA.items():
-        yield name, get_regionalization(*data['sources'])
+        yield name, {"type": "FeatureCollection",
+                     "features": get_regionalization(*data['sources'])}
 
 
 datadir = join(dirname(__file__), 'sources')
@@ -87,14 +88,15 @@ DATA = {
 
 
 def get_regionalization(geometries: Union[str, dict],
-                        mappings: Union[str, dict]) -> dict[str, dict[str, Any]]:
-    """Return a dict where a region name is mapped to a GEO-JSON formatted dict
-    of this form (key: value):
+                        mappings: Union[str, dict]) -> list[dict[str, Any]]:
+    """Return a dict where a region name is mapped to a GEO-JSON formatted list
+    of geoJSOn Features:
     ```
-    "<region>": {
+    {
         "type": "Feature",
         "geometry":dict,  # geoJSON geometry
-        "properties":dict {
+        "properties": {
+            "region":str  # the region name
             "models":list[str]  # the list of region-selected models
         }
     }
@@ -126,13 +128,14 @@ def get_regionalization(geometries: Union[str, dict],
         with open(mappings, 'r') as _:
             mappings = json.load(_)
 
-    regions = {}
+    regions = []
     for region_name, models in mappings.items():
         model_names =  [_['model'] for _ in models]
         geojson = {
             "type": "Feature",
             "geometry": {},  # will be populated below
             "properties": {
+                "region": region_name,
                 "models": model_names
             }
         }
@@ -152,7 +155,7 @@ def get_regionalization(geometries: Union[str, dict],
                           f'geometries defined in the geojson file, skipping')
             continue
         geojson['geometry'] = merge_geojson_geometries(*geojson_geometries)
-        regions[region_name] = geojson
+        regions.append(geojson)
 
     return regions
 

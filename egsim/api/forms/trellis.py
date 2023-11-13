@@ -2,25 +2,78 @@
 Django Forms for eGSIM model-to-model comparison (Trellis plots)
 """
 from collections import defaultdict
-from itertools import chain, repeat
+
+from itertools import chain, cycle
 from typing import Iterable, Any
 
 import numpy as np
-from openquake.hazardlib import imt
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from django.core.exceptions import ValidationError
 from django.utils.safestring import mark_safe
-from django.forms.fields import BooleanField, FloatField, ChoiceField
+from django.forms.fields import BooleanField, FloatField, ChoiceField, Field
 
-from egsim.api.forms import APIForm, GsimImtForm, relabel_sa
-from egsim.api.forms.fields import NArrayField, vectorize, isscalar
+from egsim.api.forms import APIForm, GsimImtForm  #, relabel_sa
+# from egsim.api.forms.fields import NArrayField, vectorize, isscalar
 # FIXME: IS THIS IMPORT BELOW neeed?
-from egsim.smtk.converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
-from egsim.smtk import get_trellis
+# from egsim.smtk.converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
+# from egsim.smtk import get_trellis
 
 
 _mag_scalerel = get_available_magnitude_scalerel()
+
+
+class ArrayField(Field):
+    """Implements an ArrayField. Loosely copied from
+    django.contrib.postgres.forms.array.SplitArrayField (which unfortunately
+    requires psycopg2)"""
+
+    default_error_messages = {
+        "invalid_size": "invalid number of elements: ",
+    }
+
+    def __init__(self, *base_fields:Field, **kwargs):
+        """
+        :param base_fields: the base field(s). 1-element means that
+            this field accept a variable length array of values
+        """
+        assert len(set(type(_) for _ in base_fields)) == 1, \
+            'base_fields must be of the same type'
+        kwargs.setdefault("widget", base_fields[0].widget)
+        if all (b.initial is not None for b in base_fields):
+            kwargs.setdefault('initial', [b.initial for b in base_fields])
+        super().__init__(**kwargs)
+        self.base_fields = base_fields
+        # override any error message with the error messages of the base field
+        self.error_messages |= self.base_fields[0].error_messages
+
+    def clean(self, value):
+        cleaned_data = []
+        if not value and self.required:
+            raise ValidationError(self.error_messages["required"],
+                                  code='required')
+        if not isinstance(value, (list, tuple)):
+            value = [value]
+        size = len(self.base_fields)
+        if 1 < size != len(value):
+            raise ValidationError(self.error_messages['invalid_size'] +
+                                  f'{str(len(value))} (expected {str(size)})',
+                                  code='invalid_size')
+        errors = []
+        base_fields = self.base_fields
+        if size == 1:
+            base_fields = cycle(self.base_fields)
+        for item, base_field in zip(value, base_fields):
+            try:
+                value = base_field.clean(item)
+                cleaned_data.append(value)
+            except ValidationError as error:
+                errors.append(str(item))
+        if errors:
+            raise ValidationError(self.error_messages["invalid"],
+                                  params={'value': ", ".join(errors)},
+                                  code="invalid")
+        return cleaned_data
 
 
 class TrellisForm(GsimImtForm, APIForm):
@@ -28,8 +81,6 @@ class TrellisForm(GsimImtForm, APIForm):
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {
-        'plot_type': ['plot'],
-        'stdev': ['stdev', 'stddev'],
         'magnitude': ['magnitude', 'mag'],
         'distance': ['distance', 'dist'],
         'msr': ['msr', 'magnitude-scalerel'],
@@ -43,17 +94,10 @@ class TrellisForm(GsimImtForm, APIForm):
         'line_azimuth': ['line-azimuth', 'line_azimuth'],
     }
 
-    plot_type = ChoiceField(label='Plot type',  # FIXME REMOVE or FIX!!!
-                            choices=[(k, f'{v[0]} [{k}]')
-                                     for k, v in {}.items()])
-    stdev = BooleanField(label='Compute Standard Deviation(s)', required=False,
-                         initial=False)
-
     # GSIM RUPTURE PARAMS:
-    magnitude = NArrayField(label='Magnitude(s)', min_count=1)
-    distance = NArrayField(label='Distance(s)', min_count=1)
-    vs30 = NArrayField(label=mark_safe('V<sub>S30</sub> (m/s)'),
-                       min_value=0., min_count=1, initial=760.0)
+    magnitude = ArrayField(FloatField(), label='Magnitude(s)', required=True)
+    distance = ArrayField(FloatField(), label='Distance(s)', required=True)
+    vs30 = FloatField(label=mark_safe('V<sub>S30</sub> (m/s)'), initial=760.0)
     aspect = FloatField(label='Rupture Length / Width', min_value=0.)
     dip = FloatField(label='Dip', min_value=0., max_value=90.)
     rake = FloatField(label='Rake', min_value=-180., max_value=180.,
@@ -67,31 +111,30 @@ class TrellisForm(GsimImtForm, APIForm):
                       choices=[(_, _) for _ in _mag_scalerel],
                       initial="WC1994")
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_location`
-    initial_point = NArrayField(label="Location on Earth", min_count=2, max_count=2,
-                                help_text='Longitude Latitude', initial="0 0",
-                                min_value=[-180, -90], max_value=[180, 90])
-    hypocentre_location = NArrayField(label="Location of Hypocentre",
-                                      initial='0.5 0.5',
-                                      help_text='Along-strike fraction, '
-                                                'Down-dip fraction',
-                                      min_count=2, max_count=2, min_value=[0, 0],
-                                      max_value=[1, 1])
+    initial_point = ArrayField(FloatField(initial=0, min_value=-180, max_value=180),
+                               FloatField(initial=0, min_value=-90, max_value=90),
+                               label="Location on Earth",
+                               help_text='Longitude Latitude')
+    hypocentre_location = ArrayField(FloatField(initial=0.5, min_value=0, max_value=1),
+                                     FloatField(initial=0.5, min_value=0, max_value=1),
+                                     label="Location of Hypocentre",
+                                     help_text='Along-strike fraction, '
+                                               'Down-dip fraction')
     # END OF RUPTURE PARAMS
     vs30measured = BooleanField(label=mark_safe('V<sub>S30</sub> is measured'),
                                 help_text='Otherwise is inferred',
                                 initial=True, required=False)
     line_azimuth = FloatField(label='Azimuth of Comparison Line',
                               min_value=0., max_value=360., initial=0.)
-    z1pt0 = NArrayField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
-                        min_value=0., required=False,
-                        help_text=mark_safe("Calculated from the "
-                                            "V<sub>S30</sub> if not given"))
-    z2pt5 = NArrayField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
-                        min_value=0., required=False,
-                        help_text=mark_safe("Calculated from the  "
-                                            "V<sub>S30</sub> if not given"))
-    backarc = BooleanField(label='Backarc Path', initial=False,
-                           required=False)
+    z1pt0 = FloatField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
+                       help_text=mark_safe("Calculated from the "
+                                           "V<sub>S30</sub> if not given"),
+                       required=False)
+    z2pt5 = FloatField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
+                       help_text=mark_safe("Calculated from the  "
+                                            "V<sub>S30</sub> if not given"),
+                       required=False)
+    backarc = BooleanField(label='Backarc Path', initial=False, required=False)
 
     # All clean_<field> methods below are called in `self.full_clean` after each field
     # is validated individually in order to perform additional validation or casting:
@@ -120,67 +163,67 @@ class TrellisForm(GsimImtForm, APIForm):
         except Exception as exc:
             raise ValidationError(str(exc), code='invalid')
 
-    def clean_imt(self):
-        """Clean the imt Field by checking that it is empty or composed of SA only,
-        in cae the magnitude-speactra plots are requested"""
-        imts = self.cleaned_data.get('imt', [])
-        if self._is_input_plottype_spectra():
-            # check invalid IMTs:
-            invalid_imts = [_ for _ in imts if not _.startswith('SA')]
-            if invalid_imts:
-                raise ValidationError(f'Invalid value(s): {", ".join(invalid_imts)}. '
-                                      f'Omit this parameter or provide a '
-                                      f'custom list of SA periods when selecting '
-                                      f'"spectra" plots',
-                                      code='invalid')
-            # If no SA is found (with or without period) add "SA": this will not be used
-            # in `self.clean` below but in `GsimImtForm.clean()` to check that the models
-            # provided are compatible with SA
-            if not any(_.startswith('SA') for _ in imts):
-                return list(imts) + ['SA']
-        return imts
+    # def clean_imt(self):
+    #     """Clean the imt Field by checking that it is empty or composed of SA only,
+    #     in cae the magnitude-speactra plots are requested"""
+    #     imts = self.cleaned_data.get('imt', [])
+    #     if self._is_input_plottype_spectra():
+    #         # check invalid IMTs:
+    #         invalid_imts = [_ for _ in imts if not _.startswith('SA')]
+    #         if invalid_imts:
+    #             raise ValidationError(f'Invalid value(s): {", ".join(invalid_imts)}. '
+    #                                   f'Omit this parameter or provide a '
+    #                                   f'custom list of SA periods when selecting '
+    #                                   f'"spectra" plots',
+    #                                   code='invalid')
+    #         # If no SA is found (with or without period) add "SA": this will not be used
+    #         # in `self.clean` below but in `GsimImtForm.clean()` to check that the models
+    #         # provided are compatible with SA
+    #         if not any(_.startswith('SA') for _ in imts):
+    #             return list(imts) + ['SA']
+    #     return imts
 
-    def _is_input_plottype_spectra(self):
-        return self.data.get('plot_type', '') in ('s', 'ss')
-
-    def clean(self):
-        cleaned_data = super().clean()
-
-        if self._is_input_plottype_spectra():
-            # cleaned_data['imt'] is either [] or a list of 'SA', with or without period.
-            # Extract periods cause the trellis code expects 'imt' as float in this case:
-            periods = sorted(imt.from_string(_).period
-                             for _ in cleaned_data.get('imt', [])
-                             if _ != 'SA')
-            if not periods:
-                # provide default periods if none found:
-                periods = self._default_periods_for_spectra()
-            # set the correct value:
-            cleaned_data['imt'] = periods
-
-        # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
-        vs30 = cleaned_data['vs30']  # surely a list with st least one element
-        vs30scalar = isscalar(vs30)
-        vs30s = np.array(vectorize(vs30), dtype=float)
-
-        # check vs30-dependent values:
-        for name, func in (['z1pt0', vs30_to_z1pt0_cy14],
-                           ['z2pt5', vs30_to_z2pt5_cb14]):
-            if cleaned_data.get(name, None) in (None, []):
-                values = func(vs30s)  # numpy-function
-                cleaned_data[name] = \
-                    float(values[0]) if vs30scalar else values.tolist()
-            elif isscalar(cleaned_data[name]) != isscalar(vs30) or \
-                    (not isscalar(vs30) and
-                     len(vs30) != len(cleaned_data[name])):
-                str_ = 'scalar' if isscalar(vs30) else \
-                    '%d-elements vector' % len(vs30)
-                # add error for vs30 param:
-                error = ValidationError(f"value must be consistent with vs30 ({str_})",
-                                        code='invalid')
-                self.add_error(name, error)
-
-        return cleaned_data
+    # def _is_input_plottype_spectra(self):
+    #     return self.data.get('plot_type', '') in ('s', 'ss')
+    #
+    # def clean(self):
+    #     cleaned_data = super().clean()
+    #
+    #     if self._is_input_plottype_spectra():
+    #         # cleaned_data['imt'] is either [] or a list of 'SA', with or without period.
+    #         # Extract periods cause the trellis code expects 'imt' as float in this case:
+    #         periods = sorted(imt.from_string(_).period
+    #                          for _ in cleaned_data.get('imt', [])
+    #                          if _ != 'SA')
+    #         if not periods:
+    #             # provide default periods if none found:
+    #             periods = self._default_periods_for_spectra()
+    #         # set the correct value:
+    #         cleaned_data['imt'] = periods
+    #
+    #     # calculate z1pt0 and z2pt5 if needed, raise in case of errors:
+    #     vs30 = cleaned_data['vs30']  # surely a list with st least one element
+    #     vs30scalar = isscalar(vs30)
+    #     vs30s = np.array(vectorize(vs30), dtype=float)
+    #
+    #     # check vs30-dependent values:
+    #     for name, func in (['z1pt0', vs30_to_z1pt0_cy14],
+    #                        ['z2pt5', vs30_to_z2pt5_cb14]):
+    #         if cleaned_data.get(name, None) in (None, []):
+    #             values = func(vs30s)  # numpy-function
+    #             cleaned_data[name] = \
+    #                 float(values[0]) if vs30scalar else values.tolist()
+    #         elif isscalar(cleaned_data[name]) != isscalar(vs30) or \
+    #                 (not isscalar(vs30) and
+    #                  len(vs30) != len(cleaned_data[name])):
+    #             str_ = 'scalar' if isscalar(vs30) else \
+    #                 '%d-elements vector' % len(vs30)
+    #             # add error for vs30 param:
+    #             error = ValidationError(f"value must be consistent with vs30 ({str_})",
+    #                                     code='invalid')
+    #             self.add_error(name, error)
+    #
+    #     return cleaned_data
 
     @classmethod
     def csv_rows(cls, processed_data) -> Iterable[Iterable[Any]]:

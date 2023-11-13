@@ -1,7 +1,6 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from collections import defaultdict
 from datetime import datetime
 from typing import Iterable, Sequence
 
@@ -10,9 +9,10 @@ from django.core.exceptions import ValidationError
 from django.forms import Form, ModelChoiceField
 from django.forms.fields import CharField, FileField
 
-from egsim.smtk import (registered_gsims, ground_motion_properties_required_by,
-                        imts_defined_for)
-from egsim.smtk.flatfile import (read_flatfile, ColumnDtype, query as flatfile_query,
+from egsim.smtk import (ground_motion_properties_required_by,
+                        imts_defined_for, registered_imts)
+from egsim.smtk.flatfile import (read_flatfile, ColumnDtype,
+                                 query as flatfile_query,
                                  get_all_names_of)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm
@@ -33,7 +33,8 @@ class FlatfileForm(EgsimBaseForm):
         'selexpr': ['data-query', 'selection-expression']
     }
 
-    flatfile = ModelChoiceField(queryset=models.Flatfile.objects,
+    flatfile = ModelChoiceField(queryset=models.Flatfile.objects.filter(hidden=False).
+                                only('name', 'media_root_path'),
                                 to_field_name="name", label='Flatfile',
                                 empty_label=None, required=False)
     selexpr = CharField(required=False, label='Filter flatfile records via a '
@@ -128,37 +129,26 @@ class FlatfileForm(EgsimBaseForm):
         """
         dtypes = {}
         for col in flatfile.columns:
-            dtype_name = 'unknown'
-            if isinstance(col.dtype, pd.CategoricalDtype):
-                dtype_name = "categorical data"
+            f_col = flatfile[col]
+
+            if isinstance(f_col.dtype, pd.CategoricalDtype):
+                col_dtype = "categorical"
             else:
-                col_dtype = ColumnDtype.of(flatfile[col])
-                if col_dtype is not None:
-                    dtype_name = col_dtype.name
-            dtypes[col] = dtype_name
+                col_dtype = ColumnDtype.of(f_col) or "undefined"
+            dtypes[col] = col_dtype
         return dtypes
 
 
 def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
     """Yield the GSIM names supported by the given flatfile"""
     ff_cols = set('SA' if _.startswith('SA(') else _ for _ in flatfile_columns)
-    for name, model_cls in registered_gsims.items():
-        imts = imts_defined_for(model_cls)
-        if not imts.intersection(ff_cols):
+    imt_cols = ff_cols & set(registered_imts)
+    ff_cols -= imt_cols
+    for name in models.Gsim.objects.filter(hidden=False).\
+            only('name').values_list('name', flat=True):
+        imts = imts_defined_for(name)
+        if not imts.intersection(imt_cols):
             continue
-        for gm_prop in ground_motion_properties_required_by(model_cls):
-            if not get_all_names_of(gm_prop) & ff_cols:
-                continue
-        yield name
-
-    # FIXME: REMOVE
-    # model2cols = defaultdict(set)
-    # # filter models by imts (feasible via SQL) and build a dict of models with the
-    # # relatvie required flatfile columns (filter donw below, not possible to do in SQL):
-    # for model_name, required_fcol in models.Gsim.objects.filter(imts__name__in=ff_cols).\
-    #         values_list('name', 'required_flatfile_columns__name'):
-    #     model2cols[model_name].add(required_fcol)
-    # # filter on required flatfile columns and yields supported models:
-    # for model_name, cols in model2cols.items():
-    #     if not cols - ff_cols:
-    #         yield model_name
+        if all(get_all_names_of(p) & ff_cols
+               for p in ground_motion_properties_required_by(name)):
+            yield name

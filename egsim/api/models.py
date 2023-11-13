@@ -41,13 +41,6 @@ class EgsimDbModel(DjangoDbModel):
         # does this speed up searches?:
         indexes = [Index(fields=['name']), Index(fields=['hidden'])]
 
-    @property
-    def names(self) -> QuerySet[str]:
-        """Return all the names of the items (db rows) of this model, filtering out
-        hidden rows"""
-        return self.objects.only('name').filter(hidden=False).\
-            values_list('name', flat=True)
-
     def __str__(self):
         return self.name
 
