@@ -36,7 +36,7 @@ class FlatfileForm(EgsimBaseForm):
     flatfile = ModelChoiceField(queryset=models.Flatfile.objects.filter(hidden=False).
                                 only('name', 'media_root_path'),
                                 to_field_name="name", label='Flatfile',
-                                empty_label=None, required=False)
+                                required=False)
     selexpr = CharField(required=False, label='Filter flatfile records via a '
                                               'query string')
 

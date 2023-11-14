@@ -3,7 +3,7 @@
 import re
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
-from typing import Union, Iterable, Any
+from typing import Union, Any
 from datetime import date, datetime
 import json
 from io import StringIO
@@ -14,7 +14,6 @@ from shapely.geometry import Point, shape
 from django.core.exceptions import ValidationError
 from django.forms import Form, ModelMultipleChoiceField
 from django.forms.renderers import BaseRenderer
-from django.forms.utils import ErrorDict
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, ChoiceField, FloatField
 
@@ -36,7 +35,7 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         _default_error_messages = {
             "required": "This parameter is required",
             "invalid_choice": "Value not found or misspelled: %(value)s",
-            "invalid": "Invalid value(s): %(value)s",
+            "invalid": "Invalid value: %(value)s",
             # "invalid_list": "Enter a list of values",
         }
         for field in new_class.declared_fields.values():  # same as .base_fields
@@ -106,14 +105,20 @@ def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
 class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     """Base eGSIM form"""
 
-    # The dict below allows to easily change I/O parameters (keys of `data` in __init__`
-    # and `self.errors`) uncoupling them from Field names, which can be kept immutable
-    # and thus used reliably as keys of `self.data` and `self.cleaned_data` internally.
-    # A Field name can be mapped to several parameters (including the same field name if
-    # needed) with the 1st parameter set as primary, and the rest as aliases. Each Field
-    # name not found here will be mapped to itself by default. `_field2params` of all
-    # superclasses will be merged into this one (see `EgsimFormMeta`). This attr should
-    # be private, to access the field and param mapping use `field_iterator()` instead
+    # make code linters happy (attr created in Django DeclarativeFieldsMetaclass):
+    base_fields: dict[str, Field]
+
+    # The dict below allows to easily change Field names without breaking the code.
+    # Just map any Field name implemented on this class to several parameters
+    # (including the same field name if needed), where the 1st parameter will be
+    # considered the primary name, and the rest aliases (if a Field name is mapped only
+    # to itself, it can be omitted).
+    # Notes: this attribute is merged with superclasses implementations (see
+    # `EgsimFormMeta`) and should be private, use `param_names_of` or `param_name_of`
+    # instead. Being immutable, Field names (accessible via `class.base_fields`) should
+    # be used internally during form validation, e.g. as keys of `self.data` and
+    # `self.cleaned_data`. I/O parameters are the field names exposed publicly,
+    # e.g. as input (`data` passed in `__init__`) or output (`self.errors_json_dict`).
     _field2params: dict[str, list[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
@@ -130,94 +135,49 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         """
         # remove colon in labels by default in templates:
         kwargs.setdefault('label_suffix', '')
-        # store original dict (we assume the values of data are immutable):
-        self._input_data = dict(data or {})
+        # Form Field names mapped to the relative param given as input:
+        self._field2inputparam = {}
         # call super:
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
         # Fix self.data and add errors in case:
         unknowns = set(self.data) if no_unknown_params else None
-        for field_name, field, param_names in self.field_iterator():
+        for field_name, field in self.base_fields.items():
+            param_names = self.param_names_of(field_name)
             if unknowns is not None:
                 unknowns -= set(param_names)
-            input_params = tuple(p for p in param_names if p in self.data)
-            if len(input_params) > 1:  # names conflict, store error:
-                for p in input_params:
-                    others = ", ".join(_ for _ in input_params if _ != p)
-                    self._add_error(p, ValidationError(f"This parameter conflicts with: "
-                                                       f"{others}", code='conflict'))
-            elif input_params:
-                param_name = input_params[0]
+            input_param_names = tuple(p for p in param_names if p in self.data)
+            if len(input_param_names) > 1:  # names conflict, store error:
+                for p in input_param_names:
+                    others = ", ".join(_ for _ in input_param_names if _ != p)
+                    raise ValidationError(f"This parameter conflicts with: "
+                                          f"{others}", code='conflict')
+            elif input_param_names:
+                input_param_name = input_param_names[0]
+                self._field2inputparam[field_name] = input_param_name
                 # Rename the keys of `self.data` (API params) with the mapped field name
                 # (see `self.clean` and in subclasses):
-                if field_name != param_name:
-                    self.data[field_name] = self.data.pop(param_name)
+                if field_name != input_param_name:
+                    self.data[field_name] = self.data.pop(input_param_name)
+
             else:
                 # Make missing fields initial value the default, if provided
                 # (https://stackoverflow.com/a/20309754):
                 if self.fields[field_name].initial is not None:
                     self.data[field_name] = self.fields[field_name].initial
 
-        for unk in unknowns:  # unknown (nonexistent) parameters, store error:
-            self._add_error(unk, ValidationError("This parameter does not exist "
-                                                 "(check typos)", code='nonexistent'))
-
-    def add_error(self, field: str, error: ValidationError):
-        """Call `super.add_error` relaxing some Django restrictions:
-         - this method can be safely called at any stage (`super.add_error` raises if
-           the form has not been cleaned beforehand, i.e. `self.full_clean` is called)
-         - the `field` argument does not need to be a Field name (however, if it does,
-           it will be converted to the associated parameter name, if a mapping is found)
-
-        :param field: a Form field name
-        :param error: the error as `ValidationError` instance
-        """
-        # first convert `field` to its mapped parameter name, if any:
-        params = self._field2params.get(field, [])
-        if params:
-            params = [p for p in params if p in self._input_data] or params
-        self._add_error(params[0] if params else field, error)
-
-    def _add_error(self, param: str, error: ValidationError):
-        """private method performing the same operations as `self.add_error` but storing
-        `param` as it is with no conversion or check. Used in `__init__` where we deal
-        with input parameters and not Field names
-
-        :param param: a string denoting an input parameter
-        :param error: the error as `ValidationError` instance
-        """
-        # If we did not clean the form yet, `self._errors` is None. So:
-        if self._errors is None:
-            self._errors = ErrorDict()  # code copied from `super().full_clean`
-        # If we do not have the `param` argument in `self._errors`, the `super.add_error`
-        # raises. So:
-        if param not in self._errors:
-            # code copied from `super.add_error`:
-            self._errors[param] = self.error_class(renderer=self.renderer)
-        # If we did not clean the form yet, `self.cleaned_data` does not exist. So:
-        add_attr = not hasattr(self, 'cleaned_data')
-        if add_attr:
-            setattr(self, 'cleaned_data', {})
-        # Now we can safely call the super method:
-        super().add_error(param, error)
-        # remove cleaned_data if needed:
-        if add_attr:
-            delattr(self, 'cleaned_data')
+        if unknowns:  # unknown (nonexistent) parameters, store error:
+            raise ValidationError(", ".join(unknowns) + " (check typos)",
+                                  code='invalid_name')
 
     def has_error(self, field, code=None):
-        """Call `super.has_error` relaxing some Django conditions: this method can be
-        safely called at any stage (`super.has_error` triggers a Form clean if not
-        already done, whereas this method simply returns False in case)
+        """Call `super.has_error` without forcing a full clean (if the form has not
+        been cleaned, return False)
 
-        :param field: a Form field name
+        :param field: a Form field name (not an input parameter name)
         :param code: an optional error code (e.g. 'invalid')
         """
-        if self._errors:
-            # convert field name to mapped params, if any (otherwise map to [itself]):
-            for param in self._field2params.get(field, [field]):
-                if super().has_error(param, code):
-                    return True
-        return False
+        return super().has_error(field, code) if self._errors else False
 
     def errors_json_data(self, msg: str = None) -> dict:
         """Reformat `self.errors.get_json_data()` and return a JSON serializable dict
@@ -240,7 +200,8 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
         errors = []
         # build errors dict:
-        for param_name, errs in errors_dict.items():
+        for field_name, errs in errors_dict.items():
+            param_name = self.param_name_of(field_name)
             for err in errs:
                 errors.append({
                     'location': param_name or 'unspecified',
@@ -249,7 +210,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 })
         if not msg:
             msg = "Invalid request"
-            err_param_names = sorted(errors_dict.keys())
+            err_param_names = sorted({self.param_name_of(f) for f in errors_dict})
             if err_param_names:
                 msg += f'. Problems found in: {", ".join(err_param_names)}'
         return {
@@ -257,41 +218,23 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             'errors': errors
         }
 
+    def param_name_of(self, field: str) -> str:
+        """Return the parameter name (given as input on this instance)
+        relative to the given field. If no input param is found, the primary
+        parameter name associated to `field` at a class-level (which can also
+        be `field` itself) will be returned
+        """
+        if field in self._field2inputparam: # param is given in this form `data`:
+            return self._field2inputparam[field]
+        return self.param_names_of(field)[0]  # class-level method
+
     @classmethod
-    def field_iterator(cls) -> Iterable[tuple[str, Field, tuple[str, ...]]]:
-        """Yield the Fields of this class as tuples of 3 elements:
-        ```
-        field_name: str, field: Field, params: tuple[str]
-        ```
-        where field_name and field are the same as returned by
-        `cls.declared_fields.items()` and `params` is a tuple of
-        API parameter names of the Field (1st param is the default), and it is by
-        default a tuple with a single element equal to `field_name`, unless
-        different parameter name(s) are provided in `cls._field2params`
+    def param_names_of(cls, field: str) -> tuple[str]:
+        """Return the names associated to `field` at a class-level. The returned
+        tuple has nonzero length and might contain the passed field argument. In
+        case of length > 1, the first tuple item is the primary parameter name
         """
-        for field_name, field in cls.declared_fields.items():
-            params = cls._field2params.get(field_name, (field_name,))
-            yield field_name, field, params
-
-    def _get_data(self, compact=True) -> Iterable[tuple[str, Any]]:
-        """Yield the Fields of this instance as tuples of 3 elements:
-        ```
-        param_name: str, param_value: Any, field: Field | None
-        ```
-        The fields are yielded from the original `data` passed in `__init__`: as such,
-        `field` might be None if `param_name` does not match any Form parameter
-
-        @param compact: if True (the default), optional Form parameters (either non
-            required or whose value equals the Field initial value) are not yielded
-        """
-        param2field = {p: f for _, f, ps in self.field_iterator() for p in ps}
-        for param_name, value in self._input_data.items():
-            field = param2field.get(param_name, None)
-            if compact and field is not None:
-                field_optional = not field.required or field.initial is not None
-                if field_optional and self._input_data[param_name] == field.initial:
-                    continue
-            yield param_name, value, field
+        return cls._field2params.get(field, (field,))
 
     def as_json(self, compact=True) -> str:
         """Return the `data` argument passed in the constructor in a JSON formatted
@@ -300,8 +243,13 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         @param compact: skip optional parameters (see `compact` in `self._get_data`)
         """
         stream = StringIO()
-        json.dump({p: v for p, v, f in self._get_data(compact)},
-                  stream, indent=4, separators=(',', ': '), sort_keys=True)
+        ret = {}
+        for field, value in self.data.items():
+            if compact and \
+                    self._is_default_value_for_field(field, value):  # class level attr
+                continue
+            ret[self.param_name_of(field)] = value
+        json.dump(ret, stream, indent=2, separators=(',', ': '), sort_keys=True)
         return stream.getvalue()
 
     def as_yaml(self, compact=True) -> str:
@@ -318,23 +266,42 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 return super(Dumper, self).increase_indent(flow, False)
 
         stream = StringIO()
-        for param_name, value, field in self._get_data(compact):
-            docstr = self.get_field_docstring(field) if field else ""
+        for field, value in self.data.items():
+            if compact and \
+                    self._is_default_value_for_field(field, value):  # class level attr
+                continue
+            docstr = self.get_field_docstring(field)
             if docstr:
                 stream.write(f'# {docstr}')
                 stream.write('\n')
-            yaml.dump({param_name: value},
+            yaml.dump({self.param_name_of(field): value},
                       stream=stream, Dumper=Dumper, default_flow_style=False)
             stream.write('\n')
 
         return stream.getvalue()
 
-    @staticmethod
-    def get_field_docstring(field: Field, remove_html_tags=False):
+    @classmethod
+    def _is_default_value_for_field(cls, field: Union[str, Field], value):
+        """Return True if the given value is the default value for the given
+        field and can be omitted in `self.data`"""
+        if isinstance(field, str):
+            field = cls.declared_fields.get(field, None)
+        if field:
+            field_optional = not field.required or field.initial is not None
+            if field_optional and value == field.initial:
+                return True
+        return False
+
+    @classmethod
+    def get_field_docstring(cls, field: Union[str, Field], remove_html_tags=False):
         """Return a docstring from the given Form field `label` and `help_text`
         attributes. The returned string will be a one-line (new newlines) string
         FIXME: remove? remove HTML in Fields help_text so that this method is simpler?
         """
+        if isinstance(field, str):
+            field = cls.declared_fields.get(field, None)
+        if not field:
+            return ""
         field_label = getattr(field, 'label')
         field_help_text = getattr(field, 'help_text')
         label = (field_label or '') + \
@@ -363,12 +330,15 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         safe_chars = self.QUERY_STRING_SAFE_CHARS
         ret = []
         to_str = self.obj_as_querystr
-        for param_name, value, field in self._get_data(compact):
+        for field, value in self.data.items():
+            if compact and \
+                    self._is_default_value_for_field(field, value):  # class level attr
+                continue
             if isinstance(value, (list, tuple)):
                 val = ','.join(f'{urlquote(to_str(v), safe=safe_chars)}' for v in value)
             else:
                 val = f'{urlquote(to_str(value), safe=safe_chars)}'
-            ret.append(f'{param_name}={val}')
+            ret.append(f'{self.param_name_of(field)}={val}')
         return '&'.join(ret)
 
     @staticmethod
@@ -524,7 +494,11 @@ class GsimImtForm(SHSRForm):
 
 class APIForm(EgsimBaseForm):
     """Basic API Form: handle user request in different media types (json, text)
-     and returning the relative response"""
+     and returning the relative response. To allow a given format (any key of
+     `self.MIME_TYPE`), e.g. "json", subclasses should implement the method:
+
+     def response_data_json(cleaned_data:dict) -> Any
+     """
 
     MIME_TYPE = {
         'csv': "text/csv",
@@ -546,16 +520,14 @@ class APIForm(EgsimBaseForm):
                          choices=MIME_TYPE.items())
 
     @property
-    def response_data(self) -> Union[dict, StringIO, None]:
-        """Return the response data by processing the form data, or None if
-        the form is invalid (`self.is_valid() == False`)
-        """
+    def response_data(self) -> tuple[Any, str]:
+        """Return the response data and the mime type from this form cleaned data"""
         if not self.is_valid():
             return None
         dformat = self.cleaned_data.get('format', self.__class__.default_format)
         func = getattr(self, f'response_data_{dformat}', None)
         if callable(func):
-            return func(self.cleaned_data)
+            return func(self.cleaned_data), self.MIME_TYPE[dformat]
         raise NotImplementedError(f'Format "{dformat}" not implemented')
 
 

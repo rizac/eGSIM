@@ -50,9 +50,9 @@ class RESTAPIView(View):
         form_cls = self.formclass
 
         multi_value_params = set()
-        for field_name, field, param_names in form_cls.field_iterator():
+        for field_name, field in form_cls.base_fields.items():
             if isinstance(field, (MultipleChoiceField, ArrayField)):
-                multi_value_params.update(param_names)
+                multi_value_params.update(form_cls.param_names_of(field_name))
 
         ret = {}
         for param_name, values in querydict.lists():
@@ -112,8 +112,7 @@ class RESTAPIView(View):
                 return error_response(err['message'], self.CLIENT_ERR_CODE,
                                       errors=err['errors'])
 
-            response_data = form.response_data
-            mime_type = form.mime_type
+            response_data, mime_type = form.response_data
             return self.create_response(response_data, mime_type)
         except ValidationError as v_err:
             return error_response("; ".join(v_err.messages), self.CLIENT_ERR_CODE)
