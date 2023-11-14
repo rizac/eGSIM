@@ -316,11 +316,12 @@ def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
     form_data = {}
     # iterate over the field (public) names because we also have the attribute
     # name immediately available:
-    for field_name, field, param_names in form.field_iterator():
+    for field_name, field in form.base_fields.items():
         if ignore_field(field_name):
             continue
         field_dict = field_to_dict(field, ignore_choices=ignore_choices(field_name))
-        field_dict |= dict(field_to_htmlelement_attrs(field), name=param_names[0])
+        field_dict |= dict(field_to_htmlelement_attrs(field),
+                           name=form.param_names_of(field_name)[0])
         field_dict['error'] = ''
         form_data[field_name] = field_dict
 

@@ -138,7 +138,7 @@ class Test:
                 data = yaml.safe_load(_)
             if service == 'residuals':
                 data['plot'] = 'res'
-            response_data = {
+            response_data, _ = {
                 'trellis': TrellisForm,
                 'residuals': ResidualsForm,
                 'testing': TestingForm
