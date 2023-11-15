@@ -11,7 +11,7 @@ from urllib.parse import quote as urlquote
 
 import yaml
 from shapely.geometry import Point, shape
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.forms import Form, ModelMultipleChoiceField
 from django.forms.renderers import BaseRenderer
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
@@ -21,6 +21,13 @@ from egsim.api import models
 from egsim.smtk import validate_inputs, InvalidInput, harmonize_input_gsims, \
     harmonize_input_imts, gsim
 from egsim.smtk.validators import IncompatibleInput
+
+# parameter error codes:
+# invalid_name
+# invalid_value
+# invalid_choice
+# conflicting_names
+# missing_value
 
 
 class EgsimFormMeta(DeclarativeFieldsMetaclass):
@@ -32,6 +39,7 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         new_class = super().__new__(mcs, name, bases, attrs)
 
         # Set standardized default error messages for each Form field
+        # FIXME: str-like enum and move it to global var?
         _default_error_messages = {
             "required": "This parameter is required",
             "invalid_choice": "Value not found or misspelled: %(value)s",
@@ -141,34 +149,43 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
         # Fix self.data and add errors in case:
-        unknowns = set(self.data) if no_unknown_params else None
+        unknowns = set(self.data if no_unknown_params else [])
+        errors = []
         for field_name, field in self.base_fields.items():
             param_names = self.param_names_of(field_name)
-            if unknowns is not None:
-                unknowns -= set(param_names)
+            unknowns -= set(param_names)
             input_param_names = tuple(p for p in param_names if p in self.data)
             if len(input_param_names) > 1:  # names conflict, store error:
-                for p in input_param_names:
-                    others = ", ".join(_ for _ in input_param_names if _ != p)
-                    raise ValidationError(f"This parameter conflicts with: "
-                                          f"{others}", code='conflict')
-            elif input_param_names:
+                names = " and ".join(input_param_names)
+                errors.append(ValidationError(f'{names}: names conflict',
+                                              code=f'names_conflict'))
+                # keep only the first param in `self.data`
+                for p in input_param_names[1:]:
+                    self.data.pop(p)
+                # now let's fall in the next if below:
+                input_param_names = input_param_names[:1]
+            if len(input_param_names) == 1:
                 input_param_name = input_param_names[0]
                 self._field2inputparam[field_name] = input_param_name
-                # Rename the keys of `self.data` (API params) with the mapped field name
-                # (see `self.clean` and in subclasses):
+                # Rename the keys of `self.data` (API params) with the mapped
+                # field name (see `self.clean` and in subclasses):
                 if field_name != input_param_name:
                     self.data[field_name] = self.data.pop(input_param_name)
-
             else:
                 # Make missing fields initial value the default, if provided
                 # (https://stackoverflow.com/a/20309754):
                 if self.fields[field_name].initial is not None:
                     self.data[field_name] = self.fields[field_name].initial
 
-        if unknowns:  # unknown (nonexistent) parameters, store error:
-            raise ValidationError(", ".join(unknowns) + " (check typos)",
-                                  code='invalid_name')
+        for unk in unknowns:
+            # add_error(unk, ...) raises as unk is not a field name:
+            errors.append(ValidationError(f'Invalid name(s): {unk}',
+                                          code=f'invalid_name'))
+        if errors:
+            # Add errors mapped to field name None (`add_error(N, ...) raises if N
+            # is not a field name. This will force a form full clean and thus
+            # we might have also other errors, but who cares
+            self.add_error(None, errors)
 
     def has_error(self, field, code=None):
         """Call `super.has_error` without forcing a full clean (if the form has not
@@ -201,7 +218,10 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         errors = []
         # build errors dict:
         for field_name, errs in errors_dict.items():
-            param_name = self.param_name_of(field_name)
+            param_name = ''
+            if field_name != NON_FIELD_ERRORS:
+                # if we called add_error(None, ...) then field_name is NON_FIELD_ERRORS
+                param_name = self.param_name_of(field_name)
             for err in errs:
                 errors.append({
                     'location': param_name or 'unspecified',
@@ -210,7 +230,8 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 })
         if not msg:
             msg = "Invalid request"
-            err_param_names = sorted({self.param_name_of(f) for f in errors_dict})
+            err_param_names = sorted({self.param_name_of(f) for f in errors_dict
+                                      if f != NON_FIELD_ERRORS})
             if err_param_names:
                 msg += f'. Problems found in: {", ".join(err_param_names)}'
         return {
@@ -523,7 +544,7 @@ class APIForm(EgsimBaseForm):
     def response_data(self) -> tuple[Any, str]:
         """Return the response data and the mime type from this form cleaned data"""
         if not self.is_valid():
-            return None
+            return None   # FIXME better
         dformat = self.cleaned_data.get('format', self.__class__.default_format)
         func = getattr(self, f'response_data_{dformat}', None)
         if callable(func):
