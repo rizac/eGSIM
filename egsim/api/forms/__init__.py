@@ -558,8 +558,6 @@ class GsimFromRegionForm(SHSRForm, APIForm):
     """API Form returning a list of models from a given location and optional
     seismic hazard source regionalizations (SHSR)"""
 
-    def process_data_json(self, cleaned_data: dict) -> list[str]:
-        """Process the input data in JSON format
-        :param cleaned_data: the result of `self.cleaned_data`
-        """
-        return sorted(self.get_region_selected_model_names())
+    def response_json(self, cleaned_data) -> dict:
+        """Return the API response for data requested in JSON format"""
+        return {'models': sorted(self.get_region_selected_model_names())}
