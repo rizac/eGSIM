@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
-from typing import Union, Any
+from typing import Union
 from datetime import date, datetime
 import json
 from io import StringIO
@@ -22,6 +22,7 @@ from egsim.api import models
 from egsim.smtk import validate_inputs, InvalidInput, harmonize_input_gsims, \
     harmonize_input_imts, gsim
 from egsim.smtk.validators import IncompatibleInput
+
 
 # parameter error codes:
 # invalid_name
@@ -179,13 +180,12 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                     self.data[field_name] = self.fields[field_name].initial
 
         for unk in unknowns:
-            # add_error(unk, ...) raises as unk is not a field name:
             errors.append(ValidationError(f'Invalid name(s): {unk}',
                                           code=f'invalid_name'))
         if errors:
-            # Add errors mapped to field name None (`add_error(N, ...) raises if N
-            # is not a field name. This will force a form full clean and thus
-            # we might have also other errors, but who cares
+            # Add errors. Notes: `add_error(N, ...)` works only if N is None or
+            # an existing field name, and will force a form full clean (so that we
+            # might end up adding more errors than those added below)
             self.add_error(None, errors)
 
     def has_error(self, field, code=None):
@@ -241,20 +241,19 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         }
 
     def param_name_of(self, field: str) -> str:
-        """Return the parameter name (given as input on this instance)
-        relative to the given field. If no input param is found, the primary
-        parameter name associated to `field` at a class-level (which can also
-        be `field` itself) will be returned
+        """Return the input parameter name of `field`. If no parameter name mapped to
+        `field` has been provided as input `data`, return the first parameter name
+        of `field` or, in case of no mapping, `field` itself
         """
-        if field in self._field2inputparam: # param is given in this form `data`:
+        if field in self._field2inputparam:  # param is given in this form `data`:
             return self._field2inputparam[field]
         return self.param_names_of(field)[0]  # class-level method
 
     @classmethod
     def param_names_of(cls, field: str) -> tuple[str]:
-        """Return the names associated to `field` at a class-level. The returned
-        tuple has nonzero length and might contain the passed field argument. In
-        case of length > 1, the first tuple item is the primary parameter name
+        """Return the parameter names of `field` registered at a class-level. The
+        returned tuple has nonzero length and might contain the passed field argument.
+        In case of length > 1, the first item is the primary parameter name
         """
         return cls._field2params.get(field, (field,))
 
@@ -487,8 +486,8 @@ class GsimImtForm(SHSRForm):
             )
 
     def clean(self):
-        """Run validation where we must validate selected gsim(s) based on
-        selected intensity measure type
+        """Perform a final validation checking models and intensity measures
+        compatibility
         """
         gsim, imt = 'gsim', 'imt'
         cleaned_data = super().clean()
@@ -535,14 +534,15 @@ class APIForm(EgsimBaseForm):
                          choices=MIME_TYPE.items())
 
     # these are methods that will be called from api/views.RestAPIView
-    # Subclasses should implement AT LEAST ONE of these methods:
-
-    def response_csv(self, cleaned_data) -> Union[str, StringIO]:
-        """Return the API response for data requested in CSV format"""
-        raise NotImplementedError()
+    # Subclasses should implement AT LEAST ONE of these methods (usually the
+    # one mapped to the `format` field `initial` value, the default format):
 
     def response_json(self, cleaned_data) -> dict:
         """Return the API response for data requested in JSON format"""
+        raise NotImplementedError()
+
+    def response_csv(self, cleaned_data) -> Union[str, StringIO]:
+        """Return the API response for data requested in CSV format"""
         raise NotImplementedError()
 
     def response_hdf(self, cleaned_data) -> "pd.DataFrame":
