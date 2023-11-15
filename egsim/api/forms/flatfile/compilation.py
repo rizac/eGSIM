@@ -3,19 +3,20 @@ Django Forms for eGSIM flatfile compilation (inspection, plot, upload)
 
 @author: riccardo
 """
-from itertools import chain
-from typing import Iterable, Any, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from django.forms.fields import CharField
 
 from egsim.api import models
 from egsim.api.forms import APIForm, GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
+from egsim.smtk import (ground_motion_properties_required_by,
+                        intensity_measures_defined_for)
 from egsim.smtk.flatfile import get_dtypes_and_defaults
+from egsim.smtk.flatfile.columns import load_from_yaml
 
 
 class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
@@ -24,66 +25,29 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
     accept_empty_gsim_list = True  # see GsimImtForm
     accept_empty_imt_list = True
 
-    def clean(self):
-        return super().clean()
+    def response_json(self, cleaned_data: dict) -> dict:
+        """Return the API response for data requested in JSON format"""
+        gsims = cleaned_data.get('gsim', [])
+        if not models:
+            gsims = list(models.Gsim.objects.filter(hidden=False).only('name').
+                         values_list('name', flat=True))
+        gm_props = ground_motion_properties_required_by(*gsims, as_ff_column=True)
+        imts = cleaned_data.get('imt', [])
 
-    @classmethod
-    def process_data(cls, cleaned_data: dict) -> dict:
-        """Process the input data `cleaned_data` returning the response data
-        of this form upon user request.
-        This method is called by `self.response_data` only if the form is valid.
+        if not imts:
+            imts = set()
+            for m in gsims:
+                imts |= intensity_measures_defined_for(m)
 
-        :param cleaned_data: the result of `self.cleaned_data`
-        """
-        query = models.FlatfileColumn.objects  # noqa
-
-        condition = Q(data_properties__required=True)
-        if cleaned_data.get('gsim', []):
-            condition |= Q(gsims__name__in=cleaned_data['gsim'],
-                           type__in=(ColumnType.rupture_param.name,
-                                     ColumnType.sites_param.name,
-                                     ColumnType.distance.name))
-
-        if cleaned_data.get('imt', []):
-            # we could simply skip querying imts as we already have them, but we need
-            # helpvand dtype info:
-            imts = cleaned_data['imt']
-            imts_to_query = set('SA' if _.startswith('SA(') else _ for _ in imts)
-            condition |= Q(name__in=imts_to_query, type=ColumnType.imt.name)
-
+        col_registry = load_from_yaml()
         columns = {}
-        attrs = 'name', 'help', 'type', 'dtype'
-        for name, help, type, dtype in query.filter(condition).values_list(*attrs):
-            if name in columns:  # could be (we query with m2m relationship)
-                continue
-            if name == 'SA' and type == ColumnType.imt.name:
-                names = [col for col in cleaned_data.get('imt', [])
-                         if col.startswith('SA(')]
-            else:
-                names = [name]
-            for name_ in names:
-                columns[name_] = {
-                    'help': help,
-                    'type': ColumnType[type].value,
-                    'dtype': dtype or 'any'
-                }
-
+        for col_name in sorted(set(gm_props) | set(imts)):
+            columns[col_name] = {
+                'help': str(col_registry.get(col_name, {}).get('help', 'unspecified')),
+                'type': str(col_registry.get(col_name, {}).get('type', 'unspecified')),
+                'dtype': str(col_registry.get(col_name, {}).get('dtype', 'unspecified'))
+            }
         return columns
-
-    @classmethod
-    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
-        """Yield CSV rows, where each row is an iterables of Python objects
-        representing a cell value. Each row doesn't need to contain the same
-        number of elements, the caller function `self.to_csv_buffer` will pad
-        columns with Nones, in case (note that None is rendered as "", any other
-        value using its string representation).
-
-        :param processed_data: dict resulting from `self.process_data`
-        """
-        names = processed_data.keys()
-        yield names
-        yield (processed_data[n].get('help', '') for n in names)
-        yield (processed_data[n].get('dtype', '') for n in names)
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):
@@ -117,59 +81,53 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
 
         return cleaned_data
 
-    @classmethod
-    def process_data(cls, cleaned_data: dict) -> dict:
-        """Process the input data `cleaned_data` returning the response data
-        of this form upon user request.
-        This method is called by `self.response_data` only if the form is valid.
-
-        :param cleaned_data: the result of `self.cleaned_data`
-        """
+    def response_json(self, cleaned_data: dict) -> dict:
+        """Return the API response for data requested in JSON format"""
         dataframe = cleaned_data['flatfile']
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
         if x and y:  # scatter plot
             xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
             xvalues = dataframe[xlabel]
             yvalues = dataframe[ylabel]
-            xnan = cls._isna(xvalues)
-            ynan = cls._isna(yvalues)
+            xnan = self._isna(xvalues)
+            ynan = self._isna(yvalues)
             plot = dict(
-                xvalues=cls.tolist(xvalues[~(xnan | ynan)]),
-                yvalues=cls.tolist(yvalues[~(xnan | ynan)]),
+                xvalues=self.tolist(xvalues[~(xnan | ynan)]),
+                yvalues=self.tolist(yvalues[~(xnan | ynan)]),
                 xlabel=xlabel,
                 ylabel=ylabel,
                 stats={
                     xlabel: {'N/A count': int(xnan.sum()),
-                             **cls._get_stats(xvalues.values[~xnan])},
+                             **self._get_stats(xvalues.values[~xnan])},
                     ylabel: {'N/A count': int(ynan.sum()),
-                             **cls._get_stats(yvalues.values[~ynan])}
+                             **self._get_stats(yvalues.values[~ynan])}
                 }
             )
         else:
             label = x or y
-            na_values = cls._isna(dataframe[label])
+            na_values = self._isna(dataframe[label])
             dataframe = dataframe.loc[~na_values, :]
             series = dataframe[label]
             na_count = int(na_values.sum())
             if x:
                 plot = dict(
-                    xvalues=cls.tolist(series),
+                    xvalues=self.tolist(series),
                     xlabel=label,
                     stats={
                         label: {
                             'N/A count': na_count,
-                            **cls._get_stats(series.values)
+                            **self._get_stats(series.values)
                         }
                     }
                 )
             else:
                 plot = dict(
-                    yvalues=cls.tolist(series),
+                    yvalues=self.tolist(series),
                     ylabel=label,
                     stats={
                         label: {
                             'N/A count': na_count,
-                            **cls._get_stats(series.values)
+                            **self._get_stats(series.values)
                         }
                     }
                 )
@@ -211,19 +169,6 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 '0.75quantile': None
             }
 
-    @classmethod
-    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
-        """Yield CSV rows, where each row is an iterables of Python objects
-        representing a cell value. Each row doesn't need to contain the same
-        number of elements, the caller function `self.to_csv_buffer` will pad
-        columns with Nones, in case (note that None is rendered as "", any other
-        value using its string representation).
-
-        :param processed_data: dict resulting from `self.process_data`
-        """
-        yield chain([processed_data['xlabel']], processed_data['x'])
-        yield chain([processed_data['ylabel']], processed_data['y'])
-
 
 class FlatfileInspectionForm(APIForm, FlatfileForm):
     """Form for flatfile inspection, return info from a given flatfile"""
@@ -249,30 +194,10 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
         return cleaned_data
 
-    @classmethod
-    def process_data(cls, cleaned_data: dict) -> dict:
-        """Process the input data `cleaned_data` returning the response data
-        of this form upon user request.
-        This method is called by `self.response_data` only if the form is valid.
-
-        :param cleaned_data: the result of `self.cleaned_data`
-        """
+    def response_json(self, cleaned_data: dict) -> dict:
+        """Return the API response for data requested in JSON format"""
         return {
             'columns': cleaned_data['flatfile_dtypes'],
-             'default_columns': get_dtypes_and_defaults()[0],
+            'default_columns': get_dtypes_and_defaults()[0],
             'gsim': cleaned_data['gsim']
         }
-
-    @classmethod
-    def csv_rows(cls, processed_data: dict) -> Iterable[Iterable[Any]]:
-        """Yield CSV rows, where each row is an iterables of Python objects
-        representing a cell value. Each row doesn't need to contain the same
-        number of elements, the caller function `self.to_csv_buffer` will pad
-        columns with Nones, in case (note that None is rendered as "", any other
-        value using its string representation).
-
-        :param processed_data: dict resulting from `self.process_data`
-        """
-        # NOT IMPLEMENTED. THIS SHOULD RAISE:
-        return super().csv_rows(processed_data)
-

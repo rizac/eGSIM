@@ -122,14 +122,14 @@ def get_all_names_of(column, ordered=False) -> Union[frozenset[str], list[str]]:
     """Return all possible names of the given column, as set of strings (if ordered is
     False, the default). If ordered is True, a list is returned where the first element
     is assured to be the flatfile default column name (primary name) and all remaining
-    the secondary names. The set/list will be empty if `column` does not denote a
-    flatfile column
+    the secondary names. The set/list will be composed of `column` alone if `column`
+    does not denote a flatfile column
     """
     global _alias
     if _alias is None:
         _alias = {}
         _extract_from_columns(load_from_yaml(), alias=_alias)
-    all_names = _alias.get(column, frozenset())
+    all_names = _alias.get(column, frozenset([column]))
     if not ordered:
         return all_names
     # re-order putting the primary name in the 1st position:

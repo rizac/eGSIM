@@ -99,7 +99,7 @@ def distances_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]
     return frozenset(ret)
 
 
-def imts_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+def intensity_measures_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     """Return the intensity measures defined for the given model"""
     if isinstance(gsim, str):
         gsim = registry[gsim]
@@ -112,8 +112,9 @@ def ground_motion_properties_required_by(
     """Return the required ground motion properties (distance measures,
        rupture and site params all together)
 
-    :param as_ff_column: True if the ground motion properties name should be
-        returned as flatfile columns instead oif properties (False by default)
+    :param as_ff_column: False (the default) will return the ground motion property
+        names as implemented in OpenQuake. True will check any property
+        and return the relative flatfile column registered in this package
     """
     ret = []
     for model in gsim:
