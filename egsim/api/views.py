@@ -109,8 +109,14 @@ class RESTAPIView(View):
             form = self.formclass(**form_kwargs)
             if not form.is_valid():
                 return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
-            response_data, mime_type = form.response_data
-            return self.create_response(response_data, mime_type)
+            cleaned_data = form.cleaned_data
+            dformat = cleaned_data.pop('format')
+            func = getattr(self, f'response_{dformat}', None)
+            if not callable(func):
+                raise NotImplementedError(f'Format {dformat} N/A')
+            response_data = func(cleaned_data)
+            mime_type = form.MIME_TYPE[dformat]
+            return HttpResponse(response_data, status=200, content_type=mime_type)
         except ValidationError as v_err:
             return error_response(v_err, self.CLIENT_ERR_CODE)
         except NotImplementedError as ni_err:
@@ -118,10 +124,6 @@ class RESTAPIView(View):
         except Exception as err:
             msg = f'Server error ({err.__class__.__name__}): {str(err)}'
             return error_response(msg, self.SERVER_ERR_CODE)
-
-    @classmethod
-    def create_response(cls, response_data: Any, content_type, **kwargs):
-        return HttpResponse(response_data, content_type=content_type, **kwargs)
 
 
 # we need to provide the full URL of the views here, because the frontend need
