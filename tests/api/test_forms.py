@@ -6,7 +6,7 @@ Created on 2 Jun 2018
 @author: riccardo
 """
 from datetime import datetime
-from django.core.exceptions import ValidationError
+# from django.core.exceptions import ValidationError
 
 from io import BytesIO
 
@@ -165,39 +165,39 @@ class Test:
     def test_provide_unknown_params(self):
         """Test that unknown and conflicting parameters"""
 
-        with pytest.raises(ValidationError) as verr:
-            form = GsimImtForm({
-                'unknown_param': 5,
-                GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
-            })
-        # assert not form.is_valid()
-        # verr = form.errors_json_data()
-        # assert 'unknown_param' in verr['message']
+
+        form = GsimImtForm({
+            'unknown_param': 5,
+            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
+        })
+        assert not form.is_valid()
+        verr = form.errors_json_data()
+        assert 'unknown_param' in verr['errors'][0]['message']
 
         # test another unknown parameter, but this time provide a name of an existing
         # Form Field ('plot_type'):
-        with pytest.raises(ValidationError) as verr:
-            data = {
-                GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                IMT: ['PGA'],
-                'mag': '9', 'distance': '0', 'aspect': '1', 'dip': '60', 'plot_type': 'm'
-            }
-            form = TrellisForm(data)
-        # assert not form.is_valid()
-        # verr = form.errors_json_data()
-        # assert 'plot_type' in verr['message']
+
+        data = {
+            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+            IMT: ['PGA'],
+            'mag': '9', 'distance': '0', 'aspect': '1', 'dip': '60', 'plot_type': 'm'
+        }
+        form = TrellisForm(data)
+        assert not form.is_valid()
+        verr = form.errors_json_data()
+        assert 'plot_type' in verr['errors'][0]['message']
 
         # conflicting names:
-        with pytest.raises(ValidationError) as verr:
-            form = GsimImtForm({
-                'model': ['BindiEtAl2011'],
-                'gmm': ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
-            })
-        # assert not form.is_valid()
-        # verr = form.errors_json_data()
-        # assert 'model' in verr['message'] and 'gmm' in verr['message']
+        form = GsimImtForm({
+            'model': ['BindiEtAl2011'],
+            'gmm': ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+            IMT: ['SA(0.1)', 'SA(0.2)', 'PGA', 'PGV']
+        })
+        assert not form.is_valid()
+        verr = form.errors_json_data()
+        assert 'model' in verr['errors'][0]['message']
+        assert 'gmm' in verr['errors'][0]['message']
 
         # assert verr.value.message == 'Conflicting parameters: model, gmm'
 
