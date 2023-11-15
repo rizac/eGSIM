@@ -1,5 +1,5 @@
 """Module with the views for the web API (no GUI)"""
-import os
+from http.client import responses
 import re
 from io import StringIO
 from typing import Union, Type, Any
@@ -108,16 +108,13 @@ class RESTAPIView(View):
         try:
             form = self.formclass(**form_kwargs)
             if not form.is_valid():
-                err = form.errors_json_data()
-                return error_response(err['message'], self.CLIENT_ERR_CODE,
-                                      errors=err['errors'])
-
+                return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
             response_data, mime_type = form.response_data
             return self.create_response(response_data, mime_type)
         except ValidationError as v_err:
-            return error_response("; ".join(v_err.messages), self.CLIENT_ERR_CODE)
+            return error_response(v_err, self.CLIENT_ERR_CODE)
         except NotImplementedError as ni_err:
-            return error_response(str(ni_err), 501)
+            return error_response(ni_err, 501)
         except Exception as err:
             msg = f'Server error ({err.__class__.__name__}): {str(err)}'
             return error_response(msg, self.SERVER_ERR_CODE)
@@ -154,25 +151,28 @@ class TestingView(RESTAPIView):
     urls = (f'{API_PATH}/testing', f'{API_PATH}/model-data-testing')
 
 
-def error_response(exception: Union[str, Exception], code=500, **kwargs) -> JsonResponse:
-    """Convert the given exception or string message `exception` into a json
-    response. the response data will be the dict:
-    ```
-    {
-    "error": {
-            "message": exception,
-            "code": code,
-            **kwargs
-        }
-    }
-    ```
+def error_response(content: Union[str, Exception, dict],
+                   status_code=500, **kwargs) -> JsonResponse:
+    """Convert the given exception, dict or string into a JSON
+    response with content (or data or body) a dict with at least the key
+    "message"
     (see https://google.github.io/styleguide/jsoncstyleguide.xml)
 
-    :param exception: Exception or string. If string, it's the exception
-        message. Otherwise, the exception message will be built as str(exception)
-    :param code: the response HTTP status code (int, default: 400)
-    :param kwargs: other optional arguments which will be inserted in the
-        response data dict
+    :param content: dict, Exception or string. If dict, it will be used as response
+        content (assuring there is at least the key 'message' which will be built
+        from `status_code` if missing). If string a dict `{message: <content>}` will
+        be built, if exception, the same dict will be returned but with 'message' built
+        from the exception
+    :param status_code: the response HTTP status code (int, default: 500)
+    :param kwargs: optional params for JSONResponse (except 'content' and 'status')
     """
-    err_body = {**kwargs, 'message': str(exception), 'code': code}
-    return JsonResponse({'error': err_body}, safe=False, status=code)
+    if isinstance(content, dict):
+        err_body = content
+        err_body.setdefault('message', f'{status_code} ({responses[status_code]})')
+    else:
+        if isinstance(content, ValidationError):
+            message = "; ".join(content.messages)
+        else:
+            message = str(content)
+        err_body = {'message': message}
+    return JsonResponse(err_body, safe=False, status=status_code, **kwargs)

@@ -224,7 +224,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 param_name = self.param_name_of(field_name)
             for err in errs:
                 errors.append({
-                    'location': param_name or 'unspecified',
+                    'location': param_name,
                     'message': err.get('message', ''),
                     'reason': err.get('code', '')
                 })
