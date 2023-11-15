@@ -1,4 +1,5 @@
 """Base eGSIM forms"""
+from __future__ import annotations
 
 import re
 from openquake.hazardlib.gsim.base import GMPE
@@ -528,28 +529,29 @@ class APIForm(EgsimBaseForm):
         'gzip': "application/gzip"
     }
 
-    @property
-    def mime_type(self):
-        if not self.is_valid():
-            return None
-        return self.cleaned_data['format']
-
-    default_format='json'  # change in subclasses if needed
-
     format = ChoiceField(required=False,
-                         label='The format of the returned data (server response)',
+                         initial="json",
+                         label='The format of the data returned by the web service',
                          choices=MIME_TYPE.items())
 
-    @property
-    def response_data(self) -> tuple[Any, str]:
-        """Return the response data and the mime type from this form cleaned data"""
-        if not self.is_valid():
-            return None   # FIXME better
-        dformat = self.cleaned_data.get('format', self.__class__.default_format)
-        func = getattr(self, f'response_data_{dformat}', None)
-        if callable(func):
-            return func(self.cleaned_data), self.MIME_TYPE[dformat]
-        raise NotImplementedError(f'Format "{dformat}" not implemented')
+    # these are methods that will be called from api/views.RestAPIView
+    # Subclasses should implement AT LEAST ONE of these methods:
+
+    def response_csv(self, cleaned_data) -> Union[str, StringIO]:
+        """Return the API response for data requested in CSV format"""
+        raise NotImplementedError()
+
+    def response_json(self, cleaned_data) -> dict:
+        """Return the API response for data requested in JSON format"""
+        raise NotImplementedError()
+
+    def response_hdf(self, cleaned_data) -> "pd.DataFrame":
+        """Return the API response for data requested in HDF format"""
+        raise NotImplementedError()
+
+    def response_gzip(self, cleaned_data) -> "BytesIO":
+        """Return the API response for data requested in gzip FORMAT"""
+        raise NotImplementedError()
 
 
 class GsimFromRegionForm(SHSRForm, APIForm):

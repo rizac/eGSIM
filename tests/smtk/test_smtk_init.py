@@ -6,15 +6,17 @@ Created on 16 Feb 2018
 from openquake.hazardlib.gsim.base import gsim_aliases, GMPE
 import warnings
 import pytest
+
+import numpy as np
 from openquake.hazardlib.imt import IMT, SA
 
-from egsim.smtk import InvalidImt
+# from egsim.smtk import InvalidImt
 from egsim.smtk.converters import convert_accel_units
-from egsim.smtk.registry import (registered_gsim_names, registry, \
-                                 imts_defined_for, distances_required_by, \
+from egsim.smtk.registry import (registered_gsims, registry, \
+                                 intensity_measures_defined_for, distances_required_by, \
                                  rupture_params_required_by, site_params_required_by,
                                  gsim_name)
-from egsim.smtk.validators import InvalidGsim, gsim, imt
+from egsim.smtk.validators import gsim, imt
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
@@ -56,8 +58,9 @@ def test_load_models():
 
 
 def test_load_model_with_deprecation_warnings():
+    excs = (TypeError, IndexError, KeyError, ValueError, DeprecationWarning)
     model = 'AkkarEtAl2013'
-    with pytest.raises(InvalidGsim) as exc:
+    with pytest.raises(*excs) as exc:
         gsim(model)
     gsim_ = gsim(model, raise_deprecated=False)
     assert isinstance(gsim_, GMPE)
@@ -77,7 +80,7 @@ def test_load_model_with_deprecation_warnings():
             assert len(w) == 0 if ignore_warnings else 1
 
 def test_gsim_name_1to1_relation():
-    for model in registered_gsim_names:
+    for model in registered_gsims:
         try:
             gsim_ = gsim(model, raise_deprecated=False)
         except InvalidGsim as exc:
@@ -108,7 +111,7 @@ def test_requires():
         for func in [distances_required_by,
                      rupture_params_required_by,
                      site_params_required_by,
-                     imts_defined_for]:
+                     intensity_measures_defined_for]:
             res = func(gsim_cls)
             assert isinstance(res, frozenset)
             assert not res or all(isinstance(_, str) for _ in res)

@@ -10,7 +10,7 @@ from django.forms import Form, ModelChoiceField
 from django.forms.fields import CharField, FileField
 
 from egsim.smtk import (ground_motion_properties_required_by,
-                        imts_defined_for, registered_imts)
+                        intensity_measures_defined_for, registered_imts)
 from egsim.smtk.flatfile import (read_flatfile, ColumnDtype,
                                  query as flatfile_query,
                                  get_all_names_of)
@@ -146,7 +146,7 @@ def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
     ff_cols -= imt_cols
     for name in models.Gsim.objects.filter(hidden=False).\
             only('name').values_list('name', flat=True):
-        imts = imts_defined_for(name)
+        imts = intensity_measures_defined_for(name)
         if not imts.intersection(imt_cols):
             continue
         if all(get_all_names_of(p) & ff_cols

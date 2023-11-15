@@ -11,7 +11,7 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.valid import gsim as valid_gsim
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
-from .registry import gsim_name, imts_defined_for, sa_limits, imt_name
+from .registry import gsim_name, intensity_measures_defined_for, sa_limits, imt_name
 
 
 def harmonize_input_gsims(
@@ -171,7 +171,7 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
     # create an IncompatibleGsmImt exception, adn populate it with errors if any:
     errors = []
     for gm_name, gsim_inst in gsims.items():
-        invalid_imts = imt_names - imts_defined_for(gsim_inst)
+        invalid_imts = imt_names - intensity_measures_defined_for(gsim_inst)
         if periods:
             if 'SA' in invalid_imts:
                 invalid_imts.remove('SA')
