@@ -130,7 +130,6 @@ class FlatfileForm(EgsimBaseForm):
         dtypes = {}
         for col in flatfile.columns:
             f_col = flatfile[col]
-
             if isinstance(f_col.dtype, pd.CategoricalDtype):
                 col_dtype = "categorical"
             else:
