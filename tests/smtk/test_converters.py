@@ -13,6 +13,18 @@ def test_dataframe2dict():
     cols = [('mag', ''), ('PGA', 'CauzziEtAl')]
     data = [[np.nan, 1], [3, np.inf], [-np.inf, 5.37]]
     dfr = pd.DataFrame(columns=cols, data=data)
+    _check_dataframe2dict(dfr)
+    # the dataframe above does not actually have a
+    # multi-index, so let's set one and check again
+    # (the multiindex we are about to set does not change
+    # the dataframe columns actually):
+    dfr.columns = pd.MultiIndex.from_tuples(cols)
+    assert isinstance(dfr.columns, pd.MultiIndex)
+    _check_dataframe2dict(dfr)
+
+
+def _check_dataframe2dict(dfr):
+    """Test the flatfile metadata"""
     res = dataframe2dict(dfr, as_json=False, drop_empty_levels=False)
     expected = {
         ('mag', ''): [np.nan, 3, -np.inf],

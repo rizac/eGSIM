@@ -87,14 +87,14 @@ def convert_accel_units(
 
 
 def dataframe2dict(dframe: pd.DataFrame, as_json=True,
-                   drop_empty_levels=True):
-    """Converts the given dataframe into a Python dict, in the format:
+                   drop_empty_levels=True) -> dict[Union[str, tuple], list]:
+    """Convert the given dataframe into a Python dict, in the format:
     ```
     { column:Union[str, tuple]: values:list[Any], ... }
     ```
     :param dframe: the input dataframe
-    :param as_json: if True (the default), the dict will be JSOn serializable, i.e.
-        it will have only `str` as keys (multi-level hierarchical columns will be
+    :param as_json: if True (the default), the dict will be JSON serializable, i.e.
+        with `str` keys (multi-level hierarchical columns will be
         converted from tuples into nested dicts) and `None`s in-place of NaN or +-inf
     :param drop_empty_levels: if True (the default) trailing empty strings / None in
         hierarchical columns will be dropped. E.g. the `dict` item
@@ -109,23 +109,25 @@ def dataframe2dict(dframe: pd.DataFrame, as_json=True,
     if as_json:
         df_na = dframe.isna() | dframe.isin([-np.inf, np.inf])
     for col, vals in dframe.to_dict(orient='series').items():
+        if drop_empty_levels and isinstance(col, tuple):
+            # multi-index columns (hierarchical), remove trailing '' / None:
+            keys = list(col)
+            while len(keys) > 1 and not keys[-1]:
+                keys.pop()
+            key = tuple(keys) if len(keys) > 1 else keys[0]
+        else:
+            key = col
         dest_ret = output
-        col_na = None if not as_json else df_na[col]
-        if drop_empty_levels:
-            if isinstance(col, tuple):  # multi-index columns (hierarchical)
-                # remove trailing '' Nones:
-                colz = list(col)
-                while len(colz) > 1 and not colz[-1]:
-                    colz.pop()
-                col = tuple(colz) if len(colz) > 1 else colz[0]
         if as_json:
-            if isinstance(col, tuple):  # multi-index columns (hierarchical)
+            if isinstance(key, tuple):  # multi-index columns (hierarchical)
                 # str keys only => create nested dicts
-                for kol in col[:-1]:
+                for kol in key[:-1]:
                     dest_ret = dest_ret.setdefault(str(kol), {})
-                col = str(col[-1])
+                key = str(key[-1])
+            # remove nan +-inf:
+            col_na = df_na[col]
             if col_na.any():
                 vals = vals.astype(object)
                 vals[col_na] = None
-        dest_ret[col] = vals.tolist()
+        dest_ret[key] = vals.tolist()
     return output
