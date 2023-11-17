@@ -38,7 +38,8 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
 
         return cleaned_data
 
-    def response_hdf(self, cleaned_data:dict):
+    def response_hdf(self, cleaned_data: dict):
         """"""
-        return get_residuals(cleaned_data["gsim"], cleaned_data["imt"],
-                                  cleaned_data['flatfile'])
+        return get_residuals(cleaned_data["gsim"],
+                             cleaned_data["imt"],
+                             cleaned_data['flatfile'])

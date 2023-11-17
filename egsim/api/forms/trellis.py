@@ -1,8 +1,6 @@
 """
 Django Forms for eGSIM model-to-model comparison (Trellis plots)
 """
-from collections import defaultdict
-
 from django.forms import IntegerField
 from itertools import cycle
 
