@@ -211,7 +211,7 @@ class InvalidInput(ValueError):
     """
 
     def __str__(self):
-        # print each input separated by comma:
+        # print each input separated by comma (superclass uses `repr(self.args)`):
         return ", ".join(self.args)
 
 

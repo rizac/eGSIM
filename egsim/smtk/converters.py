@@ -2,6 +2,7 @@
 from collections.abc import Collection
 
 from typing import Union
+import pandas as pd
 import numpy as np
 from scipy.constants import g
 
@@ -85,50 +86,46 @@ def convert_accel_units(
                      "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
 
 
-# FIXME REMOVE UNUSED
-
-# def n_jsonify(obj: Union[Collection, int, float, np.generic]) -> \
-#         Union[float, int, list, tuple, None]:
-#     """Attempt to convert the numeric input to a Python object that is JSON serializable,
-#     i.e. same as `obj.tolist()` but - in case `obj` is a list/tuple, with NoN or
-#     infinite values converted to None.
-#
-#     :param obj: the numeric input to be converted. It can be a scalar or sequence as
-#         plain Python or numpy object. If this argument is non-numeric, this function is
-#         not guaranteed to return a JSON serializable object
-#     """
-#     # we could simply perform an iteration over `obj` but with numpy is faster. Convert
-#     # to numpy object if needed:
-#     np_obj = np.asarray(obj)
-#
-#     if np_obj.shape:  # np_obj is array
-#         # `np_obj.dtype` is not float: try to cast it to float. This will be successful
-#         # if obj contains `None`s and numeric values only:
-#         if np.issubdtype(np_obj.dtype, np.object_):
-#             try:
-#                 np_obj = np_obj.astype(float)
-#             except ValueError:
-#                 # np_obj is a non-numeric array, leave it as it is
-#                 pass
-#         # if obj is a numeric list tuples, convert non-finite (nan, inf) to None:
-#         if np.issubdtype(np_obj.dtype, np.floating):
-#             na = ~np.isfinite(np_obj)
-#             if na.any():  # has some non-finite numbers:
-#                 np_obj = np_obj.astype(object)
-#                 np_obj[na] = None
-#                 return np_obj.tolist()  # noqa
-#         # there were only finite values:
-#         if isinstance(np_obj, (list, tuple)):  # we passed a list/tuple: return it
-#             return obj
-#         # we passed something else (e.g. a np array):
-#         return np_obj.tolist()  # noqa
-#
-#     # np_obj is scalar:
-#     num = np_obj.tolist()
-#     # define infinity (note that inf == np.inf so the set below is verbose).
-#     # NaNs will be checked via `x != x` which works also when x is not numeric
-#     if num != num or num in {inf, -inf, np.inf, -np.inf}:
-#         return None
-#     return num  # noqa
-#
-#
+def dataframe2dict(dframe: pd.DataFrame, as_json=True,
+                   drop_empty_levels=True):
+    """Converts the given dataframe into a Python dict, in the format:
+    ```
+    { column:Union[str, tuple]: values:list[Any], ... }
+    ```
+    :param dframe: the input dataframe
+    :param as_json: if True (the default), the dict will be JSOn serializable, i.e.
+        it will have only `str` as keys (multi-level hierarchical columns will be
+        converted from tuples into nested dicts) and `None`s in-place of NaN or +-inf
+    :param drop_empty_levels: if True (the default) trailing empty strings / None in
+        hierarchical columns will be dropped. E.g. the `dict` item
+        ('A', '', '') -> values will be returned as {'A' -> values}
+    """
+    if not as_json and not drop_empty_levels:
+        # use pandas default method:
+        return dframe.to_dict(orient='list')
+    # customized output:
+    output = {}
+    df_na = None
+    if as_json:
+        df_na = dframe.isna() | dframe.isin([-np.inf, np.inf])
+    for col, vals in dframe.to_dict(orient='series').items():
+        dest_ret = output
+        col_na = None if not as_json else df_na[col]
+        if drop_empty_levels:
+            if isinstance(col, tuple):  # multi-index columns (hierarchical)
+                # remove trailing '' Nones:
+                colz = list(col)
+                while len(colz) > 1 and not colz[-1]:
+                    colz.pop()
+                col = tuple(colz) if len(colz) > 1 else colz[0]
+        if as_json:
+            if isinstance(col, tuple):  # multi-index columns (hierarchical)
+                # str keys only => create nested dicts
+                for kol in col[:-1]:
+                    dest_ret = dest_ret.setdefault(str(kol), {})
+                col = str(col[-1])
+            if col_na.any():
+                vals = vals.astype(object)
+                vals[col_na] = None
+        dest_ret[col] = vals.tolist()
+    return output
