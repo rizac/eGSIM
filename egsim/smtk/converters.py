@@ -123,7 +123,8 @@ def dataframe2dict(dframe: pd.DataFrame, as_json=True,
                 # str keys only => create nested dicts
                 for kol in key[:-1]:
                     dest_ret = dest_ret.setdefault(str(kol), {})
-                key = str(key[-1])
+                key = key[-1]
+            key = str(key)
             # remove nan +-inf:
             col_na = df_na[col]
             if col_na.any():
