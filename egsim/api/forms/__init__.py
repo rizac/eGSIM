@@ -1,6 +1,8 @@
 """Base eGSIM forms"""
 from __future__ import annotations
 
+from enum import StrEnum
+
 import re
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
@@ -441,8 +443,11 @@ class GsimImtForm(SHSRForm):
     accept_empty_imt_list = False  # see above (for imts)
 
     def clean_gsim(self) -> dict[str, GMPE]:
+        """Custom gsim clean.
+        The return value will replace self.cleaned_data['gsim']
+        """
         key = 'gsim'
-        value = self.cleaned_data.pop(key, None)
+        value = self.cleaned_data.get(key, None)
         if not value:
             if not self.accept_empty_gsim_list:
                 raise ValidationError(
@@ -466,8 +471,11 @@ class GsimImtForm(SHSRForm):
             )
 
     def clean_imt(self) -> dict[str, IMT]:
+        """Custom gsim clean.
+        The return value will replace self.cleaned_data['imt']
+        """
         key = 'imt'
-        value = self.cleaned_data.pop(key, None)
+        value = self.cleaned_data.get(key, None)
         if not value:
             if not self.accept_empty_imt_list:
                 raise ValidationError(
@@ -513,44 +521,45 @@ class GsimImtForm(SHSRForm):
         return cleaned_data
 
 
+class MIMETYPE(StrEnum):  # noqa
+    """An enum of supported mime types (content_type in Django Response) loosely
+    copied from mimetypes.types_map (https://docs.python.org/3.8/library/mimetypes.html)
+    """
+    CSV = "text/csv"
+    JSON = "application/json"
+    HDF = "application/x-hdf"
+    PNG = 'image/png'
+    PDF = 'application/pdf'
+    SVG = 'image/svg+xml'
+    # GZIP = "application/gzip"
+
+
 class APIForm(EgsimBaseForm):
-    """Basic API Form: handle user request in different media types (json, text)
-     and returning the relative response. To allow a given format (any key of
-     `self.MIME_TYPE`), e.g. "json", subclasses should implement the method:
-
-     def response_data_json(cleaned_data:dict) -> Any
-     """
-
-    MIME_TYPE = {
-        'csv': "text/csv",
-        'json': "application/json",
-        'hdf': "application/x-hdf",
-        'gzip': "application/gzip"
-    }
+    """API Form is the Base Form for the eGSIM API request/response. It implements:
+    1. a "format" Field/parameter to validate a request format (defaulting to "json")
+        and return the relative content type (mime type) in the cleaned data
+    2. An abstract-like `response_json` method and, for any other supported format
+        the relative `response_data_<format>` method (usually converting from or to
+        the JSON response data)
+    """
 
     format = ChoiceField(required=False,
-                         initial="json",
+                         initial=MIMETYPE.JSON.name.lower(),
                          label='The format of the data returned by the web service',
-                         choices=MIME_TYPE.items())
+                         choices=[(m.name.lower(), m) for m in MIMETYPES])  # noqa
 
-    # these are methods that will be called from api/views.RestAPIView
-    # Subclasses should implement AT LEAST ONE of these methods (usually the
-    # one mapped to the `format` field `initial` value, the default format):
+    def clean_format(self) -> str:
+        """Custom format clean.
+        The return value will replace self.cleaned_data['format']
+        """
+        return MIMETYPE[self.cleaned_data.get('format', "").upper()]
 
-    def response_json(self, cleaned_data) -> dict:
-        """Return the API response for data requested in JSON format"""
-        raise NotImplementedError()
-
-    def response_csv(self, cleaned_data) -> Union[str, StringIO]:
-        """Return the API response for data requested in CSV format"""
-        raise NotImplementedError()
-
-    def response_hdf(self, cleaned_data) -> "pd.DataFrame":
-        """Return the API response for data requested in HDF format"""
-        raise NotImplementedError()
-
-    def response_gzip(self, cleaned_data) -> "BytesIO":
-        """Return the API response for data requested in gzip FORMAT"""
+    def response_data_json(self, cleaned_data:dict) -> dict:
+        """Return the response data from this Form `cleaned_data` as a JSON-serializable
+        `dict`. Subclasses supporting different formats other than the default ('json')
+        should implement the relative `response_<format>` methods (any lowercase name
+        of the `MIMETYPE` enum, e.g. `response_csv(cleaned_data)`)
+        """
         raise NotImplementedError()
 
 
@@ -558,6 +567,6 @@ class GsimFromRegionForm(SHSRForm, APIForm):
     """API Form returning a list of models from a given location and optional
     seismic hazard source regionalizations (SHSR)"""
 
-    def response_json(self, cleaned_data) -> dict:
-        """Return the API response for data requested in JSON format"""
+    def response_data_json(self, cleaned_data:dict) -> dict:
+        """Return the API response from the Form cleaned_data"""
         return {'models': sorted(self.get_region_selected_model_names())}

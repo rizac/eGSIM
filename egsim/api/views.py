@@ -1,13 +1,14 @@
 """Module with the views for the web API (no GUI)"""
 from http.client import responses
 import re
-from io import StringIO
+from io import StringIO, BytesIO
 from typing import Union, Type, Any
 
 import yaml
+import pandas as pd
 from django.core.exceptions import ValidationError
 
-from django.http import JsonResponse, HttpRequest, QueryDict
+from django.http import JsonResponse, HttpRequest, QueryDict, StreamingHttpResponse
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
@@ -15,8 +16,7 @@ from django.forms.fields import MultipleChoiceField
 from .forms.flatfile import FlatfileForm
 from .forms.trellis import TrellisForm, ArrayField
 from .forms.flatfile.gsim.residuals import ResidualsForm
-from .forms.flatfile.gsim.testing import TestingForm
-from .forms import APIForm
+from .forms import APIForm, MIMETYPE
 
 
 class RESTAPIView(View):
@@ -110,20 +110,46 @@ class RESTAPIView(View):
             if not form.is_valid():
                 return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
             cleaned_data = form.cleaned_data
-            dformat = cleaned_data.pop('format')
-            func = getattr(self, f'response_{dformat}', None)
-            if not callable(func):
-                raise NotImplementedError(f'Format {dformat} N/A')
-            response_data = func(cleaned_data)
-            mime_type = form.MIME_TYPE[dformat]
+            mime_type = cleaned_data.pop('format')
+            method = f'response_data_{mime_type.name.lower()}'
+            if not callable(getattr(form, method, None)):
+                raise NotImplementedError('{mime_type.name} format not implented')
+            response_data = getattr(form, method)(cleaned_data)
             return HttpResponse(response_data, status=200, content_type=mime_type)
         except ValidationError as v_err:
             return error_response(v_err, self.CLIENT_ERR_CODE)
-        except NotImplementedError as ni_err:
+        except (KeyError, AttributeError, NotImplementedError) as ni_err:
             return error_response(ni_err, 501)
         except Exception as err:
             msg = f'Server error ({err.__class__.__name__}): {str(err)}'
             return error_response(msg, self.SERVER_ERR_CODE)
+
+    def create_response(self, data:Any, content_type:MIMETYPE):
+        if isinstance(data, dict) and content_type == MIMETYPE.JSON:
+            return JsonResponse(data)
+        if isinstance(data, pd.DataFrame):
+            stream = BytesIO()
+            if content_type == MIMETYPE.CSV:
+                data.to_csv(stream)
+            elif content_type == MIMETYPE.HDF:
+                stream = write_hdf_to_buffer(egsim=data)
+            else:
+                stream = None
+            if stream is not None:
+                stream.seek(0)
+                return StreamingHttpResponse(stream)
+        raise NotImplementedError(f'cannot serve {data.__class__.__name__} '
+                                  f'as type "{content_type}"')
+
+
+def write_hdf_to_buffer(**frames: pd.DataFrame):
+    with pd.get_store(
+            "data.h5", mode="w", driver="H5FD_CORE",
+            driver_core_backing_store=0
+            ) as out:
+        for key, df in frames.items():
+            out[key] = df
+        return out._handle.get_file_image()
 
 
 # we need to provide the full URL of the views here, because the frontend need
@@ -146,12 +172,6 @@ class ResidualsView(RESTAPIView):
     urls = (f'{API_PATH}/residuals', f'{API_PATH}/model-data-comparison')
 
 
-class TestingView(RESTAPIView):
-    """EgsimQueryView subclass for generating Testing responses"""
-
-    formclass = TestingForm
-    urls = (f'{API_PATH}/testing', f'{API_PATH}/model-data-testing')
-
 
 def error_response(content: Union[str, Exception, dict],
                    status_code=500, **kwargs) -> JsonResponse:
@@ -162,19 +182,20 @@ def error_response(content: Union[str, Exception, dict],
 
     :param content: dict, Exception or string. If dict, it will be used as response
         content (assuring there is at least the key 'message' which will be built
-        from `status_code` if missing). If string a dict `{message: <content>}` will
-        be built, if exception, the same dict will be returned but with 'message' built
-        from the exception
+        from `status_code` if missing). If string, a dict `{message: <content>}` will
+        be built. If exception, the same dict but with the `message` key mapped to
+        a string inferred from the exception
     :param status_code: the response HTTP status code (int, default: 500)
     :param kwargs: optional params for JSONResponse (except 'content' and 'status')
     """
+    err_body = {}
     if isinstance(content, dict):
         err_body = content
-        err_body.setdefault('message', f'{status_code} ({responses[status_code]})')
+        message = f'{status_code} {responses[status_code]}'
     else:
         if isinstance(content, ValidationError):
             message = "; ".join(content.messages)
         else:
             message = str(content)
-        err_body = {'message': message}
+    err_body.setdefault('message', message)
     return JsonResponse(err_body, safe=False, status=status_code, **kwargs)

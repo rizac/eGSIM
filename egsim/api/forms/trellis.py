@@ -4,6 +4,7 @@ Django Forms for eGSIM model-to-model comparison (Trellis plots)
 from django.forms import IntegerField
 from itertools import cycle
 
+import pandas as pd
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from django.core.exceptions import ValidationError
@@ -12,6 +13,7 @@ from django.forms.fields import BooleanField, FloatField, ChoiceField, Field
 
 from egsim.api.forms import APIForm, GsimImtForm
 from egsim.smtk import get_trellis
+from egsim.smtk.converters import dataframe2dict
 from egsim.smtk.trellis import RuptureProperties, SiteProperties
 
 
@@ -160,7 +162,7 @@ class TrellisForm(GsimImtForm, APIForm):
         except Exception as exc:
             raise ValidationError(str(exc), code='invalid')
 
-    def response_hdf(self, cleaned_data:dict):
+    def response_data_hdf(self, cleaned_data:dict) -> pd.DataFrame:
         return get_trellis(cleaned_data['gsim'],
                            cleaned_data['imt'],
                            cleaned_data['magnitude'],
@@ -172,7 +174,15 @@ class TrellisForm(GsimImtForm, APIForm):
                                              SiteProperties.__annotations__
                                              if p in cleaned_data})
                            )
+    def response_data_csv(self, cleaned_data: dict) -> pd.DataFrame:
+        return self.response_data_hdf(cleaned_data)
 
+    def response_data_json(self, cleaned_data:dict) -> dict:
+        return dataframe2dict(self.response_data_hdf(cleaned_data),
+                              drop_empty_levels=True,
+                              as_json=True)
+
+    # FIXME: REMOVE? is it used?
     @staticmethod
     def _default_periods_for_spectra():
         """Return an array for the default periods for the magnitude distance
