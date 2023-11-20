@@ -3,12 +3,14 @@ Django Forms for eGSIM model-to-data comparison (residuals computation)
 
 @author: riccardo
 """
+import pandas as pd
 from django.core.exceptions import ValidationError
 
 from egsim.smtk import get_residuals
 from egsim.api.forms import APIForm
 from egsim.api.forms import GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
+from egsim.smtk.converters import dataframe2dict
 
 
 class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
@@ -38,8 +40,15 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
 
         return cleaned_data
 
-    def response_hdf(self, cleaned_data: dict):
-        """"""
+    def response_data_hdf(self, cleaned_data: dict) -> pd.DataFrame:
         return get_residuals(cleaned_data["gsim"],
                              cleaned_data["imt"],
                              cleaned_data['flatfile'])
+
+    def response_data_csv(self, cleaned_data: dict) -> pd.DataFrame:
+        return self.response_data_hdf(cleaned_data)
+
+    def response_data_json(self, cleaned_data:dict) -> dict:
+        return dataframe2dict(self.response_data_hdf(cleaned_data),
+                              drop_empty_levels=True,
+                              as_json=True)
