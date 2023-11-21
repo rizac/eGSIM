@@ -25,7 +25,8 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
     accept_empty_gsim_list = True  # see GsimImtForm
     accept_empty_imt_list = True
 
-    def response_json(self, cleaned_data: dict) -> dict:
+    @classmethod
+    def response_data(cls, cleaned_data: dict) -> dict:
         """Return the API response for data requested in JSON format"""
         gsims = cleaned_data.get('gsim', [])
         if not models:
@@ -81,7 +82,8 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
 
         return cleaned_data
 
-    def response_json(self, cleaned_data: dict) -> dict:
+    @classmethod
+    def response_data(cls, cleaned_data: dict) -> dict:
         """Return the API response for data requested in JSON format"""
         dataframe = cleaned_data['flatfile']
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
@@ -89,45 +91,45 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
             xvalues = dataframe[xlabel]
             yvalues = dataframe[ylabel]
-            xnan = self._isna(xvalues)
-            ynan = self._isna(yvalues)
+            xnan = cls._isna(xvalues)
+            ynan = cls._isna(yvalues)
             plot = dict(
-                xvalues=self.tolist(xvalues[~(xnan | ynan)]),
-                yvalues=self.tolist(yvalues[~(xnan | ynan)]),
+                xvalues=cls.tolist(xvalues[~(xnan | ynan)]),
+                yvalues=cls.tolist(yvalues[~(xnan | ynan)]),
                 xlabel=xlabel,
                 ylabel=ylabel,
                 stats={
                     xlabel: {'N/A count': int(xnan.sum()),
-                             **self._get_stats(xvalues.values[~xnan])},
+                             **cls._get_stats(xvalues.values[~xnan])},
                     ylabel: {'N/A count': int(ynan.sum()),
-                             **self._get_stats(yvalues.values[~ynan])}
+                             **cls._get_stats(yvalues.values[~ynan])}
                 }
             )
         else:
             label = x or y
-            na_values = self._isna(dataframe[label])
+            na_values = cls._isna(dataframe[label])
             dataframe = dataframe.loc[~na_values, :]
             series = dataframe[label]
             na_count = int(na_values.sum())
             if x:
                 plot = dict(
-                    xvalues=self.tolist(series),
+                    xvalues=cls.tolist(series),
                     xlabel=label,
                     stats={
                         label: {
                             'N/A count': na_count,
-                            **self._get_stats(series.values)
+                            **cls._get_stats(series.values)
                         }
                     }
                 )
             else:
                 plot = dict(
-                    yvalues=self.tolist(series),
+                    yvalues=cls.tolist(series),
                     ylabel=label,
                     stats={
                         label: {
                             'N/A count': na_count,
-                            **self._get_stats(series.values)
+                            **cls._get_stats(series.values)
                         }
                     }
                 )
@@ -194,7 +196,8 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
         return cleaned_data
 
-    def response_json(self, cleaned_data: dict) -> dict:
+    @classmethod
+    def response_data(cls, cleaned_data: dict) -> dict:
         """Return the API response for data requested in JSON format"""
         return {
             'columns': cleaned_data['flatfile_dtypes'],

@@ -40,15 +40,8 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
 
         return cleaned_data
 
-    def response_data_hdf(self, cleaned_data: dict) -> pd.DataFrame:
+    @classmethod
+    def response_data(cls, cleaned_data: dict) -> pd.DataFrame:
         return get_residuals(cleaned_data["gsim"],
                              cleaned_data["imt"],
                              cleaned_data['flatfile'])
-
-    def response_data_csv(self, cleaned_data: dict) -> pd.DataFrame:
-        return self.response_data_hdf(cleaned_data)
-
-    def response_data_json(self, cleaned_data:dict) -> dict:
-        return dataframe2dict(self.response_data_hdf(cleaned_data),
-                              drop_empty_levels=True,
-                              as_json=True)

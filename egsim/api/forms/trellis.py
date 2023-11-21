@@ -162,7 +162,8 @@ class TrellisForm(GsimImtForm, APIForm):
         except Exception as exc:
             raise ValidationError(str(exc), code='invalid')
 
-    def response_data_hdf(self, cleaned_data:dict) -> pd.DataFrame:
+    @classmethod
+    def response_data(cls, cleaned_data:dict) -> pd.DataFrame:
         return get_trellis(cleaned_data['gsim'],
                            cleaned_data['imt'],
                            cleaned_data['magnitude'],
@@ -174,13 +175,6 @@ class TrellisForm(GsimImtForm, APIForm):
                                              SiteProperties.__annotations__
                                              if p in cleaned_data})
                            )
-    def response_data_csv(self, cleaned_data: dict) -> pd.DataFrame:
-        return self.response_data_hdf(cleaned_data)
-
-    def response_data_json(self, cleaned_data:dict) -> dict:
-        return dataframe2dict(self.response_data_hdf(cleaned_data),
-                              drop_empty_levels=True,
-                              as_json=True)
 
     # FIXME: REMOVE? is it used?
     @staticmethod
