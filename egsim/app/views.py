@@ -5,6 +5,8 @@ Created on 17 Jan 2018
 """
 import os
 from os.path import join, dirname, abspath
+
+from django.http import FileResponse
 from io import StringIO
 import json
 import yaml
@@ -19,7 +21,7 @@ from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
                                               FlatfileInspectionForm, FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm
 from ..api.views import (error_response, RESTAPIView, TrellisView, ResidualsView,
-                         TestingView)
+                         MIMETYPE)
 
 
 def main(request, selected_menu=None):
@@ -59,9 +61,6 @@ def apidoc(request):
             },
             'RESIDUALS': {
                 'path': ResidualsView.urls[0]
-            },
-            'TESTING': {
-                'path': TestingView.urls[0]
             }
         },
         **_get_home_page_renderer_context()
@@ -143,9 +142,13 @@ def download_response(request, key: TAB, filename: str):
         return download_ascsv(request, key, filename)
     elif ext == '.csv_eu':
         return download_ascsv(request, key, basename + '.csv', ';', ',')
-    elif ext[1:] in _IMG_FORMATS:
-        return download_asimage(request, filename)
-    return error_response(f'Unsupported format "{ext[1:]}"', RESTAPIView.CLIENT_ERR_CODE)
+    try:
+        content_type = MIMETYPE[ext[1:].upper()]
+        return download_asimage(request, filename, content_type)
+    except KeyError:
+        pass  # filename extension not recognized as image
+    return error_response(f'Unsupported format "{ext[1:]}"',
+                          RESTAPIView.CLIENT_ERR_CODE)
 
 
 def download_ascsv(request, key: TAB, filename: str, sep=',', dec='.'):
@@ -167,20 +170,22 @@ def download_ascsv(request, key: TAB, filename: str, sep=',', dec='.'):
     return response
 
 
-_IMG_FORMATS = {
-    # 'eps': 'application/postscript',  # NA (note: requires poppler library in case)
-    'pdf': 'application/pdf',
-    'svg': 'image/svg+xml',
-    'png': 'image/png'
-}
+# FIXME: remove
+# _IMG_FORMATS = {
+#     # 'eps': 'application/postscript',  # NA (note: requires poppler library in case)
+#     'pdf': 'application/pdf',
+#     'svg': 'image/svg+xml',
+#     'png': 'image/png'
+# }
 
 
-def download_asimage(request, filename: str):
+def download_asimage(request, filename: str, content_type: MIMETYPE) -> FileResponse:
     """Return the image from the given request built in the frontend GUI
     according to the chosen plots
     """
-    img_format = os.path.splitext(filename)[1][1:]
-    content_type = _IMG_FORMATS[img_format]
+    img_format = content_type.name.lower()
+    if not filename.lower().endswith(f".{img_format}"):
+        filename += f".{img_format}"
     jsondata = json.loads(request.body.decode('utf-8'))
     data, layout, width, height = (jsondata['data'],
                                    jsondata['layout'],
@@ -190,28 +195,30 @@ def download_asimage(request, filename: str):
     fig = go.Figure(data=data, layout=layout)
     # fix for https://github.com/plotly/plotly.py/issues/3469:
     pio.full_figure_for_development(fig, warn=False)
-    # compute bytes string:
-    bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)  # , scale=2)
-    response = HttpResponse(bytestr, content_type=content_type)
-    response['Content-Disposition'] = \
-        'attachment; filename=%s' % filename
-    response['Content-Length'] = len(bytestr)
-    return response
+    bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)
+    return FileResponse(bytestr, content_type=content_type,
+                        filename=filename, as_attachment=True)
+    # FIXME: remove?
+    # response = HttpResponse(bytestr, content_type=content_type)
+    # response['Content-Disposition'] = \
+    #     'attachment; filename=%s' % filename
+    # response['Content-Length'] = len(bytestr)
+    # return response
 
 
-def get_gsims_from_region(request):
+def get_gsims_from_region(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
 
 
-def flatfile_required_columns(request):
+def flatfile_required_columns(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=FlatfileRequiredColumnsForm)(request)
 
 
-def flatfile_inspection(request):
+def flatfile_inspection(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=FlatfileInspectionForm)(request)
 
 
-def flatfile_plot(request):
+def flatfile_plot(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=FlatfilePlotForm)(request)
 
 

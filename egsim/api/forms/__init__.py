@@ -1,12 +1,10 @@
 """Base eGSIM forms"""
 from __future__ import annotations
 
-from enum import StrEnum
-
 import re
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
-from typing import Union
+from typing import Union, Any
 from datetime import date, datetime
 import json
 from io import StringIO
@@ -18,7 +16,7 @@ from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 from django.forms import Form, ModelMultipleChoiceField
 from django.forms.renderers import BaseRenderer
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
-from django.forms.fields import Field, ChoiceField, FloatField
+from django.forms.fields import Field, FloatField
 
 from egsim.api import models
 from egsim.smtk import validate_inputs, InvalidInput, harmonize_input_gsims, \
@@ -521,44 +519,19 @@ class GsimImtForm(SHSRForm):
         return cleaned_data
 
 
-class MIMETYPE(StrEnum):  # noqa
-    """An enum of supported mime types (content_type in Django Response) loosely
-    copied from mimetypes.types_map (https://docs.python.org/3.8/library/mimetypes.html)
-    """
-    CSV = "text/csv"
-    JSON = "application/json"
-    HDF = "application/x-hdf"
-    PNG = 'image/png'
-    PDF = 'application/pdf'
-    SVG = 'image/svg+xml'
-    # GZIP = "application/gzip"
-
-
 class APIForm(EgsimBaseForm):
-    """API Form is the Base Form for the eGSIM API request/response. It implements:
-    1. a "format" Field/parameter to validate a request format (defaulting to "json")
-        and return the relative content type (mime type) in the cleaned data
-    2. An abstract-like `response_json` method and, for any other supported format
-        the relative `response_data_<format>` method (usually converting from or to
-        the JSON response data)
+    """API Form is the Base Form for the eGSIM API request/response. It implements
+    an abstract-like `response_data` method that should return the repsonse data
+    from this form input data
     """
 
-    format = ChoiceField(required=False,
-                         initial=MIMETYPE.JSON.name.lower(),
-                         label='The format of the data returned by the web service',
-                         choices=[(m.name.lower(), m) for m in MIMETYPES])  # noqa
+    @classmethod
+    def response_data(cls, cleaned_data:dict) -> Any:
+        """Return the response data from this Form `cleaned_data`
 
-    def clean_format(self) -> str:
-        """Custom format clean.
-        The return value will replace self.cleaned_data['format']
-        """
-        return MIMETYPE[self.cleaned_data.get('format', "").upper()]
-
-    def response_data_json(self, cleaned_data:dict) -> dict:
-        """Return the response data from this Form `cleaned_data` as a JSON-serializable
-        `dict`. Subclasses supporting different formats other than the default ('json')
-        should implement the relative `response_<format>` methods (any lowercase name
-        of the `MIMETYPE` enum, e.g. `response_csv(cleaned_data)`)
+        :param cleaned_data: this form cleaned data, obtained after
+            successful validating the form inpout data
+        :return: any object (e.g., a JSON-serializable dict)
         """
         raise NotImplementedError()
 
@@ -567,6 +540,7 @@ class GsimFromRegionForm(SHSRForm, APIForm):
     """API Form returning a list of models from a given location and optional
     seismic hazard source regionalizations (SHSR)"""
 
-    def response_data_json(self, cleaned_data:dict) -> dict:
+    @classmethod
+    def response_data(cls, cleaned_data:dict) -> dict:
         """Return the API response from the Form cleaned_data"""
-        return {'models': sorted(self.get_region_selected_model_names())}
+        return {'models': sorted(cls.get_region_selected_model_names())}
