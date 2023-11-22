@@ -94,8 +94,8 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             xnan = cls._isna(xvalues)
             ynan = cls._isna(yvalues)
             plot = dict(
-                xvalues=cls.tolist(xvalues[~(xnan | ynan)]),
-                yvalues=cls.tolist(yvalues[~(xnan | ynan)]),
+                xvalues=cls._tolist(xvalues[~(xnan | ynan)]),
+                yvalues=cls._tolist(yvalues[~(xnan | ynan)]),
                 xlabel=xlabel,
                 ylabel=ylabel,
                 stats={
@@ -113,7 +113,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             na_count = int(na_values.sum())
             if x:
                 plot = dict(
-                    xvalues=cls.tolist(series),
+                    xvalues=cls._tolist(series),
                     xlabel=label,
                     stats={
                         label: {
@@ -124,7 +124,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 )
             else:
                 plot = dict(
-                    yvalues=cls.tolist(series),
+                    yvalues=cls._tolist(series),
                     ylabel=label,
                     stats={
                         label: {
@@ -136,17 +136,19 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         return plot
 
     @classmethod
-    def tolist(cls, series_with_no_na: pd.Series):
-        if str(series_with_no_na.dtype).startswith('datetime'):
-            return pd.to_datetime(series_with_no_na.values).\
-                strftime('%Y-%m-%dT%H:%M:%S').tolist()
-        else:
-            return series_with_no_na.values.tolist()
+    def _tolist(cls, values: pd.Series):  # values does not have NA
+        if str(values.dtype).startswith('datetime'):
+            # convert values to DatetimeIndex (note:
+            # to_datetime(series) -> series, to_datetime(ndarray) -> DatetimeIndex)
+            # and then to a pandas Index of ISO formatted strings
+            values = pd.to_datetime(values.values).\
+                strftime('%Y-%m-%dT%H:%M:%S')
+        return values.tolist()
 
     @classmethod
-    def _isna(cls, values):
-        with pd.option_context('mode.use_inf_as_na', True):
-            return pd.isna(values).values
+    def _isna(cls, values: pd.Serie) -> np.ndarray:
+        filt = pd.isna(values) | values.isin([-np.inf, np.inf])
+        return values[filt].values
 
     @classmethod
     def _get_stats(cls, finite_values) -> dict[str, Union[float, None]]:
