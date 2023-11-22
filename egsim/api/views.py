@@ -56,24 +56,6 @@ class RESTAPIView(View):
     # error codes for general client and server errors:
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
-    @classmethod
-    def supported_formats(cls) -> dict[MIMETYPE, Callable[[dict], HttpResponse]]:
-        """Return a list of supported formats (content_types) by inspecting
-        this class implemented methods. Each dict key is a MIMETYPE enum,
-        mapped to this class method used to obtain the response data in that
-        mime type"""
-        formats = {}
-        for a in dir(cls):
-            if a.startswith('response_'):
-                frmt = a.split('_', 1)[1]
-                meth = getattr(cls, a)
-                if callable(a):
-                    try:
-                        formats[MIMETYPE[frmt.upper()]] = meth
-                    except KeyError:
-                        pass
-        return formats
-
     def parse_query_dict(self, querydict: QueryDict, nulls=("null",)) \
             -> dict[str, Union[str, list[str]]]:
         """parse the given query dict and returns a Python dict
@@ -160,6 +142,24 @@ class RESTAPIView(View):
         except Exception as err:
             msg = f'Server error ({err.__class__.__name__}): {str(err)}'
             return error_response(msg, self.SERVER_ERR_CODE)
+
+    @classmethod
+    def supported_formats(cls) -> dict[MIMETYPE, Callable[[dict], HttpResponse]]:
+        """Return a list of supported formats (content_types) by inspecting
+        this class implemented methods. Each dict key is a MIMETYPE enum,
+        mapped to this class method used to obtain the response data in that
+        mime type"""
+        formats = {}
+        for a in dir(cls):
+            if a.startswith('response_'):
+                meth = getattr(cls, a)
+                if callable(meth):
+                    frmt = a.split('_', 1)[1]
+                    try:
+                        formats[MIMETYPE[frmt.upper()]] = meth
+                    except KeyError:
+                        pass
+        return formats
 
     def response_json(self, cleaned_data:dict):
         return JsonResponse(self.formclass.response_data(cleaned_data))
