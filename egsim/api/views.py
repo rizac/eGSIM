@@ -1,5 +1,6 @@
 """Module with the views for the web API (no GUI)"""
 from collections.abc import Callable
+from django.forms import SelectDateWidget, SelectMultiple
 from enum import StrEnum
 from http.client import responses
 import re
@@ -16,11 +17,11 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-from .forms.flatfile import FlatfileForm
-from .forms.trellis import TrellisForm, ArrayField
-from .forms.flatfile.gsim.residuals import ResidualsForm
-from .forms import APIForm
 from ..smtk.converters import dataframe2dict
+from .forms import APIForm
+from .forms.trellis import TrellisForm, ArrayField
+from .forms.flatfile import FlatfileForm
+from .forms.flatfile.residuals import ResidualsForm
 
 
 class MIMETYPE(StrEnum):  # noqa
@@ -69,7 +70,11 @@ class RESTAPIView(View):
 
         multi_value_params = set()
         for field_name, field in form_cls.base_fields.items():
-            if isinstance(field, (MultipleChoiceField, ArrayField)):
+            # FIXME: Move ArrayField from trellis to forms and
+            # set arrayfield(Field...) for both gsim and imt
+            # then here we can just check isinstance(ArrayField):
+            if isinstance(field, (MultipleChoiceField, ArrayField)) or \
+                    isinstance(field.widget, SelectMultiple):
                 multi_value_params.update(form_cls.param_names_of(field_name))
 
         ret = {}
@@ -126,7 +131,7 @@ class RESTAPIView(View):
         try:
             rformat = form_kwargs.pop('format', MIMETYPE.JSON.name.lower())
             try:
-                mimetype = MIMETYPE[rformat]
+                mimetype = MIMETYPE[rformat.upper()]
                 response_function = self.supported_formats()[mimetype]
             except KeyError:
                 raise ValidationError(f'Invalid format {rformat}')
@@ -134,7 +139,7 @@ class RESTAPIView(View):
             if not form.is_valid():
                 return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
             cleaned_data = form.cleaned_data
-            return response_function(cleaned_data)
+            return response_function(self, cleaned_data)
         except (KeyError, ValidationError) as v_err:
             return error_response(v_err, self.CLIENT_ERR_CODE)
         except (KeyError, AttributeError, NotImplementedError) as ni_err:

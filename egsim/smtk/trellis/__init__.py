@@ -83,14 +83,15 @@ def get_trellis(
                                    site_properties.distance_type)
 
     # Get the ground motion values
+    imts_list = list(imts)
     for gsim_label, medians, sigmas in get_ground_motion_values(gsims, imts, ctxts):
         # both medians and spectra are numpy matrices of
         # `len(imt)` rows X `len(ctxts) columns`. Convert them to
         # `len(ctxts) rows X len(imt)`columns` matrices
         medians = medians.T
         sigmas = sigmas.T
-        trellis_df.loc[:, (labels.MEDIAN, list(imts), gsim_label)] = medians
-        trellis_df.loc[:, (labels.SIGMA, list(imts), gsim_label)] = sigmas
+        trellis_df.loc[:, (imts_list, labels.MEDIAN, gsim_label)] = medians
+        trellis_df.loc[:, (imts_list, labels.SIGMA, gsim_label)] = sigmas
 
     return trellis_df
 
@@ -138,8 +139,8 @@ def build_contexts(
 def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     """prepare an empty dataframe for holding trellis plot data"""
     # get columns:
-    columns = [('mag', '', ''), (dist_label, '', '')] + \
-              list(product([labels.MEDIAN, labels.SIGMA], imts, gsims))
+    columns = [(labels.MAG, '', ''), (dist_label, '', '')] + \
+              list(product(imts, [labels.MEDIAN, labels.SIGMA], gsims))
     columns = pd.MultiIndex.from_tuples(columns, names=["name", "imt", "model"])
     ret = pd.DataFrame(columns=columns)
     # get the values for magnitudes, distances and periods:
@@ -147,7 +148,7 @@ def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     mags = np.hstack((np.full(len(distances), m) for m in magnitudes))
     # assign:
     ret[dist_label] = dists
-    ret['mag'] = mags
+    ret[labels.MAG] = mags
     return ret
 
 
@@ -185,6 +186,7 @@ def get_ground_motion_values(
         yield gsim_label, median, sigma
 
 
-class labels:
-    MEDIAN = "Median"
-    SIGMA = "Stddev"
+class labels:  # noqa (keep it simple, no Enum/dataclass needed)
+    MEDIAN = "median"
+    SIGMA = "stddev"
+    MAG = "mag"
