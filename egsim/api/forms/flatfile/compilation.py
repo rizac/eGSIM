@@ -146,7 +146,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         return values.tolist()
 
     @classmethod
-    def _isna(cls, values: pd.Serie) -> np.ndarray:
+    def _isna(cls, values: pd.Series) -> np.ndarray:
         filt = pd.isna(values) | values.isin([-np.inf, np.inf])
         return values[filt].values
 

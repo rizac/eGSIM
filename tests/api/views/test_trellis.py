@@ -62,8 +62,7 @@ class Test:
                           # parametrized argument:
                           st_dev):
         """test trellis distance and distance stdev"""
-        inputdic = dict(testdata.readyaml(self.request_filename),
-                        plot='d', stdev=st_dev)
+        inputdic = dict(testdata.readyaml(self.request_filename))
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -73,8 +72,7 @@ class Test:
         form = TrellisForm(data=dict(inputdic))
         assert form.is_valid()
         input_ = form.cleaned_data
-        assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'imts',
-                                         'xlabel', 'xvalues']
+        assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'mag', 'rrup']
         xvalues = result['xvalues']
         assert len(xvalues) == len(input_['distance']) + 1  # FIXME: should be len(distance)!!!
         figures = self.get_figures(result)

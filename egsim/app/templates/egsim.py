@@ -13,7 +13,7 @@ from ...api.forms import EgsimBaseForm, APIForm
 from ...api.forms.flatfile import FlatfileForm
 from ...api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
                                                FlatfilePlotForm)
-from ...api.views import (ResidualsView, TestingView, TrellisView, RESTAPIView)
+from ...api.views import (ResidualsView, TrellisView, RESTAPIView)
 
 
 class URLS:  # noqa
@@ -55,7 +55,8 @@ class TAB(Enum):
     trellis = 'Model to Model Comparison', 'fa-area-chart', TrellisView
     flatfile = 'Data management', 'fa-database'
     residuals = 'Model to Data Comparison', 'fa-bar-chart', ResidualsView
-    testing = 'Model to Data Testing', 'fa-list', TestingView
+    # FIXME REMOVE
+    # testing = 'Model to Data Testing', 'fa-list', TestingView
 
     def __init__(self, *args):
         # args is the unpacked tuple passed above (2-elements), set attributes:
@@ -228,16 +229,17 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
                                     f"{TAB.residuals.download_response_filename}"
             }
         },
-        TAB.testing.name: {
-            'form': form_to_json(TAB.testing.formclass, ignore_field, ignore_choices),
-            'url': TAB.testing.urls[0],
-            'urls': {
-                'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.testing.name}/"
-                                   f"{TAB.testing.download_request_filename}",
-                'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.testing.name}/"
-                                    f"{TAB.testing.download_response_filename}"
-            }
-        }
+        # FIXME: REMOVE
+        # TAB.testing.name: {
+        #     'form': form_to_json(TAB.testing.formclass, ignore_field, ignore_choices),
+        #     'url': TAB.testing.urls[0],
+        #     'urls': {
+        #         'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.testing.name}/"
+        #                            f"{TAB.testing.download_request_filename}",
+        #         'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.testing.name}/"
+        #                             f"{TAB.testing.download_response_filename}"
+        #     }
+        # }
     }
 
     # FlatfilePlotForm has x and y that must be represented as <select> but cannot
