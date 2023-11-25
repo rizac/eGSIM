@@ -27,6 +27,11 @@ def get_gsims_imts_flatfile():
         flatfile[i] = flatfile[i] / (100 *g)  # convert_accel_units(flatfile[i], 'cm/s/s', 'g')
     return gsims, imts, flatfile
 
+label_mapping_res = {
+    'Total': c_labels.total_res,
+    'Inter-event': c_labels.inter_ev_res,
+    'Intra-event': c_labels.intra_ev_res
+}
 
 def test_residuals_execution():
     """
@@ -45,20 +50,23 @@ def test_residuals_execution():
     with open(os.path.join(BASE_DATA_PATH, file)) as _:
         exp_dict = json.load(_)
     # check results:
+
     # self.assertEqual(len(exp_dict), len(res_dict))
     for lbl in exp_dict:
         # self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
             # check values
+        is_inter_ev = 'Inter-event' in lbl
         expected = np.array(exp_dict[lbl], dtype=float)
         # computed dataframes have different labelling:
-        lbl += " " + c_labels.res
+        _model, _imt, _lbl = lbl.split(" ")
+        lbl = (_imt, label_mapping_res[_lbl], _model)
         computed = res_df[lbl].values
-        if 'Inter-event' in lbl:
+        if is_inter_ev:
             # Are all inter events (per event) are close enough?
             # (otherwise its an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
-            for ev_id, dfr in res_df.groupby('event_id'):
+            for ev_id, dfr in res_df.groupby(('flatfile', 'event_id')):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():
                     _computed.append(vals[0])
@@ -76,6 +84,13 @@ def test_residuals_execution():
             vals_ok = max_diff < RTOL
 
         assert vals_ok
+
+
+label_mapping_res_lh = {
+    'Total': c_labels.total_res_lh,
+    'Inter-event': c_labels.inter_ev_res_lh,
+    'Intra-event': c_labels.intra_ev_res_lh
+}
 
 
 def test_residuals_execution_lh():
@@ -97,18 +112,24 @@ def test_residuals_execution_lh():
     # check results:
     # self.assertEqual(len(exp_dict), len(res_dict))
     for lbl in exp_dict:
-        # self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
-            # check values
+        # # self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
+        #     # check values
+        # expected = np.array(exp_dict[lbl], dtype=float)
+        # # computed dataframes have different labelling:
+        # lbl += " " + c_labels.lh
+        # computed = res_df[lbl].values
+        is_inter_ev = 'Inter-event' in lbl
         expected = np.array(exp_dict[lbl], dtype=float)
         # computed dataframes have different labelling:
-        lbl += " " + c_labels.lh
+        _model, _imt, _lbl = lbl.split(" ")
+        lbl = (_imt, label_mapping_res_lh[_lbl], _model)
         computed = res_df[lbl].values
-        if 'Inter-event' in lbl:
+        if is_inter_ev:
             # Are all inter events (per event) are close enough?
             # (otherwise its an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
-            for ev_id, dfr in res_df.groupby('event_id'):
+            for ev_id, dfr in res_df.groupby(('flatfile', 'event_id')):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():
                     _computed.append(vals[0])

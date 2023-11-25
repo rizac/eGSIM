@@ -187,6 +187,7 @@ def get_ground_motion_values(
 
 
 class labels:  # noqa (keep it simple, no Enum/dataclass needed)
+    """computed column labels"""
     MEDIAN = "median"
     SIGMA = "stddev"
     MAG = "mag"
