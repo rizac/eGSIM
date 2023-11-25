@@ -128,7 +128,7 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
         imt_inst = imt(obj)
         if not imt_name(imt_inst).startswith('SA('):
             return None
-    except InvalidInput:
+    except (TypeError, KeyError, ValueError):
         return None
 
     period = imt_inst.period
@@ -177,6 +177,7 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
                 invalid_imts.remove('SA')
                 invalid_imts.update(periods.values())
             else:
+                # FIXME: raise only if no period is supported
                 for p in invalid_sa_periods(gsim_inst, periods):
                     invalid_imts.add(periods[p])
         if not invalid_imts:
@@ -189,6 +190,7 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
     return gsims, imts
 
 
+# FIXME REMOVE
 def invalid_sa_periods(gsim: GMPE, periods: Iterable[float, str, IMT]) \
         -> Iterable[float]:
     """Yield the SA periods in `periods` NOT supported by the model `gsim`"""
