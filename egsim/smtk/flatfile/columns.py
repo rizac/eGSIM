@@ -360,22 +360,12 @@ class MissingColumn(InvalidColumn, AttributeError, KeyError):
         """return the names with their alias(es), if any"""
         _names = []
         for name in self.args:
-            sorted_names = self.get_all_names_of(name)
+            sorted_names = get_all_names_of(name, True)
             suffix_str = repr(sorted_names[0])
             if len(sorted_names) > 1:
                 suffix_str += f" (or {', '.join(repr(_) for _ in sorted_names[1:])})"
             _names.append(suffix_str)
         return _names
-
-    @classmethod
-    def get_all_names_of(cls, col_name) -> list[str]:
-        """Return a list of all column names of the argument, with the first element
-        being the flatfile primary name. Returns `[col_name]` if the argument does not
-        denote any flatfile column"""
-        names = get_all_names_of(col_name, True)
-        if len(names) <= 1:
-            return [col_name]
-        return names
 
 
 class ConflictingColumns(InvalidColumn):
