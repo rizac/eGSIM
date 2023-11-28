@@ -57,7 +57,7 @@ def imt_name(imtx: Union[Callable, IMT]) -> str:
     return imtx.__name__
 
 
-def sa_limits(gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, float], None]:
+def gsim_sa_limits(gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, float], None]:
     """Return the SA period limits defined for the given gsim, or None"""
     if isinstance(gsim, str):
         gsim = registry[gsim]
