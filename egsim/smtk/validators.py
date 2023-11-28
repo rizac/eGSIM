@@ -11,7 +11,8 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.valid import gsim as valid_gsim
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
-from .registry import gsim_name, intensity_measures_defined_for, sa_limits, imt_name
+from .registry import (gsim_name, intensity_measures_defined_for,
+                       gsim_sa_limits, imt_name)
 
 
 def harmonize_input_gsims(
@@ -88,15 +89,15 @@ def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IM
     be sorted ascending comparing SAs using their period. E.g.: 'PGA' 'SA(2)' 'SA(10)'
     """
     errors = []
-    ret = []
+    imt_set = set()
     for imtx in imts:
         try:
-            ret.append(imt(imtx))
+            imt_set.add(imt(imtx))
         except (TypeError, ValueError, KeyError) as exc:
             errors.append(imtx if isinstance(imtx, str) else imt_name(imtx))
     if errors:
         raise InvalidInput(*errors)
-    return {imt_name(i): i for i in sorted(ret, key=_imtkey)}
+    return {imt_name(i): i for i in sorted(imt_set, key=_imtkey)}
 
 
 def imt(arg: Union[float, str, IMT]) -> IMT:
@@ -177,9 +178,11 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
                 invalid_imts.remove('SA')
                 invalid_imts.update(periods.values())
             else:
-                # FIXME: raise only if no period is supported
-                for p in invalid_sa_periods(gsim_inst, periods):
-                    invalid_imts.add(periods[p])
+                # gsim invalid if ALL periods are outside the gsim limits:
+                sa_lim = gsim_sa_limits(gsim_inst)
+                if sa_lim is not None and not \
+                        any(sa_lim[0] <= p <= sa_lim[1] for p in periods):
+                    invalid_imts.update(periods.values())
         if not invalid_imts:
             continue
         errors.append([gm_name] + list(invalid_imts))
@@ -188,21 +191,6 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
         raise IncompatibleInput(*errors) from None
 
     return gsims, imts
-
-
-# FIXME REMOVE
-def invalid_sa_periods(gsim: GMPE, periods: Iterable[float, str, IMT]) \
-        -> Iterable[float]:
-    """Yield the SA periods in `periods` NOT supported by the model `gsim`"""
-    limits = sa_limits(gsim)
-    if limits is not None:
-        for p in periods:
-            period = sa_period(p)
-            if period is None:
-                continue
-            if period < limits[0] or period > limits[1]:
-                yield period
-
 
 # Custom Exceptions:
 

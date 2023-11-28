@@ -5,6 +5,6 @@ from .flatfile import read_flatfile
 from .registry import (registered_gsims, registered_imts,
                        site_params_required_by, rupture_params_required_by,
                        distances_required_by, intensity_measures_defined_for,
-                       sa_limits, gsim_name, ground_motion_properties_required_by)
+                       gsim_sa_limits, gsim_name, ground_motion_properties_required_by)
 from .validators import (InvalidInput, gsim, imt, harmonize_input_gsims,
                          harmonize_input_imts, validate_inputs)

@@ -20,7 +20,7 @@ from openquake.hazardlib.contexts import RuptureContext
 
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, sa_period)
-from ..registry import sa_limits
+from ..registry import gsim_sa_limits
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
@@ -56,7 +56,7 @@ def get_residuals(
         gsims, imts, flatfile_r, normalise=normalise)
     labels = [c_labels.total_res, c_labels.inter_ev_res, c_labels.intra_ev_res]
     if likelihood:
-        residuals = get_residuals_likelihood(residuals, flatfile_r)
+        residuals = get_residuals_likelihood(residuals)
         labels = [c_labels.total_res_lh,
                   c_labels.inter_ev_res_lh,
                   c_labels.intra_ev_res_lh]
@@ -206,7 +206,7 @@ def get_expected_motions(
     # Period range for GSIM
     for gsim_name, gsim in gsims.items():
         types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        model_sa_period_limits = sa_limits(gsim)
+        model_sa_period_limits = gsim_sa_limits(gsim)
         for imt_name, imtx in imts.items():
             # skip if outside the model defined periods:
             # FIXME: if a model is defined, say, for Sa(0.1), and in the flatfile
@@ -266,6 +266,7 @@ def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
     Calculate the random effects residuals using the inter-event
     residual formula described in Abrahamson & Youngs (1992) Eq. 10
     """
+    # FIXME this is the only part where grouping by event is relevant
     nvals = float(len(mean))
     inter_res = ((inter ** 2.) * sum(obs - mean)) /\
         (nvals * (inter ** 2.) + (intra ** 2.))
@@ -290,21 +291,13 @@ class c_labels: # noqa (keep it simple, no Enum/dataclass needed)
     intra_ev_res_lh = intra_ev_res + "_likelihood"
 
 
-def get_residuals_likelihood(residuals: pd.DataFrame,
-                             src_flatfile: pd.DataFrame) -> pd.DataFrame:
+def get_residuals_likelihood(residuals: pd.DataFrame) -> pd.DataFrame:
     """
     Return the likelihood values for the residuals column found in `residuals`
     (e.g. Total, inter- intra-event) according to Equation 9 of Scherbaum et al (2004)
 
     :param residuals: a pandas DataFrame resulting from :ref:`get_residuals`
-    :param src_flatfile: the source flatfile whereby the residuals have been
-        computed, resulting from `prepare_flatfile`.
-        This dataframe must have the same index as residuals, meaning
-        that each row is related to the same row of `residuals`
     """
-    if not (residuals.index == src_flatfile.index).all():  # noqa
-        raise ValueError('cannot compute likelihood: source flatfile index '
-                         'seems not to be valid')
     likelihoods = pd.DataFrame(index=residuals.index.copy())
     col_list = list(residuals.columns)
     residuals_columns = {
@@ -312,26 +305,11 @@ def get_residuals_likelihood(residuals: pd.DataFrame,
         c_labels.inter_ev_res: c_labels.inter_ev_res_lh,
         c_labels.intra_ev_res: c_labels.intra_ev_res_lh
     }
-    # get the columns uniquely identifying an event:
-    ev_cols = get_event_id_column_names(src_flatfile)
     for col in col_list:
         (imtx, label, gsim) = col
-        if label not in residuals_columns:
-            continue
-        # build label:
-        lh_label = residuals_columns[label]
-        dest_label = (imtx, lh_label, gsim)
-        # compute values
-        if label == c_labels.inter_ev_res:  # inter event, group by events:
-            likelihoods[dest_label] = np.nan
-            for _, sub_evts in src_flatfile.groupby(ev_cols):
-                sub_residuals = residuals.loc[sub_evts.index, :]
-                lh_values = get_likelihood(sub_residuals[col])
-                # note: dest_label is a tuple, we need to address like this to
-                # avoid misunderstandings:
-                likelihoods.loc[sub_residuals.index, [dest_label]] = lh_values
-        else:
-            likelihoods[dest_label] = get_likelihood(residuals[col])
+        lh_label = residuals_columns.get(label, None)
+        if lh_label is not None:
+            likelihoods[(imtx, lh_label, gsim)] = get_likelihood(residuals[col])
     return likelihoods
 
 
