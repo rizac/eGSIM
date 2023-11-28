@@ -7,7 +7,7 @@ import os
 from os.path import join, dirname, abspath
 
 from django.http import FileResponse
-from io import StringIO
+from io import StringIO, BytesIO
 import json
 import yaml
 
@@ -196,7 +196,8 @@ def download_asimage(request, filename: str, content_type: MIMETYPE) -> FileResp
     # fix for https://github.com/plotly/plotly.py/issues/3469:
     pio.full_figure_for_development(fig, warn=False)
     bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)
-    return FileResponse(bytestr, content_type=content_type,
+    # FIXME: use the following throughout the code harmonizing how we return files:
+    return FileResponse(BytesIO(bytestr), content_type=content_type,
                         filename=filename, as_attachment=True)
     # FIXME: remove?
     # response = HttpResponse(bytestr, content_type=content_type)

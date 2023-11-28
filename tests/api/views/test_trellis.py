@@ -5,10 +5,15 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
+from io import BytesIO
+
 import re
 import pytest
+import numpy as np
+import pandas as pd
 
-from egsim.api.views import TrellisView
+from egsim.api.views import TrellisView, MIMETYPE, read_hdf_from_buffer, \
+    read_csv_from_buffer
 from egsim.api.forms.trellis import TrellisForm
 from egsim.api.forms import APIForm
 
@@ -55,17 +60,16 @@ class Test:
             if not dst.startswith(src):
                 raise AssertionError('gsims differ: %s != %s' % (src, dst))
 
-    @pytest.mark.parametrize('st_dev', [False, True])
-    def test_trellis_dist(self,
-                          # pytest fixtures:
-                          client, testdata, areequal,
-                          # parametrized argument:
-                          st_dev):
+    # @pytest.mark.parametrize('st_dev', [False, True])
+    def test_trellis(
+            self,
+            # pytest fixtures:
+            client, testdata, areequal):
         """test trellis distance and distance stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename))
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
-                            content_type='application/json')
+                            content_type=MIMETYPE.JSON)
         result = resp1.json()
         assert resp1.status_code == 200
         assert areequal(result, resp2.json())
@@ -73,28 +77,36 @@ class Test:
         assert form.is_valid()
         input_ = form.cleaned_data
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'mag', 'rrup']
-        xvalues = result['xvalues']
-        assert len(xvalues) == len(input_['distance']) + 1  # FIXME: should be len(distance)!!!
-        figures = self.get_figures(result)
-        if st_dev:
-            # assert we wrtoe the stdevs:
-            assert all(_['stdvalues'] for _ in figures)
-            assert all(_['stdlabel'] for _ in figures)
-        else:
-            # assert we did NOT write stdevs:
-            assert not any(_['stdvalues'] for _ in figures)
-            assert not any(_['stdlabel'] for _ in figures)
-        assert len(figures) == len(input_['magnitude']) * len(input_['imt'])
-        for fig in figures:
-            yvalues = fig['yvalues']
-            assert all(len(yval) == len(xvalues) for yval in yvalues.values())
-            self.assert_gims_equal(input_['gsim'], yvalues)
+        assert list(result.keys())[1] == 'rrup'
+        assert len(result['mag']) == len(result['rrup']) == 12
+        result_json = result
 
         # test the text response:
-        resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
-                            content_type='text/csv')
-        assert resp2.status_code == 200
-        assert re.search(self.csv_expected_text, resp2.content)
+        resp = client.post(self.url, data=dict(inputdic, format=MIMETYPE.CSV.name),
+                            content_type=MIMETYPE.CSV)
+        assert resp.status_code == 200
+        result_csv = read_csv_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+
+        # test the hdf response:
+        resp = client.post(self.url, data=dict(inputdic, format=MIMETYPE.HDF.name),
+                            content_type=MIMETYPE.HDF)
+        assert resp.status_code == 200
+        result_hdf = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
+
+        assert sorted(result_csv.columns) == sorted(result_hdf.columns)
+
+        for col in result_csv.columns:
+            assert (result_csv[col] == result_hdf[col]).all() or \
+                np.allclose(result_csv[col], result_hdf[col],
+                            rtol=1.e-12, atol=0, equal_nan=True)
+            if col[-1]:  # not ('mag', '', '') or ('rrup, '', ''),
+                # but computed trellis data (e.g. ('PGA', 'median', 'model_name')):
+                result_json_col = result_json[col[0]][col[1]][col[2]]
+            else:
+                result_json_col = result_json[col[0]]
+            assert (result_csv[col] == result_json_col).all() or \
+                np.allclose(result_csv[col], result_json_col,
+                            rtol=1.e-12, atol=0, equal_nan=True)
 
     @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis_mag(self,

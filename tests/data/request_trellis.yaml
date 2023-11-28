@@ -3,7 +3,7 @@ distance: [1, 3, 7]
 dip: 45
 aspect: 0.5
 model: ['BindiEtAl2011', 'BindiEtAl2014Rjb']
-imt: ['SA(0.2)', 'PGA', 'PGV']
+imt: ['SA(0.2)', 'PGA', 'PGV', 'SA(0.20)']
 
 # plot: 'd'
 # tectonic_region "Active Shallow Crust"

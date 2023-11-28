@@ -1,18 +1,18 @@
 """Module with the views for the web API (no GUI)"""
 from collections.abc import Callable
-from django.forms import SelectDateWidget, SelectMultiple
+from django.forms import SelectMultiple
 from enum import StrEnum
 from http.client import responses
 import re
 from io import StringIO, BytesIO
-from typing import Union, Type, Optional
+from typing import Union, Type, Optional, IO
 
 import yaml
 import pandas as pd
 from django.core.exceptions import ValidationError
 
 from django.http import (JsonResponse, HttpRequest, QueryDict,
-                         StreamingHttpResponse)
+                         StreamingHttpResponse, FileResponse)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
@@ -71,8 +71,8 @@ class RESTAPIView(View):
         multi_value_params = set()
         for field_name, field in form_cls.base_fields.items():
             # FIXME: Move ArrayField from trellis to forms and
-            # set arrayfield(Field...) for both gsim and imt
-            # then here we can just check isinstance(ArrayField):
+            #  set arrayfield(Field...) for both gsim and imt
+            #  then here we can just check isinstance(ArrayField):
             if isinstance(field, (MultipleChoiceField, ArrayField)) or \
                     isinstance(field.widget, SelectMultiple):
                 multi_value_params.update(form_cls.param_names_of(field_name))
@@ -129,7 +129,7 @@ class RESTAPIView(View):
         :param form_kwargs: keyword arguments to be passed to this class Form
         """
         try:
-            rformat = form_kwargs.pop('format', MIMETYPE.JSON.name.lower())
+            rformat = form_kwargs['data'].pop('format', MIMETYPE.JSON.name.lower())
             try:
                 mimetype = MIMETYPE[rformat.upper()]
                 response_function = self.supported_formats()[mimetype]
@@ -244,36 +244,80 @@ def error_response(error: Union[str, Exception, dict],
 
 
 def pandas_response(data:pd.DataFrame, content_type:Optional[MIMETYPE]=None,
-                    status=200, reason=None, headers=None, charset=None):
+                    status=200, reason=None, headers=None, charset=None,
+                    as_stream=False):
     """Return a `HTTPResponse` for serving pandas dataframes as either HDF or CSV
 
     :param content_type: optional content type. Either MIMETYPE.CSV or MIMETYPE.HDF
         If None, it defaults to the former.
+    :param as_stream: if False (the default) return a `FileResponse`, otherwise
+        a `StreamingHttpResponse`
     """
-    if content_type in (None, MIMETYPE.CSV):
-        content = BytesIO()
-        data.to_csv(content)
-        nbytes = content.getbuffer().nbytes
-        content.seek(0)
+    if content_type is None:  # the default is CSV:
         content_type = MIMETYPE.CSV
+    if content_type == MIMETYPE.CSV:
+        content = write_csv_to_buffer(data)
     elif content_type == MIMETYPE.HDF:
-        content = write_hdf_to_buffer(egsim=data)
-        nbytes = content.getbuffer().nbytes
-        content.seek(0)
+        content = write_hdf_to_buffer({'egsim': data})
     else:
         return error_response(f'cannot serve {data.__class__.__name__} '
-                              f'as type "{content_type}"', status=500)
-    headers = headers or {}
-    headers['Content-Length'] = nbytes
-    return StreamingHttpResponse(content, status=status, content_type=content_type,
-                                 reason=reason, headers=headers, charset=charset)
+                              f'as type "{content_type}"', status=400)
+    # FIXME: check if FileResponse guesses the length automatically and
+    #    remove the lines below eventually:
+    # headers = headers or {}
+    # headers['Content-Length'] = nbytes
+    kwargs = dict(status=status, content_type=content_type,
+                  reason=reason, headers=headers, charset=charset)
+    content.seek(0)  # for safety
+    return StreamingHttpResponse(content, **kwargs) if as_stream else \
+        FileResponse(content, **kwargs)
 
 
-def write_hdf_to_buffer(**frames: pd.DataFrame):
-    with pd.get_store(
-            "data.h5", mode="w", driver="H5FD_CORE",
-            driver_core_backing_store=0
-            ) as out:
+# functions to read from BytesIO:
+# (https://github.com/pandas-dev/pandas/issues/9246#issuecomment-74041497):
+
+
+def write_hdf_to_buffer(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
+    """Write in HDF format to a BytesIO the passed DataFrame(s)"""
+    with pd.HDFStore(
+            "data.h5",  # apparently unused for in-memory data
+            mode="w",
+            driver="H5FD_CORE",  # create in-memory file
+            driver_core_backing_store=0,  # prevent saving to file on close
+            **kwargs) as out:
         for key, df in frames.items():
             out[key] = df
-        return out._handle.get_file_image()
+        # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
+        return BytesIO(out._handle.get_file_image())
+
+
+def read_hdf_from_buffer(buffer: IO, key:Optional[str]=None) -> pd.DataFrame:
+    """Read from a BytesIO containing HDF data"""
+    # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
+    with pd.HDFStore(
+            "data.h5",  # apparently unused for in-memory data
+            mode="r",
+            driver="H5FD_CORE",  # create in-memory file
+            driver_core_backing_store=0,  # for safety, just in case
+            driver_core_image=buffer.read()) as store:
+        if key is None:
+            keys = store.keys()
+            if len(keys) == 1:
+                key = keys[0]
+        # Note: top-level keys can be passed with or wothout leading slash:
+        return store[key]
+
+
+def write_csv_to_buffer(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
+    """Write in CSV format to a BytesIO the passed DataFrame(s)"""
+    content = BytesIO()
+    data.to_csv(content, **csv_kwargs)
+    return content
+
+
+def read_csv_from_buffer(buffer: IO) -> pd.DataFrame:
+    """Read from a file-like object containing CSV data"""
+    dframe = pd.read_csv(buffer, header=[0, 1, 2], index_col=0)
+    dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
+                  inplace=True)
+    return dframe
