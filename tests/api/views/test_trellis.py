@@ -12,7 +12,7 @@ import numpy as np
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 
 from egsim.api.views import (TrellisView, MIMETYPE, read_hdf_from_buffer,
-                             read_csv_from_buffer)
+                             read_csv_from_buffer, dict_as_querystring)
 from egsim.api.forms.trellis import TrellisForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa
@@ -29,7 +29,7 @@ class Test:
     request_filename = 'request_trellis.yaml'
 
     def querystring(self, data):
-        return f'{self.url}?{TrellisView.formclass(dict(data)).as_querystring()}'
+        return f'{self.url}?{dict_as_querystring(data)}'
 
     # @pytest.mark.parametrize('st_dev', [False, True])
     def test_trellis(

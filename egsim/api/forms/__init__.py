@@ -5,10 +5,9 @@ import re
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
 from typing import Union, Any
-from datetime import date, datetime
 import json
 from io import StringIO
-from urllib.parse import quote as urlquote
+
 
 import yaml
 from shapely.geometry import Point, shape
@@ -337,48 +336,6 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         # replace newlines for safety:
         label = label.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
         return label
-
-    QUERY_STRING_SAFE_CHARS = "-_.~!*'()"
-
-    def as_querystring(self, compact=True) -> str:
-        """Return the `data` argument passed in the constructor as query string
-        that can be used in GET requests (if `self.is_valid()` is True)
-
-        @param compact: skip optional parameters (see `compact` in `self._get_data`)
-        """
-        # Letters, digits, and the characters '_.-~' are never quoted. These are
-        # the additional safe characters (we include the former for safety):
-        safe_chars = self.QUERY_STRING_SAFE_CHARS
-        ret = []
-        to_str = self.obj_as_querystr
-        for field, value in self.data.items():
-            if compact and \
-                    self._is_default_value_for_field(field, value):  # class level attr
-                continue
-            if isinstance(value, (list, tuple)):
-                val = ','.join(f'{urlquote(to_str(v), safe=safe_chars)}' for v in value)
-            else:
-                val = f'{urlquote(to_str(value), safe=safe_chars)}'
-            ret.append(f'{self.param_name_of(field)}={val}')
-        return '&'.join(ret)
-
-    @staticmethod
-    def obj_as_querystr(obj: Union[bool, None, str, date, datetime, int, float]) -> str:
-        """Return a string representation of `obj` for injection into URL query
-        strings. No character of the returned string is escaped (see
-        :func:`urllib.parse.quote` for that)
-
-        @return "null" if obj is None, "true/false"  if `obj` is `bool`,
-            `obj.isoformat()` if `obj` is `date` or `datetime`, `str(obj)` in any other
-             case
-        """
-        if obj is None:
-            return "null"
-        if obj is True or obj is False:
-            return str(obj).lower()
-        if isinstance(obj, (date, datetime)):
-            return obj.isoformat()
-        return str(obj)
 
 
 class SHSRForm(EgsimBaseForm):
