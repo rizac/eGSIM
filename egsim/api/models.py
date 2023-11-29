@@ -61,8 +61,8 @@ class Gsim(EgsimDbModel):
 
 
 class Reference(DjangoDbModel):
-    """Abstract class for Table rows representing a reference, with any info
-    such as URL, license, bib. citation"""
+    """Abstract class for Table rows representing a reference to some work
+    (e.g. data, file, article)"""
 
     display_name = TextField(default=None, null=True)
     url = URLField(default=None, null=True)

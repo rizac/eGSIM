@@ -5,15 +5,12 @@ Created on 22 Oct 2018
 
 @author: riccardo
 """
-import re
-
 import pytest
 
 from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
-from egsim.api.forms.flatfile.gsim.residuals import ResidualsForm
 from egsim.api.views import ResidualsView, RESTAPIView
 
 
@@ -39,7 +36,7 @@ class Test:
                             content_type='application/json')
         resp1 = client.get(self.querystring(inputdic2))
         assert resp1.status_code == resp2.status_code == 400
-        assert 'flatfile' in resp1.json()['error']['message']
+        assert 'flatfile' in resp1.json()['message']
 
         # Uploaded flatfile, but not well formed:
         csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
@@ -47,7 +44,7 @@ class Test:
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert 'flatfile' in resp2.json()['error']['message']
+        assert 'flatfile' in resp2.json()['message']
 
         def fake_post(self, request):
             # Django testing class `client` expects every data in the `data` argument
@@ -60,46 +57,54 @@ class Test:
         with patch.object(RESTAPIView, 'post', fake_post):
             resp2 = client.post(self.url, data=inputdic2)
             assert resp2.status_code == 400
-            assert 'flatfile' in resp2.json()['error']['message']
+            assert 'flatfile' in resp2.json()['message']
 
     def test_kotha_turkey(self, client, testdata):
-        # Uploaded flatfile, but not well formed:
         csv = SimpleUploadedFile("file.csv",
-                                 testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'),
+                                 testdata.read('tk_20230206_flatfile_geometric_mean.csv'),
                                  content_type="text/csv")
-        inputdic2 = {'model': 'KothaEtAl2020ESHM20', 'imt' : 'PGA',
-                     'flatfile':csv, 'plot':'res'}
+        inputdic2 = {
+            'model': 'KothaEtAl2020ESHM20',
+            'imt' : 'PGA',
+            'flatfile':csv
+        }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
     def test_cauzzi_rjb_turkey(self, client, testdata):
-        # Uploaded flatfile, but not well formed:
         csv = SimpleUploadedFile("file.csv",
-                                 testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'),
+                                 testdata.read('tk_20230206_flatfile_geometric_mean.csv'),
                                  content_type="text/csv")
-        inputdic2 = {'model': 'CauzziEtAl2014', 'imt' : 'PGA',
-                     'flatfile':csv, 'plot':'rjb'}
+        inputdic2 = {
+            'model': 'CauzziEtAl2014',
+            'imt' : 'PGA',
+            'flatfile':csv
+        }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
     def test_cauzzi_vs30_turkey(self, client, testdata):
-        # Uploaded flatfile, but not well formed:
         csv = SimpleUploadedFile("file.csv",
-                                 testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'),
+                                 testdata.read('tk_20230206_flatfile_geometric_mean.csv'),
                                  content_type="text/csv")
-        inputdic2 = {'model': 'CauzziEtAl2014', 'imt' : 'PGA',
-                     'flatfile':csv, 'plot':'vs30'}
+        inputdic2 = {
+            'model': 'CauzziEtAl2014',
+            'imt' : 'PGA',
+            'flatfile':csv,
+        }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
-    @pytest.mark.parametrize('plot_type', ['mag', 'res'])
-    def test_bindi17_turkey(self, client, testdata, plot_type):
+    def test_bindi17_turkey(self, client, testdata):
         # Uploaded flatfile, but not well-formed:
         csv = SimpleUploadedFile("file.csv",
                                  testdata.read('PGA_BindiEtAl17.csv'),
                                  content_type="text/csv")
-        inputdic2 = {'model': 'BindiEtAl2017Rhypo', 'imt' : 'PGA',
-                     'flatfile':csv, 'plot': plot_type}
+        inputdic2 = {
+            'model': 'BindiEtAl2017Rhypo',
+            'imt' : 'PGA',
+            'flatfile':csv
+        }
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
         resp_json = resp2.json()
@@ -112,11 +117,11 @@ class Test:
         inputdic = testdata.readyaml(self.request_filename)
 
         # test conflicting values:
-        resp1 = client.get(self.querystring({**inputdic, 'plot': 'res',
+        resp1 = client.get(self.querystring({**inputdic,
                                              'selection-expression': '(vs30 > 800) & (vs30 < 1200)',
                                              'data-query': '(vs30 > 1000) & (vs30 < 1010)'}))
         assert resp1.status_code == 400
-        assert 'data-query' in resp1.json()['error']['message']
+        assert 'data-query' in resp1.json()['message']
 
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
@@ -125,18 +130,15 @@ class Test:
         assert areequal(resp1.json(), resp2.json())
         json_ = resp1.json()
         exp_json = {
-            'error': {
-                'code': 400,
-                'message': 'Invalid request. Problems found in: plot. '
-                           'See response data for details',
-                'errors': [
-                    {
-                        'location': 'plot',
-                        'message': 'This parameter is required',
-                        'reason': 'required'
-                    }
-                ]
-            }
+            'message': 'Invalid request. Problems found in: plot. '
+                       'See response data for details',
+            'errors': [
+                {
+                    'location': 'plot',
+                    'message': 'This parameter is required',
+                    'reason': 'required'
+                }
+            ]
         }
         assert areequal(json_, exp_json)
 
@@ -164,41 +166,6 @@ class Test:
         inputdict2.pop('data-query')
         resp2 = client.post(self.url, data=inputdict2, content_type='text/csv')
         assert resp2.status_code == 400
-
-    @pytest.mark.parametrize('restype',
-                             [_[0] for _ in ResidualsForm.declared_fields['plot_type'].choices])
-    def test_residuals_service_(self,
-                                restype,
-                                # pytest fixtures:
-                                testdata, areequal, client):
-        """tests the residuals API service."""
-        expected_txt = \
-            re.compile(b'^imt,residual,model,mean,stddev,median,slope,'
-                       b'intercept,pvalue,,*\r\n')
-        base_inputdic = testdata.readyaml(self.request_filename)
-        # for restype, _ in ResidualsForm.declared_fields['plot_type'].choices:
-        inputdic = dict(base_inputdic, plot=restype)
-        inputdic['data-query'] = '(vs30 > 1000) & (vs30 < 1010)'
-        # sel='(vs30 > 800) & (vs30 < 1200)')
-        # selexpr='(vs30 > 1000) & (vs30 < 1010)')
-        resp2 = client.post(self.url, data=inputdic,
-                            content_type='application/json')
-        assert resp2.status_code == 200
-        if restype == 'res':
-            # compute the GET request and compare to POST but only for 1
-            # residual plot type case, as this test is time consuming:
-            resp1 = client.get(self.querystring(inputdic))
-            assert resp1.status_code == resp2.status_code
-            assert areequal(resp1.json(), resp2.json())
-
-        # FIXME: IMPROVE TESTS? what to assert?
-
-        # test text format:
-        resp2 = client.post(self.url, data=dict(inputdic, format='csv'),
-                            content_type='text/csv')
-        assert resp2.status_code == 200
-        assert expected_txt.search(resp2.content)
-        assert len(resp2.content) > len(expected_txt.pattern)
 
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
