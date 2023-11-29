@@ -1,7 +1,6 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from datetime import datetime
 from typing import Iterable, Sequence
 
 import pandas as pd
@@ -32,7 +31,7 @@ class FlatfileForm(EgsimBaseForm):
     _field2params = {
         'selexpr': ['data-query', 'selection-expression']
     }
-
+    # FIXME: centralize the way we fetch data with hidden=False
     flatfile = ModelChoiceField(queryset=models.Flatfile.objects.filter(hidden=False).
                                 only('name', 'media_root_path'),
                                 to_field_name="name", label='Flatfile',
@@ -78,13 +77,7 @@ class FlatfileForm(EgsimBaseForm):
             u_flatfile = u_flatfile.file  # ByesIO or similar
 
         if u_flatfile is None:
-            # exception should be raised and sent as 500: don't catch
-            p_ff = cleaned_data["flatfile"]
-            if p_ff.expiration is not None and p_ff.expiration > datetime.utcnow():
-                self.add_error("flatfile", ValidationError("Flatfile expired",
-                                                           code='invalid'))
-                return cleaned_data  # no nned to further process
-            dataframe = self.read_flatfile_from_db(p_ff)
+            dataframe = self.read_flatfile_from_db(cleaned_data["flatfile"])
         else:
             # u_ff = cleaned_data[key_u]
             try:

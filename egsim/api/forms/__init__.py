@@ -242,8 +242,8 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
     def param_name_of(self, field: str) -> str:
         """Return the input parameter name of `field`. If no parameter name mapped to
-        `field` has been provided as input `data`, return the first parameter name
-        of `field` or, in case of no mapping, `field` itself
+        `field` has been provided as input `data`, return the 1st (=primary) parameter
+        name of `field` or, in case of no mapping, `field` itself
         """
         if field in self._field2inputparam:  # param is given in this form `data`:
             return self._field2inputparam[field]
