@@ -37,8 +37,6 @@ class MIMETYPE(StrEnum):  # noqa
     # GZIP = "application/gzip"
 
 
-
-
 class RESTAPIView(View):
     """Base view for every eGSIM REST API endpoint. Typical usage:
 
@@ -183,10 +181,12 @@ class TrellisView(RESTAPIView):
     urls = (f'{API_PATH}/trellis', f'{API_PATH}/model-model-comparison')
 
     def response_csv(self, cleaned_data:dict):
-        return pandas_response(self.formclass.response_data(cleaned_data), MIMETYPE.CSV)
+        return pandas_response(self.formclass.response_data(cleaned_data),
+                               MIMETYPE.CSV)
 
     def response_hdf(self, cleaned_data:dict):
-        return pandas_response(self.formclass.response_data(cleaned_data), MIMETYPE.HDF)
+        return pandas_response(self.formclass.response_data(cleaned_data),
+                               MIMETYPE.HDF)
 
     def response_json(self, cleaned_data:dict):
         json_data = dataframe2dict(self.formclass.response_data(cleaned_data),

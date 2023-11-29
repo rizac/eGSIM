@@ -84,14 +84,16 @@ def get_trellis(
 
     # Get the ground motion values
     imts_list = list(imts)
-    for gsim_label, medians, sigmas in get_ground_motion_values(gsims, imts, ctxts):
-        # both medians and spectra are numpy matrices of
-        # `len(imt)` rows X `len(ctxts) columns`. Convert them to
-        # `len(ctxts) rows X len(imt)`columns` matrices
-        medians = medians.T
-        sigmas = sigmas.T
-        trellis_df.loc[:, (imts_list, labels.MEDIAN, gsim_label)] = medians
-        trellis_df.loc[:, (imts_list, labels.SIGMA, gsim_label)] = sigmas
+    for gsim_label, gsim in gsims.items():
+        try:
+            medians, sigmas = get_ground_motion_values(gsim, imts, ctxts)
+            # both medians and spectra are numpy matrices of
+            # `len(imt)` rows X `len(ctxts) columns`. Convert them to
+            # `len(ctxts) rows X len(imt)`columns` matrices
+            trellis_df.loc[:, (imts_list, labels.MEDIAN, gsim_label)] = medians.T
+            trellis_df.loc[:, (imts_list, labels.SIGMA, gsim_label)] = sigmas.T
+        except Exception as exc:
+            raise ValueError(f'Error in {gsim_label}: {str(exc)}')
 
     return trellis_df
 
@@ -153,12 +155,12 @@ def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
 
 
 def get_ground_motion_values(
-        gsims: dict[str, GMPE],
+        gsim: GMPE,
         imts: dict[str, IMT],
         ctxts: np.recarray) -> Iterable[tuple[str, np.ndarray, np.ndarray]]:
     """Return the ground motion values for the expected scenarios
 
-    :param gsims: dict of GSIM names mapped to a GSIM instance (class `GMPE`)
+    :param gsim: the GSIM instance
     :param imts: dict of IMT names mapped to an IMT instance (class `IMT`)
     :param ctxts: Scenarios as numpy recarray (output from context maker) as
         N (rows) x M (columns) matrix where N is the number of magnitudes
@@ -174,16 +176,17 @@ def get_ground_motion_values(
     # imts_values = list(imts.values())
     # n_gmvs = len(ctxts)
     # n_imts = len(imts)
-    for gsim_label, gsim in gsims.items():
-        # Need to pre-allocate arrays for median, sigma, tau and phi
-        median = np.zeros([len(imts), len(ctxts)])
-        sigma = np.zeros_like(median)
-        tau = np.zeros_like(median)
-        phi = np.zeros_like(median)
-        # Call OpenQuake GSIM
-        gsim.compute(ctxts, imts.values(), median, sigma, tau, phi)
-        median = np.exp(median)
-        yield gsim_label, median, sigma
+    # for gsim_label, gsim in gsims.items():
+
+    # Need to pre-allocate arrays for median, sigma, tau and phi
+    median = np.zeros([len(imts), len(ctxts)])
+    sigma = np.zeros_like(median)
+    tau = np.zeros_like(median)
+    phi = np.zeros_like(median)
+    # Call OpenQuake GSIM
+    gsim.compute(ctxts, imts.values(), median, sigma, tau, phi)
+    median = np.exp(median)
+    return median, sigma
 
 
 class labels:  # noqa (keep it simple, no Enum/dataclass needed)

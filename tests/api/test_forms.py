@@ -6,7 +6,6 @@ Created on 2 Jun 2018
 @author: riccardo
 """
 from datetime import datetime
-# from django.core.exceptions import ValidationError
 
 from io import BytesIO
 
@@ -24,6 +23,8 @@ GSIM, IMT = 'gsim', 'imt'
 
 @pytest.mark.django_db
 class Test:
+
+    # FIXME: remove nested error details and also relative checks in test
 
     def test_gsimimt_form_invalid(self, areequal):  # areequal: fixture in conftest.py
         """tests the gsimimt form invalid case. The form is the base class for all
@@ -456,6 +457,7 @@ class Test:
         assert form.is_valid()
         models = form.get_region_selected_model_names()
         assert len(models) == 12
+
 
 def test_get_flatfile_columns():
     import pandas as pd

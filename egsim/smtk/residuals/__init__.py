@@ -209,7 +209,7 @@ def get_expected_motions(
         model_sa_period_limits = gsim_sa_limits(gsim)
         for imt_name, imtx in imts.items():
             # skip if outside the model defined periods:
-            # FIXME: if a model is defined, say, for Sa(0.1), and in the flatfile
+            # FIXME: if a model is defined, say, for SA(0.1), and in the flatfile
             #   we have SA(0.01) and SA(0.2), where do we interpolate?
             if model_sa_period_limits is not None:
                 requested_period = requested_sa_periods[imt_name]
@@ -217,6 +217,8 @@ def get_expected_motions(
                     if model_sa_period_limits[0] > requested_period \
                             or model_sa_period_limits[1] < requested_period:
                         continue
+            # FIXME: use the new API gsim.compute with a recarray built from all contexts
+            #   but then grouopby (check with GW)
             mean, stddev = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imtx, types)
             expected[(imt_name, c_labels.mean, gsim_name)] = mean
             for std_type, values in zip(types, stddev):
