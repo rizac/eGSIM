@@ -126,9 +126,10 @@ def download_request(request, key: TAB, filename: str):
         # we better use text/plain?)
         response = HttpResponse(StringIO(form.as_json(compact=compact)),
                                 content_type='text/javascript')
-    elif ext_nodot == 'querystring':
-        response = HttpResponse(StringIO(form.as_querystring(compact=compact)),
-                                content_type='text/plain')
+    # elif ext_nodot == 'querystring':
+    #     # FIXME: as_querystring is not part of Form anymore... remove? drop?
+    #     response = HttpResponse(StringIO(form.as_querystring(compact=compact)),
+    #                             content_type='text/plain')
     else:
         response = HttpResponse(StringIO(form.as_yaml(compact=compact)),
                                 content_type='application/x-yaml')

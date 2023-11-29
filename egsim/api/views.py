@@ -5,7 +5,7 @@ from enum import StrEnum
 from http.client import responses
 import re
 from io import StringIO, BytesIO
-from typing import Union, Type, Optional, IO
+from typing import Union, Type, Optional, IO, Any
 
 import yaml
 import pandas as pd
@@ -321,3 +321,49 @@ def read_csv_from_buffer(buffer: IO) -> pd.DataFrame:
     dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
                   inplace=True)
     return dframe
+
+
+# some utilities:
+
+
+QUERY_STRING_SAFE_CHARS = "-_.~!*'()"  # FIXME: mozilla page link
+
+
+def dict_as_querystring(data: dict) -> str:
+    """Return the `data` argument passed in the constructor as query string
+    that can be used in GET requests (if `self.is_valid()` is True)
+    """
+    from urllib.parse import quote as urlquote
+    # Letters, digits, and the characters '_.-~' are never quoted. These are
+    # the additional safe characters (we include the former for safety):
+    safe_chars = QUERY_STRING_SAFE_CHARS
+    ret = []
+    to_str = obj_as_querystr
+    for field, value in data.items():
+        if isinstance(value, (list, tuple)):
+            val = ','.join(f'{urlquote(to_str(v), safe=safe_chars)}' for v in value)
+        else:
+            val = f'{urlquote(to_str(value), safe=safe_chars)}'
+        ret.append(f'{field}={val}')
+    return '&'.join(ret)
+
+
+def obj_as_querystr(obj: Any) -> str:
+    """Return a string representation of `obj` for injection into URL query
+    strings. No character of the returned string is escaped (see
+    :func:`urllib.parse.quote` for that)
+
+    @return "null" if obj is None, "true/false"  if `obj` is `bool`,
+        `obj.isoformat()` if `obj` is `date` or `datetime`, `str(obj)` in any other
+         case
+    """
+    from datetime import date, datetime
+    if obj is None:
+        return "null"
+    if obj is True or obj is False:
+        return str(obj).lower()
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return str(obj)
+
+
