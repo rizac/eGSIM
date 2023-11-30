@@ -11,7 +11,7 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
-from egsim.api.views import ResidualsView, RESTAPIView, dict_as_querystring
+from egsim.api.views import ResidualsView, RESTAPIView, as_querystring
 
 
 @pytest.mark.django_db
@@ -22,7 +22,7 @@ class Test:
     request_filename = 'request_residuals.yaml'
 
     def querystring(self, data):
-        return f'{self.url}?{dict_as_querystring(data)}'
+        return f'{self.url}?{as_querystring(data)}'
 
     def test_uploaded_flatfile(self,
                                # pytest fixtures:

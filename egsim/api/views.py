@@ -1,11 +1,12 @@
 """Module with the views for the web API (no GUI)"""
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from django.forms import SelectMultiple
 from enum import StrEnum
 from http.client import responses
 import re
 from io import StringIO, BytesIO
 from typing import Union, Type, Optional, IO, Any
+from urllib.parse import quote as urlquote
 
 import yaml
 import pandas as pd
@@ -323,47 +324,51 @@ def read_csv_from_buffer(buffer: IO) -> pd.DataFrame:
     return dframe
 
 
-# some utilities:
+# Default safe characters in `as_querystring`. Letters, digits are safe by default
+# and don't need to be added (also '_.-~' are safe but are added anyway for safety):
+QUERY_STRING_SAFE_CHARS = "-_.~!*'()"
 
 
-QUERY_STRING_SAFE_CHARS = "-_.~!*'()"  # FIXME: mozilla page link
-
-
-def dict_as_querystring(data: dict) -> str:
+def as_querystring(data: Any, safe=QUERY_STRING_SAFE_CHARS,
+                   encoding:str=None, errors:str=None) -> str:
     """Return the `data` argument passed in the constructor as query string
-    that can be used in GET requests (if `self.is_valid()` is True)
+    that can be used in GET requests.
+    With the default set of input parameters, this function encodes strings exactly
+    as JavaScript encodeURIComponent:
+    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description   # noqa
+
+    E.g.:
+    ```
+    as_querystring(' ') = "%20"
+    as_querystring([1, 2]) = "1,2"
+    as_querystring({'a': [1, 2], 'b': ' '}) = "a=1,2&b=%20"
+    ```
+
+    :param data: the data to be encoded. Containers (e.g. lists/tuple/dict) are
+        allowed as long as they do not contain nested containers, because this
+        would result in invalid URLs
+    :param safe: string of safe characters that should not be encoded
+    :param encoding: used to deal with non-ASCII characters. See `urllib.parse.quote`
+    :param errors: used to deal with non-ASCII characters. See `urllib.parse.quote`
     """
-    from urllib.parse import quote as urlquote
-    # Letters, digits, and the characters '_.-~' are never quoted. These are
-    # the additional safe characters (we include the former for safety):
-    safe_chars = QUERY_STRING_SAFE_CHARS
-    ret = []
-    to_str = obj_as_querystr
-    for field, value in data.items():
-        if isinstance(value, (list, tuple)):
-            val = ','.join(f'{urlquote(to_str(v), safe=safe_chars)}' for v in value)
-        else:
-            val = f'{urlquote(to_str(value), safe=safe_chars)}'
-        ret.append(f'{field}={val}')
-    return '&'.join(ret)
-
-
-def obj_as_querystr(obj: Any) -> str:
-    """Return a string representation of `obj` for injection into URL query
-    strings. No character of the returned string is escaped (see
-    :func:`urllib.parse.quote` for that)
-
-    @return "null" if obj is None, "true/false"  if `obj` is `bool`,
-        `obj.isoformat()` if `obj` is `date` or `datetime`, `str(obj)` in any other
-         case
-    """
-    from datetime import date, datetime
-    if obj is None:
+    if data is None:
         return "null"
-    if obj is True or obj is False:
-        return str(obj).lower()
-    if isinstance(obj, (date, datetime)):
-        return obj.isoformat()
-    return str(obj)
+    if data is True or data is False:
+        return str(data).lower()
+    if isinstance(data, dict):
+        return '&'.join(f'{f}={as_querystring(v)}' for f, v in data.items())
+    elif isinstance(data, Iterable):
+        if not isinstance(data, (str, bytes)):
+            return ','.join(f'{as_querystring(v)}' for v in data)
+    else:
+        # no str, bytes, iterable or dict: use `isoformat` (if date/datetime)
+        try:
+            data = data.isoformat(sep='T')
+        except (AttributeError, ValueError, TypeError):
+            # note: this shouldn't be the fallback for bytes: urlquote handles
+            # them and str(bytes) appends an unwanted 'b'
+            data = str(data)
+    return urlquote(data, safe=safe, encoding=encoding, errors=errors)
+
 
 
