@@ -51,14 +51,10 @@ class FlatfileForm(EgsimBaseForm):
         # Handle flatfiles conflicts first. Note: with no selection from the web GUI we
         # have data['flatfile'] = None
         if u_form is not None and self.data.get('flatfile', None):
-            self.add_error("flatfile", ValidationError('Please either select a '
-                                                       'flatfile, or upload one',
-                                                       code='conflict'))
+            self.add_error("flatfile", 'Select either a flatfile, or upload one')
         elif u_form is None and not self.data.get('flatfile', None):
             # note: with no selection from the web GUI we have data['flatfile'] = None
-            self.add_error("flatfile",  ValidationError('Please select a flatfile '
-                                                        'or upload one',
-                                                        code='required'))
+            self.add_error("flatfile",  self.ErrCode.required)
 
         cleaned_data = super().clean()
 
@@ -86,11 +82,10 @@ class FlatfileForm(EgsimBaseForm):
                 # (https://stackoverflow.com/a/10758350):
                 dataframe = self.read_flatfilefrom_csv_bytes(u_flatfile)
             except Exception as exc:
-                msg = str(exc)
                 # Use 'flatfile' as error key: users can not be confused
                 # (see __init__), and also 'flatfile' is also the exposed key
                 # for the `files` argument in requests
-                self.add_error("flatfile", ValidationError(msg, code='invalid'))
+                self.add_error("flatfile", "read error: " + str(exc))
                 return cleaned_data  # no need to further process
 
         # replace the flatfile parameter with the pandas dataframe:
@@ -103,7 +98,7 @@ class FlatfileForm(EgsimBaseForm):
                 cleaned_data['flatfile'] = flatfile_query(dataframe, selexpr).copy()
             except Exception as exc:
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(key, ValidationError(str(exc), code='invalid'))
+                self.add_error(key, "data query error: " + str(exc))
 
         return cleaned_data
 

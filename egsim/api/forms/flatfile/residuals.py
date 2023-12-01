@@ -27,15 +27,9 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                 invalid_gsims = set(cleaned_data['gsim']) - \
                                 set(get_gsims_from_flatfile(flatfile.columns))
                 if invalid_gsims:
-                    inv_str = ', '.join(sorted(invalid_gsims)[:5])
-                    if len(invalid_gsims) > 5:
-                        inv_str += ' ... (showing first 5 only)'
-                    err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not "
-                                               f"supported by the given flatfile: "
-                                               f"{inv_str}", code='invalid')
                     # add_error removes also the field from self.cleaned_data:
-                    self.add_error('gsim', err_gsim)
-                    cleaned_data.pop('flatfile')
+                    self.add_error('flatfile', f'missing columns required by '
+                                               f'{", ".join(invalid_gsims)}')
                     return cleaned_data
 
         return cleaned_data

@@ -64,21 +64,15 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         cleaned_data = super().clean()
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
         if not x and not y:
-            self.add_error("x", ValidationError('with no "y" specified, this '
-                                                'parameter is required',
-                                                code='required'))
-            self.add_error("y", ValidationError('with no "x" specified, this '
-                                                'parameter is required',
-                                                code='required'))
+            self.add_error("x", 'either x or y is required')
+            self.add_error("y", 'either x or y is required')
 
         if not self.has_error('flatfile'):
             cols = cleaned_data['flatfile'].columns
             if x and x not in cols:
-                self.add_error("x", ValidationError(f'"{x}" is not a flatfile'
-                                                    'column', code='invalid'))
+                self.add_error("x", f'"{x}" is not a flatfile column')
             if y and y not in cols:
-                self.add_error("y", ValidationError(f'"{y}" is not a flatfile'
-                                                    'column', code='invalid'))
+                self.add_error("y", f'"{y}"  is not a flatfile column')
 
         return cleaned_data
 
@@ -191,9 +185,7 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         dataframe = cleaned_data['flatfile']
         gsims = list(get_gsims_from_flatfile(dataframe.columns))
         if not gsims:
-            self.add_error("flatfile",
-                           ValidationError("Invalid or missing column names",
-                                           code='invalid'))
+            self.add_error("flatfile", f'missing columns required')
         cleaned_data['gsim'] = gsims
         cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
         return cleaned_data
