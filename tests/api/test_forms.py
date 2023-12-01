@@ -24,8 +24,6 @@ GSIM, IMT = 'gsim', 'imt'
 @pytest.mark.django_db
 class Test:
 
-    # FIXME: remove nested error details and also relative checks in test
-
     def test_gsimimt_form_invalid(self, areequal):  # areequal: fixture in conftest.py
         """tests the gsimimt form invalid case. The form is the base class for all
         forms using imt and gsim as input"""
@@ -39,15 +37,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: model',
-            'errors': [
-                {
-                    'location': 'model',
-                    'message': 'Value not found or misspelled: BindiEtAl2011t, '
-                               'BindiEtAl2014RJb',
-                    'reason': 'invalid_choice'
-                }
-            ]
+            'message': 'unknown value for "model"'
         }
         assert areequal(err, expected_err)
 
@@ -55,14 +45,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: imt',
-            'errors': [
-                {
-                    'location': 'imt',
-                    'message': 'This parameter is required',
-                    'reason': 'required'
-                }
-            ]
+            'message': 'missing parameter "imt"'
         }
         assert areequal(err, expected_err)
 
@@ -70,19 +53,7 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: gsim, imt',
-            'errors': [
-                {
-                    'location': 'gsim',
-                    'message': 'Value not found or misspelled: abcde',
-                    'reason': 'invalid_choice'
-                },
-                {
-                    'location': 'imt',
-                    'message': 'This parameter is required',
-                    'reason': 'required'
-                }
-            ]
+            'message': 'missing parameter "imt"; unknown value for "gsim"'
         }
         assert areequal(err, expected_err)
 
@@ -90,83 +61,74 @@ class Test:
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: imt, model',
-            'errors': [
-                {
-                    'location': 'model',
-                    'message': 'This parameter is required',
-                    'reason': 'required'
-                },
-                {
-                    'location': 'imt',
-                    'message': "Value not found or misspelled: abcde, BindiEtAl2014Rjb",
-                    'reason': 'invalid_choice'
-                }
-            ]
+            'message': 'missing parameter "model"; unknown value for "imt"'
         }
         # fix the case of inverted params:
         expected_err2 = dict(expected_err, message='Invalid parameters: imt, model')
         assert areequal(err, expected_err) or areequal(err, expected_err2)
+
+    def test_imt_invalid(self, areequal):
+        data = {
+            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
+            IMT: ['SA(r)', 'SA(0.2)', 'PGA', 'PGV']
+        }
+        form = GsimImtForm(data)
+        assert not form.is_valid()
+        err_json = form.errors_json_data()
+        expected_json = {
+            'message': 'invalid value for "imt"',
+        }
+        assert areequal(err_json, expected_json)
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
                             IMT: ['SA', '0.t', 'MMI']})
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: imt',
-            'errors': [
-                # {
-                #     'location': 'imt',
-                #     'message': 'Value not found or misspelled: MMI',
-                #     'reason': 'invalid_choice'
-                # },
-                {
-                    'location': 'imt',
-                    'message': 'Value not found or misspelled: SA, 0.t',
-                    'reason': 'invalid_choice'
-                }
-            ]
+            'message': 'unknown value for "imt"'
         }
         assert areequal(err, expected_err)
 
         form = GsimImtForm({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-                            IMT: ['MMI', '_T_']})
+                            IMT: ['MMI', '_T_' , 'SA(r)']})
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: imt',
-            'errors': [
-                {
-                    'location': 'imt',
-                    'message': 'Value not found or misspelled: _T_',
-                    'reason': 'invalid_choice'
-                }
-            ]
+            'message': 'invalid value for "imt"; unknown value for "imt"'
         }
         assert areequal(err, expected_err)
 
     def test_flatifle_form(self, areequal):
-        # with pytest.raises(ValidationError) as verr:
+        # double flatfile provided (this should NOT be poossible from the API
+        # but we test the correct message anyway):
         csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
         form = FlatfileForm({'flatfile': 'esm2018'}, {'flatfile': csv})
         assert not form.is_valid()
         err = form.errors_json_data()
         expected_err = {
-            'message': 'Invalid request. Problems found in: flatfile',
-            'errors': [
-                {
-                    'location': 'flatfile',
-                    'message': 'Please either select a flatfile, or upload one',
-                    'reason': 'conflict'}
-            ]
+            'message': 'redundant parameter "flatfile"'
         }
         assert areequal(err, expected_err)
-        # assert verr.value.message == 'Please either select a flatfile, or upload one'
+
+        # malformed uploaded flatfile:
+        csv = SimpleUploadedFile("file.csv", b"", content_type="text/csv")
+        form = FlatfileForm({}, {'flatfile': csv})
+        assert not form.is_valid()
+        err = form.errors_json_data()
+        expected_err = {
+            'message': 'invalid value for "flatfile"'
+        }
+        assert areequal(err, expected_err)
+
+        # note that any flatfile readable with pandas does not raise, so the form
+        # is valid (it will raise when computing residuals):
+        csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
+        form = FlatfileForm({}, {'flatfile': csv})
+        assert form.is_valid()
+
 
     def test_provide_unknown_params(self):
         """Test that unknown and conflicting parameters"""
-
-
         form = GsimImtForm({
             'unknown_param': 5,
             GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
@@ -174,7 +136,7 @@ class Test:
         })
         assert not form.is_valid()
         verr = form.errors_json_data()
-        assert 'unknown_param' in verr['errors'][0]['message']
+        assert verr['message'] == 'unknown parameter "unknown_param"'
 
         # test another unknown parameter, but this time provide a name of an existing
         # Form Field ('plot_type'):
@@ -187,7 +149,7 @@ class Test:
         form = TrellisForm(data)
         assert not form.is_valid()
         verr = form.errors_json_data()
-        assert 'plot_type' in verr['errors'][0]['message']
+        assert verr['message'] == 'unknown parameter "plot_type"'
 
         # conflicting names:
         form = GsimImtForm({
@@ -197,10 +159,7 @@ class Test:
         })
         assert not form.is_valid()
         verr = form.errors_json_data()
-        assert 'model' in verr['errors'][0]['message']
-        assert 'gmm' in verr['errors'][0]['message']
-
-        # assert verr.value.message == 'Conflicting parameters: model, gmm'
+        assert verr['message'] == 'redundant parameter "model" vs. "gmm"'
 
     @pytest.mark.parametrize('data',
                              [({GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
@@ -224,33 +183,13 @@ class Test:
         assert 'PGA' in imts
         assert 'PGV' in imts
         # to test SA's it's complicated, they should be 'SA(0.1)', 'SA(0.2)'
-        # IN PRINCIPLE but due to rounding errors they might be slighlty different.
+        # IN PRINCIPLE but due to rounding errors they might be slightly different.
         # So do not test for string equality but create imts and test for
         # 'period' equality:
         imts = sorted([imt.from_string(i) for i in imts if i not in
                        ('PGA', 'PGV')], key=lambda imt: imt.period)
         assert imts[0].period == 0.1
         assert imts[1].period == 0.2
-
-    def test_imt_invalid(self, areequal):
-        data = {
-            GSIM: ['BindiEtAl2011', 'BindiEtAl2014Rjb'],
-            IMT: ['SA(r)', 'SA(0.2)', 'PGA', 'PGV']
-        }
-        form = GsimImtForm(data)
-        assert not form.is_valid()
-        err_json = form.errors_json_data()
-        expected_json = {
-            'message': 'Invalid request. Problems found in: imt',
-            'errors': [
-                {
-                    'location': 'imt',
-                    'message': 'Value not found or misspelled: SA(r)',
-                    'reason': 'invalid_choice'
-                }
-            ]
-        }
-        assert areequal(err_json, expected_json)
 
     @pytest.mark.skip('MMI is implemented in egsim3.0')
     def test_gsim_not_available(self, areequal):
@@ -262,13 +201,6 @@ class Test:
         assert not form.is_valid()
         expected_err = {
             'message': 'Invalid request. Problems found in: gmm',
-            'errors': [
-                {
-                    'location': 'gmm',
-                    'message': 'Value not found or misspelled: AllenEtAl2012',
-                    'reason': 'invalid_choice'
-                }
-            ]
         }
         assert areequal(form.errors_json_data(), expected_err)
 
@@ -282,21 +214,11 @@ class Test:
         form = GsimImtForm(data)
         assert not form.is_valid()
         expected_err = {
-            'message': 'Invalid request. Problems found in: gsim, imt',
-            'errors': [
-                {
-                    'location': 'gsim',
-                    'message': '2 model(s) not defined for all supplied imt(s)',
-                    'reason': 'invalid_model_imt_combination'
-                },
-                {
-                    'location': 'imt',
-                    'message': '1 imt(s) not defined for all supplied model(s)',
-                    'reason': 'invalid_model_imt_combination'
-                }
-            ]
+            'message': 'gsim, imt: BindiEtAl2011 not defined for PGD, '
+                       'BindiEtAl2014Rjb not defined for PGD'
         }
-        assert areequal(form.errors_json_data(), expected_err)
+        err = form.errors_json_data()
+        assert areequal(err, expected_err)
 
     def test_arrayfields_all_valid_input_types(self):
         """Tests some valid inputs in the egsim Fields accepting array of values
@@ -348,11 +270,6 @@ class Test:
                     'message': 'Value not found or misspelled: SA',
                     'reason': 'invalid_choice'
                 },
-                # {
-                #     'location': 'plot',
-                #     'message': 'This parameter is required',
-                #     'reason': 'required'
-                # },
                 {
                     'location': 'mag',
                     'message': "Invalid value: a",

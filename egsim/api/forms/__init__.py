@@ -7,11 +7,11 @@ from openquake.hazardlib.imt import IMT
 from typing import Union, Any
 import json
 from io import StringIO
-
+from enum import StrEnum
 
 import yaml
 from shapely.geometry import Point, shape
-from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
+from django.core.exceptions import ValidationError
 from django.forms import Form, ModelMultipleChoiceField
 from django.forms.renderers import BaseRenderer
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
@@ -19,16 +19,8 @@ from django.forms.fields import Field, FloatField
 
 from egsim.api import models
 from egsim.smtk import validate_inputs, InvalidInput, harmonize_input_gsims, \
-    harmonize_input_imts, gsim
+    harmonize_input_imts, gsim, registered_imts
 from egsim.smtk.validators import IncompatibleInput
-
-
-# parameter error codes:
-# invalid_name
-# invalid_value
-# invalid_choice
-# conflicting_names
-# missing_value
 
 
 class EgsimFormMeta(DeclarativeFieldsMetaclass):
@@ -38,21 +30,6 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 
     def __new__(mcs, name, bases, attrs):
         new_class = super().__new__(mcs, name, bases, attrs)
-
-        # Set standardized default error messages for each Form field
-        # FIXME: str-like enum and move it to global var?
-        _default_error_messages = {
-            "required": "This parameter is required",
-            "invalid_choice": "Value not found or misspelled: %(value)s",
-            "invalid": "Invalid value: %(value)s",
-            # "invalid_list": "Enter a list of values",
-        }
-        for field in new_class.declared_fields.values():  # same as .base_fields
-            field.error_messages |= _default_error_messages
-            for err_code, err_msg in field.error_messages.items():
-                if err_msg.endswith('.'):  # remove Django msg ending dot, if any:
-                    field.error_messages[err_code] = err_msg[:-1]
-
         # Attribute denoting field -> API params mappings:
         attname = '_field2params'
         # Dict denoting the field -> API params mappings:
@@ -61,7 +38,6 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
         # because in all `_field2params`s same key / field <=> same value / params:
         for base in bases:
             field2params.update(getattr(base, attname, {}))
-
         form_fields = set(new_class.declared_fields)
         # Merge this class `field2params` data into `field2params`, and do some check:
         for field, params in attrs.get(attname, {}).items():
@@ -98,15 +74,14 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
-
+ß
 
 def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
-    """Return a singleton, no-op "dummy" renderer instance (we use Django as REST API
-    only with HTML rendering delegated to SPA in JavaScript).
-    Because this function is set as "FORM_RENDERER" in the settings file, it will be
-    called by `django forms.renderers.get_default_renderer` every
-    time a default renderer is needed (See e.g. `django.forms.forms.Form` and `ErrorDict`
-    or `ErrorList` - both in the module `django.forms.utils`)
+    """Default renderer instance (see "FORM_RENDERER" in the settings file and
+    `django.forms.forms.Form` or `django.forms.utils.ErrorDict` for usage).
+
+    :return: a singleton, no-op dummy Renderer implemented for performance reasons
+        only, as this app is intended to be a REST API without Django rendering
     """
     return _base_singleton_renderer
 
@@ -149,18 +124,30 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         # call super:
         super(EgsimBaseForm, self).__init__(data, files, **kwargs)
 
-        # Fix self.data and add errors in case:
-        unknowns = set(self.data if no_unknown_params else [])
-        errors = []
+        unknowns = set(self.data)
+        # store conflicting+unknown params and manage them later in `errors_json_data`.
+        # Avoid `self.add_error(field, ...)` for the overhead it introduces:
+        # 1. It triggers a Form validation (`full_clean`) which is unnecessary and
+        #    can only be done at the end of __init__
+        # 2. It raises if `field` is neither None nor a valid Field name, so unknown
+        #   parameters should be passed with None (which discards the param name info)
+        self.init_errors = {}
         for field_name, field in self.base_fields.items():
             param_names = self.param_names_of(field_name)
             unknowns -= set(param_names)
             input_param_names = tuple(p for p in param_names if p in self.data)
             if len(input_param_names) > 1:  # names conflict, store error:
-                names = " and ".join(input_param_names)
-                errors.append(ValidationError(f'{names}: names conflict',
-                                              code=f'names_conflict'))
-                # keep only the first param in `self.data`
+                for p in input_param_names:
+                    self.init_errors[p] = \
+                        f"this parameter conflicts with " \
+                        f"{' and '.join(_ for _ in input_param_names if _ != p)}"
+                # assure has_error(field_name) returns True:
+                if field_name not in input_param_names:
+                    # setting None is a way to not display any error for
+                    # field_name (see self.errors_json_data):
+                    self.init_errors[field_name] = None
+                # Do not remove all params, because if the field is required we
+                # don't want a 'missing param'-ish error: keep only the 1st param:
                 for p in input_param_names[1:]:
                     self.data.pop(p)
                 # now let's fall in the next if below:
@@ -178,65 +165,61 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                 if self.fields[field_name].initial is not None:
                     self.data[field_name] = self.fields[field_name].initial
 
-        for unk in unknowns:
-            errors.append(ValidationError(f'Invalid name(s): {unk}',
-                                          code=f'invalid_name'))
-        if errors:
-            # Add errors. Notes: `add_error(N, ...)` works only if N is None or
-            # an existing field name, and will force a form full clean (so that we
-            # might end up adding more errors than those added below)
-            self.add_error(None, errors)
+        if no_unknown_params:
+            for u in unknowns:
+                self.init_errors[u] = f'unknown parameter'
+
+        # If we have any init error, set `is_bound=False` to prevent any further
+        # validation (see super `full_clean` and `is_valid`):
+        if self.init_errors:
+            self.is_bound = False
 
     def has_error(self, field, code=None):
         """Call `super.has_error` without forcing a full clean (if the form has not
-        been cleaned, return False)
+        been cleaned, return if the field resulted in an internal initialization error)
 
         :param field: a Form field name (not an input parameter name)
         :param code: an optional error code (e.g. 'invalid')
         """
-        return super().has_error(field, code) if self._errors else False
+        if not self._errors:
+            return self.init_errors and (code is None or field in self.init_errors)
+        return super().has_error(field, code)
 
-    def errors_json_data(self, msg: str = None) -> dict:
-        """Reformat `self.errors.get_json_data()` and return a JSON serializable dict
-        with keys `message` (the `msg` argument or - if missing - a global error message
-        summarizing all errors), and `errors`, a list of `dict[str, str]` elements, where
-        each dict represents a parameter and has keys "location" (the parameter name),
-        "message" (the detailed error message related to the parameter), and "reason" (an
-        error code indicating the type of error, e.g. "required", "invalid")
+    # error codes mapped to be default message to be used in `errors_json_data`
+    # and replace custom Django messages. The enums below can also be set in
+    # add_error, e.g. add_error(field, self.ErrCode.required):
+    class ErrCode(StrEnum):
+        required = "this parameter is required"
+        invalid = "invalid value"
+        invalid_choice = "value not found or misspelled"
 
-        NOTE: This method triggers a full Form clean (`self.full_clean`). It should
-        be usually called if `self.is_valid()` returns False
-
-        For details see:
-        https://cloud.google.com/storage/docs/json_api/v1/status-codes
-        https://google.github.io/styleguide/jsoncstyleguide.xml
+    def errors_json_data(self) -> dict:
+        """Return a JSON serializable dict with the key `message` specifying
+        all invalid parameters grouped by error type. Typically, users call
+        this method if `self.is_valid()` returns False.
+        Note: API users should retrieve JSON formatted errors via this method only
+        (e.g., do not call `self.errors.get_json_data()` or other Django utilities)
         """
-        errors_dict: dict[str, list[dict[str, str]]] = self.errors.get_json_data()
-        if not errors_dict:
-            return {}
+        errors = {}
+        # add init errors
+        for param, msg in self.init_errors.items():
+            if msg:
+                errors.setdefault(msg, set()).add(param)
 
-        errors = []
-        # build errors dict:
-        for field_name, errs in errors_dict.items():
-            param_name = ''
-            if field_name != NON_FIELD_ERRORS:
-                # if we called add_error(None, ...) then field_name is NON_FIELD_ERRORS
-                param_name = self.param_name_of(field_name)
+        # add Django validation errors:
+        for field_name, errs in self.errors.get_json_data().items():
+            param = self.param_name_of(field_name)
             for err in errs:
-                errors.append({
-                    'location': param_name,
-                    'message': err.get('message', ''),
-                    'reason': err.get('code', '')
-                })
-        if not msg:
-            msg = "Invalid request"
-            err_param_names = sorted({self.param_name_of(f) for f in errors_dict
-                                      if f != NON_FIELD_ERRORS})
-            if err_param_names:
-                msg += f'. Problems found in: {", ".join(err_param_names)}'
+                try:
+                    msg = self.ErrCode[err['code']]
+                except KeyError:
+                    msg = err.get('message', 'unknown error')
+                errors.setdefault(msg, set()).add(param)
+
+        # build message:
+        msg = [f'{", ".join(sorted(ps))}: {err}' for err, ps in errors.items()]
         return {
-            'message': msg,
-            'errors': errors
+            'message': '; '.join(msg)
         }
 
     def param_name_of(self, field: str) -> str:
@@ -401,13 +384,13 @@ class GsimImtForm(SHSRForm):
         """Custom gsim clean.
         The return value will replace self.cleaned_data['gsim']
         """
+        # Implementation note: as of 2024, the 1st arg to ValidationError is not
+        # really used, just pass the right `code` arg (see `error_json_data`)
         key = 'gsim'
         value = self.cleaned_data.get(key, None)
         if not value:
             if not self.accept_empty_gsim_list:
-                raise ValidationError(
-                    self.fields[key].error_messages['required'],
-                    code='required')
+                raise ValidationError("required", code=self.ErrCode.required.name)
             return {}
         if type(value) not in (list, tuple):
             value = [value]
@@ -418,35 +401,47 @@ class GsimImtForm(SHSRForm):
                     ret[name] = gsim(name)
             return ret
         except InvalidInput as err:
-            # FIXME handle error messages and also in clean_imt below:
-            raise ValidationError(
-                self.fields[key].error_messages["invalid_choice"],
-                code="invalid_choice",
-                params={"value": str(err)},
-            )
+            raise ValidationError(str(err), code=self.ErrCode.invalid_choice.name)
 
     def clean_imt(self) -> dict[str, IMT]:
         """Custom gsim clean.
         The return value will replace self.cleaned_data['imt']
         """
+        # Implementation note: as of 2024, the 1st arg to ValidationError is not
+        # really used, just pass the right `code` arg (see `error_json_data`)
         key = 'imt'
         value = self.cleaned_data.get(key, None)
         if not value:
             if not self.accept_empty_imt_list:
-                raise ValidationError(
-                    self.fields[key].error_messages['required'],
-                    code='required')
+                raise ValidationError("required", code=self.ErrCode.required.name)
             return {}
         if type(value) not in (list, tuple):
             value = [value]
         try:
             return harmonize_input_imts(value)
         except InvalidInput as err:
-            raise ValidationError(
-                self.fields[key].error_messages["invalid_choice"],
-                code="invalid_choice",
-                params={"value": str(err)},
-            )
+            msg = str(err)
+            # separate err. messages: invalid values ('SA(x)') vs unknown ('XXX'):
+            imts = set(err.args)
+            invalid = {
+                i for i in imts if '(' in i and i[:i.index('(')] in registered_imts
+            }
+            err_i = self.ErrCode.invalid.name
+            unknown = imts - invalid
+            err_u = self.ErrCode.invalid_choice.name
+            if invalid and unknown:
+                msg = [
+                    ValidationError(",".join(invalid), code=err_i),
+                    ValidationError(",".join(unknown), code=err_u)
+                ]
+                code = None
+            elif not unknown:
+                code = err_i
+            else:
+                code = err_u
+            raise ValidationError(msg, code=code)
+
+    INCOMPATIBLE_MODEL_IMT = '_invalid_model_imt_combination_'
 
     def clean(self):
         """Perform a final validation checking models and intensity measures
@@ -462,19 +457,13 @@ class GsimImtForm(SHSRForm):
                 validate_inputs(cleaned_data[gsim], cleaned_data[imt])
             except IncompatibleInput as err:
                 # add error to form:
-                invalid_gsims = [i[0] for i in err.args]
-                invalid_imts = set(i for v in err.args for i in v[1:])
-                code = 'invalid_model_imt_combination'
-                err_gsim = ValidationError(f"{len(invalid_gsims)} model(s) not defined "
-                                           "for all supplied imt(s)", code=code)
-                err_imt = ValidationError(f"{len(invalid_imts)} imt(s) not defined for "
-                                          "all supplied model(s)", code=code)
+                msg = [f"{m[0]} not defined for {' and '.join(m[1:])}" for m in err.args]
+                err = ValidationError(", ".join(msg))
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(gsim, err_gsim)
-                self.add_error(imt, err_imt)
+                self.add_error(gsim, err)
+                self.add_error(imt, err)
 
         return cleaned_data
-
 
 class APIForm(EgsimBaseForm):
     """API Form is the Base Form for the eGSIM API request/response. It implements
