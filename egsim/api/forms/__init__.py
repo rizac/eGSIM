@@ -74,7 +74,7 @@ class EgsimFormMeta(DeclarativeFieldsMetaclass):
 
 
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
-ß
+
 
 def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
     """Default renderer instance (see "FORM_RENDERER" in the settings file and
