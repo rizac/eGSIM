@@ -92,17 +92,17 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
     # make code linters happy (attr created in Django DeclarativeFieldsMetaclass):
     base_fields: dict[str, Field]
 
-    # The dict below allows to easily change Field names without breaking the code.
-    # Just map any Field name implemented on this class to several parameters
-    # (including the same field name if needed), where the 1st parameter will be
-    # considered the primary name, and the rest aliases (if a Field name is mapped only
-    # to itself, it can be omitted).
-    # Notes: this attribute is merged with superclasses implementations (see
-    # `EgsimFormMeta`) and should be private, use `param_names_of` or `param_name_of`
-    # instead. Being immutable, Field names (accessible via `class.base_fields`) should
-    # be used internally during form validation, e.g. as keys of `self.data` and
-    # `self.cleaned_data`. I/O parameters are the field names exposed publicly,
-    # e.g. as input (`data` passed in `__init__`) or output (`self.errors_json_dict`).
+    # Mapping class Field name to the associated request parameter name. Dict values
+    # are lists where the 1st element is the primary parameter name, and the rest
+    # aliases (the Field name can be in the list, but if it's the only element the
+    # mapping can be omitted). This class attribute is merged with superclasses
+    # implementations (see `EgsimFormMeta`) and should be private, use `param_names_of`
+    # or `param_name_of` instead.
+    # Rationale: Field names are by default exposed as requests API parameters, but the
+    # latter should be changed easily without breaking the code. With this mapping,
+    # field names can be immutable and used internally during validation (e.g. keys
+    # of `self.data` and `self.cleaned_data`) whilst parameter names used in I/O data
+    # (keys of the dict passed to `__init__`, or returned from `self.errors_json_dict`)
     _field2params: dict[str, list[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
