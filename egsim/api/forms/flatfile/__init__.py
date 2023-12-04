@@ -4,7 +4,6 @@ Base Form for to model-to-data operations i.e. flatfile handling
 from typing import Iterable, Sequence
 
 import pandas as pd
-from django.core.exceptions import ValidationError
 from django.forms import Form, ModelChoiceField
 from django.forms.fields import CharField, FileField
 
@@ -21,7 +20,11 @@ from egsim.api.forms import EgsimBaseForm
 # strictly JSON-encodable (info here: https://stackoverflow.com/a/4083908) and
 # should be kept private/hidden by default:
 class _UploadedFlatfile(Form):
-    flatfile = FileField(required=False)  # keep same name as flatfile below
+    flatfile = FileField(required=False,
+                         allow_empty_file=False,
+                         error_messages={
+                            'empty': 'the submitted file is empty'
+                         })  # keep same name as flatfile below
 
 
 class FlatfileForm(EgsimBaseForm):
@@ -51,7 +54,8 @@ class FlatfileForm(EgsimBaseForm):
         # Handle flatfiles conflicts first. Note: with no selection from the web GUI we
         # have data['flatfile'] = None
         if u_form is not None and self.data.get('flatfile', None):
-            self.add_error("flatfile", 'Select either a flatfile, or upload one')
+            self.add_error("flatfile", 'select a flatfile by name or upload one, '
+                                       'not both')
         elif u_form is None and not self.data.get('flatfile', None):
             # note: with no selection from the web GUI we have data['flatfile'] = None
             self.add_error("flatfile",  self.ErrCode.required)

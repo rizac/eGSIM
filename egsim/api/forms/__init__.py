@@ -11,15 +11,14 @@ from enum import StrEnum
 
 import yaml
 from shapely.geometry import Point, shape
-from django.core.exceptions import ValidationError
 from django.forms import Form, ModelMultipleChoiceField
 from django.forms.renderers import BaseRenderer
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, FloatField
 
 from egsim.api import models
-from egsim.smtk import validate_inputs, InvalidInput, harmonize_input_gsims, \
-    harmonize_input_imts, gsim, registered_imts
+from egsim.smtk import (validate_inputs, InvalidInput, harmonize_input_gsims,
+                        harmonize_input_imts, gsim)
 from egsim.smtk.validators import IncompatibleInput
 
 
@@ -185,13 +184,15 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             return False
         return super().has_error(field, code)
 
-    # error codes mapped to be default message used in `errors_json_data` to
-    # replace custom Django messages. You can also pass enums below in subclasses
-    # `add_error`, e.g. add_error(field, self.ErrCode.required):
     class ErrCode(StrEnum):
-        required = "this parameter is required"
+        """Custom error code and msg replacing Django defaults"""
+        required = "missing parameter is required"
         invalid = "invalid value"
         invalid_choice = "value not found or misspelled"
+
+    def add_error(self, field:str, msg:Union[str, ErrCode]):
+        """Same as super.add_Error but simplified with explicit arg. types"""
+        super().add_error(field, msg)
 
     def errors_json_data(self) -> dict:
         """Return a JSON serializable dict with the key `message` specifying
@@ -216,10 +217,10 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                     msg = err.get('message', 'unknown error')
                 errors.setdefault(msg, set()).add(param)
 
-        # build message:
-        msg = [f'{", ".join(sorted(ps))}: {err}' for err, ps in errors.items()]
+        # build message. Sort params to make tests deterministic
         return {
-            'message': '; '.join(msg)
+            'message': '; '.join(sorted(f'{", ".join(sorted(ps))}: {err}'
+                                        for err, ps in errors.items()))
         }
 
     def param_name_of(self, field: str) -> str:
@@ -390,18 +391,20 @@ class GsimImtForm(SHSRForm):
         value = self.cleaned_data.get(key, None)
         if not value:
             if not self.accept_empty_gsim_list:
-                raise ValidationError("required", code=self.ErrCode.required.name)
+                self.add_error(key, self.ErrCode.required)
             return {}
         if type(value) not in (list, tuple):
             value = [value]
+        ret = {}
         try:
             ret = harmonize_input_gsims(value)
             for name in self.get_region_selected_model_names():
                 if name not in ret:
                     ret[name] = gsim(name)
-            return ret
         except InvalidInput as err:
-            raise ValidationError(str(err), code=self.ErrCode.invalid_choice.name)
+            self.add_error(key, f"{self.ErrCode.invalid} "
+                                f"({', '.join(sorted(err.args))})")
+        return ret
 
     def clean_imt(self) -> dict[str, IMT]:
         """Custom gsim clean.
@@ -413,33 +416,17 @@ class GsimImtForm(SHSRForm):
         value = self.cleaned_data.get(key, None)
         if not value:
             if not self.accept_empty_imt_list:
-                raise ValidationError("required", code=self.ErrCode.required.name)
+                self.add_error(key, self.ErrCode.required)
             return {}
         if type(value) not in (list, tuple):
             value = [value]
+        ret = {}
         try:
-            return harmonize_input_imts(value)
+            ret = harmonize_input_imts(value)
         except InvalidInput as err:
-            msg = str(err)
-            # separate err. messages: invalid values ('SA(x)') vs unknown ('XXX'):
-            imts = set(err.args)
-            invalid = {
-                i for i in imts if '(' in i and i[:i.index('(')] in registered_imts
-            }
-            err_i = self.ErrCode.invalid.name
-            unknown = imts - invalid
-            err_u = self.ErrCode.invalid_choice.name
-            if invalid and unknown:
-                msg = [
-                    ValidationError(",".join(invalid), code=err_i),
-                    ValidationError(",".join(unknown), code=err_u)
-                ]
-                code = None
-            elif not unknown:
-                code = err_i
-            else:
-                code = err_u
-            raise ValidationError(msg, code=code)
+            self.add_error(key, f"{self.ErrCode.invalid} "
+                                f"({', '.join(sorted(err.args))})")
+        return ret
 
     def clean(self):
         """Perform a final validation checking models and intensity measures
@@ -447,7 +434,6 @@ class GsimImtForm(SHSRForm):
         """
         gsim, imt = 'gsim', 'imt'
         cleaned_data = super().clean()
-
         # if any of the if above was true, then the parameter has been removed from
         # cleaned_data. If both are provided, check gsims and imts match:
         if not self.has_error(gsim) and not self.has_error(imt):
@@ -455,13 +441,13 @@ class GsimImtForm(SHSRForm):
                 validate_inputs(cleaned_data[gsim], cleaned_data[imt])
             except IncompatibleInput as err:
                 # add error to form:
-                msg = [f"{m[0]} not defined for {' and '.join(m[1:])}" for m in err.args]
-                err = ValidationError(", ".join(msg))
+                msg = ", ".join(f"{m[0]} not defined for {' and '.join(m[1:])}"
+                                for m in err.args)
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(gsim, err)
-                self.add_error(imt, err)
-
+                self.add_error(gsim, msg)
+                self.add_error(imt, msg)
         return cleaned_data
+
 
 class APIForm(EgsimBaseForm):
     """API Form is the Base Form for the eGSIM API request/response. It implements
@@ -473,8 +459,8 @@ class APIForm(EgsimBaseForm):
     def response_data(cls, cleaned_data:dict) -> Any:
         """Return the response data from this Form `cleaned_data`
 
-        :param cleaned_data: this form cleaned data, obtained after
-            successful validating the form inpout data
+        :param cleaned_data: a `dict` representing the validated and "clean" data
+            passed as input to an instance of this class
         :return: any object (e.g., a JSON-serializable dict)
         """
         raise NotImplementedError()

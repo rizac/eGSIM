@@ -13,7 +13,6 @@ from django.forms.fields import BooleanField, FloatField, ChoiceField, Field
 
 from egsim.api.forms import APIForm, GsimImtForm
 from egsim.smtk import get_trellis
-from egsim.smtk.converters import dataframe2dict
 from egsim.smtk.trellis import RuptureProperties, SiteProperties
 
 
@@ -24,10 +23,6 @@ class ArrayField(Field):
     """Implements an ArrayField. Loosely copied from
     django.contrib.postgres.forms.array.SplitArrayField (which unfortunately
     requires psycopg2)"""
-
-    default_error_messages = {
-        "invalid_size": "invalid number of elements: ",
-    }
 
     def __init__(self, *base_fields:Field, **kwargs):
         """
@@ -47,30 +42,26 @@ class ArrayField(Field):
     def clean(self, value):
         cleaned_data = []
         if not value and self.required:
-            raise ValidationError(self.error_messages["required"],
-                                  code='required')
+            raise ValidationError(APIForm.ErrCode.required)
         if not isinstance(value, (list, tuple)):
             value = [value]
         size = len(self.base_fields)
         if 1 < size != len(value):
-            raise ValidationError(self.error_messages['invalid_size'] +
-                                  f'{str(len(value))} (expected {str(size)})',
-                                  code='invalid_size')
-        errors = []
+            raise ValidationError(f"expected {size} elements, not {len(value)}")
         base_fields = self.base_fields
         if size == 1:
             base_fields = cycle(self.base_fields)
+        invalid = 0
         for item, base_field in zip(value, base_fields):
             try:
-                value = base_field.clean(item)
-                cleaned_data.append(value)
+                cleaned_data.append(base_field.clean(item))
             except ValidationError as error:
-                errors.append(str(item))
-        if errors:
-            raise ValidationError(self.error_messages["invalid"],
-                                  params={'value': ", ".join(errors)},
-                                  code="invalid")
-        return cleaned_data
+                invalid += 1
+        if invalid:
+            raise ValidationError(f"{invalid} value"
+                                  f"{'s are' if invalid != 1 else ' is'} "
+                                  f"invalid")
+        return [] if invalid else cleaned_data
 
 
 class TrellisForm(GsimImtForm, APIForm):
@@ -147,8 +138,8 @@ class TrellisForm(GsimImtForm, APIForm):
         # #cleaning-a-specific-field-attribute
         try:
             return _mag_scalerel[value]()
-        except Exception as exc:
-            raise ValidationError(str(exc), code='invalid')
+        except Exception as exc:  # noqa
+            self.add_error('msr', self.ErrCode.invalid)
 
     def clean_initial_point(self):
         """Clean the "location" field by converting the given value to a
@@ -159,8 +150,8 @@ class TrellisForm(GsimImtForm, APIForm):
         # #cleaning-a-specific-field-attribute
         try:
             return Point(*value)
-        except Exception as exc:
-            raise ValidationError(str(exc), code='invalid')
+        except Exception as exc:  # noqa
+            self.add_error('initial_point', self.ErrCode.invalid)
 
     @classmethod
     def response_data(cls, cleaned_data:dict) -> pd.DataFrame:

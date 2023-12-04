@@ -1,4 +1,5 @@
 """Module with the views for the web API (no GUI)"""
+from __future__ import annotations
 from collections.abc import Callable, Iterable
 from django.forms import SelectMultiple
 from enum import StrEnum
@@ -148,7 +149,8 @@ class RESTAPIView(View):
             return error_response(msg, self.SERVER_ERR_CODE)
 
     @classmethod
-    def supported_formats(cls) -> dict[MIMETYPE, Callable[[dict], HttpResponse]]:
+    def supported_formats(cls) -> \
+            dict[MIMETYPE, Callable[[RESTAPIView, dict], HttpResponse]]:
         """Return a list of supported formats (content_types) by inspecting
         this class implemented methods. Each dict key is a MIMETYPE enum,
         mapped to this class method used to obtain the response data in that
