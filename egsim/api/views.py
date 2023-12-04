@@ -1,9 +1,9 @@
 """Module with the views for the web API (no GUI)"""
 from __future__ import annotations
 from collections.abc import Callable, Iterable
-from django.forms import SelectMultiple
 from enum import StrEnum
 from http.client import responses
+from datetime import date, datetime
 import re
 from io import StringIO, BytesIO
 from typing import Union, Type, Optional, IO, Any
@@ -12,12 +12,12 @@ from urllib.parse import quote as urlquote
 import yaml
 import pandas as pd
 from django.core.exceptions import ValidationError
-
 from django.http import (JsonResponse, HttpRequest, QueryDict,
                          StreamingHttpResponse, FileResponse)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
+from django.forms import SelectMultiple
 
 from ..smtk.converters import dataframe2dict
 from .forms import APIForm
@@ -245,7 +245,7 @@ def error_response(error: Union[str, Exception, dict],
 
 def pandas_response(data:pd.DataFrame, content_type:Optional[MIMETYPE]=None,
                     status=200, reason=None, headers=None, charset=None,
-                    as_stream=False):
+                    as_stream=False) -> HttpResponseBase:  # usually FileResponse
     """Return a `HTTPResponse` for serving pandas dataframes as either HDF or CSV
 
     :param content_type: optional content type. Either MIMETYPE.CSV or MIMETYPE.HDF
@@ -262,15 +262,12 @@ def pandas_response(data:pd.DataFrame, content_type:Optional[MIMETYPE]=None,
     else:
         return error_response(f'cannot serve {data.__class__.__name__} '
                               f'as type "{content_type}"', status=400)
-    # FIXME: check if FileResponse guesses the length automatically and
-    #    remove the lines below eventually:
-    # headers = headers or {}
-    # headers['Content-Length'] = nbytes
     kwargs = dict(status=status, content_type=content_type,
                   reason=reason, headers=headers, charset=charset)
     content.seek(0)  # for safety
-    return StreamingHttpResponse(content, **kwargs) if as_stream else \
-        FileResponse(content, **kwargs)
+    if as_stream:
+        return StreamingHttpResponse(content, **kwargs)
+    return FileResponse(content, **kwargs)
 
 
 # functions to read from BytesIO:
@@ -328,15 +325,17 @@ def read_csv_from_buffer(buffer: IO) -> pd.DataFrame:
 QUERY_STRING_SAFE_CHARS = "-_.~!*'()"
 
 
-def as_querystring(data: Any, safe=QUERY_STRING_SAFE_CHARS,
-                   encoding:str=None, errors:str=None) -> str:
-    """Return the `data` argument passed in the constructor as query string
-    that can be used in GET requests.
-    With the default set of input parameters, this function encodes strings exactly
-    as JavaScript encodeURIComponent:
+def as_querystring(
+        data: Any,
+        safe=QUERY_STRING_SAFE_CHARS,
+        none_value='null',
+        encoding:str=None,
+        errors:str=None) -> str:
+    """Return `data` as query string (URL portion after the '?' character) for GET
+    requests. With the default set of input parameters, this function encodes strings
+    exactly as JavaScript encodeURIComponent:
     https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#description   # noqa
-
-    E.g.:
+    Examples:
     ```
     as_querystring(' ') = "%20"
     as_querystring([1, 2]) = "1,2"
@@ -347,11 +346,12 @@ def as_querystring(data: Any, safe=QUERY_STRING_SAFE_CHARS,
         allowed as long as they do not contain nested containers, because this
         would result in invalid URLs
     :param safe: string of safe characters that should not be encoded
+    :param none_value: string to be used when encountering None (default 'null')
     :param encoding: used to deal with non-ASCII characters. See `urllib.parse.quote`
     :param errors: used to deal with non-ASCII characters. See `urllib.parse.quote`
     """
     if data is None:
-        return "null"
+        return none_value
     if data is True or data is False:
         return str(data).lower()
     if isinstance(data, dict):
@@ -359,14 +359,8 @@ def as_querystring(data: Any, safe=QUERY_STRING_SAFE_CHARS,
     elif isinstance(data, Iterable):
         if not isinstance(data, (str, bytes)):
             return ','.join(f'{as_querystring(v)}' for v in data)
-    else:
-        # no str, bytes, iterable or dict: use `isoformat` (if date/datetime)
-        try:
-            data = data.isoformat(sep='T')
-        except (AttributeError, ValueError, TypeError):
-            # note: this shouldn't be the fallback for bytes: urlquote handles
-            # them and str(bytes) appends an unwanted 'b'
-            data = str(data)
+    elif isinstance(data, (date, datetime)):
+        data = data.isoformat(sep='T')
     return urlquote(data, safe=safe, encoding=encoding, errors=errors)
 
 
