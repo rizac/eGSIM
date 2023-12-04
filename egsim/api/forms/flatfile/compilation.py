@@ -7,7 +7,6 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from django.core.exceptions import ValidationError
 from django.forms.fields import CharField
 
 from egsim.api import models
@@ -25,9 +24,13 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
     accept_empty_gsim_list = True  # see GsimImtForm
     accept_empty_imt_list = True
 
-    @classmethod
-    def response_data(cls, cleaned_data: dict) -> dict:
-        """Return the API response for data requested in JSON format"""
+    def response_data(self) -> dict:
+        """Return the response data from this Form input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True
+
+        :return: a response data Python object (e.g., a JSON-serializable dict)
+        """
+        cleaned_data = self.cleaned_data
         gsims = cleaned_data.get('gsim', [])
         if not models:
             gsims = list(models.Gsim.objects.filter(hidden=False).only('name').
@@ -76,54 +79,53 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
 
         return cleaned_data
 
-    @classmethod
-    def response_data(cls, cleaned_data: dict) -> dict:
-        """Return the API response for data requested in JSON format"""
+    def response_data(self) -> dict:
+        cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
         if x and y:  # scatter plot
             xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
             xvalues = dataframe[xlabel]
             yvalues = dataframe[ylabel]
-            xnan = cls._isna(xvalues)
-            ynan = cls._isna(yvalues)
+            xnan = self._isna(xvalues)
+            ynan = self._isna(yvalues)
             plot = dict(
-                xvalues=cls._tolist(xvalues[~(xnan | ynan)]),
-                yvalues=cls._tolist(yvalues[~(xnan | ynan)]),
+                xvalues=self._tolist(xvalues[~(xnan | ynan)]),
+                yvalues=self._tolist(yvalues[~(xnan | ynan)]),
                 xlabel=xlabel,
                 ylabel=ylabel,
                 stats={
                     xlabel: {'N/A count': int(xnan.sum()),
-                             **cls._get_stats(xvalues.values[~xnan])},
+                             **self._get_stats(xvalues.values[~xnan])},
                     ylabel: {'N/A count': int(ynan.sum()),
-                             **cls._get_stats(yvalues.values[~ynan])}
+                             **self._get_stats(yvalues.values[~ynan])}
                 }
             )
         else:
             label = x or y
-            na_values = cls._isna(dataframe[label])
+            na_values = self._isna(dataframe[label])
             dataframe = dataframe.loc[~na_values, :]
             series = dataframe[label]
             na_count = int(na_values.sum())
             if x:
                 plot = dict(
-                    xvalues=cls._tolist(series),
+                    xvalues=self._tolist(series),
                     xlabel=label,
                     stats={
                         label: {
                             'N/A count': na_count,
-                            **cls._get_stats(series.values)
+                            **self._get_stats(series.values)
                         }
                     }
                 )
             else:
                 plot = dict(
-                    yvalues=cls._tolist(series),
+                    yvalues=self._tolist(series),
                     ylabel=label,
                     stats={
                         label: {
                             'N/A count': na_count,
-                            **cls._get_stats(series.values)
+                            **self._get_stats(series.values)
                         }
                     }
                 )
@@ -190,9 +192,8 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
         return cleaned_data
 
-    @classmethod
-    def response_data(cls, cleaned_data: dict) -> dict:
-        """Return the API response for data requested in JSON format"""
+    def response_data(self) -> dict:
+        cleaned_data = self.cleaned_data
         return {
             'columns': cleaned_data['flatfile_dtypes'],
             'default_columns': get_dtypes_and_defaults()[0],

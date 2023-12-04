@@ -138,8 +138,7 @@ class RESTAPIView(View):
             form = self.formclass(**form_kwargs)
             if not form.is_valid():
                 return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
-            cleaned_data = form.cleaned_data
-            return response_function(self, cleaned_data)
+            return response_function(self, form)
         except (KeyError, ValidationError) as v_err:
             return error_response(v_err, self.CLIENT_ERR_CODE)
         except (KeyError, AttributeError, NotImplementedError) as ni_err:
@@ -150,7 +149,7 @@ class RESTAPIView(View):
 
     @classmethod
     def supported_formats(cls) -> \
-            dict[MIMETYPE, Callable[[RESTAPIView, dict], HttpResponse]]:
+            dict[MIMETYPE, Callable[[RESTAPIView, APIForm], HttpResponse]]:
         """Return a list of supported formats (content_types) by inspecting
         this class implemented methods. Each dict key is a MIMETYPE enum,
         mapped to this class method used to obtain the response data in that
@@ -167,8 +166,8 @@ class RESTAPIView(View):
                         pass
         return formats
 
-    def response_json(self, cleaned_data:dict):
-        return JsonResponse(self.formclass.response_data(cleaned_data))
+    def response_json(self, form:APIForm) -> JsonResponse:
+        return JsonResponse(form.response_data())
 
 
 # we need to provide the full URL of the views here, because the frontend need
@@ -183,16 +182,14 @@ class TrellisView(RESTAPIView):
     formclass = TrellisForm
     urls = (f'{API_PATH}/trellis', f'{API_PATH}/model-model-comparison')
 
-    def response_csv(self, cleaned_data:dict):
-        return pandas_response(self.formclass.response_data(cleaned_data),
-                               MIMETYPE.CSV)
+    def response_csv(self, form:APIForm):
+        return pandas_response(form.response_data(), MIMETYPE.CSV)
 
-    def response_hdf(self, cleaned_data:dict):
-        return pandas_response(self.formclass.response_data(cleaned_data),
-                               MIMETYPE.HDF)
+    def response_hdf(self, form:APIForm):
+        return pandas_response(form.response_data(), MIMETYPE.HDF)
 
-    def response_json(self, cleaned_data:dict):
-        json_data = dataframe2dict(self.formclass.response_data(cleaned_data),
+    def response_json(self, form:APIForm) -> JsonResponse:
+        json_data = dataframe2dict(form.response_data(),
                                    as_json=True, drop_empty_levels=True)
         return JsonResponse(json_data)
 
@@ -203,14 +200,14 @@ class ResidualsView(RESTAPIView):
     formclass = ResidualsForm
     urls = (f'{API_PATH}/residuals', f'{API_PATH}/model-data-comparison')
 
-    def response_csv(self, cleaned_data:dict):
-        return pandas_response(self.formclass.response_data(cleaned_data), MIMETYPE.CSV)
+    def response_csv(self, form:APIForm):
+        return pandas_response(form.response_data(), MIMETYPE.CSV)
 
-    def response_hdf(self, cleaned_data:dict):
-        return pandas_response(self.formclass.response_data(cleaned_data), MIMETYPE.HDF)
+    def response_hdf(self, form:APIForm):
+        return pandas_response(form.response_data(), MIMETYPE.HDF)
 
-    def response_json(self, cleaned_data:dict):
-        json_data = dataframe2dict(self.formclass.response_data(cleaned_data),
+    def response_json(self, form:APIForm) -> JsonResponse:
+        json_data = dataframe2dict(form.response_data(),
                                    as_json=True, drop_empty_levels=True)
         return JsonResponse(json_data)
 

@@ -153,8 +153,8 @@ class TrellisForm(GsimImtForm, APIForm):
         except Exception as exc:  # noqa
             self.add_error('initial_point', self.ErrCode.invalid)
 
-    @classmethod
-    def response_data(cls, cleaned_data:dict) -> pd.DataFrame:
+    def response_data(self) -> pd.DataFrame:
+        cleaned_data = self.cleaned_data
         return get_trellis(cleaned_data['gsim'],
                            cleaned_data['imt'],
                            cleaned_data['magnitude'],

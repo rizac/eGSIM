@@ -34,8 +34,8 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
 
         return cleaned_data
 
-    @classmethod
-    def response_data(cls, cleaned_data: dict) -> pd.DataFrame:
+    def response_data(self) -> pd.DataFrame:
+        cleaned_data = self.cleaned_data
         return get_residuals(cleaned_data["gsim"],
                              cleaned_data["imt"],
                              cleaned_data['flatfile'])
