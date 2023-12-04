@@ -451,17 +451,14 @@ class GsimImtForm(SHSRForm):
 
 class APIForm(EgsimBaseForm):
     """API Form is the Base Form for the eGSIM API request/response. It implements
-    an abstract-like `response_data` method that should return the repsonse data
-    from this form input data
+    an abstract-like `response_data` method
     """
 
-    @classmethod
-    def response_data(cls, cleaned_data:dict) -> Any:
-        """Return the response data from this Form `cleaned_data`
+    def response_data(self) -> Any:
+        """Return the response data from this Form input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True
 
-        :param cleaned_data: a `dict` representing the validated and "clean" data
-            passed as input to an instance of this class
-        :return: any object (e.g., a JSON-serializable dict)
+        :return: any Python object (e.g., a JSON-serializable dict)
         """
         raise NotImplementedError()
 
@@ -470,7 +467,5 @@ class GsimFromRegionForm(SHSRForm, APIForm):
     """API Form returning a list of models from a given location and optional
     seismic hazard source regionalizations (SHSR)"""
 
-    @classmethod
-    def response_data(cls, cleaned_data:dict) -> dict:
-        """Return the API response from the Form cleaned_data"""
-        return {'models': sorted(cls.get_region_selected_model_names())}
+    def response_data(self) -> dict:
+        return {'models': sorted(self.get_region_selected_model_names())}
