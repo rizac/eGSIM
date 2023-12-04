@@ -126,11 +126,11 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
 
         unknowns = set(self.data)
         # store conflicting+unknown params and manage them later in `errors_json_data`.
-        # Avoid `self.add_error(field, ...)` for the overhead it introduces:
+        # Avoid the mess that `self.add_error(field, ...)` introduces:
         # 1. It triggers a Form validation (`full_clean`) which is unnecessary and
         #    can only be done at the end of __init__
         # 2. It raises if `field` is neither None nor a valid Field name, so unknown
-        #   parameters should be passed with None (which discards the param name info)
+        #    params should be passed as None (but this discards the param name info)
         self.init_errors = {}
         for field_name, field in self.base_fields.items():
             param_names = self.param_names_of(field_name)
@@ -141,11 +141,9 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
                     self.init_errors[p] = \
                         f"this parameter conflicts with " \
                         f"{' and '.join(_ for _ in input_param_names if _ != p)}"
-                # assure has_error(field_name) returns True:
-                if field_name not in input_param_names:
-                    # setting None is a way to not display any error for
-                    # field_name (see self.errors_json_data):
-                    self.init_errors[field_name] = None
+                # assure has_error(field_name) returns True ("" will not print any
+                # msg related to the field in errors_json_data):
+                self.init_errors.setdefault(field_name, "")
                 # Do not remove all params, because if the field is required we
                 # don't want a 'missing param'-ish error: keep only the 1st param:
                 for p in input_param_names[1:]:
@@ -181,13 +179,15 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         :param field: a Form field name (not an input parameter name)
         :param code: an optional error code (e.g. 'invalid')
         """
+        if self.init_errors and (code is None or field in self.init_errors):
+            return True
         if not self._errors:
-            return self.init_errors and (code is None or field in self.init_errors)
+            return False
         return super().has_error(field, code)
 
-    # error codes mapped to be default message to be used in `errors_json_data`
-    # and replace custom Django messages. The enums below can also be set in
-    # add_error, e.g. add_error(field, self.ErrCode.required):
+    # error codes mapped to be default message used in `errors_json_data` to
+    # replace custom Django messages. You can also pass enums below in subclasses
+    # `add_error`, e.g. add_error(field, self.ErrCode.required):
     class ErrCode(StrEnum):
         required = "this parameter is required"
         invalid = "invalid value"
@@ -374,7 +374,7 @@ class GsimImtForm(SHSRForm):
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
     gsim = Field(required=False, label="Model(s)",
                  widget=ModelMultipleChoiceField.widget)
-    imt = Field(required=False, label='Intensity Measure Type(s)',
+    imt = Field(required=False, label='Intensity Measure(s)',
                 widget=ModelMultipleChoiceField.widget)
 
     accept_empty_gsim_list = False  # override in subclasses if needed
@@ -440,8 +440,6 @@ class GsimImtForm(SHSRForm):
             else:
                 code = err_u
             raise ValidationError(msg, code=code)
-
-    INCOMPATIBLE_MODEL_IMT = '_invalid_model_imt_combination_'
 
     def clean(self):
         """Perform a final validation checking models and intensity measures
