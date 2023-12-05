@@ -11,7 +11,6 @@ from math import sqrt
 
 import numpy as np
 import pandas as pd
-from pandas import RangeIndex
 from pandas.core.indexes.numeric import IntegerIndex
 from scipy.special import erf
 from openquake.hazardlib.gsim.base import GMPE
@@ -131,10 +130,6 @@ def get_observed_motions(flatfile: pd.DataFrame, imts: Container[str], log=True)
 def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     """Group the flatfile by events, and yield `EventContext`s objects, one for
     each event"""
-    # assure each row has a unique int id from 0 until row_count-1:
-    if not isinstance(flatfile.index, RangeIndex):
-        flatfile.reset_index(drop=True, inplace=True)
-
     # check event id column or use the event location to group events:
     # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
     # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])

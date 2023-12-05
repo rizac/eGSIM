@@ -108,8 +108,17 @@ class TrellisForm(GsimImtForm, APIForm):
                                      label="Location of Hypocentre",
                                      help_text='Along-strike fraction, '
                                                'Down-dip fraction')
-    region = IntegerField(label="Region parameter", min_value=0, max_value=5,
-                          initial=0)
+    region = ChoiceField(label="Attenuation cluster region",
+                         choices=[
+                             (0, '0 - Default or unknown'),
+                             (1, '1 - Average / Slower'),
+                             (2, '2 - Average / Faster'),
+                             (3, '3 - Fast'),
+                             (4, '4 - Average'),
+                             (5, '5 - Very slow'),
+                         ],
+                         initial=0,
+                         help_text="https://doi.org/10.1007/s10518-020-00899-9")
     # END OF RUPTURE PARAMS
     vs30measured = BooleanField(label=mark_safe('V<sub>S30</sub> is measured'),
                                 help_text='Otherwise is inferred',
