@@ -22,56 +22,6 @@ from egsim.smtk import (validate_inputs, InvalidInput, harmonize_input_gsims,
 from egsim.smtk.validators import IncompatibleInput
 
 
-class EgsimFormMeta(DeclarativeFieldsMetaclass):
-    """EGSIM Form metaclass. Inherits from `DeclarativeFieldsMetaclass` (base metaclass
-    for all Django Forms) and sets up the defined field -> API params mappings
-    """
-
-    def __new__(mcs, name, bases, attrs):
-        new_class = super().__new__(mcs, name, bases, attrs)
-        # Attribute denoting field -> API params mappings:
-        attname = '_field2params'
-        # Dict denoting the field -> API params mappings:
-        field2params = {}
-        # Fill `field2params` with the superclass data. `bases` order is irrelevant
-        # because in all `_field2params`s same key / field <=> same value / params:
-        for base in bases:
-            field2params.update(getattr(base, attname, {}))
-        form_fields = set(new_class.declared_fields)
-        # Merge this class `field2params` data into `field2params`, and do some check:
-        for field, params in attrs.get(attname, {}).items():
-            err_msg = f"Error in {name}.{attname}:"
-            # no key already implemented in `field2params`:
-            if field in field2params:
-                raise ValueError(f"{err_msg} '{field}' is already a key of "
-                                 f"`{attname}` in some superclass")
-            # no key that does not denote a Django Form Field name
-            if field not in form_fields:
-                raise ValueError(f"{err_msg}: '{field}' must be a Form Field name")
-            for param in params:
-                # no param equal to another field name:
-                if param != field and param in field2params:
-                    raise ValueError(f"{err_msg} '{field}' cannot be mapped to the "
-                                     f"Field name '{param}'")
-                # no param keyed by multiple field names:
-                dupes = [f for f, p in field2params.items() if param in p]
-                if dupes:
-                    raise ValueError(f"{err_msg} '{field}' cannot be mapped to "
-                                     f"'{param}', as the latter is already keyed by "
-                                     f"{', '.join(dupes)}")
-            # all values must be list or tuples:
-            if isinstance(params, list):
-                params = tuple(params)
-            elif not isinstance(params, tuple):
-                raise ValueError(f"{err_msg} dict values must be lists or tuples")
-            # all good. Merge into `field2params`:
-            field2params[field] = params
-
-        # assign new dict of public field name:
-        setattr(new_class, attname, field2params)
-        return new_class
-
-
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
 
@@ -85,24 +35,23 @@ def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
     return _base_singleton_renderer
 
 
-class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
+class EgsimBaseForm(Form):
     """Base eGSIM form"""
 
     # make code linters happy (attr created in Django DeclarativeFieldsMetaclass):
     base_fields: dict[str, Field]
 
-    # Mapping class Field name to the associated request parameter name. Dict values
-    # are lists where the 1st element is the primary parameter name, and the rest
-    # aliases (the Field name can be in the list, but if it's the only element the
-    # mapping can be omitted). This class attribute is merged with superclasses
-    # implementations (see `EgsimFormMeta`) and should be private, use `param_names_of`
-    # or `param_name_of` instead.
+    # Mapping Field names of this class to the associated request parameter name. Dict
+    # values are tuples where the 1st element is the primary parameter name, and the
+    # rest aliases (the Field name can be in the tuple, but if it's the only element
+    # the whole mapping can be omitted). This class attribute should be private,
+    # use `param_names_of` or `param_name_of` instead.
     # Rationale: Field names are by default exposed as requests API parameters, but the
     # latter should be changed easily without breaking the code. With this mapping,
     # field names can be immutable and used internally during validation (e.g. keys
     # of `self.data` and `self.cleaned_data`) whilst parameter names used in I/O data
     # (keys of the dict passed to `__init__`, or returned from `self.errors_json_dict`)
-    _field2params: dict[str, list[str]]
+    _field2params: dict[str, tuple[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
         """Override init: re-arrange `self.data` (renaming each key with the
@@ -116,7 +65,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
             parameters to be treated as missing and thus potentially assigned a default
             "wrong" value with no warnings
         """
-        # remove colon in labels by default in templates:
+        # remove colon in labels by default in templates (if used):
         kwargs.setdefault('label_suffix', '')
         # Form Field names mapped to the relative param given as input:
         self._field2inputparam = {}
@@ -191,7 +140,7 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         invalid_choice = "value not found or misspelled"
 
     def add_error(self, field:str, msg:Union[str, ErrCode]):
-        """Same as super.add_Error but simplified with explicit arg. types"""
+        """Same as super.add_error but simplified with explicit arg. types"""
         super().add_error(field, msg)
 
     def errors_json_data(self) -> dict:
@@ -238,7 +187,11 @@ class EgsimBaseForm(Form, metaclass=EgsimFormMeta):
         returned tuple has nonzero length and might contain the passed field argument.
         In case of length > 1, the first item is the primary parameter name
         """
-        return cls._field2params.get(field, (field,))
+        for clz in cls.__mro__:
+            params = getattr(clz, '_field2params', {})
+            if field in params:
+                return params[field]
+        return field,  # <- tuple!
 
     def as_json(self, compact=True) -> str:
         """Return the `data` argument passed in the constructor in a JSON formatted

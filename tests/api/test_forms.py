@@ -6,14 +6,16 @@ Created on 2 Jun 2018
 @author: riccardo
 """
 from datetime import datetime
-
+from django.core.exceptions import ValidationError
+from django.forms import Field
+from typing import Type
 from io import BytesIO
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
-from egsim.api.forms import (GsimImtForm, GsimFromRegionForm)
+from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, EgsimBaseForm)
 from egsim.api.forms.flatfile import FlatfileForm
 from egsim.api.forms.flatfile.compilation import FlatfileInspectionForm
 from egsim.api.forms.trellis import TrellisForm
@@ -324,3 +326,85 @@ def test_get_flatfile_columns():
         d[c+'_categ'] = d[c].astype('category')
 
     res = FlatfileForm.get_flatfile_dtypes(d)
+
+
+def test_field2params_in_forms():
+    for cls in EgsimBaseForm.__subclasses__():
+        check_egsim_form(cls)
+
+    # mock a Form with errors and check it
+    class Test(TrellisForm):
+        _field2params = {'gsim': ['model']}  # already defined
+
+    with pytest.raises(ValueError):
+        check_egsim_form(Test)
+
+    class Test(TrellisForm):
+        _field2params = {'gsim_45673': ['model']}  # not a form field defined
+
+    with pytest.raises(ValueError):
+        check_egsim_form(Test)
+
+    class Test(TrellisForm):
+        _field2params = {'test': ['gsim']}  # 'gsim' already a field name
+        test = Field()
+
+    with pytest.raises(ValueError):
+        check_egsim_form(Test)
+
+    class Test(TrellisForm):
+        _field2params = {'test': ['model']}  # 'model' already mapped
+        test = Field()
+
+    with pytest.raises(ValueError):
+        check_egsim_form(Test)
+
+    class Test(TrellisForm):
+        _field2params = {'test': 'model'}  # 'model' neither tuple or list
+        test = Field()
+
+    with pytest.raises(ValueError):
+        check_egsim_form(Test)
+
+
+def check_egsim_form(new_class:Type[EgsimBaseForm]):
+    # Attribute denoting field -> API params mappings:
+    attname = '_field2params'
+    # Dict denoting the field -> API params mappings:
+    field2params = {}
+    # Fill `field2params` with the superclass data. `bases` order is irrelevant
+    # because in all `_field2params`s same key / field <=> same value / params:
+    for base in new_class.__mro__:
+        if base == new_class:
+            continue
+        field2params.update(getattr(base, attname, {}))
+    form_fields = set(new_class.base_fields)
+    # Merge this class `field2params` data into `field2params`, and do some check:
+    for field, params in getattr(new_class, attname, {}).items():
+        err_msg = f"Error in {new_class.__name__}.{attname}:"
+        # no key already implemented in `field2params`:
+        if field in field2params:
+            raise ValueError(f"{err_msg} '{field}' is already a key of "
+                             f"`{attname}` in some superclass")
+        # no key that does not denote a Django Form Field name
+        if field not in form_fields:
+            raise ValueError(f"{err_msg}: '{field}' must be a Form Field name")
+        for param in params:
+            # no param equal to another field name:
+            if param != field and param in field2params:
+                raise ValueError(f"{err_msg} '{field}' cannot be mapped to the "
+                                 f"Field name '{param}'")
+            # no param keyed by multiple field names:
+            dupes = [f for f, p in field2params.items() if param in p]
+            if dupes:
+                raise ValueError(f"{err_msg} '{field}' cannot be mapped to "
+                                 f"'{param}', as the latter is already keyed by "
+                                 f"{', '.join(dupes)}")
+        # all values must be list or tuples:
+        if isinstance(params, list):
+            params = tuple(params)
+        elif not isinstance(params, tuple):
+            raise ValueError(f"{err_msg} dict values must be lists or tuples")
+        # all good. Merge into `field2params`:
+        field2params[field] = params
+    return field2params
