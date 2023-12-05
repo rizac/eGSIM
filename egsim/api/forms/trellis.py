@@ -1,7 +1,6 @@
 """
 Django Forms for eGSIM model-to-model comparison (Trellis plots)
 """
-from django.forms import IntegerField
 from itertools import cycle
 
 import pandas as pd
@@ -142,25 +141,28 @@ class TrellisForm(GsimImtForm, APIForm):
         """Clean the "msr" field by converting the given value to a
         object of type :class:`openquake.hazardlib.scalerel.base.BaseMSR`.
         """
-        value = self.cleaned_data['msr']
-        # https://docs.djangoproject.com/en/3.2/ref/forms/validation/
-        # #cleaning-a-specific-field-attribute
         try:
-            return _mag_scalerel[value]()
+            return _mag_scalerel[self.cleaned_data['msr']]()
         except Exception as exc:  # noqa
-            self.add_error('msr', self.ErrCode.invalid)
+            raise ValidationError(self.ErrCode.invalid)
 
     def clean_initial_point(self):
         """Clean the "location" field by converting the given value to a
         object of type :class:`openquake.hazardlib.geo.point.Point`.
         """
-        value = self.cleaned_data['initial_point']
-        # https://docs.djangoproject.com/en/3.2/ref/forms/validation/
-        # #cleaning-a-specific-field-attribute
         try:
-            return Point(*value)
+            return Point(*self.cleaned_data['initial_point'])
         except Exception as exc:  # noqa
-            self.add_error('initial_point', self.ErrCode.invalid)
+            raise ValidationError(self.ErrCode.invalid)
+
+    def clean_region(self):
+        """Clean the "region" field by converting the value (which is set as str
+        by Django) to int.
+        """
+        try:
+            return int(self.cleaned_data['region'])
+        except Exception as exc:  # noqa
+            raise ValidationError(self.ErrCode.invalid)
 
     def response_data(self) -> pd.DataFrame:
         cleaned_data = self.cleaned_data

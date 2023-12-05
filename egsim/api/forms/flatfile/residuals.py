@@ -4,13 +4,11 @@ Django Forms for eGSIM model-to-data comparison (residuals computation)
 @author: riccardo
 """
 import pandas as pd
-from django.core.exceptions import ValidationError
 
 from egsim.smtk import get_residuals
 from egsim.api.forms import APIForm
 from egsim.api.forms import GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
-from egsim.smtk.converters import dataframe2dict
 
 
 class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
