@@ -458,7 +458,8 @@ class APIForm(EgsimBaseForm):
         """Return the response data from this Form input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
-        :return: any Python object (e.g., a JSON-serializable dict)
+        :return: any Python object that can be used as HTTP response data (e.g.,
+            a JSON-serializable dict)
         """
         raise NotImplementedError()
 

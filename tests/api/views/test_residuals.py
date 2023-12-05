@@ -11,7 +11,9 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
-from egsim.api.views import ResidualsView, RESTAPIView, as_querystring
+from egsim.api.views import ResidualsView, RESTAPIView, as_querystring, MIMETYPE, \
+    read_csv_from_buffer, read_hdf_from_buffer
+from egsim.smtk.converters import dataframe2dict
 
 
 @pytest.mark.django_db
@@ -123,49 +125,47 @@ class Test:
         assert resp1.status_code == 400
         assert 'data-query' in resp1.json()['message']
 
-        resp2 = client.post(self.url, data=inputdic,
-                            content_type='application/json')
-        resp1 = client.get(self.querystring(inputdic))
-        assert resp1.status_code == resp2.status_code == 400
-        assert areequal(resp1.json(), resp2.json())
-        json_ = resp1.json()
-        exp_json = {
-            'message': 'Invalid request. Problems found in: plot. '
-                       'See response data for details',
-            'errors': [
-                {
-                    'location': 'plot',
-                    'message': 'This parameter is required',
-                    'reason': 'required'
-                }
-            ]
-        }
-        assert areequal(json_, exp_json)
-
-        # Error in plot_type: incalid choice XXX
-        inputdic2 = dict(inputdic)
-        inputdic2['plot_type'] = 'XXX'
-        resp2 = client.post(self.url, data=inputdic2,
-                            content_type='application/json')
-        resp1 = client.get(self.querystring(inputdic2))
-        assert resp1.status_code == resp2.status_code == 400
-        assert 'plot_type' in resp1.json()['error']['message']
-        assert 'plot_type' in resp2.json()['error']['message']
-
-        # test data query errors:
         inputdic['data-query'] = '(magnitude >5'
-        resp2 = client.post(self.url, data=inputdic,
-                            content_type='application/json')
+        resp2 = client.post(self.url, data=inputdic, content_type='application/json')
         resp1 = client.get(self.querystring(inputdic))
         assert resp1.status_code == resp2.status_code == 400
-        assert 'data-query' in resp1.json()['error']['message']
-        assert 'data-query' in resp2.json()['error']['message']
+        err_msg = resp1.json()['message']
+        assert 'data-query' in err_msg
+        assert 'data-query' in err_msg
 
         # test error give in format (text instead of csv):
         inputdict2 = dict(inputdic, format='text')
         inputdict2.pop('data-query')
         resp2 = client.post(self.url, data=inputdict2, content_type='text/csv')
         assert resp2.status_code == 400
+
+    def test_residuals_service(self,
+                                   # pytest fixtures:
+                                   testdata, areequal, client):
+        inputdic = testdata.readyaml(self.request_filename)
+        inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
+
+        # resp2 = client.post(self.url, data=inputdic,
+        #                     content_type='application/json')
+        resp1 = client.get(self.querystring(inputdic))
+        assert resp1.status_code == 200
+        # resp2.status_code == 200
+        # assert areequal(resp1.json(), resp2.json())
+
+        # dfr1 = pd.DataFrame(resp1.json())
+
+        for format in [None, 'csv', 'hdf']:
+            if format is None:
+                inputdic.pop('format', None)
+            else:
+                inputdic['format'] = format
+
+        resp2 = client.post(self.url, data=inputdic, content_type=MIMETYPE[format.upper()])
+        assert resp2.status_code == 200
+        content = resp2.streaming_content
+        dfr2 = read_csv_from_buffer(content) if format == 'csv' \
+            else read_hdf_from_buffer(content)
+        areequal(resp1.json(), dataframe2dict(dfr2))
 
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
@@ -214,18 +214,8 @@ class Test:
             "imt": [
                 "PGA"
             ],
-            'flatfile': 'esm2018',
-            "plot": "mag"
+            'flatfile': 'esm2018'
         }
         resp1 = client.get(self.url, data=inputdict,
                            content_type='application/json')
-        # expected_json = {
-        #     'error': {
-        #         'code': 400,
-        #         'message': ('Unable to perform the request with the current '
-        #                     'parameters (AssertionError)')
-        #     }
-        # }
-        # assert areequal(expected_json, resp1.json())
-        # assert resp1.status_code == 400
         assert resp1.status_code == 200

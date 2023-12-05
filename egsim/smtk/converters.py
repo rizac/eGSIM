@@ -132,3 +132,17 @@ def dataframe2dict(dframe: pd.DataFrame, as_json=True,
                 vals[col_na] = None
         dest_ret[key] = vals.tolist()
     return output
+
+
+def dict2dataframe(data: dict) -> pd.DataFrame:
+    """Return a DataFrame from the given dict, using its keys as the columns of
+    the resulting DataFrame. Nested dict keys will result ina  multi-index column
+    """
+    for key, val in data.items():
+        if isinstance(val, dict):
+            val = dict2dataframe(val)
+            col_mapping = {
+                c: (key,) + c if isinstance(c, tuple) else (c,) for c in val.columns}
+            val.rename(columns=col_mapping, inplace=True)
+        else:
+            val = pd.DataFrame({key: val})

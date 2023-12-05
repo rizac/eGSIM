@@ -13,7 +13,7 @@ import yaml
 import pandas as pd
 from django.core.exceptions import ValidationError
 from django.http import (JsonResponse, HttpRequest, QueryDict,
-                         StreamingHttpResponse, FileResponse)
+                         StreamingHttpResponse, FileResponse, HttpResponseBase)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
@@ -139,12 +139,10 @@ class RESTAPIView(View):
             if not form.is_valid():
                 return error_response(form.errors_json_data(), self.CLIENT_ERR_CODE)
             return response_function(self, form)
-        except (KeyError, ValidationError) as v_err:
+        except ValidationError as v_err:
             return error_response(v_err, self.CLIENT_ERR_CODE)
-        except (KeyError, AttributeError, NotImplementedError) as ni_err:
-            return error_response(ni_err, 501)
         except Exception as err:
-            msg = f'Server error ({err.__class__.__name__}): {str(err)}'
+            msg = f'({err.__class__.__name__}): {str(err)}'
             return error_response(msg, self.SERVER_ERR_CODE)
 
     @classmethod
@@ -214,16 +212,15 @@ class ResidualsView(RESTAPIView):
 
 def error_response(error: Union[str, Exception, dict],
                    status=500, **kwargs) -> JsonResponse:
-    """Returns a response (JSONResponse by default, unless a `content_type` is
-    explicitly set in `kwargs`) from the given error. The response content will be
-    inferred from error and will be a `dict` with at least the key "message" (mapped
+    """Returns a JSON response from the given error. The response content will be
+    inferred from `error` and will be a `dict` with at least the key "message" (mapped
     to a `str`).
 
     (see https://google.github.io/styleguide/jsoncstyleguide.xml)
 
     :param error: dict, Exception or string. If dict, it will be used as response
         content (assuring there is at least the key 'message' which will be built
-        from `status_code` if missing). If string, a dict `{message: <content>}` will
+        from `status` if missing). If string, a dict `{message: <content>}` will
         be built. If exception, the same dict but with the `message` key mapped to
         a string inferred from the exception
     :param status: the response HTTP status code (int, default: 500)
@@ -282,8 +279,9 @@ def write_hdf_to_buffer(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
             driver="H5FD_CORE",  # create in-memory file
             driver_core_backing_store=0,  # prevent saving to file on close
             **kwargs) as out:
-        for key, df in frames.items():
-            out[key] = df
+        for key, dfr in frames.items():
+            out.put(key, dfr, format='table')
+            # out[key] = df
         # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
         return BytesIO(out._handle.get_file_image())
 
