@@ -361,9 +361,11 @@ def as_querystring(
         return str(data).lower()
     if isinstance(data, dict):
         return '&'.join(f'{f}={as_querystring(v)}' for f, v in data.items())
-    elif isinstance(data, Iterable):
-        if not isinstance(data, (str, bytes)):
-            return ','.join(f'{as_querystring(v)}' for v in data)
-    elif isinstance(data, (date, datetime)):
+    if isinstance(data, Iterable) and not isinstance(data, (str, bytes)):
+        return ','.join(f'{as_querystring(v)}' for v in data)
+
+    if isinstance(data, (date, datetime)):
         data = data.isoformat(sep='T')
+    elif not isinstance(data, (str, bytes)):
+        data = str(data)
     return urlquote(data, safe=safe, encoding=encoding, errors=errors)

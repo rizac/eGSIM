@@ -137,22 +137,10 @@ class Test:
         resp1 = client.get(qstr)
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
-        result = resp1.json()
         assert resp1.status_code == 400
-        assert areequal(result, resp2.json())
+        assert areequal(resp1.json(), resp2.json())
+        assert resp1.json()['message'] == 'gsim: invalid value (AkkarEtAl2013)'
 
-        expected_err_json = {
-                # 'code': 400,
-            'message': 'Invalid request. Problems found in: gsim',
-            'errors': [
-                {
-                    'location': 'gsim',
-                    'message': 'Value not found or misspelled: AkkarEtAl2013',
-                    'reason': 'invalid_choice'
-                }
-            ]
-        }
-        assert areequal(result, expected_err_json)
 
     def test_empty_gsim(self,
                         # pytest fixtures:

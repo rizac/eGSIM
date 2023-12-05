@@ -24,7 +24,7 @@ class _UploadedFlatfile(Form):
                          allow_empty_file=False,
                          error_messages={
                             'empty': 'the submitted file is empty'
-                         })  # keep same name as flatfile below
+                         })
 
 
 class FlatfileForm(EgsimBaseForm):
