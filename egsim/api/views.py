@@ -286,17 +286,23 @@ def write_hdf_to_buffer(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
         return BytesIO(out._handle.get_file_image())
 
 
-def read_hdf_from_buffer(buffer: IO, key:Optional[str]=None) -> pd.DataFrame:
+def read_hdf_from_buffer(buffer: Union[bytes, IO], key:Optional[str]=None) -> pd.DataFrame:
     """Read from a BytesIO containing HDF data"""
+    content = buffer if isinstance(buffer, bytes) else buffer.read()
     # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
     with pd.HDFStore(
             "data.h5",  # apparently unused for in-memory data
             mode="r",
             driver="H5FD_CORE",  # create in-memory file
             driver_core_backing_store=0,  # for safety, just in case
-            driver_core_image=buffer.read()) as store:
+            driver_core_image=content) as store:
         if key is None:
-            keys = store.keys()
+            keys = []
+            for k in store.keys():
+                if not any(k.startswith(_) for _ in keys):
+                    keys.append(k)
+                if len(keys) > 1:
+                    break
             if len(keys) == 1:
                 key = keys[0]
         # Note: top-level keys can be passed with or wothout leading slash:
@@ -310,9 +316,10 @@ def write_csv_to_buffer(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
     return content
 
 
-def read_csv_from_buffer(buffer: IO) -> pd.DataFrame:
+def read_csv_from_buffer(buffer: Union[bytes, IO]) -> pd.DataFrame:
     """Read from a file-like object containing CSV data"""
-    dframe = pd.read_csv(buffer, header=[0, 1, 2], index_col=0)
+    content = BytesIO(buffer) if isinstance(buffer, bytes) else buffer
+    dframe = pd.read_csv(content, header=[0, 1, 2], index_col=0)
     dframe.rename(columns=lambda c: "" if c.startswith("Unnamed:") else c,
                   inplace=True)
     return dframe
@@ -360,6 +367,3 @@ def as_querystring(
     elif isinstance(data, (date, datetime)):
         data = data.isoformat(sep='T')
     return urlquote(data, safe=safe, encoding=encoding, errors=errors)
-
-
-
