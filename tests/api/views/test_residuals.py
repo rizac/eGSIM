@@ -5,6 +5,8 @@ Created on 22 Oct 2018
 
 @author: riccardo
 """
+from io import BytesIO
+
 import pytest
 
 from unittest.mock import patch
@@ -162,7 +164,7 @@ class Test:
 
         resp2 = client.post(self.url, data=inputdic, content_type=MIMETYPE[format.upper()])
         assert resp2.status_code == 200
-        content = resp2.streaming_content
+        content = BytesIO(resp2.getvalue())
         dfr2 = read_csv_from_buffer(content) if format == 'csv' \
             else read_hdf_from_buffer(content)
         areequal(resp1.json(), dataframe2dict(dfr2))
