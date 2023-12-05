@@ -27,9 +27,9 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
                 invalid_gsims = set(cleaned_data['gsim']) - \
                                 set(get_gsims_from_flatfile(flatfile.columns))
                 if invalid_gsims:
-                    # add_error removes also the field from self.cleaned_data:
+                    # put sorted list of models to facilitate tests:
                     self.add_error('flatfile', f'missing columns required by '
-                                               f'{", ".join(invalid_gsims)}')
+                                               f'{", ".join(sorted(invalid_gsims))}')
                     return cleaned_data
 
         return cleaned_data
