@@ -32,23 +32,16 @@ class Test:
                                # pytest fixtures:
                                testdata, areequal, client):
         inputdic = testdata.readyaml(self.request_filename)
-        # no flatfile, uploaded flatfile:
-        inputdic['plot'] = 'res'
-        inputdic2 = dict(inputdic)
-        inputdic2.pop('flatfile')
-        resp2 = client.post(self.url, data=inputdic2,
-                            content_type='application/json')
-        resp1 = client.get(self.querystring(inputdic2))
-        assert resp1.status_code == resp2.status_code == 400
-        assert 'flatfile' in resp1.json()['message']
 
         # Uploaded flatfile, but not well formed:
         csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
-        inputdic2 = dict(inputdic, flatfile=csv, plot='res')
+        inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 400
-        assert 'flatfile' in resp2.json()['message']
+        assert resp2.json()['message'] == \
+               "data-query: name 'vs30' is not defined; " \
+               "flatfile: missing columns required by BindiEtAl2011, BindiEtAl2014Rjb"
 
         def fake_post(self, request):
             # Django testing class `client` expects every data in the `data` argument
@@ -120,6 +113,15 @@ class Test:
         """tests errors in the residuals API service."""
         inputdic = testdata.readyaml(self.request_filename)
 
+        # no flatfile, uploaded flatfile:
+        inputdic2 = dict(inputdic)
+        inputdic2.pop('flatfile')
+        resp2 = client.post(self.url, data=inputdic2,
+                            content_type='application/json')
+        resp1 = client.get(self.querystring(inputdic2))
+        assert resp1.status_code == resp2.status_code == 400
+        assert resp1.json()['message'] == 'flatfile: missing parameter is required'
+
         # test conflicting values:
         resp1 = client.get(self.querystring({**inputdic,
                                              'selection-expression': '(vs30 > 800) & (vs30 < 1200)',
@@ -179,28 +181,7 @@ class Test:
                            ('?gsim=BindiEtAl2014Rjb&flatfile=wrong_flatfile_name'
                             '&imt=PGA&plot=res&plot=llh'),
                            content_type='application/json')
-        # FIXME: the error messages might be made more clear by simply stating:
-        # 'only one value possible', but for the moment is ok like this.
-        expected_dict = {
-            'error': {
-                'code': 400,
-                'message': 'Invalid request. Problems found in: flatfile, plot. '
-                           'See response data for details',
-                'errors': [
-                    {
-                        'location': 'flatfile',
-                        'message': 'Value not found or misspelled: wrong_flatfile_name',
-                        'reason': 'invalid_choice'
-                    },
-                    {
-                        'location': 'plot',
-                        'message': "Value not found or misspelled: ['res', 'llh']",
-                        'reason': 'invalid_choice'
-                    }
-                ]
-            }
-        }
-        assert areequal(expected_dict, resp1.json())
+        assert resp1.json()['message'] == 'plot: unknown parameter'
         assert resp1.status_code == 400
 
     def test_allen2012(self,

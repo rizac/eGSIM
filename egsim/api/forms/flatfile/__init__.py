@@ -89,7 +89,7 @@ class FlatfileForm(EgsimBaseForm):
                 # Use 'flatfile' as error key: users can not be confused
                 # (see __init__), and also 'flatfile' is also the exposed key
                 # for the `files` argument in requests
-                self.add_error("flatfile", "read error: " + str(exc))
+                self.add_error("flatfile", str(exc))
                 return cleaned_data  # no need to further process
 
         # replace the flatfile parameter with the pandas dataframe:
@@ -102,7 +102,7 @@ class FlatfileForm(EgsimBaseForm):
                 cleaned_data['flatfile'] = flatfile_query(dataframe, selexpr).copy()
             except Exception as exc:
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(key, "data query error: " + str(exc))
+                self.add_error(key, str(exc))
 
         return cleaned_data
 
