@@ -12,24 +12,43 @@ from egsim.api.models import Gsim
 
 @pytest.mark.django_db(transaction=True)  # https://stackoverflow.com/a/54563945
 def test_models(capfd):
-    """Test the models after initializing the DB with eGSIM management commands"""
+    """Test the models methods after egsim commands are run and the DB populated"""
 
-    models = list(Gsim.objects.all())
+    objects = sorted(Gsim.objects.all(), key=lambda _: _.name)
+    # assert we created an id attr and a name attr they are all unique:
+    assert len({_.id for _ in objects}) == len(objects)
+    assert len({_.name for _ in objects}) == len(objects)
+    # get names:
     names = sorted(Gsim.names())
+    # assert names are all strings:
     assert all(isinstance(_, str) for _ in names)
-    assert sorted(names) == sorted(_.name for _ in models)
-    name = models[0].name
-    assert sorted(_.name for _ in Gsim.queryset('name')) == names
-    assert sorted(_.name for _ in Gsim.queryset()) == names
-    # save to Db one hidden:
-    assert not models[0].hidden
-    models[0].hidden = True
-    models[0].save()
+    # assert names returns the same as `objects`
+    assert names == [_.name for _ in objects]
+    # use queryset now:
+    queryset = sorted(Gsim.queryset(), key=lambda _: _.name)
+    assert [_.id for _ in queryset] == [_.id for _ in objects]
+
+    # Now let's create an hidden item, as we clicked on the admin panel:
+    assert not objects[0].hidden
+    objects[0].hidden = True
+    objects[0].save()
+    assert objects[0].hidden
+    hidden_name = objects[0].name
+
     # re check
-    models2 = list(Gsim.objects.all())
-    assert sorted(_.name for _ in models) == sorted(_.name for _ in models2)
-    names2 = sorted(Gsim.names())
-    assert len(names2) == len(models) - 1
-    assert sorted(_.name for _ in models if _.name != name) == names2
-    assert sorted(_.name for _ in Gsim.queryset('name')) == names2
-    assert sorted(_.name for _ in Gsim.queryset()) == names2
+    old_objects = objects
+    objects = sorted(Gsim.objects.all(), key=lambda _: _.name)
+    # assert we created an id attr and a name attr they are all unique:
+    assert len({_.id for _ in objects}) == len(objects)
+    assert len({_.name for _ in objects}) == len(objects)
+    # assert the objects are the same as before
+    assert [_.id for _ in old_objects] == [_.id for _ in objects]
+    # get names:
+    names = sorted(Gsim.names())
+    # assert names returns the same as `objects` but not hidden name
+    assert len(names) == len(objects) -1
+    assert names == [_.name for _ in objects if _.name != hidden_name]
+    # use queryset now and assert we do not have hidden_name either:
+    queryset = sorted(Gsim.queryset(), key=lambda _: _.name)
+    assert len(queryset) == len(names)
+    assert [_.id for _ in queryset] == [_.id for _ in objects if _.name != hidden_name]
