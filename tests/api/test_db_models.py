@@ -1,5 +1,5 @@
 """
-Tests the eGSIM Django commands
+Tests the eGSIM Django DB models
 
 Created on 6 Apr 2019
 
@@ -26,7 +26,7 @@ def test_models(capfd):
     assert names == [_.name for _ in objects]
     # use queryset now:
     queryset = sorted(Gsim.queryset(), key=lambda _: _.name)
-    assert [_.id for _ in queryset] == [_.id for _ in objects]
+    assert [_.id for _ in queryset] == [_.id for _ in objects]  # noqa
 
     # Now let's create an hidden item, as we clicked on the admin panel:
     assert not objects[0].hidden
@@ -51,4 +51,4 @@ def test_models(capfd):
     # use queryset now and assert we do not have hidden_name either:
     queryset = sorted(Gsim.queryset(), key=lambda _: _.name)
     assert len(queryset) == len(names)
-    assert [_.id for _ in queryset] == [_.id for _ in objects if _.name != hidden_name]
+    assert [_.id for _ in queryset] == [_.id for _ in objects if _.name != hidden_name]  # noqa
