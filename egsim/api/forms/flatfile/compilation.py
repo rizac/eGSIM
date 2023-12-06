@@ -173,12 +173,6 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
 class FlatfileInspectionForm(APIForm, FlatfileForm):
     """Form for flatfile inspection, return info from a given flatfile"""
 
-    # Set the public names of this Form Fields as `public_name: attribute_name`
-    # mappings. Superclass mappings are merged into this one. An attribute name
-    # can be keyed by several names, and will be keyed by itself anyway if not
-    # done here (see `egsim.forms.EgsimFormMeta` for details)
-    public_field_names = {}
-
     def clean(self):
         cleaned_data = super().clean()
 

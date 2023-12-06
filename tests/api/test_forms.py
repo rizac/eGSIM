@@ -329,8 +329,13 @@ def test_get_flatfile_columns():
 
 
 def test_field2params_in_forms():
-    for cls in EgsimBaseForm.__subclasses__():
+    clz = list(EgsimBaseForm.__subclasses__())
+    while len(clz):
+        cls = clz.pop()
         check_egsim_form(cls)
+        for c in cls.__subclasses__():
+            if c not in clz:
+                clz.append(c)
 
     # mock a Form with errors and check it
     class Test(TrellisForm):
@@ -377,10 +382,10 @@ def check_egsim_form(new_class:Type[EgsimBaseForm]):
     for base in new_class.__mro__:
         if base is new_class:
             continue
-        field2params.update(getattr(base, attname, {}))
+        field2params.update(base.__dict__.get(attname, {}))
     form_fields = set(new_class.base_fields)
     # Merge this class `field2params` data into `field2params`, and do some check:
-    for field, params in getattr(new_class, attname, {}).items():
+    for field, params in new_class.__dict__.get(attname, {}).items():
         err_msg = f"Error in {new_class.__name__}.{attname}:"
         # no key already implemented in `field2params`:
         if field in field2params:

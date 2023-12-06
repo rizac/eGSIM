@@ -323,7 +323,7 @@ class GsimImtForm(SHSRForm):
     """Base abstract-like form for any form requiring Gsim+Imt selection"""
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
-    _field2params: dict[str, list[str]] = {'gsim': ['model', 'gsim', 'gmm']}
+    _field2params: dict[str, list[str]] = {'gsim': ('model', 'gsim', 'gmm')}
 
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
     gsim = Field(required=False, label="Model(s)",
