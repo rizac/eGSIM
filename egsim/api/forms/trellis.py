@@ -68,17 +68,17 @@ class TrellisForm(GsimImtForm, APIForm):
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {
-        'magnitude': ['magnitude', 'mag'],
-        'distance': ['distance', 'dist'],
-        'msr': ['msr', 'magnitude-scalerel'],
-        'vs30measured': ['vs30measured', 'vs30_measured'],
-        'z1pt0': ['z1', 'z1pt0'],
-        'initial_point': ['initial-point', 'initial_point'],
-        'hypocentre_location': ['hypocenter-location',
+        'magnitude': ('magnitude', 'mag'),
+        'distance': ('distance', 'dist'),
+        'msr': ('msr', 'magnitude-scalerel'),
+        'vs30measured': ('vs30measured', 'vs30_measured'),
+        'z1pt0': ('z1', 'z1pt0'),
+        'initial_point': ('initial-point', 'initial_point'),
+        'hypocentre_location': ('hypocenter-location',
                                 'hypocentre-location',
                                 'hypocenter_location',
-                                'hypocentre_location', ],
-        'line_azimuth': ['line-azimuth', 'line_azimuth'],
+                                'hypocentre_location'),
+        'line_azimuth': ('line-azimuth', 'line_azimuth'),
     }
 
     # GSIM RUPTURE PARAMS:
@@ -130,7 +130,7 @@ class TrellisForm(GsimImtForm, APIForm):
                        required=False)
     z2pt5 = FloatField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
                        help_text=mark_safe("Calculated from the  "
-                                            "V<sub>S30</sub> if not given"),
+                                           "V<sub>S30</sub> if not given"),
                        required=False)
     backarc = BooleanField(label='Backarc Path', initial=False, required=False)
 
