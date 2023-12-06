@@ -123,6 +123,7 @@ def get_init_json_data(browser: dict = None,
             gsims.append([gsim_name, imt_group_index])
 
     # get regionalization data (for selecting models on a map):
+    # FIXME: remove objects:
     _r_data = list(models.Regionalization.objects.values_list('name', 'geometry', 'url'))
     regionalizations = {
         'url': URLS.GET_GSIMS_FROM_REGION,
@@ -173,11 +174,11 @@ def get_init_json_data(browser: dict = None,
 def _get_gsim_for_init_data():
     """Get gsim DB model instances and all related data (imts and warnings)"""
     ret = {}
-    for model, warning, imt in \
-            models.Gsim.objects.values_list('name', 'warning', 'imts__name'):
+    for obj in models.Gsim.queryset('name', 'warning', 'imts__name'):
+        model = obj.name
         if model not in ret:
-            ret[model] = {'warning': warning, 'imts': set()}
-        ret[model]['imts'].add(imt)
+            ret[model] = {'warning': obj.warning, 'imts': set()}
+        ret[model]['imts'].add(obj.imt)
     return ret
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
