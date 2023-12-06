@@ -375,7 +375,7 @@ def check_egsim_form(new_class:Type[EgsimBaseForm]):
     # Fill `field2params` with the superclass data. `bases` order is irrelevant
     # because in all `_field2params`s same key / field <=> same value / params:
     for base in new_class.__mro__:
-        if base == new_class:
+        if base is new_class:
             continue
         field2params.update(getattr(base, attname, {}))
     form_fields = set(new_class.base_fields)
@@ -400,10 +400,7 @@ def check_egsim_form(new_class:Type[EgsimBaseForm]):
                 raise ValueError(f"{err_msg} '{field}' cannot be mapped to "
                                  f"'{param}', as the latter is already keyed by "
                                  f"{', '.join(dupes)}")
-        # all values must be list or tuples:
-        if isinstance(params, list):
-            params = tuple(params)
-        elif not isinstance(params, tuple):
+        if not isinstance(params, tuple):
             raise ValueError(f"{err_msg} dict values must be lists or tuples")
         # all good. Merge into `field2params`:
         field2params[field] = params

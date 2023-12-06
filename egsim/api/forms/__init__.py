@@ -46,11 +46,11 @@ class EgsimBaseForm(Form):
     # rest aliases (the Field name can be in the tuple, but if it's the only element
     # the whole mapping can be omitted). This class attribute should be private,
     # use `param_names_of` or `param_name_of` instead.
-    # Rationale: Field names are by default exposed as requests API parameters, but the
-    # latter should be changed easily without breaking the code. With this mapping,
-    # field names can be immutable and used internally during validation (e.g. keys
-    # of `self.data` and `self.cleaned_data`) whilst parameter names used in I/O data
-    # (keys of the dict passed to `__init__`, or returned from `self.errors_json_dict`)
+    # Rationale: by default, a Field name is also a request parameter. With this mapping,
+    # we can change the latter only and keep the former immutable: this way, we can rely
+    # on field names internally during validation (e.g., keys of `self.cleaned_data`,
+    # `self.data`) whilst the Form will automatically input/output data with parameter
+    # names (e.g. keys of the input dicts in `__init__`, or `self.errors_json_dict`)
     _field2params: dict[str, tuple[str]]
 
     def __init__(self, data=None, files=None, no_unknown_params=True, **kwargs):
@@ -134,14 +134,14 @@ class EgsimBaseForm(Form):
         return super().has_error(field, code)
 
     class ErrCode(StrEnum):
-        """Custom error code and msg replacing Django defaults"""
+        """Custom error code and msg replacing Django defaults and simplifying
+        how to raise field errors. Usage:
+            raise ValidationError(self.ErrCode.invalid)
+            self.add_error(field, self.ErrCode.invalid)
+        """
         required = "missing parameter is required"
         invalid = "invalid value"
         invalid_choice = "value not found or misspelled"
-
-    def add_error(self, field:str, msg:Union[str, ErrCode]):
-        """Same as super.add_error but simplified with explicit arg. types"""
-        super().add_error(field, msg)
 
     def errors_json_data(self) -> dict:
         """Return a JSON serializable dict with the key `message` specifying
@@ -280,10 +280,10 @@ class SHSRForm(EgsimBaseForm):
     (lat lon) and optional list of seismic hazard source regionalizations (SHSR)"""
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
-    _field2params = {
-        'latitude': ['latitude', 'lat'],
-        'longitude': ['longitude', 'lon'],
-        'regionalization': ['regionalization', 'shsr']
+    _field2params: dict[str, tuple[str]] = {
+        'latitude': ('latitude', 'lat'),
+        'longitude': ('longitude', 'lon'),
+        'regionalization': ('regionalization', 'shsr')
     }
 
     latitude = FloatField(label='Latitude', min_value=-90., max_value=90.,

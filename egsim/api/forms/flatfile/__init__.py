@@ -31,8 +31,8 @@ class FlatfileForm(EgsimBaseForm):
     """Base Form for handling Flatfiles"""
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
-    _field2params = {
-        'selexpr': ['data-query', 'selection-expression']
+    _field2params: dict[str, tuple[str]] = {
+        'selexpr': ('data-query', 'selection-expression')
     }
     # FIXME: centralize the way we fetch data with hidden=False
     flatfile = ModelChoiceField(queryset=models.Flatfile.objects.filter(hidden=False).
