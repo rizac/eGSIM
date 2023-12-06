@@ -373,18 +373,13 @@ def test_field2params_in_forms():
 
 
 def check_egsim_form(new_class:Type[EgsimBaseForm]):
-    # Attribute denoting field -> API params mappings:
-    attname = '_field2params'
     # Dict denoting the field -> API params mappings:
     field2params = {}
-    # Fill `field2params` with the superclass data. `bases` order is irrelevant
-    # because in all `_field2params`s same key / field <=> same value / params:
-    for base in new_class.__mro__:
-        if base is new_class:
-            continue
-        field2params.update(base.__dict__.get(attname, {}))
     form_fields = set(new_class.base_fields)
-    # Merge this class `field2params` data into `field2params`, and do some check:
+    # Attribute denoting field -> API params mappings:
+    attname = '_field2params'
+    # Merge this class `field2params` data into `field2params`, and do some check
+    # (Note: use `__dict__.get` because `getattr` also returns superclass attrs):
     for field, params in new_class.__dict__.get(attname, {}).items():
         err_msg = f"Error in {new_class.__name__}.{attname}:"
         # no key already implemented in `field2params`:
@@ -404,6 +399,7 @@ def check_egsim_form(new_class:Type[EgsimBaseForm]):
             if dupes:
                 raise ValueError(f"{err_msg} '{field}' cannot be mapped to "
                                  f"'{param}', as the latter is already keyed by "
+                                 f"the field(s) "
                                  f"{', '.join(dupes)}")
         if not isinstance(params, tuple):
             raise ValueError(f"{err_msg} dict values must be lists or tuples")
