@@ -291,10 +291,8 @@ class SHSRForm(EgsimBaseForm):
     longitude = FloatField(label='Longitude', min_value=-180., max_value=180.,
                            required=False)
     regionalization = ModelMultipleChoiceField(
-        queryset=models.Regionalization.objects.only('name', 'media_root_path').
-            filter(hidden=False),
-        initial=models.Regionalization.objects.only('name', 'media_root_path').
-            filter(hidden=False),
+        queryset=models.Regionalization.queryset('name', 'media_root_path'),
+        initial=models.Regionalization.queryset('name', 'media_root_path'),
         to_field_name="name",
         label='Regionalization',
         required=False)

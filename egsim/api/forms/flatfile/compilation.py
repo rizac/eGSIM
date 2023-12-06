@@ -33,8 +33,7 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
         cleaned_data = self.cleaned_data
         gsims = cleaned_data.get('gsim', [])
         if not models:
-            gsims = list(models.Gsim.objects.filter(hidden=False).only('name').
-                         values_list('name', flat=True))
+            gsims = list(models.Gsim.names())
         gm_props = ground_motion_properties_required_by(*gsims, as_ff_column=True)
         imts = cleaned_data.get('imt', [])
 

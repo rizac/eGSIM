@@ -5,15 +5,12 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
-from typing import Optional
-import json
-
-from collections.abc import Iterable
+from __future__ import annotations
+from os.path import abspath, join, isabs, relpath
 
 from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
                               Index, URLField, Manager, QuerySet)
 from django.db.models.options import Options
-from os.path import abspath, join, isabs, relpath
 
 
 # Notes: primary keys are auto added if not present ('id' of type BigInt or so).
@@ -24,15 +21,18 @@ from os.path import abspath, join, isabs, relpath
 class EgsimDbModel(DjangoDbModel):
     """Abstract base class of Egsim Db models"""
 
-    # attrs dynamically set by Django. declare them here just to silent lint warnings:
+    # attrs dynamically set by Django. declared here just to silent lint warnings:
+    # IMPORTANT: `objects` should be used internally (e.g. `object.all().delete()` to
+    # empty the table in Django commands), and `queryset` or `names` for serving
+    # data in the API, as these use the `hidden` field (see Field help_text)
     objects: Manager  # https://docs.djangoproject.com/en/stable/topics/db/managers
     _meta: Options  # https://docs.djangoproject.com/en/stable/ref/models/options/
 
     name = TextField(null=False, unique=True, help_text="Unique name")
     hidden = BooleanField(default=False, null=False,
                           help_text="Hide this item, i.e. make it publicly "
-                                    "unavailable through the `names` property "
-                                    "and as such, to the whole API. This field "
+                                    "unavailable through the `queryset` and `names` "
+                                    "methods to the whole API. This field "
                                     "is intended to hide/show items quickly from "
                                     "the admin panel without executing management "
                                     "scrips")
@@ -43,6 +43,23 @@ class EgsimDbModel(DjangoDbModel):
 
     def __str__(self):
         return self.name
+
+    @classmethod
+    def queryset(cls, *only) -> QuerySet[EgsimDbModel]:
+        """Return a QuerySet of all visible model instances. Use this method to
+        serve model data instead of the class `objects` attribute, as this method
+        will not yield hidden elements
+
+        :param only: the fields to load from the DB for each instance, e.g. 'name'
+            (the `str` uniquely denoting the instance). Empty (the default) will
+            load all instance fields
+        """
+        queryset = cls.objects if not only else cls.objects.only(*only)
+        return queryset.filter(hidden=False)
+
+    @classmethod
+    def names(cls) -> QuerySet[str]:
+        return cls.queryset('name').values_list('name', flat=True)
 
 
 class Gsim(EgsimDbModel):
@@ -80,8 +97,8 @@ class MediaFile(EgsimDbModel):
     # for safety, do not store full file paths in the db (see `filepath` for details):
     media_root_path = TextField(unique=True, null=False,
                                 help_text="the file path, relative to the media "
-                                          "root directory defined in the settings"
-                                          "file")
+                                          "root directory defined in the "
+                                          "settings file")
 
     @property
     def filepath(self):
@@ -113,11 +130,3 @@ class Flatfile(MediaFile, Reference):
 class Regionalization(MediaFile, Reference):
     """Class handling regionalizations stored in the file system"""
 
-    @classmethod
-    def data(cls, regionalizations: Optional[Iterable[str]] = None) -> Iterable[dict]:
-        query = cls.objects.filter(hidden=False)
-        if regionalizations:
-            query = query.filter(name__in=regionalizations)
-        for obj in query.only('media_root_path').all():
-            with open(obj.filepath, 'r') as _:
-                yield json.load(_)

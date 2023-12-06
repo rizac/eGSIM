@@ -34,11 +34,11 @@ class FlatfileForm(EgsimBaseForm):
     _field2params: dict[str, tuple[str]] = {
         'selexpr': ('data-query', 'selection-expression')
     }
-    # FIXME: centralize the way we fetch data with hidden=False
-    flatfile = ModelChoiceField(queryset=models.Flatfile.objects.filter(hidden=False).
-                                only('name', 'media_root_path'),
-                                to_field_name="name", label='Flatfile',
-                                required=False)
+    flatfile = ModelChoiceField(
+        queryset=models.Flatfile.queryset('name', 'media_root_path'),
+        to_field_name="name",
+        label='Flatfile',
+        required=False)
     selexpr = CharField(required=False, label='Filter flatfile records via a '
                                               'query string')
 
@@ -135,8 +135,7 @@ def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
     ff_cols = set('SA' if _.startswith('SA(') else _ for _ in flatfile_columns)
     imt_cols = ff_cols & set(registered_imts)
     ff_cols -= imt_cols
-    for name in models.Gsim.objects.filter(hidden=False).\
-            only('name').values_list('name', flat=True):
+    for name in models.Gsim.names():
         imts = intensity_measures_defined_for(name)
         if not imts.intersection(imt_cols):
             continue
