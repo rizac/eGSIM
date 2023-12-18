@@ -24,7 +24,7 @@ class EgsimDbModel(DjangoDbModel):
     # attrs dynamically set by Django. declared here just to silent lint warnings:
     # IMPORTANT: `objects` should be used internally (e.g. `object.all().delete()` to
     # empty the table in Django commands), and `queryset` or `names` for serving
-    # data in the API, as these use the `hidden` field (see Field help_text)
+    # data in the API, as these filter out hidden items (see `hidden` Field help_text)
     objects: Manager  # https://docs.djangoproject.com/en/stable/topics/db/managers
     _meta: Options  # https://docs.djangoproject.com/en/stable/ref/models/options/
 
@@ -46,9 +46,11 @@ class EgsimDbModel(DjangoDbModel):
 
     @classmethod
     def queryset(cls, *only) -> QuerySet[EgsimDbModel]:
-        """Return a QuerySet of all visible model instances. Use this method to
-        serve model data instead of the class `objects` attribute, as this method
-        will not yield hidden elements
+        """Return a QuerySet of all visible model instances. This method should be
+        used to serve model data because it automatically filters out hidden elements.
+        The standard manager (`cls.objects`) should be used instead for internal
+        operations only e.g., `cl.objects.all().delete()` to empty a table in a
+        management command
 
         :param only: the fields to load from the DB for each instance, e.g. 'name'
             (the `str` uniquely denoting the instance). Empty (the default) will
@@ -59,6 +61,7 @@ class EgsimDbModel(DjangoDbModel):
 
     @classmethod
     def names(cls) -> QuerySet[str]:
+        """Return a QuerySet yielding all instance unique names (`str`)"""
         return cls.queryset('name').values_list('name', flat=True)
 
 
