@@ -123,14 +123,13 @@ def get_init_json_data(browser: dict = None,
             gsims.append([gsim_name, imt_group_index])
 
     # get regionalization data (for selecting models on a map):
-    # FIXME: remove objects:
-    _r_data = list(models.Regionalization.objects.values_list('name', 'geometry', 'url'))
+    _r_data = list(models.Regionalization.queryset('name', 'geometry', 'url'))
     regionalizations = {
         'url': URLS.GET_GSIMS_FROM_REGION,
-        'names': [_[0] for _ in _r_data],
+        'names': [_.name for _ in _r_data],
         # bbox are tuples of the form (min_lng, min_lat, max_lng, max_lat):
-        'bbox': {_[0]: shape(_[1]).bounds for _ in _r_data},
-        'ref': {_[0]: _[2] or "" for _ in _r_data}
+        'bbox': {_.name: shape(_.geometry).bounds for _ in _r_data},
+        'ref': {_.name: _.url or "" for _ in _r_data}
     }
 
     # get predefined flatfiles info:

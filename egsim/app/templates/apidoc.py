@@ -154,7 +154,7 @@ def get_field_dtype(field: Field) -> Type:
 
 def _get_flatfile_column_desc(as_html=True):
     ret = {}
-    for ff_field in FlatfileColumn.objects.all():
+    for ff_field in FlatfileColumn.queryset():
         name = ff_field.name
         props = ff_field.properties
         dtype = props['dtype']
