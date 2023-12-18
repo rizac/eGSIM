@@ -6,7 +6,7 @@ Created on 5 Apr 2019
 @author: riccardo
 """
 from __future__ import annotations
-from os.path import abspath, join, isabs, relpath
+from os.path import abspath, join, isabs, relpath, isfile
 
 from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
                               Index, URLField, Manager, QuerySet)
@@ -22,17 +22,14 @@ class EgsimDbModel(DjangoDbModel):
     """Abstract base class of Egsim Db models"""
 
     # attrs dynamically set by Django. declared here just to silent lint warnings:
-    # IMPORTANT: `objects` should be used internally (e.g. `object.all().delete()` to
-    # empty the table in Django commands), and `queryset` or `names` for serving
-    # data in the API, as these filter out hidden items (see `hidden` Field help_text)
+    # (NOTE: `objects` SHOULD BE USED INTERNALLY, see `queryset` docstring for details)
     objects: Manager  # https://docs.djangoproject.com/en/stable/topics/db/managers
     _meta: Options  # https://docs.djangoproject.com/en/stable/ref/models/options/
 
     name = TextField(null=False, unique=True, help_text="Unique name")
     hidden = BooleanField(default=False, null=False,
                           help_text="Hide this item, i.e. make it publicly "
-                                    "unavailable through the `queryset` and `names` "
-                                    "methods to the whole API. This field "
+                                    "unavailable to the whole API. This field "
                                     "is intended to hide/show items quickly from "
                                     "the admin panel without executing management "
                                     "scrips")
@@ -46,11 +43,11 @@ class EgsimDbModel(DjangoDbModel):
 
     @classmethod
     def queryset(cls, *only) -> QuerySet[EgsimDbModel]:
-        """Return a QuerySet of all visible model instances. This method should be
-        used to serve model data because it automatically filters out hidden elements.
-        The standard manager (`cls.objects`) should be used instead for internal
-        operations only e.g., `cl.objects.all().delete()` to empty a table in a
-        management command
+        """Return a QuerySet of all visible model instances. This method calls
+        `cls.objects.filter(hidden=False)` and should be used to serve model data
+        in the API instead of `cls.objects`. The latter should be used for internal
+        operations only, e.g., in a management command where we want to empty a table
+        (including hidden elements): `cls.objects.all().delete()`
 
         :param only: the fields to load from the DB for each instance, e.g. 'name'
             (the `str` uniquely denoting the instance). Empty (the default) will
@@ -101,7 +98,7 @@ class MediaFile(EgsimDbModel):
     media_root_path = TextField(unique=True, null=False,
                                 help_text="the file path, relative to the media "
                                           "root directory defined in the "
-                                          "settings file")
+                                          "settings file (settings.MEDIA_ROOT)")
 
     @property
     def filepath(self):
@@ -110,12 +107,14 @@ class MediaFile(EgsimDbModel):
         return abspath(join(settings.MEDIA_ROOT, self.media_root_path))  # noqa
 
     def save(self, *a, **kw):
-        """Assure `media_root_path` is relative to the current settings
-        MEDIA_ROOT and save instance calling super method"""
+        """Assure `media_root_path` exists and is relative to the current settings
+        MEDIA_ROOT before saving this instance via `super().save`"""
         from django.conf import settings
         if isabs(self.media_root_path):  # noqa
             self.media_root_path = relpath(self.media_root_path,  # noqa
                                            settings.MEDIA_ROOT)
+        if not isfile(self.filepath):
+            raise FileNotFoundError(self.filepath)
         super().save(*a, **kw)
 
     class Meta:
