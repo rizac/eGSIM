@@ -134,13 +134,13 @@ def get_init_json_data(browser: dict = None,
 
     # get predefined flatfiles info:
     flatfiles = []
-    for r in models.Flatfile.get_flatfiles(hidden=False):
+    for ffile in models.Flatfile.queryset('name', 'display_name', 'url'):
         flatfiles .append({
-            'value': r.name,
-            'innerHTML': f'{r.name} ({r.display_name})',
-            'url': r.url,
+            'value': ffile.name,
+            'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
+            'url': ffile.url,  # noqa
             'columns': FlatfileForm.get_flatfile_dtypes(
-                FlatfileForm.read_flatfile_from_db(r))
+                FlatfileForm.read_flatfile_from_db(ffile))
         })
 
     # Get component props (core data needed for Vue rendering):
