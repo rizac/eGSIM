@@ -77,14 +77,15 @@ class FlatfileForm(EgsimBaseForm):
             u_flatfile = u_flatfile.file  # ByesIO or similar
 
         if u_flatfile is None:
-            dataframe = self.read_flatfile_from_db(cleaned_data["flatfile"])
+            # cleaned_data["flatfile"] is a models.Flatfile instance:
+            dataframe = cleaned_data["flatfile"].read_from_filepath()
         else:
             # u_ff = cleaned_data[key_u]
             try:
                 # u_flatfile is a Django TemporaryUploadedFile or InMemoryUploadedFile
                 # (the former if file size > configurable threshold
                 # (https://stackoverflow.com/a/10758350):
-                dataframe = self.read_flatfilefrom_csv_bytes(u_flatfile)
+                dataframe = read_flatfile(u_flatfile)
             except Exception as exc:
                 # Use 'flatfile' as error key: users can not be confused
                 # (see __init__), and also 'flatfile' is also the exposed key
@@ -105,14 +106,6 @@ class FlatfileForm(EgsimBaseForm):
                 self.add_error(key, str(exc))
 
         return cleaned_data
-
-    @classmethod
-    def read_flatfile_from_db(cls, model_instance: models.Flatfile) -> pd.DataFrame:
-        return pd.read_hdf(model_instance.filepath, key=model_instance.name)  # noqa
-
-    @classmethod
-    def read_flatfilefrom_csv_bytes(cls, buffer, *, sep=None) -> pd.DataFrame:
-        return read_flatfile(buffer, sep=sep)
 
     @classmethod
     def get_flatfile_dtypes(cls, flatfile: pd.DataFrame) -> dict[str, str]:

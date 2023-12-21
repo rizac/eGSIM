@@ -6,7 +6,6 @@ Created on 2 Jun 2018
 @author: riccardo
 """
 from datetime import datetime
-from django.core.exceptions import ValidationError
 from django.forms import Field
 from typing import Type
 from io import BytesIO
@@ -19,6 +18,7 @@ from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, EgsimBaseForm)
 from egsim.api.forms.flatfile import FlatfileForm
 from egsim.api.forms.flatfile.compilation import FlatfileInspectionForm
 from egsim.api.forms.trellis import TrellisForm
+from egsim.smtk import read_flatfile
 
 GSIM, IMT = 'gsim', 'imt'
 
@@ -244,7 +244,7 @@ class Test:
         # assert is_valid
 
         # now let's test some errors:
-        flatfile_df = FlatfileForm.read_flatfilefrom_csv_bytes(testdata.open('tk_20230206_flatfile_geometric_mean.csv'))
+        flatfile_df = read_flatfile(testdata.open('tk_20230206_flatfile_geometric_mean.csv'))
 
         # Normal case (form valid)
         flatfile = flatfile_df[['rake', 'station_id',

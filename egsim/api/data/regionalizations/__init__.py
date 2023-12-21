@@ -23,27 +23,15 @@ from shapely.ops import unary_union
 from egsim.smtk import registered_gsims
 
 
-def get_regionalizations() -> Iterable[str, dict[str, dict[str, Any]]]:
+def get_regionalizations() -> Iterable[str, list[dict[str, Any]]]:
     """Yield regionalizations stored in this package
 
     :return: a generator yielding tuples of the form `name:str, regionalization:dict`
         where the first item is the regionalization name and the second
-        is the `dict` of the form (see `get_regionalization` for details):
-        ```
-        {
-            "<region>": {
-                "type": "Feature",
-                "geometry":dict,  # geoJSON geometry
-                "properties":dict {
-                    "models":list[str]  # the list of region-selected models
-                },
-            ...
-        }
-        ```
+        is a list of geoJSON Feature(s) (`dict`. see `get_regionalization` for details)
     """
     for name, data in DATA.items():
-        yield name, {"type": "FeatureCollection",
-                     "features": get_regionalization(*data['sources'])}
+        yield name, get_regionalization(*data['sources'])
 
 
 datadir = join(dirname(__file__), 'sources')
@@ -172,3 +160,102 @@ def merge_geojson_geometries(*geometries: dict) -> dict:
     shapes = [shape(g) for g in geometries]
     whole_shape = unary_union(shapes)
     return json.loads(to_geojson(whole_shape))
+
+
+if __name__ == "__main__":
+    import time
+    # t = time.time()
+    # for _, regions in get_regionalizations():
+    #     shapes = [shape(g['geometry']) for g in regions]
+    #     whole_shape = unary_union(shapes)
+    #     bounds = whole_shape.bounds  # (minx, miny, maxx, maxy)
+    #     # pass
+    # print(time.time() - t)
+    _k, _k2 = [], []
+
+    import os
+    t = time.time()
+    path = '/Users/rizac/work/gfz/projects/sources/python/egsim/media/regionalizations'
+    for fpt in os.listdir(path):
+        if os.path.splitext(fpt)[1] != '.json':
+            continue
+        with open(os.path.join(path, fpt)) as _:
+            feat_collection = json.load(_)
+        whole_shape = unary_union([shape(g['geometry'])
+                                   for g in feat_collection['features']])
+        bounds = whole_shape.bounds  # (minx, miny, maxx, maxy)
+        _k.append(bounds)
+        # pass
+    print(time.time() - t)
+
+    t = time.time()
+    path = '/Users/rizac/work/gfz/projects/sources/python/egsim/media/regionalizations'
+    bounds = [180, 90, -180, -90]
+    for fpt in os.listdir(path):
+        if os.path.splitext(fpt)[1] != '.json':
+            continue
+        with open(os.path.join(path, fpt)) as _:
+            feat_collection = json.load(_)
+        for g in feat_collection['features']:
+            bounds_ = shape(g['geometry']).bounds  # (minx, miny, maxx, maxy)
+            if bounds_[0] < bounds[0]:
+                bounds[0] = bounds_[0]
+            if bounds_[1] < bounds[1]:
+                bounds[1] = bounds_[1]
+            if bounds_[2] > bounds[2]:
+                bounds[2] = bounds_[2]
+            if bounds_[3] > bounds[3]:
+                bounds[3] = bounds_[3]
+        # pass
+    print(time.time() - t)
+
+    t = time.time()
+    path = '/Users/rizac/work/gfz/projects/sources/python/egsim/media/regionalizations'
+    bounds = [180, 90, -180, -90]  # (minx, miny, maxx, maxy)
+    for fpt in os.listdir(path):
+        if os.path.splitext(fpt)[1] != '.json':
+            continue
+        with open(os.path.join(path, fpt)) as _:
+            feat_collection = json.load(_)
+        for g in feat_collection['features']:
+            geoms = g['geometry']['coordinates']
+            while geoms:
+                geom = geoms.pop(0)
+                if not isinstance(geom, list) or not geom:
+                    continue
+                if isinstance(geom[0], list):
+                    geoms.extend(geom)
+                    continue
+                x, y = geom[0], geom[1]
+                if x < bounds[0]:
+                    bounds[0] = x
+                elif x > bounds[2]:
+                    bounds[2] = x
+                if y < bounds[1]:
+                    bounds[1] = y
+                elif y > bounds[3]:
+                    bounds[3] = y
+        # pass
+    print(time.time() - t)
+
+
+    t = time.time()
+    path = '/Users/rizac/work/gfz/projects/sources/python/egsim/media/regionalizations'
+
+    for fpt in os.listdir(path):
+        if os.path.splitext(fpt)[1] != '.json':
+            continue
+        with open(os.path.join(path, fpt)) as _:
+            feat_collection = json.load(_)
+        bounds = [180, 90, -180, -90]  # (minx, miny, maxx, maxy)
+        for g in feat_collection['features']:
+            bounds_ = shape(g['geometry']).bounds  # (minx, miny, maxx, maxy)
+            bounds[0] = min(bounds[0], bounds_[0])
+            bounds[1] = min(bounds[1], bounds_[1])
+            bounds[2] = max(bounds[2], bounds_[2])
+            bounds[3] = max(bounds[3], bounds_[3])
+        # pass
+        _k2.append(bounds)
+    print(time.time() - t)
+    import numpy as np
+    assert np.allclose(_k, _k2)

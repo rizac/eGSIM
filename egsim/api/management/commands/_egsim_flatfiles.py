@@ -39,13 +39,10 @@ class Command(BaseCommand):
             db_obj = models.Flatfile.objects.create(name=name,
                                                     media_root_path=relpath,
                                                     **refs)
-            # store object to disk:
-            filepath = db_obj.filepath  # abspath
-            if not isdir(dirname(filepath)):
-                makedirs(dirname(filepath))
-            dfr.to_hdf(filepath, key=name, format='table', mode='w')
+            db_obj.write_to_filepath(dfr)
+
             numfiles += 1
-            self.stdout.write(f'  Flatfile "{name}" ({filepath})')
+            self.stdout.write(f'  Flatfile "{name}" ({db_obj.filepath})')
             # print some stats:
             cols, metadata_cols, imt_cols_no_sa, imt_cols_sa, unknown_cols = \
                 self.get_stats(dfr, ffcolumns, imts)
