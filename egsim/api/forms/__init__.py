@@ -305,10 +305,9 @@ class SHSRForm(EgsimBaseForm):
         if lat is None or lon is None:
             return gsims
         point = Point(lon, lat)
-        for obj in cleaned_data['regionalization']:
-            with open(obj.filepath, 'r') as _:
-                features = json.load(_)['features']
-            for feat in features:
+        for reg_obj in cleaned_data['regionalization']:
+            feat_collection = reg_obj.read_from_filepath()
+            for feat in feat_collection['features']:
                 geometry, models = feat['geometry'], feat['properties']['models']
                 # if we already have all models, skip check:
                 if set(models) - gsims:

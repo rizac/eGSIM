@@ -182,22 +182,19 @@ def testdata(request):  # noqa
 
 @pytest.mark.django_db
 @pytest.fixture(scope='session')
-def django_db_setup(django_db_setup, django_db_blocker):
-    """Setup the database. This fixture acts as a subclass of the default pytest django
-    db setup, executing custom code on top of it.
+def django_db_setup(django_db_setup, django_db_blocker):  # noqa
+    """Set up the database and populates it with eGSIM data. This fixture is
+    called whenever we decorate a test function with `@pytest.mark.django_db`.
+    For info see:
 
-    Details here:
-        https://github.com/pytest-dev/pytest-django/issues/343#issuecomment-230394740
-        https://pytest-django.readthedocs.io/en/latest/database.html#django-db-setup
-        https://pytest-django.readthedocs.io/en/latest/database.html#django-db-blocker
+     - https://pytest-django.readthedocs.io/en/latest/database.html#populate-the-test-database-if-you-don-t-use-transactional-or-live-server
+     - https://pytest-django.readthedocs.io/en/latest/helpers.html#pytest.mark.django_db
 
-    @param django_db_setup: fixture ensuring that the test databases are created and
-        available before calling this fixture. Note that by simply declaring this
-        argument, the code of `pytest_django.fixtures.django_db_setup` is automatically
-        executed. This is a feature of some pytest fixtures that is worth mentioning as
-        it causes the argument not to be used and mistakenly treated as unnecessary
+    @param django_db_setup: "parent" fixture that ensures that the test databases are 
+        created and available (see `pytest_django.fixtures.django_db_setup` for details. 
+        Being a pytest fixture, do not treat it as "unused argument" and remove it)
     @param django_db_blocker: fixture used in the code to write custom data on the db
-    """
+    """ # noqa
     with django_db_blocker.unblock():
         call_command('egsim_init', interactive=False)
 

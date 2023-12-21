@@ -123,24 +123,24 @@ def get_init_json_data(browser: dict = None,
             gsims.append([gsim_name, imt_group_index])
 
     # get regionalization data (for selecting models on a map):
-    _r_data = list(models.Regionalization.queryset('name', 'geometry', 'url'))
+    regs = list(models.Regionalization.queryset('name', 'geometry', 'url',
+                                                'media_root_path'))
     regionalizations = {
         'url': URLS.GET_GSIMS_FROM_REGION,
-        'names': [_.name for _ in _r_data],
+        'names': [r.name for r in regs],
         # bbox are tuples of the form (min_lng, min_lat, max_lng, max_lat):
-        'bbox': {_.name: shape(_.geometry).bounds for _ in _r_data},
-        'ref': {_.name: _.url or "" for _ in _r_data}
+        'bbox': {r.name: _get_bbox(r) for r in regs},
+        'ref': {r.name: r.url or "" for r in regs}
     }
 
     # get predefined flatfiles info:
     flatfiles = []
-    for ffile in models.Flatfile.queryset('name', 'display_name', 'url'):
+    for ffile in models.Flatfile.queryset('name', 'display_name', 'url', 'media_root_path'):
         flatfiles .append({
             'value': ffile.name,
             'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
             'url': ffile.url,  # noqa
-            'columns': FlatfileForm.get_flatfile_dtypes(
-                FlatfileForm.read_flatfile_from_db(ffile))
+            'columns': FlatfileForm.get_flatfile_dtypes(ffile.read_from_filepath(nrows=0))
         })
 
     # Get component props (core data needed for Vue rendering):
@@ -170,15 +170,33 @@ def get_init_json_data(browser: dict = None,
     }
 
 
+def _get_bbox(reg: models.Regionalization) -> list[float]:
+    """Return the bounds of all the regions coordinates in the given regionalization
+
+    @param return: the 4-element list (minx, miny, maxx, maxy) i.e.
+        (minLon, minLat, maxLon, maxLat)
+    """
+    feat_collection = reg.read_from_filepath()
+    bounds = [180, 90, -180, -90]  # (minx, miny, maxx, maxy)
+    for g in feat_collection['features']:
+        bounds_ = shape(g['geometry']).bounds  # (minx, miny, maxx, maxy)
+        bounds[0] = min(bounds[0], bounds_[0])
+        bounds[1] = min(bounds[1], bounds_[1])
+        bounds[2] = max(bounds[2], bounds_[2])
+        bounds[3] = max(bounds[3], bounds_[3])
+    return bounds
+
+
 def _get_gsim_for_init_data():
     """Get gsim DB model instances and all related data (imts and warnings)"""
     ret = {}
-    for obj in models.Gsim.queryset('name', 'warning', 'imts__name'):
+    for obj in models.Gsim.queryset():
         model = obj.name
         if model not in ret:
             ret[model] = {'warning': obj.warning, 'imts': set()}
         ret[model]['imts'].add(obj.imt)
     return ret
+
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
     """Return a dict with all the properties to be passed

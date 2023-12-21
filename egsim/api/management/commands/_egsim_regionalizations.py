@@ -48,16 +48,11 @@ class Command(BaseCommand):
                 db_obj = models.Regionalization.objects.create(name=name,
                                                                media_root_path=relpath,
                                                                **refs)
-                # save object to disk:
-                filepath = db_obj.filepath  # abspath
-                if not isdir(dirname(filepath)):
-                    makedirs(dirname(filepath))
-                with open(filepath, 'w') as _:
-                    json.dump(regionalization, _, separators=(',', ':'))
+                db_obj.write_to_filepath(regionalization)
 
-                self.stdout.write(f'  Regionalization "{name}" ({filepath}), '
+                self.stdout.write(f'  Regionalization "{name}" ({db_obj.filepath}), '
                                f'{len(regionalization)} region(s):')
-                for feat in regionalization['features']:
+                for feat in regionalization:
                     self.stdout.write(f"    {feat['properties']['region']}: "
                                    f"{len(feat['properties']['models'])} model(s), "
                                    f"geometry type: {feat['geometry']['type']}")

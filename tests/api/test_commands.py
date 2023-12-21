@@ -9,32 +9,16 @@ import pytest
 from django.core.management import call_command
 
 
-# WARNING: tests requiring db access should use the function decorator:
-# @pytest.mark.django_db
-# which we overwrite to auto populate the db (see django_db_setup in conftest.py).
-# This however pre-execute the same custom commands that we want to test here,
-# causing problems in e.g. capturing the stdout. Looking at the code, to grant access
-# to the empty db in the default Django mode, we just need the django_db_blocker fixture:
-
-
 @pytest.mark.django_db
 def test_initdb(capsys):
-    """Test initdb command, with new Gsims and required attributes not
-    managed by egsim
-
-    NOTE: these are just shallow tests to check no error is raised. Deeper tests cannot
-        be easily performed. An alternative is to issue bookmarks in the editor
-        (e.g. PyCharm) and inspect the printout
-    """
-    # why is it @patch not working if provided as decorator?
-    # It has conflicts with capsys fixture, but only here ....
-    # Anyway:
-
-    # with patch.object(builtins, 'input', lambda _: 'yes'):
+    """Test the command initializing the DB with eGSIM data"""
+    # NOTE: the decorator `django_db` already executes the command below, so
+    # we could simply pass here, or even remove the test entirely. Just provide
+    # capsys in case we want to test the generated output in more details
     call_command('egsim_init', interactive=False)
     captured = capsys.readouterr()
     capout = captured.out
-    assert "Unused Flatfile column(s)" not in capout
+    assert capout and "Unused Flatfile column(s)" not in capout
 
 
 def test_areequal(areequal):
