@@ -70,12 +70,7 @@ EGSIM.component('trellis', {
 				</div>
 
 				<div class="mt-4" style="background-color:transparent">
-					<field-label :field='form["plot_type"]' />
-					<field-input :field='form["plot_type"]' size="3" />
-					<div class='mt-1 d-flex flex-row align-items-baseline'>
-						<field-input :field='form["stdev"]'/>
-						<field-label :field='form["stdev"]' class='ms-2' style='flex: 1 1 auto'/>
-					</div>
+					REMOVE HERE
 				</div>
 			</template>
 		</egsim-form>

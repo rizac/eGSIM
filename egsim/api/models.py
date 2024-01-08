@@ -71,9 +71,9 @@ class Gsim(EgsimDbModel):
     """
 
     unverified = BooleanField(default=False, help_text="not independently verified")
-    experimental = BooleanField(default=False, help_text="experimental, may "
+    experimental = BooleanField(default=False, help_text="experimental: may "
                                                          "change in future versions")
-    adapted = BooleanField(default=False, help_text="not intended for general use, "
+    adapted = BooleanField(default=False, help_text="not intended for general use: "
                                                     "the behaviour may not be "
                                                     "as expected")
     # Note: `superseded_by` is not used (we do not save deprecated Gsims)

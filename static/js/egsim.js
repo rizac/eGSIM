@@ -80,7 +80,7 @@ const EGSIM = Vue.createApp({
 				this.errors[key] = data.invalid_browser_message || "";
 			}
 			this.newpageURLs = data.newpage_urls;
-			this.init(data.gsims, data.imt_groups, data.flatfile, data.regionalizations);
+			this.init(data.gsims, data.imt_groups, data.warning_groups, data.flatfile, data.regionalizations);
 			this.selComponent = data.sel_component;
 		});
 	},
@@ -179,7 +179,7 @@ const EGSIM = Vue.createApp({
 				.nav-tabs .nav-item.show .nav-link, .nav-tabs .nav-link.active {color: var(--bs-primary); opacity: 1; background-color: inherit}
 			`;
 		},
-		init(gsims, imtGroups, flatfile, regionalizations){
+		init(gsims, imtGroups, warningGroups, flatfile, regionalizations){
 			// Create a "template" Array of gsims and imts, to be copied as field choices
 			var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
 			// converts the gsims received from server from an Array of Arrays to an
@@ -195,7 +195,7 @@ const EGSIM = Vue.createApp({
 					disabled: false,
 					innerHTML: gsimName.match(reg).join(" "),
 					imts: gsimImts,
-					warning: elm[2] || "",
+					warning: elm[2] ? warningGroups[elm[2]]: "",
 				}
 			});
 			// create global like Object:

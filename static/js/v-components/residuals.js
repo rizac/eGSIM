@@ -30,8 +30,7 @@ EGSIM.component('residuals', {
 					<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
 				</div>
 				<div class="mt-4 d-flex flex-column" style="flex: 1 1 0">
-					<field-label :field='form.plot_type' />
-					<field-input :field='form.plot_type' size="10"/>
+					REMOVE HERE
 				</div>
 
 			</template>
