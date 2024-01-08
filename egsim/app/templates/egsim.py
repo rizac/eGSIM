@@ -14,6 +14,7 @@ from ...api.forms.flatfile import FlatfileForm
 from ...api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
                                                FlatfilePlotForm)
 from ...api.views import (ResidualsView, TrellisView, RESTAPIView)
+from ...smtk import intensity_measures_defined_for
 
 
 class URLS:  # noqa
@@ -108,23 +109,36 @@ def get_init_json_data(browser: dict = None,
 
     gsims = []
     imt_groups = []
-    for gsim_name, gsim_data in _get_gsim_for_init_data().items():
-        imt_names = sorted(gsim_data['imts'])
-        warning = gsim_data['warning']  # gsim.warning
-        # imt_names = sorted(i for i in gsim.imts.values_list('name', flat=True))
+    warning_groups = []
+    db_warnings = {
+        models.Gsim.unverified.field.name: models.Gsim.unverified.field.help_text,
+        models.Gsim.experimental.field.name: models.Gsim.experimental.field.help_text,
+        models.Gsim.adapted.field.name: models.Gsim.adapted.field.help_text
+    }
+    for gsim in models.Gsim.queryset('name', *db_warnings):
+        imt_names = sorted(intensity_measures_defined_for(gsim.name))
+        model_warnings = []
+        for field_name, field_help in db_warnings.items():
+            if getattr(gsim, field_name) is True:
+                model_warnings.append(field_help)  # noqa
         try:
             imt_group_index = imt_groups.index(imt_names)
         except ValueError:
             imt_group_index = len(imt_groups)
             imt_groups.append(imt_names)
-        if warning:
-            gsims.append([gsim_name, imt_group_index, str(warning)])
+        if model_warnings:
+            warning_text = "; ".join(model_warnings)
+            try:
+                warning_group_index = warning_groups.index(warning_text)
+            except ValueError:
+                warning_group_index = len(warning_groups)
+                warning_groups.append(warning_text)
+            gsims.append([gsim.name, imt_group_index, warning_group_index])
         else:
-            gsims.append([gsim_name, imt_group_index])
+            gsims.append([gsim.name, imt_group_index])
 
     # get regionalization data (for selecting models on a map):
-    regs = list(models.Regionalization.queryset('name', 'geometry', 'url',
-                                                'media_root_path'))
+    regs = list(models.Regionalization.queryset('name', 'url', 'media_root_path'))
     regionalizations = {
         'url': URLS.GET_GSIMS_FROM_REGION,
         'names': [r.name for r in regs],
@@ -155,6 +169,7 @@ def get_init_json_data(browser: dict = None,
         'sel_component': TAB.home.name if not selected_menu else selected_menu,
         'gsims': gsims,
         'imt_groups': imt_groups,
+        'warning_groups': warning_groups,
         'flatfile': {
             'choices': flatfiles,
             'upload_url': URLS.FLATFILE_INSPECTION,
@@ -185,17 +200,6 @@ def _get_bbox(reg: models.Regionalization) -> list[float]:
         bounds[2] = max(bounds[2], bounds_[2])
         bounds[3] = max(bounds[3], bounds_[3])
     return bounds
-
-
-def _get_gsim_for_init_data():
-    """Get gsim DB model instances and all related data (imts and warnings)"""
-    ret = {}
-    for obj in models.Gsim.queryset():
-        model = obj.name
-        if model not in ret:
-            ret[model] = {'warning': obj.warning, 'imts': set()}
-        ret[model]['imts'].add(obj.imt)
-    return ret
 
 
 def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
@@ -287,24 +291,24 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
     trellis_form = components_props['trellis']['form']
     trellis_form['gsim'][val] = gsimnames
     trellis_form['imt'][val] = ['PGA']
-    trellis_form['magnitude'][val] = "5:7"
+    trellis_form['magnitude'][val] = "5 6 7"
     trellis_form['distance'][val] = "10 50 100"
     trellis_form['aspect'][val] = 1
     trellis_form['dip'][val] = 60
-    trellis_form['plot_type'][val] = 's'
+    # trellis_form['plot_type'][val] = 's'
 
     residuals_form = components_props['residuals']['form']
     residuals_form['gsim'][val] = gsimnames
     residuals_form['imt'][val] = ["SA(0.2)", "SA(1.0)", "SA(2.0)"]
     residuals_form['flatfile'][val] = "esm2018"
     residuals_form['selexpr'][val] = "magnitude > 6"
-    residuals_form['plot_type'][val] = MOF.RES
+    # residuals_form['plot_type'][val] = MOF.RES
 
-    testing_form = components_props['testing']['form']
-    testing_form['gsim'][val] = ['KothaEtAl2020ESHM20']
-    testing_form['imt'][val] = ['PGA']  # , 'PGV', "0.2", "1.0", "2.0"]
-    testing_form['selexpr'][val] = "magnitude > 6"
-    testing_form['fit_measure'][val] = [MOF.RES]  # , MOF.LH]
+    # testing_form = components_props['testing']['form']
+    # testing_form['gsim'][val] = ['KothaEtAl2020ESHM20']
+    # testing_form['imt'][val] = ['PGA']  # , 'PGV', "0.2", "1.0", "2.0"]
+    # testing_form['selexpr'][val] = "magnitude > 6"
+    # testing_form['fit_measure'][val] = [MOF.RES]  # , MOF.LH]
 
 
 def form_to_json(form: Union[Type[EgsimBaseForm], EgsimBaseForm],
