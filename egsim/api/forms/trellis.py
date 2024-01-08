@@ -85,8 +85,8 @@ class TrellisForm(GsimImtForm, APIForm):
     magnitude = ArrayField(FloatField(), label='Magnitude(s)', required=True)
     distance = ArrayField(FloatField(), label='Distance(s)', required=True)
     vs30 = FloatField(label=mark_safe('V<sub>S30</sub> (m/s)'), initial=760.0)
-    aspect = FloatField(label='Rupture Length / Width', min_value=0.)
-    dip = FloatField(label='Dip', min_value=0., max_value=90.)
+    aspect = FloatField(label='Rupture Length / Width', min_value=0., initial=1.0)
+    dip = FloatField(label='Dip', min_value=0., max_value=90., initial=90)
     rake = FloatField(label='Rake', min_value=-180., max_value=180.,
                       initial=0.)
     strike = FloatField(label='Strike', min_value=0., max_value=360.,

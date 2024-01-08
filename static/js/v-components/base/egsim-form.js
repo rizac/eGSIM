@@ -4,9 +4,9 @@
 Base class for Form components. See README.md for details */
 var FormDataHTTPClient = {
 	props: {
-		form: Object,  // field names mapped to Objects describing <input>s or <select>
-					   // (the keys 'value' and 'error' are mandatory)
-		url: String,  // the request URL after form submission
+		form: Object,	// field names mapped to Objects describing <input>s or <select>
+						// (the keys 'value' and 'error' are mandatory)
+		url: String,	// the request URL after form submission
 	},
 	methods: {
 		postFormData(url=null){
