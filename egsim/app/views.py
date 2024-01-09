@@ -21,7 +21,7 @@ from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
                                               FlatfileInspectionForm, FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm
 from ..api.views import (error_response, RESTAPIView, TrellisView, ResidualsView,
-                         MIMETYPE)
+                         MimeType)
 
 
 def main(request, selected_menu=None):
@@ -107,7 +107,7 @@ def download_request(request, key: TAB, filename: str):
     :param key: a :class:`TAB` name associated to a REST API TAB (i.e.,
         with an associated Form class)
     """
-    form_class = TAB[key].formclass
+    form_class = TAB[key].formclass  # FIXME remove pycharm lint warning
 
     def input_dict() -> dict:
         """return the input dict. This function allows to work each time
@@ -144,9 +144,8 @@ def download_response(request, key: TAB, filename: str):
     elif ext == '.csv_eu':
         return download_ascsv(request, key, basename + '.csv', ';', ',')
     try:
-        content_type = MIMETYPE[ext[1:].upper()]
-        return download_asimage(request, filename, content_type)
-    except KeyError:
+        return download_asimage(request, filename, ext[1:])
+    except AttributeError:
         pass  # filename extension not recognized as image
     return error_response(f'Unsupported format "{ext[1:]}"',
                           RESTAPIView.CLIENT_ERR_CODE)
@@ -171,20 +170,11 @@ def download_ascsv(request, key: TAB, filename: str, sep=',', dec='.'):
     return response
 
 
-# FIXME: remove
-# _IMG_FORMATS = {
-#     # 'eps': 'application/postscript',  # NA (note: requires poppler library in case)
-#     'pdf': 'application/pdf',
-#     'svg': 'image/svg+xml',
-#     'png': 'image/png'
-# }
-
-
-def download_asimage(request, filename: str, content_type: MIMETYPE) -> FileResponse:
+def download_asimage(request, filename: str, img_format: str) -> FileResponse:
     """Return the image from the given request built in the frontend GUI
     according to the chosen plots
     """
-    img_format = content_type.name.lower()
+    content_type = getattr(MimeType, img_format)
     if not filename.lower().endswith(f".{img_format}"):
         filename += f".{img_format}"
     jsondata = json.loads(request.body.decode('utf-8'))
