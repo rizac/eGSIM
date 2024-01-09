@@ -1,7 +1,6 @@
 """Module with the views for the web API (no GUI)"""
 from __future__ import annotations
 from collections.abc import Callable, Iterable
-from enum import StrEnum
 from http.client import responses
 from datetime import date, datetime
 import re
@@ -26,16 +25,18 @@ from .forms.flatfile import FlatfileForm
 from .forms.flatfile.residuals import ResidualsForm
 
 
-class MIMETYPE(StrEnum):  # noqa
-    """An enum of supported mime types (content_type in Django Response) loosely
+class MimeType:  # noqa
+    """A collection of supported mime types (content_type in Django Response), loosely
     copied from mimetypes.types_map (https://docs.python.org/3.8/library/mimetypes.html)
     """
-    CSV = "text/csv"
-    JSON = "application/json"
-    HDF = "application/x-hdf"
-    PNG = "image/png"
-    PDF = "application/pdf"
-    SVG = "image/svg+xml"
+    # NOTE: avoid Enums or alike, attributes below will be passed as `content_type` arg
+    # to Responses and must be pure str (subclasses NOT allowed!)
+    csv = "text/csv"
+    json = "application/json"
+    hdf = "application/x-hdf"
+    png = "image/png"
+    pdf = "application/pdf"
+    svg = "image/svg+xml"
     # GZIP = "application/gzip"
 
 
@@ -129,10 +130,9 @@ class RESTAPIView(View):
         :param form_kwargs: keyword arguments to be passed to this class Form
         """
         try:
-            rformat = form_kwargs['data'].pop('format', MIMETYPE.JSON.name.lower())
+            rformat = form_kwargs['data'].pop('format', 'json')
             try:
-                mimetype = MIMETYPE[rformat.upper()]
-                response_function = self.supported_formats()[mimetype]
+                response_function = self.supported_formats()[rformat]
             except KeyError:
                 raise ValidationError(f'Invalid format {rformat}')
             form = self.formclass(**form_kwargs)
@@ -147,10 +147,10 @@ class RESTAPIView(View):
 
     @classmethod
     def supported_formats(cls) -> \
-            dict[MIMETYPE, Callable[[RESTAPIView, APIForm], HttpResponse]]:
+            dict[str, Callable[[RESTAPIView, APIForm], HttpResponse]]:
         """Return a list of supported formats (content_types) by inspecting
-        this class implemented methods. Each dict key is a MIMETYPE enum,
-        mapped to this class method used to obtain the response data in that
+        this class implemented methods. Each dict key is a MimeType attr name,
+        mapped to a class method used to obtain the response data in that
         mime type"""
         formats = {}
         for a in dir(cls):
@@ -158,10 +158,8 @@ class RESTAPIView(View):
                 meth = getattr(cls, a)
                 if callable(meth):
                     frmt = a.split('_', 1)[1]
-                    try:
-                        formats[MIMETYPE[frmt.upper()]] = meth
-                    except KeyError:
-                        pass
+                    if hasattr(MimeType, frmt):
+                        formats[frmt] = meth
         return formats
 
     def response_json(self, form:APIForm) -> JsonResponse:
@@ -181,10 +179,10 @@ class TrellisView(RESTAPIView):
     urls = (f'{API_PATH}/trellis', f'{API_PATH}/model-model-comparison')
 
     def response_csv(self, form:APIForm):
-        return pandas_response(form.response_data(), MIMETYPE.CSV)
+        return pandas_response(form.response_data(), MimeType.csv)
 
     def response_hdf(self, form:APIForm):
-        return pandas_response(form.response_data(), MIMETYPE.HDF)
+        return pandas_response(form.response_data(), MimeType.hdf)
 
     def response_json(self, form:APIForm) -> JsonResponse:
         json_data = dataframe2dict(form.response_data(),
@@ -199,10 +197,10 @@ class ResidualsView(RESTAPIView):
     urls = (f'{API_PATH}/residuals', f'{API_PATH}/model-data-comparison')
 
     def response_csv(self, form:APIForm):
-        return pandas_response(form.response_data(), MIMETYPE.CSV)
+        return pandas_response(form.response_data(), MimeType.csv)
 
     def response_hdf(self, form:APIForm):
-        return pandas_response(form.response_data(), MIMETYPE.HDF)
+        return pandas_response(form.response_data(), MimeType.hdf)
 
     def response_json(self, form:APIForm) -> JsonResponse:
         json_data = dataframe2dict(form.response_data(),
@@ -236,25 +234,25 @@ def error_response(error: Union[str, Exception, dict],
         else:
             message = str(error)
     content.setdefault('message', message)
-    kwargs.setdefault('content_type', MIMETYPE.JSON)
+    kwargs.setdefault('content_type', MimeType.json)
     return JsonResponse(content, status=status, **kwargs)
 
 
-def pandas_response(data:pd.DataFrame, content_type:Optional[MIMETYPE]=None,
+def pandas_response(data:pd.DataFrame, content_type:Optional[str]=None,
                     status=200, reason=None, headers=None, charset=None,
                     as_stream=False) -> HttpResponseBase:  # usually FileResponse
     """Return a `HTTPResponse` for serving pandas dataframes as either HDF or CSV
 
-    :param content_type: optional content type. Either MIMETYPE.CSV or MIMETYPE.HDF
-        If None, it defaults to the former.
+    :param content_type: optional content type. See MimeType attr values. Defaults to
+        `MimeType.csv`
     :param as_stream: if False (the default) return a `FileResponse`, otherwise
         a `StreamingHttpResponse`
     """
     if content_type is None:  # the default is CSV:
-        content_type = MIMETYPE.CSV
-    if content_type == MIMETYPE.CSV:
+        content_type = MimeType.csv
+    if content_type == MimeType.csv:
         content = write_csv_to_buffer(data)
-    elif content_type == MIMETYPE.HDF:
+    elif content_type == MimeType.hdf:
         content = write_hdf_to_buffer({'egsim': data})
     else:
         return error_response(f'cannot serve {data.__class__.__name__} '
