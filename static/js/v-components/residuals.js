@@ -23,7 +23,10 @@ EGSIM.component('residuals', {
 			</template>
 
 			<template v-slot:right-column>
-
+				<gsim-map
+					@gsim-selected="(gs) => { form.gsim.value = Array.from(new Set(form.gsim.value.concat(gs))) }"
+					:regionalizations="form.gsim['data-regionalizations']"
+				/>
 				<imt-select :field="form.imt" style="flex: 1 1 0;" />
 				<div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
 					<flatfile-select :field="form.flatfile"/>

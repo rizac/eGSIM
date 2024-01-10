@@ -11,12 +11,6 @@ EGSIM.component('gsim-select', {
 			modeltext: ""
 		}
 	},
-	created(){
-		// attach non reactive prop (https://stackoverflow.com/a/69533537):
-		this.regionalizations = this.field['data-regionalizations'] || {names: []};
-		this.regionalizations.selected = new Set(this.regionalizations.names);
-		this.regionalizations.selectable = new Set(this.regionalizations.names);
-	},
 	watch: {
 		'field.value': {
 			deep: true,
@@ -24,11 +18,6 @@ EGSIM.component('gsim-select', {
 				this.$emit('gsim-selected', newVal)
 			}
 		},
-		selectableModels(models){  // watch computed property (see below)
-			if(!models.length && this.map){
-				this.map.invalidateSize(); // no popup => map becomes visible underneath => refresh map
-			}
-		}
 	},
 	computed: {
 		infoMsg(){
@@ -84,10 +73,11 @@ EGSIM.component('gsim-select', {
 				   @click="field.value=[]" ></i>
 			</template>
 		</field-label>
-		<div class='d-flex flex-column' style="flex: 1 1 auto; min-width: 18rem">
+		<div class='d-flex flex-column' style="flex: 1 1 auto;">
 			<div class='form-control d-flex flex-column' style='flex: 1 1 auto'
 				 :class="field.error ? 'border-danger' : ''">
-				<div class='d-flex flex-row' style='overflow: auto' :style="{minHeight: field.value.length ? '3rem' : '0px' }"
+				<div class='d-flex flex-row' style='overflow: auto; max-height:6rem'
+					 :style="{minHeight: field.value.length ? '3rem' : '0px' }"
 					 :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
 					<!-- div with cancel icons stacked vertically -->
 					<div class='d-flex flex-column'>
@@ -115,19 +105,14 @@ EGSIM.component('gsim-select', {
 					</div>
 				</div>
 				<div class='mt-1 d-flex flex-row align-items-baseline'>
-					<input type="text" style='flex: 1 1 auto'
+					<input type="text" style='flex: 1 1 auto; width:32rem'
 						   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
-						   :placeholder="'Type name (' + field.choices.length + ' models available)'"
+						   :placeholder="'Type model name (' + field.choices.length + ' available) or select by region (click on map)'"
 						   v-model='modeltext' class="form-control" ref="modelTextControl"
 						   @keydown.down.prevent="focusSelectComponent()"
 						   @keydown.esc.prevent="modeltext=''">
-					<button v-if='modeltext && modeltext.length' class='text-nowrap btn btn-outline-secondary ms-2' type='button'
-							@click="modeltext=''">
-						clear text (ESC)
-					</button>
-					<div v-else class='text-nowrap ms-2'>or select by region (click on map):</div>
 				</div>
-				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;min-height:12rem'>
+				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;'>
 					<select v-show='!!selectableModels.length' multiple class='form-control border-0' ref="modelSelect"
 							@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
 							@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
@@ -138,19 +123,10 @@ EGSIM.component('gsim-select', {
 							{{ m.innerHTML }}
 						</option>
 					</select>
-					<div ref="mapDiv" style='flex: 1 1 auto;cursor:pointer'></div>
 				</div>
 			</div>
 		</div>
 	</div>`,
-	mounted(){
-		this.createLeafletMap();
-	},
-	activated(){
-		if(this.map){
-			this.map.invalidateSize();
-		}
-	},
 	methods: {
 		focusSelectComponent(){
 			if (!!this.selectableModels.length){
@@ -180,161 +156,7 @@ EGSIM.component('gsim-select', {
 				this.$refs.modelTextControl.focus();
 				event.preventDefault();
 			}
-		},
-		createLeafletMap(){
-			var mapDiv = this.$refs.mapDiv;
-			let map = L.map(mapDiv, {center: [48, 7], zoom: 4});
-			// center map:
-			var mapCenter = L.latLng([49, 13]);
-			map.fitBounds(L.latLngBounds([mapCenter, mapCenter]), {maxZoom: 3});
-			/*
-			// add a button to call invalidateSize manually
-			var Control = L.Control.extend({
-				onAdd: function(map) {
-					var btn = L.DomUtil.create('button', 'btn btn-secondary btn-sm');
-					btn.setAttribute('type', 'button');  // prevent form submit
-					var onclick = (evt) => { evt.stopPropagation(); map.invalidateSize(); };
-					btn.addEventListener('click', onclick);
-					btn.innerHTML = '<i class="fa fa-refresh"></i> Redraw map'
-					return btn;
-				}
-			});
-			new Control({ position: 'bottomright' }).addTo(map);
-			*/
-
-			// provide two base layers. Keep it simple as many base layers are just to shof off
-			// and they do not need to be the main map concern
-			// 1 MapBox Outdorrs (if you want more, sign in to mapbox. FIXME: why is it working with the token then?)
-			var geoportailLayer = L.tileLayer('https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
-				attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
-				bounds: [[-75, -180], [81, 180]],
-				minZoom: 2,
-				maxZoom: 19,
-				apikey: 'choisirgeoportail',
-				format: 'image/jpeg',
-				style: 'normal'
-			}).addTo(map);
-			// 2 CartoDB gray scale map (very good with overlays, as in our case)
-			// the added base layer added is set selected by default (do not add the others then)
-			var cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-				attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-				subdomains: 'abcd',
-				maxZoom: 19
-			}).addTo(map);
-
-			// instantiate a layer control (the button on the top-right corner for showing/hiding overlays
-			// overlays will be added when setting the tr model
-			var layersControl = L.control.layers({
-				'Map: Geoportail': geoportailLayer, 'Map: Carto': cartoLayer
-			}, {}, {collapsed: false, position: 'bottomleft'}).addTo(map);  // https://gis.stackexchange.com/a/68243
-			this.addRegionalizationControl(map);
-			this.map = map;
-			map.on("click", this.mapClicked);
-			map.on('zoomend', this.mapBoundsChanged);
-			map.on('moveend', this.mapBoundsChanged);
-		},
-		addRegionalizationControl(map){
-			var field = this.field;
-			var regionalizations = this.regionalizations;
-			var control = L.control({position: 'topright'});
-			control.onAdd = function (map) {
-				var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded leaflet-control');
-				// prevent click on anything on the div to propagate on the map:
-				L.DomEvent.disableClickPropagation(div);
-				// Add title:
-				var title = L.DomUtil.create('span', '', div);
-				title.innerHTML = '<h6>Regionalization:</h6>';
-				for (var name of regionalizations.names){
-					// For each regionalization create a <label> wrapping several HTML controls
-					// Leaflet syntax is: L.DomUtil.create(tag, classes, parent):
-					// Note: display:flex will be set in mapBoundsChanged (see below)
-					var label = L.DomUtil.create('label', 'flex-row align-items-baseline', div);
-					// add input type=checkbox to label
-					var input = L.DomUtil.create('input',
-												 "leaflet-control-layers-selector",
-												 label);
-					input.setAttribute('type', 'checkbox');
-					input.setAttribute('data-name', name);
-					input.checked = regionalizations.selected.has(name);
-					input.addEventListener('input', function (evt) {
-						var name = evt.target.getAttribute('data-name');
-						if (regionalizations.selected.has(name)){
-							regionalizations.selected.delete(name);
-						}else{
-							regionalizations.selected.add(name);
-						}
-					});
-					// add span to label (with regionalization name)
-					var span = L.DomUtil.create('span', 'ms-2', label);
-					span.innerHTML = name;
-					// add anchor to label (with ref. URL, if given):
-					if (regionalizations.ref[name]){
-						var anchor = L.DomUtil.create('a', 'ms-2', label);
-						anchor.setAttribute('href', regionalizations.ref[name]);
-						anchor.setAttribute('target', "_blank");
-						anchor.innerHTML = '<i class="fa fa-link"></i>';
-						anchor.setAttribute('title', 'see ref (open link in new tab)');
-					}
-				}
-				return div;
-			};
-			control.addTo(map);
-		},
-		mapBoundsChanged(event){
-			var mapDiv = this.$refs.mapDiv;
-			var elms = mapDiv.querySelectorAll('input[data-name]');
-			var mapLeafletBounds = this.map.getBounds();
-			var mapBounds = [
-				mapLeafletBounds.getWest(),
-				mapLeafletBounds.getSouth(),
-				mapLeafletBounds.getEast(),
-				mapLeafletBounds.getNorth()
-			];
-			for (var elm of elms){
-				var name = elm.getAttribute('data-name');
-				var regBounds = this.regionalizations.bbox[name];
-				// regBounds: (minLng, minLat, maxLng, maxLat)
-				var outOfBounds = (regBounds[0]>=mapBounds[2] || regBounds[2]<=mapBounds[0] ||
-					regBounds[1]>=mapBounds[3] || regBounds[3]<=mapBounds[1]);
-				if (outOfBounds){
-					this.regionalizations.selectable.delete(name);
-					elm.parentNode.style.display = 'none';
-				}else{
-					this.regionalizations.selectable.add(name);
-					elm.parentNode.style.display = 'flex';
-				}
-			}
-		},
-		mapClicked(event) {
-			var latLng = [event.latlng.lat, event.latlng.lng];
-			// Destroy existing markers marker (or move existing one):
-			this.removeMarkersFromMap();
-			// ad new marker:
-			L.marker(latLng).addTo(this.map);
-			// query data:
-
-			var data = {
-				'latitude': latLng[0],
-				'longitude': latLng[1],
-				'regionalization': Array.from(this.regionalizations.selected).filter(
-				 	name => this.regionalizations.selectable.has(name)
-				 )
-			};
-			// query data and update filter func:
-			axios.post(this.regionalizations.url, data).then(response => {
-				// response.data is an Array of gsim names
-				var selectedModels = new Set(this.field.value || []);
-				var gsims = (response.data || []).filter(m => !selectedModels.has(m));
-				this.field.value.push(...gsims);
-			});
-		},
-		removeMarkersFromMap(){
-			this.map.eachLayer(function (layer) {
-				if (layer instanceof L.Marker){
-					layer.remove();
-				}
-			});
-		},
+		}
 	}
 })
 
@@ -406,6 +228,164 @@ EGSIM.component('imt-select', {
 				imts = imts.filter(elm => elm!='SA').concat(saWithPeriods);
 			}
 			return imts;
+		}
+	}
+})
+
+
+/**
+ * HTML component representing a map of regionalizations allowing models selection
+ */
+EGSIM.component('gsim-map', {
+	props: {
+		regionalizations: {type: Object}
+	},
+	data(){
+		return {map: null};  // leaflet map
+	},
+	emits: ['gsim-selected'],
+	template: `<div ref="mapDiv" style='flex: 1 1 auto;cursor:pointer'></div>`,
+	mounted(){
+		this.map = this.createLeafletMap();
+		this.mapBoundsChanged();  // update regionalization visibility
+	},
+	activated(){
+		this.map && this.map.invalidateSize();
+	},
+	methods: {
+		createLeafletMap(){
+			let map = L.map(this.$refs.mapDiv, {center: [48, 7], zoom: 4});
+			// center map:
+			var mapCenter = L.latLng([49, 13]);
+			map.fitBounds(L.latLngBounds([mapCenter, mapCenter]), {maxZoom: 3});
+
+			// // add a button to call invalidateSize manually
+			// var Control = L.Control.extend({
+			// 	onAdd: function(map) {
+			// 		var btn = L.DomUtil.create('button', 'btn btn-secondary btn-sm');
+			// 		btn.setAttribute('type', 'button');  // prevent form submit
+			// 		var onclick = (evt) => { evt.stopPropagation(); map.invalidateSize(); };
+			// 		btn.addEventListener('click', onclick);
+			// 		btn.innerHTML = '<i class="fa fa-refresh"></i> Redraw map'
+			// 		return btn;
+			// 	}
+			// });
+			// new Control({ position: 'bottomright' }).addTo(map);
+
+			// provide two base layers. Keep it simple as many base layers are just to shof off
+			// and they do not need to be the main map concern
+			// 1 MapBox Outdorrs (if you want more, sign in to mapbox. FIXME: why is it working with the token then?)
+			var geoportailLayer = L.tileLayer('https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+				attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
+				bounds: [[-75, -180], [81, 180]],
+				minZoom: 2,
+				maxZoom: 19,
+				apikey: 'choisirgeoportail',
+				format: 'image/jpeg',
+				style: 'normal'
+			}).addTo(map);
+			// 2 CartoDB gray scale map (very good with overlays, as in our case)
+			// the added base layer added is set selected by default (do not add the others then)
+			var cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+				attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+				subdomains: 'abcd',
+				maxZoom: 19
+			}).addTo(map);
+
+			// instantiate a layer control (the button on the top-right corner for showing/hiding overlays
+			// overlays will be added when setting the tr model
+			var layersControl = L.control.layers({
+				'Map: Geoportail': geoportailLayer, 'Map: Carto': cartoLayer
+			}, {}, {collapsed: false, position: 'bottomleft'}).addTo(map);  // https://gis.stackexchange.com/a/68243
+			this.addRegionalizationControl(map);
+			map.on("click", this.mapClicked);
+			map.on('zoomend', this.mapBoundsChanged);
+			map.on('moveend', this.mapBoundsChanged);
+			return map;
+		},
+		addRegionalizationControl(map){
+			var regionalizations = this.regionalizations;
+			var control = L.control({position: 'topright'});
+			control.onAdd = function (map) {
+				var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded leaflet-control');
+				// prevent click on anything on the div to propagate on the map:
+				L.DomEvent.disableClickPropagation(div);
+				// Add title:
+				var title = L.DomUtil.create('span', '', div);
+				title.innerHTML = '<h6>Regionalization:</h6>';
+				for (var name of regionalizations.names){
+					// For each regionalization create a <label> wrapping several HTML controls
+					// Leaflet syntax is: L.DomUtil.create(tag, classes, parent):
+					// Note: display:flex will be set in mapBoundsChanged (see below)
+					var label = L.DomUtil.create('label', 'flex-row align-items-baseline', div);
+					// add input type=checkbox to label
+					var input = L.DomUtil.create('input',
+												 "leaflet-control-layers-selector",
+												 label);
+					input.setAttribute('type', 'checkbox');
+					input.setAttribute('data-regionalization-name', name);
+					input.setAttribute('checked', true);
+					// add span to label (with regionalization name)
+					var span = L.DomUtil.create('span', 'ms-2', label);
+					span.innerHTML = name;
+					// add anchor to label (with ref. URL, if given):
+					if (regionalizations.ref[name]){
+						var anchor = L.DomUtil.create('a', 'ms-2', label);
+						anchor.setAttribute('href', regionalizations.ref[name]);
+						anchor.setAttribute('target', "_blank");
+						anchor.innerHTML = '<i class="fa fa-link"></i>';
+						anchor.setAttribute('title', 'see ref (open link in new tab)');
+					}
+				}
+				return div;
+			};
+			control.addTo(map);
+		},
+		isRegionalizationSelected(regionalizationName){
+			var elm = this.getRegionalizationInput(regionalizationName);
+			return elm && elm.parentNode.style.display!='none' && elm.checked;
+		},
+		getRegionalizationInput(regionalizationName){
+			return this.$refs.mapDiv.querySelector(`input[data-regionalization-name='${regionalizationName}']`);
+		},
+		mapBoundsChanged(event){
+			var mapLeafletBounds = this.map.getBounds();
+			var mapBounds = [
+				mapLeafletBounds.getWest(),
+				mapLeafletBounds.getSouth(),
+				mapLeafletBounds.getEast(),
+				mapLeafletBounds.getNorth()
+			];
+			for (var name of this.regionalizations.names){
+				var regBounds = this.regionalizations.bbox[name];  // (minLng, minLat, maxLng, maxLat)
+				var outOfBounds = (regBounds[0]>=mapBounds[2] || regBounds[2]<=mapBounds[0] ||
+					regBounds[1]>=mapBounds[3] || regBounds[3]<=mapBounds[1]);
+				this.getRegionalizationInput(name).parentNode.style.display = outOfBounds ? 'none' : 'flex';
+			}
+		},
+		mapClicked(event) {
+			var latLng = [event.latlng.lat, event.latlng.lng];
+			// Destroy existing markers marker (or move existing one):
+			this.removeMarkersFromMap();
+			// ad new marker:
+			L.marker(latLng).addTo(this.map);
+			// query data:
+			var data = {
+				'latitude': latLng[0],
+				'longitude': latLng[1],
+				'regionalization': this.regionalizations.names.filter(name => this.isRegionalizationSelected(name))
+			};
+			// query data and update filter func:
+			axios.post(this.regionalizations.url, data).then(response => {
+				this.$emit('gsim-selected', response.data.models || [])
+			});
+		},
+		removeMarkersFromMap(){
+			this.map.eachLayer(function (layer) {
+				if (layer instanceof L.Marker){
+					layer.remove();
+				}
+			});
 		}
 	}
 })
