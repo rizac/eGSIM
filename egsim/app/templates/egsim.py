@@ -283,8 +283,6 @@ def _setup_default_values(components_props: dict[str, dict[str, Any]]):
     """Set up some dict keys and sub-keys so that the frontend FORM is already
     filled with default values for easy testing
     """
-    from egsim.api.forms.flatfile.gsim import MOF
-
     gsimnames = ['AkkarEtAlRjb2014', 'BindiEtAl2014Rjb', 'BooreEtAl2014',
                  'CauzziEtAl2014', 'KothaEtAl2020ESHM20']
     val = 'value'
