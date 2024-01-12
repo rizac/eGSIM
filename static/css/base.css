@@ -80,3 +80,13 @@ select:not([multiple]):not([size]).form-control{
 *[disabled:not([disabled="false"])], .disabled{ opacity: 0.65 !important;}
 /* style disabled for <option>s (in safari, `disabled` above does not work) */
 option[disabled:not([disabled="false"])], option.disabled{ color: #bbb !important; }
+
+
+/* glass-like form control div */
+div.form-control{
+	backdrop-filter: grayscale(.8) blur(5px);
+	/* background-color:rgba(0,0,0,0.3);
+	color: white; */
+	box-shadow: inset 0 0 0 200px rgb(255 255 255 / 8%);
+	/* border-color:gray; */
+}

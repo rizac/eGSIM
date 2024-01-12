@@ -1,6 +1,7 @@
 /* Residuals plot components (model-to-data comparison) */
 
 EGSIM.component('residuals', {
+	mixins: [FormDataHTTPClient, DataDownloader],  // FIXME DataDownloader i needed?
 	props :{
 		form: Object,
 		url: String,
@@ -13,35 +14,30 @@ EGSIM.component('residuals', {
 			responseData: {}
 		}
 	},
-	template: `<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-		<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
-					:show="formVisible" :dialogbox="formAsDialogBox" @closed="formVisible=false"
-					@submitted="(response) => {formVisible=false;formAsDialogBox=true;responseData=response.data}">
+	template: `<div class='position-relative' style="flex: 1 1 auto">
+		<gsim-map @gsim-selected="(gs) => { form.gsim.value = Array.from(new Set(form.gsim.value.concat(gs))) }"
+				  :regionalizations="form.gsim['data-regionalizations']"
+				  style='position:absolute;inset:0px;z-index:0'
+		/>
 
-			<template v-slot:left-column>
-				<gsim-select :field="form.gsim" :imtField="form.imt" style="flex:1 1 auto" />
-			</template>
-
-			<template v-slot:right-column>
-				<gsim-map
-					@gsim-selected="(gs) => { form.gsim.value = Array.from(new Set(form.gsim.value.concat(gs))) }"
-					:regionalizations="form.gsim['data-regionalizations']"
-				/>
+		<form :form="form" :url="url" :download-url="urls.downloadRequest"
+			  class='d-flex flex-column' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+			<div class="mt-4 form-control pb-3 pt-2 d-flex flex-column" style="flex:0 1 auto">
+				<gsim-select :field="form.gsim" :imtField="form.imt" style="flex:0 1 auto" />
+			</div>
+			<div class="mt-4 form-control pb-3 pt-2">
 				<imt-select :field="form.imt" style="flex: 1 1 0;" />
-				<div class="mt-4 form-control pb-3 pt-2" style="background-color:transparent">
-					<flatfile-select :field="form.flatfile"/>
-					<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
-				</div>
-				<div class="mt-4 d-flex flex-column" style="flex: 1 1 0">
-					REMOVE HERE
-				</div>
-
-			</template>
-		</egsim-form>
+			</div>
+			<div class="mt-4 form-control pb-3 pt-2">
+				<flatfile-select :field="form.flatfile"/><button type='button' class='btn btn-primary'>expr</button>
+				<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
+			</div>
+		</form>
 
 		<residuals-plot-div :data="responseData" :download-url="urls.downloadResponse"
-							class='invisible position-absolute start-0 top-0 end-0 bottom-0'
-							:style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
+							class='invisible'
+							style='position:absolute;inset:0px;z-index:10'
+							:style="{visibility: Object.keys(responseData).length ? 'visible !important' : ''}">
 			<slot>
 				<button @click='formVisible=!formVisible' class='btn btn-sm btn-primary'>
 					<i class='fa fa-list-alt'></i> Configuration
