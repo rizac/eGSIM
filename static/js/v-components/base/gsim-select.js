@@ -31,6 +31,13 @@ EGSIM.component('gsim-select', {
 				var selectedModelNames = new Set(this.field.value);
 				models = this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
 			}
+			// adjust popup height:
+			if (this.$refs.modelSelect){
+				var rect = this.$refs.modelTextControl.getBoundingClientRect();
+				this.$refs.modelSelect.style.width = (rect.right - rect.left) + 'px';
+				this.$refs.modelSelect.size = models.length;
+				this.$refs.modelSelect.style.maxHeight = (.75*(document.documentElement.clientHeight - rect.bottom)) + 'px';
+			}
 			return models;
 		},
 		errors(){  // remember: props are cached https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
@@ -111,11 +118,11 @@ EGSIM.component('gsim-select', {
 					   v-model='modeltext' ref="modelTextControl"
 					   @keydown.down.prevent="focusSelectComponent()"
 					   @keydown.esc.prevent="modeltext=''"
-					   class='form-control'
-					   :style='selectableModels.length ? "border-bottom-left-radius:0rem !important;border-bottom-right-radius:0rem !important" : ""'>
+					   class='form-control'>
+				<div class='position-relative' style='overflow:visible'>
 				<select v-show='!!selectableModels.length' multiple ref="modelSelect"
-						class='form-control'
-						style='flex: 1 1 auto;border-top-left-radius:0rem !important;border-top-right-radius:0rem !important'
+						class='border position-absolute shadow'
+						style='z-index:10000'
 						@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
 						@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
 						@keydown.up="focusTextInput($event);"
@@ -124,6 +131,7 @@ EGSIM.component('gsim-select', {
 						{{ m.innerHTML }}
 					</option>
 				</select>
+				</div>
 			</div>
 		</div>
 	</div>`,
