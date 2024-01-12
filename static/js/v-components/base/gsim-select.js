@@ -56,7 +56,7 @@ EGSIM.component('gsim-select', {
 			return warnings;
 		}
 	},
-	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
+	template: `<div class='d-flex flex-column'>
 		<field-label :field="field">
 			<template v-slot:trailing-content>
 				<span v-if="!field.error" class='ms-2 small text-muted' v-html="infoMsg"></span>
@@ -73,12 +73,12 @@ EGSIM.component('gsim-select', {
 				   @click="field.value=[]" ></i>
 			</template>
 		</field-label>
-		<div class='d-flex flex-column' style="flex: 1 1 auto;">
-			<div class='form-control d-flex flex-column' style='flex: 1 1 auto'
+		<div class='d-flex flex-column' style="flex: 0 1 auto;">
+			<div class='d-flex flex-column' style='flex: 0 1 auto'
 				 :class="field.error ? 'border-danger' : ''">
-				<div class='d-flex flex-row' style='overflow: auto; max-height:6rem'
+				<div class='d-flex flex-row' style='overflow: auto; flex: 0 1 auto'
 					 :style="{minHeight: field.value.length ? '3rem' : '0px' }"
-					 :class="field.value.length ? 'pb-2 mb-2 border-bottom': ''">
+					 :class="field.value.length ? 'form-control mb-2': ''">
 					<!-- div with cancel icons stacked vertically -->
 					<div class='d-flex flex-column'>
 						<div v-for="model in field.value" class='me-1'
@@ -104,26 +104,26 @@ EGSIM.component('gsim-select', {
 						</span>
 					</div>
 				</div>
-				<div class='mt-1 d-flex flex-row align-items-baseline'>
-					<input type="text" style='flex: 1 1 auto; width:32rem'
-						   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
-						   :placeholder="'Type model name (' + field.choices.length + ' available) or select by region (click on map)'"
-						   v-model='modeltext' class="form-control" ref="modelTextControl"
-						   @keydown.down.prevent="focusSelectComponent()"
-						   @keydown.esc.prevent="modeltext=''">
-				</div>
-				<div class='mt-1 d-flex flex-column position-relative' style='flex: 1 1 auto;'>
-					<select v-show='!!selectableModels.length' multiple class='form-control border-0' ref="modelSelect"
-							@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
-							@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
-							@keydown.up="focusTextInput($event);"
-							@keydown.esc.prevent="modeltext=''"
-							style='position:absolute;left:0;top:0;bottom:0;right:0;z-index:10000' >
-						<option v-for="m in selectableModels" :value='m.value'>
-							{{ m.innerHTML }}
-						</option>
-					</select>
-				</div>
+				<!-- select text and relative popup/div -->
+				<input type="text" style='flex: 1 1 auto; width:30rem'
+					   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
+					   :placeholder="'Type model name (' + field.choices.length + ' available) or select by region (click on map)'"
+					   v-model='modeltext' ref="modelTextControl"
+					   @keydown.down.prevent="focusSelectComponent()"
+					   @keydown.esc.prevent="modeltext=''"
+					   class='form-control'
+					   :style='selectableModels.length ? "border-bottom-left-radius:0rem !important;border-bottom-right-radius:0rem !important" : ""'>
+				<select v-show='!!selectableModels.length' multiple ref="modelSelect"
+						class='form-control'
+						style='flex: 1 1 auto;border-top-left-radius:0rem !important;border-top-right-radius:0rem !important'
+						@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
+						@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
+						@keydown.up="focusTextInput($event);"
+						@keydown.esc.prevent="modeltext=''">
+					<option v-for="m in selectableModels" :value='m.value'>
+						{{ m.innerHTML }}
+					</option>
+				</select>
 			</div>
 		</div>
 	</div>`,
@@ -244,7 +244,7 @@ EGSIM.component('gsim-map', {
 		return {map: null};  // leaflet map
 	},
 	emits: ['gsim-selected'],
-	template: `<div ref="mapDiv" style='flex: 1 1 auto;cursor:pointer'></div>`,
+	template: `<div ref="mapDiv" style='cursor:pointer'></div>`,
 	mounted(){
 		this.map = this.createLeafletMap();
 		this.mapBoundsChanged();  // update regionalization visibility
@@ -258,7 +258,7 @@ EGSIM.component('gsim-map', {
 			// center map:
 			var mapCenter = L.latLng([49, 13]);
 			map.fitBounds(L.latLngBounds([mapCenter, mapCenter]), {maxZoom: 3});
-
+			map.zoomControl.setPosition('topright');
 			// // add a button to call invalidateSize manually
 			// var Control = L.Control.extend({
 			// 	onAdd: function(map) {
@@ -295,8 +295,15 @@ EGSIM.component('gsim-map', {
 			// instantiate a layer control (the button on the top-right corner for showing/hiding overlays
 			// overlays will be added when setting the tr model
 			var layersControl = L.control.layers({
-				'Map: Geoportail': geoportailLayer, 'Map: Carto': cartoLayer
-			}, {}, {collapsed: false, position: 'bottomleft'}).addTo(map);  // https://gis.stackexchange.com/a/68243
+					'Map: Geoportail': geoportailLayer,
+					'Map: Carto': cartoLayer
+				},
+				{},
+				{
+					collapsed: false,
+					position: 'topright'
+				}
+			).addTo(map);  // https://gis.stackexchange.com/a/68243
 			this.addRegionalizationControl(map);
 			map.on("click", this.mapClicked);
 			map.on('zoomend', this.mapBoundsChanged);
@@ -350,16 +357,26 @@ EGSIM.component('gsim-map', {
 		},
 		mapBoundsChanged(event){
 			var mapLeafletBounds = this.map.getBounds();
-			var mapBounds = [
-				mapLeafletBounds.getWest(),
-				mapLeafletBounds.getSouth(),
-				mapLeafletBounds.getEast(),
-				mapLeafletBounds.getNorth()
-			];
+			var southWest = mapLeafletBounds.getSouthWest().wrap();
+			var northEast = mapLeafletBounds.getNorthEast().wrap();
+			// define bounding check functions:
+			function outOfBoundsLat(minLat, maxLat){
+				return maxLat < southWest.lat || minLat > northEast.lat;
+			}
+			if (southWest.lng <= northEast.lng){
+				function outOfBoundsLng(minLng, maxLng){
+					return maxLng < southWest.lng || minLng > northEast.lng;
+				}
+			}else{
+				// we have the antimeridian (mid pacific) in the map. This means southWest
+				// is greater than northEast (usually should be the other way around)
+				function outOfBoundsLng(minLng, maxLng){
+					return maxLng < southWest.lng && minLng > northEast.lng;
+				}
+			}
 			for (var name of this.regionalizations.names){
 				var regBounds = this.regionalizations.bbox[name];  // (minLng, minLat, maxLng, maxLat)
-				var outOfBounds = (regBounds[0]>=mapBounds[2] || regBounds[2]<=mapBounds[0] ||
-					regBounds[1]>=mapBounds[3] || regBounds[3]<=mapBounds[1]);
+				var outOfBounds = outOfBoundsLng(regBounds[0], regBounds[2]) || outOfBoundsLat(regBounds[1], regBounds[3]);
 				this.getRegionalizationInput(name).parentNode.style.display = outOfBounds ? 'none' : 'flex';
 			}
 		},

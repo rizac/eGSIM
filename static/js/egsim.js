@@ -52,8 +52,7 @@ const EGSIM = Vue.createApp({
 			<transition name="fade" mode="out-in">
 				<keep-alive>
 					<component v-bind:is="selComponent"
-							   v-bind="selComponentProps"
-							   :class="['home', 'apidoc'].includes(selComponent) ? 'm-0' : 'm-3 mt-4'">
+							   v-bind="selComponentProps" class='m-0'>
 					</component>
 				</keep-alive>
 			</transition>
