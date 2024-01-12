@@ -22,14 +22,14 @@ EGSIM.component('residuals', {
 
 		<form :form="form" :url="url" :download-url="urls.downloadRequest"
 			  class='d-flex flex-column' style='position:absolute;top:0px;bottom:0px;z-index:1'>
-			<div class="mt-4 form-control pb-3 pt-2 d-flex flex-column" style="flex:0 1 auto">
+			<div class="mt-4 form-control pb-3 pt-2 d-flex flex-column position-relative" style="flex:0 1 auto; z-index:1">
 				<gsim-select :field="form.gsim" :imtField="form.imt" style="flex:0 1 auto" />
 			</div>
-			<div class="mt-4 form-control pb-3 pt-2">
+			<div class="mt-4 form-control pb-3 pt-2 position-relative">
 				<imt-select :field="form.imt" style="flex: 1 1 0;" />
 			</div>
-			<div class="mt-4 form-control pb-3 pt-2">
-				<flatfile-select :field="form.flatfile"/><button type='button' class='btn btn-primary'>expr</button>
+			<div class="mt-4 form-control pb-3 pt-2 position-relative">
+				<flatfile-select :field="form.flatfile"/>
 				<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
 			</div>
 		</form>

@@ -90,6 +90,9 @@ var FormDataHTTPClient = {
 	}
 };
 
+
+/* FIXME REMOVE BELOW */
+
 /**Egsim form used in trellis, residuals, testing. Main features:
 - emits a 'submitted' on response successfully received, after submit and a 'closed' if the X button is clicked
 - implements a toolbar for IO operations such as get Form in YAML or JSON config
