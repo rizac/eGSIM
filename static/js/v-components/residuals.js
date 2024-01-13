@@ -14,21 +14,20 @@ EGSIM.component('residuals', {
 			responseData: {}
 		}
 	},
-	template: `<div class='position-relative' style="flex: 1 1 auto">
+	template: `<div class='position-relative' style="flex: 1 1 auto;">
 		<gsim-map @gsim-selected="(gs) => { form.gsim.value = Array.from(new Set(form.gsim.value.concat(gs))) }"
 				  :regionalizations="form.gsim['data-regionalizations']"
-				  style='position:absolute;inset:0px;z-index:0'
-		/>
-
+				  style='position:absolute;inset:0px;z-index:0' />
 		<form :form="form" :url="url" :download-url="urls.downloadRequest"
-			  class='d-flex flex-column' style='position:absolute;top:0px;bottom:0px;z-index:1'>
-			<div class="mt-4 form-control pb-3 pt-2 d-flex flex-column position-relative" style="flex:0 1 auto; z-index:1">
-				<gsim-select :field="form.gsim" :imtField="form.imt" style="flex:0 1 auto" />
-			</div>
-			<div class="mt-4 form-control pb-3 pt-2 position-relative">
-				<imt-select :field="form.imt" style="flex: 1 1 0;" />
-			</div>
-			<div class="mt-4 form-control pb-3 pt-2 position-relative">
+			  class='d-flex flex-column ps-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+			<!-- css notes below: position makes z-index below work,
+			z-index shows models popup in front of all other components -->
+			<gsim-select :field="form.gsim" :imtField="form.imt"
+						 class="mt-4 form-control pb-3 pt-2 position-relative"
+						 style="z-index:1" />
+			<imt-select :field="form.imt"
+						class="my-4 form-control pb-3 pt-2 position-relative" />
+			<div class="mb-4 form-control pb-3 pt-2 position-relative">
 				<flatfile-select :field="form.flatfile"/>
 				<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
 			</div>
