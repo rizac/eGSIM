@@ -77,62 +77,59 @@ EGSIM.component('gsim-select', {
 				   @click="field.value=field.value.filter(m => !errors[m])"></i>
 				<i v-show="field.value.length && !field.error"
 				   aria-label="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
-				   @click="field.value=[]" ></i>
+				   @click="field.value=[]"></i>
 			</template>
 		</field-label>
-		<div class='d-flex flex-column' style="flex: 0 1 auto;">
-			<div class='d-flex flex-column' style='flex: 0 1 auto'
-				 :class="field.error ? 'border-danger' : ''">
-				<div class='d-flex flex-row' style='overflow: auto; flex: 0 1 auto'
-					 :style="{minHeight: field.value.length ? '3rem' : '0px' }"
-					 :class="field.value.length ? 'form-control mb-2': ''">
-					<!-- div with cancel icons stacked vertically -->
-					<div class='d-flex flex-column'>
-						<div v-for="model in field.value" class='me-1'
-							 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-							 aria-label="remove from selection (to remove all models, click the same button on this panel top right corner)"
-							 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
-							<i class='fa fa-times-circle'></i>
-						</div>
-					</div>
-					<!-- div with selected model names stacked vertically -->
-					<div class='d-flex flex-column' style='flex: 1 1 auto'>
-						<div v-for="model in field.value"
-							 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-							 :aria-label="errors[model] || warnings[model] || ''">{{ model }}</div>
-					</div>
-					<!-- div with warning icons stacked vertically -->
-					<div class='d-flex flex-column'>
-						<span v-for="model in field.value"
-							  :style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
-							  :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-							  class='me-1'>
-							<i class='fa fa-exclamation-triangle'></i>
-						</span>
+		<div style='overflow: auto; flex: 1 1 0px'
+			 :class="field.value.length ? 'form-control mb-2': ''"
+			 :style="{minHeight: field.value.length ? '15rem' : '0px' }">
+			<div class='d-flex flex-row'>
+				<!-- div with cancel icons stacked vertically -->
+				<div class='d-flex flex-column'>
+					<div v-for="model in field.value" class='me-1'
+						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						 aria-label="remove from selection (to remove all models, click the same button on this panel top right corner)"
+						 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
+						<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
-				<!-- select text and relative popup/div -->
-				<input type="text" style='flex: 1 1 auto; width:30rem'
-					   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
-					   :placeholder="'Type model name (' + field.choices.length + ' available) or select by region (click on map)'"
-					   v-model='modeltext' ref="modelTextControl"
-					   @keydown.down.prevent="focusSelectComponent()"
-					   @keydown.esc.prevent="modeltext=''"
-					   class='form-control'>
-				<div class='position-relative' style='overflow:visible'>
-				<select v-show='!!selectableModels.length' multiple ref="modelSelect"
-						class='border position-absolute shadow'
-						style='z-index:10000'
-						@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
-						@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
-						@keydown.up="focusTextInput($event);"
-						@keydown.esc.prevent="modeltext=''">
-					<option v-for="m in selectableModels" :value='m.value'>
-						{{ m.innerHTML }}
-					</option>
-				</select>
+				<!-- div with selected model names stacked vertically -->
+				<div class='d-flex flex-column'>
+					<div v-for="model in field.value"
+						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						 :aria-label="errors[model] || warnings[model] || ''">{{ model }}</div>
+				</div>
+				<!-- div with warning icons stacked vertically -->
+				<div class='d-flex flex-column'>
+					<span v-for="model in field.value"
+						  :style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
+						  :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						  class='me-1'>
+						<i class='fa fa-exclamation-triangle'></i>
+					</span>
 				</div>
 			</div>
+		</div>
+		<!-- select text and relative popup/div -->
+		<input type="text" style='width:30rem'
+			   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
+			   :placeholder="'Type name (' + field.choices.length + ' models available) or select by region (click on map)'"
+			   v-model='modeltext' ref="modelTextControl"
+			   @keydown.down.prevent="focusSelectComponent()"
+			   @keydown.esc.prevent="modeltext=''"
+			   class='form-control'>
+		<div class='position-relative' style='overflow:visible'>
+			<select v-show='!!selectableModels.length' multiple ref="modelSelect"
+					class='border position-absolute shadow'
+					style='z-index:10000'
+					@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
+					@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
+					@keydown.up="focusTextInput($event);"
+					@keydown.esc.prevent="modeltext=''">
+				<option v-for="m in selectableModels" :value='m.value'>
+					{{ m.innerHTML }}
+				</option>
+			</select>
 		</div>
 	</div>`,
 	methods: {
