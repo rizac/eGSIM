@@ -24,7 +24,7 @@ EGSIM.component('residuals', {
 			z-index shows models popup in front of all other components -->
 			<gsim-select :field="form.gsim" :imtField="form.imt"
 						 class="mt-4 form-control pb-3 pt-2 position-relative"
-						 style="z-index:1" />
+						 style="z-index:1; flex: 0 1 auto;min-height:0px" />
 			<imt-select :field="form.imt"
 						class="my-4 form-control pb-3 pt-2 position-relative" />
 			<div class="mb-4 form-control pb-3 pt-2 position-relative">

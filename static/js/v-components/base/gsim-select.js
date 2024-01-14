@@ -80,9 +80,8 @@ EGSIM.component('gsim-select', {
 				   @click="field.value=[]"></i>
 			</template>
 		</field-label>
-		<div style='overflow: auto; flex: 1 1 0px'
-			 :class="field.value.length ? 'form-control mb-2': ''"
-			 :style="{minHeight: field.value.length ? '15rem' : '0px' }">
+		<div style='overflow: auto; flex: 0 1 auto; min-height:0px'
+			 :class="field.value.length ? 'd-flex flex-column form-control mb-2': 'd-none'">
 			<div class='d-flex flex-row'>
 				<!-- div with cancel icons stacked vertically -->
 				<div class='d-flex flex-column'>
