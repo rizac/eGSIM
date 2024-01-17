@@ -25,7 +25,7 @@ def auto_create_media_root():
 
 @pytest.fixture()
 def client() -> Client:
-    """A Django test client instance. Overwrite default pytest-django foxture with
+    """A Django test client instance. Overwrite default pytest-django fixture with
     the same name to provide a client with enforce_csrf_checks=True.
     This allows to spot when a request would need a csfr token, and fix it by
     adding the CSFR Token it or making the request @csrf_exempt

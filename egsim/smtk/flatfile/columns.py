@@ -25,7 +25,7 @@ except ImportError:
 class ColumnType(Enum):
     """Flatfile column type"""
     rupture = 'Rupture parameter'
-    sites = 'Sites parameter'
+    site = 'Site parameter'
     distance = 'Distance measure'
     intensity = 'Intensity measure'
 
@@ -113,6 +113,14 @@ def get_intensity_measures() -> set[str]:
     return imts
 
 
+# def get_types() -> dict[str, ColumnType]:
+#     """Return a dict of strings with all column names (including aliases)
+#     mapped to the relative ColumnType, or None (no type assigned)
+#     """
+#     rup = set()
+#     _extract_from_columns(load_from_yaml(), rupture_params=rup)
+#     return rup
+
 # Column name and aliases, mapped to all their aliases
 # The dict values will always include at least the column name itself:
 _alias: dict[str, frozenset[str]] = None  # noqa
@@ -186,7 +194,7 @@ def load_from_yaml(cache=True) -> dict[str, dict[str, Any]]:
 
 def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
                           rupture_params:set[str]=None,
-                          sites_params: set[str] = None,
+                          site_params: set[str] = None,
                           distances: set[str] = None,
                           imts: set[str] = None,
                           dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
@@ -196,10 +204,11 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
                           help:dict=None):
     """Extract data from `columns` (the metadata stored in the YAML file)
      and put it into the passed function arguments that are not missing / None.
+     **Column aliases will be included**
 
     :param rupture_params: set or None. If set, it will be populated with all flatfile
         columns (aliases included) that denote an OpenQuake rupture parameter
-    :param sites_params: set or None. If set, it will be populated with all flatfile
+    :param site_params: set or None. If set, it will be populated with all flatfile
         columns (aliases included) that denote an OpenQuake sites parameter
     :param distances: set or None. If set, it will be populated with all flatfile
         columns (aliases included) that denote an OpenQuake distance measure
@@ -223,7 +232,7 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
         (aliases included) mapped to their description. Columns with no help will not be
         present
     """
-    check_type = rupture_params is not None or sites_params is not None \
+    check_type = rupture_params is not None or site_params is not None \
                  or distances is not None or imts is not None
     for c_name, props in columns.items():
         aliases = props.get('alias', [])
@@ -239,8 +248,8 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
                 ctype = ColumnType[props['type']]
                 if rupture_params is not None and ctype == ColumnType.rupture:
                     rupture_params.add(name)
-                if sites_params is not None and ctype == ColumnType.sites:
-                    sites_params.add(name)
+                if site_params is not None and ctype == ColumnType.site:
+                    site_params.add(name)
                 if distances is not None and ctype == ColumnType.distance:
                     distances.add(name)
                 if imts is not None and ctype == ColumnType.intensity:

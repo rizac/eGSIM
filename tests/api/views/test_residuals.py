@@ -13,8 +13,8 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
-from egsim.api.views import ResidualsView, RESTAPIView, as_querystring, MIMETYPE, \
-    read_csv_from_buffer, read_hdf_from_buffer
+from egsim.api.views import ResidualsView, RESTAPIView, as_querystring, \
+    read_csv_from_buffer, read_hdf_from_buffer, MimeType
 from egsim.smtk.converters import dataframe2dict
 
 
@@ -164,7 +164,9 @@ class Test:
             else:
                 inputdic['format'] = format
 
-        resp2 = client.post(self.url, data=inputdic, content_type=MIMETYPE[format.upper()])
+        resp2 = client.post(
+            self.url, data=inputdic, content_type='application/json')
+
         assert resp2.status_code == 200
         content = BytesIO(resp2.getvalue())
         dfr2 = read_csv_from_buffer(content) if format == 'csv' \

@@ -121,6 +121,8 @@ class RESTAPIView(View):
         else:
             stream = StringIO(request.body.decode('utf-8'))
             return self.response(data=yaml.safe_load(stream))
+            # stream = StringIO(request.body.decode('utf-8'))
+            # return self.response(data=self.parse_query_dict(request.POST))
 
     def response(self, **form_kwargs):
         """process an input Response by calling `self.process` if the input is
