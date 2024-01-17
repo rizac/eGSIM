@@ -10,8 +10,8 @@
 #             Note that in Python pandas, missing data in int and bool dtypes is invalid.
 #             In these cases, the presence or not of a default (usually 0 for int and
 #             false for bool) will also affect data validation
-#   type:     The column type (optional). Supported values are: rupture, sites, distance,
-#             intensity (rupture and sites parameter, distance and intensity measure,
+#   type:     The column type (optional). Supported values are: rupture, site, distance,
+#             intensity (rupture and site parameter, distance and intensity measure,
 #             respectively). If a type is given, the column name must match exactly the
 #             OpenQuake name in case of intensity measure (e.g. PGA, not pga), whereas
 #             for all other types the OpenQuake name can be added as alias (see below)
@@ -141,23 +141,23 @@ z1pt0:
     derived from the vs30 (if present) using the Chiou & Youngs (2014) California 
     model
   alias: z1
-  type: sites
+  type: site
 z2pt5:
   dtype: float
   help: >-
     depth of the layer where seismic waves start to propagate with a speed above 
     2.5 km/sec, in km. Missing data (e.g., empty cell, NaN, column not provided) will 
     be derived from the vs30 (if present) using the Campbell & Bozorgnia (2014) model
-  type: sites
+  type: site
 vs30:
   dtype: float
   ">=": 0
   help: Average shear wave velocity in the top 30 m, in m/s
-  type: sites
+  type: site
 backarc:
   dtype: bool
   default: false
-  type: sites
+  type: site
   help: >-
     boolean indicating if the site is in the subduction backarc. When missing or false, 
     the site is assumed to be unknown or in the subduction forearc
@@ -167,47 +167,47 @@ sta_lat:
   "<=": 90
   help: station latitude (deg)
   alias: [station_latitude, lat]  # lat is for compatibility with OpenQuake
-  type: sites
+  type: site
 sta_lon:
   dtype: float
   ">=": -180
   "<=": 180
   help: station longitude (deg)
   alias: [station_longitude, lon]  # lon is for compatibility with OpenQuake
-  type: sites
+  type: site
 vs30measured:
   dtype: bool
   default: true
   help: whether or not the Vs30 is measured (default true)
-  type: sites
+  type: site
 xvf:
   dtype: float
   help: distance to the volcanic front (km)
-  type: sites
+  type: site
 fpeak:
   dtype: float
   ">=": 0
   help: >-
     Frequency that corresponds to the peak of the horizontal to vertical
     spectral ratio (Hz)
-  type: sites
+  type: site
 region:
   dtype: int
   ">=": 0
   "<=": 5
   default: 0
   help: The ESHM2020 cluster region to which the site belongs
-  type: sites
+  type: site
 geology:
   dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC", "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
   default: UNKNOWN
   help: geological classification of the site
-  type: sites
+  type: site
 slope:
   dtype: float
   ">": 0
   help: The local slope of the station
-  type: sites
+  type: site
 PGA:
   dtype: float
   help: Peak ground acceleration, in g

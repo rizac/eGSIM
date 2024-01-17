@@ -12,9 +12,9 @@ import pandas as pd
 import numpy as np
 
 from openquake.hazardlib import imt
-from egsim.smtk import registered_imt_names
+from egsim.smtk import registered_imts
 
-from egsim.smtk import (registered_gsim_names,
+from egsim.smtk import (registered_gsims,
                         rupture_params_required_by,
                         site_params_required_by,
                         distances_required_by)
@@ -50,10 +50,10 @@ def test_flatfile_extract_from_yaml():
                 raise ValueError(f"alias(es) {dupes} already defined as name")
 
     c_type, c_alias = {}, {}
-    c_rupture, c_sites, c_dist, c_imts = set(), set(), set(), set()
+    c_rupture, c_site, c_dist, c_imts = set(), set(), set(), set()
     c_dtype, c_default, c_help, c_bounds = {}, {}, {}, {}
     _extract_from_columns(dic, rupture_params=c_rupture,
-                         sites_params=c_sites,
+                         site_params=c_site,
                          distances=c_dist, imts=c_imts,
                          dtype=c_dtype, default=c_default, help=c_help,
                          alias=c_alias, bounds=c_bounds)
@@ -63,8 +63,8 @@ def test_flatfile_extract_from_yaml():
         c_type = None
         if c in c_rupture:
             c_type = ColumnType.rupture
-        elif c in c_sites:
-            c_type = ColumnType.sites
+        elif c in c_site:
+            c_type = ColumnType.site
         elif c in c_dist:
             c_type = ColumnType.distance
         elif c in c_imts:
@@ -91,7 +91,7 @@ def test_flatfile_extract_from_yaml():
     for n in dic:
         if n in c_rupture:
             rup[n] = c_alias[n]
-        elif n in c_sites:
+        elif n in c_site:
             site[n] = c_alias[n]
         elif n in c_dist:
             dist[n] = c_alias[n]
@@ -189,7 +189,7 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
     oq_sites_params = set()
     oq_distances = set()
 
-    for name in registered_gsim_names:
+    for name in registered_gsims:
         oq_rupture_params.update(rupture_params_required_by(name))
         oq_sites_params.update(site_params_required_by(name))
         oq_distances.update(distances_required_by(name))
@@ -208,7 +208,7 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
 
     for ix in imts:
         x = getattr(imt, ix)
-        assert callable(x) and x.__name__ in registered_imt_names
+        assert callable(x) and x.__name__ in registered_imts
 
 
 def test_Column_dtype():

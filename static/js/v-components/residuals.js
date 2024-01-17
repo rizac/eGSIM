@@ -31,6 +31,24 @@ EGSIM.component('residuals', {
 				<flatfile-select :field="form.flatfile"/>
 				<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
 			</div>
+
+			<div class='d-flex flex-column'>
+				<div> Model-to-data comparison </div>
+				<div class='d-flex flex-row'>
+					<button type='button' class='me-2 btn-btn-primary'>
+						<i class="fa fa-bar-chart"></i> Show
+					</button>
+					<button type='button' class='me-2 btn-btn-primary'>
+						<i class="fa fa-download"></i> Get
+					</button>
+					<button type='button' class='me-2 btn-btn-primary'>
+						<i class="fa fa-download"></i> Get with tutorial
+					</button>
+					<button type='button' class='me-2 btn-btn-primary'>
+						<i class="fa fa-download"></i> run in custom code
+					</button>
+				</div>
+			</div>
 		</form>
 
 		<residuals-plot-div :data="responseData" :download-url="urls.downloadResponse"

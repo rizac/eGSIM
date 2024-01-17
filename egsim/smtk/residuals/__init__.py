@@ -77,7 +77,8 @@ def prepare_flatfile(flatfile: pd.DataFrame,
                      gsims: dict[str, GMPE],
                      imts: dict[str, imt.IMT]) -> pd.DataFrame:
     """Return a version of flatfile ready for residuals computation with
-    the given gsims and imts"""
+    the given gsims and imts
+    """
     flatfile_r = get_flatfile_for_residual_analysis(flatfile, gsims.values(), imts)
     # copy event columns (raises if columns not found):
     ev_cols = get_event_id_column_names(flatfile)
