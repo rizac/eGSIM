@@ -49,27 +49,14 @@ def test_flatfile_extract_from_yaml():
             if dupes:
                 raise ValueError(f"alias(es) {dupes} already defined as name")
 
-    c_type, c_alias = {}, {}
-    c_rupture, c_site, c_dist, c_imts = set(), set(), set(), set()
-    c_dtype, c_default, c_help, c_bounds = {}, {}, {}, {}
-    _extract_from_columns(dic, rupture_params=c_rupture,
-                         site_params=c_site,
-                         distances=c_dist, imts=c_imts,
+    c_type, c_dtype, c_alias, c_default, c_help, c_bounds = {}, {}, {}, {}, {}, {}
+    _extract_from_columns(dic, type=c_type,
                          dtype=c_dtype, default=c_default, help=c_help,
                          alias=c_alias, bounds=c_bounds)
 
     # Check column properties within itself (no info on other columns required):
     for c in dic:
-        c_type = None
-        if c in c_rupture:
-            c_type = ColumnType.rupture
-        elif c in c_site:
-            c_type = ColumnType.site
-        elif c in c_dist:
-            c_type = ColumnType.distance
-        elif c in c_imts:
-            c_type = ColumnType.intensity
-        props = {'ctype': c_type, 'name': c}
+        props = {'name': c, 'ctype': c_type.get(c, None)}
         if c in c_dtype:
             props['dtype'] = c_dtype.pop(c)
         if c in c_default:
@@ -87,16 +74,19 @@ def test_flatfile_extract_from_yaml():
     # c_rupture, c_sites and c_distances because they are set containing all names
     # and aliases mixed up. As such, separate names and aliases in the following
     # dicts (column name as dict key, column aliases as dict values):
-    rup, site, dist = {}, {}, {}
+    rup, site, dist, imtz = {}, {}, {}, set()
     for n in dic:
-        if n in c_rupture:
+        if c_type.get(n, None) == ColumnType.rupture:
             rup[n] = c_alias[n]
-        elif n in c_site:
+        elif c_type.get(n, None) == ColumnType.site:
             site[n] = c_alias[n]
-        elif n in c_dist:
+        elif c_type.get(n, None) == ColumnType.distance:
             dist[n] = c_alias[n]
+        elif c_type.get(n, None) == ColumnType.intensity:
+            imtz.add(n)
+
     # now check names with openquake names:
-    check_with_openquake(rup, site, dist, c_imts)
+    check_with_openquake(rup, site, dist, imtz)
 
 
 class missingarg:

@@ -24,7 +24,7 @@ from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
 from ..flatfile.columns import (InvalidColumn, MissingColumn,
-                                get_rupture_params)
+                                get_rupture_params, get_types, ColumnType)
 
 
 def get_residuals(
@@ -64,10 +64,23 @@ def get_residuals(
     sorted_cols = product(imts, labels, gsims)
     residuals = residuals[[c for c in sorted_cols if c in original_cols]]
     # concat:
-    # FIXME: maybe observations instead of flatfile so that we harmonize with the
-    #  trellis output?
-    flatfile_r.rename(columns={c: ('flatfile', c, '') for c in flatfile_r.columns},
+    # FIXME: use 'input_data' also in trellis output?
+    c_types = get_types()
+    for col in get_event_id_column_names(flatfile_r):
+        c_types.setdefault(col, ColumnType.rupture)
+    try:
+        for col in get_station_id_column_names(flatfile_r):
+            c_types.setdefault(col, ColumnType.site)
+    except InvalidColumn:
+        pass
+    flatfile_r.rename(columns={c: ('input_data',
+                                   c_types[c].name if c in c_types else 'misc',
+                                   c)
+                               for c in flatfile_r.columns},
                       inplace=True)
+    # sort columns:
+    flatfile_r.sort_index(axis=1, inplace=True)
+    # concat residuals and observations
     residuals = pd.concat([residuals, flatfile_r], axis=1)
     residuals.columns = pd.MultiIndex.from_tuples(residuals.columns)
     return residuals
@@ -135,7 +148,10 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
     # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
     ev_sub_flatfiles = flatfile.groupby(get_event_id_column_names(flatfile))
-
+    # FIXME: FutureWarning: In a future version of pandas, a length 1 tuple
+    #   will be returned when iterating over a groupby with a grouper equal to
+    #   a list of length 1. Don't supply a list with a single grouper to avoid
+    #   this warning.
     for ev_id, dfr in ev_sub_flatfiles:
         if not dfr.empty:  # for safety ...
             yield EventContext(dfr)
