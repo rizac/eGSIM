@@ -99,27 +99,23 @@ def get_rupture_params() -> set[str]:
     """Return a set of strings with all column names (including aliases)
     denoting a rupture parameter
     """
-    rup = set()
-    _extract_from_columns(load_from_yaml(), rupture_params=rup)
-    return rup
+    return {k for k, v in get_types().items() if v == ColumnType.rupture}
 
 
 def get_intensity_measures() -> set[str]:
     """Return a set of strings with all column names
     denoting an intensity measure. Sa, if given, is returned without period
     """
-    imts = set()
-    _extract_from_columns(load_from_yaml(), imts=imts)
-    return imts
+    return {k for k, v in get_types().items() if v == ColumnType.intensity}
 
 
-# def get_types() -> dict[str, ColumnType]:
-#     """Return a dict of strings with all column names (including aliases)
-#     mapped to the relative ColumnType, or None (no type assigned)
-#     """
-#     rup = set()
-#     _extract_from_columns(load_from_yaml(), rupture_params=rup)
-#     return rup
+def get_types() -> dict[str, ColumnType]:
+    """Return a dict of strings with all column names (including aliases)
+    mapped to the relative ColumnType, or None (no type assigned)
+    """
+    typ = {}
+    _extract_from_columns(load_from_yaml(), type=typ)
+    return typ
 
 # Column name and aliases, mapped to all their aliases
 # The dict values will always include at least the column name itself:
@@ -167,7 +163,6 @@ def get_dtypes_and_defaults() -> \
     return _dtype, _default
 
 
-
 # YAML file path:
 _ff_metadata_path = join(dirname(__file__), 'columns.yaml')
 # cache storage of the data in the YAML:
@@ -193,10 +188,7 @@ def load_from_yaml(cache=True) -> dict[str, dict[str, Any]]:
 
 
 def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
-                          rupture_params:set[str]=None,
-                          site_params: set[str] = None,
-                          distances: set[str] = None,
-                          imts: set[str] = None,
+                          type:dict[str, Union[ColumnType, None]]=None,  # noqa
                           dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
                           alias:dict[str, frozenset[str]]=None,
                           default:dict[str, Any]=None,
@@ -206,14 +198,9 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
      and put it into the passed function arguments that are not missing / None.
      **Column aliases will be included**
 
-    :param rupture_params: set or None. If set, it will be populated with all flatfile
-        columns (aliases included) that denote an OpenQuake rupture parameter
-    :param site_params: set or None. If set, it will be populated with all flatfile
-        columns (aliases included) that denote an OpenQuake sites parameter
-    :param distances: set or None. If set, it will be populated with all flatfile
-        columns (aliases included) that denote an OpenQuake distance measure
-    :param imts: set or None. If set, it will be populated with all flatfile
-        columns (aliases included) that denote an OpenQuake intensity parameter
+    :param type: dict or None. If dict, it will be populated with all flatfile columns
+         (aliases included) mapped to their type (a ColumnType enum). Columns with no
+        data type will not be present
     :param dtype: dict or None. If dict, it will be populated with all flatfile columns
          (aliases included) mapped to their data type (a name of an item of
         the enum :ref:`ColumnDtype` - or pandas `CategoricalDtype`). Columns with no
@@ -232,8 +219,6 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
         (aliases included) mapped to their description. Columns with no help will not be
         present
     """
-    check_type = rupture_params is not None or site_params is not None \
-                 or distances is not None or imts is not None
     for c_name, props in columns.items():
         aliases = props.get('alias', [])
         if isinstance(aliases, str):
@@ -242,34 +227,32 @@ def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
             aliases = set(aliases)
         aliases.add(c_name)
         aliases = frozenset(aliases)
-        _dtype = None  # cache value, see below
+        c_help = props.get('help', '')
+        has_type = 'type' in props
+        c_type = ColumnType[props['type']] if has_type else None
+        has_dtype = 'dtype' in props
+        c_dtype = cast_dtype(props['dtype']) if has_dtype else None
+        has_default = 'default' in props
+        c_default = props['default'] if has_default else None
+        if has_default and has_dtype:
+            c_default = cast_value(c_default, c_dtype)
+        c_bounds = {k: props[k] for k in ("<", "<=", ">", ">=") if k in props}
+        if c_bounds and has_dtype:
+            for k, v in c_bounds.items():
+                c_bounds[k] = cast_value(v, c_dtype)
         for name in aliases:
-            if check_type and 'type' in props:
-                ctype = ColumnType[props['type']]
-                if rupture_params is not None and ctype == ColumnType.rupture:
-                    rupture_params.add(name)
-                if site_params is not None and ctype == ColumnType.site:
-                    site_params.add(name)
-                if distances is not None and ctype == ColumnType.distance:
-                    distances.add(name)
-                if imts is not None and ctype == ColumnType.intensity:
-                    imts.add(name)
+            if type is not None and has_type:
+                type[name] = c_type
             if alias is not None:
                 alias[name] = aliases
-            if dtype is not None and 'dtype' in props:
-                dtype[name] = _dtype = cast_dtype(props['dtype'])
-            if default is not None and 'default' in props:
-                default[name] = props['default'] if dtype is None else \
-                    cast_value(props['default'], _dtype)
-            if bounds is not None:
-                keys = [k for k in ["<", "<=", ">", ">="] if k in props]
-                if keys:
-                    bounds[name] = {}
-                    for k in keys:
-                        bounds[name][k] = props[k] if _dtype is None else \
-                            cast_value(props[k], _dtype)
-            if help is not None and props.get('help', ''):
-                help[name] = props['help']
+            if help is not None and c_help:
+                help[name] = c_help
+            if dtype is not None and has_dtype:
+                dtype[name] = c_dtype
+            if default is not None and has_default:
+                default[name] = c_default
+            if bounds is not None and c_bounds:
+                bounds[name] = c_bounds
 
 
 def cast_dtype(dtype: Union[Collection, str, pd.CategoricalDtype, ColumnDtype]) \
