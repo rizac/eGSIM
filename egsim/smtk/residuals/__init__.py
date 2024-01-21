@@ -6,12 +6,13 @@ from __future__ import annotations  # https://peps.python.org/pep-0563/
 from itertools import product
 
 from collections.abc import Iterable, Container
+from pandas import RangeIndex
 from typing import Union
 from math import sqrt
 
 import numpy as np
 import pandas as pd
-from pandas.core.indexes.numeric import IntegerIndex
+# from pandas.core.indexes.numeric import IntegerIndex
 from scipy.special import erf
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
@@ -49,6 +50,10 @@ def get_residuals(
     imts = harmonize_input_imts(imts)
     validate_inputs(gsims, imts)
     # 2. prepare flatfile:
+    if not isinstance(flatfile.index, RangeIndex):
+        # we want to return as index the original record position. this makes
+        # it a safe uid regardless of the indices or ids defined in teh flatfile
+        flatfile.index = range(len(flatfile))
     flatfile_r = prepare_flatfile(flatfile, gsims, imts)
     # 3. compute residuals:
     residuals = get_residuals_from_validated_inputs(
@@ -65,19 +70,11 @@ def get_residuals(
     residuals = residuals[[c for c in sorted_cols if c in original_cols]]
     # concat:
     # FIXME: use 'input_data' also in trellis output?
-    c_types = get_types()
-    for col in get_event_id_column_names(flatfile_r):
-        c_types.setdefault(col, ColumnType.rupture)
-    try:
-        for col in get_station_id_column_names(flatfile_r):
-            c_types.setdefault(col, ColumnType.site)
-    except InvalidColumn:
-        pass
-    flatfile_r.rename(columns={c: ('input_data',
-                                   c_types[c].name if c in c_types else 'misc',
-                                   c)
-                               for c in flatfile_r.columns},
-                      inplace=True)
+    c_types = get_column_type_names(flatfile_r)
+    flatfile_r.rename(
+        columns={c: ('input_data', c_types.get(c, 'misc'), c)
+                 for c in flatfile_r.columns},
+        inplace=True)
     # sort columns:
     flatfile_r.sort_index(axis=1, inplace=True)
     # concat residuals and observations
@@ -334,3 +331,31 @@ def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd
     """
     zvals = np.fabs(values)
     return 1.0 - erf(zvals / sqrt(2.))
+
+
+def get_column_type_names(flatfile) -> dict[str, str]:
+    """Return a dict where each column of `faltfile` is mapped to its
+    `ColumnType` names. Flatfile columns not registered with a specific type
+    are not in the returned dict"""
+
+    registered_types = get_types()
+    ev_colnames = set(get_event_id_column_names(flatfile))
+    st_colnames = set()
+    try:
+        st_colnames = set(get_station_id_column_names(flatfile))
+    except InvalidColumn:
+        pass
+
+    c_types = {}
+    for c in flatfile.columns:
+        c_type = registered_types.get(c, None)
+        if c_type is None:
+            if c in ev_colnames:
+                c_type = ColumnType.rupture
+            elif c in st_colnames:
+                c_type = ColumnType.site
+            elif sa_period(c) is not None:
+                c_type = ColumnType.intensity
+        c_types[c] = None if c_type is None else c_type.name
+
+    return c_types

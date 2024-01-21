@@ -244,6 +244,7 @@ evt_id:
     In general, you can use the id provided by the event catalog or web service,
     or create your own, as long as it holds: same id <=> same event. IDs should
     be preferably of type integer for performance reasons
+  type: rupture
 sta_id:
   alias: station_id
   help: >-
@@ -252,7 +253,9 @@ sta_id:
     In general, you can infer the id from the tuple (network_code, station_code)
     or create your own, as long as it holds: same id <=> same station. IDs should
     be preferably of type integer for performance reasons
+  type: site
 evt_time:
   alias: event_time
   dtype: datetime
   help: the event time (as ISO formatted string, e.g. 2006-03-31T00:12:24)
+  type: rupture
