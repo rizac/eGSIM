@@ -143,7 +143,7 @@ def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     # get columns:
     columns = [(labels.MAG, '', ''), (dist_label, '', '')] + \
               list(product(imts, [labels.MEDIAN, labels.SIGMA], gsims))
-    columns = pd.MultiIndex.from_tuples(columns, names=["name", "imt", "model"])
+    columns = pd.MultiIndex.from_tuples(columns)  #  , names=["name", "imt", "model"]
     ret = pd.DataFrame(columns=columns)
     # get the values for magnitudes, distances and periods:
     dists = np.tile(distances, len(magnitudes))
@@ -151,6 +151,7 @@ def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     # assign:
     ret[dist_label] = dists
     ret[labels.MAG] = mags
+    ret.index = range(len(ret))
     return ret
 
 
