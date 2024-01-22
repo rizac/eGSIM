@@ -16,6 +16,7 @@ from openquake.hazardlib.geo import Point
 from .rupture import (get_target_sites, create_planar_surface,
                       get_hypocentre_on_planar_surface,
                       create_rupture)
+from ..flatfile import ColumnsRegistry
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts)
 
@@ -141,7 +142,9 @@ def build_contexts(
 def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     """prepare an empty dataframe for holding trellis plot data"""
     # get columns:
-    columns = [(labels.MAG, '', ''), (dist_label, '', '')] + \
+    dist_label = ("input_data", ColumnsRegistry.get_type(dist_label).name, dist_label)
+    mag_label = ("input_data", ColumnsRegistry.get_type(labels.MAG).name, labels.MAG)
+    columns = [mag_label, dist_label] + \
               list(product(imts, [labels.MEDIAN, labels.SIGMA], gsims))
     columns = pd.MultiIndex.from_tuples(columns)  #  , names=["name", "imt", "model"]
     ret = pd.DataFrame(columns=columns)
@@ -150,7 +153,7 @@ def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     mags = np.hstack((np.full(len(distances), m) for m in magnitudes))
     # assign:
     ret[dist_label] = dists
-    ret[labels.MAG] = mags
+    ret[mag_label] = mags
     ret.index = range(len(ret))
     return ret
 

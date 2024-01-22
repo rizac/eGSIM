@@ -8,8 +8,8 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.scalerel import PeerMSR
 
-from .columns import (get_all_names_of, get_intensity_measures, MissingColumn,
-                      InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
+from . import (ColumnsRegistry, MissingColumn,
+               InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
 from ..validators import sa_period
 from ..registry import (distances_required_by,
                         ground_motion_properties_required_by)
@@ -22,7 +22,7 @@ def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:
      Returns None if no column is found, raise `ConflictingColumns` if more than
      a matching column is found"""
     ff_cols = set(flatfile.columns)
-    cols = set(get_all_names_of(column)) & ff_cols
+    cols = set(ColumnsRegistry.get_aliases(column)) & ff_cols
     if len(cols) > 1:
         raise ConflictingColumns(*cols)
     elif len(cols) == 0:
@@ -97,7 +97,7 @@ def get_required_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataF
     if non_sa_imts:
         # get the imts supported by this program, and raise if some unsupported IMT
         # was requested:
-        supported_imts = get_intensity_measures() - {'SA'}
+        supported_imts = ColumnsRegistry.get_intensity_measures() - {'SA'}
         if non_sa_imts - supported_imts:
             raise InvalidColumnName(*list(non_sa_imts - supported_imts))
         # from the requested imts, raise if some are not in the flatfile:

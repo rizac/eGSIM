@@ -14,8 +14,7 @@ from egsim.api.forms import APIForm, GsimImtForm
 from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for)
-from egsim.smtk.flatfile import get_dtypes_and_defaults
-from egsim.smtk.flatfile.columns import load_from_yaml
+from egsim.smtk.flatfile import ColumnsRegistry
 
 
 class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
@@ -42,13 +41,12 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
             for m in gsims:
                 imts |= intensity_measures_defined_for(m)
 
-        col_registry = load_from_yaml()
         columns = {}
         for col_name in sorted(set(gm_props) | set(imts)):
             columns[col_name] = {
-                'help': str(col_registry.get(col_name, {}).get('help', 'unspecified')),
-                'type': str(col_registry.get(col_name, {}).get('type', 'unspecified')),
-                'dtype': str(col_registry.get(col_name, {}).get('dtype', 'unspecified'))
+                'help': str(ColumnsRegistry.get_help(col_name) or 'unspecified'),
+                'type': str(ColumnsRegistry.get_type(col_name) or 'unspecified'),
+                'dtype': str(ColumnsRegistry.get_dtype(col_name) or 'unspecified')
             }
         return columns
 
@@ -189,6 +187,6 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         cleaned_data = self.cleaned_data
         return {
             'columns': cleaned_data['flatfile_dtypes'],
-            'default_columns': get_dtypes_and_defaults()[0],
+            # 'default_columns': get_dtypes_and_defaults()[0],  # FIXME WHAT WAS THIS?
             'gsim': cleaned_data['gsim']
         }

@@ -12,24 +12,20 @@ import pytest
 import pandas as pd
 from pandas import StringDtype
 
-from egsim.smtk.flatfile import (read_flatfile, query, read_csv)
-from egsim.smtk.flatfile.columns import _extract_from_columns, load_from_yaml, \
-        get_rupture_params
+from egsim.smtk.flatfile import read_flatfile, query, ColumnType
+from egsim.smtk.flatfile import ColumnsRegistry, _load_from_yaml
 
 
 def test_read_flatifle_yaml():
 
-    dic = load_from_yaml(False)
-    assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
-               get_rupture_params()) == 4
+    dic = _load_from_yaml(False)
+    params = ColumnsRegistry.get_rupture_params()
+    assert len({'rupture_width', 'mag', 'magnitude', 'width'} & params) == 4
+    params = {c for c in dic if ColumnsRegistry.get_type(c) == ColumnType.distance}
+    assert len({'rrup', 'rhypo'} & params) == 2
+    params = {c for c in dic if ColumnsRegistry.get_type(c) == ColumnType.site}
+    assert len({'sta_lat', 'station_latitude', 'lat' , 'vs30'} & params) == 4
 
-    rup, dists, sites = set(), set(), set()
-    _extract_from_columns(dic, rupture_params=rup, sites_params=sites, distances=dists)
-    assert len({'rrup', 'rhypo'} & set(dists)) == 2
-    assert len({'st_lat', 'station_latitude', 'lat' , 'vs30'} &
-               set(sites)) == 4
-    assert len({'rupture_width', 'mag', 'magnitude', 'width'} &
-               set(rup)) == 4
 
 def test_flatfile_turkey():
     # FIXME handle paths, fixtures wrt django tests. HArdcoding path for the moment:
@@ -63,7 +59,7 @@ def test_read_csv():
            "1,true,1.1,2006-01-01T00:00:00,x,a"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,ax")
-    d = read_csv(StringIO(csv), **args)  # noqa
+    d = read_flatfile(StringIO(csv), **args)  # noqa
     assert d.dtypes.to_dict() == expected
     for c in d.columns:
         assert not pd.isna(d[c]).any()
@@ -77,7 +73,7 @@ def test_read_csv():
            ",,,,,"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,ax")
-    d = read_csv(StringIO(csv), **args, defaults={'int':0, 'bool':False})  # noqa
+    d = read_flatfile(StringIO(csv), **args, defaults={'int':0, 'bool':False})  # noqa
     assert d.dtypes.to_dict() == expected
     for c in d.columns:
         assert pd.isna(d[c]).sum() == expected_na_count[c]
@@ -93,17 +89,17 @@ def test_read_csv():
         csv2 = f"{header}\n{val}\n{val}x"
         if header in ('int', 'bool', 'float', 'datetime'):
         # try:
-        #     d = read_csv(StringIO(csv2), **args)
+        #     d = read_flatfile(StringIO(csv2), **args)
         #     asd = 9
         # except Exception as exc:
         #     pass
         # continue
             with pytest.raises(ValueError) as verr:
-                d = read_csv(StringIO(csv2), **args)  # noqa
+                d = read_flatfile(StringIO(csv2), **args)  # noqa
                 # check that the column is in the exception message:
             assert header in str(verr.value)
             continue
-        d = read_csv(StringIO(csv2), **args)
+        d = read_flatfile(StringIO(csv2), **args)
 
 
 def test_read_csv_bool():
@@ -118,41 +114,41 @@ def test_read_csv_bool():
     }
     expected = [True, True, True, False, False, False]
     csv_str = "bool\n1\nTrue\ntrue\n0\nFalse\nfalse"
-    d = read_csv(StringIO(csv_str), **args)  # noqa
+    d = read_flatfile(StringIO(csv_str), **args)  # noqa
     assert (d['bool'] == expected).all()
 
     # Insert a missing value at the beginning (defaults to False).
     # NOTE: appending a missing value (empty line) is skipped even if skip_blank_lines is
     # True (as it is probably interpreted as ending newline of the previous csv row?)
     csv_str = csv_str.replace("bool\n", "bool\n\n")
-    d = read_csv(StringIO(csv_str), **args, defaults={'bool': False})  # noqa
+    d = read_flatfile(StringIO(csv_str), **args, defaults={'bool': False})  # noqa
     assert (d['bool'] == [False] + expected).all()
 
     # Append invalid value (float not in [0, 1]):
     with pytest.raises(ValueError):
-        d = read_csv(StringIO("bool\n1\nTrue\ntrue\nFalse\nfalse\n1.1"), **args)  # noqa
+        d = read_flatfile(StringIO("bool\n1\nTrue\ntrue\nFalse\nfalse\n1.1"), **args)  # noqa
 
     # Append invalid value ("X"):
     with pytest.raises(ValueError):
-        d = read_csv(StringIO("bool\n1\nTrue\ntrue\nFalse\nfalse\nX"), **args)  # noqa
+        d = read_flatfile(StringIO("bool\n1\nTrue\ntrue\nFalse\nfalse\nX"), **args)  # noqa
 
     # int series is ok
     csv_str = "bool\n1\n1\n1\n0\n0\n0"
-    d = read_csv(StringIO(csv_str), **args)  # noqa
+    d = read_flatfile(StringIO(csv_str), **args)  # noqa
     assert (d['bool'] == expected).all()
     with pytest.raises(ValueError):
         # int series must have only 0 and 1:
         csv_str += "\n2"
-        d = read_csv(StringIO(csv_str), **args)  # noqa
+        d = read_flatfile(StringIO(csv_str), **args)  # noqa
 
     # float series is ok
     csv_str = "bool\n1.0\n1.0\n1.0\n0.0\n0.0\n0.0"
-    d = read_csv(StringIO(csv_str), **args)  # noqa
+    d = read_flatfile(StringIO(csv_str), **args)  # noqa
     assert (d['bool'] == expected).all()
     with pytest.raises(ValueError):
         # float series must have only 0 and 1:
         csv_str += "\n0.1"
-        d = read_csv(StringIO(csv_str), **args)  # noqa
+        d = read_flatfile(StringIO(csv_str), **args)  # noqa
 
 
 def test_read_csv_categorical():
@@ -171,7 +167,7 @@ def test_read_csv_categorical():
            "1,true,1.1,2006-01-01T00:00:00,a"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,a")
-    d = read_csv(StringIO(csv), dtype=dict(dtypes))  # noqa
+    d = read_flatfile(StringIO(csv), dtype=dict(dtypes))  # noqa
     for c in d.columns:
         assert d[c].dtype == dtypes[c]
         assert sorted(d[c].dtype.categories.tolist()) == \
@@ -184,7 +180,7 @@ def test_read_csv_categorical():
            "1,true,1.1,2006-01-01T00:00:00,a"
            "\n"
            ",,,,")
-    d = read_csv(StringIO(csv), dtype=dict(dtypes))  # noqa
+    d = read_flatfile(StringIO(csv), dtype=dict(dtypes))  # noqa
     for c in d.columns:
         assert d[c].dtype == dtypes[c]
         assert sorted(d[c].dtype.categories.tolist()) == \
@@ -195,7 +191,7 @@ def test_read_csv_categorical():
     for header, val in zip(csv.split("\n")[0].split(","), csv.split("\n")[1].split(",")):
         csv2 = f"{header}\n{val}\n{val}x"
         with pytest.raises(ValueError) as verr:
-            d = read_csv(StringIO(csv2), dtype=dict(dtypes))  # noqa
+            d = read_flatfile(StringIO(csv2), dtype=dict(dtypes))  # noqa
             # check that the column is in the exception message:
         assert header in str(verr.value)
 

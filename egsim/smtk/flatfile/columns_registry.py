@@ -113,37 +113,35 @@ def get_intensity_measures() -> set[str]:
 
 def get_type(column: str) -> Union[ColumnType, None]:
     """Return the ColumnType of the given column name, or None"""
-    return load_from_yaml().get(column, {}).get('type', None)
+    return load_from_yaml().get(_replace(column), {}).get('type', None)
 
 
-def get_all_names_of(column: str) -> tuple[str]:
+def get_dtype(column: str) -> Union[None, ColumnDtype, pd.CategoricalDtype]:
+    """Return the Column data type of the given column name, or None"""
+    return load_from_yaml().get(_replace(column), {}).get('dtype', None)
+
+
+def get_default(column: str) -> Union[None, Any]:
+    """Return the Column data type of the given column name, or None"""
+    return load_from_yaml().get(_replace(column), {}).get('default', None)
+
+
+def get_aliases(column: str) -> tuple[str]:
     """Return all possible names of the given column, as tuple set of strings
     where the first element is assured to be the flatfile default column name
     (primary name) and all remaining the secondary names. The tuple will be composed
     of `column` alone if `column` does not have registered aliases
     """
-    # `aliases` should be populated with at least `col_name` (see _harmonize_props),
-    # but for safety:
-    return load_from_yaml().get(column, {}).get('aliases', (column,))
+    return load_from_yaml().get(_replace(column), {}).get('aliases', (column,))
 
 
-def get_dtypes_and_defaults() -> \
-        tuple[dict[str, Union[ColumnDtype, pd.CategoricalDtype]], dict[str, Any]]:
-    """Return the column data types and defaults. Dict keys are all columns names
-     (including aliases) mapped to their data type or default. Columns with no data
-     type or default are not present.
-    """
-    _dtype, _default = {}, {}
-    for c_name, props in load_from_yaml().items():
-        if 'dtype' in props:
-            _dtype[c_name] = props['dtype']
-        if 'default' in props:
-            _default[c_name] = props['default']
-    return _dtype, _default
+def _replace(name:str):
+    return name if not name.startswith('SA(') else 'SA'
+
 
 
 # YAML file path:
-_ff_metadata_path = join(dirname(__file__), 'columns.yaml')
+_ff_metadata_path = join(dirname(__file__), 'columns_registry.yaml')
 # cache storage of the data in the YAML:
 _columns: dict[str, dict[str, Any]] = None  # noqa
 
@@ -287,7 +285,7 @@ class MissingColumn(InvalidColumn, AttributeError, KeyError):
         """return the names with their alias(es), if any"""
         _names = []
         for name in self.args:
-            sorted_names = get_all_names_of(name)
+            sorted_names = get_aliases(name)
             suffix_str = repr(sorted_names[0])
             if len(sorted_names) > 1:
                 suffix_str += f" (or {', '.join(repr(_) for _ in sorted_names[1:])})"

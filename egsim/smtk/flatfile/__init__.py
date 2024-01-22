@@ -1,41 +1,33 @@
 """flatfile root module"""
-
+from __future__ import annotations
 from io import IOBase
+from os.path import join, dirname
 from datetime import date, datetime
 import re
 from typing import Union, Any
-from collections.abc import Callable
+from collections.abc import Callable, Collection
+from enum import Enum, ReprEnum
 
+import numpy as np
 import pandas as pd
+from pandas.core.arrays import PandasArray
+from pandas.core.dtypes.base import ExtensionDtype
 
-from .columns import (ColumnDtype, get_dtypes_and_defaults, get_all_names_of,
-                      MissingColumn, InvalidDataInColumn, InvalidColumnName,
-                      ConflictingColumns, cast_dtype, cast_value)
-
-
-def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
-    """
-    Read a flat file into pandas DataFrame from a given CSV file
-
-    :param filepath_or_buffer: str, path object or file-like object of the CSV
-        formatted data. If string, compressed files are also supported
-        and inferred from the extension (e.g. 'gzip', 'zip')
-    :param sep: the separator (or delimiter). None means 'infer' (it might
-        take more time)
-    """
-    kwargs = dict(_flatfile_default_args)
-    dtypes, defaults = get_dtypes_and_defaults()
-    return read_csv(filepath_or_buffer, sep=sep, dtype=dtypes, defaults=defaults,
-                     _check_dtypes_and_defaults=False, **kwargs)
+from yaml import load as yaml_load
+try:
+    from yaml import CSafeLoader as SafeLoader  # faster, if available
+except ImportError:
+    from yaml import SafeLoader  # same as using yaml.safe_load
 
 
-def parse_flatfile(filepath_or_buffer: str, sep: str = None,
-                   rename:dict[str,str]= None,
-                   extra_dtype: dict[
-                       str, Union[str, list, ColumnDtype, pd.CategoricalDtype]] = None,
-                   extra_defaults: dict[str, Any] = None,
-                   usecols: Union[list[str], Callable[[str], bool]] = None,
-                   **kwargs) -> pd.DataFrame:
+def parse_flatfile(
+        filepath_or_buffer: str, sep: str = None,
+        rename:dict[str,str]= None,
+        extra_dtype: dict[
+            str, Union[str, list, ColumnDtype, pd.CategoricalDtype]] = None,
+        extra_defaults: dict[str, Any] = None,
+        usecols: Union[list[str], Callable[[str], bool]] = None,
+        **kwargs) -> pd.DataFrame:
     """
     Read a flatfile not in standard format
 
@@ -44,35 +36,31 @@ def parse_flatfile(filepath_or_buffer: str, sep: str = None,
         and inferred from the extension (e.g. 'gzip', 'zip')
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
-    :param rename: optional dict specifying as keys the CSV fieldnames that
-        correspond to a standard flatfile column (dict values). Keys of this
-        dict will have data type and default automatically set from the registered
-        flatfile columns (see `columns.yaml` for details)
-    :param extra_dtype: optional dict specifying the data type of CSV
-        fieldnames that are not standard  flatfile columns and are not implemented
-        in `rename`. Dict values can be: 'float', 'datetime', 'bool', 'int', 'str',
+    :param rename: optional dict mapping CSV fieldnames to a standard flatfile column.
+        This dict keys will have data type and default automatically set from the
+        registered flatfile columns (see `columns.yaml` for details)
+    :param extra_dtype: optional dict mapping CSV fieldnames that are not standard
+        flatfile columns and are not implemented in `rename`, to its data type.
+        Dict values can be: 'float', 'datetime', 'bool', 'int', 'str',
         'category', `ColumnDType`s, list/tuples or pandas CategoricalDtype
-    :param extra_defaults: optional dict with the defaults for missing values.
-        Keys are extra CSV fieldnames that are not standard flatfile columns and
-        are not implemented in `rename`
+    :param extra_defaults: optional mapping CSV fieldnames that are not standard
+        flatfile columns and are not implemented in `rename`, to the default value
+        that will be used to replace missing values
     :param usecols: pandas `read_csv` parameter (exposed explicitly here for clarity)
         the column names to load, as list. Can be also a callable
         accepting a column name and returning True/False (keep/discard)
     """
     # get registered dtypes and defaults:
-    kwargs |= dict(_flatfile_default_args)
     extra_dtype = extra_dtype or {}
     extra_defaults = extra_defaults or {}
-    dtype, defaults = get_dtypes_and_defaults()
     for csv_col, ff_col in (rename or {}).items():
-        if ff_col in defaults:
-            extra_defaults[csv_col] = defaults[ff_col]
-        if ff_col in dtype:
-            extra_dtype[csv_col] = dtype[ff_col]
+        if ColumnsRegistry.get_default(ff_col) is not None:
+            extra_defaults[csv_col] = ColumnsRegistry.get_default(ff_col)
+        if ColumnsRegistry.get_dtype(ff_col) is not None:
+            extra_dtype[csv_col] = ColumnsRegistry.get_dtype(ff_col)
 
-    dfr = read_csv(filepath_or_buffer, sep=sep, dtype=extra_dtype,
-                   defaults=extra_defaults, usecols=usecols,
-                   _check_dtypes_and_defaults=True, **kwargs)
+    dfr = read_flatfile(filepath_or_buffer, sep=sep, dtype=extra_dtype,
+                        defaults=extra_defaults, usecols=usecols, **kwargs)
     if rename:
         dfr.rename(columns=rename, inplace=True)
     return dfr
@@ -88,12 +76,13 @@ _flatfile_default_args = (
 )
 
 
-def read_csv(filepath_or_buffer: Union[str, IOBase],
-             sep: str = None,
-             dtype: dict[str, Union[str, list, ColumnDtype, pd.CategoricalDtype]] = None,
-             defaults: dict[str, Any] = None,
-             usecols: Union[list[str], Callable[[str], bool]] = None,
-             **kwargs) -> pd.DataFrame:
+def read_flatfile(
+        filepath_or_buffer: Union[str, IOBase],
+        sep: str = None,
+        dtype: dict[str, Union[str, list, ColumnDtype, pd.CategoricalDtype]] = None,
+        defaults: dict[str, Any] = None,
+        usecols: Union[list[str], Callable[[str], bool]] = None,
+        **kwargs) -> pd.DataFrame:
     """
     Read a comma-separated values (csv) file into DataFrame, behaving as pandas
     `read_csv` with some additional features:
@@ -112,33 +101,34 @@ def read_csv(filepath_or_buffer: Union[str, IOBase],
     :param usecols: pandas `read_csv` parameter (exposed explicitly here for clarity)
         the column names to load, as list. Can be also a callable
         accepting a column name and returning True/False (keep/discard)
-    :param dtype: dict of column names mapped to the data type. Columns not present
-        in the flatfile will be ignored. Dtypes can be either 'int', 'bool', 'float',
-        'str', 'datetime', 'category'`, list, pandas `CategoricalDtype`:
-        the last four data types are for data that can take only a limited amount of
-        possible values and should be used mostly with string data as it might save
-        a lot of memory. With "category", pandas will infer the categories from the
-        data - note that each category will be of type `str` - with all others,
-        the categories can be any type input by the user. Flatfile values not
-        found in the categories will be replaced with missing values (NA in pandas,
-        see e.g. `pandas.isna`).
-        Columns of type 'int' and 'bool' do not support missing values: NA data will be
-        replaced with the default set in `defaults` (see doc), or with 0 for int and
-        False for bool if no default is set for the column.
-    :param defaults: a dict of flat file column names mapped to the default
-        value for missing/NA data.  Columns not present in the flatfile will be ignored.
+    :param dtype: dict of flatfile column names mapped to user-defined data type.
+        Standard flatfile columns do not need to be present, unless their data type
+        needs to be overwritten. Columns in `dtype` not present in the CSV will be
+        ignored.
+        Dtypes can be either 'int', 'bool', 'float', 'str', 'datetime', 'category'`,
+        list, pandas `CategoricalDtype`: the last four data types are for data that can
+        take only a limited amount of possible values and should be used mostly with
+        string data as it might save a lot of memory. With "category", pandas will infer
+        the categories from the data - note that each category will be of type `str` -
+        with all others, the categories can be any type input by the user. Flatfile
+        values not found in the categories will be replaced with missing values (NA in
+        pandas, see e.g. `pandas.isna`). Columns of type 'int' and 'bool' do not support
+        missing values: NA data will be replaced with the default set in `defaults`
+        (see doc), or with 0 for int and False for bool if no default is set for the
+        column.
+    :param defaults: dict of flatfile column names mapped to user-defined default to
+        replace missing values. Standard flatfile columns do not need to be present,
+        unless their data type needs to be overwritten. Columns in `default` not present
+        in the CSV will be ignored.
         Note that if int and bool columns are specified in `dtype`, then a default is
         set for those columns anyway (0 for int, False for bool. See `dtype` doc)
 
     :return: pandas DataFrame representing a Flat file
     """
-    # convert the file input to a stream (IOBase): if already a stream, do not close
-    # it at the end but restore the position with `seek`:
-    check_dtypes_and_defaults = kwargs.pop('_check_dtypes_and_defaults', True)
-
+    kwargs = dict(_flatfile_default_args) | kwargs
+    dtype = dtype or {}
     kwargs =  _read_csv_prepare(filepath_or_buffer, sep=sep, dtype=dtype,
-                                usecols=usecols, check_dtypes=check_dtypes_and_defaults,
-                                **kwargs)
+                                usecols=usecols, **kwargs)
     try:
         dfr = pd.read_csv(filepath_or_buffer, **kwargs)
     except ValueError as exc:
@@ -146,22 +136,17 @@ def read_csv(filepath_or_buffer: Union[str, IOBase],
         raise InvalidDataInColumn(*invalid_columns) from None
 
     # finalize and return
-    _read_csv_finalize(dfr, dtype, defaults, check_dtypes_and_defaults)
+    defaults = defaults or {}
+    _read_csv_finalize(dfr, dtype, defaults)
     if not isinstance(dfr.index, pd.RangeIndex):
         dfr.reset_index(drop=True, inplace=True)
     return dfr
 
 
-def _read_csv_prepare(filepath_or_buffer: IOBase, check_dtypes:bool, **kwargs) -> dict:
+def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
     """prepare the arguments for pandas read_csv: take tha passed **kwargs
     and return a modified version of it after checking some keys and values
     """
-    dtype = kwargs.pop('dtype', {})  # removed and handled later
-
-    if check_dtypes:
-        for col, _dtype in dtype.items():
-            dtype[col] = cast_dtype(_dtype)
-
     parse_dates = set(kwargs.pop('parse_dates', []))  # see above
 
     # infer `sep` and read the CSV header (dataframe columns), as some args of
@@ -172,8 +157,7 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, check_dtypes:bool, **kwargs) -
     if sep is None:
         kwargs.pop('sep')  # if it was None needs removal
         for _sep in [';', ',', r'\s+']:
-            _header = _read_csv_get_header(filepath_or_buffer, sep=_sep,
-                                           **kwargs)
+            _header = _read_csv_get_header(filepath_or_buffer, sep=_sep, **kwargs)
             if len(_header) > len(header):
                 sep = _sep
                 header = _header
@@ -194,48 +178,51 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, check_dtypes:bool, **kwargs) -
     else:
         csv_columns = set(header)
 
-    # Set the `dtype` and `parse_dates` arguments of read_csv. NOTE: dtypes that will
-    # be changed here will be restored later (see `_read_csv_finalize`)
-    if dtype:  # did we provide a dtype?
-        kwargs['dtype'] = {}
-        for col in csv_columns:
-            col_dtype = dtype.get(col, None)
+    # Set the `dtype` and `parse_dates` arguments of read_csv (see also
+    # `_read_csv_finalize`)
+    dtype = kwargs.pop('dtype', {})  # removed and handled later
+    kwargs['dtype'] = {}
+    for col in csv_columns:
+        if col in dtype:
+            col_dtype = cast_dtype(dtype[col])
+        else:
+            col_dtype = ColumnsRegistry.get_dtype(col)
             if col_dtype is None:
                 continue
 
-            if isinstance(col_dtype, pd.CategoricalDtype):
-                # if `col_dtype.categories=None` or `col_dtype='category'`, then
-                # `read_csv` will infer the categories from the data. Otherwise,
-                # it will silently convert values not found in categories to N/A,
-                # making invalid and missing values indistinguishable. To do that, we
-                # set now `col_dtype` as the dtype of the categories (which must be all
-                # the same type) to get missing values, checking invalid values
-                # after reading:
-                if col_dtype.categories is not None:
-                    col_dtype = ColumnDtype.of(*col_dtype.categories)
+        if isinstance(col_dtype, pd.CategoricalDtype):
+            # if `col_dtype.categories=None` or `col_dtype='category'`, then
+            # `read_csv` will infer the categories from the data. Otherwise,
+            # it will silently convert values not found in categories to N/A,
+            # making invalid and missing values indistinguishable. To do that, we
+            # set now `col_dtype` as the dtype of the categories (which must be all
+            # the same type) to get missing values, checking invalid values
+            # after reading:
+            if col_dtype.categories is not None:
+                col_dtype = ColumnDtype.of(*col_dtype.categories)
 
-            if col_dtype == ColumnDtype.int:
-                # let `read_csv` treat ints as floats, so that we can have NaN and
-                # check later if we can replace them with the column default, if set
-                kwargs['dtype'][col] = ColumnDtype.float
-            elif col_dtype == ColumnDtype.bool:
-                # let `read_csv` infer the data type of bools by not passing a dtype at
-                # all. We will check later if we can cast the values to bool, not only
-                # in terms of replacing N/A with the column default, if set, but also
-                # string values (e.g. 'FALSE') to valid values
-                continue
-            elif col_dtype == ColumnDtype.datetime:
-                # date times in `read_csv` must be given in the `parse_dates` arg. Note
-                # that, whereas missing values will still preserve the dtype and be set
-                # as `NaT` (not a time), invalid datetime values will simply result in a
-                # column with a more general dtype set (usually object): this will be
-                # checked later
-                parse_dates.add(col)
-            else:
-                kwargs['dtype'][col] = col_dtype
+        if col_dtype == ColumnDtype.int:
+            # let `read_csv` treat ints as floats, so that we can have NaN and
+            # check later if we can replace them with the column default, if set
+            kwargs['dtype'][col] = ColumnDtype.float
+        elif col_dtype == ColumnDtype.bool:
+            # let `read_csv` infer the data type of bools by not passing a dtype at
+            # all. We will check later if we can cast the values to bool, not only
+            # in terms of replacing N/A with the column default, if set, but also
+            # string values (e.g. 'FALSE') to valid values
+            continue
+        elif col_dtype == ColumnDtype.datetime:
+            # date times in `read_csv` must be given in the `parse_dates` arg. Note
+            # that, whereas missing values will still preserve the dtype and be set
+            # as `NaT` (not a time), invalid datetime values will simply result in a
+            # column with a more general dtype set (usually object): this will be
+            # checked later
+            parse_dates.add(col)
+        else:
+            kwargs['dtype'][col] = col_dtype
 
-        if parse_dates:
-            kwargs['parse_dates'] = list(parse_dates)
+    if parse_dates:
+        kwargs['parse_dates'] = list(parse_dates)
 
     return kwargs
 
@@ -274,10 +261,10 @@ def _read_csv_inspect_failure(filepath_or_buffer: IOBase, **kwargs) -> list[str]
     return invalid_columns or cols2check
 
 
-def _read_csv_finalize(dfr: pd.DataFrame,
-                       dtype: dict[str, Union[ColumnDtype, pd.CategoricalDtype]],
-                       defaults: dict[str, Any],
-                       check_defaults: bool):
+def _read_csv_finalize(
+        dfr: pd.DataFrame,
+        dtype: dict[str, Union[ColumnDtype, pd.CategoricalDtype]],
+        defaults: dict[str, Any]):
     """Finalize `read_csv` by adjusting the values and dtypes of the given dataframe
     `dfr`, and return it
 
@@ -335,10 +322,13 @@ def _read_csv_finalize(dfr: pd.DataFrame,
         if dtype_ok:
             #set default
             if col in defaults:
-                default = defaults[col]
-                if check_defaults:
-                    default = cast_value(default,
-                                         expected_categories or expected_dtype)
+                has_default = True
+                default = cast_value(defaults[col],
+                                     expected_categories or expected_dtype)
+            else:
+                default = ColumnsRegistry.get_default(col)
+                has_default = default is not None
+            if has_default:
                 is_na = pd.isna(dfr[col])
                 dfr.loc[is_na, col] = default
             # if we expected categories, set the categories, nut be sure that we do not
@@ -410,326 +400,304 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     return flatfile.query(query_expression, **__kwargs)
 
 
-# FIXME REMOVE LEGACY STUFF CHECK WITH GW:
+# Columns utilities:
 
-# FIXME: remove columns checks will be done when reading the flatfile and
-# computing the residuals
-
-# def _check_flatfile(flatfile: pd.DataFrame):
-#     """Check the given flatfile: required column(s), upper-casing IMTs, and so on.
-#     Modifications will be done inplace
-#     """
-#     ff_columns = set(flatfile.columns)
-#
-#     ev_col, ev_cols = _EVENT_COLUMNS[0], _EVENT_COLUMNS[1:]
-#     if get_column(flatfile, ev_col) is None:
-#         raise ValueError(f'Missing required column: {ev_col} or ' + ", ".join(ev_cols))
-#
-#     st_col, st_cols = _STATION_COLUMNS[0], _STATION_COLUMNS[1:]
-#     if get_column(flatfile, st_col) is None:
-#         # raise ValueError(f'Missing required column: {st_col} or ' + ", ".join(st_cols))
-#         # do not check for station id (no operation requiring it implemented yet):
-#         pass
-#
-#     # check IMTs (but allow mixed case, such as 'pga'). So first rename:
-#     col2rename = {}
-#     no_imt_col = True
-#     imt_invalid_dtype = []
-#     for col in ff_columns:
-#         imtx = get_imt(col, ignore_case=True)
-#         if imtx is None:
-#             continue
-#         no_imt_col = False
-#         if not str(flatfile[col].dtype).lower().startswith('float'):
-#             imt_invalid_dtype.append(col)
-#         if imtx != col:
-#             col2rename[col] = imtx
-#             # do we actually have the imt provided? (conflict upper/lower case):
-#             if imtx in ff_columns:
-#                 raise ValueError(f'Column conflict, please rename: '
-#                                  f'"{col}" vs. "{imtx}"')
-#     # ok but regardless of all, do we have imt columns at all?
-#     if no_imt_col:
-#         raise ValueError(f"No IMT column found (e.g. 'PGA', 'PGV', 'SA(0.1)')")
-#     if imt_invalid_dtype:
-#         raise ValueError(f"Invalid data type ('float' required) in IMT column(s): "
-#                          f"{', '.join(imt_invalid_dtype)}")
-#     # rename imts:
-#     if col2rename:
-#         flatfile.rename(columns=col2rename, inplace=True)
+class ColumnType(Enum):
+    """Flatfile column type"""
+    rupture = 'Rupture parameter'
+    site = 'Site parameter'
+    distance = 'Distance measure'
+    intensity = 'Intensity measure'
 
 
-# def get_imt(imt_name: str, ignore_case=False,   # FIXME is it USED?
-#             accept_sa_without_period=False) -> Union[str, None]:
-#     """Return the OpenQuake formatted IMT CLASS name from string, or None if col does not
-#     denote a IMT name.
-#     Wit ignore_case=True:
-#     "sa(0.1)"  and "SA(0.1)" will be returned as "SA(0.1)"
-#     "pga"  and "pGa" will be returned as "PGA"
-#     With ignore_case=False, the comparison is strict:
-#     "sa(0.1)" -> None
-#     """
-#     if ignore_case:
-#         imt_name = imt_name.upper()
-#     if accept_sa_without_period and imt_name == 'SA':
-#         return 'SA'
-#     try:
-#         return imt.imt2tup(imt_name)[0]
-#     except Exception as _:  # noqa
-#         return None
+class ColumnDtype(str, ReprEnum):
+    """Enum where members are also strings representing supported data types for
+    flatfile columns. E.g.: `pd_series.astype(ColumnDtype.datetime)`. Use the class
+    method `ColumnDtype.of` to get the ColumnDType corresponding to any given Python
+    / numpy/ pandas object or type
+    """
+    def __new__(cls, value, *py_types:type):
+        """Constructs a new ColumnDtype member"""
+        # subclassing StrEnum does not work, so we copy from StreEnum.__new__:
+        member = str.__new__(cls, value)
+        member._value_ = value
+        member.py_types = tuple(py_types)
+        return member
+
+    # each member below must be mapped to the numpy name (see `numpy.sctypeDict.keys()`
+    # for a list of supported names. Exception is 'string' that is pandas only) and
+    # one or more Python classes that will be used
+    # to get if an object (Python, numpy or pandas) is instance of a particular
+    # `ColumnDtype` (see `ColumnDtype.of`)
+
+    float = "float",  float, np.floating
+    int = "int", int, np.integer
+    bool = "bool", bool, np.bool_
+    datetime = "datetime64", datetime, np.datetime64
+    str = "string", str, np.str_  # , np.object_
+
+    @classmethod
+    def of(cls, *item: Union[int, float, datetime, bool, str,
+                           np.array, pd.Series, PandasArray,
+                           type[int, float, datetime, bool, str],
+                           np.dtype, ExtensionDtype]) -> Union[ColumnDtype, None]:
+        """Return the ColumnDtype of the given argument, or None if no associated
+        dtype is found.
+        If several arguments are passed, return None also if the arguments are
+        not all the same dtype
+
+        :param item: one or more Python objects, such as object instance (e.g. 4.5),
+            object class (`float`), a numpy array, pandas Series / Array, a numpy dtype,
+            pandas ExtensionDtype (e.g., as returned from a pandas dataframe
+            `dataframe[column].dtype`).
+        """
+        ret_type = None
+        for obj in item:
+            if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
+                obj = obj.dtype  # will fall back in the next "if"
+            if isinstance(obj, (np.dtype, ExtensionDtype)):
+                obj = obj.type  # will NOT fall back into the next "if"
+            if not isinstance(obj, type):
+                obj = type(obj)
+            for c_dtype in cls:
+                if issubclass(obj, c_dtype.py_types):  # noqa
+                    # bool is a subclass of int in Python, so:
+                    if c_dtype == ColumnDtype.int and \
+                            issubclass(obj, ColumnDtype.bool.py_types):
+                        c_dtype = ColumnDtype.bool
+                    if ret_type is None:
+                        ret_type = c_dtype
+                    elif ret_type != c_dtype:
+                        return None
+                    break
+            else:
+                return None
+        return ret_type
 
 
-# class ContextDB:
-#     """This abstract-like class represents a Database (DB) of data capable of
-#     yielding Contexts and Observations suitable for Residual analysis (see
-#     argument `ctx_database` of :meth:`gmpe_residuals.Residuals.get_residuals`)
-#
-#     Concrete subclasses of `ContextDB` must implement three abstract methods
-#     (e.g. :class:`smtk.sm_database.GroundMotionDatabase`):
-#      - get_event_and_records(self)
-#      - update_context(self, ctx, records, nodal_plane_index=1)
-#      - get_observations(self, imtx, records, component="Geometric")
-#        (which is called only if `imts` is given in :meth:`self.get_contexts`)
-#
-#     Please refer to the functions docstring for further details
-#     """
-#
-#     def __init__(self, dataframe: pd.DataFrame):
-#         """
-#         Initializes a new EgsimContextDB.
-#
-#         :param dataframe: a dataframe representing a flatfile
-#         """
-#         self._data = dataframe
-#         sa_columns_and_periods = ((col, imt.from_string(col.upper()).period)
-#                                   for col in self._data.columns
-#                                   if col.upper().startswith("SA("))
-#         sa_columns_and_periods = sorted(sa_columns_and_periods, key=lambda _: _[1])
-#         self.sa_columns = [_[0] for _ in sa_columns_and_periods]
-#         self.sa_periods = [_[1] for _ in sa_columns_and_periods]
-#
-#     def get_contexts(self, nodal_plane_index=1,
-#                      imts=None, component="Geometric"):
-#         """Return an iterable of Contexts. Each Context is a `dict` with
-#         earthquake, sites and distances information (`dict["Ctx"]`)
-#         and optionally arrays of observed IMT values (`dict["Observations"]`).
-#         See `create_context` for details.
-#
-#         This is the only method required by
-#         :meth:`gmpe_residuals.Residuals.get_residuals`
-#         and should not be overwritten only in very specific circumstances.
-#         """
-#         compute_observations = imts is not None and len(imts)
-#         for evt_id, records in self.get_event_and_records():
-#             dic = self.create_context(evt_id, records, imts)
-#             # ctx = dic['Ctx']
-#             # self.update_context(ctx, records, nodal_plane_index)
-#             if compute_observations:
-#                 observations = dic['Observations']
-#                 for imtx, values in observations.items():
-#                     values = self.get_observations(imtx, records, component)
-#                     observations[imtx] = np.asarray(values, dtype=float)
-#                 dic["Num. Sites"] = len(records)
-#             # Legacy code??  FIXME: kind of redundant with "Num. Sites" above
-#             # dic['Ctx'].sids = np.arange(len(records), dtype=np.uint32)
-#             yield dic
-#
-#     def create_context(self, evt_id, records: pd.DataFrame, imts=None):
-#         """Create a new Context `dict`. Objects of this type will be yielded
-#         by `get_context`.
-#
-#         :param evt_id: the earthquake id (e.g. int, or str)
-#         :param imts: a list of strings denoting the IMTs to be included in the
-#             context. If missing or None, the returned dict **will NOT** have
-#             the keys "Observations" and "Num. Sites"
-#
-#         :return: the dict with keys:
-#             ```
-#             {
-#             'EventID': evt_id,
-#             'Ctx: a new :class:`openquake.hazardlib.contexts.RuptureContext`
-#             'Observations": dict[str, list] # (each imt in imts mapped to `[]`)
-#             'Num. Sites': 0
-#             }
-#             ```
-#             NOTE: Remember 'Observations' and 'Num. Sites' are missing if `imts`
-#             is missing, None or an emtpy sequence.
-#         """
-#         dic = {
-#             'EventID': evt_id,
-#             'Ctx': EventContext(records)
-#         }
-#         if imts is not None and len(imts):
-#             dic["Observations"] = {imt: [] for imt in imts}  # OrderedDict([(imt, []) for imt in imts])
-#             dic["Num. Sites"] = 0
-#         return dic
-#
-#     def get_event_and_records(self):
-#         """Yield the tuple (event_id:Any, records:DataFrame)
-#
-#         where:
-#          - `event_id` is a scalar denoting the unique earthquake id, and
-#          - `records` are the database records related to the given event: it
-#             must be a sequence with given length (i.e., `len(records)` must
-#             work) and its elements can be any user-defined data type according
-#             to the current user implementations. For instance, `records` can be
-#             a pandas DataFrame, or a list of several data types such as `dict`s
-#             `h5py` Datasets, `pytables` rows, `django` model instances.
-#         """
-#         ev_id_name = _EVENT_COLUMNS[0]
-#         if ev_id_name not in self._data.columns:
-#             self._data[ev_id_name] = get_column(self._data, ev_id_name)
-#
-#         for ev_id, dfr in  self._data.groupby(ev_id_name):
-#             if not dfr.empty:
-#                 # FIXME: pandas bug? flatfile bug? sometimes dfr is empty, skip
-#                 yield ev_id, dfr
-#
-#     def get_observations(self, imtx, records, component="Geometric"):
-#         """Return the observed values of the given IMT `imtx` from `records`,
-#         as numpy array. This method is not called if `get_contexts`is called
-#         with the `imts` argument missing or `None`.
-#
-#         *IMPORTANT*: IMTs in acceleration units (e.g. PGA, SA) are supposed to
-#         return their values in cm/s/s (which should be by convention the unit
-#         in which they are stored)
-#
-#         :param imtx: a string denoting a given Intensity measure type.
-#         :param records: sequence (e.g., list, tuple, pandas DataFrame) of records
-#             related to a given event (see :meth:`get_event_and_records`)
-#
-#         :return: a numpy array of observations, the same length of `records`
-#         """
-#
-#         if imtx.lower().startswith("sa("):
-#             sa_periods = self.sa_periods
-#             target_period = imt.from_string(imtx).period
-#             spectrum = np.log10(records[self.sa_columns])
-#             # we need to interpolate row wise
-#             # build the interpolation function
-#             interp = interp1d(sa_periods, spectrum, axis=1)
-#             # and interpolate
-#             values = 10 ** interp(target_period)
-#         else:
-#             try:
-#                 values = records[imtx].values
-#             except KeyError:
-#                 # imtx not found, try ignoring case: first `lower()`, more likely
-#                 # (IMTs mainly upper case), then `upper()`, otherwise: raise
-#                 for _ in (imtx.lower() if imtx.lower() != imtx else None,
-#                           imtx.upper() if imtx.upper() != imtx else None):
-#                     if _ is not None:
-#                         try:
-#                             values = records[_].values
-#                             break
-#                         except KeyError:
-#                             pass
-#                 else:
-#                     raise ValueError("'%s' is not a recognized IMT" % imtx) from None
-#         return values.copy()
+def cast_dtype(dtype: Union[Collection, str, pd.CategoricalDtype, ColumnDtype]) \
+        -> Union[ColumnDtype, pd.CategoricalDtype]:
+    """Return a value from the given argument that is suitable to be used as data type in
+    pandas, i.e., either a `ColumnDtype` (str-like enum) or a pandas `CategoricalDtype`
+    """
+    try:
+        if isinstance(dtype, ColumnDtype):
+            return dtype
+        if isinstance(dtype, str):
+            if dtype == 'category':  # infer categories from data
+                dtype = pd.CategoricalDtype() # see below
+            else:
+                try:
+                    return ColumnDtype[dtype]  # try enum name (raise KeyError)
+                except KeyError:
+                    return ColumnDtype(dtype)  # try enum value (raises ValueError)
+        if isinstance(dtype, (list, tuple)):
+            dtype = pd.CategoricalDtype(dtype)
+        if isinstance(dtype, pd.CategoricalDtype):
+            # CategoricalDtype with no categories or categories=None (<=> infer
+            # categories from data) needs no check. Otherwise, check that the categories
+            # are *all* of the same supported dtype:
+            if dtype.categories is None or \
+                    ColumnDtype.of(*dtype.categories) is not None:
+                return dtype
+    except (KeyError, ValueError, TypeError):
+        pass
+    raise ValueError(f'Invalid data type: {str(dtype)}')
 
 
-    # def update_context(self, ctx, records, nodal_plane_index=1):
-    #     """Update the attributes of the earthquake-based context `ctx` with
-    #     the data in `records`.
-    #     See `rupture_context_attrs`, `sites_context_attrs`,
-    #     `distances_context_attrs`, for a list of possible attributes. Any
-    #     attribute of `ctx` that is non-scalar should be given as numpy array.
-    #
-    #     :param ctx: a :class:`openquake.hazardlib.contexts.RuptureContext`
-    #         created for a specific event. It is the key 'Ctx' of the Context dict
-    #         returned by `self.create_context`
-    #     :param records: sequence (e.g., list, tuple, pandas DataFrame) of records
-    #         related to the given event (see :meth:`get_event_and_records`)
-    #     """
-    #     self._update_rupture_context(ctx, records, nodal_plane_index)
-    #     self._update_distances_context(ctx, records)
-    #     self._update_sites_context(ctx, records)
-    #     # add remaining ctx attributes:  FIXME SHOULD WE?
-    #     for ff_colname, ctx_attname in self.flatfile_columns.items():
-    #         if hasattr(ctx, ctx_attname) or ff_colname not in records.columns:
-    #             continue
-    #         val = records[ff_colname].values
-    #         val = val[0] if ff_colname in self._rup_columns else val.copy()
-    #         setattr(ctx, ctx_attname, val)
+def cast_value(val: Any, dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
+    """Cast the given value to the given dtype, raise ValueError if unsuccessful
 
-    # def _update_rupture_context(self, ctx, records, nodal_plane_index=1):
-    #     """see `self.update_context`"""
-    #     record = records.iloc[0]  # pandas Series
-    #     ctx.mag = record['magnitude']
-    #     ctx.strike = record['strike']
-    #     ctx.dip = record['dip']
-    #     ctx.rake = record['rake']
-    #     ctx.hypo_depth = record['event_depth']
-    #
-    #     ztor = record['depth_top_of_rupture']
-    #     if pd.isna(ztor):
-    #         ztor = ctx.hypo_depth
-    #     ctx.ztor = ztor
-    #
-    #     rup_width = record['rupture_width']
-    #     if pd.isna(rup_width):
-    #         # Use the PeerMSR to define the area and assuming an aspect ratio
-    #         # of 1 get the width
-    #         rup_width = np.sqrt(DEFAULT_MSR.get_median_area(ctx.mag, 0))
-    #     ctx.width = rup_width
-    #
-    #     ctx.hypo_lat = record['event_latitude']
-    #     ctx.hypo_lon = record['event_longitude']
-    #     ctx.hypo_loc = np.array([0.5, 0.5])  # <- this is compatible with older smtk. FIXME: it was like this: np.full((len(record), 2), 0.5)
+    :param val: any Python object
+    :param dtype: either a `ColumnDtype` or pandas `CategoricalDtype` object.
+        See `cast_dtype` for details
+    """
+    if dtype is None:
+        raise ValueError(f'Invalid dtype: {str(dtype)}')
+    if isinstance(dtype, pd.CategoricalDtype):
+        if val in dtype.categories:
+            return val
+        dtype_name = 'categorical'
+    else:
+        actual_dtype = ColumnDtype.of(val)
+        if actual_dtype == dtype:
+            return val
+        if dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
+            return float(val)
+        elif dtype == ColumnDtype.datetime and isinstance(val, date):
+            return datetime(val.year, val.month, val.day)
+        dtype_name = dtype.name
+    raise ValueError(f'Invalid value for type {dtype_name}: {str(val)}')
 
-    # def _update_distances_context(self, ctx, records):
-    #     """see `self.update_context`"""
-    #
-    #     # TODO Setting Rjb == Repi and Rrup == Rhypo when missing value
-    #     # is a hack! Need feedback on how to fix
-    #     ctx.repi = records['repi'].values.copy()
-    #     ctx.rhypo = records['rhypo'].values.copy()
-    #
-    #     ctx.rcdpp = np.full((len(records),), 0.0)
-    #     ctx.rvolc = np.full((len(records),), 0.0)
-    #     ctx.azimuth = records['azimuth'].values.copy()
-    #
-    #     dists = records['rjb'].values.copy()
-    #     isna = pd.isna(dists)
-    #     if isna.any():
-    #         dists[isna] = records.loc[isna, 'repi']
-    #     ctx.rjb = dists
-    #
-    #     dists = records['rrup'].values.copy()
-    #     isna = pd.isna(dists)
-    #     if isna.any():
-    #         dists[isna] = records.loc[isna, 'rhypo']
-    #     ctx.rrup = dists
-    #
-    #     dists = records['rx'].values.copy()
-    #     isna = pd.isna(dists)
-    #     if isna.any():
-    #         dists[isna] = -records.loc[isna, 'repi']
-    #     ctx.rx = dists
-    #
-    #     dists = records['ry0'].values.copy()
-    #     isna = pd.isna(dists)
-    #     if isna.any():
-    #         dists[isna] = records.loc[isna, 'repi']
-    #     ctx.ry0 = dists
 
-    # def _update_sites_context(self, ctx, records):
-    #     """see `self.update_context`"""
-    #     # Legacy code not used please check in the future:
-    #     # ------------------------------------------------
-    #     # ctx.lons = records['station_longitude'].values.copy()
-    #     # ctx.lats = records['station_latitude'].values.copy()
-    #     ctx.depths = records['station_elevation'].values * -1.0E-3 if \
-    #         'station_elevation' in records.columns else np.full((len(records),), 0.0)
-    #     vs30 = records['vs30'].values.copy()
-    #     ctx.vs30 = vs30
-    #     ctx.vs30measured = records['vs30measured'].values.copy()
-    #     ctx.z1pt0 = records['z1'].values.copy() if 'z1' in records.columns else \
-    #         vs30_to_z1pt0_cy14(vs30)
-    #     ctx.z2pt5 = records['z2pt5'].values.copy() if 'z2pt5' in records.columns else \
-    #         vs30_to_z2pt5_cb14(vs30)
-    #     if 'backarc' in records.columns:
-    #         ctx.backarc = records['backarc'].values.copy()
-    #     else:
-    #         ctx.backarc = np.full(shape=ctx.vs30.shape, fill_value=False)
+# Exceptions:
+
+class InvalidColumn(Exception):
+    """
+    General flatfile column(s) error. See subclasses for details
+    """
+    def __init__(self, *names, sep=', ', plural_suffix='s'):
+        super().__init__(*names)
+        self._sep = sep
+        self._plural_suffix = plural_suffix
+
+    @property
+    def names(self):
+        """return the names (usually column names) raising this Exception
+        and passed in `__init__`"""
+        return [repr(_) for _ in self.args]
+
+    def __str__(self):
+        """Make `str(self)` more clear"""
+        # get prefix (e.g. 'Missing column(s)'):
+        prefix = self.__class__.__name__
+        # replace upper cases with space + lower case letter
+        prefix = re.sub("([A-Z])", " \\1", prefix).strip().capitalize()
+        names = self.names
+        if len(names) != 1:
+            prefix += self._plural_suffix
+        # return full string:
+        return f"{prefix} {self._sep.join(names)}"
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class MissingColumn(InvalidColumn, AttributeError, KeyError):
+    """MissingColumnError. It inherits also from AttributeError and
+    KeyError to be compliant with pandas and OpenQuake"""
+
+    @property
+    def names(self):
+        """return the names with their alias(es), if any"""
+        _names = []
+        for name in self.args:
+            sorted_names = ColumnsRegistry.get_aliases(name)
+            suffix_str = repr(sorted_names[0])
+            if len(sorted_names) > 1:
+                suffix_str += f" (or {', '.join(repr(_) for _ in sorted_names[1:])})"
+            _names.append(suffix_str)
+        return _names
+
+
+class ConflictingColumns(InvalidColumn):
+
+    def __init__(self, name1, name2, *other_names):
+        InvalidColumn.__init__(self, name1, name2, *other_names,
+                               sep=" vs. ", plural_suffix='')
+
+
+class InvalidDataInColumn(InvalidColumn, ValueError, TypeError):
+    pass
+
+
+class InvalidColumnName(InvalidColumn):
+    pass
+
+
+# registered columns:
+
+class ColumnsRegistry:
+    """Container class to access registered flatfile properties defined in the
+    associated YAML file
+    """
+
+    @staticmethod
+    def get_rupture_params() -> set[str]:
+        """Return a set of strings with all column names (including aliases)
+        denoting a rupture parameter
+        """
+        return {c_name for c_name, c_props in _load_columns_registry().items()
+                if c_props.get('type', None) == ColumnType.rupture}
+
+    @staticmethod
+    def get_intensity_measures() -> set[str]:
+        """Return a set of strings with all column names denoting an intensity
+        measure name, with no arguments, e.g., "PGA", "SA" (not "SA(...)").
+        """
+        return {c_name for c_name, c_props in _load_columns_registry().items()
+                if c_props.get('type', None) == ColumnType.intensity}
+
+    @staticmethod
+    def get_type(column: str) -> Union[ColumnType, None]:
+        """Return the ColumnType of the given column name, or None"""
+        return _load_columns_registry().get(_replace(column), {}).get('type', None)
+
+    @staticmethod
+    def get_dtype(column: str) -> Union[None, ColumnDtype, pd.CategoricalDtype]:
+        """Return the Column data type of the given column name, or None"""
+        return _load_columns_registry().get(_replace(column), {}).get('dtype', None)
+
+    @staticmethod
+    def get_default(column: str) -> Union[None, Any]:
+        """Return the Column data type of the given column name, or None"""
+        return _load_columns_registry().get(_replace(column), {}).get('default', None)
+
+    @staticmethod
+    def get_aliases(column: str) -> tuple[str]:
+        """Return all possible names of the given column, as tuple set of strings
+        where the first element is assured to be the flatfile default column name
+        (primary name) and all remaining the secondary names. The tuple will be composed
+        of `column` alone if `column` does not have registered aliases
+        """
+        return _load_columns_registry().get(_replace(column), {}).get('alias', (column,))
+
+    @staticmethod
+    def get_help(column: str) -> str:
+        """Return the help (description) ofthe given column name, or ''"""
+        return _load_columns_registry().get(_replace(column), {}).get('help', "")
+
+
+# registered columns IO method:
+
+# YAML file path:
+_columns_registry_path = join(dirname(__file__), 'columns_registry.yaml')
+# cache storage of the data in the YAML:
+_columns_registry: dict[str, dict[str, Any]] = None  # noqa
+
+
+def _load_columns_registry(cache=True) -> dict[str, dict[str, Any]]:
+    """Loads the content of the associated YAML file with all columns
+    information and returns it as Python dict
+
+    :param cache: if True, a cache version will be returned (faster, but remember
+        that any change to the cached version will persist permanently!). Otherwise,
+        a new dict loaded from file (slower) will be returned
+    """
+    global _columns_registry
+    if cache and _columns_registry:
+        return _columns_registry
+    _cols = {}
+    with open(_columns_registry_path) as fpt:
+        for col_name, props in yaml_load(fpt, SafeLoader).items():
+            props = _harmonize_col_props(col_name, props)
+            # add all aliases mapped to the relative properties:
+            for c_name in props['alias']:
+                _cols[c_name] = props
+    if cache:
+        _columns_registry = _cols
+    return _cols
+
+
+def _harmonize_col_props(name:str, props:dict):
+    """harmonize the values of a column property dict"""
+    aliases = props.get('alias', [])
+    if isinstance(aliases, str):
+        aliases = [aliases]
+    props['alias'] = (name,) + tuple(aliases)
+    if 'type' in props:
+        props['type'] = ColumnType[props['type']]
+    if 'dtype' in props:
+        props['dtype'] = cast_dtype(props['dtype'])
+    if 'default' in props:
+        props['default'] = cast_value(props['default'], props['dtype'] )
+    for k in ("<", "<=", ">", ">="):
+        if k in props:
+            props[k] = cast_value(props[k], props['dtype'] )
+    return props
+
+
+def _replace(name: str):
+    return name if not name.startswith('SA(') else 'SA'
+
+
