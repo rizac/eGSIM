@@ -132,6 +132,6 @@ def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
         imts = intensity_measures_defined_for(name)
         if not imts.intersection(imt_cols):
             continue
-        if all(get_all_names_of(p) & ff_cols
+        if all(set(get_all_names_of(p)) & ff_cols
                for p in ground_motion_properties_required_by(name)):
             yield name

@@ -124,5 +124,5 @@ def ground_motion_properties_required_by(
         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
     if as_ff_column:
-        return frozenset(get_all_names_of(c, ordered=True)[0] for c in ret)
+        return frozenset(get_all_names_of(c)[0] for c in ret)
     return frozenset(ret)
