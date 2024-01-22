@@ -8,11 +8,9 @@ from collections.abc import Callable
 
 import pandas as pd
 
-from .columns import (ColumnDtype, get_rupture_params,
-                      get_dtypes_and_defaults, get_all_names_of,
-                      get_intensity_measures, MissingColumn,
-                      InvalidDataInColumn, InvalidColumnName, ConflictingColumns,
-                      cast_dtype, cast_value)
+from .columns import (ColumnDtype, get_dtypes_and_defaults, get_all_names_of,
+                      MissingColumn, InvalidDataInColumn, InvalidColumnName,
+                      ConflictingColumns, cast_dtype, cast_value)
 
 
 def read_flatfile(filepath_or_buffer: str, sep: str = None) -> pd.DataFrame:
@@ -54,7 +52,7 @@ def parse_flatfile(filepath_or_buffer: str, sep: str = None,
         fieldnames that are not standard  flatfile columns and are not implemented
         in `rename`. Dict values can be: 'float', 'datetime', 'bool', 'int', 'str',
         'category', `ColumnDType`s, list/tuples or pandas CategoricalDtype
-    :param extra_defaults: optional dict of with the defaults for missing values.
+    :param extra_defaults: optional dict with the defaults for missing values.
         Keys are extra CSV fieldnames that are not standard flatfile columns and
         are not implemented in `rename`
     :param usecols: pandas `read_csv` parameter (exposed explicitly here for clarity)

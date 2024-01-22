@@ -99,55 +99,32 @@ def get_rupture_params() -> set[str]:
     """Return a set of strings with all column names (including aliases)
     denoting a rupture parameter
     """
-    return {k for k, v in get_types().items() if v == ColumnType.rupture}
+    return {c_name for c_name, c_props in load_from_yaml().items()
+            if c_props.get('type', None) == ColumnType.rupture}
 
 
 def get_intensity_measures() -> set[str]:
-    """Return a set of strings with all column names
-    denoting an intensity measure. Sa, if given, is returned without period
+    """Return a set of strings with all column names denoting an intensity
+    measure name, with no arguments, e.g., "PGA", "SA" (not "SA(...)").
     """
-    return {k for k, v in get_types().items() if v == ColumnType.intensity}
+    return {c_name for c_name, c_props in load_from_yaml().items()
+            if c_props.get('type', None) == ColumnType.intensity}
 
 
-def get_types() -> dict[str, ColumnType]:
-    """Return a dict of strings with all column names (including aliases)
-    mapped to the relative ColumnType, or None (no type assigned)
+def get_type(column: str) -> Union[ColumnType, None]:
+    """Return the ColumnType of the given column name, or None"""
+    return load_from_yaml().get(column, {}).get('type', None)
+
+
+def get_all_names_of(column: str) -> tuple[str]:
+    """Return all possible names of the given column, as tuple set of strings
+    where the first element is assured to be the flatfile default column name
+    (primary name) and all remaining the secondary names. The tuple will be composed
+    of `column` alone if `column` does not have registered aliases
     """
-    typ = {}
-    _extract_from_columns(load_from_yaml(), type=typ)
-    return typ
-
-# Column name and aliases, mapped to all their aliases
-# The dict values will always include at least the column name itself:
-_alias: dict[str, frozenset[str]] = None  # noqa
-
-
-def get_all_names_of(column, ordered=False) -> Union[frozenset[str], list[str]]:
-    """Return all possible names of the given column, as set of strings (if ordered is
-    False, the default). If ordered is True, a list is returned where the first element
-    is assured to be the flatfile default column name (primary name) and all remaining
-    the secondary names. The set/list will be composed of `column` alone if `column`
-    does not denote a flatfile column
-    """
-    global _alias
-    if _alias is None:
-        _alias = {}
-        _extract_from_columns(load_from_yaml(), alias=_alias)
-    all_names = _alias.get(column, frozenset([column]))
-    if not ordered:
-        return all_names
-    # re-order putting the primary name in the 1st position:
-    all_names = list(all_names)
-    for i in range(len(all_names)):
-        if all_names[i] in _columns:
-            if i > 0:
-                all_names.insert(0, all_names.pop(i))
-            break
-    return all_names
-
-
-_dtype: dict[str, Union[ColumnDtype, pd.CategoricalDtype]] = None  # noqa
-_default: dict[str, Any] = None  # noqa
+    # `aliases` should be populated with at least `col_name` (see _harmonize_props),
+    # but for safety:
+    return load_from_yaml().get(column, {}).get('aliases', (column,))
 
 
 def get_dtypes_and_defaults() -> \
@@ -156,10 +133,12 @@ def get_dtypes_and_defaults() -> \
      (including aliases) mapped to their data type or default. Columns with no data
      type or default are not present.
     """
-    global _dtype, _default
-    if _dtype is None or _default is None:
-        _dtype, _default = {}, {}
-        _extract_from_columns(load_from_yaml(), dtype=_dtype, default=_default)
+    _dtype, _default = {}, {}
+    for c_name, props in load_from_yaml().items():
+        if 'dtype' in props:
+            _dtype[c_name] = props['dtype']
+        if 'default' in props:
+            _default[c_name] = props['default']
     return _dtype, _default
 
 
@@ -180,79 +159,35 @@ def load_from_yaml(cache=True) -> dict[str, dict[str, Any]]:
     global _columns
     if cache and _columns:
         return _columns
+    _cols = {}
     with open(_ff_metadata_path) as fpt:
-        _cols = yaml_load(fpt, SafeLoader)
+        for col_name, props in yaml_load(fpt, SafeLoader).items():
+            props = _harmonize_props(props)
+            # makes aliases sorted with col_name the primary name:
+            props['aliases'] = (col_name,) + props['aliases']
+            # add all aliases mapped to the relative properties:
+            for c_name in props['aliases']:
+                _cols[c_name] = props
     if cache:
         _columns = _cols
     return _cols
 
 
-def _extract_from_columns(columns: dict[str, dict[str, Any]], *,
-                          type:dict[str, Union[ColumnType, None]]=None,  # noqa
-                          dtype:dict[str, Union[str, pd.CategoricalDtype]]=None,
-                          alias:dict[str, frozenset[str]]=None,
-                          default:dict[str, Any]=None,
-                          bounds:dict[str, dict[str, Any]]=None,
-                          help:dict=None):
-    """Extract data from `columns` (the metadata stored in the YAML file)
-     and put it into the passed function arguments that are not missing / None.
-     **Column aliases will be included**
-
-    :param type: dict or None. If dict, it will be populated with all flatfile columns
-         (aliases included) mapped to their type (a ColumnType enum). Columns with no
-        data type will not be present
-    :param dtype: dict or None. If dict, it will be populated with all flatfile columns
-         (aliases included) mapped to their data type (a name of an item of
-        the enum :ref:`ColumnDtype` - or pandas `CategoricalDtype`). Columns with no
-        data type will not be present
-    :param alias: dict or None. If dict, it will be populated with all flatfile columns
-        (aliases included) mapped to their aliases. A column with N aliases will be
-        mapped to a set of N+1 names (if N=0, the column will be mapped to itself).
-    :param default: dict or None. If dict, it will be populated with all flatfile
-        columns (aliases included) mapped to their default, if defined. Columns with no
-        default will not be present
-    :param bounds: dict or None, of dict, it will be populated with all flatfile
-        columns (aliases included) mapped to a dict with keys "<=", "<" ">=", ">" mapped
-        in turn to a value consistent with the column dtype. Columns with no bounds
-        will not be present
-    :param help: dict or None, if dict, it will be populated with all flatfile columns
-        (aliases included) mapped to their description. Columns with no help will not be
-        present
-    """
-    for c_name, props in columns.items():
-        aliases = props.get('alias', [])
-        if isinstance(aliases, str):
-            aliases = {aliases}
-        else:
-            aliases = set(aliases)
-        aliases.add(c_name)
-        aliases = frozenset(aliases)
-        c_help = props.get('help', '')
-        has_type = 'type' in props
-        c_type = ColumnType[props['type']] if has_type else None
-        has_dtype = 'dtype' in props
-        c_dtype = cast_dtype(props['dtype']) if has_dtype else None
-        has_default = 'default' in props
-        c_default = props['default'] if has_default else None
-        if has_default and has_dtype:
-            c_default = cast_value(c_default, c_dtype)
-        c_bounds = {k: props[k] for k in ("<", "<=", ">", ">=") if k in props}
-        if c_bounds and has_dtype:
-            for k, v in c_bounds.items():
-                c_bounds[k] = cast_value(v, c_dtype)
-        for name in aliases:
-            if type is not None and has_type:
-                type[name] = c_type
-            if alias is not None:
-                alias[name] = aliases
-            if help is not None and c_help:
-                help[name] = c_help
-            if dtype is not None and has_dtype:
-                dtype[name] = c_dtype
-            if default is not None and has_default:
-                default[name] = c_default
-            if bounds is not None and c_bounds:
-                bounds[name] = c_bounds
+def _harmonize_props(props:dict):
+    """harmonize the values of a column property dict"""
+    aliases = props.get('alias', [])
+    if isinstance(aliases, str):
+        aliases = [aliases]
+    props['aliases'] = set(aliases)  # set -> remove duplicate aliases
+    # props['help'] = props.get('help', '')
+    props['type'] = ColumnType[props['type']] if 'type' in props else None
+    props['dtype'] = cast_dtype(props['dtype']) if 'dtype' in props else None
+    if 'default' in props:
+        props['default'] = cast_value(props['default'], props['dtype'] )
+    for k in ("<", "<=", ">", ">="):
+        if k in props:
+            props[k] = cast_value(props[k], props['dtype'] )
+    return props
 
 
 def cast_dtype(dtype: Union[Collection, str, pd.CategoricalDtype, ColumnDtype]) \
@@ -352,7 +287,7 @@ class MissingColumn(InvalidColumn, AttributeError, KeyError):
         """return the names with their alias(es), if any"""
         _names = []
         for name in self.args:
-            sorted_names = get_all_names_of(name, True)
+            sorted_names = get_all_names_of(name)
             suffix_str = repr(sorted_names[0])
             if len(sorted_names) > 1:
                 suffix_str += f" (or {', '.join(repr(_) for _ in sorted_names[1:])})"

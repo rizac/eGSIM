@@ -22,7 +22,7 @@ def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:
      Returns None if no column is found, raise `ConflictingColumns` if more than
      a matching column is found"""
     ff_cols = set(flatfile.columns)
-    cols = get_all_names_of(column) & ff_cols
+    cols = set(get_all_names_of(column)) & ff_cols
     if len(cols) > 1:
         raise ConflictingColumns(*cols)
     elif len(cols) == 0:
