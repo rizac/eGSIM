@@ -1,4 +1,4 @@
-# Flatfile Columns Metadata. The syntax for each column (in YAML) is:
+# Flatfile Columns Metadata registry. The syntax for each column (in YAML) is:
 #
 # <column_name>:
 #   dtype:    The data type (default when missing: null). Supported values are: null,
@@ -15,7 +15,8 @@
 #             respectively). If a type is given, the column name must match exactly the
 #             OpenQuake name in case of intensity measure (e.g. PGA, not pga), whereas
 #             for all other types the OpenQuake name can be added as alias (see below)
-#   alias:    The column alias(es), as string or list of strings. Any additional name
+#   alias:    The column alias(es), as string or list of strings. The column name must
+#             not compare in the list, applications might add it, usually as 1st element
 #             allowed for the column, e.g., the OpenQuake name (see `type` above)
 #   help:     The field help (optional), used to provide documentation
 #   ">"       (with quotation marks because > and < are special characters in YAML)

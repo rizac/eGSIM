@@ -5,8 +5,6 @@ Created on 16 Feb 2018
 """
 from datetime import datetime
 
-from typing import Any, Union
-
 import yaml
 import pandas as pd
 import numpy as np
@@ -18,27 +16,32 @@ from egsim.smtk import (registered_gsims,
                         rupture_params_required_by,
                         site_params_required_by,
                         distances_required_by)
-from egsim.smtk.flatfile.columns import (ColumnType, ColumnDtype,
-                                         _extract_from_columns,
-                                         _ff_metadata_path, cast_value)
+from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
+                                 _columns_registry_path, cast_value, ColumnsRegistry,
+                                 _load_columns_registry)
 
 
 def test_flatfile_extract_from_yaml():
     """Test the flatfile metadata"""
 
-    with open(_ff_metadata_path) as _:
+    # read directly from columns registry and asure aliases are well formed.
+    # Do not use _load_column_registry because it is assumed to rely on the following
+    # test passing (no duplicates, no single alias euqal to column name, and so on):
+    with open(_columns_registry_path) as _:
         dic = yaml.safe_load(_)
         all_names = set(dic)
         all_aliases = set()
         for k, v in dic.items():
-            aliases = v.get('alias', None)
-            if aliases is None:
+            if 'aliases' not in v:
                 continue
+            aliases = v['aliases']
             if isinstance(aliases, str):
                 aliases = [aliases]
             assert isinstance(aliases, list)
-            assert all(isinstance(_, str) for _ in aliases)
             len_aliases = len(aliases)
+            assert len_aliases > 0
+            assert k not in aliases
+            assert all(isinstance(_, str) for _ in aliases)
             aliases = set(aliases)
             assert len(aliases) == len_aliases, f"Duplicated alias defined for {k}"
             dupes = aliases & all_aliases
@@ -49,24 +52,9 @@ def test_flatfile_extract_from_yaml():
             if dupes:
                 raise ValueError(f"alias(es) {dupes} already defined as name")
 
-    c_type, c_dtype, c_alias, c_default, c_help, c_bounds = {}, {}, {}, {}, {}, {}
-    _extract_from_columns(dic, type=c_type,
-                         dtype=c_dtype, default=c_default, help=c_help,
-                         alias=c_alias, bounds=c_bounds)
-
     # Check column properties within itself (no info on other columns required):
-    for c in dic:
-        props = {'name': c, 'ctype': c_type.get(c, None)}
-        if c in c_dtype:
-            props['dtype'] = c_dtype.pop(c)
-        if c in c_default:
-            props['default'] = c_default.pop(c)
-        if c in c_help:
-            props['chelp'] = c_help.pop(c)
-        props['alias'] = c_alias[c]
-        if c in c_bounds:
-            props['bounds'] = c_bounds.pop(c)
-        check_column_metadata(**props)
+    for c, props in _load_columns_registry(False).items():
+        check_column_metadata(name=c, props=dict(props))
 
     # Check that the columns we defined as rupture param, sites param,  distance
     # and intensity measure are implemented in OpenQuake (e.g. no typos).
@@ -76,50 +64,54 @@ def test_flatfile_extract_from_yaml():
     # dicts (column name as dict key, column aliases as dict values):
     rup, site, dist, imtz = {}, {}, {}, set()
     for n in dic:
-        if c_type.get(n, None) == ColumnType.rupture:
-            rup[n] = c_alias[n]
-        elif c_type.get(n, None) == ColumnType.site:
-            site[n] = c_alias[n]
-        elif c_type.get(n, None) == ColumnType.distance:
-            dist[n] = c_alias[n]
-        elif c_type.get(n, None) == ColumnType.intensity:
+        c_type = ColumnsRegistry.get_type(n)
+        aliases = ColumnsRegistry.get_aliases(n)
+        if c_type == ColumnType.rupture:
+            rup[n] = set(aliases)
+        elif c_type == ColumnType.site:
+            site[n] = set(aliases)
+        elif c_type == ColumnType.distance:
+            dist[n] = set(aliases)
+        elif c_type == ColumnType.intensity:
             imtz.add(n)
 
     # now check names with openquake names:
     check_with_openquake(rup, site, dist, imtz)
 
 
-class missingarg:
-    pass
-
-
-def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
-                          alias:set[str, ...],
-                          dtype:Union[ColumnDtype, pd.CategoricalDtype]=None,
-                          default:Any=missingarg,
-                          bounds:dict[str, Any]=missingarg,
-                          chelp:str = missingarg
-                          ):
+def check_column_metadata(*, name: str, props: dict):
     """checks the Column metadata dict issued from the YAML flatfile"""
     # nb: use keyword arguments instead of a dict
     # so that we can easily track typos
     prefix = f'Column "{name}" metadata error (check YAML): '
     # convert type to corresponding Enum:
+    alias = props.pop('alias')
     assert name in alias
-    alias_is_missing = alias == {name}
+    alias_is_missing = set(alias) == {name}
 
-    if ctype == ColumnType.intensity.name and not alias_is_missing:
+    type = props.pop('type', None)
+    if type == ColumnType.intensity.name and not alias_is_missing:
         raise ValueError(f"{prefix} Intensity measure cannot have alias(es)")
 
-    if chelp is not missingarg and (not isinstance(chelp, str) or not chelp):
-        raise ValueError(f"{prefix} set 'help' to a non empty string, or "
-                         f"remove the key entirely")
+    if 'help' in props:
+        help = props.pop('help')
+        if not isinstance(help, str) or not help:
+            raise ValueError(f"{prefix} set 'help' to a non empty string, or "
+                             f"remove the key entirely")
 
     # perform some check on the data type consistencies:
-    bounds_are_given = bounds is not missingarg
-    default_is_given = default is not missingarg
+    bounds_symbols = {"<", ">", ">=", "<="}
+    bounds_are_given = any(k in props for k in bounds_symbols)
+    bounds = None
+    if bounds_are_given:
+        bounds = {k: props.pop(k) for k in bounds_symbols if k in props}
+    default_is_given = 'default' in props
+    default = None
+    if default_is_given:
+        default = props.pop('default')
 
     # check dtype null and return in case:
+    dtype = props.pop('dtype', None)
     if dtype is None:
         if bounds_are_given or default_is_given:
             raise ValueError(f"{prefix}  with `dtype` null or missing, "
@@ -140,15 +132,10 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
     assert isinstance(dtype, ColumnDtype)
 
     if dtype in (ColumnDtype.int, ColumnDtype.bool) and not default_is_given:
-        raise ValueError('int or bool with no default')
-
+        raise ValueError(f'{prefix} int or bool with no default')
 
     # check bounds:
     if bounds_are_given:
-        symbols = {"<", ">", ">=", "<="}
-        assert all(k in symbols for k in bounds), \
-            f"Some bound symbols not in {str(symbols)}, check flatfile Python" \
-            f"and flatfile metadata YAML file"
         if len(bounds) > 2:
             raise ValueError(f'{prefix} too many bounds: {list(bounds)}')
         if (">" in bounds and ">=" in bounds) or \
@@ -166,6 +153,10 @@ def check_column_metadata(*, name: str, ctype: Union[ColumnType, None],
     # check default value:
     if default_is_given:
         assert default is cast_value(default, dtype)
+
+    if props:
+        raise ValueError(f'{prefix} Undefined property names, '
+                         f'remove from YAML: {list(props.keys())}')
 
 
 def check_with_openquake(rupture_params: dict[str, set[str]],
@@ -185,15 +176,19 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
         oq_distances.update(distances_required_by(name))
 
     for name in rupture_params:
+        if name in {'evt_id', 'evt_time'}:
+            continue  # defined in yaml, not in openquake
         if name not in oq_rupture_params:
             assert len(set(rupture_params[name]) & oq_rupture_params) == 1
 
     for name in sites_params:
+        if name in {'sta_id', 'event_id'}:
+            continue  # defined in yaml, not in openquake
         if name not in oq_sites_params:
             assert len(set(sites_params[name]) & oq_sites_params) == 1
 
     for name in distances:
-        if name not in distances:
+        if name not in oq_distances:
             assert len(set(distances[name]) & oq_distances) == 1
 
     for ix in imts:

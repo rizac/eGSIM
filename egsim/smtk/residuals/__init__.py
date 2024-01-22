@@ -24,8 +24,7 @@ from ..registry import gsim_sa_limits
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
-from ..flatfile.columns import (InvalidColumn, MissingColumn,
-                                get_rupture_params, get_type, ColumnType)
+from ..flatfile import InvalidColumn, MissingColumn, ColumnsRegistry
 
 
 def get_residuals(
@@ -50,10 +49,6 @@ def get_residuals(
     imts = harmonize_input_imts(imts)
     validate_inputs(gsims, imts)
     # 2. prepare flatfile:
-    if not isinstance(flatfile.index, RangeIndex):
-        # we want to return as index the original record position. this makes
-        # it a safe uid regardless of the indices or ids defined in teh flatfile
-        flatfile.index = range(len(flatfile))
     flatfile_r = prepare_flatfile(flatfile, gsims, imts)
     # 3. compute residuals:
     residuals = get_residuals_from_validated_inputs(
@@ -70,10 +65,10 @@ def get_residuals(
     residuals = residuals[[c for c in sorted_cols if c in original_cols]]
     # concat:
     # FIXME: use 'input_data' also in trellis output?
-    col_mapping = {
-        c: ('input_data', get_type('SA' if c.startswith('SA(') else c) or 'misc', c)
-        for c in flatfile_r.columns
-    }
+    col_mapping = {}
+    for c in flatfile_r.columns:
+        c_type = ColumnsRegistry.get_type(c)
+        col_mapping[c] = ('input_data', c_type.name if c_type else 'misc', c)
     flatfile_r.rename(columns=col_mapping, inplace=True)
     # sort columns:
     flatfile_r.sort_index(axis=1, inplace=True)
@@ -166,7 +161,7 @@ class EventContext(RuptureContext):
         self._flatfile = flatfile
         if self.__class__.rupture_params is None:
             # get rupture params once for all instances the first time only:
-            self.__class__.rupture_params = get_rupture_params()
+            self.__class__.rupture_params = ColumnsRegistry.get_rupture_params()
 
     def __eq__(self, other):
         """Overwrite `BaseContext.__eq__` method"""
