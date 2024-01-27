@@ -178,7 +178,8 @@ class TrellisView(RESTAPIView):
     """EgsimQueryView subclass for generating Trellis plots responses"""
 
     formclass = TrellisForm
-    urls = (f'{API_PATH}/trellis', f'{API_PATH}/model-model-comparison')
+    urls = (f'{API_PATH}/predictions',
+            f'{API_PATH}/trellis', f'{API_PATH}/model2model')
 
     def response_csv(self, form:APIForm):
         return pandas_response(form.response_data(), MimeType.csv)
@@ -196,7 +197,7 @@ class ResidualsView(RESTAPIView):
     """EgsimQueryView subclass for generating Residuals plot responses"""
 
     formclass = ResidualsForm
-    urls = (f'{API_PATH}/residuals', f'{API_PATH}/model-data-comparison')
+    urls = (f'{API_PATH}/residuals', f'{API_PATH}/model2data')
 
     def response_csv(self, form:APIForm):
         return pandas_response(form.response_data(), MimeType.csv)

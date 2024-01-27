@@ -598,8 +598,8 @@ class InvalidColumnName(InvalidColumn):
 # registered columns:
 
 class ColumnsRegistry:
-    """Container class to access registered flatfile properties defined in the
-    associated YAML file
+    """Container class to access registered flatfile columns properties defined
+    in the associated YAML file
     """
 
     @staticmethod
