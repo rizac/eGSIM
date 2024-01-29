@@ -1,4 +1,4 @@
-# IPython/Jupyter setup (not needed in standard Python file):
+# IPython/Jupyter setup (Optional: edit or remove at your wish)
 %reload_ext autoreload
 %autoreload 2
 from IPython.display import display, HTML, Markdown

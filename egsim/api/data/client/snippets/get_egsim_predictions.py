@@ -1,14 +1,11 @@
-# eGSIM request function
-import requests
-import os  # not used here, most likely required in your code
 import io
 from typing import Optional
+# required external packages (pip install ...):
+import requests
 import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe
-try:
-    import tables  # required to read HDF data. See "format" parameter docstring below
-except ImportError:
-    raise ImportError('Install pytables (pip install tables) or remove the import '
-                      'after setting format="csv" in the function arguments')
+# recommended external packages:
+import tables  # enables reading HDF data. If not installed, use CSV (see "format" parameter below)
+
 
 def get_egsim_predictions(
         model: list[str],
@@ -19,9 +16,9 @@ def get_egsim_predictions(
         site_params: Optional[dict] = None,
         format="hdf"
 ) -> pd.DataFrame:
-    """Retrieve the predictions for the selected set of ground motion models
-    and intensity measure types. Each prediction will be the result of a given model,
-    imt, and scenario, which is a configurable set of Rupture parameters and
+    """Retrieve the ground motion predictions for the selected set of ground motion
+    models and intensity measure types. Each prediction will be the result of a given
+    model, imt, and scenario, which is a configurable set of Rupture parameters and
     Site parameters.
 
     Args:
@@ -36,22 +33,20 @@ def get_egsim_predictions(
 
     Returns:
 
-    a tabular structure (pandas DataFrame) where each row represents a given
-    scenario (i.e., a configured Rupture and Site) and the columns represent the
-    scenario input data and the relative computed ground motion predictions:
+    a tabular structure (pandas DataFrame) where each row contains the input data and
+    the computed predictions for a given scenario (i.e., a combination
+    of a configured Rupture and Site). The table has a multi-level column header
+    composed of 3 rows indicating:
 
-    | Predictions | Input-data |
-    |-------------|------------|
-    | data ...    | data ...   |
-
-    The table has a multi-level column header composed of 3 rows indicating:
-
-    | Header row | Predictions / Each cell indicates:                     | Input-data / Each cell indicates:                                    |
+    | Header row |  Each 'predictions' cell indicates:                    | Each 'input data' cell indicates:                                    |
     |------------|--------------------------------------------------------|----------------------------------------------------------------------|
     | 1          | the requested intensity measure, e.g. "PGA", "SA(1.0)" | the string "input_data"                                              |
     | 2          | the metric type (e.g. "median", "stddev")              | the input data type (e.g. "distance", "rupture" "intensity", "site") |
     | 3          | the requested model name                               | the input data name (e.g. "mag", "rrup")                             |
     |            | data ...                                               | data ...                                                             |
+
+    *Note: the table 1st column (called Index in pandas) reports an incremental row identifier
+    (starting from 0) unrelated to the rest of the row data*
     """
     # request parameters (concatenate with site_config and rupture_config):
     parameters = {}
