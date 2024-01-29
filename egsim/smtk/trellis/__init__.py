@@ -150,7 +150,7 @@ def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     ret = pd.DataFrame(columns=columns)
     # get the values for magnitudes, distances and periods:
     dists = np.tile(distances, len(magnitudes))
-    mags = np.hstack((np.full(len(distances), m) for m in magnitudes))
+    mags = np.hstack(tuple(np.full(len(distances), m) for m in magnitudes))
     # assign:
     ret[dist_label] = dists
     ret[mag_label] = mags

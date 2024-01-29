@@ -4,7 +4,7 @@ import tables  # required to save/read pd.DataFrame in HDF format (see format in
 
 
 def open_egsim_downloaded_file(file_path: str) -> pd.DataFrame:
-    """Open a file downloaded from eGSIM
+    """Open a tabular data file downloaded from eGSIM in HDF or CSV format
 
     Args:
         file_path: A string denoting the path to a valid file, in CSV or HDF format,
@@ -22,4 +22,5 @@ def open_egsim_downloaded_file(file_path: str) -> pd.DataFrame:
     elif file_ext in hdf_ext:
         return pd.read_hdf(file_path)
     else:
-        raise ValueError(f'Unrecognized file extension "{file_ext}" not in {csv_ext+hdf_ext}')
+        raise ValueError(f'Unrecognized file extension "{file_ext}" '
+                         f'not in {csv_ext + hdf_ext}')

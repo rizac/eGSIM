@@ -1,14 +1,11 @@
-# eGSIM request function
-import requests
-import os  # not used here, most likely required in your code
 import io
 from typing import Union
+# required external packages (pip install ...):
+import requests
 import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe
-try:
-    import tables  # required to read HDF data. See "format" parameter docstring below
-except ImportError:
-    raise ImportError('Install pytables (pip install tables) or remove the import '
-                      'after setting format="csv" in the function arguments')
+# recommended external packages:
+import tables  # enables reading HDF data. If not installed, use CSV (see "format" parameter below)
+
 
 def get_egsim_residuals(
         model: list[str],
@@ -19,7 +16,7 @@ def get_egsim_residuals(
         format="hdf"
 ) -> pd.DataFrame:
     """Retrieve the residuals for the flatfile and the selected
-    set of ground motion models and intensity measure types:
+    set of ground motion models and intensity measure types. Examples:
     ```
         dataframe = get_residuals_from_egsim(... flatfile=<predefined_flatfile_name>...)
     ```
@@ -43,22 +40,19 @@ def get_egsim_residuals(
 
     Returns:
 
-    a tabular structure (pandas DataFrame) where each row represents a given
-    record and the columns represent the flatfile input data and the relative
-    computed residuals:
-
-    | Residuals | Input-data |
-    |-----------|------------|
-    | data ...  | data ...   |
-
+    a tabular structure (pandas DataFrame) where each row contains the
+    input data and the computed residuals for a given flatfile record.
     The table has a multi-level column header composed of 3 rows indicating:
 
-    | Header row | Residuals / Each cell indicates:                                  | Input-data / Each cell indicates:                                        |
+    | Header row | Each 'residuals' cell indicates:                                  | Each 'input data' cell indicates:                                        |
     |------------|-------------------------------------------------------------------|--------------------------------------------------------------------------|
     | 1          | the requested intensity measure, e.g. "PGA", "SA(1.0)"            | the string "input_data"                                                  |
     | 2          | the residual type (e.g. "total_residual", "intra_event_residual") | the flatfile field type (e.g. "distance", "rupture" "intensity", "site") |
     | 3          | the requested model name                                          | the flatfile field name (e.g. "mag", "rrup")                             |
     |            | data ...                                                          | data ...                                                                 |
+
+    *Note: the table 1st column (called Index in pandas) reports the row position (starting from 0)
+    in the original flatfile*
     """
 
     # request parameters:
