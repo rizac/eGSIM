@@ -34,9 +34,11 @@ def get_egsim_predictions(
 
     Returns:
 
-    a tabular structure (pandas DataFrame) where each row contains the input data and
+    a tabular structure
+    ([pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe))
+    where each row contains the input data and
     the computed predictions for a given scenario (i.e., a combination
-    of a configured Rupture and Site). The table has a multi-level column header
+    of a configured Rupture and Site properties). The table has a multi-level column header
     composed of 3 rows indicating:
 
     | Header row |  Each 'predictions' cell indicates:                    | Each 'input data' cell indicates:                                    |

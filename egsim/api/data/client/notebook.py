@@ -92,19 +92,19 @@ display(HTML("<style>th, td{border: 1px solid #DDE !important;}</style>"))
 
 
 def egsim_predictions_dataframe_tutorial(
-        doc_prefix = 'The downloaded data'
+        doc_prefix = 'eGSIM computed predictions are stored in'
     ) -> dict:
     from snippets.get_egsim_predictions import get_egsim_predictions
     # Create a doc with the var_name + le last 'Returns:' section of the func docstring:
-    doc = f'**{doc_prefix}** is {get_doc(get_egsim_predictions)[-1]}'
+    doc = f'{doc_prefix} {get_doc(get_egsim_predictions)[-1]}'
     return nb_markdown_cell(f"\n{doc}\n\n{pd_tutorial}")
 
 def egsim_residuals_dataframe_tutorial(
-        doc_prefix = 'The downloaded data'
+        doc_prefix = 'eGSIM computed residuals are stored in'
     ) -> dict:
     from snippets.get_egsim_residuals import get_egsim_residuals
     # Create a doc with the var_name + le last 'Returns:' section of the func docstring:
-    doc = f'**{doc_prefix}** is {get_doc(get_egsim_residuals)[-1]}'
+    doc = f'**{doc_prefix}** {get_doc(get_egsim_residuals)[-1]}'
     return nb_markdown_cell(f"\n{doc}\n\n{pd_tutorial}")
 
 
@@ -160,7 +160,7 @@ def egsim_get_predictions_nb(
         nb_code_cell(request_code),  # query
         nb_markdown_cell('## Working with the data'),
         nb_code_cell(f'display({request_var_name})'),
-        egsim_predictions_dataframe_tutorial(request_var_name),
+        egsim_predictions_dataframe_tutorial(f'`{request_var_name}` is '),
         *debug_cells
     )
 
@@ -220,7 +220,7 @@ def egsim_get_residuals_nb(
         nb_code_cell(request_code),  # query
         nb_markdown_cell('## Working with the data'),
         nb_code_cell(f'display({request_var_name})'),
-        egsim_residuals_dataframe_tutorial(request_var_name),
+        egsim_residuals_dataframe_tutorial(f'`{request_var_name}` is '),
         *debug_cells
     )
 
@@ -236,14 +236,14 @@ def _egsim_debug_cell_nb(dataframe_var_name: str) -> list[dict]:
                          'testing/debug purposes'),
         nb_code_cell("\n".join([
             create_write_hdf_snippet(dataframe_var_name,
-                                     f"./{dataframe_var_name}.hdf",
-                                     dataframe_var_name),
-            'tmp_df = ' + create_read_hdf_snippet(f"./{dataframe_var_name}.hdf"),
+                                     repr(f"./{dataframe_var_name}.hdf"),
+                                     repr(dataframe_var_name)),
+            'tmp_df = ' + create_read_hdf_snippet(repr(f"./{dataframe_var_name}.hdf")),
             '# test equality',
             f'pd.testing.assert_frame_equal(tmp_df, {dataframe_var_name})',
             create_write_csv_snippet(dataframe_var_name,
-                                     f"./{dataframe_var_name}.csv"),
-            'tmp_df = ' + create_read_csv_snippet(f"./{dataframe_var_name}.csv"),
+                                     repr(f"./{dataframe_var_name}.csv")),
+            'tmp_df = ' + create_read_csv_snippet(repr(f"./{dataframe_var_name}.csv")),
             '# test equality',
             '# Note: CSV does not preserve all data types, so we compare dataframes ',
             '# by relaxing some conditions: here below we set arguments to fix ',

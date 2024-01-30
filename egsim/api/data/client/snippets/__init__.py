@@ -29,20 +29,20 @@ def get_doc(function:Callable) -> list[str, str, str]:  # intro, args, returns s
 
 
 def create_read_csv_snippet(file_path:str):
-    return f'pd.read_csv({repr(file_path)}, header=[0, 1, 2], index_col=0)'
+    return f'pd.read_csv({file_path}, header=[0, 1, 2], index_col=0)'
 
 
 def create_read_hdf_snippet(file_path:str):
-    return f'pd.read_hdf({repr(file_path)})'
+    return f'pd.read_hdf({file_path})'
 
 
 def create_write_hdf_snippet(dataframe_var_name:str, file_path:str, key: str):
-    return f'{dataframe_var_name}.to_hdf({repr(file_path)}, key={repr(key)}, ' \
+    return f'{dataframe_var_name}.to_hdf({file_path}, key={key}, ' \
            f'format="table")'
 
 
 def create_write_csv_snippet(dataframe_var_name:str, file_path:str):
-    return f'{dataframe_var_name}.to_csv({repr(file_path)})'
+    return f'{dataframe_var_name}.to_csv({file_path})'
 
 
 egsim_base_url = "https://egsim.gfz-potsdam.de"
@@ -57,23 +57,24 @@ pd_tutorial = f'''
 
 ```python
 import pandas as pd
-# read:
-dataframe = {create_read_hdf_snippet('/path/to/file.hdf')}
-# write:
-{create_write_hdf_snippet('dataframe', '/path/to/file.hdf', 'table_key')}
+# [read] provide a string path to an existing file (file_path):
+dataframe = {create_read_hdf_snippet('file_path')}
+# [write] provide a string path to a destination file (file_path)
+# and a string identifier for the table, required in HDF (table_key)    
+{create_write_hdf_snippet('dataframe', 'file_path', 'table_key')}
 ```
 
 [CSV format](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_csv.html)
 
 ```python
 import pandas as pd
-# read
-dataframe = {create_read_csv_snippet('/path/to/file.csv')}
-# write
-{create_write_csv_snippet('dataframe', '/path/to/file.csv')}
+# [read] provide a string path to an existing file (file_path):
+dataframe = {create_read_csv_snippet('file_path')}
+# [write] provide a string path to a destination file (file_path):
+{create_write_csv_snippet('dataframe', 'file_path')}
 ```
 
-*Note: HDF is the **recommended format**: it requires `pytables` (`pip install tables`)
+Note: HDF is the **recommended format**: it requires `pytables` (`pip install tables`)
 but is more performant and preserves data types (i.e., if you write a dataframe to 
 CSV file and read it back, some data types might not be the same)
 
