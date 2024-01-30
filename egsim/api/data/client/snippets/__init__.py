@@ -1,5 +1,4 @@
 import textwrap
-
 import sys
 from collections.abc import Iterable, Callable
 from typing import Optional, Union
@@ -97,19 +96,65 @@ def get_doc(function:Callable) -> list[str, str, str]:  # intro, args, returns s
     return sections
 
 
+def create_read_csv_snippet(file_path:str):
+    return f'pd.read_csv({repr(file_path)}, header=[0, 1, 2], index_col=0)'
+
+
+def create_read_hdf_snippet(file_path:str):
+    return f'pd.read_hdf({repr(file_path)})'
+
+
+def create_write_hdf_snippet(dataframe_var_name:str, file_path:str, key: str):
+    return f'{dataframe_var_name}.to_hdf({repr(file_path)}, key={repr(key)}, ' \
+           f'format="table")'
+
+
+def create_write_csv_snippet(dataframe_var_name:str, file_path:str):
+    return f'{dataframe_var_name}.to_csv({repr(file_path)})'
+
+
 egsim_base_url = "https://egsim.gfz-potsdam.de"
 local_server_base_url = "http://127.0.0.1:8000"
-egsim_predictions_url = egsim_base_url + '/query/predictions'
-egsim_residuals_url = egsim_base_url + '/query/residuals'
 
 
 # trailing section of each doc sections of the notebooks:
-pd_useful_links = '''
-**Useful links to work with your dataframe**:
+pd_tutorial = f'''
+### Short pandas tutorial
+
+#### Read / write DataFrame
+
+HDF format (**recommended**: more performant, preserve data types. Requires `pip install tables`)
+```python
+import pandas as pd
+# read:
+dataframe = {create_read_hdf_snippet('/path/to/file.hdf')}
+# write:
+{create_write_hdf_snippet('dataframe', '/path/to/file.hdf', 'table_key')}
+```
+
+*Note: `table_name` is a table identifier and can be any string: as long as the HDF 
+file contains only one table (as in the example) its value is irrelevant*
+
+
+CSV format
+```python
+import pandas as pd
+# read
+dataframe = {create_read_csv_snippet('/path/to/file.csv')}
+# write
+{create_write_csv_snippet('dataframe', '/path/to/file.csv')}
+```
+
+*Note: if now you read back the dataframe from file, not all columns might have the 
+same data type as before. You might need to manually set the data type in `read_csv`
+(see doc) or use HDF instead*
+
+
+#### Useful links
+
 - [Short intro](https://pandas.pydata.org/docs/user_guide/10min.html)
 - [Indexing and selecting data](https://pandas.pydata.org/docs/user_guide/indexing.html)
   - [with multi-index row or column (the case at hand)](https://pandas.pydata.org/docs/user_guide/advanced.html)
-- [Read from / write to disk](https://pandas.pydata.org/docs/user_guide/io.html)
 - [Plotting](https://pandas.pydata.org/docs/user_guide/visualization.html#visualization)
 '''.strip()  # noqa
 
@@ -130,13 +175,13 @@ def create_example_code(
 
     if as_notebook:
         jupyter_setup = open_snippet(join(dirname(__file__), 'notebook_setup.py'))
-        doc += f"\n\n{pd_useful_links}"
+        doc += f"\n\n{pd_tutorial}"
         return json.dumps(create_notebook([
             create_notebook_markdown_cell(title),
             create_notebook_markdown_cell('## Setup'),
             create_notebook_code_cell(jupyter_setup),
             create_notebook_code_cell(setup_code),  # default functions from snippet
-            create_notebook_markdown_cell('## Working example with short tutorial'),
+            create_notebook_markdown_cell('## Working example'),
             create_notebook_code_cell(example_code),  # query
             create_notebook_markdown_cell(doc)
         ]))
@@ -153,7 +198,7 @@ def create_example_code(
                f'\n\n' \
                f'{request_code}' \
                f'\n\n' \
-               f'{textwrap.indent(pd_useful_links, "#")}'
+               f'{textwrap.indent(pd_tutorial, "#")}'
 
 
 ##############################
@@ -168,7 +213,7 @@ def create_predictions_request_code(
         rupture_params: Optional[dict] = None,
         site_params: Optional[dict] = None,
         format="hdf",
-        save_files=False,
+        test_io=False,  # for debugging, write code performing I/O to file
         as_notebook=True,
         local_server=False) -> str:
     """"""
@@ -193,20 +238,7 @@ def create_predictions_request_code(
         request_code += f'format = {repr(format)}\n'
         args += ['format=format']
     request_code += f'{request_var_name} = {request_func_name}({", ".join(args)})'
-    request_code += (
-        '\n\n'
-        '# show result (optional, here for illustrative purposes only):'
-        '\n' 
-        f'display({request_var_name})'
-    )
-    if save_files:
-        request_code += (
-            '\n\n'
-            '# save files to disk WARNING: check the file path\n'
-            f'{request_var_name}.to_hdf("./{request_var_name}.hdf", '
-            f'key="{request_var_name}")\n'
-            f'{request_var_name}.to_csv("./{request_var_name}.csv")'
-        )
+    request_code += f'\n\n{_create_test_snippet(request_var_name, True, test_io)}'
 
     title = f'# Computing and fetching {request_var_name} with the eGSIM web API'
     # Create a doc with the var_name + le last 'Returns:' section of the func docstring:
@@ -222,7 +254,7 @@ def create_residuals_request_code(
         query_string=None,
         likelihood=False,
         format="hdf",
-        save_files=False,
+        test_io=False,   # for debugging, write code performing I/O to file
         as_notebook=True,
         local_server=False) -> str:
     """"""
@@ -251,25 +283,7 @@ def create_residuals_request_code(
         request_code += f'with open(flatfile, "rb") as file_obj:\n    {request_line}'
     else:
         request_code += request_line
-    request_code += (
-        '\n\n'
-        '# show result (optional, here for illustrative purposes only):'
-        '\n' 
-        f'display({request_var_name})'
-    )
-    if save_files:
-        fname = request_var_name
-        if upload:
-            fname += '.upload'
-        if likelihood:
-            fname+= '.likelihood'
-        request_code += (
-            '\n\n'
-            '# save files to disk WARNING: check the file path\n'
-            f'{request_var_name}.to_hdf("./{fname}.hdf", '
-            f'key="{request_var_name}")\n'
-            f'{request_var_name}.to_csv("./{fname}.csv")'
-        )
+    request_code += f'\n\n{_create_test_snippet(request_var_name, True, test_io)}'
 
     title = f'# Computing and fetching {request_var_name} with the eGSIM web API'
     # Create a doc with the var_name + le last 'Returns:' section of the func docstring:
@@ -278,43 +292,36 @@ def create_residuals_request_code(
                                as_notebook, local_server)
 
 
-def create_predictions_response_openfile_code(filepath:str, as_notebook=True) -> str:
-    """"""
-    from .open_egsim_downloaded_file import open_egsim_downloaded_file
-    func_name = open_egsim_downloaded_file.__name__
-    module_path = sys.modules[open_egsim_downloaded_file.__module__].__file__
-    from .get_egsim_predictions import get_egsim_predictions
-    request_var_name = 'predictions'
+def _create_test_snippet(dataframe_var_name: str, display=True, io=False):
+    """Creates few lines of code where the given dataframe can be visualized or tested
+    on a cell notebook or py file
+    """
+    code = []
+    if display:
+        code += [
+            '# show result (optional, here for illustrative purposes only):',
+            f'display({dataframe_var_name})'
+        ]
+    if io:
+        code += [
+            '# test I/O',
+            create_write_hdf_snippet(dataframe_var_name,
+                                     f"./{dataframe_var_name}.hdf",
+                                     dataframe_var_name),
+            'tmp_df = ' + create_read_hdf_snippet(f"./{dataframe_var_name}.hdf"),
+            '# test equality',
+            f'pd.testing.assert_frame_equal(tmp_df, {dataframe_var_name})',
+            create_write_csv_snippet(dataframe_var_name,
+                                     f"./{dataframe_var_name}.csv"),
+            'tmp_df = ' + create_read_csv_snippet(f"./{dataframe_var_name}.csv"),
+            '# test equality',
+            '# Note: CSV does not preserve all data types, so we compare dataframes ',
+            '# by relaxing some conditions: here below we set arguments to fix ',
+            '# categorical data type problems, but we cannot be sure that all data ',
+            '# types are safe (e.g., date times?). As such, YOU MIGHT NEED TO MODIFY ',
+            '# THE FUNCTION ARGUMENTS IN THE FUTURE',
+            f'pd.testing.assert_frame_equal(tmp_df, {dataframe_var_name}, '
+            f'check_dtype=False, check_categorical=False)'
+        ]
 
-    # Create a doc with the var_name + le last 'Returns:' section of the func docstring:
-    doc = f'**{request_var_name}** is {get_doc(get_egsim_predictions)[-1]}'
-    title = f'# Working with {request_var_name} downloaded from eGSIM'
-    request_code = (
-        f"flatfile = {repr(filepath)}  # PLEASE CHECK and provide an existing file path"
-        f"{request_var_name} = {func_name}(flatfile)\n"
-        "\n\n"
-        '# show result (optional, here for illustrative purposes only):\n'
-        f'display({request_var_name})'
-    )
-    return create_example_code(title, module_path, request_code, doc, as_notebook)
-
-
-def create_residuals_response_openfile_code(filepath:str, as_notebook=True) -> str:
-    """"""
-    from .open_egsim_downloaded_file import open_egsim_downloaded_file
-    func_name = open_egsim_downloaded_file.__name__
-    module_path = sys.modules[open_egsim_downloaded_file.__module__].__file__
-    from .get_egsim_residuals import get_egsim_residuals
-    request_var_name = 'residuals'
-
-    # Create a doc with the var_name + le last 'Returns:' section of the func docstring:
-    doc = f'**{request_var_name}** is {get_doc(get_egsim_residuals)[-1]}'
-    title = f'# Working with {request_var_name} downloaded from eGSIM'
-    request_code = (
-        f"flatfile = {repr(filepath)}  # PLEASE CHECK and provide an existing file path"
-        f"{request_var_name} = {func_name}(flatfile)\n"
-        "\n\n"
-        '# show result (optional, here for illustrative purposes only):\n'
-        f'display({request_var_name})'
-    )
-    return create_example_code(title, module_path, request_code, doc, as_notebook)
+    return "\n".join(code)

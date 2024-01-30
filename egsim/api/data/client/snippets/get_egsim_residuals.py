@@ -35,8 +35,9 @@ def get_egsim_residuals(
     - query_string: selection query to apply to the data (e.g. "mag>6")
     - likelihood: bool (default False): compute the residuals likelihood
       according to [Scherbaum et al. (2004)](https://doi.org/10.1785/0120030147)
-    - format: the requested data format. "hdf" (the default) or "csv". The latter is
-      less performant but does not require external software and libraries
+    - format: the requested data format. "hdf" (the default, recommended) or "csv".
+      HDF is more performant and support more data types, but it requires pytables
+      (`pip install tables`)
 
     Returns:
 

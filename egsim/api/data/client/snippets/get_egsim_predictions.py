@@ -28,8 +28,9 @@ def get_egsim_predictions(
     - distances: list of distances configuring each Site
     - rupture_params: dict of shared Rupture parameters (magnitude excluded)
     - site_params: dict of shared Site parameters (distance excluded)
-    - format: the requested data format. "hdf" (the default) or "csv". The latter is
-      less performant but does not require external software and libraries
+    - format: the requested data format. "hdf" (the default, recommended) or "csv".
+      HDF is more performant and support more data types, but it requires pytables
+      (`pip install tables`)
 
     Returns:
 
