@@ -4,7 +4,6 @@ from collections.abc import Iterable, Callable
 from typing import Optional, Union
 import uuid
 import json
-from os.path import join, dirname
 
 
 def create_notebook_code_cell(src_code: Optional[Union[str, Iterable[str]]]=None):
@@ -64,11 +63,6 @@ def create_notebook(cells: Optional[list[dict]]=None):
     }
 
 
-def open_snippet(file_path) -> str:
-    with open(file_path, 'rt', encoding='utf8') as file_obj:
-        return file_obj.read()
-
-
 def get_doc(function:Callable) -> list[str, str, str]:  # intro, args, returns sections
     """Return the docstring of the given function in a list of three
     strings with the content of 'intro', 'args', and 'returns' sections
@@ -119,8 +113,6 @@ local_server_base_url = "http://127.0.0.1:8000"
 
 # trailing section of each doc sections of the notebooks:
 pd_tutorial = f'''
-### Short pandas tutorial
-
 #### Read / write DataFrame
 
 HDF format (**recommended**: more performant, preserve data types. Requires `pip install tables`)
@@ -150,7 +142,7 @@ same data type as before. You might need to manually set the data type in `read_
 (see doc) or use HDF instead*
 
 
-#### Useful links
+#### Useful pandas links
 
 - [Short intro](https://pandas.pydata.org/docs/user_guide/10min.html)
 - [Indexing and selecting data](https://pandas.pydata.org/docs/user_guide/indexing.html)
@@ -158,6 +150,18 @@ same data type as before. You might need to manually set the data type in `read_
 - [Plotting](https://pandas.pydata.org/docs/user_guide/visualization.html#visualization)
 '''.strip()  # noqa
 
+
+notebook_setup_cell = """
+# IPython/Jupyter setup (Optional: edit or remove at your wish)
+%reload_ext autoreload
+%autoreload 2
+from IPython.display import display, HTML, Markdown
+# make wide HTML cells (e.g., as created by `display(dataframe)`) display a scrollbar:
+display(HTML("<style>div.jp-OutputArea-output.jp-RenderedHTML{display:block;overflow:auto;}</style>"))
+from IPython.core.display import HTML
+# make tables cells with a border:
+display(HTML("<style>th, td{border: 1px solid #DDE !important;}</style>"))
+"""
 
 def create_example_code(
         title:str,
@@ -167,38 +171,35 @@ def create_example_code(
         as_notebook=True,
         local_server=False) -> str:
     """"""
-    # assure the request code ends with <request_var_name> = :
+    if title and title[0] != '#':  # add section (or comment) tag
+        title = f'# {title}'
 
-    setup_code = open_snippet(setup_module_path)
+    with open(setup_module_path, 'rt', encoding='utf8') as file_obj:
+        setup_code = file_obj.read()
     if local_server:
         setup_code = setup_code.replace(egsim_base_url, local_server_base_url)
 
     if as_notebook:
-        jupyter_setup = open_snippet(join(dirname(__file__), 'notebook_setup.py'))
-        doc += f"\n\n{pd_tutorial}"
         return json.dumps(create_notebook([
             create_notebook_markdown_cell(title),
             create_notebook_markdown_cell('## Setup'),
-            create_notebook_code_cell(jupyter_setup),
+            create_notebook_code_cell(notebook_setup_cell),
             create_notebook_code_cell(setup_code),  # default functions from snippet
             create_notebook_markdown_cell('## Working example'),
             create_notebook_code_cell(example_code),  # query
-            create_notebook_markdown_cell(doc)
+            create_notebook_markdown_cell(f"\n{doc}\n\n{pd_tutorial}")
         ]))
-    else:
-        request_code = (
-            'if __name__ == "__main__":\n'
-            '# The code below is executed when this file is '
-            'invoked as script (python <this_file>):\n\n'
-            f'{textwrap.indent(example_code, "    ")}'
-        )
-        return f'{title}' \
-               f'\n\n' \
-               f'{setup_code}' \
-               f'\n\n' \
-               f'{request_code}' \
-               f'\n\n' \
-               f'{textwrap.indent(pd_tutorial, "#")}'
+
+    # python file
+    return "\n\n".join([
+        title,
+        setup_code,
+        'if __name__ == "__main__":\n',
+        '# This code is executed when this file is run as script\n',
+        '# (python <this_file>):',
+        f'{textwrap.indent(example_code, "    ")}',
+        f'{textwrap.indent(pd_tutorial, "#")}'
+    ])
 
 
 ##############################
