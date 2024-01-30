@@ -41,7 +41,9 @@ def get_egsim_residuals(
 
     Returns:
 
-    a tabular structure (pandas DataFrame) where each row contains the
+    a tabular structure
+    ([pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe))
+    where each row contains the
     input data and the computed residuals for a given flatfile record.
     The table has a multi-level column header composed of 3 rows indicating:
 
