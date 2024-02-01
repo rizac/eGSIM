@@ -7,12 +7,15 @@ EGSIM.component('trellis', {
 		urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
 	},
 	data() {
+		rupKeys = ['dip', 'aspect', 'tectonic_region', 'rake', 'ztor', 'strike', 'hypocenter_location', 'msr', 'initial_point'];
+		otherKeys = ['gsim', 'imt', 'magnitude', 'distance'];
 		return {
 			formVisible: true,
 			formAsDialogBox: false,
 			predefinedSA: false,  // whether we have selected spectra as plot type
 			responseData: {},
-			scenarioKeys: Object.keys(this.form).filter(key => key!='gsim' && key!='imt' && key!='plot_type' && key!='stdev')
+			ruptureKeys: Object.keys(this.form).filter(key => rupKeys.includes(key)),
+			scenarioKeys: Object.keys(this.form).filter(key => !rupKeys.includes(key) && !otherKeys.includes(key))
 		}
 	},
 	computed: {
@@ -21,59 +24,47 @@ EGSIM.component('trellis', {
 			return this.scenarioKeys.some(key => !!form[key].error);
 		}
 	},
-	watch: {
-		'form.plot_type.value': {
-			// watch the selected plot type and enable/disable the imt <select> accordingly
-			immediate: true,
-			handler(newVal, oldVal){
-				var enabled = newVal !== 's' && newVal !== 'ss';
-				this.form.imt.disabled = !enabled;
-				this.predefinedSA = !enabled;
-			}
-		}
-	},
-	template: `<div class='d-flex flex-column position-relative' style="flex: 1 1 auto">
-		<egsim-form :form="form" :url="url" :download-url="urls.downloadRequest"
-					:show="formVisible" :dialogbox="formAsDialogBox" @closed="formVisible=false"
-					@submitted="(response) => {formVisible=false;formAsDialogBox=true;responseData=response.data;}">
+	template: `<div class='position-relative' style="flex: 1 1 auto;">
+		<gsim-map @gsim-selected="(gs) => { form.gsim.value = Array.from(new Set(form.gsim.value.concat(gs))) }"
+				  :regionalizations="form.gsim['data-regionalizations']"
+				  style='position:absolute;inset:0px;z-index:0' />
+		<form :form="form" :url="url" :download-url="urls.downloadRequest"
+			  class='d-flex flex-column ps-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
 
-			<template v-slot:left-column>
-				<gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
-			</template>
+			<gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
 
-			<template v-slot:right-column>
-				<div style="position:relative">
-					<imt-select :field="form['imt']" />
-					<div v-show='predefinedSA' class="form-control small text-muted"
-						 style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
-						<i class='text-warning fa fa-info-circle'></i>
-						Intensity Measure will default to 'SA' with a set of pre-defined periods
+			<div style="position:relative">
+				<imt-select :field="form['imt']" />
+				<div v-show='predefinedSA' class="form-control small text-muted"
+					 style="position:absolute;bottom:1rem;right:1rem;width:13rem;text-align:justify">
+					<i class='text-warning fa fa-info-circle'></i>
+					Intensity Measure will default to 'SA' with a set of pre-defined periods
+				</div>
+			</div>
+			<div class="form-control mt-4"
+				 :class="{'border-danger': scenarioHasErrors}"
+				 style="flex: 1 1 0;min-height:3rem;background-color:transparent;overflow-y:auto">
+
+				<template v-for="(name, index) in scenarioKeys" >
+
+					<div v-if="form[name].type != 'checkbox'" class='d-flex flex-column'
+						 :class="{ 'mt-2': index > 0 }">
+						<field-label :field="form[name]" />
+						<field-input :field="form[name]" />
 					</div>
-				</div>
-				<div class="form-control mt-4"
-					 :class="{'border-danger': scenarioHasErrors}"
-					 style="flex: 1 1 0;min-height:3rem;background-color:transparent;overflow-y:auto">
+					<div v-else class='d-flex flex-row align-items-baseline'
+						 :class="{ 'mt-2': index > 0 }">
+						<field-input :field="form[name]" />
+						<field-label :field="form[name]" class='ms-2' style='flex: 1 1 auto'/>
+					</div>
+				</template>
 
-					<template v-for="(name, index) in scenarioKeys" >
-						<div v-if="form[name].type != 'checkbox'" class='d-flex flex-column'
-							 :class="{ 'mt-2': index > 0 }">
-							<field-label :field="form[name]" />
-							<field-input :field="form[name]" />
-						</div>
-						<div v-else class='d-flex flex-row align-items-baseline'
-							 :class="{ 'mt-2': index > 0 }">
-							<field-input :field="form[name]" />
-							<field-label :field="form[name]" class='ms-2' style='flex: 1 1 auto'/>
-						</div>
-					</template>
+			</div>
 
-				</div>
-
-				<div class="mt-4" style="background-color:transparent">
-					REMOVE HERE
-				</div>
-			</template>
-		</egsim-form>
+			<div class="mt-4" style="background-color:transparent">
+				REMOVE HERE
+			</div>
+		</form>
 
 		<trellis-plot-div :data="responseData" :download-url="urls.downloadResponse"
 						  class='invisible position-absolute start-0 top-0 end-0 bottom-0'
