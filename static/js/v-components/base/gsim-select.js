@@ -2,7 +2,7 @@
 
 EGSIM.component('gsim-select', {
 	props: {
-		field: {type: Object}, // see field-input
+		field: {type: Object},
 		imtField: {type: Object, default: null} // field of IMTs (can be null)
 	},
 	emits: ['gsim-selected'],
@@ -64,22 +64,21 @@ EGSIM.component('gsim-select', {
 		}
 	},
 	template: `<div class='d-flex flex-column'>
-		<field-label :field="field">
-			<template v-slot:trailing-content>
-				<span v-if="!field.error" class='ms-2 small text-muted' v-html="infoMsg"></span>
-				<i v-show="Object.keys(warnings).length"
-				   aria-label="Remove models with warnings (for details, hover mouse on the list below)"
-				   class="fa fa-exclamation-triangle ms-2 text-warning" style="cursor: pointer;"
-				   @click="field.value=field.value.filter(m => !warnings[m])"></i>
-				<i v-show="Object.keys(errors).length"
-				   aria-label="Remove models with errors (for details, hover mouse on the list below)"
-				   class="fa fa-exclamation-triangle ms-2 text-danger" style="cursor: pointer;"
-				   @click="field.value=field.value.filter(m => !errors[m])"></i>
-				<i v-show="field.value.length && !field.error"
-				   aria-label="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
-				   @click="field.value=[]"></i>
-			</template>
-		</field-label>
+		<div style='display:flex'>
+			<label style="flex: 1 1 auto">{{ field.name }}</label>
+			<span v-if="!field.error" class='ms-2 small text-muted' v-html="infoMsg"></span>
+			<i v-show="Object.keys(warnings).length"
+			   aria-label="Remove models with warnings (for details, hover mouse on the list below)"
+			   class="fa fa-exclamation-triangle ms-2 text-warning" style="cursor: pointer;"
+			   @click="field.value=field.value.filter(m => !warnings[m])"></i>
+			<i v-show="Object.keys(errors).length"
+			   aria-label="Remove models with errors (for details, hover mouse on the list below)"
+			   class="fa fa-exclamation-triangle ms-2 text-danger" style="cursor: pointer;"
+			   @click="field.value=field.value.filter(m => !errors[m])"></i>
+			<i v-show="field.value.length && !field.error"
+			   aria-label="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
+			   @click="field.value=[]"></i>
+		</div>
 		<div style='overflow: auto; flex: 0 1 auto; min-height:0px'
 			 :class="field.value.length ? 'd-flex flex-column form-control mb-2': 'd-none'">
 			<div class='d-flex flex-row'>
@@ -213,13 +212,18 @@ EGSIM.component('imt-select', {
 		}
 	},
 	template: `<div class='d-flex flex-column'>
-		<field-label :field="fieldCopy" />
-		<field-input :field="fieldCopy" style="flex: 1 1 0;min-height: 5rem" />
-		<base-input :value="SAPeriods"
-					@value-changed="(value) => {SAPeriods = value;}"
-					:disabled="field.disabled || !fieldCopy.value.includes('SA')"
-					placeholder="SA periods (space-separated)"
-					:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />
+		<label>{{ fieldCopy.name }}</label>
+		<select :v-model="fieldCopy.value" multiple  class='form-control'
+				style="flex: 1 1 0;min-height: 5rem;border-bottom-left-radius: 0;border-bottom-right-radius: 0;">
+			<option	v-for='opt in fieldCopy.choices' :value="opt">
+				{{ opt }}
+			</option>
+		</select>
+		<input type='text' :value="SAPeriods" class='form-control'
+				@value-changed="(value) => {SAPeriods = value;}"
+				:disabled="field.disabled || !fieldCopy.value.includes('SA')"
+				placeholder="SA periods (space-separated)"
+				:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />
 	</div>`,
 	methods: {
 		updateSelectedImts(){
