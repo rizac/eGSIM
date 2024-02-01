@@ -19,6 +19,7 @@ from egsim.api.forms.flatfile import FlatfileForm
 from egsim.api.forms.flatfile.compilation import FlatfileInspectionForm
 from egsim.api.forms.trellis import TrellisForm
 from egsim.smtk import read_flatfile
+from egsim.smtk.trellis import RuptureProperties, SiteProperties
 
 GSIM, IMT = 'gsim', 'imt'
 
@@ -370,6 +371,32 @@ def test_field2params_in_forms():
 
     with pytest.raises(ValueError):
         check_egsim_form(Test)
+
+
+def test_trellis_rupture_site_fields():
+
+    rup_fields = RuptureProperties.__annotations__
+    missing = set(rup_fields) - TrellisForm.rupture_fields()
+    assert sorted(missing) == ['tectonic_region']
+
+    site_fields = SiteProperties.__annotations__
+    missing = set(site_fields) - TrellisForm.site_fields()
+    assert sorted(missing) == ['distance_type', 'origin_point', 'xvf']
+
+    # check that we did not misspelled any TrellisField. To do this, let's
+    # remove the site and rupture fields, and all fields defined in superclasses.
+    # We should be left with 2 fields only: magnitude and distance
+
+    rem_fields = set(TrellisForm.base_fields) \
+                 - TrellisForm.rupture_fields() - TrellisForm.site_fields()
+
+    for super_cls in TrellisForm.__mro__:
+        if super_cls is not TrellisForm:
+            try:
+                rem_fields -= set(super_cls.base_fields)  # noqa
+            except AttributeError:
+                pass
+    assert sorted(rem_fields) == ['distance', 'magnitude']
 
 
 def check_egsim_form(new_class:Type[EgsimBaseForm]):

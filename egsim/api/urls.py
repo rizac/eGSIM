@@ -16,6 +16,7 @@ urlpatterns = [
       for _ in TrellisView.urls],
     *[re_path(r'^%s/?$' % esc(_), csrf_exempt(ResidualsView.as_view()))
       for _ in ResidualsView.urls],
-    # return a 404 not-found JSONResponse for all other cases:
-    re_path("^.*/?$", csrf_exempt(lambda *a, **kw: error_response(responses[404], 404)))
+    # return a 404 not-found JSON Response for all other cases
+    # KEEP THIS AT THE END OF THE URL PATTERNS (see also egsim.urls for details):
+    re_path("^.+/?$", csrf_exempt(lambda *a, **kw: error_response(responses[404], 404)))
 ]

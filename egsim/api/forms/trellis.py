@@ -74,9 +74,8 @@ class TrellisForm(GsimImtForm, APIForm):
         'vs30measured': ('vs30measured', 'vs30_measured'),
         'z1pt0': ('z1', 'z1pt0'),
         'initial_point': ('initial-point', 'initial_point'),
-        'hypocentre_location': ('hypocenter-location',
+        'hypocenter_location': ('hypocenter-location',
                                 'hypocentre-location',
-                                'hypocenter_location',
                                 'hypocentre_location'),
         'line_azimuth': ('line-azimuth', 'line_azimuth'),
     }
@@ -84,7 +83,6 @@ class TrellisForm(GsimImtForm, APIForm):
     # GSIM RUPTURE PARAMS:
     magnitude = ArrayField(FloatField(), label='Magnitude(s)', required=True)
     distance = ArrayField(FloatField(), label='Distance(s)', required=True)
-    vs30 = FloatField(label=mark_safe('V<sub>S30</sub> (m/s)'), initial=760.0)
     aspect = FloatField(label='Rupture Length / Width', min_value=0., initial=1.0)
     dip = FloatField(label='Dip', min_value=0., max_value=90., initial=90)
     rake = FloatField(label='Rake', min_value=-180., max_value=180.,
@@ -102,11 +100,13 @@ class TrellisForm(GsimImtForm, APIForm):
                                FloatField(initial=0, min_value=-90, max_value=90),
                                label="Location on Earth",
                                help_text='Longitude Latitude')
-    hypocentre_location = ArrayField(FloatField(initial=0.5, min_value=0, max_value=1),
+    hypocenter_location = ArrayField(FloatField(initial=0.5, min_value=0, max_value=1),
                                      FloatField(initial=0.5, min_value=0, max_value=1),
                                      label="Location of Hypocentre",
                                      help_text='Along-strike fraction, '
                                                'Down-dip fraction')
+    vs30 = FloatField(label=mark_safe('V<sub>S30</sub> (m/s)'), initial=760.0)
+
     region = ChoiceField(label="Attenuation cluster region",
                          choices=[
                              (0, '0 - Default or unknown'),
@@ -133,6 +133,18 @@ class TrellisForm(GsimImtForm, APIForm):
                                            "V<sub>S30</sub> if not given"),
                        required=False)
     backarc = BooleanField(label='Backarc Path', initial=False, required=False)
+
+    @classmethod
+    def site_fields(cls) -> set[str]:
+        return set(SiteProperties.__annotations__) & set(cls.base_fields)
+
+    @classmethod
+    def rupture_fields(cls) -> set[str]:
+        return set(RuptureProperties.__annotations__) & set(cls.base_fields)
+
+    @classmethod
+    def scenario_fields(cls) -> set[str]:
+        return cls.site_fields() | cls.rupture_fields()
 
     # All clean_<field> methods below are called in `self.full_clean` after each field
     # is validated individually in order to perform additional validation or casting:
