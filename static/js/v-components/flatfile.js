@@ -1,4 +1,5 @@
 /* Flatfile components */
+// FIXME import submitForm from ....
 
 EGSIM.component('flatfile', {
 	props: {
@@ -45,7 +46,6 @@ EGSIM.component('flatfile', {
 
 
 EGSIM.component('flatfile-compilation', {
-	mixins: [FormDataHTTPClient],
 	props: {
 		form: Object,
 		url: String,
@@ -126,9 +126,8 @@ EGSIM.component('flatfile-compilation', {
 	methods: {
 		queryRequiredColumns(){
 			// query the server and store in response data the metadata columns
-			// required for the current GSIM selection
-			// this.$nextTick(() => {
-				this.postFormData().then(response => {
+			// submitForm defined globally
+				submitForm(this.url, this.form).then(response => {
 					this.responseData = response.data;
 					this.needsRefresh = false;
 				});
@@ -177,7 +176,6 @@ EGSIM.component('flatfile-compilation', {
 
 
 EGSIM.component('flatfile-plot', {
-	mixins: [FormDataHTTPClient],
 	props: {
 		form: Object,
 		url: String,
@@ -196,7 +194,7 @@ EGSIM.component('flatfile-plot', {
 			this.form.y.choices = this.form.y.choices.slice(0, 1).concat(vals);
 		},
 		submit(){
-			this.postFormData().then(response => {this.responseData = response.data});
+			submitForm(this.url, this.form).then(response => {this.responseData = response.data});
 		}
 	},
 	template: `<div class='d-flex flex-column' style='flex: 1 1 auto'>
@@ -392,10 +390,8 @@ EGSIM.component('flatfile-select', {
 		upload(file){  // return a Promise
 			var formData = new FormData();
 			formData.append("flatfile", file);
-			return axios.post(this.field['data-url'], formData, {
-				headers: {
-				  'Content-Type': 'multipart/form-data'
-				}
+			return fetch(this.field['data-url'], formData, {
+				headers: { 'Content-Type': 'multipart/form-data' }
 			});
 		}
 	},

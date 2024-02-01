@@ -227,12 +227,12 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         TAB.trellis.name: {
             'form': form_to_json(TAB.trellis.formclass, ignore_field, ignore_choices),
             'url': TAB.trellis.urls[0],
-            'urls': {
-                'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.trellis.name}/"
-                                   f"{TAB.trellis.download_request_filename}",
-                'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.trellis.name}/"
-                                    f"{TAB.trellis.download_response_filename}"
-            }
+            # 'urls': {  # FIXME REMOVE
+            #     'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.trellis.name}/"
+            #                        f"{TAB.trellis.download_request_filename}",
+            #     'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.trellis.name}/"
+            #                         f"{TAB.trellis.download_response_filename}"
+            # }
         },
         TAB.flatfile.name: {
             'forms': [form_to_json(FlatfileRequiredColumnsForm, ignore_field,
@@ -244,12 +244,12 @@ def get_components_properties(debugging=False) -> dict[str, dict[str, Any]]:
         TAB.residuals.name: {
             'form': form_to_json(TAB.residuals.formclass, ignore_field, ignore_choices),
             'url': TAB.residuals.urls[0],
-            'urls': {
-                'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.residuals.name}/"
-                                   f"{TAB.residuals.download_request_filename}",
-                'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.residuals.name}/"
-                                    f"{TAB.residuals.download_response_filename}"
-            }
+            # 'urls': {  # FIXME REMOVE
+            #     'downloadRequest': f"{URLS.DOWNLOAD_REQUEST}/{TAB.residuals.name}/"
+            #                        f"{TAB.residuals.download_request_filename}",
+            #     'downloadResponse': f"{URLS.DOWNLOAD_RESPONSE}/{TAB.residuals.name}/"
+            #                         f"{TAB.residuals.download_response_filename}"
+            # }
         },
         # FIXME: REMOVE
         # TAB.testing.name: {

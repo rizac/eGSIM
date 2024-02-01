@@ -397,7 +397,7 @@ EGSIM.component('gsim-map', {
 				'regionalization': this.regionalizations.names.filter(name => this.isRegionalizationSelected(name))
 			};
 			// query data and update filter func:
-			axios.post(this.regionalizations.url, data).then(response => {
+			fetch(this.regionalizations.url, data).then(response => {
 				this.$emit('gsim-selected', response.data.models || [])
 			});
 		},
