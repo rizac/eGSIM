@@ -4,14 +4,11 @@ EGSIM.component('trellis', {
 	props :{
 		form: Object,
 		url: String,
-		urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
 	},
 	data() {
 		rupKeys = ['dip', 'aspect', 'tectonic_region', 'rake', 'ztor', 'strike', 'hypocenter_location', 'msr', 'initial_point'];
 		otherKeys = ['gsim', 'imt', 'magnitude', 'distance'];
 		return {
-			formVisible: true,
-			formAsDialogBox: false,
 			predefinedSA: false,  // whether we have selected spectra as plot type
 			responseData: {},
 			ruptureKeys: Object.keys(this.form).filter(key => rupKeys.includes(key)),
@@ -28,7 +25,7 @@ EGSIM.component('trellis', {
 		<gsim-map @gsim-selected="(gs) => { form.gsim.value = Array.from(new Set(form.gsim.value.concat(gs))) }"
 				  :regionalizations="form.gsim['data-regionalizations']"
 				  style='position:absolute;inset:0px;z-index:0' />
-		<form :form="form" :url="url" :download-url="urls.downloadRequest"
+		<form :form="form" :url="url" novalidate @submit.prevent="postData(url, form).then(r => { responseData = r; })"
 			  class='d-flex flex-column ps-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
 
 			<gsim-select :field="form['gsim']" :imtField="form['imt']" style="flex:1 1 auto" />
@@ -66,14 +63,9 @@ EGSIM.component('trellis', {
 			</div>
 		</form>
 
-		<trellis-plot-div :data="responseData" :download-url="urls.downloadResponse"
+		<trellis-plot-div :data="responseData"
 						  class='invisible position-absolute start-0 top-0 end-0 bottom-0'
 						  :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">
-			<slot>
-				<button @click='formVisible=!formVisible' class='btn btn-sm btn-primary'>
-					<i class='fa fa-list-alt'></i> Configuration
-				</button>
-			</slot>
 		</trellis-plot-div>
 	</div>`
 });
