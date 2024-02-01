@@ -59,20 +59,20 @@ const EGSIM = Vue.createApp({
 		</div>
 	</div>`,
 	created(){
-		this.configureHTTPClient();
 		this.addCss();
 	},
 	mounted(){
 		setupTooltipObserver(this.$el.parentNode);   // https://vuejs.org/api/component-instance.html#el
-		cfg = {
-			headers: { 'content-type': 'application/json; charset=utf-8' }
+		var data = {
+			method: "POST",
+			headers: { 'content-type': 'application/json; charset=utf-8' },
+			body: JSON.stringify({
+				browser: this.getBrowser(),
+				selectedMenu: window.location.pathname.split("/").pop()
+			})
 		};
-		data = {
-			browser: this.getBrowser(),
-			selectedMenu: window.location.pathname.split("/").pop()
-		};
-		axios.post('/init_data', data, cfg).then(response => {
-			data = response.data;
+		fetch('/init_data', data).then(response => response.json().then(data => {
+			// data = response.json();
 			this.components = data.components;
 			// setup the errors dict:
 			for(var key of Object.keys(this.components.props)){
@@ -81,7 +81,7 @@ const EGSIM = Vue.createApp({
 			this.newpageURLs = data.newpage_urls;
 			this.init(data.gsims, data.imt_groups, data.warning_groups, data.flatfile, data.regionalizations);
 			this.selComponent = data.sel_component;
-		});
+		}));
 	},
 	computed: {
 		selComponentProps(){  // https://stackoverflow.com/a/43658979
@@ -104,28 +104,6 @@ const EGSIM = Vue.createApp({
 				window.history.replaceState({}, document.title, newHref);
 			}
 			return false; // in case accessed from within anchors
-		},
-		configureHTTPClient(){
-			// Configures the HTTPClient (currently axios library)
-			axios.interceptors.request.use((config) => {
-				// Do something before request is sent
-				this.setError('');
-				this.loading = true;
-				return config;
-			}, (error) => {
-				this.setError(this.getErrorMsg(error));
-				this.loading = false;
-				throw error;
-			});
-			// Add a response interceptor
-			axios.interceptors.response.use((response) => {
-				this.loading = false;
-				return response;
-			}, (error) => {
-				this.setError(this.getErrorMsg(error));
-				this.loading = false;
-				throw error;
-			});
 		},
 		addCss(){
 			var style = document.createElement('style');
@@ -222,7 +200,8 @@ const EGSIM = Vue.createApp({
 			}
 		},
 		getErrorMsg(errorResponse){
-			// get the error message (str) from an axios errorResponse and return it
+			// FIXME REMOVE?
+			// get the error message (str) from an fech request
 			var errData = (errorResponse.response || {}).data;
 			if (errData instanceof ArrayBuffer){
 				// this might happen if, e.g., we requested png. The JSON error response
@@ -343,6 +322,7 @@ EGSIM.component('home', {
 
 
 const DataDownloader = {
+	// FIXME: how to handle responseType?
 	methods: {
 		download(url, postData, config){
 			/** send `postData` to `url`, and download the response on the client OS */
@@ -352,7 +332,7 @@ const DataDownloader = {
 			if (!config.responseType){
 				config.responseType = 'arraybuffer';
 			}
-			axios.post(url, postData, {responseType: 'arraybuffer'}).then(response => {
+			fetch(url, postData, {responseType: 'arraybuffer'}).then(response => {
 				if (response && response.data){
 					var filename = (response.headers || {})['content-disposition'];
 					if (!filename){ return; }
@@ -488,4 +468,46 @@ function setupTooltipObserver(observedRootElement){
 		subtree: true,
 	});
 
+}
+
+// Example POST method implementation:
+async function submitForm(url = "", formData = {}) {
+	// FIXME: replace this?
+	var data = {};
+	Object.keys(formData).map(k => {data[k] = formData[k].value; });
+	// infer the content type:
+	var contentType = "application/json";
+	var hasFiles = Object.keys(data).some(elm => data[elm] instanceof File);
+	if (hasFiles){
+		var contentType = 'multipart/form-data';
+		requestBody = new FormData();
+		for (var name of Object.keys(data)){
+			// https://stackoverflow.com/a/63340869:
+			// in form-data content, null will be converted to "null". Either replace
+			// (but how to get a default?) or simply remove:
+			var val = data[name];
+			if ((val !== null) && (val !== undefined)){
+				requestBody.append(name, val);
+			}
+		}
+	}else{
+		var contentType = "application/json";
+		requestBody = JSON.stringify(data);
+	}
+
+	// Default options are marked with *
+	const response = await fetch(url, {
+		method: "POST", // *GET, POST, PUT, DELETE, etc.
+		mode: "cors", // no-cors, *cors, same-origin
+		cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
+		credentials: "same-origin", // include, *same-origin, omit
+		headers: {
+			"Content-Type": contentType,
+			// 'Content-Type': 'application/x-www-form-urlencoded',
+		},
+		redirect: "follow", // manual, *follow, error
+		referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+		body: requestBody, // body data type must match "Content-Type" header
+	});
+	return response.json(); // parses JSON response into native JavaScript objects
 }

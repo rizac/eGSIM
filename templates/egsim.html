@@ -2,7 +2,7 @@
 
 {% block head %}
 
-{% with vue=True plotly=True leaflet=True axios=True fontawesome=True %}
+{% with vue=True plotly=True leaflet=True fontawesome=True %}
 {{ block.super }}
 {% endwith %}
 
@@ -18,13 +18,15 @@
 {{ block.super }}
 
 <script>
-axios.interceptors.request.use(config => {
-	if (!('headers' in config)){
-		config.headers = {};
+// make window.fetch use the CSRF Token:
+var _fetch = window.fetch;
+window.fetch = function(resource, options){
+	if (!options.headers){
+		options.headers = {};
 	}
-	config.headers["X-CSRFToken"] = "{{ csrf_token }}";
-	return config;
-});
+	options.headers["X-CSRFToken"] = "{{ csrf_token }}";
+	return _fetch(resource, options);
+}
 </script>
 
 <!-- VUE.JS: -->
@@ -32,7 +34,6 @@ axios.interceptors.request.use(config => {
 <!-- Components and dependencies of the EGISM app: -->
 <script type='text/javascript' src="{% static 'js/v-components/base/field-input.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/egsim-form.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/plots-div.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}flatfile.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>

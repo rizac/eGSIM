@@ -1,16 +1,13 @@
 /* Residuals plot components (model-to-data comparison) */
 
 EGSIM.component('residuals', {
-	mixins: [FormDataHTTPClient, DataDownloader],  // FIXME DataDownloader i needed?
 	props :{
 		form: Object,
 		url: String,
-		urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
+		// urls: Object, // object with to props: downloadRequest, downloadResponse (both string)
 	},
 	data() {
 		return {
-			formVisible: true,
-			formAsDialogBox: false,
 			responseData: {}
 		}
 	},
@@ -18,7 +15,7 @@ EGSIM.component('residuals', {
 		<gsim-map @gsim-selected="(gs) => { form.gsim.value = Array.from(new Set(form.gsim.value.concat(gs))) }"
 				  :regionalizations="form.gsim['data-regionalizations']"
 				  style='position:absolute;inset:0px;z-index:0' />
-		<form :form="form" :url="url" :download-url="urls.downloadRequest"
+		<form :form="form" :url="url" novalidate @submit.prevent="postData(url, form).then(r => { responseData = r; })"
 			  class='d-flex flex-column ps-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
 			<!-- css notes below: position makes z-index below work,
 			z-index shows models popup in front of all other components -->
@@ -51,19 +48,16 @@ EGSIM.component('residuals', {
 			</div>
 		</form>
 
-		<residuals-plot-div :data="responseData" :download-url="urls.downloadResponse"
+		<residuals-plot-div :data="responseData"
 							class='invisible'
 							style='position:absolute;inset:0px;z-index:10'
 							:style="{visibility: Object.keys(responseData).length ? 'visible !important' : ''}">
-			<slot>
-				<button @click='formVisible=!formVisible' class='btn btn-sm btn-primary'>
-					<i class='fa fa-list-alt'></i> Configuration
-				</button>
-			</slot>
 		</residuals-plot-div>
 	</div>`
 });
 
+
+// FIXME: REMOVE: attr of residuals-plot was: :download-url="urls.downloadResponse"
 
 EGSIM.component('residuals-plot-div', {
 	mixins: [PlotsDiv],  // defined in plot-div.js

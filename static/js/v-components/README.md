@@ -3,7 +3,6 @@
 ## Table of Contents
 
 - [FORM FIELD INPUTS in egsm-form.js](#FORM-FIELD-INPUTS)
-- [FormDataHTTPClient in egsm-form.js](#FormDataHTTPClient)
 - [PlotsDiv in plot-div.js](#PlotsDiv)
 - [FLATFILE_SELECT_COMPONENT](#FLATFILE-SELECT)
 
@@ -56,52 +55,11 @@ or select component:
 ('error' is a string usually returned from the server. When error
 is given, it outlines the component in red, if present)
 
-## FormDataHTTPClient
-(`v-components/base/egsim-form.js`)
-
-`FormDataHTTPClient` is the Mixin base class for all Form related components
-and is intended to perform HTTP requests with the form data as request data.
-It is subclassed by the component `egsim-form`, which is in turn used
-in `trellis.js`, `residuals.js` and `testing.js`.
-
-`egsim-form` handles also the fact that the <div> disappears and becomes a 
-dialog window after the first submission. To implement a more general form
-component from `FormDataHTTPClient`, e.g. a `my-form` Component from 
-a given Form Object and a URL where to send POST request with the form data:
-
-```
-<my-form :form=form :url=url />
-```
-
-then, along the lines of `egsim-form` one could write:
-
-```
-EGSIM.component('my-form', {
-    mixins: [FormDataHTTPClient],
-    emits: ['submitted'],  // needed only if we want to emit, see below
-    template: `<form novalidate @submit.prevent="submit">
-        <!-- you form component here, associated to this.form -->
-       <button type='submit'>Ok</button>
-    </form>`
-    methods: {
-        submit(){
-            // call FormDataHTTPClient.postFormData. You can also
-            // chain the promise for performing custom operation upon 
-            // submission, e.g. let's emit the event 'submitted
-            this.postFormData().then(response => {
-                this.$emit('submitted', response);
-            });
-        },
-    }
-});
-```
-
-
 ## PlotsDiv
 (`v-components/base/plot-div.js`)
 
 `PlotsDiv` is the Mixin base class for all Grids of plots
-This snippet shortly describes how to use FormDataHTTPClient in subclasses. 
+This snippet shortly describes how to use it in subclasses. 
 Given, e.g. a subclass `my-plot-div`:
 
 ```
@@ -112,8 +70,7 @@ Given, e.g. a subclass `my-plot-div`:
 where:
 
 - `responseData` is the `response.data` Object received from the server
-  after e.g. form submission (e.g., there must be a `FormDataHTTPClient` implementing
-  something like `@submitted="responseData=arguments[0].data`)
+  after e.g. form submission
 
 - `download-url` is  a string of the URL to call for downloading plots
 
