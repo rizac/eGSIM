@@ -206,13 +206,17 @@ EGSIM.component('flatfile-plot', {
 					<flatfile-selexpr-input :field="form.selexpr" class='mt-3'/>
 					<span class='me-3'></span>
 					<div class='d-flex flex-column'>
-						<field-label :field='form.x'/>
-						<field-input :field='form.x'/>
+						<label>x</label>
+						<select v-model='form.x'>
+							<option v-for="x in form.x.choices">{{ x }}</option>
+						</select>
 					</div>
 					<span class='me-3'></span>
 					<div class='d-flex flex-column'>
-						<field-label :field='form.y'/>
-						<field-input :field='form.y'/>
+						<label>y</label>
+						<select v-model='form.y'>
+							<option v-for="y in form.y.choices">{{ y }}</option>
+						</select>
 					</div>
 					<span class='me-3'></span>
 					<button type="submit" class="btn btn-primary mt-2">
@@ -396,9 +400,13 @@ EGSIM.component('flatfile-select', {
 		}
 	},
 	template:`<div class='d-flex flex-column'>
-		<field-label :field="fieldProxy" />
+		<label> {{ fieldProxy.name }} </label>
 		<div class='d-flex flex-row align-items-baseline'>
-			<field-input :field="fieldProxy" />
+			<select v-model="fieldProxy.value">
+				<option v-for="v in fieldProxy.choices" :value='v.value'>
+					{{ v.innerHTML }}
+				</option>
+			</select>
 			<div class='d-flex flex-row align-items-baseline'>
 				<a aria-label='flatfile reference (opens in new tab)' target="_blank"
 				   class='ms-1' v-show="!!flatfileURL" :href="flatfileURL"><i class="fa fa-link"></i></a>
@@ -432,7 +440,7 @@ EGSIM.component('flatfile-selexpr-input', {
 		}
 	},
 	template: `<div class='d-flex flex-column' :aria-label="doc">
-			<field-label :field='field'/>
-			<field-input :field='field' style='flex:1 1 auto'/>
+			<label>{{ field.name }}</label>
+			<input type='text' :v-model='field.value' style='flex:1 1 auto'/>
 		</div>`
 });

@@ -30,31 +30,6 @@ form_obj = {
 Above, each 'parameterN' is mapped to a so-called `Field` Object
 (the term is Django legacy) that represents a Form parameter.
 
-
-## FORM FIELD INPUTS
-(`v-components/base/field-form.js`)
-
-A Field is represented via a `field-input` which automatically
-created the associated [input] component from the Field data (e.g. select,
-input[type=checkbox], and so on)
-
-```
-<field-input :field="form_obj['parameter1']" />
-```
-
-
-A Field input can also be called for more control with each parameter 
-separately using a `base-component`, a base class for any HTML input 
-or select component:
-
-```
-<base-input v-model="field.value" :disabled="field.disabled"
-    :choices="field.choices" :error="field.error" />
-```
-
-('error' is a string usually returned from the server. When error
-is given, it outlines the component in red, if present)
-
 ## PlotsDiv
 (`v-components/base/plot-div.js`)
 
