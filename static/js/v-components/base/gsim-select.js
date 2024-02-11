@@ -1,5 +1,25 @@
 /* GSIM and IMT <select> components */
 
+/* This is an input[type=text] where the v-model is an array. The array elements
+will be displayed - and can be edited - on the input space- or comma-separated */
+EGSIM.component('array-input', {
+	props: {'modelValue': {type: Array}},
+	emits: ['update:modelValue'],
+	data(){
+		return {
+			modelValue2str: this.modelValue.join(' ')
+		}
+	},
+	watch: {
+		modelValue2str(newVal, oldVal){
+			this.$emit('update:modelValue', newVal.trim().split(/\s*,\s*|\s+/))
+		}
+	},
+	template: `<input type='text' placeholder='type values space- or comma-separated'
+				class='form-control' v-model="modelValue2str"/>`
+});
+
+
 EGSIM.component('gsim-select', {
 	props: {
 		models: {type: Array},  // Array of objects with props: name, warning, imts
@@ -196,14 +216,14 @@ EGSIM.component('imt-select', {
 	data() {
 		return {
 			selectedImtClassNames: Array.from(new Set(this.selectedImts.map(i => i.startsWith('SA(') ? 'SA' : i))),
-			SAPeriodsString: this.selectedImts.filter(i => i.startsWith('SA(')).map(sa => sa.substring(3, sa.length-1)).join(' ')
+			SAPeriods: this.selectedImts.filter(i => i.startsWith('SA(')).map(sa => sa.substring(3, sa.length-1))
 		}
 	},
 	watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
 		selectedImtClassNames: function(newVal, oldVal){
 			this.updateSelectedImts();
 		},
-		SAPeriodsString: function(newVal, oldVal){
+		SAPeriods: function(newVal, oldVal){
 			this.updateSelectedImts();
 		},
 		selectedImts: {
@@ -221,9 +241,9 @@ EGSIM.component('imt-select', {
 				{{ imt }}
 			</option>
 		</select>
-		<input type='text' v-model="SAPeriodsString" class='form-control'
+		<array-input v-model="SAPeriods" class='form-control'
 				:disabled="!selectedImtClassNames.includes('SA')"
-				placeholder="SA periods (space-separated)"
+				placeholder="SA periods (space- or comma-separated)"
 				:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />
 	</div>`,
 	methods: {
@@ -235,8 +255,7 @@ EGSIM.component('imt-select', {
 			var imts = this.selectedImtClassNames.filter(i => i != 'SA');
 			if (imts.length < this.selectedImtClassNames.length){
 				// we selected 'SA'. Add periods:
-				var saWithPeriods = this.SAPeriodsString.trim().split(/\s*,\s*|\s+/).map(p => `SA(${p})`);
-				imts = imts.concat(saWithPeriods);
+				imts = imts.concat(this.SAPeriods.map(p => `SA(${p})`));
 			}
 			return imts;
 		}
