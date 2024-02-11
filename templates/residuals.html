@@ -1,0 +1,43 @@
+<div class='position-relative' style="flex: 1 1 auto;">
+	<gsim-map @gsim-selected="(gs) => { form.gsim.value = Array.from(new Set(form.gsim.value.concat(gs))) }"
+			  :regionalizations="form.gsim['data-regionalizations']"
+			  style='position:absolute;inset:0px;z-index:0' />
+	<form :form="form" :url="url" novalidate @submit.prevent="postData(url, form).then(r => { responseData = r; })"
+		  class='d-flex flex-column ps-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+		<!-- css notes below: position makes z-index below work,
+		z-index shows models popup in front of all other components -->
+		<gsim-select :field="form.gsim" :imtField="form.imt"
+					 class="mt-4 form-control pb-3 pt-2 position-relative"
+					 style="z-index:1; flex: 0 1 auto;min-height:0px" />
+		<imt-select :field="form.imt"
+					class="my-4 form-control pb-3 pt-2 position-relative" />
+		<div class="mb-4 form-control pb-3 pt-2 position-relative">
+			<flatfile-select :field="form.flatfile"/>
+			<flatfile-selexpr-input :field="form.selexpr" class='mt-3' />
+		</div>
+
+		<div class='d-flex flex-column'>
+			<div> Model-to-data comparison </div>
+			<div class='d-flex flex-row'>
+				<button type='button' class='me-2 btn-btn-primary'>
+					<i class="fa fa-bar-chart"></i> Show
+				</button>
+				<button type='button' class='me-2 btn-btn-primary'>
+					<i class="fa fa-download"></i> Get
+				</button>
+				<button type='button' class='me-2 btn-btn-primary'>
+					<i class="fa fa-download"></i> Get with tutorial
+				</button>
+				<button type='button' class='me-2 btn-btn-primary'>
+					<i class="fa fa-download"></i> run in custom code
+				</button>
+			</div>
+		</div>
+	</form>
+
+	<residuals-plot-div :data="responseData"
+						class='invisible'
+						style='position:absolute;inset:0px;z-index:10'
+						:style="{visibility: Object.keys(responseData).length ? 'visible !important' : ''}">
+	</residuals-plot-div>
+</div>

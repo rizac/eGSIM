@@ -1,0 +1,22 @@
+<div class='position-relative' style="flex: 1 1 auto;">
+	<gsim-map @gsim-selected="(gs) => { forms.trellis.gsim = Array.from(new Set(forms.trellis.gsim.concat(gs))) }"
+			  :regionalizations="regionalizations"
+			  style='position:absolute;inset:0px;z-index:0'>
+	</gsim-map>
+	<form novalidate @submit.prevent="postData(urls.trellis, forms.trellis).then(r => { responseData = r; })"
+		  class='d-flex flex-column ps-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+
+		<gsim-select :selected-model-names="forms.trellis.gsim"
+					 :models="models"
+					 :selected-imts="forms.trellis.imt"
+					 style="flex: 0 1 auto; min-height:0px">
+		</gsim-select>
+
+		<imt-select :selected-imts="forms.trellis.imt" :imts='imts'></imt-select>
+	</form>
+
+<!--	<trellis-plot-div :data="responseData"-->
+<!--					  class='invisible position-absolute start-0 top-0 end-0 bottom-0'-->
+<!--					  :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">-->
+<!--	</trellis-plot-div>-->
+</div>

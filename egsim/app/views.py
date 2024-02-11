@@ -26,8 +26,10 @@ from ..api.views import (error_response, RESTAPIView, TrellisView, ResidualsView
 
 def main(request, selected_menu=None):
     """view for the main page"""
+    # FIXME: REMOVE egsim.py entirely, as well as apidoc.py!
     template = 'egsim.html'
-    return render(request, template, context={'debug': settings.DEBUG})
+    return render(request, template, context={'debug': settings.DEBUG,
+                                              'init_data': get_init_json_data() })
 
 
 def main_page_init_data(request):

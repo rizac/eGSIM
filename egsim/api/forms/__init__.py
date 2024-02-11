@@ -2,14 +2,13 @@
 from __future__ import annotations
 
 import re
+# from django.db.models import QuerySet
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
 from typing import Union, Any
-import json
-from io import StringIO
+# import json
 from enum import StrEnum
 
-import yaml
 from shapely.geometry import Point, shape
 from django.forms import Form, ModelMultipleChoiceField
 from django.forms.renderers import BaseRenderer
@@ -193,49 +192,20 @@ class EgsimBaseForm(Form):
                 return params[field]
         return field,  # <- tuple!
 
-    def as_json(self, compact=True) -> str:
-        """Return the `data` argument passed in the constructor in a JSON formatted
-        string that can be used in POST requests (if `self.is_valid()` is True)
+    def asdict(self, compact=False) -> dict:
+        """Return the `data` argument passed in the constructor in a JSON serializable
+        dict
 
-        @param compact: skip optional parameters (see `compact` in `self._get_data`)
+        @param compact: skip optional parameters, i.e. those whose value equals
+            the default when missing
         """
-        stream = StringIO()
         ret = {}
         for field, value in self.data.items():
             if compact and \
                     self._is_default_value_for_field(field, value):  # class level attr
                 continue
             ret[self.param_name_of(field)] = value
-        json.dump(ret, stream, indent=2, separators=(',', ': '), sort_keys=True)
-        return stream.getvalue()
-
-    def as_yaml(self, compact=True) -> str:
-        """Return the `data` argument passed in the constructor as YAML formatted
-        string (with parameters docstrings when available) that can be used in POST
-        requests (if `self.is_valid()` is True)
-
-        @param compact: skip optional parameters (see `compact` in `self._get_data`)
-        """
-        class Dumper(yaml.SafeDumper):
-            """Force indentation of lists ( https://stackoverflow.com/a/39681672)"""
-
-            def increase_indent(self, flow=False, indentless=False):
-                return super(Dumper, self).increase_indent(flow, False)
-
-        stream = StringIO()
-        for field, value in self.data.items():
-            if compact and \
-                    self._is_default_value_for_field(field, value):  # class level attr
-                continue
-            docstr = self.get_field_docstring(field)
-            if docstr:
-                stream.write(f'# {docstr}')
-                stream.write('\n')
-            yaml.dump({self.param_name_of(field): value},
-                      stream=stream, Dumper=Dumper, default_flow_style=False)
-            stream.write('\n')
-
-        return stream.getvalue()
+        return ret
 
     @classmethod
     def _is_default_value_for_field(cls, field: Union[str, Field], value):

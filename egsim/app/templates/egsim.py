@@ -160,13 +160,20 @@ def get_init_json_data(browser: dict = None,
     # Get component props (core data needed for Vue rendering):
     components_props = get_components_properties(debug)
 
+    init_val = {'gsim': [], 'imt': [], 'regionalization': None}
     return {
-        'components': {
-            'names': [_.name for _ in TAB],
-            'tabs': {_.name: {'title': _.title, 'icon': _.icon} for _ in TAB},
-            'props': components_props
+        'forms': {
+            'trellis': TrellisView.formclass(init_val).asdict(),
+            'residuals': ResidualsView.formclass(init_val).asdict()
         },
-        'sel_component': TAB.home.name if not selected_menu else selected_menu,
+        'urls': {
+            'trellis': TrellisView.urls[0],
+            'residuals': ResidualsView.urls[0],
+            'api': URLS.API,
+            'imprint': URLS.IMPRINT,
+            'data_protection': URLS.DATA_PROTECTION,
+            'ref_and_license': URLS.REF_AND_LICENSE
+        },
         'gsims': gsims,
         'imt_groups': imt_groups,
         'warning_groups': warning_groups,
@@ -175,14 +182,31 @@ def get_init_json_data(browser: dict = None,
             'upload_url': URLS.FLATFILE_INSPECTION,
         },
         'regionalizations': regionalizations,
-        'invalid_browser_message': invalid_browser_message,
-        'newpage_urls': {
-            'api': URLS.API,
-            'imprint': URLS.IMPRINT,
-            'data_protection': URLS.DATA_PROTECTION,
-            'ref_and_license': URLS.REF_AND_LICENSE
-        }
     }
+
+    # return {
+    #     'components': {
+    #         'names': [_.name for _ in TAB],
+    #         'tabs': {_.name: {'title': _.title, 'icon': _.icon} for _ in TAB},
+    #         'props': components_props
+    #     },
+    #     'sel_component': TAB.home.name if not selected_menu else selected_menu,
+    #     'gsims': gsims,
+    #     'imt_groups': imt_groups,
+    #     'warning_groups': warning_groups,
+    #     'flatfile': {
+    #         'choices': flatfiles,
+    #         'upload_url': URLS.FLATFILE_INSPECTION,
+    #     },
+    #     'regionalizations': regionalizations,
+    #     'invalid_browser_message': invalid_browser_message,
+    #     'newpage_urls': {
+    #         'api': URLS.API,
+    #         'imprint': URLS.IMPRINT,
+    #         'data_protection': URLS.DATA_PROTECTION,
+    #         'ref_and_license': URLS.REF_AND_LICENSE
+    #     }
+    # }
 
 
 def _get_bbox(reg: models.Regionalization) -> list[float]:
