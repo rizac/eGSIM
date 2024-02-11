@@ -160,10 +160,13 @@ def get_init_json_data(browser: dict = None,
     # Get component props (core data needed for Vue rendering):
     components_props = get_components_properties(debug)
 
+    # fixme: handle regionalization (set to None cause otherwise is not JSON serializable)!
     init_val = {'gsim': [], 'imt': [], 'regionalization': None}
     return {
         'forms': {
-            'trellis': TrellisView.formclass(init_val).asdict(),
+            'trellis': TrellisView.formclass(
+                {'magnitude':[1, 2], 'distance':[3], **init_val}
+            ).asdict(),
             'residuals': ResidualsView.formclass(init_val).asdict()
         },
         'urls': {
