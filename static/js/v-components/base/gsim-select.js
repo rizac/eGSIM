@@ -15,8 +15,7 @@ EGSIM.component('array-input', {
 			this.$emit('update:modelValue', newVal.trim().split(/\s*,\s*|\s+/))
 		}
 	},
-	template: `<input type='text' placeholder='type values space- or comma-separated'
-				class='form-control' v-model="modelValue2str"/>`
+	template: `<input type='text' v-model="modelValue2str" class='form-control' placeholder='type values space- or comma-separated' />`
 });
 
 
@@ -30,7 +29,7 @@ EGSIM.component('gsim-select', {
 	data() {
 		return {
 			inputElementText: "",
-			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g  //NOTE safari does not support lookbehind/aheads!
+			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9_]+|.+/g  //NOTE safari does not support lookbehind/aheads!
 		}
 	},
 	watch: {
@@ -84,66 +83,92 @@ EGSIM.component('gsim-select', {
 	template: `<div class='d-flex flex-column'>
 		<div class='d-flex flex-row align-items-baseline'>
 			<label style="flex: 1 1 auto">model</label>
-			<span flex='1 1 auto' class='ms-2 small'>({{ selectedModelNames.length }} of {{ models.length }} selected)</span>
-			<i v-show="Object.keys(warnings).length"
-			   aria-label="Remove models with warnings (for details, hover mouse on each model icon)"
-			   class="fa fa-exclamation-triangle ms-2 text-warning" style="cursor: pointer;"
-			   @click="removeSelectedModelsWithWarnings()"></i>
-			<i v-show="Object.keys(errors).length"
-			   aria-label="Remove models with errors (for details, hover mouse on each model icon)"
-			   class="fa fa-exclamation-triangle ms-2 text-danger" style="cursor: pointer;"
-			   @click="removeSelectedModelsWithErrors()"></i>
-			<i v-show="selectedModelNames.length"
-			   aria-label="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
-			   @click="removeSelectedModels()"></i>
+			<span flex='1 1 auto' class='ms-2 small'>
+				({{ selectedModelNames.length }} of {{ models.length }} selected)
+			</span>
+			<i
+				v-show="Object.keys(warnings).length"
+				aria-label="Remove models with warnings (for details, hover mouse on each model icon)"
+				class="fa fa-exclamation-triangle ms-2 text-warning"
+				style="cursor: pointer;"
+				@click="removeSelectedModelsWithWarnings()">
+			</i>
+			<i
+				v-show="Object.keys(errors).length"
+				aria-label="Remove models with errors (for details, hover mouse on each model icon)"
+				class="fa fa-exclamation-triangle ms-2 text-danger"
+				style="cursor: pointer;"
+				@click="removeSelectedModelsWithErrors()">
+			</i>
+			<i
+				v-show="selectedModelNames.length"
+				aria-label="Clear selection"
+				class="fa fa-times-circle ms-2"
+				style="cursor: pointer;"
+				@click="removeSelectedModels()">
+			</i>
 		</div>
 		<div style='overflow: auto; flex: 0 1 auto; min-height:0px'
 			 :class="selectedModelNames.length ? 'd-flex flex-column form-control mb-2': 'd-none'">
 			<div class='d-flex flex-row'>
 				<!-- div with cancel icons stacked vertically -->
 				<div class='d-flex flex-column'>
-					<div v-for="model in selectedModelNames" class='me-1'
-						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						 aria-label="remove from selection (to remove all models, click the same button on this panel top right corner)"
-						 @click="selectedModelNames.splice(selectedModelNames.indexOf(model), 1)">
+					<div
+						v-for="model in selectedModelNames"
+						class='me-1'
+						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						aria-label="remove from selection (to remove all models, click the same button on this panel top right corner)"
+						@click="selectedModelNames.splice(selectedModelNames.indexOf(model), 1)">
 						<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
 				<!-- div with selected model names stacked vertically -->
 				<div class='d-flex flex-column ms-1'>
-					<div v-for="model in selectedModelNames"
-						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						 :aria-label="errors[model] || warnings[model] || ''">{{ model }}</div>
+					<div
+						v-for="model in selectedModelNames"
+						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						:aria-label="errors[model] || warnings[model] || ''">
+						{{ model }}
+					</div>
 				</div>
 				<!-- div with warning icons stacked vertically -->
 				<div class='d-flex flex-column ms-1'>
-					<span v-for="model in selectedModelNames"
-						  :style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
-						  :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						  class='me-1'>
+					<span
+						v-for="model in selectedModelNames"
+						:style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
+						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
+						class='me-1'>
 						<i class='fa fa-exclamation-triangle'></i>
 					</span>
 				</div>
 			</div>
 		</div>
 		<!-- select text and relative popup/div -->
-		<input type="text" style='width:30rem'
-			   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
-			   :placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'"
-			   v-model='inputElementText' ref="inputElement"
-			   @keydown.down.prevent="focusSelectElement()"
-			   @keydown.esc.prevent="inputElementText=''"
-			   class='form-control'>
-		<div class='position-relative' style='overflow:visible'>
-			<select multiple ref="selectElement"
-					v-show='!!selectableModels.length'
-					class='border position-absolute shadow'
-					style='z-index:10000'
-					@dblclick.capture.prevent="selectElementSelected()"
-					@keydown.enter.prevent="selectElementSelected()"
-					@keydown.up="focusInputElement($event);"
-					@keydown.esc.prevent="inputElementText=''">
-				<option v-for="m in selectableModels" :value='m.name'>
+		<input
+			type="text"
+			v-model='inputElementText' ref="inputElement"
+			@keydown.down.prevent="focusSelectElement()"
+			@keydown.esc.prevent="inputElementText=''"
+			class='form-control'
+			style='width:30rem'
+			aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
+			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
+		<div
+			class='position-relative'
+			style='overflow:visible'>
+			<select
+				multiple
+				ref="selectElement"
+				v-show='!!selectableModels.length'
+				class='border position-absolute shadow'
+				style='z-index:10000'
+				@dblclick.capture.prevent="selectElementSelected()"
+				@keydown.enter.prevent="selectElementSelected()"
+				@keydown.up="focusInputElement($event);"
+				@keydown.esc.prevent="inputElementText=''">
+				<option
+					v-for="m in selectableModels"
+					:value='m.name'>
 					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
 			</select>
@@ -235,16 +260,21 @@ EGSIM.component('imt-select', {
 	},
 	template: `<div class='d-flex flex-column'>
 		<label>imt</label>
-		<select v-model="selectedImtClassNames" multiple  class='form-control'
-				style="flex: 1 1 0;min-height: 5rem;border-bottom-left-radius: 0;border-bottom-right-radius: 0;">
+		<select
+			v-model="selectedImtClassNames"
+			multiple
+			class='form-control'
+			style="flex: 1 1 0;min-height: 5rem;border-bottom-left-radius: 0;border-bottom-right-radius: 0;">
 			<option	v-for='imt in imts' :value="imt">
 				{{ imt }}
 			</option>
 		</select>
-		<array-input v-model="SAPeriods" class='form-control'
-				:disabled="!selectedImtClassNames.includes('SA')"
-				placeholder="SA periods (space- or comma-separated)"
-				:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />
+		<array-input
+			v-model="SAPeriods"
+			class='form-control'
+			:disabled="!selectedImtClassNames.includes('SA')"
+			placeholder="SA periods (space- or comma-separated)"
+			:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />
 	</div>`,
 	methods: {
 		updateSelectedImts(){
