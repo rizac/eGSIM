@@ -2,17 +2,19 @@
 
 EGSIM.component('gsim-select', {
 	props: {
-		field: {type: Object},
-		imtField: {type: Object, default: null} // field of IMTs (can be null)
+		models: {type: Array},  // Array of objects with props: name, warning, imts
+		selectedModelNames: {type: Array},  // Array of strings
+		selectedImts: {type: Array, default: []} // field of IMTs (strings)
 	},
 	emits: ['gsim-selected'],
 	data() {
 		return {
-			modeltext: ""
+			inputElementText: "",
+			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g  //NOTE safari does not support lookbehind/aheads!
 		}
 	},
 	watch: {
-		'field.value': {
+		'selectedModelNames': {
 			deep: true,
 			handler(newVal, oldVal){
 				this.$emit('gsim-selected', newVal)
@@ -20,86 +22,82 @@ EGSIM.component('gsim-select', {
 		},
 	},
 	computed: {
-		infoMsg(){
-			return `${this.field.value.length || 0} of ${this.field.choices.length} selected`;
+		selectedModels(){  // Array of Objects with props name, imts, warning
+			var selectedModelNamesSet = new Set(this.selectedModelNames);
+			return this.models.filter(m => selectedModelNamesSet.has(m.name));
 		},
 		selectableModels(){
 			var models = [];
-			var text = this.modeltext;
+			var text = this.inputElementText;
+			var selectedModelNamesSet = new Set(this.selectedModelNames);
 			if (text){
 				var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
-				var selectedModelNames = new Set(this.field.value);
-				models = this.field.choices.filter(m => !selectedModelNames.has(m.value) && m.value.search(regexp) > -1);
+				models = this.models.filter(m => !selectedModelNamesSet.has(m.name) && m.name.search(regexp) > -1);
 			}
 			// adjust popup height:
-			if (this.$refs.modelSelect){
-				var rect = this.$refs.modelTextControl.getBoundingClientRect();
-				this.$refs.modelSelect.style.width = (rect.right - rect.left) + 'px';
-				this.$refs.modelSelect.size = models.length;
-				this.$refs.modelSelect.style.maxHeight = (.75*(document.documentElement.clientHeight - rect.bottom)) + 'px';
+			if (models.length){
+				setTimeout( () => this.resizeSelectElement(models.length), 50 );
 			}
 			return models;
 		},
-		errors(){  // remember: props are cached https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
+		errors(){
 			var errors = {};
-			var selected = new Set(this.field.value);
-			var selimts = Array.from(this.imtField ? new Set(this.imtField.value.map(elm => elm.startsWith('SA') ? 'SA' : elm)) : []);
-			for (var model of this.field.choices.filter(m => selected.has(m.value))){
-				var wrongimts = selimts.filter(i => !model.imts.includes(i));
+			var selimts = this.selectedImts.map(i => i.startsWith('SA') ? 'SA' : i);
+			for (var model of this.selectedModels){
+				var wrongimts = selimts.filter(i => !model.imts.has(i));
 				if (wrongimts.length){
-					errors[model.value] = `${model.value} does not support ${wrongimts.join(', ')}`;
+					errors[model.name] = `${model.name} does not support ${wrongimts.join(', ')}`;
 				}
 			}
 			return errors;
 		},
-		warnings(){  // remember: props are cached https://vuejs.org/guide/essentials/computed.html#computed-caching-vs-methods
+		warnings(){
 			var warnings = {};
-			var selected = new Set(this.field.value);
-			for (var model of this.field.choices.filter(m => selected.has(m.value))){
+			for (var model of this.selectedModels){
 				if (model.warning){
-					warnings[model.value] = model.warning || "";
+					warnings[model.name] = model.warning;
 				}
 			}
 			return warnings;
 		}
 	},
 	template: `<div class='d-flex flex-column'>
-		<div style='display:flex'>
-			<label style="flex: 1 1 auto">{{ field.name }}</label>
-			<span v-if="!field.error" class='ms-2 small text-muted' v-html="infoMsg"></span>
+		<div class='d-flex flex-row align-items-baseline'>
+			<label style="flex: 1 1 auto">model</label>
+			<span flex='1 1 auto' class='ms-2 small'>({{ selectedModelNames.length }} of {{ models.length }} selected)</span>
 			<i v-show="Object.keys(warnings).length"
-			   aria-label="Remove models with warnings (for details, hover mouse on the list below)"
+			   aria-label="Remove models with warnings (for details, hover mouse on each model icon)"
 			   class="fa fa-exclamation-triangle ms-2 text-warning" style="cursor: pointer;"
-			   @click="field.value=field.value.filter(m => !warnings[m])"></i>
+			   @click="removeSelectedModelsWithWarnings()"></i>
 			<i v-show="Object.keys(errors).length"
-			   aria-label="Remove models with errors (for details, hover mouse on the list below)"
+			   aria-label="Remove models with errors (for details, hover mouse on each model icon)"
 			   class="fa fa-exclamation-triangle ms-2 text-danger" style="cursor: pointer;"
-			   @click="field.value=field.value.filter(m => !errors[m])"></i>
-			<i v-show="field.value.length && !field.error"
+			   @click="removeSelectedModelsWithErrors()"></i>
+			<i v-show="selectedModelNames.length"
 			   aria-label="Clear selection" class="fa fa-times-circle ms-2" style="cursor: pointer;"
-			   @click="field.value=[]"></i>
+			   @click="removeSelectedModels()"></i>
 		</div>
 		<div style='overflow: auto; flex: 0 1 auto; min-height:0px'
-			 :class="field.value.length ? 'd-flex flex-column form-control mb-2': 'd-none'">
+			 :class="selectedModelNames.length ? 'd-flex flex-column form-control mb-2': 'd-none'">
 			<div class='d-flex flex-row'>
 				<!-- div with cancel icons stacked vertically -->
 				<div class='d-flex flex-column'>
-					<div v-for="model in field.value" class='me-1'
+					<div v-for="model in selectedModelNames" class='me-1'
 						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
 						 aria-label="remove from selection (to remove all models, click the same button on this panel top right corner)"
-						 @click="this.field.value.splice(this.field.value.indexOf(model), 1)">
+						 @click="selectedModelNames.splice(selectedModelNames.indexOf(model), 1)">
 						<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
 				<!-- div with selected model names stacked vertically -->
-				<div class='d-flex flex-column'>
-					<div v-for="model in field.value"
+				<div class='d-flex flex-column ms-1'>
+					<div v-for="model in selectedModelNames"
 						 :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
 						 :aria-label="errors[model] || warnings[model] || ''">{{ model }}</div>
 				</div>
 				<!-- div with warning icons stacked vertically -->
-				<div class='d-flex flex-column'>
-					<span v-for="model in field.value"
+				<div class='d-flex flex-column ms-1'>
+					<span v-for="model in selectedModelNames"
 						  :style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
 						  :class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
 						  class='me-1'>
@@ -111,57 +109,78 @@ EGSIM.component('gsim-select', {
 		<!-- select text and relative popup/div -->
 		<input type="text" style='width:30rem'
 			   aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
-			   :placeholder="'Type name (' + field.choices.length + ' models available) or select by region (click on map)'"
-			   v-model='modeltext' ref="modelTextControl"
-			   @keydown.down.prevent="focusSelectComponent()"
-			   @keydown.esc.prevent="modeltext=''"
+			   :placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'"
+			   v-model='inputElementText' ref="inputElement"
+			   @keydown.down.prevent="focusSelectElement()"
+			   @keydown.esc.prevent="inputElementText=''"
 			   class='form-control'>
 		<div class='position-relative' style='overflow:visible'>
-			<select v-show='!!selectableModels.length' multiple ref="modelSelect"
+			<select multiple ref="selectElement"
+					v-show='!!selectableModels.length'
 					class='border position-absolute shadow'
 					style='z-index:10000'
-					@dblclick.capture.prevent="addSelectedOptionComponentValuesToModelSelection()"
-					@keydown.enter.prevent="addSelectedOptionComponentValuesToModelSelection()"
-					@keydown.up="focusTextInput($event);"
-					@keydown.esc.prevent="modeltext=''">
-				<option v-for="m in selectableModels" :value='m.value'>
-					{{ m.innerHTML }}
+					@dblclick.capture.prevent="selectElementSelected()"
+					@keydown.enter.prevent="selectElementSelected()"
+					@keydown.up="focusInputElement($event);"
+					@keydown.esc.prevent="inputElementText=''">
+				<option v-for="m in selectableModels" :value='m.name'>
+					{{ m.name.match(displayRegex).join(" ") }}
 				</option>
 			</select>
 		</div>
 	</div>`,
 	methods: {
-		focusSelectComponent(){
-			if (!!this.selectableModels.length){
-				var sel = this.$refs.modelSelect;
-				sel.selectedIndex = 0;
-				sel.focus();
-			}
+		removeSelectedModelsWithWarnings(){
+			// this function filters the selectedModelNames Array without creating a new one:
+			this.selectedModelNames.splice(0,
+				this.selectedModelNames.length,
+				...selectedModelNames.filter(m => !this.warnings[m]))
 		},
-		addSelectedOptionComponentValuesToModelSelection(){
-			var sel = this.$refs.modelSelect;
+		removeSelectedModelsWithErrors(){
+			// this function filters the selectedModelNames Array without creating a new one:
+			this.selectedModelNames.splice(0,
+				this.selectedModelNames.length,
+				...selectedModelNames.filter(m => !this.errors[m]))
+		},
+		removeSelectedModels(){
+			// this function clears the selectedModelNames Array without creating a new one:
+			this.selectedModelNames.splice(0, this.selectedModelNames.length)
+		},
+		focusSelectElement(){
+			var sel = this.$refs.selectElement;
+			sel.selectedIndex = 0;
+			sel.focus();
+		},
+		selectElementSelected(){
+			var sel = this.$refs.selectElement;
 			var opts = Array.from(sel.selectedOptions);
 			if (!opts.length && sel.selectedIndex > -1){
-				elms = [sel.options[sel.selectedIndex]];
+				opts = [sel.options[sel.selectedIndex]];
 			}
 			if(!opts.length){
 				return;
 			}
-			this.field.value.push(...opts.map(opt => opt.value));
+			this.selectedModelNames.push(...opts.map(opt => opt.value));
 			this.$nextTick(() => {
 				sel.selectedIndex = -1;
-				this.$refs.modelTextControl.focus();
+				this.$refs.inputElement.focus();
 			});
 		},
-		focusTextInput(event){
-			if(this.$refs.modelSelect.selectedIndex==0){
-				this.$refs.modelSelect.selectedIndex=-1;
-				this.$refs.modelTextControl.focus();
+		resizeSelectElement(optionsLength){
+			var rect = this.$refs.inputElement.getBoundingClientRect();
+			this.$refs.selectElement.style.width = (rect.right - rect.left) + 'px';
+			this.$refs.selectElement.size = optionsLength;
+			this.$refs.selectElement.style.maxHeight = (.8 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
+		},
+		focusInputElement(event){
+			if(this.$refs.selectElement.selectedIndex==0){
+				this.$refs.selectElement.selectedIndex=-1;
+				this.$refs.inputElement.focus();
 				event.preventDefault();
 			}
 		}
 	}
-})
+});
 
 
 /**
@@ -170,41 +189,24 @@ EGSIM.component('gsim-select', {
 EGSIM.component('imt-select', {
 	//https://vuejs.org/v2/guide/components-props.html#Prop-Types:
 	props: {
-		field: {type: Object},
+		imts: { type: Array },  // without arguments (so 'SA', not 'SA(1.0)')
+		selectedImts: { type: Array }  // with or without arguments
 	},
 	emits: ['imt-selected'],
 	data() {
-		var fieldCopy = {
-			'style': ['border-bottom-left-radius:0rem !important',
-					   'border-bottom-right-radius:0rem !important'].join(";")
-		};
-		if ('size' in this.$attrs){
-			fieldCopy['size'] = this.$attrs['size'];
-		}
-		fieldCopy: Object.assign(fieldCopy, this.field);
-		// setup the init values for IMTs in the <select> and SA Periods in the <input>:
-		var imts = fieldCopy.value || [];
-		fieldCopy.value = Array.from(new Set(imts.map(elm => elm.startsWith('SA(') ? 'SA' : elm)));
-		var saPeriods = imts.filter(elm => elm.startsWith('SA(')).map(elm => elm.substring(3, elm.length-1)).join(' ');
 		return {
-			fieldCopy: fieldCopy,
-			SAPeriods: saPeriods
+			selectedImtClassNames: Array.from(new Set(this.selectedImts.map(i => i.startsWith('SA(') ? 'SA' : i))),
+			SAPeriodsString: this.selectedImts.filter(i => i.startsWith('SA(')).map(sa => sa.substring(3, sa.length-1)).join(' ')
 		}
 	},
 	watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
-		'fieldCopy.value': function(newVal, oldVal){
+		selectedImtClassNames: function(newVal, oldVal){
 			this.updateSelectedImts();
 		},
-		'field.error': function(newVal, oldVal){
-			this.fieldCopy.error = newVal;
-		},
-		'field.disabled': function(newVal, oldVal){
-			this.fieldCopy.disabled = newVal;
-		},
-		'SAPeriods': function(newVal, oldVal){
+		SAPeriodsString: function(newVal, oldVal){
 			this.updateSelectedImts();
 		},
-		'field.value': {
+		selectedImts: {
 			deep: true,
 			handler(newVal, oldVal){
 				this.$emit('imt-selected', newVal)
@@ -212,33 +214,34 @@ EGSIM.component('imt-select', {
 		}
 	},
 	template: `<div class='d-flex flex-column'>
-		<label>{{ fieldCopy.name }}</label>
-		<select :v-model="fieldCopy.value" multiple  class='form-control'
+		<label>imt</label>
+		<select v-model="selectedImtClassNames" multiple  class='form-control'
 				style="flex: 1 1 0;min-height: 5rem;border-bottom-left-radius: 0;border-bottom-right-radius: 0;">
-			<option	v-for='opt in fieldCopy.choices' :value="opt">
-				{{ opt }}
+			<option	v-for='imt in imts' :value="imt">
+				{{ imt }}
 			</option>
 		</select>
-		<input type='text' :value="SAPeriods" class='form-control'
-				@value-changed="(value) => {SAPeriods = value;}"
-				:disabled="field.disabled || !fieldCopy.value.includes('SA')"
+		<input type='text' v-model="SAPeriodsString" class='form-control'
+				:disabled="!selectedImtClassNames.includes('SA')"
 				placeholder="SA periods (space-separated)"
 				:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />
 	</div>`,
 	methods: {
 		updateSelectedImts(){
-			this.field.value = this.getSelectedImts();
+			// same as this.selectedImts = getSelectedImts(), but without creating new Array:
+			this.selectedImts.splice(0, this.selectedImts.length, ...this.getSelectedImts());
 		},
 		getSelectedImts(){
-			var imts = Array.from(this.fieldCopy.value);
-			if (imts.includes('SA')){
-				var saWithPeriods = this.SAPeriods.trim().split(/\s*,\s*|\s+/).map(p => `SA(${p})`);
-				imts = imts.filter(elm => elm!='SA').concat(saWithPeriods);
+			var imts = this.selectedImtClassNames.filter(i => i != 'SA');
+			if (imts.length < this.selectedImtClassNames.length){
+				// we selected 'SA'. Add periods:
+				var saWithPeriods = this.SAPeriodsString.trim().split(/\s*,\s*|\s+/).map(p => `SA(${p})`);
+				imts = imts.concat(saWithPeriods);
 			}
 			return imts;
 		}
 	}
-})
+});
 
 
 /**

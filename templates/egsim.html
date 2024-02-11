@@ -10,7 +10,10 @@
 
 
 {% block body %}
-<div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;"></div>
+<div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
+	{% include "trellis.html" %}
+
+</div>
 {% endblock %}
 
 {% block after-body %}
@@ -30,7 +33,44 @@ window.fetch = function(resource, options){
 </script>
 
 <!-- VUE.JS: -->
-<script type='text/javascript' src = "{% static 'js/egsim.js' %}"></script>
+<!--<script type='text/javascript' src = "{% static 'js/egsim.js' %}"></script>-->
+
+{{ init_data | json_script:"init-data" }}
+
+<script type="text/javascript">
+function getInitData(){
+	const data = JSON.parse(document.getElementById('init-data').textContent);
+	// Create a "template" Array of gsims and imts, to be copied as field choices
+	var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
+	// converts the gsims received from server from an Array of Arrays to an
+	// Array of Objects:
+	var imts = new Set();
+	var models = data.gsims.map(elm => {  // elm: Array of 2 or 3 elements: name, imt_group, warning
+		var modelImts = data.imt_groups[elm[1]];  // Array
+		// add the model imts to the global imt collection:
+		modelImts.forEach(imt => imts.add(imt));
+		return {
+			name: elm[0],
+			imts: new Set(modelImts),
+			warning: elm[2] ? data.warning_groups[elm[2]]: "",
+		}
+	});
+	return {
+		// create global like Object:
+		models: Object.freeze(models),
+		// convert imts (Set) into Array:
+		imts: Array.from(imts),
+		forms: data.forms,
+		urls: data.urls,
+		regionalizations: data.regionalizations,
+		// flatfile: data.flatfile
+	}
+}
+const EGSIM = Vue.createApp({
+	data: getInitData
+});
+
+</script>
 <!-- Components and dependencies of the EGISM app: -->
 <script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/plots-div.js' %}"></script>

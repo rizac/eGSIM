@@ -1,7 +1,7 @@
 /* Base class to be used as mixin for any component showing plots as a result
 of a response Object sent from the server */
 var PlotsDiv = {
-	mixins: [DataDownloader],
+	// mixins: [DataDownloader],  // FIXME REMOVE
 	props: {
 		data: {type: Object, default: () => { return {} }},
 		downloadUrl: String // base url for download actions

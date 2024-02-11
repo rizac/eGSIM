@@ -1,7 +1,7 @@
 /* Trellis plot components (model-to-model comparison) */
 
 EGSIM.component('trellis', {
-	props :{
+	props: {
 		form: Object,
 		url: String,
 	},

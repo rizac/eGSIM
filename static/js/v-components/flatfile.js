@@ -1,5 +1,6 @@
 /* Flatfile components */
 // FIXME import submitForm from ....
+// FIXME: remove everything but plotdiv stuff, or remove entirely this module in the future
 
 EGSIM.component('flatfile', {
 	props: {
