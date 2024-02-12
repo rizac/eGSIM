@@ -105,11 +105,10 @@ EGSIM.component('gsim-select', {
 		}
 	},
 	template: `<div class='d-flex flex-column'>
-		<div class='d-flex flex-row align-items-baseline'>
-			<label style="flex: 1 1 auto">model</label>
-			<span flex='1 1 auto' class='ms-2 small'>
-				({{ selectedModelNames.length }} of {{ models.length }} selected)
-			</span>
+		<div
+			class='d-flex flex-row align-items-baseline input-group-text'
+			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
+			<label style="flex: 1 1 auto;" class='text-start'>model ({{ selectedModelNames.length }} selected)</label>
 			<i
 				v-show="Object.keys(warnings).length"
 				aria-label="Remove models with warnings (for details, hover mouse on each model icon)"
@@ -133,7 +132,8 @@ EGSIM.component('gsim-select', {
 			</i>
 		</div>
 		<div style='overflow: auto; flex: 0 1 auto; min-height:0px'
-			 :class="selectedModelNames.length ? 'd-flex flex-column form-control mb-2': 'd-none'">
+			class='rounded-0 flex-column form-control'
+			:class="selectedModelNames.length ? 'd-flex': 'd-none'">
 			<div class='d-flex flex-row'>
 				<!-- div with cancel icons stacked vertically -->
 				<div class='d-flex flex-column'>
@@ -174,7 +174,8 @@ EGSIM.component('gsim-select', {
 			@keydown.down.prevent="focusSelectElement()"
 			@keydown.esc.prevent="inputElementText=''"
 			class='form-control'
-			style='width:30rem'
+			:class="selectedModelNames.length ? 'border-top-0' : ''"
+			style='width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
 			aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
 		<div
@@ -315,8 +316,9 @@ EGSIM.component('imt-select', {
 				@click="SAPeriods.splice(0, SAPeriods.length, ...defaultSAPeriods)"
 				type='button'
 				class='btn border bg-white'
-				style='border-left:0 !important;border-top-right-radius:0 !important; border-top: 0 !important'
-				>def</button>
+				style='border-left:0 !important;border-top-right-radius:0 !important; border-top: 0 !important'>
+				def
+			</button>
 		</div>
 	</div>`,
 	methods: {
