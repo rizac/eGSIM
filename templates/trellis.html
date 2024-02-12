@@ -15,16 +15,18 @@
 		<imt-select :selected-imts="forms.trellis.imt" :imts='imts' class='mt-2'></imt-select>
 
 		<div class='d-flex flex-column mt-2'>
-			<div class='d-flex flex-row align-items-baseline'>
-				<label>magnitude</label>
-				<array-input v-model="forms.trellis.magnitude" />
+			<div class='input-group'>
+				<label class="input-group-text">magnitude</label>
+				<array-input v-model="forms.trellis.magnitude"></array-input>
+				<button class="btn border bg-white" type="button" style='border-left-width:0 !important'>V</button>
 			</div>
 		</div>
 
 		<div class='d-flex flex-column mt-2'>
-			<div class='d-flex flex-row align-items-baseline'>
-				<label>distance</label>
-				<array-input v-model="forms.trellis.distance" />
+			<div class='input-group'>
+				<label class="input-group-text">distance</label>
+				<array-input v-model="forms.trellis.distance"></array-input>
+				<button class="btn border bg-white" type="button" style='border-left-width:0 !important'>V</button>
 			</div>
 		</div>
 	</form>

@@ -3,19 +3,43 @@
 /* This is an input[type=text] where the v-model is an array. The array elements
 will be displayed - and can be edited - on the input space- or comma-separated */
 EGSIM.component('array-input', {
+	// modelValue is the value of v-model set on this array-input:
 	props: {'modelValue': {type: Array}},
 	emits: ['update:modelValue'],
 	data(){
-		return {
-			modelValue2str: this.modelValue.join(' ')
-		}
+		return { modelValue2str: null }  // string (null means uninitialized)
 	},
 	watch: {
+		modelValue: {
+			immediate: true,
+			deep: true,
+			handler(newVal, oldVal) {
+				if (this.modelValueChanged(newVal)){
+					this.modelValue2str = newVal.join(' ')
+				}
+			}
+		},
 		modelValue2str(newVal, oldVal){
-			this.$emit('update:modelValue', newVal.trim().split(/\s*,\s*|\s+/))
+			// emit a v-model update on this component, after converting back the internal string to an Array:
+			this.$emit('update:modelValue', this.string2Array(newVal));
 		}
 	},
-	template: `<input type='text' v-model="modelValue2str" class='form-control' placeholder='type values space- or comma-separated' />`
+	template: `<input type='text' v-model="modelValue2str" class='form-control' placeholder='type values space- or comma-separated' />`,
+	methods: {
+		string2Array(stringValue){
+			return stringValue.trim().split(/\s*,\s*|\s+/);
+		},
+		modelValueChanged(newArray){
+			if (this.modelValue2str !== null){
+				var oldArray = this.string2Array(this.modelValue2str);
+				if (oldArray.length === newArray.length &&
+						oldArray.every((e,i) => e === newArray[i])){
+					return false;
+				}
+			}
+			return true;
+		}
+	}
 });
 
 
@@ -241,15 +265,22 @@ EGSIM.component('imt-select', {
 	data() {
 		return {
 			selectedImtClassNames: Array.from(new Set(this.selectedImts.map(i => i.startsWith('SA(') ? 'SA' : i))),
-			SAPeriods: this.selectedImts.filter(i => i.startsWith('SA(')).map(sa => sa.substring(3, sa.length-1))
+			SAPeriods: this.selectedImts.filter(i => i.startsWith('SA(')).map(sa => sa.substring(3, sa.length-1)),
+			defaultSAPeriods: [0.05, 0.075, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.20,
+				0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.42, 0.44, 0.46, 0.48, 0.5, 0.55,
+				0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8,
+				1.9, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]
 		}
 	},
 	watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
 		selectedImtClassNames: function(newVal, oldVal){
 			this.updateSelectedImts();
 		},
-		SAPeriods: function(newVal, oldVal){
-			this.updateSelectedImts();
+		SAPeriods: {
+			deep: true,
+			handler(newVal, oldVal){
+				this.updateSelectedImts();
+			}
 		},
 		selectedImts: {
 			deep: true,
@@ -258,23 +289,35 @@ EGSIM.component('imt-select', {
 			}
 		}
 	},
-	template: `<div class='d-flex flex-column'>
-		<label>imt</label>
+	template: `<div class='d-flex flex-column' style='height: 10rem'>
+		<div
+			class='input-group-text'
+			style="border-bottom:0!important;border-bottom-left-radius:0!important;border-bottom-right-radius:0!important">
+			imt ({{ selectedImts.length }} selected)
+		</div>
 		<select
 			v-model="selectedImtClassNames"
 			multiple
-			class='form-control'
-			style="flex: 1 1 0;min-height: 5rem;border-bottom-left-radius: 0;border-bottom-right-radius: 0;">
+			class='form-control rounded-0'
+			:class="selectedImtClassNames.includes('SA') ? '' : 'rounded-bottom'"
+			style="flex: 1 1 auto;">
 			<option	v-for='imt in imts' :value="imt">
 				{{ imt }}
 			</option>
 		</select>
-		<array-input
-			v-model="SAPeriods"
-			class='form-control'
-			:disabled="!selectedImtClassNames.includes('SA')"
-			placeholder="SA periods (space- or comma-separated)"
-			:style="'border-top: 0 !important;border-top-left-radius: 0rem !important;border-top-right-radius: 0rem !important;'" />
+		<div class='input-group' v-show="selectedImtClassNames.includes('SA')">
+			<array-input
+				v-model="SAPeriods"
+				class='form-control'
+				placeholder="SA periods (space- or comma-separated)"
+				style="border-top: 0 !important;border-top-left-radius: 0 !important;border-top-right-radius: 0 !important;" />
+			<button
+				@click="SAPeriods.splice(0, SAPeriods.length, ...defaultSAPeriods)"
+				type='button'
+				class='btn border bg-white'
+				style='border-left:0 !important;border-top-right-radius:0 !important; border-top: 0 !important'
+				>def</button>
+		</div>
 	</div>`,
 	methods: {
 		updateSelectedImts(){
