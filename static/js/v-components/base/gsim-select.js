@@ -71,15 +71,15 @@ EGSIM.component('gsim-select', {
 		},
 		selectableModels(){
 			var models = [];
-			var text = this.inputElementText;
-			var selectedModelNamesSet = new Set(this.selectedModelNames);
+			var text = this.inputElementText.trim();
 			if (text){
+				var selectedModelNamesSet = new Set(this.selectedModelNames);
 				var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
 				models = this.models.filter(m => !selectedModelNamesSet.has(m.name) && m.name.search(regexp) > -1);
-			}
-			// adjust popup height:
-			if (models.length){
-				setTimeout( () => this.resizeSelectElement(models.length), 50 );
+				// adjust popup height:
+				if (models.length){
+					setTimeout( () => this.resizeSelectElement(models.length), 50 );
+				}
 			}
 			return models;
 		},
