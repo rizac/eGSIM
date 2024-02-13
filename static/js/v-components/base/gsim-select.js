@@ -7,7 +7,7 @@ EGSIM.component('array-input', {
 	props: {'modelValue': {type: Array}},
 	emits: ['update:modelValue'],
 	data(){
-		return { modelValue2str: null }  // string (null means uninitialized)
+		return { modelValue2str: null }  // string (null: uninitialized)
 	},
 	watch: {
 		modelValue: {
@@ -78,7 +78,7 @@ EGSIM.component('gsim-select', {
 				models = this.models.filter(m => !selectedModelNamesSet.has(m.name) && m.name.search(regexp) > -1);
 				// adjust popup height:
 				if (models.length){
-					setTimeout( () => this.resizeSelectElement(models.length), 50 );
+					setTimeout( () => this.resizeSelectElement(models.length), 20 );
 				}
 			}
 			return models;
@@ -204,13 +204,13 @@ EGSIM.component('gsim-select', {
 			// this function filters the selectedModelNames Array without creating a new one:
 			this.selectedModelNames.splice(0,
 				this.selectedModelNames.length,
-				...selectedModelNames.filter(m => !this.warnings[m]))
+				...this.selectedModelNames.filter(m => !this.warnings[m]))
 		},
 		removeSelectedModelsWithErrors(){
 			// this function filters the selectedModelNames Array without creating a new one:
 			this.selectedModelNames.splice(0,
 				this.selectedModelNames.length,
-				...selectedModelNames.filter(m => !this.errors[m]))
+				...this.selectedModelNames.filter(m => !this.errors[m]))
 		},
 		removeSelectedModels(){
 			// this function clears the selectedModelNames Array without creating a new one:
@@ -240,7 +240,7 @@ EGSIM.component('gsim-select', {
 			var rect = this.$refs.inputElement.getBoundingClientRect();
 			this.$refs.selectElement.style.width = (rect.right - rect.left) + 'px';
 			this.$refs.selectElement.size = optionsLength;
-			this.$refs.selectElement.style.maxHeight = (.8 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
+			this.$refs.selectElement.style.maxHeight = (.95 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
 		},
 		focusInputElement(event){
 			if(this.$refs.selectElement.selectedIndex==0){
@@ -290,7 +290,7 @@ EGSIM.component('imt-select', {
 			}
 		}
 	},
-	template: `<div class='d-flex flex-column' style='height: 10rem'>
+	template: `<div class='d-flex flex-column ' style='min-height: 10rem; max-height: 10rem'>
 		<div
 			class='input-group-text'
 			style="border-bottom:0!important;border-bottom-left-radius:0!important;border-bottom-right-radius:0!important">
