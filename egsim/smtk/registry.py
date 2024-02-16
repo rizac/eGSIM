@@ -3,7 +3,7 @@ from typing import Union, Iterable, Callable
 import re
 
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.imt import IMT
+from openquake.hazardlib.imt import IMT, from_string as imt_from_string
 from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
@@ -46,6 +46,16 @@ def gsim(gmm: Union[str, type[GMPE], GMPE], raise_deprecated=True) -> GMPE:
             raise DeprecationWarning(f'Use {gmm.superseded_by} instead')
         return gmm
     raise TypeError(gmm)
+
+
+def imt(arg: Union[float, str, IMT]) -> IMT:
+    """Return a IMT object from the given argument
+
+    :raise: TypeError, ValueError, KeyError
+    """
+    if isinstance(arg, IMT):
+        return arg
+    return imt_from_string(str(arg))
 
 
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
