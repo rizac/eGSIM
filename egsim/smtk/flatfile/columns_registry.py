@@ -176,7 +176,7 @@ def _harmonize_props(props:dict):
     aliases = props.get('alias', [])
     if isinstance(aliases, str):
         aliases = [aliases]
-    props['aliases'] = set(aliases)  # set -> remove duplicate aliases
+    props['aliases'] = tuple(aliases)  # set -> remove duplicate aliases
     # props['help'] = props.get('help', '')
     props['type'] = ColumnType[props['type']] if 'type' in props else None
     props['dtype'] = cast_dtype(props['dtype']) if 'dtype' in props else None

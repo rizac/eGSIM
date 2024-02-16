@@ -161,13 +161,17 @@ def get_init_json_data(browser: dict = None,
     components_props = get_components_properties(debug)
 
     # fixme: handle regionalization (set to None cause otherwise is not JSON serializable)!
-    init_val = {'gsim': [], 'imt': [], 'regionalization': None}
+    inits = {'gsim': [], 'imt': [], 'regionalization': None}
+    trellis_form = TrellisView.formclass({'magnitude':[1, 2], 'distance':[3], **inits})
+    residuals_form = ResidualsView.formclass(inits)
     return {
         'forms': {
-            'trellis': TrellisView.formclass(
-                {'magnitude':[1, 2], 'distance':[3], **init_val}
-            ).asdict(),
-            'residuals': ResidualsView.formclass(init_val).asdict()
+            'trellis': trellis_form.asdict(),
+            'residuals': residuals_form.asdict()
+        },
+        'django_forms': {
+            'trellis': trellis_form,
+            'residuals': residuals_form
         },
         'urls': {
             'trellis': TrellisView.urls[0],

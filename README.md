@@ -27,6 +27,7 @@ The web portal (and API documentation) is available at:
    * [Maintenance](#maintenance)
      * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
      * [Complete DB reset](#Complete-DB-reset)
+     * [Repopulating the DB](#Repopulating-the-DB)
      * [Admin panel](#admin-panel)
      * [Create a custom management command](#Create-a-custom-management-command)  
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
@@ -40,7 +41,7 @@ DISCLAIMER: **This document covers installation in development (or debug)
 mode, i.e. when the program is deployed locally, usually for testing, 
 fixing bug or adding features.**
 
-For installation in **production** mode, see `deploy.html`
+For installation in **production** mode (for maintainers only), see `deploy.html`
 
 ## Requirements
 
@@ -261,7 +262,7 @@ To perform a complete db reset:
  - `git add` the newly created migration file (in dev mode it's 
    `egsim/api/migrations/0001_initial.py`)
  - [**Optional**] re-add the Django admin superuser(s) as explained in the
-   [admin panel](#admin-panel) above
+   [admin panel](#admin-panel)
 
 Notes:
  - Commands explanation:
@@ -269,12 +270,24 @@ Notes:
      code and existing migration file(s)
    - `migrate` re-create the DB via the generated migration file(s)
    - `egsim_init` repopulates the db with eGSIM data
- - If the db has to be update but **its schema has not changed**, e.g.
-   OpenQuake is upgraded, or new data is implemented (new regionalization or 
-   flatfile), one could simply run `egsim_init` alone and skip commit at the 
-   end, as no new migration file will be generated
 
 
+## Repopulating the DB
+ 
+We repopulate the DB when  **its schema has not changed** but its data 
+needs to, e.g., OpenQuake is upgraded, or new data is implemented 
+(new regionalization or flatfile), or a bug in the code has been 
+fixed. The operations are similar but simpler than a complete Db Rest:
+
+- delete or rename the database of the settings file used:
+   - `egsim/db.sqlite3`
+- Execute: 
+  ```bash
+  export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate && python manage.py egsim_init
+  ```
+- [**Optional**] most likely (not tested, please check) you need to re-add the Django admin superuser(s) as explained in the
+   [admin panel](#admin-panel)
+   
 ## Admin panel
 
 > Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below must be changed in production

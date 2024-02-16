@@ -6,7 +6,7 @@ from os import makedirs
 
 from django.core.management import BaseCommand, CommandError
 
-from egsim.smtk.flatfile.columns import load_from_yaml
+from egsim.smtk.flatfile.columns_registry import load_from_yaml
 from egsim.smtk.registry import registered_imts
 from ... import models
 from ...data.flatfiles import get_flatfiles, DATA

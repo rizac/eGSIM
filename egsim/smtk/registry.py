@@ -1,14 +1,51 @@
 """Registry with helper functions to access OpenQuake entities and properties"""
 from typing import Union, Iterable, Callable
+import re
 
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
+from openquake.hazardlib.gsim.gmpe_table import GMPETable
+from openquake.hazardlib.valid import gsim as valid_gsim
 
 from .flatfile import ColumnsRegistry
 
 
 registered_gsims:dict[str, type[GMPE]] = registry.copy()
+
+
+def gsim(gmm: Union[str, type[GMPE], GMPE], raise_deprecated=True) -> GMPE:
+    """Return a Gsim instance (Python object of class `GMPE`) from the given input
+
+    :param gmm: a gsim name, class or instance (in this latter case, the instance is
+        returned). If str, it can also denote a GMPETable in the form
+        "GMPETable(gmpe_table=filepath)"
+    :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
+        will raise (as normal Python  `DeprecationWarning`)
+    :raise: a `(TypeError, ValueError, FileNotFoundError, OSError, AttributeError)`
+        if name starts with "GMPETable", otherwise a
+        `(TypeError, IndexError, KeyError, ValueError, DeprecationWarning)`
+        (the last one only if `raise_deprecated` is True, the default)
+    """
+    if isinstance(gmm, type) and issubclass(gmm, GMPE):
+        gmm = gsim(gmm.__name__)
+    if isinstance(gmm, str):
+        is_table = gmm.startswith('GMPETable')
+        if is_table:
+            # GMPETable. raises: TypeError, ValueError, FileNotFoundError, OSError,
+            # AttributeError
+            filepath = re.match(r'^GMPETable\(([^)]+?)\)$', gmm).\
+                group(1).split("=")[1]  # get table filename
+            return GMPETable(gmpe_table=filepath)
+        else:
+            # "normal" str case, calls valid_gsim which raises:
+            # TypeError, IndexError, KeyError, ValueError
+            gmm = valid_gsim(gmm)
+    if isinstance(gmm, GMPE):
+        if raise_deprecated and gmm.superseded_by:
+            raise DeprecationWarning(f'Use {gmm.superseded_by} instead')
+        return gmm
+    raise TypeError(gmm)
 
 
 # OpenQuake lacks a registry of IMTs, so we need to inspect the imt module:
@@ -68,46 +105,49 @@ def gsim_sa_limits(gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, flo
             break
     return (min(pers), max(pers)) if pers is not None else None
 
+# FIXME: REMOVE:
+# def rupture_params_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+#     """Return the rupture parameters required by the given model(s)"""
+#     ret = []
+#     for model in gsim:
+#         if isinstance(model, str):
+#             model = registry[model]
+#         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
+#     return frozenset(ret)
+#
+#
+# def site_params_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+#     """Return the site parameters required by the given model(s)"""
+#     ret = []
+#     for model in gsim:
+#         if isinstance(model, str):
+#             model = registry[model]
+#         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
+#     return frozenset(ret)
+#
+#
+# def distances_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+#     """Return the distance measures required by the given model(s)"""
+#     ret = []
+#     for model in gsim:
+#         if isinstance(model, str):
+#             model = registry[model]
+#         ret.extend(model.REQUIRES_DISTANCES or [])
+#     return frozenset(ret)
 
-def rupture_params_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-    """Return the rupture parameters required by the given model(s)"""
-    ret = []
-    for model in gsim:
-        if isinstance(model, str):
-            model = registry[model]
-        ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
-    return frozenset(ret)
 
-
-def site_params_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-    """Return the site parameters required by the given model(s)"""
-    ret = []
-    for model in gsim:
-        if isinstance(model, str):
-            model = registry[model]
-        ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
-    return frozenset(ret)
-
-
-def distances_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-    """Return the distance measures required by the given model(s)"""
-    ret = []
-    for model in gsim:
-        if isinstance(model, str):
-            model = registry[model]
-        ret.extend(model.REQUIRES_DISTANCES or [])
-    return frozenset(ret)
-
-
-def intensity_measures_defined_for(gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+def intensity_measures_defined_for(model: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
     """Return the intensity measures defined for the given model"""
-    if isinstance(gsim, str):
-        gsim = registry[gsim]
-    return frozenset(_.__name__ for _ in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+    if not isinstance(model, GMPE):
+        # creating a new GMPE via `gsim`is not super efficient wrt getting the class
+        # name via `registry`, but the latter has sometimes the attributes below
+        # empty (something to do with GMPE aliases I guess)
+        model = gsim(model)
+    return frozenset(_.__name__ for _ in model.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
 
 
 def ground_motion_properties_required_by(
-        *gsim: Union[str, GMPE, type[GMPE]],
+        *models: Union[str, GMPE, type[GMPE]],
         as_ff_column=False) -> frozenset[str]:
     """Return the required ground motion properties (distance measures,
        rupture and site params all together)
@@ -117,9 +157,12 @@ def ground_motion_properties_required_by(
         and return the relative flatfile column registered in this package
     """
     ret = []
-    for model in gsim:
-        if isinstance(model, str):
-            model = registry[model]
+    for model in models:
+        if not isinstance(model, GMPE):
+            # creating a new GMPE via `gsim`is not super efficient wrt getting the class
+            # name via `registry`, but the latter has sometimes the attributes below
+            # empty (something to do with GMPE aliases I guess)
+            model = gsim(model)
         ret.extend(model.REQUIRES_DISTANCES or [])
         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])

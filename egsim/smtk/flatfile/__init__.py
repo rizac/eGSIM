@@ -147,7 +147,7 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
     """prepare the arguments for pandas read_csv: take tha passed **kwargs
     and return a modified version of it after checking some keys and values
     """
-    parse_dates = set(kwargs.pop('parse_dates', []))  # see above
+    parse_dates = set(kwargs.pop('parse_dates', []))
 
     # infer `sep` and read the CSV header (dataframe columns), as some args of
     # `read_csv` (e.g. `parse_dates`) cannot contain columns not present in the flatfile
@@ -231,8 +231,15 @@ def _read_csv_get_header(filepath_or_buffer: IOBase, sep=None, **kwargs) -> list
     _pos = None
     if isinstance(filepath_or_buffer, IOBase):
         _pos = filepath_or_buffer.tell()
-    kwargs['nrows'] = 0  # read just header
-    ret = pd.read_csv(filepath_or_buffer, sep=sep, **kwargs).columns  # noqa
+    # use only args necessary to parse columns, we might raise unnecessary errors
+    # otherwise (these errors might be fixed afterwards before reading the whole csv):
+    args = ['header', 'names', 'skip_blank_lines', 'skipinitialspace', 'engine',
+            'lineterminator', 'quotechar', 'quoting', 'doublequote', 'escapechar',
+            'comment', 'dialect', 'delim_whitespace']
+    _kwargs = {k: kwargs[k] for k in args if k in kwargs}
+    _kwargs['nrows'] = 0  # read just header
+    _kwargs['sep'] = sep
+    ret = pd.read_csv(filepath_or_buffer, **_kwargs).columns  # noqa
     if _pos is not None:
         filepath_or_buffer.seek(_pos)
     return ret
@@ -279,6 +286,9 @@ def _read_csv_finalize(
     for col in dfr.columns:
         expected_dtype = dtype.get(col, None)  # ColumnDtype or pd.CategoricalDtype
         if expected_dtype is None:
+            continue
+        if expected_dtype == 'category' and \
+                isinstance(dfr[col].dtype, pd.CategoricalDtype):
             continue
         # is expected dtype a pandas CategoricalDtype?
         expected_categories = None

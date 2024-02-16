@@ -29,7 +29,7 @@ def main(request, selected_menu=None):
     # FIXME: REMOVE egsim.py entirely, as well as apidoc.py!
     template = 'egsim.html'
     return render(request, template, context={'debug': settings.DEBUG,
-                                              'init_data': get_init_json_data() })
+                                              'init_data': get_init_json_data()})
 
 
 def main_page_init_data(request):

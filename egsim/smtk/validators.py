@@ -3,15 +3,12 @@ from __future__ import annotations
 
 from typing import Union
 from collections.abc import Iterable
-import re
 
 import numpy as np
 from openquake.hazardlib.imt import IMT, from_string as imt_from_string
 from openquake.hazardlib.gsim.base import GMPE
-from openquake.hazardlib.valid import gsim as valid_gsim
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
-from .registry import (gsim_name, intensity_measures_defined_for,
+from .registry import (gsim_name, intensity_measures_defined_for, gsim,
                        gsim_sa_limits, imt_name)
 
 
@@ -47,40 +44,6 @@ def harmonize_input_gsims(
         raise InvalidInput(*errors)
 
     return {k: output_gsims[k] for k in sorted(output_gsims)}
-
-
-def gsim(gmm: Union[str, type[GMPE], GMPE], raise_deprecated=True) -> GMPE:
-    """Return a Gsim instance (Python object of class `GMPE`) from the given input
-
-    :param gmm: a gsim name, class or instance (in this latter case, the instance is
-        returned). If str, it can also denote a GMPETable in the form
-        "GMPETable(gmpe_table=filepath)"
-    :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
-        will raise (as normal Python  `DeprecationWarning`)
-    :raise: a `(TypeError, ValueError, FileNotFoundError, OSError, AttributeError)`
-        if name starts with "GMPETable", otherwise a
-        `(TypeError, IndexError, KeyError, ValueError, DeprecationWarning)`
-        (the last one only if `raise_deprecated` is True, the default)
-    """
-    if isinstance(gmm, type) and issubclass(gmm, GMPE):
-        gmm = gsim(gmm.__name__)
-    if isinstance(gmm, str):
-        is_table = gmm.startswith('GMPETable')
-        if is_table:
-            # GMPETable. raises: TypeError, ValueError, FileNotFoundError, OSError,
-            # AttributeError
-            filepath = re.match(r'^GMPETable\(([^)]+?)\)$', gmm).\
-                group(1).split("=")[1]  # get table filename
-            return GMPETable(gmpe_table=filepath)
-        else:
-            # "normal" str case, calls valid_gsim which raises:
-            # TypeError, IndexError, KeyError, ValueError
-            gmm = valid_gsim(gmm)
-    if isinstance(gmm, GMPE):
-        if raise_deprecated and gmm.superseded_by:
-            raise DeprecationWarning(f'Use {gmm.superseded_by} instead')
-        return gmm
-    raise TypeError(gmm)
 
 
 def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IMT]:
