@@ -5,7 +5,7 @@ from typing import Union
 from collections.abc import Iterable
 
 import numpy as np
-from openquake.hazardlib.imt import IMT, from_string as imt_from_string
+from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE
 
 from .registry import (gsim_name, intensity_measures_defined_for, gsim,
@@ -61,16 +61,6 @@ def harmonize_input_imts(imts: Iterable[Union[str, float, IMT]]) -> dict[str, IM
     if errors:
         raise InvalidInput(*errors)
     return {imt_name(i): i for i in sorted(imt_set, key=_imtkey)}
-
-
-def imt(arg: Union[float, str, IMT]) -> IMT:
-    """Return a IMT object from the given argument
-
-    :raise: TypeError, ValueError, KeyError
-    """
-    if isinstance(arg, IMT):
-        return arg
-    return imt_from_string(str(arg))
 
 
 def _imtkey(imt_inst) -> tuple[str, float]:
@@ -154,6 +144,7 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
         raise IncompatibleInput(*errors) from None
 
     return gsims, imts
+
 
 # Custom Exceptions:
 
