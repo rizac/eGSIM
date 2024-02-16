@@ -136,14 +136,17 @@ class TrellisForm(GsimImtForm, APIForm):
 
     @classmethod
     def site_fields(cls) -> set[str]:
+        # FIXME: move to egsim.app?
         return set(SiteProperties.__annotations__) & set(cls.base_fields)
 
     @classmethod
     def rupture_fields(cls) -> set[str]:
+        # FIXME: move to egsim.app ?
         return set(RuptureProperties.__annotations__) & set(cls.base_fields)
 
     @classmethod
     def scenario_fields(cls) -> set[str]:
+        # FIXME: is it used?
         return cls.site_fields() | cls.rupture_fields()
 
     # All clean_<field> methods below are called in `self.full_clean` after each field

@@ -22,6 +22,12 @@
 			</div>
 		</div>
 
+		{% for field in django_forms.trellis %}
+		<div class="input-group">
+			<div class='input-group-text'>{{ field.label_tag }}</div>{{ field }}
+		</div>
+		{% endfor %}
+
 		<div class='d-flex flex-column mt-2'>
 			<div class='input-group'>
 				<label class="input-group-text">distance</label>

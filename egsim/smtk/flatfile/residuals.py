@@ -11,8 +11,7 @@ from openquake.hazardlib.scalerel import PeerMSR
 from . import (ColumnsRegistry, MissingColumn,
                InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
 from ..validators import sa_period
-from ..registry import (distances_required_by,
-                        ground_motion_properties_required_by)
+from ..registry import ground_motion_properties_required_by
 from ..converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
 
 
@@ -180,7 +179,7 @@ def get_required_ground_motion_properties(
     # REQUIRES_DISTANCES is empty when gsims = [FromFile]: in this case, add a
     # default 'rrup' (see openquake,hazardlib.contexts.ContextMaker.__init__):
     if 'rrup' not in req_properties and \
-            any(len(distances_required_by(g)) == 0 for g in gsims):
+            any(len(g.REQUIRES_DISTANCES) == 0 for g in gsims):
         req_properties |= {'rrup'}
 
     for p in req_properties:

@@ -5,7 +5,8 @@ import warnings
 
 from django.core.management import CommandError, BaseCommand
 
-from egsim.smtk import registered_gsims, gsim
+from egsim.smtk import registered_gsims, gsim, intensity_measures_defined_for, \
+    ground_motion_properties_required_by
 from ... import models
 
 
@@ -51,6 +52,10 @@ class Command(BaseCommand):
 def write_model(name, cls):
     try:
         _ = gsim(name)  # check we can initialize the model
+        imtz = intensity_measures_defined_for(_)
+        gmp = ground_motion_properties_required_by(_)
+        if not imtz or not gmp:
+            return False
         models.Gsim.objects.create(
             name=name,
             unverified=cls.non_verified,
