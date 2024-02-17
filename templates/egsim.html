@@ -2,6 +2,49 @@
 
 {% block head %}
 
+<style>
+	@media (max-width: 975px){  /* narrow  screen (< 975px) */
+		nav > .menu-item span { display: none !important; } /* hide menu texts */
+	}
+	/* waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
+	.loader, .loader:before { height: 10px; }
+	.loader {
+		width: 100%;
+		position: relative;
+		overflow: hidden;
+		background-color: #999;
+	}
+	.loader:before{
+		display: block;
+		position: absolute;
+		content: "";
+		left: -200px;
+		width: 200px;
+		background-color: #ffc107; /*#a2cd7e;*/
+		animation: loading 2s linear infinite;
+	}
+	@keyframes loading {
+		from {left: -200px; width: 30%;}
+		50% {width: 30%;}
+		70% {width: 70%;}
+		80% { left: 50%;}
+		95% {left: 120%;}
+		to {left: 100%;}
+	}
+	/* Transitions when activating a main component: https://vuejs.org/guide/built-ins/transition.html */
+	.fade-enter-active, .fade-leave-active { transition: opacity .4s ease-out; }
+	.fade-enter, .fade-leave-to { opacity: 0; }
+	/* nav menus anchors */
+	nav#egsim-nav > * {  }
+	nav#egsim-nav .menu-item { border-radius: .375rem; padding: .5rem; margin: .375rem; }
+	nav#egsim-nav a.menu-item { color: lightgray; cursor: pointer; }
+	nav#egsim-nav a.menu-item:hover, nav#egsim-nav a.menu-item.selected  { color: white; background-color: rgba(202, 214, 222, .25) }
+	code{color: inherit;}
+	/* tabs (e.g., flatfile page) */
+	.nav-tabs .nav-link {color: inherit; opacity: .8;}
+	.nav-tabs .nav-item.show .nav-link, .nav-tabs .nav-link.active {color: var(--bs-primary); opacity: 1; background-color: inherit}
+</style>
+
 {% with vue=True plotly=True leaflet=True fontawesome=True %}
 {{ block.super }}
 {% endwith %}
@@ -12,11 +55,17 @@
 {% block body %}
 <div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
 	{% include "navbar.html" %}
-	<KeepAlive>
+	<keep-alive>
+	<template v-if="selectedTab==1">
 	{% include "trellis.html" %}
+	</template>
+	<template v-else-if="selectedTab==3">
 	{% include "residuals.html" %}
-	<iframe style='flex: 1 1 auto' src='home' v-else></iframe>
-	</KeepAlive>
+	</template>
+	<template v-else>
+	<iframe style='flex: 1 1 auto' src='home'></iframe>
+	</template>
+	</keep-alive>
 </div>
 {% endblock %}
 
@@ -71,10 +120,8 @@ const EGSIM = Vue.createApp({
 
 </script>
 <!-- Components and dependencies of the EGISM app: -->
-<script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/plots-div.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
+<script type='text/javascript' src="{% static 'js/vue/components.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/vue/plots-div.js' %}"></script>
 <script>
 /* mount the Vue App EGSIM. The function below returns an App instance (not used for the moment): */
 EGSIM.mount('#egsim-vue');
