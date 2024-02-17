@@ -1,4 +1,4 @@
-<div class='position-relative' style="flex: 1 1 auto;" v-if="selectedTab==3">
+<div class='position-relative' style="flex: 1 1 auto;">
 	<gsim-map @gsim-selected="(gs) => { forms.residuals.gsim = Array.from(new Set(forms.residuals.gsim.concat(gs))) }"
 			  :regionalizations="regionalizations"
 			  style='position:absolute;inset:0px;z-index:0'>
