@@ -14,6 +14,7 @@ EGSIM.component('array-input', {
 			immediate: true,
 			deep: true,
 			handler(newVal, oldVal) {
+				if (newVal === undefined){ newVal = []; }
 				if (this.modelValueChanged(newVal)){
 					this.modelValue2str = newVal.join(' ')
 				}

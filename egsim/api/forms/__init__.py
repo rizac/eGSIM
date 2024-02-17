@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 import re
-# from django.db.models import QuerySet
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
 from typing import Union, Any
-# import json
 from enum import StrEnum
 
 from shapely.geometry import Point, shape

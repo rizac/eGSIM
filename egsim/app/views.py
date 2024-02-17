@@ -16,7 +16,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from .templates.egsim import TAB, URLS, get_init_json_data
+from .templates.egsim import TAB, URLS, get_init_json_data, field_to_htmlelement_attrs
 from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
                                               FlatfileInspectionForm, FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm
@@ -28,8 +28,22 @@ def main(request, selected_menu=None):
     """view for the main page"""
     # FIXME: REMOVE egsim.py entirely, as well as apidoc.py!
     template = 'egsim.html'
+    inits = {'gsim': [], 'imt': [], 'regionalization': None}
+    trellis_form = TrellisView.formclass({'magnitude': [1, 2], 'distance': [3], **inits})
+    residuals_form = ResidualsView.formclass(inits)
+    forms_data_json = {
+        'forms': {
+            'trellis': trellis_form.asdict(),
+            'residuals': residuals_form.asdict(),
+            'misc': {
+                'msr': trellis_form.fields['msr'].choices,
+                'region': trellis_form.fields['region'].choices
+            }
+        }
+    }
+    init_data = get_init_json_data() | forms_data_json
     return render(request, template, context={'debug': settings.DEBUG,
-                                              'init_data': get_init_json_data()})
+                                              'init_data': init_data})
 
 
 def main_page_init_data(request):
