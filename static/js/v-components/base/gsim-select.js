@@ -176,7 +176,7 @@ EGSIM.component('gsim-select', {
 			@keydown.esc.prevent="inputElementText=''"
 			class='form-control'
 			:class="selectedModelNames.length ? 'border-top-0' : ''"
-			style='width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
+			style='min-width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
 			aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
 		<div
@@ -512,3 +512,95 @@ EGSIM.component('gsim-map', {
 		}
 	}
 })
+
+EGSIM.component('flatfile-select', {
+	props: {
+		flatfiles: {type: Array},  // Array of Objet with keys value (str or File), key, innerHTML, url, columns
+		selectedFlatfile: {type: String, default: null},
+		flatfileQuery: {type: String},
+		uploadUrl: {type: String}
+	},
+	data(){
+		return { selectedIndex: this.flatfiles.map(f => f.name).indexOf(this.selectedFlatfile) };
+	},
+	emits: ['flatfile-selected'],
+	watch: {
+		selectedIndex:{
+			handler(newVal, oldVal){
+				this.selectedFlatfile = newVal !== undefined && newVal >= 0 ? this.flatfiles[newVal].value : null;
+			}
+		},
+		selectedFlatfile: {
+			deep: true,
+			immediate: true,
+			handler(newVal, oldVal){
+				if (newVal){
+					this.$emit('flatfile-selectedf', ... [newVal.value, newVal.columns]);
+				}
+			}
+		}
+	},
+	methods:{
+		uploadFlatfiles(files){
+			var choices = this.flatfiles;
+			for(var index = 0; index < files.length; index++){
+				var file = files[index];
+				var label = `${file.name} (${new Date().toLocaleString()})`;
+				var append = true;
+				for (let choice of choices){
+					if (choice.value instanceof File && choice.value.name == file.name){
+						this.upload(file).then(response => {
+							choice.value = file;
+							choice.innerHTML = label;  // update label on <select>
+							choice.columns = response.data.columns;
+						});
+						append = false;
+						break;
+					}
+				}
+				if (append){
+					this.upload(file).then(response => {
+						var cols = response.data.columns;
+						choices.push({ value: file, innerHTML: label, columns: cols });
+					});
+				}
+			}
+		},
+		upload(file){  // return a Promise
+			var formData = new FormData();
+			formData.append("flatfile", file);
+			return fetch(this.uploadUrl, formData, {
+				headers: { 'Content-Type': 'multipart/form-data' }
+			});
+		}
+	},
+	template:`<div>
+		<div class='input-group'>
+			<label class='input-group-text'> data </label>
+			<select v-model="selectedIndex" class='form-control'>
+				<option v-for="(v, idx) in flatfiles" :value='idx'>
+					{{ v.innerHTML }}
+				</option>
+			</select>
+			<a aria-label='flatfile reference (opens in new tab)' target="_blank"
+				class='ms-1' v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
+				:href="flatfiles[selectedIndex].url">
+				<i class="fa fa-link"></i>
+			</a>
+			<button
+				type="button"
+				class="btn border bg-white"
+				onclick="this.nextElementSibling.click()"
+				style='border-left-width: 0 !important'
+				aria-label=''>
+				upload
+			</button>
+			<!-- THIS MUST ALWAYS BE NEXT TO THE BUTTON ABOVE: -->
+			<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
+		</div>
+		<div class='input-group mt-1'>
+			<label class='input-group-text'>data-query</label>
+			<input type='text' v-model='flatfileQuery' class='form-control'/>
+		</div>
+	</div>`
+});

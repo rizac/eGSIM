@@ -1,23 +1,25 @@
 <div class='position-relative' style="flex: 1 1 auto;">
-	<gsim-map @gsim-selected="(gs) => { forms.trellis.gsim = Array.from(new Set(forms.trellis.gsim.concat(gs))) }"
+	<gsim-map @gsim-selected="(gs) => { forms.residuals.gsim = Array.from(new Set(forms.residuals.gsim.concat(gs))) }"
 			  :regionalizations="regionalizations"
 			  style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
-	<form novalidate @submit.prevent="postData(urls.trellis, forms.trellis).then(r => { responseData = r; })"
+	<form novalidate @submit.prevent="postData(urls.residuals, forms.residuals).then(r => { responseData = r; })"
 		  class='d-flex flex-column p-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
 
-		<gsim-select :selected-model-names="forms.trellis.gsim"
+		<gsim-select :selected-model-names="forms.residuals.gsim"
 					 :models="models"
-					 :selected-imts="forms.trellis.imt"
+					 :selected-imts="forms.residuals.imt"
 					 style="flex: 0 1 auto; min-height:0px">
 		</gsim-select>
 
-		<imt-select :selected-imts="forms.trellis.imt" :imts='imts' class='mt-2'></imt-select>
+		<imt-select :selected-imts="forms.residuals.imt" :imts='imts' class='mt-2'></imt-select>
 
-		<div class="mt-2 form-control pb-3 pt-2 position-relative">
-			<flatfile-select :field="forms.flatfile"/>
-			<flatfile-selexpr-input :field="forms.selexpr" class='mt-3' />
-		</div>
+		<flatfile-select
+			:flatfiles='flatfiles'
+			:selected-flatfile="forms.residuals.flatfile"
+			:data-query="forms.residuals['data-query']"
+			:upload-url='urls.flatfile_upload'>
+		</flatfile-select>
 
 <!--		<div class='d-flex flex-column'>-->
 <!--			<div> Model-to-data comparison </div>-->

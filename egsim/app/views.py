@@ -28,6 +28,7 @@ def main(request, selected_menu=None):
     """view for the main page"""
     # FIXME: REMOVE egsim.py entirely, as well as apidoc.py!
     template = 'egsim.html'
+    # fixme: handle regionalization (set to None cause otherwise is not JSON serializable)!
     inits = {'gsim': [], 'imt': [], 'regionalization': None}
     trellis_form = TrellisView.formclass({'magnitude': [1, 2], 'distance': [3], **inits})
     residuals_form = ResidualsView.formclass(inits)
