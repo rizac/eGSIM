@@ -152,6 +152,7 @@ def get_init_json_data(browser: dict = None,
     for ffile in models.Flatfile.queryset('name', 'display_name', 'url', 'media_root_path'):
         flatfiles .append({
             'value': ffile.name,
+            'key': ffile.name,
             'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
             'url': ffile.url,  # noqa
             'columns': FlatfileForm.get_flatfile_dtypes(ffile.read_from_filepath(nrows=0))
@@ -160,7 +161,7 @@ def get_init_json_data(browser: dict = None,
     # Get component props (core data needed for Vue rendering):
     components_props = get_components_properties(debug)
 
-    # fixme: handle regionalization (set to None cause otherwise is not JSON serializable)!
+
     return {
         'urls': {
             'trellis': TrellisView.urls[0],
@@ -168,15 +169,13 @@ def get_init_json_data(browser: dict = None,
             'api': URLS.API,
             'imprint': URLS.IMPRINT,
             'data_protection': URLS.DATA_PROTECTION,
-            'ref_and_license': URLS.REF_AND_LICENSE
+            'ref_and_license': URLS.REF_AND_LICENSE,
+            'flatfile_upload': URLS.FLATFILE_INSPECTION
         },
         'gsims': gsims,
         'imt_groups': imt_groups,
         'warning_groups': warning_groups,
-        'flatfile': {
-            'choices': flatfiles,
-            'upload_url': URLS.FLATFILE_INSPECTION,
-        },
+        'flatfiles': flatfiles,
         'regionalizations': regionalizations,
     }
 

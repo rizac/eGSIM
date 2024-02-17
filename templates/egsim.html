@@ -64,7 +64,7 @@ function getInitData(){
 		forms: data.forms,
 		urls: data.urls,
 		regionalizations: data.regionalizations,
-		// flatfile: data.flatfile
+		flatfiles: data.flatfiles
 	}
 }
 const EGSIM = Vue.createApp({
@@ -75,7 +75,6 @@ const EGSIM = Vue.createApp({
 <!-- Components and dependencies of the EGISM app: -->
 <script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
 <script type='text/javascript' src="{% static 'js/v-components/base/plots-div.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}flatfile.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>
 <script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
 <script>
