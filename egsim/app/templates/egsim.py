@@ -161,18 +161,7 @@ def get_init_json_data(browser: dict = None,
     components_props = get_components_properties(debug)
 
     # fixme: handle regionalization (set to None cause otherwise is not JSON serializable)!
-    inits = {'gsim': [], 'imt': [], 'regionalization': None}
-    trellis_form = TrellisView.formclass({'magnitude':[1, 2], 'distance':[3], **inits})
-    residuals_form = ResidualsView.formclass(inits)
     return {
-        'forms': {
-            'trellis': trellis_form.asdict(),
-            'residuals': residuals_form.asdict()
-        },
-        'django_forms': {
-            'trellis': trellis_form,
-            'residuals': residuals_form
-        },
         'urls': {
             'trellis': TrellisView.urls[0],
             'residuals': ResidualsView.urls[0],
@@ -441,8 +430,7 @@ def field_to_htmlelement_attrs(field: Field) -> dict:
     widget = field.widget
     attrs = {
         # 'hidden': widget.is_hidden,
-        'required': field.required,
-        'disabled': False
+        'required': field.required
     }
     if isinstance(field, IntegerField):  # note: FloatField inherits from IntegerField
         if field.min_value is not None:

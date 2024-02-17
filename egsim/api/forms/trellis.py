@@ -80,7 +80,7 @@ class TrellisForm(GsimImtForm, APIForm):
         'line_azimuth': ('line-azimuth', 'line_azimuth'),
     }
 
-    # GSIM RUPTURE PARAMS:
+    # RUPTURE PARAMS:
     magnitude = ArrayField(FloatField(), label='Magnitude(s)', required=True)
     distance = ArrayField(FloatField(), label='Distance(s)', required=True)
     aspect = FloatField(label='Rupture Length / Width', min_value=0., initial=1.0)
@@ -107,6 +107,7 @@ class TrellisForm(GsimImtForm, APIForm):
                                                'Down-dip fraction')
     vs30 = FloatField(label=mark_safe('V<sub>S30</sub> (m/s)'), initial=760.0)
 
+    # SITE PARAMS:
     region = ChoiceField(label="Attenuation cluster region",
                          choices=[
                              (0, '0 - Default or unknown'),
@@ -118,7 +119,7 @@ class TrellisForm(GsimImtForm, APIForm):
                          ],
                          initial=0,
                          help_text="https://doi.org/10.1007/s10518-020-00899-9")
-    # END OF RUPTURE PARAMS
+
     vs30measured = BooleanField(label=mark_safe('V<sub>S30</sub> is measured'),
                                 help_text='Otherwise is inferred',
                                 initial=True, required=False)
@@ -134,20 +135,15 @@ class TrellisForm(GsimImtForm, APIForm):
                        required=False)
     backarc = BooleanField(label='Backarc Path', initial=False, required=False)
 
-    @classmethod
-    def site_fields(cls) -> set[str]:
-        # FIXME: move to egsim.app?
-        return set(SiteProperties.__annotations__) & set(cls.base_fields)
+    @property
+    def site_fields(self) -> dict[str, Field]:
+        fields = set(SiteProperties.__annotations__) & set(self.base_fields)
+        return {f: self.fields[f] for f in sorted(fields)}
 
-    @classmethod
-    def rupture_fields(cls) -> set[str]:
-        # FIXME: move to egsim.app ?
-        return set(RuptureProperties.__annotations__) & set(cls.base_fields)
-
-    @classmethod
-    def scenario_fields(cls) -> set[str]:
-        # FIXME: is it used?
-        return cls.site_fields() | cls.rupture_fields()
+    @property
+    def rupture_fields(self) -> dict[str, Field]:
+        fields = set(RuptureProperties.__annotations__) & set(self.base_fields)
+        return {f: self.fields[f] for f in sorted(fields)}
 
     # All clean_<field> methods below are called in `self.full_clean` after each field
     # is validated individually in order to perform additional validation or casting:
@@ -181,17 +177,17 @@ class TrellisForm(GsimImtForm, APIForm):
 
     def response_data(self) -> pd.DataFrame:
         cleaned_data = self.cleaned_data
+        rup = RuptureProperties(**{p: cleaned_data[p]
+                                   for p in self.rupture_fields()
+                                   if p in cleaned_data})
+        site = SiteProperties(**{p: cleaned_data[p] for p in
+                                 self.site_fields()
+                                 if p in cleaned_data})
         return get_trellis(cleaned_data['gsim'],
                            cleaned_data['imt'],
                            cleaned_data['magnitude'],
                            cleaned_data['distance'],
-                           RuptureProperties(**{p: cleaned_data[p] for p in
-                                                RuptureProperties.__annotations__
-                                                if p in cleaned_data}),
-                           SiteProperties(**{p: cleaned_data[p] for p in
-                                             SiteProperties.__annotations__
-                                             if p in cleaned_data})
-                           )
+                           rup, site)
 
     # FIXME: REMOVE? is it used?
     @staticmethod

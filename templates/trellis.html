@@ -22,11 +22,54 @@
 			</div>
 		</div>
 
-		{% for field in django_forms.trellis %}
-		<div class="input-group">
-			<div class='input-group-text'>{{ field.label_tag }}</div>{{ field }}
+		<div>
+			<div class="input-group">
+				<div class='input-group-text'>aspect</div>
+				<input type='number' v-model="forms.trellis['aspect']"
+					   required min="0.0" step="any" class='form-control' />
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>dip</div>
+				<input type="number" v-model="forms.trellis['dip']"
+					   min="0.0" max="90.0" step="any" class='form-control' />
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>hypocenter-location</div>
+				<array-input v-model="forms.trellis['hypocenter-location']" />
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>initial-point</div>
+				<array-input v-model="forms.trellis['initial-point']" />
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>msr</div>
+				<select v-model="forms.trellis['msr']" class='form-control'>
+					<option v-for="m in forms.misc.msr" :value="m[0]">{% verbatim %}{{ m[1] }}{% endverbatim %}</option>
+				</select>
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>rake</div>
+				<input type='number' v-model="forms.trellis['rake']"
+					   min="-180.0" max="180.0" step="any" class='form-control' />
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>strike</div>
+				<input type="number" v-model="forms.trellis['strike']"
+					   min="0.0" max="360.0" step="any" class='form-control' />
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>ztor</div>
+				<input type="number" v-model="forms.trellis['ztor']"
+					   min="0.0" step="any" class='form-control' />
+			</div>
 		</div>
-		{% endfor %}
 
 		<div class='d-flex flex-column mt-2'>
 			<div class='input-group'>
@@ -35,6 +78,60 @@
 				<button class="btn border bg-white" type="button" style='border-left-width:0 !important'>V</button>
 			</div>
 		</div>
+
+		<div>
+
+			<div class="input-group">
+				<label class='input-group-text'>
+					<input type='checkbox' v-model="forms.trellis.backarc" />
+					backarc</label>
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>line-azimuth</div>
+				<input type='number' v-model="forms.trellis['line-azimuth']"
+					   min="0" max="360.0" step="any" class='form-control' />
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>region</div>
+				<select v-model="forms.trellis.region" class='form-control'>
+					<option v-for="m in forms.misc.region" :value="m[0]">{% verbatim %}{{ m[1] }}{% endverbatim %}</option>
+				</select>
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>vs30</div>
+				<input type='number' v-model="forms.trellis.vs30"
+					   step="any" class='form-control' />
+			</div>
+
+			<div class="input-group">
+				<label class='input-group-text'>
+					<input type='checkbox' v-model="forms.trellis.vs30measured" />
+					vs30measured</label>
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>z1</div>
+				<!-- implement v-model "natively" because we need to convert empty inputs to null: -->
+				<input type='number'
+					   :value="forms.trellis.z1"
+					   @input="forms.trellis.z1 = $event.target.value.trim() ? $event.target.value : null"
+					   class='form-control' />
+			</div>
+
+			<div class="input-group">
+				<div class='input-group-text'>z2pt5</div>
+				 <!-- implement v-model "natively" because we need to convert empty inputs to null: -->
+				<input type='number'
+					   :value="forms.trellis.z2pt5"
+					   @input="forms.trellis.z2pt5 = $event.target.value.trim() ? $event.target.value : null"
+					   step="any" class='form-control' />
+			</div>
+
+		</div>
+
 	</form>
 
 <!--	<trellis-plot-div :data="responseData"-->

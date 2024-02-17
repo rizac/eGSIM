@@ -14,12 +14,11 @@ from .flatfile import ColumnsRegistry
 registered_gsims:dict[str, type[GMPE]] = registry.copy()
 
 
-def gsim(gmm: Union[str, type[GMPE], GMPE], raise_deprecated=True) -> GMPE:
+def gsim(gmm: Union[str, GMPE], raise_deprecated=True) -> GMPE:
     """Return a Gsim instance (Python object of class `GMPE`) from the given input
 
-    :param gmm: a gsim name, class or instance (in this latter case, the instance is
-        returned). If str, it can also denote a GMPETable in the form
-        "GMPETable(gmpe_table=filepath)"
+    :param gmm: a gsim name or Gsim instance. If str, it can also denote a
+        GMPETable in the form "GMPETable(gmpe_table=filepath)"
     :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
         will raise (as normal Python  `DeprecationWarning`)
     :raise: a `(TypeError, ValueError, FileNotFoundError, OSError, AttributeError)`
@@ -27,8 +26,6 @@ def gsim(gmm: Union[str, type[GMPE], GMPE], raise_deprecated=True) -> GMPE:
         `(TypeError, IndexError, KeyError, ValueError, DeprecationWarning)`
         (the last one only if `raise_deprecated` is True, the default)
     """
-    if isinstance(gmm, type) and issubclass(gmm, GMPE):
-        gmm = gsim(gmm.__name__)
     if isinstance(gmm, str):
         is_table = gmm.startswith('GMPETable')
         if is_table:
@@ -146,18 +143,18 @@ def gsim_sa_limits(gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, flo
 #     return frozenset(ret)
 
 
-def intensity_measures_defined_for(model: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
+def intensity_measures_defined_for(model: Union[str, GMPE]) -> frozenset[str]:
     """Return the intensity measures defined for the given model"""
-    if not isinstance(model, GMPE):
-        # creating a new GMPE via `gsim`is not super efficient wrt getting the class
-        # name via `registry`, but the latter has sometimes the attributes below
-        # empty (something to do with GMPE aliases I guess)
-        model = gsim(model)
+    if isinstance(model, str):
+        # try loading the class first from registry (faster), otherwise the instance
+        # if the class does not hold the info we need:
+        model = registry[model] if registry[model].DEFINED_FOR_INTENSITY_MEASURE_TYPES \
+            else gsim(model)
     return frozenset(_.__name__ for _ in model.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
 
 
 def ground_motion_properties_required_by(
-        *models: Union[str, GMPE, type[GMPE]],
+        *models: Union[str, GMPE],
         as_ff_column=False) -> frozenset[str]:
     """Return the required ground motion properties (distance measures,
        rupture and site params all together)
@@ -168,11 +165,13 @@ def ground_motion_properties_required_by(
     """
     ret = []
     for model in models:
-        if not isinstance(model, GMPE):
-            # creating a new GMPE via `gsim`is not super efficient wrt getting the class
-            # name via `registry`, but the latter has sometimes the attributes below
-            # empty (something to do with GMPE aliases I guess)
-            model = gsim(model)
+        if isinstance(model, str):
+            # try loading the class first from registry (faster), otherwise the instance
+            # if the class does not hold the info we need:
+            cls = registry[model]
+            model = cls if any((cls.REQUIRES_DISTANCES,
+                                cls.REQUIRES_SITES_PARAMETERS,
+                                cls.REQUIRES_RUPTURE_PARAMETERS)) else gsim(model)
         ret.extend(model.REQUIRES_DISTANCES or [])
         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])

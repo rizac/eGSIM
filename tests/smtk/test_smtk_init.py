@@ -10,16 +10,25 @@ import pytest
 import numpy as np
 from openquake.hazardlib.imt import IMT, SA
 
-# from egsim.smtk import InvalidImt
 from egsim.smtk.converters import convert_accel_units
-from egsim.smtk.registry import (registered_gsims, registry, \
-                                 intensity_measures_defined_for, distances_required_by, \
-                                 rupture_params_required_by, site_params_required_by,
-                                 gsim_name)
-from egsim.smtk.validators import gsim, imt
+from openquake.hazardlib.gsim.base import registry
+from egsim.smtk import (registered_gsims, gsim, imt, \
+                        intensity_measures_defined_for,
+                        gsim_name)
 
 
 _gsim_aliases_ = {v: k for k, v in gsim_aliases.items()}
+
+
+def test_gsim_special_case():
+    """simple test case for a model whose name and class name differ"""
+    model_name = 'Idriss2014NSHMPUpper'
+    model_class = registry[model_name]  # 'NSHMP2014'
+    # assert gsim works:
+    model_instance = gsim(model_name)
+    # assert that calling gsim with the class name doesn't:
+    with pytest.raises(KeyError) as kerr:
+        gsim(model_class.__name__)
 
 
 def test_load_models():
@@ -67,9 +76,11 @@ def test_load_model_with_deprecation_warnings():
     # now check that the behavior is the same if we set a warning filter beforehand:
     for ignore_warnings in [True, False]:
         with warnings.catch_warnings(record=True) as w:
+            _excs = excs
             if ignore_warnings:
                 warnings.simplefilter('ignore')
-            with pytest.raises(InvalidGsim) as exc:
+                _excs = _excs[:-1]
+            with pytest.raises(*_excs) as exc:
                 gsim(model)
             assert len(w) == 0
         with warnings.catch_warnings(record=True) as w:
@@ -83,38 +94,36 @@ def test_gsim_name_1to1_relation():
     for model in registered_gsims:
         try:
             gsim_ = gsim(model, raise_deprecated=False)
-        except InvalidGsim as exc:
+        except (TypeError, IndexError, KeyError, ValueError) as exc:
             continue
         model_name_back = gsim_name(gsim_)
-        if model == 'Boore2015NGAEastA04':
-            asd = 9
         assert model == model_name_back
 
 
 def read_gsims(raise_deprecated=True, catch_deprecated=True):
     count, ok = 0, 0
+    excs = (TypeError, IndexError, KeyError, ValueError, DeprecationWarning)
+    if not raise_deprecated:
+        excs = excs[:-1]
     # errors = [TypeError, KeyError, IndexError]
     # if catch_deprecated:
     #     errors.append(OQDeprecationWarning)
     # errors = tuple(errors)
-    for model in registered_gsim_names:
+    for model in registry:
         count += 1
         try:
             gsim_ = gsim(model, raise_deprecated=raise_deprecated)
             ok += 1
-        except InvalidGsim as exc:
+        except excs as exc:
             continue
     return count, ok
 
+
 def test_requires():
     for gsim_cls in registry.values():
-        for func in [distances_required_by,
-                     rupture_params_required_by,
-                     site_params_required_by,
-                     intensity_measures_defined_for]:
-            res = func(gsim_cls)
-            assert isinstance(res, frozenset)
-            assert not res or all(isinstance(_, str) for _ in res)
+        res = intensity_measures_defined_for(gsim_cls)
+        assert isinstance(res, frozenset)
+        assert not res or all(isinstance(_, str) for _ in res)
 
 
 def test_imt_as_float_is_converted_to_sa():
@@ -122,7 +131,7 @@ def test_imt_as_float_is_converted_to_sa():
         assert isinstance(imt(val), IMT)
         assert imt(val) == SA(val)
     for val in [np.nan, np.inf, -np.inf, -1]:
-        with pytest.raises(InvalidImt):
+        with pytest.raises(TypeError, ValueError, KeyError):
             imt(val)
 
 
