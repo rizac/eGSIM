@@ -41,25 +41,19 @@ window.fetch = function(resource, options){
 <script type="text/javascript">
 function getInitData(){
 	const data = JSON.parse(document.getElementById('init-data').textContent);
-	// Create a "template" Array of gsims and imts, to be copied as field choices
-	var reg = /[A-Z]+[^A-Z0-9]+|[0-9]+|.+/g; //NOTE safari does not support lookbehind/aheads!
 	// converts the gsims received from server from an Array of Arrays to an
 	// Array of Objects:
 	var imts = new Set();
+	data.imt_groups.forEach(imtz => imtz.forEach(i => imts.add(i)));
 	var models = data.gsims.map(elm => {  // elm: Array of 2 or 3 elements: name, imt_group, warning
-		var modelImts = data.imt_groups[elm[1]];  // Array
-		// add the model imts to the global imt collection:
-		modelImts.forEach(imt => imts.add(imt));
 		return {
 			name: elm[0],
-			imts: new Set(modelImts),
+			imts: new Set(data.imt_groups[elm[1]]),
 			warning: elm[2] ? data.warning_groups[elm[2]]: "",
 		}
 	});
 	return {
-		// create global like Object:
 		models: Object.freeze(models),
-		// convert imts (Set) into Array:
 		imts: Array.from(imts),
 		forms: data.forms,
 		urls: data.urls,
