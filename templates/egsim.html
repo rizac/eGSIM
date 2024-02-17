@@ -11,9 +11,12 @@
 
 {% block body %}
 <div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
+	{% include "navbar.html" %}
+	<KeepAlive>
 	{% include "trellis.html" %}
 	{% include "residuals.html" %}
-
+	<iframe style='flex: 1 1 auto' src='home' v-else></iframe>
+	</KeepAlive>
 </div>
 {% endblock %}
 
@@ -58,7 +61,8 @@ function getInitData(){
 		forms: data.forms,
 		urls: data.urls,
 		regionalizations: data.regionalizations,
-		flatfiles: data.flatfiles
+		flatfiles: data.flatfiles,
+		selectedTab: data.selectedTab
 	}
 }
 const EGSIM = Vue.createApp({

@@ -42,7 +42,8 @@ def main(request, selected_menu=None):
             }
         }
     }
-    init_data = get_init_json_data() | forms_data_json
+    selectedTab = {'trellis': 1, 'flatfile': 2, 'residuals': 3}.get(selected_menu, 0)
+    init_data = get_init_json_data() | forms_data_json | {'selectedTab': selectedTab}
     return render(request, template, context={'debug': settings.DEBUG,
                                               'init_data': init_data})
 
