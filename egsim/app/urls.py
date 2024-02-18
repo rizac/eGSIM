@@ -6,7 +6,7 @@ from django.views.generic.base import RedirectView
 from .templates.egsim import URLS, TAB
 from .views import (main, home, apidoc, download_request, download_response,
                     imprint, ref_and_license, get_gsims_from_region, flatfile_inspection,
-                    flatfile_plot, flatfile_required_columns, main_page_init_data)
+                    flatfile_plot, flatfile_required_columns)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
 
@@ -16,7 +16,8 @@ urlpatterns = [
 
     # main page entry point, valid for all urls implemented in views.KEY:
     re_path(r'^(?P<selected_menu>%s)/?$' % "|".join(_.name for _ in TAB), main),
-    re_path(r'%s/?' % URLS.MAIN_PAGE_INIT_DATA, main_page_init_data),
+    # FIXME REMOVE BELOW
+    # re_path(r'%s/?' % URLS.MAIN_PAGE_INIT_DATA, main_page_init_data),
 
     # Imprint, refs (pages with a "normal" static django template associated):
     re_path(r'^%s/?$' % URLS.IMPRINT, imprint),

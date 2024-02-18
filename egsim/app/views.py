@@ -10,18 +10,44 @@ from django.http import FileResponse
 from io import StringIO, BytesIO
 import json
 import yaml
+from shapely.geometry import shape
 
 from django.http.response import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from .templates.egsim import TAB, URLS, get_init_json_data, field_to_htmlelement_attrs
+# from .templates.egsim import TAB, URLS
+from ..api import models
+from ..api.forms.flatfile import FlatfileForm
 from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
                                               FlatfileInspectionForm, FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm
 from ..api.views import (error_response, RESTAPIView, TrellisView, ResidualsView,
                          MimeType)
+from ..smtk import intensity_measures_defined_for
+
+
+class URLS:  # noqa
+    """Define global URLs"""
+    # NOTE NO URL HERE (unless external, i.e., http://) MUST END WITH  "/"
+
+    # JSON data requested by the main page at startup:
+    MAIN_PAGE_INIT_DATA = "init_data"
+    # Url for getting the gsim list from a given geographic location:
+    GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
+    # inspecting a flatfile:
+    FLATFILE_INSPECTION = 'data/flatfile_inspection'
+    FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
+    FLATFILE_PLOT = 'data/flatfile_plot'
+    DOWNLOAD_REQUEST = 'data/downloadrequest'
+    DOWNLOAD_RESPONSE = 'data/downloadresponse'
+    # info pages:
+    HOME_NO_MENU = 'home_no_menu'
+    API = 'api'
+    DATA_PROTECTION = 'https://www.gfz-potsdam.de/en/data-protection/'
+    IMPRINT = "imprint"
+    REF_AND_LICENSE = "ref_and_license"
 
 
 def main(request, selected_menu=None):
@@ -46,17 +72,132 @@ def main(request, selected_menu=None):
         }
     }
     selectedTab = {'trellis': 1, 'flatfile': 2, 'residuals': 3}.get(selected_menu, 0)
-    init_data = get_init_json_data() | forms_data_json | {'selectedTab': selectedTab}
+    init_data = _get_init_data_json() | forms_data_json | {'selectedTab': selectedTab}
     return render(request, template, context={'debug': settings.DEBUG,
                                               'init_data': init_data})
 
 
-def main_page_init_data(request):
-    """JSON data requested by the browser app at startup to initialize the HTML page"""
-    request_body = json.loads(request.body)
-    browser = request_body.get('browser', {})
-    selected_menu = request_body.get('selectedMenu', TAB.home.name)
-    return JsonResponse(get_init_json_data(browser, selected_menu, settings.DEBUG))
+def _get_init_data_json(browser: dict = None,
+                        selected_menu: str = None,
+                        debug=True) -> dict:
+    """Return the JSON data to be passed to the browser at startup to initialize
+    the page content
+
+    :param browser: a dict with 'name':str and 'version': float keys
+    """
+    # check browser:
+    allowed_browsers = {'chrome': 49, 'firefox': 45, 'safari': 10}
+    allowed_browsers_msg = ', '.join(f'{b.title()}≥{v}'
+                                     for b, v in allowed_browsers.items())
+    invalid_browser_message = (f'eGSIM could not determine if your browser '
+                               f'matches {allowed_browsers_msg}. '
+                               f'This portal might not work as expected')
+    browser_name = (browser or {}).get('name', None)
+    browser_ver = (browser or {}).get('version', None)
+    if browser_ver is not None:
+        a_browser_ver = allowed_browsers.get(browser_name.lower(), None)
+        if a_browser_ver is not None and browser_ver >= a_browser_ver:
+            invalid_browser_message = ''
+
+    gsims = []
+    imt_groups = []
+    warning_groups = []
+    db_warnings = {
+        models.Gsim.unverified.field.name: models.Gsim.unverified.field.help_text,
+        models.Gsim.experimental.field.name: models.Gsim.experimental.field.help_text,
+        models.Gsim.adapted.field.name: models.Gsim.adapted.field.help_text
+    }
+    for gsim in models.Gsim.queryset('name', *db_warnings):
+        imt_names = sorted(intensity_measures_defined_for(gsim.name))
+        model_warnings = []
+        for field_name, field_help in db_warnings.items():
+            if getattr(gsim, field_name) is True:
+                model_warnings.append(field_help)  # noqa
+        try:
+            imt_group_index = imt_groups.index(imt_names)
+        except ValueError:
+            imt_group_index = len(imt_groups)
+            imt_groups.append(imt_names)
+        if model_warnings:
+            warning_text = "; ".join(model_warnings)
+            try:
+                warning_group_index = warning_groups.index(warning_text)
+            except ValueError:
+                warning_group_index = len(warning_groups)
+                warning_groups.append(warning_text)
+            gsims.append([gsim.name, imt_group_index, warning_group_index])
+        else:
+            gsims.append([gsim.name, imt_group_index])
+
+    # get regionalization data (for selecting models on a map):
+    regs = list(models.Regionalization.queryset('name', 'url', 'media_root_path'))
+    regionalizations = {
+        'url': URLS.GET_GSIMS_FROM_REGION,
+        'names': [r.name for r in regs],
+        # bbox are tuples of the form (min_lng, min_lat, max_lng, max_lat):
+        'bbox': {r.name: _get_bbox(r) for r in regs},
+        'ref': {r.name: r.url or "" for r in regs}
+    }
+
+    # get predefined flatfiles info:
+    flatfiles = []
+    for ffile in models.Flatfile.queryset('name', 'display_name', 'url', 'media_root_path'):
+        flatfiles .append({
+            'value': ffile.name,
+            'key': ffile.name,
+            'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
+            'url': ffile.url,  # noqa
+            'columns': FlatfileForm.get_flatfile_dtypes(ffile.read_from_filepath(nrows=0))
+        })
+
+    # Get component props (core data needed for Vue rendering):
+    # components_props = get_components_properties(debug)
+
+
+    return {
+        'urls': {
+            'trellis': TrellisView.urls[0],
+            'residuals': ResidualsView.urls[0],
+            'api': URLS.API,
+            'imprint': URLS.IMPRINT,
+            'data_protection': URLS.DATA_PROTECTION,
+            'ref_and_license': URLS.REF_AND_LICENSE,
+            'flatfile_upload': URLS.FLATFILE_INSPECTION,
+            'flatfile_inspection': 'data/flatfile_plot',
+            'flatfile_compilation': 'data/flatfile_required_columns'
+        },
+        'gsims': gsims,
+        'imt_groups': imt_groups,
+        'warning_groups': warning_groups,
+        'flatfiles': flatfiles,
+        'regionalizations': regionalizations,
+    }
+
+
+def _get_bbox(reg: models.Regionalization) -> list[float]:
+    """Return the bounds of all the regions coordinates in the given regionalization
+
+    @param return: the 4-element list (minx, miny, maxx, maxy) i.e.
+        (minLon, minLat, maxLon, maxLat)
+    """
+    feat_collection = reg.read_from_filepath()
+    bounds = [180, 90, -180, -90]  # (minx, miny, maxx, maxy)
+    for g in feat_collection['features']:
+        bounds_ = shape(g['geometry']).bounds  # (minx, miny, maxx, maxy)
+        bounds[0] = min(bounds[0], bounds_[0])
+        bounds[1] = min(bounds[1], bounds_[1])
+        bounds[2] = max(bounds[2], bounds_[2])
+        bounds[3] = max(bounds[3], bounds_[3])
+    return bounds
+
+
+# FIXME REMOVE BELOW
+# def main_page_init_data(request):
+#     """JSON data requested by the browser app at startup to initialize the HTML page"""
+#     request_body = json.loads(request.body)
+#     browser = request_body.get('browser', {})
+#     selected_menu = request_body.get('selectedMenu', TAB.home.name)
+#     return JsonResponse(get_init_json_data(browser, selected_menu, settings.DEBUG))
 
 
 @xframe_options_sameorigin
@@ -118,6 +259,55 @@ def _get_imprint_page_renderer_context():
         'data_protection_url': URLS.DATA_PROTECTION,
         'ref_and_license_url': URLS.REF_AND_LICENSE
     }
+
+
+# FIXME REMOVE THE CODE BELOW AND ALL ITS USAGES! =======================================
+from enum import Enum
+from ..api.forms import APIForm
+class TAB(Enum):
+    """Define Tabs/Menus of the Single page Application. A TAB T is an Enum with attr:
+    ```
+    title: str
+    icon: str
+    viewclass: Union[Type[RESTAPIView], None]
+    ```
+    Enum names should be kept constant as they are used as ID also in frontend code.
+    Remember that a Tab element can be obtained from its name via square notation
+    e.g. tab = TAB["trellis"] (and conversely, `tab.name` returns "trellis")
+    """
+    # icons (2nd element) are currently given as font-awesome bootsrap icons
+    home = '', 'fa-home'
+    trellis = 'Model to Model Comparison', 'fa-area-chart', TrellisView
+    flatfile = 'Data management', 'fa-database'
+    residuals = 'Model to Data Comparison', 'fa-bar-chart', ResidualsView
+    # FIXME REMOVE
+    # testing = 'Model to Data Testing', 'fa-list', TestingView
+
+    def __init__(self, *args):
+        # args is the unpacked tuple passed above (2-elements), set attributes:
+        self.title: str = args[0]
+        self.icon: str = args[1]
+        self.viewclass: type[RESTAPIView] = args[2] if len(args) > 2 else None
+
+    @property
+    def urls(self) -> list[str]:
+        return self.viewclass.urls if self.viewclass else []
+
+    @property
+    def formclass(self) -> type[APIForm]:
+        return self.viewclass.formclass if self.viewclass else None
+
+    @property
+    def download_request_filename(self) -> str:
+        return f"egsim-{self.name}-config"
+
+    @property
+    def download_response_filename(self) -> str:
+        return f"egsim-{self.name}-result"
+
+    def __str__(self):
+        return self.name
+#============== END OF CODE TO REMOVE ==================================================
 
 
 def download_request(request, key: TAB, filename: str):
