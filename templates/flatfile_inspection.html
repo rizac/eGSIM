@@ -1,0 +1,44 @@
+<div class='position-relative' style="flex: 1 1 auto;">
+	<div class='mb-3'>
+	<form novalidate @submit.prevent="postData(urls.flatfile_inspection, forms.flatfile_inspection).then(r => { responseData = r; })"
+		  class='d-flex flex-column p-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+			<div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
+				<flatfile-select
+					:flatfiles='flatfiles'
+					:selected-flatfile="forms.flatfile_inspection.flatfile"
+					:data-query="forms.flatfile_inspection['data-query']"
+					:upload-url='urls.flatfile_upload'
+					@flatfile-selected="(value, columns) => {forms.misc.flatfile_inspection_columns=[null].concat(columns)}"
+				>
+				</flatfile-select>
+				<div class='d-flex flex-column' v-if="!!forms.flatfile_inspection.flatfile">
+					<label>x</label>
+					<select v-model='forms.flatfile_inspection.x'>
+						<option v-for="x in forms.misc.flatfile_inspection_columns">
+							{% verbatim %}
+							{{ x=== null ? 'None (histogram on the Y axis)' : x }}
+							{% endverbatim %}
+						</option>
+					</select>
+				</div>
+				<span class='me-3'></span>
+				<div class='d-flex flex-column' v-if="forms.misc.flatfile_inspection_columns.length">
+					<label>y</label>
+					<select v-model='forms.flatfile_inspection.y'>
+						<option v-for="y in forms.misc.flatfile_inspection_columns">
+							{% verbatim %}
+							{{ y === null ? 'None (histogram on the X axis)' : y }}
+							{% endverbatim %}
+						</option>
+					</select>
+				</div>
+				<span class='me-3'></span>
+				<button type="submit" class="btn btn-primary mt-2">
+					Display plot
+				</button>
+			</div>
+	   </form>
+	</div>
+<!--	<flatfile-plot-div :data="responseData" class="invisible"-->
+<!--					   :style='{visibility: Object.keys(responseData).length ? "visible !important" : "", flex: "1 1 auto"}'/>-->
+</div>

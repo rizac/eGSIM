@@ -170,7 +170,9 @@ def get_init_json_data(browser: dict = None,
             'imprint': URLS.IMPRINT,
             'data_protection': URLS.DATA_PROTECTION,
             'ref_and_license': URLS.REF_AND_LICENSE,
-            'flatfile_upload': URLS.FLATFILE_INSPECTION
+            'flatfile_upload': URLS.FLATFILE_INSPECTION,
+            'flatfile_inspection': 'data/flatfile_plot',
+            'flatfile_compilation': 'data/flatfile_required_columns'
         },
         'gsims': gsims,
         'imt_groups': imt_groups,

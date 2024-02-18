@@ -575,7 +575,7 @@ EGSIM.component('flatfile-select', {
 		}
 	},
 	template:`<div>
-		<div class='input-group'>
+		<div class='input-group align-items-baseline'>
 			<label class='input-group-text'> data </label>
 			<select v-model="selectedIndex" class='form-control'>
 				<option v-for="(v, idx) in flatfiles" :value='idx'>
@@ -583,20 +583,20 @@ EGSIM.component('flatfile-select', {
 				</option>
 			</select>
 			<a aria-label='flatfile reference (opens in new tab)' target="_blank"
-				class='ms-1' v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
+				style='padding: .375rem .75rem;'
+				class='border-top border-bottom bg-white' v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
 				:href="flatfiles[selectedIndex].url">
 				<i class="fa fa-link"></i>
 			</a>
+			<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
 			<button
 				type="button"
 				class="btn border bg-white"
-				onclick="this.nextElementSibling.click()"
+				onclick="this.parentNode.querySelector('input[type=file]').click()"
 				style='border-left-width: 0 !important'
 				aria-label=''>
 				upload
 			</button>
-			<!-- THIS MUST ALWAYS BE NEXT TO THE BUTTON ABOVE: -->
-			<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
 		</div>
 		<div class='input-group mt-1'>
 			<label class='input-group-text'>data-query</label>
