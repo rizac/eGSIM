@@ -1,0 +1,43 @@
+<div class='position-relative d-flex flex-row' style="flex: 1 1 auto;">
+	<div>
+	<gsim-map @gsim-selected="(gs) => { forms.flatfile_compilation.gsim = Array.from(new Set(forms.flatfile_compilation.gsim.concat(gs))) }"
+			  :regionalizations="regionalizations"
+			  style='position:absolute;inset:0px;z-index:0'>
+	</gsim-map>
+	<form novalidate @submit.prevent="postData(urls.flatfile_compilation, forms.flatfile_compilation).then(r => { responseData = r; })"
+		  class='d-flex flex-column p-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+
+		<gsim-select :selected-model-names="forms.flatfile_compilation.gsim"
+					 :models="models"
+					 :selected-imts="forms.flatfile_compilation.imt"
+					 style="flex: 0 1 auto; min-height:0px">
+		</gsim-select>
+
+		<imt-select :selected-imts="forms.flatfile_compilation.imt" :imts='imts' class='mt-2'></imt-select>
+		
+
+<!--		<div class='d-flex flex-column'>-->
+<!--			<div> Model-to-data comparison </div>-->
+<!--			<div class='d-flex flex-row'>-->
+<!--				<button type='button' class='me-2 btn-btn-primary'>-->
+<!--					<i class="fa fa-bar-chart"></i> Show-->
+<!--				</button>-->
+<!--				<button type='button' class='me-2 btn-btn-primary'>-->
+<!--					<i class="fa fa-download"></i> Get-->
+<!--				</button>-->
+<!--				<button type='button' class='me-2 btn-btn-primary'>-->
+<!--					<i class="fa fa-download"></i> Get with tutorial-->
+<!--				</button>-->
+<!--				<button type='button' class='me-2 btn-btn-primary'>-->
+<!--					<i class="fa fa-download"></i> run in custom code-->
+<!--				</button>-->
+<!--			</div>-->
+<!--		</div>-->
+	</form>
+</div>
+<!--	<flatfile_compilation-plot-div :data="responseData"-->
+<!--						class='invisible'-->
+<!--						style='position:absolute;inset:0px;z-index:10'-->
+<!--						:style="{visibility: Object.keys(responseData).length ? 'visible !important' : ''}">-->
+<!--	</flatfile_compilation-plot-div>-->
+</div>

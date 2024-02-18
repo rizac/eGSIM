@@ -7,39 +7,37 @@
 		<i class="fa fa-area-chart me-1"></i>
 		<span>Model-to-Model comparison</span>
 	</a>
-	<a class='menu-item' @click="selectedTab=2">
+
+	<button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 		<i class="fa fa-database me-1"></i>
-		<span>Data Management</span>
-	</a>
+		<span>Data</span>
+	</button>
+	<ul class="dropdown-menu">
+		<li><a class="dropdown-item" @click="selectedTab=21">Compilation</a></li>
+		<li><a class="dropdown-item" @click="selectedTab=22">Inspection</a></li>
+	</ul>
+
 	<a class='menu-item' @click="selectedTab=3">
 		<i class="fa fa-bar-chart me-1"></i>
 		<span>Model-to-Data Comparison</span>
 	</a>
-	<!-- <div class='menu-item invisible d-flex flex-row bg-danger text-white align-items-baseline'
-		 style="flex: 1 1 auto" :style="{visibility: errorMsg ? 'visible !important' : 'hidden'}">
-		<i class="fa fa-exclamation-circle" style="color:white"></i>&nbsp;
-		<input type="text" :value="errorMsg" readonly class="p-0 m-0"
-			   style="flex: 1 1 auto;background-color: rgba(0,0,0,0);color: white;outline: none;border-width: 0px;"/>
-		<i class="fa fa-times ms-2" @click='setError("")' style="cursor: pointer"></i>
-	</div> -->
-	<div>
-		<a class="menu-item" href="#" >  <!-- @click="toggleOptionsMenu"> --> <!-- FIXME REMOVE COMMENTS -->
+
+	<div style='flex: 1 1 auto'></div>
+
+	<div class="dropdown">
+		<button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 			<i class="fa fa-bars"></i>
-		</a>
-		<div style="transform: scaleY(0);z-index:100; transition: transform .25s ease-out; transform-origin: top;"
-			 ref='options-menu' class="m-0 d-flex flex-column bg-dark position-absolute end-0">
-			<a style="display:none" class="menu-item" :href='urls.api' target="_blank">
+		</button>
+		<ul class="dropdown-menu">
+			<li><a class="d-none dropdown-item" :href='urls.api' target="_blank">
 				<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
-			</a>
-			<a class="menu-item" :href='urls.ref_and_license' target="_blank">
+			</a></li>
+			<li><a class="dropdown-item" :href='urls.ref_and_license'  target="_blank">
 				<i class="fa fa-address-card-o"></i> <span>References & License</span>
-			</a>
-			<a class='menu-item' :href='urls.imprint' target="_blank">
-				Imprint
-			</a>
-			<a class='menu-item' :href='urls.data_protection' target="_blank">
-				Data Protection
-			</a>
-		</div>
+			</a></li>
+			<li><a class="dropdown-item" :href='urls.imprint'  target="_blank">Imprint</a></li>
+			<li><a class="dropdown-item" :href='urls.data_protection'  target="_blank">Data Protection</a></li>
+		</ul>
 	</div>
+
 </nav>

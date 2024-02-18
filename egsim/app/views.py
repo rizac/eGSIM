@@ -36,9 +36,12 @@ def main(request, selected_menu=None):
         'forms': {
             'trellis': trellis_form.asdict(),
             'residuals': residuals_form.asdict(),
+            'flatfile_compilation': dict(inits),
+            'flatfile_inspection': FlatfilePlotForm({}).asdict(),
             'misc': {
                 'msr': trellis_form.fields['msr'].choices,
-                'region': trellis_form.fields['region'].choices
+                'region': trellis_form.fields['region'].choices,
+                'flatfile_inspection_columns': []
             }
         }
     }
