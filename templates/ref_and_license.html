@@ -1,0 +1,56 @@
+<button type="button" class='btn btn-primary  rounded-0 shadow' @click="selectedTab -= 100">
+		<i class='fa fa-backward'></i>
+		Return to page
+</button>
+
+<div class='d-flex flex-column p-5'>
+
+	<h3 id='license'>License</h3>
+
+	<p class="license-text">The content of this site, as well as all output data produced by
+	the underlying API (including data downloadable through this web portal) is licensed under
+	<a rel="license" href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0
+		<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;"
+			 src="{% static 'img/logos/cc.svg' %}"/>
+		<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;"
+			 src="{% static 'img/logos/by.svg' %}" />
+	</a>
+	</p>
+
+	<p>
+	This page code samples, as well as eGSIM source code is licensed under the
+	<a href="https://www.gnu.org/licenses/agpl-3.0.en.html">
+		GNU Affero General Public License v.3.0
+		<img style='height:1.5rem' src="{% static 'img/logos/AGPLv3_Logo.svg' %}">
+	</a>
+
+
+	<h3 id='references'>References</h3>
+	<p>
+	The references of the Ground-shaking intensity models (Gsim) available in eGSIM
+	can be found <a href="https://docs.openquake.org/oq-engine/3.9/openquake.hazardlib.gsim.html">
+	in the Python documentation of the OpenQuake
+	</a> (The OpenQuake version at the link might not match exactly the version used in eGSIM, as
+	well as the list of available models)
+
+	</p>
+
+	<p>
+	eGSIM uses the following input data
+	(click on the links below for details such as e.g., how to cite their data
+	alongside eGSIM in your work):
+	</p>
+
+	<ul>
+	{% for key, value in references.items %}
+		<li>
+			<a href="{{value.url}}">{{key}}</a><br>
+		</li>
+	{% endfor %}
+	</ul>
+
+	<p class='small text-muted'>
+	(All links provided in this page open in a new tab/window when clicked)
+	</p>
+
+</div>

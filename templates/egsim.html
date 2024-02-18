@@ -55,10 +55,10 @@
 
 {% block body %}
 <div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
-	<keep-alive>
-	<template v-if="typeof selectedTab === 'number' && selectedTab > 0">
+	<template v-if="[1, 21, 22, 3].includes(selectedTab)">
 	{% include "navbar.html" %}
 	</template>
+	<keep-alive>
 	<template v-if="selectedTab==1">
 	{% include "trellis.html" %}
 	</template>
@@ -70,6 +70,12 @@
 	</template>
 	<template v-else-if="selectedTab==3">
 	{% include "residuals.html" %}
+	</template>
+	<template v-else-if="selectedTab>=100 && selectedTab<1000">
+	{% include "ref_and_license.html" %}
+	</template>
+	<template v-else-if="selectedTab>=1000">
+	{% include "imprint.html" %}
 	</template>
 	<template v-else>
 	{% include "home.html" %}
