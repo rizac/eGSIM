@@ -55,8 +55,10 @@
 
 {% block body %}
 <div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
-	{% include "navbar.html" %}
 	<keep-alive>
+	<template v-if="typeof selectedTab === 'number' && selectedTab > 0">
+	{% include "navbar.html" %}
+	</template>
 	<template v-if="selectedTab==1">
 	{% include "trellis.html" %}
 	</template>
@@ -70,7 +72,7 @@
 	{% include "residuals.html" %}
 	</template>
 	<template v-else>
-	<iframe style='flex: 1 1 auto' src='home'></iframe>
+	{% include "home.html" %}
 	</template>
 	</keep-alive>
 </div>
