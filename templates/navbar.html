@@ -29,13 +29,13 @@
 			<i class="fa fa-bars"></i>
 		</button>
 		<ul class="dropdown-menu">
-			<li><a class="d-none dropdown-item" :href='urls.api' target="_blank">
+			<li><a class="d-none dropdown-item" target="_blank">
 				<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
 			</a></li>
-			<li><a class="dropdown-item" :href='urls.ref_and_license'  target="_blank">
+			<li><a class="dropdown-item" @click="selectedTab += 100">
 				<i class="fa fa-address-card-o"></i> <span>References & License</span>
 			</a></li>
-			<li><a class="dropdown-item" :href='urls.imprint'  target="_blank">Imprint</a></li>
+			<li><a class="dropdown-item" @click="selectedTab += 1000">Imprint</a></li>
 			<li><a class="dropdown-item" :href='urls.data_protection'  target="_blank">Data Protection</a></li>
 		</ul>
 	</div>
