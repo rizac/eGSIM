@@ -9,7 +9,7 @@
 
 	<p class="license-text">The content of this site, as well as all output data produced by
 	the underlying API (including data downloadable through this web portal) is licensed under
-	<a rel="license" href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0
+	<a rel="license" href="https://creativecommons.org/licenses/by/4.0" target="_blank">CC BY 4.0
 		<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;"
 			 src="{% static 'img/logos/cc.svg' %}"/>
 		<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;"
@@ -19,7 +19,7 @@
 
 	<p>
 	This page code samples, as well as eGSIM source code is licensed under the
-	<a href="https://www.gnu.org/licenses/agpl-3.0.en.html">
+	<a href="https://www.gnu.org/licenses/agpl-3.0.en.html" target="_blank">
 		GNU Affero General Public License v.3.0
 		<img style='height:1.5rem' src="{% static 'img/logos/AGPLv3_Logo.svg' %}">
 	</a>
@@ -41,9 +41,9 @@
 	</p>
 
 	<ul>
-	{% for key, value in references.items %}
+	{% for name, url in references.items %}
 		<li>
-			<a href="{{value.url}}">{{key}}</a><br>
+			<a href="{{ url }}" target="_blank">{{ name }}</a><br>
 		</li>
 	{% endfor %}
 	</ul>
