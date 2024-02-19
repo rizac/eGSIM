@@ -3,10 +3,9 @@
 from django.urls import re_path
 from django.views.generic.base import RedirectView
 
-from .templates.egsim import URLS, TAB
 from .views import (main, home, apidoc, download_request, download_response,
                     imprint, ref_and_license, get_gsims_from_region, flatfile_inspection,
-                    flatfile_plot, flatfile_required_columns)
+                    flatfile_plot, flatfile_required_columns, URLS, TAB)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
 

@@ -349,7 +349,7 @@ EGSIM.component('gsim-map', {
 	data(){
 		return {map: null};  // leaflet map
 	},
-	emits: ['gsim-selected'],
+	emits: ['gsim-selected', 'gsim-unselected'],
 	template: `<div ref="mapDiv" style='cursor:pointer'></div>`,
 	mounted(){
 		this.map = this.createLeafletMap();
@@ -491,7 +491,7 @@ EGSIM.component('gsim-map', {
 			// Destroy existing markers marker (or move existing one):
 			this.removeMarkersFromMap();
 			// ad new marker:
-			L.marker(latLng).addTo(this.map);
+			var marker = L.marker(latLng).addTo(this.map);
 			// query data:
 			var data = {
 				'latitude': latLng[0],
@@ -499,8 +499,23 @@ EGSIM.component('gsim-map', {
 				'regionalization': this.regionalizations.names.filter(name => this.isRegionalizationSelected(name))
 			};
 			// query data and update filter func:
-			fetch(this.regionalizations.url, data).then(response => {
-				this.$emit('gsim-selected', response.data.models || [])
+			fetch(this.regionalizations.url, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(data),
+			}).then(response => {
+				return response.json();
+			}).then(json_data => {
+				let models = json_data.models;
+				if (models.length){
+					this.$emit('gsim-selected', models);
+					marker.on('click', e => {
+						this.$emit('gsim-unselected', models);
+						marker.remove();
+					});
+				}
 			});
 		},
 		removeMarkersFromMap(){

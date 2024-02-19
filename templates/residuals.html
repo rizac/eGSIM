@@ -1,10 +1,11 @@
 <div class='position-relative' style="flex: 1 1 auto;">
 	<gsim-map @gsim-selected="(gs) => { forms.residuals.gsim = Array.from(new Set(forms.residuals.gsim.concat(gs))) }"
+			  @gsim-unselected="(gs) => { forms.residuals.gsim = forms.residuals.gsim.filter(g => !gs.includes(g)); }"
 			  :regionalizations="regionalizations"
 			  style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
 	<form novalidate @submit.prevent="postData(urls.residuals, forms.residuals).then(r => { responseData = r; })"
-		  class='d-flex flex-column p-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 
 		<gsim-select :selected-model-names="forms.residuals.gsim"
 					 :models="models"

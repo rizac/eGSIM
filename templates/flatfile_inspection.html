@@ -1,7 +1,7 @@
 <div class='position-relative' style="flex: 1 1 auto;">
 	<div class='mb-3'>
 	<form novalidate @submit.prevent="postData(urls.flatfile_inspection, forms.flatfile_inspection).then(r => { responseData = r; })"
-		  class='d-flex flex-column p-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 			<div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
 				<flatfile-select
 					:flatfiles='flatfiles'
