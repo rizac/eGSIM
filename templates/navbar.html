@@ -8,13 +8,13 @@
 		<span>Model-to-Model comparison</span>
 	</a>
 
-	<button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+	<button class="btn dropdown-toggle menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 		<i class="fa fa-database me-1"></i>
 		<span>Data</span>
 	</button>
 	<ul class="dropdown-menu">
-		<li><a class="dropdown-item" @click="selectedTab=21">Compilation</a></li>
-		<li><a class="dropdown-item" @click="selectedTab=22">Inspection</a></li>
+		<li><a class="dropdown-item menu-item" @click="selectedTab=21">Compilation</a></li>
+		<li><a class="dropdown-item menu-item" @click="selectedTab=22">Inspection</a></li>
 	</ul>
 
 	<a class='menu-item' @click="selectedTab=3">
@@ -25,16 +25,20 @@
 	<div style='flex: 1 1 auto'></div>
 
 	<div class="dropdown">
-		<button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+		<button class="btn dropdown-toggle menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 			<i class="fa fa-bars"></i>
 		</button>
 		<ul class="dropdown-menu">
-			<li><a class="d-none dropdown-item" target="_blank">
-				<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
-			</a></li>
-			<li><a class="dropdown-item" @click="selectedTab += 100">
-				<i class="fa fa-address-card-o"></i> <span>References & License</span>
-			</a></li>
+			<li>
+				<a class="d-none dropdown-item" target="_blank">
+					<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
+				</a>
+			</li>
+			<li>
+				<a class="dropdown-item" @click="selectedTab += 100">
+					<i class="fa fa-address-card-o"></i> <span>References & License</span>
+				</a>
+			</li>
 			<li><a class="dropdown-item" @click="selectedTab += 1000">Imprint</a></li>
 			<li><a class="dropdown-item" :href='urls.data_protection'  target="_blank">Data Protection</a></li>
 		</ul>

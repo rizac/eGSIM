@@ -32,10 +32,12 @@ class URLS:  # noqa
     """Define global URLs"""
     # NOTE NO URL HERE (unless external, i.e., http://) MUST END WITH  "/"
 
+    # FIXME REMOVE BELOW
     # JSON data requested by the main page at startup:
-    MAIN_PAGE_INIT_DATA = "init_data"
+    #  MAIN_PAGE_INIT_DATA = "init_data"
+
     # Url for getting the gsim list from a given geographic location:
-    GET_GSIMS_FROM_REGION = 'data/getgsimfromlatlon'
+    GET_GSIMS_FROM_REGION = 'data/get_models_from_region'
     # inspecting a flatfile:
     FLATFILE_INSPECTION = 'data/flatfile_inspection'
     FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
@@ -211,6 +213,7 @@ def _get_home_page_renderer_context():
     return {'ref_and_license_url': URLS.REF_AND_LICENSE}
 
 
+# FIXME REMOVE
 @xframe_options_sameorigin
 def apidoc(request):
     """view for the home page (iframe in browser)"""
@@ -230,6 +233,7 @@ def apidoc(request):
     return render(request, template, context=context)
 
 
+# FIXME REMOVE?
 @xframe_options_sameorigin
 def ref_and_license(request):
     """view for the home page (iframe in browser)"""
@@ -238,6 +242,7 @@ def ref_and_license(request):
     return render(request, template, context=context)
 
 
+# FIXME: REMOVE?
 def _get_ref_and_license_page_renderer_context():
     refs = {}
     with open(join(dirname(dirname(abspath(__file__))), 'api',
@@ -247,13 +252,14 @@ def _get_ref_and_license_page_renderer_context():
             refs[name] = ref
     return {'references': refs}
 
-
+# FIXME: REMOVE?
 @xframe_options_sameorigin
 def imprint(request):
     template = 'info_pages/imprint.html'
     return render(request, template, context=_get_imprint_page_renderer_context())
 
 
+# FIXME: REMOVE?
 def _get_imprint_page_renderer_context():
     return {
         'data_protection_url': URLS.DATA_PROTECTION,

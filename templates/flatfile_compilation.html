@@ -1,11 +1,12 @@
 <div class='position-relative d-flex flex-row' style="flex: 1 1 auto;">
 	<div>
 	<gsim-map @gsim-selected="(gs) => { forms.flatfile_compilation.gsim = Array.from(new Set(forms.flatfile_compilation.gsim.concat(gs))) }"
+			  @gsim-unselected="(gs) => { forms.flatfile_compilation.gsim = forms.flatfile_compilation.gsim.filter(g => !gs.includes(g)); }"
 			  :regionalizations="regionalizations"
 			  style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
 	<form novalidate @submit.prevent="postData(urls.flatfile_compilation, forms.flatfile_compilation).then(r => { responseData = r; })"
-		  class='d-flex flex-column p-2' style='position:absolute;top:0px;bottom:0px;z-index:1'>
+		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 
 		<gsim-select :selected-model-names="forms.flatfile_compilation.gsim"
 					 :models="models"
