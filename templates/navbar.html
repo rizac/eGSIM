@@ -1,47 +1,37 @@
-<nav class="d-flex flex-row navbar-dark bg-dark align-items-center position-relative" id='egsim-nav' style='color:lightgray'>
-	<a class='menu-item' @click="selectedTab=0">
+<nav class="nav bg-dark" style='padding:.25rem'>
+
+	<a class='nav-link' @click="selectedTab=0" href="#">
 		<i class="fa fa-home me-1"></i>
-		<span></span>
-	</a>
-	<a class='menu-item' @click="selectedTab=1">
-		<i class="fa fa-area-chart me-1"></i>
-		<span>Model-to-Model comparison</span>
 	</a>
 
-	<button class="btn dropdown-toggle menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-		<i class="fa fa-database me-1"></i>
-		<span>Data</span>
-	</button>
-	<ul class="dropdown-menu">
-		<li><a class="dropdown-item menu-item" @click="selectedTab=21">Compilation</a></li>
-		<li><a class="dropdown-item menu-item" @click="selectedTab=22">Inspection</a></li>
-	</ul>
+	<a class='nav-link' @click="selectedTab=1" href="#">
+		<i class="fa fa-area-chart me-1"></i> Model-to-Model comparison
+	</a>
 
-	<a class='menu-item' @click="selectedTab=3">
-		<i class="fa fa-bar-chart me-1"></i>
-		<span>Model-to-Data Comparison</span>
+	<li class="nav-item dropdown">
+		<a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+			<i class="fa fa-database me-1"></i> Data
+		</a>
+		<ul class="dropdown-menu bg-dark rounded-top-0">
+			<li><a class="dropdown-item" href="#" @click="selectedTab=21">Compilation (intro)</a></li>
+			<li><a class="dropdown-item" href="#" @click="selectedTab=22">Visual inspection</a></li>
+		</ul>
+	</li>
+
+
+	<a class='nav-link' @click="selectedTab=3" href="#">
+		<i class="fa fa-bar-chart me-1"></i> Model-to-Data Comparison
 	</a>
 
 	<div style='flex: 1 1 auto'></div>
 
-	<div class="dropdown">
-		<button class="btn dropdown-toggle menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-			<i class="fa fa-bars"></i>
-		</button>
-		<ul class="dropdown-menu">
-			<li>
-				<a class="d-none dropdown-item" target="_blank">
-					<i class="fa fa-info-circle"></i> <span>Tutorial (API Doc)</span>
-				</a>
-			</li>
-			<li>
-				<a class="dropdown-item" @click="selectedTab += 100">
-					<i class="fa fa-address-card-o"></i> <span>References & License</span>
-				</a>
-			</li>
-			<li><a class="dropdown-item" @click="selectedTab += 1000">Imprint</a></li>
-			<li><a class="dropdown-item" :href='urls.data_protection'  target="_blank">Data Protection</a></li>
-		</ul>
-	</div>
+	<a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+		<i class="fa fa-bars"></i>
+	</a>
+	<ul class="dropdown-menu bg-dark rounded-top-0">
+		<li><a class="dropdown-item" @click="selectedTab += 100" href="#"><i class="fa fa-address-card-o me-1"></i>References & License</a></li>
+		<li><a class="dropdown-item" @click="selectedTab += 1000" href="#">Imprint</a></li>
+		<li><a class="dropdown-item" :href='urls.data_protection' target="_blank">Data Protection</a></li>
+	</ul>
 
 </nav>

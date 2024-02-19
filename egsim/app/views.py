@@ -76,7 +76,8 @@ def main(request, selected_menu=None):
     selectedTab = {'trellis': 1, 'flatfile': 2, 'residuals': 3}.get(selected_menu, 0)
     init_data = _get_init_data_json() | forms_data_json | {'selectedTab': selectedTab}
     return render(request, template, context={'debug': settings.DEBUG,
-                                              'init_data': init_data})
+                                              'init_data': init_data,
+                                              'references': _get_references()})
 
 
 def _get_init_data_json(browser: dict = None,
@@ -172,7 +173,7 @@ def _get_init_data_json(browser: dict = None,
         'imt_groups': imt_groups,
         'warning_groups': warning_groups,
         'flatfiles': flatfiles,
-        'regionalizations': regionalizations,
+        'regionalizations': regionalizations
     }
 
 
@@ -191,6 +192,23 @@ def _get_bbox(reg: models.Regionalization) -> list[float]:
         bounds[2] = max(bounds[2], bounds_[2])
         bounds[3] = max(bounds[3], bounds_[3])
     return bounds
+
+
+def _get_references():
+    """Return the references of the data used by the program"""
+    refs = {}
+    for model_cls in [models.Regionalization, models.Flatfile]:
+        for item in model_cls.queryset().values():
+            url = item.get('url', '')
+            if not url:
+                url = item.get('doi', '')
+                if url and not url.startswith('http'):
+                    url = f'https://doi.org/{url}'
+            if not url:
+                continue
+            name = item.get('display_name', item['name'])
+            refs[name] = url
+    return refs
 
 
 # FIXME REMOVE BELOW
@@ -242,15 +260,6 @@ def ref_and_license(request):
     return render(request, template, context=context)
 
 
-# FIXME: REMOVE?
-def _get_ref_and_license_page_renderer_context():
-    refs = {}
-    with open(join(dirname(dirname(abspath(__file__))), 'api',
-                   'management', 'commands', 'data', 'data_sources.yaml')) as _:
-        for ref in yaml.safe_load(_).values():
-            name = ref.pop('display_name')
-            refs[name] = ref
-    return {'references': refs}
 
 # FIXME: REMOVE?
 @xframe_options_sameorigin
