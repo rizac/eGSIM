@@ -7,7 +7,8 @@
 		</h5>
 	</div>
 
-	<div style='flex: 1 1 auto; overflow:auto' class='p-5 text-center'>
+	<div style='flex: 1 1 auto; overflow:auto; padding: 3rem calc(0.5*(100vw - 40rem))'
+		 class='text-center'>
 
 		<p>
 			eGSIM is a web application programming interface (API)
@@ -22,11 +23,11 @@
 			user-friendly interface to interact with several API features:
 		</p>
 
-		<div class='d-flex flex-row align-items-baseline'>
+		<div class='d-flex flex-row align-items-baseline justify-content-center'>
 
 			<div class='form-control shadow'>
 				<p>
-				Compute or visualize model predictions of ground motions
+				Get model predictions of ground motions
 				from hypothetical earthquake scenarios
 				</p>
 				<p>
@@ -38,8 +39,8 @@
 
 			<div class='form-control shadow mx-3'>
 				<p>
-				Come to grips with eGSIM data format (flatfile) in order to compile and upload
-				user-defined data of observed earthquake scenarios
+				Utilities to compile, inspect or upload user-defined data of
+				observed earthquake scenarios
 				</p>
 				<p>
 				<button class='btn btn-primary text-nowrap' @click="selectedTab=21">
@@ -55,8 +56,9 @@
 
 			<div class='form-control shadow'>
 				<p>
-				Compute or visualize the residuals of model predictions of ground motions
-				vs. pre- or user-defined data of observed earthquake scenarios
+				Get residuals between
+				model predictions of ground motions
+				and observed earthquake scenarios
 				</p>
 				<p>
 				<button class='btn btn-primary text-nowrap' @click="selectedTab=3">
@@ -99,9 +101,9 @@
 
 		</div>
 
-		<div style='font-size:70%' class='text-muted text-center pt-2'>
+		<div style='font-size:80%' class='text-muted text-center py-2'>
 			<div>
-				This service (version number: 3, first deploy end 2019)
+				This service (version number: 3, online since 2019)
 				is part of the
 				<a target='_blank' href='http://www.efehr.org/'>European Facilities for Earthquake Hazard and Risk</a>
 				(EFEHR), a non-profit network of organisations and

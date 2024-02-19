@@ -17,7 +17,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-# from .templates.egsim import TAB, URLS
+
 from ..api import models
 from ..api.forms.flatfile import FlatfileForm
 from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
