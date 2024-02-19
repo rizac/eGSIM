@@ -459,6 +459,9 @@ EGSIM.component('gsim-map', {
 			return elm && elm.parentNode.style.display!='none' && elm.checked;
 		},
 		getRegionalizationInput(regionalizationName){
+			if (!this.$refs.mapDiv){  // prevent weird log errors  "this.$refs.mapDiv is undefined"
+				return null;
+			}
 			return this.$refs.mapDiv.querySelector(`input[data-regionalization-name='${regionalizationName}']`);
 		},
 		mapBoundsChanged(event){
@@ -483,7 +486,10 @@ EGSIM.component('gsim-map', {
 			for (var name of this.regionalizations.names){
 				var regBounds = this.regionalizations.bbox[name];  // (minLng, minLat, maxLng, maxLat)
 				var outOfBounds = outOfBoundsLng(regBounds[0], regBounds[2]) || outOfBoundsLat(regBounds[1], regBounds[3]);
-				this.getRegionalizationInput(name).parentNode.style.display = outOfBounds ? 'none' : 'flex';
+				var elm = this.getRegionalizationInput(name);
+				if (elm){
+					this.getRegionalizationInput(name).parentNode.style.display = outOfBounds ? 'none' : 'flex';
+				}
 			}
 		},
 		mapClicked(event) {
