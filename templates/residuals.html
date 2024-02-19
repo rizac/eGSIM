@@ -4,6 +4,7 @@
 			  :regionalizations="regionalizations"
 			  style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
+
 	<form novalidate @submit.prevent="postData(urls.residuals, forms.residuals).then(r => { responseData = r; })"
 		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 
@@ -13,9 +14,10 @@
 					 style="flex: 0 1 auto; min-height:0px">
 		</gsim-select>
 
-		<imt-select :selected-imts="forms.residuals.imt" :imts='imts' class='mt-2'></imt-select>
+		<imt-select :selected-imts="forms.residuals.imt" :imts='imts' class='mt-3'></imt-select>
 
 		<flatfile-select
+			class= 'mt-3'
 			:flatfiles='flatfiles'
 			:selected-flatfile="forms.residuals.flatfile"
 			:data-query="forms.residuals['data-query']"
