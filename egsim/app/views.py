@@ -4,7 +4,6 @@ Created on 17 Jan 2018
 @author: riccardo
 """
 import os
-from os.path import join, dirname, abspath
 
 from django.http import FileResponse
 from io import StringIO, BytesIO
@@ -15,7 +14,7 @@ from shapely.geometry import shape
 from django.http.response import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.conf import settings
-from django.views.decorators.clickjacking import xframe_options_sameorigin
+# from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 
 from ..api import models
@@ -37,22 +36,28 @@ class URLS:  # noqa
     #  MAIN_PAGE_INIT_DATA = "init_data"
 
     # Url for getting the gsim list from a given geographic location:
+    # FIXME: MOVE OUT OF REGIONALIZATION dict
     GET_GSIMS_FROM_REGION = 'data/get_models_from_region'
     # inspecting a flatfile:
     FLATFILE_INSPECTION = 'data/flatfile_inspection'
-    FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
-    FLATFILE_PLOT = 'data/flatfile_plot'
-    DOWNLOAD_REQUEST = 'data/downloadrequest'
-    DOWNLOAD_RESPONSE = 'data/downloadresponse'
+    # FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
+    # FLATFILE_PLOT = 'data/flatfile_plot'
+    # DOWNLOAD_REQUEST = 'data/downloadrequest'
+    # DOWNLOAD_RESPONSE = 'data/downloadresponse'
     # info pages:
-    HOME_NO_MENU = 'home_no_menu'
-    API = 'api'
-    DATA_PROTECTION = 'https://www.gfz-potsdam.de/en/data-protection/'
-    IMPRINT = "imprint"
-    REF_AND_LICENSE = "ref_and_license"
+    # HOME_NO_MENU = 'home_no_menu'
+    # API = 'api'
+    HOME_PAGE = 'home'
+    DATA_PROTECTION_PAGE = 'https://www.gfz-potsdam.de/en/data-protection/'
+    FLATFILE_INFO_PAGE = 'flatfile-info'
+    FLATFILE_VISUALIZER_PAGE = 'flatfile-visualizer'
+    IMPRINT_PAGE = "imprint"
+    PREDICTIONS_PAGE = 'predictions'
+    RESIDUALS_PAGE = 'residuals'
+    REF_AND_LICENSE_PAGE = "ref_and_license"
 
 
-def main(request, selected_menu=None):
+def main(request, page=''):
     """view for the main page"""
     # FIXME: REMOVE egsim.py entirely, as well as apidoc.py!
     template = 'egsim.html'
@@ -73,8 +78,7 @@ def main(request, selected_menu=None):
             }
         }
     }
-    selectedTab = {'trellis': 1, 'flatfile': 2, 'residuals': 3}.get(selected_menu, 0)
-    init_data = _get_init_data_json() | forms_data_json | {'selectedTab': selectedTab}
+    init_data = _get_init_data_json() | forms_data_json | {'currentPage': page or URLS.HOME_PAGE}
     return render(request, template, context={'debug': settings.DEBUG,
                                               'init_data': init_data,
                                               'references': _get_references()})
@@ -158,16 +162,22 @@ def _get_init_data_json(browser: dict = None,
 
 
     return {
+        'pages': {  # tab key => url path (after the first slash)
+            'predictions': URLS.PREDICTIONS_PAGE,
+            'residuals': URLS.RESIDUALS_PAGE,
+            'flatfile_info': URLS.FLATFILE_INFO_PAGE,
+            'flatfile_visualizer': URLS.FLATFILE_VISUALIZER_PAGE,
+            'ref_and_license': URLS.REF_AND_LICENSE_PAGE,
+            'imprint': URLS.IMPRINT_PAGE,
+            'home': URLS.HOME_PAGE,
+            'data_protection': URLS.DATA_PROTECTION_PAGE
+        },
         'urls': {
             'trellis': TrellisView.urls[0],
             'residuals': ResidualsView.urls[0],
-            'api': URLS.API,
-            'imprint': URLS.IMPRINT,
-            'data_protection': URLS.DATA_PROTECTION,
-            'ref_and_license': URLS.REF_AND_LICENSE,
             'flatfile_upload': URLS.FLATFILE_INSPECTION,
-            'flatfile_inspection': 'data/flatfile_plot',
-            'flatfile_compilation': 'data/flatfile_required_columns'
+            # 'flatfile_inspection': 'data/flatfile_plot',
+            # 'flatfile_compilation': 'data/flatfile_required_columns'
         },
         'gsims': gsims,
         'imt_groups': imt_groups,
@@ -211,121 +221,26 @@ def _get_references():
     return refs
 
 
-# FIXME REMOVE BELOW
-# def main_page_init_data(request):
-#     """JSON data requested by the browser app at startup to initialize the HTML page"""
-#     request_body = json.loads(request.body)
-#     browser = request_body.get('browser', {})
-#     selected_menu = request_body.get('selectedMenu', TAB.home.name)
-#     return JsonResponse(get_init_json_data(browser, selected_menu, settings.DEBUG))
+def get_gsims_from_region(request) -> JsonResponse:
+    return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
 
 
-@xframe_options_sameorigin
-def home(request):
-    """view for the home page (iframe in browser)"""
-    template = 'info_pages/home.html'
-    return render(request, template, context=_get_home_page_renderer_context())
+def flatfile_required_columns(request) -> JsonResponse:
+    return RESTAPIView.as_view(formclass=FlatfileRequiredColumnsForm)(request)
 
 
-def _get_home_page_renderer_context():
-    return {'ref_and_license_url': URLS.REF_AND_LICENSE}
+def flatfile_inspection(request) -> JsonResponse:
+    return RESTAPIView.as_view(formclass=FlatfileInspectionForm)(request)
 
 
-# FIXME REMOVE
-@xframe_options_sameorigin
-def apidoc(request):
-    """view for the home page (iframe in browser)"""
-    template = 'info_pages/apidoc/base.html'
-    context = {
-        'baseurl': 'https://egsim.gfz-potsdam.de',
-        'egsim_data': {
-            'TRELLIS': {
-                'path': TrellisView.urls[0]
-            },
-            'RESIDUALS': {
-                'path': ResidualsView.urls[0]
-            }
-        },
-        **_get_home_page_renderer_context()
-    }
-    return render(request, template, context=context)
-
-
-# FIXME REMOVE?
-@xframe_options_sameorigin
-def ref_and_license(request):
-    """view for the home page (iframe in browser)"""
-    template = 'info_pages/ref_and_license.html'
-    context = _get_ref_and_license_page_renderer_context()
-    return render(request, template, context=context)
+def flatfile_plot(request) -> JsonResponse:
+    return RESTAPIView.as_view(formclass=FlatfilePlotForm)(request)
 
 
 
-# FIXME: REMOVE?
-@xframe_options_sameorigin
-def imprint(request):
-    template = 'info_pages/imprint.html'
-    return render(request, template, context=_get_imprint_page_renderer_context())
+# FIXME REMOVE / CLEANUP THE CODE BELOW AND ALL ITS USAGES! ===================
 
-
-# FIXME: REMOVE?
-def _get_imprint_page_renderer_context():
-    return {
-        'data_protection_url': URLS.DATA_PROTECTION,
-        'ref_and_license_url': URLS.REF_AND_LICENSE
-    }
-
-
-# FIXME REMOVE THE CODE BELOW AND ALL ITS USAGES! =======================================
-from enum import Enum
-from ..api.forms import APIForm
-class TAB(Enum):
-    """Define Tabs/Menus of the Single page Application. A TAB T is an Enum with attr:
-    ```
-    title: str
-    icon: str
-    viewclass: Union[Type[RESTAPIView], None]
-    ```
-    Enum names should be kept constant as they are used as ID also in frontend code.
-    Remember that a Tab element can be obtained from its name via square notation
-    e.g. tab = TAB["trellis"] (and conversely, `tab.name` returns "trellis")
-    """
-    # icons (2nd element) are currently given as font-awesome bootsrap icons
-    home = '', 'fa-home'
-    trellis = 'Model to Model Comparison', 'fa-area-chart', TrellisView
-    flatfile = 'Data management', 'fa-database'
-    residuals = 'Model to Data Comparison', 'fa-bar-chart', ResidualsView
-    # FIXME REMOVE
-    # testing = 'Model to Data Testing', 'fa-list', TestingView
-
-    def __init__(self, *args):
-        # args is the unpacked tuple passed above (2-elements), set attributes:
-        self.title: str = args[0]
-        self.icon: str = args[1]
-        self.viewclass: type[RESTAPIView] = args[2] if len(args) > 2 else None
-
-    @property
-    def urls(self) -> list[str]:
-        return self.viewclass.urls if self.viewclass else []
-
-    @property
-    def formclass(self) -> type[APIForm]:
-        return self.viewclass.formclass if self.viewclass else None
-
-    @property
-    def download_request_filename(self) -> str:
-        return f"egsim-{self.name}-config"
-
-    @property
-    def download_response_filename(self) -> str:
-        return f"egsim-{self.name}-result"
-
-    def __str__(self):
-        return self.name
-#============== END OF CODE TO REMOVE ==================================================
-
-
-def download_request(request, key: TAB, filename: str):
+def download_request(request, key, filename: str):
     """Return the request (configuration) re-formatted according to the syntax
     inferred from filename (*.json or *.yaml) to be downloaded by the front
     end GUI.
@@ -363,7 +278,7 @@ def download_request(request, key: TAB, filename: str):
     return response
 
 
-def download_response(request, key: TAB, filename: str):
+def download_response(request, key, filename: str):
     basename, ext = os.path.splitext(filename)
     if ext == '.csv':
         return download_ascsv(request, key, filename)
@@ -377,7 +292,7 @@ def download_response(request, key: TAB, filename: str):
                           RESTAPIView.CLIENT_ERR_CODE)
 
 
-def download_ascsv(request, key: TAB, filename: str, sep=',', dec='.'):
+def download_ascsv(request, key, filename: str, sep=',', dec='.'):
     """Return the processed data as text/CSV. This method is used from within
     the browser when users want to get processed data as text/csv: as the
     browser stores the processed data dict, we just need to convert it as
@@ -422,22 +337,6 @@ def download_asimage(request, filename: str, img_format: str) -> FileResponse:
     #     'attachment; filename=%s' % filename
     # response['Content-Length'] = len(bytestr)
     # return response
-
-
-def get_gsims_from_region(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
-
-
-def flatfile_required_columns(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfileRequiredColumnsForm)(request)
-
-
-def flatfile_inspection(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfileInspectionForm)(request)
-
-
-def flatfile_plot(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfilePlotForm)(request)
 
 
 def _test_err(request):

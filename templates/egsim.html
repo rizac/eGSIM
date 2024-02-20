@@ -42,26 +42,26 @@
 
 {% block body %}
 <div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
-	<template v-if="[1, 21, 22, 3].includes(selectedTab)">
+	<template v-if="showNavBar">
 	{% include "navbar.html" %}
 	</template>
 	<keep-alive>
-	<template v-if="selectedTab==1">
+	<template v-if="currentPage==pages.predictions">
 	{% include "trellis.html" %}
 	</template>
-	<template v-else-if="selectedTab==21">
+	<template v-else-if="currentPage==pages.flatfile_info">
 	{% include "flatfile_compilation.html" %}
 	</template>
-	<template v-else-if="selectedTab==22">
+	<template v-else-if="currentPage==pages.flatfile_visualizer">
 	{% include "flatfile_inspection.html" %}
 	</template>
-	<template v-else-if="selectedTab==3">
+	<template v-else-if="currentPage==pages.residuals">
 	{% include "residuals.html" %}
 	</template>
-	<template v-else-if="selectedTab>=100 && selectedTab<1000">
+	<template v-else-if="currentPage==pages.ref_and_license">
 	{% include "ref_and_license.html" %}
 	</template>
-	<template v-else-if="selectedTab>=1000">
+	<template v-else-if="currentPage==pages.imprint">
 	{% include "imprint.html" %}
 	</template>
 	<template v-else>
@@ -111,6 +111,7 @@ function getInitData(){
 			warning: elm[2] ? data.warning_groups[elm[2]]: "",
 		}
 	});
+	var currentPage = data.currentPage || 'home';  // one of the key of the Objet 'tab' below
 	return {
 		models: Object.freeze(models),
 		imts: Array.from(imts),
@@ -118,11 +119,34 @@ function getInitData(){
 		urls: data.urls,
 		regionalizations: data.regionalizations,
 		flatfiles: data.flatfiles,
-		selectedTab: data.selectedTab
+		showNavBar: true,
+		pages: data.pages,  // dict of key -> page URL (relative to the base URL of the site)
+		currentPage: currentPage,
 	}
 }
+
 const EGSIM = Vue.createApp({
-	data: getInitData
+	watch:{
+		currentPage:{
+			immediate: true,
+			handler(newVal, oldVal){
+				this.showNavBar = newVal != this.pages.home;
+				this.setUrlInBrowser(newVal)
+			}
+		}
+	},
+	data: getInitData,
+	methods: {
+		setUrlInBrowser(menu){
+			var location = window.location;
+			if (!location.pathname.startsWith(`/${menu}`)){
+				var newHref = `${location.origin}/${menu}`
+				// https://developer.mozilla.org/en-US/docs/Web/API/History_API
+				window.history.replaceState({}, document.title, newHref);
+			}
+			return false; // in case accessed from within anchors
+		},
+	}
 });
 
 </script>

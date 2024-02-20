@@ -393,9 +393,9 @@ EGSIM.component('gsim-map', {
 							</button>
 							<div id="${id}" class='collapse'>`;
 				// Add title:
-				html += `<h6 class="mt-3">Click options</h6>
-					<div style='max-width:10rem' class='mb-2'>Select models
-					defined for the following seismic hazard source regionalizations
+				html += `<h6 class="mt-1">Click options</h6>
+					<div style='max-width:12rem' class='mb-2'>Search models
+					of the following seismic hazard source regionalizations:
 					</div>`;
 				for (var name of regionalizations.names){
 					var ipt = `<input type='checkbox' data-regionalization-name='${name}' checked class='me-1' />${name}`;
