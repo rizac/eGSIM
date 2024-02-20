@@ -2,6 +2,7 @@
 	<gsim-map @gsim-selected="(gs) => { forms.trellis.gsim = Array.from(new Set(forms.trellis.gsim.concat(gs))); }"
 			  @gsim-unselected="(gs) => { forms.trellis.gsim = forms.trellis.gsim.filter(g => !gs.includes(g)); }"
 			  :regionalizations="regionalizations"
+			  :region-selected-url="urls.get_gsim_from_region"
 			  style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
 	<form novalidate @submit.prevent="postData(urls.trellis, forms.trellis).then(r => { responseData = r; })"
