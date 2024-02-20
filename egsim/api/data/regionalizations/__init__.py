@@ -59,6 +59,8 @@ DATA = {
     'eshm20': {
         'sources': [join(datadir, 'eshm20.geo.json'),
                     join(datadir, 'eshm20.json')],
+        'url': 'http://www.hazard.efehr.org/en/Documentation/'
+               'specific-hazard-models/europe/eshm2020-overview/'
     },
     'germany': {
         'sources': [join(datadir, 'germany.geo.json'),
