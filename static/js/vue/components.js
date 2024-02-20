@@ -344,7 +344,8 @@ EGSIM.component('imt-select', {
  */
 EGSIM.component('gsim-map', {
 	props: {
-		regionalizations: {type: Object}
+		regionalizations: {type: Array},  // Array of Objects with keys name, bbox, url
+		regionSelectedUrl: {type: String}
 	},
 	data(){
 		return {map: null};  // leaflet map
@@ -397,15 +398,15 @@ EGSIM.component('gsim-map', {
 					<div style='max-width:12rem' class='mb-2'>Search models
 					of the following seismic hazard source regionalizations:
 					</div>`;
-				for (var name of regionalizations.names){
+				for (var regx of regionalizations){
+					var name = regx.name;
 					var ipt = `<input type='checkbox' data-regionalization-name='${name}' checked class='me-1' />${name}`;
-					var link = ""
-					if (regionalizations.ref[name]){
-						link = `<a class='ms-1' target="_blank" href="${regionalizations.ref[name]}" title="ref (open link in new tab)">
+					if (regx.url){
+						ipt += `<a class='ms-1' target="_blank" href="${regx.url}" title="ref (open link in new tab)">
 							<i class="fa fa-link"></i>
 						</a>`;
 					}
-					html += `${rowDivPrefix}${ipt}${link}</div>`;
+					html += `${rowDivPrefix}${ipt}</div>`;
 				}
 
 				// add layers (1st is the default selected):
@@ -482,12 +483,12 @@ EGSIM.component('gsim-map', {
 					return maxLng < southWest.lng && minLng > northEast.lng;
 				}
 			}
-			for (var name of this.regionalizations.names){
-				var regBounds = this.regionalizations.bbox[name];  // (minLng, minLat, maxLng, maxLat)
+			for (var regx of this.regionalizations){
+				var regBounds = regx.bbox;  // (minLng, minLat, maxLng, maxLat)
 				var outOfBounds = outOfBoundsLng(regBounds[0], regBounds[2]) || outOfBoundsLat(regBounds[1], regBounds[3]);
-				var elm = this.getRegionalizationInput(name);
+				var elm = this.getRegionalizationInput(regx.name);
 				if (elm){
-					this.getRegionalizationInput(name).parentNode.style.display = outOfBounds ? 'none' : 'flex';
+					elm.parentNode.style.display = outOfBounds ? 'none' : 'flex';
 				}
 			}
 		},
@@ -501,10 +502,11 @@ EGSIM.component('gsim-map', {
 			var data = {
 				'latitude': latLng[0],
 				'longitude': latLng[1],
-				'regionalization': this.regionalizations.names.filter(name => this.isRegionalizationSelected(name))
+				'regionalization': this.regionalizations.map(r => r.name).
+					filter(name => this.isRegionalizationSelected(name))
 			};
 			// query data and update filter func:
-			fetch(this.regionalizations.url, {
+			fetch(this.regionSelectedUrl, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

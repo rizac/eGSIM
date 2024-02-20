@@ -137,19 +137,18 @@ def _get_init_data_json(browser: dict = None,
             gsims.append([gsim.name, imt_group_index])
 
     # get regionalization data (for selecting models on a map):
-    regs = list(models.Regionalization.queryset('name', 'url', 'media_root_path'))
-    regionalizations = {
-        'url': URLS.GET_GSIMS_FROM_REGION,
-        'names': [r.name for r in regs],
-        # bbox are tuples of the form (min_lng, min_lat, max_lng, max_lat):
-        'bbox': {r.name: _get_bbox(r) for r in regs},
-        'ref': {r.name: r.url or "" for r in regs}
-    }
+    regionalizations = []
+    for regx in models.Regionalization.queryset('name', 'url', 'media_root_path'):
+        regionalizations.append({
+            'name': regx.name,
+            'bbox': _get_bbox(regx),  # tuple (min_lng, min_lat, max_lng, max_lat)
+            'ref': regx.url or ""
+        })
 
     # get predefined flatfiles info:
     flatfiles = []
     for ffile in models.Flatfile.queryset('name', 'display_name', 'url', 'media_root_path'):
-        flatfiles .append({
+        flatfiles.append({
             'value': ffile.name,
             'key': ffile.name,
             'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
@@ -175,7 +174,8 @@ def _get_init_data_json(browser: dict = None,
         'urls': {
             'trellis': TrellisView.urls[0],
             'residuals': ResidualsView.urls[0],
-            'flatfile_upload': URLS.FLATFILE_INSPECTION,
+            'flatfile_inspection': URLS.FLATFILE_INSPECTION,
+            'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION
             # 'flatfile_inspection': 'data/flatfile_plot',
             # 'flatfile_compilation': 'data/flatfile_required_columns'
         },

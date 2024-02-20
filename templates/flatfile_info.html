@@ -3,6 +3,7 @@
 	<gsim-map @gsim-selected="(gs) => { forms.flatfile_compilation.gsim = Array.from(new Set(forms.flatfile_compilation.gsim.concat(gs))) }"
 			  @gsim-unselected="(gs) => { forms.flatfile_compilation.gsim = forms.flatfile_compilation.gsim.filter(g => !gs.includes(g)); }"
 			  :regionalizations="regionalizations"
+			  :region-selected-url="urls.get_gsim_from_region"
 			  style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
 	<form novalidate @submit.prevent="postData(urls.flatfile_compilation, forms.flatfile_compilation).then(r => { responseData = r; })"
