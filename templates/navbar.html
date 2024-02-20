@@ -1,10 +1,10 @@
 <nav class="nav bg-dark" style='padding:.25rem'>
 
-	<a class='nav-link' @click="selectedTab=0" href="#">
+	<a class='nav-link' @click="currentPage = pages.home" href="#">
 		<i class="fa fa-home me-1"></i>
 	</a>
 
-	<a class='nav-link' @click="selectedTab=1" href="#">
+	<a class='nav-link' @click="currentPage = pages.predictions" href="#">
 		<i class="fa fa-area-chart me-1"></i> Model-to-Model comparison
 	</a>
 
@@ -13,13 +13,13 @@
 			<i class="fa fa-database me-1"></i> Data
 		</a>
 		<ul class="dropdown-menu bg-dark rounded-top-0">
-			<li><a class="dropdown-item" href="#" @click="selectedTab=21">Compilation (intro)</a></li>
-			<li><a class="dropdown-item" href="#" @click="selectedTab=22">Visual inspection</a></li>
+			<li><a class="dropdown-item" href="#" @click="currentPage = pages.flatfile_info">Compilation (intro)</a></li>
+			<li><a class="dropdown-item" href="#" @click="currentPage = pages.flatfile_visualizer">Visual inspection</a></li>
 		</ul>
 	</li>
 
 
-	<a class='nav-link' @click="selectedTab=3" href="#">
+	<a class='nav-link' @click="currentPage = pages.residuals" href="#">
 		<i class="fa fa-bar-chart me-1"></i> Model-to-Data Comparison
 	</a>
 
@@ -29,9 +29,9 @@
 		<i class="fa fa-bars"></i>
 	</a>
 	<ul class="dropdown-menu bg-dark rounded-top-0">
-		<li><a class="dropdown-item" @click="selectedTab += 100" href="#"><i class="fa fa-address-card-o me-1"></i>References & License</a></li>
-		<li><a class="dropdown-item" @click="selectedTab += 1000" href="#">Imprint</a></li>
-		<li><a class="dropdown-item" :href='urls.data_protection' target="_blank">Data Protection</a></li>
+		<li><a class="dropdown-item" @click="currentPage = pages.ref_and_license" href="#"><i class="fa fa-address-card-o me-1"></i>References & License</a></li>
+		<li><a class="dropdown-item" @click="currentPage = pages.imprint" href="#">Imprint</a></li>
+		<li><a class="dropdown-item" :href='pages.data_protection' target="_blank">Data Protection</a></li>
 	</ul>
 
 </nav>

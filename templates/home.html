@@ -31,7 +31,7 @@
 				from hypothetical earthquake scenarios
 				</p>
 				<p>
-				<button class='btn btn-primary text-nowrap' @click="selectedTab=1">
+				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.predictions">
 					<i class="fa fa-area-chart me-1"></i> Model-to-Model comparison
 				</button>
 				</p>
@@ -43,12 +43,12 @@
 				observed earthquake scenarios
 				</p>
 				<p>
-				<button class='btn btn-primary text-nowrap' @click="selectedTab=21">
+				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.flatfile_info">
 					<i class="fa fa-database me-1"></i> Data compilation (intro)
 				</button>
 				</p>
 				<p>
-				<button class='btn btn-primary text-nowrap' @click="selectedTab=22">
+				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.flatfile_visualizer">
 					<i class="fa fa-database me-1"></i> Data visual inspection
 				</button>
 				</p>
@@ -61,7 +61,7 @@
 				and observed earthquake scenarios
 				</p>
 				<p>
-				<button class='btn btn-primary text-nowrap' @click="selectedTab=3">
+				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.residuals">
 					<i class="fa fa-bar-chart me-1"></i> Model-to-Data Comparison
 				</button>
 				</p>
@@ -71,7 +71,7 @@
 	</div>
 
 	<div>
-		<div class="d-flex flex-row justify-content-evenly align-items-baseline p-5">
+		<div class="d-flex flex-row justify-content-evenly align-items-baseline p-4">
 
 			<a target="_blank" class='me-2' href='https://www.epos-ip.org/'>
 				<img src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" style="height:3rem"/>
@@ -93,7 +93,7 @@
 				<img src="{% static 'img/logos/SERA_logo_scaled.png' %}" style="height:3rem"/>
 			</a>
 
-			<a href='#' @click="selectedTab = selectedTab + 100">
+			<a href='#' @click="currentPage = pages.ref_and_license">
 				<img class='me-1' style='height:2.8rem' src="{% static 'img/logos/AGPLv3_Logo.svg' %}">
 				<img style="height:2.8rem" src="{% static 'img/logos/cc.svg' %}" />
 				<img style="height:2.8rem" src="{% static 'img/logos/by.svg' %}" />
@@ -101,7 +101,7 @@
 
 		</div>
 
-		<div style='font-size:80%' class='text-muted text-center py-2'>
+		<div style='font-size:80%' class='text-muted text-center p-2'>
 			<div>
 				This service (version number: 3, online since 2019)
 				is part of the
@@ -110,10 +110,14 @@
 				community resources aimed at advancing earthquake hazard and
 				risk assessment in the European-Mediterranean area.
 			</div>
-			<div class='my-1'>
-				<b>We welcome feedback on eGSIM</b>. Please open an Issue in the
+			<div>
+				<b>We welcome feedbacks</b>: please open an Issue in the
 				<a target="_blank" href="https://github.com/rizac/eGSIM/issues">
 				GitHub Repository</a> with the desired label (e.g. bug, enhancement, question, help)
+			</div>
+			<div>
+				<a class='me-2' @click="currentPage = pages.imprint" href="#">Imprint</a>
+				<a :href='pages.data_protection' target="_blank">Data Protection</a>
 			</div>
 		</div>
 	</div>
