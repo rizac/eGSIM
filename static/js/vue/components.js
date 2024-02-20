@@ -352,8 +352,10 @@ EGSIM.component('gsim-map', {
 	emits: ['gsim-selected', 'gsim-unselected'],
 	template: `<div ref="mapDiv" style='cursor:pointer'></div>`,
 	mounted(){
-		this.map = this.createLeafletMap();
-		this.mapBoundsChanged();  // update regionalization visibility
+		if (this.map === null){
+			this.map = this.createLeafletMap();
+			this.mapBoundsChanged();  // update regionalization visibility
+		}
 	},
 	activated(){
 		this.map && this.map.invalidateSize();
@@ -365,91 +367,88 @@ EGSIM.component('gsim-map', {
 			var mapCenter = L.latLng([49, 13]);
 			map.fitBounds(L.latLngBounds([mapCenter, mapCenter]), {maxZoom: 3});
 			map.zoomControl.setPosition('topright');
-			// // add a button to call invalidateSize manually
-			// var Control = L.Control.extend({
-			// 	onAdd: function(map) {
-			// 		var btn = L.DomUtil.create('button', 'btn btn-secondary btn-sm');
-			// 		btn.setAttribute('type', 'button');  // prevent form submit
-			// 		var onclick = (evt) => { evt.stopPropagation(); map.invalidateSize(); };
-			// 		btn.addEventListener('click', onclick);
-			// 		btn.innerHTML = '<i class="fa fa-refresh"></i> Redraw map'
-			// 		return btn;
-			// 	}
-			// });
-			// new Control({ position: 'bottomright' }).addTo(map);
-
-			// provide two base layers. Keep it simple as many base layers are just to shof off
-			// and they do not need to be the main map concern
-			// 1 MapBox Outdorrs (if you want more, sign in to mapbox. FIXME: why is it working with the token then?)
-			var geoportailLayer = L.tileLayer('https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
-				attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
-				bounds: [[-75, -180], [81, 180]],
-				minZoom: 2,
-				maxZoom: 19,
-				apikey: 'choisirgeoportail',
-				format: 'image/jpeg',
-				style: 'normal'
-			}).addTo(map);
-			// 2 CartoDB gray scale map (very good with overlays, as in our case)
-			// the added base layer added is set selected by default (do not add the others then)
-			var cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-				attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-				subdomains: 'abcd',
-				maxZoom: 19
-			}).addTo(map);
-
-			// instantiate a layer control (the button on the top-right corner for showing/hiding overlays
-			// overlays will be added when setting the tr model
-			var layersControl = L.control.layers({
-					'Map: Geoportail': geoportailLayer,
-					'Map: Carto': cartoLayer
-				},
-				{},
-				{
-					collapsed: false,
-					position: 'topright'
-				}
-			).addTo(map);  // https://gis.stackexchange.com/a/68243
-			this.addRegionalizationControl(map);
+			this.addMapControl(map);
 			map.on("click", this.mapClicked);
 			map.on('zoomend', this.mapBoundsChanged);
 			map.on('moveend', this.mapBoundsChanged);
 			return map;
 		},
-		addRegionalizationControl(map){
+		addMapControl(map){
 			var regionalizations = this.regionalizations;
 			var control = L.control({position: 'topright'});
 			control.onAdd = function (map) {
-				var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded leaflet-control');
+				var div = document.createElement('div');
+				div.className = 'leaflet-control-layers leaflet-control p-2';
+				var rowDivPrefix = "<div class='d-flex flex-row align-items-center text-nowrap'>";
 				// prevent click on anything on the div to propagate on the map:
 				L.DomEvent.disableClickPropagation(div);
+				var id = String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
+					Math.random().toString().split('.')[1] +
+					Math.random().toString().split('.')[1];
+				var html = `<button class="border-0" type="button" data-bs-toggle="collapse"
+								onclick=''
+								style='width:100%; background-color:transparent'
+								data-bs-target="#${id}" aria-expanded="false">
+								<i class="fa fa-sort"></i>
+							</button>
+							<div id="${id}" class='collapse'>`;
 				// Add title:
-				var title = L.DomUtil.create('span', '', div);
-				title.innerHTML = '<h6>Regionalization:</h6>';
+				html += `<h6 class="mt-3">Click options</h6>
+					<div style='max-width:10rem' class='mb-2'>Select models
+					defined for the following seismic hazard source regionalizations
+					</div>`;
 				for (var name of regionalizations.names){
-					// For each regionalization create a <label> wrapping several HTML controls
-					// Leaflet syntax is: L.DomUtil.create(tag, classes, parent):
-					// Note: display:flex will be set in mapBoundsChanged (see below)
-					var label = L.DomUtil.create('label', 'flex-row align-items-baseline', div);
-					// add input type=checkbox to label
-					var input = L.DomUtil.create('input',
-												 "leaflet-control-layers-selector",
-												 label);
-					input.setAttribute('type', 'checkbox');
-					input.setAttribute('data-regionalization-name', name);
-					input.setAttribute('checked', true);
-					// add span to label (with regionalization name)
-					var span = L.DomUtil.create('span', 'ms-2', label);
-					span.innerHTML = name;
-					// add anchor to label (with ref. URL, if given):
+					var ipt = `<input type='checkbox' data-regionalization-name='${name}' checked class='me-1' />${name}`;
+					var link = ""
 					if (regionalizations.ref[name]){
-						var anchor = L.DomUtil.create('a', 'ms-2', label);
-						anchor.setAttribute('href', regionalizations.ref[name]);
-						anchor.setAttribute('target', "_blank");
-						anchor.innerHTML = '<i class="fa fa-link"></i>';
-						anchor.setAttribute('title', 'see ref (open link in new tab)');
+						link = `<a class='ms-1' target="_blank" href="${regionalizations.ref[name]}" title="ref (open link in new tab)">
+							<i class="fa fa-link"></i>
+						</a>`;
 					}
+					html += `${rowDivPrefix}${ipt}${link}</div>`;
 				}
+
+				// add layers (1st is the default selected):
+				var layers = {
+					'Geoportail': L.tileLayer('https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+						attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
+						bounds: [[-75, -180], [81, 180]],
+						minZoom: 2,
+						maxZoom: 19,
+						apikey: 'choisirgeoportail',
+						format: 'image/jpeg',
+						style: 'normal'
+					}),
+					// 2 CartoDB gray scale map (very good with overlays, as in our case)
+					// the added base layer added is set selected by default (do not add the others then)
+					'Carto': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+						attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+						subdomains: 'abcd',
+						maxZoom: 19
+					})
+				};
+				html += '<h6 class="mt-3">Base layer</h6>';
+				for (var name of Object.keys(layers)){
+					html += `${rowDivPrefix}
+						<input type='radio' name='_gm_map_l' data-map-layer='${name}' class='me-1' />${name}
+					</div>`;
+				}
+
+				div.innerHTML = `${html}</div></div>`;
+				var defElement = null;
+				// add events:
+				for (var elm of div.querySelectorAll('input[data-map-layer]')){
+					var name = elm.getAttribute('data-map-layer');
+					if (name == 'Carto'){
+						defElement = elm;
+					}
+					let layer = layers[name];
+					elm.addEventListener('click', e => {
+						map.eachLayer((layer) => { if (layer instanceof L.Layer){ layer.remove(); }});
+						layer.addTo(map);
+					});
+				}
+				defElement.click();
 				return div;
 			};
 			control.addTo(map);
@@ -495,7 +494,7 @@ EGSIM.component('gsim-map', {
 		mapClicked(event) {
 			var latLng = [event.latlng.lat, event.latlng.lng];
 			// Destroy existing markers marker (or move existing one):
-			this.removeMarkersFromMap();
+			this.map.eachLayer((layer) => { if (layer instanceof L.Marker){ layer.remove(); }});
 			// ad new marker:
 			var marker = L.marker(latLng).addTo(this.map);
 			// query data:
@@ -521,13 +520,6 @@ EGSIM.component('gsim-map', {
 						this.$emit('gsim-unselected', models);
 						marker.remove();
 					});
-				}
-			});
-		},
-		removeMarkersFromMap(){
-			this.map.eachLayer(function (layer) {
-				if (layer instanceof L.Marker){
-					layer.remove();
 				}
 			});
 		}
