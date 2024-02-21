@@ -75,7 +75,7 @@ input[type=checkbox]:hover, input[type=radio]:hover{
 /* harmonize border colors (.border is already set by bootstrap, here for clarity) */
 .form-control:not([style*="-color"]):not([class*="border-"]),
 .input-group-text:not([style*="-color"]):not([class*="border-"]),
-.border, .rounded, .leaflet-control-layers {
+.border, .leaflet-control-layers {
 	border-color: var(--bs-border-color) !important;
 }
 
@@ -89,14 +89,14 @@ input[type=checkbox]:hover, input[type=radio]:hover{
 /* harmonize border widths (.border is already set by bootstrap, here for clarity) */
 .form-control:not([style*="-width"]):not([class*="border-"]),
 .input-group-text:not([style*="-width"]):not([class*="border-"]),
-.border, .rounded, .leaflet-control-layers {
+.border, .leaflet-control-layers {
 	border-width: var(--bs-border-width) !important;
 }
 
 /* harmonize border styles (.border is already set by bootstrap, here for clarity) */
 .form-control:not([style*="-style"]):not([class*="border-"]),
 .input-group-text:not([style*="-style"]):not([class*="border-"]),
-.border, .rounded, .leaflet-control-layers {
+.border, .leaflet-control-layers {
 	border-style: var(--bs-border-style) !important;
 }
 

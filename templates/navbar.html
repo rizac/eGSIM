@@ -23,7 +23,13 @@
 		<i class="fa fa-bar-chart me-1"></i> Model-to-Data Comparison
 	</a>
 
-	<div style='flex: 1 1 auto'></div>
+	<div class='d-flex flex-row align-items-center'
+		 style='flex: 1 1 auto; padding: var(--bs-nav-link-padding-y) var(--bs-nav-link-padding-x);'>
+		<!-- load bar to display during fetch -->
+		<div id='loadbar' style='display:none;z-index:200; flex: 1 1 auto'>
+			<div class="loader"></div>
+		</div>
+	</div>
 
 	<a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
 		<i class="fa fa-bars"></i>
