@@ -7,7 +7,7 @@
 					:flatfiles='flatfiles'
 					:selected-flatfile="forms.flatfile_inspection.flatfile"
 					:data-query="forms.flatfile_inspection['data-query']"
-					:upload-url='urls.urls.flatfile_inspection'
+					:upload-url='urls.flatfile_inspection'
 					@flatfile-selected="(value, columns) => {forms.misc.flatfile_inspection_columns=[null].concat(columns)}"
 				>
 				</flatfile-select>
