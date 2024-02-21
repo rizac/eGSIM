@@ -5,7 +5,7 @@ from django.views.generic.base import RedirectView
 
 from .views import (main, download_request, download_response,
                     get_gsims_from_region, flatfile_inspection,
-                    flatfile_plot, flatfile_required_columns, URLS)
+                    flatfile_plot, flatfile_required_columns, URLS, test_request)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
 
@@ -46,4 +46,5 @@ urlpatterns = [
 
     # test stuff: (FIXME: REMOVE)
     # url(r'_test_err', _test_err),
+    re_path(r'test_request', test_request)
 ]

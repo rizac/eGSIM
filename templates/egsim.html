@@ -45,6 +45,8 @@
 	<template v-if="showNavBar">
 	{% include "navbar.html" %}
 	</template>
+	<!-- FIXME REMOVE BELOW -->
+<!--	<button type='button' onclick="fetch('test_request').then(r => r.json()).then(d => { console.log(d); })">Test request</button>-->
 	<keep-alive>
 	<template v-if="currentPage==pages.predictions">
 	{% include "trellis.html" %}
@@ -81,14 +83,46 @@
 {{ block.super }}
 
 <script>
-// make window.fetch use the CSRF Token:
-var _fetch = window.fetch;
-window.fetch = function(resource, options){
+const origFetch = window.fetch;
+window.fetch = function() {
+	var args = Array.from(arguments);
+	if (args.length == 1){
+		args.push({});
+	}
+	var options = args[1];
 	if (!options.headers){
 		options.headers = {};
 	}
 	options.headers["X-CSRFToken"] = "{{ csrf_token }}";
-	return _fetch(resource, options);
+
+	// setup the load bar <div>
+	var bar = document.getElementById('loadbar');
+	bar.style.display = '';
+
+	return new Promise((resolve, reject) => {  // https://stackoverflow.com/a/53448336
+		origFetch.apply(this, args).then((response) => {
+			if (!response.ok){
+				// status code 4xx or 5xx: show msg and then treat it like an error (fetch doesn't by default)
+				response.clone().json().then(data => showFetchError(data.message));
+				reject(response);
+			}else{
+				resolve(response);
+			}
+		}).catch((error) => {
+			// some network error (Note: NOT 4xx or 5xx responses!)
+			showFetchError("" + error);
+			reject(error);
+		}).finally(() => {
+			bar.style.display = 'none';
+		});
+	});
+}
+
+function showFetchError(msg){
+	let div = document.body;
+	let alert = document.createElement('div');
+	alert.innerHTML = `{% include "alert.html" with content="${msg}" %}`;
+	div.appendChild(alert);
 }
 </script>
 

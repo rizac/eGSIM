@@ -339,7 +339,21 @@ def download_asimage(request, filename: str, img_format: str) -> FileResponse:
     # return response
 
 
+# FIXME TEST REQUESTS REMOVE BELOW
+
 def _test_err(request):
     """Dummy function raising for front end test purposes. Might be removed
     soon"""
     raise ValueError('this is a test error!')
+
+
+def test_request(request):
+    import time
+    time.sleep(3)
+    # return JsonResponse(data={'message': 'ok'}, status=200)
+    return JsonResponse(data={'message': """Examples
+Fetching an image
+
+In our basic fetch example (run example live) we use a simple fetch() call to grab an image and display it in an <img> element. The fetch() call returns a promise, which resolves to the Response object associated with the resource fetch operation.
+
+You'll notice that since we are requesting an image, we need to run Response.blob to give the response its correct MIME type."""}, status=400)
