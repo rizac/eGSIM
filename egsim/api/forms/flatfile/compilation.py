@@ -23,11 +23,11 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
     accept_empty_gsim_list = True  # see GsimImtForm
     accept_empty_imt_list = True
 
-    def response_data(self) -> dict:
-        """Return the response data from this Form input data (`self.cleaned_data`).
+    def output(self) -> dict:
+        """Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
 
-        :return: a response data Python object (e.g., a JSON-serializable dict)
+        :return: any Python object (e.g., a JSON-serializable dict)
         """
         cleaned_data = self.cleaned_data
         gsims = cleaned_data.get('gsim', [])
@@ -76,7 +76,12 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
 
         return cleaned_data
 
-    def response_data(self) -> dict:
+    def output(self) -> dict:
+        """Compute and return the output from the input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True
+
+        :return: any Python object (e.g., a JSON-serializable dict)
+        """
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
@@ -183,7 +188,12 @@ class FlatfileInspectionForm(APIForm, FlatfileForm):
         cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
         return cleaned_data
 
-    def response_data(self) -> dict:
+    def output(self) -> dict:
+        """Compute and return the output from the input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True
+
+        :return: any Python object (e.g., a JSON-serializable dict)
+        """
         cleaned_data = self.cleaned_data
         return {
             'columns': cleaned_data['flatfile_dtypes'],

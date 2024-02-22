@@ -175,7 +175,12 @@ class TrellisForm(GsimImtForm, APIForm):
         except Exception as exc:  # noqa
             raise ValidationError(self.ErrCode.invalid)
 
-    def response_data(self) -> pd.DataFrame:
+    def output(self) -> pd.DataFrame:
+        """Compute and return the output from the input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True
+
+        :return: any Python object (e.g., a JSON-serializable dict)
+        """
         cleaned_data = self.cleaned_data
         rup = RuptureProperties(**{p: cleaned_data[p]
                                    for p in self.rupture_fields

@@ -164,8 +164,9 @@ class RESTAPIView(View):
                         formats[frmt] = meth
         return formats
 
-    def response_json(self, form:APIForm) -> JsonResponse:
-        return JsonResponse(form.response_data())
+    def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
+        kwargs.setdefault('status', 200)
+        return JsonResponse(form.output(), **kwargs)
 
 
 # we need to provide the full URL of the views here, because the frontend need
@@ -181,16 +182,25 @@ class TrellisView(RESTAPIView):
     urls = (f'{API_PATH}/predictions',
             f'{API_PATH}/trellis', f'{API_PATH}/model2model')
 
-    def response_csv(self, form:APIForm):
-        return pandas_response(form.response_data(), MimeType.csv)
+    def response_csv(self, form:APIForm, **kwargs):
+        content = write_csv_to_buffer(form.output())
+        content.seek(0)  # for safety
+        kwargs.setdefault('content_type', MimeType.csv)
+        kwargs.setdefault('status', 200)
+        return FileResponse(content, **kwargs)
 
-    def response_hdf(self, form:APIForm):
-        return pandas_response(form.response_data(), MimeType.hdf)
+    def response_hdf(self, form:APIForm, **kwargs):
+        content = write_hdf_to_buffer({'egsim': form.output()})
+        content.seek(0)  # for safety
+        kwargs.setdefault('content_type', MimeType.hdf)
+        kwargs.setdefault('status', 200)
+        return FileResponse(content, **kwargs)
 
-    def response_json(self, form:APIForm) -> JsonResponse:
-        json_data = dataframe2dict(form.response_data(),
+    def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
+        json_data = dataframe2dict(form.output(),
                                    as_json=True, drop_empty_levels=True)
-        return JsonResponse(json_data)
+        kwargs.setdefault('status', 200)
+        return JsonResponse(json_data, **kwargs)
 
 
 class ResidualsView(RESTAPIView):
@@ -199,16 +209,25 @@ class ResidualsView(RESTAPIView):
     formclass = ResidualsForm
     urls = (f'{API_PATH}/residuals', f'{API_PATH}/model2data')
 
-    def response_csv(self, form:APIForm):
-        return pandas_response(form.response_data(), MimeType.csv)
+    def response_csv(self, form:APIForm, **kwargs):
+        content = write_csv_to_buffer(form.output())
+        content.seek(0)  # for safety
+        kwargs.setdefault('content_type', MimeType.csv)
+        kwargs.setdefault('status', 200)
+        return FileResponse(content, **kwargs)
 
-    def response_hdf(self, form:APIForm):
-        return pandas_response(form.response_data(), MimeType.hdf)
+    def response_hdf(self, form:APIForm, **kwargs):
+        content = write_hdf_to_buffer({'egsim': form.output()})
+        content.seek(0)  # for safety
+        kwargs.setdefault('content_type', MimeType.hdf)
+        kwargs.setdefault('status', 200)
+        return FileResponse(content, **kwargs)
 
-    def response_json(self, form:APIForm) -> JsonResponse:
-        json_data = dataframe2dict(form.response_data(),
+    def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
+        json_data = dataframe2dict(form.output(),
                                    as_json=True, drop_empty_levels=True)
-        return JsonResponse(json_data)
+        kwargs.setdefault('status', 200)
+        return JsonResponse(json_data, **kwargs)
 
 
 def error_response(error: Union[str, Exception, dict],
@@ -241,31 +260,32 @@ def error_response(error: Union[str, Exception, dict],
     return JsonResponse(content, status=status, **kwargs)
 
 
-def pandas_response(data:pd.DataFrame, content_type:Optional[str]=None,
-                    status=200, reason=None, headers=None, charset=None,
-                    as_stream=False) -> HttpResponseBase:  # usually FileResponse
-    """Return a `HTTPResponse` for serving pandas dataframes as either HDF or CSV
-
-    :param content_type: optional content type. See MimeType attr values. Defaults to
-        `MimeType.csv`
-    :param as_stream: if False (the default) return a `FileResponse`, otherwise
-        a `StreamingHttpResponse`
-    """
-    if content_type is None:  # the default is CSV:
-        content_type = MimeType.csv
-    if content_type == MimeType.csv:
-        content = write_csv_to_buffer(data)
-    elif content_type == MimeType.hdf:
-        content = write_hdf_to_buffer({'egsim': data})
-    else:
-        return error_response(f'cannot serve {data.__class__.__name__} '
-                              f'as type "{content_type}"', status=400)
-    kwargs = dict(status=status, content_type=content_type,
-                  reason=reason, headers=headers, charset=charset)
-    content.seek(0)  # for safety
-    if as_stream:
-        return StreamingHttpResponse(content, **kwargs)
-    return FileResponse(content, **kwargs)
+# FIXME REMOVE
+# def pandas_response(data:pd.DataFrame, content_type:Optional[str]=None,
+#                     status=200, reason=None, headers=None, charset=None,
+#                     as_stream=False) -> HttpResponseBase:  # usually FileResponse
+#     """Return a `HTTPResponse` for serving pandas dataframes as either HDF or CSV
+#
+#     :param content_type: optional content type. See MimeType attr values. Defaults to
+#         `MimeType.csv`
+#     :param as_stream: if False (the default) return a `FileResponse`, otherwise
+#         a `StreamingHttpResponse`
+#     """
+#     if content_type is None:  # the default is CSV:
+#         content_type = MimeType.csv
+#     if content_type == MimeType.csv:
+#         content = write_csv_to_buffer(data)
+#     elif content_type == MimeType.hdf:
+#         content = write_hdf_to_buffer({'egsim': data})
+#     else:
+#         return error_response(f'cannot serve {data.__class__.__name__} '
+#                               f'as type "{content_type}"', status=400)
+#     kwargs = dict(status=status, content_type=content_type,
+#                   reason=reason, headers=headers, charset=charset)
+#     content.seek(0)  # for safety
+#     if as_stream:
+#         return StreamingHttpResponse(content, **kwargs)
+#     return FileResponse(content, **kwargs)
 
 
 # functions to read from BytesIO:
