@@ -3,8 +3,8 @@
 from django.urls import re_path
 from django.views.generic.base import RedirectView
 
-from .views import (main, download_request, download_response,
-                    get_gsims_from_region, flatfile_inspection,
+from egsim.api.views import TrellisView, ResidualsView
+from .views import (main, get_gsims_from_region, flatfile_inspection,
                     flatfile_plot, flatfile_required_columns, URLS, test_request)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
@@ -38,6 +38,8 @@ urlpatterns = [
     # download response (json, csv, png, svg, ...) urls:
     # re_path(r'^%s/(?P<key>.+?)/(?P<filename>.+)$' % URLS.DOWNLOAD_RESPONSE,
     #         download_response),
+    re_path(r'^%s/?$' % URLS.DOWNLOAD_PREDICTIONS, TrellisView.as_view()),
+    re_path(r'^%s/?$' % URLS.DOWNLOAD_RESIDUALS, ResidualsView.as_view()),
 
     re_path(r'^%s/?$' % URLS.GET_GSIMS_FROM_REGION, get_gsims_from_region),
     re_path(r'^%s/?$' % URLS.FLATFILE_INSPECTION, flatfile_inspection),

@@ -8,7 +8,7 @@ import numpy as np
 from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE
 
-from .registry import (gsim_name, intensity_measures_defined_for, gsim,
+from .registry import (gsim_name, intensity_measures_defined_for, gsim, imt,
                        gsim_sa_limits, imt_name)
 
 

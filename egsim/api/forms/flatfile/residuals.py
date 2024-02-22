@@ -37,7 +37,12 @@ class ResidualsForm(GsimImtForm, FlatfileForm, APIForm):
 
         return cleaned_data
 
-    def response_data(self) -> pd.DataFrame:
+    def output(self) -> pd.DataFrame:
+        """Compute and return the output from the input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True
+
+        :return: any Python object (e.g., a JSON-serializable dict)
+        """
         cleaned_data = self.cleaned_data
         return get_residuals(cleaned_data["gsim"],
                              cleaned_data["imt"],

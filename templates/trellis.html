@@ -5,7 +5,7 @@
 			  :region-selected-url="urls.get_gsim_from_region"
 			  style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
-	<form novalidate @submit.prevent="postData(urls.trellis, forms.trellis).then(r => { responseData = r; })"
+	<form novalidate @submit.prevent="downloadResult(urls.trellis, forms.trellis, 'egsim-predictions')"
 		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 
 		<gsim-select :selected-model-names="forms.trellis.gsim"
@@ -52,7 +52,9 @@
 			<div class="input-group mt-1">
 				<div class='input-group-text'>msr</div>
 				<select v-model="forms.trellis['msr']" class='form-control'>
-					<option v-for="m in forms.misc.msr" :value="m[0]">{% verbatim %}{{ m[1] }}{% endverbatim %}</option>
+					<option v-for="m in forms.misc.msr" :value="m[0]">
+						{% verbatim %}{{ m[1] }}{% endverbatim %}
+					</option>
 				</select>
 			</div>
 
@@ -139,6 +141,12 @@
 
 		</div>
 
+		<select v-model='forms.trellis.format'>
+			<option v-for='format in forms.misc.download_formats' :value='format'>
+				{% verbatim %}{{ format }}{% endverbatim %}
+			</option>
+		</select>
+		<button type='submit'><i class='fa fa-download'></i> Compute</button>
 	</form>
 
 <!--	<trellis-plot-div :data="responseData"-->
