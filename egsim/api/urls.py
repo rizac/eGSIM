@@ -7,8 +7,7 @@ from http.client import responses
 
 from .views import TrellisView, ResidualsView, error_response
 
-# Watch out trailing slashes:
-# https://stackoverflow.com/questions/1596552/django-urls-without-a-trailing-slash-do-not-redirect
+# For trailing slashes in urls, see: https://stackoverflow.com/a/11690144
 
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),  # added by default by django

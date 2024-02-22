@@ -11,8 +11,7 @@ from urllib.parse import quote as urlquote
 import yaml
 import pandas as pd
 from django.core.exceptions import ValidationError
-from django.http import (JsonResponse, HttpRequest, QueryDict,
-                         StreamingHttpResponse, FileResponse, HttpResponseBase)
+from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
@@ -197,8 +196,8 @@ class TrellisView(RESTAPIView):
         return FileResponse(content, **kwargs)
 
     def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
-        json_data = dataframe2dict(form.output(),
-                                   as_json=True, drop_empty_levels=True)
+        json_data = dataframe2dict(form.output(), as_json=True,
+                                   drop_empty_levels=True)
         kwargs.setdefault('status', 200)
         return JsonResponse(json_data, **kwargs)
 
@@ -224,8 +223,8 @@ class ResidualsView(RESTAPIView):
         return FileResponse(content, **kwargs)
 
     def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
-        json_data = dataframe2dict(form.output(),
-                                   as_json=True, drop_empty_levels=True)
+        json_data = dataframe2dict(form.output(), as_json=True,
+                                   drop_empty_levels=True)
         kwargs.setdefault('status', 200)
         return JsonResponse(json_data, **kwargs)
 
@@ -258,34 +257,6 @@ def error_response(error: Union[str, Exception, dict],
     content.setdefault('message', message)
     kwargs.setdefault('content_type', MimeType.json)
     return JsonResponse(content, status=status, **kwargs)
-
-
-# FIXME REMOVE
-# def pandas_response(data:pd.DataFrame, content_type:Optional[str]=None,
-#                     status=200, reason=None, headers=None, charset=None,
-#                     as_stream=False) -> HttpResponseBase:  # usually FileResponse
-#     """Return a `HTTPResponse` for serving pandas dataframes as either HDF or CSV
-#
-#     :param content_type: optional content type. See MimeType attr values. Defaults to
-#         `MimeType.csv`
-#     :param as_stream: if False (the default) return a `FileResponse`, otherwise
-#         a `StreamingHttpResponse`
-#     """
-#     if content_type is None:  # the default is CSV:
-#         content_type = MimeType.csv
-#     if content_type == MimeType.csv:
-#         content = write_csv_to_buffer(data)
-#     elif content_type == MimeType.hdf:
-#         content = write_hdf_to_buffer({'egsim': data})
-#     else:
-#         return error_response(f'cannot serve {data.__class__.__name__} '
-#                               f'as type "{content_type}"', status=400)
-#     kwargs = dict(status=status, content_type=content_type,
-#                   reason=reason, headers=headers, charset=charset)
-#     content.seek(0)  # for safety
-#     if as_stream:
-#         return StreamingHttpResponse(content, **kwargs)
-#     return FileResponse(content, **kwargs)
 
 
 # functions to read from BytesIO:

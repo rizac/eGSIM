@@ -13,8 +13,7 @@ urlpatterns = [
     re_path(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                         permanent=False)),
 
-    # main page entry point, valid for all urls implemented in views.KEY:
-    # re_path(r'^(?P<selected_menu>%s)/?$' % "|".join(_.name for _ in TAB), main),
+    # html pages:
     re_path((r'^(?P<page>' +
              '|'.join([URLS.HOME_PAGE, URLS.PREDICTIONS_PAGE, URLS.RESIDUALS_PAGE,
                        URLS.FLATFILE_VISUALIZER_PAGE, URLS.FLATFILE_INFO_PAGE,
