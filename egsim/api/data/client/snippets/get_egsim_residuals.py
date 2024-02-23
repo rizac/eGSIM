@@ -41,11 +41,11 @@ def get_egsim_residuals(
 
     Returns:
 
-    a tabular structure
-    ([pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe))
+    A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
     where each row contains the
     input data and the computed residuals for a given flatfile record.
-    The table has a multi-level column header composed of 3 rows indicating:
+
+    The DataFrame column labels are composed of 3 hierarchical rows indicating:
 
     | Header row | Each 'residuals' cell indicates:                                  | Each 'input data' cell indicates:                                        |
     |------------|-------------------------------------------------------------------|--------------------------------------------------------------------------|
@@ -54,10 +54,8 @@ def get_egsim_residuals(
     | 3          | the requested model name                                          | the flatfile field name (e.g. "mag", "rrup")                             |
     |            | data ...                                                          | data ...                                                                 |
 
-    *Note: the table 1st column (called Index in pandas) reports the row position (starting from 0)
-    in the original flatfile*
-    """
-
+    The DataFrame row labels report the row position (starting from 0) in the original flatfile
+    """  # noqa
     # request parameters:
     parameters = {
         'model': model,

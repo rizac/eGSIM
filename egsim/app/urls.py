@@ -5,7 +5,8 @@ from django.views.generic.base import RedirectView
 
 from egsim.api.views import TrellisView, ResidualsView
 from .views import (main, get_gsims_from_region, flatfile_inspection,
-                    flatfile_plot, flatfile_required_columns, URLS, test_request)
+                    flatfile_plot, flatfile_required_columns, URLS, test_request,
+                    get_predictions_response_tutorial, get_residuals_response_tutorial)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
 
@@ -19,6 +20,12 @@ urlpatterns = [
                        URLS.FLATFILE_VISUALIZER_PAGE, URLS.FLATFILE_INFO_PAGE,
                        URLS.IMPRINT_PAGE, URLS.REF_AND_LICENSE_PAGE]) +
              ')/?$'), main),
+
+    re_path(r'^%s/?$' % URLS.RESIDUALS_RESPONSE_TUTORIAL_HTML,
+            get_residuals_response_tutorial),
+    re_path(r'^%s/?$' % URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
+            get_predictions_response_tutorial),
+
     # FIXME REMOVE CLEANUP
     # re_path(r'%s/?' % URLS.MAIN_PAGE_INIT_DATA, main_page_init_data),
 

@@ -4,7 +4,8 @@ Created on 17 Jan 2018
 @author: riccardo
 """
 from django.http import FileResponse
-from io import BytesIO
+from django.views.decorators.clickjacking import xframe_options_exempt
+from io import BytesIO, StringIO
 import json
 from shapely.geometry import shape
 
@@ -17,7 +18,9 @@ from ..api import models
 from ..api.forms.flatfile import FlatfileForm
 from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
                                               FlatfileInspectionForm, FlatfilePlotForm)
-from ..api.forms import GsimFromRegionForm
+from ..api.forms import GsimFromRegionForm, APIForm
+from ..api.forms.flatfile.residuals import ResidualsForm
+from ..api.forms.trellis import TrellisForm
 from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType
 from ..smtk import intensity_measures_defined_for
 
@@ -37,6 +40,10 @@ class URLS:  # noqa
     FLATFILE_INSPECTION = 'data/flatfile_inspection'
     DOWNLOAD_PREDICTIONS = 'download/egsim-predictions'
     DOWNLOAD_RESIDUALS = 'download/egsim-residuals'
+
+    PREDICTIONS_RESPONSE_TUTORIAL_HTML = 'jupyter/Predictions-response-tutorial.html'
+    RESIDUALS_RESPONSE_TUTORIAL_HTML = 'jupyter/Residuals-response-tutorial.html'
+
     # FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
     # FLATFILE_PLOT = 'data/flatfile_plot'
     # DOWNLOAD_REQUEST = 'data/downloadrequest'
@@ -153,7 +160,9 @@ def _get_init_data_json(debug=False) -> dict:
             'trellis': URLS.DOWNLOAD_PREDICTIONS,
             'residuals': URLS.DOWNLOAD_RESIDUALS,
             'flatfile_inspection': URLS.FLATFILE_INSPECTION,
-            'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION
+            'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
+            'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
+            'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL_HTML,
             # 'flatfile_inspection': 'data/flatfile_plot',
             # 'flatfile_compilation': 'data/flatfile_required_columns'
         },
@@ -227,6 +236,68 @@ def flatfile_inspection(request) -> JsonResponse:
 
 def flatfile_plot(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=FlatfilePlotForm)(request)
+
+
+@xframe_options_exempt
+def get_predictions_response_tutorial(request):
+    from egsim.api.data.client.snippets.get_egsim_predictions import \
+        get_egsim_predictions
+    api_form = TrellisForm({
+        'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+        'imt': ['PGA', 'SA(0.1)'],
+        'magnitude': [4, 5, 6],
+        'distance': [10, 100]
+    })
+    return _get_download_tutorial(request, 'predictions', api_form, get_egsim_predictions)
+
+
+@xframe_options_exempt
+def get_residuals_response_tutorial(request):
+    from egsim.api.data.client.snippets.get_egsim_residuals import \
+        get_egsim_residuals
+    api_form = ResidualsForm({
+        'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+        'imt': ['PGA', 'PGV'],
+        'data-query': 'mag > 7',
+        'flatfile': 'esm2018'
+    })
+    return _get_download_tutorial(request, 'residuals', api_form, get_egsim_residuals)
+
+
+def _get_download_tutorial(request, key:str, api_form:APIForm, api_client_function):
+    import re
+    doc = api_client_function.__doc__
+    # replace italic with <em>s:
+    doc = re.sub(r'\*(.*?)\*', f'<em>\\1</em>', doc, flags=re.DOTALL)
+
+    doc = doc[doc.index('Returns'):].strip()
+    doc = doc.split('\n\n')[1:]
+    doc[1] = doc[1].replace('indicating:', 'indicating (cf. table representation above):')
+    tbl = doc[2].strip().split("\n")
+    table_cls = 'table table-bordered table-light my-2'
+    doc[2] = (
+        f"<table class=\"{table_cls}\">"
+        f"<thead>"
+        f"<tr><td>{'</td><td>'.join(tbl[0].split('|')[1:-1])}</td></tr>"
+        f"</thead>"
+        f"<tbody>"
+        f"<tr><td>{'</td><td>'.join(tbl[2].split('|')[1:-1])}</td></tr>"
+        f"<tr><td>{'</td><td>'.join(tbl[3].split('|')[1:-1])}</td></tr>"
+        f"<tr><td>{'</td><td>'.join(tbl[4].split('|')[1:-1])}</td></tr>"
+        "</tbody>"
+        "</table>"
+    )
+
+    s = StringIO()
+    if api_form.is_valid():
+        api_form.output().to_html(s, index=True, classes=table_cls, border=0, max_rows=6)
+    return render(request, 'downloaded-data-tutorial.html',
+                  context={
+                      'key': key,
+                      'dataframe_html': s.getvalue(),
+                      'docstring_intro': doc[0][doc[0].index('where each row'):],
+                      'docstring_headers_intro': "\n\n".join(doc[1:])
+                  })
 
 
 # FIXME REMOVE / CLEANUP THE CODE BELOW AND ALL ITS USAGES! ===================

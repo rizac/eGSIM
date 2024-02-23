@@ -141,15 +141,50 @@
 
 		</div>
 
-		<select v-model='forms.trellis.format'>
-			<option v-for='format in forms.misc.download_formats' :value='format'>
-				{% verbatim %}{{ format }}{% endverbatim %}
-			</option>
-		</select>
-		<button type='submit'><i class='fa fa-download'></i> Compute</button>
+		<div class='d-flex flex-column mt-3 align-items-stretch'>
+			<div class="input-group-text"
+				 style="border-bottom: 0px !important; border-bottom-left-radius: 0px !important; border-bottom-right-radius: 0px !important;">
+				Compute predictions
+			</div>
+			<div class='d-flex flex-row form-control'
+				 style="border-top-left-radius: 0px !important; border-top-right-radius: 0px !important;">
+				<div class='input-group me-2'>
+					<select v-model='forms.trellis.format' class='form-control'>
+						<option v-for='format in forms.misc.download_formats' :value='format'>
+							{% verbatim %}{{ format }}{% endverbatim %}
+						</option>
+					</select>
+					<button
+						type='button'
+						@click="downloadResult(urls.trellis, forms.trellis, 'egsim-predictions')"
+						class='btn btn-primary text-nowrap' type='submit'
+						title='Download predictions'>
+						<i class='fa fa-download'></i>
+					</button>
+					<button type='button'
+							onclick='var elm=document.getElementById("trellis_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'
+							class='btn btn-light border'
+							style='border-left: 0px !important;'>
+						<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
+					</button>
+				</div>
+				<button type='button'
+						@click='getPlotData()'
+						class='btn btn-primary text-nowrap' type='submit' title='Visualize predictions'>
+					<i class='fa fa-area-chart'></i>
+				</button>
+			</div>
+		</div>
 	</form>
 
-<!--	<trellis-plot-div :data="responseData"-->
+	<iframe
+		id='trellis_tutorial'
+		class='p-3 bg-white d-none position-absolute border-0 shadow' style='width:50vw; height: 100%; right:0'
+		:data-src=urls.predictions_response_tutorial>
+	</iframe>
+
+
+	<!--	<trellis-plot-div :data="responseData"-->
 <!--					  class='invisible position-absolute start-0 top-0 end-0 bottom-0'-->
 <!--					  :style="{visibility: Object.keys(responseData).length ? 'visible !important' : '', 'z-index':1}">-->
 <!--	</trellis-plot-div>-->
