@@ -531,26 +531,29 @@ EGSIM.component('gsim-map', {
 EGSIM.component('flatfile-select', {
 	props: {
 		flatfiles: {type: Array},  // Array of Objet with keys value (str or File), key, innerHTML, url, columns
-		selectedFlatfile: {type: String, default: null},
+		modelValue: {type: String, default: null},
 		flatfileQuery: {type: String},
 		uploadUrl: {type: String}
 	},
 	data(){
-		return { selectedIndex: this.flatfiles.map(f => f.name).indexOf(this.selectedFlatfile) };
+		return { selectedIndex: -1 };
 	},
-	emits: ['flatfile-selected'],
+	emits: ['update:modelValue'],
 	watch: {
 		selectedIndex:{
 			handler(newVal, oldVal){
-				this.selectedFlatfile = newVal !== undefined && newVal >= 0 ? this.flatfiles[newVal].value : null;
+				var selectedFlatfile = newVal !== undefined && newVal >= 0 ? this.flatfiles[newVal].value : null;
+				if (selectedFlatfile != this.modelValue){
+					this.$emit('update:modelValue', selectedFlatfile);
+				}
 			}
 		},
-		selectedFlatfile: {
+		modelValue: {
 			deep: true,
 			immediate: true,
 			handler(newVal, oldVal){
-				if (newVal){
-					this.$emit('flatfile-selectedf', ... [newVal.value, newVal.columns]);
+				if (newVal != oldVal){
+					var selectedIndex = this.flatfiles.map(f => f.name).indexOf(newVal);
 				}
 			}
 		}
@@ -599,7 +602,8 @@ EGSIM.component('flatfile-select', {
 			</select>
 			<a aria-label='flatfile reference (opens in new tab)' target="_blank"
 				style='padding: .375rem .75rem;'
-				class='border-top border-bottom bg-white' v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
+				class='border-top border-bottom bg-white'
+				v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
 				:href="flatfiles[selectedIndex].url">
 				<i class="fa fa-link"></i>
 			</a>

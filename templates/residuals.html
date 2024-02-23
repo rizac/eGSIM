@@ -20,7 +20,7 @@
 		<flatfile-select
 			class= 'mt-3'
 			:flatfiles='flatfiles'
-			:selected-flatfile="forms.residuals.flatfile"
+			v-model="forms.residuals.flatfile"
 			:data-query="forms.residuals['data-query']"
 			:upload-url='urls.flatfile_inspection'>
 		</flatfile-select>

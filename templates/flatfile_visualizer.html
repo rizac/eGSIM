@@ -5,7 +5,7 @@
 			<div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
 				<flatfile-select
 					:flatfiles='flatfiles'
-					:selected-flatfile="forms.flatfile_inspection.flatfile"
+					v-model="forms.flatfile_inspection.flatfile"
 					:data-query="forms.flatfile_inspection['data-query']"
 					:upload-url='urls.flatfile_inspection'
 					@flatfile-selected="(value, columns) => {forms.misc.flatfile_inspection_columns=[null].concat(columns)}"
