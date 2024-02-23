@@ -34,12 +34,12 @@ def get_egsim_predictions(
 
     Returns:
 
-    a tabular structure
-    ([pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe))
+    A [pandas DataFrame](https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe)
     where each row contains the input data and
     the computed predictions for a given scenario (i.e., a combination
-    of a configured Rupture and Site properties). The table has a multi-level column header
-    composed of 3 rows indicating:
+    of a configured Rupture and Site properties).
+
+    The DataFrame column labels are composed of 3 hierarchical rows indicating:
 
     | Header row |  Each 'predictions' cell indicates:                    | Each 'input data' cell indicates:                                    |
     |------------|--------------------------------------------------------|----------------------------------------------------------------------|
@@ -48,9 +48,8 @@ def get_egsim_predictions(
     | 3          | the requested model name                               | the input data name (e.g. "mag", "rrup")                             |
     |            | data ...                                               | data ...                                                             |
 
-    *Note: the table 1st column (called Index in pandas) reports an incremental row identifier
-    (starting from 0) unrelated to the rest of the row data*
-    """
+    The DataFrame row labels report an unique row identifier (incremental and starting from 0)
+    """  # noqa
     # request parameters (concatenate with site_config and rupture_config):
     parameters = {}
     if site_params:

@@ -181,3 +181,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Use a singleton, custom no-op renderer to speed up Forms and Errors initialization
 FORM_RENDERER = 'egsim.api.forms.get_base_singleton_renderer'
+
+# # Since Django 3.0. The default value of the X_FRAME_OPTIONS setting was changed from SAMEORIGIN to DENY, restore it back:
+# X_FRAME_OPTIONS = 'SAMEORIGIN'
