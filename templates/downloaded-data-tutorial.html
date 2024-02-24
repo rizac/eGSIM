@@ -71,10 +71,9 @@ dataframe.to_hdf(file_path, key=table_key, format="table")
 <i>
 	Disclaimer: We discourage the use of CSV files. The format is much less performant than
 	HDF, resulting in bigger files size and slower download, and does not store all required
-	information: aw such, the code snippets below might require additional arguments
-	or code fixes, especially when reading or writing DataFrames with missing data or
-	non-standard column types (e.g. categorical).
-	Consult the pandas doc (link above) in case.
+	information: as such, you might need to fix potential issues with additional code
+	(see the pandas doc at the link above in case), especially when reading or writing
+	DataFrames with missing data or non-standard column types (e.g. categorical).
 </i>
 
 <pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas

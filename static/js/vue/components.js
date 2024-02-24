@@ -16,7 +16,7 @@ EGSIM.component('array-input', {
 			handler(newVal, oldVal) {
 				if (newVal === undefined){ newVal = []; }
 				if (this.modelValueChanged(newVal)){
-					this.modelValue2str = newVal.join(' ')
+					this.modelValue2str = newVal.join(' ');
 				}
 			}
 		},
@@ -592,34 +592,28 @@ EGSIM.component('flatfile-select', {
 			});
 		}
 	},
-	template:`<div>
-		<div class='input-group align-items-baseline'>
-			<label class='input-group-text'> data </label>
-			<select v-model="selectedIndex" class='form-control'>
-				<option v-for="(v, idx) in flatfiles" :value='idx'>
-					{{ v.innerHTML }}
-				</option>
-			</select>
-			<a aria-label='flatfile reference (opens in new tab)' target="_blank"
-				style='padding: .375rem .75rem;'
-				class='border-top border-bottom bg-white'
-				v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
-				:href="flatfiles[selectedIndex].url">
-				<i class="fa fa-link"></i>
-			</a>
-			<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
-			<button
-				type="button"
-				class="btn border bg-white"
-				onclick="this.parentNode.querySelector('input[type=file]').click()"
-				style='border-left-width: 0 !important'
-				aria-label=''>
-				upload
-			</button>
-		</div>
-		<div class='input-group mt-1'>
-			<label class='input-group-text'>data-query</label>
-			<input type='text' v-model='flatfileQuery' class='form-control'/>
-		</div>
+	template:`<div class='input-group align-items-baseline'>
+		<label class='input-group-text'> data </label>
+		<select v-model="selectedIndex" class='form-control'>
+			<option v-for="(v, idx) in flatfiles" :value='idx'>
+				{{ v.innerHTML }}
+			</option>
+		</select>
+		<a aria-label='flatfile reference (opens in new tab)' target="_blank"
+			style='padding: .375rem .75rem;'
+			class='border-top border-bottom bg-white'
+			v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
+			:href="flatfiles[selectedIndex].url">
+			<i class="fa fa-link"></i>
+		</a>
+		<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
+		<button
+			type="button"
+			class="btn border bg-white"
+			onclick="this.parentNode.querySelector('input[type=file]').click()"
+			style='border-left-width: 0 !important'
+			aria-label=''>
+			upload
+		</button>
 	</div>`
 });

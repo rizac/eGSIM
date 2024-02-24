@@ -6,11 +6,14 @@
 				<flatfile-select
 					:flatfiles='flatfiles'
 					v-model="forms.flatfile_inspection.flatfile"
-					:data-query="forms.flatfile_inspection['data-query']"
 					:upload-url='urls.flatfile_inspection'
 					@flatfile-selected="(value, columns) => {forms.misc.flatfile_inspection_columns=[null].concat(columns)}"
 				>
 				</flatfile-select>
+				<div class='input-group ms-1'>
+					<label class='input-group-text'>data-query</label>
+					<input type='text' v-model="forms.flatfile_inspection['data-query']" class='form-control'/>
+				</div>
 				<div class='d-flex flex-column' v-if="!!forms.flatfile_inspection.flatfile">
 					<label>x</label>
 					<select v-model='forms.flatfile_inspection.x'>
