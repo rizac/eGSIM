@@ -531,7 +531,7 @@ EGSIM.component('gsim-map', {
 EGSIM.component('flatfile-select', {
 	props: {
 		flatfiles: {type: Array},  // Array of Objet with keys value (str or File), key, innerHTML, url, columns
-		modelValue: {type: String, default: null},
+		modelValue: {type: [String, File], default: null},
 		flatfileQuery: {type: String},
 		uploadUrl: {type: String}
 	},
@@ -543,43 +543,42 @@ EGSIM.component('flatfile-select', {
 		selectedIndex:{
 			handler(newVal, oldVal){
 				var selectedFlatfile = newVal !== undefined && newVal >= 0 ? this.flatfiles[newVal].value : null;
-				if (selectedFlatfile != this.modelValue){
-					this.$emit('update:modelValue', selectedFlatfile);
-				}
+				this.$emit('update:modelValue', selectedFlatfile);
 			}
 		},
 		modelValue: {
 			deep: true,
 			immediate: true,
 			handler(newVal, oldVal){
-				if (newVal != oldVal){
-					var selectedIndex = this.flatfiles.map(f => f.name).indexOf(newVal);
-				}
+				var selectedIndex = this.flatfiles.map(f => f.name).indexOf(newVal);
 			}
 		}
 	},
 	methods:{
 		uploadFlatfiles(files){
 			var choices = this.flatfiles;
+			var self = this;
 			for(var index = 0; index < files.length; index++){
 				var file = files[index];
 				var label = `${file.name} (${new Date().toLocaleString()})`;
 				var append = true;
 				for (let choice of choices){
-					if (choice.value instanceof File && choice.value.name == file.name){
-						this.upload(file).then(response => {
+					if (choice.value instanceof File && choice.name == file.name){
+						this.upload(file).then(data => {
 							choice.value = file;
 							choice.innerHTML = label;  // update label on <select>
-							choice.columns = response.data.columns;
+							choice.columns = data.columns;
+							self.selectedIndex = index;
 						});
 						append = false;
 						break;
 					}
 				}
 				if (append){
-					this.upload(file).then(response => {
-						var cols = response.data.columns;
-						choices.push({ value: file, innerHTML: label, columns: cols });
+					this.upload(file).then(data => {
+						var cols = data.columns;
+						choices.push({ name: file.name, value: file, innerHTML: label, columns: cols });
+						self.selectedIndex = choices.length - 1;
 					});
 				}
 			}
@@ -587,9 +586,11 @@ EGSIM.component('flatfile-select', {
 		upload(file){  // return a Promise
 			var formData = new FormData();
 			formData.append("flatfile", file);
-			return fetch(this.uploadUrl, formData, {
-				headers: { 'Content-Type': 'multipart/form-data' }
-			});
+			return fetch(this.uploadUrl, {
+				method: "POST",
+				body: formData
+				// headers: { 'Content-Type': 'multipart/form-data' }  // not needed actually
+			}).then(resp => resp.json());
 		}
 	},
 	template:`<div class='input-group align-items-baseline'>

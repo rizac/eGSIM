@@ -139,11 +139,10 @@ def yield_event_contexts(flatfile: pd.DataFrame) -> Iterable[EventContext]:
     # check event id column or use the event location to group events:
     # group flatfile by events. Use ev. id (_EVENT_COLUMNS[0]) or, when
     # no ID found, event spatio-temporal coordinates (_EVENT_COLUMNS[1:])
-    ev_sub_flatfiles = flatfile.groupby(get_event_id_column_names(flatfile))
-    # FIXME: FutureWarning: In a future version of pandas, a length 1 tuple
-    #   will be returned when iterating over a groupby with a grouper equal to
-    #   a list of length 1. Don't supply a list with a single grouper to avoid
-    #   this warning.
+    ev_id_cols = get_event_id_column_names(flatfile)
+    ev_sub_flatfiles = flatfile.groupby(  # https://stackoverflow.com/a/75478319
+        ev_id_cols[0] if len(ev_id_cols) == 1 else ev_id_cols
+    )
     for ev_id, dfr in ev_sub_flatfiles:
         if not dfr.empty:  # for safety ...
             yield EventContext(dfr)

@@ -1,11 +1,15 @@
-<div class="rounded align-items-stretch position-absolute d-flex flex-column shadow" role="alert"
-	 style='z-index:2000;top: 50%; left: 50%; transform: translateX(-50%) translateY(-50%);'>
-	<div class='text-end p-2 pt-1 rounded-top' style='background-color:darkred;color:white'>
-		<i class="fa fa-times-circle ms-3" title='close' onclick='this.parentNode.parentNode.remove()' style='cursor:pointer'></i>
-	</div>
-	<div class='bg-white py-1 px-3 rounded-bottom border-top-0'
-		 style='max-height:50vh;max-width:max-width: max(33vw, 40rem);overflow:auto;border:1px solid darkred;color:darkred'>
+<div class="text-danger bg-white rounded align-items-stretch position-absolute d-flex flex-column shadow border-danger p-2"
+	 role="alert"
+	 style='z-index:2000;top: 50%; left: 50%; transform: translateX(-50%) translateY(-50%);border-width:1px;border-style:solid'>
+	<div class='p-3'
+		 style='max-height:50vh;max-width:max-width: max(33vw, 40rem);overflow:auto;'>
 		<i class="fa fa-exclamation-triangle me-1"></i>
 		{{ content }}
+	</div>
+	<div class='text-center mt-2'>
+		<button class='btn btn-sm btn-danger' onclick='this.parentNode.parentNode.remove()' type='button'
+			style='width:100%'>
+			<i class="fa fa-times-circle ms-3" title='close'></i> close
+		</button>
 	</div>
 </div>

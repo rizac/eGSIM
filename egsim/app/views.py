@@ -131,7 +131,7 @@ def _get_init_data_json(debug=False) -> dict:
                                           'media_root_path'):
         flatfiles.append({
             'value': ffile.name,
-            'key': ffile.name,
+            'name': ffile.name,
             'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
             'url': ffile.url,  # noqa
             'columns': FlatfileForm.get_flatfile_dtypes(ffile.read_from_filepath(nrows=0))
