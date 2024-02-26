@@ -1,19 +1,21 @@
 {% extends 'base.html' %}
 
 {% block head %}
-
-{% with vue=True plotly=False leaflet=False fontawesome=True %}
+{% with vue=False plotly=False leaflet=False fontawesome=True %}
 {{ block.super }}
 {% endwith %}
+{% endblock %}
 
+
+{% block end-of-head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/rainbow.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <!-- and it's easy to individually load additional languages -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
 {% endblock %}
 
-{% block body %}
 
+{% block body %}
 <div style='max-width:60rem;line-height:2'>
 
 <div>eGSIM computed {{ key }} are arranged in a tabular structure {{ docstring_intro | safe }}
@@ -103,6 +105,11 @@ efficiently manipulate the data in your DataFrame. For further reading, see this
 </a>.
 </div>
 
+</div>
+{% endblock %}
+
+
+{% block end-of-body %}
 
 {% with bootstrap_js=False %}
 {{ block.super }}

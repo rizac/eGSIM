@@ -4,45 +4,41 @@
 	<meta charset="UTF-8">
 	<title>eGSIM</title>
 
-	{% block fonts %}
-		<!-- load font now, set font later when loaded (otherwise it could not be applied) -->
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed&family=Encode+Sans+Condensed&display=swap" rel="stylesheet">
-	{% endblock %}
-
-	{% block fontloadingscript %}
-		<script type="text/javascript">
-		document.fonts.ready.then(() => {  // https://developer.mozilla.org/en-US/docs/Web/API/Document/fonts
-			var style = document.createElement('style');
-			style.type = 'text/css';
-			style.innerHTML = `
-				body{
-					font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
-				}
-				h1, h2, h3, h4, h5, h6, nav, label{
-					font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
-				}
-			`;
-			document.head.appendChild(style);
-		});
-		</script>
-	{% endblock %}
-
 	{% block head %}
+
+	<!-- load font now, set font later when loaded (otherwise it could not be applied) -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed&family=Encode+Sans+Condensed&display=swap" rel="stylesheet">
+
+	<script type="text/javascript">
+	document.fonts.ready.then(() => {  // https://developer.mozilla.org/en-US/docs/Web/API/Document/fonts
+		var style = document.createElement('style');
+		style.type = 'text/css';
+		style.innerHTML = `
+			body{
+				font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
+			}
+			h1, h2, h3, h4, h5, h6, nav, label{
+				font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
+			}
+		`;
+		document.head.appendChild(style);
+	});
+	</script>
+
 	{% if vue %}
-		{% if debug %}
-		<script src="https://unpkg.com/vue@3.4.18/dist/vue.global.js"></script>
-		{% else %}
-		<script src="https://unpkg.com/vue@3.4.18/dist/vue.global.prod.js"></script>
-		{% endif %}
+	{% if debug %}
+	<script src="https://unpkg.com/vue@3.4.18/dist/vue.global.js"></script>
+	{% else %}
+	<script src="https://unpkg.com/vue@3.4.18/dist/vue.global.prod.js"></script>
+	{% endif %}
 	{% endif %}
 
 	<!-- BOOTSTRAP CSS must be loaded before custom classes if we want to override it -->
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
 		  rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
 		  crossorigin="anonymous">
-
 
 	{% if leaflet %}
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -59,35 +55,33 @@
 	{% endif %}
 
 	{% if plotly %}
-		{% if debug %}
-			<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.29.1/plotly-cartesian.js"></script>
-		{% else %}
-			<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.29.1/plotly-cartesian.min.js"></script>
-		{% endif %}
-		<!-- library-related css here: -->
-		<style>/* hide upper-right toolbar in plots: */ div.modebar.modebar--hover{ display: none; }</style>
+	{% if debug %}
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.29.1/plotly-cartesian.js"></script>
+	{% else %}
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.29.1/plotly-cartesian.min.js"></script>
+	{% endif %}
+	<!-- library-related css here: -->
+	<style>/* hide upper-right toolbar in plots: */ div.modebar.modebar--hover{ display: none; }</style>
 	{% endif %}
 
 	<!-- egsim base css. Load at the real end:  -->
 	<link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
-	{% endblock %}
-
-	{% block extra-head %}
-	{% endblock %}
+	{% endblock head %}
 
 	<link rel="shortcut icon" href="{% static 'img/favicon.png' %}" type="image/png"/>
+
+	{% block end-of-head %}{% endblock %}
 </head>
 
 <body>
-{% block body %}
+{% block body %}{% endblock %}
 
+{% block end-of-body %}
 {% if bootstrap_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
 		integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
 		crossorigin="anonymous"></script>
 {% endif %}
-
-{% endblock %}
+{% endblock end-of-body %}
 </body>
-{% block after-body %}{% endblock %}
 </html>
