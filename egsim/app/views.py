@@ -16,8 +16,9 @@ from django.conf import settings
 
 from ..api import models
 from ..api.forms.flatfile import FlatfileForm
-from ..api.forms.flatfile.compilation import (FlatfileRequiredColumnsForm,
-                                              FlatfileInspectionForm, FlatfilePlotForm)
+from ..api.forms.flatfile.management import (FlatfileMetadataInfoForm,
+                                             FlatfileValidationForm,
+                                             FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.flatfile.residuals import ResidualsForm
 from ..api.forms.trellis import TrellisForm
@@ -35,9 +36,12 @@ class URLS:  # noqa
 
     # Url for getting the gsim list from a given geographic location:
     # FIXME: MOVE OUT OF REGIONALIZATION dict
-    GET_GSIMS_FROM_REGION = 'data/get_models_from_region'
+    GET_GSIMS_FROM_REGION = 'gui/get_models_from_region'
     # inspecting a flatfile:
-    FLATFILE_INSPECTION = 'data/flatfile_inspection'
+    FLATFILE_VALIDATION = 'gui/flatfile_validation'
+    FLATFILE_VISUALIZATION = 'gui/flatfile_visualization'
+    FLATFILE_META_INFO = 'gui/get_flatfile_meta_info'
+
     DOWNLOAD_PREDICTIONS = 'download/egsim-predictions'
     DOWNLOAD_RESIDUALS = 'download/egsim-residuals'
 
@@ -53,8 +57,8 @@ class URLS:  # noqa
     # API = 'api'
     HOME_PAGE = 'home'
     DATA_PROTECTION_PAGE = 'https://www.gfz-potsdam.de/en/data-protection/'
-    FLATFILE_INFO_PAGE = 'flatfile-info'
-    FLATFILE_VISUALIZER_PAGE = 'flatfile-visualizer'
+    FLATFILE_META_INFO_PAGE = 'flatfile-meta-info'
+    FLATFILE_VISUALIZATION_PAGE = 'flatfile-visualizer'
     IMPRINT_PAGE = "imprint"
     PREDICTIONS_PAGE = 'predictions'
     RESIDUALS_PAGE = 'residuals'
@@ -139,18 +143,31 @@ def _get_init_data_json(debug=False) -> dict:
 
     # Get component props (core data needed for Vue rendering):
     # components_props = get_components_properties(debug)
-    inits = {'gsim': [], 'imt': [], 'regionalization': None, 'format': 'hdf'}
+    default_models = []
+    default_imts = []
     if debug:
-        inits['gsim'] = ['CauzziEtAl2014', 'BindiEtAl2014Rjb']
-        inits['imt'] = ['PGA', 'SA(0.1)']
-    trellis_form = TrellisView.formclass({'magnitude': [1, 2], 'distance': [3], **inits})
-    residuals_form = ResidualsView.formclass(inits)
+        default_models = ['CauzziEtAl2014', 'BindiEtAl2014Rjb']
+        default_imts = ['PGA', 'SA(0.1)']
+    trellis_form = TrellisView.formclass({
+        'gsim': default_models,
+        'imt': default_imts,
+        'regionalization': None,
+        'magnitude': [1, 2],
+        'distance': [3],
+        'format': 'hdf'
+    })
+    residuals_form = ResidualsView.formclass({
+        'gsim': default_models,
+        'imt': default_imts,
+        'regionalization': None,
+        'format': 'hdf'
+    })
     return {
         'pages': {  # tab key => url path (after the first slash)
             'predictions': URLS.PREDICTIONS_PAGE,
             'residuals': URLS.RESIDUALS_PAGE,
-            'flatfile_info': URLS.FLATFILE_INFO_PAGE,
-            'flatfile_visualizer': URLS.FLATFILE_VISUALIZER_PAGE,
+            'flatfile_meta_info': URLS.FLATFILE_META_INFO_PAGE,
+            'flatfile_visualizer': URLS.FLATFILE_VISUALIZATION_PAGE,
             'ref_and_license': URLS.REF_AND_LICENSE_PAGE,
             'imprint': URLS.IMPRINT_PAGE,
             'home': URLS.HOME_PAGE,
@@ -159,24 +176,35 @@ def _get_init_data_json(debug=False) -> dict:
         'urls': {
             'trellis': URLS.DOWNLOAD_PREDICTIONS,
             'residuals': URLS.DOWNLOAD_RESIDUALS,
-            'flatfile_inspection': URLS.FLATFILE_INSPECTION,
             'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
+            'flatfile_meta_info': URLS.FLATFILE_META_INFO,
+            'flatfile_visualization': URLS.FLATFILE_VISUALIZATION,
+            'flatfile_validation': URLS.FLATFILE_VALIDATION,
             'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
             'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL_HTML,
-            # 'flatfile_inspection': 'data/flatfile_plot',
-            # 'flatfile_compilation': 'data/flatfile_required_columns'
         },
         'forms': {
             'trellis': trellis_form.asdict(),
             'residuals': residuals_form.asdict(),
-            'flatfile_compilation': dict(inits),
-            'flatfile_inspection': FlatfilePlotForm({}).asdict(),
+            'flatfile_meta_info': FlatfileMetadataInfoForm({
+                'gsim': default_models,
+                'imt': default_imts,
+                'regionalization': None
+            }).asdict(),
+            'flatfile_visualization': FlatfilePlotForm({}).asdict(),
             'misc': {
                 'msr': trellis_form.fields['msr'].choices,
                 'region': trellis_form.fields['region'].choices,
                 'flatfile_inspection_columns': [],
+                'flatfile_meta_info_show_dialog': False,
                 'download_formats': ['hdf', 'csv']
             }
+        },
+        'responses': {
+            'trellis': None,
+            'residuals': None,
+            'flatfile_meta_info': None,
+            'flatfile_visualization': None,
         },
         'gsims': gsims,
         # return the list of imts (imt_groups keys) in the right order:
@@ -226,12 +254,12 @@ def get_gsims_from_region(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
 
 
-def flatfile_required_columns(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfileRequiredColumnsForm)(request)
+def flatfile_validation(request) -> JsonResponse:
+    return RESTAPIView.as_view(formclass=FlatfileValidationForm)(request)
 
 
-def flatfile_inspection(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfileInspectionForm)(request)
+def flatfile_meta_info(request) -> JsonResponse:
+    return RESTAPIView.as_view(formclass=FlatfileMetadataInfoForm)(request)
 
 
 def flatfile_plot(request) -> JsonResponse:

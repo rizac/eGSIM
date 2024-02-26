@@ -1,22 +1,22 @@
 <div class='position-relative' style="flex: 1 1 auto;">
 	<div class='mb-3'>
-	<form novalidate @submit.prevent="postData(urls.flatfile_inspection, forms.flatfile_inspection).then(r => { responseData = r; })"
+	<form novalidate @submit.prevent="postData(urls.flatfile_visualization, forms.flatfile_visualization).then(r => { responseData = r; })"
 		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 			<div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
 				<flatfile-select
 					:flatfiles='flatfiles'
-					v-model="forms.flatfile_inspection.flatfile"
-					:upload-url='urls.flatfile_inspection'
-					@update:model-value="(value) => { forms.flatfile_inspection.x=null; forms.flatfile_inspection.y=null; forms.misc.flatfile_inspection_columns=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns;   }"
+					v-model="forms.flatfile_visualization.flatfile"
+					:upload-url='urls.flatfile_visualization'
+					@update:model-value="(value) => { forms.flatfile_visualization.x=null; forms.flatfile_visualization.y=null; forms.misc.flatfile_inspection_columns=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns;   }"
 				>
 				</flatfile-select>
 				<div class='input-group ms-1'>
 					<label class='input-group-text'>data-query</label>
-					<input type='text' v-model="forms.flatfile_inspection['data-query']" class='form-control'/>
+					<input type='text' v-model="forms.flatfile_visualization['data-query']" class='form-control'/>
 				</div>
 				<div class='input-group ms-3' v-if="Object.keys(forms.misc.flatfile_inspection_columns).length">
 					<label class='input-group-text'>x</label>
-					<select v-model='forms.flatfile_inspection.x' class='form-control'>
+					<select v-model='forms.flatfile_visualization.x' class='form-control'>
 						<option :value="null">None (histogram on the Y axis)</option>
 						<option v-for="v in Object.keys(forms.misc.flatfile_inspection_columns)" :value="v">
 							{% verbatim %} {{ v + ' (' + forms.misc.flatfile_inspection_columns[v] + ")" }} {% endverbatim %}
@@ -25,7 +25,7 @@
 				</div>
 				<div class='input-group ms-3' v-if="Object.keys(forms.misc.flatfile_inspection_columns).length">
 					<label class='input-group-text'>y</label>
-					<select v-model='forms.flatfile_inspection.y' class='form-control'>
+					<select v-model='forms.flatfile_visualization.y' class='form-control'>
 						<option :value="null">None (histogram on the X axis)</option>
 						<option v-for="v in Object.keys(forms.misc.flatfile_inspection_columns)" :value="v">
 							{% verbatim %} {{ v + ' (' + forms.misc.flatfile_inspection_columns[v] + ")" }} {% endverbatim %}

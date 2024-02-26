@@ -4,9 +4,10 @@ from django.urls import re_path
 from django.views.generic.base import RedirectView
 
 from egsim.api.views import TrellisView, ResidualsView
-from .views import (main, get_gsims_from_region, flatfile_inspection,
-                    flatfile_plot, flatfile_required_columns, URLS, test_request,
-                    get_predictions_response_tutorial, get_residuals_response_tutorial)
+from .views import (main, get_gsims_from_region, flatfile_meta_info,
+                    flatfile_plot, flatfile_validation, URLS, test_request,
+                    get_predictions_response_tutorial,
+                    get_residuals_response_tutorial)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
 
@@ -17,7 +18,7 @@ urlpatterns = [
     # html pages:
     re_path((r'^(?P<page>' +
              '|'.join([URLS.HOME_PAGE, URLS.PREDICTIONS_PAGE, URLS.RESIDUALS_PAGE,
-                       URLS.FLATFILE_VISUALIZER_PAGE, URLS.FLATFILE_INFO_PAGE,
+                       URLS.FLATFILE_VISUALIZATION_PAGE, URLS.FLATFILE_META_INFO_PAGE,
                        URLS.IMPRINT_PAGE, URLS.REF_AND_LICENSE_PAGE]) +
              ')/?$'), main),
 
@@ -48,9 +49,9 @@ urlpatterns = [
     re_path(r'^%s/?$' % URLS.DOWNLOAD_RESIDUALS, ResidualsView.as_view()),
 
     re_path(r'^%s/?$' % URLS.GET_GSIMS_FROM_REGION, get_gsims_from_region),
-    re_path(r'^%s/?$' % URLS.FLATFILE_INSPECTION, flatfile_inspection),
-    # re_path(r'^%s/?$' % URLS.FLATFILE_REQUIRED_COLUMNS, flatfile_required_columns),
-    # re_path(r'^%s/?$' % URLS.FLATFILE_PLOT, flatfile_plot),
+    re_path(r'^%s/?$' % URLS.FLATFILE_VALIDATION, flatfile_validation),
+    re_path(r'^%s/?$' % URLS.FLATFILE_META_INFO, flatfile_meta_info),
+    re_path(r'^%s/?$' % URLS.FLATFILE_VISUALIZATION, flatfile_plot),
 
     # test stuff: (FIXME: REMOVE)
     # url(r'_test_err', _test_err),

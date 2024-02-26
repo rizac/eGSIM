@@ -1,0 +1,90 @@
+<div class='position-relative d-flex flex-row' style="flex: 1 1 auto;">
+
+	<div class='border my-5 start-50 position-absolute top-0 bottom-0 d-flex flex-column shadow bg-white'
+			style='z-index:1000;transform: translateX(-50%)' v-if="forms.misc.flatfile_meta_info_show_dialog">
+
+		<div class='p-3'>Select your models and intensity measure types of interest
+			<span class='small text-muted'>(no model selected = all models selected)</span>
+		</div>
+		<div style='flex: 1 1 auto' class='my-2 position-relative border-top border-bottom'>
+			<gsim-map @gsim-selected="(gs) => { forms.flatfile_meta_info.gsim = Array.from(new Set(forms.flatfile_meta_info.gsim.concat(gs))) }"
+					  @gsim-unselected="(gs) => { forms.flatfile_meta_info.gsim = forms.flatfile_meta_info.gsim.filter(g => !gs.includes(g)); }"
+					  :regionalizations="regionalizations"
+					  :region-selected-url="urls.get_gsim_from_region"
+					  style='position:absolute;inset:0px;z-index:0'>
+			</gsim-map>
+
+			<form novalidate @submit.prevent=""
+				  class='position-absolute d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:10'>
+
+				<gsim-select :selected-model-names="forms.flatfile_meta_info.gsim"
+							 :models="models"
+							 :selected-imts="forms.flatfile_meta_info.imt"
+							 style="flex: 0 1 auto; min-height:0px">
+				</gsim-select>
+
+				<imt-select :selected-imts="forms.flatfile_meta_info.imt" :imts='imts' class='mt-3'></imt-select>
+
+			</form>
+		</div>
+		<div class="p-2 text-center">
+			<button class='btn btn-primary me-2' type='button'
+					@click='postData(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info_show_dialog=false'>
+				Fetch required flatfile fields
+			</button>
+			<button class='btn btn-primary' type='button'
+					@click='forms.misc.flatfile_meta_info_show_dialog=false'>
+				Close dialog
+			</button>
+		</div>
+
+	</div>
+
+
+	<div class='position-absolute top-0 bottom-0 end-0 start-0 m-5 d-flex flex-column'>
+
+		<div class='text-justify'>
+		The data required in Model-to-data comparison must be uploaded in eGSIM in form of
+		flatfile. A flatfile is a zipped or uncompressed CSV file where each
+		row represents an observed seismic waveform consisting of one or more fields
+		(the waveform data and metadata) separated by commas. The CSV header (1st row)
+		must be composed of the field names.
+		</div>
+		<div class='text-center my-2'>
+			<button type='button' class='btn btn-primary'
+					@click='forms.misc.flatfile_meta_info_show_dialog=true'>
+				Compose and visualize flatfile fields
+			</button>
+		</div>
+
+		<div v-if="Object.keys(responses.flatfile_meta_info || {}).length"
+			 style='flex:1 1 0px;' class='p-2 d-flex flex-column'>
+			<div style='flex:1 1 0px; overflow:auto'>
+				<table class='table table-striped-columns' style='height:100%'>
+					<thead class='table-dark'>
+						<tr>
+							<td>Field (Column)</td>
+							<td>Type</td>
+							<td>Data type</td>
+							<td>Description</td>
+						</tr>
+					</thead>
+
+					<tbody>
+						<tr v-for="name in Object.keys(responses.flatfile_meta_info || {})">
+							<td v-html="name"></td>
+							<td v-html="responses.flatfile_meta_info[name].type"></td>
+							<td v-html="responses.flatfile_meta_info[name].dtype"></td>
+							<td v-html="responses.flatfile_meta_info[name].help"></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<div class='input-group mt-2'>
+				<label class='input-group-text'>CSV (header)</label>
+				<input class='form-control' :value='Object.keys(responses.flatfile_meta_info || {}).join(",")' />
+			</div>
+		</div>
+	</div>
+</div>

@@ -17,10 +17,10 @@ from egsim.smtk import (ground_motion_properties_required_by,
 from egsim.smtk.flatfile import ColumnsRegistry
 
 
-class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
+class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
     """Form for querying the necessary metadata columns from a given list of Gsims"""
 
-    accept_empty_gsim_list = True  # see GsimImtForm
+    accept_empty_gsim_list = True  # see GsimImtForm  # FIXME: remove class level attrs, simpler?  # noqa
     accept_empty_imt_list = True
 
     def output(self) -> dict:
@@ -30,11 +30,11 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
         :return: any Python object (e.g., a JSON-serializable dict)
         """
         cleaned_data = self.cleaned_data
-        gsims = cleaned_data.get('gsim', [])
-        if not models:
+        gsims = list(cleaned_data.get('gsim', {}))
+        if not gsims:
             gsims = list(models.Gsim.names())
         gm_props = ground_motion_properties_required_by(*gsims, as_ff_column=True)
-        imts = cleaned_data.get('imt', [])
+        imts = list(cleaned_data.get('imt', []))
 
         if not imts:
             imts = set()
@@ -45,7 +45,8 @@ class FlatfileRequiredColumnsForm(GsimImtForm, APIForm):
         for col_name in sorted(set(gm_props) | set(imts)):
             columns[col_name] = {
                 'help': str(ColumnsRegistry.get_help(col_name) or 'unspecified'),
-                'type': str(ColumnsRegistry.get_type(col_name) or 'unspecified'),
+                'type': str(getattr(ColumnsRegistry.get_type(col_name), 'value',
+                                    'unspecified')),
                 'dtype': str(ColumnsRegistry.get_dtype(col_name) or 'unspecified')
             }
         return columns
@@ -172,8 +173,9 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
             }
 
 
-class FlatfileInspectionForm(APIForm, FlatfileForm):
-    """Form for flatfile inspection, return info from a given flatfile"""
+class FlatfileValidationForm(APIForm, FlatfileForm):
+    """Form for flatfile validation, on success
+    return info from a given uploaded flatfile"""
 
     def clean(self):
         cleaned_data = super().clean()
