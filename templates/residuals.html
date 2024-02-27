@@ -29,23 +29,13 @@
 			<input type='text' v-model="forms.residuals['data-query']" class='form-control'/>
 		</div>
 
-		<div class="input-group mt-1">
-			<label class='input-group-text' style='width:100%'>
-				<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />
-				<div class='d-flex flex-row' style='width:100%'>
-					<span class='text-start' style='flex:1 1 auto'>Include likelihood</span>
-					<a href="https://doi.org/10.1785/0120030147" target='_blank'>
-						<i class='fa fa-external-link'></i>
-					</a>
-				</div>
-			</label>
-
-		</div>
-
 		<div class='d-flex flex-column mt-3 align-items-stretch'>
-			<div class="input-group-text"
+			<div class="input-group-text d-flex flex-row"
 				 style="border-bottom: 0px !important; border-bottom-left-radius: 0px !important; border-bottom-right-radius: 0px !important;">
-				Compute residuals
+				<span>Compute residuals</span>
+				<span style='flex:1 1 auto'></span>
+				<label><input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood</label>
+				<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-2'><i class='fa fa-external-link'></i></a>
 			</div>
 			<div class='d-flex flex-row form-control'
 				 style="border-top-left-radius: 0px !important; border-top-right-radius: 0px !important;">
