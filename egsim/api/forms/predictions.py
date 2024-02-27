@@ -63,8 +63,8 @@ class ArrayField(Field):
         return [] if invalid else cleaned_data
 
 
-class TrellisForm(GsimImtForm, APIForm):
-    """Form for Trellis plot generation"""
+class PredictionsForm(GsimImtForm, APIForm):
+    """Form for the computation of Ground motion model predictions"""
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {

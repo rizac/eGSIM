@@ -403,7 +403,7 @@ EGSIM.component('gsim-map', {
 					var ipt = `<input type='checkbox' data-regionalization-name='${name}' checked class='me-1' />${name}`;
 					if (regx.url){
 						ipt += `<a class='ms-1' target="_blank" href="${regx.url}" title="ref (open link in new tab)">
-							<i class="fa fa-link"></i>
+							<i class="fa fa-external-link"></i>
 						</a>`;
 					}
 					html += `${rowDivPrefix}${ipt}</div>`;
@@ -605,7 +605,7 @@ EGSIM.component('flatfile-select', {
 			class='border-top border-bottom bg-white'
 			v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
 			:href="flatfiles[selectedIndex].url">
-			<i class="fa fa-link"></i>
+			<i class="fa fa-external-link"></i>
 		</a>
 		<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
 		<button

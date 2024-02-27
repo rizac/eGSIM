@@ -19,7 +19,7 @@ from django.forms import SelectMultiple
 
 from ..smtk.converters import dataframe2dict
 from .forms import APIForm
-from .forms.trellis import TrellisForm, ArrayField
+from .forms.predictions import PredictionsForm, ArrayField
 from .forms.flatfile import FlatfileForm
 from .forms.flatfile.residuals import ResidualsForm
 
@@ -28,8 +28,8 @@ class MimeType:  # noqa
     """A collection of supported mime types (content_type in Django Response), loosely
     copied from mimetypes.types_map (https://docs.python.org/3.8/library/mimetypes.html)
     """
-    # NOTE: avoid Enums or alike, attributes below will be passed as `content_type` arg
-    # to Responses and must be pure str (subclasses NOT allowed!)
+    # NOTE: avoid Enums or alike, attributes below will be passed as arg `content_type`
+    # to build Responses and must be pure str (subclasses NOT allowed!)
     csv = "text/csv"
     json = "application/json"
     hdf = "application/x-hdf"
@@ -177,7 +177,7 @@ API_PATH = 'query'
 class TrellisView(RESTAPIView):
     """EgsimQueryView subclass for generating Trellis plots responses"""
 
-    formclass = TrellisForm
+    formclass = PredictionsForm
     urls = (f'{API_PATH}/predictions',
             f'{API_PATH}/trellis', f'{API_PATH}/model2model')
 
