@@ -185,10 +185,10 @@ EGSIM.component('gsim-select', {
 				ref="selectElement"
 				v-show='!!selectableModels.length'
 				class='border position-absolute shadow'
-				style='z-index:10000'
-				@dblclick.capture.prevent="htmlSelectElementSelected()"
-				@keydown.enter.prevent="htmlSelectElementSelected()"
-				@keydown.up="focusInputElement($event);"
+				style='z-index:10000; outline: 0px !important;'
+				@dblclick.capture.prevent="$evt => addModelsToSelection( Array.from($evt.target.selectedOptions).map(o => o.value) )"
+				@keydown.enter.prevent="$evt => addModelsToSelection( Array.from($evt.target.selectedOptions).map(o => o.value) )"
+				@keydown.up="$evt => { if( $evt.target.selectedIndex == 0 ){ focusHTMLInputElement(); $evt.preventDefault(); } }"
 				@keydown.esc.prevent="inputElementText=''">
 				<option
 					v-for="m in selectableModels"
@@ -220,19 +220,17 @@ EGSIM.component('gsim-select', {
 			sel.selectedIndex = 0;
 			sel.focus();
 		},
-		htmlSelectElementSelected(){
-			var sel = this.$refs.selectElement;
-			var opts = Array.from(sel.selectedOptions);
-			if (!opts.length && sel.selectedIndex > -1){
-				opts = [sel.options[sel.selectedIndex]];
-			}
-			if(!opts.length){
+		focusHTMLInputElement(){
+			this.$refs.selectElement.selectedIndex=-1;
+			this.$refs.inputElement.focus();
+		},
+		addModelsToSelection(modelNames){
+			if (!modelNames){
 				return;
 			}
-			this.selectedModels.push(...opts.map(opt => opt.value));
+			this.selectedModels.push(...modelNames);
 			this.$nextTick(() => {
-				sel.selectedIndex = -1;
-				this.$refs.inputElement.focus();
+				this.focusHTMLInputElement();
 			});
 		},
 		resizeHTMLSelectElement(optionsLength){
@@ -240,13 +238,6 @@ EGSIM.component('gsim-select', {
 			this.$refs.selectElement.style.width = (rect.right - rect.left) + 'px';
 			this.$refs.selectElement.size = optionsLength;
 			this.$refs.selectElement.style.maxHeight = (.95 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
-		},
-		focusHTMLInputElement(event){
-			if(this.$refs.selectElement.selectedIndex==0){
-				this.$refs.selectElement.selectedIndex=-1;
-				this.$refs.inputElement.focus();
-				event.preventDefault();
-			}
 		}
 	}
 });
