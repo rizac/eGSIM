@@ -46,40 +46,36 @@ EGSIM.component('array-input', {
 
 EGSIM.component('gsim-select', {
 	props: {
-		models: {type: Array},  // Array of objects with props: name, warning, imts
-		selectedModelNames: {type: Array},  // Array of strings
-		selectedImts: {type: Array, default: []} // field of IMTs (strings)
+		modelValue: {type: Array},  // [NOTE: VUE model] Array of selected ground motion model names
+		models: {type: Array},  // [Note: Ground Motion models] Array of available models. Each model is an objects with keys: name, warning, imts
+		selectedImts: {type: Array, default: []} // field of selected IMTs (strings)
 	},
-	emits: ['gsim-selected'],
+	emits: ['update:modelValue'],
 	data() {
 		return {
 			inputElementText: "",
 			displayRegex: /[A-Z]+[^A-Z0-9]+|[0-9_]+|.+/g  //NOTE safari does not support lookbehind/aheads!
 		}
 	},
-	watch: {
-		'selectedModelNames': {
-			deep: true,
-			handler(newVal, oldVal){
-				this.$emit('gsim-selected', newVal)
-			}
-		},
-	},
 	computed: {
-		selectedModels(){  // Array of Objects with props name, imts, warning
-			var selectedModelNamesSet = new Set(this.selectedModelNames);
-			return this.models.filter(m => selectedModelNamesSet.has(m.name));
+		selectedModels: {
+			get() {
+				return this.modelValue;
+			},
+			set(value) {
+				this.$emit('update:modelValue', value);
+			}
 		},
 		selectableModels(){
 			var models = [];
 			var text = this.inputElementText.trim();
 			if (text){
-				var selectedModelNamesSet = new Set(this.selectedModelNames);
+				var selectedModelsSet = new Set(this.selectedModels);
 				var regexp = new RegExp(text.replace(/\s+/, '').replace(/([^\w\*\?])/g, '\\$1').replace(/\*/g, '.*').replace(/\?/g, '.'), 'i');
-				models = this.models.filter(m => !selectedModelNamesSet.has(m.name) && m.name.search(regexp) > -1);
+				models = this.models.filter(m => !selectedModelsSet.has(m.name) && m.name.search(regexp) > -1);
 				// adjust popup height:
 				if (models.length){
-					setTimeout( () => this.resizeSelectElement(models.length), 20 );
+					setTimeout( () => this.resizeHTMLSelectElement(models.length), 20 );
 				}
 			}
 			return models;
@@ -87,7 +83,8 @@ EGSIM.component('gsim-select', {
 		errors(){
 			var errors = {};
 			var selimts = this.selectedImts.map(i => i.startsWith('SA') ? 'SA' : i);
-			for (var model of this.selectedModels){
+			var selectedModelsSet = new Set(this.selectedModels);
+			for (var model of this.models.filter(m => selectedModelsSet.has(m.name))){
 				var wrongimts = selimts.filter(i => !model.imts.has(i));
 				if (wrongimts.length){
 					errors[model.name] = `${model.name} does not support ${wrongimts.join(', ')}`;
@@ -97,7 +94,8 @@ EGSIM.component('gsim-select', {
 		},
 		warnings(){
 			var warnings = {};
-			for (var model of this.selectedModels){
+			var selectedModelsSet = new Set(this.selectedModels);
+			for (var model of this.models.filter(m => selectedModelsSet.has(m.name))){
 				if (model.warning){
 					warnings[model.name] = model.warning;
 				}
@@ -109,7 +107,7 @@ EGSIM.component('gsim-select', {
 		<div
 			class='d-flex flex-row align-items-baseline input-group-text'
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
-			<label style="flex: 1 1 auto;" class='text-start'>model ({{ selectedModelNames.length }} selected)</label>
+			<label style="flex: 1 1 auto;" class='text-start'>model ({{ selectedModels.length }} selected)</label>
 			<i
 				v-show="Object.keys(warnings).length"
 				aria-label="Remove models with warnings (for details, hover mouse on each model icon)"
@@ -125,7 +123,7 @@ EGSIM.component('gsim-select', {
 				@click="removeSelectedModelsWithErrors()">
 			</i>
 			<i
-				v-show="selectedModelNames.length"
+				v-show="selectedModels.length"
 				aria-label="Clear selection"
 				class="fa fa-times-circle ms-2"
 				style="cursor: pointer;"
@@ -134,23 +132,23 @@ EGSIM.component('gsim-select', {
 		</div>
 		<div style='overflow: auto; flex: 0 1 auto; min-height:0px'
 			class='rounded-0 flex-column form-control'
-			:class="selectedModelNames.length ? 'd-flex': 'd-none'">
+			:class="selectedModels.length ? 'd-flex': 'd-none'">
 			<div class='d-flex flex-row'>
 				<!-- div with cancel icons stacked vertically -->
 				<div class='d-flex flex-column'>
 					<div
-						v-for="model in selectedModelNames"
+						v-for="model in selectedModels"
 						class='me-1'
 						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
 						aria-label="remove from selection (to remove all models, click the same button on this panel top right corner)"
-						@click="selectedModelNames.splice(selectedModelNames.indexOf(model), 1)">
+						@click="selectedModels.splice(selectedModels.indexOf(model), 1)">
 						<i class='fa fa-times-circle'></i>
 					</div>
 				</div>
 				<!-- div with selected model names stacked vertically -->
 				<div class='d-flex flex-column ms-1'>
 					<div
-						v-for="model in selectedModelNames"
+						v-for="model in selectedModels"
 						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
 						:aria-label="errors[model] || warnings[model] || ''">
 						{{ model }}
@@ -159,7 +157,7 @@ EGSIM.component('gsim-select', {
 				<!-- div with warning icons stacked vertically -->
 				<div class='d-flex flex-column ms-1'>
 					<span
-						v-for="model in selectedModelNames"
+						v-for="model in selectedModels"
 						:style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
 						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
 						class='me-1'>
@@ -172,10 +170,10 @@ EGSIM.component('gsim-select', {
 		<input
 			type="text"
 			v-model='inputElementText' ref="inputElement"
-			@keydown.down.prevent="focusSelectElement()"
+			@keydown.down.prevent="focusHTMLSelectElement()"
 			@keydown.esc.prevent="inputElementText=''"
 			class='form-control'
-			:class="selectedModelNames.length ? 'border-top-0' : ''"
+			:class="selectedModels.length ? 'border-top-0' : ''"
 			style='min-width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
 			aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
@@ -188,8 +186,8 @@ EGSIM.component('gsim-select', {
 				v-show='!!selectableModels.length'
 				class='border position-absolute shadow'
 				style='z-index:10000'
-				@dblclick.capture.prevent="selectElementSelected()"
-				@keydown.enter.prevent="selectElementSelected()"
+				@dblclick.capture.prevent="htmlSelectElementSelected()"
+				@keydown.enter.prevent="htmlSelectElementSelected()"
 				@keydown.up="focusInputElement($event);"
 				@keydown.esc.prevent="inputElementText=''">
 				<option
@@ -202,27 +200,27 @@ EGSIM.component('gsim-select', {
 	</div>`,
 	methods: {
 		removeSelectedModelsWithWarnings(){
-			// this function filters the selectedModelNames Array without creating a new one:
-			this.selectedModelNames.splice(0,
-				this.selectedModelNames.length,
-				...this.selectedModelNames.filter(m => !this.warnings[m]))
+			// this function filters the selectedModels Array without creating a new one:
+			this.selectedModels.splice(0,
+				this.selectedModels.length,
+				...this.selectedModels.filter(m => !this.warnings[m]))
 		},
 		removeSelectedModelsWithErrors(){
-			// this function filters the selectedModelNames Array without creating a new one:
-			this.selectedModelNames.splice(0,
-				this.selectedModelNames.length,
-				...this.selectedModelNames.filter(m => !this.errors[m]))
+			// this function filters the selectedModels Array without creating a new one:
+			this.selectedModels.splice(0,
+				this.selectedModels.length,
+				...this.selectedModels.filter(m => !this.errors[m]))
 		},
 		removeSelectedModels(){
-			// this function clears the selectedModelNames Array without creating a new one:
-			this.selectedModelNames.splice(0, this.selectedModelNames.length)
+			// this function clears the selectedModels Array without creating a new one:
+			this.selectedModels.splice(0, this.selectedModels.length)
 		},
-		focusSelectElement(){
+		focusHTMLSelectElement(){
 			var sel = this.$refs.selectElement;
 			sel.selectedIndex = 0;
 			sel.focus();
 		},
-		selectElementSelected(){
+		htmlSelectElementSelected(){
 			var sel = this.$refs.selectElement;
 			var opts = Array.from(sel.selectedOptions);
 			if (!opts.length && sel.selectedIndex > -1){
@@ -231,19 +229,19 @@ EGSIM.component('gsim-select', {
 			if(!opts.length){
 				return;
 			}
-			this.selectedModelNames.push(...opts.map(opt => opt.value));
+			this.selectedModels.push(...opts.map(opt => opt.value));
 			this.$nextTick(() => {
 				sel.selectedIndex = -1;
 				this.$refs.inputElement.focus();
 			});
 		},
-		resizeSelectElement(optionsLength){
+		resizeHTMLSelectElement(optionsLength){
 			var rect = this.$refs.inputElement.getBoundingClientRect();
 			this.$refs.selectElement.style.width = (rect.right - rect.left) + 'px';
 			this.$refs.selectElement.size = optionsLength;
 			this.$refs.selectElement.style.maxHeight = (.95 * (document.documentElement.clientHeight - rect.bottom)) + 'px';
 		},
-		focusInputElement(event){
+		focusHTMLInputElement(event){
 			if(this.$refs.selectElement.selectedIndex==0){
 				this.$refs.selectElement.selectedIndex=-1;
 				this.$refs.inputElement.focus();
@@ -260,18 +258,30 @@ EGSIM.component('gsim-select', {
 EGSIM.component('imt-select', {
 	//https://vuejs.org/v2/guide/components-props.html#Prop-Types:
 	props: {
-		imts: { type: Array },  // without arguments (so 'SA', not 'SA(1.0)')
-		selectedImts: { type: Array }  // with or without arguments
+		modelValue: { type: Array },  // [Vue model] Array of IMT names, with or without arguments
+		imts: { type: Array }  // without arguments (so 'SA', not 'SA(1.0)')
 	},
-	emits: ['imt-selected'],
+	emits: ['update:modelValue'],
 	data() {
+		var selectedImtClassNames = Array.from(new Set(this.modelValue.map(i => i.startsWith('SA(') ? 'SA' : i)));
+		var SAPeriods = this.modelValue.filter(i => i.startsWith('SA(')).map(sa => sa.substring(3, sa.length-1));
 		return {
-			selectedImtClassNames: Array.from(new Set(this.selectedImts.map(i => i.startsWith('SA(') ? 'SA' : i))),
-			SAPeriods: this.selectedImts.filter(i => i.startsWith('SA(')).map(sa => sa.substring(3, sa.length-1)),
+			selectedImtClassNames: selectedImtClassNames,
+			SAPeriods: SAPeriods,
 			defaultSAPeriods: [0.05, 0.075, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.20,
 				0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.42, 0.44, 0.46, 0.48, 0.5, 0.55,
 				0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8,
 				1.9, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]
+		}
+	},
+	computed: {
+		selectedImts: {
+			get(){
+				return this.modelValue;
+			},
+			set(value) {
+				this.$emit('update:modelValue', value);
+			}
 		}
 	},
 	watch: { // https://siongui.github.io/2017/02/03/vuejs-input-change-event/
@@ -282,12 +292,6 @@ EGSIM.component('imt-select', {
 			deep: true,
 			handler(newVal, oldVal){
 				this.updateSelectedImts();
-			}
-		},
-		selectedImts: {
-			deep: true,
-			handler(newVal, oldVal){
-				this.$emit('imt-selected', newVal)
 			}
 		}
 	},
