@@ -16,8 +16,9 @@ from openquake.hazardlib import imt
 
 from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, EgsimBaseForm)
 from egsim.api.forms.flatfile import FlatfileForm
-from egsim.api.forms.flatfile.compilation import FlatfileInspectionForm
-from egsim.api.forms.trellis import TrellisForm
+from egsim.api.forms.flatfile.management import FlatfileValidationForm
+# from egsim.api.forms.flatfile.management import FlatfileInspectionForm
+from egsim.api.forms.predictions import PredictionsForm
 from egsim.smtk import read_flatfile
 from egsim.smtk.trellis import RuptureProperties, SiteProperties
 
@@ -120,7 +121,7 @@ class Test:
             IMT: ['PGA'],
             'mag': '9', 'distance': '0', 'aspect': '1', 'dip': '60', 'plot_type': 'm'
         }
-        form = TrellisForm(data)
+        form = PredictionsForm(data)
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == 'plot_type: unknown parameter'
 
@@ -210,7 +211,7 @@ class Test:
             # 'plot': 'm',
             'aspect': 1
         }
-        form = TrellisForm(data)
+        form = PredictionsForm(data)
         assert form.is_valid()
         assert list(form.cleaned_data[GSIM]) == ['BindiEtAl2011']  # testing 1)
         assert form.cleaned_data['magnitude'] == [0.5]  # testing 2a)
@@ -226,7 +227,7 @@ class Test:
                 'msr': 'x',
                 'mag': 'a'}
 
-        form = TrellisForm(data)
+        form = PredictionsForm(data)
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
               'aspect, dip: missing parameter is required; ' \
@@ -235,7 +236,7 @@ class Test:
               'mag: 1 value is invalid; ' \
               'msr: value not found or misspelled'
 
-    def test_flatfile_inspect(self, testdata):
+    def test_flatfile_validation(self, testdata):
 
         # file_content = testdata.read('esm2018.hdf.small.csv')
         # files = {'esm2019': SimpleUploadedFile('cover', file_content)}
@@ -254,7 +255,7 @@ class Test:
         flatfile.to_csv(bio, sep=',')
         files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
         # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileInspectionForm({}, files=files)
+        form = FlatfileValidationForm({}, files=files)
         is_valid = form.is_valid()
         assert is_valid
         # data = form.response_data
@@ -269,7 +270,7 @@ class Test:
         flatfile.to_csv(bio, sep=',')
         files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
         # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileInspectionForm({}, files=files)
+        form = FlatfileValidationForm({}, files=files)
         is_valid = form.is_valid()
         assert is_valid
 
@@ -281,7 +282,7 @@ class Test:
         flatfile.to_csv(bio, sep=',')
         files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
         # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileInspectionForm({}, files=files)
+        form = FlatfileValidationForm({}, files=files)
         is_valid = form.is_valid()
         assert not is_valid
         assert form.errors.as_json()
@@ -293,7 +294,7 @@ class Test:
         flatfile.to_csv(bio, sep=',')
         files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
         # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileInspectionForm({}, files=files)
+        form = FlatfileValidationForm({}, files=files)
         is_valid = form.is_valid()
         assert not is_valid
 
@@ -304,7 +305,7 @@ class Test:
         flatfile.to_csv(bio, sep=',')
         files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
         # mvd = MultiValueDict({'flatfile': fp})
-        form = FlatfileInspectionForm({}, files=files)
+        form = FlatfileValidationForm({}, files=files)
         is_valid = form.is_valid()
         assert not is_valid
 
@@ -339,33 +340,33 @@ def test_field2params_in_forms():
                 clz.append(c)
 
     # mock a Form with errors and check it
-    class Test(TrellisForm):
+    class Test(PredictionsForm):
         _field2params = {'gsim': ['model']}  # already defined
 
     with pytest.raises(ValueError):
         check_egsim_form(Test)
 
-    class Test(TrellisForm):
+    class Test(PredictionsForm):
         _field2params = {'gsim_45673': ['model']}  # not a form field defined
 
     with pytest.raises(ValueError):
         check_egsim_form(Test)
 
-    class Test(TrellisForm):
+    class Test(PredictionsForm):
         _field2params = {'test': ['gsim']}  # 'gsim' already a field name
         test = Field()
 
     with pytest.raises(ValueError):
         check_egsim_form(Test)
 
-    class Test(TrellisForm):
+    class Test(PredictionsForm):
         _field2params = {'test': ['model']}  # 'model' already mapped
         test = Field()
 
     with pytest.raises(ValueError):
         check_egsim_form(Test)
 
-    class Test(TrellisForm):
+    class Test(PredictionsForm):
         _field2params = {'test': 'model'}  # 'model' neither tuple or list
         test = Field()
 
@@ -376,22 +377,22 @@ def test_field2params_in_forms():
 def test_trellis_rupture_site_fields():
 
     rup_fields = RuptureProperties.__annotations__
-    missing = set(rup_fields) - TrellisForm.rupture_fields()
+    missing = set(rup_fields) - PredictionsForm.rupture_fields()
     assert sorted(missing) == ['tectonic_region']
 
     site_fields = SiteProperties.__annotations__
-    missing = set(site_fields) - TrellisForm.site_fields()
+    missing = set(site_fields) - PredictionsForm.site_fields()
     assert sorted(missing) == ['distance_type', 'origin_point', 'xvf']
 
     # check that we did not misspelled any TrellisField. To do this, let's
     # remove the site and rupture fields, and all fields defined in superclasses.
     # We should be left with 2 fields only: magnitude and distance
 
-    rem_fields = set(TrellisForm.base_fields) \
-                 - TrellisForm.rupture_fields() - TrellisForm.site_fields()
+    rem_fields = set(PredictionsForm.base_fields) \
+                 - PredictionsForm.rupture_fields() - PredictionsForm.site_fields()
 
-    for super_cls in TrellisForm.__mro__:
-        if super_cls is not TrellisForm:
+    for super_cls in PredictionsForm.__mro__:
+        if super_cls is not PredictionsForm:
             try:
                 rem_fields -= set(super_cls.base_fields)  # noqa
             except AttributeError:

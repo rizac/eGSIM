@@ -11,9 +11,9 @@ import pytest
 import numpy as np
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 
-from egsim.api.views import (TrellisView, MIMETYPE, read_hdf_from_buffer,
+from egsim.api.views import (TrellisView, MimeType, read_hdf_from_buffer,
                              read_csv_from_buffer, as_querystring)
-from egsim.api.forms.trellis import TrellisForm
+from egsim.api.forms.predictions import PredictionsForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa
 
@@ -40,11 +40,11 @@ class Test:
         inputdic = dict(testdata.readyaml(self.request_filename))
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
-                            content_type=MIMETYPE.JSON)
+                            content_type=MimeType.json)
         result = resp1.json()
         assert resp1.status_code == 200
         assert areequal(result, resp2.json())
-        form = TrellisForm(data=dict(inputdic))
+        form = PredictionsForm(data=dict(inputdic))
         assert form.is_valid()
         input_ = form.cleaned_data
         assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'mag', 'rrup']
@@ -53,14 +53,14 @@ class Test:
         result_json = result
 
         # test the text response:
-        resp = client.post(self.url, data=dict(inputdic, format=MIMETYPE.CSV.name),
-                            content_type=MIMETYPE.CSV)
+        resp = client.post(self.url, data=dict(inputdic, format="csv"),
+                            content_type=MimeType.csv)
         assert resp.status_code == 200
         result_csv = read_csv_from_buffer(BytesIO(b''.join(resp.streaming_content)))
 
         # test the hdf response:
-        resp = client.post(self.url, data=dict(inputdic, format=MIMETYPE.HDF.name),
-                            content_type=MIMETYPE.HDF)
+        resp = client.post(self.url, data=dict(inputdic, format="hdf"),
+                            content_type=MimeType.hdf)
         assert resp.status_code == 200
         result_hdf = read_hdf_from_buffer(BytesIO(b''.join(resp.streaming_content)))
 

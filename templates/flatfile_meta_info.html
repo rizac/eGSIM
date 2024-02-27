@@ -1,12 +1,14 @@
 <div class='position-relative d-flex flex-row' style="flex: 1 1 auto;">
 
 	<div class='border my-5 start-50 position-absolute top-0 bottom-0 d-flex flex-column shadow bg-white'
-			style='z-index:1000;transform: translateX(-50%)' v-if="forms.misc.flatfile_meta_info_show_dialog">
+			style='z-index:1000;transform: translateX(-50%); width:75vw' v-if="forms.misc.flatfile_meta_info_show_dialog">
 
-		<div class='p-3'>Select your models and intensity measure types of interest
-			<span class='small text-muted'>(no model selected = all models selected)</span>
+		<div class='p-3'>
+			<div>Select your models and intensity measure types of interest</div>
+			<div class='small text-muted'>(no model selected = all models selected)</div>
 		</div>
-		<div style='flex: 1 1 auto' class='my-2 position-relative border-top border-bottom'>
+
+		<div style='flex: 1 1 auto' class='position-relative border-top border-bottom'>
 			<gsim-map @gsim-selected="(gs) => { forms.flatfile_meta_info.gsim = Array.from(new Set(forms.flatfile_meta_info.gsim.concat(gs))) }"
 					  @gsim-unselected="(gs) => { forms.flatfile_meta_info.gsim = forms.flatfile_meta_info.gsim.filter(g => !gs.includes(g)); }"
 					  :regionalizations="regionalizations"
@@ -27,7 +29,8 @@
 
 			</form>
 		</div>
-		<div class="p-2 text-center">
+
+		<div class="p-3 text-center">
 			<button class='btn btn-primary me-2' type='button'
 					@click='postData(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info_show_dialog=false'>
 				Fetch required flatfile fields

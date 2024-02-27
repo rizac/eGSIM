@@ -18,7 +18,7 @@ urlpatterns = [
     # html pages:
     re_path((r'^(?P<page>' +
              '|'.join([URLS.HOME_PAGE, URLS.PREDICTIONS_PAGE, URLS.RESIDUALS_PAGE,
-                       URLS.FLATFILE_VISUALIZATION_PAGE, URLS.FLATFILE_META_INFO_PAGE,
+                       URLS.FLATFILE_INSPECTION_PLOT_PAGE, URLS.FLATFILE_META_INFO_PAGE,
                        URLS.IMPRINT_PAGE, URLS.REF_AND_LICENSE_PAGE]) +
              ')/?$'), main),
 

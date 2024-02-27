@@ -21,7 +21,7 @@ from ..api.forms.flatfile.management import (FlatfileMetadataInfoForm,
                                              FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.flatfile.residuals import ResidualsForm
-from ..api.forms.trellis import TrellisForm
+from ..api.forms.predictions import PredictionsForm
 from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType
 from ..smtk import intensity_measures_defined_for
 
@@ -57,8 +57,8 @@ class URLS:  # noqa
     # API = 'api'
     HOME_PAGE = 'home'
     DATA_PROTECTION_PAGE = 'https://www.gfz-potsdam.de/en/data-protection/'
-    FLATFILE_META_INFO_PAGE = 'flatfile-meta-info'
-    FLATFILE_VISUALIZATION_PAGE = 'flatfile-visualizer'
+    FLATFILE_META_INFO_PAGE = 'flatfile-metadata-info'
+    FLATFILE_INSPECTION_PLOT_PAGE = 'flatfile-inspection-plot'
     IMPRINT_PAGE = "imprint"
     PREDICTIONS_PAGE = 'predictions'
     RESIDUALS_PAGE = 'residuals'
@@ -148,7 +148,7 @@ def _get_init_data_json(debug=False) -> dict:
     if debug:
         default_models = ['CauzziEtAl2014', 'BindiEtAl2014Rjb']
         default_imts = ['PGA', 'SA(0.1)']
-    trellis_form = TrellisView.formclass({
+    predictions_form = TrellisView.formclass({
         'gsim': default_models,
         'imt': default_imts,
         'regionalization': None,
@@ -167,41 +167,41 @@ def _get_init_data_json(debug=False) -> dict:
             'predictions': URLS.PREDICTIONS_PAGE,
             'residuals': URLS.RESIDUALS_PAGE,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO_PAGE,
-            'flatfile_visualizer': URLS.FLATFILE_VISUALIZATION_PAGE,
+            'flatfile_inspection_plot': URLS.FLATFILE_INSPECTION_PLOT_PAGE,
             'ref_and_license': URLS.REF_AND_LICENSE_PAGE,
             'imprint': URLS.IMPRINT_PAGE,
             'home': URLS.HOME_PAGE,
             'data_protection': URLS.DATA_PROTECTION_PAGE
         },
         'urls': {
-            'trellis': URLS.DOWNLOAD_PREDICTIONS,
+            'predictions': URLS.DOWNLOAD_PREDICTIONS,
             'residuals': URLS.DOWNLOAD_RESIDUALS,
             'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO,
-            'flatfile_visualization': URLS.FLATFILE_VISUALIZATION,
+            'flatfile_inspection_plot': URLS.FLATFILE_VISUALIZATION,
             'flatfile_validation': URLS.FLATFILE_VALIDATION,
             'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
             'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL_HTML,
         },
         'forms': {
-            'trellis': trellis_form.asdict(),
+            'predictions': predictions_form.asdict(),
             'residuals': residuals_form.asdict(),
             'flatfile_meta_info': FlatfileMetadataInfoForm({
                 'gsim': default_models,
                 'imt': default_imts,
                 'regionalization': None
             }).asdict(),
-            'flatfile_visualization': FlatfilePlotForm({}).asdict(),
+            'flatfile_inspection_plot': FlatfilePlotForm({}).asdict(),
             'misc': {
-                'msr': trellis_form.fields['msr'].choices,
-                'region': trellis_form.fields['region'].choices,
-                'flatfile_inspection_columns': [],
+                'msr': predictions_form.fields['msr'].choices,
+                'region': predictions_form.fields['region'].choices,
+                'flatfile_inspection_plot_columns': [],
                 'flatfile_meta_info_show_dialog': False,
                 'download_formats': ['hdf', 'csv']
             }
         },
         'responses': {
-            'trellis': None,
+            'predictions': None,
             'residuals': None,
             'flatfile_meta_info': None,
             'flatfile_visualization': None,
@@ -270,7 +270,7 @@ def flatfile_plot(request) -> JsonResponse:
 def get_predictions_response_tutorial(request):
     from egsim.api.data.client.snippets.get_egsim_predictions import \
         get_egsim_predictions
-    api_form = TrellisForm({
+    api_form = PredictionsForm({
         'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
         'imt': ['PGA', 'SA(0.1)'],
         'magnitude': [4, 5, 6],

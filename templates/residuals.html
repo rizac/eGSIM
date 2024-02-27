@@ -6,7 +6,7 @@
 			  style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
 
-	<form novalidate @submit.prevent="postData(urls.residuals, forms.residuals).then(r => { responseData = r; })"
+	<form novalidate @submit.prevent=""
 		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 
 		<gsim-select :selected-model-names="forms.residuals.gsim"
@@ -21,12 +21,25 @@
 			class= 'mt-3'
 			:flatfiles='flatfiles'
 			v-model="forms.residuals.flatfile"
-			:upload-url='urls.flatfile_inspection'>
+			:upload-url='urls.flatfile_validation'>
 		</flatfile-select>
 
 		<div class='input-group mt-1'>
 			<label class='input-group-text'>data-query</label>
 			<input type='text' v-model="forms.residuals['data-query']" class='form-control'/>
+		</div>
+
+		<div class="input-group mt-1">
+			<label class='input-group-text' style='width:100%'>
+				<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />
+				<div class='d-flex flex-row' style='width:100%'>
+					<span class='text-start' style='flex:1 1 auto'>Include likelihood</span>
+					<a href="https://doi.org/10.1785/0120030147" target='_blank'>
+						<i class='fa fa-external-link'></i>
+					</a>
+				</div>
+			</label>
+
 		</div>
 
 		<div class='d-flex flex-column mt-3 align-items-stretch'>

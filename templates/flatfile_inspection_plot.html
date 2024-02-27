@@ -1,0 +1,43 @@
+<div class='position-relative' style="flex: 1 1 auto;">
+	<div class='mb-3'>
+	<form novalidate @submit.prevent="postData(urls.flatfile_inspection_plot, forms.flatfile_inspection_plot).then(r => { responseData = r; })"
+		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
+			<div class="d-flex flex-row align-items-end" style='flex: 1 1 auto'>
+				<flatfile-select
+					:flatfiles='flatfiles'
+					v-model="forms.flatfile_inspection_plot.flatfile"
+					:upload-url='urls.flatfile_validation'
+					@update:model-value="(value) => { forms.flatfile_inspection_plot.x=null; forms.flatfile_inspection_plot.y=null; forms.misc.flatfile_inspection_plot_columns=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns;   }"
+				>
+				</flatfile-select>
+				<div class='input-group ms-1'>
+					<label class='input-group-text'>data-query</label>
+					<input type='text' v-model="forms.flatfile_inspection_plot['data-query']" class='form-control'/>
+				</div>
+				<div class='input-group ms-3' v-if="Object.keys(forms.misc.flatfile_inspection_plot_columns).length">
+					<label class='input-group-text'>x</label>
+					<select v-model='forms.flatfile_inspection_plot.x' class='form-control'>
+						<option :value="null">None (histogram on the Y axis)</option>
+						<option v-for="v in Object.keys(forms.misc.flatfile_inspection_plot_columns)" :value="v">
+							{% verbatim %} {{ v + ' (' + forms.misc.flatfile_inspection_plot_columns[v] + ")" }} {% endverbatim %}
+						</option>
+					</select>
+				</div>
+				<div class='input-group ms-3' v-if="Object.keys(forms.misc.flatfile_inspection_plot_columns).length">
+					<label class='input-group-text'>y</label>
+					<select v-model='forms.flatfile_inspection_plot.y' class='form-control'>
+						<option :value="null">None (histogram on the X axis)</option>
+						<option v-for="v in Object.keys(forms.misc.flatfile_inspection_plot_columns)" :value="v">
+							{% verbatim %} {{ v + ' (' + forms.misc.flatfile_inspection_plot_columns[v] + ")" }} {% endverbatim %}
+						</option>
+					</select>
+				</div>
+				<button type="submit" class="btn btn-primary mt-2 ms-3">
+					Display plot
+				</button>
+			</div>
+	   </form>
+	</div>
+<!--	<flatfile-plot-div :data="responseData" class="invisible"-->
+<!--					   :style='{visibility: Object.keys(responseData).length ? "visible !important" : "", flex: "1 1 auto"}'/>-->
+</div>

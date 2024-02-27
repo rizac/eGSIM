@@ -15,9 +15,8 @@ from itertools import product
 import json
 import pytest
 
-from egsim.api.forms.flatfile.gsim.residuals import ResidualsForm
-from egsim.api.forms.flatfile.gsim.testing import TestingForm
-from egsim.api.forms.trellis import TrellisForm
+from egsim.api.forms.flatfile.residuals import ResidualsForm
+from egsim.api.forms.predictions import PredictionsForm
 
 
 from egsim.app.views import _IMG_FORMATS
@@ -36,12 +35,12 @@ class Test:
         json.dumps(data)
 
     def test_to_vuejs(self):
-        val = [form_to_json(_) for _ in (TrellisForm, ResidualsForm, TestingForm)]
+        val = [form_to_json(_) for _ in (PredictionsForm, ResidualsForm)]
         # test it is json serializable:
         data = json.dumps(val)
 
     def test_to_help(self):
-        val = [as_dict(_) for _ in (TrellisForm, ResidualsForm, TestingForm)]
+        val = [as_dict(_) for _ in (PredictionsForm, ResidualsForm)]
         # test it is json serializable:
         data = json.dumps(val)
 
@@ -139,9 +138,9 @@ class Test:
             if service == 'residuals':
                 data['plot'] = 'res'
             response_data, _ = {
-                'trellis': TrellisForm,
+                'trellis': PredictionsForm,
                 'residuals': ResidualsForm,
-                'testing': TestingForm
+                # 'testing': TestingForm
             }[service](data).response_data
             client = Client()  # do not use the fixture client as we want
             # Note below: json is not supported because from the browser we simply
