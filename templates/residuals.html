@@ -33,15 +33,17 @@
 
 		<div class='d-flex flex-column mt-3 align-items-stretch'>
 
-			<div class="input-group-text d-flex flex-row"
+			<div class="input-group-text d-flex flex-row align-items-center"
 				 style="border-bottom: 0px !important; border-bottom-left-radius: 0px !important; border-bottom-right-radius: 0px !important;">
-				<span>Compute residuals</span>
-				<span style='flex:1 1 auto'></span>
-				<label><input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood</label>
-				<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-2'><i class='fa fa-external-link'></i></a>
+				<span class='text-start' style='flex: 1 1 auto'>Compute residuals</span>
+				<button type='button'
+						onclick='var elm=document.getElementById("residuals_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'
+						class='btn btn-light btn-sm'>
+					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" /> Python tutorials
+				</button>
 			</div>
 
-			<div class='d-flex flex-row form-control'
+			<div class='d-flex flex-column form-control'
 				 style="border-top-left-radius: 0px !important; border-top-right-radius: 0px !important;">
 
 				<div class='input-group me-2'>
@@ -50,31 +52,25 @@
 							{% verbatim %}{{ format }}{% endverbatim %}
 						</option>
 					</select>
+					<div class="d-flex align-items-center px-3 border-top border-bottom">
+						<label class='me-2' ><input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood</label>
+						<a href="https://doi.org/10.1785/0120030147" target='_blank'><i class='fa fa-external-link'></i></a>
+					</div>
 					<button type='button'
 							@click="downloadResult(urls.residuals, forms.residuals, 'egsim-residuals')"
 							class='btn btn-primary text-nowrap'
 							title='Download residuals'>
 						<i class='fa fa-download'></i>
 					</button>
-					<button type='button'
-							onclick='var elm=document.getElementById("residuals_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'
-							class='btn btn-light border'
-							style='border-left: 0px !important;'>
-						<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
-					</button>
+
 				</div>
 
-				<div class='input-group me-2'>
+				<div class='input-group me-2 mt-2'>
 					<select v-model='forms.misc.residuals.plot_x' class='form-control'>
-						<option :value='null'>
-							{% verbatim %}
-							{{ forms.residuals.likelihood ? 'Likelihood' : 'Residuals' }} histogram (density distribution)
-							{% endverbatim %}
-						</option>
+						<option :value='null'>Residuals histogram (density distribution)</option>
+						<option :value='null'>Likelihood histogram (density distribution)</option>
 						<option v-for='f in forms.misc.residuals.selected_flatfile_fields.filter(f => !f.type.toLowerCase().includes("intensity"))' :value='f.name'>
-							{% verbatim %}
-							{{ forms.residuals.likelihood ? 'Likelihood' : 'Residuals' }} vs. {{ f.name + " (" + f.dtype + ")" }}
-							{% endverbatim %}
+							{% verbatim %} Residuals vs. {{ f.name + " (" + f.dtype + ")" }} {% endverbatim %}
 						</option>
 					</select>
 					<button type='button'
