@@ -1,10 +1,9 @@
 /* Base class to be used as mixin for any component showing plots as a result
 of a response Object sent from the server */
-var PlotsDiv = {
-	// mixins: [DataDownloader],  // FIXME REMOVE
+EGSIM.component('plots-div', {
 	props: {
 		data: {type: Object, default: () => { return {} }},
-		downloadUrl: String // base url for download actions
+		downloadUrl: {type: String, default: ""} // base url for download actions
 	},
 	data(){
 		return {
@@ -162,7 +161,7 @@ var PlotsDiv = {
 		data: {
 			immediate: true,
 			handler(newVal, oldVal){
-				if (typeof newVal === 'object' && Object.keys(newVal).length){
+				if (Array.isArray(newVal) && Object.keys(newVal).length){
 					this.init(newVal);
 				}
 			}
@@ -333,22 +332,15 @@ var PlotsDiv = {
 		</div>
 	</div>`,
 	methods: {
-		getPlots(responseObject){
-			/* METHOD TO BE SUBCLASSED: return from the given response object an Array of Objects representing
-			the sub-plot to be visualized. Each sub-plot Object has the form:
-			{data: Array, layout: Object, params: Object}
-			See README, residuals.js and trellis.js for a details docstring and implementation
-			*/
-		},
 		updateGridParams(){
 			this.grid.params = this.grid.layouts[this.grid.selectedLayout] || [{}, {}];
 			this.grid.params.forEach((p, i) => p.visible = !!(p.label && this.grid.visibility[i]));
 		},
-		init(jsondict){
+		init(data){
 			this.drawingPlots = true;
 			this.legend = {};
 			// convert data:
-			this.plots = this.getPlots(jsondict);
+			this.plots = data;
 			// update selection, taking into account previously selected stuff:
 			this.setupParams();
 			this.createLegend();
@@ -1185,4 +1177,4 @@ var PlotsDiv = {
 			selectElement.selectedIndex = 0;
 		}
 	}
-};
+});

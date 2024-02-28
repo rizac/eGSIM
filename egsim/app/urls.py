@@ -7,7 +7,8 @@ from egsim.api.views import TrellisView, ResidualsView
 from .views import (main, get_gsims_from_region, flatfile_meta_info,
                     flatfile_plot, flatfile_validation, URLS, test_request,
                     get_predictions_response_tutorial,
-                    get_residuals_response_tutorial)
+                    get_residuals_response_tutorial,
+                    predictions_plot, residuals_plot)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
 
@@ -45,8 +46,11 @@ urlpatterns = [
     # download response (json, csv, png, svg, ...) urls:
     # re_path(r'^%s/(?P<key>.+?)/(?P<filename>.+)$' % URLS.DOWNLOAD_RESPONSE,
     #         download_response),
+
     re_path(r'^%s/?$' % URLS.DOWNLOAD_PREDICTIONS, TrellisView.as_view()),
     re_path(r'^%s/?$' % URLS.DOWNLOAD_RESIDUALS, ResidualsView.as_view()),
+    re_path(r'^%s/?$' % URLS.PREDICTIONS_PLOT, predictions_plot),
+    re_path(r'^%s/?$' % URLS.RESIDUALS_PLOT, residuals_plot),
 
     re_path(r'^%s/?$' % URLS.GET_GSIMS_FROM_REGION, get_gsims_from_region),
     re_path(r'^%s/?$' % URLS.FLATFILE_VALIDATION, flatfile_validation),

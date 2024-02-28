@@ -12,10 +12,11 @@ from shapely.geometry import shape
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.conf import settings
+
+from .forms import ResidualsPlotDataForm, PredictionsPlotDataForm
 # from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from ..api import models
-from ..api.forms.flatfile import FlatfileForm
 from ..api.forms.flatfile.management import (FlatfileMetadataInfoForm,
                                              FlatfileValidationForm,
                                              FlatfilePlotForm)
@@ -34,10 +35,10 @@ class URLS:  # noqa
     FLATFILE_VISUALIZATION = 'gui/flatfile_visualization'
     FLATFILE_META_INFO = 'gui/get_flatfile_meta_info'
 
-    DOWNLOAD_PREDICTIONS = 'download/egsim-predictions'
-    DOWNLOAD_RESIDUALS = 'download/egsim-residuals'
-    DOWNLOAD_PREDICTIONS_PLOT = 'download/egsim-predictions-plot'
-    DOWNLOAD_RESIDUALS_PLOT = 'download/egsim-residuals-plot'
+    DOWNLOAD_PREDICTIONS = 'gui/download/egsim-predictions'
+    DOWNLOAD_RESIDUALS = 'gui/download/egsim-residuals'
+    PREDICTIONS_PLOT = 'gui/egsim-predictions-plot'
+    RESIDUALS_PLOT = 'gui/egsim-residuals-plot'
 
     PREDICTIONS_RESPONSE_TUTORIAL_HTML = 'jupyter/predictions-response-tutorial.html'
     RESIDUALS_RESPONSE_TUTORIAL_HTML = 'jupyter/residuals-response-tutorial.html'
@@ -165,8 +166,8 @@ def _get_init_data_json(debug=False) -> dict:
         'urls': {
             'predictions': URLS.DOWNLOAD_PREDICTIONS,
             'residuals': URLS.DOWNLOAD_RESIDUALS,
-            'predictions_plot': URLS.DOWNLOAD_PREDICTIONS_PLOT,
-            'residuals_plot': URLS.DOWNLOAD_RESIDUALS_PLOT,
+            'predictions_plot': URLS.PREDICTIONS_PLOT,
+            'residuals_plot': URLS.RESIDUALS_PLOT,
             'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO,
             'flatfile_inspection_plot': URLS.FLATFILE_VISUALIZATION,
@@ -176,7 +177,13 @@ def _get_init_data_json(debug=False) -> dict:
         },
         'forms': {
             'predictions': predictions_form.asdict(),
+            # in frontend, the form data below will be merged into forms.residuals above
+            # (keys below will take priority):
+            'predictions_plot': {'x': None, 'format': 'json'},
             'residuals': residuals_form.asdict(),
+            # in frontend, the form data below will be merged with forms.residuals above
+            # (keys below will take priority):
+            'residuals_plot': {'x': None, 'likelihood': False, 'format': 'json'},
             'flatfile_meta_info': FlatfileMetadataInfoForm({
                 'gsim': default_models,
                 'imt': default_imts,
@@ -195,15 +202,18 @@ def _get_init_data_json(debug=False) -> dict:
                 'predictions':{
                     'msr': predictions_form.fields['msr'].choices,
                     'region': predictions_form.fields['region'].choices,
-                    'plot_x': None
+                    # 'plot_x': None
                 },
                 'flatfile_inspection_plot': {
                     'selected_flatfile_fields': []
                 },
                 'residuals': {
                     'selected_flatfile_fields': [],
-                    'plot_x': None
                 },
+                # 'residuals_plot': {
+                #     'plot_histogram_label': ResidualsPlotDataForm.histogram_label,
+                #     'plot_histogram_lh_label': ResidualsPlotDataForm.histogram_lh_label,
+                # },
                 'flatfile_meta_info': {
                     'show_dialog': False
                 },
@@ -211,10 +221,10 @@ def _get_init_data_json(debug=False) -> dict:
             }
         },
         'responses': {
-            'predictions': None,
-            'residuals': None,
+            'predictions_plots': [],
+            'residuals_plots': [],
             'flatfile_meta_info': None,
-            'flatfile_visualization': None,
+            'flatfile_visualization_plot': None,
         },
         'gsims': gsims,
         # return the list of imts (imt_groups keys) in the right order:
@@ -274,6 +284,14 @@ def flatfile_meta_info(request) -> JsonResponse:
 
 def flatfile_plot(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=FlatfilePlotForm)(request)
+
+
+def predictions_plot(request) -> JsonResponse:
+    return RESTAPIView.as_view(formclass=PredictionsPlotDataForm)(request)
+
+
+def residuals_plot(request) -> JsonResponse:
+    return RESTAPIView.as_view(formclass=ResidualsPlotDataForm)(request)
 
 
 @xframe_options_exempt
