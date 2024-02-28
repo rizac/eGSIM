@@ -66,7 +66,8 @@
 				</div>
 
 				<div class='input-group me-2 mt-2'>
-					<select v-model='forms.misc.residuals.plot_x' class='form-control'>
+					<select v-model='forms.residuals_plot.x' class='form-control'
+						@change="evt => { forms.residuals_plot.likelihood = evt.target.selectedIndex == 1; }">
 						<option :value='null'>Residuals histogram (density distribution)</option>
 						<option :value='null'>Likelihood histogram (density distribution)</option>
 						<option v-for='f in forms.misc.residuals.selected_flatfile_fields.filter(f => !f.type.toLowerCase().includes("intensity"))' :value='f.name'>
@@ -74,7 +75,7 @@
 						</option>
 					</select>
 					<button type='button'
-							@click="var data = Object.assign({}, forms.residuals, forms.misc.residuals); postData(urls.residuals_plot, data)"
+							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); postData(urls.residuals_plot, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
 							class='btn btn-primary text-nowrap'
 							title='Visualize residuals via interactive plots'>
 						<i class='fa fa-bar-chart'></i>
@@ -91,9 +92,10 @@
 			class='p-3 bg-white d-none position-absolute border-0 shadow' style='width:50vw; height: 100%; right:0'
 			:data-src=urls.residuals_response_tutorial>
 	</iframe>
-<!--	<residuals-plot-div :data="responseData"-->
-<!--						class='invisible'-->
-<!--						style='position:absolute;inset:0px;z-index:10'-->
-<!--						:style="{visibility: Object.keys(responseData).length ? 'visible !important' : ''}">-->
-<!--	</residuals-plot-div>-->
+
+	<plots-div :data="responses.predictions_plots"
+			   class='invisible'
+			   style='position:absolute;inset:0px;z-index:10000'
+			   :style="{visibility: responses.predictions_plots.length ? 'visible !important' : ''}">
+	</plots-div>
 </div>

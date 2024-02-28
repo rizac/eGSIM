@@ -64,11 +64,10 @@ def get_residuals(
     sorted_cols = product(imts, labels, gsims)
     residuals = residuals[[c for c in sorted_cols if c in original_cols]]
     # concat:
-    # FIXME: use 'input_data' also in trellis output?
     col_mapping = {}
     for c in flatfile_r.columns:
         c_type = ColumnsRegistry.get_type(c)
-        col_mapping[c] = ('input_data', c_type.name if c_type else 'misc', c)
+        col_mapping[c] = (c_labels.input_data, c_type.name if c_type else 'misc', c)
     flatfile_r.rename(columns=col_mapping, inplace=True)
     # sort columns:
     flatfile_r.sort_index(axis=1, inplace=True)
@@ -294,6 +293,7 @@ class c_labels: # noqa (keep it simple, no Enum/dataclass needed)
     total_res_lh = total_res + "_likelihood"
     inter_ev_res_lh = inter_ev_res + "_likelihood"
     intra_ev_res_lh = intra_ev_res + "_likelihood"
+    input_data = 'input_data'
 
 
 def get_residuals_likelihood(residuals: pd.DataFrame) -> pd.DataFrame:

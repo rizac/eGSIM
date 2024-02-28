@@ -142,11 +142,20 @@ def build_contexts(
 def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     """prepare an empty dataframe for holding trellis plot data"""
     # get columns:
-    dist_label = ("input_data", ColumnsRegistry.get_type(dist_label).name, dist_label)
-    mag_label = ("input_data", ColumnsRegistry.get_type(labels.MAG).name, labels.MAG)
-    columns = [mag_label, dist_label] + \
-              list(product(imts, [labels.MEDIAN, labels.SIGMA], gsims))
-    columns = pd.MultiIndex.from_tuples(columns)  #  , names=["name", "imt", "model"]
+    dist_label = (
+        labels.input_data,
+        ColumnsRegistry.get_type(dist_label).name,
+        dist_label
+    )
+    mag_label = (
+        labels.input_data,
+        ColumnsRegistry.get_type(labels.MAG).name,
+        labels.MAG
+    )
+    columns = pd.MultiIndex.from_tuples(
+        list(product(imts, [labels.MEDIAN, labels.SIGMA], gsims)) +
+        [mag_label, dist_label]
+    )
     ret = pd.DataFrame(columns=columns)
     # get the values for magnitudes, distances and periods:
     dists = np.tile(distances, len(magnitudes))
@@ -198,3 +207,4 @@ class labels:  # noqa (keep it simple, no Enum/dataclass needed)
     MEDIAN = "median"
     SIGMA = "stddev"
     MAG = "mag"
+    input_data = 'input_data'

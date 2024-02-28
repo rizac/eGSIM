@@ -126,14 +126,30 @@ def dataframe2dict(dframe: pd.DataFrame, as_json=True,
                 key = key[-1]
             key = str(key)
             # remove nan +-inf:
-            col_na = df_na[col]
-            if col_na.any():
-                vals = vals.astype(object)
-                vals[col_na] = None
+            vals = _array2json(vals, df_na[col])
         dest_ret[key] = vals.tolist()
     return output
 
 
+def array2json(values: Union[pd.Series, np.ndarray]) -> list:
+    """Convert the given array, list or pandas Series into a JSON serializable list
+
+    :param values: a numeric Sequence
+    """
+    values = np.asarray(values)
+    return _array2json(values, np.isnan(values) | np.isinf(values)).tolist()  # noqa
+
+
+def _array2json(values: Union[pd.Series, np.ndarray],
+                na_values: Union[pd.Series, np.ndarray, None] = None) -> np.ndarray:
+    values = np.asarray(values)  # in case of pd.Series S, returns S.values by ref.
+    if na_values is not None and na_values.any():
+        values = values.astype(object)
+        values[na_values] = None
+    return values
+
+
+# FIXME USED? REMOVE?
 def dict2dataframe(data: dict) -> pd.DataFrame:
     """Return a DataFrame from the given dict, using its keys as the columns of
     the resulting DataFrame. Nested dict keys will result ina  multi-index column
