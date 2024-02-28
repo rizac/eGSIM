@@ -52,7 +52,7 @@
 			<div class="input-group mt-1">
 				<div class='input-group-text'>msr</div>
 				<select v-model="forms.predictions['msr']" class='form-control'>
-					<option v-for="m in forms.misc.msr" :value="m[0]">
+					<option v-for="m in forms.misc.predictions.msr" :value="m[0]">
 						{% verbatim %}{{ m[1] }}{% endverbatim %}
 					</option>
 				</select>
@@ -104,7 +104,7 @@
 			<div class="input-group mt-1">
 				<div class='input-group-text'>region</div>
 				<select v-model="forms.predictions.region" class='form-control'>
-					<option v-for="m in forms.misc.region" :value="m[0]">{% verbatim %}{{ m[1] }}{% endverbatim %}</option>
+					<option v-for="m in forms.misc.predictions.region" :value="m[0]">{% verbatim %}{{ m[1] }}{% endverbatim %}</option>
 				</select>
 			</div>
 

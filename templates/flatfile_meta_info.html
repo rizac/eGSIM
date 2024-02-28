@@ -1,7 +1,7 @@
 <div class='position-relative d-flex flex-row' style="flex: 1 1 auto;">
 
 	<div class='border my-5 start-50 position-absolute top-0 bottom-0 d-flex flex-column shadow bg-white'
-			style='z-index:1000;transform: translateX(-50%); width:75vw' v-if="forms.misc.flatfile_meta_info_show_dialog">
+			style='z-index:1000;transform: translateX(-50%); width:75vw' v-if="forms.misc.flatfile_meta_info.show_dialog">
 
 		<div class='p-3'>
 			<div>Select your models and intensity measure types of interest</div>
@@ -32,11 +32,11 @@
 
 		<div class="p-3 text-center">
 			<button class='btn btn-primary me-2' type='button'
-					@click='postData(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info_show_dialog=false'>
+					@click='postData(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info.show_dialog=false'>
 				Fetch required flatfile fields
 			</button>
 			<button class='btn btn-primary' type='button'
-					@click='forms.misc.flatfile_meta_info_show_dialog=false'>
+					@click='forms.misc.flatfile_meta_info.show_dialog=false'>
 				Close dialog
 			</button>
 		</div>
@@ -55,7 +55,7 @@
 		</div>
 		<div class='text-center my-2'>
 			<button type='button' class='btn btn-primary'
-					@click='forms.misc.flatfile_meta_info_show_dialog=true'>
+					@click='forms.misc.flatfile_meta_info.show_dialog=true'>
 				Compose and visualize flatfile fields
 			</button>
 		</div>
@@ -74,11 +74,11 @@
 					</thead>
 
 					<tbody>
-						<tr v-for="name in Object.keys(responses.flatfile_meta_info || {})">
-							<td v-html="name"></td>
-							<td v-html="responses.flatfile_meta_info[name].type"></td>
-							<td v-html="responses.flatfile_meta_info[name].dtype"></td>
-							<td v-html="responses.flatfile_meta_info[name].help"></td>
+						<tr v-for="col in responses.flatfile_meta_info.columns">
+							<td v-html="col.name"></td>
+							<td v-html="col.type"></td>
+							<td v-html="col.dtype"></td>
+							<td v-html="col.help"></td>
 						</tr>
 					</tbody>
 				</table>
@@ -86,7 +86,7 @@
 
 			<div class='input-group mt-2'>
 				<label class='input-group-text'>CSV (header)</label>
-				<input class='form-control' :value='Object.keys(responses.flatfile_meta_info || {}).join(",")' />
+				<input class='form-control' :value='responses.flatfile_meta_info.columns.map(c => c.name).join(",")' />
 			</div>
 		</div>
 	</div>

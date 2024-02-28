@@ -28,33 +28,20 @@ from ..smtk import intensity_measures_defined_for
 
 class URLS:  # noqa
     """Define global URLs"""
-    # NOTE NO URL HERE (unless external, i.e., http://) MUST END WITH  "/"
 
-    # FIXME REMOVE BELOW
-    # JSON data requested by the main page at startup:
-    #  MAIN_PAGE_INIT_DATA = "init_data"
-
-    # Url for getting the gsim list from a given geographic location:
-    # FIXME: MOVE OUT OF REGIONALIZATION dict
     GET_GSIMS_FROM_REGION = 'gui/get_models_from_region'
-    # inspecting a flatfile:
     FLATFILE_VALIDATION = 'gui/flatfile_validation'
     FLATFILE_VISUALIZATION = 'gui/flatfile_visualization'
     FLATFILE_META_INFO = 'gui/get_flatfile_meta_info'
 
     DOWNLOAD_PREDICTIONS = 'download/egsim-predictions'
     DOWNLOAD_RESIDUALS = 'download/egsim-residuals'
+    DOWNLOAD_PREDICTIONS_PLOT = 'download/egsim-predictions-plot'
+    DOWNLOAD_RESIDUALS_PLOT = 'download/egsim-residuals-plot'
 
-    PREDICTIONS_RESPONSE_TUTORIAL_HTML = 'jupyter/Predictions-response-tutorial.html'
-    RESIDUALS_RESPONSE_TUTORIAL_HTML = 'jupyter/Residuals-response-tutorial.html'
+    PREDICTIONS_RESPONSE_TUTORIAL_HTML = 'jupyter/predictions-response-tutorial.html'
+    RESIDUALS_RESPONSE_TUTORIAL_HTML = 'jupyter/residuals-response-tutorial.html'
 
-    # FLATFILE_REQUIRED_COLUMNS = 'data/flatfile_required_columns'
-    # FLATFILE_PLOT = 'data/flatfile_plot'
-    # DOWNLOAD_REQUEST = 'data/downloadrequest'
-    # DOWNLOAD_RESPONSE = 'data/downloadresponse'
-    # info pages:
-    # HOME_NO_MENU = 'home_no_menu'
-    # API = 'api'
     HOME_PAGE = 'home'
     DATA_PROTECTION_PAGE = 'https://www.gfz-potsdam.de/en/data-protection/'
     FLATFILE_META_INFO_PAGE = 'flatfile-metadata-info'
@@ -133,13 +120,15 @@ def _get_init_data_json(debug=False) -> dict:
     flatfiles = []
     for ffile in models.Flatfile.queryset('name', 'display_name', 'url',
                                           'media_root_path'):
-        flatfiles.append({
-            'value': ffile.name,
-            'name': ffile.name,
-            'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
-            'url': ffile.url,  # noqa
-            'columns': FlatfileForm.get_flatfile_dtypes(ffile.read_from_filepath(nrows=0))
-        })
+        ff_form = FlatfileValidationForm({'flatfile': ffile.name})
+        if ff_form.is_valid():
+            flatfiles.append({
+                'value': ffile.name,
+                'name': ffile.name,
+                'innerHTML': f'{ffile.name} ({ffile.display_name})',  # noqa
+                'url': ffile.url,  # noqa
+                'columns': ff_form.output()['columns']
+            })
 
     # Get component props (core data needed for Vue rendering):
     # components_props = get_components_properties(debug)
@@ -176,6 +165,8 @@ def _get_init_data_json(debug=False) -> dict:
         'urls': {
             'predictions': URLS.DOWNLOAD_PREDICTIONS,
             'residuals': URLS.DOWNLOAD_RESIDUALS,
+            'predictions_plot': URLS.DOWNLOAD_PREDICTIONS_PLOT,
+            'residuals_plot': URLS.DOWNLOAD_RESIDUALS_PLOT,
             'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO,
             'flatfile_inspection_plot': URLS.FLATFILE_VISUALIZATION,
@@ -192,11 +183,30 @@ def _get_init_data_json(debug=False) -> dict:
                 'regionalization': None
             }).asdict(),
             'flatfile_inspection_plot': FlatfilePlotForm({}).asdict(),
+            # 'misc': {
+            #     'msr': predictions_form.fields['msr'].choices,
+            #     'region': predictions_form.fields['region'].choices,
+            #     'flatfile_inspection_plot_columns': [],
+            #     'flatfile_residuals_columns': [],
+            #     'flatfile_meta_info_show_dialog': False,
+            #     'download_formats': ['hdf', 'csv']
+            # }
             'misc': {
-                'msr': predictions_form.fields['msr'].choices,
-                'region': predictions_form.fields['region'].choices,
-                'flatfile_inspection_plot_columns': [],
-                'flatfile_meta_info_show_dialog': False,
+                'predictions':{
+                    'msr': predictions_form.fields['msr'].choices,
+                    'region': predictions_form.fields['region'].choices,
+                    'plot_x': None
+                },
+                'flatfile_inspection_plot': {
+                    'selected_flatfile_fields': []
+                },
+                'residuals': {
+                    'selected_flatfile_fields': [],
+                    'plot_x': None
+                },
+                'flatfile_meta_info': {
+                    'show_dialog': False
+                },
                 'download_formats': ['hdf', 'csv']
             }
         },
@@ -437,7 +447,7 @@ def _test_err(request):
     raise ValueError('this is a test error!')
 
 
-def test_request(request):
+def test_request(request):  # FIXME REMOVE?
     import time
     time.sleep(3)
     # return JsonResponse(data={'message': 'ok'}, status=200)

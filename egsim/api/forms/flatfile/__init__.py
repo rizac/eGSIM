@@ -106,20 +106,96 @@ class FlatfileForm(EgsimBaseForm):
 
         return cleaned_data
 
-    @classmethod
-    def get_flatfile_dtypes(cls, flatfile: pd.DataFrame) -> dict[str, str]:
-        """Return the human-readable data type description for each column of the given
-        flatfile
+    # FIXME REMOVE
+    # @classmethod
+    # def get_flatfile_dtypes(cls, flatfile: pd.DataFrame) -> dict[str, str]:
+    #     """Return the human-readable data type description for each column of the given
+    #     flatfile
+    #     """
+    #     cols = []
+    #     for col in sorted(flatfile.columns):
+    #         c_type = None
+    #         c_help = None
+    #         c_dtype = ColumnsRegistry.get_dtype(col)
+    #         if c_dtype is not None and c_dtype == ColumnDtype.of(flatfile[col]):
+    #             c_help = str(ColumnsRegistry.get_help(col) or None)
+    #             c_type = str(getattr(ColumnsRegistry.get_type(col), 'value', None))
+    #
+    #         cols.append({
+    #             'help': str(ColumnsRegistry.get_help(col) or None),
+    #             'type': str(getattr(ColumnsRegistry.get_type(col), 'value', None)),
+    #             'dtype': str(ColumnsRegistry.get_dtype(col) or None)
+    #         })
+    #
+    #     dtypes = {}
+    #     for col in flatfile.columns:
+    #         f_col = flatfile[col]
+    #         if isinstance(f_col.dtype, pd.CategoricalDtype):
+    #             col_dtype = "categorical"
+    #         else:
+    #             col_dtype = ColumnDtype.of(f_col) or "undefined"
+    #         dtypes[col] = col_dtype
+    #     return dtypes
+
+    @staticmethod
+    def get_columns_info(flatfile: pd.DataFrame) -> list[dict]:
+        """Return a list of dicts representing a column:
+        {"name":str, "type":str, "dtype":str, "help":str}.
+        Columns that are defined in the flatfile and are also default columns
+        registered in this program will not be returned if their data type does not match
         """
-        dtypes = {}
+        columns = []
         for col in flatfile.columns:
-            f_col = flatfile[col]
-            if isinstance(f_col.dtype, pd.CategoricalDtype):
-                col_dtype = "categorical"
-            else:
-                col_dtype = ColumnDtype.of(f_col) or "undefined"
-            dtypes[col] = col_dtype
-        return dtypes
+            c_dtype = ColumnDtype.of(flatfile[col])
+            c_info = FlatfileForm.get_registered_column_info(col)
+            if not c_info['type']:  # not registered column, set the actual column dtype
+                c_info['dtype'] = c_dtype
+                c_info['help'] = ''  # for safety
+            elif not c_info['dtype']:  # registered columns with no dtype set.
+                # Use the actual dtype, if present
+                if c_dtype:
+                    c_info['dtype'] = str(c_dtype)
+            else:  # registered columns with dtype set. Check:
+                if c_dtype != c_info['dtype']:
+                    if not isinstance(c_dtype, pd.CategoricalDtype) and \
+                            not isinstance(c_info['dtype'], pd.CategoricalDtype):
+                        continue
+                if isinstance(c_info['dtype'], pd.CategoricalDtype):
+                    c_info['dtype'] = 'category'
+            columns.append(c_info)
+        return columns
+
+        #     c_dtype = ColumnsRegistry.get_dtype(col)
+        #     if c_dtype is None:
+        #         columns.append()
+        #     f_col = flatfile[col]
+        #     if isinstance(f_col.dtype, pd.CategoricalDtype) \
+        #             and isinstance(c_dtype, pd.CategoricalDtype):
+        #         c_dtype = "categorical"
+        #     elif isinstance(c_dtype, pd.CategoricalDtype) or \
+        #         ColumnDtype.of(flatfile[col]) != c_dtype:
+        #         continue
+        #     else:
+        #         col_dtype = ColumnDtype.of(f_col) or "undefined"
+        #     dtypes[col] = col_dtype
+        # return dtypes
+
+    @staticmethod
+    def get_registered_column_info(column: str):
+        """Return a dict representing the given registered
+        flatfile column:
+            {"name":str, "type":str, "dtype":str, "help":str}
+        """
+        ret = {
+            'name': column,
+            'type': getattr(ColumnsRegistry.get_type(column), 'value', ""),
+            'dtype': "",
+            'help': ""
+        }
+        if ret['type'] is not None:
+            ret['dtype'] = str(ColumnsRegistry.get_dtype(column) or "")
+            ret['help'] = str(ColumnsRegistry.get_help(column) or "")
+        return ret
 
 
 def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
