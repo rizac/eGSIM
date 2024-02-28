@@ -15,6 +15,7 @@ from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for)
 from egsim.smtk.flatfile import ColumnsRegistry
+from egsim.smtk.flatfile.columns_registry import ColumnDtype
 
 
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
@@ -41,15 +42,18 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
             for m in gsims:
                 imts |= intensity_measures_defined_for(m)
 
-        columns = {}
-        for col_name in sorted(set(gm_props) | set(imts)):
-            columns[col_name] = {
-                'help': str(ColumnsRegistry.get_help(col_name) or 'unspecified'),
-                'type': str(getattr(ColumnsRegistry.get_type(col_name), 'value',
-                                    'unspecified')),
-                'dtype': str(ColumnsRegistry.get_dtype(col_name) or 'unspecified')
-            }
-        return columns
+        return {
+            'columns': [FlatfileForm.get_default_column_info(c)
+                        for c in sorted(set(gm_props) | set(imts))]
+        }
+        # for col_name in sorted(set(gm_props) | set(imts)):
+        #     columns[col_name] = {
+        #         'help': str(ColumnsRegistry.get_help(col_name) or 'unspecified'),
+        #         'type': str(getattr(ColumnsRegistry.get_type(col_name), 'value',
+        #                             'unspecified')),
+        #         'dtype': str(ColumnsRegistry.get_dtype(col_name) or 'unspecified')
+        #     }
+        # return columns
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):
@@ -177,17 +181,20 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
     """Form for flatfile validation, on success
     return info from a given uploaded flatfile"""
 
+    # FIXME: REMOVE
+    #
     def clean(self):
         cleaned_data = super().clean()
 
         if self.has_error('flatfile'):
             return cleaned_data
         dataframe = cleaned_data['flatfile']
-        gsims = list(get_gsims_from_flatfile(dataframe.columns))
-        if not gsims:
-            self.add_error("flatfile", f'missing columns required')
-        cleaned_data['gsim'] = gsims
-        cleaned_data['flatfile_dtypes'] = self.get_flatfile_dtypes(dataframe)
+        # check invalid columns:
+        invalid = set(dataframe.columns) - \
+                  set(_['name'] for _ in self.get_columns_info(dataframe))
+        if invalid:
+            self.add_error('flatfile',
+                           f'Invalid data type in column(s):  {", ".join(invalid)}')
         return cleaned_data
 
     def output(self) -> dict:
@@ -197,8 +204,10 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         :return: any Python object (e.g., a JSON-serializable dict)
         """
         cleaned_data = self.cleaned_data
+        dataframe = cleaned_data['flatfile']
+
         return {
-            'columns': cleaned_data['flatfile_dtypes'],
+            'columns': self.get_columns_info(dataframe)
             # 'default_columns': get_dtypes_and_defaults()[0],  # FIXME WHAT WAS THIS?
-            'gsim': cleaned_data['gsim']
+            # 'gsim': cleaned_data['gsim']
         }

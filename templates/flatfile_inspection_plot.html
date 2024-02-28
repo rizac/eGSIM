@@ -7,32 +7,32 @@
 					:flatfiles='flatfiles'
 					v-model="forms.flatfile_inspection_plot.flatfile"
 					:upload-url='urls.flatfile_validation'
-					@update:model-value="(value) => { forms.flatfile_inspection_plot.x=null; forms.flatfile_inspection_plot.y=null; forms.misc.flatfile_inspection_plot_columns=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns;   }"
+					@update:model-value="(value) => { forms.flatfile_inspection_plot.x=null; forms.flatfile_inspection_plot.y=null; forms.misc.flatfile_inspection_plot.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }"
 				>
 				</flatfile-select>
 				<div class='input-group ms-1'>
 					<label class='input-group-text'>data-query</label>
 					<input type='text' v-model="forms.flatfile_inspection_plot['data-query']" class='form-control'/>
 				</div>
-				<div class='input-group ms-3' v-if="Object.keys(forms.misc.flatfile_inspection_plot_columns).length">
+				<div class='input-group ms-3' v-if="forms.misc.flatfile_inspection_plot.selected_flatfile_fields.length">
 					<label class='input-group-text'>x</label>
 					<select v-model='forms.flatfile_inspection_plot.x' class='form-control'>
 						<option :value="null">None (histogram on the Y axis)</option>
-						<option v-for="v in Object.keys(forms.misc.flatfile_inspection_plot_columns)" :value="v">
-							{% verbatim %} {{ v + ' (' + forms.misc.flatfile_inspection_plot_columns[v] + ")" }} {% endverbatim %}
+						<option v-for="f in forms.misc.flatfile_inspection_plot.selected_flatfile_fields" :value="f.name">
+							{% verbatim %} {{ f.name + ' (' + f.dtype + ")" }} {% endverbatim %}
 						</option>
 					</select>
 				</div>
-				<div class='input-group ms-3' v-if="Object.keys(forms.misc.flatfile_inspection_plot_columns).length">
+				<div class='input-group ms-3' v-if="forms.misc.flatfile_inspection_plot.selected_flatfile_fields.length">
 					<label class='input-group-text'>y</label>
 					<select v-model='forms.flatfile_inspection_plot.y' class='form-control'>
 						<option :value="null">None (histogram on the X axis)</option>
-						<option v-for="v in Object.keys(forms.misc.flatfile_inspection_plot_columns)" :value="v">
-							{% verbatim %} {{ v + ' (' + forms.misc.flatfile_inspection_plot_columns[v] + ")" }} {% endverbatim %}
+						<option v-for="f in forms.misc.flatfile_inspection_plot.selected_flatfile_fields" :value="f.name">
+							{% verbatim %} {{ f.name + ' (' + f.dtype + ")" }} {% endverbatim %}
 						</option>
 					</select>
 				</div>
-				<button type="submit" class="btn btn-primary mt-2 ms-3">
+				<button type="submit" class="btn btn-primary mt-2 ms-3 text-nowrap">
 					Display plot
 				</button>
 			</div>

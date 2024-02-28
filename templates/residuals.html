@@ -21,7 +21,9 @@
 			class= 'mt-3'
 			:flatfiles='flatfiles'
 			v-model="forms.residuals.flatfile"
-			:upload-url='urls.flatfile_validation'>
+			:upload-url='urls.flatfile_validation'
+			@update:model-value="(value) => { forms.misc.residuals.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }"
+		>
 		</flatfile-select>
 
 		<div class='input-group mt-1'>
@@ -30,6 +32,7 @@
 		</div>
 
 		<div class='d-flex flex-column mt-3 align-items-stretch'>
+
 			<div class="input-group-text d-flex flex-row"
 				 style="border-bottom: 0px !important; border-bottom-left-radius: 0px !important; border-bottom-right-radius: 0px !important;">
 				<span>Compute residuals</span>
@@ -37,19 +40,20 @@
 				<label><input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood</label>
 				<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-2'><i class='fa fa-external-link'></i></a>
 			</div>
+
 			<div class='d-flex flex-row form-control'
 				 style="border-top-left-radius: 0px !important; border-top-right-radius: 0px !important;">
+
 				<div class='input-group me-2'>
 					<select v-model='forms.residuals.format' class='form-control'>
 						<option v-for='format in forms.misc.download_formats' :value='format'>
 							{% verbatim %}{{ format }}{% endverbatim %}
 						</option>
 					</select>
-					<button
-						type='button'
-						@click="downloadResult(urls.residuals, forms.residuals, 'egsim-residuals')"
-						class='btn btn-primary text-nowrap'
-						title='Download residuals'>
+					<button type='button'
+							@click="downloadResult(urls.residuals, forms.residuals, 'egsim-residuals')"
+							class='btn btn-primary text-nowrap'
+							title='Download residuals'>
 						<i class='fa fa-download'></i>
 					</button>
 					<button type='button'
@@ -59,20 +63,37 @@
 						<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
 					</button>
 				</div>
-				<!--<button type='button'
-						@click='getPlotData()'
-						class='btn btn-primary text-nowrap' type='submit' title='Visualize predictions'>
-					<i class='fa fa-area-chart'></i>
-				</button>-->
+
+				<div class='input-group me-2'>
+					<select v-model='forms.misc.residuals.plot_x' class='form-control'>
+						<option :value='null'>
+							{% verbatim %}
+							{{ forms.residuals.likelihood ? 'Likelihood' : 'Residuals' }} histogram (density distribution)
+							{% endverbatim %}
+						</option>
+						<option v-for='f in forms.misc.residuals.selected_flatfile_fields.filter(f => !f.type.toLowerCase().includes("intensity"))' :value='f.name'>
+							{% verbatim %}
+							{{ forms.residuals.likelihood ? 'Likelihood' : 'Residuals' }} vs. {{ f.name + " (" + f.dtype + ")" }}
+							{% endverbatim %}
+						</option>
+					</select>
+					<button type='button'
+							@click="var data = Object.assign({}, forms.residuals, forms.misc.residuals); postData(urls.residuals_plot, data)"
+							class='btn btn-primary text-nowrap'
+							title='Visualize residuals via interactive plots'>
+						<i class='fa fa-bar-chart'></i>
+					</button>
+				</div>
+
 			</div>
+
 		</div>
 
 	</form>
 
-	<iframe
-		id='residuals_tutorial'
-		class='p-3 bg-white d-none position-absolute border-0 shadow' style='width:50vw; height: 100%; right:0'
-		:data-src=urls.residuals_response_tutorial>
+	<iframe id='residuals_tutorial'
+			class='p-3 bg-white d-none position-absolute border-0 shadow' style='width:50vw; height: 100%; right:0'
+			:data-src=urls.residuals_response_tutorial>
 	</iframe>
 <!--	<residuals-plot-div :data="responseData"-->
 <!--						class='invisible'-->
