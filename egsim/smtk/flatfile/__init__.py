@@ -422,7 +422,7 @@ class ColumnType(Enum):
     intensity = 'Intensity measure'
 
 
-class ColumnDtype(Enum):  # (str, ReprEnum):
+class ColumnDtype(Enum):
     """Enum where members are registered dtype names (see ColumnRegistry) and
     values are the pandas counterpart
     """

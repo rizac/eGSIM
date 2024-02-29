@@ -11,7 +11,8 @@ from django.forms.fields import CharField
 
 from egsim.api import models
 from egsim.api.forms import APIForm, GsimImtForm
-from egsim.api.forms.flatfile import FlatfileForm
+from egsim.api.forms.flatfile import (FlatfileForm, get_registered_column_info,
+                                      get_columns_info)
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for)
 
@@ -41,17 +42,9 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
                 imts |= intensity_measures_defined_for(m)
 
         return {
-            'columns': [FlatfileForm.get_registered_column_info(c)
+            'columns': [get_registered_column_info(c)
                         for c in sorted(set(gm_props) | set(imts))]
         }
-        # for col_name in sorted(set(gm_props) | set(imts)):
-        #     columns[col_name] = {
-        #         'help': str(ColumnsRegistry.get_help(col_name) or 'unspecified'),
-        #         'type': str(getattr(ColumnsRegistry.get_type(col_name), 'value',
-        #                             'unspecified')),
-        #         'dtype': str(ColumnsRegistry.get_dtype(col_name) or 'unspecified')
-        #     }
-        # return columns
 
 
 class FlatfilePlotForm(APIForm, FlatfileForm):
@@ -179,17 +172,15 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
     """Form for flatfile validation, on success
     return info from a given uploaded flatfile"""
 
-    # FIXME: REMOVE
-    #
     def clean(self):
         cleaned_data = super().clean()
 
         if self.has_error('flatfile'):
             return cleaned_data
         dataframe = cleaned_data['flatfile']
-        # check invalid columns:
+        # check invalid columns (FIXME: we could skip this, it's already checked? write a test):
         invalid = set(dataframe.columns) - \
-                  set(_['name'] for _ in self.get_columns_info(dataframe))
+                  set(_['name'] for _ in get_columns_info(dataframe))
         if invalid:
             self.add_error('flatfile',
                            f'Invalid data type in column(s):  {", ".join(invalid)}')
@@ -205,7 +196,5 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         dataframe = cleaned_data['flatfile']
 
         return {
-            'columns': self.get_columns_info(dataframe)
-            # 'default_columns': get_dtypes_and_defaults()[0],  # FIXME WHAT WAS THIS?
-            # 'gsim': cleaned_data['gsim']
+            'columns': get_columns_info(dataframe)
         }
