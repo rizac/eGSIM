@@ -31,7 +31,8 @@ class FlatfileForm(EgsimBaseForm):
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params: dict[str, tuple[str]] = {
-        'selexpr': ('data-query', 'selection-expression')
+        'selexpr': ('data-query', 'selection-expression'),
+        'flatfile': ('data', 'flatfile')
     }
     flatfile = ModelChoiceField(
         queryset=models.Flatfile.queryset('name', 'media_root_path'),

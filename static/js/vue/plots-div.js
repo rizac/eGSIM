@@ -2,11 +2,12 @@
 of a response Object sent from the server */
 EGSIM.component('plots-div', {
 	props: {
-		data: {type: Object, default: () => { return {} }},
+		data: {type: Array, default: () => { return [] }},
 		downloadUrl: {type: String, default: ""} // base url for download actions
 	},
 	data(){
 		return {
+			show: true,
 			// boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
 			drawingPlots: false,
 			// an Array of [legendgroup:str, traceProperties:Object] elements:
@@ -207,7 +208,7 @@ EGSIM.component('plots-div', {
 			}
 		},
 	},
-	template: `<div v-show='Object.keys(data).length' class='d-flex flex-row'>
+	template: `<div class='flex-row bg-body p-1' :class='data.length && show ? "d-flex" : "d-none"'>
 		<div class="d-flex flex-column" style="flex: 1 1 auto">
 			<div v-if="params.length" class='d-flex flex-row justify-content-around'>
 				<template v-for='(param, index) in params'>
@@ -240,6 +241,12 @@ EGSIM.component('plots-div', {
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
 		<div class='d-flex flex-column ps-4' style='overflow-y: auto'>
 			<slot></slot> <!-- slot for custom buttons -->
+			<div class='d-flex flex-row-reverse'>
+				<button type='button' class='btn btn-outline-primary text-nowrap'
+						@click="show = !show">
+					close <i class='fa fa-times-circle ms-2'></i>
+				</button>
+			</div>
 			<div v-show='legend.length' class='mt-3 p-2 px-1'>
 				<div v-for="l in legend" class='d-flex flex-column form-control mt-2'>
 					<div class='d-flex flex-row align-items-baseline' :style="{color: getLegendColor(l[1])}">
@@ -337,6 +344,7 @@ EGSIM.component('plots-div', {
 			this.grid.params.forEach((p, i) => p.visible = !!(p.label && this.grid.visibility[i]));
 		},
 		init(data){
+			this.show = true;
 			this.drawingPlots = true;
 			this.legend = {};
 			// convert data:
