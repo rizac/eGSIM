@@ -6,7 +6,7 @@ from datetime import date, datetime
 import re
 from typing import Union, Any
 from collections.abc import Callable, Collection
-from enum import Enum, ReprEnum
+from enum import Enum
 
 import numpy as np
 import pandas as pd
@@ -126,7 +126,7 @@ def read_flatfile(
     :return: pandas DataFrame representing a Flat file
     """
     kwargs = dict(_flatfile_default_args) | kwargs
-    dtype = dtype or {}
+    dtype = dict(dtype or {})  # will be harmonized and modified inplace below:
     kwargs =  _read_csv_prepare(filepath_or_buffer, sep=sep, dtype=dtype,
                                 usecols=usecols, **kwargs)
     try:
@@ -184,11 +184,13 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
     kwargs['dtype'] = {}
     for col in csv_columns:
         if col in dtype:
-            col_dtype = cast_dtype(dtype[col])
+            col_dtype = _as_dtype_value(dtype[col]) # a ColumndDType value or pd.Categorical
         else:
-            col_dtype = ColumnsRegistry.get_dtype(col)
+            col_dtype = ColumnsRegistry.get_dtype(col)  # a ColumnDType value
             if col_dtype is None:
                 continue
+        # set the harmonized value into our dtype dict (see finalize_read_csv):
+        dtype[col] = col_dtype
 
         if isinstance(col_dtype, pd.CategoricalDtype):
             # if `col_dtype.categories=None` or `col_dtype='category'`, then
@@ -199,19 +201,19 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
             # the same type) to get missing values, checking invalid values
             # after reading:
             if col_dtype.categories is not None:
-                col_dtype = ColumnDtype.of(*col_dtype.categories)
+                col_dtype = get_dtype_of(*col_dtype.categories).value
 
-        if col_dtype == ColumnDtype.int:
+        if col_dtype == ColumnDtype.int.value:
             # let `read_csv` treat ints as floats, so that we can have NaN and
             # check later if we can replace them with the column default, if set
-            kwargs['dtype'][col] = ColumnDtype.float
-        elif col_dtype == ColumnDtype.bool:
+            kwargs['dtype'][col] = ColumnDtype.float.value
+        elif col_dtype == ColumnDtype.bool.value:
             # let `read_csv` infer the data type of bools by not passing a dtype at
             # all. We will check later if we can cast the values to bool, not only
             # in terms of replacing N/A with the column default, if set, but also
             # string values (e.g. 'FALSE') to valid values
             continue
-        elif col_dtype == ColumnDtype.datetime:
+        elif col_dtype == ColumnDtype.datetime.value:
             # date times in `read_csv` must be given in the `parse_dates` arg. Note
             # that, whereas missing values will still preserve the dtype and be set
             # as `NaT` (not a time), invalid datetime values will simply result in a
@@ -253,9 +255,9 @@ def _read_csv_inspect_failure(filepath_or_buffer: IOBase, **kwargs) -> list[str]
     # As `read_csv` exception messages do not convey any column information, let's call
     # `read_csv` for each singular column, and collect those which raise.
     # To narrow down the choice of suspects let's pass only float columns: dtypes that
-    # might raise are also bool and int, but we do not have those stypes here
+    # might raise are also bool and int, but we do not have those dtypes here
     # (see `_read_csv_prepare` for details):
-    cols2check = [c for c, v in kwargs['dtype'].items() if v == ColumnDtype.float]
+    cols2check = [c for c, v in kwargs['dtype'].items() if v == ColumnDtype.float.value]
     invalid_columns = []
     for c in cols2check:
         try:
@@ -284,10 +286,10 @@ def _read_csv_finalize(
         defaults = {}
     # check dtypes correctness (actual vs expected) and try to fix mismatching ones:
     for col in dfr.columns:
-        expected_dtype = dtype.get(col, None)  # ColumnDtype or pd.CategoricalDtype
+        expected_dtype = dtype.get(col, None)  # ColumnDtype value or pd.CategoricalDtype
         if expected_dtype is None:
             continue
-        if expected_dtype == 'category' and \
+        if expected_dtype == ColumnDtype.category.value and \
                 isinstance(dfr[col].dtype, pd.CategoricalDtype):
             continue
         # is expected dtype a pandas CategoricalDtype?
@@ -298,21 +300,21 @@ def _read_csv_finalize(
                 continue
             expected_categories = expected_dtype
             # expected_dtype is the dtype of all categories
-            expected_dtype = ColumnDtype.of(*expected_dtype.categories)
+            expected_dtype = get_dtype_of(*expected_dtype.categories).value
         # actual dtype. NOTE: cannot be categorical (see `_read_csv_prepare`)
-        actual_dtype: ColumnDtype = ColumnDtype.of(dfr[col])
+        actual_dtype = get_dtype_of(dfr[col])
         # check matching dtypes:
-        dtype_ok = actual_dtype == expected_dtype
+        dtype_ok = actual_dtype is not None and actual_dtype.value == expected_dtype
         do_type_cast = False
         # handle mismatching dtypes (bool and int):
         if not dtype_ok:
-            if expected_dtype == ColumnDtype.int:
+            if expected_dtype == ColumnDtype.int.value:
                 not_na = pd.notna(dfr[col])
                 values = dfr[col][not_na]
                 if (values == values.astype(int)).all():  # noqa
                     dtype_ok = True
                     do_type_cast = True
-            elif expected_dtype == ColumnDtype.bool:
+            elif expected_dtype == ColumnDtype.bool.value:
                 not_na = pd.notna(dfr[col])
                 unique_vals = pd.unique(dfr[col][not_na])
                 mapping = {}
@@ -333,8 +335,8 @@ def _read_csv_finalize(
             #set default
             if col in defaults:
                 has_default = True
-                default = cast_value(defaults[col],
-                                     expected_categories or expected_dtype)
+                default = _cast_value(defaults[col],
+                                      expected_categories or expected_dtype)
             else:
                 default = ColumnsRegistry.get_default(col)
                 has_default = default is not None
@@ -420,124 +422,64 @@ class ColumnType(Enum):
     intensity = 'Intensity measure'
 
 
-class ColumnDtype(str, ReprEnum):
-    """Enum where members are also strings representing supported data types for
-    flatfile columns. E.g.: `pd_series.astype(ColumnDtype.datetime)`. Use the class
-    method `ColumnDtype.of` to get the ColumnDType corresponding to any given Python
-    / numpy/ pandas object or type
+class ColumnDtype(Enum):  # (str, ReprEnum):
+    """Enum where members are registered dtype names (see ColumnRegistry) and
+    values are the pandas counterpart
     """
-    def __new__(cls, value, *py_types:type):
-        """Constructs a new ColumnDtype member"""
-        # subclassing StrEnum does not work, so we copy from StreEnum.__new__:
-        member = str.__new__(cls, value)
-        member._value_ = value
-        member.py_types = tuple(py_types)
-        return member
-
-    # each member below must be mapped to the numpy name (see `numpy.sctypeDict.keys()`
-    # for a list of supported names. Exception is 'string' that is pandas only) and
-    # one or more Python classes that will be used
-    # to get if an object (Python, numpy or pandas) is instance of a particular
-    # `ColumnDtype` (see `ColumnDtype.of`)
-
-    float = "float",  float, np.floating
-    int = "int", int, np.integer
-    bool = "bool", bool, np.bool_
-    datetime = "datetime64", datetime, np.datetime64
-    str = "string", str, np.str_  # , np.object_
-
-    @classmethod
-    def of(cls, *item: Union[int, float, datetime, bool, str,
-                           np.array, pd.Series, PandasArray,
-                           type[int, float, datetime, bool, str],
-                           np.dtype, ExtensionDtype]) -> Union[ColumnDtype, None]:
-        """Return the ColumnDtype of the given argument, or None if no associated
-        dtype is found.
-        If several arguments are passed, return None also if the arguments are
-        not all the same dtype
-
-        :param item: one or more Python objects, such as object instance (e.g. 4.5),
-            object class (`float`), a numpy array, pandas Series / Array, a numpy dtype,
-            pandas ExtensionDtype (e.g., as returned from a pandas dataframe
-            `dataframe[column].dtype`).
-        """
-        ret_type = None
-        for obj in item:
-            if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
-                obj = obj.dtype  # will fall back in the next "if"
-            if isinstance(obj, (np.dtype, ExtensionDtype)):
-                obj = obj.type  # will NOT fall back into the next "if"
-            if not isinstance(obj, type):
-                obj = type(obj)
-            for c_dtype in cls:
-                if issubclass(obj, c_dtype.py_types):  # noqa
-                    # bool is a subclass of int in Python, so:
-                    if c_dtype == ColumnDtype.int and \
-                            issubclass(obj, ColumnDtype.bool.py_types):
-                        c_dtype = ColumnDtype.bool
-                    if ret_type is None:
-                        ret_type = c_dtype
-                    elif ret_type != c_dtype:
-                        return None
-                    break
-            else:
-                return None
-        return ret_type
+    float = "float"
+    int = "int"
+    bool = "bool"
+    datetime = "datetime64"  # NOTE: datetime64 is actually not used in pandas read_csv,
+    # We set here a unique value identifying date time types, and use the numpy value
+    # "datetime64" (see `numpy.sctypeDict.keys()` for a list of supported names)
+    str = "string"  # https://pandas.pydata.org/docs/user_guide/text.html
+    category = "category"
 
 
-def cast_dtype(dtype: Union[Collection, str, pd.CategoricalDtype, ColumnDtype]) \
-        -> Union[ColumnDtype, pd.CategoricalDtype]:
-    """Return a value from the given argument that is suitable to be used as data type in
-    pandas, i.e., either a `ColumnDtype` (str-like enum) or a pandas `CategoricalDtype`
+def get_dtype_of(*item: Union[int, float, datetime, bool, str,
+                 np.array, pd.Series, PandasArray,
+                 type[int, float, datetime, bool, str],
+                 np.dtype, ExtensionDtype]) -> Union[ColumnDtype, None]:
+    """Return the dtype of the given argument, as member of the ColumnDtype Enum,
+    or None if no associated dtype is found.
+    If several arguments are passed and the arguments are not all the same dtype,
+    returns None
+    To get the ColumnDtype Enum from the returned value, call `ColumnDType(value)`
+
+    :param item: one or more Python objects, such as object instance (e.g. 4.5),
+        object class (`float`), a numpy array, pandas Series / Array, a numpy dtype,
+        pandas ExtensionDtype (e.g., as returned from a pandas dataframe
+        `dataframe[column].dtype`).
     """
-    try:
-        if isinstance(dtype, ColumnDtype):
-            return dtype
-        if isinstance(dtype, str):
-            if dtype == 'category':  # infer categories from data
-                dtype = pd.CategoricalDtype() # see below
-            else:
-                try:
-                    return ColumnDtype[dtype]  # try enum name (raise KeyError)
-                except KeyError:
-                    return ColumnDtype(dtype)  # try enum value (raises ValueError)
-        if isinstance(dtype, (list, tuple)):
-            dtype = pd.CategoricalDtype(dtype)
-        if isinstance(dtype, pd.CategoricalDtype):
-            # CategoricalDtype with no categories or categories=None (<=> infer
-            # categories from data) needs no check. Otherwise, check that the categories
-            # are *all* of the same supported dtype:
-            if dtype.categories is None or \
-                    ColumnDtype.of(*dtype.categories) is not None:
-                return dtype
-    except (KeyError, ValueError, TypeError):
-        pass
-    raise ValueError(f'Invalid data type: {str(dtype)}')
-
-
-def cast_value(val: Any, dtype: Union[ColumnDtype, pd.CategoricalDtype]) -> Any:
-    """Cast the given value to the given dtype, raise ValueError if unsuccessful
-
-    :param val: any Python object
-    :param dtype: either a `ColumnDtype` or pandas `CategoricalDtype` object.
-        See `cast_dtype` for details
-    """
-    if dtype is None:
-        raise ValueError(f'Invalid dtype: {str(dtype)}')
-    if isinstance(dtype, pd.CategoricalDtype):
-        if val in dtype.categories:
-            return val
-        dtype_name = 'categorical'
-    else:
-        actual_dtype = ColumnDtype.of(val)
-        if actual_dtype == dtype:
-            return val
-        if dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
-            return float(val)
-        elif dtype == ColumnDtype.datetime and isinstance(val, date):
-            return datetime(val.year, val.month, val.day)
-        dtype_name = dtype.name
-    raise ValueError(f'Invalid value for type {dtype_name}: {str(val)}')
+    ret_type = None
+    for obj in item:
+        if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
+            obj = obj.dtype  # will fall back in the next "if"
+        if isinstance(obj, (np.dtype, ExtensionDtype)):
+            obj = obj.type
+        # define a 'is_type' function:
+        is_type = issubclass if isinstance(obj, type) else isinstance
+        if is_type(obj, (bool, np.bool_)):
+            # Note: bool is a subclass of int in Python: this 'if' before any int check
+            c_dtype = ColumnDtype.bool
+        elif is_type(obj, (int, np.integer)):
+            c_dtype = ColumnDtype.int
+        elif is_type(obj, (float, np.floating)):
+            c_dtype = ColumnDtype.float
+        elif is_type(obj, (datetime, np.datetime64)):
+            c_dtype = ColumnDtype.datetime
+        elif is_type(obj, (str, np.str_)):
+            c_dtype = ColumnDtype.str
+        elif is_type(obj, (pd.CategoricalDtype.type,  # noqa
+                           pd.core.arrays.categorical.Categorical)):
+            c_dtype = ColumnDtype.category
+        else:
+            return None
+        if ret_type is None:
+            ret_type = c_dtype
+        elif ret_type != c_dtype:
+            return None
+    return ret_type
 
 
 # Exceptions:
@@ -634,8 +576,9 @@ class ColumnsRegistry:
         return _load_columns_registry().get(_replace(column), {}).get('type', None)
 
     @staticmethod
-    def get_dtype(column: str) -> Union[None, ColumnDtype, pd.CategoricalDtype]:
-        """Return the Column data type of the given column name, or None"""
+    def get_dtype(column: str) -> Union[None, str, pd.CategoricalDtype]:
+        """Return the Column data type of the given column name, as ColumnDtype value
+        (str), pandas CategoricalDtype, or None"""
         return _load_columns_registry().get(_replace(column), {}).get('dtype', None)
 
     @staticmethod
@@ -698,16 +641,63 @@ def _harmonize_col_props(name:str, props:dict):
     if 'type' in props:
         props['type'] = ColumnType[props['type']]
     if 'dtype' in props:
-        props['dtype'] = cast_dtype(props['dtype'])
+        props['dtype'] = _as_dtype_value(props['dtype'])
     if 'default' in props:
-        props['default'] = cast_value(props['default'], props['dtype'] )
+        props['default'] = _cast_value(props['default'], props['dtype'] )
     for k in ("<", "<=", ">", ">="):
         if k in props:
-            props[k] = cast_value(props[k], props['dtype'] )
+            props[k] = _cast_value(props[k], props['dtype'] )
     return props
 
 
 def _replace(name: str):
     return name if not name.startswith('SA(') else 'SA'
+
+
+def _as_dtype_value(dtype: Union[str, pd.CategoricalDtype, Collection]) \
+        -> Union[str, pd.CategoricalDtype]:
+    """Return a dtype that is suitable to be used as data type in pandas read_csv,
+    i.e., either a `ColumnDtype` value (str) or a pandas `CategoricalDtype` (with all
+    categories of the same type)
+    """
+    try:
+        return ColumnDtype[dtype].value
+    except (TypeError, KeyError):
+        if isinstance(dtype, pd.CategoricalDtype):
+            cat = dtype
+        else:
+            try:
+                cat = pd.CategoricalDtype(dtype)
+            except (TypeError, ValueError):
+                if not isinstance(dtype, pd.CategoricalDtype):
+                    raise ValueError(f'Invalid data type: {str(dtype)}')
+                cat = dtype
+        if len(set(type(v) for v in cat.categories)) != 1:
+            raise ValueError(f'Invalid categorical data type, categories '
+                             f'must be all of the same type')
+        return cat
+
+
+def _cast_value(val: Any, dtype_value: Union[str, pd.CategoricalDtype]) -> Any:
+    """Cast the given value to the given dtype, raise ValueError if unsuccessful
+
+    :param val: any Python object
+    :param dtype_value: either a `ColumnDtype` value (str)
+        or pandas `CategoricalDtype` object.
+    """
+    if isinstance(dtype_value, pd.CategoricalDtype):
+        if val in dtype_value.categories:
+            return val
+        raise ValueError(f'Not in supplied categories: {str(val)}')
+
+    expected_dtype = ColumnDtype(dtype_value)
+    if expected_dtype == ColumnDtype.datetime and isinstance(val, date):
+        return datetime(val.year, val.month, val.day)
+    actual_dtype = get_dtype_of(val)
+    if actual_dtype == expected_dtype:
+        return val
+    if expected_dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
+        return float(val)
+    raise ValueError(f'Not a {dtype_value}: {str(val)}')
 
 
