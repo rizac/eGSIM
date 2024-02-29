@@ -186,9 +186,9 @@ EGSIM.component('gsim-select', {
 				v-show='!!selectableModels.length'
 				class='border position-absolute shadow'
 				style='z-index:10000; outline: 0px !important;'
-				@dblclick.capture.prevent="$evt => addModelsToSelection( Array.from($evt.target.selectedOptions).map(o => o.value) )"
-				@keydown.enter.prevent="$evt => addModelsToSelection( Array.from($evt.target.selectedOptions).map(o => o.value) )"
-				@keydown.up="$evt => { if( $evt.target.selectedIndex == 0 ){ focusHTMLInputElement(); $evt.preventDefault(); } }"
+				@dblclick.prevent="addModelsToSelection( Array.from($refs.selectElement.selectedOptions).map(o => o.value) )"
+				@keydown.enter.prevent="addModelsToSelection( Array.from($refs.selectElement.selectedOptions).map(o => o.value) )"
+				@keydown.up="$evt => { if( $refs.selectElement.selectedIndex == 0 ){ focusHTMLInputElement(); $evt.preventDefault(); } }"
 				@keydown.esc.prevent="inputElementText=''">
 				<option
 					v-for="m in selectableModels"
@@ -545,7 +545,7 @@ EGSIM.component('flatfile-select', {
 			deep: true,
 			immediate: true,
 			handler(newVal, oldVal){
-				var selectedIndex = this.flatfiles.map(f => f.name).indexOf(newVal);
+				this.selectedIndex = this.flatfiles.map(f => f.name).indexOf(newVal);
 			}
 		}
 	},

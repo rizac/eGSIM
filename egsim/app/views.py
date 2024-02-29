@@ -135,9 +135,14 @@ def _get_init_data_json(debug=False) -> dict:
     # components_props = get_components_properties(debug)
     default_models = []
     default_imts = []
+    default_data = None
+    default_data_query = ''
     if debug:
         default_models = ['CauzziEtAl2014', 'BindiEtAl2014Rjb']
         default_imts = ['PGA', 'SA(0.1)']
+        default_data = 'esm2018'
+        default_data_query = 'mag > 7'
+
     predictions_form = TrellisView.formclass({
         'gsim': default_models,
         'imt': default_imts,
@@ -149,6 +154,8 @@ def _get_init_data_json(debug=False) -> dict:
     residuals_form = ResidualsView.formclass({
         'gsim': default_models,
         'imt': default_imts,
+        'flatfile': default_data,
+        'data-query': default_data_query,
         'regionalization': None,
         'format': 'hdf'
     })
@@ -190,19 +197,10 @@ def _get_init_data_json(debug=False) -> dict:
                 'regionalization': None
             }).asdict(),
             'flatfile_inspection_plot': FlatfilePlotForm({}).asdict(),
-            # 'misc': {
-            #     'msr': predictions_form.fields['msr'].choices,
-            #     'region': predictions_form.fields['region'].choices,
-            #     'flatfile_inspection_plot_columns': [],
-            #     'flatfile_residuals_columns': [],
-            #     'flatfile_meta_info_show_dialog': False,
-            #     'download_formats': ['hdf', 'csv']
-            # }
             'misc': {
                 'predictions':{
                     'msr': predictions_form.fields['msr'].choices,
                     'region': predictions_form.fields['region'].choices,
-                    # 'plot_x': None
                 },
                 'flatfile_inspection_plot': {
                     'selected_flatfile_fields': []
