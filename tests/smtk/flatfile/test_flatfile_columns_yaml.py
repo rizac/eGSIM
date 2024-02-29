@@ -10,15 +10,10 @@ import pandas as pd
 import numpy as np
 
 from openquake.hazardlib import imt
-from egsim.smtk import registered_imts
-
-from egsim.smtk import (registered_gsims,
-                        rupture_params_required_by,
-                        site_params_required_by,
-                        distances_required_by)
+from egsim.smtk import gsim, registered_imts, registered_gsims
 from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
-                                 _columns_registry_path, cast_value, ColumnsRegistry,
-                                 _load_columns_registry)
+                                 _columns_registry_path, _cast_value, ColumnsRegistry,
+                                 _load_columns_registry, get_dtype_of)
 
 
 def test_flatfile_extract_from_yaml():
@@ -120,16 +115,17 @@ def check_column_metadata(*, name: str, props: dict):
 
     # handle categorical data:
     if isinstance(dtype, pd.CategoricalDtype):  # categorical data type
-        if ColumnDtype.of(*dtype.categories) is None:
+        if get_dtype_of(*dtype.categories) is None:
             raise ValueError(f"{prefix} invalid data type(s) in categorical data")
         if bounds_are_given:
             raise ValueError(f"{prefix} bounds cannot be provided with "
                              f"categorical data type")
         if default_is_given:
-            assert default is cast_value(default, dtype)  # raise if not in categories
+            assert default is _cast_value(default, dtype)  # raise if not in categories
         return
 
-    assert isinstance(dtype, ColumnDtype)
+    dtype = ColumnDtype(dtype)  # raise ValueError
+    # assert isinstance(dtype, ColumnDtype)
 
     if dtype in (ColumnDtype.int, ColumnDtype.bool) and not default_is_given:
         raise ValueError(f'{prefix} int or bool with no default')
@@ -145,14 +141,14 @@ def check_column_metadata(*, name: str, props: dict):
         min_val = bounds.get(">", bounds.get(">=", None))
         for val in [max_val, min_val]:
             if val is not None:
-                assert val is cast_value(val, dtype)
+                assert val is _cast_value(val, dtype)
         if max_val is not None and min_val is not None and max_val <= min_val:
             raise ValueError(f'{prefix} min. bound must be lower than '
                              f'max. bound')
 
     # check default value:
     if default_is_given:
-        assert default is cast_value(default, dtype)
+        assert default is _cast_value(default, dtype)
 
     if props:
         raise ValueError(f'{prefix} Undefined property names, '
@@ -171,9 +167,14 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
     oq_distances = set()
 
     for name in registered_gsims:
-        oq_rupture_params.update(rupture_params_required_by(name))
-        oq_sites_params.update(site_params_required_by(name))
-        oq_distances.update(distances_required_by(name))
+        try:
+            model = gsim(name)
+        except (TypeError, ValueError, FileNotFoundError, OSError, AttributeError,
+                IndexError, KeyError, DeprecationWarning) as _:
+            continue
+        oq_rupture_params.update(model.REQUIRES_RUPTURE_PARAMETERS)
+        oq_sites_params.update(model.REQUIRES_SITES_PARAMETERS)
+        oq_distances.update(model.REQUIRES_DISTANCES)
 
     for name in rupture_params:
         if name in {'evt_id', 'evt_time'}:
@@ -205,24 +206,37 @@ def test_Column_dtype():
         'a': ColumnDtype.str
     }
     for val, ctype in vals.items():
-        assert ColumnDtype.of(val) == ctype
-        assert ColumnDtype.of(type(val)) == ctype
-        assert ColumnDtype.of(*pd.CategoricalDtype([val]).categories) == ctype
+        assert get_dtype_of(val) == ctype
+        assert get_dtype_of(type(val)) == ctype
+        assert get_dtype_of(*pd.CategoricalDtype([val]).categories) == ctype
 
     d = pd.DataFrame({
+        'category': [None, "x"],
         'int': [4, 5],
         'float': [1.1, np.nan],
         'datetime': [datetime.utcnow(), datetime.utcnow()],
         'bool': [True, False],
-        'str': [None, "x"]
+        'str': [None, "x"],
     })
     d.str = d.str.astype('string')
+    d.category = d.category.astype('category')
     for c in d.columns:
         dtyp = d[c].dtype
-        assert ColumnDtype.of(dtyp) == ColumnDtype[c]
-        assert ColumnDtype.of(d[c]) == ColumnDtype[c]
-        assert ColumnDtype.of(d[c].values) == ColumnDtype[c]
-        assert all(ColumnDtype.of(_) == ColumnDtype[c] for _ in d[c] if pd.notna(_))
-        assert all(ColumnDtype.of(_) == ColumnDtype[c] for _ in d[c].values if pd.notna(_))
+        assert get_dtype_of(dtyp) == ColumnDtype[c]
+        assert get_dtype_of(d[c]) == ColumnDtype[c]
+        assert get_dtype_of(d[c].values) == ColumnDtype[c]
+        if c == 'category':
+            continue
+        assert all(
+            get_dtype_of(_) == ColumnDtype[c] for _ in d[c] if pd.notna(_))
+        assert all(
+            get_dtype_of(_) == ColumnDtype[c] for _ in d[c].values if pd.notna(_))
+        # assert all(
+        #     ColumnDtype.of(_) == ColumnDtype[c]
+        #     for _ in d[c].tolist() if _ is not None)
+        for _, isna in zip(d[c].tolist(), pd.isna(d[c])):
+            if not isna:
+                if get_dtype_of(_) != ColumnDtype[c]:
+                    get_dtype_of(_)
 
-    assert ColumnDtype.of(None) is None
+    assert get_dtype_of(None) is None

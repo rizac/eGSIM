@@ -12,13 +12,13 @@ import pytest
 import pandas as pd
 from pandas import StringDtype
 
-from egsim.smtk.flatfile import read_flatfile, query, ColumnType
-from egsim.smtk.flatfile import ColumnsRegistry, _load_from_yaml
+from egsim.smtk.flatfile import read_flatfile, query, ColumnType, InvalidDataInColumn
+from egsim.smtk.flatfile import ColumnsRegistry, _load_columns_registry
 
 
 def test_read_flatifle_yaml():
 
-    dic = _load_from_yaml(False)
+    dic = _load_columns_registry(False)
     params = ColumnsRegistry.get_rupture_params()
     assert len({'rupture_width', 'mag', 'magnitude', 'width'} & params) == 4
     params = {c for c in dic if ColumnsRegistry.get_type(c) == ColumnType.distance}
@@ -94,7 +94,7 @@ def test_read_csv():
         # except Exception as exc:
         #     pass
         # continue
-            with pytest.raises(ValueError) as verr:
+            with pytest.raises(InvalidDataInColumn) as verr:
                 d = read_flatfile(StringIO(csv2), **args)  # noqa
                 # check that the column is in the exception message:
             assert header in str(verr.value)

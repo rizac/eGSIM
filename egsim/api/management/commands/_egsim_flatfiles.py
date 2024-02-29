@@ -1,12 +1,11 @@
 """
 eGSIM management command. See `Command.help` for details
 """
-from os.path import join, dirname, isdir
-from os import makedirs
+from os.path import join
 
 from django.core.management import BaseCommand, CommandError
 
-from egsim.smtk.flatfile.columns_registry import load_from_yaml
+from egsim.smtk.flatfile import _load_columns_registry
 from egsim.smtk.registry import registered_imts
 from ... import models
 from ...data.flatfiles import get_flatfiles, DATA
@@ -26,7 +25,7 @@ class Command(BaseCommand):
             raise CommandError('Table is not empty (deletion failed?), check the DB')
 
         destdir = 'flatfiles'
-        ffcolumns = set(load_from_yaml())
+        ffcolumns = set(_load_columns_registry())
         imts = set(registered_imts)
         numfiles = 0
         for name, dfr in get_flatfiles():

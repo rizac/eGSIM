@@ -11,11 +11,9 @@ from django.forms.fields import CharField
 
 from egsim.api import models
 from egsim.api.forms import APIForm, GsimImtForm
-from egsim.api.forms.flatfile import FlatfileForm, get_gsims_from_flatfile
+from egsim.api.forms.flatfile import FlatfileForm
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for)
-from egsim.smtk.flatfile import ColumnsRegistry
-from egsim.smtk.flatfile.columns_registry import ColumnDtype
 
 
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
@@ -43,7 +41,7 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
                 imts |= intensity_measures_defined_for(m)
 
         return {
-            'columns': [FlatfileForm.get_default_column_info(c)
+            'columns': [FlatfileForm.get_registered_column_info(c)
                         for c in sorted(set(gm_props) | set(imts))]
         }
         # for col_name in sorted(set(gm_props) | set(imts)):
