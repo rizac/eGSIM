@@ -15,6 +15,8 @@ from egsim.api.forms.flatfile import (FlatfileForm, get_registered_column_info,
                                       get_columns_info)
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for)
+from egsim.smtk.converters import na_values, array2json
+from egsim.smtk.flatfile import ColumnDtype, get_dtype_of
 
 
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
@@ -166,6 +168,130 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 '0.25quantile': None,
                 '0.75quantile': None
             }
+
+
+class Plotly:
+    """
+    Plotly utilities. for ref, see:
+    https://plotly.com/javascript/reference/
+    """
+
+    @classmethod
+    def get_histogram_plot(
+            cls,
+            values: pd.Series,
+            on_x=True,
+            histnorm = '',  # "" | "percent" | "probability" | "density" | "probability density"
+            max_bins=20
+    ) -> tuple[list[dict], dict]:
+        lbl = 'x' if on_x else 'y'
+        data, layout = cls.get_default_data_and_layout(1)
+        na_vals = na_values(values)
+        vals = values[~na_vals]
+        trace = data[0]
+        trace[lbl] = cls.array2json(vals)
+        trace['type'] = 'histogram'
+        trace['histnorm']: histnorm
+        if values.name:
+            trace['name'] = values.name
+            trace['legendgroup'] = values.name
+        categories = cls.get_categories(vals)
+        if categories:
+            layout[f'{lbl}axis']['categoryarray'] = categories
+            layout[f'{lbl}axis']['categoryorder'] = 'array'
+        else:
+            trace[f'nbins{lbl}'] = max_bins
+        return data, layout
+
+    @classmethod
+    def get_scatter_plot(
+            cls,
+            x_values: pd.Series,
+            y_values:pd.Series
+    ) -> tuple[list[dict], dict]:
+        data, layout = cls.get_default_data_and_layout(1)
+        na_vals = na_values(x_values) | na_values(y_values)
+        x_vals = x_values[~na_vals]
+        categories = cls.get_categories(x_vals)
+        if categories:
+            layout['xaxis']['categoryarray'] = categories
+            layout['xaxis']['categoryorder'] = 'array'
+        y_vals = y_values[~na_vals]
+        categories = cls.get_categories(y_vals)
+        if categories:
+            layout['yaxis']['categoryarray'] = categories
+            layout['yaxis']['categoryorder'] = 'array'
+        trace = data[0]
+        trace['x'] = cls.array2json(x_vals)
+        trace['y'] = cls.array2json(y_vals)
+        trace['type'] = 'scatter'
+        trace['mode'] = 'markers'
+        if y_values.name:
+            trace['name'] = y_values.name
+            trace['legendgroup'] = y_values.name
+        return data, layout
+
+    @classmethod
+    def get_line_plot(
+            cls,
+            x_values: pd.Series,  # <- must be sorted, must be numeric
+            *y_values:pd.Series
+    ) -> tuple[list[dict], dict]:
+        data, layout = cls.get_default_data_and_layout(len(y_values))
+        na_vals = na_values(x_values)
+        for _ in y_values:
+            na_vals |= na_values(_)
+        x_vals = x_values[~na_vals]
+        for trace, y_vals in zip(data, y_values):
+            trace['x'] = cls.array2json(x_vals)
+            y_vals = y_vals[~na_vals]
+            trace['y'] = cls.array2json(y_vals)
+            trace['type'] = 'scatter'
+            trace['mode'] = 'markers' if len(y_vals) == 1 else 'lines'
+            if y_vals.name:
+                trace['name'] = y_vals.name
+                trace['legendgroup'] = y_vals.name
+
+        return data, layout
+
+    @classmethod
+    def get_default_data_and_layout(cls, n_traces=1) -> tuple[list[dict], dict]:
+        layout = {
+            'xaxis': {
+                'title': '',
+                'type': 'linear'
+            },
+            'yaxis': {
+                'title': '',
+                'type': 'linear'
+            }
+        }
+        data = [{'x': [], 'y': [], 'type': ''}] * n_traces
+        return data, layout
+
+    @classmethod
+    def array2json(cls, notna_values: pd.Series) -> list:
+        if get_dtype_of(notna_values) == ColumnDtype.datetime:
+            # make format recognizable by plotly:
+            # (note: to_datetime(series) > series,
+            # to_datetime(ndarray) > DatetimeIndex)
+            values = pd.to_datetime(notna_values.values)
+            return values.strftime('%Y-%m-%dT%H:%M:%S').tolist()
+        return array2json(notna_values, False)
+
+    @classmethod
+    def get_categories(cls, notna_values:pd.Series) -> list:
+        is_bool = get_dtype_of(notna_values) == ColumnDtype.bool
+        is_categ = get_dtype_of(notna_values) == ColumnDtype.category
+        is_str = get_dtype_of(notna_values) == ColumnDtype.str
+        if is_categ or is_bool or is_str:
+            if is_bool:
+                return [False, True]
+            elif is_str:
+                return sorted(pd.unique(notna_values).tolist())
+            else:
+                return sorted(values.dtype.categories.tolist())  # noqa
+        return []
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):

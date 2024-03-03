@@ -1,7 +1,7 @@
 """Converter functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
 from collections.abc import Collection
 
-from typing import Union
+from typing import Union, Optional
 import pandas as pd
 import numpy as np
 from scipy.constants import g
@@ -86,8 +86,10 @@ def convert_accel_units(
                      "Should take either ''g'', ''m/s/s'' or ''cm/s/s''")
 
 
-def dataframe2dict(dframe: pd.DataFrame, as_json=True,
-                   drop_empty_levels=True) -> dict[Union[str, tuple], list]:
+def dataframe2dict(
+    dframe: pd.DataFrame, as_json=True,
+    drop_empty_levels=True
+) -> dict[Union[str, tuple], list]:
     """Convert the given dataframe into a Python dict, in the format:
     ```
     { column:Union[str, tuple]: values:list[Any], ... }
@@ -107,7 +109,7 @@ def dataframe2dict(dframe: pd.DataFrame, as_json=True,
     output = {}
     df_na = None
     if as_json:
-        df_na = dframe.isna() | dframe.isin([-np.inf, np.inf])
+        df_na = na_values(dframe)
     for col, vals in dframe.to_dict(orient='series').items():
         if drop_empty_levels and isinstance(col, tuple):
             # multi-index columns (hierarchical), remove trailing '' / None:
@@ -126,27 +128,29 @@ def dataframe2dict(dframe: pd.DataFrame, as_json=True,
                 key = key[-1]
             key = str(key)
             # remove nan +-inf:
-            vals = _array2json(vals, df_na[col])
+            vals = array2json(vals, df_na[col])
         dest_ret[key] = vals.tolist()
     return output
 
 
-def array2json(values: Union[pd.Series, np.ndarray]) -> list:
-    """Convert the given array, list or pandas Series into a JSON serializable list
-
-    :param values: a numeric Sequence
-    """
-    values = np.asarray(values)
-    return _array2json(values, np.isnan(values) | np.isinf(values)).tolist()  # noqa
+def na_values(
+    values: Union[pd.Series, pd.DataFrame, np.ndarray]
+) -> Union[pd.Series, pd.DataFrame, np.ndarray]:
+    return pd.isna(values) | np.isin(values, [np.inf, -np.inf])
 
 
-def _array2json(values: Union[pd.Series, np.ndarray],
-                na_values: Union[pd.Series, np.ndarray, None] = None) -> np.ndarray:
+def array2json(
+    values: Union[pd.Series, np.ndarray, pd.DataFrame],
+    na_vals: Optional[pd.Series, np.ndarray, pd.DataFrame, False] = None
+) -> list:
     values = np.asarray(values)  # in case of pd.Series S, returns S.values by ref.
-    if na_values is not None and na_values.any():
-        values = values.astype(object)
-        values[na_values] = None
-    return values
+    if na_vals is not False:
+        if na_vals is None or na_vals is True:
+            na_vals = na_values(values)
+        if na_vals.any():
+            values = values.astype(object)
+            values[na_vals] = None
+    return values.tolist()  # noqa
 
 
 # FIXME USED? REMOVE?
