@@ -136,13 +136,21 @@ def dataframe2dict(
 def na_values(
     values: Union[pd.Series, pd.DataFrame, np.ndarray]
 ) -> Union[pd.Series, pd.DataFrame, np.ndarray]:
+    """Return a bool ndarray of values that are na (pandas "na" or +-inf)"""
     return pd.isna(values) | np.isin(values, [np.inf, -np.inf])
 
 
 def array2json(
     values: Union[pd.Series, np.ndarray, pd.DataFrame],
-    na_vals: Optional[pd.Series, np.ndarray, pd.DataFrame, False] = None
+    na_vals: Union[pd.Series, np.ndarray, pd.DataFrame, bool, None] = None
 ) -> list:
+    """Convert `values` to a JSON serializable list
+
+    :param values: the values (pandas Series/ DataFrame or nd array)
+    :param na_vals: the NA/+-inf values, a bool array the same shape of `values`
+        USed to properly convert any NA value to None. If False, skip check, as
+        `values` is supposed to have non-na values, if None/True, infer na_values
+    """
     values = np.asarray(values)  # in case of pd.Series S, returns S.values by ref.
     if na_vals is not False:
         if na_vals is None or na_vals is True:

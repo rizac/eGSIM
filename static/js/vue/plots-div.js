@@ -78,7 +78,7 @@ EGSIM.component('plots-div', {
 			paper_bgcolor: 'rgba(0,0,0,0)',
 			plot_bgcolor: 'rgba(255,255,255,1)',
 			showlegend: false,
-			legend: { bgcolor: 'rgba(0,0,0,0)'},
+			legend: { bgcolor: 'rgba(0,0,0,0)' },
 			margin: { r: 0, b: 0, t: 0, l: 0, pad: 0 },
 			font: font,
 			annotations: [],
@@ -122,47 +122,13 @@ EGSIM.component('plots-div', {
 			modeBarButtonsToRemove: ['sendDataToCloud', 'toImage'],
 			displaylogo: false
 		};
-
-		this.colors = {
-			_i: -1,
-			_values: [
-				'#1f77b4',  // muted blue
-				'#ff7f0e',  // safety orange
-				'#2ca02c',  // cooked asparagus green
-				'#d62728',  // brick red
-				'#9467bd',  // muted purple
-				'#8c564b',  // chestnut brown
-				'#e377c2',  // raspberry yogurt pink
-				'#7f7f7f',  // middle gray
-				'#bcbd22',  // curry yellow-green
-				'#17becf'   // blue-teal
-			],
-			_cmap: {},
-			get(key){  // return a new color mapped to key. Subsequent calls with `key` as argument return the same color
-				if (!(key in this._cmap)){
-					this._cmap[key] = this._values[(++this._i) % this._values.length];
-				}
-				return this._cmap[key];
-			},
-			rgba(hexcolor, alpha) {
-				// Returns the corresponding 'rgba' string of `hexcolor` with the given alpha channel ( in [0, 1], 1:opaque)
-				if (hexcolor.length == 4){
-					var [r, g, b] = Array.from(hexcolor.substring(1)).map(h => h+h);
-				}else if(hexcolor.length == 7){
-					var [r, g, b] = [hexcolor.substring(1, 3), hexcolor.substring(3, 5), hexcolor.substring(5, 7)];
-				}else{
-					return hexcolor;
-				}
-				var [r, g, b] = [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16)];
-				return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-			}
-		};
+		this.doneCreated = true;
+		this.init(this.data);
 	},
 	watch: {
 		data: {
-			immediate: true,
 			handler(newVal, oldVal){
-				if (Array.isArray(newVal) && Object.keys(newVal).length){
+				if (this.doneCreated){
 					this.init(newVal);
 				}
 			}
@@ -344,11 +310,14 @@ EGSIM.component('plots-div', {
 			this.grid.params.forEach((p, i) => p.visible = !!(p.label && this.grid.visibility[i]));
 		},
 		init(data){
+			if (!Array.isArray(data) || !data.length){
+				return;
+			}
 			this.show = true;
 			this.drawingPlots = true;
 			this.legend = {};
 			// convert data:
-			this.plots = data;
+			this.plots = Array.from(data);
 			// update selection, taking into account previously selected stuff:
 			this.setupParams();
 			this.createLegend();
