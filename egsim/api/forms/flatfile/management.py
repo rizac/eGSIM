@@ -3,7 +3,8 @@ Django Forms for eGSIM flatfile compilation (inspection, plot, upload)
 
 @author: riccardo
 """
-from typing import Union
+from typing import Union, Optional
+from collections.abc import Iterable, Iterator
 
 import numpy as np
 import pandas as pd
@@ -172,102 +173,79 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
 
 class Plotly:
     """
-    Plotly utilities. for ref, see:
-    https://plotly.com/javascript/reference/
+    Plotly utilities o create plots from pandas DataFrames.
+    For ref, see: https://plotly.com/javascript/reference/
     """
 
     @classmethod
-    def get_histogram_plot(
-            cls,
-            values: pd.Series,
-            on_x=True,
-            histnorm = '',  # "" | "percent" | "probability" | "density" | "probability density"
-            max_bins=20
-    ) -> tuple[list[dict], dict]:
-        lbl = 'x' if on_x else 'y'
-        data, layout = cls.get_default_data_and_layout(1)
-        na_vals = na_values(values)
-        vals = values[~na_vals]
-        trace = data[0]
-        trace[lbl] = cls.array2json(vals)
-        trace['type'] = 'histogram'
-        trace['histnorm']: histnorm
-        if values.name:
-            trace['name'] = values.name
-            trace['legendgroup'] = values.name
-        categories = cls.get_categories(vals)
-        if categories:
-            layout[f'{lbl}axis']['categoryarray'] = categories
-            layout[f'{lbl}axis']['categoryorder'] = 'array'
+    def get_trace(
+            cls, *,
+            x: Optional[pd.Series] = None,
+            y: Optional[pd.Series] = None,
+            **kwargs: Optional[dict]
+    ) -> dict:
+        """Return a dict representing a Plotly trace in Javascript. The dict keys
+        `x`, `y` and `type` and `mode` set according to the passed `x` and `y` pandas
+        Series, removing NaNs or Nones. In addition, the 'type' key will be set
+        to 'histogram' if either `x` or `y` is None (but not both), and 'scatter'
+        otherwise. For ref (to provide additional `kwargs`), see:
+        https://plotly.com/javascript/reference/scatter/
+        https://plotly.com/javascript/reference/histogram/
+        """
+        trace = {k: v for k, v in kwargs.items()}
+        if x is None and y is None:
+            trace.setdefault('x', [])
+            trace.setdefault('y', [])
+            trace.setdefault('type', 'scatter')
+        elif x is not None and y is None:
+            trace.setdefault('x', cls.array2json(x[~na_values(x)]))
+            trace.setdefault('type', 'histogram')
+        elif y is not None and x is None:
+            trace.setdefault('y', cls.array2json(y[~na_values(y)]))
+            trace.setdefault('type', 'histogram')
         else:
-            trace[f'nbins{lbl}'] = max_bins
-        return data, layout
+            na_vals = na_values(x) | na_values(y)
+            trace.setdefault('x', cls.array2json(x[~na_vals]))
+            trace.setdefault('y', cls.array2json(y[~na_vals]))
+            trace.setdefault('type', 'scatter')
+            trace.setdefault('mode', 'markers' if len(trace['x']) == 1 else 'lines')
+        return trace
 
     @classmethod
-    def get_scatter_plot(
+    def get_layout(
             cls,
-            x_values: pd.Series,
-            y_values:pd.Series
-    ) -> tuple[list[dict], dict]:
-        data, layout = cls.get_default_data_and_layout(1)
-        na_vals = na_values(x_values) | na_values(y_values)
-        x_vals = x_values[~na_vals]
-        categories = cls.get_categories(x_vals)
-        if categories:
-            layout['xaxis']['categoryarray'] = categories
-            layout['xaxis']['categoryorder'] = 'array'
-        y_vals = y_values[~na_vals]
-        categories = cls.get_categories(y_vals)
-        if categories:
-            layout['yaxis']['categoryarray'] = categories
-            layout['yaxis']['categoryorder'] = 'array'
-        trace = data[0]
-        trace['x'] = cls.array2json(x_vals)
-        trace['y'] = cls.array2json(y_vals)
-        trace['type'] = 'scatter'
-        trace['mode'] = 'markers'
-        if y_values.name:
-            trace['name'] = y_values.name
-            trace['legendgroup'] = y_values.name
-        return data, layout
+            x: Optional[pd.Series] = None,
+            y: Optional[pd.Series] = None,
+            **kwargs
+    ) -> dict:
+        """Return a dict representing a Plotly layout in Javascript. The dict keys
+        `xaxis`, `yaxis` will be set according to the passed `x` and `y` pandas
+        Series, which represent the plotted data. In paticular the 'xaxis' and
+        'yaxis' 'type' key will be set to 'category', 'linear', 'date' or '-' (infer)
+        For ref (to provide additional `kwargs`), see:
+        https://plotly.com/javascript/reference/layout/
+        """
+        layout = {k: v for k, v in kwargs.items()}
+        layout.setdefault('xaxis', {})
+        cls.set_axis(x, layout['xaxis'])
+        layout.setdefault('yaxis', {})
+        cls.set_axis(y, layout['yaxis'])
+        return layout
 
     @classmethod
-    def get_line_plot(
-            cls,
-            x_values: pd.Series,  # <- must be sorted, must be numeric
-            *y_values:pd.Series
-    ) -> tuple[list[dict], dict]:
-        data, layout = cls.get_default_data_and_layout(len(y_values))
-        na_vals = na_values(x_values)
-        for _ in y_values:
-            na_vals |= na_values(_)
-        x_vals = x_values[~na_vals]
-        for trace, y_vals in zip(data, y_values):
-            trace['x'] = cls.array2json(x_vals)
-            y_vals = y_vals[~na_vals]
-            trace['y'] = cls.array2json(y_vals)
-            trace['type'] = 'scatter'
-            trace['mode'] = 'markers' if len(y_vals) == 1 else 'lines'
-            if y_vals.name:
-                trace['name'] = y_vals.name
-                trace['legendgroup'] = y_vals.name
-
-        return data, layout
-
-    @classmethod
-    def get_default_data_and_layout(cls, n_traces=1) -> tuple[list[dict], dict]:
-        layout = {
-            'xaxis': {
-                'title': '',
-                'type': 'linear'
-            },
-            'yaxis': {
-                'title': '',
-                'type': 'linear'
-            }
-        }
-        data = [{'x': [], 'y': [], 'type': ''}] * n_traces
-        return data, layout
+    def set_axis(cls, values: pd.Series, axis:dict):
+        axis.setdefault('type', '-')  # infer from data
+        axis.setdefault('title', '')
+        if values is not None:
+            categories = cls.get_categories(values)
+            if categories:
+                axis['type'] = 'category'
+                axis.setdefault('categoryarray', categories)
+                axis.setdefault('categoryorder', 'array')
+            elif get_dtype_of(values) == ColumnDtype.datetime:
+                axis['type'] = 'date'
+            elif get_dtype_of(values) == (ColumnDtype.int, ColumnDtype.float):
+                axis['type'] = 'linear'
 
     @classmethod
     def array2json(cls, notna_values: pd.Series) -> list:
@@ -280,18 +258,180 @@ class Plotly:
         return array2json(notna_values, False)
 
     @classmethod
-    def get_categories(cls, notna_values:pd.Series) -> list:
-        is_bool = get_dtype_of(notna_values) == ColumnDtype.bool
-        is_categ = get_dtype_of(notna_values) == ColumnDtype.category
-        is_str = get_dtype_of(notna_values) == ColumnDtype.str
-        if is_categ or is_bool or is_str:
-            if is_bool:
-                return [False, True]
-            elif is_str:
-                return sorted(pd.unique(notna_values).tolist())
-            else:
-                return sorted(values.dtype.categories.tolist())  # noqa
+    def get_categories(cls, values:pd.Series) -> list:
+        """Return the categories (as list) of the given values. This includes
+        the given categories in case of pandas categorical data, but also
+        the unique values in case of strings, and the list [False, True] in
+        case of bool"""
+        categ_dtype = get_dtype_of(values)
+        if categ_dtype == ColumnDtype.bool:
+            return [False, True]
+        elif categ_dtype == ColumnDtype.str:
+            categs = pd.unique(values)
+            categs = categs[~na_values(categs)]
+            return sorted(categs.tolist())
+        elif categ_dtype == ColumnDtype.category:
+            return sorted(values.dtype.categories.tolist())  # noqa
         return []
+
+    @classmethod
+    def colors_cycle(cls, hex_colors: Optional[Iterable[str]] = None) -> Iterator[str]:
+        """endless iterator providing colors in `rgba(...)` form """
+
+        values = []
+        if hex_colors is None:
+            hex_colors = [
+                '#1f77b4',  # muted blue
+                '#ff7f0e',  # safety orange
+                '#2ca02c',  # cooked asparagus green
+                '#d62728',  # brick red
+                '#9467bd',  # muted purple
+                '#8c564b',  # chestnut brown
+                '#e377c2',  # raspberry yogurt pink
+                '#7f7f7f',  # middle gray
+                '#bcbd22',  # curry yellow-green
+                '#17becf'  # blue-teal
+            ]
+        for hex_c in hex_colors:
+            rgba = [int(hex_c[1:][i:i + 2], 16) for i in (0, 2, 4)]
+            rgba = ", ".join(str(_) for _ in rgba)
+            values.append(f'rgba({rgba}, 1)')
+        from itertools import cycle
+        return cycle(values)
+
+
+        # 		this.colors = {
+
+
+# 			_i: -1,
+# 			_values: [
+# 				'#1f77b4',  // muted blue
+# 				'#ff7f0e',  // safety orange
+# 				'#2ca02c',  // cooked asparagus green
+# 				'#d62728',  // brick red
+# 				'#9467bd',  // muted purple
+# 				'#8c564b',  // chestnut brown
+# 				'#e377c2',  // raspberry yogurt pink
+# 				'#7f7f7f',  // middle gray
+# 				'#bcbd22',  // curry yellow-green
+# 				'#17becf'   // blue-teal
+# 			],
+# 			_cmap: {},
+# 			get(key){  // return a new color mapped to key. Subsequent calls with `key` as argument return the same color
+# 				if (!(key in this._cmap)){
+# 					this._cmap[key] = this._values[(++this._i) % this._values.length];
+# 				}
+# 				return this._cmap[key];
+# 			},
+# 			rgba(hexcolor, alpha) {
+# 				// Returns the corresponding 'rgba' string of `hexcolor` with the given alpha channel ( in [0, 1], 1:opaque)
+# 				if (hexcolor.length == 4){
+# 					var [r, g, b] = Array.from(hexcolor.substring(1)).map(h => h+h);
+# 				}else if(hexcolor.length == 7){
+# 					var [r, g, b] = [hexcolor.substring(1, 3), hexcolor.substring(3, 5), hexcolor.substring(5, 7)];
+# 				}else{
+# 					return hexcolor;
+# 				}
+# 				var [r, g, b] = [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16)];
+# 				return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+# 			}
+# 		};
+
+    # FIXME REMOVE
+    # @classmethod
+    # def get_histogram_plot(
+    #         cls,
+    #         values: pd.Series,
+    #         on_x=True,
+    #         # histnorm = '',  # "" | "percent" | "probability" | "density" | "probability density"
+    #         # max_bins=20,
+    #         default_trace: Optional[dict] = None,
+    #         default_layout: Optional[dict] = None
+    # ) -> tuple[list[dict], dict]:
+    #     trace = default_trace or {}
+    #     layout = default_layout or {}
+    #     lbl = 'x' if on_x else 'y'
+    #     # data, layout = cls.get_default_data_and_layout(1)
+    #     na_vals = na_values(values)
+    #     vals = values[~na_vals]
+    #     trace.setdefault(lbl, cls.array2json(vals))
+    #     trace.setdefault('type', 'histogram')
+    #     # trace.setdefault('histnorm', histnorm)
+    #     # if values.name:
+    #     #    trace['name'] = values.name
+    #     #    trace['legendgroup'] = values.name
+    #     categories = cls.get_categories(vals)
+    #     if categories:
+    #         layout.setdefault(f'{lbl}axis', {}).setdefault('categoryarray', categories)
+    #         layout.setdefault(f'{lbl}axis', {}).setdefault('categoryorder', 'array')
+    #     # else:
+    #     #     trace[f'nbins{lbl}'] = max_bins
+    #     return [trace], layout
+    #
+    # @classmethod
+    # def get_scatter_plot(
+    #         cls,
+    #         x_values: pd.Series,
+    #         y_values:pd.Series,
+    #         default_trace: Optional[dict] = None,
+    #         default_layout: Optional[dict] = None
+    # ) -> tuple[list[dict], dict]:
+    #     trace = default_trace or {}
+    #     layout = default_layout or {}
+    #     na_vals = na_values(x_values) | na_values(y_values)
+    #     x_vals = x_values[~na_vals]
+    #     categories = cls.get_categories(x_values)
+    #     if categories:
+    #         layout.setdefault('xaxis', {}).setdefault('categoryarray', categories)
+    #         layout.setdefault('xaxis', {}).setdefault('categoryorder', 'array')
+    #     y_vals = y_values[~na_vals]
+    #     categories = cls.get_categories(y_vals)
+    #     if categories:
+    #         layout.setdefault('yaxis', {}).setdefault('categoryarray', categories)
+    #         layout.setdefault('yaxis', {}).setdefault('categoryorder', 'array')
+    #     trace.setdefault('x', cls.array2json(x_vals))
+    #     trace.setdefault('y', cls.array2json(y_vals))
+    #     trace.setdefault('type', 'scatter')
+    #     trace.setdefault('mode', 'markers')
+    #     return [trace], layout
+    #
+    # @classmethod
+    # def get_line_plot(
+    #         cls,
+    #         x_values: pd.Series,  # <- must be sorted, must be numeric
+    #         y_values:pd.Series,
+    #         default_trace: Optional[dict] = None,
+    #         default_layout: Optional[dict] = None
+    # ) -> tuple[list[dict], dict]:
+    #     # data, layout = cls.get_default_data_and_layout(len(y_values))
+    #     trace = default_trace or {}
+    #     layout = default_layout or {}
+    #     na_vals = na_values(x_values) | na_values(y_values)
+    #     # for _ in y_values:
+    #     #     na_vals |= na_values(_)
+    #     x_vals = x_values[~na_vals]
+    #     # for trace, y_vals in zip(data, y_values):
+    #     trace.setdefault('x', cls.array2json(x_vals))
+    #     y_vals = y_values[~na_vals]
+    #     trace.setdefault('y', cls.array2json(y_vals))
+    #     trace.setdefault('type', 'scatter')
+    #     trace.setdefault('mode', 'markers' if len(y_vals) == 1 else 'lines')
+    #     return [trace], layout
+    #
+    # @classmethod
+    # def get_default_data_and_layout(cls, n_traces=1) -> tuple[list[dict], dict]:
+    #     layout = {
+    #         'xaxis': {
+    #             'title': '',
+    #             'type': 'linear'
+    #         },
+    #         'yaxis': {
+    #             'title': '',
+    #             'type': 'linear'
+    #         }
+    #     }
+    #     data = [{'x': [], 'y': [], 'type': ''}] * n_traces
+    #     return data, layout
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):
