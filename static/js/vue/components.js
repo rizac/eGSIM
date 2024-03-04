@@ -28,7 +28,7 @@ EGSIM.component('array-input', {
 	template: `<input type='text' v-model="modelValue2str" class='form-control' placeholder='type values space- or comma-separated' />`,
 	methods: {
 		string2Array(stringValue){
-			return stringValue.trim().split(/\s*,\s*|\s+/);
+			return stringValue.trim() ? stringValue.trim().split(/\s*,\s*|\s+/) : [];  // https://stackoverflow.com/a/5164901
 		},
 		modelValueChanged(newArray){
 			if (this.modelValue2str !== null){
@@ -309,11 +309,12 @@ EGSIM.component('imt-select', {
 				placeholder="SA periods (space- or comma-separated)"
 				style="border-top: 0 !important;border-top-left-radius: 0 !important;border-top-right-radius: 0 !important;" />
 			<button
-				@click="SAPeriods.splice(0, SAPeriods.length, ...defaultSAPeriods)"
+				@click="SAPeriods = Array.from(SAPeriods.length ? [] : defaultSAPeriods)"
 				type='button'
 				class='btn border bg-white'
 				style='border-left:0 !important;border-top-right-radius:0 !important; border-top: 0 !important'>
-				def
+				<i class="fa fa-times-circle"
+					:class='SAPeriods.length ? "fa-times-circle" : "fa-arrow-circle-o-left"'></i>
 			</button>
 		</div>
 	</div>`,
@@ -590,7 +591,7 @@ EGSIM.component('flatfile-select', {
 	},
 	template:`<div class='input-group align-items-baseline'>
 		<label class='input-group-text'> data </label>
-		<select v-model="selectedIndex" class='form-control'>
+		<select v-model="selectedIndex" class='form-control border-end-0'>
 			<option v-for="(v, idx) in flatfiles" :value='idx'>
 				{{ v.innerHTML }}
 			</option>
@@ -605,11 +606,10 @@ EGSIM.component('flatfile-select', {
 		<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
 		<button
 			type="button"
-			class="btn border bg-white"
+			class="btn btn-secondary"
 			onclick="this.parentNode.querySelector('input[type=file]').click()"
-			style='border-left-width: 0 !important'
-			aria-label=''>
-			upload
+			aria-label='upload'>
+			<i class='fa fa-upload'></i>
 		</button>
 	</div>`
 });
