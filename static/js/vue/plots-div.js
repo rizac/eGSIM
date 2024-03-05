@@ -207,13 +207,14 @@ EGSIM.component('plots-div', {
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
 		<div class='d-flex flex-column ps-4' style='overflow-y: auto'>
 			<slot></slot> <!-- slot for custom buttons -->
-			<div class='d-flex flex-row-reverse'>
-				<button type='button' class='btn btn-outline-primary text-nowrap'
+			<div class='d-flex flex-row'>
+				<button type='button' class='btn btn-secondary text-nowrap'
+						style='flex: 1 1 auto'
 						@click="show = !show">
 					close <i class='fa fa-times-circle ms-2'></i>
 				</button>
 			</div>
-			<div v-show='legend.length' class='mt-3 p-2 px-1'>
+			<div v-show='legend.length' class='mt-3'>
 				<div v-for="l in legend" class='d-flex flex-column form-control mt-2'>
 					<div class='d-flex flex-row align-items-baseline' :style="{color: getLegendColor(l[1])}">
 						<label class='my-0 text-nowrap' :class="{'checked': l[1].visible}" style='flex: 1 1 auto'>
@@ -549,7 +550,7 @@ EGSIM.component('plots-div', {
 				}
 				// same range:
 				control.sameRange.value = false;
-				control.sameRange.disabled = (this.plots || []).length <= 1 ||
+				control.sameRange.disabled = datatypeHist || (this.plots || []).length <= 1 ||
 					control.log.disabled || axis.some(a => a.range !== undefined);
 			}
 		},
@@ -1055,19 +1056,21 @@ EGSIM.component('plots-div', {
 					}else{
 						var vals = [];
 						data.forEach(trace => {
-							vals.push(...trace[ax].filter(v => v!==null && !isNaN(v) && v!==undefined));
+							vals.push(...(trace[ax] || []).filter(v => v!==null && !isNaN(v) && v!==undefined));
 						});
-						var range = [Math.min(...vals), Math.max(...vals)];
-						if (range[0] < range[1]){
-							// add margins for better visualization:
-							var margin = Math.abs(range[1] - range[0]) / 50;
-							// be careful with negative logarithmic values:
-							if (!control.log.value || (range[0] > margin && range[1] > 0)){
-								range[0] -= margin;
-								range[1] += margin;
+						if (vals.length){
+							var range = [Math.min(...vals), Math.max(...vals)];
+							if (range[0] < range[1]){
+								// add margins for better visualization:
+								var margin = Math.abs(range[1] - range[0]) / 50;
+								// be careful with negative logarithmic values:
+								if (!control.log.value || (range[0] > margin && range[1] > 0)){
+									range[0] -= margin;
+									range[1] += margin;
+								}
+								// set computed ranges to all plot axis:
+								axis.forEach(a => newLayout[`${a}.range`]  = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
 							}
-							// set computed ranges to all plot axis:
-							axis.forEach(a => newLayout[`${a}.range`]  = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
 						}
 					}
 				}
