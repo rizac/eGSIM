@@ -503,26 +503,28 @@ EGSIM.component('plots-div', {
 				}else if (axis.every(a => a.type === undefined || a.type === '-')){
 					// undefined and '-' are plotly default for: infer. Let's do the same:
 					var datakey = layoutkey[0];  // "x" or "y"
-					var infer = true;
-					// before inferring, check if we have bar charts with oriented on the current
-					// axis (vertical for x axis, horizontal for y axis). Not only plotly has problems in this case
-					// (play around with flatfile plots to check), but it doesn't make much sense, too,
-					// as visually log scales with bars/histograms distort bars width
-					if (datakey === 'y'){
-						var isHorizontalBarType = datatypeBar && traces.every(t => t.orientation === 'h');
-						if (!isHorizontalBarType){
-							isHorizontalBarType = datatypeHist && traces.every(t => t.orientation === 'h' || !('x' in t));
-						}
-						if (isHorizontalBarType){
-							infer = false;
-						}
-					}else{
-						var isVerticalBarType = datatypeBar &&  traces.every(!('orientation' in t) || t.orientation === 'v');
-						if (!isVerticalBarType){
-							isVerticalBarType = datatypeHist && traces.every(t => t.orientation === 'v' ||  !('y' in t));
-						}
-						if (isVerticalBarType){
-							infer = false;
+					var infer = traces.every(t => Array.isArray(t[datakey]));  // infer only if all traces have 'x' (or 'y') set
+					if (infer){
+						// before inferring, check if we have bar charts with oriented on the current
+						// axis (vertical for x axis, horizontal for y axis). Not only plotly has problems in this case
+						// (play around with flatfile plots to check), but it doesn't make much sense, too,
+						// as visually log scales with bars/histograms distort bars width
+						if (datakey === 'y'){
+							var isHorizontalBarType = datatypeBar && traces.every(t => t.orientation === 'h');
+							if (!isHorizontalBarType){
+								isHorizontalBarType = datatypeHist && traces.every(t => t.orientation === 'h' || !('x' in t));
+							}
+							if (isHorizontalBarType){
+								infer = false;
+							}
+						}else{
+							var isVerticalBarType = datatypeBar &&  traces.every(!('orientation' in t) || t.orientation === 'v');
+							if (!isVerticalBarType){
+								isVerticalBarType = datatypeHist && traces.every(t => t.orientation === 'v' ||  !('y' in t));
+							}
+							if (isVerticalBarType){
+								infer = false;
+							}
 						}
 					}
 					if (infer){
@@ -1070,19 +1072,19 @@ EGSIM.component('plots-div', {
 			for (var plot of this.plots){
 				for (var trace of plot.data){
 					if (trace.legendgroup && !this.legend.has(trace.legendgroup)){
-						var editableData = {};
-						['marker', 'line', 'xbins', 'ybins'].forEach(k => {
-							if (k in trace){
-								editableData[k] = trace[k];
-							}
-						});
-						this.setLegendItem(trace.legendgroup, editableData);
+						this.setLegendItem(trace.legendgroup, trace);
 					}
 				}
 			}
 		},
-		setLegendItem(legendgroup, editableStyleObject){
-			this.legend.set(legendgroup, JSON.stringify(editableStyleObject, null, '  '));
+		setLegendItem(legendgroup, traceObject){
+			var editableData = {};
+			['marker', 'line', 'xbins', 'ybins'].forEach(k => {
+				if (k in traceObject){
+					editableData[k] = traceObject[k];
+				}
+			});
+			this.legend.set(legendgroup, JSON.stringify(editableData, null, '  '));
 		},
 		getLegendColor(style){  // style => object as JSON string
 			try{
