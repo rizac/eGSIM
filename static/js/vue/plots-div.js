@@ -7,11 +7,13 @@ EGSIM.component('plots-div', {
 	},
 	data(){
 		return {
+			// setup non reactive data:
+			plots: [],  // populated in init`
 			show: true,
 			// boolean visualizing a div while drawing (to prevent user clicking everywhere for long taks):
 			drawingPlots: false,
 			// an Array of [legendgroup:str, traceProperties:Object] elements:
-			legend: [],
+			legend: new Map(),
 			// An Array of Param Objects for laying out plots. Each param has at least the function indexOf(plot, idx, plots)
 			// and optionally a value:Array key and a name:str key. If the latter are provided, then the param
 			// is displayable as label on the plot grids
@@ -53,26 +55,7 @@ EGSIM.component('plots-div', {
 		}
 	},
 	created(){
-		// setup non reactive data:
-		this.plots = [];  // populated in `init`
-		// define default font and infer from page if possible:
-		var font = {};
-		var fontf = window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-family');
-		if (typeof fontf === 'string' && !!fontf){
-			// Comma-separated font families work in Plotly here, but to download images
-			// Plotly server side needs a single family, so set the 1st declared here:
-			fontf = fontf.split(",")[0].trim();
-			// remove quotes, if present:
-			if ('\'"'.includes(fontf[0]) && fontf[fontf.length -1] == fontf[0]){
-				fontf = fontf.substring(1, fontf.length - 1);
-			}
-			font.family = fontf;
-		}
-		var fonts = parseInt(window.getComputedStyle(document.getElementsByTagName('body')[0]).getPropertyValue('font-size'));
-		if (typeof fonts === 'number' && !isNaN(fonts)){
-			font.size = fonts;
-		}
-		// default Plotly layout
+		// default Plotly layout (the `font` property will be set when page fonts are loaded, see init)
 		this.defaultlayout = {
 			autosize: true,  // without this, the inner svg does not expand properly FIXME HERE
 			paper_bgcolor: 'rgba(0,0,0,0)',
@@ -80,7 +63,6 @@ EGSIM.component('plots-div', {
 			showlegend: false,
 			legend: { bgcolor: 'rgba(0,0,0,0)' },
 			margin: { r: 0, b: 0, t: 0, l: 0, pad: 0 },
-			font: font,
 			annotations: [],
 			xaxis: {  // https://plotly.com/javascript/reference/layout/xaxis/#layout-xaxis
 				zeroline: false,
@@ -214,13 +196,16 @@ EGSIM.component('plots-div', {
 					close <i class='fa fa-times-circle ms-2'></i>
 				</button>
 			</div>
-			<div v-show='legend.length' class='mt-3'>
-				<div v-for="l in legend" class='d-flex flex-column form-control mt-2'>
-					<div class='d-flex flex-row align-items-baseline' :style="{color: getLegendColor(l[1])}">
-						<label class='my-0 text-nowrap' :class="{'checked': l[1].visible}" style='flex: 1 1 auto'>
-							<input type='checkbox' v-model="l[1].visible"  getLegendColor
-								   :style="{'accent-color': getLegendColor(l[1]) + ' !important'}"
-								   @change="setTraceStyle(l[0], l[1])"> {{ l[0] }}
+			<div v-show='legend.size' class='mt-3'>
+				<div v-for="[legendgroup, jsonStyle] in legend" class='d-flex flex-column form-control mt-2'>
+					<div class='d-flex flex-row align-items-baseline' :style="{color: getLegendColor(jsonStyle)}">
+						<label class='my-0 text-nowrap' style='flex: 1 1 auto'>
+							<input type='checkbox'
+								   v-if="plots.some(p => p.data.length > 0)"
+								   :checked="true"
+								   @change="$evt => { setTraceStyle(legendgroup, JSON.stringify({ visible: !!$evt.target.checked })) }"
+								   :style="{'accent-color': getLegendColor(jsonStyle) + ' !important'}"
+								   > {{ legendgroup }}
 						</label>
 						<div class='ms-1' aria-label='Style the plot traces (lines, bars, markers) of this legend group'>
 							<i class="fa fa-chevron-down" style="cursor:pointer"
@@ -230,10 +215,10 @@ EGSIM.component('plots-div', {
 					<div class='_pso d-flex flex-column' style='max-height:0px; transition:max-height 0.25s ease-out;overflow:hidden'>
 						<textarea class='form-control mt-1' spellcheck="false"
 								  style='flex: 1 1 auto; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
-								  v-model="l[2]"/>
-						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonParse(l[2])"
-								@click="setTraceStyle(l[0], jsonParse(l[2]))"
-								:style="{color: getLegendColor(l[1]), 'border-color': getLegendColor(l[1])}">Apply</button>
+								  v-model="jsonStyle"/>
+						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonStyle"
+								@click="setTraceStyle(legendgroup, jsonStyle)"
+								:style="{color: getLegendColor(jsonStyle), 'border-color': getLegendColor(jsonStyle)}">Apply</button>
 					</div>
 				</div>
 			</div>
@@ -316,7 +301,6 @@ EGSIM.component('plots-div', {
 			}
 			this.show = true;
 			this.drawingPlots = true;
-			this.legend = {};
 			// convert data:
 			this.plots = Array.from(data);
 			// update selection, taking into account previously selected stuff:
@@ -325,9 +309,33 @@ EGSIM.component('plots-div', {
 			this.initAxisControls();
 			// now plot:
 			this.$nextTick(() => {
-				this.drawingPlots = false;
-				this.newPlot();
+				document.fonts.ready.then(() => {
+					this.defaultlayout.font = this.computeFontObject();
+					this.drawingPlots = false;
+					this.newPlot();
+				});
 			});
+		},
+		computeFontObject(){
+			var bodyStyle = window.getComputedStyle(document.getElementsByTagName('body')[0]);
+			// define default font and infer from page if possible:
+			var font = {};
+			var fontf = bodyStyle.getPropertyValue('font-family');
+			if (typeof fontf === 'string' && !!fontf){
+				// Comma-separated font families work in Plotly here, but to download images
+				// Plotly server side needs a single family, so set the 1st declared here:
+				fontf = fontf.split(",")[0].trim();
+				// remove quotes, if present:
+				if ('\'"'.includes(fontf[0]) && fontf[fontf.length -1] == fontf[0]){
+					fontf = fontf.substring(1, fontf.length - 1);
+				}
+				font.family = fontf;
+			}
+			var fonts = parseInt(bodyStyle.getPropertyValue('font-size'));
+			if (typeof fonts === 'number' && !isNaN(fonts)){
+				font.size = fonts;
+			}
+			return font;
 		},
 		setupParams(){
 			var plots = this.plots;
@@ -432,26 +440,6 @@ EGSIM.component('plots-div', {
 			this.params = params;
 			this.grid.layouts = gridlayouts;
 			this.grid.selectedLayout = selectedgridlayout;
-		},
-		createLegend(){
-			this.legend = [];
-			var legend = this.legend;
-			var legendgroups = new Set();
-			this.plots.forEach((plot, i) => {
-				plot.data.forEach((trace) => {
-					var legendgroup = trace.legendgroup;
-					if (legendgroup && !legendgroups.has(legendgroup)){
-						legendgroups.add(legendgroup);
-						var legenddata = {visible: ('visible' in trace) ? !!trace.visible : true};
-						for (var key of ['line', 'marker']){
-							if (key in trace){
-								legenddata[key] = Object.assign({}, trace[key]);
-							}
-						}
-						legend.push([legendgroup, legenddata, JSON.stringify(legenddata, null, '  ')]);
-					}
-				});
-			});
 		},
 		initAxisControls(){
 			for (var layoutkey of ['xaxis', 'yaxis']){
@@ -1077,30 +1065,67 @@ EGSIM.component('plots-div', {
 			}
 			return newLayout;
 		},
-		getLegendColor(legenddata){
-			if (legenddata) {
-				var marker = legenddata.marker;
-				if (marker && marker.line && marker.line.color){
-					return marker.line.color;
+		createLegend(){
+			this.legend = new Map();
+			for (var plot of this.plots){
+				for (var trace of plot.data){
+					if (trace.legendgroup && !this.legend.has(trace.legendgroup)){
+						var editableData = {};
+						['marker', 'line', 'xbins', 'ybins'].forEach(k => {
+							if (k in trace){
+								editableData[k] = trace[k];
+							}
+						});
+						this.setLegendItem(trace.legendgroup, editableData);
+					}
 				}
-				if (legenddata.line && legenddata.line.color){
-					return legenddata.line.color;
-				}
-				if (marker && marker.color){
-					return marker.color;
-				}
+			}
+		},
+		setLegendItem(legendgroup, editableStyleObject){
+			this.legend.set(legendgroup, JSON.stringify(editableStyleObject, null, '  '));
+		},
+		getLegendColor(style){  // style => object as JSON string
+			try{
+				var styleObject = JSON.parse(style);
+			}catch(error){  // also raises if style is empty string
+				return;
+			}
+			var marker = styleObject.marker;
+			if (marker && marker.line && marker.line.color){
+				return marker.line.color;
+			}
+			if (styleObject.line && styleObject.line.color){
+				return styleObject.line.color;
+			}
+			if (marker && marker.color){
+				return marker.color;
 			}
 			return '#000000';
 		},
-		setTraceStyle(legendgroup, legenddata){
-			if (!legenddata){ return; }
-			for (var legend of this.legend){
-				if(legend[0] === legendgroup){
-					legend[1] = legenddata;
-					legend[2] = JSON.stringify(legenddata, null, "  ")
-				}
+		setTraceStyle(legendgroup, style){  // style => Object as JSON string
+			try{
+				var styleObject = JSON.parse(style);
+			}catch(error){  // also raises if style is empty string
+				return;
 			}
-			// update plotly data:
+			// update legend data:
+			try{
+				var legenddata = JSON.parse(this.legend.get(legendgroup));
+				legenddata = Object.assign(legenddata, styleObject);
+				this.setLegendItem(legendgroup, legenddata);
+			}catch(error){  // also raises if style is empty string
+				return;
+			}
+			// update our data:
+			this.plots.map(p => p.data).forEach(traces => {
+				for (var i =0; i < traces.length; i++){
+					if (traces[i].legendgroup === legendgroup){
+						traces[i] = Object.assign(traces[i], styleObject);
+					}
+				}
+			});
+			// update plotly data, which requires the indices of the
+			// currently displayed plots:
 			var indices = [];
 			var plotlydata = this.getPlotlyDataAndLayout()[0];
 			plotlydata.forEach((trace, i) => {
@@ -1108,23 +1133,8 @@ EGSIM.component('plots-div', {
 					indices.push(i);
 				}
 			});
-			// update our data:
-			this.plots.map(p => p.data).forEach(traces => {
-				for (var i =0; i < traces.length; i++){
-					if (traces[i].legendgroup === legendgroup){
-						traces[i] = Object.assign(traces[i], legenddata);
-					}
-				}
-			});
 			if(indices.length){
-				this.restyle(legenddata, indices);
-			}
-		},
-		jsonParse(jsonString){
-			try{
-				return JSON.parse(jsonString);
-			}catch(error){
-				return null;
+				this.restyle(styleObject, indices);
 			}
 		},
 		getPlotlyDataAndLayout(){
@@ -1145,7 +1155,7 @@ EGSIM.component('plots-div', {
 				this.saveAsJSON(data, filename);
 			} else if (format.startsWith('csv')){
 				this.download(url, data);
-			}else{
+			} else {
 				// image format:
 				var [data, layout] = this.getPlotlyDataAndLayout();
 				var parent = this.$refs.rootDiv; //.parentNode.parentNode.parentNode;
