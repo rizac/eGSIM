@@ -201,7 +201,7 @@ EGSIM.component('plots-div', {
 					<div class='d-flex flex-row align-items-baseline' :style="{color: getLegendColor(jsonStyle)}">
 						<label class='my-0 text-nowrap' style='flex: 1 1 auto'>
 							<input type='checkbox'
-								   v-if="plots.some(p => p.data.length > 0)"
+								   v-if="plots.some(p => p.data.length > 1)"
 								   :checked="true"
 								   @change="$evt => { setTraceStyle(legendgroup, JSON.stringify({ visible: !!$evt.target.checked })) }"
 								   :style="{'accent-color': getLegendColor(jsonStyle) + ' !important'}"
@@ -553,7 +553,7 @@ EGSIM.component('plots-div', {
 				var newLayout = this.updateLayoutFromCurrentlyDisplayedPlots(layout);
 				Plotly.relayout(divElement, newLayout);
 				this.drawingPlots = false;
-			}, 150);
+			}, 100);
 		},
 		relayout(newLayout, updatePositions){  // Redraw the plot layout (anything but data)
 			// updatePositions: set to true if newLayout affects in some way the position
