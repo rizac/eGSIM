@@ -30,7 +30,7 @@ EGSIM.component('plots-div', {
 				axis: {
 					x: {
 						log: {disabled: false, value: undefined},
-						sameRange: {disabled: false, value: undefined},
+						sameRange: {disabled: false, value: undefined, range: null},
 						grid: {disabled: false, value: undefined},  // plot x tick lines, not to be confused with this.grid
 						title: {disabled: false, value: undefined, title: ''}
 					} ,
@@ -361,13 +361,14 @@ EGSIM.component('plots-div', {
 					}else{
 						values.sort();
 					}
+					// FIXME REMOVE:
 					// quick-n-dirty fix to sort residuals and have 'total' as first element:
-					if (pname.toLowerCase().startsWith('residual')){
+					/* if (pname.toLowerCase().startsWith('residual')){
 						var idx_ = values.map(e => (""+e).toLowerCase()).indexOf('total');
 						if (idx_ > -1){
 							values = [values[idx_]].concat(values.filter((e, i) => i!=idx_));
 						}
-					}
+					}*/
 					params.push({
 						values: values,
 						label: pname,
@@ -479,69 +480,38 @@ EGSIM.component('plots-div', {
 					control.grid.disabled = false;
 					control.grid.value = false;
 				}
-				// type (log linear)
+				// axis type (log / linear): enable only for specific plotly axis types:
 				control.log.disabled = true;
 				control.log.value = false;
-				// before controlling the axis type ('-', 'log', 'linear' and so on)
-				// check the datatype. This is because with bars and histograms we want
-				// to avoid log scales on the bar axis (i.e., x axis for vertical bars and vice versa)
-				var traces = [];
-				for (var p of this.plots){
-					traces.push(...(p.data || []));
-				}
-				var datatypeBar = traces.every(t => t.type === 'bar');
-				var datatypeHist = !datatypeBar && traces.every(t => t.type === 'histogram');
-				// set control from data:
-				if (axis.every(a => a.type === 'log') && !datatypeBar && !datatypeHist){
-					// if all axes are log type, then set the checkbox value first:
-					control.log.value = true;
+				if (axis.every(a => a.type === 'log') ||
+						axis.every(a => a.type === 'linear')){
+					control.log.value = axis.every(a => a.type === 'log');
 					control.log.disabled = false;
-				}else if (axis.every(a => a.type === 'linear') && !datatypeBar && !datatypeHist){
-					// if all axes are linear type, then set the type according to the checkbox:
-					control.log.disabled = false;
-					control.log.value = false;
-				}else if (axis.every(a => a.type === undefined || a.type === '-')){
-					// undefined and '-' are plotly default for: infer. Let's do the same:
-					var datakey = layoutkey[0];  // "x" or "y"
-					var infer = traces.every(t => Array.isArray(t[datakey]));  // infer only if all traces have 'x' (or 'y') set
-					if (infer){
-						// before inferring, check if we have bar charts with oriented on the current
-						// axis (vertical for x axis, horizontal for y axis). Not only plotly has problems in this case
-						// (play around with flatfile plots to check), but it doesn't make much sense, too,
-						// as visually log scales with bars/histograms distort bars width
-						if (datakey === 'y'){
-							var isHorizontalBarType = datatypeBar && traces.every(t => t.orientation === 'h');
-							if (!isHorizontalBarType){
-								isHorizontalBarType = datatypeHist && traces.every(t => t.orientation === 'h' || !('x' in t));
-							}
-							if (isHorizontalBarType){
-								infer = false;
-							}
-						}else{
-							var isVerticalBarType = datatypeBar &&  traces.every(!('orientation' in t) || t.orientation === 'v');
-							if (!isVerticalBarType){
-								isVerticalBarType = datatypeHist && traces.every(t => t.orientation === 'v' ||  !('y' in t));
-							}
-							if (isVerticalBarType){
-								infer = false;
-							}
-						}
-					}
-					if (infer){
-						// this is the time consuming case (that's why it is better to specify type in subclasses, when possible)
-						// isNaN has been proven to be the fastest check for numeric values.
-						// Also consider that when we have histograms we might have only either x or y, so:
-						tracevalues = traces.map(t => datatypeHist && (!(datakey in t)) ? t[datakey == 'x' ? 'y' : 'x'] : t[datakey]);
-						if (tracevalues.every(values => values.every(value => !isNaN(value)))){
-							control.log.disabled = false;
-							control.log.value = false;
-						}
-					}
 				}
 				// same range:
+				control.sameRange.range = null;
+				control.sameRange.disabled = true;
 				control.sameRange.value = false;
-				control.sameRange.disabled = datatypeHist || (this.plots || []).length <= 1 ||
-					control.log.disabled || axis.some(a => a.range !== undefined);
+				if (this.plots.length > 1){
+					// do we have the same range set for all plots?
+					var sameRangeSet = axis.every((a, i, as) => {
+						var r2 = a.range;
+						var r1 = i == 0 ? a.range : as[i-1].range;
+						return Array.isArray(r2) && r2.length == 2 && (r2[0] === r1[0] && r2[1] === r1[1] );
+					});
+					if (sameRangeSet){
+						if (axis.every(a => !('autorange' in a) || a.autorange === true)){ // autorange set for all plots
+							control.sameRange.range = Array.from(axis[0].range);
+							control.sameRange.disabled = false;
+							control.sameRange.value = false;
+							// plotly gives priority to range vs autorange, we want the latter to take effect
+							// initially, and the former to be set via the checkbox, so remove each axis range:
+							axis.forEach(a => { delete a.range; });
+						}else if (axis.every(a => a.autorange === false)){  // autorange false for all plots
+							control.sameRange.value = true;
+						}
+					}
+				}
 			}
 		},
 		newPlot(){  // redraw completely the plots
@@ -1041,27 +1011,13 @@ EGSIM.component('plots-div', {
 				// set data from control:
 				if(!control.sameRange.disabled){
 					if(!control.sameRange.value){
-						// Provide a 'delete range key' command by setting it undefined (infer range):
 						axis.forEach(a => newLayout[`${a}.range`] = undefined);
+						axis.forEach(a => newLayout[`${a}.autorange`] = true);
 					}else{
-						var vals = [];
-						data.forEach(trace => {
-							vals.push(...(trace[ax] || []).filter(v => v!==null && !isNaN(v) && v!==undefined));
-						});
-						if (vals.length){
-							var range = [Math.min(...vals), Math.max(...vals)];
-							if (range[0] < range[1]){
-								// add margins for better visualization:
-								var margin = Math.abs(range[1] - range[0]) / 50;
-								// be careful with negative logarithmic values:
-								if (!control.log.value || (range[0] > margin && range[1] > 0)){
-									range[0] -= margin;
-									range[1] += margin;
-								}
-								// set computed ranges to all plot axis:
-								axis.forEach(a => newLayout[`${a}.range`]  = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : range);
-							}
-						}
+						var range = control.sameRange.range;
+						range = control.log.value ? [Math.log10(range[0]), Math.log10(range[1])] : Array.from(range);
+						axis.forEach(a => newLayout[`${a}.range`] = range);
+						axis.forEach(a => newLayout[`${a}.autorange`] = false);
 					}
 				}
 			}
