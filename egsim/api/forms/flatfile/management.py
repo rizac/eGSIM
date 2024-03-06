@@ -227,25 +227,55 @@ class Plotly:
         """
         layout = {k: v for k, v in kwargs.items()}
         layout.setdefault('xaxis', {})
-        cls.set_axis(x, layout['xaxis'])
+        cls.set_axis(layout['xaxis'], x)
         layout.setdefault('yaxis', {})
-        cls.set_axis(y, layout['yaxis'])
+        cls.set_axis(layout['yaxis'], y)
         return layout
 
     @classmethod
-    def set_axis(cls, values: pd.Series, axis:dict):
-        axis.setdefault('type', '-')  # infer from data
+    def set_axis(cls, axis: dict, values: Optional[pd.Series] = None):
         axis.setdefault('title', '')
+        axis.setdefault('autorange', True)  # same as missing, but provide it explicitly
         if values is not None:
             categories = cls.get_categories(values)
+            computed_range = None
             if categories:
-                axis['type'] = 'category'
+                axis.setdefault('type', cls.AxisType.category)
                 axis.setdefault('categoryarray', categories)
                 axis.setdefault('categoryorder', 'array')
             elif get_dtype_of(values) == ColumnDtype.datetime:
-                axis['type'] = 'date'
-            elif get_dtype_of(values) == (ColumnDtype.int, ColumnDtype.float):
-                axis['type'] = 'linear'
+                axis.setdefault('type', cls.AxisType.date)
+                computed_range = [values.min(), values.max()]
+            elif get_dtype_of(values) in (ColumnDtype.int, ColumnDtype.float):
+                axis.setdefault('type', cls.AxisType.linear)
+                computed_range = [values.min(), values.max()]
+            else:
+                axis.setdefault('type', cls.AxisType.infer)  # infer from data
+            if computed_range is not None and pd.notna(computed_range).all():
+                axis.setdefault('range', computed_range)
+
+    @classmethod
+    def harmonize_axis_ranges(cls, axis: list[dict], margin=0.01):
+        mins, maxs = [], []
+        for axs in axis:
+            range = axs.get('range', None)
+            if range is None:
+                return
+            mins.append(range[0])
+            maxs.append(range[1])
+
+        min_ = min(mins)
+        max_ = max(maxs)
+        delta = margin * (max_ - min_)
+        for axs in axis:
+            axs['range'] = [min_ - delta, max_ + delta]
+
+    class AxisType:
+        linear = 'linear'
+        log = 'log'
+        date = 'date'
+        category = 'category'
+        infer = '-'  # FIXME REF
 
     @classmethod
     def array2json(cls, notna_values: pd.Series) -> list:

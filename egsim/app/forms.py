@@ -3,7 +3,7 @@ from egsim.api.forms.flatfile.management import Plotly
 from egsim.api.forms.flatfile.residuals import ResidualsForm
 from egsim.api.forms.predictions import PredictionsForm
 from django.forms.fields import CharField
-import numpy as np
+
 
 from egsim.smtk.residuals import c_labels
 
@@ -70,8 +70,14 @@ class ResidualsPlotDataForm(ResidualsForm):
                 'name': " ".join(col),
                 'legendgroup': model
             }
+
+            default_layout = lambda: {
+                'xaxis': {'title': x_label(imt)},
+                'yaxis': {'title': y_label(imt)}
+            }
+
             if not col_x:
-                default_trace['xbins'] = { 'size': .1 }
+                default_trace['xbins'] = { 'size': .5 }
                 default_trace['histnorm'] = 'probability'
                 default_trace['marker']['line'] = {
                     'color': color,
@@ -80,20 +86,12 @@ class ResidualsPlotDataForm(ResidualsForm):
                 x = dataframe[col]
                 y = None
                 trace = Plotly.get_trace(x=x, **default_trace)
-                # add normal distribution:
-                # trace_n = default_trace | {
-                #     'x': np.random.normal(loc=np.nanmean(x), scale=np.nanstd(x), size=100).tolist(),
-                #     'name': default_trace['name'] + ' Normal distribution',
-                #     'type': 'scatter',
-                #     'legendgroup': model + ' Normal distribution',
-                # }
-                # trace_n_0_1 = default_trace | {
-                #     'x': np.random.normal(loc=0.0, scale=1.0, size=100).tolist(),
-                #     'name': 'Normal distribution (m=0, s=1)',
-                #     'type': 'scatter',
-                #     'legendgroup': 'Normal distribution (m=0, s=1)',
-                # }
                 data = [trace]
+                def_layout = default_layout()
+                def_layout['xaxis']['type'] = '-'
+                def_layout['yaxis']['type'] = Plotly.AxisType.linear
+                def_layout['yaxis']['range'] = [0, 1]
+                # layout['xaxis']['type'] = Plotly.AxisType.infer  # disables log axis control
             else:
                 default_trace['mode'] = 'markers'
                 default_trace['marker']['size'] = 10
@@ -101,12 +99,9 @@ class ResidualsPlotDataForm(ResidualsForm):
                 y = dataframe[col]
                 trace = Plotly.get_trace(x=x, y=y, **default_trace)
                 data = [trace]
-            layout = Plotly.get_layout(
-                x = x,
-                y = y,
-                xaxis = { 'title': x_label(imt) },
-                yaxis = { 'title': y_label(imt) }
-            )
+                def_layout = default_layout()
+
+            layout = Plotly.get_layout(x = x, y = y, **def_layout)
 
             plots.append({
                 'data': data,
@@ -118,5 +113,7 @@ class ResidualsPlotDataForm(ResidualsForm):
                 'layout': layout
             })
 
+        Plotly.harmonize_axis_ranges([p['layout']['xaxis'] for p in plots])
+        Plotly.harmonize_axis_ranges([p['layout']['yaxis'] for p in plots])
         return {'plots': plots}
 
