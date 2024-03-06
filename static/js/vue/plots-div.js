@@ -361,14 +361,6 @@ EGSIM.component('plots-div', {
 					}else{
 						values.sort();
 					}
-					// FIXME REMOVE:
-					// quick-n-dirty fix to sort residuals and have 'total' as first element:
-					/* if (pname.toLowerCase().startsWith('residual')){
-						var idx_ = values.map(e => (""+e).toLowerCase()).indexOf('total');
-						if (idx_ > -1){
-							values = [values[idx_]].concat(values.filter((e, i) => i!=idx_));
-						}
-					}*/
 					params.push({
 						values: values,
 						label: pname,
@@ -492,16 +484,18 @@ EGSIM.component('plots-div', {
 				control.sameRange.range = null;
 				control.sameRange.disabled = true;
 				control.sameRange.value = false;
-				if (this.plots.length > 1){
-					// do we have the same range set for all plots?
-					var sameRangeSet = axis.every((a, i, as) => {
-						var r2 = a.range;
-						var r1 = i == 0 ? a.range : as[i-1].range;
-						return Array.isArray(r2) && r2.length == 2 && (r2[0] === r1[0] && r2[1] === r1[1] );
-					});
-					if (sameRangeSet){
+				if (this.plots.length > 1 && axis.every(a => Array.isArray(a.range))){
+					var mins = axis.map(a => a.range[0]);
+					var maxs = axis.map(a => a.range[1]);
+					// sort and get endpoints (Math.min and Math.max work for numeric data only)
+					mins.sort((a, b) => a > b ? 1 : (b > a ? -1 : 0));
+					maxs.sort((a, b) => a > b ? 1 : (b > a ? -1 : 0));
+					var axisMin = mins[0];
+					var axisMax = maxs[maxs.length-1];
+					var invalid = [null, undefined, NaN];
+					if (!invalid.includes(axisMin) && !invalid.includes(axisMax) && (axisMin < axisMax)){
 						if (axis.every(a => !('autorange' in a) || a.autorange === true)){ // autorange set for all plots
-							control.sameRange.range = Array.from(axis[0].range);
+							control.sameRange.range = [axisMin, axisMax];
 							control.sameRange.disabled = false;
 							control.sameRange.value = false;
 							// plotly gives priority to range vs autorange, we want the latter to take effect
