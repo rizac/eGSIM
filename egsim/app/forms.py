@@ -78,17 +78,9 @@ class ResidualsPlotDataForm(ResidualsForm):
                     step = 0.1
                 bins = np.arange(x.min(), x.max() + step, step)
                 y = np.histogram(x, bins, density=True)[0]
-                trace = {
+                trace = Plotly.bar_trace(color) | {
                     'x': Plotly.array2json(bins[:-1]),
                     'y': Plotly.array2json(y),
-                    'type': 'bar',
-                    'marker': {
-                        'color': color.replace(', 1)', ', 0.5)'),
-                        'line': {
-                            'color': color,
-                            'width': 2
-                        }
-                    },
                     'name': " ".join(col),
                     'legendgroup': model
                 }
@@ -97,28 +89,15 @@ class ResidualsPlotDataForm(ResidualsForm):
                 if not likelihood:
                     mean, std = x.mean(), x.std()
                     x_ = np.arange(mean - 3 * std, mean + 3 * std, step / 10)
-                    data.append({
+                    data.append(Plotly.line_trace(color) | {
                         'x': Plotly.array2json(x_),
                         'y': Plotly.array2json(norm_dist(x_, mean, std)),
-                        'type': 'scatter',
-                        'mode': 'lines',
-                        'line': {
-                            'color': color,
-                            'width': 2
-                        },
                         'name': " ".join(col) + ' normal distribution',
                         'legendgroup': model + ' normal distribution',
                     })
-                    data.append({
+                    data.append(Plotly.line_trace("rgba(120, 120, 120, 1)") | {
                         'x': Plotly.array2json(x_),
                         'y': Plotly.array2json(norm_dist(x_)),
-                        'type': 'scatter',
-                        'mode': 'lines',
-                        'line': {
-                            'color': "rgba(120, 120, 120, 1)",
-                            'width': 2,
-                            'dash': 'dot'
-                        },
                         'name': 'Normal distribution',
                         'legendgroup': 'Normal distribution (m=0, s=1)',
                     })
@@ -126,18 +105,9 @@ class ResidualsPlotDataForm(ResidualsForm):
             else:
                 x = self.cleaned_data['flatfile'][col_x]
                 y = dataframe[col]
-                trace = {
+                trace = Plotly.scatter_trace(color) | {
                     'x': Plotly.array2json(x),
                     'y': Plotly.array2json(y),
-                    'type': 'scatter',
-                    'mode': 'markers',
-                    'marker': {
-                        'color': color.replace(', 1)', ', 0.5)'),
-                        'line': {
-                            'color': color,
-                            'width': 2
-                        }
-                    },
                     'name': " ".join(col),
                     'legendgroup': model
                 }

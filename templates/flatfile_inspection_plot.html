@@ -32,12 +32,16 @@
 						</option>
 					</select>
 				</div>
-				<button type="submit" class="btn btn-primary mt-2 ms-3 text-nowrap">
-					Display plot
+				<button type='button'
+						@click="var data = Object.assign({}, forms.flatfile_inspection_plot, {format: 'json'}); postData(urls.flatfile_inspection_plot, data).then(r => r.json()).then(data => { responses.flatfile_inspection_plot=data.plots; })"
+						class='btn btn-primary mt-2 ms-3 text-nowrap'
+						title='Visualize flatfile data in an interactive plot'>
+					<i class='fa fa-bar-chart'></i> Display plot
 				</button>
 			</div>
 	   </form>
 	</div>
+	<plots-div :data="responses.flatfile_inspection_plot" style='position:absolute;inset:0px;z-index:100'></plots-div>
 <!--	<flatfile-plot-div :data="responseData" class="invisible"-->
 <!--					   :style='{visibility: Object.keys(responseData).length ? "visible !important" : "", flex: "1 1 auto"}'/>-->
 </div>
