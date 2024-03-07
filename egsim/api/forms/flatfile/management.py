@@ -84,91 +84,66 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
+        c = next(Plotly.colors_cycle())
         if x and y:  # scatter plot
             xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
-            xvalues = dataframe[xlabel]
-            yvalues = dataframe[ylabel]
-            xnan = self._isna(xvalues)
-            ynan = self._isna(yvalues)
-            plot = dict(
-                xvalues=self._tolist(xvalues[~(xnan | ynan)]),
-                yvalues=self._tolist(yvalues[~(xnan | ynan)]),
-                xlabel=xlabel,
-                ylabel=ylabel,
-                stats={
-                    xlabel: {'N/A count': int(xnan.sum()),
-                             **self._get_stats(xvalues.values[~xnan])},
-                    ylabel: {'N/A count': int(ynan.sum()),
-                             **self._get_stats(yvalues.values[~ynan])}
+            x, y = dataframe[xlabel], dataframe[ylabel]
+            # x_na = na_values(x).sum()
+            # y_na = na_values(y).sum()
+            layout = {
+                'xaxis': {
+                    'title': xlabel
+                },
+                'yaxis': {
+                    'title': ylabel
                 }
-            )
-        else:
-            label = x or y
-            na_values = self._isna(dataframe[label])
-            dataframe = dataframe.loc[~na_values, :]
-            series = dataframe[label]
-            na_count = int(na_values.sum())
-            if x:
-                plot = dict(
-                    xvalues=self._tolist(series),
-                    xlabel=label,
-                    stats={
-                        label: {
-                            'N/A count': na_count,
-                            **self._get_stats(series.values)
-                        }
-                    }
-                )
-            else:
-                plot = dict(
-                    yvalues=self._tolist(series),
-                    ylabel=label,
-                    stats={
-                        label: {
-                            'N/A count': na_count,
-                            **self._get_stats(series.values)
-                        }
-                    }
-                )
-        return plot
-
-    @classmethod
-    def _tolist(cls, values: pd.Series):  # values does not have NA
-        if str(values.dtype).startswith('datetime'):
-            # convert values to DatetimeIndex (note:
-            # to_datetime(series) -> series, to_datetime(ndarray) -> DatetimeIndex)
-            # and then to a pandas Index of ISO formatted strings
-            values = pd.to_datetime(values.values).\
-                strftime('%Y-%m-%dT%H:%M:%S')
-        return values.tolist()
-
-    @classmethod
-    def _isna(cls, values: pd.Series) -> np.ndarray:
-        filt = pd.isna(values) | values.isin([-np.inf, np.inf])
-        return values[filt].values
-
-    @classmethod
-    def _get_stats(cls, finite_values) -> dict[str, Union[float, None]]:
-        values = np.asarray(finite_values)
-        try:
-            return {
-                'min': float(np.min(values)),
-                'max': float(np.max(values)),
-                'median': float(np.median(values)),
-                'mean': float(np.mean(values)),
-                '0.25quantile': float(np.quantile(values, 0.25)),
-                '0.75quantile': float(np.quantile(values, 0.75))
             }
-        except (ValueError, TypeError):
-            # ValueError if values is empty. TypeError if values contains mixed types
-            return {
-                'min': None,
-                'max': None,
-                'median': None,
-                'mean': None,
-                '0.25quantile': None,
-                '0.75quantile': None
+            plot = {
+                'data': [Plotly.scatter_trace(c) | {
+                    'x': Plotly.array2json(dataframe[xlabel]),
+                    'y': Plotly.array2json(dataframe[ylabel])
+                }],
+                'params': {},
+                'layout': Plotly.get_layout(x=x, y=y, **layout)
             }
+        elif x:
+            xlabel = cleaned_data['x']
+            layout = {
+                'xaxis': {
+                    'title': xlabel
+                },
+                'yaxis': {
+                    'title': 'Frequency',
+                    'type': Plotly.AxisType.linear
+                }
+            }
+            plot = {
+                'data': [Plotly.histogram_trace(c) | {
+                    'x': Plotly.array2json(dataframe[xlabel])
+                }],
+                'params': {},
+                'layout': Plotly.get_layout(x=x, **layout)
+            }
+        else:  # y only provided
+            ylabel = cleaned_data['y']
+            layout = {
+                'xaxis': {
+                    'title': 'Frequency',
+                    'type': Plotly.AxisType.linear
+                },
+                'yaxis': {
+                    'title': ylabel
+                }
+            }
+            plot = {
+                'data': [Plotly.histogram_trace(c) | {
+                    'y': Plotly.array2json(dataframe[ylabel])
+                }],
+                'params': {},
+                'layout': Plotly.get_layout(y=y, **layout)
+            }
+
+        return {'plots': [plot]}
 
 
 class Plotly:
@@ -283,6 +258,62 @@ class Plotly:
             values.append(f'rgba({rgba}, 1)')
         from itertools import cycle
         return cycle(values)
+
+    @classmethod
+    def scatter_trace(cls, rgba_color: str) -> dict:
+        """Return the properties and style for a trace of type scatter (no lines)"""
+        return {
+            'type': 'scatter',
+            'mode': 'markers',
+            'marker': {
+                'size': 10,
+                'color': rgba_color.replace(', 1)', ', 0.5)'),
+                'symbol': "circle",
+                'line': {
+                    'width': 0,
+                    'color': rgba_color,
+                    'dash': 'solid'
+                }
+            }
+        }
+
+    @classmethod
+    def line_trace(cls, rgba_color: str) -> dict:
+        """Return the properties and style for a trace of type scatter (lines only)"""
+        return {
+            'type': 'scatter',
+            'mode': 'lines',
+            'line': {
+                'width': 2,
+                'color': rgba_color,
+                'dash': 'dot'
+            },
+        }
+
+    @classmethod
+    def bar_trace(cls, rgba_color:str) -> dict:
+        """Return the properties and style for a trace of type bar"""
+        return cls._bar_like_trace(rgba_color, 'bar')
+
+    @classmethod
+    def histogram_trace(cls, rgba_color: str) -> dict:
+        """Return the properties and style for a trace of type histogram"""
+        return cls._bar_like_trace(rgba_color, 'histogram')
+
+    @classmethod
+    def _bar_like_trace(cls, rgba_color: str, type: str) -> dict:
+
+        return {
+            'type': type,
+            'marker': {
+                'color': rgba_color.replace(', 1)', ', 0.5)'),
+                'line': {
+                    'width': 2,
+                    'color': rgba_color,
+                    'dash': 'solid'
+                }
+            }
+       }
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):

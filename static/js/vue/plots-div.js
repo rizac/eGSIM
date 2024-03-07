@@ -2,7 +2,7 @@
 of a response Object sent from the server */
 EGSIM.component('plots-div', {
 	props: {
-		data: {type: Array, default: () => { return [] }},
+		data: {type: [Array], default: () => { return [] }},
 		downloadUrl: {type: String, default: ""} // base url for download actions
 	},
 	data(){

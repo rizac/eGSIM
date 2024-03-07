@@ -208,10 +208,6 @@ def _get_init_data_json(debug=False) -> dict:
                 'residuals': {
                     'selected_flatfile_fields': [],
                 },
-                # 'residuals_plot': {
-                #     'plot_histogram_label': ResidualsPlotDataForm.histogram_label,
-                #     'plot_histogram_lh_label': ResidualsPlotDataForm.histogram_lh_label,
-                # },
                 'flatfile_meta_info': {
                     'show_dialog': False
                 },
@@ -222,7 +218,7 @@ def _get_init_data_json(debug=False) -> dict:
             'predictions_plots': [],
             'residuals_plots': [],
             'flatfile_meta_info': None,
-            'flatfile_visualization_plot': None,
+            'flatfile_inspection_plot': [],
         },
         'gsims': gsims,
         # return the list of imts (imt_groups keys) in the right order:
