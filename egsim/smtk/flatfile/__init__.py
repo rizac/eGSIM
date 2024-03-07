@@ -57,7 +57,7 @@ def parse_flatfile(
         if ColumnsRegistry.get_default(ff_col) is not None:
             extra_defaults[csv_col] = ColumnsRegistry.get_default(ff_col)
         if ColumnsRegistry.get_dtype(ff_col) is not None:
-            extra_dtype[csv_col] = ColumnsRegistry.get_dtype(ff_col)
+            extra_dtype[csv_col] = ColumnDtype(ColumnsRegistry.get_dtype(ff_col)).name
 
     dfr = read_flatfile(filepath_or_buffer, sep=sep, dtype=extra_dtype,
                         defaults=extra_defaults, usecols=usecols, **kwargs)

@@ -8,8 +8,6 @@ from openquake.hazardlib.gsim.base import GMPE, registry, gsim_aliases
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
 
-from .flatfile import ColumnsRegistry
-
 
 registered_gsims:dict[str, type[GMPE]] = registry.copy()
 
@@ -101,7 +99,8 @@ def imt_name(imtx: Union[Callable, IMT]) -> str:
     return imtx.__name__
 
 
-def gsim_sa_limits(gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, float], None]:
+def gsim_sa_limits(
+        gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, float], None]:
     """Return the SA period limits defined for the given gsim, or None"""
     if isinstance(gsim, str):
         gsim = registry[gsim]
@@ -111,36 +110,6 @@ def gsim_sa_limits(gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, flo
             pers = [sa.period for sa in getattr(gsim, c).sa_coeffs]
             break
     return (min(pers), max(pers)) if pers is not None else None
-
-# FIXME: REMOVE:
-# def rupture_params_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-#     """Return the rupture parameters required by the given model(s)"""
-#     ret = []
-#     for model in gsim:
-#         if isinstance(model, str):
-#             model = registry[model]
-#         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
-#     return frozenset(ret)
-#
-#
-# def site_params_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-#     """Return the site parameters required by the given model(s)"""
-#     ret = []
-#     for model in gsim:
-#         if isinstance(model, str):
-#             model = registry[model]
-#         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
-#     return frozenset(ret)
-#
-#
-# def distances_required_by(*gsim: Union[str, GMPE, type[GMPE]]) -> frozenset[str]:
-#     """Return the distance measures required by the given model(s)"""
-#     ret = []
-#     for model in gsim:
-#         if isinstance(model, str):
-#             model = registry[model]
-#         ret.extend(model.REQUIRES_DISTANCES or [])
-#     return frozenset(ret)
 
 
 def intensity_measures_defined_for(model: Union[str, GMPE]) -> frozenset[str]:
@@ -154,14 +123,12 @@ def intensity_measures_defined_for(model: Union[str, GMPE]) -> frozenset[str]:
 
 
 def ground_motion_properties_required_by(
-        *models: Union[str, GMPE],
-        as_ff_column=False) -> frozenset[str]:
-    """Return the required ground motion properties (distance measures,
-       rupture and site params all together)
-
-    :param as_ff_column: False (the default) will return the ground motion property
-        names as implemented in OpenQuake. True will check any property
-        and return the relative flatfile column registered in this package
+        *models: Union[str, GMPE]) -> frozenset[str]:
+    """Return the aggregated required ground motion properties (distance measures,
+       rupture and site params all together) from all the passed models. Note: the
+       returned names are those implemented in OpenQuake, use
+       `smtk.flatfile.ColumnRegistry` to translate them into the registered flatfile
+       column names
     """
     ret = []
     for model in models:
@@ -175,6 +142,4 @@ def ground_motion_properties_required_by(
         ret.extend(model.REQUIRES_DISTANCES or [])
         ret.extend(model.REQUIRES_SITES_PARAMETERS or [])
         ret.extend(model.REQUIRES_RUPTURE_PARAMETERS or [])
-    if as_ff_column:
-        return frozenset(ColumnsRegistry.get_aliases(c)[0] for c in ret)
     return frozenset(ret)

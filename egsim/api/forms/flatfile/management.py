@@ -17,7 +17,7 @@ from egsim.api.forms.flatfile import (FlatfileForm, get_registered_column_info,
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for)
 from egsim.smtk.converters import na_values, array2json
-from egsim.smtk.flatfile import ColumnDtype, get_dtype_of
+from egsim.smtk.flatfile import ColumnDtype, get_dtype_of, ColumnsRegistry
 
 
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
@@ -36,7 +36,10 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
         gsims = list(cleaned_data.get('gsim', {}))
         if not gsims:
             gsims = list(models.Gsim.names())
-        gm_props = ground_motion_properties_required_by(*gsims, as_ff_column=True)
+        ff_columns = {
+            ColumnsRegistry.get_aliases(c)[0]
+            for c in ground_motion_properties_required_by(*gsims)
+        }
         imts = list(cleaned_data.get('imt', []))
 
         if not imts:
@@ -46,7 +49,7 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
 
         return {
             'columns': [get_registered_column_info(c)
-                        for c in sorted(set(gm_props) | set(imts))]
+                        for c in sorted(ff_columns | set(imts))]
         }
 
 
