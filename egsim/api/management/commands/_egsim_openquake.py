@@ -7,6 +7,7 @@ from django.core.management import CommandError, BaseCommand
 
 from egsim.smtk import registered_gsims, gsim, intensity_measures_defined_for, \
     ground_motion_properties_required_by
+from egsim.smtk.flatfile import ColumnsRegistry
 from ... import models
 
 
@@ -42,25 +43,38 @@ class Command(BaseCommand):
                     warnings.simplefilter('error')
 
                 # try to see if we can initialize it:
-                ok += write_model(name, model_cls)
+                ok += self.write_model(name, model_cls)
 
         discarded = len(registered_gsims) - ok
         self.stdout.write(self.style.SUCCESS(f'Models saved: {ok}, '
                                              f'discarded: {discarded}'))
 
 
-def write_model(name, cls):
-    try:
-        _ = gsim(name)  # check we can initialize the model
-        imtz = intensity_measures_defined_for(_)
-        gmp = ground_motion_properties_required_by(_)
-        if not imtz or not gmp:
+    def write_model(self, name, cls):
+        prefix = 'Discarding'
+        try:
+            _ = gsim(name)  # check we can initialize the model
+            imtz = intensity_measures_defined_for(_)
+            if not imtz:
+                self.stdout.write(f"  {prefix} {name}. No intensity measure defined")
+                return False
+            gmp = ground_motion_properties_required_by(_)
+            if not gmp:
+                self.stdout.write(f"  {prefix} {name}. No ground motion property "
+                                  f"defined")
+                return False
+            invalid = sorted(c for c in gmp if ColumnsRegistry.get_type(c) is None)
+            if invalid:
+                self.stdout.write(f"  {prefix} {name}. Unregistered "
+                                  f"ground motion properties: {invalid}")
+                return False
+            models.Gsim.objects.create(
+                name=name,
+                unverified=cls.non_verified,
+                adapted=cls.adapted,
+                experimental=cls.experimental)
+        except (TypeError, KeyError, IndexError, ValueError, AttributeError) as exc:
+            self.stdout.write(f"  {prefix} {name}. Initialization error: "
+                              f"{str(exc)}")
             return False
-        models.Gsim.objects.create(
-            name=name,
-            unverified=cls.non_verified,
-            adapted=cls.adapted,
-            experimental=cls.experimental)
-    except (TypeError, KeyError, IndexError, ValueError, AttributeError):
-        return False
-    return True
+        return True
