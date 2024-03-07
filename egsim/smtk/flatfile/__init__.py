@@ -424,14 +424,15 @@ class ColumnType(Enum):
 
 class ColumnDtype(Enum):
     """Enum where members are registered dtype names (see ColumnRegistry) and
-    values are the pandas counterpart
+    values are the pandas valid counterpart (e.g. arguments of `Series.astype`,
+    or dict values of `dtype` in `read_csv`)
     """
+    # for a list of possible values, see `numpy.sctypeDict.keys()` (but also
+    # check that they behave as you wish in pandas)
     float = "float"
     int = "int"
     bool = "bool"
-    datetime = "datetime64"  # NOTE: datetime64 is actually not used in pandas read_csv,
-    # We set here a unique value identifying date time types, and use the numpy value
-    # "datetime64" (see `numpy.sctypeDict.keys()` for a list of supported names)
+    datetime = "datetime64"  # not used in `pd.read_csv`, works with `Series.astype`
     str = "string"  # https://pandas.pydata.org/docs/user_guide/text.html
     category = "category"
 
@@ -444,7 +445,6 @@ def get_dtype_of(*item: Union[int, float, datetime, bool, str,
     or None if no associated dtype is found.
     If several arguments are passed and the arguments are not all the same dtype,
     returns None
-    To get the ColumnDtype Enum from the returned value, call `ColumnDType(value)`
 
     :param item: one or more Python objects, such as object instance (e.g. 4.5),
         object class (`float`), a numpy array, pandas Series / Array, a numpy dtype,

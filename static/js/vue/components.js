@@ -392,7 +392,7 @@ EGSIM.component('gsim-map', {
 				// Add title:
 				html += `<h6 class="mt-1">Click options</h6>
 					<div style='max-width:12rem' class='mb-2'>Search models
-					of the following seismic hazard source regionalizations:
+					from the following seismic hazard source regionalizations:
 					</div>`;
 				for (var regx of regionalizations){
 					var name = regx.name;
