@@ -114,7 +114,7 @@ def _get_init_data_json(debug=False) -> dict:
         regionalizations.append({
             'name': regx.name,
             'bbox': _get_bbox(regx),  # tuple (min_lng, min_lat, max_lng, max_lat)
-            'ref': regx.url or ""
+            'url': regx.url or ""
         })
 
     # get predefined flatfiles info:

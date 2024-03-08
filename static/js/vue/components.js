@@ -395,7 +395,7 @@ EGSIM.component('gsim-map', {
 					</div>`;
 				for (var regx of regionalizations){
 					var name = regx.name;
-					var ipt = `<input type='checkbox' data-regionalization-name='${name}' checked class='me-1' />${name}`;
+					var ipt = `<label><input type='checkbox' data-regionalization-name='${name}' checked class='me-1' />${name}</label>`;
 					if (regx.url){
 						ipt += `<a class='ms-1' target="_blank" href="${regx.url}" title="ref (open link in new tab)">
 							<i class="fa fa-external-link"></i>
@@ -404,7 +404,7 @@ EGSIM.component('gsim-map', {
 					html += `${rowDivPrefix}${ipt}</div>`;
 				}
 
-				// add layers (1st is the default selected):
+				// add layers (to change default layer, see below at the end):
 				var layers = {
 					'Geoportail': L.tileLayer('https://wxs.ign.fr/{apikey}/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE={style}&TILEMATRIXSET=PM&FORMAT={format}&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
 						attribution: '<a target="_blank" href="https://www.geoportail.gouv.fr/">Geoportail France</a>',
@@ -426,25 +426,26 @@ EGSIM.component('gsim-map', {
 				html += '<h6 class="mt-3">Base layer</h6>';
 				for (var name of Object.keys(layers)){
 					html += `${rowDivPrefix}
-						<input type='radio' name='_gm_map_l' data-map-layer='${name}' class='me-1' />${name}
+						<label><input type='radio' name='__gm_map_layer__' data-map-layer='${name}' class='me-1' />${name}</label>
 					</div>`;
 				}
 
 				div.innerHTML = `${html}</div></div>`;
-				var defElement = null;
 				// add events:
-				for (var elm of div.querySelectorAll('input[data-map-layer]')){
-					var name = elm.getAttribute('data-map-layer');
-					if (name == 'Carto'){
-						defElement = elm;
-					}
-					let layer = layers[name];
-					elm.addEventListener('click', e => {
-						map.eachLayer((layer) => { if (layer instanceof L.Layer){ layer.remove(); }});
-						layer.addTo(map);
+				function addLayer(name){
+					map.eachLayer((layer) => {
+						if (!(layer instanceof L.Marker)){
+							layer.remove();
+						}
 					});
+					layers[name].addTo(map);
 				}
-				defElement.click();
+				div.querySelectorAll('input[data-map-layer]').forEach(elm => {
+					elm.addEventListener('click', e => { addLayer(e.target.getAttribute('data-map-layer')); });
+				});
+				// default Layer (click on the associated HTML element to set it):
+				var defaultLayerName = "Carto";
+				div.querySelector(`input[data-map-layer="${defaultLayerName}"]`).click();
 				return div;
 			};
 			control.addTo(map);
