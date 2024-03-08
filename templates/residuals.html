@@ -15,10 +15,10 @@
 					 style="flex: 0 1 auto; min-height:0px">
 		</gsim-select>
 
-		<imt-select v-model="forms.residuals.imt" :imts='imts' class='mt-3'></imt-select>
+		<imt-select v-model="forms.residuals.imt" :imts='imts' class='mt-4'></imt-select>
 
 		<flatfile-select
-			class= 'mt-3'
+			class= 'mt-4'
 			:flatfiles='flatfiles'
 			v-model="forms.residuals.flatfile"
 			:upload-url='urls.flatfile_validation'
@@ -31,42 +31,50 @@
 			<input type='text' v-model="forms.residuals['data-query']" class='form-control'/>
 		</div>
 
-		<div class='d-flex flex-column mt-3 align-items-stretch'>
+		<div class='d-flex flex-column mt-4 align-items-stretch'>
 
 			<div class="input-group-text d-flex flex-row align-items-center"
 				 style="border-bottom: 0px !important; border-bottom-left-radius: 0px !important; border-bottom-right-radius: 0px !important;">
-				<span class='text-start' style='flex: 1 1 auto'>Compute residuals</span>
+				<span class='text-start' style='flex: 1 1 auto'>Residuals</span>
 				<button type='button'
 						onclick='var elm=document.getElementById("residuals_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'
 						class='btn btn-light btn-sm'>
-					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" /> Python tutorials
+					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
 				</button>
 			</div>
 
 			<div class='d-flex flex-column form-control'
 				 style="border-top-left-radius: 0px !important; border-top-right-radius: 0px !important;">
-
-				<div class='input-group me-2'>
-					<select v-model='forms.residuals.format' class='form-control'>
+				<table class='table-sm'>
+				<tr>
+					<td>Download</td>
+					<td class='d-flex flex-row align-items-baseline'>
+					<select v-model='forms.residuals.format' class='border p-2 bg-white rounded' style='flex:1 1 auto'>
 						<option v-for='format in forms.misc.download_formats' :value='format'>
 							{% verbatim %}{{ format }}{% endverbatim %}
 						</option>
 					</select>
-					<div class="d-flex align-items-center px-3 border-top border-bottom">
-						<label class='me-2' ><input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood</label>
-						<a href="https://doi.org/10.1785/0120030147" target='_blank'><i class='fa fa-external-link'></i></a>
-					</div>
-					<button type='button'
+					<label class='ms-2'>
+						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood
+					</label>
+					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1'>
+						<i class='fa fa-external-link'></i>
+					</a>
+					</td>
+					<td>
+					<button type='button' style='width:100%'
 							@click="downloadResult(urls.residuals, forms.residuals, 'egsim-residuals')"
-							class='btn btn-primary text-nowrap'
+							class='btn btn-primary'
 							title='Download residuals'>
 						<i class='fa fa-download'></i>
 					</button>
+					</td>
+				</tr>
 
-				</div>
-
-				<div class='input-group me-2 mt-2'>
-					<select v-model='forms.residuals_plot.x' class='form-control'
+				<tr>
+					<td>Visualize</td>
+					<td>
+					<select v-model='forms.residuals_plot.x' class='border rounded p-2 bg-white'
 						@change="evt => { forms.residuals_plot.likelihood = evt.target.selectedIndex == 1; }">
 						<option :value='null'>Residuals histogram (density distribution)</option>
 						<option :value='null'>Likelihood histogram (density distribution)</option>
@@ -74,14 +82,17 @@
 							{% verbatim %} Residuals vs. {{ f.name + " (" + f.dtype + ")" }} {% endverbatim %}
 						</option>
 					</select>
-					<button type='button'
+					</td>
+					<td>
+					<button type='button' style='width:100%'
 							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); postData(urls.residuals_plot, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
-							class='btn btn-primary text-nowrap'
+							class='btn btn-primary'
 							title='Visualize residuals via interactive plots'>
 						<i class='fa fa-bar-chart'></i>
 					</button>
-				</div>
-
+					</td>
+				</tr>
+				</table>
 			</div>
 
 		</div>
