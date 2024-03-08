@@ -1,7 +1,6 @@
-/* GSIM and IMT <select> components */
-
-/* This is an input[type=text] where the v-model is an array. The array elements
-will be displayed - and can be edited - on the input space- or comma-separated */
+/* This is an input[type=text] where the v-model is an array represented on the
+input as space space separated list (comma is also allowed)
+*/
 EGSIM.component('array-input', {
 	// modelValue is the value of v-model set on this array-input:
 	props: {'modelValue': {type: Array}},
