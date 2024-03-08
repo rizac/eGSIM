@@ -289,7 +289,7 @@ class Plotly:
             'line': {
                 'width': 2,
                 'color': rgba_color,
-                'dash': 'dot'
+                'dash': 'solid'
             },
         }
 

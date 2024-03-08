@@ -186,7 +186,7 @@ def _get_init_data_json(debug=False) -> dict:
             'predictions': predictions_form.asdict(),
             # in frontend, the form data below will be merged into forms.residuals above
             # (keys below will take priority):
-            'predictions_plot': {'x': None, 'format': 'json'},
+            'predictions_plot': {'plot_type': 'm', 'format': 'json'},
             'residuals': residuals_form.asdict(),
             # in frontend, the form data below will be merged with forms.residuals above
             # (keys below will take priority):
@@ -201,6 +201,9 @@ def _get_init_data_json(debug=False) -> dict:
                 'predictions':{
                     'msr': predictions_form.fields['msr'].choices,
                     'region': predictions_form.fields['region'].choices,
+                },
+                'predictions_plot':{
+                    'plot_types': PredictionsPlotDataForm.base_fields['plot_type'].choices
                 },
                 'flatfile_inspection_plot': {
                     'selected_flatfile_fields': []

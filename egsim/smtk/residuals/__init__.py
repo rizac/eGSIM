@@ -67,7 +67,7 @@ def get_residuals(
     col_mapping = {}
     for c in flatfile_r.columns:
         c_type = ColumnsRegistry.get_type(c)
-        col_mapping[c] = (c_labels.input_data, c_type.name if c_type else 'misc', c)
+        col_mapping[c] = (c_labels.input_data, c_type.value if c_type else 'misc', c)
     flatfile_r.rename(columns=col_mapping, inplace=True)
     # sort columns:
     flatfile_r.sort_index(axis=1, inplace=True)

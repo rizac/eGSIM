@@ -418,10 +418,10 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
 
 class ColumnType(Enum):
     """Flatfile column type"""
-    rupture = 'Rupture parameter'
-    site = 'Site parameter'
-    distance = 'Distance measure'
-    intensity = 'Intensity measure'
+    rupture = 'rupture_parameter'
+    site = 'site_parameter'
+    distance = 'distance_measure'
+    intensity = 'intensity_measure'
 
 
 class ColumnDtype(Enum):
