@@ -144,12 +144,12 @@ def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
     # get columns:
     dist_label = (
         labels.input_data,
-        ColumnsRegistry.get_type(dist_label).name,
+        ColumnsRegistry.get_type(dist_label).value,
         dist_label
     )
     mag_label = (
         labels.input_data,
-        ColumnsRegistry.get_type(labels.MAG).name,
+        ColumnsRegistry.get_type(labels.MAG).value,
         labels.MAG
     )
     columns = pd.MultiIndex.from_tuples(

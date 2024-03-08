@@ -85,7 +85,7 @@
 					</td>
 					<td>
 					<button type='button' style='width:100%'
-							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); postData(urls.residuals_plot, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
+							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); postData(urls.residuals_plot, data).then(r => r.json()).then(data => { responses.residuals_plots=data.plots; })"
 							class='btn btn-primary'
 							title='Visualize residuals via interactive plots'>
 						<i class='fa fa-bar-chart'></i>
@@ -104,5 +104,5 @@
 			:data-src=urls.residuals_response_tutorial>
 	</iframe>
 
-	<plots-div :data="responses.predictions_plots" style='position:absolute;inset:0px;z-index:100'></plots-div>
+	<plots-div :data="responses.residuals_plots" style='position:absolute;inset:0px;z-index:100'></plots-div>
 </div>
