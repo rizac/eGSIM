@@ -178,15 +178,17 @@ def _read_csv_prepare(filepath_or_buffer: IOBase, **kwargs) -> dict:
     else:
         csv_columns = set(header)
 
-    # Set the `dtype` and `parse_dates` arguments of read_csv (see also
-    # `_read_csv_finalize`)
+    # Harmonize `dtype` values and set `parse_dates` arguments of read_csv
+    # (see also `_read_csv_finalize`):
     dtype = kwargs.pop('dtype', {})  # removed and handled later
     kwargs['dtype'] = {}
     for col in csv_columns:
         if col in dtype:
-            col_dtype = _as_dtype_value(dtype[col]) # a ColumndDType value or pd.Categorical
+            # convert to str (ColumnDtype enum value) or pd.Categorical:
+            col_dtype = _as_dtype_value(dtype[col])
         else:
-            col_dtype = ColumnsRegistry.get_dtype(col)  # a ColumnDType value
+            # get registered str (ColumnDtype enum value) or pd.Categorical:
+            col_dtype = ColumnsRegistry.get_dtype(col)
             if col_dtype is None:
                 continue
         # set the harmonized value into our dtype dict (see finalize_read_csv):
@@ -669,12 +671,11 @@ def _as_dtype_value(dtype: Union[str, pd.CategoricalDtype, Collection]) \
             try:
                 cat = pd.CategoricalDtype(dtype)
             except (TypeError, ValueError):
-                if not isinstance(dtype, pd.CategoricalDtype):
-                    raise ValueError(f'Invalid data type: {str(dtype)}')
-                cat = dtype
-        if len(set(type(v) for v in cat.categories)) != 1:
+                raise ValueError(f'Invalid data type: {str(dtype)}')
+        cat_dtypes = {get_dtype_of(v) for v in cat.categories}
+        if len(cat_dtypes) != 1 or None in cat_dtypes:
             raise ValueError(f'Invalid categorical data type, categories '
-                             f'must be all of the same type')
+                             f'data types unrecognized or not homogeneous')
         return cat
 
 
