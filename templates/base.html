@@ -6,26 +6,10 @@
 
 	{% block head %}
 
-	<!-- load font now, set font later when loaded (otherwise it could not be applied) -->
+	<!-- load font now, set font later (See <style> tage below at the end of the <head>)-->
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Semi+Condensed&family=Encode+Sans+Condensed&display=swap" rel="stylesheet">
-
-	<script type="text/javascript">
-	document.fonts.ready.then(() => {  // https://developer.mozilla.org/en-US/docs/Web/API/Document/fonts
-		var style = document.createElement('style');
-		style.type = 'text/css';
-		style.innerHTML = `
-			body{
-				font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
-			}
-			h1, h2, h3, h4, h5, h6, nav, label{
-				font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
-			}
-		`;
-		document.head.appendChild(style);
-	});
-	</script>
 
 	{% if vue %}
 	{% if debug %}
@@ -70,6 +54,14 @@
 
 	<link rel="shortcut icon" href="{% static 'img/favicon.png' %}" type="image/png"/>
 
+	<style>
+		body{
+			font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
+		}
+		h1, h2, h3, h4, h5, h6, nav, label{
+			font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
+		}
+	</style>
 	{% block end-of-head %}{% endblock %}
 </head>
 
