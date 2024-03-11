@@ -29,8 +29,7 @@ class PredictionsPlotDataForm(PredictionsForm):
         cleaned_data = super().clean()
         if cleaned_data['plot_type'] == 's':
             if not (all(_.startswith('SA(') for _ in cleaned_data['imt'])):
-                self.add_error('imt', 'You must specify only SA with period(s) '
-                                       'as intensity measures')
+                self.add_error('imt', 'Only SA with period(s) allowed')
         return cleaned_data
 
     def output(self) -> dict:
@@ -53,26 +52,28 @@ class PredictionsPlotDataForm(PredictionsForm):
             x_label = mag_label
             y_label = lambda imt: f'Median {imt}'
             def groupby(dataframe):
-                for d, dfr in dataframe.groupby([dist_col]):
+                for d, dfr in dataframe.groupby(dist_col):
                     yield {dist_label: d}, dfr[mag_col], dfr
         elif self.cleaned_data['plot_type'] == 'd':
             x_label = dist_label
             y_label = lambda imt: f'Median {imt}'
             def groupby(dataframe):
-                for m, dfr in dataframe.groupby([mag_col]):
+                for m, dfr in dataframe.groupby(mag_col):
                     yield {mag_label: m}, dfr[dist_col], dfr
         else:
             x_label = 'Period (s)'
             y_label = lambda imt: 'SA (g)'
-            sas = {c for c in dataframe.columns if sa_period(c[-1]) is not None}
-            sas = sorted(sas, key=lambda s: sa_period(s))
+            sas = sorted(imts, key=lambda s: sa_period(s))  # FIXME sort imts in one place
             x_values = [float(sa_period(_)) for _ in sas]
+            imts = ['SA']
             def groupby(dataframe):
                 for (d, m), dfr in dataframe.groupby([dist_col, mag_col]):
-                    ret = pd.DataFrame()
+                    ret = {}
                     for m in models:
-                        ret[('SA', labels.MEDIAN, m)] = dfr.loc[sas, labels.MEDIAN, m]
-                        ret[('SA', labels.SIGMA, m)] = dfr.loc[sas, labels.SIGMA, m]
+                        vals = dfr.loc[:, (sas, labels.MEDIAN, m)].iloc[0, :].values
+                        ret[(imts[0], labels.MEDIAN, m)] = vals.astype(float)
+                        vals = dfr.loc[:, (sas, labels.SIGMA, m)].iloc[0,:].values
+                        ret[(imts[0], labels.SIGMA, m)] = vals.astype(float)
 
                     yield {mag_label: m, dist_label: d}, x_values, pd.DataFrame(ret)
 
@@ -80,8 +81,8 @@ class PredictionsPlotDataForm(PredictionsForm):
             for imt in imts:
                 for model in models:
                     try:
-                        medians = dataframe[(imt, labels.MEDIAN, model)]
-                        sigmas = dataframe[(imt, labels.SIGMA, model)]
+                        medians = dfr[(imt, labels.MEDIAN, model)]
+                        sigmas = dfr[(imt, labels.SIGMA, model)]
                     except KeyError:
                         medians = []
                         sigmas = []

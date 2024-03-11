@@ -16,10 +16,10 @@ from openquake.hazardlib.geo import Point
 from .rupture import (get_target_sites, create_planar_surface,
                       get_hypocentre_on_planar_surface,
                       create_rupture)
+from ..registry import gsim_sa_limits
 from ..flatfile import ColumnsRegistry
 from ..validators import (validate_inputs, harmonize_input_gsims,
-                          harmonize_input_imts)
-
+                          harmonize_input_imts, sa_period)
 
 @dataclass
 class RuptureProperties:
@@ -84,13 +84,22 @@ def get_trellis(
                                    site_properties.distance_type)
 
     # Get the ground motion values
-    imts_list = list(imts)
+
     for gsim_label, gsim in gsims.items():
+        sa_lim = gsim_sa_limits(gsim)
+        if sa_lim is not None:
+            valid_imts = { k: v for k, v in imts.items() if sa_period(k) is None
+                           or sa_lim[0] <= sa_period(k) <= sa_lim[1] }
+        else:
+            valid_imts = imts
+        imts_list = list(valid_imts)
         try:
-            medians, sigmas = get_ground_motion_values(gsim, imts, ctxts)
+            medians, sigmas = get_ground_motion_values(gsim, valid_imts, ctxts)
             # both medians and spectra are numpy matrices of
             # `len(imt)` rows X `len(ctxts) columns`. Convert them to
             # `len(ctxts) rows X len(imt)`columns` matrices
+
+            # FIXME REMOVE: this raises pandas warning:
             trellis_df.loc[:, (imts_list, labels.MEDIAN, gsim_label)] = medians.T
             trellis_df.loc[:, (imts_list, labels.SIGMA, gsim_label)] = sigmas.T
         except Exception as exc:
