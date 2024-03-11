@@ -86,7 +86,7 @@ EGSIM.component('gsim-select', {
 			for (var model of this.models.filter(m => selectedModelsSet.has(m.name))){
 				var wrongimts = selimts.filter(i => !model.imts.has(i));
 				if (wrongimts.length){
-					errors[model.name] = `${model.name} does not support ${wrongimts.join(', ')}`;
+					errors[model.name] = [`${model.name} does not support ${wrongimts.join(', ')}`];
 				}
 			}
 			return errors;
@@ -97,14 +97,17 @@ EGSIM.component('gsim-select', {
 			var saLimits = saPeriods.length ? [Math.min(...saPeriods), Math.max(...saPeriods)] : [];
 			var selectedModelsSet = new Set(this.selectedModels);
 			for (var model of this.models.filter(m => selectedModelsSet.has(m.name))){
+				var warns = [];
 				if (model.warning){
-					warnings[model.name] = model.warning;
+					warns.push(model.warning);
 				}
-				if (!saLimits.length){
-					continue;
+				if (saLimits.length){
+					if (saPeriods.some(p => (p < model.saLimits[0] || p > model.saLimits[1]))){
+						warns.push("Not defined for all supplied SA periods");
+					}
 				}
-				if (saPeriods.some(p => (p < model.saLimits[0] || p > model.saLimits[1]))){
-					warnings[model.name] = "Not defined for all supplied SA periods"
+				if (warns.length){
+					warnings[model.name] = warns;
 				}
 			}
 			return warnings;
@@ -117,21 +120,21 @@ EGSIM.component('gsim-select', {
 			<label style="flex: 1 1 auto;" class='text-start'>model ({{ selectedModels.length }} selected)</label>
 			<i
 				v-show="Object.keys(warnings).length"
-				aria-label="Remove models with warnings (for details, hover mouse on each model icon)"
+				title="Remove models with warnings (for details, hover mouse on each model icon)"
 				class="fa fa-exclamation-triangle ms-2 text-warning"
 				style="cursor: pointer;"
 				@click="removeSelectedModelsWithWarnings()">
 			</i>
 			<i
 				v-show="Object.keys(errors).length"
-				aria-label="Remove models with errors (for details, hover mouse on each model icon)"
+				title="Remove models with errors (for details, hover mouse on each model icon)"
 				class="fa fa-exclamation-triangle ms-2 text-danger"
 				style="cursor: pointer;"
 				@click="removeSelectedModelsWithErrors()">
 			</i>
 			<i
 				v-show="selectedModels.length"
-				aria-label="Clear selection"
+				title="Remove all models from selection"
 				class="fa fa-times-circle ms-2"
 				style="cursor: pointer;"
 				@click="removeSelectedModels()">
@@ -147,7 +150,7 @@ EGSIM.component('gsim-select', {
 						v-for="model in selectedModels"
 						class='me-1'
 						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						aria-label="remove from selection (to remove all models, click the same button on this panel top right corner)"
+						title="Remove from selection"
 						@click="selectedModels.splice(selectedModels.indexOf(model), 1)">
 						<i class='fa fa-times-circle'></i>
 					</div>
@@ -156,8 +159,9 @@ EGSIM.component('gsim-select', {
 				<div class='d-flex flex-column ms-1'>
 					<div
 						v-for="model in selectedModels"
+						:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
 						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
-						:aria-label="errors[model] || warnings[model] || ''">
+						>
 						{{ model }}
 					</div>
 				</div>
@@ -165,6 +169,7 @@ EGSIM.component('gsim-select', {
 				<div class='d-flex flex-column ms-1'>
 					<span
 						v-for="model in selectedModels"
+						:title="(errors[model] || []).concat(warnings[model] || []).join('<br>')"
 						:style='{visibility: errors[model] || warnings[model] ? "visible" : "hidden"}'
 						:class="errors[model] ? 'text-danger' : warnings[model] ? 'text-warning' : ''"
 						class='me-1'>
@@ -182,7 +187,7 @@ EGSIM.component('gsim-select', {
 			class='form-control'
 			:class="selectedModels.length ? 'border-top-0' : ''"
 			style='min-width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
-			aria-label="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
+			title="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
 		<div
 			class='position-relative'
@@ -318,6 +323,7 @@ EGSIM.component('imt-select', {
 			<button
 				@click="SAPeriods = Array.from(SAPeriods.length ? [] : defaultSAPeriods)"
 				type='button'
+				:title='SAPeriods.length ? "clear text" : "input a predefined list of SA periods"'
 				class='btn border bg-white'
 				style='border-left:0 !important;border-top-right-radius:0 !important; border-top: 0 !important'>
 				<i class="fa fa-times-circle"
@@ -392,7 +398,7 @@ EGSIM.component('gsim-map', {
 				var html = `<button class="border-0" type="button" data-bs-toggle="collapse"
 								onclick=''
 								style='width:100%; background-color:transparent'
-								data-bs-target="#${id}" aria-expanded="false">
+								data-bs-target="#${id}">
 								<i class="fa fa-sort"></i>
 							</button>
 							<div id="${id}" class='collapse'>`;
@@ -604,7 +610,7 @@ EGSIM.component('flatfile-select', {
 				{{ v.innerHTML }}
 			</option>
 		</select>
-		<a aria-label='flatfile reference (opens in new tab)' target="_blank"
+		<a title="data reference" target="_blank"
 			style='padding: .375rem .75rem;'
 			class='border-top border-bottom bg-white'
 			v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
@@ -616,7 +622,7 @@ EGSIM.component('flatfile-select', {
 			type="button"
 			class="btn btn-secondary"
 			onclick="this.parentNode.querySelector('input[type=file]').click()"
-			aria-label='upload'>
+			title="upload user-defined data as flatfile in CSV format">
 			<i class='fa fa-upload'></i>
 		</button>
 	</div>`
