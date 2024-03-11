@@ -207,7 +207,7 @@ EGSIM.component('plots-div', {
 								   :style="{'accent-color': getLegendColor(jsonStyle) + ' !important'}"
 								   > {{ legendgroup }}
 						</label>
-						<div class='ms-1' aria-label='Style the plot traces (lines, bars, markers) of this legend group'>
+						<div class='ms-1' title="Style the plot traces (lines, bars, markers) of this legend group">
 							<i class="fa fa-chevron-down" style="cursor:pointer"
 							   onclick='this.parentNode.parentNode.parentNode.querySelector("div._pso").style.maxHeight=this.parentNode.parentNode.parentNode.querySelector("div._pso").offsetHeight ? "0px" : "15rem"; this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
 						</div>
@@ -226,7 +226,7 @@ EGSIM.component('plots-div', {
 			<div>
 				<div class='mt-3 border p-2 bg-white'>
 					<select @change="downloadTriggered" class='form-control'
-							aria-label='Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see'>
+							title="Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see">
 						<option value="">Download as:</option>
 						<option value="json">json</option>
 						<option value="csv">text/csv</option>
