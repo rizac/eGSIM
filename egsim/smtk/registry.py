@@ -78,6 +78,7 @@ registered_imts:dict[str, Callable] = dict(_registered_imts())
 _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
 
 
+# FIXME remove type[GMPE] from allowed arg types?
 def gsim_name(gsim: Union[type[GMPE], GMPE]) -> str:
     """
     Returns the name of the GMPE given an instance of the class
@@ -99,16 +100,17 @@ def imt_name(imtx: Union[Callable, IMT]) -> str:
     return imtx.__name__
 
 
-def gsim_sa_limits(
-        gsim: Union[str, GMPE, type[GMPE]]) -> Union[tuple[float, float], None]:
+def get_sa_limits(  # FIXME rename?
+        model: Union[str, GMPE]) -> Union[tuple[float, float], None]:
     """Return the SA period limits defined for the given gsim, or None"""
-    if isinstance(gsim, str):
-        gsim = registry[gsim]
+    if isinstance(model, str):
+        model = gsim(model)
     pers = None
-    for c in dir(gsim):
+    for c in dir(model):
         if 'COEFFS' in c:
-            pers = [sa.period for sa in getattr(gsim, c).sa_coeffs]
-            break
+            pers = [sa.period for sa in getattr(model, c).sa_coeffs]
+            if pers:  # might be an empty list, so break only if non-empty
+                break
     return (min(pers), max(pers)) if pers is not None else None
 
 

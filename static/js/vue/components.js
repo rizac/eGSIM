@@ -93,10 +93,18 @@ EGSIM.component('gsim-select', {
 		},
 		warnings(){
 			var warnings = {};
+			var saPeriods = this.selectedImts.filter(e => e.startsWith('SA(')).map(e => e.substring(3, e.length-1));
+			var saLimits = saPeriods.length ? [Math.min(...saPeriods), Math.max(...saPeriods)] : [];
 			var selectedModelsSet = new Set(this.selectedModels);
 			for (var model of this.models.filter(m => selectedModelsSet.has(m.name))){
 				if (model.warning){
 					warnings[model.name] = model.warning;
+				}
+				if (!saLimits.length){
+					continue;
+				}
+				if (saPeriods.some(p => (p < model.saLimits[0] || p > model.saLimits[1]))){
+					warnings[model.name] = "Not defined for all supplied SA periods"
 				}
 			}
 			return warnings;

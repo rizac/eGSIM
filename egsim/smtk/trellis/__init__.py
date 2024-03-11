@@ -16,7 +16,7 @@ from openquake.hazardlib.geo import Point
 from .rupture import (get_target_sites, create_planar_surface,
                       get_hypocentre_on_planar_surface,
                       create_rupture)
-from ..registry import gsim_sa_limits
+from ..registry import get_sa_limits
 from ..flatfile import ColumnsRegistry
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, sa_period)
@@ -86,7 +86,7 @@ def get_trellis(
     # Get the ground motion values
 
     for gsim_label, gsim in gsims.items():
-        sa_lim = gsim_sa_limits(gsim)
+        sa_lim = get_sa_limits(gsim)
         if sa_lim is not None:
             valid_imts = { k: v for k, v in imts.items() if sa_period(k) is None
                            or sa_lim[0] <= sa_period(k) <= sa_lim[1] }
