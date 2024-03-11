@@ -48,7 +48,7 @@ def get_egsim_predictions(
     | 3          | the requested model name                               | the input data name (e.g. "mag", "rrup")                             |
     |            | data ...                                               | data ...                                                             |
 
-    The DataFrame row labels report an unique row identifier (incremental and starting from 0)
+    The DataFrame row labels report a unique row identifier (incremental and starting from 0)
     """  # noqa
     # request parameters (concatenate with site_config and rupture_config):
     parameters = {}

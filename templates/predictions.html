@@ -160,8 +160,8 @@
 				<table class='table-sm'>
 				<tr>
 					<td>Download</td>
-					<td class='d-flex flex-row align-items-baseline'>
-					<select v-model='forms.residuals.format' class='border p-2 bg-white rounded' style='flex:1 1 auto'>
+					<td>
+					<select v-model='forms.residuals.format' class='form-control'>
 						<option v-for='format in forms.misc.download_formats' :value='format'>
 							{% verbatim %}{{ format }}{% endverbatim %}
 						</option>
@@ -180,7 +180,7 @@
 				<tr>
 					<td>Visualize</td>
 					<td>
-					<select v-model='forms.predictions_plot.plot_type' class='border rounded p-2 bg-white'>
+					<select v-model='forms.predictions_plot.plot_type' class='form-control'>
 						<option v-for="v in forms.misc.predictions_plot.plot_types" :value='v[0]' v-html='v[1]'></option>
 					</select>
 					</td>
