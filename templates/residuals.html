@@ -48,13 +48,15 @@
 				<table class='table-sm'>
 				<tr>
 					<td>Download</td>
-					<td class='d-flex flex-row align-items-baseline'>
-					<select v-model='forms.residuals.format' class='border p-2 bg-white rounded' style='flex:1 1 auto'>
+					<td class='w-100'>
+					<select v-model='forms.residuals.format' class='form-control'>
 						<option v-for='format in forms.misc.download_formats' :value='format'>
 							{% verbatim %}{{ format }}{% endverbatim %}
 						</option>
 					</select>
-					<label class='ms-2'>
+					</td>
+					<td class='text-nowrap'>
+					<label>
 						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood
 					</label>
 					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1'>
@@ -73,7 +75,7 @@
 
 				<tr>
 					<td>Visualize</td>
-					<td>
+					<td colspan="2">
 					<select v-model='forms.residuals_plot.x' class='border rounded p-2 bg-white'
 						@change="evt => { forms.residuals_plot.likelihood = evt.target.selectedIndex == 1; }">
 						<option :value='null'>Residuals histogram (density distribution)</option>
