@@ -6,7 +6,7 @@ import warnings
 from django.core.management import CommandError, BaseCommand
 
 from egsim.smtk import registered_gsims, gsim, intensity_measures_defined_for, \
-    ground_motion_properties_required_by
+    ground_motion_properties_required_by, get_sa_limits
 from egsim.smtk.flatfile import ColumnsRegistry
 from ... import models
 
@@ -68,8 +68,12 @@ class Command(BaseCommand):
                 self.stdout.write(f"  {prefix} {name}. Unregistered "
                                   f"ground motion properties: {invalid}")
                 return False
+            sa_lim = get_sa_limits(_)
             models.Gsim.objects.create(
                 name=name,
+                imts =" ".join(sorted(imtz)),
+                min_sa_period=None if sa_lim is None else sa_lim[0],
+                max_sa_period=None if sa_lim is None else sa_lim[1],
                 unverified=cls.non_verified,
                 adapted=cls.adapted,
                 experimental=cls.experimental)

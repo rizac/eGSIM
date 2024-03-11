@@ -24,7 +24,6 @@ from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.flatfile.residuals import ResidualsForm
 from ..api.forms.predictions import PredictionsForm
 from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType
-from ..smtk import intensity_measures_defined_for
 
 
 class URLS:  # noqa
@@ -87,26 +86,27 @@ def _get_init_data_json(debug=False) -> dict:
     gsims = []
     imt_groups: dict[tuple, int] = {}  # noqa
     warning_groups: dict[str, int] = {}  # noqa
-    db_warnings = {
-        'unverified': models.Gsim.unverified.field.help_text,
-        'experimental': models.Gsim.experimental.field.help_text,
-        'adapted': models.Gsim.adapted.field.help_text
-    }
-    for gsim in models.Gsim.queryset('name', *list(db_warnings)):
-        imt_names = tuple(sorted(intensity_measures_defined_for(gsim.name)))
+    for gsim in models.Gsim.queryset():
+        # imt_names should be hashable and unique, so sort and make a tuple:
+        imt_names = tuple(sorted(gsim.imts.split(" ")))
         imt_group_index = imt_groups.setdefault(imt_names, len(imt_groups))
-
+        sa_limits = [gsim.min_sa_period, gsim.max_sa_period]
+        if any(_ is None for _ in sa_limits):
+            sa_limits = []
         model_warnings = []
-        for field_name, field_help in db_warnings.items():
-            if getattr(gsim, field_name) is True:
-                model_warnings.append(field_help)  # noqa
+        if gsim.unverified:
+            model_warnings.append(models.Gsim.unverified.field.help_text)
+        if gsim.experimental:
+            model_warnings.append(models.Gsim.experimental.field.help_text)
+        if gsim.adapted:
+            model_warnings.append(models.Gsim.adapted.field.help_text)
         if model_warnings:
             warning_text = "; ".join(model_warnings)
             warning_group_index = warning_groups.setdefault(warning_text,
                                                             len(warning_groups))
-            gsims.append([gsim.name, imt_group_index, warning_group_index])
+            gsims.append([gsim.name, imt_group_index, sa_limits, warning_group_index])
         else:
-            gsims.append([gsim.name, imt_group_index])
+            gsims.append([gsim.name, imt_group_index, sa_limits])
 
     # get regionalization data (for selecting models on a map):
     regionalizations = []

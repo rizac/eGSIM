@@ -9,9 +9,10 @@ from openquake.hazardlib.imt import IMT
 from openquake.hazardlib.gsim.base import GMPE
 
 from .registry import (gsim_name, intensity_measures_defined_for, gsim, imt,
-                       gsim_sa_limits, imt_name)
+                       get_sa_limits, imt_name)
 
 
+# FIXME REMOVE type[GMPE] from allowed args types?
 def harmonize_input_gsims(
         gsims: Iterable[Union[str, type[GMPE], GMPE]]) -> dict[str, GMPE]:
     """harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
@@ -132,7 +133,7 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
                 invalid_imts.update(periods.values())
             else:
                 # gsim invalid if ALL periods are outside the gsim limits:
-                sa_lim = gsim_sa_limits(gsim_inst)
+                sa_lim = get_sa_limits(gsim_inst)
                 if sa_lim is not None and not \
                         any(sa_lim[0] <= p <= sa_lim[1] for p in periods):
                     invalid_imts.update(periods.values())

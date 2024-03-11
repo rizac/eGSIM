@@ -144,11 +144,13 @@ const EGSIM = Vue.createApp({
 		// Array of Objects:
 		var imts = new Set();
 		data.imt_groups.forEach(imtz => imtz.forEach(i => imts.add(i)));
+		var defaultSALimits = [-Math.Infinity, Math.Infinity];
 		var models = data.gsims.map(elm => {  // elm: Array of 2 or 3 elements: name, imt_group, warning
 			return {
 				name: elm[0],
 				imts: new Set(data.imt_groups[elm[1]]),
-				warning: elm[2] ? data.warning_groups[elm[2]]: "",
+				saLimits: elm[2].length ? elm[2] : Array.from(defaultSALimits),
+				warning: elm[3] ? data.warning_groups[elm[3]]: "",
 			}
 		});
 		var currentPage = data.currentPage || 'home';  // one of the key of the Objet 'tab' below

@@ -20,7 +20,7 @@ from openquake.hazardlib.contexts import RuptureContext
 
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, sa_period)
-from ..registry import gsim_sa_limits
+from ..registry import get_sa_limits
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
@@ -208,7 +208,7 @@ def get_expected_motions(
     # Period range for GSIM
     for gsim_name, gsim in gsims.items():
         types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        model_sa_period_limits = gsim_sa_limits(gsim)
+        model_sa_period_limits = get_sa_limits(gsim)
         for imt_name, imtx in imts.items():
             # skip if outside the model defined periods:
             # FIXME: if a model is defined, say, for SA(0.1), and in the flatfile

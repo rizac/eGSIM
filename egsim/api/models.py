@@ -11,7 +11,7 @@ from os import makedirs
 from typing import Any, Union, Iterable, Self
 
 from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
-                              Index, URLField, Manager, QuerySet)
+                              Index, URLField, Manager, QuerySet, FloatField)
 from django.db.models.options import Options
 
 
@@ -69,6 +69,16 @@ class Gsim(EgsimDbModel):
     is populated with valid OpenQuake models only (`passing valid.gsim` or not
     deprecated)
     """
+    imts = TextField(null=False,
+                     help_text='The intensity measure types '
+                               'defined for the model, space separated '
+                               '(e.g.: "PGA SA")')
+    min_sa_period = FloatField(null=True,
+                               help_text='The minimum SA period supported '
+                                         'by the model, or None (no lower limit)')
+    max_sa_period = FloatField(null=True,
+                               help_text='The maximum SA period supported '
+                                         'by the model, or None (no upper limit)')
 
     unverified = BooleanField(default=False, help_text="not independently verified")
     experimental = BooleanField(default=False, help_text="experimental: may "
