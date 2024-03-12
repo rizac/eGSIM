@@ -11,8 +11,9 @@ from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
 from scipy.interpolate import interpolate
 
-from egsim.smtk.trellis import get_trellis, RuptureProperties, SiteProperties
-from egsim.smtk.validators import IncompatibleGsimImt
+from egsim.smtk.flatfile import ColumnType, ColumnsRegistry
+from egsim.smtk.trellis import get_trellis, RuptureProperties, SiteProperties, labels
+from egsim.smtk.validators import IncompatibleInput
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -70,19 +71,33 @@ def test_distance_imt_trellis():
         distances,
         RuptureProperties(dip=60.0, aspect=1.5, hypocenter_location=(0.5, 0.5)),
         SiteProperties(vs30=800))
-    # compare with old data:
-    TEST_FILE = "trellis_vs_distance.hdf"
-    ref = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))
-    # columns are the same:
-    assert not set(ref.columns) ^ set(dfr.columns)  # noqa
-    # remove 1st line (was a bug in old code?) whose rrup equals to the 2nd,
-    ref = ref.iloc[1:]  # noqa
-    # few checks:
+
+    ref = open_ref_hdf("trellis_vs_distance.hdf")
+    assert len(dfr) == len(distances)
+    # there was a kind of bug in old smtk? ref has one element more, as the 1st distance
+    # is repeated twice. Test it and remove 1st row:
+    assert (ref.iloc[0, :] == ref.iloc[1, :]).all()
+    # now remove 1st row
+    ref = ref.iloc[1:, :].copy()
+    # usual tests:
     assert len(ref) == len(dfr)
-    assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
+    assert not set(ref.columns) ^ set(dfr.columns)
+
 
     # Now compare trellis values:
     for c in dfr.columns:
+        if c[0] == labels.input_data:
+            if c[-1] == 'rrup':
+                # distances are messed up, let's just test they are
+                # both monotonically increasing:
+                assert all(x < y for x, y in zip(dfr[c], dfr[c][1:]))
+                assert all(x < y for x, y in zip(ref[c], ref[c][1:]))
+            else:
+                # magnitudes should be equal:
+                assert (dfr[c].values == ref[c].values).all()
+
+            continue
+
         if all(_ for _ in c):  # columns denoting medians and sttdev
             # all series are monotonically decreasing:
             if 'Median' in c and not 'ChiouYoungs2008' in c:
@@ -92,11 +107,12 @@ def test_distance_imt_trellis():
                     # then decrease. Remove first 20 values
                     values = dfr[c][20:]
                 assert (np.diff(values) <= 0).all()
+            dist_col = (labels.input_data, ColumnType.distance.value, 'rrup')
             # create interpolation function from new data
-            interp = interpolate.interp1d(dfr['rrup'].values, dfr[c].values,
+            interp = interpolate.interp1d(dfr[dist_col].values, dfr[c].values,
                                           fill_value="extrapolate", kind="cubic")
             # interpolate the old values
-            expected = interp(ref['rrup'].values)
+            expected = interp(ref[dist_col].values)
             # and here are the old values:
             actual = ref[c].values
             # Now check diffs (The if below are unnecessary but allow to set
@@ -123,18 +139,17 @@ def test_magnitude_imt_trellis():
         RuptureProperties(dip=60.0, aspect=1.5, rake=-90),
         SiteProperties(vs30=800, z1pt0=50., z2pt5=1.)
     )
-    # compare with old data:
-    TEST_FILE = "trellis_vs_magnitude.hdf"
-    ref:pd.DataFrame = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))  # noqa
-    # columns are the same:
-    assert not set(ref.columns) ^ set(dfr.columns)  # noqa
-    # few checks:
+
+    ref = open_ref_hdf("trellis_vs_magnitude.hdf")
     assert len(ref) == len(dfr)
-    assert (ref['rrup'].values == dfr['rrup'].values).all()  # noqa
-    assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
+    assert not set(ref.columns) ^ set(dfr.columns)
 
     # Now compare trellis values:
     for c in dfr.columns:
+        if c[0] == labels.input_data:
+            assert (dfr[c] == ref[c]).all()  # noqa
+            continue
+
         if all(_ for _ in c):  # columns denoting medians and sttdev
             # all series are monotonically increasing:
             if 'Median' in c:
@@ -145,10 +160,11 @@ def test_magnitude_imt_trellis():
                     # (hacky test heuristically calculated):
                     assert (np.diff(dfr[c]) >= 0).sum() > 0.92 * len(dfr[c])
             # create interpolation function from new data
-            interp = interpolate.interp1d(dfr['mag'].values, dfr[c].values,
+            mag_col = (labels.input_data, ColumnType.rupture.value, 'mag')
+            interp = interpolate.interp1d(dfr[mag_col].values, dfr[c].values,
                                           fill_value="extrapolate", kind="cubic")
             # interpolate the old values
-            expected = interp(ref['mag'].values)
+            expected = interp(ref[mag_col].values)
             # and here are the old values:
             actual = ref[c].values
             # Now check diffs (The if below are unnecessary but allow to set
@@ -171,16 +187,17 @@ def test_magnitude_distance_spectra_trellis():
     #               "z2pt5": 1.0}
     magnitudes = [4.0, 5.0, 6.0, 7.0]
     distances = [5., 20., 50., 150.0]
-    with raises(IncompatibleGsimImt) as verr:
-        dfr = get_trellis(
-            gsims,
-            list(periods) + [4.001, 5.0, 7.5, 10.0],
-            magnitudes,
-            distances,
-            RuptureProperties(dip=60., rake=-90., aspect=1.5, ztor=0.0),
-            SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0,
-                           z2pt5=1.0)
-        )
+    # with raises(IncompatibleInput) as verr:
+    dfr = get_trellis(
+        gsims,
+        list(periods) + [4.001, 5.0, 7.5, 10.0],
+        magnitudes,
+        distances,
+        RuptureProperties(dip=60., rake=-90., aspect=1.5, ztor=0.0),
+        SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0,
+                       z2pt5=1.0)
+    )
+    # FIXME test that we do not have all periods (maybe easier?)
 
     dfr = get_trellis(
         gsims,
@@ -192,18 +209,17 @@ def test_magnitude_distance_spectra_trellis():
                        z2pt5=1.0)
     )
     # compare with old data:
-    TEST_FILE = "trellis_spectra.hdf"
-    ref:pd.DataFrame = pd.read_hdf(os.path.join(BASE_DATA_PATH, TEST_FILE))  # noqa
-    # columns are the same:
-    assert not set(ref.columns) ^ set(dfr.columns)  # noqa
-    # few checks:
-    assert len(ref) == len(dfr)
+    ref = open_ref_hdf("trellis_spectra.hdf")
 
-    assert (ref['rrup'].values == dfr['rrup'].values).all()  # noqa
-    assert (dfr['mag'].values == ref['mag'].values).all()  # noqa
+    assert len(ref) == len(dfr)
+    assert not set(ref.columns) ^ set(dfr.columns)  # noqa
 
     # compare trellis values:
     for c in dfr.columns:
+        if c[0] == labels.input_data:
+            assert (dfr[c] == ref[c]).all()  # noqa
+            continue
+
         if all(_ for _ in c):  # columns denoting medians and sttdev
             # interpolate the old values
             expected = dfr[c].values
@@ -213,3 +229,27 @@ def test_magnitude_distance_spectra_trellis():
             if not allclose(actual, expected, rtol=0.0001):  #, q=0.95):
                 assert False
 
+
+def open_ref_hdf(file_name) -> pd.DataFrame:
+    ref:pd.DataFrame = pd.read_hdf(os.path.join(BASE_DATA_PATH, file_name))  # noqa
+    # columns are the same:
+    # map columns:
+    c_mapping = {}
+    for c in ref.columns:
+        if c[0] == 'Median':
+            c_mapping[c] = (c[1], labels.MEDIAN, c[-1])
+        elif c[0] == 'Stddev':
+            c_mapping[c] = (c[1], labels.SIGMA, c[-1])
+        else:
+            try:
+                c_mapping[c] = (
+                    labels.input_data,
+                    str(ColumnsRegistry.get_type(c[0]).value),
+                    c[0])
+            except Exception as exc:
+                raise ValueError(f'`ref` dataframe: unmapped column {c}. {exc}')
+    # set new columns (create new dataframe, as rename does not work with
+    # multiindex and set_level is too complex):
+    new_ref = pd.DataFrame({v: ref[c] for c, v in c_mapping.items()})
+    new_ref.columns = pd.MultiIndex.from_tuples(new_ref.columns)
+    return new_ref
