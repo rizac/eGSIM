@@ -3,7 +3,8 @@ from .trellis import get_trellis
 from .residuals import get_residuals
 from .flatfile import read_flatfile
 from .registry import (registered_gsims, registered_imts, gsim, imt,
-                       intensity_measures_defined_for,
+                       intensity_measures_defined_for, get_ground_motion_values,
                        get_sa_limits, gsim_name, ground_motion_properties_required_by)
 from .validators import (InvalidInput, harmonize_input_gsims,
                          harmonize_input_imts, validate_inputs)
+
