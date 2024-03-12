@@ -20,7 +20,7 @@ from .rupture import (get_target_sites, create_planar_surface,
 from ..registry import get_ground_motion_values
 from ..flatfile import ColumnsRegistry
 from ..validators import (validate_inputs, harmonize_input_gsims,
-                          harmonize_input_imts, validate_imt_sa_periods)
+                          harmonize_input_imts, validate_imt_sa_limits)
 
 @dataclass
 class RuptureProperties:
@@ -86,7 +86,7 @@ def get_trellis(
 
     # Get the ground motion values
     for gsim_label, gsim in gsims.items():
-        imts_ok = validate_imt_sa_periods(gsim, imts)
+        imts_ok = validate_imt_sa_limits(gsim, imts)
         if not imts_ok:
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
