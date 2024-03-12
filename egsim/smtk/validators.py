@@ -92,51 +92,43 @@ def sa_period(obj: Union[float, str, IMT]) -> Union[float, None]:
     return float(period) if np.isfinite(period) else None
 
 
-def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
-        tuple[dict[str, GMPE], dict[str, IMT]]:
+def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]):
     """Validate the input ground motion models (`gsims`)
-    and intensity measures types (`imts`) returning a tuple of two dicts
-    `gsim, imts` with sorted ascending keys mapping each model / intensity
-    measure name to the relative OpenQuake instance.
-
-    The dicts will be returned after validating the inputs and assuring
-    that the given models and imts can be used together, otherwise a
-    ValueError is raised (the exception will have a special attribute
-    `invalid` with all invalid model name mapped to thr incompatible imt names)
+    and intensity measures types (`imts`), raising `IncompatibleInput` in case
+    of failure, and simply returning (None) otherwise
 
     :param gsims: an iterable of str (model name, see `get_registered_gsim_names`),
-        Gsim classes or instances. It can also be a dict, in this case the argument
-        is returned as-it-is, after checking that keys and values types are ok
-    :param imts: an iterable of str (e.g. 'SA(0.1)' ,'PGV',  'PGA'),
-        or IMT instances. It can also be a dict, in this case the argument is
-        returned as-it-is, after checking that keys and values types are ok
+        mapped to the GMPE instance, as output from `harmonize_input_gsims`
+    :param imts: an iterable of str (e.g. 'SA(0.1)', 'PGA') mapped to IMT the
+        instance, as output from `harmonize_input_imts`
     """
-    periods = {}
-    imt_names = set()
-    # get SA periods, and put in imtz just the imt names (e.g. 'SA' not 'SA(2.0)'):
-    for imt_name, imtx in imts.items():
-        period = sa_period(imtx)
-        if period is not None:
-            periods[period] = imt_name
-        else:
-            imt_names.add(imt_name)
-    if periods:
-        imt_names.add('SA')
+    # periods = {}
+    # imt_names = set()
+    # # get SA periods, and put in imtz just the imt names (e.g. 'SA' not 'SA(2.0)'):
+    # for imt_name, imtx in imts.items():
+    #     period = sa_period(imtx)
+    #     if period is not None:
+    #         periods[period] = imt_name
+    #     else:
+    #         imt_names.add(imt_name)
+    # if periods:
+    #     imt_names.add('SA')
+    imt_names = {n if sa_period(i) is None else n[:2] for n, i in imts.items()}
 
     # create an IncompatibleGsmImt exception, adn populate it with errors if any:
     errors = []
     for gm_name, gsim_inst in gsims.items():
         invalid_imts = imt_names - intensity_measures_defined_for(gsim_inst)
-        if periods:
-            if 'SA' in invalid_imts:
-                invalid_imts.remove('SA')
-                invalid_imts.update(periods.values())
-            else:
-                # gsim invalid if ALL periods are outside the gsim limits:
-                sa_lim = get_sa_limits(gsim_inst)
-                if sa_lim is not None and not \
-                        any(sa_lim[0] <= p <= sa_lim[1] for p in periods):
-                    invalid_imts.update(periods.values())
+        # if periods:
+        #     if 'SA' in invalid_imts:
+        #         invalid_imts.remove('SA')
+        #         invalid_imts.update(periods.values())
+        #     else:
+        #         # gsim invalid if ALL periods are outside the gsim limits:
+        #         sa_lim = get_sa_limits(gsim_inst)
+        #         if sa_lim is not None and not \
+        #                 any(sa_lim[0] <= p <= sa_lim[1] for p in periods):
+        #             invalid_imts.update(periods.values())
         if not invalid_imts:
             continue
         errors.append([gm_name] + list(invalid_imts))
@@ -147,7 +139,32 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]) -> \
     return gsims, imts
 
 
+def validate_imt_sa_periods(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
+    """Return a dict of IMT names mapped to the IMT instances that are either not SA,
+    or have a period compatible with the model SA limits
+
+    :param gsim: a model instance
+    :param imts: an iterable of str (e.g. 'SA(0.1)', 'PGA') mapped to IMT the
+        instance, as output from `harmonize_input_imts`
+
+    :return a subset of the passed `imts` dict, or `imts` unchanged if all its IMT
+        are valid for the given model
+    """
+    imt_periods = {i: sa_period(v) for i, v in imts.items()}
+    if all(_ is None for _ in imt_periods.values()):
+        return imts
+    model_sa_p_lim = get_sa_limits(gsim)
+    if model_sa_p_lim is None:
+        return imts
+    imt_new = {}
+    for imt_n, sa_p in imt_periods.items():
+        if sa_p is None or model_sa_p_lim[0] <= sa_p <= model_sa_p_lim[1]:
+            imt_new[imt_n] = imts[imt_n]
+    return imt_new
+
+
 # Custom Exceptions:
+
 
 class InvalidInput(ValueError):
     """Exception describing any invalid ground motion model or intensity measure

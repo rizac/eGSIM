@@ -18,7 +18,7 @@ from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 
 from ..validators import (validate_inputs, harmonize_input_gsims,
-                          harmonize_input_imts, sa_period)
+                          harmonize_input_imts, sa_period, validate_imt_sa_periods)
 from ..registry import get_sa_limits, get_ground_motion_values
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
@@ -197,21 +197,13 @@ def get_expected_motions(
     Calculate the expected ground motions from the context
     """
     expected = []
-    imt_periods = {i: sa_period(v) for i, v in imts.items()}
-    no_sa = all(_ is None for _ in imt_periods)
     # Period range for GSIM
     for gsim_name, gsim in gsims.items():
-        # build valid imts (according to model sa limits):
-        model_sa_p_lim = None if no_sa else get_sa_limits(gsim)
-        if model_sa_p_lim is not None:
-            imt_names, imt_vals = [], []
-            for imt_name, sa_p in imt_periods.items():
-                if sa_p is None or model_sa_p_lim[0] <= sa_p <= model_sa_p_lim[1]:
-                    imt_names.append(imt_name)
-                    imt_vals.append(imts[imt_name])
-        else:
-            imt_names = list(imts.keys())
-            imt_vals = list(imts.values())
+        # validate SA periods:
+        imts_ok = validate_imt_sa_periods(gsim, imts)
+        if not imts_ok:
+            continue
+        imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
         cmaker = ContextMaker('*', [gsim], {'imtls': {i: [0] for i in imt_names}})
         # FIXME above is imtls relevant, or should we use PGA: [0] as in trellis?
         mean, total, inter, intra = get_ground_motion_values(

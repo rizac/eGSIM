@@ -20,7 +20,7 @@ from .rupture import (get_target_sites, create_planar_surface,
 from ..registry import get_sa_limits, get_ground_motion_values
 from ..flatfile import ColumnsRegistry
 from ..validators import (validate_inputs, harmonize_input_gsims,
-                          harmonize_input_imts, sa_period)
+                          harmonize_input_imts, sa_period, validate_imt_sa_periods)
 
 @dataclass
 class RuptureProperties:
@@ -85,19 +85,11 @@ def get_trellis(
                                    site_properties.distance_type)
 
     # Get the ground motion values
-    imt_periods = {i: sa_period(v) for i, v in imts.items()}
-    no_sa = all(_ is None for _ in imt_periods)
     for gsim_label, gsim in gsims.items():
-        model_sa_p_lim = None if no_sa else get_sa_limits(gsim)
-        if model_sa_p_lim is not None:
-            imt_names, imt_vals = [], []
-            for imt_name, sa_p in imt_periods.items():
-                if sa_p is None or model_sa_p_lim[0] <= sa_p <= model_sa_p_lim[1]:
-                    imt_names.append(imt_name)
-                    imt_vals.append(imts[imt_name])
-        else:
-            imt_names = list(imts.keys())
-            imt_vals = list(imts.values())
+        imts_ok = validate_imt_sa_periods(gsim, imts)
+        if not imts_ok:
+            continue
+        imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
 
         try:
             median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
