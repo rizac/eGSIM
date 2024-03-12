@@ -102,33 +102,10 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]):
     :param imts: an iterable of str (e.g. 'SA(0.1)', 'PGA') mapped to IMT the
         instance, as output from `harmonize_input_imts`
     """
-    # periods = {}
-    # imt_names = set()
-    # # get SA periods, and put in imtz just the imt names (e.g. 'SA' not 'SA(2.0)'):
-    # for imt_name, imtx in imts.items():
-    #     period = sa_period(imtx)
-    #     if period is not None:
-    #         periods[period] = imt_name
-    #     else:
-    #         imt_names.add(imt_name)
-    # if periods:
-    #     imt_names.add('SA')
     imt_names = {n if sa_period(i) is None else n[:2] for n, i in imts.items()}
-
-    # create an IncompatibleGsmImt exception, adn populate it with errors if any:
     errors = []
     for gm_name, gsim_inst in gsims.items():
         invalid_imts = imt_names - intensity_measures_defined_for(gsim_inst)
-        # if periods:
-        #     if 'SA' in invalid_imts:
-        #         invalid_imts.remove('SA')
-        #         invalid_imts.update(periods.values())
-        #     else:
-        #         # gsim invalid if ALL periods are outside the gsim limits:
-        #         sa_lim = get_sa_limits(gsim_inst)
-        #         if sa_lim is not None and not \
-        #                 any(sa_lim[0] <= p <= sa_lim[1] for p in periods):
-        #             invalid_imts.update(periods.values())
         if not invalid_imts:
             continue
         errors.append([gm_name] + list(invalid_imts))
