@@ -17,10 +17,10 @@ from openquake.hazardlib.geo import Point
 from .rupture import (get_target_sites, create_planar_surface,
                       get_hypocentre_on_planar_surface,
                       create_rupture)
-from ..registry import get_sa_limits, get_ground_motion_values
+from ..registry import get_ground_motion_values
 from ..flatfile import ColumnsRegistry
 from ..validators import (validate_inputs, harmonize_input_gsims,
-                          harmonize_input_imts, sa_period, validate_imt_sa_periods)
+                          harmonize_input_imts, validate_imt_sa_periods)
 
 @dataclass
 class RuptureProperties:

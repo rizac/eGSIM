@@ -10,10 +10,10 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
 
 
-registered_gsims:dict[str, type[GMPE]] = registry.copy()
+registered_gsims:dict[str, type[GMPE]] = registry.copy()  # FIXME why copy?
 
 
-def gsim(gmm: Union[str, GMPE], raise_deprecated=True) -> GMPE:
+def gsim(gmm: Union[str, GMPE], raise_deprecated=True) -> GMPE:  # FIXME arg name, maybe 'model' ?
     """Return a Gsim instance (Python object of class `GMPE`) from the given input
 
     :param gmm: a gsim name or Gsim instance. If str, it can also denote a

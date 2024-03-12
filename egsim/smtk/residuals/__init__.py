@@ -18,8 +18,8 @@ from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 
 from ..validators import (validate_inputs, harmonize_input_gsims,
-                          harmonize_input_imts, sa_period, validate_imt_sa_periods)
-from ..registry import get_sa_limits, get_ground_motion_values
+                          harmonize_input_imts, validate_imt_sa_periods)
+from ..registry import get_ground_motion_values
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
