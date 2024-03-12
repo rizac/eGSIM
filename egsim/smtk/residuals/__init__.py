@@ -6,13 +6,11 @@ from __future__ import annotations  # https://peps.python.org/pep-0563/
 from itertools import product
 
 from collections.abc import Iterable, Container
-from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from typing import Union
 from math import sqrt
 
 import numpy as np
 import pandas as pd
-from pandas import RangeIndex
 from pandas.core.indexes.numeric import IntegerIndex
 from scipy.special import erf
 from openquake.hazardlib.gsim.base import GMPE
@@ -21,7 +19,7 @@ from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, sa_period)
-from ..registry import get_sa_limits
+from ..registry import get_sa_limits, get_ground_motion_values
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
@@ -249,39 +247,6 @@ def get_expected_motions(
          c_labels.intra_ev_std],
         axis='columns',
         level=1)
-
-
-# FIXME: save models to DB only: if model.compute.__annotations__.get("ctx") is np.recarray:
-
-
-def get_ground_motion_values(
-        model: GMPE,
-        imts: list[imt.IMT],
-        ctx: np.recarray):
-    """
-    Compute the ground motion values from the arguments.
-
-    :param model: the ground moion model instance
-    :param imts: a list of M Intensity Measure Types
-    :param ctx: a numpy recarray of size N created from a given
-        scenario (e.g. `RuptureContext`)
-
-    :return: a tuple of 4-elements: (note: arrays below are simply the transposed
-        matrices of OpenQuake computed values):
-        - an array of shape (N, M) for the means (N=len(ctx), M=len(imts), see above)
-        - an array of shape (N, M) for the TOTAL stddevs
-        - an array of shape (N, M) for the INTER_EVENT stddevs
-        - an array of shape (N, M) for the INTRA_EVENT stddevs
-    """
-
-    # mean and stddevs by calling the underlying .compute method
-    median = np.zeros([len(imts), len(ctx)])
-    sigma = np.zeros_like(median)
-    tau = np.zeros_like(median)
-    phi = np.zeros_like(median)
-
-    model.compute(ctx, imts, median, sigma, tau, phi)
-    return median.T, sigma.T, tau.T, phi.T
 
 
 def get_residuals_from_expected_and_observed_motions(

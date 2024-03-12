@@ -1,7 +1,7 @@
 """Converter functions for the strong motion modeller toolkit (smtk) package of eGSIM"""
 from collections.abc import Collection
 
-from typing import Union, Optional
+from typing import Union
 import pandas as pd
 import numpy as np
 from scipy.constants import g

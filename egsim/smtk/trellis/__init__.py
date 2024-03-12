@@ -13,10 +13,11 @@ from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo import Point
 
+
 from .rupture import (get_target_sites, create_planar_surface,
                       get_hypocentre_on_planar_surface,
                       create_rupture)
-from ..registry import get_sa_limits
+from ..registry import get_sa_limits, get_ground_motion_values
 from ..flatfile import ColumnsRegistry
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, sa_period)
@@ -84,24 +85,30 @@ def get_trellis(
                                    site_properties.distance_type)
 
     # Get the ground motion values
-
+    imt_periods = {i: sa_period(v) for i, v in imts.items()}
+    no_sa = all(_ is None for _ in imt_periods)
     for gsim_label, gsim in gsims.items():
-        sa_lim = get_sa_limits(gsim)
-        if sa_lim is not None:
-            valid_imts = { k: v for k, v in imts.items() if sa_period(k) is None
-                           or sa_lim[0] <= sa_period(k) <= sa_lim[1] }
+        model_sa_p_lim = None if no_sa else get_sa_limits(gsim)
+        if model_sa_p_lim is not None:
+            imt_names, imt_vals = [], []
+            for imt_name, sa_p in imt_periods.items():
+                if sa_p is None or model_sa_p_lim[0] <= sa_p <= model_sa_p_lim[1]:
+                    imt_names.append(imt_name)
+                    imt_vals.append(imts[imt_name])
         else:
-            valid_imts = imts
-        imts_list = list(valid_imts)
+            imt_names = list(imts.keys())
+            imt_vals = list(imts.values())
+
         try:
-            medians, sigmas = get_ground_motion_values(gsim, valid_imts, ctxts)
+            median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
+            median = np.exp(median)
             # both medians and spectra are numpy matrices of
             # `len(imt)` rows X `len(ctxts) columns`. Convert them to
             # `len(ctxts) rows X len(imt)`columns` matrices
 
             # FIXME REMOVE: this raises pandas warning:
-            trellis_df.loc[:, (imts_list, labels.MEDIAN, gsim_label)] = medians.T
-            trellis_df.loc[:, (imts_list, labels.SIGMA, gsim_label)] = sigmas.T
+            trellis_df.loc[:, (imt_names, labels.MEDIAN, gsim_label)] = median
+            trellis_df.loc[:, (imt_names, labels.SIGMA, gsim_label)] = sigma
         except Exception as exc:
             raise ValueError(f'Error in {gsim_label}: {str(exc)}')
 
@@ -179,41 +186,6 @@ def prepare_dataframe(
     ret[mag_label] = mags
     ret.index = range(len(ret))
     return ret
-
-
-def get_ground_motion_values(
-        gsim: GMPE,
-        imts: dict[str, IMT],
-        ctxts: np.recarray) -> Iterable[tuple[str, np.ndarray, np.ndarray]]:
-    """Return the ground motion values for the expected scenarios
-
-    :param gsim: the GSIM instance
-    :param imts: dict of IMT names mapped to an IMT instance (class `IMT`)
-    :param ctxts: Scenarios as numpy recarray (output from context maker) as
-        N (rows) x M (columns) matrix where N is the number of magnitudes
-        and M the number of distances
-
-    :return: Iterable of tuples:
-        `gsim_label, medians, sigmas`
-        where `medians` and `sigmas` are two matrices
-        (`len(imt)` rows X `len(ctxts)` columns)
-        denoting the medians and standard deviations of the motions, respectively
-    """
-    # Get the GMVs
-    # imts_values = list(imts.values())
-    # n_gmvs = len(ctxts)
-    # n_imts = len(imts)
-    # for gsim_label, gsim in gsims.items():
-
-    # Need to pre-allocate arrays for median, sigma, tau and phi
-    median = np.zeros([len(imts), len(ctxts)])
-    sigma = np.zeros_like(median)
-    tau = np.zeros_like(median)
-    phi = np.zeros_like(median)
-    # Call OpenQuake GSIM
-    gsim.compute(ctxts, imts.values(), median, sigma, tau, phi)
-    median = np.exp(median)
-    return median, sigma
 
 
 class labels:  # noqa (keep it simple, no Enum/dataclass needed)
