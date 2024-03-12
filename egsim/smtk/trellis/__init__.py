@@ -148,17 +148,22 @@ def build_contexts(
     return cmaker.recarray(ctxts)
 
 
-def prepare_dataframe(imts:dict, gsims:dict, magnitudes, distances, dist_label):
+def prepare_dataframe(
+        imts:dict[str, IMT],
+        gsims:dict[str, GMPE],
+        magnitudes,
+        distances,
+        dist_label:str):
     """prepare an empty dataframe for holding trellis plot data"""
     # get columns:
     dist_label = (
         labels.input_data,
-        ColumnsRegistry.get_type(dist_label).value,
+        str(ColumnsRegistry.get_type(dist_label).value),
         dist_label
     )
     mag_label = (
         labels.input_data,
-        ColumnsRegistry.get_type(labels.MAG).value,
+        str(ColumnsRegistry.get_type(labels.MAG).value),
         labels.MAG
     )
     columns = pd.MultiIndex.from_tuples(

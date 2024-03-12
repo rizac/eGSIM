@@ -6,6 +6,7 @@ from __future__ import annotations  # https://peps.python.org/pep-0563/
 from itertools import product
 
 from collections.abc import Iterable, Container
+from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from typing import Union
 from math import sqrt
 
@@ -16,7 +17,7 @@ from pandas.core.indexes.numeric import IntegerIndex
 from scipy.special import erf
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import imt, const
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, sa_period)
@@ -197,35 +198,90 @@ def get_expected_motions(
     """
     Calculate the expected ground motions from the context
     """
-    #  If a stddev is not computable, remove the column
-    expected:pd.DataFrame = pd.DataFrame(index=ctx.sids)
-    label_of = {
-        const.StdDev.TOTAL: c_labels.total_std,
-        const.StdDev.INTER_EVENT: c_labels.inter_ev_std,
-        const.StdDev.INTRA_EVENT: c_labels.intra_ev_std
-    }
-    requested_sa_periods = {i: sa_period(i) for i in imts}
+    expected = []
+    imt_periods = {i: sa_period(v) for i, v in imts.items()}
+    no_sa = all(_ is None for _ in imt_periods)
     # Period range for GSIM
     for gsim_name, gsim in gsims.items():
-        types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        model_sa_period_limits = get_sa_limits(gsim)
-        for imt_name, imtx in imts.items():
-            # skip if outside the model defined periods:
-            # FIXME: if a model is defined, say, for SA(0.1), and in the flatfile
-            #   we have SA(0.01) and SA(0.2), where do we interpolate?
-            if model_sa_period_limits is not None:
-                requested_period = requested_sa_periods[imt_name]
-                if requested_period is not None:
-                    if model_sa_period_limits[0] > requested_period \
-                            or model_sa_period_limits[1] < requested_period:
-                        continue
-            # FIXME: use the new API gsim.compute with a recarray built from all contexts
-            #   but then grouopby (check with GW)
-            mean, stddev = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imtx, types)
-            expected[(imt_name, c_labels.mean, gsim_name)] = mean
-            for std_type, values in zip(types, stddev):
-                expected[(imt_name, label_of[std_type], gsim_name)] = values
-    return expected
+        # build valid imts (according to model sa limits):
+        model_sa_p_lim = None if no_sa else get_sa_limits(gsim)
+        if model_sa_p_lim is not None:
+            imt_names, imt_vals = [], []
+            for imt_name, sa_p in imt_periods.items():
+                if sa_p is None or model_sa_p_lim[0] <= sa_p <= model_sa_p_lim[1]:
+                    imt_names.append(imt_name)
+                    imt_vals.append(imts[imt_name])
+        else:
+            imt_names = list(imts.keys())
+            imt_vals = list(imts.values())
+        cmaker = ContextMaker('*', [gsim], {'imtls': {i: [0] for i in imt_names}})
+        # FIXME above is imtls relevant, or should we use PGA: [0] as in trellis?
+        mean, total, inter, intra = get_ground_motion_values(
+            gsim, imt_vals, cmaker.recarray([ctx]))
+        # assign to dataframe. Build a numpy matrix + columns and create a new Df:
+        columns = list(product(imt_names, [c_labels.mean], [gsim_name]))
+        data = [mean]
+        stddev_types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+        if const.StdDev.TOTAL in stddev_types:
+            columns.extend((i, c_labels.total_std, gsim_name) for i in imt_names)
+            data.append(total)
+        if const.StdDev.INTER_EVENT in stddev_types:
+            columns.extend((i, c_labels.inter_ev_std, gsim_name) for i in imt_names)
+            data.append(inter)
+            # dfr[:(imt_names, c_labels.inter_ev_std, gsim_name)] = inter
+        if const.StdDev.INTRA_EVENT in stddev_types:
+            columns.extend((i, c_labels.intra_ev_std, gsim_name) for i in imt_names)
+            data.append(intra)
+            # expected.loc[:(imt_names, c_labels.intra_ev_std, gsim_name)] = intra
+
+        dfr = pd.DataFrame(
+            columns=pd.MultiIndex.from_tuples(columns),
+            data=np.hstack(data), index=ctx.sids)
+
+        expected.append(dfr)
+
+    # return DataFrame by groping next to each other all total, inter intra columns
+    # (see `reindex`):
+    return pd.concat(expected, axis='columns').reindex(
+        [c_labels.mean,
+         c_labels.total_std,
+         c_labels.inter_ev_std,
+         c_labels.intra_ev_std],
+        axis='columns',
+        level=1)
+
+
+# FIXME: save models to DB only: if model.compute.__annotations__.get("ctx") is np.recarray:
+
+
+def get_ground_motion_values(
+        model: GMPE,
+        imts: list[imt.IMT],
+        ctx: np.recarray):
+    """
+    Compute the ground motion values from the arguments.
+
+    :param model: the ground moion model instance
+    :param imts: a list of M Intensity Measure Types
+    :param ctx: a numpy recarray of size N created from a given
+        scenario (e.g. `RuptureContext`)
+
+    :return: a tuple of 4-elements: (note: arrays below are simply the transposed
+        matrices of OpenQuake computed values):
+        - an array of shape (N, M) for the means (N=len(ctx), M=len(imts), see above)
+        - an array of shape (N, M) for the TOTAL stddevs
+        - an array of shape (N, M) for the INTER_EVENT stddevs
+        - an array of shape (N, M) for the INTRA_EVENT stddevs
+    """
+
+    # mean and stddevs by calling the underlying .compute method
+    median = np.zeros([len(imts), len(ctx)])
+    sigma = np.zeros_like(median)
+    tau = np.zeros_like(median)
+    phi = np.zeros_like(median)
+
+    model.compute(ctx, imts, median, sigma, tau, phi)
+    return median.T, sigma.T, tau.T, phi.T
 
 
 def get_residuals_from_expected_and_observed_motions(

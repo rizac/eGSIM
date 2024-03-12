@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 from egsim.smtk import residuals
-from egsim.smtk.flatfile import read_flatfile
+from egsim.smtk.flatfile import read_flatfile, ColumnType
 from scipy.constants import g
 from egsim.smtk.residuals import c_labels
 
@@ -66,7 +66,8 @@ def test_residuals_execution():
             # (otherwise its an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
-            for ev_id, dfr in res_df.groupby(('flatfile', 'event_id')):
+            key = (c_labels.input_data, ColumnType.rupture.value, 'event_id')
+            for ev_id, dfr in res_df.groupby([key]):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():
                     _computed.append(vals[0])
@@ -129,7 +130,8 @@ def test_residuals_execution_lh():
             # (otherwise its an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
-            for ev_id, dfr in res_df.groupby(('flatfile', 'event_id')):
+            key = (c_labels.input_data, ColumnType.rupture.value, 'event_id')
+            for ev_id, dfr in res_df.groupby([key]):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():
                     _computed.append(vals[0])
