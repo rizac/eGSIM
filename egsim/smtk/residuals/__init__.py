@@ -18,7 +18,7 @@ from openquake.hazardlib import imt, const
 from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 
 from ..validators import (validate_inputs, harmonize_input_gsims,
-                          harmonize_input_imts, validate_imt_sa_periods)
+                          harmonize_input_imts, validate_imt_sa_limits)
 from ..registry import get_ground_motion_values
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
@@ -200,7 +200,7 @@ def get_expected_motions(
     # Period range for GSIM
     for gsim_name, gsim in gsims.items():
         # validate SA periods:
-        imts_ok = validate_imt_sa_periods(gsim, imts)
+        imts_ok = validate_imt_sa_limits(gsim, imts)
         if not imts_ok:
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())

@@ -116,9 +116,9 @@ def validate_inputs(gsims:dict[str, GMPE], imts: dict[str, IMT]):
     return gsims, imts
 
 
-def validate_imt_sa_periods(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
+def validate_imt_sa_limits(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     """Return a dict of IMT names mapped to the IMT instances that are either not SA,
-    or have a period compatible with the model SA limits
+    or have a period within the model SA period limits
 
     :param gsim: a model instance
     :param imts: an iterable of str (e.g. 'SA(0.1)', 'PGA') mapped to IMT the
@@ -127,11 +127,11 @@ def validate_imt_sa_periods(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
     :return a subset of the passed `imts` dict, or `imts` unchanged if all its IMT
         are valid for the given model
     """
-    imt_periods = {i: sa_period(v) for i, v in imts.items()}
-    if all(_ is None for _ in imt_periods.values()):
-        return imts
     model_sa_p_lim = get_sa_limits(gsim)
     if model_sa_p_lim is None:
+        return imts
+    imt_periods = {i: sa_period(v) for i, v in imts.items()}
+    if all(_ is None for _ in imt_periods.values()):
         return imts
     imt_new = {}
     for imt_n, sa_p in imt_periods.items():
