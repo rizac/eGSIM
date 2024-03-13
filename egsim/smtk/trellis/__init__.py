@@ -80,31 +80,48 @@ def get_trellis(
     ctxts = build_contexts(gsims, magnitudes, distances, rupture_properties,
                            site_properties)
 
-    # prepare dataframe
-    trellis_df = prepare_dataframe(imts, gsims, magnitudes, distances,
-                                   site_properties.distance_type)
-
     # Get the ground motion values
+    data = []
+    columns = []
     for gsim_label, gsim in gsims.items():
         imts_ok = validate_imt_sa_limits(gsim, imts)
         if not imts_ok:
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
-
         try:
             median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
-            median = np.exp(median)
-            # both medians and spectra are numpy matrices of
-            # `len(imt)` rows X `len(ctxts) columns`. Convert them to
-            # `len(ctxts) rows X len(imt)`columns` matrices
-
-            # FIXME REMOVE: this raises pandas warning:
-            trellis_df.loc[:, (imt_names, labels.MEDIAN, gsim_label)] = median
-            trellis_df.loc[:, (imt_names, labels.SIGMA, gsim_label)] = sigma
+            median = np.exp(median)  # FIXME ask Graeme: is this a Trellis feature or a prediction feature?
+            data.append(median)
+            columns.extend((i, labels.MEDIAN, gsim_label) for i in imt_names)
+            data.append(sigma)
+            columns.extend((i, labels.SIGMA, gsim_label) for i in imt_names)
         except Exception as exc:
             raise ValueError(f'Error in {gsim_label}: {str(exc)}')
 
-    return trellis_df
+    # distances:
+    columns.append((
+        labels.input_data,
+        str(ColumnsRegistry.get_type(site_properties.distance_type).value),
+        site_properties.distance_type
+    ))
+    dists_ = np.tile(distances, len(magnitudes))
+    data.append(dists_.reshape(len(ctxts), 1))
+    # magnitudes:
+    columns.append((
+        labels.input_data,
+        str(ColumnsRegistry.get_type(labels.MAG).value),
+        labels.MAG
+    ))
+    mags_ = np.hstack(tuple(np.full(len(distances), m) for m in magnitudes))
+    data.append(mags_.reshape(len(ctxts), 1))
+
+    # compute final DataFrame:
+    trellis_df = pd.DataFrame(columns=columns, data=np.hstack(data))
+    # sort columns (maybe we could use reindex but let's be more explicit):
+    computed_cols = set(trellis_df.columns)
+    expected_cols = \
+        list(product(imts, [labels.MEDIAN, labels.SIGMA], gsims)) + columns[-2:]
+    return trellis_df[[c for c in expected_cols if c in computed_cols]]
 
 
 def build_contexts(
@@ -145,39 +162,6 @@ def build_contexts(
 
     # Convert to recarray:
     return cmaker.recarray(ctxts)
-
-
-def prepare_dataframe(
-        imts:dict[str, IMT],
-        gsims:dict[str, GMPE],
-        magnitudes,
-        distances,
-        dist_label:str):
-    """prepare an empty dataframe for holding trellis plot data"""
-    # get columns:
-    dist_label = (
-        labels.input_data,
-        str(ColumnsRegistry.get_type(dist_label).value),
-        dist_label
-    )
-    mag_label = (
-        labels.input_data,
-        str(ColumnsRegistry.get_type(labels.MAG).value),
-        labels.MAG
-    )
-    columns = pd.MultiIndex.from_tuples(
-        list(product(imts, [labels.MEDIAN, labels.SIGMA], gsims)) +
-        [mag_label, dist_label]
-    )
-    ret = pd.DataFrame(columns=columns)
-    # get the values for magnitudes, distances and periods:
-    dists = np.tile(distances, len(magnitudes))
-    mags = np.hstack(tuple(np.full(len(distances), m) for m in magnitudes))
-    # assign:
-    ret[dist_label] = dists
-    ret[mag_label] = mags
-    ret.index = range(len(ret))
-    return ret
 
 
 class labels:  # noqa (keep it simple, no Enum/dataclass needed)
