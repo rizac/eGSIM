@@ -55,8 +55,8 @@ def get_trellis(
         imts: Iterable[Union[str, IMT]],
         magnitudes: Union[float, Collection[float]],
         distances: Union[float, Collection[float]],
-        rupture_properties: RuptureProperties,
-        site_properties: SiteProperties) -> pd.DataFrame:
+        rupture_properties: Optional[RuptureProperties] = None,
+        site_properties: Optional[SiteProperties] = None) -> pd.DataFrame:
     """
     Calculates the ground motion values for the trellis plots
 
@@ -77,8 +77,12 @@ def get_trellis(
         distances = distances.reshape(1,)
 
     # Get the context objects as a numpy recarray
-    ctxts = build_contexts(gsims, magnitudes, distances, rupture_properties,
-                           site_properties)
+    if rupture_properties is None:
+        rupture_properties = RuptureProperties()
+    if site_properties is None:
+        site_properties = SiteProperties()
+    ctxts = build_contexts(
+        gsims, magnitudes, distances, rupture_properties, site_properties)
 
     # Get the ground motion values
     data = []
@@ -104,16 +108,16 @@ def get_trellis(
         str(ColumnsRegistry.get_type(site_properties.distance_type).value),
         site_properties.distance_type
     ))
-    dists_ = np.tile(distances, len(magnitudes))
-    data.append(dists_.reshape(len(ctxts), 1))
+    # values: [d1...dN, ..., d1...dN], (concat [d1...dN] len(magnitudes) times)
+    data.append(np.tile(distances, len(magnitudes)).reshape(len(ctxts), 1))
     # magnitudes:
     columns.append((
         labels.input_data,
         str(ColumnsRegistry.get_type(labels.MAG).value),
         labels.MAG
     ))
-    mags_ = np.hstack(tuple(np.full(len(distances), m) for m in magnitudes))
-    data.append(mags_.reshape(len(ctxts), 1))
+    # values: [M1, ..., M1, Mn, ... Mn] (repeating each Mi len(distances) times)
+    data.append(np.repeat(magnitudes, len(distances)).reshape(len(ctxts), 1))
 
     # compute final DataFrame:
     trellis_df = pd.DataFrame(columns=columns, data=np.hstack(data))
