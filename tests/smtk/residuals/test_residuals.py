@@ -8,7 +8,7 @@ import os
 from egsim.smtk import residuals
 from egsim.smtk.flatfile import read_flatfile, ColumnType
 from scipy.constants import g
-from egsim.smtk.residuals import c_labels
+from egsim.smtk.registry import Clabel
 
 
 # load flatfile once:
@@ -28,9 +28,9 @@ def get_gsims_imts_flatfile():
     return gsims, imts, flatfile
 
 label_mapping_res = {
-    'Total': c_labels.total_res,
-    'Inter-event': c_labels.inter_ev_res,
-    'Intra-event': c_labels.intra_ev_res
+    'Total': Clabel.total_res,
+    'Inter-event': Clabel.inter_ev_res,
+    'Intra-event': Clabel.intra_ev_res
 }
 
 def test_residuals_execution():
@@ -66,7 +66,7 @@ def test_residuals_execution():
             # (otherwise its an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
-            key = (c_labels.input_data, ColumnType.rupture.value, 'event_id')
+            key = (Clabel.input_data, ColumnType.rupture.value, 'event_id')
             for ev_id, dfr in res_df.groupby([key]):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():
@@ -88,9 +88,9 @@ def test_residuals_execution():
 
 
 label_mapping_res_lh = {
-    'Total': c_labels.total_res_lh,
-    'Inter-event': c_labels.inter_ev_res_lh,
-    'Intra-event': c_labels.intra_ev_res_lh
+    'Total': Clabel.total_lh,
+    'Inter-event': Clabel.inter_ev_lh,
+    'Intra-event': Clabel.intra_ev_lh
 }
 
 
@@ -113,12 +113,6 @@ def test_residuals_execution_lh():
     # check results:
     # self.assertEqual(len(exp_dict), len(res_dict))
     for lbl in exp_dict:
-        # # self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
-        #     # check values
-        # expected = np.array(exp_dict[lbl], dtype=float)
-        # # computed dataframes have different labelling:
-        # lbl += " " + c_labels.lh
-        # computed = res_df[lbl].values
         is_inter_ev = 'Inter-event' in lbl
         expected = np.array(exp_dict[lbl], dtype=float)
         # computed dataframes have different labelling:
@@ -130,7 +124,7 @@ def test_residuals_execution_lh():
             # (otherwise its an Inter event residuals per-site e.g. Chiou
             # & Youngs (2008; 2014) case)
             _computed = []
-            key = (c_labels.input_data, ColumnType.rupture.value, 'event_id')
+            key = (Clabel.input_data, ColumnType.rupture.value, 'event_id')
             for ev_id, dfr in res_df.groupby([key]):
                 vals = dfr[lbl].values
                 if ((vals - vals[0]) < 1.0E-12).all():

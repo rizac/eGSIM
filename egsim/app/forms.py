@@ -8,8 +8,7 @@ from egsim.api.forms.predictions import PredictionsForm
 from django.forms.fields import ChoiceField, CharField
 
 from egsim.smtk.flatfile import ColumnType
-from egsim.smtk.residuals import c_labels
-from egsim.smtk.trellis import labels
+from egsim.smtk.registry import Clabel
 from egsim.smtk.validators import sa_period
 
 
@@ -36,10 +35,10 @@ class PredictionsPlotDataForm(PredictionsForm):
         dataframe = super().output()
         dist_col = None
         for c in dataframe.columns:
-            if c[0] == labels.input_data and c[1] == ColumnType.distance.value:
+            if c[0] == Clabel.input_data and c[1] == ColumnType.distance.value:
                 dist_col = c
                 break
-        mag_col = (labels.input_data, ColumnType.rupture.value, labels.MAG)
+        mag_col = (Clabel.input_data, ColumnType.rupture.value, Clabel.mag)
 
         plots = []
         colors_cycle = Plotly.colors_cycle()
@@ -70,10 +69,10 @@ class PredictionsPlotDataForm(PredictionsForm):
                 for (d, m), dfr in dataframe.groupby([dist_col, mag_col]):
                     ret = {}
                     for m in models:
-                        vals = dfr.loc[:, (sas, labels.MEDIAN, m)].iloc[0, :].values
-                        ret[(imts[0], labels.MEDIAN, m)] = vals.astype(float)
-                        vals = dfr.loc[:, (sas, labels.SIGMA, m)].iloc[0,:].values
-                        ret[(imts[0], labels.SIGMA, m)] = vals.astype(float)
+                        vals = dfr.loc[:, (sas, Clabel.median, m)].iloc[0, :].values
+                        ret[(imts[0], Clabel.median, m)] = vals.astype(float)
+                        vals = dfr.loc[:, (sas, Clabel.std, m)].iloc[0,:].values
+                        ret[(imts[0], Clabel.std, m)] = vals.astype(float)
 
                     yield {mag_label: m, dist_label: d}, x_values, pd.DataFrame(ret)
 
@@ -81,8 +80,8 @@ class PredictionsPlotDataForm(PredictionsForm):
             for imt in imts:
                 for model in models:
                     try:
-                        medians = dfr[(imt, labels.MEDIAN, model)]
-                        sigmas = dfr[(imt, labels.SIGMA, model)]
+                        medians = dfr[(imt, Clabel.median, model)]
+                        sigmas = dfr[(imt, Clabel.std, model)]
                     except KeyError:
                         medians = []
                         sigmas = []
@@ -126,9 +125,9 @@ class ResidualsPlotDataForm(ResidualsForm):
         # as 2-element list (same for yaxis)
         # Plotly.get_layout (see below) handles this automatically
         df_labels = {
-            c_labels.total_res: 'Total',
-            c_labels.intra_ev_res: 'Intra event',
-            c_labels.inter_ev_res: 'Inter event'
+            Clabel.total_res: 'Total',
+            Clabel.intra_ev_res: 'Intra event',
+            Clabel.inter_ev_res: 'Inter event'
         }
         dataframe = super().output()
         col_x = self.cleaned_data.get('x', None)
@@ -140,9 +139,9 @@ class ResidualsPlotDataForm(ResidualsForm):
             else:
                 y_label = lambda imt: 'Frequency'
                 df_labels = {
-                    c_labels.total_res_lh: 'Total',
-                    c_labels.intra_ev_res_lh: 'Intra event',
-                    c_labels.inter_ev_res_lh: 'Inter event'
+                    Clabel.total_lh: 'Total',
+                    Clabel.intra_ev_lh: 'Intra event',
+                    Clabel.inter_ev_lh: 'Inter event'
                 }
                 x_label = lambda imt: f'Likelihood ({str(imt)})'
         else:

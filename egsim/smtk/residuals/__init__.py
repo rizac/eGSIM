@@ -19,7 +19,7 @@ from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, validate_imt_sa_limits)
-from ..registry import get_ground_motion_values
+from ..registry import get_ground_motion_values, Clabel
 from ..flatfile.residuals import (get_event_id_column_names,
                                   get_station_id_column_names,
                                   get_flatfile_for_residual_analysis)
@@ -52,12 +52,12 @@ def get_residuals(
     # 3. compute residuals:
     residuals = get_residuals_from_validated_inputs(
         gsims, imts, flatfile_r, normalise=normalise)
-    labels = [c_labels.total_res, c_labels.inter_ev_res, c_labels.intra_ev_res]
+    labels = [Clabel.total_res, Clabel.inter_ev_res, Clabel.intra_ev_res]
     if likelihood:
         residuals = get_residuals_likelihood(residuals)
-        labels = [c_labels.total_res_lh,
-                  c_labels.inter_ev_res_lh,
-                  c_labels.intra_ev_res_lh]
+        labels = [Clabel.total_lh,
+                  Clabel.inter_ev_lh,
+                  Clabel.intra_ev_lh]
     # sort columns (kind of reindex, more verbose for safety):
     original_cols = set(residuals.columns)
     sorted_cols = product(imts, labels, gsims)
@@ -66,7 +66,7 @@ def get_residuals(
     col_mapping = {}
     for c in flatfile_r.columns:
         c_type = ColumnsRegistry.get_type(c)
-        col_mapping[c] = (c_labels.input_data, c_type.value if c_type else 'misc', c)
+        col_mapping[c] = (Clabel.input_data, c_type.value if c_type else 'misc', c)
     flatfile_r.rename(columns=col_mapping, inplace=True)
     # sort columns:
     flatfile_r.sort_index(axis=1, inplace=True)
@@ -205,17 +205,17 @@ def get_expected_motions(
         mean, total, inter, intra = get_ground_motion_values(
             gsim, imt_vals, cmaker.recarray([ctx]))
         # assign data to our tmp lists:
-        columns.extend(product(imt_names, [c_labels.mean], [gsim_name]))
+        columns.extend(product(imt_names, [Clabel.mean], [gsim_name]))
         data.append(mean)
         stddev_types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
         if const.StdDev.TOTAL in stddev_types:
-            columns.extend((i, c_labels.total_std, gsim_name) for i in imt_names)
+            columns.extend((i, Clabel.total_std, gsim_name) for i in imt_names)
             data.append(total)
         if const.StdDev.INTER_EVENT in stddev_types:
-            columns.extend((i, c_labels.inter_ev_std, gsim_name) for i in imt_names)
+            columns.extend((i, Clabel.inter_ev_std, gsim_name) for i in imt_names)
             data.append(inter)
         if const.StdDev.INTRA_EVENT in stddev_types:
-            columns.extend((i, c_labels.intra_ev_std, gsim_name) for i in imt_names)
+            columns.extend((i, Clabel.intra_ev_std, gsim_name) for i in imt_names)
             data.append(intra)
 
     return pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
@@ -234,27 +234,27 @@ def get_residuals_from_expected_and_observed_motions(
         observed ground motion # FIXME check log
     """
     residuals: pd.DataFrame = pd.DataFrame(index=expected.index)
-    mean_cols = expected.columns[expected.columns.get_level_values(1)==c_labels.mean]
+    mean_cols = expected.columns[expected.columns.get_level_values(1)==Clabel.mean]
     for (imtx, label, gsim) in mean_cols:
         obs = observed.get(imtx)
         if obs is None:
             continue
-        mean = expected[(imtx, c_labels.mean, gsim)]
+        mean = expected[(imtx, Clabel.mean, gsim)]
         # compute total residuals:
-        total_stddev = expected.get((imtx, c_labels.total_std, gsim))
+        total_stddev = expected.get((imtx, Clabel.total_std, gsim))
         if total_stddev is None:
             continue
-        residuals[(imtx, c_labels.total_res, gsim)] = \
+        residuals[(imtx, Clabel.total_res, gsim)] = \
             (obs - mean) / total_stddev
         # compute inter- and intra-event residuals:
-        inter_ev = expected.get((imtx, c_labels.inter_ev_std, gsim))
-        intra_ev = expected.get((imtx, c_labels.intra_ev_std, gsim))
+        inter_ev = expected.get((imtx, Clabel.inter_ev_std, gsim))
+        intra_ev = expected.get((imtx, Clabel.intra_ev_std, gsim))
         if inter_ev is None or intra_ev is None:
             continue
         inter, intra = _get_random_effects_residuals(obs, mean, inter_ev,
                                                      intra_ev, normalise)
-        residuals[(imtx, c_labels.inter_ev_res, gsim)] = inter
-        residuals[(imtx, c_labels.intra_ev_res, gsim)] = intra
+        residuals[(imtx, Clabel.inter_ev_res, gsim)] = inter
+        residuals[(imtx, Clabel.intra_ev_res, gsim)] = intra
     return residuals
 
 
@@ -273,22 +273,6 @@ def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
     return inter_res, intra_res
 
 
-class c_labels: # noqa (keep it simple, no Enum/dataclass needed)
-    """computed column labels"""
-    mean = "mean"
-    total_std = "total_stddev"
-    inter_ev_std = "inter_event_stddev"
-    intra_ev_std = "intra_event_stddev"
-    # expected_motion_column = {total, inter_ev, intra_ev}
-    total_res = "total_residual"
-    inter_ev_res = "inter_event_residual"
-    intra_ev_res = "intra_event_residual"
-    total_res_lh = total_res + "_likelihood"
-    inter_ev_res_lh = inter_ev_res + "_likelihood"
-    intra_ev_res_lh = intra_ev_res + "_likelihood"
-    input_data = 'input_data'
-
-
 def get_residuals_likelihood(residuals: pd.DataFrame) -> pd.DataFrame:
     """
     Return the likelihood values for the residuals column found in `residuals`
@@ -299,9 +283,9 @@ def get_residuals_likelihood(residuals: pd.DataFrame) -> pd.DataFrame:
     likelihoods = pd.DataFrame(index=residuals.index.copy())
     col_list = list(residuals.columns)
     residuals_columns = {
-        c_labels.total_res: c_labels.total_res_lh,
-        c_labels.inter_ev_res: c_labels.inter_ev_res_lh,
-        c_labels.intra_ev_res: c_labels.intra_ev_res_lh
+        Clabel.total_res: Clabel.total_lh,
+        Clabel.inter_ev_res: Clabel.inter_ev_lh,
+        Clabel.intra_ev_res: Clabel.intra_ev_lh
     }
     for col in col_list:
         (imtx, label, gsim) = col

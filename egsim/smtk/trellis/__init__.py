@@ -17,7 +17,7 @@ from openquake.hazardlib.geo import Point
 from .rupture import (get_target_sites, create_planar_surface,
                       get_hypocentre_on_planar_surface,
                       create_rupture)
-from ..registry import get_ground_motion_values
+from ..registry import get_ground_motion_values, Clabel
 from ..flatfile import ColumnsRegistry
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, validate_imt_sa_limits)
@@ -96,15 +96,15 @@ def get_trellis(
             median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
             median = np.exp(median)  # FIXME ask Graeme: is this a Trellis feature or a prediction feature?
             data.append(median)
-            columns.extend((i, labels.MEDIAN, gsim_label) for i in imt_names)
+            columns.extend((i, Clabel.median, gsim_label) for i in imt_names)
             data.append(sigma)
-            columns.extend((i, labels.SIGMA, gsim_label) for i in imt_names)
+            columns.extend((i, Clabel.std, gsim_label) for i in imt_names)
         except Exception as exc:
             raise ValueError(f'Error in {gsim_label}: {str(exc)}')
 
     # distances:
     columns.append((
-        labels.input_data,
+        Clabel.input_data,
         str(ColumnsRegistry.get_type(site_properties.distance_type).value),
         site_properties.distance_type
     ))
@@ -112,9 +112,9 @@ def get_trellis(
     data.append(np.tile(distances, len(magnitudes)).reshape(len(ctxts), 1))
     # magnitudes:
     columns.append((
-        labels.input_data,
-        str(ColumnsRegistry.get_type(labels.MAG).value),
-        labels.MAG
+        Clabel.input_data,
+        str(ColumnsRegistry.get_type(Clabel.mag).value),
+        Clabel.mag
     ))
     # values: [M1, ..., M1, Mn, ... Mn] (repeating each Mi len(distances) times)
     data.append(np.repeat(magnitudes, len(distances)).reshape(len(ctxts), 1))
@@ -124,7 +124,7 @@ def get_trellis(
     # sort columns (maybe we could use reindex but let's be more explicit):
     computed_cols = set(trellis_df.columns)
     expected_cols = \
-        list(product(imts, [labels.MEDIAN, labels.SIGMA], gsims)) + columns[-2:]
+        list(product(imts, [Clabel.median, Clabel.std], gsims)) + columns[-2:]
     return trellis_df[[c for c in expected_cols if c in computed_cols]]
 
 
@@ -167,10 +167,3 @@ def build_contexts(
     # Convert to recarray:
     return cmaker.recarray(ctxts)
 
-
-class labels:  # noqa (keep it simple, no Enum/dataclass needed)
-    """computed column labels"""
-    MEDIAN = "median"
-    SIGMA = "stddev"
-    MAG = "mag"
-    input_data = 'input_data'

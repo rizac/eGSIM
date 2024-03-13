@@ -11,9 +11,9 @@ from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
 from scipy.interpolate import interpolate
 
+from egsim.smtk.registry import Clabel
 from egsim.smtk.flatfile import ColumnType, ColumnsRegistry
-from egsim.smtk.trellis import get_trellis, RuptureProperties, SiteProperties, labels
-from egsim.smtk.validators import IncompatibleInput
+from egsim.smtk.trellis import get_trellis, RuptureProperties, SiteProperties
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -86,7 +86,7 @@ def test_distance_imt_trellis():
 
     # Now compare trellis values:
     for c in dfr.columns:
-        if c[0] == labels.input_data:
+        if c[0] == Clabel.input_data:
             if c[-1] == 'rrup':
                 # distances are messed up, let's just test they are
                 # both monotonically increasing:
@@ -107,7 +107,7 @@ def test_distance_imt_trellis():
                     # then decrease. Remove first 20 values
                     values = dfr[c][20:]
                 assert (np.diff(values) <= 0).all()
-            dist_col = (labels.input_data, ColumnType.distance.value, 'rrup')
+            dist_col = (Clabel.input_data, ColumnType.distance.value, 'rrup')
             # create interpolation function from new data
             interp = interpolate.interp1d(dfr[dist_col].values, dfr[c].values,
                                           fill_value="extrapolate", kind="cubic")
@@ -146,7 +146,7 @@ def test_magnitude_imt_trellis():
 
     # Now compare trellis values:
     for c in dfr.columns:
-        if c[0] == labels.input_data:
+        if c[0] == Clabel.input_data:
             assert (dfr[c] == ref[c]).all()  # noqa
             continue
 
@@ -160,7 +160,7 @@ def test_magnitude_imt_trellis():
                     # (hacky test heuristically calculated):
                     assert (np.diff(dfr[c]) >= 0).sum() > 0.92 * len(dfr[c])
             # create interpolation function from new data
-            mag_col = (labels.input_data, ColumnType.rupture.value, 'mag')
+            mag_col = (Clabel.input_data, ColumnType.rupture.value, 'mag')
             interp = interpolate.interp1d(dfr[mag_col].values, dfr[c].values,
                                           fill_value="extrapolate", kind="cubic")
             # interpolate the old values
@@ -216,7 +216,7 @@ def test_magnitude_distance_spectra_trellis():
 
     # compare trellis values:
     for c in dfr.columns:
-        if c[0] == labels.input_data:
+        if c[0] == Clabel.input_data:
             assert (dfr[c] == ref[c]).all()  # noqa
             continue
 
@@ -237,13 +237,13 @@ def open_ref_hdf(file_name) -> pd.DataFrame:
     c_mapping = {}
     for c in ref.columns:
         if c[0] == 'Median':
-            c_mapping[c] = (c[1], labels.MEDIAN, c[-1])
+            c_mapping[c] = (c[1], Clabel.median, c[-1])
         elif c[0] == 'Stddev':
-            c_mapping[c] = (c[1], labels.SIGMA, c[-1])
+            c_mapping[c] = (c[1], Clabel.std, c[-1])
         else:
             try:
                 c_mapping[c] = (
-                    labels.input_data,
+                    Clabel.input_data,
                     str(ColumnsRegistry.get_type(c[0]).value),
                     c[0])
             except Exception as exc:

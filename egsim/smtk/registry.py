@@ -10,7 +10,8 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
 
 
-registered_gsims:dict[str, type[GMPE]] = registry.copy()  # FIXME why copy?
+# added for compatibility with registered_imts (see below)
+registered_gsims:dict[str, type[GMPE]] = registry
 
 
 def gsim(gmm: Union[str, GMPE], raise_deprecated=True) -> GMPE:  # FIXME arg name, maybe 'model' ?
@@ -174,3 +175,21 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray):
     phi = np.zeros_like(median)
     model.compute(ctx, imts, median, sigma, tau, phi)
     return median.T, sigma.T, tau.T, phi.T
+
+
+class Clabel:
+    """Custom column labels provided in the output Dataframes"""
+    input_data = 'input_data'
+    mean = "mean"
+    median = "median"
+    std = "stddev"
+    total_std = f"total_{std}"
+    inter_ev_std = f"inter_event_{std}"
+    intra_ev_std = f"intra_event_{std}"
+    total_res = "total_residual"
+    inter_ev_res = "inter_event_residual"
+    intra_ev_res = "intra_event_residual"
+    total_lh = total_res.replace("_residual", "_likelihood")
+    inter_ev_lh = inter_ev_res.replace("_residual", "_likelihood")
+    intra_ev_lh = intra_ev_res.replace("_residual", "_likelihood")
+    mag = "mag"
