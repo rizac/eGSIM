@@ -12,7 +12,8 @@ import pandas as pd
 from scipy.stats import norm
 from scipy.linalg import solve
 
-from ..residuals import get_computed_columns, c_labels, column_label
+from ..registry import Clabel
+from ..residuals import get_computed_columns, column_label
 
 
 def get_residuals_stats(gsim_names: Iterable[str], imt_names: Iterable[str],
@@ -25,7 +26,7 @@ def get_residuals_stats(gsim_names: Iterable[str], imt_names: Iterable[str],
     """
     stats = {}
     for col, gsim, imtx, label in get_computed_columns(gsim_names, imt_names, flatfile):
-        if label not in c_labels.residuals_columns:
+        if label not in Clabel.residuals_columns:
             continue
         if gsim not in stats:
             stats[gsim] = {}
