@@ -13,7 +13,7 @@ from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 
 from egsim.api.views import (TrellisView, MimeType, read_hdf_from_buffer,
                              read_csv_from_buffer, as_querystring)
-from egsim.api.forms.predictions import PredictionsForm
+from egsim.api.forms.scenarios import PredictionsForm
 
 from unittest.mock import patch  # ok in py3.8  # noqa
 

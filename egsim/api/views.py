@@ -19,7 +19,7 @@ from django.forms import SelectMultiple
 
 from ..smtk.converters import dataframe2dict
 from .forms import APIForm
-from .forms.predictions import PredictionsForm, ArrayField
+from .forms.scenarios import PredictionsForm, ArrayField
 from .forms.flatfile import FlatfileForm
 from .forms.flatfile.residuals import ResidualsForm
 

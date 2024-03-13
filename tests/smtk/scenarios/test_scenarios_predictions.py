@@ -13,7 +13,8 @@ from scipy.interpolate import interpolate
 
 from egsim.smtk.registry import Clabel
 from egsim.smtk.flatfile import ColumnType, ColumnsRegistry
-from egsim.smtk.trellis import get_trellis, RuptureProperties, SiteProperties
+from egsim.smtk.scenarios import (get_scenarios_predictions, RuptureProperties,
+                                  SiteProperties)
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 
@@ -64,7 +65,7 @@ def test_distance_imt_trellis():
     distances = np.arange(0, 250.5, 1)
     magnitude = 6.5
     # Get trellis calculations
-    dfr = get_trellis(
+    dfr = get_scenarios_predictions(
         gsims,
         imts,
         magnitude,
@@ -131,7 +132,7 @@ def test_magnitude_imt_trellis():
     magnitudes = np.arange(4., 8.1, 0.1)
     distance = 20.
 
-    dfr = get_trellis(
+    dfr = get_scenarios_predictions(
         gsims,
         imts,
         magnitudes,
@@ -188,7 +189,7 @@ def test_magnitude_distance_spectra_trellis():
     magnitudes = [4.0, 5.0, 6.0, 7.0]
     distances = [5., 20., 50., 150.0]
     # with raises(IncompatibleInput) as verr:
-    dfr = get_trellis(
+    dfr = get_scenarios_predictions(
         gsims,
         list(periods) + [4.001, 5.0, 7.5, 10.0],
         magnitudes,
@@ -197,9 +198,14 @@ def test_magnitude_distance_spectra_trellis():
         SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0,
                        z2pt5=1.0)
     )
-    # FIXME test that we do not have all periods (maybe easier?)
+    # test that some gsim are not supported for all periods:
+    assert (dfr.columns.get_level_values(0) == 'SA(3.0)').sum() > \
+           (dfr.columns.get_level_values(0) == 'SA(4.001)').sum()
+    assert (dfr.columns.get_level_values(0) == 'SA(4.001)').sum() > \
+           (dfr.columns.get_level_values(0) == 'SA(10.0)').sum()
 
-    dfr = get_trellis(
+    # normal test (comparison with old data):
+    dfr = get_scenarios_predictions(
         gsims,
         periods,
         magnitudes,

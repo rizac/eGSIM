@@ -20,9 +20,9 @@ from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 from ..validators import (validate_inputs, harmonize_input_gsims,
                           harmonize_input_imts, validate_imt_sa_limits)
 from ..registry import get_ground_motion_values, Clabel
-from ..flatfile.residuals import (get_event_id_column_names,
-                                  get_station_id_column_names,
-                                  get_flatfile_for_residual_analysis)
+from .flatfile_utils import (get_event_id_column_names,
+                             get_station_id_column_names,
+                             get_flatfile_for_residual_analysis)
 from ..flatfile import InvalidColumn, MissingColumn, ColumnsRegistry
 
 

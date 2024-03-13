@@ -1,4 +1,4 @@
-"""trellis plots module"""
+"""module for computing ground motion values from different scenarios"""
 from itertools import product
 from collections.abc import Collection, Iterable
 from typing import Union, Optional
@@ -50,15 +50,16 @@ class SiteProperties:
     region:int = 0
 
 
-def get_trellis(
+def get_scenarios_predictions(
         gsims: Iterable[Union[str, GMPE, type[GMPE]]],
         imts: Iterable[Union[str, IMT]],
         magnitudes: Union[float, Collection[float]],
         distances: Union[float, Collection[float]],
         rupture_properties: Optional[RuptureProperties] = None,
-        site_properties: Optional[SiteProperties] = None) -> pd.DataFrame:
+        site_properties: Optional[SiteProperties] = None,
+        exp_values=True) -> pd.DataFrame:
     """
-    Calculate the ground motion values from the given scenarios to be used, e.g.
+    Calculate the ground motion values from different scenarios to be used, e.g.
     in trellis plots
 
     :param magnitudes: list or numpy array of magnitudes
@@ -95,7 +96,8 @@ def get_trellis(
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
         try:
             median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
-            median = np.exp(median)  # FIXME ask Graeme: is this a Trellis feature or a prediction feature?
+            if exp_values:  # FIXME ask Graeme: is this a Trellis feature or a prediction feature?
+                median = np.exp(median)
             data.append(median)
             columns.extend((i, Clabel.median, gsim_label) for i in imt_names)
             data.append(sigma)
@@ -121,12 +123,14 @@ def get_trellis(
     data.append(np.repeat(magnitudes, len(distances)).reshape(len(ctxts), 1))
 
     # compute final DataFrame:
-    trellis_df = pd.DataFrame(columns=columns, data=np.hstack(data))
+    output = pd.DataFrame(columns=columns, data=np.hstack(data))
     # sort columns (maybe we could use reindex but let's be more explicit):
-    computed_cols = set(trellis_df.columns)
+    computed_cols = set(output.columns)
     expected_cols = \
         list(product(imts, [Clabel.median, Clabel.std], gsims)) + columns[-2:]
-    return trellis_df[[c for c in expected_cols if c in computed_cols]]
+    output = output[[c for c in expected_cols if c in computed_cols]].copy()
+    output.columns = pd.MultiIndex.from_tuples(output.columns)
+    return output
 
 
 def build_contexts(
