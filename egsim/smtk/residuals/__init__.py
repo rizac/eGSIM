@@ -58,7 +58,7 @@ def get_residuals(
         labels = [c_labels.total_res_lh,
                   c_labels.inter_ev_res_lh,
                   c_labels.intra_ev_res_lh]
-    # sort columns:
+    # sort columns (kind of reindex, more verbose for safety):
     original_cols = set(residuals.columns)
     sorted_cols = product(imts, labels, gsims)
     residuals = residuals[[c for c in sorted_cols if c in original_cols]]
@@ -100,7 +100,7 @@ def get_residuals_from_validated_inputs(
         imts: dict[str, imt.IMT],
         flatfile: pd.DataFrame,
         normalise=True) -> pd.DataFrame:
-    residuals:pd.DataFrame = None  # noqa
+    residuals = []
     # compute the observations (compute the log for all once here):
     observed = get_observed_motions(flatfile, imts, True)
     for context in yield_event_contexts(flatfile):
@@ -111,14 +111,9 @@ def get_residuals_from_validated_inputs(
             expected,
             observed.loc[expected.index, :],
             normalise=normalise)
-        # init `residuals` if needed (only once operation):
-        if residuals is None:
-            # Note: setting data=np.nan will force columns dtype to float
-            residuals = pd.DataFrame(index=flatfile.index, columns=res.columns,
-                                     data=np.nan)
-        # copy values (note that res.index == context.sids):
-        residuals.loc[res.index, res.columns] = res
-    return residuals
+        residuals.append(res)
+    # concat preserving index (last arg. is False by default but set anyway for safety):
+    return pd.concat(residuals, axis='index', ignore_index=False)
 
 
 def get_observed_motions(flatfile: pd.DataFrame, imts: Container[str], log=True):
@@ -196,7 +191,8 @@ def get_expected_motions(
     """
     Calculate the expected ground motions from the context
     """
-    expected = []
+    data = []
+    columns = []
     # Period range for GSIM
     for gsim_name, gsim in gsims.items():
         # validate SA periods:
@@ -208,9 +204,9 @@ def get_expected_motions(
         # FIXME above is imtls relevant, or should we use PGA: [0] as in trellis?
         mean, total, inter, intra = get_ground_motion_values(
             gsim, imt_vals, cmaker.recarray([ctx]))
-        # assign to dataframe. Build a numpy matrix + columns and create a new Df:
-        columns = list(product(imt_names, [c_labels.mean], [gsim_name]))
-        data = [mean]
+        # assign data to our tmp lists:
+        columns.extend(product(imt_names, [c_labels.mean], [gsim_name]))
+        data.append(mean)
         stddev_types = gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES
         if const.StdDev.TOTAL in stddev_types:
             columns.extend((i, c_labels.total_std, gsim_name) for i in imt_names)
@@ -218,27 +214,12 @@ def get_expected_motions(
         if const.StdDev.INTER_EVENT in stddev_types:
             columns.extend((i, c_labels.inter_ev_std, gsim_name) for i in imt_names)
             data.append(inter)
-            # dfr[:(imt_names, c_labels.inter_ev_std, gsim_name)] = inter
         if const.StdDev.INTRA_EVENT in stddev_types:
             columns.extend((i, c_labels.intra_ev_std, gsim_name) for i in imt_names)
             data.append(intra)
-            # expected.loc[:(imt_names, c_labels.intra_ev_std, gsim_name)] = intra
 
-        dfr = pd.DataFrame(
-            columns=pd.MultiIndex.from_tuples(columns),
-            data=np.hstack(data), index=ctx.sids)
-
-        expected.append(dfr)
-
-    # return DataFrame by groping next to each other all total, inter intra columns
-    # (see `reindex`):
-    return pd.concat(expected, axis='columns').reindex(
-        [c_labels.mean,
-         c_labels.total_std,
-         c_labels.inter_ev_std,
-         c_labels.intra_ev_std],
-        axis='columns',
-        level=1)
+    return pd.DataFrame(columns=pd.MultiIndex.from_tuples(columns),
+                        data=np.hstack(data), index=ctx.sids)
 
 
 def get_residuals_from_expected_and_observed_motions(
@@ -246,16 +227,15 @@ def get_residuals_from_expected_and_observed_motions(
         observed: pd.DataFrame,
         normalise=True):
     """
-    Calculate the residual terms, modifies `flatfile` inplace
+    Calculate the residual terms, returning a new DataFrame
 
     :param expected: the DataFrame returned from `get_expected_motions`
     :param observed: the DataFame of the (natural logarithm of) the
         observed ground motion # FIXME check log
     """
     residuals: pd.DataFrame = pd.DataFrame(index=expected.index)
-    for (imtx, label, gsim) in expected:
-        if label != c_labels.mean:
-            continue
+    mean_cols = expected.columns[expected.columns.get_level_values(1)==c_labels.mean]
+    for (imtx, label, gsim) in mean_cols:
         obs = observed.get(imtx)
         if obs is None:
             continue
