@@ -8,8 +8,8 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.scalerel import PeerMSR
 
-from . import (ColumnsRegistry, MissingColumn,
-               InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
+from ..flatfile import (ColumnsRegistry, MissingColumn,
+                        InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
 from ..validators import sa_period
 from ..registry import ground_motion_properties_required_by
 from ..converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14

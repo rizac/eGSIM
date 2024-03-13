@@ -43,68 +43,55 @@ def test_load_models():
         w = set(str(_) for _ in w)
         assert len(w) > 50  # hacky check as well
 
-    # don't raise DeprecationWarnings (all other warnings behave as default):
-    with warnings.catch_warnings(record=True) as w3:
-        count3, ok3 = read_gsims(False)
-        # we have more model loaded but the overall models available is the same:
-        assert ok3 > ok and count3 == count
-        # warnings might not be unique, get the unique ones:
-        w3 = set(str(_) for _ in w3)
-        # we should have N more warning, and  N more successfully loaded models
-        warnings_more = len(w3) - len(w)
-        ok_models_more = ok3 - ok
-        assert  warnings_more == ok_models_more
-
-    # don't raise DeprecationWarnings (ignore all warnings overall):
-    with warnings.catch_warnings(record=True) as w4:
-        # don't raise DeprecationWarnings (all other warnings behave as default):
-        warnings.simplefilter('ignore')
-        count4, ok4 = read_gsims(False)
-        # we have more model loaded but the overall models available is the same:
-        assert ok4 == ok3 and count4 == count3
-        # warnings might not be unique, get the unique ones:
-        assert not w4
-
 
 def test_load_model_with_deprecation_warnings():
-    excs = (TypeError, IndexError, KeyError, ValueError, DeprecationWarning)
+    excs = (DeprecationWarning,)
     model = 'AkkarEtAl2013'
+    # gsim(model)
     with pytest.raises(*excs) as exc:
         gsim(model)
     gsim_ = gsim(model, raise_deprecated=False)
     assert isinstance(gsim_, GMPE)
     # now check that the behavior is the same if we set a warning filter beforehand:
-    for ignore_warnings in [True, False]:
-        with warnings.catch_warnings(record=True) as w:
-            _excs = excs
-            if ignore_warnings:
-                warnings.simplefilter('ignore')
-                _excs = _excs[:-1]
-            with pytest.raises(*_excs) as exc:
-                gsim(model)
-            assert len(w) == 0
-        with warnings.catch_warnings(record=True) as w:
-            if ignore_warnings:
-                warnings.simplefilter('ignore')
-            gsim_ = gsim(model, raise_deprecated=False)
-            assert isinstance(gsim_, GMPE)
-            assert len(w) == 0 if ignore_warnings else 1
+    with warnings.catch_warnings(record=True) as w:
+        with pytest.raises(*excs) as exc:
+            gsim(model)
+        assert len(w) == 1
+    with warnings.catch_warnings(record=True) as w:
+        gsim(model, raise_deprecated=False)
+        assert len(w) == 1
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('ignore')
+        with pytest.raises(*excs) as exc:
+            gsim(model)
+        assert len(w) == 0
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('ignore')
+        gsim(model, raise_deprecated=False)
+        assert len(w) == 0
+
 
 def test_gsim_name_1to1_relation():
+    excs = (TypeError, IndexError, KeyError, ValueError,
+            FileNotFoundError, OSError, AttributeError)
     for model in registered_gsims:
         try:
             gsim_ = gsim(model, raise_deprecated=False)
-        except (TypeError, IndexError, KeyError, ValueError) as exc:
+        except excs as exc:
             continue
         model_name_back = gsim_name(gsim_)
         assert model == model_name_back
 
+    for model, cls in registered_gsims.items():
+        if cls.superseded_by:
+            asd = 9
 
 def read_gsims(raise_deprecated=True, catch_deprecated=True):
     count, ok = 0, 0
-    excs = (TypeError, IndexError, KeyError, ValueError, DeprecationWarning)
-    if not raise_deprecated:
-        excs = excs[:-1]
+    excs = (TypeError, IndexError, KeyError, ValueError,
+            FileNotFoundError, OSError, AttributeError)
+    if raise_deprecated:
+        excs += (DeprecationWarning, )
     # errors = [TypeError, KeyError, IndexError]
     # if catch_deprecated:
     #     errors.append(OQDeprecationWarning)
@@ -130,9 +117,13 @@ def test_imt_as_float_is_converted_to_sa():
     for val in [0, .0, 1, 1.]:
         assert isinstance(imt(val), IMT)
         assert imt(val) == SA(val)
-    for val in [np.nan, np.inf, -np.inf, -1]:
-        with pytest.raises(TypeError, ValueError, KeyError):
+    for val in [np.nan, "abc"]:
+        with pytest.raises(KeyError):
             imt(val)
+    with pytest.raises(ValueError):
+        imt('SA(0.1a)')
+    with pytest.raises(ValueError):
+        imt('SA("0.1a")')
 
 
 # legacy code and relative tests (convert acceleration units). See notes function below

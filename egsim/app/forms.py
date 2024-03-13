@@ -4,7 +4,7 @@ import pandas as pd
 
 from egsim.api.forms.flatfile.management import Plotly
 from egsim.api.forms.flatfile.residuals import ResidualsForm
-from egsim.api.forms.predictions import PredictionsForm
+from egsim.api.forms.scenarios import PredictionsForm
 from django.forms.fields import ChoiceField, CharField
 
 from egsim.smtk.flatfile import ColumnType
@@ -184,13 +184,13 @@ class ResidualsPlotDataForm(ResidualsForm):
                         'name': " ".join(col) + ' normal distribution',
                         'legendgroup': model + ' normal distribution',
                     })
-                    data.append(Plotly.line_trace("rgba(120, 120, 120, 1)") | {
+                    data.append(
+                        Plotly.line_trace("rgba(120, 120, 120, 1)", dash='dot') | {
                         'x': Plotly.array2json(x_),
                         'y': Plotly.array2json(norm_dist(x_)),
                         'name': 'Normal distribution',
                         'legendgroup': 'Normal distribution (m=0, s=1)',
                     })
-                    data[-1]['line']['dash'] = 'dot'
                 def_layout = default_layout()
             else:
                 x = self.cleaned_data['flatfile'][col_x]

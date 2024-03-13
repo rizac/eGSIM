@@ -263,57 +263,63 @@ class Plotly:
         return cycle(values)
 
     @classmethod
-    def scatter_trace(cls, rgba_color: str) -> dict:
-        """Return the properties and style for a trace of type scatter (no lines)"""
+    def scatter_trace(cls, rgba_color: str, size=10, symbol='circle',
+                      width=0, dash='solid') -> dict:
+        """Return the properties and style for a trace of type scatter (no lines)
+
+        :param rgba_color: the color for the symbols. The fill color
+            will be set as a semi opqaue version of this colod (alpha=0.5)
+
+        """
         return {
             'type': 'scatter',
             'mode': 'markers',
             'marker': {
-                'size': 10,
+                'size': size,
                 'color': rgba_color.replace(', 1)', ', 0.5)'),
-                'symbol': "circle",
+                'symbol': symbol,
                 'line': {
-                    'width': 0,
+                    'width': width,
                     'color': rgba_color,
-                    'dash': 'solid'
+                    'dash': dash
                 }
             }
         }
 
     @classmethod
-    def line_trace(cls, rgba_color: str) -> dict:
+    def line_trace(cls, rgba_color: str, width=2, dash='solid') -> dict:
         """Return the properties and style for a trace of type scatter (lines only)"""
         return {
             'type': 'scatter',
             'mode': 'lines',
             'line': {
-                'width': 2,
+                'width': width,
                 'color': rgba_color,
-                'dash': 'solid'
+                'dash': dash
             },
         }
 
     @classmethod
-    def bar_trace(cls, rgba_color:str) -> dict:
+    def bar_trace(cls, rgba_color:str, width=2, dash='solid') -> dict:
         """Return the properties and style for a trace of type bar"""
-        return cls._bar_like_trace(rgba_color, 'bar')
+        return cls._bar_like_trace(rgba_color, 'bar', width, dash)
 
     @classmethod
-    def histogram_trace(cls, rgba_color: str) -> dict:
+    def histogram_trace(cls, rgba_color: str, width=2, dash='solid') -> dict:
         """Return the properties and style for a trace of type histogram"""
-        return cls._bar_like_trace(rgba_color, 'histogram')
+        return cls._bar_like_trace(rgba_color, 'histogram', width, dash)
 
     @classmethod
-    def _bar_like_trace(cls, rgba_color: str, type: str) -> dict:
+    def _bar_like_trace(cls, rgba_color: str, typ: str, width:float, dash:str) -> dict:
 
         return {
-            'type': type,
+            'type': typ,
             'marker': {
                 'color': rgba_color.replace(', 1)', ', 0.5)'),
                 'line': {
-                    'width': 2,
+                    'width': width,
                     'color': rgba_color,
-                    'dash': 'solid'
+                    'dash': dash
                 }
             }
        }

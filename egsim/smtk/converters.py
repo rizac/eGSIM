@@ -129,7 +129,9 @@ def dataframe2dict(
             key = str(key)
             # remove nan +-inf:
             vals = array2json(vals, df_na[col])
-        dest_ret[key] = vals.tolist()
+        else:
+            vals = vals.tolist()
+        dest_ret[key] = vals
     return output
 
 
@@ -144,7 +146,8 @@ def array2json(
     values: Union[pd.Series, np.ndarray, pd.DataFrame],
     na_vals: Union[pd.Series, np.ndarray, pd.DataFrame, bool, None] = None
 ) -> list:
-    """Convert `values` to a JSON serializable list
+    """Convert `values` to a JSON serializable list, basically converting
+    all NA (NaN, Null, +-Inf, NaT) into None (null in JSON)
 
     :param values: the values (pandas Series/ DataFrame or nd array)
     :param na_vals: the NA/+-inf values, a bool array the same shape of `values`

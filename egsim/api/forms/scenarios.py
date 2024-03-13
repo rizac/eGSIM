@@ -11,8 +11,8 @@ from django.utils.safestring import mark_safe
 from django.forms.fields import BooleanField, FloatField, ChoiceField, Field
 
 from egsim.api.forms import APIForm, GsimImtForm
-from egsim.smtk import get_trellis
-from egsim.smtk.trellis import RuptureProperties, SiteProperties
+from egsim.smtk import get_scenarios_predictions
+from egsim.smtk.scenarios import RuptureProperties, SiteProperties
 
 
 _mag_scalerel = get_available_magnitude_scalerel()
@@ -64,7 +64,8 @@ class ArrayField(Field):
 
 
 class PredictionsForm(GsimImtForm, APIForm):
-    """Form for the computation of Ground motion model predictions"""
+    """Form for the computation of Ground motion model predictions from
+    different scenarios"""
 
     # Custom API param names (see doc of `EgsimBaseForm._field2params` for details):
     _field2params = {
@@ -188,8 +189,9 @@ class PredictionsForm(GsimImtForm, APIForm):
         site = SiteProperties(**{p: cleaned_data[p] for p in
                                  self.site_fields
                                  if p in cleaned_data})
-        return get_trellis(cleaned_data['gsim'],
-                           cleaned_data['imt'],
-                           cleaned_data['magnitude'],
-                           cleaned_data['distance'],
-                           rup, site)
+        return get_scenarios_predictions(cleaned_data['gsim'],
+                                         cleaned_data['imt'],
+                                         cleaned_data['magnitude'],
+                                         cleaned_data['distance'],
+                                         rupture_properties=rup,
+                                         site_properties=site)

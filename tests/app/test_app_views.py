@@ -16,7 +16,7 @@ import json
 import pytest
 
 from egsim.api.forms.flatfile.residuals import ResidualsForm
-from egsim.api.forms.predictions import PredictionsForm
+from egsim.api.forms.scenarios import PredictionsForm
 
 
 from egsim.app.views import _IMG_FORMATS

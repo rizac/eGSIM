@@ -22,7 +22,7 @@ from ..api.forms.flatfile.management import (FlatfileMetadataInfoForm,
                                              FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.flatfile.residuals import ResidualsForm
-from ..api.forms.predictions import PredictionsForm
+from ..api.forms.scenarios import PredictionsForm
 from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType
 
 
