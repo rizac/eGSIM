@@ -38,7 +38,7 @@ class RuptureProperties:
 
 @dataclass
 class SiteProperties:
-    vs30:float
+    vs30:float = 760.0
     line_azimuth:float = 90.0
     distance_type:str = "rrup"
     origin_point:tuple[float, float] = (0.5, 0.0)
@@ -58,7 +58,8 @@ def get_trellis(
         rupture_properties: Optional[RuptureProperties] = None,
         site_properties: Optional[SiteProperties] = None) -> pd.DataFrame:
     """
-    Calculates the ground motion values for the trellis plots
+    Calculate the ground motion values from the given scenarios to be used, e.g.
+    in trellis plots
 
     :param magnitudes: list or numpy array of magnitudes
     :param distances: list or numpy array of distances
