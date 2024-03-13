@@ -24,8 +24,8 @@ from ..validators import (validate_inputs, harmonize_input_gsims,
 
 @dataclass
 class RuptureProperties:
-    dip:float
-    aspect:float
+    dip:float = 90.
+    aspect:float = 1.0
     tectonic_region:str = "Active Shallow Crust"
     rake:float = 0.
     ztor:float = 0.
