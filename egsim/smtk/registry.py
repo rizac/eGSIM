@@ -152,10 +152,11 @@ def ground_motion_properties_required_by(
 
 def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray):
     """
-    Compute the ground motion values from the arguments.
-    This is the main function to compute predictions to be used within the package.
+    Compute the ground motion values from the arguments returning 4 arrays each
+    one of shape `( len(ctx), len(imts) )`. This is the main function to compute
+    predictions to be used within the package.
 
-    :param model: the ground moion model instance
+    :param model: the ground motion model instance
     :param imts: a list of M Intensity Measure Types
     :param ctx: a numpy recarray of size N created from a given
         scenario (e.g. `RuptureContext`)
@@ -167,11 +168,9 @@ def get_ground_motion_values(model: GMPE, imts: list[IMT], ctx: np.recarray):
         - an array of shape (N, M) for the INTER_EVENT stddevs
         - an array of shape (N, M) for the INTRA_EVENT stddevs
     """
-    # mean and stddevs by calling the underlying .compute method
     median = np.zeros([len(imts), len(ctx)])
     sigma = np.zeros_like(median)
     tau = np.zeros_like(median)
     phi = np.zeros_like(median)
-
     model.compute(ctx, imts, median, sigma, tau, phi)
     return median.T, sigma.T, tau.T, phi.T
