@@ -1,5 +1,6 @@
 """
-source and site configuration functions for comparing the trellis plots
+source and site configuration functions for creating scenarios (and computing
+relative ground motion values)
 """
 from __future__ import annotations
 from collections.abc import Iterable
