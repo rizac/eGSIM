@@ -1,6 +1,5 @@
 """Forms for the eGSIM app (web portal)"""
 import numpy as np
-import pandas as pd
 
 from egsim.api.forms.flatfile.management import Plotly
 from egsim.api.forms.flatfile.residuals import ResidualsForm
@@ -56,13 +55,16 @@ class PredictionsPlotDataForm(PredictionsForm):
                 for dist, dfr in dataframe.groupby(dist_col):
                     x = dfr[mag_col]
                     for i in imts:
+                        p = {dist_label: dist, 'imt': i}
+                        data = {}
                         for m in models:
-                            try:
-                                med = dfr.loc[:, (i, Clabel.median, m)].iloc[0, :].values
-                                std = dfr.loc[:, (i, Clabel.std, m)].iloc[0, :].values
-                                yield m, i, {dist_label: dist, imt: i}, x, med, std
-                            except KeyError:
-                                pass
+                            if (i, Clabel.median, m) in dfr.columns:
+                                data[m] = (
+                                    dfr.loc[:, (i, Clabel.median, m)].values,
+                                    dfr.loc[:, (i, Clabel.std, m)].values
+                                )
+                        yield p, x, data
+
 
         elif self.cleaned_data['plot_type'] == 'd':
             x_label = dist_label
@@ -72,13 +74,15 @@ class PredictionsPlotDataForm(PredictionsForm):
                 for mag, dfr in dataframe.groupby(mag_col):
                     x = dfr[dist_col]
                     for i in imts:
+                        p = {mag_label: mag, 'imt': i}
+                        data = {}
                         for m in models:
-                            try:
-                                med = dfr.loc[:, (i, Clabel.median, m)].iloc[0, :].values
-                                std = dfr.loc[:, (i, Clabel.std, m)].iloc[0, :].values
-                                yield m, i, {mag_label: mag, imt: i}, x, med, std
-                            except KeyError:
-                                pass
+                            if (i, Clabel.median, m) in dfr.columns:
+                                data[m] = (
+                                    dfr.loc[:, (i, Clabel.median, m)].values,
+                                    dfr.loc[:, (i, Clabel.std, m)].values
+                                )
+                        yield p, x, data
 
         else:
             x_label = 'Period (s)'
@@ -88,19 +92,23 @@ class PredictionsPlotDataForm(PredictionsForm):
             i = 'SA'
 
             def groupby(dataframe):
-                for (d, m), dfr in dataframe.groupby([dist_col, mag_col]):
-                    p = {mag_label: m, dist_label: d, 'imt': i}
+                for (d, mag), dfr in dataframe.groupby([dist_col, mag_col]):
+                    p = {mag_label: mag, dist_label: d, 'imt': i}
+                    data = {}
                     for m in models:
-                        med = dfr.loc[:, (sas, Clabel.median, m)].iloc[0, :].values
-                        std = dfr.loc[:, (sas, Clabel.std, m)].iloc[0,:].values
-                        yield m, i, p, x_values, med, std
+                        data[m] = (
+                            dfr.loc[:, (sas, Clabel.median, m)].iloc[0, :].values,
+                            dfr.loc[:, (sas, Clabel.std, m)].iloc[0,:].values
+                        )
+                    yield i, p, x_values, data
 
-        for model, imt, params, x_values, medians, sigmas in groupby(dataframe):
-            color = colors.setdefault(model, next(colors_cycle))
-            color_transparent = color.replace(', 1)', ', 0.2)')
-            legendgroup = model
-            plots.append({
-                'data': [
+        for params, x_values, data in groupby(dataframe):
+            traces = []
+            for model, [medians, sigmas] in data.items():
+                color = colors.setdefault(model, next(colors_cycle))
+                color_transparent = color.replace(', 1)', ', 0.2)')
+                legendgroup = model
+                traces.extend([
                     Plotly.line_trace(
                         color=color,
                         x=x_values,
@@ -126,12 +134,14 @@ class PredictionsPlotDataForm(PredictionsForm):
                         y=medians * np.exp(-sigmas),
                         name=model + ' stddev',
                         legendgroup=legendgroup + ' stddev'
-                    )
-                ],
+                    )]
+                )
+            plots.append({
+                'data':traces,
                 'params': params,
                 'layout': {
                     'xaxis': {'title': x_label, 'type': 'linear'},
-                    'yaxis': {'title': y_label(imt), 'type': 'log'}
+                    'yaxis': {'title': y_label(params['imt']), 'type': 'log'}
                 }
             })
 
