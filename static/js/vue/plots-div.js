@@ -570,7 +570,8 @@ EGSIM.component('plots-div', {
 			// compute rows, cols, and margins for paramsGrid labels:
 			var cols = gridxparam.values.length || 1;
 			var rows = gridyparam.values.length || 1;
-
+			var plotBaseWidth = (1.0/cols); // as fraction of the whole plot area
+			var plotBaseHeight = (1.0/rows); // as fraction of the whole plot area
 			var legendgroups = new Set();
 			for (var i = 0; i < plots.length; i++){
 				var plot = plots[i];
@@ -593,11 +594,21 @@ EGSIM.component('plots-div', {
 					}
 					yaxis.title.standoff = 5; // space between label and axis
 				}
-				// compute axis domains (assure the second domain element is 1 and not, e.g., 0.9999):
+				// compute axis domains. Remeber that xdomain = [x0, x1], where each xI in [0, 1] is
+				// given as fraction of the main plot area width (same for ydomain wrt to total plot area height):
 				var gridxindex = gridxindices[i];
 				var gridyindex = gridyindices[i];
-				var xdomain = [gridxindex*(1.0/cols), (1+gridxindex)*(1.0/cols)];
-				var ydomain = [gridyindex*(1.0/rows), (1+gridyindex)*(1.0/rows)];
+				var xdomain = [gridxindex*plotBaseWidth, gridxindex*plotBaseWidth + plotBaseWidth];
+				var ydomain = [gridyindex*plotBaseHeight, gridyindex*plotBaseHeight + plotBaseHeight];
+				// Now shrink both sizes by 50% to avoid plotly being too optimistic about the available plot space.
+				// This prevents cases like e.g., plotly having enough space to lay out xtick labels horizontally and then,
+				// after `updateLayoutFromCurrentlyDisplayedPlots` is executed (which likely shrinks the available space)
+				// to lay them out vertically, causing overlapping labels as final result (another way of preventing this
+				// is to set x(y)axis.tickangle!='auto' but it would cause other undesired drawbacks)
+				xdomain[0] += plotBaseWidth/4.0;
+				xdomain[1] -= plotBaseWidth/4.0;
+				ydomain[0] += plotBaseHeight/4.0;
+				ydomain[1] -= plotBaseHeight/4.0;
 				// Add to the layout xaxis and yaxis, with specific key:
 				var axisIndex = 1 + gridyindex * cols + gridxindex;
 				layout[`xaxis${axisIndex}`] = Object.assign(xaxis, { domain: xdomain, anchor: `y${axisIndex}` });

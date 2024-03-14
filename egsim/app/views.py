@@ -145,10 +145,10 @@ def _get_init_data_json(debug=False) -> dict:
 
     predictions_form = TrellisView.formclass({
         'gsim': default_models,
-        'imt': default_imts,
+        'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
         'regionalization': None,
-        'magnitude': [1, 2],
-        'distance': [3],
+        'magnitude': [4,5,6,7],
+        'distance': [1, 10, 100, 1000],
         'format': 'hdf'
     })
     residuals_form = ResidualsView.formclass({
