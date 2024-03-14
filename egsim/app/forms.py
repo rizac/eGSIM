@@ -44,87 +44,96 @@ class PredictionsPlotDataForm(PredictionsForm):
         colors_cycle = Plotly.colors_cycle()
         colors = {}
         mag_label = mag_col[-1].title()
-        dist_label =  dist_col[-1].title()
+        dist_label = dist_col[-1].title()
         models = sorted(self.cleaned_data['gsim'])
         imts = sorted(self.cleaned_data['imt'])
+
         if self.cleaned_data['plot_type'] == 'm':
             x_label = mag_label
             y_label = lambda imt: f'Median {imt}'
+
             def groupby(dataframe):
-                for d, dfr in dataframe.groupby(dist_col):
-                    yield {dist_label: d}, dfr[mag_col], dfr
+                for dist, dfr in dataframe.groupby(dist_col):
+                    x = dfr[mag_col]
+                    for i in imts:
+                        for m in models:
+                            try:
+                                med = dfr.loc[:, (i, Clabel.median, m)].iloc[0, :].values
+                                std = dfr.loc[:, (i, Clabel.std, m)].iloc[0, :].values
+                                yield m, i, {dist_label: dist, imt: i}, x, med, std
+                            except KeyError:
+                                pass
+
         elif self.cleaned_data['plot_type'] == 'd':
             x_label = dist_label
             y_label = lambda imt: f'Median {imt}'
+
             def groupby(dataframe):
-                for m, dfr in dataframe.groupby(mag_col):
-                    yield {mag_label: m}, dfr[dist_col], dfr
+                for mag, dfr in dataframe.groupby(mag_col):
+                    x = dfr[dist_col]
+                    for i in imts:
+                        for m in models:
+                            try:
+                                med = dfr.loc[:, (i, Clabel.median, m)].iloc[0, :].values
+                                std = dfr.loc[:, (i, Clabel.std, m)].iloc[0, :].values
+                                yield m, i, {mag_label: mag, imt: i}, x, med, std
+                            except KeyError:
+                                pass
+
         else:
             x_label = 'Period (s)'
             y_label = lambda imt: 'SA (g)'
             sas = sorted(imts, key=lambda s: sa_period(s))  # FIXME sort imts in one place
             x_values = [float(sa_period(_)) for _ in sas]
-            imts = ['SA']
+            i = 'SA'
+
             def groupby(dataframe):
                 for (d, m), dfr in dataframe.groupby([dist_col, mag_col]):
-                    ret = {}
+                    p = {mag_label: m, dist_label: d, 'imt': i}
                     for m in models:
-                        vals = dfr.loc[:, (sas, Clabel.median, m)].iloc[0, :].values
-                        ret[(imts[0], Clabel.median, m)] = vals.astype(float)
-                        vals = dfr.loc[:, (sas, Clabel.std, m)].iloc[0,:].values
-                        ret[(imts[0], Clabel.std, m)] = vals.astype(float)
+                        med = dfr.loc[:, (sas, Clabel.median, m)].iloc[0, :].values
+                        std = dfr.loc[:, (sas, Clabel.std, m)].iloc[0,:].values
+                        yield m, i, p, x_values, med, std
 
-                    yield {mag_label: m, dist_label: d}, x_values, pd.DataFrame(ret)
-
-        for params, x_values, dfr in groupby(dataframe):
-            for imt in imts:
-                for model in models:
-                    try:
-                        medians = dfr[(imt, Clabel.median, model)]
-                        sigmas = dfr[(imt, Clabel.std, model)]
-                    except KeyError:
-                        medians = []
-                        sigmas = []
-                    color = colors.setdefault(model, next(colors_cycle))
-                    color_transparent = color.replace(', 1)', ', 0.2)')
-                    legendgroup = model
-                    plots.append({
-                        'data': [
-                            Plotly.line_trace(
-                                color=color,
-                                x=x_values,
-                                y=medians,
-                                name=model,
-                                legendgroup=legendgroup
-                            ),
-                            Plotly.line_trace(
-                                width=0,
-                                color=color_transparent,
-                                fillcolor = color_transparent,
-                                x=x_values,
-                                y=medians * np.exp(sigmas),
-                                name=model + ' stddev',
-                                legendgroup=legendgroup + ' stddev'
-                            ),
-                            Plotly.line_trace(
-                                width=0,
-                                color=color_transparent,
-                                fillcolor=color_transparent,
-                                fill='tonexty',
-                                x=x_values,
-                                y=medians * np.exp(-sigmas),
-                                name=model + ' stddev',
-                                legendgroup=legendgroup + ' stddev'
-                            )
-                        ],
-                        'params': params | {
-                            'imt': imt
-                        },
-                        'layout': {
-                            'xaxis': {'title': x_label, 'type': 'linear'},
-                            'yaxis': {'title': y_label(imt), 'type': 'log'}
-                        }
-                    })
+        for model, imt, params, x_values, medians, sigmas in groupby(dataframe):
+            color = colors.setdefault(model, next(colors_cycle))
+            color_transparent = color.replace(', 1)', ', 0.2)')
+            legendgroup = model
+            plots.append({
+                'data': [
+                    Plotly.line_trace(
+                        color=color,
+                        x=x_values,
+                        y=medians,
+                        name=model,
+                        legendgroup=legendgroup
+                    ),
+                    Plotly.line_trace(
+                        width=0,
+                        color=color_transparent,
+                        fillcolor=color_transparent,
+                        x=x_values,
+                        y=medians * np.exp(sigmas),
+                        name=model + ' stddev',
+                        legendgroup=legendgroup + ' stddev'
+                    ),
+                    Plotly.line_trace(
+                        width=0,
+                        color=color_transparent,
+                        fillcolor=color_transparent,
+                        fill='tonexty',  # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
+                        x=x_values,
+                        y=medians * np.exp(-sigmas),
+                        name=model + ' stddev',
+                        legendgroup=legendgroup + ' stddev'
+                    )
+                ],
+                'params': params,
+                'layout': {
+                    'xaxis': {'title': x_label, 'type': 'linear'},
+                    'yaxis': {'title': y_label(imt), 'type': 'log'}
+                }
+            })
 
         return {'plots': plots}
 
