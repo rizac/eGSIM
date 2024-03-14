@@ -13,7 +13,7 @@ from egsim.smtk.validators import sa_period
 
 
 class PredictionsPlotDataForm(PredictionsForm):
-    """Form returning predictions in form of plots"""
+    """Form returning predictions from configured scenarios in form of plots"""
 
     plot_type = ChoiceField(
         required=True, initial=None,
@@ -86,11 +86,37 @@ class PredictionsPlotDataForm(PredictionsForm):
                         medians = []
                         sigmas = []
                     color = colors.setdefault(model, next(colors_cycle))
+                    color_transparent = color.replace(', 1)', ', 0.2)')
+                    legendgroup = model
                     plots.append({
-                        'data': [Plotly.line_trace(color) | {
-                            'x': Plotly.array2json(x_values),
-                            'y': Plotly.array2json(medians)
-                        }],
+                        'data': [
+                            Plotly.line_trace(
+                                color=color,
+                                x=x_values,
+                                y=medians,
+                                name=model,
+                                legendgroup=legendgroup
+                            ),
+                            Plotly.line_trace(
+                                width=0,
+                                color=color_transparent,
+                                fillcolor = color_transparent,
+                                x=x_values,
+                                y=medians * np.exp(sigmas),
+                                name=model + ' stddev',
+                                legendgroup=legendgroup + ' stddev'
+                            ),
+                            Plotly.line_trace(
+                                width=0,
+                                color=color_transparent,
+                                fillcolor=color_transparent,
+                                fill='tonexty',
+                                x=x_values,
+                                y=medians * np.exp(-sigmas),
+                                name=model + ' stddev',
+                                legendgroup=legendgroup + ' stddev'
+                            )
+                        ],
                         'params': params | {
                             'imt': imt
                         },
@@ -154,6 +180,7 @@ class ResidualsPlotDataForm(ResidualsForm):
         for col in [c for c in dataframe.columns if c[1] in df_labels]:
             imt, res_type, model = col
             color = colors.setdefault(model, next(colors_cycle))
+            color_transparent = color.replace(', 1)', ', 0.5)')
             default_layout = lambda: {
                 'xaxis': {'title': x_label(imt)},
                 'yaxis': {'title': y_label(imt)}
@@ -167,47 +194,53 @@ class ResidualsPlotDataForm(ResidualsForm):
                     step = 0.1
                 bins = np.arange(x.min(), x.max() + step, step)
                 y = np.histogram(x, bins, density=True)[0]
-                trace = Plotly.bar_trace(color) | {
-                    'x': Plotly.array2json(bins[:-1]),
-                    'y': Plotly.array2json(y),
-                    'name': " ".join(col),
-                    'legendgroup': model
-                }
+                trace = Plotly.bar_trace(
+                    color=color_transparent,
+                    line_color=color,
+                    x=bins[:-1],
+                    y=y,
+                    name=" ".join(col),
+                    legendgroup=model
+                )
                 data = [trace]
 
                 if not likelihood:
                     mean, std = x.mean(), x.std()
                     x_ = np.arange(mean - 3 * std, mean + 3 * std, step / 10)
-                    data.append(Plotly.line_trace(color) | {
-                        'x': Plotly.array2json(x_),
-                        'y': Plotly.array2json(norm_dist(x_, mean, std)),
-                        'name': " ".join(col) + ' normal distribution',
-                        'legendgroup': model + ' normal distribution',
-                    })
+                    data.append(Plotly.line_trace(
+                        color=color,
+                        x=x_,
+                        y=norm_dist(x_, mean, std),
+                        name=" ".join(col) + ' normal distribution',
+                        legendgroup=model + ' normal distribution',
+                    ))
                     data.append(
-                        Plotly.line_trace("rgba(120, 120, 120, 1)", dash='dot') | {
-                        'x': Plotly.array2json(x_),
-                        'y': Plotly.array2json(norm_dist(x_)),
-                        'name': 'Normal distribution',
-                        'legendgroup': 'Normal distribution (m=0, s=1)',
-                    })
+                        Plotly.line_trace(
+                            color="rgba(120, 120, 120, 1)",
+                            dash='dot',
+                            x=x_,
+                            y=norm_dist(x_),
+                            name='Normal distribution',
+                            legendgroup='Normal distribution (m=0, s=1)',
+                    ))
                 def_layout = default_layout()
             else:
                 x = self.cleaned_data['flatfile'][col_x]
                 y = dataframe[col]
-                trace = Plotly.scatter_trace(color) | {
-                    'x': Plotly.array2json(x),
-                    'y': Plotly.array2json(y),
-                    'name': " ".join(col),
-                    'legendgroup': model
-                }
+                trace = Plotly.scatter_trace(
+                    color=color_transparent,
+                    x=x,
+                    y=y,
+                    name=" ".join(col),
+                    legendgroup=model
+                )
                 data = [trace]
                 def_layout = default_layout()
 
             # config layout based on the displayed data x, y. If not already set,
             # layout['xaxis']['type'] and layout['xaxis']['range'] will be inferred from
             # x (same for y and layout['xaxis']):
-            layout = Plotly.get_layout(x = x, y = y, **def_layout)
+            layout = Plotly.layout(x = x, y = y, **def_layout)
 
             plots.append({
                 'data': data,
