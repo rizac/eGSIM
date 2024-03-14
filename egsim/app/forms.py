@@ -44,6 +44,7 @@ class PredictionsPlotDataForm(PredictionsForm):
         colors = {}
         mag_label = mag_col[-1].title()
         dist_label = dist_col[-1].title()
+        imt_label = 'Imt'
         models = sorted(self.cleaned_data['gsim'])
         imts = sorted(self.cleaned_data['imt'])
 
@@ -55,7 +56,7 @@ class PredictionsPlotDataForm(PredictionsForm):
                 for dist, dfr in dataframe.groupby(dist_col):
                     x = dfr[mag_col]
                     for i in imts:
-                        p = {dist_label: dist, 'imt': i}
+                        p = {dist_label: dist, imt_label: i}
                         data = {}
                         for m in models:
                             if (i, Clabel.median, m) in dfr.columns:
@@ -74,7 +75,7 @@ class PredictionsPlotDataForm(PredictionsForm):
                 for mag, dfr in dataframe.groupby(mag_col):
                     x = dfr[dist_col]
                     for i in imts:
-                        p = {mag_label: mag, 'imt': i}
+                        p = {mag_label: mag, imt_label: i}
                         data = {}
                         for m in models:
                             if (i, Clabel.median, m) in dfr.columns:
@@ -93,7 +94,7 @@ class PredictionsPlotDataForm(PredictionsForm):
 
             def groupby(dataframe):
                 for (d, mag), dfr in dataframe.groupby([dist_col, mag_col]):
-                    p = {mag_label: mag, dist_label: d, 'imt': i}
+                    p = {mag_label: mag, dist_label: d, imt_label: i}
                     data = {}
                     for m in models:
                         data[m] = (
@@ -104,6 +105,8 @@ class PredictionsPlotDataForm(PredictionsForm):
 
         for params, x_values, data in groupby(dataframe):
             traces = []
+            y_mins =[]
+            y_maxs = []
             for model, [medians, sigmas] in data.items():
                 color = colors.setdefault(model, next(colors_cycle))
                 color_transparent = color.replace(', 1)', ', 0.2)')
@@ -136,12 +139,25 @@ class PredictionsPlotDataForm(PredictionsForm):
                         legendgroup=legendgroup + ' stddev'
                     )]
                 )
+                y_mins.append(min(traces[-1]['y']))
+                y_maxs.append(max(traces[-2]['y']))
+
             plots.append({
                 'data':traces,
                 'params': params,
                 'layout': {
-                    'xaxis': {'title': x_label, 'type': 'linear'},
-                    'yaxis': {'title': y_label(params['imt']), 'type': 'log'}
+                    'xaxis': {
+                        'title': x_label,
+                        'type': 'linear',
+                        'autorange': True,
+                        'range': [float(x_values.min()), float(x_values.max())]
+                    },
+                    'yaxis': {
+                        'title': y_label(params['imt']),
+                        'type': 'log',
+                        'autorange': True,
+                        'range': [float(min(y_mins)), float(max(y_maxs))],
+                    }
                 }
             })
 
