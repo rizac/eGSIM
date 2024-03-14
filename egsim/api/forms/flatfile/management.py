@@ -88,6 +88,7 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
         dataframe = cleaned_data['flatfile']
         x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
         c = next(Plotly.colors_cycle())
+        c_transparent = c.replace(', 1)', ', 0.5)')
         if x and y:  # scatter plot
             xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
             x, y = dataframe[xlabel], dataframe[ylabel]
@@ -102,12 +103,15 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 }
             }
             plot = {
-                'data': [Plotly.scatter_trace(c) | {
-                    'x': Plotly.array2json(dataframe[xlabel]),
-                    'y': Plotly.array2json(dataframe[ylabel])
-                }],
+                'data': [
+                    Plotly.scatter_trace(
+                        color=c_transparent,
+                        x=dataframe[xlabel],
+                        y=dataframe[ylabel]
+                    )
+                ],
                 'params': {},
-                'layout': Plotly.get_layout(x=x, y=y, **layout)
+                'layout': Plotly.layout(x=x, y=y, **layout)
             }
         elif x:
             xlabel = cleaned_data['x']
@@ -121,11 +125,15 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 }
             }
             plot = {
-                'data': [Plotly.histogram_trace(c) | {
-                    'x': Plotly.array2json(dataframe[xlabel])
-                }],
+                'data': [
+                    Plotly.histogram_trace(
+                        color=c_transparent,
+                        line_color=c,
+                        x=dataframe[xlabel]
+                    )
+                ],
                 'params': {},
-                'layout': Plotly.get_layout(x=x, **layout)
+                'layout': Plotly.layout(x=x, **layout)
             }
         else:  # y only provided
             ylabel = cleaned_data['y']
@@ -139,11 +147,15 @@ class FlatfilePlotForm(APIForm, FlatfileForm):
                 }
             }
             plot = {
-                'data': [Plotly.histogram_trace(c) | {
-                    'y': Plotly.array2json(dataframe[ylabel])
-                }],
+                'data': [
+                    Plotly.histogram_trace(
+                        color=c_transparent,
+                        line_color=c,
+                        y=dataframe[ylabel]
+                    )
+                ],
                 'params': {},
-                'layout': Plotly.get_layout(y=y, **layout)
+                'layout': Plotly.layout(y=y, **layout)
             }
 
         return {'plots': [plot]}
@@ -169,7 +181,7 @@ class Plotly:
         return array2json(values)
 
     @classmethod
-    def get_layout(
+    def layout(
             cls,
             x: Optional[Union[np.ndarray, pd.Series]] = None,
             y: Optional[Union[np.ndarray, pd.Series]] = None,
@@ -263,66 +275,78 @@ class Plotly:
         return cycle(values)
 
     @classmethod
-    def scatter_trace(cls, rgba_color: str, size=10, symbol='circle',
-                      width=0, dash='solid') -> dict:
-        """Return the properties and style for a trace of type scatter (no lines)
-
-        :param rgba_color: the color for the symbols. The fill color
-            will be set as a semi opqaue version of this colod (alpha=0.5)
-
-        """
+    def scatter_trace(cls, *, color: str, size=10, symbol='circle',
+                      line_color=None, line_width=0, line_dash='solid',
+                      **kwargs) -> dict:
+        """Return the properties and style for a trace of type scatter"""
+        if 'x' in kwargs:
+            kwargs['x'] = cls.array2json(kwargs['x'])
+        if 'y' in kwargs:
+            kwargs['y'] = cls.array2json(kwargs['y'])
         return {
             'type': 'scatter',
             'mode': 'markers',
             'marker': {
                 'size': size,
-                'color': rgba_color.replace(', 1)', ', 0.5)'),
+                'color': color,
                 'symbol': symbol,
                 'line': {
-                    'width': width,
-                    'color': rgba_color,
-                    'dash': dash
+                    'width': line_width,
+                    'color': line_color or color,
+                    'dash': line_dash
                 }
             }
-        }
+        } | kwargs
 
     @classmethod
-    def line_trace(cls, rgba_color: str, width=2, dash='solid') -> dict:
+    def line_trace(cls, *, color: str, width=2, dash='solid', **kwargs) -> dict:
         """Return the properties and style for a trace of type scatter (lines only)"""
+        if 'x' in kwargs:
+            kwargs['x'] = cls.array2json(kwargs['x'])
+        if 'y' in kwargs:
+            kwargs['y'] = cls.array2json(kwargs['y'])
         return {
             'type': 'scatter',
             'mode': 'lines',
             'line': {
                 'width': width,
-                'color': rgba_color,
+                'color': color,
                 'dash': dash
             },
-        }
+        } | kwargs
 
     @classmethod
-    def bar_trace(cls, rgba_color:str, width=2, dash='solid') -> dict:
+    def bar_trace(cls, *, color: str, line_width=2, line_dash='solid',
+                  line_color=None, **kwargs) -> dict:
         """Return the properties and style for a trace of type bar"""
-        return cls._bar_like_trace(rgba_color, 'bar', width, dash)
+        return cls._bar_like_trace(color, 'bar', line_width, line_dash,
+                                   line_color, **kwargs)
 
     @classmethod
-    def histogram_trace(cls, rgba_color: str, width=2, dash='solid') -> dict:
+    def histogram_trace(cls, *, color: str, line_width=2, line_dash='solid',
+                        line_color=None, **kwargs) -> dict:
         """Return the properties and style for a trace of type histogram"""
-        return cls._bar_like_trace(rgba_color, 'histogram', width, dash)
+        return cls._bar_like_trace(color, 'histogram', line_width, line_dash,
+                                   line_color, **kwargs)
 
     @classmethod
-    def _bar_like_trace(cls, rgba_color: str, typ: str, width:float, dash:str) -> dict:
-
+    def _bar_like_trace(cls, color: str, typ: str, width:float, dash:str,
+                        line_color=None, **kwargs) -> dict:
+        if 'x' in kwargs:
+            kwargs['x'] = cls.array2json(kwargs['x'])
+        if 'y' in kwargs:
+            kwargs['y'] = cls.array2json(kwargs['y'])
         return {
             'type': typ,
             'marker': {
-                'color': rgba_color.replace(', 1)', ', 0.5)'),
+                'color': color,
                 'line': {
                     'width': width,
-                    'color': rgba_color,
+                    'color': line_color or color,
                     'dash': dash
                 }
             }
-       }
+       } | kwargs
 
 
 class FlatfileValidationForm(APIForm, FlatfileForm):
