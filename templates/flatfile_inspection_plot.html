@@ -1,5 +1,5 @@
 <div class='position-relative d-flex flex-column' style="flex: 1 1 auto;">
-	<form novalidate @submit.prevent="postData(urls.flatfile_inspection_plot, forms.flatfile_inspection_plot).then(r => { responseData = r; })"
+	<form novalidate @submit.prevent=""
 		  class='d-flex flex-row align-items-center p-3'>
 		<flatfile-select
 			style='flex: 1 1 auto'
@@ -38,7 +38,7 @@
 			</select>
 		</div>
 		<button type='button'
-				@click="var data = Object.assign({}, forms.flatfile_inspection_plot, {format: 'json'}); postData(urls.flatfile_inspection_plot, data).then(r => r.json()).then(data => { responses.flatfile_inspection_plot=data.plots; })"
+				@click="var data = Object.assign({}, forms.flatfile_inspection_plot, {format: 'json'}); postData(urls.flatfile_inspection_visualize, data).then(r => r.json()).then(data => { responses.flatfile_inspection_plot=data.plots; })"
 				:disabled='forms.flatfile_inspection_plot.x == forms.flatfile_inspection_plot.y'
 				class='btn btn-primary ms-3 text-nowrap'
 				title='Visualize flatfile data in an interactive plot'>
@@ -47,7 +47,7 @@
 	</form>
 	<plots-div
 		:data="responses.flatfile_inspection_plot"
-		:download-urls='urls.download_flatfile_plot'
+		:download-urls='urls.flatfile_inspection_download_plot_image'
 		@image-requested='(url, data, fileName) => { downloadResult(url, data, fileName); }'
 		style='flex: 1 1 auto;z-index:100'>
 	</plots-div>

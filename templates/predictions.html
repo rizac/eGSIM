@@ -188,7 +188,7 @@
 					</td>
 					<td>
 					<button type='button' style='width:100%'
-							@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); postData(urls.predictions_plot, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
+							@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); postData(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
 							class='btn btn-primary'
 							title='Visualize residuals via interactive plots'>
 						<i class='fa fa-bar-chart'></i>
@@ -210,7 +210,7 @@
 
 	<plots-div
 		:data="responses.predictions_plots"
-		:download-urls='urls.download_predictions_plot'
+		:download-urls='urls.predictions_download_plot_image'
 		@image-requested='(url, data, fileName) => { downloadResult(url, data, fileName); }'
 		style='position:absolute;inset:0px;z-index:100'>
 	</plots-div>
