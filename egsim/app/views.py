@@ -17,9 +17,9 @@ from .forms import ResidualsPlotDataForm, PredictionsPlotDataForm
 # from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from ..api import models
-from ..api.forms.flatfile.management import (FlatfileMetadataInfoForm,
-                                             FlatfileValidationForm,
-                                             FlatfilePlotForm)
+from ..api.forms.flatfile.flatfile_inspection import (FlatfileMetadataInfoForm,
+                                                      FlatfileValidationForm,
+                                                      FlatfilePlotForm)
 from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.flatfile.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
@@ -203,7 +203,7 @@ def _get_init_data_json(debug=False) -> dict:
                     'region': predictions_form.fields['region'].choices,
                 },
                 'predictions_plot':{
-                    'plot_types': PredictionsPlotDataForm.base_fields['plot_type'].choices
+                    'plot_types': PredictionsPlotDataForm.base_fields['plot_type'].choices  # FIXME noqa?
                 },
                 'flatfile_inspection_plot': {
                     'selected_flatfile_fields': []
