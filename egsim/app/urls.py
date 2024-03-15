@@ -8,7 +8,7 @@ from .views import (main, get_gsims_from_region, flatfile_meta_info,
                     flatfile_plot, flatfile_validation, URLS, test_request,
                     get_predictions_response_tutorial,
                     get_residuals_response_tutorial,
-                    predictions_plot, residuals_plot)
+                    predictions_plot, residuals_plot, download_plots_as_image)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
 
@@ -43,9 +43,8 @@ urlpatterns = [
     # re_path(r'^%s/(?P<key>.+?)/(?P<filename>.+)$' % URLS.DOWNLOAD_REQUEST,
     #         download_request),
 
-    # download response (json, csv, png, svg, ...) urls:
-    # re_path(r'^%s/(?P<key>.+?)/(?P<filename>.+)$' % URLS.DOWNLOAD_RESPONSE,
-    #         download_response),
+    re_path(r'^%s/(?P<filename>.+)$' % URLS.DOWNLOAD_PLOTS_AS_IMAGE,
+            download_plots_as_image),
 
     re_path(r'^%s/?$' % URLS.DOWNLOAD_PREDICTIONS, TrellisView.as_view()),
     re_path(r'^%s/?$' % URLS.DOWNLOAD_RESIDUALS, ResidualsView.as_view()),

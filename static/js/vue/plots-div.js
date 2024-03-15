@@ -3,8 +3,9 @@ of a response Object sent from the server */
 EGSIM.component('plots-div', {
 	props: {
 		data: {type: [Array], default: () => { return [] }},
-		downloadUrl: {type: String, default: ""} // base url for download actions
+		downloadUrls: {type: Array, default: []} // base url for download actions
 	},
+	emits: ['image-requested'],
 	data(){
 		return {
 			// setup non reactive data:
@@ -225,16 +226,12 @@ EGSIM.component('plots-div', {
 			<div style='flex: 1 1 auto'></div>
 			<div>
 				<div class='mt-3 border p-2 bg-white'>
-					<select @change="downloadTriggered" class='form-control'
-							title="Download the computed results in different formats. Notes: EPS images do not support color transparency, the result might not match what you see">
-						<option value="">Download as:</option>
-						<option value="json">json</option>
-						<option value="csv">text/csv</option>
-						<option value="csv_eu">tex/csv (decimal comma)</option>
-						<option value="png">png (visible plots only)</option>
-						<option value="pdf">pdf (visible plots only)</option>
-						<option value="eps">eps (visible plots only)</option>
-						<option value="svg">svg (visible plots only)</option>
+					<select @change="downloadImage" class='form-control'
+							title="Download visible plots in different formats">
+						<option :value="''">Download plots as:</option>
+						<option v-for="url in downloadUrls" :value='url'>
+							{{ url.substring(url.lastIndexOf('.') + 1, url.length).toUpperCase() }} format
+						</option>
 					</select>
 				</div>
 				<div v-show="Object.keys(grid.layouts).length > 1" class='mt-3 border p-2 bg-white'>
@@ -1105,28 +1102,20 @@ EGSIM.component('plots-div', {
 			var elm = this.$refs.rootDiv;
 			return elm ? [elm.data || [], elm.layout || {}] : [[], {}];
 		},
-		downloadTriggered(event){
+		downloadImage(event){
 			var selectElement = event.target;
-			if (selectElement.selectedIndex == 0){
+			if (selectElement.selectedIndex <= 0){
 				return;
 			}
-			var format = selectElement.value;
-			var url = this.downloadUrl + '.' + format;
-			var data = this.data;
-			if (format == 'json'){
-				var filename =  url.split('/').pop();
-				this.saveAsJSON(data, filename);
-			} else if (format.startsWith('csv')){
-				this.download(url, data);
-			} else {
-				// image format:
-				var [data, layout] = this.getPlotlyDataAndLayout();
-				var parent = this.$refs.rootDiv; //.parentNode.parentNode.parentNode;
-				var [width, height] = this.getElmSize(parent);
-				data = data.filter(elm => elm.visible || !('visible' in elm));
-				postData = {data:data, layout:layout, width:width, height:height};
-				this.download(url, postData);
-			}
+			var url = selectElement.value;
+			var [data, layout] = this.getPlotlyDataAndLayout();
+			var parent = this.$refs.rootDiv; //.parentNode.parentNode.parentNode;
+			var [width, height] = this.getElmSize(parent);
+			data = data.filter(elm => elm.visible || !('visible' in elm));
+			postData = {data:data, layout:layout, width:width, height:height};
+			var filename = url.substring(url.lastIndexOf('/') + 1, url.length);
+			// downloadResult(url, postData, filename);
+			this.$emit('image-requested', url, postData, filename);
 			selectElement.selectedIndex = 0;
 		}
 	}
