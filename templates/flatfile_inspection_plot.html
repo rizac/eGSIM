@@ -45,5 +45,10 @@
 			<i class='fa fa-bar-chart'></i> Display plot
 		</button>
 	</form>
-	<plots-div :data="responses.flatfile_inspection_plot" style='flex: 1 1 auto;z-index:100'></plots-div>
+	<plots-div
+		:data="responses.flatfile_inspection_plot"
+		:download-urls='urls.download_flatfile_plot'
+		@image-requested='(url, data, fileName) => { downloadResult(url, data, fileName); }'
+		style='flex: 1 1 auto;z-index:100'>
+	</plots-div>
 </div>

@@ -1,18 +1,20 @@
 <div class='position-relative' style="flex: 1 1 auto;">
-	<gsim-map @gsim-selected="(gs) => { forms.residuals.gsim = Array.from(new Set(forms.residuals.gsim.concat(gs))) }"
-			  @gsim-unselected="(gs) => { forms.residuals.gsim = forms.residuals.gsim.filter(g => !gs.includes(g)); }"
-			  :regionalizations="regionalizations"
-			  :region-selected-url="urls.get_gsim_from_region"
-			  style='position:absolute;inset:0px;z-index:0'>
+	<gsim-map
+		@gsim-selected="(gs) => { forms.residuals.gsim = Array.from(new Set(forms.residuals.gsim.concat(gs))) }"
+		@gsim-unselected="(gs) => { forms.residuals.gsim = forms.residuals.gsim.filter(g => !gs.includes(g)); }"
+		:regionalizations="regionalizations"
+		:region-selected-url="urls.get_gsim_from_region"
+		style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
 
 	<form novalidate @submit.prevent=""
 		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 
-		<gsim-select v-model="forms.residuals.gsim"
-					 :models="models"
-					 :selected-imts="forms.residuals.imt"
-					 style="flex: 0 1 auto; min-height:0px">
+		<gsim-select
+			v-model="forms.residuals.gsim"
+			:models="models"
+			:selected-imts="forms.residuals.imt"
+			style="flex: 0 1 auto; min-height:0px">
 		</gsim-select>
 
 		<imt-select v-model="forms.residuals.imt" :imts='imts' class='mt-4'></imt-select>
@@ -22,8 +24,7 @@
 			:flatfiles='flatfiles'
 			v-model="forms.residuals.flatfile"
 			:upload-url='urls.flatfile_validation'
-			@update:model-value="(value) => { forms.misc.residuals.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }"
-		>
+			@update:model-value="(value) => { forms.misc.residuals.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }">
 		</flatfile-select>
 
 		<div class='input-group mt-1'>
@@ -101,10 +102,17 @@
 
 	</form>
 
-	<iframe id='residuals_tutorial'
-			class='p-3 bg-white d-none position-absolute border-0 shadow' style='width:50vw; height: 100%; right:0'
-			:data-src=urls.residuals_response_tutorial>
+	<iframe
+		id='residuals_tutorial'
+		:data-src=urls.residuals_response_tutorial
+		class='p-3 bg-white d-none position-absolute border-0 shadow'
+		style='width:50vw; height: 100%; right:0'>
 	</iframe>
 
-	<plots-div :data="responses.residuals_plots" style='position:absolute;inset:0px;z-index:100'></plots-div>
+	<plots-div
+		:data="responses.residuals_plots"
+		:download-urls='urls.download_residuals_plot'
+		@image-requested='(url, data, fileName) => { downloadResult(url, data, fileName); }'
+		style='position:absolute;inset:0px;z-index:100'>
+	</plots-div>
 </div>

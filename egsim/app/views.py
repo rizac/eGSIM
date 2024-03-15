@@ -3,17 +3,17 @@ Created on 17 Jan 2018
 
 @author: riccardo
 """
-from django.http import FileResponse
-from django.views.decorators.clickjacking import xframe_options_exempt
 from io import BytesIO, StringIO
 import json
+from os.path import splitext
 from shapely.geometry import shape
 
+from django.http import FileResponse, HttpResponseBase
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.conf import settings
 
-from .forms import ResidualsPlotDataForm, PredictionsPlotDataForm
 # from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from ..api import models
@@ -23,7 +23,8 @@ from ..api.forms.flatfile.flatfile_inspection import (FlatfileMetadataInfoForm,
 from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.flatfile.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
-from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType
+from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType, error_response
+from .forms import ResidualsPlotDataForm, PredictionsPlotDataForm
 
 
 class URLS:  # noqa
@@ -38,6 +39,8 @@ class URLS:  # noqa
     DOWNLOAD_RESIDUALS = 'gui/download/egsim-residuals'
     PREDICTIONS_PLOT = 'gui/egsim-predictions-plot'
     RESIDUALS_PLOT = 'gui/egsim-residuals-plot'
+
+    DOWNLOAD_PLOTS_AS_IMAGE = 'gui/download/plots-image'
 
     PREDICTIONS_RESPONSE_TUTORIAL_HTML = 'jupyter/predictions-response-tutorial.html'
     RESIDUALS_RESPONSE_TUTORIAL_HTML = 'jupyter/residuals-response-tutorial.html'
@@ -181,6 +184,18 @@ def _get_init_data_json(debug=False) -> dict:
             'flatfile_validation': URLS.FLATFILE_VALIDATION,
             'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
             'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL_HTML,
+            'download_predictions_plot': [
+                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/predictions-plot.{ext}'
+                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            ],
+            'download_residuals_plot': [
+                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/residuals-plot.{ext}'
+                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            ],
+            'download_flatfile_plot': [
+                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/flatfile-data-plot.{ext}'
+                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            ]
         },
         'forms': {
             'predictions': predictions_form.asdict(),
@@ -289,6 +304,29 @@ def predictions_plot(request) -> JsonResponse:
 
 def residuals_plot(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=ResidualsPlotDataForm)(request)
+
+
+def download_plots_as_image(request, filename: str) -> HttpResponseBase:
+    """Return the image from the given request built in the frontend GUI
+    according to the chosen plots
+    """
+    img_format = splitext(filename)[1][1:].lower()
+    try:
+        content_type = getattr(MimeType, img_format)
+    except AttributeError:
+        return error_response('Invalid format "{img_format}"', 400)
+    jsondata = json.loads(request.body.decode('utf-8'))
+    data, layout, width, height = (jsondata['data'],
+                                   jsondata['layout'],
+                                   jsondata['width'],
+                                   jsondata['height'])
+    from plotly import graph_objects as go, io as pio
+    fig = go.Figure(data=data, layout=layout)
+    # fix for https://github.com/plotly/plotly.py/issues/3469:
+    pio.full_figure_for_development(fig, warn=False)
+    bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)
+    return FileResponse(BytesIO(bytestr), content_type=content_type,
+                        filename=filename, as_attachment=True)
 
 
 @xframe_options_exempt
@@ -425,33 +463,6 @@ def _get_download_tutorial(request, key:str, api_form:APIForm, api_client_functi
 #     response['Content-Disposition'] = 'attachment; filename=%s' % filename
 #     return response
 
-
-def download_asimage(request, filename: str, img_format: str) -> FileResponse:
-    """Return the image from the given request built in the frontend GUI
-    according to the chosen plots
-    """
-    content_type = getattr(MimeType, img_format)
-    if not filename.lower().endswith(f".{img_format}"):
-        filename += f".{img_format}"
-    jsondata = json.loads(request.body.decode('utf-8'))
-    data, layout, width, height = (jsondata['data'],
-                                   jsondata['layout'],
-                                   jsondata['width'],
-                                   jsondata['height'])
-    from plotly import graph_objects as go, io as pio
-    fig = go.Figure(data=data, layout=layout)
-    # fix for https://github.com/plotly/plotly.py/issues/3469:
-    pio.full_figure_for_development(fig, warn=False)
-    bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)
-    # FIXME: use the following throughout the code harmonizing how we return files:
-    return FileResponse(BytesIO(bytestr), content_type=content_type,
-                        filename=filename, as_attachment=True)
-    # FIXME: remove?
-    # response = HttpResponse(bytestr, content_type=content_type)
-    # response['Content-Disposition'] = \
-    #     'attachment; filename=%s' % filename
-    # response['Content-Length'] = len(bytestr)
-    # return response
 
 
 # FIXME TEST REQUESTS REMOVE BELOW
