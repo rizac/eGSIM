@@ -175,27 +175,27 @@ def _get_init_data_json(debug=False) -> dict:
         },
         'urls': {
             'predictions': URLS.DOWNLOAD_PREDICTIONS,
+            'predictions_visualize': URLS.PREDICTIONS_PLOT,
+            'predictions_download_plot_image': [
+                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/egsim-predictions-plot.{ext}'
+                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            ],
+            'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
             'residuals': URLS.DOWNLOAD_RESIDUALS,
-            'predictions_plot': URLS.PREDICTIONS_PLOT,
-            'residuals_plot': URLS.RESIDUALS_PLOT,
+            'residuals_visualize': URLS.RESIDUALS_PLOT,
+            'residuals_download_plot_image': [
+                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/egsim-residuals-plot.{ext}'
+                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            ],
+            'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL_HTML,
             'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO,
-            'flatfile_inspection_plot': URLS.FLATFILE_VISUALIZATION,
+            'flatfile_inspection_visualize': URLS.FLATFILE_VISUALIZATION,
+            'flatfile_inspection_download_plot_image': [
+                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/egsim-flatfile-data-plot.{ext}'
+                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            ],
             'flatfile_validation': URLS.FLATFILE_VALIDATION,
-            'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
-            'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL_HTML,
-            'download_predictions_plot': [
-                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/predictions-plot.{ext}'
-                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
-            ],
-            'download_residuals_plot': [
-                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/residuals-plot.{ext}'
-                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
-            ],
-            'download_flatfile_plot': [
-                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/flatfile-data-plot.{ext}'
-                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
-            ]
         },
         'forms': {
             'predictions': predictions_form.asdict(),

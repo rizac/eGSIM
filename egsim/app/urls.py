@@ -15,8 +15,6 @@ from .views import (main, get_gsims_from_region, flatfile_meta_info,
 urlpatterns = [
     re_path(r'^$', RedirectView.as_view(pattern_name='main', url='home',
                                         permanent=False)),
-
-    # html pages:
     re_path((r'^(?P<page>' +
              '|'.join([URLS.HOME_PAGE, URLS.PREDICTIONS_PAGE, URLS.RESIDUALS_PAGE,
                        URLS.FLATFILE_INSPECTION_PLOT_PAGE, URLS.FLATFILE_META_INFO_PAGE,
@@ -27,21 +25,6 @@ urlpatterns = [
             get_residuals_response_tutorial),
     re_path(r'^%s/?$' % URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
             get_predictions_response_tutorial),
-
-    # FIXME REMOVE CLEANUP
-    # re_path(r'%s/?' % URLS.MAIN_PAGE_INIT_DATA, main_page_init_data),
-
-    # Imprint, refs (pages with a "normal" static django template associated):
-    # re_path(r'^%s/?$' % URLS.IMPRINT, imprint),
-
-    # other urls called from within the page:
-    # re_path(r'^%s/?$' % URLS.HOME_NO_MENU, home),
-    # re_path(r'^%s/?$' % URLS.API, apidoc),
-    # re_path(r'^%s/?$' % URLS.REF_AND_LICENSE, ref_and_license),
-
-    # download request data (json, yaml) urls:
-    # re_path(r'^%s/(?P<key>.+?)/(?P<filename>.+)$' % URLS.DOWNLOAD_REQUEST,
-    #         download_request),
 
     re_path(r'^%s/(?P<filename>.+)$' % URLS.DOWNLOAD_PLOTS_AS_IMAGE,
             download_plots_as_image),
