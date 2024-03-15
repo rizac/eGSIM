@@ -1,7 +1,9 @@
-"""Forms for the eGSIM app (web portal)"""
+"""Forms handling data (flatfiles)"""
 import numpy as np
 
-from egsim.api.forms.flatfile.management import Plotly
+from egsim.api.forms.plotly import (colors_cycle, axis_type,
+                                    axis_range, scatter_trace,
+                                    bar_trace, line_trace)
 from egsim.api.forms.flatfile.residuals import ResidualsForm
 from egsim.api.forms.scenarios import PredictionsForm
 from django.forms.fields import ChoiceField, CharField
@@ -33,15 +35,11 @@ class PredictionsPlotDataForm(PredictionsForm):
     def output(self) -> dict:
         dataframe = super().output()
         dist_col = None
-        for c in dataframe.columns:
+        for c in dataframe.columns:  # FIXME better
             if c[0] == Clabel.input_data and c[1] == ColumnType.distance.value:
                 dist_col = c
                 break
         mag_col = (Clabel.input_data, ColumnType.rupture.value, Clabel.mag)
-
-        plots = []
-        colors_cycle = Plotly.colors_cycle()
-        colors = {}
         mag_label = mag_col[-1].title()
         dist_label = dist_col[-1].title()
         imt_label = 'Imt'
@@ -101,46 +99,51 @@ class PredictionsPlotDataForm(PredictionsForm):
                             dfr.loc[:, (sas, Clabel.median, m)].iloc[0, :].values,
                             dfr.loc[:, (sas, Clabel.std, m)].iloc[0,:].values
                         )
-                    yield i, p, x_values, data
+                    yield p, x_values, data
 
+        c_cycle = colors_cycle()
+        colors = {}
+        plots = []
         for params, x_values, data in groupby(dataframe):
             traces = []
-            y_mins =[]
-            y_maxs = []
+            ys = []
             for model, [medians, sigmas] in data.items():
-                color = colors.setdefault(model, next(colors_cycle))
+                color = colors.setdefault(model, next(c_cycle))
                 color_transparent = color.replace(', 1)', ', 0.2)')
                 legendgroup = model
+                # first add all values to list so that we can compute ranges later
+                ys.append(medians)
+                ys.append(medians * np.exp(sigmas))
+                ys.append(medians * np.exp(-sigmas))
+                # now add those values to plotly traces:
                 traces.extend([
-                    Plotly.line_trace(
+                    line_trace(
                         color=color,
                         x=x_values,
-                        y=medians,
+                        y=ys[-3],
                         name=model,
                         legendgroup=legendgroup
                     ),
-                    Plotly.line_trace(
+                    line_trace(
                         width=0,
                         color=color_transparent,
                         fillcolor=color_transparent,
                         x=x_values,
-                        y=medians * np.exp(sigmas),
+                        y=ys[-2],
                         name=model + ' stddev',
                         legendgroup=legendgroup + ' stddev'
                     ),
-                    Plotly.line_trace(
+                    line_trace(
                         width=0,
                         color=color_transparent,
                         fillcolor=color_transparent,
                         fill='tonexty',  # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
                         x=x_values,
-                        y=medians * np.exp(-sigmas),
+                        y=ys[-1],
                         name=model + ' stddev',
                         legendgroup=legendgroup + ' stddev'
                     )]
                 )
-                y_mins.append(min(traces[-1]['y']))
-                y_maxs.append(max(traces[-2]['y']))
 
             plots.append({
                 'data':traces,
@@ -149,14 +152,14 @@ class PredictionsPlotDataForm(PredictionsForm):
                     'xaxis': {
                         'title': x_label,
                         'type': 'linear',
-                        'autorange': True,
-                        'range': [float(x_values.min()), float(x_values.max())]
+                        # 'autorange': True,
+                        # 'range': axis_range(x_values)
                     },
                     'yaxis': {
-                        'title': y_label(params['imt']),
+                        'title': y_label(params[imt_label]),
                         'type': 'log',
-                        'autorange': True,
-                        'range': [float(min(y_mins)), float(max(y_maxs))],
+                        # 'autorange': True,
+                        'range': axis_range(np.concatenate(ys).ravel()),
                     }
                 }
             })
@@ -210,18 +213,22 @@ class ResidualsPlotDataForm(ResidualsForm):
             x_label = lambda imt: self.cleaned_data['x']
 
         plots = []
-        colors_cycle = Plotly.colors_cycle()
+        c_cycle = colors_cycle()
         colors = {}
         for col in [c for c in dataframe.columns if c[1] in df_labels]:
             imt, res_type, model = col
-            color = colors.setdefault(model, next(colors_cycle))
+            color = colors.setdefault(model, next(c_cycle))
             color_transparent = color.replace(', 1)', ', 0.5)')
-            default_layout = lambda: {
-                'xaxis': {'title': x_label(imt)},
-                'yaxis': {'title': y_label(imt)}
+            layout = {
+                'xaxis': {
+                    'title': x_label(imt)
+                },
+                'yaxis': {
+                    'title': y_label(imt)
+                }
             }
 
-            if not col_x:
+            if not col_x:  # residuals hist or likelihood hist
                 x = dataframe[col]
                 if not likelihood:
                     step = 0.5
@@ -229,7 +236,7 @@ class ResidualsPlotDataForm(ResidualsForm):
                     step = 0.1
                 bins = np.arange(x.min(), x.max() + step, step)
                 y = np.histogram(x, bins, density=True)[0]
-                trace = Plotly.bar_trace(
+                trace = bar_trace(
                     color=color_transparent,
                     line_color=color,
                     x=bins[:-1],
@@ -242,27 +249,29 @@ class ResidualsPlotDataForm(ResidualsForm):
                 if not likelihood:
                     mean, std = x.mean(), x.std()
                     x_ = np.arange(mean - 3 * std, mean + 3 * std, step / 10)
-                    data.append(Plotly.line_trace(
-                        color=color,
-                        x=x_,
-                        y=norm_dist(x_, mean, std),
-                        name=" ".join(col) + ' normal distribution',
-                        legendgroup=model + ' normal distribution',
-                    ))
                     data.append(
-                        Plotly.line_trace(
+                        line_trace(
+                            color=color,
+                            x=x_,
+                            y=norm_dist(x_, mean, std),
+                            name=" ".join(col) + ' normal distribution',
+                            legendgroup=model + ' normal distribution',
+                        )
+                    )
+                    data.append(
+                        line_trace(
                             color="rgba(120, 120, 120, 1)",
                             dash='dot',
                             x=x_,
                             y=norm_dist(x_),
                             name='Normal distribution',
                             legendgroup='Normal distribution (m=0, s=1)',
-                    ))
-                def_layout = default_layout()
+                        )
+                    )
             else:
                 x = self.cleaned_data['flatfile'][col_x]
                 y = dataframe[col]
-                trace = Plotly.scatter_trace(
+                trace = scatter_trace(
                     color=color_transparent,
                     x=x,
                     y=y,
@@ -270,12 +279,13 @@ class ResidualsPlotDataForm(ResidualsForm):
                     legendgroup=model
                 )
                 data = [trace]
-                def_layout = default_layout()
 
-            # config layout based on the displayed data x, y. If not already set,
-            # layout['xaxis']['type'] and layout['xaxis']['range'] will be inferred from
-            # x (same for y and layout['xaxis']):
-            layout = Plotly.layout(x = x, y = y, **def_layout)
+            # config layout axis based on the displayed values:
+            for values, axis in ((x, layout['xaxis']), (y, layout['yaxis'])):
+                axis['type'] = axis_type(values)
+                range = axis_range(values)
+                if range is not None:
+                    axis['range'] = range
 
             plots.append({
                 'data': data,

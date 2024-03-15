@@ -16,7 +16,7 @@ from openquake.hazardlib import imt
 
 from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, EgsimBaseForm)
 from egsim.api.forms.flatfile import FlatfileForm
-from egsim.api.forms.flatfile.management import FlatfileValidationForm
+from egsim.api.forms.flatfile.flatfile_inspection import FlatfileValidationForm
 from egsim.api.forms.scenarios import PredictionsForm
 from egsim.smtk import read_flatfile
 from egsim.smtk.scenarios import RuptureProperties, SiteProperties
