@@ -23,7 +23,7 @@
 			class= 'mt-4'
 			:flatfiles='flatfiles'
 			v-model="forms.residuals.flatfile"
-			:upload-url='urls.flatfile_validation'
+			:upload-url='urls.flatfile_validate'
 			@update:model-value="(value) => { forms.misc.residuals.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }">
 		</flatfile-select>
 
@@ -65,11 +65,12 @@
 					</a>
 					</td>
 					<td>
-					<button type='button' style='width:100%'
-							@click="downloadResult(urls.residuals, forms.residuals, 'egsim-residuals')"
-							class='btn btn-primary'
-							title='Download residuals'>
-						<i class='fa fa-download'></i>
+					<button
+						type='button' style='width:100%'
+						@click="downloadResult(`${urls.residuals}.${forms.residuals.format}`, forms.residuals)"
+						class='btn btn-primary'
+						title='Download residuals'>
+							<i class='fa fa-download'></i>
 					</button>
 					</td>
 				</tr>
@@ -111,8 +112,8 @@
 
 	<plots-div
 		:data="responses.residuals_plots"
-		:download-urls='urls.residuals_download_plot_image'
-		@image-requested='(url, data, fileName) => { downloadResult(url, data, fileName); }'
+		:download-urls='urls.residuals_plot_download'
+		@image-requested='(url, data) => { downloadResult(url, data); }'
 		style='position:absolute;inset:0px;z-index:100'>
 	</plots-div>
 </div>

@@ -5,7 +5,7 @@
 			style='flex: 1 1 auto'
 			:flatfiles='flatfiles'
 			v-model="forms.flatfile_inspection_plot.flatfile"
-			:upload-url='urls.flatfile_validation'
+			:upload-url='urls.flatfile_validate'
 			@update:model-value="(value) => { forms.flatfile_inspection_plot.x=null; forms.flatfile_inspection_plot.y=null; forms.misc.flatfile_inspection_plot.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }"
 		>
 		</flatfile-select>
@@ -38,7 +38,7 @@
 			</select>
 		</div>
 		<button type='button'
-				@click="var data = Object.assign({}, forms.flatfile_inspection_plot, {format: 'json'}); postData(urls.flatfile_inspection_visualize, data).then(r => r.json()).then(data => { responses.flatfile_inspection_plot=data.plots; })"
+				@click="var data = Object.assign({}, forms.flatfile_inspection_plot, {format: 'json'}); postData(urls.flatfile_visualize, data).then(r => r.json()).then(data => { responses.flatfile_inspection_plot=data.plots; })"
 				:disabled='forms.flatfile_inspection_plot.x == forms.flatfile_inspection_plot.y'
 				class='btn btn-primary ms-3 text-nowrap'
 				title='Visualize flatfile data in an interactive plot'>
@@ -47,8 +47,8 @@
 	</form>
 	<plots-div
 		:data="responses.flatfile_inspection_plot"
-		:download-urls='urls.flatfile_inspection_download_plot_image'
-		@image-requested='(url, data, fileName) => { downloadResult(url, data, fileName); }'
+		:download-urls='urls.flatfile_plot_download'
+		@image-requested='(url, data) => { downloadResult(url, data); }'
 		style='flex: 1 1 auto;z-index:100'>
 	</plots-div>
 </div>
