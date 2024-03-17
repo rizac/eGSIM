@@ -1113,9 +1113,8 @@ EGSIM.component('plots-div', {
 			var [width, height] = this.getElmSize(parent);
 			data = data.filter(elm => elm.visible || !('visible' in elm));
 			postData = {data:data, layout:layout, width:width, height:height};
-			var filename = url.substring(url.lastIndexOf('/') + 1, url.length);
 			// downloadResult(url, postData, filename);
-			this.$emit('image-requested', url, postData, filename);
+			this.$emit('image-requested', url, postData);
 			selectElement.selectedIndex = 0;
 		}
 	}

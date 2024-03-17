@@ -217,10 +217,9 @@ const EGSIM = Vue.createApp({
 				body: requestBody, // body data type must match "Content-Type" header
 			})
 		},
-		downloadResult(url, data, fileName){
-			if (data.format){
-				fileName += `.${data.format}`;
-			}
+		downloadResult(url, data){
+			// download the response using the last portion of url as filename
+			var fileName = url.substring(url.lastIndexOf('/') + 1, url.length);
 			this.postData(url, data).then( resp => {
 				// in case you want to get headers:
 				// var contentDisp = resp.headers.get('content-disposition');

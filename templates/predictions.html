@@ -163,18 +163,19 @@
 				<tr>
 					<td>Download</td>
 					<td>
-					<select v-model='forms.residuals.format' class='form-control'>
+					<select v-model='forms.predictions.format' class='form-control'>
 						<option v-for='format in forms.misc.download_formats' :value='format'>
 							{% verbatim %}{{ format }}{% endverbatim %}
 						</option>
 					</select>
 					</td>
 					<td>
-					<button type='button' style='width:100%'
-							@click="downloadResult(urls.predictions, forms.predictions, 'egsim-predictions')"
-							class='btn btn-primary'
-							title='Download residuals'>
-						<i class='fa fa-download'></i>
+					<button
+						type='button' style='width:100%'
+						@click="downloadResult(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
+						class='btn btn-primary'
+						title='Download predictions'>
+							<i class='fa fa-download'></i>
 					</button>
 					</td>
 				</tr>
@@ -190,7 +191,7 @@
 					<button type='button' style='width:100%'
 							@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); postData(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
 							class='btn btn-primary'
-							title='Visualize residuals via interactive plots'>
+							title='Visualize predictions via interactive plots'>
 						<i class='fa fa-bar-chart'></i>
 					</button>
 					</td>
@@ -210,8 +211,8 @@
 
 	<plots-div
 		:data="responses.predictions_plots"
-		:download-urls='urls.predictions_download_plot_image'
-		@image-requested='(url, data, fileName) => { downloadResult(url, data, fileName); }'
+		:download-urls='urls.predictions_plot_download'
+		@image-requested='(url, data) => { downloadResult(url, data); }'
 		style='position:absolute;inset:0px;z-index:100'>
 	</plots-div>
 </div>

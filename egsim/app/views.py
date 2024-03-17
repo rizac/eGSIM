@@ -27,24 +27,32 @@ from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType, error
 from .forms import ResidualsPlotDataForm, PredictionsPlotDataForm
 
 
+img_ext = ('png', 'pdf', 'svg')
+data_ext = ('hdf', 'csv')
+
+
 class URLS:  # noqa
     """Define global URLs"""
 
+    # Misc URLs (used in different pages/tabs)
     GET_GSIMS_FROM_REGION = 'gui/get_models_from_region'
-    FLATFILE_VALIDATION = 'gui/flatfile_validation'
-    FLATFILE_VISUALIZATION = 'gui/flatfile_visualization'
+    FLATFILE_VALIDATE = 'gui/flatfile_validation'
+    # DOWNLOAD_PLOTS_AS_IMAGE = 'gui/download/plots-image'
+
+    # Form specific URLs
+    PREDICTIONS = 'gui/egsim-predictions'  # .../{file_basename}
+    PREDICTIONS_VISUALIZE = 'gui/egsim-predictions-visualize'
+    PREDICTIONS_PLOT_IMG = 'gui/egsim-predictions-plot'  # .../{file_basename}
+    PREDICTIONS_RESPONSE_TUTORIAL = 'jupyter/predictions-response-tutorial.html'
+    RESIDUALS = 'gui/egsim-residuals'  # .../{file_basename}
+    RESIDUALS_VISUALIZE = 'gui/egsim-residuals-visualize'
+    RESIDUALS_PLOT_IMG = 'gui/egsim-residuals-plot'  # .../{file_basename}
+    RESIDUALS_RESPONSE_TUTORIAL = 'jupyter/residuals-response-tutorial.html'
+    FLATFILE_VISUALIZE = 'gui/flatfile_visualization'
     FLATFILE_META_INFO = 'gui/get_flatfile_meta_info'
+    FLATFILE_PLOT_IMG = 'gui/egsim-flatfile-plot'  # .../{file_basename}
 
-    DOWNLOAD_PREDICTIONS = 'gui/download/egsim-predictions'
-    DOWNLOAD_RESIDUALS = 'gui/download/egsim-residuals'
-    PREDICTIONS_PLOT = 'gui/egsim-predictions-plot'
-    RESIDUALS_PLOT = 'gui/egsim-residuals-plot'
-
-    DOWNLOAD_PLOTS_AS_IMAGE = 'gui/download/plots-image'
-
-    PREDICTIONS_RESPONSE_TUTORIAL_HTML = 'jupyter/predictions-response-tutorial.html'
-    RESIDUALS_RESPONSE_TUTORIAL_HTML = 'jupyter/residuals-response-tutorial.html'
-
+    # webpage URLs:
     HOME_PAGE = 'home'
     DATA_PROTECTION_PAGE = 'https://www.gfz-potsdam.de/en/data-protection/'
     FLATFILE_META_INFO_PAGE = 'flatfile-metadata-info'
@@ -60,7 +68,8 @@ def main(request, page=''):
     # FIXME: REMOVE egsim.py entirely, as well as apidoc.py! (DONE, but check for safety)
     template = 'egsim.html'
     # fixme: handle regionalization (set to None cause otherwise is not JSON serializable)!
-    init_data = _get_init_data_json(settings.DEBUG) | {'currentPage': page or URLS.HOME_PAGE}
+    init_data = _get_init_data_json(settings.DEBUG) | \
+                {'currentPage': page or URLS.HOME_PAGE}
     return render(request, template, context={'debug': settings.DEBUG,
                                               'init_data': init_data,
                                               'references': _get_references()})
@@ -72,20 +81,6 @@ def _get_init_data_json(debug=False) -> dict:
 
     :param debug: True or False, the value of the settings DEBUG flag
     """
-    # check browser: FIXME REMOVE?
-    # allowed_browsers = {'chrome': 49, 'firefox': 45, 'safari': 10}
-    # allowed_browsers_msg = ', '.join(f'{b.title()}≥{v}'
-    #                                  for b, v in allowed_browsers.items())
-    # invalid_browser_message = (f'eGSIM could not determine if your browser '
-    #                            f'matches {allowed_browsers_msg}. '
-    #                            f'This portal might not work as expected')
-    # browser_name = (browser or {}).get('name', None)
-    # browser_ver = (browser or {}).get('version', None)
-    # if browser_ver is not None:
-    #     a_browser_ver = allowed_browsers.get(browser_name.lower(), None)
-    #     if a_browser_ver is not None and browser_ver >= a_browser_ver:
-    #         invalid_browser_message = ''
-
     gsims = []
     imt_groups: dict[tuple, int] = {}  # noqa
     warning_groups: dict[str, int] = {}  # noqa
@@ -174,28 +169,25 @@ def _get_init_data_json(debug=False) -> dict:
             'data_protection': URLS.DATA_PROTECTION_PAGE
         },
         'urls': {
-            'predictions': URLS.DOWNLOAD_PREDICTIONS,
-            'predictions_visualize': URLS.PREDICTIONS_PLOT,
-            'predictions_download_plot_image': [
-                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/egsim-predictions-plot.{ext}'
-                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            'predictions': URLS.PREDICTIONS,
+            'predictions_visualize': URLS.PREDICTIONS_VISUALIZE,
+            'predictions_plot_download': [
+                f'{URLS.PREDICTIONS_PLOT_IMG}.{ext}' for ext in img_ext
             ],
-            'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL_HTML,
-            'residuals': URLS.DOWNLOAD_RESIDUALS,
-            'residuals_visualize': URLS.RESIDUALS_PLOT,
-            'residuals_download_plot_image': [
-                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/egsim-residuals-plot.{ext}'
-                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL,
+            'residuals': URLS.RESIDUALS,
+            'residuals_visualize': URLS.RESIDUALS_VISUALIZE,
+            'residuals_plot_download': [
+                f'{URLS.RESIDUALS_PLOT_IMG}.{ext}' for ext in img_ext
             ],
-            'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL_HTML,
+            'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL,
             'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO,
-            'flatfile_inspection_visualize': URLS.FLATFILE_VISUALIZATION,
-            'flatfile_inspection_download_plot_image': [
-                f'{URLS.DOWNLOAD_PLOTS_AS_IMAGE}/egsim-flatfile-data-plot.{ext}'
-                for ext in ['png', 'svg', 'pdf', 'eps'] if hasattr(MimeType, ext)
+            'flatfile_visualize': URLS.FLATFILE_VISUALIZE,
+            'flatfile_plot_download': [
+                f'{URLS.FLATFILE_PLOT_IMG}.{ext}' for ext in img_ext
             ],
-            'flatfile_validation': URLS.FLATFILE_VALIDATION,
+            'flatfile_validate': URLS.FLATFILE_VALIDATE,
         },
         'forms': {
             'predictions': predictions_form.asdict(),
@@ -229,7 +221,7 @@ def _get_init_data_json(debug=False) -> dict:
                 'flatfile_meta_info': {
                     'show_dialog': False
                 },
-                'download_formats': ['hdf', 'csv']
+                'download_formats': data_ext
             }
         },
         'responses': {
@@ -286,7 +278,7 @@ def get_gsims_from_region(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=GsimFromRegionForm)(request)
 
 
-def flatfile_validation(request) -> JsonResponse:
+def flatfile_validate(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=FlatfileValidationForm)(request)
 
 
@@ -294,22 +286,23 @@ def flatfile_meta_info(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=FlatfileMetadataInfoForm)(request)
 
 
-def flatfile_plot(request) -> JsonResponse:
+def flatfile_visualize(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=FlatfilePlotForm)(request)
 
 
-def predictions_plot(request) -> JsonResponse:
+def predictions_visualize(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=PredictionsPlotDataForm)(request)
 
 
-def residuals_plot(request) -> JsonResponse:
+def residuals_visualize(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=ResidualsPlotDataForm)(request)
 
 
-def download_plots_as_image(request, filename: str) -> HttpResponseBase:
+def download_plots_as_image(request) -> HttpResponseBase:
     """Return the image from the given request built in the frontend GUI
     according to the chosen plots
     """
+    filename = request.path[request.path.rfind('/')+1:]
     img_format = splitext(filename)[1][1:].lower()
     try:
         content_type = getattr(MimeType, img_format)
@@ -389,81 +382,6 @@ def _get_download_tutorial(request, key:str, api_form:APIForm, api_client_functi
                       'docstring_intro': doc[0][doc[0].index('where each row'):],
                       'docstring_headers_intro': "\n\n".join(doc[1:])
                   })
-
-
-# FIXME REMOVE / CLEANUP THE CODE BELOW AND ALL ITS USAGES! ===================
-
-# def download_request(request, key, filename: str):
-#     """Return the request (configuration) re-formatted according to the syntax
-#     inferred from filename (*.json or *.yaml) to be downloaded by the front
-#     end GUI.
-#
-#     :param key: a :class:`TAB` name associated to a REST API TAB (i.e.,
-#         with an associated Form class)
-#     """
-#     form_class = TAB[key].formclass  # FIXME remove pycharm lint warning
-#
-#     def input_dict() -> dict:
-#         """return the input dict. This function allows to work each time
-#         on a new copy of the input data"""
-#         return yaml.safe_load(StringIO(request.body.decode('utf-8')))
-#
-#     form = form_class(data=input_dict())
-#     if not form.is_valid():
-#         return error_response(form.errors_json_data(), RESTAPIView.CLIENT_ERR_CODE)
-#     ext_nodot = os.path.splitext(filename)[1][1:].lower()
-#     compact = True
-#     if ext_nodot == 'json':
-#         # in the frontend the axios library expects bytes data (blob)
-#         # or bytes strings in order for the data to be correctly saved. Thus,
-#         # use text/javascript because 'application/json' does not work (or should
-#         # we better use text/plain?)
-#         response = HttpResponse(StringIO(form.as_json(compact=compact)),
-#                                 content_type='text/javascript')
-#     # elif ext_nodot == 'querystring':
-#     #     # FIXME: as_querystring is not part of Form anymore... remove? drop?
-#     #     response = HttpResponse(StringIO(form.as_querystring(compact=compact)),
-#     #                             content_type='text/plain')
-#     else:
-#         response = HttpResponse(StringIO(form.as_yaml(compact=compact)),
-#                                 content_type='application/x-yaml')
-#     response['Content-Disposition'] = 'attachment; filename=%s' % filename
-#     return response
-#
-#
-# def download_response(request, key, filename: str):
-#     basename, ext = os.path.splitext(filename)
-#     if ext == '.csv':
-#         return download_ascsv(request, key, filename)
-#     elif ext == '.csv_eu':
-#         return download_ascsv(request, key, basename + '.csv', ';', ',')
-#     try:
-#         return download_asimage(request, filename, ext[1:])
-#     except AttributeError:
-#         pass  # filename extension not recognized as image
-#     return error_response(f'Unsupported format "{ext[1:]}"',
-#                           RESTAPIView.CLIENT_ERR_CODE)
-#
-#
-# def download_ascsv(request, key, filename: str, sep=',', dec='.'):
-#     """Return the processed data as text/CSV. This method is used from within
-#     the browser when users want to get processed data as text/csv: as the
-#     browser stores the processed data dict, we just need to convert it as
-#     text/CSV.
-#     Consequently, the request's body is the JSON data resulting from a previous
-#     call of the GET or POST method of any REST API View.
-#
-#     :param key: a :class:`TAB` name associated to a REST API TAB (i.e.,
-#         with an associated Form class)
-#     """
-#     formclass = TAB[key].formclass
-#     inputdict = yaml.safe_load(StringIO(request.body.decode('utf-8')))
-#     response_data = formclass.to_csv_buffer(inputdict, sep, dec)
-#     response = TAB[key].viewclass.response_text(response_data)
-#     response['Content-Disposition'] = 'attachment; filename=%s' % filename
-#     return response
-
-
 
 # FIXME TEST REQUESTS REMOVE BELOW
 
