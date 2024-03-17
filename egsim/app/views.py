@@ -32,25 +32,23 @@ data_ext = ('hdf', 'csv')
 
 
 class URLS:  # noqa
-    """Define global URLs"""
-
-    # Misc URLs (used in different pages/tabs)
-    GET_GSIMS_FROM_REGION = 'gui/get_models_from_region'
-    FLATFILE_VALIDATE = 'gui/flatfile_validation'
-    # DOWNLOAD_PLOTS_AS_IMAGE = 'gui/download/plots-image'
+    """Define global URLs, to be used in both urls.py and injected in the web page"""
 
     # Form specific URLs
-    PREDICTIONS = 'gui/egsim-predictions'  # .../{file_basename}
+    PREDICTIONS = 'gui/egsim-predictions'  # <path>/<downloaded_file_basename>
     PREDICTIONS_VISUALIZE = 'gui/egsim-predictions-visualize'
-    PREDICTIONS_PLOT_IMG = 'gui/egsim-predictions-plot'  # .../{file_basename}
+    PREDICTIONS_PLOT_IMG = 'gui/egsim-predictions-plot'  # <path>/<downloaded_file_basename>
     PREDICTIONS_RESPONSE_TUTORIAL = 'jupyter/predictions-response-tutorial.html'
-    RESIDUALS = 'gui/egsim-residuals'  # .../{file_basename}
+    RESIDUALS = 'gui/egsim-residuals'  # <path>/<downloaded_file_basename>
     RESIDUALS_VISUALIZE = 'gui/egsim-residuals-visualize'
-    RESIDUALS_PLOT_IMG = 'gui/egsim-residuals-plot'  # .../{file_basename}
+    RESIDUALS_PLOT_IMG = 'gui/egsim-residuals-plot'  # <path>/<downloaded_file_basename>
     RESIDUALS_RESPONSE_TUTORIAL = 'jupyter/residuals-response-tutorial.html'
     FLATFILE_VISUALIZE = 'gui/flatfile_visualization'
     FLATFILE_META_INFO = 'gui/get_flatfile_meta_info'
-    FLATFILE_PLOT_IMG = 'gui/egsim-flatfile-plot'  # .../{file_basename}
+    FLATFILE_PLOT_IMG = 'gui/egsim-flatfile-plot'  # <path>/<downloaded_file_basename>
+    # Misc (URLs shared between forms)
+    GET_GSIMS_FROM_REGION = 'gui/get_models_from_region'
+    FLATFILE_VALIDATE = 'gui/flatfile_validation'
 
     # webpage URLs:
     HOME_PAGE = 'home'
@@ -65,7 +63,6 @@ class URLS:  # noqa
 
 def main(request, page=''):
     """view for the main page"""
-    # FIXME: REMOVE egsim.py entirely, as well as apidoc.py! (DONE, but check for safety)
     template = 'egsim.html'
     # fixme: handle regionalization (set to None cause otherwise is not JSON serializable)!
     init_data = _get_init_data_json(settings.DEBUG) | \
@@ -89,7 +86,7 @@ def _get_init_data_json(debug=False) -> dict:
         imt_names = tuple(sorted(gsim.imts.split(" ")))
         imt_group_index = imt_groups.setdefault(imt_names, len(imt_groups))
         sa_limits = [gsim.min_sa_period, gsim.max_sa_period]
-        if any(_ is None for _ in sa_limits):
+        if sa_limits[0] is None or sa_limits[1] is None:
             sa_limits = []
         model_warnings = []
         if gsim.unverified:
@@ -298,7 +295,7 @@ def residuals_visualize(request) -> JsonResponse:
     return RESTAPIView.as_view(formclass=ResidualsPlotDataForm)(request)
 
 
-def download_plots_as_image(request) -> HttpResponseBase:
+def plots_image(request) -> HttpResponseBase:
     """Return the image from the given request built in the frontend GUI
     according to the chosen plots
     """
@@ -323,7 +320,7 @@ def download_plots_as_image(request) -> HttpResponseBase:
 
 
 @xframe_options_exempt
-def get_predictions_response_tutorial(request):
+def predictions_response_tutorial(request):
     from egsim.api.data.client.snippets.get_egsim_predictions import \
         get_egsim_predictions
     api_form = PredictionsForm({
@@ -336,7 +333,7 @@ def get_predictions_response_tutorial(request):
 
 
 @xframe_options_exempt
-def get_residuals_response_tutorial(request):
+def residuals_response_tutorial(request):
     from egsim.api.data.client.snippets.get_egsim_residuals import \
         get_egsim_residuals
     api_form = ResidualsForm({
