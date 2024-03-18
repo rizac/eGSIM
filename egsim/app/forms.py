@@ -1,16 +1,17 @@
 """Forms handling data (flatfiles)"""
 import numpy as np
 
-from egsim.api.forms.plotly import (colors_cycle, axis_type,
-                                    axis_range, scatter_trace,
-                                    bar_trace, line_trace)
-from egsim.api.forms.flatfile.residuals import ResidualsForm
+from egsim.api.forms import APIForm
+from egsim.api.forms.flatfile import FlatfileForm
+from egsim.api.forms.residuals import ResidualsForm
 from egsim.api.forms.scenarios import PredictionsForm
 from django.forms.fields import ChoiceField, CharField
 
 from egsim.smtk.flatfile import ColumnType
 from egsim.smtk.registry import Clabel
 from egsim.smtk.validators import sa_period
+from .plotly import (colors_cycle, axis_type, axis_range, scatter_trace,
+                     bar_trace, line_trace, histogram_trace, AxisType)
 
 
 class PredictionsPlotDataForm(PredictionsForm):
@@ -305,3 +306,112 @@ def norm_dist(x, mean=0, sigma=1):
     sigma_square_times_two = 2 * (sigma ** 2)
     norm = 1. / np.sqrt(2 * pi * sigma_square_times_two)
     return norm * np.exp(-((x - mean) ** 2) / sigma_square_times_two)
+
+
+class FlatfilePlotForm(APIForm, FlatfileForm):
+    """Form for plotting flatfile columns"""
+
+    x = CharField(label='X', help_text="The flatfile column for the x values",
+                  required=False)
+    y = CharField(label='Y', help_text="The flatfile column for the y values",
+                  required=False)
+
+    def clean(self):
+        """Call `super.clean()` and handle the flatfile"""
+        cleaned_data = super().clean()
+        x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
+        if not x and not y:
+            self.add_error("x", 'either x or y is required')
+            self.add_error("y", 'either x or y is required')
+
+        if not self.has_error('flatfile'):
+            cols = cleaned_data['flatfile'].columns
+            if x and x not in cols:
+                self.add_error("x", f'"{x}" is not a flatfile column')
+            if y and y not in cols:
+                self.add_error("y", f'"{y}"  is not a flatfile column')
+
+        return cleaned_data
+
+    def output(self) -> dict:
+        """Compute and return the output from the input data (`self.cleaned_data`).
+        This method must be called after checking that `self.is_valid()` is True
+
+        :return: any Python object (e.g., a JSON-serializable dict)
+        """
+        cleaned_data = self.cleaned_data
+        dataframe = cleaned_data['flatfile']
+        x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
+        c = next(colors_cycle())
+        c_transparent = c.replace(', 1)', ', 0.5)')
+        if x and y:  # scatter plot
+            xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
+            x, y = dataframe[xlabel], dataframe[ylabel]
+            # x_na = na_values(x).sum()
+            # y_na = na_values(y).sum()
+            plot = {
+                'data': [
+                    scatter_trace(
+                        color=c_transparent,
+                        x=dataframe[xlabel],
+                        y=dataframe[ylabel]
+                    )
+                ],
+                'params': {},
+                'layout': {
+                    'xaxis': {
+                        'title': xlabel,
+                        'type': axis_type(x)
+                    },
+                    'yaxis':  {
+                        'title': ylabel,
+                        'type': axis_type(y)
+                    }
+                }
+            }
+        elif x:
+            xlabel = cleaned_data['x']
+            plot = {
+                'data': [
+                    histogram_trace(
+                        color=c_transparent,
+                        line_color=c,
+                        x=dataframe[xlabel]
+                    )
+                ],
+                'params': {},
+                'layout': {
+                    'xaxis': {
+                        'title': xlabel,
+                        'type': axis_type(x)
+                    },
+                    'yaxis': {
+                        'title': 'Frequency',
+                        'type': AxisType.linear
+                    }
+                }
+            }
+        else:  # y only provided
+            ylabel = cleaned_data['y']
+            plot = {
+                'data': [
+                    histogram_trace(
+                        color=c_transparent,
+                        line_color=c,
+                        y=dataframe[ylabel]
+                    )
+                ],
+                'params': {},
+                'layout': {
+                    'xaxis': {
+                        'title': 'Frequency',
+                        'type': AxisType.linear
+                    },
+                    'yaxis': {
+                        'title': ylabel,
+                        'type': axis_type(y)
+                    }
+                }
+            }
+
+        return {'plots': [plot]}

@@ -21,7 +21,7 @@ from ..smtk.converters import dataframe2dict
 from .forms import APIForm
 from .forms.scenarios import PredictionsForm, ArrayField
 from .forms.flatfile import FlatfileForm
-from .forms.flatfile.residuals import ResidualsForm
+from .forms.residuals import ResidualsForm
 
 
 class MimeType:  # noqa

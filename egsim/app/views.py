@@ -17,14 +17,13 @@ from django.conf import settings
 # from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from ..api import models
-from ..api.forms.flatfile.flatfile_inspection import (FlatfileMetadataInfoForm,
-                                                      FlatfileValidationForm,
-                                                      FlatfilePlotForm)
+from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
+                                  FlatfileValidationForm)
 from ..api.forms import GsimFromRegionForm, APIForm
-from ..api.forms.flatfile.residuals import ResidualsForm
+from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType, error_response
-from .forms import ResidualsPlotDataForm, PredictionsPlotDataForm
+from .forms import ResidualsPlotDataForm, PredictionsPlotDataForm, FlatfilePlotForm
 
 
 img_ext = ('png', 'pdf', 'svg')
