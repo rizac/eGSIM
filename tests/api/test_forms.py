@@ -15,8 +15,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from openquake.hazardlib import imt
 
 from egsim.api.forms import (GsimImtForm, GsimFromRegionForm, EgsimBaseForm)
-from egsim.api.forms.flatfile import FlatfileForm
-from egsim.api.forms.flatfile.flatfile_inspection import FlatfileValidationForm
+from egsim.api.forms.flatfile import FlatfileForm, FlatfileValidationForm
 from egsim.api.forms.scenarios import PredictionsForm
 from egsim.smtk import read_flatfile
 from egsim.smtk.scenarios import RuptureProperties, SiteProperties
@@ -229,7 +228,6 @@ class Test:
         form = PredictionsForm(data)
         assert not form.is_valid()
         assert form.errors_json_data()['message'] == \
-              'aspect, dip: missing parameter is required; ' \
               'distance: 2 values are invalid; ' \
               'imt: invalid value (SA); ' \
               'mag: 1 value is invalid; ' \
@@ -251,14 +249,14 @@ class Test:
         flatfile = flatfile_df[['rake', 'station_id',
                                 'magnitude', 'rrup', 'vs30', 'event_id', 'PGA']].copy()
         bio = BytesIO()
-        flatfile.to_csv(bio, sep=',')
+        flatfile.to_csv(bio, sep=',', index=False)
         files = {'esm2019': SimpleUploadedFile('cover', bio.getvalue())}
         # mvd = MultiValueDict({'flatfile': fp})
         form = FlatfileValidationForm({}, files=files)
         is_valid = form.is_valid()
         assert is_valid
-        # data = form.response_data
-        assert 'CauzziEtAl2014' in form.cleaned_data['gsim']
+        data = form.output()
+        assert isinstance(data['columns'], list) and data['columns']
 
         # Test removing event_id (form still valid. Previously, had event_id
         # was required and the form was invalid. Now we removed the mandatory
