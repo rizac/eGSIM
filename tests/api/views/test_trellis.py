@@ -18,7 +18,8 @@ from egsim.api.forms.scenarios import PredictionsForm
 from unittest.mock import patch  # ok in py3.8  # noqa
 
 from egsim.smtk import registered_imts
-from egsim.smtk.registry import imt_name
+from egsim.smtk.flatfile import ColumnType
+from egsim.smtk.registry import imt_name, Clabel
 
 
 @pytest.mark.django_db
@@ -47,9 +48,11 @@ class Test:
         form = PredictionsForm(data=dict(inputdic))
         assert form.is_valid()
         input_ = form.cleaned_data
-        assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', 'mag', 'rrup']
-        assert list(result.keys())[1] == 'rrup'
-        assert len(result['mag']) == len(result['rrup']) == 12
+        assert sorted(result.keys()) == ['PGA', 'PGV', 'SA(0.2)', Clabel.input_data]
+        # assert list(result.keys())[1] == 'rrup'
+        mags = result[Clabel.input_data][ColumnType.rupture.value]['mag']
+        dists = result[Clabel.input_data][ColumnType.distance.value]['rrup']
+        assert len(mags) == len(dists) == 12
         result_json = result
 
         # test the text response:
