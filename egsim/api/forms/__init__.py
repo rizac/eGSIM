@@ -124,6 +124,8 @@ class EgsimBaseForm(Form):
         :param field: a Form field name (not an input parameter name)
         :param code: an optional error code (e.g. 'invalid')
         """
+        # In case of init_errors return True also if code is None, signaling
+        # calling routines (e.g. self.clean) that isn't worth to proceed anyway:
         if self.init_errors and (code is None or field in self.init_errors):
             return True
         if not self._errors:

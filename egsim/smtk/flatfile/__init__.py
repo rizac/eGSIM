@@ -370,21 +370,6 @@ def _read_csv_finalize(
     return dfr
 
 
-def _val2str(val):
-    """Return the string representation of the given val.
-    See also :ref:`query` for consistency (therein, we expose functions
-    and variables for flatfile selection)"""
-    if isinstance(val, (date, datetime)):
-        return f'datetime("{val.isoformat()}")'
-    elif val is True or val is False:
-        return str(val).lower()
-    elif isinstance(val, str):
-        # do not import json, just delegate Python:
-        return f"{val}" if '"' not in val else val.__repr__()
-    else:
-        return str(val)
-
-
 def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     """Call `flatfile.query` with some utilities:
      - datetime can be input in the string, e.g. "datetime(2016, 12, 31)"
