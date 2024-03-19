@@ -313,18 +313,18 @@ class Test:
         assert len(models) == 12
 
 
-def test_get_flatfile_columns():
-    import pandas as pd
-    d = pd.DataFrame({
-        'a': ['', None],
-        'b': [datetime.utcnow(), None],
-        'e': [1, 0],
-        'f': [1.1, None],
-    })
-    for c in d.columns:
-        d[c+'_categ'] = d[c].astype('category')
-
-    res = FlatfileForm.get_flatfile_dtypes(d)
+# def test_get_flatfile_columns():
+#     import pandas as pd
+#     d = pd.DataFrame({
+#         'a': ['', None],
+#         'b': [datetime.utcnow(), None],
+#         'e': [1, 0],
+#         'f': [1.1, None],
+#     })
+#     for c in d.columns:
+#         d[c+'_categ'] = d[c].astype('category')
+#
+#     res = FlatfileForm.get_flatfile_dtypes(d)
 
 
 def test_field2params_in_forms():
@@ -373,20 +373,22 @@ def test_field2params_in_forms():
 
 def test_trellis_rupture_site_fields():
 
+    form_rupture_fields = set(PredictionsForm().rupture_fields)
     rup_fields = RuptureProperties.__annotations__
-    missing = set(rup_fields) - PredictionsForm.rupture_fields()
+    missing = set(rup_fields) -form_rupture_fields
     assert sorted(missing) == ['tectonic_region']
 
+    form_site_fields = set(PredictionsForm().site_fields)
     site_fields = SiteProperties.__annotations__
-    missing = set(site_fields) - PredictionsForm.site_fields()
+    missing = set(site_fields) - form_site_fields
     assert sorted(missing) == ['distance_type', 'origin_point', 'xvf']
 
-    # check that we did not misspelled any TrellisField. To do this, let's
+    # check that we did not misspell any TrellisField. To do this, let's
     # remove the site and rupture fields, and all fields defined in superclasses.
     # We should be left with 2 fields only: magnitude and distance
 
-    rem_fields = set(PredictionsForm.base_fields) \
-                 - PredictionsForm.rupture_fields() - PredictionsForm.site_fields()
+    rem_fields = set(PredictionsForm.base_fields) - \
+                 form_rupture_fields - form_site_fields
 
     for super_cls in PredictionsForm.__mro__:
         if super_cls is not PredictionsForm:

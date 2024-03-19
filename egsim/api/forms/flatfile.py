@@ -1,7 +1,7 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from typing import Iterable, Sequence, Union
+from typing import Iterable, Sequence, Union, Optional
 
 import pandas as pd
 from django.forms import Form, ModelChoiceField
@@ -10,7 +10,7 @@ from django.forms.fields import CharField, FileField
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for, registered_imts)
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, ColumnsRegistry,
-                                 query as flatfile_query, ColumnDtype)
+                                 query as flatfile_query, ColumnDtype, ColumnType)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimImtForm
 
@@ -108,57 +108,6 @@ class FlatfileForm(EgsimBaseForm):
         return cleaned_data
 
 
-def get_columns_info(flatfile: pd.DataFrame) -> list[dict]:
-    """Return a list of dicts representing a column:
-    {"name":str, "type":str, "dtype":str, "help":str}.
-    Columns that are defined in the flatfile and are also default columns
-    registered in this program will not be returned if their data type does not match
-    """
-    columns = []
-    for col in flatfile.columns:
-        actual_dtype = _dtype2str(get_dtype_of(flatfile[col]))
-        c_info = get_registered_column_info(col)
-        if not c_info['type']:  # not registered column, set the actual column dtype
-            c_info['dtype'] = actual_dtype
-        else:
-            expected_dtype = c_info['dtype']
-            if not expected_dtype:  # registered columns with no dtype set 9any is ok):.
-                # Set the one we have
-                c_info['dtype'] =actual_dtype
-            else:  # registered columns with dtype set. Check:
-                if expected_dtype != actual_dtype:
-                    continue
-        columns.append(c_info)
-    return columns
-
-
-def get_registered_column_info(column: str):
-    """Return a dict representing the given registered
-    flatfile column:
-        {"name":str, "type":str, "dtype":str, "help":str}
-    """
-    ret = {
-        'name': column,
-        'type': getattr(ColumnsRegistry.get_type(column), 'value', ""),
-        'dtype': "",
-        'help': ""
-    }
-    if ret['type']:
-        ret['dtype'] = _dtype2str(ColumnsRegistry.get_dtype(column))
-        ret['help'] = str(ColumnsRegistry.get_help(column) or "")
-    return ret
-
-
-def _dtype2str(dtype: Union[None, str, ColumnDtype, pd.CategoricalDtype]):
-    if dtype is None:
-        return ""
-    elif isinstance(dtype, pd.CategoricalDtype):
-        return f'Any value from: {", ".join(sorted(dtype.categories))})'
-    elif isinstance(dtype, ColumnDtype):
-        return dtype.value
-    return dtype
-
-
 def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
     """Yield the GSIM names supported by the given flatfile"""
     ff_cols = set('SA' if _.startswith('SA(') else _ for _ in flatfile_columns)
@@ -177,20 +126,6 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
     """Form for flatfile validation, on success
     return info from a given uploaded flatfile"""
 
-    def clean(self):
-        cleaned_data = super().clean()
-
-        if self.has_error('flatfile'):
-            return cleaned_data
-        dataframe = cleaned_data['flatfile']
-        # check invalid columns (FIXME: we could skip this, it's already checked? write a test):
-        invalid = set(dataframe.columns) - \
-                  set(_['name'] for _ in get_columns_info(dataframe))
-        if invalid:
-            self.add_error('flatfile',
-                           f'Invalid data type in column(s):  {", ".join(invalid)}')
-        return cleaned_data
-
     def output(self) -> dict:
         """Compute and return the output from the input data (`self.cleaned_data`).
         This method must be called after checking that `self.is_valid()` is True
@@ -199,10 +134,22 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         """
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
+        columns = []
+        # what if a registered column has a wrong dtype? we will not be here.
+        # So when computing the categories and dtype we are safe (we could
+        # ask ColumnRegistry for that but let's be consistent with all columns
+        # also those not registered):
+        for col in sorted(dataframe.columns):
+            ctype = ColumnsRegistry.get_type(col)
+            dtype = get_dtype_of(dataframe[col])
+            try:
+                categories = sorted(dataframe[col].cat.categories.tolist())
+            except AttributeError:
+                categories = []
+            help = ColumnsRegistry.get_help(col)
+            columns.append(_harmonize_column_props(col, ctype, dtype, categories, help))
 
-        return {
-            'columns': get_columns_info(dataframe)
-        }
+        return { 'columns': columns }
 
 
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
@@ -232,7 +179,35 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
             for m in gsims:
                 imts |= intensity_measures_defined_for(m)
 
-        return {
-            'columns': [get_registered_column_info(c)
-                        for c in sorted(ff_columns | set(imts))]
-        }
+        columns = []
+        for col in sorted(ff_columns | set(imts)):
+            columns.append(
+                _harmonize_column_props(
+                    col,
+                    ColumnsRegistry.get_type(col),
+                    ColumnsRegistry.get_dtype(col),
+                    ColumnsRegistry.get_categories(col),
+                    ColumnsRegistry.get_help(col)
+                )
+            )
+
+        return { 'columns': columns }
+
+
+def _harmonize_column_props(
+        name:str,
+        ctype: Optional[ColumnType],
+        dtype: Optional[ColumnDtype],
+        categories: Optional[list],
+        help: Optional[str]):
+    dtype = getattr(dtype, name, "")
+    if dtype and categories:
+        dtype += f' (categorical) to be chosen from: {", ".join(sorted(categories))})'
+    return {
+        'name': name,
+        'type': getattr(ctype, 'value', ""),
+        'dtype': dtype,
+        'help': help or ""
+    }
+
+
