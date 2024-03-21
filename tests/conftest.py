@@ -17,6 +17,7 @@ from django.core.management import call_command
 from django.test.client import Client
 from django.conf import settings
 
+# FIXME check which fixtures are still needed. Provide a path?
 
 @pytest.fixture(scope="session", autouse=True)
 def auto_create_media_root():
@@ -123,6 +124,12 @@ def areequal(request):
             return True
 
     return Comparator()
+
+
+@pytest.fixture(scope="session")
+def datadir(request):  # noqa
+    thisdir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(thisdir, 'data')
 
 
 @pytest.fixture(scope="session")

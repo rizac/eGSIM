@@ -12,7 +12,7 @@ import numpy as np
 
 from egsim.smtk.converters import (vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14,
                                    convert_accel_units)
-from egsim.smtk.flatfile import parse_flatfile
+from egsim.smtk.flatfile import read_flatfile
 
 
 def parse(file) -> pd.DataFrame:
@@ -24,8 +24,8 @@ def parse(file) -> pd.DataFrame:
     :param file: str, path object or file-like object denoting the input to be
         read and parsed
     """
-    dfr = parse_flatfile(file, sep=sep, rename=rename, extra_dtype=extra_dtype,
-                         extra_defaults={}, usecols=usecols)
+    dfr = read_flatfile(file, sep=sep, rename=rename, dtypes=extra_dtype,
+                        defaults={}, usecols=usecols)
 
     return post_process(dfr)
 

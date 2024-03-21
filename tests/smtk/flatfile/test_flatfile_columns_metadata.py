@@ -12,7 +12,7 @@ import numpy as np
 from openquake.hazardlib import imt
 from egsim.smtk import gsim, registered_imts, registered_gsims
 from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
-                                 _columns_registry_path, _cast_value, ColumnsRegistry,
+                                 _columns_registry_path, cast_to_dtype, ColumnsRegistry,
                                  _load_columns_registry, get_dtype_of)
 
 
@@ -114,14 +114,15 @@ def check_column_metadata(*, name: str, props: dict):
         return
 
     # handle categorical data:
-    if isinstance(dtype, pd.CategoricalDtype):  # categorical data type
-        if get_dtype_of(*dtype.categories) is None:
+    categories = props.pop('categories', None)
+    if categories:  # categorical data type
+        if get_dtype_of(pd.Series(categories)) is None:
             raise ValueError(f"{prefix} invalid data type(s) in categorical data")
         if bounds_are_given:
             raise ValueError(f"{prefix} bounds cannot be provided with "
                              f"categorical data type")
         if default_is_given:
-            assert default is _cast_value(default, dtype)  # raise if not in categories
+            assert default is cast_to_dtype(default, dtype, categories)  # raise if not in categories
         return
 
     dtype = ColumnDtype(dtype)  # raise ValueError
@@ -141,14 +142,14 @@ def check_column_metadata(*, name: str, props: dict):
         min_val = bounds.get(">", bounds.get(">=", None))
         for val in [max_val, min_val]:
             if val is not None:
-                assert val is _cast_value(val, dtype)
+                assert val == cast_to_dtype(val, dtype)
         if max_val is not None and min_val is not None and max_val <= min_val:
             raise ValueError(f'{prefix} min. bound must be lower than '
                              f'max. bound')
 
     # check default value:
     if default_is_given:
-        assert default is _cast_value(default, dtype)
+        assert default == cast_to_dtype(default, dtype)
 
     if props:
         raise ValueError(f'{prefix} Undefined property names, '
@@ -197,7 +198,7 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
         assert callable(x) and x.__name__ in registered_imts
 
 
-def test_Column_dtype():
+def test_get_dtype():
     vals = {
         datetime.utcnow(): ColumnDtype.datetime,
         2: ColumnDtype.int,
@@ -206,37 +207,41 @@ def test_Column_dtype():
         'a': ColumnDtype.str
     }
     for val, ctype in vals.items():
-        assert get_dtype_of(val) == ctype
-        assert get_dtype_of(type(val)) == ctype
-        assert get_dtype_of(*pd.CategoricalDtype([val]).categories) == ctype
+        assert get_dtype_of(pd.Series(val)) == ctype
+        assert get_dtype_of(pd.Series([val])) == ctype
+        assert get_dtype_of(pd.CategoricalDtype([val]).categories) == ctype
+        assert get_dtype_of(pd.Index([val])) == ctype
+        assert get_dtype_of(pd.Series(val).dtype) == ctype
+        assert get_dtype_of(pd.Series([val]).dtype) == ctype
+        assert get_dtype_of(pd.Series(val).values[0]) == ctype
+        assert get_dtype_of(pd.Series([val]).values) == ctype
+        if ctype == ColumnDtype.datetime:
+            # to_datetime returns a Timestamp so it is not datetime dtype:
+            assert get_dtype_of(pd.to_datetime(val)) != ctype
+            assert get_dtype_of(pd.to_datetime([val])) == ctype
+        else:
+            assert get_dtype_of(np.array(val)) == ctype
+            assert get_dtype_of(np.array([val])) == ctype
 
-    d = pd.DataFrame({
-        'category': [None, "x"],
-        'int': [4, 5],
-        'float': [1.1, np.nan],
-        'datetime': [datetime.utcnow(), datetime.utcnow()],
-        'bool': [True, False],
-        'str': [None, "x"],
-    })
-    d.str = d.str.astype('string')
-    d.category = d.category.astype('category')
-    for c in d.columns:
-        dtyp = d[c].dtype
-        assert get_dtype_of(dtyp) == ColumnDtype[c]
-        assert get_dtype_of(d[c]) == ColumnDtype[c]
-        assert get_dtype_of(d[c].values) == ColumnDtype[c]
-        if c == 'category':
-            continue
-        assert all(
-            get_dtype_of(_) == ColumnDtype[c] for _ in d[c] if pd.notna(_))
-        assert all(
-            get_dtype_of(_) == ColumnDtype[c] for _ in d[c].values if pd.notna(_))
-        # assert all(
-        #     ColumnDtype.of(_) == ColumnDtype[c]
-        #     for _ in d[c].tolist() if _ is not None)
-        for _, isna in zip(d[c].tolist(), pd.isna(d[c])):
-            if not isna:
-                if get_dtype_of(_) != ColumnDtype[c]:
-                    get_dtype_of(_)
+    # cases of mixed types that return None as dtype (by default they return string
+    # but this is a behaviour of pandas that we do not want to mimic):
+    assert get_dtype_of(pd.Series([True, 2])) is None
+    assert get_dtype_of(pd.CategoricalDtype([True, 2]).categories) is None
 
-    assert get_dtype_of(None) is None
+    assert get_dtype_of(pd.Series(['True', 2])) is None
+    assert get_dtype_of(pd.CategoricalDtype(['True', 2]).categories) is None
+
+    assert get_dtype_of(pd.Series(['x', 2, datetime.utcnow()])) is None
+    assert get_dtype_of(pd.CategoricalDtype(['x', 2, datetime.utcnow()]).categories) \
+           is None
+
+    # test series with N/A:
+    vals = [
+        [[datetime.utcnow(), pd.NaT], ColumnDtype.datetime],
+        [[2, None], ColumnDtype.float],
+        [[1.2, None], ColumnDtype.float],
+        [[True, None], None],
+        [['a', None], None]
+    ]
+    for val, ctype in vals:
+        assert get_dtype_of(pd.Series(val)) == ctype

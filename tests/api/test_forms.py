@@ -95,9 +95,18 @@ class Test:
         assert form.errors_json_data()['message'] == \
                'flatfile: the submitted file is empty'
 
-        # note that any flatfile readable with pandas does not raise, so the form
-        # is valid (it will raise when computing residuals):
+        # no imt:
         csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
+        form = FlatfileForm({}, {'flatfile': csv})
+        assert not form.is_valid()
+
+        # invalid data in PGA:
+        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d", content_type="text/csv")
+        form = FlatfileForm({}, {'flatfile': csv})
+        assert not form.is_valid()
+
+        # ok?:
+        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", content_type="text/csv")
         form = FlatfileForm({}, {'flatfile': csv})
         assert form.is_valid()
 

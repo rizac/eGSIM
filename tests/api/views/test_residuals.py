@@ -34,7 +34,7 @@ class Test:
         inputdic = testdata.readyaml(self.request_filename)
 
         # Uploaded flatfile, but not well formed:
-        csv = SimpleUploadedFile("file.csv", b"a,b,c,d", content_type="text/csv")
+        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", content_type="text/csv")
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
