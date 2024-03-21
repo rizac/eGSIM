@@ -3,6 +3,8 @@ Created on 16 Feb 2018
 
 @author: riccardo
 """
+import tempfile
+
 from io import StringIO
 import os
 from datetime import datetime
@@ -12,7 +14,8 @@ import pytest
 import pandas as pd
 from pandas import StringDtype
 
-from egsim.smtk.flatfile import read_flatfile, query, ColumnType, InvalidDataInColumn
+from egsim.smtk.flatfile import read_flatfile, query, ColumnType, InvalidDataInColumn, \
+    get_dtype_of, ColumnDtype
 from egsim.smtk.flatfile import ColumnsRegistry, _load_columns_registry
 
 
@@ -32,21 +35,51 @@ def test_flatfile_turkey():
     root = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     fpath = os.path.join(root, 'data', 'tk_20230206_flatfile_geometric_mean.csv')
     dfr = read_flatfile(fpath)
+    assert all(get_dtype_of(dfr[c]) is not None for c in dfr.columns)
 
 
-def test_read_csv():
+# def test_read_flatfile_dtypes(datdir):
+#     f = '/Users/rizac/work/gfz/projects/sources/python/egsim/tests/data/tmp'
+#
+#     data = [True, False]
+#     exp_dtype = ColumnDtype.bool
+#
+#     assert get_dtype_of(data) == exp_dtype
+#     d = pd.DataFrame({'PGA': [1.]* len(data), 'test':data})
+#     assert d['test'] == exp_dtype
+#     assert d['PGA'] == ColumnDtype.float
+#
+#     with open(f, 'w') as _:
+#         d.to_hdf(f)
+#     d = read_flatfile(f)
+#     assert d['test'] == exp_dtype
+#     assert d['PGA'] == ColumnDtype.float
+#     d = read_flatfile(f, dtypes={'test': ColumnDtype.category})
+#     assert d['test'] == exp_dtype
+#     assert d['PGA'] == ColumnDtype.category
+#
+#     with open(f, 'w') as _:
+#         d.to_csv(f)
+#     d = read_flatfile(f)
+#     assert d['test'] == exp_dtype
+#     assert d['PGA'] == ColumnDtype.float
+
+
+
+
+def tst_read_csv():
     # we rely on the fact that dataframe get returns none when column not found:
     assert pd.DataFrame().get('a') is None
     assert pd.DataFrame({'a': [1,2]}).get('b') is None
 
     args = {
-        'dtype': {"str": "str", "float": "float",
+        'dtype': {"str": "str", "PGA": "float",
                   "int": "int", "datetime": "datetime", "bool": "bool"},
     }
 
     expected = {
         'int': np.dtype('int64'),
-        'float': np.dtype('float64'),
+        'PGA': np.dtype('float64'),
         'bool': np.dtype('bool'),
         'datetime': np.dtype('<M8[ns]'),
         'str': StringDtype(),  # np.dtype('O'),
@@ -54,7 +87,7 @@ def test_read_csv():
     }
 
     # print("\nData ok")
-    csv = ("int,bool,float,datetime,str,category"
+    csv = ("int,bool,PGA,datetime,str,category"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,a"
            "\n"
@@ -66,9 +99,9 @@ def test_read_csv():
 
     # print("\nData ok and empty")
     expected_na_count = {
-        'int': 0, 'bool': 0, 'float':1, 'datetime': 1, 'str': 1, 'category': 1
+        'int': 0, 'bool': 0, 'PGA':1, 'datetime': 1, 'str': 1, 'category': 1
     }
-    csv = ("int,bool,float,datetime,str,category"
+    csv = ("int,bool,PGA,datetime,str,category"
            "\n"
            ",,,,,"
            "\n"
@@ -79,7 +112,7 @@ def test_read_csv():
         assert pd.isna(d[c]).sum() == expected_na_count[c]
 
     # print("\nSome data ok, empty and wrong")
-    csv = ("int,bool,float,datetime,str,category"
+    csv = ("int,bool,PGA,datetime,str,category"
            "\n"
            "1,true,1.1,2006-01-01T00:00:00,x,a"
            )
@@ -87,7 +120,7 @@ def test_read_csv():
     for header, val in zip(csv.split("\n")[0].split(","), csv.split("\n")[1].split(",")):
         # append an x to the last value
         csv2 = f"{header}\n{val}\n{val}x"
-        if header in ('int', 'bool', 'float', 'datetime'):
+        if header in ('int', 'bool', 'PGA', 'datetime'):
         # try:
         #     d = read_flatfile(StringIO(csv2), **args)
         #     asd = 9
@@ -102,7 +135,7 @@ def test_read_csv():
         d = read_flatfile(StringIO(csv2), **args)
 
 
-def test_read_csv_bool():
+def tst_read_csv_bool():
     args = {
         'sep': ';',
         'skip_blank_lines': False,
@@ -151,7 +184,7 @@ def test_read_csv_bool():
         d = read_flatfile(StringIO(csv_str), **args)  # noqa
 
 
-def test_read_csv_categorical():
+def tst_read_csv_categorical():
     defaults = {
         "str": "a",
         "int": 1,

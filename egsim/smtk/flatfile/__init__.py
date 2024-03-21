@@ -2,16 +2,16 @@
 from __future__ import annotations
 from io import IOBase
 from os.path import join, dirname
-from datetime import date, datetime
+from datetime import datetime
 import re
-from typing import Union, Any
-from collections.abc import Callable, Collection
+from pandas.core.base import IndexOpsMixin
+from pandas.errors import ParserError
+from typing import Union, Any, Optional
+from collections.abc import Callable, Collection, Container
 from enum import Enum
 
 import numpy as np
 import pandas as pd
-from pandas.core.arrays import PandasArray
-from pandas.core.dtypes.base import ExtensionDtype
 
 from yaml import load as yaml_load
 try:
@@ -79,9 +79,9 @@ _flatfile_default_args = (
 def read_flatfile(
         filepath_or_buffer: Union[str, IOBase],
         sep: str = None,
-        dtype: dict[str, Union[str, list, ColumnDtype, pd.CategoricalDtype]] = None,
+        rename: dict[str, str] = None,
+        dtypes: dict[str, Union[str, list, ColumnDtype, pd.CategoricalDtype]] = None,
         defaults: dict[str, Any] = None,
-        usecols: Union[list[str], Callable[[str], bool]] = None,
         **kwargs) -> pd.DataFrame:
     """
     Read a comma-separated values (csv) file into DataFrame, behaving as pandas
@@ -98,9 +98,6 @@ def read_flatfile(
         and inferred from the extension (e.g. 'gzip', 'zip')
     :param sep: the separator (or delimiter). None means 'infer' (it might
         take more time)
-    :param usecols: pandas `read_csv` parameter (exposed explicitly here for clarity)
-        the column names to load, as list. Can be also a callable
-        accepting a column name and returning True/False (keep/discard)
     :param dtype: dict of flatfile column names mapped to user-defined data type.
         Standard flatfile columns do not need to be present, unless their data type
         needs to be overwritten. Columns in `dtype` not present in the CSV will be
@@ -126,112 +123,49 @@ def read_flatfile(
     :return: pandas DataFrame representing a Flat file
     """
     kwargs = dict(_flatfile_default_args) | kwargs
-    dtype = dict(dtype or {})  # will be harmonized and modified inplace below:
-    kwargs, xp_dtype, xp_categories =  _read_csv_prepare(filepath_or_buffer,
-                                                         sep=sep,
-                                                         dtype=dtype,
-                                                         usecols=usecols,
-                                                         **kwargs)
+    if sep is None:
+        kwargs['sep'] =  _infer_csv_sep(filepath_or_buffer, **kwargs)
+    else:
+        kwargs['sep'] = sep
+
     try:
         dfr = pd.read_csv(filepath_or_buffer, **kwargs)
     except ValueError as exc:
         invalid_columns = _read_csv_inspect_failure(filepath_or_buffer, **kwargs)
         raise InvalidDataInColumn(*invalid_columns) from None
 
-    # finalize and return
-    defaults = defaults or {}
-    _read_csv_finalize(dfr, xp_dtype, xp_categories, defaults)
+    if rename:
+        dfr.rename(columns=rename, inplace=True)
+        # rename defaults and dtypes:
+        for old, new in rename.items():
+            if dtypes and old in dtypes:
+                dtypes[new] = dtypes.pop(old)
+            if defaults and old in defaults:
+                defaults[new] = dtypes.pop(old)
+
+    validate_flatfile_dataframe(dfr, dtypes, defaults)
     if not isinstance(dfr.index, pd.RangeIndex):
         dfr.reset_index(drop=True, inplace=True)
     return dfr
 
 
-def _read_csv_prepare(filepath_or_buffer: IOBase, dtype:dict, **kwargs) -> \
-        tuple[dict, dict, dict]:
-    """prepare the arguments for pandas read_csv: take tha passed **kwargs
-    and return three dicts:
-    - the new kwargs to be passed to pandas read_csv
-    - a dict of columns with expected ColumnDtype
-    - a dict of columns mapped to the categories (or empty list)
-    """
-    parse_dates = set(kwargs.pop('parse_dates', []))
+def _infer_csv_sep(filepath_or_buffer: IOBase, **kwargs) -> str:
+    """ infer `sep` and or return it
 
-    # infer `sep` and read the CSV header (dataframe columns), as some args of
-    # `read_csv` (e.g. `parse_dates`) cannot contain columns not present in the flatfile
-    header = []
-    sep = kwargs.get('sep', None)
+    :param kwargs: read_csv arguments, excluding 'sep'
+    """
     nrows = kwargs.pop('nrows', None)
-    if sep is None:
-        kwargs.pop('sep')  # if it was None needs removal
-        for _sep in [';', ',', r'\s+']:
-            _header = _read_csv_get_header(filepath_or_buffer, sep=_sep, **kwargs)
-            if len(_header) > len(header):
-                sep = _sep
-                header = _header
-        kwargs['sep'] = sep
-    else:
-        header = _read_csv_get_header(filepath_or_buffer, **kwargs)
+    header = []
+    kwargs.pop('sep', None)  # if it was None needs removal
+    sep = ','
+    for _sep in [';', ',', r'\s+']:
+        _header = _read_csv_get_header(filepath_or_buffer, sep=_sep, **kwargs)
+        if len(_header) > len(header):
+            sep = _sep
+            header = _header
     if nrows is not None:
         kwargs['nrows'] = nrows
-
-    # mix usecols with the flatfile columns just retrieved (it might speed up read):
-    usecols = kwargs.pop('usecols', None)
-    if callable(usecols):
-        csv_columns = set(f for f in header if usecols(f))
-        kwargs['usecols'] = csv_columns
-    elif hasattr(usecols, "__iter__"):
-        csv_columns = set(header) & set(usecols)
-        kwargs['usecols'] = csv_columns
-    else:
-        csv_columns = set(header)
-
-    # Harmonize `dtype` values and set `parse_dates` arguments of read_csv
-    # (see also `_read_csv_finalize`):
-    kwargs['dtype'] = {}
-    xp_dtype = {}  # expected dtypes
-    xp_categories = {}  # expected_categories
-    for col in csv_columns:
-        col_dtype: ColumnDtype
-        if col in dtype:
-            # custom column:
-            try:
-                col_dtype = ColumnDtype[dtype[col]]
-            except (KeyError, ValueError):
-                categories, col_dtype = _parse_categories(dtype[col])
-                xp_categories[col] = categories
-        else:
-            # registered column?
-            col_dtype = ColumnsRegistry.get_dtype(col)
-            if col_dtype is None:
-                continue
-            xp_categories[col] = ColumnsRegistry.get_categories(col)
-
-        xp_dtype[col] = col_dtype
-
-        if col_dtype == ColumnDtype.int:
-            # let `read_csv` treat ints as floats, so that we can have NaN and
-            # check later if we can replace them with the column default, if set
-            kwargs['dtype'][col] = ColumnDtype.float.value
-        elif col_dtype == ColumnDtype.bool:
-            # let `read_csv` infer the data type of bools by not passing a dtype at
-            # all. We will check later if we can cast the values to bool, not only
-            # in terms of replacing N/A with the column default, if set, but also
-            # string values (e.g. 'FALSE') to valid values
-            continue
-        elif col_dtype == ColumnDtype.datetime:
-            # date times in `read_csv` must be given in the `parse_dates` arg. Note
-            # that, whereas missing values will still preserve the dtype and be set
-            # as `NaT` (not a time), invalid datetime values will simply result in a
-            # column with a more general dtype set (usually object): this will be
-            # checked later
-            parse_dates.add(col)
-        else:
-            kwargs['dtype'][col] = col_dtype.value
-
-    if parse_dates:
-        kwargs['parse_dates'] = list(parse_dates)
-
-    return kwargs, xp_dtype, xp_categories
+    return sep
 
 
 def _read_csv_get_header(filepath_or_buffer: IOBase, sep=None, **kwargs) -> list[str]:
@@ -275,96 +209,73 @@ def _read_csv_inspect_failure(filepath_or_buffer: IOBase, **kwargs) -> list[str]
     return invalid_columns or cols2check
 
 
-def _read_csv_finalize(
+def validate_flatfile_dataframe(
         dfr: pd.DataFrame,
-        expected_dtype: dict[str, ColumnDtype],
-        expected_categories: dict[str, list],
-        defaults: dict[str, Any]):
-    """Finalize `read_csv` by adjusting the values and dtypes of the given dataframe
-    `dfr`, and return it
-
-    :return: a pandas DataFrame (the same `dfr` passed as argument, with some
-        modifications if needed)
+        extra_dtypes: dict[str, Union[str, ColumnDtype, pd.CategoricalDtype, list]] = None,
+        extra_defaults: dict[str, Any] = None):
+    """FIXME doc
     """
     # post-process:
     invalid_columns = []
-    if defaults is None:
-        defaults = {}
+    if not extra_defaults:
+        extra_defaults = {}
+    if not extra_dtypes:
+        extra_dtypes = {}
     # check dtypes correctness (actual vs expected) and try to fix mismatching ones:
     for col in dfr.columns:
-        xp_dtype = expected_dtype.get(col, None)
+        xp_categories = None
+        if col in extra_dtypes:
+            xp_dtype = extra_dtypes[col]
+            if not isinstance(xp_dtype, ColumnDtype):
+                try:
+                    xp_dtype = ColumnDtype[extra_dtypes[col]]
+                except KeyError:
+                    try:
+                        xp_categories, xp_dtype = _parse_categories(xp_dtype)
+                    except ValueError:
+                        invalid_columns.append(col)
+                        continue
+        else:
+            xp_dtype = ColumnsRegistry.get_dtype(col)
+            xp_categories = ColumnsRegistry.get_categories(col)
+
         if xp_dtype is None:
             continue
-        if xp_dtype == ColumnDtype.category:
-            if not isinstance(dfr[col].dtype, pd.CategoricalDtype):
-                invalid_columns.append(col)
-            continue
 
-        # actual dtype. NOTE: cannot be categorical (see `_read_csv_prepare`)
-        actual_dtype = get_dtype_of(dfr[col])
-        # check matching dtypes:
-        dtype_ok = actual_dtype is not None and actual_dtype == xp_dtype
-        do_type_cast = False
-        # handle mismatching dtypes (bool and int):
-        if not dtype_ok:
-            if xp_dtype == ColumnDtype.int:
-                not_na = pd.notna(dfr[col])
-                values = dfr[col][not_na]
-                if (values == values.astype(int)).all():  # noqa
-                    dtype_ok = True
-                    do_type_cast = True
-            elif xp_dtype == ColumnDtype.bool:
-                not_na = pd.notna(dfr[col])
-                unique_vals = pd.unique(dfr[col][not_na])
-                mapping = {}
-                for val in unique_vals:
-                    if isinstance(val, str):
-                        if val.lower() in {'0', 'false'}:
-                            mapping[val] = False
-                        elif val.lower() in {'1', 'true'}:
-                            mapping[val] = True
-                if mapping:
-                    dfr[col].replace(mapping, inplace=True)
-                    unique_vals = pd.unique(dfr[col][not_na])
-                if set(unique_vals).issubset({0, 1}):
-                    dtype_ok = True
-                    do_type_cast = True
-        # if expected and actual dtypes match, set defaults (if any) and cast (if needed)
-        if dtype_ok:
-            xp_categories = expected_categories.get(col, [])
-            #set default
-            if col in defaults:
-                default = defaults[col]
-                if xp_categories and default not in xp_categories:
-                    # FIXME raise? in case, this is an input error,
-                    #  not a flatfile error, how to handle?
-                    default = None
-            else:
-                default = ColumnsRegistry.get_default(col)
+        if col in extra_dtypes:
+            default = extra_defaults.get(col)
             if default is not None:
-                is_na = pd.isna(dfr[col])
-                dfr.loc[is_na, col] = default
-            # if we expected categories, set the categories, nut be sure that we do not
-            # have invalid values (pandas automatically set them to N/A):
-            if xp_categories:
-                is_na = pd.isna(dfr[col])
-                dfr[col] = dfr[col].astype(pd.CategoricalDtype(xp_categories))
-                # check that we still have the same N/A (=> all values in dfr[col] are
-                # valid categories):
-                is_na_after = pd.isna(dfr[col])
-                if len(is_na) != len(is_na_after) or (is_na != is_na_after).any():
-                    dtype_ok = False
-            elif do_type_cast:  # type-cast bool and int columns, if needed:
-                try:
-                    dfr[col] = dfr[col].astype(xp_dtype.value)
-                except (ValueError, TypeError):
-                    dtype_ok = False
+                default = cast_to_dtype(default, xp_dtype, xp_categories)
+        else:
+            default = ColumnsRegistry.get_default(col)
+        if default is not None:
+            is_na = pd.isna(dfr[col])
+            dfr.loc[is_na, col] = default
 
-        if not dtype_ok:
-            invalid_columns.append(col)
+        # handle mismatching dtypes (bool and int):
+        actual_dtype = get_dtype_of(dfr[col])
+        if actual_dtype != xp_dtype or actual_dtype is None:
+            try:
+                dfr[col] = cast_to_dtype(dfr[col], xp_dtype, xp_categories)
+            except (ParserError, ValueError):
+                invalid_columns.append(col)
+                continue
 
     if invalid_columns:
         raise InvalidDataInColumn(*invalid_columns)
+
+    # # check no dupes:
+    ff_cols = set(dfr.columns)
+    has_imt = False
+    for c in dfr.columns:
+        aliases = set(ColumnsRegistry.get_aliases(c))
+        if len(aliases & ff_cols) > 1:
+            raise ConflictingColumns(*list(aliases & ff_cols))
+        if not has_imt and ColumnsRegistry.get_type(c) == ColumnType.intensity:
+            has_imt = True
+
+    if not has_imt:
+        raise MissingColumn('No IMT column found')
 
     return dfr
 
@@ -409,64 +320,58 @@ class ColumnType(Enum):
 
 
 class ColumnDtype(Enum):
-    """Enum where members are registered dtype names (see ColumnRegistry) and
-    values are the pandas valid counterpart (e.g. arguments of `Series.astype`,
-    or dict values of `dtype` in `read_csv`)
-    """
+    """Enum where members are registered dtype names (see ColumnRegistry)"""
     # for a list of possible values, see `numpy.sctypeDict.keys()` (but also
     # check that they behave as you wish in pandas)
-    float = "float"
-    int = "int"
-    bool = "bool"
-    datetime = "datetime64"  # not used in `pd.read_csv`, works with `Series.astype`
-    str = "string"  # https://pandas.pydata.org/docs/user_guide/text.html
-    category = "category"  # categorical with no pre-defined categories
+    float = "numeric float"
+    int = "numeric integer"
+    bool = "boolean"
+    datetime = "date-time (ISO formatted)"
+    str = "string of text"
+    category = "categorical (a value from a list of possible choices)"
 
 
-def get_dtype_of(*item: Union[int, float, datetime, bool, str,
-                 np.array, pd.Series, PandasArray,
-                 type[int, float, datetime, bool, str],
-                 np.dtype, ExtensionDtype]) -> Union[ColumnDtype, None]:
-    """Return the dtype of the given argument, as member of the ColumnDtype Enum,
-    or None if no associated dtype is found.
-    If several arguments are passed and the arguments are not all the same dtype,
-    returns None
-
-    :param item: one or more Python objects, such as object instance (e.g. 4.5),
-        object class (`float`), a numpy array, pandas Series / Array, a numpy dtype,
-        pandas ExtensionDtype (e.g., as returned from a pandas dataframe
-        `dataframe[column].dtype`).
+def get_dtype_of(arr_or_dtype: Union[IndexOpsMixin, np.ndarray, np.dtype]):
     """
-    ret_type = None
-    for obj in item:
-        if isinstance(obj, (pd.Series, np.ndarray, PandasArray)):
-            obj = obj.dtype  # will fall back in the next "if"
-        if isinstance(obj, (np.dtype, ExtensionDtype)):
-            obj = obj.type
-        # define a 'is_type' function:
-        is_type = issubclass if isinstance(obj, type) else isinstance
-        if is_type(obj, (bool, np.bool_)):
-            # Note: bool is a subclass of int in Python: this 'if' before any int check
-            c_dtype = ColumnDtype.bool
-        elif is_type(obj, (int, np.integer)):
-            c_dtype = ColumnDtype.int
-        elif is_type(obj, (float, np.floating)):
-            c_dtype = ColumnDtype.float
-        elif is_type(obj, (datetime, np.datetime64)):
-            c_dtype = ColumnDtype.datetime
-        elif is_type(obj, (str, np.str_)):
-            c_dtype = ColumnDtype.str
-        elif is_type(obj, (pd.CategoricalDtype.type,  # noqa
-                           pd.core.arrays.categorical.Categorical)):
-            c_dtype = ColumnDtype.category
-        else:
-            return None
-        if ret_type is None:
-            ret_type = c_dtype
-        elif ret_type != c_dtype:
-            return None
-    return ret_type
+    Get the dtype of the given pandas object, numpy array or dtype. Examples:
+    ```
+    get_dtype_of(pd.Series(...))
+    get_dtype_of(pd.CategoricalDtype().categories)
+    get_dtype_of(dataframe.index)
+    get_dtype_of(np.array(...))
+    ```
 
+    :param arr_or_dtype: any pandas numpy collection e.g. Series / Index or a dtype
+    """
+    if  pd.api.types.is_bool_dtype(arr_or_dtype):
+        return ColumnDtype.bool
+    if pd.api.types.is_float_dtype(arr_or_dtype):
+        return ColumnDtype.float
+    if pd.api.types.is_integer_dtype(arr_or_dtype):
+        return ColumnDtype.int
+    if pd.api.types.is_datetime64_any_dtype(arr_or_dtype):
+        return ColumnDtype.datetime
+    if  pd.api.types.is_categorical_dtype(arr_or_dtype):
+        return ColumnDtype.category
+    if pd.api.types.is_string_dtype(arr_or_dtype):
+        # str in pandas is a generic type that is returned also for mixed types. We
+        # could use pandas 'string' type but it is not serializable to hdf so let's
+        # use str but check here we really deal with strings and not mixed types
+        if isinstance(arr_or_dtype, np.dtype):
+            return ColumnDtype.str
+        if isinstance(arr_or_dtype, np.ndarray) and not arr_or_dtype.shape:
+            # numpy single element, make it fall in the next if (pd.is_scalar):
+            arr_or_dtype = arr_or_dtype.item()
+        if pd.api.types.is_scalar(arr_or_dtype):
+            if isinstance(arr_or_dtype, str):
+                # values a scalar (not a dtype), check its class
+                return ColumnDtype.str
+        if pd.api.types.is_list_like(arr_or_dtype):
+            if all(isinstance(_, str) for _ in arr_or_dtype):
+                # values is list-like, check that all elements are str. Inefficient
+                # but unavoidable (e.g. pd.Series([True, 2]) would return str otherwise):
+                return ColumnDtype.str
+    return None
 
 # Exceptions:
 
@@ -638,10 +543,16 @@ def _harmonize_col_props(name:str, props:dict):
             props['dtype'] = dtype
             props['categories'] = categories
     if 'default' in props:
-        props['default'] = _cast_value(props['default'], props['dtype'])
+        props['default'] = cast_to_dtype(
+            props['default'],
+            props['dtype'],
+            props.get('categories', None))
     for k in ("<", "<=", ">", ">="):
         if k in props:
-            props[k] = _cast_value(props[k], props['dtype'] )
+            props[k] = cast_to_dtype(
+                props[k],
+                props['dtype'],
+                props.get('categories', None))
     return props
 
 
@@ -656,26 +567,89 @@ def _parse_categories(values: Union[pd.CategoricalDtype, Collection]) \
             values = pd.CategoricalDtype(values)
         except (TypeError, ValueError):
             raise ValueError(f'Not categorical: {str(values)}')
-    categories_dtype = get_dtype_of(*values.categories)
+    categories_dtype = get_dtype_of(values.categories)
     if categories_dtype is None:
         raise ValueError(f'Invalid categorical data type, categories '
                          f'data types unrecognized or not homogeneous')
     return values.categories.tolist(), categories_dtype
 
 
-def _cast_value(val: Any, dtype: ColumnDtype) -> Any:
+def cast_to_dtype(
+        value: Any,
+        dtype: ColumnDtype,
+        categories: Optional[Union[Container, pd.CategoricalDtype]]=None) -> Any:
     """Cast the given value to the given dtype, raise ValueError if unsuccessful
 
-    :param val: any Python object
+    :param value: pandas Series/Index, numpy array or scalar, Python scalar
     :param dtype: the base `ColumnDtype`
+    :param categories: a list of poandas Categorical of possible choices. Must be
+        all the same type of `dtype`
     """
-    if dtype == ColumnDtype.datetime and isinstance(val, date):
-        return datetime(val.year, val.month, val.day)
-    actual_dtype = get_dtype_of(val)
-    if actual_dtype == dtype:
-        return val
-    if dtype == ColumnDtype.float and actual_dtype == ColumnDtype.int:
-        return float(val)
-    raise ValueError(f'Not a {dtype.name}: {str(val)}')
 
+    is_pd = isinstance(value, IndexOpsMixin)  # common interface for Series / Index
+    is_np = not is_pd and isinstance(value, (np.ndarray, np.generic))
+    if not is_pd:
+        values = pd.Series(value)
+    else:
+        values = value
 
+    categorical_dtype = None
+    if isinstance(categories, pd.CategoricalDtype):
+        categorical_dtype = categories
+    elif categories:
+        categorical_dtype = pd.CategoricalDtype(categories)
+
+    if dtype == ColumnDtype.float:
+        values = values.astype(float)
+    elif dtype == ColumnDtype.int:
+        values = values.astype(int)
+    elif dtype == ColumnDtype.bool:
+        # bool is too relaxed, e.g. [3, 'x'].astype(bool) works (it shouldn't). So:
+        try:
+            values = values.astype(int)
+        except ValueError:
+            values = values.replace({
+                '0': False,
+                'false': False,
+                'False': False,
+                'FALSE': False,
+                '1': True,
+                'true': True,
+                'True': True,
+                'TRUE': True
+            }).astype(int)
+        if sorted(pd.unique(values)) not in ([0], [1], [0, 1]):  # FIXME better?
+            raise ValueError()
+    elif dtype == ColumnDtype.datetime:
+        try:
+            values = pd.to_datetime(values)
+        except (ParserError, ValueError) as exc:
+            raise ValueError(str(exc))  # dtype_ok = False, so jump at the end (see below)
+    elif dtype  == ColumnDtype.str:
+        values = values.astype(str)
+    elif dtype == ColumnDtype.category:
+        if categorical_dtype:
+            values = values.astype(categorical_dtype)
+            categorical_dtype = None  # do not fall back in the if below
+        else:
+            values = values.astype('category')
+
+    if categorical_dtype:
+        # check that we still have the same N/A. Pandas convert invalid values to NA
+        # we want to raise:
+        is_na = pd.isna(values)
+        values = values.astype(categorical_dtype)
+        is_na_after = pd.isna(values)
+        if len(is_na) != len(is_na_after) or (is_na != is_na_after).any():
+            raise ValueError('Not all values in defined categories')
+
+    if is_pd:
+        return values
+
+    list_like = pd.api.types.is_list_like(value)
+
+    if is_np:
+        return values.values if list_like else values.values[0]
+
+    # Python object
+    return values.tolist() if list_like else values.item()
