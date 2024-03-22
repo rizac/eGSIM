@@ -8,8 +8,8 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.scalerel import PeerMSR
 
-from ..flatfile import (ColumnsRegistry, MissingColumn,
-                        InvalidDataInColumn, InvalidColumnName, ConflictingColumns)
+from ..flatfile import (ColumnsRegistry, MissingColumnError,
+                        ColumnDataError, ColumnNameError, ColumnConflictError)
 from ..validators import sa_period
 from ..registry import ground_motion_properties_required_by
 from ..converters import vs30_to_z1pt0_cy14, vs30_to_z2pt5_cb14
@@ -23,7 +23,7 @@ def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:
     ff_cols = set(flatfile.columns)
     cols = set(ColumnsRegistry.get_aliases(column)) & ff_cols
     if len(cols) > 1:
-        raise ConflictingColumns(*cols)
+        raise ColumnConflictError(*cols)
     elif len(cols) == 0:
         return None
     else:
@@ -38,7 +38,7 @@ def get_event_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
     cols = ['event_latitude', 'event_longitude', 'event_depth', 'event_time']
     col_names = [get_column_name(flatfile, c) for c in cols]
     if any(c is None for c in col_names):
-        raise MissingColumn(default_col_name)
+        raise MissingColumnError(default_col_name)
     return col_names
 
 
@@ -50,7 +50,7 @@ def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
     cols = ['station_latitude', 'station_longitude']
     col_names = [get_column_name(flatfile, c) for c in cols]
     if any(c is None for c in col_names):
-        raise MissingColumn(default_col_name)
+        raise MissingColumnError(default_col_name)
     return col_names
 
 
@@ -98,10 +98,10 @@ def get_required_imts(flatfile: pd.DataFrame, imts: Collection[str]) -> pd.DataF
         # was requested:
         supported_imts = ColumnsRegistry.get_intensity_measures() - {'SA'}
         if non_sa_imts - supported_imts:
-            raise InvalidColumnName(*list(non_sa_imts - supported_imts))
+            raise ColumnNameError(*list(non_sa_imts - supported_imts))
         # from the requested imts, raise if some are not in the flatfile:
         if non_sa_imts - set(flatfile.columns):
-            raise MissingColumn(*list(non_sa_imts - set(flatfile.columns)))
+            raise MissingColumnError(*list(non_sa_imts - set(flatfile.columns)))
         # add non SA imts:
         new_dataframes.append(flatfile[sorted(non_sa_imts)])
     # prepare the flatfile for SA (create new columns by interpolation if necessary):
@@ -141,7 +141,7 @@ def get_required_sa(flatfile: pd.DataFrame, sa_imts: Iterable[str]) -> pd.DataFr
         if p not in source_sa:
             tgt_sa.append((p, i))
     if invalid_sa:
-        raise InvalidDataInColumn(*invalid_sa)
+        raise ColumnDataError(*invalid_sa)
 
     # source_sa: period [float] -> mapped to the relative column:
     target_sa: dict[float, str] = {p: c for p, c in sorted(tgt_sa, key=lambda t: t[0])}
@@ -254,7 +254,7 @@ def get_ground_motion_property_values(
     elif gm_property == 'rvolc' and series is None:
         series = pd.Series(np.full(len(flatfile), fill_value=0, dtype=int))
     if series is None:
-        raise MissingColumn(gm_property)
+        raise MissingColumnError(gm_property)
     return series
 
 

@@ -23,7 +23,7 @@ from ..registry import get_ground_motion_values, Clabel
 from .flatfile_utils import (get_event_id_column_names,
                              get_station_id_column_names,
                              get_flatfile_for_residual_analysis)
-from ..flatfile import InvalidColumn, MissingColumn, ColumnsRegistry
+from ..flatfile import FlatfileError, MissingColumnError, ColumnsRegistry
 
 
 def get_residuals(
@@ -90,7 +90,7 @@ def prepare_flatfile(flatfile: pd.DataFrame,
     try:
         st_cols = get_station_id_column_names(flatfile)
         flatfile_r[st_cols] = flatfile[st_cols]
-    except InvalidColumn:
+    except FlatfileError:
         pass
     return flatfile_r
 
@@ -178,7 +178,7 @@ class EventContext(RuptureContext):
         try:
             values = self._flatfile[column_name].values
         except KeyError:
-            raise MissingColumn(column_name)
+            raise MissingColumnError(column_name)
         if column_name in self.rupture_params:
             values = values[0]
         return values
