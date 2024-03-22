@@ -95,7 +95,7 @@ def read_flatfile(
             dfr = pd.read_csv(filepath_or_buffer, **kwargs)
         except ValueError as exc:
             # invalid_columns = _read_csv_inspect_failure(filepath_or_buffer, **kwargs)
-            raise InvalidDataInColumn(str(exc)) from None
+            raise ColumnDataError(str(exc)) from None
 
     if rename:
         dfr.rename(columns=rename, inplace=True)
@@ -213,7 +213,7 @@ def validate_flatfile_dataframe(
                 continue
 
     if invalid_columns:
-        raise InvalidDataInColumn(*invalid_columns)
+        raise ColumnDataError(*invalid_columns)
 
     # check no dupes:
     ff_cols = set(dfr.columns)
@@ -221,12 +221,12 @@ def validate_flatfile_dataframe(
     for c in dfr.columns:
         aliases = set(ColumnsRegistry.get_aliases(c))
         if len(aliases & ff_cols) > 1:
-            raise ConflictingColumns(*list(aliases & ff_cols))
+            raise ColumnConflictError(*list(aliases & ff_cols))
         if not has_imt and ColumnsRegistry.get_type(c) == ColumnType.intensity:
             has_imt = True
 
     if not has_imt:
-        raise MissingColumn('No IMT column found')
+        raise MissingColumnError('No IMT column found')
 
     return dfr
 
@@ -433,66 +433,33 @@ def _parse_categories(values: Union[pd.CategoricalDtype, Collection]) \
 
 # Exceptions:
 
-class InvalidColumn(Exception):
+
+class FlatfileError(Exception):
     """
     General flatfile column(s) error. See subclasses for details
     """
-    def __init__(self, *names, sep=', ', plural_suffix='s'):
-        super().__init__(*names)
-        self._sep = sep
-        self._plural_suffix = plural_suffix
-
-    @property
-    def names(self):
-        """return the names (usually column names) raising this Exception
-        and passed in `__init__`"""
-        return [repr(_) for _ in self.args]
-
     def __str__(self):
-        """Make `str(self)` more clear"""
-        # get prefix (e.g. 'Missing column(s)'):
-        prefix = self.__class__.__name__
-        # replace upper cases with space + lower case letter
-        prefix = re.sub("([A-Z])", " \\1", prefix).strip().capitalize()
-        names = self.names
-        if len(names) != 1:
-            prefix += self._plural_suffix
-        # return full string:
-        return f"{prefix} {self._sep.join(names)}"
-
-    def __repr__(self):
-        return self.__str__()
+        """Reformat ``str(self)``"""
+        # Basically remove the brackets if `self.arg` is a tuple i.e. if  `__init__`
+        # was called with multiple arguments:
+        return ", ".join(str(arg) for arg in self.args)
 
 
-class MissingColumn(InvalidColumn, AttributeError, KeyError):
+class MissingColumnError(FlatfileError, AttributeError, KeyError):
     """MissingColumnError. It inherits also from AttributeError and
     KeyError to be compliant with pandas and OpenQuake"""
-
-    @property
-    def names(self):
-        """return the names with their alias(es), if any"""
-        _names = []
-        for name in self.args:
-            sorted_names = ColumnsRegistry.get_aliases(name)
-            suffix_str = repr(sorted_names[0])
-            if len(sorted_names) > 1:
-                suffix_str += f" (or {', '.join(repr(_) for _ in sorted_names[1:])})"
-            _names.append(suffix_str)
-        return _names
-
-
-class ConflictingColumns(InvalidColumn):
-
-    def __init__(self, name1, name2, *other_names):
-        InvalidColumn.__init__(self, name1, name2, *other_names,
-                               sep=" vs. ", plural_suffix='')
-
-
-class InvalidDataInColumn(InvalidColumn, ValueError, TypeError):
     pass
 
 
-class InvalidColumnName(InvalidColumn):
+class ColumnConflictError(FlatfileError):
+    pass
+
+
+class ColumnDataError(FlatfileError, ValueError, TypeError):
+    pass
+
+
+class ColumnNameError(FlatfileError):
     pass
 
 
