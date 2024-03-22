@@ -36,7 +36,13 @@ def test_flatfile_turkey():
     fpath = os.path.join(root, 'data', 'tk_20230206_flatfile_geometric_mean.csv')
     dfr = read_flatfile(fpath)
     assert all(get_dtype_of(dfr[c]) is not None for c in dfr.columns)
-
+    fpath = fpath+'.hdf.tmp'
+    try:
+        dfr.to_hdf(fpath, format='table', key='egsim')
+        dfr2 = read_flatfile(fpath)
+        pd.testing.assert_frame_equal(dfr, dfr2)
+    finally:
+        os.remove(fpath)
 
 # def test_read_flatfile_dtypes(datdir):
 #     f = '/Users/rizac/work/gfz/projects/sources/python/egsim/tests/data/tmp'

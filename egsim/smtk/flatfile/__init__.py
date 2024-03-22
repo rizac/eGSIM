@@ -33,47 +33,40 @@ _csv_default_args = (
 
 def read_flatfile(
         filepath_or_buffer: Union[str, IOBase],
-        sep: str = None,
         rename: dict[str, str] = None,
         dtypes: dict[str, Union[str, list, ColumnDtype, pd.CategoricalDtype]] = None,
         defaults: dict[str, Any] = None,
+        csv_sep: str = None,
         **kwargs) -> pd.DataFrame:
     """
-    Read a comma-separated values (csv) or HDF file into DataFrame, behaving as pandas
-    `read_csv` / `read_hdf` with some additional features:
+    Read a flatfile from either a comma-separated values (CSV) or HDF file,
+    returning the corresponding pandas DataFrame.
 
-    - int and bool columns can support missing values, as long as a default
-      is explicitly set
-    - bool columns recognize 0, 1 and all case-insensitive forms of true and false
-    - categorical columns are allowed as long as the categories are all the
-      same type. Missing values are allowed, nvalid categories will raise
-
-    :param filepath_or_buffer: str, path object or file-like object of the CSV
-        formatted data. If string, compressed files are also supported
-        and inferred from the extension (e.g. 'gzip', 'zip')
-    :param sep: the separator (or delimiter). None means 'infer' (it might
-        take more time)
-    :param dtype: dict of flatfile column names mapped to user-defined data type.
+    :param filepath_or_buffer: str, path object or file-like object of the
+        data. HDF files are the recommended formats but support only files on-disk
+        as parameter. For CSV files, in-memory files, as well as compressed files
+        that will be inferred from the extension (e.g. 'gzip', 'zip') are supported
+    :param rename: a dict mapping input column to a new column name. Mostly useful
+        for renaming input columns to standard flatfile names, delegating all data types
+        check to the function later (see also dtypes and defaults for info)
+    :param dtypes: dict of input column names mapped to user-defined data type, to
+        enforce data types after the data is read.
         Standard flatfile columns do not need to be present, unless their data type
-        needs to be overwritten. Columns in `dtype` not present in the CSV will be
+        needs to be overwritten. Columns in `dtype` not present in the input will be
         ignored.
-        Dtypes can be either 'int', 'bool', 'float', 'str', 'datetime', 'category'`,
-        list, pandas `CategoricalDtype`: the last four data types are for data that can
-        take only a limited amount of possible values and should be used mostly with
-        string data as it might save a lot of memory. With "category", pandas will infer
-        the categories from the data - note that each category will be of type `str` -
-        with all others, the categories can be any type input by the user. Flatfile
-        values not found in the categories will be replaced with missing values (NA in
-        pandas, see e.g. `pandas.isna`). Columns of type 'int' and 'bool' do not support
-        missing values: NA data will be replaced with the default set in `defaults`
-        (see doc), or with 0 for int and False for bool if no default is set for the
-        column.
-    :param defaults: dict of flatfile column names mapped to user-defined default to
-        replace missing values. Standard flatfile columns do not need to be present,
-        unless their data type needs to be overwritten. Columns in `default` not present
-        in the CSV will be ignored.
-        Note that if int and bool columns are specified in `dtype`, then a default is
-        set for those columns anyway (0 for int, False for bool. See `dtype` doc)
+        Dict values can be either 'int', 'bool', 'float', 'str', 'datetime', 'category'`,
+        list, pandas `CategoricalDtype`: the last three denote data that can
+        take only a limited amount of possible values and should be mostly used with
+        string data as it might save a lot of memory (with "category", pandas will infer
+        the possible values from the data. In this case, note that with CSV inputs each
+        category will be of type `str`).
+    :param defaults: dict of input column names mapped to user-defined default to
+        replace missing values. 'int' and 'bool' columns do not support missing values
+        so when reading from CSV a valid default (e.g. 0 or False) should be provided.
+        Standard flatfile columns do not need to be present, unless their default needs
+        to be overwritten. Columns in `defaults` not present in the input will be ignored
+    :param csv_sep: the separator (or delimiter), only used for CSV files.
+        None means 'infer' (look in `kwargs` and if not found, infer from data header)
 
     :return: pandas DataFrame representing a Flat file
     """
@@ -85,16 +78,18 @@ def read_flatfile(
     try:
         dfr = pd.read_hdf(filepath_or_buffer, **kwargs)
         is_hdf = True
-    except HDF5ExtError:
+    except (HDF5ExtError, NotImplementedError):
+        # HdfError -> some error in the data
+        # NotImplementedError -> generic buffer not implemented in HDF
         # try with CSV:
         if cur_pos is not None:
             filepath_or_buffer.seek(cur_pos)
 
         kwargs = dict(_csv_default_args) | kwargs
-        if sep is None:
+        if csv_sep is None:
             kwargs['sep'] =  _infer_csv_sep(filepath_or_buffer, **kwargs)
         else:
-            kwargs['sep'] = sep
+            kwargs['sep'] = csv_sep
 
         try:
             dfr = pd.read_csv(filepath_or_buffer, **kwargs)
@@ -118,14 +113,12 @@ def read_flatfile(
 
 
 def _infer_csv_sep(filepath_or_buffer: IOBase, **kwargs) -> str:
-    """ infer `sep` and or return it
-
-    :param kwargs: read_csv arguments, excluding 'sep'
-    """
+    """Infer `sep` from kwargs, and or return it"""
+    sep = kwargs.get('sep', None)
+    if sep is not None:
+        return sep
     nrows = kwargs.pop('nrows', None)
     header = []
-    kwargs.pop('sep', None)  # if it was None needs removal
-    sep = ','
     for _sep in [';', ',', r'\s+']:
         _header = _read_csv_get_header(filepath_or_buffer, sep=_sep, **kwargs)
         if len(_header) > len(header):
@@ -159,7 +152,9 @@ def validate_flatfile_dataframe(
         extra_dtypes: dict[str, Union[str, ColumnDtype, pd.CategoricalDtype, list]] = None,
         extra_defaults: dict[str, Any] = None,
         mixed_dtype_categorical='raise'):
-    """FIXME doc
+    """Validate the flatfile dataframe checking data types, conflicting column names,
+    or missing mandatory columns (e.g. IMT related columns). This method raises
+    or returns None on success
     """
     # post-process:
     invalid_columns = []
@@ -183,7 +178,7 @@ def validate_flatfile_dataframe(
                         continue
         else:
             xp_dtype = ColumnsRegistry.get_dtype(col)
-            xp_categories = ColumnsRegistry.get_categories(col)
+            xp_categories = ColumnsRegistry.get_categories(col) or None
 
         if xp_dtype is None:
             continue
@@ -358,7 +353,7 @@ def cast_to_dtype(
     categorical_dtype = None
     if isinstance(categories, pd.CategoricalDtype):
         categorical_dtype = categories
-    elif categories:
+    elif categories is not None:
         categorical_dtype = pd.CategoricalDtype(categories)
 
     if dtype == ColumnDtype.float:
@@ -395,13 +390,24 @@ def cast_to_dtype(
                 values = values_
 
     if categorical_dtype:
-        # check that we still have the same N/A. Pandas convert invalid values to NA
-        # we want to raise:
-        is_na = pd.isna(values)
-        values = values.astype(categorical_dtype)
-        is_na_after = pd.isna(values)
-        if len(is_na) != len(is_na_after) or (is_na != is_na_after).any():
-            raise ValueError('Not all values in defined categories')
+        if is_pd:
+            # check that we still have the same N/A. Pandas convert invalid values to NA
+            # we want to raise:
+            is_na = pd.isna(values)
+            values = values.astype(categorical_dtype)
+            is_na_after = pd.isna(values)
+            ok = len(is_na) == len(is_na_after) and (is_na == is_na_after).all()
+        elif dtype == ColumnDtype.datetime:
+            # np.isin does not work for datetime / timestamps/. Verbose check:
+            if pd.api.types.is_scalar(values) or (is_np and not values.shape):
+                # scalar or no-size numpy array:
+                ok = values in categorical_dtype.categories
+            else:
+                ok = all(v in categorical_dtype.categories for v in values)
+        else:
+            ok = np.isin(values, categorical_dtype.categories.tolist()).all()
+        if not ok:
+            raise ValueError('Value mismatch with provided categorical values')
 
     if is_pd or is_np:
         return values
