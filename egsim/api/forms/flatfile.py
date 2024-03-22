@@ -200,9 +200,9 @@ def _harmonize_column_props(
         dtype: Optional[ColumnDtype],
         categories: Optional[list],
         help: Optional[str]):
-    dtype = getattr(dtype, name, "")
+    dtype = getattr(dtype, 'value', "")
     if dtype and categories:
-        dtype += f' (categorical) to be chosen from: {", ".join(sorted(categories))})'
+        dtype += f'. A value to be chosen from: {", ".join(sorted(categories))})'
     return {
         'name': name,
         'type': getattr(ctype, 'value', ""),
