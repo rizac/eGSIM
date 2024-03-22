@@ -199,29 +199,49 @@ def check_with_openquake(rupture_params: dict[str, set[str]],
 
 
 def test_get_dtype():
-    vals = {
-        datetime.utcnow(): ColumnDtype.datetime,
-        2: ColumnDtype.int,
-        1.2: ColumnDtype.float,
-        True: ColumnDtype.bool,
-        'a': ColumnDtype.str
-    }
-    for val, ctype in vals.items():
+    vals = [
+        [ColumnDtype.datetime, datetime.utcnow()],
+        [ColumnDtype.datetime, np.datetime64(datetime.utcnow())],
+        [ColumnDtype.int, 2],
+        [ColumnDtype.int, np.int_(2)],
+        [ColumnDtype.float, 2.2],
+        [ColumnDtype.float, np.nan],
+        [ColumnDtype.float, np.float_(2.2)],
+        [ColumnDtype.bool, True],
+        [ColumnDtype.bool, np.bool_(False)],
+        [ColumnDtype.str, 'a'],
+        [ColumnDtype.str, np.str_('a')],
+    ]
+    for ctype, val in vals:
+        # scalar (Pythion numpy whatever):
+        assert get_dtype_of(val) == ctype
+        # pd.Series:
         assert get_dtype_of(pd.Series(val)) == ctype
         assert get_dtype_of(pd.Series([val])) == ctype
-        assert get_dtype_of(pd.CategoricalDtype([val]).categories) == ctype
+        # pd.CategoricalDtype
+        if not pd.isna(val):
+            # (NaN / Null cannot be set as categories, skip in case)
+            assert get_dtype_of(pd.CategoricalDtype([val]).categories) == ctype
+        # pd.Index:
         assert get_dtype_of(pd.Index([val])) == ctype
+        # np.dtypes:
         assert get_dtype_of(pd.Series(val).dtype) == ctype
         assert get_dtype_of(pd.Series([val]).dtype) == ctype
+        # np.array:
         assert get_dtype_of(pd.Series(val).values[0]) == ctype
         assert get_dtype_of(pd.Series([val]).values) == ctype
-        if ctype == ColumnDtype.datetime:
-            # to_datetime returns a Timestamp so it is not datetime dtype:
-            assert get_dtype_of(pd.to_datetime(val)) != ctype
-            assert get_dtype_of(pd.to_datetime([val])) == ctype
-        else:
+        if ctype != ColumnDtype.datetime:
+            # skip np.array(datetime) and use to_datetime (see below):
             assert get_dtype_of(np.array(val)) == ctype
             assert get_dtype_of(np.array([val])) == ctype
+        # pd.numeric and pd.to_datetime
+        if ctype in (ColumnDtype.float, ColumnDtype.bool, ColumnDtype.int):
+            assert get_dtype_of(pd.to_numeric(val)) == ctype
+            assert get_dtype_of(pd.to_numeric([val])) == ctype
+        elif ctype == ColumnDtype.datetime:
+            # to_datetime returns a Timestamp so it is not datetime dtype:
+            assert get_dtype_of(pd.to_datetime(val)) == ctype
+            assert get_dtype_of(pd.to_datetime([val])) == ctype
 
     # cases of mixed types that return None as dtype (by default they return string
     # but this is a behaviour of pandas that we do not want to mimic):
@@ -245,3 +265,68 @@ def test_get_dtype():
     ]
     for val, ctype in vals:
         assert get_dtype_of(pd.Series(val)) == ctype
+
+
+def test_cast_to_dtype():
+    vals = [
+        [ColumnDtype.datetime, datetime.utcnow()],
+        [ColumnDtype.datetime, np.datetime64(datetime.utcnow())],
+        [ColumnDtype.int, 2],
+        [ColumnDtype.int, np.int_(2)],
+        [ColumnDtype.float, 2.2],
+        [ColumnDtype.float, np.nan],
+        [ColumnDtype.float, np.float_(2.2)],
+        [ColumnDtype.bool, True],
+        [ColumnDtype.bool, np.bool_(False)],
+        [ColumnDtype.str, 'a'],
+        [ColumnDtype.str, np.str_('a')],
+    ]
+
+    def eq(a, b):
+        try:
+            return np.array_equal(a, b, equal_nan=True)
+        except TypeError:
+            if pd.api.types.is_list_like(a) and pd.api.types.is_list_like(b):
+                return len(a) == len(b) and all(_1 == _2 for _1, _2 in zip(a,b))
+            elif pd.api.types.is_scalar(a) and pd.api.types.is_scalar(b):
+                return a == b
+            elif isinstance(a, np.ndarray) and isinstance(b, np.ndarray) and \
+                    not a.shape and not b.shape:
+                return a.item() == b.item()
+
+    for ctype, val in vals:
+        c = None  # possible categories
+        # scalar (Pythion numpy whatever):
+        if val != val:
+            assert np.isnan(cast_to_dtype(val, ctype, c))
+        else:
+            assert eq(cast_to_dtype(val, ctype, c), val)
+
+        # pd.Series:
+        v = pd.Series(val)
+        assert eq(cast_to_dtype(v, ctype), v)
+        v = pd.Series(val)
+        assert eq(cast_to_dtype(v, ctype) , v)
+        # pd.Index:
+        v = pd.Index([val])
+        assert eq(cast_to_dtype(v, ctype), v)
+        # np.array:
+        v = pd.Series(val).values[0]
+        assert eq(cast_to_dtype(v, ctype), v)
+        v = pd.Series([val]).values
+        assert eq(cast_to_dtype(v, ctype), v)
+        if ctype != ColumnDtype.datetime:
+            # skip np.array(datetime) and use to_datetime (see below):
+            v = np.array(val)
+            assert eq(cast_to_dtype(v, ctype), v)
+            np.array([val])
+            assert eq(cast_to_dtype(v, ctype), v)
+        # pd.numeric and pd.to_datetime
+        if ctype in (ColumnDtype.float, ColumnDtype.bool, ColumnDtype.int):
+            assert eq(cast_to_dtype(pd.to_numeric(val), ctype), val)
+            assert eq(cast_to_dtype(pd.to_numeric([val]), ctype), [val])  # noqa
+        elif ctype == ColumnDtype.datetime:
+            # to_datetime returns a Timestamp so it is not datetime dtype:
+            assert eq(cast_to_dtype(pd.to_datetime(val), ctype), val)
+            assert eq(cast_to_dtype(pd.to_datetime([val]), ctype), [val])  # noqa
+
