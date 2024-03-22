@@ -100,10 +100,10 @@ class Test:
         form = FlatfileForm({}, {'flatfile': csv})
         assert not form.is_valid()
 
-        # invalid data in PGA:
+        # PGA provided but empty works as the cast to float succeeds:
         csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d", content_type="text/csv")
         form = FlatfileForm({}, {'flatfile': csv})
-        assert not form.is_valid()
+        assert form.is_valid()
 
         # ok?:
         csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", content_type="text/csv")
