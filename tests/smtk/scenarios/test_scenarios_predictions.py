@@ -4,7 +4,6 @@ Tests for generation of data for trellis plots
 import os
 import numpy as np
 import pandas as pd
-from pytest import raises
 
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
@@ -12,7 +11,7 @@ from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
 from scipy.interpolate import interpolate
 
 from egsim.smtk.registry import Clabel
-from egsim.smtk.flatfile import ColumnType, ColumnsRegistry
+from egsim.smtk.flatfile import ColumnType, FlatfileMetadata
 from egsim.smtk.scenarios import (get_scenarios_predictions, RuptureProperties,
                                   SiteProperties)
 
@@ -77,7 +76,7 @@ def test_distance_imt_trellis():
     assert len(dfr) == len(distances)
     # there was a kind of bug in old smtk? ref has one element more, as the 1st distance
     # is repeated twice. Test it and remove 1st row:
-    assert (ref.iloc[0, :] == ref.iloc[1, :]).all()
+    assert (ref.iloc[0, :] == ref.iloc[1, :]).all()  # noqa
     # now remove 1st row
     ref = ref.iloc[1:, :].copy()
     # usual tests:
@@ -95,7 +94,7 @@ def test_distance_imt_trellis():
                 assert all(x < y for x, y in zip(ref[c], ref[c][1:]))
             else:
                 # magnitudes should be equal:
-                assert (dfr[c].values == ref[c].values).all()
+                assert (dfr[c].values == ref[c].values).all()  # noqa
 
             continue
 
@@ -250,7 +249,7 @@ def open_ref_hdf(file_name) -> pd.DataFrame:
             try:
                 c_mapping[c] = (
                     Clabel.input_data,
-                    str(ColumnsRegistry.get_type(c[0]).value),
+                    str(FlatfileMetadata.get_type(c[0]).value),
                     c[0])
             except Exception as exc:
                 raise ValueError(f'`ref` dataframe: unmapped column {c}. {exc}')

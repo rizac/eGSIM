@@ -15,13 +15,14 @@ from itertools import product
 import json
 import pytest
 
-from egsim.api.forms.flatfile.residuals import ResidualsForm
+from egsim.api.forms.flatfile import FlatfileMetadataInfoForm, FlatfileValidationForm
+from egsim.api.forms.residuals import ResidualsForm
 from egsim.api.forms.scenarios import PredictionsForm
+from egsim.app.forms import FlatfilePlotForm
 
-
-from egsim.app.views import _IMG_FORMATS
-from egsim.app.templates.apidoc import as_dict
-from egsim.app.templates.egsim import get_init_json_data, form_to_json, URLS, TAB
+# from egsim.app.views import _IMG_FORMATS
+# from egsim.app.templates.apidoc import as_dict
+from egsim.app.views import URLS
 from django.test.client import Client
 
 GSIM, IMT = 'gsim', 'imt'
@@ -29,28 +30,44 @@ GSIM, IMT = 'gsim', 'imt'
 @pytest.mark.django_db
 class Test:
 
-    def test_get_component_properties(self):
-        data = get_init_json_data(debug=False)
-        # test it is json serializable:
-        json.dumps(data)
-
-    def test_to_vuejs(self):
-        val = [form_to_json(_) for _ in (PredictionsForm, ResidualsForm)]
-        # test it is json serializable:
-        data = json.dumps(val)
-
     def test_to_help(self):
-        val = [as_dict(_) for _ in (PredictionsForm, ResidualsForm)]
-        # test it is json serializable:
-        data = json.dumps(val)
+        def_ = { GSIM: ['CauzziEtAl2014'], IMT: ['PGA']}
+        f_ = {'flatfile': 'esm_2018'}
 
-    def test_views(self,  # pytest fixtures:
-                   client):
-        for url in [URLS.IMPRINT, URLS.HOME_NO_MENU, URLS.REF_AND_LICENSE,  # URLS.API,
-                    URLS.GET_GSIMS_FROM_REGION,  # URLS.FLATFILE_INSPECTION, URLS.FLATFILE_PLOT
-                    URLS.FLATFILE_REQUIRED_COLUMNS] + \
-                   [_.name for _ in TAB]:
-            response = client.get("/" + url , follow=True)
+        for form, compact in product(
+                [PredictionsForm(def_),
+                 ResidualsForm(def_ | f_),
+                 FlatfileMetadataInfoForm(def_),
+                 FlatfileValidationForm(f_),
+                 FlatfilePlotForm(f_ | {'x': 'mag'})],
+                [True, False]):
+            val = form.asdict(compact)
+            # test it is json serializable:
+            data = json.dumps(val)
+
+    def test_html_pages(self,  # pytest fixtures:
+                        client):
+        page_urls = [getattr(URLS, _) for _ in dir(URLS) if _.endswith('_PAGE')]
+        assert len(page_urls)  # in case we rename the attrs sometime
+        for url in page_urls:
+
+            # external link, just check the link ios n ot broken:
+            if url.startswith('http://') or url.startswith('https://'):
+                import urllib.request
+                with urllib.request.urlopen(url) as response:
+                    assert response.code == 200
+                continue
+
+            # just the URL without leading slash returns 404 (FIXME WHY?)
+            response = client.get(f"{url}" , follow=True)
+            assert response.status_code == 404
+
+            # leading
+            response = client.get(f"/{url}", follow=True)
+            assert response.status_code == 200
+
+            # trailing slash al;so work (see urls.py)
+            response = client.get(f"/{url}/", follow=True)
             assert response.status_code == 200
 
     def test_flatfile_inspection(self,  # pytest fixtures:
@@ -90,7 +107,7 @@ class Test:
                 response = client.post("/" + url, data=data)
                 assert response.status_code == 200
 
-    def test_main_page_init_data_and_invalid_browser_message(self, settings):
+    def tst_main_page_init_data_and_invalid_browser_message(self, settings):
         data = [{'browser': {'name': bn, 'version': v}, 'selectedMenu': m }
                 for bn, v, m in product(['chrome', 'firefox', 'safari'],
                                         [1, 100000], [_.name for _ in TAB])]

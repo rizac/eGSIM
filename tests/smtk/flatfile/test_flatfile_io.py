@@ -16,17 +16,17 @@ from egsim.smtk.flatfile import (read_flatfile,
                                  ColumnType,
                                  FlatfileError,
                                  get_dtype_of)
-from egsim.smtk.flatfile import ColumnsRegistry, _load_columns_registry
+from egsim.smtk.flatfile import FlatfileMetadata, _load_flatfile_metadata
 
 
 def test_read_flatifle_yaml():
 
-    dic = _load_columns_registry(False)
-    params = ColumnsRegistry.get_rupture_params()
+    dic = _load_flatfile_metadata(False)
+    params = FlatfileMetadata.get_rupture_params()
     assert len({'rupture_width', 'mag', 'magnitude', 'width'} & params) == 4
-    params = {c for c in dic if ColumnsRegistry.get_type(c) == ColumnType.distance}
+    params = {c for c in dic if FlatfileMetadata.get_type(c) == ColumnType.distance}
     assert len({'rrup', 'rhypo'} & params) == 2
-    params = {c for c in dic if ColumnsRegistry.get_type(c) == ColumnType.site}
+    params = {c for c in dic if FlatfileMetadata.get_type(c) == ColumnType.site}
     assert len({'sta_lat', 'station_latitude', 'lat' , 'vs30'} & params) == 4
 
 
