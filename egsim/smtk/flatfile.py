@@ -20,6 +20,7 @@ try:
 except ImportError:
     from yaml import SafeLoader  # same as using yaml.safe_load
 
+from .validators import sa_period
 
 _csv_default_args = (
     ('na_values', ("", "null", "NULL", "None",
@@ -42,29 +43,30 @@ def read_flatfile(
     Read a flatfile from either a comma-separated values (CSV) or HDF file,
     returning the corresponding pandas DataFrame.
 
-    :param filepath_or_buffer: str, path object or file-like object of the
-        data. HDF files are the recommended formats but support only files on-disk
-        as parameter. For CSV files, in-memory files, as well as compressed files
-        that will be inferred from the extension (e.g. 'gzip', 'zip') are supported
-    :param rename: a dict mapping input column to a new column name. Mostly useful
-        for renaming input columns to standard flatfile names, delegating all data types
-        check to the function later (see also dtypes and defaults for info)
-    :param dtypes: dict of input column names mapped to user-defined data type, to
-        enforce data types after the data is read.
-        Standard flatfile columns do not need to be present, unless their data type
-        needs to be overwritten. Columns in `dtype` not present in the input will be
-        ignored.
+    :param filepath_or_buffer: str, path object or file-like object of the data.
+        HDF files are the recommended formats but support only files on-disk as
+        parameter. CSV files on the other hand can be supplied as in-memory stream, or
+        compressed files that will be inferred from the extension (e.g. 'gzip', 'zip')
+    :param rename: a dict mapping a file column to a new column name. Mostly useful
+        for renaming columns to standard flatfile names, delegating all data types
+        check to the function without (see also dtypes and defaults for info)
+    :param dtypes: dict of file column names mapped to user-defined data types, to
+        check and cast data after the data is read. Standard flatfile columns do not
+        need to be present. If they are, the value here will overwrite the default dtype,
+        if set. Columns in `dtype` not present in the file will be ignored.
         Dict values can be either 'int', 'bool', 'float', 'str', 'datetime', 'category'`,
         list, pandas `CategoricalDtype`: the last three denote data that can
         take only a limited amount of possible values and should be mostly used with
         string data as it might save a lot of memory (with "category", pandas will infer
-        the possible values from the data. In this case, note that with CSV inputs each
+        the possible values from the data. In this case, note that with CSV files each
         category will be of type `str`).
-    :param defaults: dict of input column names mapped to user-defined default to
-        replace missing values. 'int' and 'bool' columns do not support missing values
-        so when reading from CSV a valid default (e.g. 0 or False) should be provided.
-        Standard flatfile columns do not need to be present, unless their default needs
-        to be overwritten. Columns in `defaults` not present in the input will be ignored
+    :param defaults: dict of file column names mapped to user-defined default to
+        replace missing values. Because 'int' and 'bool' columns do not support missing
+        values, with CSV files a default should be provided (e.g. 0 or False) to avoid
+        raising Exceptions.
+        Standard flatfile columns do not need to be present. If they are, the value here
+        will overwrite the default dtype, if set. Columns in `defaults` not present in
+        the file will be ignored
     :param csv_sep: the separator (or delimiter), only used for CSV files.
         None means 'infer' (look in `kwargs` and if not found, infer from data header)
 
@@ -95,7 +97,7 @@ def read_flatfile(
             dfr = pd.read_csv(filepath_or_buffer, **kwargs)
         except ValueError as exc:
             # invalid_columns = _read_csv_inspect_failure(filepath_or_buffer, **kwargs)
-            raise ColumnDataError(str(exc)) from None
+            raise InvalidDataError(str(exc)) from None
 
     if rename:
         dfr.rename(columns=rename, inplace=True)
@@ -149,7 +151,7 @@ def _read_csv_get_header(filepath_or_buffer: IOBase, sep=None, **kwargs) -> list
 
 def validate_flatfile_dataframe(
         dfr: pd.DataFrame,
-        extra_dtypes: dict[str, Union[str, ColumnDtype, pd.CategoricalDtype, list]] = None,
+        extra_dtypes: dict[str, Union[str, ColumnDtype, pd.CategoricalDtype, list]] = None,  # noqa
         extra_defaults: dict[str, Any] = None,
         mixed_dtype_categorical='raise'):
     """Validate the flatfile dataframe checking data types, conflicting column names,
@@ -177,8 +179,8 @@ def validate_flatfile_dataframe(
                         invalid_columns.append(col)
                         continue
         else:
-            xp_dtype = ColumnsRegistry.get_dtype(col)
-            xp_categories = ColumnsRegistry.get_categories(col) or None
+            xp_dtype = FlatfileMetadata.get_dtype(col)
+            xp_categories = FlatfileMetadata.get_categories(col) or None
 
         if xp_dtype is None:
             continue
@@ -193,7 +195,7 @@ def validate_flatfile_dataframe(
                     mixed_dtype_categorical
                 )
         else:
-            default = ColumnsRegistry.get_default(col)
+            default = FlatfileMetadata.get_default(col)
         if default is not None:
             is_na = pd.isna(dfr[col])
             dfr.loc[is_na, col] = default
@@ -213,16 +215,16 @@ def validate_flatfile_dataframe(
                 continue
 
     if invalid_columns:
-        raise ColumnDataError(*invalid_columns)
+        raise InvalidDataError(*invalid_columns)
 
     # check no dupes:
     ff_cols = set(dfr.columns)
     has_imt = False
     for c in dfr.columns:
-        aliases = set(ColumnsRegistry.get_aliases(c))
+        aliases = set(FlatfileMetadata.get_aliases(c))
         if len(aliases & ff_cols) > 1:
             raise ColumnConflictError(*list(aliases & ff_cols))
-        if not has_imt and ColumnsRegistry.get_type(c) == ColumnType.intensity:
+        if not has_imt and FlatfileMetadata.get_type(c) == ColumnType.intensity:
             has_imt = True
 
     if not has_imt:
@@ -260,7 +262,7 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     return flatfile.query(query_expression, **__kwargs)
 
 
-# Columns utilities:
+# Flatfile columns utilities:
 
 class ColumnType(Enum):
     """Flatfile column type"""
@@ -271,15 +273,14 @@ class ColumnType(Enum):
 
 
 class ColumnDtype(Enum):
-    """Enum where members are registered dtype names (see ColumnRegistry)"""
-    # for a list of possible values, see `numpy.sctypeDict.keys()` (but also
-    # check that they behave as you wish in pandas)
+    """Enum where members are registered dtype names"""
+    # for ref `numpy.sctypeDict.keys()` lists the possible numpy values
     float = "numeric float"
     int = "numeric integer"
     bool = "boolean"
     datetime = "date-time (ISO formatted)"
     str = "string of text"
-    category = "categorical (no mixed types)"
+    category = "categorical"
 
 
 def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any]):
@@ -372,7 +373,7 @@ def cast_to_dtype(
         try:
             values = pd.to_datetime(values)
         except (ParserError, ValueError) as exc:
-            raise ValueError(str(exc))  # dtype_ok = False, so jump at the end (see below)
+            raise ValueError(str(exc))  # dtype_ok = False, so go to end (see below)
     elif dtype  == ColumnDtype.str:
         values = values.astype(str)
     elif dtype == ColumnDtype.category:
@@ -455,17 +456,13 @@ class ColumnConflictError(FlatfileError):
     pass
 
 
-class ColumnDataError(FlatfileError, ValueError, TypeError):
-    pass
-
-
-class ColumnNameError(FlatfileError):
+class InvalidDataError(FlatfileError, ValueError, TypeError):
     pass
 
 
 # registered columns:
 
-class ColumnsRegistry:
+class FlatfileMetadata:
     """Container class to access registered flatfile columns properties defined
     in the associated YAML file
     """
@@ -475,7 +472,7 @@ class ColumnsRegistry:
         """Return a set of strings with all column names (including aliases)
         denoting a rupture parameter
         """
-        return {c_name for c_name, c_props in _load_columns_registry().items()
+        return {c_name for c_name, c_props in _load_flatfile_metadata().items()
                 if c_props.get('type', None) == ColumnType.rupture}
 
     @staticmethod
@@ -483,24 +480,24 @@ class ColumnsRegistry:
         """Return a set of strings with all column names denoting an intensity
         measure name, with no arguments, e.g., "PGA", "SA" (not "SA(...)").
         """
-        return {c_name for c_name, c_props in _load_columns_registry().items()
+        return {c_name for c_name, c_props in _load_flatfile_metadata().items()
                 if c_props.get('type', None) == ColumnType.intensity}
 
     @staticmethod
     def get_type(column: str) -> Union[ColumnType, None]:
         """Return the ColumnType of the given column name, or None"""
-        return _load_columns_registry().get(_replace(column), {}).get('type', None)
+        return FlatfileMetadata._props_of(column).get('type', None)
 
     @staticmethod
     def get_dtype(column: str) -> Union[ColumnDtype, None]:
         """Return the Column data type of the given column name, as ColumnDtype value
         (str), pandas CategoricalDtype, or None"""
-        return _load_columns_registry().get(_replace(column), {}).get('dtype', None)
+        return FlatfileMetadata._props_of(column).get('dtype', None)
 
     @staticmethod
     def get_default(column: str) -> Union[None, Any]:
         """Return the Column data type of the given column name, or None"""
-        return _load_columns_registry().get(_replace(column), {}).get('default', None)
+        return FlatfileMetadata._props_of(column).get('default', None)
 
     @staticmethod
     def get_aliases(column: str) -> tuple[str]:
@@ -509,46 +506,53 @@ class ColumnsRegistry:
         (primary name) and all remaining the secondary names. The tuple will be composed
         of `column` alone if `column` does not have registered aliases
         """
-        return _load_columns_registry().get(_replace(column), {}).get('alias', (column,))
+        return FlatfileMetadata._props_of(column).get('alias', (column,))
 
     @staticmethod
     def get_help(column: str) -> str:
         """Return the help (description) ofthe given column name, or ''"""
-        return _load_columns_registry().get(_replace(column), {}).get('help', "")
+        return FlatfileMetadata._props_of(column).get('help', "")
 
     @staticmethod
     def get_categories(column: str) -> list:
-        return _load_columns_registry().get(_replace(column), {}).get('categories', [])
+        return FlatfileMetadata._props_of(column).get('categories', [])
+
+    @staticmethod
+    def _props_of(column: str) -> dict:
+        _meta = _load_flatfile_metadata()
+        props = _meta.get(column, None)
+        if props is None and sa_period(column) is not None:
+            props = _meta.get('SA', None)
+        return props or {}
 
 
 # registered columns IO method:
 
 # YAML file path:
-_columns_registry_path = join(dirname(__file__), 'columns_registry.yaml')
+_flatfile_metadata_path = join(dirname(__file__), 'flatfile_metadata.yaml')
 # cache storage of the data in the YAML:
-_columns_registry: dict[str, dict[str, Any]] = None  # noqa
+_flatfile_metadata: dict[str, dict[str, Any]] = None  # noqa
 
 
-def _load_columns_registry(cache=True) -> dict[str, dict[str, Any]]:
-    """Loads the content of the associated YAML file with all columns
-    information and returns it as Python dict
+def _load_flatfile_metadata(cache=True) -> dict[str, dict[str, Any]]:
+    """Loads the flatfile metadata from the associated YAML file into a Python dict
 
     :param cache: if True, a cache version will be returned (faster, but remember
         that any change to the cached version will persist permanently!). Otherwise,
         a new dict loaded from file (slower) will be returned
     """
-    global _columns_registry
-    if cache and _columns_registry:
-        return _columns_registry
+    global _flatfile_metadata
+    if cache and _flatfile_metadata:
+        return _flatfile_metadata
     _cols = {}
-    with open(_columns_registry_path) as fpt:
+    with open(_flatfile_metadata_path) as fpt:
         for col_name, props in yaml_load(fpt, SafeLoader).items():
             props = _harmonize_col_props(col_name, props)
             # add all aliases mapped to the relative properties:
             for c_name in props['alias']:
                 _cols[c_name] = props
     if cache:
-        _columns_registry = _cols
+        _flatfile_metadata = _cols
     return _cols
 
 
@@ -579,7 +583,3 @@ def _harmonize_col_props(name:str, props:dict):
                 props['dtype'],
                 props.get('categories', None))
     return props
-
-
-def _replace(name: str):
-    return name if not name.startswith('SA(') else 'SA'

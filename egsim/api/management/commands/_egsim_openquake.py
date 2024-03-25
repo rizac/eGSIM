@@ -7,7 +7,7 @@ from django.core.management import CommandError, BaseCommand
 
 from egsim.smtk import registered_gsims, gsim, intensity_measures_defined_for, \
     ground_motion_properties_required_by, get_sa_limits
-from egsim.smtk.flatfile import ColumnsRegistry
+from egsim.smtk.flatfile import FlatfileMetadata
 from ... import models
 
 
@@ -63,7 +63,9 @@ class Command(BaseCommand):
                 self.stdout.write(f"  {prefix} {name}. No ground motion property "
                                   f"defined")
                 return False
-            invalid = sorted(c for c in gmp if ColumnsRegistry.get_type(c) is None)
+            invalid = sorted(
+                c for c in gmp if FlatfileMetadata.get_type(c) is None
+            )
             if invalid:
                 self.stdout.write(f"  {prefix} {name}. Unregistered "
                                   f"ground motion properties: {invalid}")

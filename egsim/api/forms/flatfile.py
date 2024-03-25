@@ -1,15 +1,14 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from typing import Iterable, Sequence, Union, Optional
+from typing import Iterable, Sequence, Optional
 
-import pandas as pd
 from django.forms import Form, ModelChoiceField
 from django.forms.fields import CharField, FileField
 
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for, registered_imts)
-from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, ColumnsRegistry,
+from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
                                  query as flatfile_query, ColumnDtype, ColumnType)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimImtForm
@@ -117,7 +116,7 @@ def get_gsims_from_flatfile(flatfile_columns: Sequence[str]) -> Iterable[str]:
         imts = intensity_measures_defined_for(name)
         if not imts.intersection(imt_cols):
             continue
-        if all(set(ColumnsRegistry.get_aliases(p)) & ff_cols
+        if all(set(FlatfileMetadata.get_aliases(p)) & ff_cols
                for p in ground_motion_properties_required_by(name)):
             yield name
 
@@ -140,13 +139,13 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         # ask ColumnRegistry for that but let's be consistent with all columns
         # also those not registered):
         for col in sorted(dataframe.columns):
-            ctype = ColumnsRegistry.get_type(col)
+            ctype = FlatfileMetadata.get_type(col)
             dtype = get_dtype_of(dataframe[col])
             try:
                 categories = sorted(dataframe[col].cat.categories.tolist())
             except AttributeError:
                 categories = []
-            help = ColumnsRegistry.get_help(col)
+            help = FlatfileMetadata.get_help(col)
             columns.append(_harmonize_column_props(col, ctype, dtype, categories, help))
 
         return { 'columns': columns }
@@ -169,7 +168,7 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
         if not gsims:
             gsims = list(models.Gsim.names())
         ff_columns = {
-            ColumnsRegistry.get_aliases(c)[0]
+            FlatfileMetadata.get_aliases(c)[0]
             for c in ground_motion_properties_required_by(*gsims)
         }
         imts = list(cleaned_data.get('imt', []))
@@ -184,10 +183,10 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
             columns.append(
                 _harmonize_column_props(
                     col,
-                    ColumnsRegistry.get_type(col),
-                    ColumnsRegistry.get_dtype(col),
-                    ColumnsRegistry.get_categories(col),
-                    ColumnsRegistry.get_help(col)
+                    FlatfileMetadata.get_type(col),
+                    FlatfileMetadata.get_dtype(col),
+                    FlatfileMetadata.get_categories(col),
+                    FlatfileMetadata.get_help(col)
                 )
             )
 

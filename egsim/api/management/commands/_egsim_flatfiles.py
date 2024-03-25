@@ -5,7 +5,7 @@ from os.path import join
 
 from django.core.management import BaseCommand, CommandError
 
-from egsim.smtk.flatfile import _load_columns_registry
+from egsim.smtk.flatfile import _load_flatfile_metadata
 from egsim.smtk.registry import registered_imts
 from ... import models
 from ...data.flatfiles import get_flatfiles, DATA
@@ -25,7 +25,7 @@ class Command(BaseCommand):
             raise CommandError('Table is not empty (deletion failed?), check the DB')
 
         destdir = 'flatfiles'
-        ffcolumns = set(_load_columns_registry())
+        ffcolumns = set(_load_flatfile_metadata())
         imts = set(registered_imts)
         numfiles = 0
         for name, dfr in get_flatfiles():
