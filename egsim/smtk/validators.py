@@ -142,7 +142,7 @@ def validate_imt_sa_limits(gsim: GMPE, imts: dict[str, IMT]) -> dict[str, IMT]:
 
 # Custom Exceptions:
 
-
+# FIXME: FlatfileError can inherit from this
 class InvalidInput(ValueError):
     """Exception describing any invalid ground motion model or intensity measure
     that was given as input in a routine.

@@ -2,10 +2,7 @@
 Tests form validations and errors
 
 Created on 2 Jun 2018
-
-@author: riccardo
 """
-from datetime import datetime
 from django.forms import Field
 from typing import Type
 from io import BytesIO
@@ -321,19 +318,14 @@ class Test:
         models = form.get_region_selected_model_names()
         assert len(models) == 12
 
-
-# def test_get_flatfile_columns():
-#     import pandas as pd
-#     d = pd.DataFrame({
-#         'a': ['', None],
-#         'b': [datetime.utcnow(), None],
-#         'e': [1, 0],
-#         'f': [1.1, None],
-#     })
-#     for c in d.columns:
-#         d[c+'_categ'] = d[c].astype('category')
-#
-#     res = FlatfileForm.get_flatfile_dtypes(d)
+        form = GsimFromRegionForm({'lat': 50, 'lon': 7, 'regionalization': 'share'})
+        assert form.is_valid()
+        models = form.get_region_selected_model_names()
+        assert len(models) == 5
+        form = GsimFromRegionForm({'lat': 50, 'lon': 7, 'regionalization': ['share']})
+        assert form.is_valid()
+        _models = form.get_region_selected_model_names()
+        assert sorted(models) == sorted(_models)
 
 
 def test_field2params_in_forms():

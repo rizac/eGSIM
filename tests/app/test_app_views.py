@@ -20,8 +20,6 @@ from egsim.api.forms.residuals import ResidualsForm
 from egsim.api.forms.scenarios import PredictionsForm
 from egsim.app.forms import FlatfilePlotForm
 
-# from egsim.app.views import _IMG_FORMATS
-# from egsim.app.templates.apidoc import as_dict
 from egsim.app.views import URLS
 from django.test.client import Client
 
@@ -30,20 +28,30 @@ GSIM, IMT = 'gsim', 'imt'
 @pytest.mark.django_db
 class Test:
 
-    def test_to_help(self):
+    def test_from_to_json_dict(self):
         def_ = { GSIM: ['CauzziEtAl2014'], IMT: ['PGA']}
         f_ = {'flatfile': 'esm_2018'}
 
+        # REMEMBER THAT FORMS MODIFY INPLACE THE DICTS SO PASS dict({...}) as
+        # 1ST ARGUMENT OTHERWISE THE FOLLOWING FORMS WILL HAVE UNDESIRED ARGS.
+        # Test this (remove if in the future the form will copy its dicts):
+        tmp = dict(def_)
+        keyz = len(tmp)
+        PredictionsForm(tmp)
+        assert len(tmp) > keyz
+
+        # Now check that forms are json serializable:
         for form, compact in product(
-                [PredictionsForm(def_),
+                [PredictionsForm(dict(def_)),
                  ResidualsForm(def_ | f_),
-                 FlatfileMetadataInfoForm(def_),
-                 FlatfileValidationForm(f_),
+                 FlatfileMetadataInfoForm(dict(def_)),
+                 FlatfileValidationForm(dict(f_)),
                  FlatfilePlotForm(f_ | {'x': 'mag'})],
                 [True, False]):
             val = form.asdict(compact)
             # test it is json serializable:
             data = json.dumps(val)
+
 
     def test_html_pages(self,  # pytest fixtures:
                         client):
