@@ -1,14 +1,14 @@
 """Base eGSIM forms"""
 from __future__ import annotations
 
-import re
+from django.db.models import QuerySet
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT
-from typing import Union, Any
+from typing import Any
 from enum import StrEnum
 
 from shapely.geometry import Point, shape
-from django.forms import Form, ModelMultipleChoiceField
+from django.forms import Form
 from django.forms.renderers import BaseRenderer
 from django.forms.forms import DeclarativeFieldsMetaclass  # noqa
 from django.forms.fields import Field, FloatField
@@ -200,49 +200,18 @@ class EgsimBaseForm(Form):
             the default when missing
         """
         ret = {}
-        for field, value in self.data.items():
-            if compact and \
-                    self._is_default_value_for_field(field, value):  # class level attr
-                continue
-            ret[self.param_name_of(field)] = value
+        for field_name, value in self.data.items():
+            if compact:
+                field = self.declared_fields.get(field_name, None)
+                if field is not None and self.is_field_optional(field):
+                    if field.initial == value:
+                        continue
+            ret[self.param_name_of(field_name)] = value
         return ret
 
     @classmethod
-    def _is_default_value_for_field(cls, field: Union[str, Field], value):
-        """Return True if the given value is the default value for the given
-        field and can be omitted in `self.data`"""
-        if isinstance(field, str):
-            field = cls.declared_fields.get(field, None)
-        if field:
-            field_optional = not field.required or field.initial is not None
-            if field_optional and value == field.initial:
-                return True
-        return False
-
-    @classmethod
-    def get_field_docstring(cls, field: Union[str, Field], remove_html_tags=False):
-        """Return a docstring from the given Form field `label` and `help_text`
-        attributes. The returned string will be a one-line (new newlines) string
-        FIXME: remove? remove HTML in Fields help_text so that this method is simpler?
-        """
-        if isinstance(field, str):
-            field = cls.declared_fields.get(field, None)
-        if not field:
-            return ""
-        field_label = getattr(field, 'label')
-        field_help_text = getattr(field, 'help_text')
-        label = (field_label or '') + \
-                ('' if not field_help_text else f' ({field_help_text})')
-        if label and remove_html_tags:
-            # replace html tags, e.g.: "<a href='#'>X</a>" -> "X",
-            # "V<sub>s30</sub>" -> "Vs30"
-            _html_tags_re = re.compile('<(\\w+)(?: [^>]+|)>(.*?)</\\1>')
-            # replace html characters with their content
-            # (or empty str if no content):
-            label = _html_tags_re.sub(r'\2', label)
-        # replace newlines for safety:
-        label = label.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
-        return label
+    def is_field_optional(cls, field: Field):
+        return not field.required or field.initial is not None
 
 
 class SHSRForm(EgsimBaseForm):
@@ -260,14 +229,31 @@ class SHSRForm(EgsimBaseForm):
                           required=False)
     longitude = FloatField(label='Longitude', min_value=-180., max_value=180.,
                            required=False)
-    regionalization = ModelMultipleChoiceField(
-        queryset=models.Regionalization.queryset('name', 'media_root_path'),
-        initial=models.Regionalization.queryset('name', 'media_root_path'),
-        to_field_name="name",
+    regionalization = Field(
         label='Regionalization',
-        required=False)
+        required=False) # keep form JSON-serializable: no MultipleChoiceField
+                        # or ModelMultipleChoiceField, validate in
+                        # `self.clean_regionalization`
+
+    def clean_regionalization(self) -> QuerySet[models.Regionalization]:
+        """Custom gsim clean.
+        The return value will replace self.cleaned_data['gsim']
+        """
+        reg_objs = models.Regionalization.queryset('name', 'media_root_path')
+        value = self.cleaned_data.get('regionalization', None)
+        if isinstance(value, str):
+            value = [value]
+        if value:
+            reg_objs = reg_objs.filter(name__in=value)
+        return reg_objs
 
     def get_region_selected_model_names(self) -> set[str]:
+        """Get the ground motion model names from the chosen regionalization(s),
+        lat and lon. This method should be invoked only if `self.is_valid()` returns
+        True (form successfully validated).
+        Empty / not provided `lat` ar `lon` will return an empty set,
+        empty not provided regionalizations will default to all implemented ones
+        """
         gsims = set()
         cleaned_data = self.cleaned_data
         lon = cleaned_data.get('longitude', None)
@@ -275,14 +261,14 @@ class SHSRForm(EgsimBaseForm):
         if lat is None or lon is None:
             return gsims
         point = Point(lon, lat)
-        for reg_obj in cleaned_data['regionalization']:
+        for reg_obj in self.cleaned_data['regionalization']:  # see clean_regionalization
             feat_collection = reg_obj.read_from_filepath()
             for feat in feat_collection['features']:
-                geometry, models = feat['geometry'], feat['properties']['models']
+                geometry, reg_models = feat['geometry'], feat['properties']['models']
                 # if we already have all models, skip check:
-                if set(models) - gsims:
+                if set(reg_models) - gsims:
                     if shape(geometry).contains(point):
-                        gsims.update(models)
+                        gsims.update(reg_models)
         return gsims
 
 
@@ -293,10 +279,8 @@ class GsimImtForm(SHSRForm):
     _field2params: dict[str, list[str]] = {'gsim': ('model', 'gsim', 'gmm')}
 
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
-    gsim = Field(required=False, label="Model(s)",
-                 widget=ModelMultipleChoiceField.widget)
-    imt = Field(required=False, label='Intensity Measure(s)',
-                widget=ModelMultipleChoiceField.widget)
+    gsim = Field(required=False, label="Model(s)")
+    imt = Field(required=False, label='Intensity Measure(s)')
 
     accept_empty_gsim_list = False  # override in subclasses if needed
     accept_empty_imt_list = False  # see above (for imts)

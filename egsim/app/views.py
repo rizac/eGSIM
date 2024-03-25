@@ -113,8 +113,8 @@ def _get_init_data_json(debug=False) -> dict:
 
     # get predefined flatfiles info:
     flatfiles = []
-    for ffile in models.Flatfile.queryset('name', 'display_name', 'url',
-                                          'media_root_path'):
+    for ffile in models.Flatfile.queryset(
+            'name', 'display_name', 'url', 'media_root_path'):
         ff_form = FlatfileValidationForm({'flatfile': ffile.name})
         if ff_form.is_valid():
             flatfiles.append({
@@ -125,34 +125,32 @@ def _get_init_data_json(debug=False) -> dict:
                 'columns': ff_form.output()['columns']
             })
 
-    # Get component props (core data needed for Vue rendering):
-    # components_props = get_components_properties(debug)
-    default_models = []
-    default_imts = []
-    default_data = None
-    default_data_query = ''
-    if debug:
-        default_models = ['CauzziEtAl2014', 'BindiEtAl2014Rjb']
-        default_imts = ['PGA', 'SA(0.1)']
-        default_data = 'esm2018'
-        default_data_query = 'mag > 7'
-
-    predictions_form = TrellisView.formclass({
-        'gsim': default_models,
-        'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
-        'regionalization': None,
-        'magnitude': [4,5,6,7],
-        'distance': [1, 10, 100, 1000],
-        'format': 'hdf'
+    predictions_form = TrellisView.formclass({  # FIXME rename TreliisView
+        'gsim': [],
+        'imt': [],
+        'format': 'hdf'  # FIXME needed?
     })
     residuals_form = ResidualsView.formclass({
-        'gsim': default_models,
-        'imt': default_imts,
-        'flatfile': default_data,
-        'data-query': default_data_query,
-        'regionalization': None,
-        'format': 'hdf'
+        'gsim': [],
+        'imt': [],
+        'format': 'hdf'  # FIXME needed?
     })
+    if debug:
+        predictions_form = TrellisView.formclass({
+            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+            'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
+            'magnitude': [4, 5, 6, 7],
+            'distance': [1, 10, 100, 1000],
+            'format': 'hdf'
+        })
+        residuals_form = ResidualsView.formclass({
+            'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+            'imt': ['PGA', 'SA(0.1)'],
+            'flatfile': 'esm2018',
+            'data-query': 'mag > 7',
+            'format': 'hdf'
+        })
+
     return {
         'pages': {  # tab key => url path (after the first slash)
             'predictions': URLS.PREDICTIONS_PAGE,
@@ -195,8 +193,8 @@ def _get_init_data_json(debug=False) -> dict:
             # (keys below will take priority):
             'residuals_plot': {'x': None, 'likelihood': False, 'format': 'json'},
             'flatfile_meta_info': FlatfileMetadataInfoForm({
-                'gsim': default_models,
-                'imt': default_imts,
+                'gsim': [],
+                'imt': [],
                 'regionalization': None
             }).asdict(),
             'flatfile_inspection_plot': FlatfilePlotForm({}).asdict(),

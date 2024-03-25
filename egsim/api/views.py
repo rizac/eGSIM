@@ -25,8 +25,9 @@ from .forms.residuals import ResidualsForm
 
 
 class MimeType:  # noqa
-    """A collection of supported mime types (content_type in Django Response), loosely
-    copied from mimetypes.types_map (https://docs.python.org/3.8/library/mimetypes.html)
+    """A collection of supported mime types (content_type in Django Response),
+    loosely copied from mimetypes.types_map
+    (https://docs.python.org/stable/library/mimetypes.html)
     """
     # NOTE: avoid Enums or alike, attributes below will be passed as arg `content_type`
     # to build Responses and must be pure str (subclasses NOT allowed!)
@@ -68,13 +69,14 @@ class RESTAPIView(View):
         """
         form_cls = self.formclass
 
+        DEFAULT_MULTI_VALUE_FIELDS = {'gsim', 'imt', 'regionalization'}
         multi_value_params = set()
         for field_name, field in form_cls.base_fields.items():
             # FIXME: Move ArrayField from trellis to forms and
             #  set arrayfield(Field...) for both gsim and imt
             #  then here we can just check isinstance(ArrayField):
-            if isinstance(field, (MultipleChoiceField, ArrayField)) or \
-                    isinstance(field.widget, SelectMultiple):
+            if field_name in DEFAULT_MULTI_VALUE_FIELDS or \
+                    isinstance(field, (MultipleChoiceField, ArrayField)):
                 multi_value_params.update(form_cls.param_names_of(field_name))
 
         ret = {}

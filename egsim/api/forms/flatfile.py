@@ -3,7 +3,7 @@ Base Form for to model-to-data operations i.e. flatfile handling
 """
 from typing import Iterable, Sequence, Optional
 
-from django.forms import Form, ModelChoiceField
+from django.forms import Form
 from django.forms.fields import CharField, FileField
 
 from egsim.smtk import (ground_motion_properties_required_by,
@@ -33,11 +33,8 @@ class FlatfileForm(EgsimBaseForm):
         'selexpr': ('flatfile-query', 'data-query', 'selection-expression'),
         'flatfile': ('flatfile', 'data')
     }
-    flatfile = ModelChoiceField(
-        queryset=models.Flatfile.queryset('name', 'media_root_path'),
-        to_field_name="name",
-        label='Flatfile',
-        required=False)
+    flatfile = CharField(required=False)  # keep form JSON-serializable: no ChoiceField
+                                          # or ModelChoiceField, validate in `self.clean`
     selexpr = CharField(required=False, label='Filter flatfile records via a '
                                               'query string')
 
@@ -75,11 +72,15 @@ class FlatfileForm(EgsimBaseForm):
             u_flatfile = u_form.files[next(iter(u_form.files))]  # Django Uploaded file
             u_flatfile = u_flatfile.file  # ByesIO or similar
 
-        if u_flatfile is None:
+        if u_flatfile is None:  # predefined flatfile
+            flatfile_db_obj = models.Flatfile.queryset('name', 'media_root_path').\
+                filter(name=cleaned_data['flatfile']).first()
+            if flatfile_db_obj is None:
+                self.add_error("flatfile", self.ErrCode.invalid_choice)
+                return cleaned_data
             # cleaned_data["flatfile"] is a models.Flatfile instance:
-            dataframe = cleaned_data["flatfile"].read_from_filepath()
-        else:
-            # u_ff = cleaned_data[key_u]
+            dataframe = flatfile_db_obj.read_from_filepath()
+        else: # uploaded (user-defined) flatfile
             try:
                 # u_flatfile is a Django TemporaryUploadedFile or InMemoryUploadedFile
                 # (the former if file size > configurable threshold
