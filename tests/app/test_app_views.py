@@ -78,31 +78,32 @@ class Test:
             response = client.get(f"/{url}/", follow=True)
             assert response.status_code == 200
 
-    def test_flatfile_inspection(self,  # pytest fixtures:
+    def test_flatfile_validate(self,  # pytest fixtures:
                                  testdata):
-            url  = URLS.FLATFILE_INSPECTION
+            url  = URLS.FLATFILE_VALIDATE
             ff = SimpleUploadedFile('flatfile',
-                                    testdata.read('Turkey_20230206_flatfile_geometric_mean.csv'))
+                                    testdata.read('tk_20230206_flatfile_geometric_mean.csv'))
             data = {'flatfile': ff}
             client = Client()  # do not use the fixture client as we want
             # to disable CSRF Token check
             response = client.post("/" + url, data=data)
             assert response.status_code == 200
 
-    def test_flatfile_plot(self,  # pytest fixtures:
+    def test_flatfile_visualize(self,  # pytest fixtures:
                            testdata):
-            url = URLS.FLATFILE_PLOT
-            ff_bytes = testdata.read('Turkey_20230206_flatfile_geometric_mean.csv')
+            url = URLS.FLATFILE_VISUALIZE
+            ff_bytes = testdata.read('tk_20230206_flatfile_geometric_mean.csv')
             ff = SimpleUploadedFile('flatfile',ff_bytes)
             data = {'flatfile': ff}
             client = Client()  # do not use the fixture client as we want
             # to disable CSRF Token check
             response = client.post("/" + url, data=data)
             assert response.status_code == 400  # no x and y
-            msg = response.json()['error']['message']
+            msg = response.json()['message']
             assert "x" in msg and 'y' in msg
 
             for data in [
+                {'x': 'mag'}, # this returns 400 cause "mag" is not in the flatfile
                 {'x': 'magnitude'},
                 {'x': 'PGA'},
                 {'x': 'magnitude', 'y': 'PGA'},
@@ -113,26 +114,11 @@ class Test:
                 client = Client()  # do not use the fixture client as we want
                 # to disable CSRF Token check
                 response = client.post("/" + url, data=data)
-                assert response.status_code == 200
-
-    def tst_main_page_init_data_and_invalid_browser_message(self, settings):
-        data = [{'browser': {'name': bn, 'version': v}, 'selectedMenu': m }
-                for bn, v, m in product(['chrome', 'firefox', 'safari'],
-                                        [1, 100000], [_.name for _ in TAB])]
-        data += [{'browser': {'name': 'opera', 'version': 100000}}]
-        for d in data:
-            # test with settings.DEBUG = True only for opera
-            settings.DEBUG = d['browser']['name'] == 'opera'
-            client = Client()  # do not use the fixture client as we want
-            # to disable CSRF Token check
-            response = client.post('/' + URLS.MAIN_PAGE_INIT_DATA, json.dumps(d),
-                                   content_type="application/json")
-            assert response.status_code == 200
-            content = json.loads(response.content)
-            if d['browser']['version'] == 1 or d['browser']['name'] == 'opera':
-                assert content['invalid_browser_message']
-            else:
-                assert not content['invalid_browser_message']
+                if 'mag' in data.values():
+                    expected_code = 400
+                else:
+                    expected_code = 200
+                assert response.status_code == expected_code
 
     def test_download_request(self, #pytest fixture:
                                testdata, areequal):
@@ -167,7 +153,7 @@ class Test:
                 'residuals': ResidualsForm,
                 # 'testing': TestingForm
             }[service](data).response_data
-            client = Client()  # do not use the fixture client as we want
+            client = Client()
             # Note below: json is not supported because from the browser we simply
             # serve the already available response_data
             for filename in ['response.csv', 'response.csv_eu']:
