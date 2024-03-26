@@ -1,5 +1,5 @@
 """
-Plotly utilities o create plots from pandas DataFrames.
+Plotly utilities o create JavaScript plots from pandas DataFrames.
 For ref, see: https://plotly.com/javascript/reference/
 """
 import pandas as pd
@@ -12,7 +12,7 @@ from egsim.smtk.flatfile import ColumnDtype, get_dtype_of
 
 
 class AxisType:
-    """Container for Plotly axis types. For info see:
+    """Container for Plotly axis types supported by this program. For info see:
     https://plotly.com/javascript/reference/layout/xaxis/#layout-xaxis-type
     """
     linear = 'linear'
