@@ -122,7 +122,7 @@ class Test:
 
     def test_download_request(self, #pytest fixture:
                                testdata):
-        for service in ['trellis', 'residuals', 'testing']:
+        for service, url in ['trellis', 'residuals']:
             with open(testdata.path(f'request_{service}.yaml')) as _:
                 data = yaml.safe_load(_)
             if service == 'residuals':

@@ -5,6 +5,7 @@ Created on 3 May 2018
 
 @author: riccardo
 """
+from typing import Union
 
 import os
 import json
@@ -78,7 +79,7 @@ def testdata(request):  # noqa
         def open(self, filename, mode='rb'):
             return open(self.path(filename), mode)
 
-        def read(self, filename, mode='rb', *, decode=None):
+        def read(self, filename, mode='rb', *, decode=None) -> Union[str, bytes]:
             """reads the data (byte mode, with encoding) and returns it
             :param filename: a string denoting the file name inside the test
                 data directory
@@ -88,14 +89,6 @@ def testdata(request):  # noqa
                 if not decode:
                     return _
                 return _.decode(decode)  # noqa
-
-        def readjson(self, filename):
-            with open(self.path(filename), 'r') as opn:
-                return json.load(opn)
-
-        def readyaml(self, filename):
-            with open(self.path(filename)) as _:
-                return yaml.safe_load(_)
 
     return Data()
 
