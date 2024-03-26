@@ -5,9 +5,12 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
-from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
-from os.path import dirname, join, abspath
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+import os
+import pandas as pd
+from os.path import dirname, join, abspath, isfile
 
 import yaml
 
@@ -19,7 +22,7 @@ import pytest
 from egsim.api.forms.flatfile import FlatfileMetadataInfoForm, FlatfileValidationForm
 from egsim.api.forms.residuals import ResidualsForm
 from egsim.api.forms.scenarios import PredictionsForm
-from egsim.app.forms import FlatfilePlotForm
+from egsim.app.forms import FlatfilePlotForm, PredictionsPlotDataForm, ResidualsPlotDataForm
 
 from egsim.app.views import URLS
 from django.test.client import Client
@@ -104,6 +107,32 @@ class Test:
             response = client.post("/" + url, data=data)
             assert response.status_code == 200
 
+    def test_predictions_residuals_visualize(self):
+        tests = [
+            (
+                URLS.PREDICTIONS_VISUALIZE,
+                self.request_predictions_filepath,
+                PredictionsPlotDataForm,
+                {'plot_type': 'm'}
+            ),
+            (
+                URLS.RESIDUALS_VISUALIZE,
+                self.request_residuals_filepath,
+                ResidualsPlotDataForm,
+                {'plot_type': 'res'}
+            )
+        ]
+        for url, yaml_filepath, form, additional_data in tests:
+            with open(yaml_filepath) as _:
+                data = yaml.safe_load(_)
+            data |= additional_data
+            client = Client()
+            response = client.post(f"/{url}",
+                                   json.dumps(data),
+                                   content_type="application/json")
+            assert response.status_code == 200
+            assert len(response.json())
+
     def test_flatfile_visualize(self):
             url = URLS.FLATFILE_VISUALIZE
 
@@ -134,46 +163,48 @@ class Test:
                     expected_code = 200
                 assert response.status_code == expected_code
 
-    def tst_download_request(self):
-        for service, url in ['trellis', 'residuals']:
-            with open(testdata.path(f'request_{service}.yaml')) as _:
+    def test_download_predictions_residuals(self):
+        tests = [
+            (
+                URLS.PREDICTIONS,
+                self.request_predictions_filepath,
+                PredictionsForm,
+                {}
+            ),
+            (
+                URLS.RESIDUALS,
+                self.request_residuals_filepath,
+                ResidualsForm,
+                {'data-query': 'mag > 7'}
+            )
+        ]
+        for (url, yaml_filepath, form, additional_data), file_ext in \
+                product(tests, ['hdf', 'csv']):
+            with open(yaml_filepath) as _:
                 data = yaml.safe_load(_)
-            if service == 'residuals':
-                data['plot'] = 'res'
-            client = Client()  # do not use the fixture client as we want
-            for filename in ['request.json', 'request.yaml', 'request.querystring']:
-                # to disable CSRF Token check
-                response = client.post(f"/{URLS.DOWNLOAD_REQUEST}/{service}/{filename}",
-                                       json.dumps(data),
-                                       content_type="application/json")
-                assert response.status_code == 200
-                if service == 'json':
-                    assert data == json.loads(response.content)
-                elif service == '.yaml':
-                    assert data == yaml.safe_load(BytesIO(response.content))
-                else:
-                    assert True
-
-    def tst_download_response_csv_formats(self):
-        for service in ['trellis', 'residuals', 'testing']:
-            with open(testdata.path(f'request_{service}.yaml')) as _:
-                data = yaml.safe_load(_)
-            if service == 'residuals':
-                data['plot'] = 'res'
-            response_data, _ = {
-                'trellis': PredictionsForm,
-                'residuals': ResidualsForm,
-                # 'testing': TestingForm
-            }[service](data).response_data
+            data |= additional_data
+            data['format'] = file_ext
             client = Client()
-            # Note below: json is not supported because from the browser we simply
-            # serve the already available response_data
-            for filename in ['response.csv', 'response.csv_eu']:
-                # to disable CSRF Token check
-                response = client.post(f"/{URLS.DOWNLOAD_RESPONSE}/{service}/{filename}",
-                                       json.dumps(response_data),
-                                       content_type="application/json")
-                assert response.status_code == 200
+            response = client.post(f"/{url}.{file_ext}",
+                                   json.dumps(data),
+                                   content_type="application/json")
+            assert response.status_code == 200
+            content = list(response.streaming_content)[0]
+            if file_ext == 'csv':
+                assert len(content)
+                csv = pd.read_csv(BytesIO(content))
+            else:
+                file_tmp_hdf = yaml_filepath + '.tmp.hdf_'
+                try:
+                    with open(file_tmp_hdf, 'wb') as _:
+                        _.write(content)
+                    hdf = pd.read_hdf(file_tmp_hdf)
+                finally:
+                    if isfile(file_tmp_hdf):
+                        os.remove(file_tmp_hdf)
+
+                # not JSON serializable:
+
 
     def tst_download_response_img_formats(self):
         for service in ['trellis']:  # , 'residuals', 'testing']:
