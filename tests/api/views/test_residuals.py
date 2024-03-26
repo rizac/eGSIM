@@ -30,7 +30,7 @@ class Test:
 
     def test_uploaded_flatfile(self,
                                # pytest fixtures:
-                               testdata, areequal, client):
+                               testdata, client):
         inputdic = testdata.readyaml(self.request_filename)
 
         # Uploaded flatfile, but not well formed:
@@ -109,7 +109,7 @@ class Test:
 
     def test_residuals_service_err(self,
                                    # pytest fixtures:
-                                   testdata, areequal, client):
+                                   testdata, client):
         """tests errors in the residuals API service."""
         inputdic = testdata.readyaml(self.request_filename)
 
@@ -145,18 +145,15 @@ class Test:
 
     def test_residuals_service(self,
                                    # pytest fixtures:
-                                   testdata, areequal, client):
+                                   testdata, client):
         inputdic = testdata.readyaml(self.request_filename)
         inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
 
-        # resp2 = client.post(self.url, data=inputdic,
-        #                     content_type='application/json')
+        resp2 = client.post(self.url, data=inputdic,
+                            content_type='application/json')
         resp1 = client.get(self.querystring(inputdic))
         assert resp1.status_code == 200
-        # resp2.status_code == 200
-        # assert areequal(resp1.json(), resp2.json())
-
-        # dfr1 = pd.DataFrame(resp1.json())
+        assert resp1.json() == resp2.json()
 
         for format in [None, 'csv', 'hdf']:
             if format is None:
@@ -171,11 +168,11 @@ class Test:
         content = BytesIO(resp2.getvalue())
         dfr2 = read_csv_from_buffer(content) if format == 'csv' \
             else read_hdf_from_buffer(content)
-        areequal(resp1.json(), dataframe2dict(dfr2))
+        assert resp1.json() == dataframe2dict(dfr2)
 
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
-                                   testdata, areequal, client):
+                                   testdata, client):
         """Tests supplying twice the plot_type (invalid) and see what
         happens. This request error can happen only from an API request, not
         from the web portal"""
@@ -188,7 +185,7 @@ class Test:
 
     def test_allen2012(self,
                        # pytest fixtures:
-                       testdata, areequal, client):
+                       testdata, client):
         """test a case where the browser simply stops calculating without
         error messages. The cause was due to an AssertionError with empty
         message. UPDATE 2021: the case seems to be fixed now in OpenQuake"""

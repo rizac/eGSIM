@@ -36,7 +36,7 @@ class Test:
     def test_trellis(
             self,
             # pytest fixtures:
-            client, testdata, areequal):
+            client, testdata):
         """test trellis distance and distance stdev"""
         inputdic = dict(testdata.readyaml(self.request_filename))
         resp1 = client.get(self.querystring(inputdic))
@@ -44,7 +44,7 @@ class Test:
                             content_type=MimeType.json)
         result = resp1.json()
         assert resp1.status_code == 200
-        assert areequal(result, resp2.json())
+        assert result == resp2.json()
         form = PredictionsForm(data=dict(inputdic))
         assert form.is_valid()
         input_ = form.cleaned_data
@@ -84,7 +84,7 @@ class Test:
 
     def test_ok_request(self,
                         # pytest fixtures:
-                        client, areequal):
+                        client):
         """Test some invalid name and a missing IMT FIXME: move to form test?"""
         data = {
             'aspect': 1,
@@ -114,7 +114,7 @@ class Test:
 
     def test_error(self,
                    # pytest fixtures:
-                   client, areequal):
+                   client):
         """tests a special case where we supply a deprecated gsim (not in
         EGSIM list)"""
         inputdic = {
@@ -141,13 +141,13 @@ class Test:
         resp2 = client.post(self.url, data=inputdic,
                             content_type='application/json')
         assert resp1.status_code == 400
-        assert areequal(resp1.json(), resp2.json())
+        assert resp1.json() == resp2.json()
         assert resp1.json()['message'] == 'gsim: invalid value (AkkarEtAl2013)'
 
 
     def test_empty_gsim(self,
                         # pytest fixtures:
-                        areequal, client):
+                        client):
         """tests a special case whereby a GSIM is empty (this case raised
         before a PR to smtk repository)
         FIXME 2023: OpenQuake =3.15.0 raises again, test this
@@ -191,7 +191,7 @@ class Test:
 
     def test_mismatching_imt_gsim(self,
                                   # pytest fixtures:
-                                  areequal, client):
+                                  client):
         """tests a model supplied with an invalid imt"""
         imtz = {imt_name(i) for i in AkkarEtAlRjb2014.DEFINED_FOR_INTENSITY_MEASURE_TYPES}
         undefined_imt = [_ for _ in registered_imts.keys() if _ not in imtz]
@@ -223,6 +223,6 @@ class Test:
                                 content_type='application/json')
             result = resp1.json()
             assert resp1.status_code == 400
-            assert areequal(result, resp2.json())
+            assert result == resp2.json()
             assert 'gsim' in resp1.json()['message'] and \
                    'imt' in resp1.json()['message']
