@@ -6,6 +6,7 @@ Created on 2 Jun 2018
 from django.forms import Field
 from typing import Type
 from io import BytesIO
+from os.path import dirname, join, abspath
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -19,6 +20,8 @@ from egsim.smtk.scenarios import RuptureProperties, SiteProperties
 
 GSIM, IMT = 'gsim', 'imt'
 
+flatfile_tk_path = abspath(join(dirname(dirname(__file__)), 'data',
+                                'tk_20230206_flatfile_geometric_mean.csv'))
 
 @pytest.mark.django_db
 class Test:
@@ -239,17 +242,8 @@ class Test:
               'mag: 1 value is invalid; ' \
               'msr: value not found or misspelled'
 
-    def test_flatfile_validation(self, testdata):
-
-        # file_content = testdata.read('esm2018.hdf.small.csv')
-        # files = {'esm2019': SimpleUploadedFile('cover', file_content)}
-        # # mvd = MultiValueDict({'flatfile': fp})
-        # form = FlatfileInspectionForm({}, files=files)
-        # is_valid = form.is_valid()
-        # assert is_valid
-
-        # now let's test some errors:
-        flatfile_df = read_flatfile(testdata.open('tk_20230206_flatfile_geometric_mean.csv'))
+    def test_flatfile_validation(self):
+        flatfile_df = read_flatfile(flatfile_tk_path)
 
         # Normal case (form valid)
         flatfile = flatfile_df[['rake', 'station_id',

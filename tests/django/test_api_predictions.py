@@ -5,6 +5,8 @@ Created on 2 Jun 2018
 
 @author: riccardo
 """
+from os.path import dirname, join, abspath
+
 from io import BytesIO
 import yaml
 
@@ -28,7 +30,7 @@ class Test:
     """tests the gsim service"""
 
     url = "/" + TrellisView.urls[0]  # '/query/trellis'
-    request_filename = 'request_trellis.yaml'
+    request_filepath = abspath(join(dirname(__file__), 'data', 'request_trellis.yaml'))
 
     def querystring(self, data):
         return f'{self.url}?{as_querystring(data)}'
@@ -37,9 +39,9 @@ class Test:
     def test_trellis(
             self,
             # pytest fixtures:
-            client, testdata):
+            client):
         """test trellis distance and distance stdev"""
-        with open(testdata.path(self.request_filename)) as _:
+        with open(self.request_filepath) as _:
             inputdic = dict(yaml.safe_load(_))
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,

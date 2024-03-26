@@ -5,6 +5,7 @@ Created on 16 Feb 2018
 """
 
 import os
+from os.path import dirname, join, abspath
 from datetime import datetime
 
 import pytest
@@ -31,10 +32,15 @@ def test_read_flatifle_yaml():
 
 
 def test_flatfile_turkey():
-    # FIXME handle paths, fixtures wrt django tests. HArdcoding path for the moment:
-    root = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    fpath = os.path.join(root, 'data', 'tk_20230206_flatfile_geometric_mean.csv')
+    fpath = abspath(join(dirname(dirname(dirname(__file__))),
+                         'data', 'tk_20230206_flatfile_geometric_mean.csv'))
     dfr = read_flatfile(fpath)
+
+    # tst with file-like object
+    with open(fpath, 'rb') as _:
+        dfr2 = read_flatfile(_)  # noqa
+    pd.testing.assert_frame_equal(dfr, dfr2)
+
     assert all(get_dtype_of(dfr[c]) is not None for c in dfr.columns)
     fpath = fpath+'.hdf.tmp'
     try:
