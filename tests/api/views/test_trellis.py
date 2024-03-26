@@ -6,6 +6,7 @@ Created on 2 Jun 2018
 @author: riccardo
 """
 from io import BytesIO
+import yaml
 
 import pytest
 import numpy as np
@@ -38,7 +39,8 @@ class Test:
             # pytest fixtures:
             client, testdata):
         """test trellis distance and distance stdev"""
-        inputdic = dict(testdata.readyaml(self.request_filename))
+        with open(testdata.path(self.request_filename)) as _:
+            inputdic = dict(yaml.safe_load(_))
         resp1 = client.get(self.querystring(inputdic))
         resp2 = client.post(self.url, data=inputdic,
                             content_type=MimeType.json)

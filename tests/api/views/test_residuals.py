@@ -6,7 +6,7 @@ Created on 22 Oct 2018
 @author: riccardo
 """
 from io import BytesIO
-
+import yaml
 import pytest
 
 from unittest.mock import patch
@@ -31,7 +31,8 @@ class Test:
     def test_uploaded_flatfile(self,
                                # pytest fixtures:
                                testdata, client):
-        inputdic = testdata.readyaml(self.request_filename)
+        with open(testdata.path(self.request_filename)) as _ :
+            inputdic = yaml.safe_load(_)
 
         # Uploaded flatfile, but not well formed:
         csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", content_type="text/csv")
@@ -111,7 +112,8 @@ class Test:
                                    # pytest fixtures:
                                    testdata, client):
         """tests errors in the residuals API service."""
-        inputdic = testdata.readyaml(self.request_filename)
+        with open(testdata.path(self.request_filename)) as _:
+            inputdic = yaml.safe_load(_)
 
         # no flatfile, uploaded flatfile:
         inputdic2 = dict(inputdic)
@@ -146,7 +148,8 @@ class Test:
     def test_residuals_service(self,
                                    # pytest fixtures:
                                    testdata, client):
-        inputdic = testdata.readyaml(self.request_filename)
+        with open(testdata.path(self.request_filename)) as _:
+            inputdic = yaml.safe_load(_)
         inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
 
         resp2 = client.post(self.url, data=inputdic,
