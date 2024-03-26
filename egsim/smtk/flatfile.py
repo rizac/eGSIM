@@ -306,7 +306,7 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
         return ColumnDtype.float
     if pd.api.types.is_datetime64_any_dtype(obj) or isinstance(obj, datetime):
         return ColumnDtype.datetime
-    if pd.api.types.is_categorical_dtype(obj):
+    if isinstance(obj, pd.CategoricalDtype):
         return ColumnDtype.category
     if pd.api.types.is_string_dtype(obj):
         # as mixed arrays are also considered strings (e.g. s=pd.Series([True, 2]),

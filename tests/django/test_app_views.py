@@ -189,7 +189,7 @@ class Test:
                                    json.dumps(data),
                                    content_type="application/json")
             assert response.status_code == 200
-            content = list(response.streaming_content)[0]
+            content = b''.join(response.streaming_content)
             if file_ext == 'csv':
                 assert len(content)
                 csv = pd.read_csv(BytesIO(content))
@@ -202,9 +202,6 @@ class Test:
                 finally:
                     if isfile(file_tmp_hdf):
                         os.remove(file_tmp_hdf)
-
-                # not JSON serializable:
-
 
     def tst_download_response_img_formats(self):
         for service in ['trellis']:  # , 'residuals', 'testing']:

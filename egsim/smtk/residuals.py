@@ -6,12 +6,12 @@ from __future__ import annotations  # https://peps.python.org/pep-0563/
 from itertools import product
 
 from collections.abc import Iterable, Container, Collection
+from pandas import Index
 from typing import Union
 from math import sqrt
 
 import numpy as np
 import pandas as pd
-from pandas.core.indexes.numeric import IntegerIndex
 from scipy.interpolate import interp1d
 from scipy.special import erf
 from openquake.hazardlib.gsim.base import GMPE
@@ -150,8 +150,8 @@ class EventContext(RuptureContext):
 
     def __init__(self, flatfile: pd.DataFrame):
         super().__init__()
-        if not isinstance(flatfile.index, IntegerIndex):
-            raise ValueError('flatfile index should be made of integers')
+        if not pd.api.types.is_integer_dtype(flatfile.index.dtype):
+            raise ValueError('flatfile index must be made of integers')
         self._flatfile = flatfile
         if self.__class__.rupture_params is None:
             # get rupture params once for all instances the first time only:
@@ -163,9 +163,9 @@ class EventContext(RuptureContext):
                self._flatfile.equals(other._flatfile)
 
     @property
-    def sids(self) -> IntegerIndex:
+    def sids(self) -> Index:
         """Return the ids (iterable of integers) of the records (or sites) used to build
-        this context. The returned pandas `IntegerIndex` must have unique values so that
+        this context. The returned pandas `Index` must have unique values so that
         the records (flatfile rows) can always be retrieved from the source flatfile via
         `flatfile.loc[self.sids, :]`
         """
