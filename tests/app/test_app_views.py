@@ -121,7 +121,7 @@ class Test:
                 assert response.status_code == expected_code
 
     def test_download_request(self, #pytest fixture:
-                               testdata, areequal):
+                               testdata):
         for service in ['trellis', 'residuals', 'testing']:
             with open(testdata.path(f'request_{service}.yaml')) as _:
                 data = yaml.safe_load(_)
@@ -135,14 +135,14 @@ class Test:
                                        content_type="application/json")
                 assert response.status_code == 200
                 if service == 'json':
-                    assert areequal(data, json.loads(response.content))
+                    assert data == json.loads(response.content)
                 elif service == '.yaml':
-                    assert areequal(data, yaml.safe_load(BytesIO(response.content)))
+                    assert data == yaml.safe_load(BytesIO(response.content))
                 else:
                     assert True
 
     def test_download_response_csv_formats(self,  # pytest fixture:
-                                           testdata, areequal):
+                                           testdata):
         for service in ['trellis', 'residuals', 'testing']:
             with open(testdata.path(f'request_{service}.yaml')) as _:
                 data = yaml.safe_load(_)
@@ -164,7 +164,7 @@ class Test:
                 assert response.status_code == 200
 
     def test_download_response_img_formats(self,  # pytest fixture:
-                                           testdata, areequal):
+                                           testdata):
         for service in ['trellis']:  # , 'residuals', 'testing']:
             # for the moment, just provide a global data object regardless of the
             # service:
