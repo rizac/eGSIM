@@ -7,6 +7,7 @@ Created on 2 Jun 2018
 """
 from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
+from os.path import dirname, join, abspath
 
 import yaml
 
@@ -25,8 +26,23 @@ from django.test.client import Client
 
 GSIM, IMT = 'gsim', 'imt'
 
+
+
+
+
 @pytest.mark.django_db
 class Test:
+    with open(abspath(join(dirname(dirname(__file__)), 'data',
+                           'tk_20230206_flatfile_geometric_mean.csv')), 'rb') as _:
+        flatfile_tk_content = _.read()
+        del _
+
+    request_residuals_filepath = abspath(join(dirname(__file__), 'data',
+                                              'request_residuals.yaml'))
+
+
+    request_predictions_filepath = abspath(join(dirname(__file__), 'data',
+                                                'request_trellis.yaml'))
 
     def test_from_to_json_dict(self):
         def_ = { GSIM: ['CauzziEtAl2014'], IMT: ['PGA']}
@@ -78,22 +94,20 @@ class Test:
             response = client.get(f"/{url}/", follow=True)
             assert response.status_code == 200
 
-    def test_flatfile_validate(self,  # pytest fixtures:
-                                 testdata):
+    def test_flatfile_validate(self):
             url  = URLS.FLATFILE_VALIDATE
             ff = SimpleUploadedFile('flatfile',
-                                    testdata.read('tk_20230206_flatfile_geometric_mean.csv'))
+                                    self.flatfile_tk_content)
             data = {'flatfile': ff}
             client = Client()  # do not use the fixture client as we want
             # to disable CSRF Token check
             response = client.post("/" + url, data=data)
             assert response.status_code == 200
 
-    def test_flatfile_visualize(self,  # pytest fixtures:
-                           testdata):
+    def test_flatfile_visualize(self):
             url = URLS.FLATFILE_VISUALIZE
-            ff_bytes = testdata.read('tk_20230206_flatfile_geometric_mean.csv')
-            ff = SimpleUploadedFile('flatfile',ff_bytes)
+
+            ff = SimpleUploadedFile('flatfile', self.flatfile_tk_content)
             data = {'flatfile': ff}
             client = Client()  # do not use the fixture client as we want
             # to disable CSRF Token check
@@ -109,7 +123,7 @@ class Test:
                 {'x': 'magnitude', 'y': 'PGA'},
                 {'y': 'magnitude', 'x': 'PGA'}
             ]:
-                ff = SimpleUploadedFile('flatfile', ff_bytes)
+                ff = SimpleUploadedFile('flatfile', self.flatfile_tk_content)
                 data['flatfile'] = ff  # noqa
                 client = Client()  # do not use the fixture client as we want
                 # to disable CSRF Token check
@@ -120,8 +134,7 @@ class Test:
                     expected_code = 200
                 assert response.status_code == expected_code
 
-    def test_download_request(self, #pytest fixture:
-                               testdata):
+    def tst_download_request(self):
         for service, url in ['trellis', 'residuals']:
             with open(testdata.path(f'request_{service}.yaml')) as _:
                 data = yaml.safe_load(_)
@@ -141,8 +154,7 @@ class Test:
                 else:
                     assert True
 
-    def test_download_response_csv_formats(self,  # pytest fixture:
-                                           testdata):
+    def tst_download_response_csv_formats(self):
         for service in ['trellis', 'residuals', 'testing']:
             with open(testdata.path(f'request_{service}.yaml')) as _:
                 data = yaml.safe_load(_)
@@ -163,8 +175,7 @@ class Test:
                                        content_type="application/json")
                 assert response.status_code == 200
 
-    def test_download_response_img_formats(self,  # pytest fixture:
-                                           testdata):
+    def tst_download_response_img_formats(self):
         for service in ['trellis']:  # , 'residuals', 'testing']:
             # for the moment, just provide a global data object regardless of the
             # service:

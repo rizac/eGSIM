@@ -13,7 +13,7 @@ from egsim.smtk.registry import Clabel
 
 # load flatfile once:
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
-ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.csv" )  # "flatfile_esm_data.hdf.csv")
+ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.csv" )
 _flatfile = read_flatfile(ifile)
 
 

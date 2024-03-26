@@ -5,6 +5,7 @@ Created on 22 Oct 2018
 
 @author: riccardo
 """
+from os.path import dirname, join, abspath
 from io import BytesIO
 import yaml
 import pytest
@@ -13,8 +14,8 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
-from egsim.api.views import ResidualsView, RESTAPIView, as_querystring, \
-    read_csv_from_buffer, read_hdf_from_buffer, MimeType
+from egsim.api.views import (ResidualsView, RESTAPIView, as_querystring,
+                             read_csv_from_buffer, read_hdf_from_buffer)
 from egsim.smtk.converters import dataframe2dict
 
 
@@ -23,19 +24,36 @@ class Test:
     """tests the residuals service"""
 
     url = "/" + ResidualsView.urls[0]  # '/query/residuals'
-    request_filename = 'request_residuals.yaml'
+    
+    data_dir = abspath(join(dirname(__file__), 'data'))
+    request_filepath = join(data_dir, 'request_residuals.yaml')
+    
+    # flatfile 1
+    flatfile_bindi_content: bytes
+    with open(join(data_dir, 'PGA_BindiEtAl17.csv'), 'rb') as _:
+        flatfile_bindi_content = _.read()
+    
+    # flatfile 2 (in parent data dir because it is shared with egsim.smtk):
+    flatfile_tk_content: bytes
+    data_dir = join(dirname(dirname(data_dir)), 'data')
+    with open(join(data_dir, 'tk_20230206_flatfile_geometric_mean.csv'), 'rb') as _:
+        flatfile_tk_content = _.read()
 
+    
+        
+    
     def querystring(self, data):
         return f'{self.url}?{as_querystring(data)}'
 
     def test_uploaded_flatfile(self,
                                # pytest fixtures:
-                               testdata, client):
-        with open(testdata.path(self.request_filename)) as _ :
+                               client):
+        with open(self.request_filepath) as _ :
             inputdic = yaml.safe_load(_)
 
         # Uploaded flatfile, but not well formed:
-        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", content_type="text/csv")
+        csv = SimpleUploadedFile("file.csv", b"PGA,b,c,d\n1.1,,,", 
+                                 content_type="text/csv")
         inputdic2 = dict(inputdic, flatfile=csv)
         # test wrong flatfile:
         resp2 = client.post(self.url, data=inputdic2)
@@ -57,9 +75,9 @@ class Test:
             assert resp2.status_code == 400
             assert 'flatfile' in resp2.json()['message']
 
-    def test_kotha_turkey(self, client, testdata):
+    def test_kotha_turkey(self, client):
         csv = SimpleUploadedFile("file.csv",
-                                 testdata.read('tk_20230206_flatfile_geometric_mean.csv'),
+                                 self.flatfile_tk_content,
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'KothaEtAl2020ESHM20',
@@ -69,9 +87,9 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
-    def test_cauzzi_rjb_turkey(self, client, testdata):
+    def test_cauzzi_rjb_turkey(self, client):
         csv = SimpleUploadedFile("file.csv",
-                                 testdata.read('tk_20230206_flatfile_geometric_mean.csv'),
+                                 self.flatfile_tk_content,
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'CauzziEtAl2014',
@@ -81,9 +99,9 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
-    def test_cauzzi_vs30_turkey(self, client, testdata):
+    def test_cauzzi_vs30_turkey(self, client):
         csv = SimpleUploadedFile("file.csv",
-                                 testdata.read('tk_20230206_flatfile_geometric_mean.csv'),
+                                 self.flatfile_tk_content,
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'CauzziEtAl2014',
@@ -93,10 +111,10 @@ class Test:
         resp2 = client.post(self.url, data=inputdic2)
         assert resp2.status_code == 200
 
-    def test_bindi17_turkey(self, client, testdata):
+    def test_bindi17_turkey(self, client):
         # Uploaded flatfile, but not well-formed:
         csv = SimpleUploadedFile("file.csv",
-                                 testdata.read('PGA_BindiEtAl17.csv'),
+                                 self.flatfile_bindi_content,
                                  content_type="text/csv")
         inputdic2 = {
             'model': 'BindiEtAl2017Rhypo',
@@ -110,9 +128,9 @@ class Test:
 
     def test_residuals_service_err(self,
                                    # pytest fixtures:
-                                   testdata, client):
+                                   client):
         """tests errors in the residuals API service."""
-        with open(testdata.path(self.request_filename)) as _:
+        with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
 
         # no flatfile, uploaded flatfile:
@@ -147,8 +165,8 @@ class Test:
 
     def test_residuals_service(self,
                                    # pytest fixtures:
-                                   testdata, client):
-        with open(testdata.path(self.request_filename)) as _:
+                                   client):
+        with open(self.request_filepath) as _:
             inputdic = yaml.safe_load(_)
         inputdic['data-query'] = '(vs30 >= 1000) & (mag>=7)'
 
@@ -175,7 +193,7 @@ class Test:
 
     def test_residuals_invalid_get(self,
                                    # pytest fixtures:
-                                   testdata, client):
+                                   client):
         """Tests supplying twice the plot_type (invalid) and see what
         happens. This request error can happen only from an API request, not
         from the web portal"""
@@ -188,7 +206,7 @@ class Test:
 
     def test_allen2012(self,
                        # pytest fixtures:
-                       testdata, client):
+                       client):
         """test a case where the browser simply stops calculating without
         error messages. The cause was due to an AssertionError with empty
         message. UPDATE 2021: the case seems to be fixed now in OpenQuake"""
