@@ -84,16 +84,17 @@ activated FIRST**
 
 ## Install
 
-*Note: if the installation is done for upgrading all dependencies and 
-`pip freeze` into new requirements files,
-please go to [dependency upgrade](#dependencies-upgrade)*
+Assuming you are in the egsim directory with a virtualenv <VENVNAME>:
 
-On the terminal, execute:
-```bash
-pip install --upgrade pip setuptools && pip install -r requirements.dev.txt
+```console
+source .env/<ENVNAME>/bin/activate
+pip install --upgrade pip setuptools 
+pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
+# pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
+pip install .
+pip freeze > ./requirements.txt
+pip install ".[test]"
 ```
-(use `requirements.txt` if you don't need to run tests, e.g. you are not 
-installing as developer)
 
 ## Run Test
 
