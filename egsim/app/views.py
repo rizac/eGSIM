@@ -23,7 +23,7 @@ from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType, error_response
-from .forms import ResidualsPlotDataForm, PredictionsPlotDataForm, FlatfilePlotForm
+from .forms import ResidualsVisualizeForm, PredictionsVisualizeForm, FlatfileVisualizeForm
 
 
 img_ext = ('png', 'pdf', 'svg')
@@ -197,14 +197,15 @@ def _get_init_data_json(debug=False) -> dict:
                 'imt': [],
                 'regionalization': None
             }).asdict(),
-            'flatfile_inspection_plot': FlatfilePlotForm({}).asdict(),
+            'flatfile_inspection_plot': FlatfileVisualizeForm({}).asdict(),
             'misc': {
                 'predictions':{
                     'msr': predictions_form.fields['msr'].choices,
                     'region': predictions_form.fields['region'].choices,
                 },
                 'predictions_plot':{
-                    'plot_types': PredictionsPlotDataForm.base_fields['plot_type'].choices  # FIXME noqa?
+                    'plot_types': PredictionsVisualizeForm.
+                    declared_fields['plot_type'].choices
                 },
                 'flatfile_inspection_plot': {
                     'selected_flatfile_fields': []
@@ -281,15 +282,15 @@ def flatfile_meta_info(request) -> JsonResponse:
 
 
 def flatfile_visualize(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=FlatfilePlotForm)(request)
+    return RESTAPIView.as_view(formclass=FlatfileVisualizeForm)(request)
 
 
 def predictions_visualize(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=PredictionsPlotDataForm)(request)
+    return RESTAPIView.as_view(formclass=PredictionsVisualizeForm)(request)
 
 
 def residuals_visualize(request) -> JsonResponse:
-    return RESTAPIView.as_view(formclass=ResidualsPlotDataForm)(request)
+    return RESTAPIView.as_view(formclass=ResidualsVisualizeForm)(request)
 
 
 def plots_image(request) -> HttpResponseBase:
