@@ -14,7 +14,7 @@ import pytest
 import numpy as np
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 
-from egsim.api.views import (TrellisView, MimeType, read_hdf_from_buffer,
+from egsim.api.views import (PredictionsView, MimeType, read_hdf_from_buffer,
                              read_csv_from_buffer, as_querystring)
 from egsim.api.forms.scenarios import PredictionsForm
 
@@ -29,7 +29,7 @@ from egsim.smtk.registry import imt_name, Clabel
 class Test:
     """tests the gsim service"""
 
-    url = "/" + TrellisView.urls[0]  # '/query/trellis'
+    url = "/" + PredictionsView.urls[0]  # '/query/trellis'
     request_filepath = abspath(join(dirname(__file__), 'data', 'request_trellis.yaml'))
 
     def querystring(self, data):

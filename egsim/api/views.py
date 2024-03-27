@@ -174,7 +174,7 @@ class RESTAPIView(View):
 API_PATH = 'query'
 
 
-class TrellisView(RESTAPIView):
+class PredictionsView(RESTAPIView):
     """EgsimQueryView subclass for generating Trellis plots responses"""
 
     formclass = PredictionsForm

@@ -2,7 +2,7 @@
 from django.urls import re_path, path
 from django.views.generic.base import RedirectView
 
-from egsim.api.views import TrellisView, ResidualsView
+from egsim.api.views import PredictionsView, ResidualsView
 from .views import (main, get_gsims_from_region, flatfile_meta_info,
                     flatfile_visualize, flatfile_validate, URLS, test_request,
                     predictions_response_tutorial,
@@ -21,7 +21,7 @@ urlpatterns = [
                        URLS.IMPRINT_PAGE, URLS.REF_AND_LICENSE_PAGE]) +
              ')/?$'), main),
 
-    re_path(fr'^{URLS.PREDICTIONS}.(?:{"|".join(data_ext)})$', TrellisView.as_view()),
+    re_path(fr'^{URLS.PREDICTIONS}.(?:{"|".join(data_ext)})$', PredictionsView.as_view()),
     path(URLS.PREDICTIONS_VISUALIZE, predictions_visualize),
     re_path(fr'{URLS.PREDICTIONS_PLOT_IMG}.(?:{"|".join(img_ext)})', plots_image),
     path(URLS.PREDICTIONS_RESPONSE_TUTORIAL, predictions_response_tutorial),
