@@ -8,7 +8,7 @@ import pandas as pd
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRjb2014
 from openquake.hazardlib.gsim.bindi_2014 import BindiEtAl2014Rjb
 from openquake.hazardlib.gsim.bindi_2017 import BindiEtAl2017Rjb
-from scipy.interpolate import interpolate
+from scipy.interpolate import interp1d
 
 from egsim.smtk.registry import Clabel
 from egsim.smtk.flatfile import ColumnType, FlatfileMetadata
@@ -109,8 +109,8 @@ def test_distance_imt_trellis():
                 assert (np.diff(values) <= 0).all()
             dist_col = (Clabel.input_data, ColumnType.distance.value, 'rrup')
             # create interpolation function from new data
-            interp = interpolate.interp1d(dfr[dist_col].values, dfr[c].values,
-                                          fill_value="extrapolate", kind="cubic")
+            interp = interp1d(dfr[dist_col].values, dfr[c].values,
+                              fill_value="extrapolate", kind="cubic")
             # interpolate the old values
             expected = interp(ref[dist_col].values)
             # and here are the old values:
@@ -161,8 +161,8 @@ def test_magnitude_imt_trellis():
                     assert (np.diff(dfr[c]) >= 0).sum() > 0.92 * len(dfr[c])
             # create interpolation function from new data
             mag_col = (Clabel.input_data, ColumnType.rupture.value, 'mag')
-            interp = interpolate.interp1d(dfr[mag_col].values, dfr[c].values,
-                                          fill_value="extrapolate", kind="cubic")
+            interp = interp1d(dfr[mag_col].values, dfr[c].values,
+                              fill_value="extrapolate", kind="cubic")
             # interpolate the old values
             expected = interp(ref[mag_col].values)
             # and here are the old values:
