@@ -1,9 +1,5 @@
 """
-Tests GUI requests and functions
-
-Created on 2 Jun 2018
-
-@author: riccardo
+Tests for app requests and functions
 """
 from io import BytesIO
 
@@ -22,15 +18,13 @@ import pytest
 from egsim.api.forms.flatfile import FlatfileMetadataInfoForm, FlatfileValidationForm
 from egsim.api.forms.residuals import ResidualsForm
 from egsim.api.forms.scenarios import PredictionsForm
-from egsim.app.forms import FlatfilePlotForm, PredictionsPlotDataForm, ResidualsPlotDataForm
+from egsim.app.forms import (FlatfileVisualizeForm, PredictionsVisualizeForm,
+                             ResidualsVisualizeForm)
 
-from egsim.app.views import URLS
+from egsim.app.views import URLS, img_ext
 from django.test.client import Client
 
 GSIM, IMT = 'gsim', 'imt'
-
-
-
 
 
 @pytest.mark.django_db
@@ -42,7 +36,6 @@ class Test:
 
     request_residuals_filepath = abspath(join(dirname(__file__), 'data',
                                               'request_residuals.yaml'))
-
 
     request_predictions_filepath = abspath(join(dirname(__file__), 'data',
                                                 'request_trellis.yaml'))
@@ -65,15 +58,13 @@ class Test:
                  ResidualsForm(def_ | f_),
                  FlatfileMetadataInfoForm(dict(def_)),
                  FlatfileValidationForm(dict(f_)),
-                 FlatfilePlotForm(f_ | {'x': 'mag'})],
+                 FlatfileVisualizeForm(f_ | {'x': 'mag'})],
                 [True, False]):
             val = form.asdict(compact)
             # test it is json serializable:
             data = json.dumps(val)
 
-
-    def test_html_pages(self,  # pytest fixtures:
-                        client):
+    def test_html_pages(self, client):
         page_urls = [getattr(URLS, _) for _ in dir(URLS) if _.endswith('_PAGE')]
         assert len(page_urls)  # in case we rename the attrs sometime
         for url in page_urls:
@@ -96,72 +87,6 @@ class Test:
             # trailing slash al;so work (see urls.py)
             response = client.get(f"/{url}/", follow=True)
             assert response.status_code == 200
-
-    def test_flatfile_validate(self):
-            url  = URLS.FLATFILE_VALIDATE
-            ff = SimpleUploadedFile('flatfile',
-                                    self.flatfile_tk_content)
-            data = {'flatfile': ff}
-            client = Client()  # do not use the fixture client as we want
-            # to disable CSRF Token check
-            response = client.post("/" + url, data=data)
-            assert response.status_code == 200
-
-    def test_predictions_residuals_visualize(self):
-        tests = [
-            (
-                URLS.PREDICTIONS_VISUALIZE,
-                self.request_predictions_filepath,
-                PredictionsPlotDataForm,
-                {'plot_type': 'm'}
-            ),
-            (
-                URLS.RESIDUALS_VISUALIZE,
-                self.request_residuals_filepath,
-                ResidualsPlotDataForm,
-                {'plot_type': 'res'}
-            )
-        ]
-        for url, yaml_filepath, form, additional_data in tests:
-            with open(yaml_filepath) as _:
-                data = yaml.safe_load(_)
-            data |= additional_data
-            client = Client()
-            response = client.post(f"/{url}",
-                                   json.dumps(data),
-                                   content_type="application/json")
-            assert response.status_code == 200
-            assert len(response.json())
-
-    def test_flatfile_visualize(self):
-            url = URLS.FLATFILE_VISUALIZE
-
-            ff = SimpleUploadedFile('flatfile', self.flatfile_tk_content)
-            data = {'flatfile': ff}
-            client = Client()  # do not use the fixture client as we want
-            # to disable CSRF Token check
-            response = client.post("/" + url, data=data)
-            assert response.status_code == 400  # no x and y
-            msg = response.json()['message']
-            assert "x" in msg and 'y' in msg
-
-            for data in [
-                {'x': 'mag'}, # this returns 400 cause "mag" is not in the flatfile
-                {'x': 'magnitude'},
-                {'x': 'PGA'},
-                {'x': 'magnitude', 'y': 'PGA'},
-                {'y': 'magnitude', 'x': 'PGA'}
-            ]:
-                ff = SimpleUploadedFile('flatfile', self.flatfile_tk_content)
-                data['flatfile'] = ff  # noqa
-                client = Client()  # do not use the fixture client as we want
-                # to disable CSRF Token check
-                response = client.post("/" + url, data=data)
-                if 'mag' in data.values():
-                    expected_code = 400
-                else:
-                    expected_code = 200
-                assert response.status_code == expected_code
 
     def test_download_predictions_residuals(self):
         tests = [
@@ -203,8 +128,118 @@ class Test:
                     if isfile(file_tmp_hdf):
                         os.remove(file_tmp_hdf)
 
-    def tst_download_response_img_formats(self):
-        for service in ['trellis']:  # , 'residuals', 'testing']:
+    def test_flatfile_validate(self):
+        url  = URLS.FLATFILE_VALIDATE
+        ff = SimpleUploadedFile('flatfile',
+                                self.flatfile_tk_content)
+        data = {'flatfile': ff}
+        client = Client()  # do not use the fixture client as we want
+        # to disable CSRF Token check
+        response = client.post("/" + url, data=data)
+        assert response.status_code == 200
+
+    def test_flatfile_visualize(self):
+        url = URLS.FLATFILE_VISUALIZE
+
+        ff = SimpleUploadedFile('flatfile', self.flatfile_tk_content)
+        data = {'flatfile': ff}
+        client = Client()  # do not use the fixture client as we want
+        # to disable CSRF Token check
+        response = client.post("/" + url, data=data)
+        assert response.status_code == 400  # no x and y
+        msg = response.json()['message']
+        assert "x" in msg and 'y' in msg
+
+        for data in [
+            {'x': 'mag'}, # this returns 400 cause "mag" is not in the flatfile
+            {'x': 'magnitude'},
+            {'x': 'PGA'},
+            {'x': 'magnitude', 'y': 'PGA'},
+            {'y': 'magnitude', 'x': 'PGA'}
+        ]:
+            ff = SimpleUploadedFile('flatfile', self.flatfile_tk_content)
+            data['flatfile'] = ff  # noqa
+            client = Client()  # do not use the fixture client as we want
+            # to disable CSRF Token check
+            response = client.post("/" + url, data=data)
+            if 'mag' in data.values():
+                expected_code = 400
+            else:
+                expected_code = 200
+            assert response.status_code == expected_code
+
+    def test_predictions_residuals_visualize(self):
+        tests = [
+            *[(
+                URLS.PREDICTIONS_VISUALIZE,
+                self.request_predictions_filepath,
+                PredictionsVisualizeForm,
+                {'plot_type': c[0]}
+            ) for c in PredictionsVisualizeForm.declared_fields['plot_type'].choices],
+            (
+                URLS.RESIDUALS_VISUALIZE,
+                self.request_residuals_filepath,
+                ResidualsVisualizeForm,
+                { 'data-query': 'mag > 7' } # no x or x None => residuals
+            ),
+            (
+                URLS.RESIDUALS_VISUALIZE,
+                self.request_residuals_filepath,
+                ResidualsVisualizeForm,
+                {'data-query': 'mag > 7', 'likelihood': True } # no x or x None but likelihood => LH residuals
+            ),
+            (
+                URLS.RESIDUALS_VISUALIZE,
+                self.request_residuals_filepath,
+                ResidualsVisualizeForm,
+                {'data-query': 'mag > 7', 'x': 'mag'}
+            )
+        ]
+        for url, yaml_filepath, form, additional_data in tests:
+            with open(yaml_filepath) as _:
+                data = yaml.safe_load(_)
+            data |= additional_data
+            client = Client()
+            response = client.post(f"/{url}",
+                                   json.dumps(data),
+                                   content_type="application/json")
+            if form is PredictionsVisualizeForm and additional_data['plot_type'] == 's':
+                # only SA(period) allowed, response has also other IMTs, so:
+                assert response.status_code == 400
+                assert 'SA' in response.json()['message']
+            else:
+                assert response.status_code == 200
+                assert len(response.json())
+
+        # test errors:
+        tests = [
+            (
+                URLS.PREDICTIONS_VISUALIZE,
+                self.request_predictions_filepath,
+                PredictionsVisualizeForm,
+                {'plot_type': '?'}
+            ),
+            (
+                URLS.RESIDUALS_VISUALIZE,
+                self.request_residuals_filepath,
+                ResidualsVisualizeForm,
+                {'x': '?', 'data-query': 'mag > 7'}
+            )
+        ]
+        for url, yaml_filepath, form, additional_data in tests:
+            with open(yaml_filepath) as _:
+                data = yaml.safe_load(_)
+            data |= additional_data
+            client = Client()
+            response = client.post(f"/{url}",
+                                   json.dumps(data),
+                                   content_type="application/json")
+            assert response.status_code == 400
+            assert len(response.json())
+
+    def test_download_response_img_formats(self):
+        for url, ext in product((URLS.PREDICTIONS_PLOT_IMG, URLS.RESIDUALS_PLOT_IMG),
+                                (img_ext)):
             # for the moment, just provide a global data object regardless of the
             # service:
             data = [
@@ -275,12 +310,18 @@ class Test:
                 }
             }
             client = Client()  # do not use the fixture client as we want
-            # Note below: json is not supported because from the browser we simply
-            # serve the already available response_data
-            for filename in ['response.' + _ for _ in _IMG_FORMATS.keys()]:
-                # to disable CSRF Token check
-                response = client.post(f"/{URLS.DOWNLOAD_RESPONSE}/{service}/{filename}",
-                                       json.dumps({'data': data, 'layout': layout,
-                                                   'width': 100, 'height': 100}),
-                                       content_type="application/json")
-                assert response.status_code == 200
+            # to disable CSRF Token check
+            response = client.post(f"/{url}.{ext}",
+                                   json.dumps({'data': data, 'layout': layout,
+                                               'width': 100, 'height': 100}),
+                                   content_type="application/json")
+            content = b''.join(response.streaming_content)
+            assert response.status_code == 200
+            if ext == 'png':
+                assert b'PNG' in content[:5]
+            elif ext == 'pdf':
+                assert b'PDF' in content[:5]
+            elif ext == 'svg':
+                assert b'<svg ' in content[:5]
+            else:
+                raise ValueError(f'content generated for image format {ext} not tested')

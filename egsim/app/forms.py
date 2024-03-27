@@ -14,7 +14,7 @@ from .plotly import (colors_cycle, axis_type, axis_range, scatter_trace,
                      bar_trace, line_trace, histogram_trace, AxisType)
 
 
-class PredictionsPlotDataForm(PredictionsForm):
+class PredictionsVisualizeForm(PredictionsForm):
     """Form returning predictions from configured scenarios in form of plots"""
 
     plot_type = ChoiceField(
@@ -28,7 +28,7 @@ class PredictionsPlotDataForm(PredictionsForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data['plot_type'] == 's':
+        if not self.has_error('plot_type') and cleaned_data['plot_type'] == 's':
             if not (all(_.startswith('SA(') for _ in cleaned_data['imt'])):
                 self.add_error('imt', 'Only SA with period(s) allowed')
         return cleaned_data
@@ -168,7 +168,7 @@ class PredictionsPlotDataForm(PredictionsForm):
         return {'plots': plots}
 
 
-class ResidualsPlotDataForm(ResidualsForm):
+class ResidualsVisualizeForm(ResidualsForm):
     """Form returning residuals in form of plots"""
 
     x = CharField(required=False, initial=None,
@@ -176,6 +176,14 @@ class ResidualsPlotDataForm(ResidualsForm):
                             'this latter case a histogram will be returned '
                             'depending on the value of the param. likelihood '
                             '(True: LH values, else: residuals Z values)')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not self.has_error('flatfile') and cleaned_data.get('x', None) \
+                and cleaned_data['x'] not in cleaned_data['flatfile'].columns:
+            self.add_error('x', 'not a flatfile column')
+        return cleaned_data
+
 
     def output(self) -> dict:
 
@@ -308,7 +316,7 @@ def norm_dist(x, mean=0, sigma=1):
     return norm * np.exp(-((x - mean) ** 2) / sigma_square_times_two)
 
 
-class FlatfilePlotForm(APIForm, FlatfileForm):
+class FlatfileVisualizeForm(APIForm, FlatfileForm):
     """Form for plotting flatfile columns"""
 
     x = CharField(label='X', help_text="The flatfile column for the x values",
