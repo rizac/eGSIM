@@ -14,6 +14,7 @@ from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils.datastructures import MultiValueDict
 
+from egsim.api.urls import RESIDUALS_URL_PATH
 from egsim.api.views import (ResidualsView, RESTAPIView, as_querystring,
                              read_csv_from_buffer, read_hdf_from_buffer)
 from egsim.smtk.converters import dataframe2dict
@@ -23,7 +24,7 @@ from egsim.smtk.converters import dataframe2dict
 class Test:
     """tests the residuals service"""
 
-    url = "/" + ResidualsView.urls[0]  # '/query/residuals'
+    url = f"/{RESIDUALS_URL_PATH}"
     
     data_dir = abspath(join(dirname(__file__), 'data'))
     request_filepath = join(data_dir, 'request_residuals.yaml')

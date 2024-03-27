@@ -1,6 +1,8 @@
 """
 Tests for app requests and functions
 """
+from urllib.error import URLError
+
 from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -14,6 +16,7 @@ from itertools import product
 
 import json
 import pytest
+import urllib.request
 
 from egsim.api.forms.flatfile import FlatfileMetadataInfoForm, FlatfileValidationForm
 from egsim.api.forms.residuals import ResidualsForm
@@ -25,6 +28,14 @@ from egsim.app.views import URLS, img_ext
 from django.test.client import Client
 
 GSIM, IMT = 'gsim', 'imt'
+
+
+tests_are_not_online = False
+try:
+    with urllib.request.urlopen('https://egsim.gfz-potsdam.de/') as response:
+        pass  # response.read(1)
+except URLError as exc:
+    tests_are_not_online = True
 
 
 @pytest.mark.django_db
@@ -71,10 +82,7 @@ class Test:
 
             # external link, just check the link ios n ot broken:
             if url.startswith('http://') or url.startswith('https://'):
-                import urllib.request
-                with urllib.request.urlopen(url) as response:
-                    assert response.code == 200
-                continue
+                continue  # see below
 
             # just the URL without leading slash returns 404 (FIXME WHY?)
             response = client.get(f"{url}" , follow=True)
@@ -87,6 +95,16 @@ class Test:
             # trailing slash al;so work (see urls.py)
             response = client.get(f"/{url}/", follow=True)
             assert response.status_code == 200
+
+    @pytest.mark.skipif(tests_are_not_online, reason='no internet connection')
+    def test_external_urls_are_not_dead(self):
+        page_urls = [getattr(URLS, _) for _ in dir(URLS) if _.endswith('_PAGE')]
+        assert len(page_urls)  # in case we rename the attrs sometime
+        for url in page_urls:
+            # external link, just check the link ios n ot broken:
+            if url.startswith('http://') or url.startswith('https://'):
+                with urllib.request.urlopen(url) as response:
+                    assert response.code == 200
 
     def test_download_predictions_residuals(self):
         tests = [

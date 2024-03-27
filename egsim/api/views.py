@@ -53,8 +53,6 @@ class RESTAPIView(View):
     """
     # The APIForm of this view, to be set in subclasses:
     formclass: Type[APIForm] = None
-    # the URL(s) endpoints of the API (no paths, no slashes, just the name):
-    urls: list[str] = []
     # error codes for general client and server errors:
     CLIENT_ERR_CODE, SERVER_ERR_CODE = 400, 500
 
@@ -168,18 +166,10 @@ class RESTAPIView(View):
         return JsonResponse(form.output(), **kwargs)
 
 
-# we need to provide the full URL of the views here, because the frontend need
-# to inject those URLs (to call them when pressing OK buttons). So prefixes must
-# be written here and not in `urls.py`:
-API_PATH = 'query'
-
-
 class PredictionsView(RESTAPIView):
     """EgsimQueryView subclass for generating Trellis plots responses"""
 
     formclass = PredictionsForm
-    urls = (f'{API_PATH}/predictions',
-            f'{API_PATH}/trellis', f'{API_PATH}/model2model')
 
     def response_csv(self, form:APIForm, **kwargs):
         content = write_csv_to_buffer(form.output())
@@ -206,7 +196,6 @@ class ResidualsView(RESTAPIView):
     """EgsimQueryView subclass for generating Residuals plot responses"""
 
     formclass = ResidualsForm
-    urls = (f'{API_PATH}/residuals', f'{API_PATH}/model2data')
 
     def response_csv(self, form:APIForm, **kwargs):
         content = write_csv_to_buffer(form.output())
