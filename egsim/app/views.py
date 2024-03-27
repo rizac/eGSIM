@@ -22,7 +22,7 @@ from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
 from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
-from ..api.views import RESTAPIView, TrellisView, ResidualsView, MimeType, error_response
+from ..api.views import RESTAPIView, PredictionsView, ResidualsView, MimeType, error_response
 from .forms import ResidualsVisualizeForm, PredictionsVisualizeForm, FlatfileVisualizeForm
 
 
@@ -125,7 +125,7 @@ def _get_init_data_json(debug=False) -> dict:
                 'columns': ff_form.output()['columns']
             })
 
-    predictions_form = TrellisView.formclass({  # FIXME rename TreliisView
+    predictions_form = PredictionsView.formclass({  # FIXME rename TreliisView
         'gsim': [],
         'imt': [],
         'format': 'hdf'  # FIXME needed?
@@ -136,7 +136,7 @@ def _get_init_data_json(debug=False) -> dict:
         'format': 'hdf'  # FIXME needed?
     })
     if debug:
-        predictions_form = TrellisView.formclass({
+        predictions_form = PredictionsView.formclass({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
             'magnitude': [4, 5, 6, 7],

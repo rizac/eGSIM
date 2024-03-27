@@ -5,14 +5,14 @@ from django.views.decorators.csrf import csrf_exempt
 from re import escape as esc
 from http.client import responses
 
-from .views import TrellisView, ResidualsView, error_response
+from .views import PredictionsView, ResidualsView, error_response
 
 # For trailing slashes in urls, see: https://stackoverflow.com/a/11690144
 
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),  # added by default by django
-    *[re_path(r'^%s/?$' % esc(_), csrf_exempt(TrellisView.as_view()))
-      for _ in TrellisView.urls],
+    *[re_path(r'^%s/?$' % esc(_), csrf_exempt(PredictionsView.as_view()))
+      for _ in PredictionsView.urls],
     *[re_path(r'^%s/?$' % esc(_), csrf_exempt(ResidualsView.as_view()))
       for _ in ResidualsView.urls],
     # return a 404 not-found JSON Response for all other cases
