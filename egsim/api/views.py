@@ -15,9 +15,8 @@ from django.http import (JsonResponse, HttpRequest, QueryDict, FileResponse)
 from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
-from django.forms import SelectMultiple
 
-from ..smtk.converters import dataframe2dict
+from ..smtk.converters import dataframe2dict  # FIXME remove and drop support for JSON in SMTKView?
 from .forms import APIForm
 from .forms.scenarios import PredictionsForm, ArrayField
 from .forms.flatfile import FlatfileForm
@@ -166,56 +165,41 @@ class RESTAPIView(View):
         return JsonResponse(form.output(), **kwargs)
 
 
-class PredictionsView(RESTAPIView):
-    """EgsimQueryView subclass for generating Trellis plots responses"""
+class SmtkView(RESTAPIView):
+    """RESTAPIView for smtk (strong motion toolkit) output (e.g. Predictions or
+    Residuals, set in the `formclass` class attribute"""
+
+    def response_csv(self, form:APIForm, **kwargs):
+        content = write_csv_to_buffer(form.output())
+        content.seek(0)  # for safety
+        kwargs.setdefault('content_type', MimeType.csv)
+        kwargs.setdefault('status', 200)
+        return FileResponse(content, **kwargs)
+
+    def response_hdf(self, form:APIForm, **kwargs):
+        content = write_hdf_to_buffer({'egsim': form.output()})
+        content.seek(0)  # for safety
+        kwargs.setdefault('content_type', MimeType.hdf)
+        kwargs.setdefault('status', 200)
+        return FileResponse(content, **kwargs)
+
+    def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
+        json_data = dataframe2dict(form.output(), as_json=True,
+                                   drop_empty_levels=True)
+        kwargs.setdefault('status', 200)
+        return JsonResponse(json_data, **kwargs)
+
+
+class PredictionsView(SmtkView):
+    """SmtkView subclass for predictions computation"""
 
     formclass = PredictionsForm
 
-    def response_csv(self, form:APIForm, **kwargs):
-        content = write_csv_to_buffer(form.output())
-        content.seek(0)  # for safety
-        kwargs.setdefault('content_type', MimeType.csv)
-        kwargs.setdefault('status', 200)
-        return FileResponse(content, **kwargs)
 
-    def response_hdf(self, form:APIForm, **kwargs):
-        content = write_hdf_to_buffer({'egsim': form.output()})
-        content.seek(0)  # for safety
-        kwargs.setdefault('content_type', MimeType.hdf)
-        kwargs.setdefault('status', 200)
-        return FileResponse(content, **kwargs)
-
-    def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
-        json_data = dataframe2dict(form.output(), as_json=True,
-                                   drop_empty_levels=True)
-        kwargs.setdefault('status', 200)
-        return JsonResponse(json_data, **kwargs)
-
-
-class ResidualsView(RESTAPIView):
-    """EgsimQueryView subclass for generating Residuals plot responses"""
+class ResidualsView(SmtkView):
+    """SmtkView subclass for residuals computation"""
 
     formclass = ResidualsForm
-
-    def response_csv(self, form:APIForm, **kwargs):
-        content = write_csv_to_buffer(form.output())
-        content.seek(0)  # for safety
-        kwargs.setdefault('content_type', MimeType.csv)
-        kwargs.setdefault('status', 200)
-        return FileResponse(content, **kwargs)
-
-    def response_hdf(self, form:APIForm, **kwargs):
-        content = write_hdf_to_buffer({'egsim': form.output()})
-        content.seek(0)  # for safety
-        kwargs.setdefault('content_type', MimeType.hdf)
-        kwargs.setdefault('status', 200)
-        return FileResponse(content, **kwargs)
-
-    def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
-        json_data = dataframe2dict(form.output(), as_json=True,
-                                   drop_empty_levels=True)
-        kwargs.setdefault('status', 200)
-        return JsonResponse(json_data, **kwargs)
 
 
 def error_response(error: Union[str, Exception, dict],

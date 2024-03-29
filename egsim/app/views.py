@@ -22,7 +22,7 @@ from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
 from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
-from ..api.views import RESTAPIView, PredictionsView, ResidualsView, MimeType, error_response
+from ..api.views import RESTAPIView, MimeType, error_response
 from .forms import ResidualsVisualizeForm, PredictionsVisualizeForm, FlatfileVisualizeForm
 
 
@@ -63,7 +63,6 @@ class URLS:  # noqa
 def main(request, page=''):
     """view for the main page"""
     template = 'egsim.html'
-    # fixme: handle regionalization (set to None cause otherwise is not JSON serializable)!
     init_data = _get_init_data_json(settings.DEBUG) | \
                 {'currentPage': page or URLS.HOME_PAGE}
     return render(request, template, context={'debug': settings.DEBUG,
@@ -125,25 +124,25 @@ def _get_init_data_json(debug=False) -> dict:
                 'columns': ff_form.output()['columns']
             })
 
-    predictions_form = PredictionsView.formclass({  # FIXME rename TreliisView
+    predictions_form = PredictionsForm({
         'gsim': [],
         'imt': [],
-        'format': 'hdf'  # FIXME needed?
+        'format': 'hdf'
     })
-    residuals_form = ResidualsView.formclass({
+    residuals_form = ResidualsForm({
         'gsim': [],
         'imt': [],
-        'format': 'hdf'  # FIXME needed?
+        'format': 'hdf'
     })
     if debug:
-        predictions_form = PredictionsView.formclass({
+        predictions_form = PredictionsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
             'magnitude': [4, 5, 6, 7],
             'distance': [1, 10, 100, 1000],
             'format': 'hdf'
         })
-        residuals_form = ResidualsView.formclass({
+        residuals_form = ResidualsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA', 'SA(0.1)'],
             'flatfile': 'esm2018',
@@ -194,8 +193,7 @@ def _get_init_data_json(debug=False) -> dict:
             'residuals_plot': {'x': None, 'likelihood': False, 'format': 'json'},
             'flatfile_meta_info': FlatfileMetadataInfoForm({
                 'gsim': [],
-                'imt': [],
-                'regionalization': None
+                'imt': []
             }).asdict(),
             'flatfile_inspection_plot': FlatfileVisualizeForm({}).asdict(),
             'misc': {
