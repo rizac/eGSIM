@@ -16,7 +16,8 @@ from django.http.response import HttpResponse
 from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
-from ..smtk.converters import dataframe2dict  # FIXME remove and drop support for JSON in SMTKView?
+from ..smtk.converters import dataframe2dict
+# FIXME (import above): remove and drop support for JSON in SMTKView?
 from .forms import APIForm
 from .forms.scenarios import PredictionsForm, ArrayField
 from .forms.flatfile import FlatfileForm
@@ -59,20 +60,20 @@ class RESTAPIView(View):
             -> dict[str, Union[str, list[str]]]:
         """parse the given query dict and returns a Python dict
 
-        :param querydict: a QueryDict resulting from an HttpRequest.POST or
-            HttpRequest.GET, with percent-encoded characters already decoded
+        :param querydict: a QueryDict resulting from an `HttpRequest.POST` or
+            `HttpRequest.GET`, with percent-encoded characters already decoded
         :param nulls: tuple/list/set of strings to be converted to None. Defaults
-            to ("null", )
+            to `("null", )`
         """
         form_cls = self.formclass
 
-        DEFAULT_MULTI_VALUE_FIELDS = {'gsim', 'imt', 'regionalization'}
+        default_multi_value_fields = {'gsim', 'imt', 'regionalization'}
         multi_value_params = set()
         for field_name, field in form_cls.base_fields.items():
             # FIXME: Move ArrayField from trellis to forms and
             #  set arrayfield(Field...) for both gsim and imt
             #  then here we can just check isinstance(ArrayField):
-            if field_name in DEFAULT_MULTI_VALUE_FIELDS or \
+            if field_name in default_multi_value_fields or \
                     isinstance(field, (MultipleChoiceField, ArrayField)):
                 multi_value_params.update(form_cls.param_names_of(field_name))
 
@@ -160,7 +161,7 @@ class RESTAPIView(View):
                         formats[frmt] = meth
         return formats
 
-    def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
+    def response_json(self, form: APIForm, **kwargs) -> JsonResponse:
         kwargs.setdefault('status', 200)
         return JsonResponse(form.output(), **kwargs)
 
@@ -169,21 +170,21 @@ class SmtkView(RESTAPIView):
     """RESTAPIView for smtk (strong motion toolkit) output (e.g. Predictions or
     Residuals, set in the `formclass` class attribute"""
 
-    def response_csv(self, form:APIForm, **kwargs):
+    def response_csv(self, form:APIForm, **kwargs):  # noqa
         content = write_csv_to_buffer(form.output())
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.csv)
         kwargs.setdefault('status', 200)
         return FileResponse(content, **kwargs)
 
-    def response_hdf(self, form:APIForm, **kwargs):
+    def response_hdf(self, form:APIForm, **kwargs):  # noqa
         content = write_hdf_to_buffer({'egsim': form.output()})
         content.seek(0)  # for safety
         kwargs.setdefault('content_type', MimeType.hdf)
         kwargs.setdefault('status', 200)
         return FileResponse(content, **kwargs)
 
-    def response_json(self, form:APIForm, **kwargs) -> JsonResponse:
+    def response_json(self, form: APIForm, **kwargs) -> JsonResponse:
         json_data = dataframe2dict(form.output(), as_json=True,
                                    drop_empty_levels=True)
         kwargs.setdefault('status', 200)
@@ -212,7 +213,7 @@ def error_response(error: Union[str, Exception, dict],
 
     :param error: dict, Exception or string. If dict, it will be used as response
         content (assuring there is at least the key 'message' which will be built
-        from `status` if missing). If string, a dict `{message: <content>}` will
+        from `status` if missing). If `str`, a dict `{message: <content>}` will
         be built. If exception, the same dict but with the `message` key mapped to
         a string inferred from the exception
     :param status: the response HTTP status code (int, default: 500)
@@ -248,10 +249,11 @@ def write_hdf_to_buffer(frames: dict[str, pd.DataFrame], **kwargs) -> BytesIO:
             out.put(key, dfr, format='table')
             # out[key] = df
         # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
-        return BytesIO(out._handle.get_file_image())
+        return BytesIO(out._handle.get_file_image())  # noqa
 
 
-def read_hdf_from_buffer(buffer: Union[bytes, IO], key:Optional[str]=None) -> pd.DataFrame:
+def read_hdf_from_buffer(
+        buffer: Union[bytes, IO], key: Optional[str] = None) -> pd.DataFrame:
     """Read from a BytesIO containing HDF data"""
     content = buffer if isinstance(buffer, bytes) else buffer.read()
     # https://www.pytables.org/cookbook/inmemory_hdf5_files.html
@@ -277,7 +279,7 @@ def read_hdf_from_buffer(buffer: Union[bytes, IO], key:Optional[str]=None) -> pd
 def write_csv_to_buffer(data: pd.DataFrame, **csv_kwargs) -> BytesIO:
     """Write in CSV format to a BytesIO the passed DataFrame(s)"""
     content = BytesIO()
-    data.to_csv(content, **csv_kwargs)
+    data.to_csv(content, **csv_kwargs)  # noqa
     return content
 
 
@@ -291,7 +293,7 @@ def read_csv_from_buffer(buffer: Union[bytes, IO]) -> pd.DataFrame:
 
 
 # Default safe characters in `as_querystring`. Letters, digits are safe by default
-# and don't need to be added (also '_.-~' are safe but are added anyway for safety):
+# and don't need to be added. '_.-~' are safe but are added anyway for safety:
 QUERY_STRING_SAFE_CHARS = "-_.~!*'()"
 
 
@@ -299,8 +301,8 @@ def as_querystring(
         data: Any,
         safe=QUERY_STRING_SAFE_CHARS,
         none_value='null',
-        encoding:str=None,
-        errors:str=None) -> str:
+        encoding: str = None,
+        errors: str = None) -> str:
     """Return `data` as query string (URL portion after the '?' character) for GET
     requests. With the default set of input parameters, this function encodes strings
     exactly as JavaScript encodeURIComponent:
@@ -319,7 +321,7 @@ def as_querystring(
     :param none_value: string to be used when encountering None (default 'null')
     :param encoding: used to deal with non-ASCII characters. See `urllib.parse.quote`
     :param errors: used to deal with non-ASCII characters. See `urllib.parse.quote`
-    """
+    """  # noqa
     if data is None:
         return none_value
     if data is True or data is False:

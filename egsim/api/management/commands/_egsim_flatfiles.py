@@ -5,7 +5,7 @@ from os.path import join
 
 from django.core.management import BaseCommand, CommandError
 
-from egsim.smtk.flatfile import _load_flatfile_metadata
+from egsim.smtk.flatfile import _load_flatfile_metadata  # noqa
 from egsim.smtk.registry import registered_imts
 from ... import models
 from ...data.flatfiles import get_flatfiles, DATA

@@ -3,8 +3,7 @@ from typing import Optional
 # required external packages (pip install ...):
 import requests
 import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe
-# recommended external packages:
-import tables  # enables reading HDF data. If not installed, use CSV (see "format" parameter below)
+# import tables  # recommended to read HDF. Uncomment to check it's installed
 
 
 def get_egsim_predictions(
@@ -14,7 +13,7 @@ def get_egsim_predictions(
         distances: list[float],
         rupture_params: Optional[dict] = None,
         site_params: Optional[dict] = None,
-        format="hdf"
+        data_format="hdf"
 ) -> pd.DataFrame:
     """Retrieve the ground motion predictions for the selected set of ground motion
     models and intensity measure types. Each prediction will be the result of a given
@@ -28,7 +27,7 @@ def get_egsim_predictions(
     - distances: list of distances configuring each Site
     - rupture_params: dict of shared Rupture parameters (magnitude excluded)
     - site_params: dict of shared Site parameters (distance excluded)
-    - format: the requested data format. "hdf" (the default, recommended) or "csv".
+    - data_format: the requested data format. "hdf" (the default, recommended) or "csv".
       HDF is more performant and support more data types, but it requires pytables
       (`pip install tables`)
 
@@ -61,7 +60,7 @@ def get_egsim_predictions(
     parameters |= {
         'model': model,
         'imt': imt,
-        'format': format,
+        'format': data_format,
         'mag': magnitudes,
         'dist': distances
     }

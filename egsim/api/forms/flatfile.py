@@ -33,8 +33,9 @@ class FlatfileForm(EgsimBaseForm):
         'selexpr': ('flatfile-query', 'data-query', 'selection-expression'),
         'flatfile': ('flatfile', 'data')
     }
-    flatfile = CharField(required=False)  # keep form JSON-serializable: no ChoiceField
-                                          # or ModelChoiceField, validate in `self.clean`
+    flatfile = CharField(required=False)  # Note: with a ModelChoiceField the benefits
+    # of handling validation are outweighed by the fixes needed here and there to make
+    # values JSON serializable, so we opt for a CharField + custom validation in `clean`
     selexpr = CharField(required=False, label='Filter flatfile records via a '
                                               'query string')
 
@@ -80,7 +81,7 @@ class FlatfileForm(EgsimBaseForm):
                 return cleaned_data
             # cleaned_data["flatfile"] is a models.Flatfile instance:
             dataframe = flatfile_db_obj.read_from_filepath()
-        else: # uploaded (user-defined) flatfile
+        else:  # uploaded (user-defined) flatfile
             try:
                 # u_flatfile is a Django TemporaryUploadedFile or InMemoryUploadedFile
                 # (the former if file size > configurable threshold
@@ -146,10 +147,10 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
                 categories = sorted(dataframe[col].cat.categories.tolist())
             except AttributeError:
                 categories = []
-            help = FlatfileMetadata.get_help(col)
-            columns.append(_harmonize_column_props(col, ctype, dtype, categories, help))
+            hlp = FlatfileMetadata.get_help(col)
+            columns.append(_harmonize_column_props(col, ctype, dtype, categories, hlp))
 
-        return { 'columns': columns }
+        return {'columns': columns}
 
 
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
@@ -191,15 +192,15 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
                 )
             )
 
-        return { 'columns': columns }
+        return {'columns': columns}
 
 
 def _harmonize_column_props(
-        name:str,
+        name: str,
         ctype: Optional[ColumnType],
         dtype: Optional[ColumnDtype],
         categories: Optional[list],
-        help: Optional[str]):
+        chelp: Optional[str]):
     dtype = getattr(dtype, 'value', "")
     if dtype and categories:
         dtype += f'. A value to be chosen from: {", ".join(sorted(categories))})'
@@ -207,7 +208,7 @@ def _harmonize_column_props(
         'name': name,
         'type': getattr(ctype, 'value', ""),
         'dtype': dtype,
-        'help': help or ""
+        'help': chelp or ""
     }
 
 

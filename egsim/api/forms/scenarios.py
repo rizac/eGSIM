@@ -23,7 +23,7 @@ class ArrayField(Field):
     django.contrib.postgres.forms.array.SplitArrayField (which unfortunately
     requires psycopg2)"""
 
-    def __init__(self, *base_fields:Field, **kwargs):
+    def __init__(self, *base_fields: Field, **kwargs):
         """
         :param base_fields: the base field(s). 1-element means that
             this field accept a variable length array of values
@@ -31,7 +31,7 @@ class ArrayField(Field):
         assert len(set(type(_) for _ in base_fields)) == 1, \
             'base_fields must be of the same type'
         kwargs.setdefault("widget", base_fields[0].widget)
-        if all (b.initial is not None for b in base_fields):
+        if all(b.initial is not None for b in base_fields):
             kwargs.setdefault('initial', [b.initial for b in base_fields])
         super().__init__(**kwargs)
         self.base_fields = base_fields
@@ -54,7 +54,7 @@ class ArrayField(Field):
         for item, base_field in zip(value, base_fields):
             try:
                 cleaned_data.append(base_field.clean(item))
-            except ValidationError as error:
+            except ValidationError:
                 invalid += 1
         if invalid:
             raise ValidationError(f"{invalid} value"
@@ -150,7 +150,7 @@ class PredictionsForm(GsimImtForm, APIForm):
     # is validated individually in order to perform additional validation or casting:
 
     def clean_msr(self):
-        """Clean the "msr" field by converting the given value to a
+        """Clean the "msr" field by converting the given value to an
         object of type :class:`openquake.hazardlib.scalerel.base.BaseMSR`.
         """
         try:
@@ -159,7 +159,7 @@ class PredictionsForm(GsimImtForm, APIForm):
             raise ValidationError(self.ErrCode.invalid)
 
     def clean_initial_point(self):
-        """Clean the "location" field by converting the given value to a
+        """Clean the "location" field by converting the given value to an
         object of type :class:`openquake.hazardlib.geo.point.Point`.
         """
         try:

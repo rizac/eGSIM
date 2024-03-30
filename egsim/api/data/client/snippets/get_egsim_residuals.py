@@ -3,8 +3,7 @@ from typing import Union
 # required external packages (pip install ...):
 import requests
 import pandas as pd  # https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe
-# recommended external packages:
-import tables  # enables reading HDF data. If not installed, use CSV (see "format" parameter below)
+# import tables  # recommended to read HDF. Uncomment to check it's installed
 
 
 def get_egsim_residuals(
@@ -13,7 +12,7 @@ def get_egsim_residuals(
         flatfile: Union[io.IOBase, str],
         query_string=None,
         likelihood=False,
-        format="hdf"
+        data_format="hdf"
 ) -> pd.DataFrame:
     """Retrieve the residuals for the flatfile and the selected
     set of ground motion models and intensity measure types. Examples:
@@ -35,7 +34,7 @@ def get_egsim_residuals(
     - query_string: selection query to apply to the data (e.g. "mag>6")
     - likelihood: bool (default False): compute the residuals likelihood
       according to [Scherbaum et al. (2004)](https://doi.org/10.1785/0120030147)
-    - format: the requested data format. "hdf" (the default, recommended) or "csv".
+    - data_format: the requested data format. "hdf" (the default, recommended) or "csv".
       HDF is more performant and support more data types, but it requires pytables
       (`pip install tables`)
 
@@ -60,7 +59,7 @@ def get_egsim_residuals(
     parameters = {
         'model': model,
         'imt': imt,
-        'format': format,
+        'format': data_format,
         'likelihood': likelihood
     }
     if query_string:
@@ -71,7 +70,7 @@ def get_egsim_residuals(
     if isinstance(flatfile, str):
         # preloaded flatfile:
         parameters['flatfile'] = flatfile
-        args = { 'json': parameters }
+        args = {'json': parameters}
     else:
         # uploaded flatfile:
         args = {'data': parameters, 'files': {'flatfile': flatfile}}

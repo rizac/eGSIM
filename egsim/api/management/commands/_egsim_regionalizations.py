@@ -1,9 +1,7 @@
 """
 eGSIM management command. See `Command.help` for details
 """
-from os.path import join, dirname, isdir
-from os import makedirs
-import json
+from os.path import join
 import warnings
 from django.core.management import BaseCommand, CommandError
 
@@ -51,11 +49,11 @@ class Command(BaseCommand):
                 db_obj.write_to_filepath(regionalization)
 
                 self.stdout.write(f'  Regionalization "{name}" ({db_obj.filepath}), '
-                               f'{len(regionalization)} region(s):')
+                                  f'{len(regionalization)} region(s):')
                 for feat in regionalization:
                     self.stdout.write(f"    {feat['properties']['region']}: "
-                                   f"{len(feat['properties']['models'])} model(s), "
-                                   f"geometry type: {feat['geometry']['type']}")
+                                      f"{len(feat['properties']['models'])} model(s), "
+                                      f"geometry type: {feat['geometry']['type']}")
 
             saved_regs = models.Regionalization.objects.count()
             if saved_regs:

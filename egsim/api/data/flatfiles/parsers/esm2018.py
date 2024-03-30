@@ -127,7 +127,7 @@ def post_process(flatfile: pd.DataFrame) -> pd.DataFrame:
     # set station id as int:
     dfr['sta_id'] = \
         dfr['net_code'].str.cat(dfr['sta_code'], sep='.'). \
-            astype('category').cat.codes
+        astype('category').cat.codes
 
     # magnitude: complete it with
     # Mw -> Ms -> Ml (in this order) where standard mag is NA
@@ -203,7 +203,7 @@ def post_process(flatfile: pd.DataFrame) -> pd.DataFrame:
                 dfr.loc[filter_, 'dip'] = dip
 
     # if vs30_meas_type is not empty  then vs30_measured is True else False
-    # rowdict['vs30_measured'] = bool(rowdict.get('vs30_meas_type', ''))
+    # rowdict['vs30_measured'] = bool(rowdict.get('vs30_meas_type', '')
     dfr['vs30measured'] = ~pd.isna(dfr.pop('vs30_meas_type'))
 
     # if vs30_meas_sec has value, then vs30 is that value, vs30_measured

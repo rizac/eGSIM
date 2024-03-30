@@ -49,7 +49,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Models saved: {ok}, '
                                              f'discarded: {discarded}'))
 
-
     def write_model(self, name, cls):
         prefix = 'Discarding'
         try:
@@ -73,7 +72,7 @@ class Command(BaseCommand):
             sa_lim = get_sa_limits(_)
             models.Gsim.objects.create(
                 name=name,
-                imts =" ".join(sorted(imtz)),
+                imts=" ".join(sorted(imtz)),
                 min_sa_period=None if sa_lim is None else sa_lim[0],
                 max_sa_period=None if sa_lim is None else sa_lim[1],
                 unverified=cls.non_verified,
