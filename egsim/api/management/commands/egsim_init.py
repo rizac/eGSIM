@@ -1,7 +1,6 @@
 """
 eGSIM management command. See `Command.help` for details
 """
-import sys
 
 from django.core.management import (call_command, load_command_class,
                                     BaseCommand)

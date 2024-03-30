@@ -23,7 +23,8 @@ from ..api.forms import GsimFromRegionForm, APIForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.views import RESTAPIView, MimeType, error_response
-from .forms import ResidualsVisualizeForm, PredictionsVisualizeForm, FlatfileVisualizeForm
+from .forms import (ResidualsVisualizeForm, PredictionsVisualizeForm,
+                    FlatfileVisualizeForm)
 
 
 img_ext = ('png', 'pdf', 'svg')
@@ -36,7 +37,7 @@ class URLS:  # noqa
     # Form specific URLs
     PREDICTIONS = 'gui/egsim-predictions'  # <path>/<downloaded_file_basename>
     PREDICTIONS_VISUALIZE = 'gui/egsim-predictions-visualize'
-    PREDICTIONS_PLOT_IMG = 'gui/egsim-predictions-plot'  # <path>/<downloaded_file_basename>
+    PREDICTIONS_PLOT_IMG = 'gui/egsim-predictions-plot'  # <path>/<downloaded_file_basename>  # noqa
     PREDICTIONS_RESPONSE_TUTORIAL = 'jupyter/predictions-response-tutorial.html'
     RESIDUALS = 'gui/egsim-residuals'  # <path>/<downloaded_file_basename>
     RESIDUALS_VISUALIZE = 'gui/egsim-residuals-visualize'
@@ -197,11 +198,11 @@ def _get_init_data_json(debug=False) -> dict:
             }).asdict(),
             'flatfile_inspection_plot': FlatfileVisualizeForm({}).asdict(),
             'misc': {
-                'predictions':{
+                'predictions': {
                     'msr': predictions_form.fields['msr'].choices,
                     'region': predictions_form.fields['region'].choices,
                 },
-                'predictions_plot':{
+                'predictions_plot': {
                     'plot_types': PredictionsVisualizeForm.
                     declared_fields['plot_type'].choices
                 },

@@ -22,7 +22,7 @@ from egsim.smtk.validators import IncompatibleInput
 _base_singleton_renderer = BaseRenderer()  # singleton no-op renderer, see below
 
 
-def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:
+def get_base_singleton_renderer(*a, **kw) -> BaseRenderer:  # noqa
     """Default renderer instance (see "FORM_RENDERER" in the settings file and
     `django.forms.forms.Form` or `django.forms.utils.ErrorDict` for usage).
 
@@ -229,11 +229,10 @@ class SHSRForm(EgsimBaseForm):
                           required=False)
     longitude = FloatField(label='Longitude', min_value=-180., max_value=180.,
                            required=False)
-    regionalization = Field(
-        label='Regionalization',
-        required=False) # keep form JSON-serializable: no MultipleChoiceField
-                        # or ModelMultipleChoiceField, validate in
-                        # `self.clean_regionalization`
+    regionalization = Field(label='Regionalization', required=False)  # Note: with a
+    # ModelChoiceField the benefits of handling validation are outweighed by the fixes
+    # needed here and there to make values JSON serializable, so we opt for a CharField
+    # + custom validation in `clean_regionalization`
 
     def clean_regionalization(self) -> QuerySet[models.Regionalization]:
         """Custom gsim clean.
@@ -336,20 +335,19 @@ class GsimImtForm(SHSRForm):
         """Perform a final validation checking models and intensity measures
         compatibility
         """
-        gsim, imt = 'gsim', 'imt'
+        gsim_field, imt_field = 'gsim', 'imt'
         cleaned_data = super().clean()
-        # if any of the if above was true, then the parameter has been removed from
-        # cleaned_data. If both are provided, check gsims and imts match:
-        if not self.has_error(gsim) and not self.has_error(imt):
+        # If both fields were ok (no error), check that their values match:
+        if not self.has_error(gsim_field) and not self.has_error(imt_field):
             try:
-                validate_inputs(cleaned_data[gsim], cleaned_data[imt])
+                validate_inputs(cleaned_data[gsim_field], cleaned_data[imt_field])
             except IncompatibleInput as err:
                 # add error to form:
                 msg = ", ".join(f"{m[0]} not defined for {' and '.join(m[1:])}"
                                 for m in err.args)
                 # add_error removes also the field from self.cleaned_data:
-                self.add_error(gsim, msg)
-                self.add_error(imt, msg)
+                self.add_error(gsim_field, msg)
+                self.add_error(imt_field, msg)
         return cleaned_data
 
 

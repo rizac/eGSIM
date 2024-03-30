@@ -35,6 +35,7 @@ class EgsimDbModel(DjangoDbModel):
                                     "is intended to hide/show items quickly from "
                                     "the admin panel without executing management "
                                     "scrips")
+
     class Meta:
         abstract = True
         # does this speed up searches?:
@@ -118,7 +119,7 @@ class MediaFile(EgsimDbModel):
         from django.conf import settings
         return abspath(join(settings.MEDIA_ROOT, self.media_root_path))  # noqa
 
-    def write_to_filepath(self, media_content:Any, mkdirs=True, **kwargs):
+    def write_to_filepath(self, media_content: Any, mkdirs=True, **kwargs):
         raise NotImplementedError()
 
     def read_from_filepath(self, **kwargs) -> Any:
@@ -137,7 +138,7 @@ class Flatfile(MediaFile, Reference):
     file is an HDF file representing a valid flatfile (pandas DataFrame)
     """
 
-    def write_to_filepath(self, flatfile:Any, mkdirs=True, **kwargs):
+    def write_to_filepath(self, flatfile: Any, mkdirs=True, **kwargs):
         """Write this instance media file as HDF file on disk
 
         @param flatfile: a pandas DataFrame denoting a **valid** flatfile (no check
@@ -192,7 +193,7 @@ class Regionalization(MediaFile, Reference):
     ```
     Note for developers:. See `read_from_filepath` to convert a Feature
     geometry to a shapely `shape` object
-    """
+    """  # noqa
 
     def write_to_filepath(
             self, geojson_features: Union[Iterable[dict], dict], mkdirs=True, **kwargs):
@@ -230,8 +231,7 @@ class Regionalization(MediaFile, Reference):
         ```
 
         @param kwargs: additional arguments to `json.load`
-        """
+        """  # noqa
         import json
         with open(self.filepath, 'r') as _:
             return json.load(_, **kwargs)
-

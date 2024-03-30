@@ -1,5 +1,5 @@
 import sys
-from collections.abc import Iterable, Callable
+from collections.abc import Iterable
 from typing import Optional, Union
 import uuid
 import json
@@ -8,7 +8,8 @@ from snippets import (get_doc, create_write_hdf_snippet, create_read_hdf_snippet
                       create_write_csv_snippet, create_read_csv_snippet, pd_tutorial,
                       egsim_base_url, local_server_base_url)
 
-def nb_code_cell(src_code: Optional[Union[str, Iterable[str]]]=None):
+
+def nb_code_cell(src_code: Optional[Union[str, Iterable[str]]] = None):
     return {
         "cell_type": "code",
         "execution_count": None,
@@ -18,8 +19,9 @@ def nb_code_cell(src_code: Optional[Union[str, Iterable[str]]]=None):
         "source": _split_lines(src_code)
     }
 
-def nb_markdown_cell(src_code: Optional[Union[str, Iterable[str]]]=None):
-    return  {
+
+def nb_markdown_cell(src_code: Optional[Union[str, Iterable[str]]] = None):
+    return {
         "cell_type": "markdown",
         "id":  str(uuid.uuid4()),
         "metadata": {},
@@ -27,7 +29,7 @@ def nb_markdown_cell(src_code: Optional[Union[str, Iterable[str]]]=None):
     }
 
 
-def _split_lines(src_code: Optional[Union[str, Iterable[str]]]=None) -> list[str]:
+def _split_lines(src_code: Optional[Union[str, Iterable[str]]] = None) -> list[str]:
     if src_code is None:
         return []
     if isinstance(src_code, str):
@@ -65,7 +67,6 @@ def nb_create(*cells: dict) -> dict:
     }
 
 
-
 nb_setup_cell = """
 # IPython/Jupyter setup (Optional: edit or remove at your wish)
 %reload_ext autoreload
@@ -76,7 +77,7 @@ display(HTML("<style>div.jp-OutputArea-output.jp-RenderedHTML{display:block;over
 from IPython.core.display import HTML
 # make tables cells with a border:
 display(HTML("<style>th, td{border: 1px solid #DDE !important;}</style>"))
-"""
+"""  # noqa
 
 
 # # python file
@@ -92,16 +93,17 @@ display(HTML("<style>th, td{border: 1px solid #DDE !important;}</style>"))
 
 
 def egsim_predictions_dataframe_tutorial(
-        doc_prefix = 'eGSIM computed predictions are stored in'
-    ) -> dict:
+        doc_prefix='eGSIM computed predictions are stored in'
+) -> dict:
     from snippets.get_egsim_predictions import get_egsim_predictions
     # Create a doc with the var_name + le last 'Returns:' section of the func docstring:
     doc = f'{doc_prefix} {get_doc(get_egsim_predictions)[-1]}'
     return nb_markdown_cell(f"\n{doc}\n\n{pd_tutorial}")
 
+
 def egsim_residuals_dataframe_tutorial(
-        doc_prefix = 'eGSIM computed residuals are stored in'
-    ) -> dict:
+        doc_prefix='eGSIM computed residuals are stored in'
+) -> dict:
     from snippets.get_egsim_residuals import get_egsim_residuals
     # Create a doc with the var_name + le last 'Returns:' section of the func docstring:
     doc = f'**{doc_prefix}** {get_doc(get_egsim_residuals)[-1]}'
@@ -115,7 +117,7 @@ def egsim_get_predictions_nb(
         distances: list[float],
         rupture_params: Optional[dict] = None,
         site_params: Optional[dict] = None,
-        format="hdf",
+        data_format="hdf",
         debug=False,  # for debugging, write code performing I/O to file
 ) -> dict:
     """"""
@@ -135,8 +137,8 @@ def egsim_get_predictions_nb(
     if site_params:
         request_code += f'site_params = {json.dumps(site_params)}\n'
         args += ['site_params=site_params']
-    if format != 'hdf':
-        request_code += f'format = {repr(format)}\n'
+    if data_format != 'hdf':
+        request_code += f'format = {repr(data_format)}\n'
         args += ['format=format']
     request_code += f'{request_var_name} = {request_func_name}({", ".join(args)})'
 
@@ -171,7 +173,7 @@ def egsim_get_residuals_nb(
         flatfile: str,  # if != "esm_2018" => uploaded case
         query_string=None,
         likelihood=False,
-        format="hdf",
+        data_format="hdf",
         debug=False,   # for debugging, write code performing I/O to file
 ) -> dict:
     """"""
@@ -189,9 +191,9 @@ def egsim_get_residuals_nb(
     if query_string:
         request_code += f'query_string = {repr(query_string)}\n'
         args += ['query_string=query_string']
-    args+= ['likelihood=likelihood']
-    if format != 'hdf':
-        request_code += f'format = {repr(format)}\n'
+    args += ['likelihood=likelihood']
+    if data_format != 'hdf':
+        request_code += f'format = {repr(data_format)}\n'
         args += ['format=format']
 
     request_line = f'{request_var_name} = {request_func_name}({", ".join(args)})'
@@ -223,7 +225,6 @@ def egsim_get_residuals_nb(
         egsim_residuals_dataframe_tutorial(f'`{request_var_name}` is '),
         *debug_cells
     )
-
 
 
 def _egsim_debug_cell_nb(dataframe_var_name: str) -> list[dict]:

@@ -1,47 +1,40 @@
 from collections.abc import Callable
 
 
-def get_doc(function:Callable) -> list[str, str, str]:  # intro, args, returns sections
+def get_doc(function: Callable) -> list[str]:  # intro, args, returns sections
     """Return the docstring of the given function in a list of three
     strings with the content of 'intro', 'args', and 'returns' sections
     """
-    doc = function.__doc__.strip()  # noqa
+    doc:str = function.__doc__.strip()  # noqa
     # dedent (unfortunately, textwrap.dedent needs all lines indented):
     indent = '    '
     if doc.startswith(indent):
         doc = doc[len(indent):]
     doc = doc.replace(f'\n{indent}', '\n').strip()
-    sections = []
-    prev_index = None
-    for section_title in ['Args:', 'Returns:']:
-        try:
-            idx = doc.index(section_title)
-        except ValueError:
-            raise ValueError(f'"{function.__name__}" docstring must implement '
-                             f'two sections after the intro with title "Args:" and '
-                             f'"Returns:"')
-        sections.append(doc[prev_index: idx].strip())
-        prev_index = idx + len(section_title)
-    # append the remaining text ('Returns:' section body test):
-    sections.append(doc[prev_index:].strip())
+
+    sections = [
+        doc[:doc.index("Args:")].strip(),
+        doc[doc.index("Args:") + len('Args:'): doc.index('Returns:')].strip(),
+        doc[doc.index("Returns:") + len('Returns:'):].strip(),
+    ]
 
     return sections
 
 
-def create_read_csv_snippet(file_path:str):
+def create_read_csv_snippet(file_path: str):
     return f'pd.read_csv({file_path}, header=[0, 1, 2], index_col=0)'
 
 
-def create_read_hdf_snippet(file_path:str):
+def create_read_hdf_snippet(file_path: str):
     return f'pd.read_hdf({file_path})'
 
 
-def create_write_hdf_snippet(dataframe_var_name:str, file_path:str, key: str):
+def create_write_hdf_snippet(dataframe_var_name: str, file_path: str, key: str):
     return f'{dataframe_var_name}.to_hdf({file_path}, key={key}, ' \
            f'format="table")'
 
 
-def create_write_csv_snippet(dataframe_var_name:str, file_path:str):
+def create_write_csv_snippet(dataframe_var_name: str, file_path: str):
     return f'{dataframe_var_name}.to_csv({file_path})'
 
 
