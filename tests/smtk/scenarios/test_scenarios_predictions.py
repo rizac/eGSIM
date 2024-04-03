@@ -83,7 +83,6 @@ def test_distance_imt_trellis():
     assert len(ref) == len(dfr)
     assert not set(ref.columns) ^ set(dfr.columns)
 
-
     # Now compare trellis values:
     for c in dfr.columns:
         if c[0] == Clabel.input_data:

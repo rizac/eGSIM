@@ -36,11 +36,12 @@ class PredictionsVisualizeForm(PredictionsForm):
 
     def output(self) -> dict:
         dataframe = super().output()
-        dist_col = None
-        for c in dataframe.columns:  # FIXME better
-            if c[0] == Clabel.input_data and c[1] == ColumnType.distance.value:
-                dist_col = c
-                break
+        dist_col_lbl_selector = (
+            Clabel.input_data,
+            ColumnType.distance.value,
+            slice(None)
+        )
+        dist_col = dataframe.loc[:, dist_col_lbl_selector].columns[0]
         mag_col = (Clabel.input_data, ColumnType.rupture.value, Clabel.mag)
         mag_label = mag_col[-1].title()
         dist_label = dist_col[-1].title()
