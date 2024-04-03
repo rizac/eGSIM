@@ -43,8 +43,8 @@ def vs30_to_z2pt5_cb14(vs30: Union[float, np.ndarray], japan=False):
 
 
 def convert_accel_units(
-        acceleration: Union[Collection[float], float], from_:str, to_:str) \
-        -> Union[Collection[float], float]:
+        acceleration: Union[Collection[float], float], from_: str, to_: str
+) -> Union[Collection[float], float]:
     """
     Convert units of number or numeric array representing acceleration
 
@@ -100,7 +100,7 @@ def dataframe2dict(
         converted from tuples into nested dicts) and `None`s in-place of NaN or +-inf
     :param drop_empty_levels: if True (the default) trailing empty strings / None in
         hierarchical columns will be dropped. E.g. the `dict` item
-        ('A', '', '') -> values will be returned as {'A' -> values}
+        ("A", "", "") -> values will be returned as {'A' -> values}
     """
     if not as_json and not drop_empty_levels:
         # use pandas default method:
@@ -162,18 +162,3 @@ def array2json(
             values = values.astype(object)
             values[na_vals] = None
     return values.tolist()  # noqa
-
-
-# FIXME USED? REMOVE?
-def dict2dataframe(data: dict) -> pd.DataFrame:
-    """Return a DataFrame from the given dict, using its keys as the columns of
-    the resulting DataFrame. Nested dict keys will result ina  multi-index column
-    """
-    for key, val in data.items():
-        if isinstance(val, dict):
-            val = dict2dataframe(val)
-            col_mapping = {
-                c: (key,) + c if isinstance(c, tuple) else (c,) for c in val.columns}
-            val.rename(columns=col_mapping, inplace=True)
-        else:
-            val = pd.DataFrame({key: val})

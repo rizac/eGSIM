@@ -504,7 +504,7 @@ def get_ground_motion_property_values(
                 series = pd.Series(np.sqrt(DEFAULT_MSR.get_median_area(mag, 0)))
             else:
                 na = pd.isna(series)
-                if na.any():
+                if na.any():  # noqa (silent incorrect lint errors)
                     series = series.copy()
                     series[na] = np.sqrt(DEFAULT_MSR.get_median_area(mag[na], 0))
     elif gm_property in ['rjb', 'ry0']:
@@ -523,7 +523,7 @@ def get_ground_motion_property_values(
                 series = pd.Series(vs30_to_z1pt0_cy14(vs30))
             else:
                 na = pd.isna(series)
-                if na.any():
+                if na.any():  # noqa (silent incorrect lint errors)
                     series = series.copy()
                     series[na] = vs30_to_z1pt0_cy14(vs30[na])
     elif gm_property == 'z2pt5':
@@ -534,7 +534,7 @@ def get_ground_motion_property_values(
                 series = pd.Series(vs30_to_z2pt5_cb14(vs30))
             else:
                 na = pd.isna(series)
-                if na.any():
+                if na.any():  # noqa (silent incorrect lint errors)
                     series = series.copy()
                     series[na] = vs30_to_z2pt5_cb14(vs30[na])
     elif gm_property == 'backarc' and series is None:
