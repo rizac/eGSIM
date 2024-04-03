@@ -281,9 +281,6 @@ class GsimImtForm(SHSRForm):
     gsim = Field(required=False, label="Model(s)")
     imt = Field(required=False, label='Intensity Measure(s)')
 
-    accept_empty_gsim_list = False  # override in subclasses if needed
-    accept_empty_imt_list = False  # see above (for imts)
-
     def clean_gsim(self) -> dict[str, GMPE]:
         """Custom gsim clean.
         The return value will replace self.cleaned_data['gsim']
@@ -293,8 +290,7 @@ class GsimImtForm(SHSRForm):
         key = 'gsim'
         value = self.cleaned_data.get(key, None)
         if not value:
-            if not self.accept_empty_gsim_list:
-                self.add_error(key, self.ErrCode.required)
+            self.add_error(key, self.ErrCode.required)
             return {}
         if type(value) not in (list, tuple):
             value = [value]
@@ -310,7 +306,7 @@ class GsimImtForm(SHSRForm):
         return ret
 
     def clean_imt(self) -> dict[str, IMT]:
-        """Custom gsim clean.
+        """Custom imt clean.
         The return value will replace self.cleaned_data['imt']
         """
         # Implementation note: as of 2024, the 1st arg to ValidationError is not
@@ -318,8 +314,7 @@ class GsimImtForm(SHSRForm):
         key = 'imt'
         value = self.cleaned_data.get(key, None)
         if not value:
-            if not self.accept_empty_imt_list:
-                self.add_error(key, self.ErrCode.required)
+            self.add_error(key, self.ErrCode.required)
             return {}
         if type(value) not in (list, tuple):
             value = [value]

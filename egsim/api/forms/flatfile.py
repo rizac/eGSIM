@@ -1,7 +1,7 @@
 """
 Base Form for to model-to-data operations i.e. flatfile handling
 """
-from typing import Iterable, Sequence, Optional
+from typing import Iterable, Sequence, Optional, Any
 import pandas as pd
 
 from django.forms import Form
@@ -151,8 +151,23 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
 class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
     """Form for querying the necessary metadata columns from a given list of Gsims"""
 
-    accept_empty_gsim_list = True  # see GsimImtForm  # FIXME: remove class level attrs, simpler?  # noqa
-    accept_empty_imt_list = True
+    def clean_gsim(self) -> dict[str, Any]:
+        """Custom gsim clean, allowing empty gsim parameter (=select all models)"""
+        if not self.cleaned_data.get('gsim', None):
+            return {n: None for n in models.Gsim.names()}  # dict values are not used
+        return super().clean_gsim()
+
+    def clean_imt(self) -> dict[str, Any]:
+        """Custom imt clean, allowing empty imt parameter"""
+        if not self.cleaned_data.get('imt', None):
+            return {}
+        return super().clean_imt()
+
+    def clean(self):
+        """skip the superclass `clean` method because we do not want to check
+        imt and gsim compatibility
+        """
+        pass
 
     def output(self) -> dict:
         """Compute and return the output from the input data (`self.cleaned_data`).
@@ -161,19 +176,14 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
         :return: any Python object (e.g., a JSON-serializable dict)
         """
         cleaned_data = self.cleaned_data
-        gsims = list(cleaned_data.get('gsim', {}))
-        if not gsims:
-            gsims = list(models.Gsim.names())
+        gsims = list(cleaned_data['gsim'])
+
         ff_columns = {
             FlatfileMetadata.get_aliases(c)[0]
             for c in ground_motion_properties_required_by(*gsims)
         }
-        imts = list(cleaned_data.get('imt', []))
 
-        if not imts:
-            imts = set()
-            for m in gsims:
-                imts |= intensity_measures_defined_for(m)
+        imts = list(cleaned_data['imt'])
 
         columns = []
         for col in sorted(ff_columns | set(imts)):
