@@ -8,6 +8,7 @@ tmp/
 media/
 .DS_Store
 .idea/
+settings.py
 
 # C extensions
 *.so
