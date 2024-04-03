@@ -2,6 +2,7 @@
 Base Form for to model-to-data operations i.e. flatfile handling
 """
 from typing import Iterable, Sequence, Optional
+import pandas as pd
 
 from django.forms import Form
 from django.forms.fields import CharField, FileField
@@ -136,19 +137,13 @@ class FlatfileValidationForm(APIForm, FlatfileForm):
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
         columns = []
-        # what if a registered column has a wrong dtype? we will not be here.
-        # So when computing the categories and dtype we are safe (we could
-        # ask ColumnRegistry for that but let's be consistent with all columns
-        # also those not registered):
         for col in sorted(dataframe.columns):
-            ctype = FlatfileMetadata.get_type(col)
-            dtype = get_dtype_of(dataframe[col])
-            try:
-                categories = sorted(dataframe[col].cat.categories.tolist())
-            except AttributeError:
-                categories = []
-            hlp = FlatfileMetadata.get_help(col)
-            columns.append(_harmonize_column_props(col, ctype, dtype, categories, hlp))
+            # return the flatfile metadata from the column values (pass
+            # dataframe[col] as 2nd argument) which is more compact and suitable for
+            # combo boxes and similar components. Note that if `col` is a registered
+            # column, all metadata matches the registered one (otherwise we are not
+            # here as the Form is invalid, see FlatfileForm and smtk/flatfile.py)
+            columns.append(get_hr_flatfile_column_meta(col, dataframe[col]))
 
         return {'columns': columns}
 
@@ -182,33 +177,55 @@ class FlatfileMetadataInfoForm(GsimImtForm, APIForm):
 
         columns = []
         for col in sorted(ff_columns | set(imts)):
-            columns.append(
-                _harmonize_column_props(
-                    col,
-                    FlatfileMetadata.get_type(col),
-                    FlatfileMetadata.get_dtype(col),
-                    FlatfileMetadata.get_categories(col),
-                    FlatfileMetadata.get_help(col)
-                )
-            )
+            columns.append(get_hr_flatfile_column_meta(col))
 
         return {'columns': columns}
 
 
-def _harmonize_column_props(
-        name: str,
-        ctype: Optional[ColumnType],
-        dtype: Optional[ColumnDtype],
-        categories: Optional[list],
-        chelp: Optional[str]):
-    dtype = getattr(dtype, 'value', "")
-    if dtype and categories:
-        dtype += f'. A value to be chosen from: {", ".join(sorted(categories))})'
+def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -> dict:
+    """Return human-readable (hr) flatfile column metadata in the following `dict` form:
+    {
+        'name': str,
+        'help': str,
+        'dtype': str,
+        'type': str
+    }
+
+    :param name: the flatfile column name
+    :param values: if provided, return meta info from the values. Otherwise, from the
+        default flatfile column with the given name (if no column is registered with
+        that name or alias, then return a dict with empty values)
+    """
+    if values is not None:
+        c_dtype = get_dtype_of(values)
+        try:
+            c_categories = values.cat.categories
+        except AttributeError:
+            c_categories = []
+        c_type = ""
+        c_help = ""
+    else:
+        c_dtype = FlatfileMetadata.get_dtype(name)
+        c_categories = FlatfileMetadata.get_categories(name)
+        c_help = FlatfileMetadata.get_help(name) or ""
+        c_type = getattr(FlatfileMetadata.get_type(name), 'value', "")
+
+    if c_dtype is not None:
+        c_dtype = c_dtype.value
+        if len(c_categories):
+            if values is not None:  # custom values, compact categories info:
+                c_dtype += f", categorical, {len(c_categories)} values"
+            else:
+                c_dtype += (f", categorical, to be chosen from "
+                            f"{', '.join(str(c) for c in c_categories)}")
+    else:
+        c_dtype = ""
+
     return {
         'name': name,
-        'type': getattr(ctype, 'value', ""),
-        'dtype': dtype,
-        'help': chelp or ""
+        'type': c_type,
+        'dtype': c_dtype,
+        'help': c_help
     }
 
 

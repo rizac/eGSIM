@@ -278,7 +278,7 @@ class ColumnDtype(Enum):
     float = "numeric float"
     int = "numeric integer"
     bool = "boolean"
-    datetime = "date-time (ISO formatted)"
+    datetime = "ISO formatted date and time"
     str = "string of text"
     category = "categorical"
 
@@ -397,7 +397,7 @@ def cast_to_dtype(
             is_na = pd.isna(values)
             values = values.astype(categorical_dtype)
             is_na_after = pd.isna(values)
-            ok = len(is_na) == len(is_na_after) and (is_na == is_na_after).all()
+            ok = len(is_na) == len(is_na_after) and (is_na == is_na_after).all()  # noqa
         elif dtype == ColumnDtype.datetime:
             # np.isin does not work for datetime / timestamps/. Verbose check:
             if pd.api.types.is_scalar(values) or (is_np and not values.shape):
