@@ -1,5 +1,6 @@
 """Forms handling data (flatfiles)"""
 import numpy as np
+import pandas as pd
 
 from egsim.api.forms import APIForm
 from egsim.api.forms.flatfile import FlatfileForm
@@ -44,15 +45,17 @@ class PredictionsVisualizeForm(PredictionsForm):
         mag_label = mag_col[-1].title()
         dist_label = dist_col[-1].title()
         imt_label = 'Imt'
-        models = sorted(self.cleaned_data['gsim'])
-        imts = sorted(self.cleaned_data['imt'])
+        models = self.cleaned_data['gsim'].keys()  # sorted (see super.clean_gsim)
+        imts = self.cleaned_data['imt'].keys()  # sorted (see super.clean_imt)
 
         if self.cleaned_data['plot_type'] == 'm':
             x_label = mag_label
-            y_label = lambda imt: f'Median {imt}'
 
-            def groupby(dataframe):
-                for dist, dfr in dataframe.groupby(dist_col):
+            def y_label(imt):
+                return f'Median {imt}'
+
+            def groupby(dframe: pd.DataFrame):
+                for dist, dfr in dframe.groupby(dist_col):
                     x = dfr[mag_col]
                     for i in imts:
                         p = {dist_label: dist, imt_label: i}
@@ -65,13 +68,14 @@ class PredictionsVisualizeForm(PredictionsForm):
                                 )
                         yield p, x, data
 
-
         elif self.cleaned_data['plot_type'] == 'd':
             x_label = dist_label
-            y_label = lambda imt: f'Median {imt}'
 
-            def groupby(dataframe):
-                for mag, dfr in dataframe.groupby(mag_col):
+            def y_label(imt):
+                return f'Median {imt}'
+
+            def groupby(dframe: pd.DataFrame):
+                for mag, dfr in dframe.groupby(mag_col):
                     x = dfr[dist_col]
                     for i in imts:
                         p = {mag_label: mag, imt_label: i}
@@ -86,29 +90,34 @@ class PredictionsVisualizeForm(PredictionsForm):
 
         else:
             x_label = 'Period (s)'
-            y_label = lambda imt: 'SA (g)'
-            sas = sorted(imts, key=lambda s: sa_period(s))  # FIXME sort imts in one place
-            x_values = [float(sa_period(_)) for _ in sas]
-            i = 'SA'
 
-            def groupby(dataframe):
-                for (d, mag), dfr in dataframe.groupby([dist_col, mag_col]):
-                    p = {mag_label: mag, dist_label: d, imt_label: i}
+            def y_label(imt):  # noqa
+                return 'SA (g)'
+
+            # imts is a dict[str, IMT] of sorted SA(p) (see super.clean_imt and
+            # self.clean) rename it as `sas` just for clarity:
+            sas = imts.keys()
+
+            x_values = [float(sa_period(_)) for _ in sas]
+
+            def groupby(dframe: pd.DataFrame):
+                for (d, mag), dfr in dframe.groupby([dist_col, mag_col]):
+                    p = {mag_label: mag, dist_label: d, imt_label: 'SA'}
                     data = {}
                     for m in models:
                         data[m] = (
                             dfr.loc[:, (sas, Clabel.median, m)].iloc[0, :].values,
-                            dfr.loc[:, (sas, Clabel.std, m)].iloc[0,:].values
+                            dfr.loc[:, (sas, Clabel.std, m)].iloc[0, :].values
                         )
                     yield p, x_values, data
 
         c_cycle = colors_cycle()
         colors = {}
         plots = []
-        for params, x_values, data in groupby(dataframe):
+        for params, x_values, plot_data in groupby(dataframe):
             traces = []
             ys = []
-            for model, [medians, sigmas] in data.items():
+            for model, [medians, sigmas] in plot_data.items():
                 color = colors.setdefault(model, next(c_cycle))
                 color_transparent = color.replace(', 1)', ', 0.2)')
                 legendgroup = model
@@ -138,7 +147,8 @@ class PredictionsVisualizeForm(PredictionsForm):
                         width=0,
                         color=color_transparent,
                         fillcolor=color_transparent,
-                        fill='tonexty',  # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
+                        fill='tonexty',
+                        # https://plotly.com/javascript/reference/scatter/#scatter-fill  # noqa
                         x=x_values,
                         y=ys[-1],
                         name=model + ' stddev',
@@ -147,7 +157,7 @@ class PredictionsVisualizeForm(PredictionsForm):
                 )
 
             plots.append({
-                'data':traces,
+                'data': traces,
                 'params': params,
                 'layout': {
                     'xaxis': {
@@ -184,16 +194,15 @@ class ResidualsVisualizeForm(ResidualsForm):
             self.add_error('x', 'not a flatfile column')
         return cleaned_data
 
-
     def output(self) -> dict:
-
+        """produce the plot output (see superclass method doc)"""
         # residuals (x y): Frequency Z(<imt>)
         # likelihood (x y): Frequency LH(<imt>)
         # <ff_column> (x y): Z(<imt>) <ff_column>
 
         # remember: on the frontend:
-        # - to enable the xaxis type checkbox: layoyt.xaxis.type must be 'log' or 'linear'
-        # (same for layout.yaxis)
+        # - to enable the xaxis type checkbox: layoyt.xaxis.type must be 'log' or
+        # 'linear' (same for layout.yaxis)
         # - to enable the xaxis sameRange checkbox: layout.xaxis.range must be defined
         # as 2-element list (same for yaxis)
         # Plotly.get_layout (see below) handles this automatically
@@ -207,19 +216,34 @@ class ResidualsVisualizeForm(ResidualsForm):
         likelihood = self.cleaned_data.get('likelihood', False)
         if not col_x:
             if not likelihood:
-                y_label = lambda imt: 'Frequency'
-                x_label = lambda imt: f'Z ({str(imt)})'
+
+                def x_label(imt_):
+                    return f'Z ({str(imt_)})'
+
+                def y_label(imt_):  # noqa
+                    return 'Frequency'
+
             else:
-                y_label = lambda imt: 'Frequency'
+
+                def x_label(imt_):
+                    return f'Likelihood ({str(imt_)})'
+
+                def y_label(imt_):  # noqa
+                    return 'Frequency'
+
                 df_labels = {
                     Clabel.total_lh: 'Total',
                     Clabel.intra_ev_lh: 'Intra event',
                     Clabel.inter_ev_lh: 'Inter event'
                 }
-                x_label = lambda imt: f'Likelihood ({str(imt)})'
+
         else:
-            y_label = lambda imt: f'Z ({str(imt)})'
-            x_label = lambda imt: self.cleaned_data['x']
+
+            def x_label(imt_):  # noqa
+                return self.cleaned_data['x']
+
+            def y_label(imt_):
+                return f'Z ({str(imt_)})'
 
         plots = []
         c_cycle = colors_cycle()
@@ -292,9 +316,9 @@ class ResidualsVisualizeForm(ResidualsForm):
             # config layout axis based on the displayed values:
             for values, axis in ((x, layout['xaxis']), (y, layout['yaxis'])):
                 axis['type'] = axis_type(values)
-                range = axis_range(values)
-                if range is not None:
-                    axis['range'] = range
+                rng = axis_range(values)
+                if rng is not None:
+                    axis['range'] = rng
 
             plots.append({
                 'data': data,
@@ -371,7 +395,7 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                         'title': xlabel,
                         'type': axis_type(x)
                     },
-                    'yaxis':  {
+                    'yaxis': {
                         'title': ylabel,
                         'type': axis_type(y)
                     }

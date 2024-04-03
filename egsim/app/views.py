@@ -1,7 +1,5 @@
 """
-Created on 17 Jan 2018
-
-@author: riccardo
+Django views for the eGSIM app (web app with frontend)
 """
 from io import BytesIO, StringIO
 import json
@@ -65,7 +63,7 @@ def main(request, page=''):
     """view for the main page"""
     template = 'egsim.html'
     init_data = _get_init_data_json(settings.DEBUG) | \
-                {'currentPage': page or URLS.HOME_PAGE}
+        {'currentPage': page or URLS.HOME_PAGE}
     return render(request, template, context={'debug': settings.DEBUG,
                                               'init_data': init_data,
                                               'references': _get_references()})
@@ -326,7 +324,9 @@ def predictions_response_tutorial(request):
         'magnitude': [4, 5, 6],
         'distance': [10, 100]
     })
-    return _get_download_tutorial(request, 'predictions', api_form, get_egsim_predictions)
+    return _get_download_tutorial(
+        request, 'predictions', api_form, get_egsim_predictions
+    )
 
 
 @xframe_options_exempt
@@ -339,10 +339,12 @@ def residuals_response_tutorial(request):
         'data-query': 'mag > 7',
         'flatfile': 'esm2018'
     })
-    return _get_download_tutorial(request, 'residuals', api_form, get_egsim_residuals)
+    return _get_download_tutorial(
+        request, 'residuals', api_form, get_egsim_residuals
+    )
 
 
-def _get_download_tutorial(request, key:str, api_form:APIForm, api_client_function):
+def _get_download_tutorial(request, key: str, api_form: APIForm, api_client_function):
     import re
     doc = api_client_function.__doc__
     # replace italic with <em>s:
@@ -350,7 +352,8 @@ def _get_download_tutorial(request, key:str, api_form:APIForm, api_client_functi
 
     doc = doc[doc.index('Returns'):].strip()
     doc = doc.split('\n\n')[1:]
-    doc[1] = doc[1].replace('indicating:', 'indicating (cf. table representation above):')
+    doc[1] = doc[1].replace('indicating:',
+                            'indicating (cf. table representation above):')
     tbl = doc[2].strip().split("\n")
     table_cls = 'table table-bordered table-light my-2'
     doc[2] = (
@@ -377,21 +380,10 @@ def _get_download_tutorial(request, key:str, api_form:APIForm, api_client_functi
                       'docstring_headers_intro': "\n\n".join(doc[1:])
                   })
 
-# FIXME TEST REQUESTS REMOVE BELOW
 
-def _test_err(request):
-    """Dummy function raising for front end test purposes. Might be removed
-    soon"""
-    raise ValueError('this is a test error!')
+def error_test_response(request):  # noqa
+    """Dummy function raising for front end test purposes"""
 
-
-def test_request(request):  # FIXME REMOVE?
-    import time
-    time.sleep(3)
-    # return JsonResponse(data={'message': 'ok'}, status=200)
-    return JsonResponse(data={'message': """Examples
-Fetching an image
-
-In our basic fetch example (run example live) we use a simple fetch() call to grab an image and display it in an <img> element. The fetch() call returns a promise, which resolves to the Response object associated with the resource fetch operation.
-
-You'll notice that since we are requesting an image, we need to run Response.blob to give the response its correct MIME type."""}, status=400)
+    raise ValueError('this is a test error with a very very long line to '
+                     'check also text overflows in case this message has to be '
+                     'displayed in dynamic sized dialog windows or popups')
