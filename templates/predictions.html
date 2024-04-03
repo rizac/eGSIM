@@ -44,12 +44,12 @@
 
 			<div class="input-group mt-1">
 				<div class='input-group-text'>hypocenter-location</div>
-				<array-input v-model="forms.predictions['hypocenter-location']" />
+				<array-input v-model="forms.predictions['hypocenter-location']"></array-input>
 			</div>
 
 			<div class="input-group mt-1">
 				<div class='input-group-text'>initial-point</div>
-				<array-input v-model="forms.predictions['initial-point']" />
+				<array-input v-model="forms.predictions['initial-point']"></array-input>
 			</div>
 
 			<div class="input-group mt-1">
@@ -107,7 +107,9 @@
 			<div class="input-group mt-1">
 				<div class='input-group-text'>region</div>
 				<select v-model="forms.predictions.region" class='form-control'>
-					<option v-for="m in forms.misc.predictions.region" :value="m[0]">{% verbatim %}{{ m[1] }}{% endverbatim %}</option>
+					<option v-for="m in forms.misc.predictions.region" :value="m[0]">
+						{% verbatim %}{{ m[1] }}{% endverbatim %}
+					</option>
 				</select>
 			</div>
 
