@@ -91,7 +91,7 @@ window.fetch = function() {
 	}
 	options.headers["X-CSRFToken"] = "{{ csrf_token }}";
 
-	// setup the load bar <div>
+	// set up the load bar <div>
 	var bar = document.getElementById('loadbar');
 	bar.style.display = '';
 

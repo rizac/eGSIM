@@ -4,11 +4,11 @@ from django.views.generic.base import RedirectView
 
 from egsim.api.views import PredictionsView, ResidualsView
 from .views import (main, get_gsims_from_region, flatfile_meta_info,
-                    flatfile_visualize, flatfile_validate, URLS, test_request,
+                    flatfile_visualize, flatfile_validate, URLS,
                     predictions_response_tutorial,
                     residuals_response_tutorial,
                     predictions_visualize, residuals_visualize,
-                    plots_image, img_ext, data_ext)
+                    plots_image, img_ext, data_ext, error_test_response)
 
 # Watch out trailing slashes: https://stackoverflow.com/q/1596552
 
@@ -21,7 +21,8 @@ urlpatterns = [
                        URLS.IMPRINT_PAGE, URLS.REF_AND_LICENSE_PAGE]) +
              ')/?$'), main),
 
-    re_path(fr'^{URLS.PREDICTIONS}.(?:{"|".join(data_ext)})$', PredictionsView.as_view()),
+    re_path(fr'^{URLS.PREDICTIONS}.(?:{"|".join(data_ext)})$',
+            PredictionsView.as_view()),
     path(URLS.PREDICTIONS_VISUALIZE, predictions_visualize),
     re_path(fr'{URLS.PREDICTIONS_PLOT_IMG}.(?:{"|".join(img_ext)})', plots_image),
     path(URLS.PREDICTIONS_RESPONSE_TUTORIAL, predictions_response_tutorial),
@@ -41,5 +42,5 @@ urlpatterns = [
 
     # test stuff: (FIXME: REMOVE)
     # url(r'_test_err', _test_err),
-    re_path(r'test_request', test_request)
+    re_path(r'error_test', error_test_response)
 ]
