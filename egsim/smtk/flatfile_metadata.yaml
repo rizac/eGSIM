@@ -1,4 +1,4 @@
-# Flatfile Columns Metadata registry. The syntax for each column (in YAML) is:
+# Flatfile columns metadata registry. Syntax (in YAML format):
 #
 # <column_name>:
 #   dtype:    The data type (default when missing: null). Supported values are: null,
@@ -7,17 +7,20 @@
 #             of values, which must be all the same supported data type. If non-null,
 #             the data type will be used for data validation
 #   default:  The default value used to fill missing data (e.g. empty cell, null, NaN).
-#             Note that in Python pandas, missing data in int and bool dtypes is invalid.
-#             In these cases, the presence or not of a default (usually 0 for int and
-#             false for bool) will also affect data validation
+#             Note that in Python pandas, missing data in integers and booleans (dtype
+#             int or bool) is invalid, so the presence or not of a default (usually 0
+#             for int and false for bool) will also affect data validation
 #   type:     The column type (optional). Supported values are: rupture, site, distance,
-#             intensity (rupture and site parameter, distance and intensity measure,
-#             respectively). If a type is given, the column name must match exactly the
-#             OpenQuake name in case of intensity measure (e.g. PGA, not pga), whereas
-#             for all other types the OpenQuake name can be added as alias (see below)
-#   alias:    The column alias(es), as string or list of strings. The column name must
-#             not compare in the list, applications might add it, usually as 1st element
-#             allowed for the column, e.g., the OpenQuake name (see `type` above)
+#             intensity. If a column's type and name match an OpenQuake ground motion
+#             property (rupture parameter, site parameter, distance measure) required to
+#             compute the model predictions or an observed intensity measure required to
+#             compute residuals, its values will be used in computation. Otherwise, the
+#             column is intended to be used for other purposes (e.g. IDs assignment)
+#   alias:    The column alias(es), as string or list of strings, indicating valid
+#             alternative names for the column. If a type is provided, the OpenQuake
+#             name, if any, can also be provided here, but intensity measure columns
+#             cannot have aliases and must be spelled capitalized as in OpenQuake (e.g.
+#             PGA SA PGV)
 #   help:     The field help (optional), used to provide documentation
 #   ">"       (with quotation marks because > and < are special characters in YAML)
 #             The minimum value (endpoint excluded) of the column data. Currently used
@@ -49,8 +52,8 @@ rrup:
 rjb:
   dtype: float
   help: >-
-    Joyner-Boore distance (in km). Missing data (e.g., empty cell, NaN, column not provided) 
-    will be replaced with the epicentral distance, if present
+    Joyner-Boore distance (in km). Missing data (e.g., empty cell, NaN, column not 
+    provided) will be replaced with the epicentral distance, if present
   type: distance
 rhypo:
   dtype: float
@@ -200,7 +203,8 @@ region:
   help: The ESHM2020 cluster region to which the site belongs
   type: site
 geology:
-  dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC", "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
+  dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC",
+          "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
   default: UNKNOWN
   help: geological classification of the site
   type: site
