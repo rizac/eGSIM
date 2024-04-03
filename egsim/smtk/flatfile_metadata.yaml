@@ -1,4 +1,4 @@
-# Flatfile columns metadata registry. Syntax (in YAML format):
+# Flatfile metadata registry. Syntax (in YAML format):
 #
 # <column_name>:
 #   dtype:    The data type (default when missing: null). Supported values are: null,
@@ -82,14 +82,14 @@ evt_lat:
   dtype: float
   ">=": -90
   "<=": 90
-  help: Event latitude (hypocentre latitude, in deg)
+  help: Event latitude (hypocenter latitude, in deg)
   alias: [hypo_lat, event_latitude]
   type: rupture
 evt_lon:
   dtype: float
   ">=": -180
   "<=": 180
-  help: Event longitude (hypocentre longitude, in deg)
+  help: Event longitude (hypocenter longitude, in deg)
   alias: [hypo_lon, event_longitude]
   type: rupture
 mag:
