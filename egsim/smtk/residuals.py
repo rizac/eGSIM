@@ -33,17 +33,23 @@ def get_residuals(
         imts: Iterable[Union[str, imt.IMT]],
         flatfile: pd.DataFrame,
         likelihood=False,
-        normalise=True) -> pd.DataFrame:
-    # FIXME removed unused arguments: # nodal_plane_index=1,
-    #   component="Geometric", (the latter I guess is ok, we do not have
-    #   components anymore, but the former?)
+        normalise=True
+) -> pd.DataFrame:
     """
     Calculate the residuals from a given flatfile gsim(s) and imt(s)
 
-    :param imts: iterable of strings denoting intensity measures (Sa must be
-        given with period, e.g. "SA(0.2)")
+    :param gsims: iterable of strings or ``GMPE`` instances
+        denoting Ground shaking intensity models
+    :param imts: iterable of strings or ``imt.IMT`` instances
+        denoting intensity measures (Sa must be given with period, e.g. "SA(0.2)")
+    :param flatfile: pandas DataFrame with the values
+        of the ground motion properties required by the given models (param.
+        `gsims`) and the observed intensity measures arranged in columns
     :param likelihood: boolean telling if also the likelihood of the residuals
         (according to Equation 9 of Scherbaum et al (2004)) should be computed
+    :param normalise: boolean (default True) normalize the random effects residuals
+        (calculated using the inter-event residual formula described in
+         Abrahamson & Youngs (1992) Eq. 10)
     """
     # 1. prepare models and imts:
     gsims = harmonize_input_gsims(gsims)

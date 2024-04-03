@@ -53,7 +53,7 @@ class SiteProperties:
 
 
 def get_scenarios_predictions(
-        gsims: Iterable[Union[str, GMPE, type[GMPE]]],
+        gsims: Iterable[Union[str, GMPE]],
         imts: Iterable[Union[str, IMT]],
         magnitudes: Union[float, Collection[float]],
         distances: Union[float, Collection[float]],
@@ -98,7 +98,8 @@ def get_scenarios_predictions(
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
         try:
             median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
-            if exp_values:  # FIXME ask Graeme: is this a Trellis feature or a prediction feature?
+            if exp_values:
+                # FIXME ask Graeme: is this a Trellis feature or a prediction feature?
                 median = np.exp(median)
             data.append(median)
             columns.extend((i, Clabel.median, gsim_label) for i in imt_names)

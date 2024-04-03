@@ -10,14 +10,14 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
 
 
-# added for compatibility with registered_imts (see below)
+# added for compatibility with registered_imts (see below)  # FIXME NEEDED
 registered_gsims:dict[str, type[GMPE]] = registry
 
 
-def gsim(gmm: Union[str, GMPE], raise_deprecated=True) -> GMPE:  # FIXME arg name, maybe 'model' ?
+def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
     """Return a Gsim instance (Python object of class `GMPE`) from the given input
 
-    :param gmm: a gsim name or Gsim instance. If str, it can also denote a
+    :param model: a gsim name or Gsim instance. If str, it can also denote a
         GMPETable in the form "GMPETable(gmpe_table=filepath)"
     :param raise_deprecated: if True (the default) OpenQuake `DeprecationWarning`s
         will raise (as normal Python  `DeprecationWarning`)
@@ -26,23 +26,23 @@ def gsim(gmm: Union[str, GMPE], raise_deprecated=True) -> GMPE:  # FIXME arg nam
         `(TypeError, IndexError, KeyError, ValueError, DeprecationWarning)`
         (the last one only if `raise_deprecated` is True, the default)
     """
-    if isinstance(gmm, str):
-        is_table = gmm.startswith('GMPETable')
+    if isinstance(model, str):
+        is_table = model.startswith('GMPETable')
         if is_table:
             # GMPETable. raises: TypeError, ValueError, FileNotFoundError, OSError,
             # AttributeError
-            filepath = re.match(r'^GMPETable\(([^)]+?)\)$', gmm).\
+            filepath = re.match(r'^GMPETable\(([^)]+?)\)$', model).\
                 group(1).split("=")[1]  # get table filename
             return GMPETable(gmpe_table=filepath)
         else:
             # "normal" str case, calls valid_gsim which raises:
             # TypeError, IndexError, KeyError, ValueError
-            gmm = valid_gsim(gmm)
-    if isinstance(gmm, GMPE):
-        if raise_deprecated and gmm.superseded_by:
-            raise DeprecationWarning(f'Use {gmm.superseded_by} instead')
-        return gmm
-    raise TypeError(gmm)
+            model = valid_gsim(model)
+    if isinstance(model, GMPE):
+        if raise_deprecated and model.superseded_by:
+            raise DeprecationWarning(f'Use {model.superseded_by} instead')
+        return model
+    raise TypeError(model)
 
 
 def imt(arg: Union[float, str, IMT]) -> IMT:
@@ -73,20 +73,17 @@ def _registered_imts() -> Iterable[tuple[str, Callable]]:
             pass
 
 
-registered_imts:dict[str, Callable] = dict(_registered_imts())
+registered_imts: dict[str, Callable] = dict(_registered_imts())
 
 
 # invert `gsim_aliases` (see `gsim_name` below)
 _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
 
 
-# FIXME remove type[GMPE] from allowed arg types?
-def gsim_name(gsim: Union[type[GMPE], GMPE]) -> str:
+def gsim_name(gsim: GMPE) -> str:
     """
     Returns the name of the GMPE given an instance of the class
     """
-    if isinstance(gsim, type) and issubclass(gsim, GMPE):  # is a class
-        return gsim.__name__
     name = str(gsim)
     # if name is "[" + gsim.__class__.__name__ + "]", return the class name:
     if name == f"[{gsim.__class__.__name__}]":
@@ -102,8 +99,9 @@ def imt_name(imtx: Union[Callable, IMT]) -> str:
     return imtx.__name__
 
 
-def get_sa_limits(  # FIXME rename?
-        model: Union[str, GMPE]) -> Union[tuple[float, float], None]:
+def get_sa_limits(
+        model: Union[str, GMPE]
+) -> Union[tuple[float, float], None]:
     """Return the SA period limits defined for the given gsim, or None"""
     if isinstance(model, str):
         model = gsim(model)

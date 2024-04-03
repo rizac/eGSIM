@@ -90,7 +90,7 @@ class Test:
     def test_ok_request(self,
                         # pytest fixtures:
                         client):
-        """Test some invalid name and a missing IMT FIXME: move to form test?"""
+        """Test ok request"""
         data = {
             'aspect': 1,
             'backarc': False,
@@ -104,7 +104,7 @@ class Test:
             "msr": "WC1994",
             # "plot": "s",
             "rake": 0,
-            #"stdev": False,
+            # "stdev": False,
             "strike": 0,
             "vs30": 760,
             "vs30measured": True,
@@ -113,7 +113,7 @@ class Test:
             "ztor": 0
         }
         resp = client.post(self.url, data=data,
-                            content_type='application/json')
+                           content_type='application/json')
         result = resp.json()
         assert resp.status_code == 400
 
@@ -149,13 +149,11 @@ class Test:
         assert resp1.json() == resp2.json()
         assert resp1.json()['message'] == 'gsim: invalid value (AkkarEtAl2013)'
 
-
     def test_empty_gsim(self,
                         # pytest fixtures:
                         client):
         """tests a special case whereby a GSIM is empty (this case raised
         before a PR to smtk repository)
-        FIXME 2023: OpenQuake =3.15.0 raises again, test this
         """
         inputdic = {
             "gsim": [
@@ -192,7 +190,6 @@ class Test:
         result = resp1.json()
         assert resp1.status_code == 500
         assert 'AkkarBommer2010SWISS01' in resp2.json()['message']
-
 
     def test_mismatching_imt_gsim(self,
                                   # pytest fixtures:

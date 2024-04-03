@@ -58,7 +58,7 @@ EGSIM.component('plots-div', {
 	created(){
 		// default Plotly layout (the `font` property will be set when page fonts are loaded, see init)
 		this.defaultlayout = {
-			autosize: true,  // without this, the inner svg does not expand properly FIXME HERE
+			autosize: true,  // without this, the inner svg does not expand properly
 			paper_bgcolor: 'rgba(0,0,0,0)',
 			plot_bgcolor: 'rgba(255,255,255,1)',
 			showlegend: false,

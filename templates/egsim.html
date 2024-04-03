@@ -45,8 +45,6 @@
 	<template v-if="showNavBar">
 	{% include "navbar.html" %}
 	</template>
-	<!-- FIXME REMOVE BELOW -->
-<!--	<button type='button' onclick="fetch('test_request').then(r => r.json()).then(d => { console.log(d); })">Test request</button>-->
 	<template v-if="currentPage==pages.predictions">
 	{% include "predictions.html" %}
 	</template>

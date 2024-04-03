@@ -12,9 +12,7 @@ from .registry import (gsim_name, intensity_measures_defined_for, gsim, imt,
                        get_sa_limits, imt_name)
 
 
-# FIXME REMOVE type[GMPE] from allowed args types?
-def harmonize_input_gsims(
-        gsims: Iterable[Union[str, type[GMPE], GMPE]]) -> dict[str, GMPE]:
+def harmonize_input_gsims(gsims: Iterable[Union[str, GMPE]]) -> dict[str, GMPE]:
     """harmonize GSIMs given as names (str), OpenQuake Gsim classes or instances
     (:class:`GMPE`) into a dict[str, GMPE] where each name is mapped to
     the relative Gsim instance. Names will be sorted ascending.

@@ -17,7 +17,6 @@ from django.views.generic.base import View
 from django.forms.fields import MultipleChoiceField
 
 from ..smtk.converters import dataframe2dict
-# FIXME (import above): remove and drop support for JSON in SMTKView?
 from .forms import APIForm
 from .forms.scenarios import PredictionsForm, ArrayField
 from .forms.flatfile import FlatfileForm
@@ -70,9 +69,6 @@ class RESTAPIView(View):
         default_multi_value_fields = {'gsim', 'imt', 'regionalization'}
         multi_value_params = set()
         for field_name, field in form_cls.base_fields.items():
-            # FIXME: Move ArrayField from trellis to forms and
-            #  set arrayfield(Field...) for both gsim and imt
-            #  then here we can just check isinstance(ArrayField):
             if field_name in default_multi_value_fields or \
                     isinstance(field, (MultipleChoiceField, ArrayField)):
                 multi_value_params.update(form_cls.param_names_of(field_name))
@@ -185,6 +181,8 @@ class SmtkView(RESTAPIView):
         return FileResponse(content, **kwargs)
 
     def response_json(self, form: APIForm, **kwargs) -> JsonResponse:
+        """Return a JSON response. This method is implemented for
+        legacy code/tests and should be avoided whenever possible"""
         json_data = dataframe2dict(form.output(), as_json=True,
                                    drop_empty_levels=True)
         kwargs.setdefault('status', 200)

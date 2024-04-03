@@ -55,7 +55,7 @@ setup(
         "flatfile"
     ],
     license="AGPL3",
-    platforms=["any"],  # FIXME: shouldn't be unix/macos? (shallow google search didn't help)
+    platforms=["any"],
     # package_data={"smtk": [
     #    "README.md", "LICENSE"]},
     # include_package_data=True,
