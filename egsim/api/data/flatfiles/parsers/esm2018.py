@@ -98,7 +98,7 @@ rename = {
     'rotD50_pgd': 'PGD',
     'rotD50_CAV': 'CAV',
     'rotD50_ia': 'IA',
-    'rotD50_T90': 'duration_5_95_components',  # FIXME: IMT???
+    'rotD50_T90': 'duration_5_95_components',
 }
 
 
@@ -151,10 +151,7 @@ def post_process(flatfile: pd.DataFrame) -> pd.DataFrame:
     dfr.loc[idxs, 'mag'] = new_mag[idxs]
     dfr.loc[idxs, 'mag_type'] = 'ML'
 
-    # Use focal mechanism for those cases where All strike dip rake is NaN
-    # (see smtk.sm_table.update_rupture_context)
-    # FIXME: before we replaced if ANY was NaN, but it makes no sense to me
-    # (why replacing  dip, strike and rake if e.g. only the latter is NaN?)
+    # Use focal mechanism for those cases where any strike dip rake is NaN
     mechanism_type = {
         "Normal": -90.0,
         "Strike-Slip": 0.0,
@@ -236,17 +233,11 @@ def post_process(flatfile: pd.DataFrame) -> pd.DataFrame:
     # Scalar IMTs should be there ('pga' from "rot50D_pga", 'pgv' from
     # "rot50D_pgv" and so on, see `cls.esm_col_mapping`): if not, compute
     # the geometric mean of `U_*` and `V_*` columns (e.g. 'U_pga', 'V_pga')
-    # FIXME: IT IS SUPPOSED TO BE ALREADY IN CM/S/S
-
-    # _supported_imts = set(Imt.objects.values_list('name', flat=True))
     for col in (c for c in rename if c.startswith('rotD50_')):  # rename is global var
         esm_imt_name = col.split('_', 1)[-1]
         imt_components = dfr.pop('U_' + esm_imt_name), \
             dfr.pop('V_' + esm_imt_name), dfr.pop('W_' + esm_imt_name)
         imt_name = rename[col]
-        # if imt_name not in _supported_imts:
-        #     raise ValueError('%s.esm_col_mapping["%s"]="%s" is not a valid IMT' %
-        #                      (cls.__name__, col, cls.esm_col_mapping[col]))
         if imt_name not in dfr.columns:
             # geometric mean:
             dfr[imt_name] = np.sqrt(imt_components[0] * imt_components[1])
