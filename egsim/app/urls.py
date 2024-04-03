@@ -21,14 +21,18 @@ urlpatterns = [
                        URLS.IMPRINT_PAGE, URLS.REF_AND_LICENSE_PAGE]) +
              ')/?$'), main),
 
-    re_path(fr'^{URLS.PREDICTIONS}.(?:{"|".join(data_ext)})$',
-            PredictionsView.as_view()),
+    re_path(
+        fr'^{URLS.PREDICTIONS}.(?:{"|".join(data_ext)})$',
+        PredictionsView.as_view()
+    ),  # note: `data_ext` in url is set and used only in the GUI as download filename
     path(URLS.PREDICTIONS_VISUALIZE, predictions_visualize),
     re_path(fr'{URLS.PREDICTIONS_PLOT_IMG}.(?:{"|".join(img_ext)})', plots_image),
     path(URLS.PREDICTIONS_RESPONSE_TUTORIAL, predictions_response_tutorial),
 
-    re_path(r'^%s.(?:%s)$' % (URLS.RESIDUALS, "|".join(data_ext)),
-            ResidualsView.as_view()),
+    re_path(
+        r'^%s.(?:%s)$' % (URLS.RESIDUALS, "|".join(data_ext)),
+        ResidualsView.as_view()
+    ),  # note: `data_ext` in url is set and used only in the GUI as download filename
     path(URLS.RESIDUALS_VISUALIZE, residuals_visualize),
     re_path(fr'{URLS.RESIDUALS_PLOT_IMG}.(?:{"|".join(img_ext)})', plots_image),
     path(URLS.RESIDUALS_RESPONSE_TUTORIAL, residuals_response_tutorial),
