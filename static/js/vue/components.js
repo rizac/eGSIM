@@ -113,7 +113,7 @@ EGSIM.component('gsim-select', {
 			return warnings;
 		}
 	},
-	template: `<div class='d-flex flex-column'>
+	template: `<div class='d-flex flex-column' title="Ground motion model(s)">
 		<div
 			class='d-flex flex-row align-items-baseline input-group-text'
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
@@ -298,11 +298,12 @@ EGSIM.component('imt-select', {
 			}
 		}
 	},
-	template: `<div class='d-flex flex-column ' style='min-height: 10rem; max-height: 10rem'>
+	template: `<div class='d-flex flex-column ' style='min-height: 10rem; max-height: 10rem' title="Intensity measure type(s)">
 		<div
 			class='input-group-text'
-			style="border-bottom:0!important;border-bottom-left-radius:0!important;border-bottom-right-radius:0!important">
-			imt (Intensity measure type, {{ selectedImts.length }} selected)
+			style="border-bottom:0!important;border-bottom-left-radius:0!important;border-bottom-right-radius:0!important"
+		>
+			imt ({{ selectedImts.length }} selected)
 		</div>
 		<select
 			v-model="selectedImtClassNames"
@@ -403,9 +404,10 @@ EGSIM.component('gsim-map', {
 							</button>
 							<div id="${id}" class='collapse'>`;
 				// Add title:
-				html += `<h6 class="mt-1">Click options</h6>
-					<div style='max-width:12rem' class='mb-2'>Search models
-					from the following seismic hazard source regionalizations:
+				html += `<h6 class="mt-1">Map options</h6>
+					<div style='max-width:12rem' class='mb-2'>On click, search models
+					selected for the clicked location in the following seismic hazard
+					source regionalizations:
 					</div>`;
 				for (var regx of regionalizations){
 					var name = regx.name;

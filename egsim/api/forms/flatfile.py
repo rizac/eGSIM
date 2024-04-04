@@ -10,7 +10,7 @@ from django.forms.fields import CharField, FileField
 from egsim.smtk import (ground_motion_properties_required_by,
                         intensity_measures_defined_for, registered_imts)
 from egsim.smtk.flatfile import (read_flatfile, get_dtype_of, FlatfileMetadata,
-                                 query as flatfile_query, ColumnDtype, ColumnType)
+                                 query as flatfile_query)
 from egsim.api import models
 from egsim.api.forms import EgsimBaseForm, APIForm, GsimImtForm
 
@@ -19,11 +19,13 @@ from egsim.api.forms import EgsimBaseForm, APIForm, GsimImtForm
 # strictly JSON-encodable (info here: https://stackoverflow.com/a/4083908) and
 # should be kept private/hidden by default:
 class _UploadedFlatfile(Form):
-    flatfile = FileField(required=False,
-                         allow_empty_file=False,
-                         error_messages={
-                            'empty': 'the submitted file is empty'
-                         })
+    flatfile = FileField(
+        required=False,
+        allow_empty_file=False,
+        error_messages={
+            'empty': 'the submitted file is empty'
+        }
+    )
 
 
 class FlatfileForm(EgsimBaseForm):
@@ -38,9 +40,9 @@ class FlatfileForm(EgsimBaseForm):
         required=False,
         help_text="The flatfile (pre- or user-defined) containing observed ground "
                   "motion properties and intensity measures, in CSV or HDF format"
-    )  # Note: with a ModelChoiceField the benefits
-    # of handling validation are outweighed by the fixes needed here and there to make
-    # values JSON serializable, so we opt for a CharField + custom validation in `clean`
+    )  # Note: with a ModelChoiceField the benefits of handling validation are outweighed
+    # by the fixes needed here and there to make values JSON serializable, so we opt for
+    # a CharField + custom validation in `clean`
     selexpr = CharField(
         required=False,
         help_text='Filter flatfile records (rows) matching query expressions applied '
