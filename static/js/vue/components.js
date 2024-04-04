@@ -565,6 +565,9 @@ EGSIM.component('flatfile-select', {
 			deep: true,
 			immediate: true,
 			handler(newVal, oldVal){
+				if (newVal instanceof File){
+					newVal = newVal.name;
+				}
 				this.selectedIndex = this.flatfiles.map(f => f.name).indexOf(newVal);
 			}
 		}
