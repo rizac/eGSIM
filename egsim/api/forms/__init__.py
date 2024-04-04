@@ -199,7 +199,7 @@ class EgsimBaseForm(Form):
         @param compact: skip optional parameters, i.e. those whose value equals
             the default when missing
         """
-        ret = {}
+        ret = {}  # FIXME remove compact? Move to app?
         for field_name, value in self.data.items():
             if compact:
                 field = self.declared_fields.get(field_name, None)

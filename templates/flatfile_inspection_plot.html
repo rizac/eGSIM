@@ -6,11 +6,12 @@
 			:flatfiles='flatfiles'
 			v-model="forms.flatfile_inspection_plot.flatfile"
 			:upload-url='urls.flatfile_validate'
+			:title='forms.misc.residuals.help.flatfile'
 			@update:model-value="(value) => { forms.flatfile_inspection_plot.x=null; forms.flatfile_inspection_plot.y=null; forms.misc.flatfile_inspection_plot.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }"
 		>
 		</flatfile-select>
-		<div class='input-group ms-1'>
-			<label class='input-group-text'>data-query</label>
+		<div class='input-group ms-1' :title='forms.misc.residuals.help["flatfile-query"]'>
+			<label class='input-group-text'>flatfile-query</label>
 			<input type='text' v-model="forms.flatfile_inspection_plot['data-query']" class='form-control'/>
 		</div>
 		<div class='input-group ms-3' v-if="forms.misc.flatfile_inspection_plot.selected_flatfile_fields.length">

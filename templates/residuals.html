@@ -24,11 +24,12 @@
 			:flatfiles='flatfiles'
 			v-model="forms.residuals.flatfile"
 			:upload-url='urls.flatfile_validate'
+			:title='forms.misc.residuals.help.flatfile'
 			@update:model-value="(value) => { forms.misc.residuals.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }">
 		</flatfile-select>
 
-		<div class='input-group mt-1'>
-			<label class='input-group-text'>data-query</label>
+		<div class='input-group mt-1' :title='forms.misc.residuals.help["flatfile-query"]'>
+			<label class='input-group-text'>flatfile-query</label>
 			<input type='text' v-model="forms.residuals['data-query']" class='form-control'/>
 		</div>
 
