@@ -135,18 +135,20 @@ def _get_init_data_json(debug=False) -> dict:
         'imt': [],
         'format': 'hdf'
     })
-    if debug:
+    if not debug:
         predictions_form = PredictionsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
             'magnitude': [4, 5, 6, 7],
             'distance': [1, 10, 100, 1000],
+            'format': 'hdf'
         })
         residuals_form = ResidualsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA', 'SA(0.1)'],
             'flatfile': 'esm2018',
             'data-query': 'mag > 7',
+            'format': 'hdf'
         })
 
     return {
