@@ -34,7 +34,11 @@ class FlatfileForm(EgsimBaseForm):
         'selexpr': ('flatfile-query', 'data-query', 'selection-expression'),
         'flatfile': ('flatfile', 'data')
     }
-    flatfile = CharField(required=False)  # Note: with a ModelChoiceField the benefits
+    flatfile = CharField(
+        required=False,
+        help_text="The flatfile (pre- or user-defined) containing observed ground "
+                  "motion properties and intensity measures, in CSV or HDF format"
+    )  # Note: with a ModelChoiceField the benefits
     # of handling validation are outweighed by the fixes needed here and there to make
     # values JSON serializable, so we opt for a CharField + custom validation in `clean`
     selexpr = CharField(

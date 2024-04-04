@@ -302,7 +302,7 @@ EGSIM.component('imt-select', {
 		<div
 			class='input-group-text'
 			style="border-bottom:0!important;border-bottom-left-radius:0!important;border-bottom-right-radius:0!important">
-			imt ({{ selectedImts.length }} selected)
+			imt (Intensity measure type, {{ selectedImts.length }} selected)
 		</div>
 		<select
 			v-model="selectedImtClassNames"
@@ -604,7 +604,7 @@ EGSIM.component('flatfile-select', {
 		}
 	},
 	template:`<div class='input-group align-items-baseline'>
-		<label class='input-group-text'> data </label>
+		<label class='input-group-text'> flatfile </label>
 		<select v-model="selectedIndex" class='form-control border-end-0'>
 			<option v-for="(v, idx) in flatfiles" :value='idx'>
 				{{ v.innerHTML }}
@@ -622,7 +622,7 @@ EGSIM.component('flatfile-select', {
 			type="button"
 			class="btn btn-secondary"
 			onclick="this.parentNode.querySelector('input[type=file]').click()"
-			title="upload user-defined data as flatfile in CSV format">
+			title="upload user-defined flatfile in CSV or HDF format">
 			<i class='fa fa-upload'></i>
 		</button>
 	</div>`
