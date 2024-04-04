@@ -20,7 +20,7 @@
 		<imt-select v-model="forms.predictions.imt" :imts='imts' class='mt-4'></imt-select>
 
 		<div class='d-flex flex-column mt-4'>
-			<div class='input-group'>
+			<div class='input-group' :title="forms.misc.predictions.help['magnitude'] + ' (comma- or space-separated)' ">
 				<label class="input-group-text">magnitude</label>
 				<array-input v-model="forms.predictions.magnitude"></array-input>
 				<button
@@ -30,29 +30,29 @@
 		</div>
 
 		<div id='rupture-controls' class="collapse" style='max-height:8rem;overflow:scroll'>
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['aspect']">
 				<div class='input-group-text'>aspect</div>
 				<input type='number' v-model="forms.predictions['aspect']"
 					   required min="0.0" step="any" class='form-control' />
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['dip']">
 				<div class='input-group-text'>dip</div>
 				<input type="number" v-model="forms.predictions['dip']"
 					   min="0.0" max="90.0" step="any" class='form-control' />
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['hypocenter-location']">
 				<div class='input-group-text'>hypocenter-location</div>
 				<array-input v-model="forms.predictions['hypocenter-location']"></array-input>
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['initial-point']">
 				<div class='input-group-text'>initial-point</div>
 				<array-input v-model="forms.predictions['initial-point']"></array-input>
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['msr']">
 				<div class='input-group-text'>msr</div>
 				<select v-model="forms.predictions['msr']" class='form-control'>
 					<option v-for="m in forms.misc.predictions.msr" :value="m[0]">
@@ -61,19 +61,19 @@
 				</select>
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['rake']">
 				<div class='input-group-text'>rake</div>
 				<input type='number' v-model="forms.predictions['rake']"
 					   min="-180.0" max="180.0" step="any" class='form-control' />
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['strike']">
 				<div class='input-group-text'>strike</div>
 				<input type="number" v-model="forms.predictions['strike']"
 					   min="0.0" max="360.0" step="any" class='form-control' />
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['ztor']">
 				<div class='input-group-text'>ztor</div>
 				<input type="number" v-model="forms.predictions['ztor']"
 					   min="0.0" step="any" class='form-control' />
@@ -81,7 +81,7 @@
 		</div>
 
 		<div class='d-flex flex-column mt-4'>
-			<div class='input-group'>
+			<div class='input-group' :title="forms.misc.predictions.help['distance'] + ' (comma- or space-separated)' ">
 				<label class="input-group-text">distance</label>
 				<array-input v-model="forms.predictions.distance"></array-input>
 				<button class="btn border bg-white" type="button" style='border-left-width:0 !important'
@@ -91,20 +91,20 @@
 
 		<div id='site-controls' class="collapse" style='max-height:8rem;overflow:scroll'>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['backarc']">
 				<label class='input-group-text' style='width:100%'>
 					<input type='checkbox' v-model="forms.predictions.backarc" class='me-1' />
 					backarc
 				</label>
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['line-azimuth']">
 				<div class='input-group-text'>line-azimuth</div>
 				<input type='number' v-model="forms.predictions['line-azimuth']"
 					   min="0" max="360.0" step="any" class='form-control' />
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['region']">
 				<div class='input-group-text'>region</div>
 				<select v-model="forms.predictions.region" class='form-control'>
 					<option v-for="m in forms.misc.predictions.region" :value="m[0]">
@@ -113,29 +113,29 @@
 				</select>
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['vs30']">
 				<div class='input-group-text'>vs30</div>
 				<input type='number' v-model="forms.predictions.vs30"
 					   step="any" class='form-control' />
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['vs30measured']">
 				<label class='input-group-text' style='width:100%'>
 					<input type='checkbox' v-model="forms.predictions.vs30measured" class='me-1' />
 					vs30measured
 				</label>
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['z1pt0']">
 				<div class='input-group-text'>z1</div>
 				<!-- implement v-model "natively" because we need to convert empty inputs to null: -->
 				<input type='number'
-					   :value="forms.predictions.z1"
-					   @input="forms.predictions.z1 = $event.target.value.trim() ? $event.target.value : null"
+					   :value="forms.predictions.z1pt0"
+					   @input="forms.predictions.z1pt0 = $event.target.value.trim() ? $event.target.value : null"
 					   class='form-control' />
 			</div>
 
-			<div class="input-group mt-1">
+			<div class="input-group mt-1" :title="forms.misc.predictions.help['z2pt5']">
 				<div class='input-group-text'>z2pt5</div>
 				 <!-- implement v-model "natively" because we need to convert empty inputs to null: -->
 				<input type='number'
