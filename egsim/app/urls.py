@@ -44,7 +44,6 @@ urlpatterns = [
     path(URLS.FLATFILE_META_INFO, flatfile_meta_info),
     path(URLS.GET_GSIMS_FROM_REGION, get_gsims_from_region),
 
-    # test stuff: (FIXME: REMOVE)
-    # url(r'_test_err', _test_err),
+    # test stuff:
     re_path(r'error_test', error_test_response)
 ]

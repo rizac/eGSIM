@@ -209,7 +209,8 @@ def get_expected_motions(
             continue
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
         cmaker = ContextMaker('*', [gsim], {'imtls': {i: [0] for i in imt_names}})
-        # FIXME above is imtls relevant, or should we use PGA: [0] as in trellis?
+        # TODO above is imtls relevant, or should we use PGA: [0] as in trellis?
+        # TODO: maybe harmonize and document why we do the line above?
         mean, total, inter, intra = get_ground_motion_values(
             gsim, imt_vals, cmaker.recarray([ctx]))
         # assign data to our tmp lists:
@@ -239,7 +240,7 @@ def get_residuals_from_expected_and_observed_motions(
 
     :param expected: the DataFrame returned from `get_expected_motions`
     :param observed: the DataFame of the (natural logarithm of) the
-        observed ground motion # FIXME check log
+        observed ground motion
     """
     residuals: pd.DataFrame = pd.DataFrame(index=expected.index)
     mean_cols = expected.columns[expected.columns.get_level_values(1)==Clabel.mean]
@@ -271,7 +272,8 @@ def _get_random_effects_residuals(obs, mean, inter, intra, normalise=True):
     Calculate the random effects residuals using the inter-event
     residual formula described in Abrahamson & Youngs (1992) Eq. 10
     """
-    # FIXME this is the only part where grouping by event is relevant
+    # TODO this is the only part where grouping by event is relevant: maybe
+    #  move groupby here?
     nvals = float(len(mean))
     inter_res = ((inter ** 2.) * sum(obs - mean)) /\
         (nvals * (inter ** 2.) + (intra ** 2.))

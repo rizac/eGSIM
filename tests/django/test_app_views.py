@@ -84,7 +84,7 @@ class Test:
             if url.startswith('http://') or url.startswith('https://'):
                 continue  # see below
 
-            # just the URL without leading slash returns 404 (FIXME WHY?)
+            # just the URL without leading slash returns 404 (TODO document WHY)
             response = client.get(f"{url}" , follow=True)
             assert response.status_code == 404
 
