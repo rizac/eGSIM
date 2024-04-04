@@ -3,7 +3,10 @@ input as space space separated list (comma is also allowed)
 */
 EGSIM.component('array-input', {
 	// modelValue is the value of v-model set on this array-input:
-	props: {'modelValue': {type: Array}},
+	props: {
+		'modelValue': { type: Array },
+		'placeholder': { type: String, default: "type values comma- or space-separated"}
+	},
 	emits: ['update:modelValue'],
 	data(){
 		return { modelValue2str: null }  // string (null: uninitialized)
@@ -24,7 +27,7 @@ EGSIM.component('array-input', {
 			this.$emit('update:modelValue', this.string2Array(newVal));
 		}
 	},
-	template: `<input type='text' v-model="modelValue2str" class='form-control' placeholder='type values space- or comma-separated' />`,
+	template: `<input type='text' v-model="modelValue2str" class='form-control' :placeholder='placeholder' />`,
 	methods: {
 		string2Array(stringValue){
 			return stringValue.trim() ? stringValue.trim().split(/\s*,\s*|\s+/) : [];  // https://stackoverflow.com/a/5164901
