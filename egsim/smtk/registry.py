@@ -10,8 +10,8 @@ from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.valid import gsim as valid_gsim
 
 
-# added for compatibility with registered_imts (see below)  # FIXME NEEDED
-registered_gsims:dict[str, type[GMPE]] = registry
+# added for compatibility with registered_imts (see below)
+registered_gsims: dict[str, type[GMPE]] = registry
 
 
 def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
@@ -46,7 +46,7 @@ def gsim(model: Union[str, GMPE], raise_deprecated=True) -> GMPE:
 
 
 def imt(arg: Union[float, str, IMT]) -> IMT:
-    """Return a IMT object from the given argument
+    """Return an IMT object from the given argument
 
     :raise: TypeError, ValueError, KeyError
     """
@@ -80,14 +80,14 @@ registered_imts: dict[str, Callable] = dict(_registered_imts())
 _gsim_aliases = {v: k for k, v in gsim_aliases.items()}
 
 
-def gsim_name(gsim: GMPE) -> str:
+def gsim_name(model: GMPE) -> str:
     """
     Returns the name of the GMPE given an instance of the class
     """
-    name = str(gsim)
-    # if name is "[" + gsim.__class__.__name__ + "]", return the class name:
-    if name == f"[{gsim.__class__.__name__}]":
-        return gsim.__class__.__name__
+    name = str(model)
+    # if name is the gsim class name within square brackets, return the class name:
+    if name == f"[{model.__class__.__name__}]":
+        return model.__class__.__name__
     # name is the TOML representation of gsim. Use _gsim_aliases to return the name:
     return _gsim_aliases[name]
 
