@@ -37,8 +37,11 @@ class FlatfileForm(EgsimBaseForm):
     flatfile = CharField(required=False)  # Note: with a ModelChoiceField the benefits
     # of handling validation are outweighed by the fixes needed here and there to make
     # values JSON serializable, so we opt for a CharField + custom validation in `clean`
-    selexpr = CharField(required=False, label='Filter flatfile records via a '
-                                              'query string')
+    selexpr = CharField(
+        required=False,
+        help_text='Filter flatfile records (rows) matching query expressions applied '
+                  'on the columns, e.g.: "(mag > 6) & (rrup < 10)" (&=and, |=or)'
+    )
 
     def __init__(self, data, files=None, **kwargs):
         # set now `self._u_ff`, in case `self.clean` is called in `super.__init__` below:

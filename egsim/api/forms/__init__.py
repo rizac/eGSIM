@@ -225,14 +225,12 @@ class SHSRForm(EgsimBaseForm):
         'regionalization': ('regionalization', 'shsr')
     }
 
-    latitude = FloatField(label='Latitude', min_value=-90., max_value=90.,
-                          required=False)
-    longitude = FloatField(label='Longitude', min_value=-180., max_value=180.,
-                           required=False)
-    regionalization = Field(label='Regionalization', required=False)  # Note: with a
-    # ModelChoiceField the benefits of handling validation are outweighed by the fixes
-    # needed here and there to make values JSON serializable, so we opt for a CharField
-    # + custom validation in `clean_regionalization`
+    latitude = FloatField(min_value=-90., max_value=90., required=False)
+    longitude = FloatField(min_value=-180., max_value=180., required=False)
+    regionalization = Field(required=False)  # Note: with a ModelChoiceField the
+    # benefits of handling validation are outweighed by the fixes needed here and there
+    # to make values JSON serializable, so we opt for a CharField + custom validation
+    # in `clean_regionalization`
 
     def clean_regionalization(self) -> QuerySet[models.Regionalization]:
         """Custom gsim clean.
@@ -278,8 +276,8 @@ class GsimImtForm(SHSRForm):
     _field2params: dict[str, list[str]] = {'gsim': ('model', 'gsim', 'gmm')}
 
     # Set simple Fields and perform validation in `clean_gsim` and `clean_imt`:
-    gsim = Field(required=False, label="Model(s)")
-    imt = Field(required=False, label='Intensity Measure(s)')
+    gsim = Field(required=False, help_text="Ground shaking intensity Model(s)")
+    imt = Field(required=False, help_text='Intensity Measure type(s)')
 
     def clean_gsim(self) -> dict[str, GMPE]:
         """Custom gsim clean.

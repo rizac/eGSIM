@@ -82,59 +82,65 @@ class PredictionsForm(GsimImtForm, APIForm):
     }
 
     # RUPTURE PARAMS:
-    magnitude = ArrayField(FloatField(), label='Magnitude(s)', required=True)
-    distance = ArrayField(FloatField(), label='Distance(s)', required=True)
-    aspect = FloatField(label='Rupture Length / Width', min_value=0., initial=1.0)
-    dip = FloatField(label='Dip', min_value=0., max_value=90., initial=90)
-    rake = FloatField(label='Rake', min_value=-180., max_value=180.,
-                      initial=0.)
-    strike = FloatField(label='Strike', min_value=0., max_value=360.,
-                        initial=0.)
-    ztor = FloatField(label='Top of Rupture Depth (km)', min_value=0.,
-                      initial=0.)
+    magnitude = ArrayField(FloatField(), help_text='Magnitude(s)', required=True)
+    distance = ArrayField(FloatField(), help_text='Distance(s), in km', required=True)
+    aspect = FloatField(help_text='Rupture Length / Width', min_value=0., initial=1.0)
+    dip = FloatField(min_value=0., max_value=90., initial=90)
+    rake = FloatField(min_value=-180., max_value=180., initial=0.)
+    strike = FloatField(min_value=0., max_value=360., initial=0.)
+    ztor = FloatField(help_text='Top of Rupture Depth (km)', min_value=0.,initial=0.)
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_msr`
-    msr = ChoiceField(label='Magnitude-Area Scaling Relationship',
-                      choices=[(_, _) for _ in _mag_scalerel],
-                      initial="WC1994")
+    msr = ChoiceField(
+        help_text='Magnitude-Area Scaling Relationship',
+        choices=[(_, _) for _ in _mag_scalerel],
+        initial="WC1994"
+    )
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_location`
-    initial_point = ArrayField(FloatField(initial=0, min_value=-180, max_value=180),
-                               FloatField(initial=0, min_value=-90, max_value=90),
-                               label="Location on Earth",
-                               help_text='Longitude Latitude')
-    hypocenter_location = ArrayField(FloatField(initial=0.5, min_value=0, max_value=1),
-                                     FloatField(initial=0.5, min_value=0, max_value=1),
-                                     label="Location of Hypocentre",
-                                     help_text='Along-strike fraction, '
-                                               'Down-dip fraction')
-    vs30 = FloatField(label=mark_safe('V<sub>S30</sub> (m/s)'), initial=760.0)
+    initial_point = ArrayField(
+        FloatField(initial=0, min_value=-180, max_value=180),
+        FloatField(initial=0, min_value=-90, max_value=90),
+        help_text="Location on Earth (Longitude, Latitude)"
+    )
+    hypocenter_location = ArrayField(
+        FloatField(initial=0.5, min_value=0, max_value=1),
+        FloatField(initial=0.5, min_value=0, max_value=1),
+        help_text="Location of Hypocenter (Along-strike fraction, Down-dip fraction)")
+    vs30 = FloatField(help_text="vs30 (m/s)", initial=760.0)
 
     # SITE PARAMS:
-    region = ChoiceField(label="Attenuation cluster region",
-                         choices=[
-                             (0, '0 - Default or unknown'),
-                             (1, '1 - Average / Slower'),
-                             (2, '2 - Average / Faster'),
-                             (3, '3 - Fast'),
-                             (4, '4 - Average'),
-                             (5, '5 - Very slow'),
-                         ],
-                         initial=0,
-                         help_text="https://doi.org/10.1007/s10518-020-00899-9")
+    region = ChoiceField(
+        initial=0,
+        choices=[
+            (0, '0 - Default or unknown'),
+            (1, '1 - Average / Slower'),
+            (2, '2 - Average / Faster'),
+            (3, '3 - Fast'),
+            (4, '4 - Average'),
+            (5, '5 - Very slow'),
+        ],
+        help_text="Attenuation cluster region "
+                  "(https://doi.org/10.1007/s10518-020-00899-9)"
+    )
 
-    vs30measured = BooleanField(label=mark_safe('V<sub>S30</sub> is measured'),
-                                help_text='Otherwise is inferred',
-                                initial=True, required=False)
-    line_azimuth = FloatField(label='Azimuth of Comparison Line',
-                              min_value=0., max_value=360., initial=0.)
-    z1pt0 = FloatField(label=mark_safe('Depth to 1 km/s V<sub>S</sub> layer (m)'),
-                       help_text=mark_safe("Calculated from the "
-                                           "V<sub>S30</sub> if not given"),
-                       required=False)
-    z2pt5 = FloatField(label=mark_safe('Depth to 2.5 km/s V<sub>S</sub> layer (km)'),
-                       help_text=mark_safe("Calculated from the  "
-                                           "V<sub>S30</sub> if not given"),
-                       required=False)
-    backarc = BooleanField(label='Backarc Path', initial=False, required=False)
+    vs30measured = BooleanField(
+        initial=True, required=False,
+        help_text='Whether vs30 is measured (otherwise is inferred)'
+    )
+    line_azimuth = FloatField(
+        help_text='Azimuth of Comparison Line',
+        min_value=0., max_value=360., initial=0.
+    )
+    z1pt0 = FloatField(
+        required=False,
+        help_text="Depth to 1 km/s V<sub>S</sub> layer (m). If missing, it will be "
+                  "calculated from the vs30"
+    )
+    z2pt5 = FloatField(
+        required=False,
+        help_text="Depth to 2.5 km/s V<sub>S</sub> layer (km). If missing, it will be "
+                  "calculated from the vs30"
+    )
+    backarc = BooleanField(help_text='Backarc Path', initial=False, required=False)
 
     @property
     def site_fields(self) -> dict[str, Field]:

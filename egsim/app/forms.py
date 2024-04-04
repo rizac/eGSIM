@@ -345,10 +345,8 @@ def norm_dist(x, mean=0, sigma=1):
 class FlatfileVisualizeForm(APIForm, FlatfileForm):
     """Form for plotting flatfile columns"""
 
-    x = CharField(label='X', help_text="The flatfile column for the x values",
-                  required=False)
-    y = CharField(label='Y', help_text="The flatfile column for the y values",
-                  required=False)
+    x = CharField(help_text="The flatfile column for the x values", required=False)
+    y = CharField(help_text="The flatfile column for the y values", required=False)
 
     def clean(self):
         """Call `super.clean()` and handle the flatfile"""
