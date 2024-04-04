@@ -179,26 +179,33 @@ def build_contexts(
     return cmaker.recarray(ctxts)
 
 
-
 # utilities:
 
 
-def create_rupture(id:int, magnitude, rake, tectonic_region, hypocenter, surface) \
-        -> BaseRupture:
-    rupture = BaseRupture(magnitude, rake, tectonic_region, hypocenter,
-                       surface, PointSource)
+def create_rupture(
+        id: int, magnitude, rake, tectonic_region, hypocenter, surface  # noqa
+) -> BaseRupture:
+    rupture = BaseRupture(
+        magnitude, rake, tectonic_region, hypocenter, surface, PointSource
+    )
     rupture.rup_id = id
     return rupture
 
 
-def create_planar_surface(top_centroid: Point, strike: float, dip: float,
-                          area: float, aspect: float, ztor: float) -> PlanarSurface:
+def create_planar_surface(
+        top_centroid: Point,
+        strike: float,
+        dip: float,
+        area: float,
+        aspect: float,
+        ztor: float
+) -> PlanarSurface:
     """
     Given a central location, create a simple planar rupture
 
     :param top_centroid: Centroid of trace of the rupture, as instance of
         :class:`openquake.hazardlib.geo.point.Point`
-    :param strike: (float) Strike of rupture(Degrees)
+    :param strike: (float) Strike of rupture (Degrees)
     :param dip: (float) Dip of rupture (degrees)
     :param area: Area of rupture (km^2)
     :param aspect: Aspect ratio of rupture
@@ -234,14 +241,16 @@ def create_planar_surface(top_centroid: Point, strike: float, dip: float,
                          bottom_right, bottom_left)
 
 
-def get_target_sites(hypocenter: Point,
+def get_target_sites(
+        hypocenter: Point,
         surface: PlanarSurface,
         distances: Iterable[float],
         vs30: float,
         line_azimuth=90.0,
         origin_point=(0.5, 0.0),
         distance_type="rrup",
-        z1pt0=None, z2pt5=None, **extras):
+        z1pt0=None, z2pt5=None, **extras
+):
     """Sets a set of target sites in the class"""
     # Get the site locations
     site_locations = sites_at_distance(hypocenter, surface, distances,

@@ -523,7 +523,7 @@ EGSIM.component('plots-div', {
 			// of axis and gridlabels, which must thus be recomputed
 			this.drawingPlots = true;
 			this.waitbar.msg = this.waitbar.UPDATING;
-			// TODO: if I do not do this, newLayout is undefined in setTimeout below WTF?!!!
+			// TODO: if I do not do this, newLayout is undefined in setTimeout below?!!!
 			var nl = newLayout || {};
 			var up = updatePositions;
 			setTimeout(() => {

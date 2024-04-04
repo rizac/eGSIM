@@ -64,16 +64,23 @@ class Test:
         assert len(tmp) > keyz
 
         # Now check that forms are json serializable:
-        for form, compact in product(
-                [PredictionsForm(dict(def_)),
-                 ResidualsForm(def_ | f_),
-                 FlatfileMetadataInfoForm(dict(def_)),
-                 FlatfileValidationForm(dict(f_)),
-                 FlatfileVisualizeForm(f_ | {'x': 'mag'})],
-                [True, False]):
-            val = form.asdict(compact)
-            # test it is json serializable:
-            data = json.dumps(val)
+        for form in [
+            PredictionsForm(dict(def_)),
+            ResidualsForm(def_ | f_),
+            FlatfileMetadataInfoForm(dict(def_)),
+            FlatfileValidationForm(dict(f_)),
+            FlatfileVisualizeForm(f_ | {'x': 'mag'})
+        ]:
+            val = form.asdict(compact=False)
+            val_c = form.asdict(compact=True)
+            # test everything is json serializable:
+            _ = json.dumps(val)
+            _ = json.dumps(val_c)
+
+            p_names = sorted(form.param_name_of(n) for n in form.declared_fields)
+            assert not set(val_c) - set(p_names)
+            assert not set(val) - set(p_names)
+            assert len(p_names) >= len(val) >= len(val_c)
 
     def test_html_pages(self, client):
         page_urls = [getattr(URLS, _) for _ in dir(URLS) if _.endswith('_PAGE')]
@@ -84,7 +91,7 @@ class Test:
             if url.startswith('http://') or url.startswith('https://'):
                 continue  # see below
 
-            # just the URL without leading slash returns 404 (TODO document WHY)
+            # just the URL without leading slash returns 404 (TODO document why?)
             response = client.get(f"{url}" , follow=True)
             assert response.status_code == 404
 

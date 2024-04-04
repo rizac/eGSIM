@@ -126,6 +126,8 @@ def _get_init_data_json(debug=False) -> dict:
     predictions_form = PredictionsForm({
         'gsim': [],
         'imt': [],
+        'magnitude': [],  # required
+        'distance': [],  # required
         'format': 'hdf'
     })
     residuals_form = ResidualsForm({
@@ -139,14 +141,12 @@ def _get_init_data_json(debug=False) -> dict:
             'imt': ['SA(0.05)', 'SA(0.075)'],  # default_imts,
             'magnitude': [4, 5, 6, 7],
             'distance': [1, 10, 100, 1000],
-            'format': 'hdf'
         })
         residuals_form = ResidualsForm({
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA', 'SA(0.1)'],
             'flatfile': 'esm2018',
             'data-query': 'mag > 7',
-            'format': 'hdf'
         })
 
     return {
@@ -199,6 +199,11 @@ def _get_init_data_json(debug=False) -> dict:
                 'predictions': {
                     'msr': predictions_form.fields['msr'].choices,
                     'region': predictions_form.fields['region'].choices,
+                    'help': {
+                        PredictionsForm.param_names_of(n)[0]: f.help_text
+                        for n, f in PredictionsForm.declared_fields.items()
+                        if getattr(f, 'help_text', n).lower() != n.lower()
+                    }
                 },
                 'predictions_plot': {
                     'plot_types': PredictionsVisualizeForm.
@@ -209,6 +214,11 @@ def _get_init_data_json(debug=False) -> dict:
                 },
                 'residuals': {
                     'selected_flatfile_fields': [],
+                    'help': {
+                        ResidualsForm.param_names_of(n)[0]: f.help_text
+                        for n, f in ResidualsForm.declared_fields.items()
+                        if getattr(f, 'help_text', n).lower() != n.lower()
+                    }
                 },
                 'flatfile_meta_info': {
                     'show_dialog': False

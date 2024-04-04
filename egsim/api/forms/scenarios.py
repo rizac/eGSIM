@@ -7,7 +7,6 @@ import pandas as pd
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from django.core.exceptions import ValidationError
-from django.utils.safestring import mark_safe
 from django.forms.fields import BooleanField, FloatField, ChoiceField, Field
 
 from egsim.api.forms import APIForm, GsimImtForm
@@ -82,13 +81,24 @@ class PredictionsForm(GsimImtForm, APIForm):
     }
 
     # RUPTURE PARAMS:
-    magnitude = ArrayField(FloatField(), help_text='Magnitude(s)', required=True)
-    distance = ArrayField(FloatField(), help_text='Distance(s), in km', required=True)
-    aspect = FloatField(help_text='Rupture Length / Width', min_value=0., initial=1.0)
-    dip = FloatField(min_value=0., max_value=90., initial=90)
-    rake = FloatField(min_value=-180., max_value=180., initial=0.)
-    strike = FloatField(min_value=0., max_value=360., initial=0.)
-    ztor = FloatField(help_text='Top of Rupture Depth (km)', min_value=0.,initial=0.)
+    magnitude = ArrayField(FloatField(), help_text='Magnitudes', required=True)
+    distance = ArrayField(FloatField(), help_text='Distances (km)', required=True)
+    aspect = FloatField(
+        help_text='Rupture Length / Width in [0, 1]', min_value=0., initial=1.0
+    )
+    dip = FloatField(
+        min_value=0., max_value=90., initial=90,
+        help_text="Dip of rupture (deg) in [0, 90]"
+    )
+    rake = FloatField(
+        min_value=-180., max_value=180., initial=0.,
+        help_text="Rake of rupture (deg) in [-180, 180]"
+    )
+    strike = FloatField(
+        min_value=0., max_value=360., initial=0.,
+        help_text="Strike of rupture (deg) in [0, 360]"
+    )
+    ztor = FloatField(help_text='Top of Rupture Depth (km)', min_value=0., initial=0.)
     # WARNING IF RENAMING FIELD BELOW: RENAME+MODIFY also `clean_msr`
     msr = ChoiceField(
         help_text='Magnitude-Area Scaling Relationship',
@@ -99,12 +109,13 @@ class PredictionsForm(GsimImtForm, APIForm):
     initial_point = ArrayField(
         FloatField(initial=0, min_value=-180, max_value=180),
         FloatField(initial=0, min_value=-90, max_value=90),
-        help_text="Location on Earth (Longitude, Latitude)"
+        help_text="Location on Earth (Longitude in [-180, 180], Latitude in [-90, 90])"
     )
     hypocenter_location = ArrayField(
         FloatField(initial=0.5, min_value=0, max_value=1),
         FloatField(initial=0.5, min_value=0, max_value=1),
-        help_text="Location of Hypocenter (Along-strike fraction, Down-dip fraction)")
+        help_text="Location of Hypocenter (Along-strike fraction in [0, 1], "
+                  "Down-dip fraction in [0, 1])")
     vs30 = FloatField(help_text="vs30 (m/s)", initial=760.0)
 
     # SITE PARAMS:
@@ -127,17 +138,17 @@ class PredictionsForm(GsimImtForm, APIForm):
         help_text='Whether vs30 is measured (otherwise is inferred)'
     )
     line_azimuth = FloatField(
-        help_text='Azimuth of Comparison Line',
+        help_text='Azimuth of Comparison Line in [0, 360]',
         min_value=0., max_value=360., initial=0.
     )
     z1pt0 = FloatField(
         required=False,
-        help_text="Depth to 1 km/s V<sub>S</sub> layer (m). If missing, it will be "
+        help_text="Depth to 1 km/s Vs layer (m). If missing, it will be "
                   "calculated from the vs30"
     )
     z2pt5 = FloatField(
         required=False,
-        help_text="Depth to 2.5 km/s V<sub>S</sub> layer (km). If missing, it will be "
+        help_text="Depth to 2.5 km/s Vs layer (km). If missing, it will be "
                   "calculated from the vs30"
     )
     backarc = BooleanField(help_text='Backarc Path', initial=False, required=False)
