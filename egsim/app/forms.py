@@ -123,9 +123,10 @@ class PredictionsVisualizeForm(PredictionsForm):
                 color_transparent = color.replace(', 1)', ', 0.2)')
                 legendgroup = model
                 # first add all values to list so that we can compute ranges later
-                ys.append(medians)
-                ys.append(medians * np.exp(sigmas))
-                ys.append(medians * np.exp(-sigmas))
+                # FIXME add Graeme if this is ok (np.exp I mean, legacy code from smtk)
+                ys.append(np.exp(medians))
+                ys.append(np.exp(medians + sigmas))
+                ys.append(np.exp(medians - sigmas))
                 # now add those values to plotly traces:
                 traces.extend([
                     line_trace(

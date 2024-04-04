@@ -71,6 +71,13 @@ def test_distance_imt_trellis():
         distances,
         RuptureProperties(dip=60.0, aspect=1.5, hypocenter_location=(0.5, 0.5)),
         SiteProperties(vs30=800))
+    # convert medians to np.exp(medians) as in legacy smtk:
+    medians_cols = (
+        [k[0] for k in dfr.columns if k[0] != Clabel.input_data],
+        Clabel.median,
+        slice(None)
+    )
+    dfr.loc[:, medians_cols] = np.exp(dfr.loc[:, medians_cols])
 
     ref = open_ref_hdf("trellis_vs_distance.hdf")
     assert len(dfr) == len(distances)
@@ -138,6 +145,13 @@ def test_magnitude_imt_trellis():
         RuptureProperties(dip=60.0, aspect=1.5, rake=-90),
         SiteProperties(vs30=800, z1pt0=50., z2pt5=1.)
     )
+    # convert medians to np.exp(medians) as in legacy smtk:
+    medians_cols = (
+        [k[0] for k in dfr.columns if k[0] != Clabel.input_data],
+        Clabel.median,
+        slice(None)
+    )
+    dfr.loc[:, medians_cols] = np.exp(dfr.loc[:, medians_cols])
 
     ref = open_ref_hdf("trellis_vs_magnitude.hdf")
     assert len(ref) == len(dfr)
@@ -196,6 +210,7 @@ def test_magnitude_distance_spectra_trellis():
         SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0,
                        z2pt5=1.0)
     )
+    # (no need to convert medians to np.exp(medians for the test below)
     # test that some gsim are not supported for all periods:
     assert (dfr.columns.get_level_values(0) == 'SA(3.0)').sum() > \
            (dfr.columns.get_level_values(0) == 'SA(4.001)').sum()
@@ -209,9 +224,15 @@ def test_magnitude_distance_spectra_trellis():
         magnitudes,
         distances,
         RuptureProperties(dip=60., rake=-90., aspect=1.5, ztor=0.0),
-        SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0,
-                       z2pt5=1.0)
+        SiteProperties(vs30=800.0, backarc=False, z1pt0=50.0, z2pt5=1.0)
     )
+    # convert medians to np.exp(medians) as in legacy smtk:
+    medians_cols = (
+        [k[0] for k in dfr.columns if k[0] != Clabel.input_data],
+        Clabel.median,
+        slice(None)
+    )
+    dfr.loc[:, medians_cols] = np.exp(dfr.loc[:, medians_cols])
     # compare with old data:
     ref = open_ref_hdf("trellis_spectra.hdf")
 

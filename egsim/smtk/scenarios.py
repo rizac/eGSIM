@@ -58,14 +58,20 @@ def get_scenarios_predictions(
         magnitudes: Union[float, Collection[float]],
         distances: Union[float, Collection[float]],
         rupture_properties: Optional[RuptureProperties] = None,
-        site_properties: Optional[SiteProperties] = None,
-        exp_values=True) -> pd.DataFrame:
+        site_properties: Optional[SiteProperties] = None
+) -> pd.DataFrame:
     """
     Calculate the ground motion values from different scenarios to be used, e.g.
     in trellis plots
 
+    :param gsims: Iterable of Ground shaking intensity models or their names (str)
+    :param imts: Iterable of Intensity measure types or their names (str)
     :param magnitudes: list or numpy array of magnitudes
     :param distances: list or numpy array of distances
+    :param rupture_properties: the optional Rupture properties (see
+        class RuptureProperties)
+    :param site_properties: the optional Site properties (see class
+        SiteProperties)
 
     :return: pandas DataFrame
     """
@@ -98,9 +104,6 @@ def get_scenarios_predictions(
         imt_names, imt_vals = list(imts_ok.keys()), list(imts_ok.values())
         try:
             median, sigma, tau, phi = get_ground_motion_values(gsim, imt_vals, ctxts)
-            if exp_values:
-                # FIXME ask Graeme: is this a Trellis feature or a prediction feature?
-                median = np.exp(median)
             data.append(median)
             columns.extend((i, Clabel.median, gsim_label) for i in imt_names)
             data.append(sigma)
