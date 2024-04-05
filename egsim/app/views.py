@@ -306,24 +306,27 @@ def plots_image(request) -> HttpResponseBase:
     """Return the image from the given request built in the frontend GUI
     according to the chosen plots
     """
-    filename = request.path[request.path.rfind('/')+1:]
-    img_format = splitext(filename)[1][1:].lower()
     try:
-        content_type = getattr(MimeType, img_format)
-    except AttributeError:
-        return error_response('Invalid format "{img_format}"', 400)
-    jsondata = json.loads(request.body.decode('utf-8'))
-    data, layout, width, height = (jsondata['data'],
-                                   jsondata['layout'],
-                                   jsondata['width'],
-                                   jsondata['height'])
-    from plotly import graph_objects as go, io as pio
-    fig = go.Figure(data=data, layout=layout)
-    # fix for https://github.com/plotly/plotly.py/issues/3469:
-    pio.full_figure_for_development(fig, warn=False)
-    bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)
-    return FileResponse(BytesIO(bytestr), content_type=content_type,
-                        filename=filename, as_attachment=True)
+        filename = request.path[request.path.rfind('/')+1:]
+        img_format = splitext(filename)[1][1:].lower()
+        try:
+            content_type = getattr(MimeType, img_format)
+        except AttributeError:
+            return error_response('Invalid format "{img_format}"', 400)
+        jsondata = json.loads(request.body.decode('utf-8'))
+        data, layout, width, height = (jsondata['data'],
+                                       jsondata['layout'],
+                                       jsondata['width'],
+                                       jsondata['height'])
+        from plotly import graph_objects as go, io as pio
+        fig = go.Figure(data=data, layout=layout)
+        # fix for https://github.com/plotly/plotly.py/issues/3469:
+        pio.full_figure_for_development(fig, warn=False)
+        bytestr = fig.to_image(format=img_format, width=width, height=height, scale=5)
+        return FileResponse(BytesIO(bytestr), content_type=content_type,
+                            filename=filename, as_attachment=True)
+    except Exception as exc:
+        return error_response(str(exc), 500)
 
 
 @xframe_options_exempt

@@ -130,7 +130,7 @@ def scatter_trace(
             'line': {
                 'width': line_width,
                 'color': line_color or color,
-                'dash': line_dash
+                # 'dash': line_dash  # invalid in marker.Line (Python)
             }
         }
     } | kwargs
@@ -195,7 +195,7 @@ def _bar_like_trace(
             'line': {
                 'width': width,
                 'color': line_color or color,
-                'dash': dash
+                # 'dash': dash   # invalid in marker.Line (Python)
             }
         }
     } | kwargs
