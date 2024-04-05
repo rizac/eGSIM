@@ -1046,21 +1046,23 @@ EGSIM.component('plots-div', {
 		},
 		getLegendColor(style){  // style => object as JSON string
 			try{
-				var styleObject = JSON.parse(style);
+				var styleObj = JSON.parse(style);
 			}catch(error){  // also raises if style is empty string
-				return;
+				styleObj = {};
 			}
-			var marker = styleObject.marker;
-			if (marker && marker.line && marker.line.color){
-				return marker.line.color;
+			var color = '#000000';
+			if (styleObj.marker && styleObj.marker.color){
+				color = styleObj.marker.color + "";
+			}else if(styleObj.line && styleObj.line.color){
+				color = styleObj.line.color + "";
+			}else if (styleObj.marker && styleObj.marker.line && styleObj.marker.line.color){
+				color = styleObj.marker.line.color + "";
 			}
-			if (styleObject.line && styleObject.line.color){
-				return styleObject.line.color;
+			// if color is non-opaque, make it opaque:
+			if (color.trim().toLowerCase().startsWith('rgba(')){
+				color = color.replace(/,[^,]*\)\s*$/, ', 1)');
 			}
-			if (marker && marker.color){
-				return marker.color;
-			}
-			return '#000000';
+			return color;
 		},
 		setTraceStyle(legendgroup, style){  // style => Object as JSON string
 			try{
