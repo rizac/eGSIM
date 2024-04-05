@@ -165,20 +165,20 @@ def _get_init_data_json(debug=False) -> dict:
         'urls': {
             'predictions': URLS.PREDICTIONS,
             'predictions_visualize': URLS.PREDICTIONS_VISUALIZE,
-            'predictions_plot_download': [
+            'predictions_plot_img': [
                 f'{URLS.PREDICTIONS_PLOT_IMG}.{ext}' for ext in img_ext
             ],
             'predictions_response_tutorial': URLS.PREDICTIONS_RESPONSE_TUTORIAL,
             'residuals': URLS.RESIDUALS,
             'residuals_visualize': URLS.RESIDUALS_VISUALIZE,
-            'residuals_plot_download': [
+            'residuals_plot_img': [
                 f'{URLS.RESIDUALS_PLOT_IMG}.{ext}' for ext in img_ext
             ],
             'residuals_response_tutorial': URLS.RESIDUALS_RESPONSE_TUTORIAL,
             'get_gsim_from_region': URLS.GET_GSIMS_FROM_REGION,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO,
             'flatfile_visualize': URLS.FLATFILE_VISUALIZE,
-            'flatfile_plot_download': [
+            'flatfile_plot_img': [
                 f'{URLS.FLATFILE_PLOT_IMG}.{ext}' for ext in img_ext
             ],
             'flatfile_validate': URLS.FLATFILE_VALIDATE,

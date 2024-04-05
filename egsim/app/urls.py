@@ -38,7 +38,7 @@ urlpatterns = [
     path(URLS.RESIDUALS_RESPONSE_TUTORIAL, residuals_response_tutorial),
 
     path(URLS.FLATFILE_VISUALIZE, flatfile_visualize),
-    re_path(fr'{URLS.FLATFILE_PLOT_IMG}.(?:{"|".join(data_ext)})', plots_image),
+    re_path(fr'{URLS.FLATFILE_PLOT_IMG}.(?:{"|".join(img_ext)})', plots_image),
 
     path(URLS.FLATFILE_VALIDATE, flatfile_validate),
     path(URLS.FLATFILE_META_INFO, flatfile_meta_info),
