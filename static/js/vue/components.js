@@ -121,22 +121,23 @@ EGSIM.component('gsim-select', {
 			class='d-flex flex-row align-items-baseline input-group-text'
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
 			<label style="flex: 1 1 auto;" class='text-start'>model ({{ selectedModels.length }} selected)</label>
+			<span v-show='inputElementText' class='text-muted small'> [ESC]: clear text and hide popup</span>
 			<i
-				v-show="Object.keys(warnings).length"
+				v-show="Object.keys(warnings).length && !inputElementText"
 				title="Remove models with warnings (for details, hover mouse on each model icon)"
 				class="fa fa-exclamation-triangle ms-2 text-warning"
 				style="cursor: pointer;"
 				@click="removeSelectedModelsWithWarnings()">
 			</i>
 			<i
-				v-show="Object.keys(errors).length"
+				v-show="Object.keys(errors).length && !inputElementText"
 				title="Remove models with errors (for details, hover mouse on each model icon)"
 				class="fa fa-exclamation-triangle ms-2 text-danger"
 				style="cursor: pointer;"
 				@click="removeSelectedModelsWithErrors()">
 			</i>
 			<i
-				v-show="selectedModels.length"
+				v-show="selectedModels.length && !inputElementText"
 				title="Remove all models from selection"
 				class="fa fa-times-circle ms-2"
 				style="cursor: pointer;"
@@ -188,6 +189,7 @@ EGSIM.component('gsim-select', {
 			@keydown.down.prevent="focusHTMLSelectElement()"
 			@keydown.esc.prevent="inputElementText=''"
 			class='form-control'
+			:title="inputElementText ? 'ESC: clear text and hide popup' : ''"
 			:class="selectedModels.length ? 'border-top-0' : ''"
 			style='min-width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
@@ -195,7 +197,7 @@ EGSIM.component('gsim-select', {
 			class='position-relative'
 			style='overflow:visible'>
 			<select
-				title="Highlight models: Click or [&uarr;][&darr;] (with [Shift] or [Ctrl]: multi highlight)\nSelect highlighted models: Double click, [Return] or [Enter]\nHide popup: [ESC]"
+				title="Highlight models: Click or [&uarr;][&darr;] (with [Shift] or [Ctrl]: multi highlight)\nSelect highlighted models: Double click, [Return] or [Enter]\nClear text and hide popup: [ESC]"
 				multiple
 				ref="selectElement"
 				v-show='!!selectableModels.length'
