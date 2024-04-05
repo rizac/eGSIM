@@ -68,7 +68,7 @@
 					<td>
 					<button
 						type='button' style='width:100%'
-						@click="downloadResult(`${urls.residuals}.${forms.residuals.format}`, forms.residuals)"
+						@click="download(`${urls.residuals}.${forms.residuals.format}`, forms.residuals)"
 						class='btn btn-primary'
 						title='Download residuals'>
 							<i class='fa fa-download'></i>
@@ -90,7 +90,7 @@
 					</td>
 					<td>
 					<button type='button' style='width:100%'
-							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); postData(urls.residuals_visualize, data).then(r => r.json()).then(data => { responses.residuals_plots=data.plots; })"
+							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); post(urls.residuals_visualize, data).then(r => r.json()).then(data => { responses.residuals_plots=data.plots; })"
 							class='btn btn-primary'
 							title='Visualize residuals via interactive plots'>
 						<i class='fa fa-bar-chart'></i>
@@ -114,7 +114,7 @@
 	<plots-div
 		:data="responses.residuals_plots"
 		:download-urls='urls.residuals_plot_download'
-		@image-requested='(url, data) => { downloadResult(url, data); }'
+		@image-requested='(url, data) => { download(url, data); }'
 		style='position:absolute;inset:0px;z-index:100'>
 	</plots-div>
 </div>

@@ -39,7 +39,7 @@
 			</select>
 		</div>
 		<button type='button'
-				@click="var data = Object.assign({}, forms.flatfile_inspection_plot, {format: 'json'}); postData(urls.flatfile_visualize, data).then(r => r.json()).then(data => { responses.flatfile_inspection_plot=data.plots; })"
+				@click="var data = Object.assign({}, forms.flatfile_inspection_plot, {format: 'json'}); post(urls.flatfile_visualize, data).then(r => r.json()).then(data => { responses.flatfile_inspection_plot=data.plots; })"
 				:disabled='forms.flatfile_inspection_plot.x == forms.flatfile_inspection_plot.y'
 				class='btn btn-primary ms-3 text-nowrap'
 				title='Visualize flatfile data in an interactive plot'>
@@ -49,7 +49,7 @@
 	<plots-div
 		:data="responses.flatfile_inspection_plot"
 		:download-urls='urls.flatfile_plot_download'
-		@image-requested='(url, data) => { downloadResult(url, data); }'
+		@image-requested='(url, data) => { download(url, data); }'
 		style='flex: 1 1 auto;z-index:100'>
 	</plots-div>
 </div>

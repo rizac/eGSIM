@@ -174,7 +174,7 @@
 					<td>
 					<button
 						type='button' style='width:100%'
-						@click="downloadResult(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
+						@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
 						class='btn btn-primary'
 						title='Download predictions'>
 							<i class='fa fa-download'></i>
@@ -191,7 +191,7 @@
 					</td>
 					<td>
 					<button type='button' style='width:100%'
-							@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); postData(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
+							@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); post(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
 							class='btn btn-primary'
 							title='Visualize predictions via interactive plots'>
 						<i class='fa fa-bar-chart'></i>
@@ -214,7 +214,7 @@
 	<plots-div
 		:data="responses.predictions_plots"
 		:download-urls='urls.predictions_plot_download'
-		@image-requested='(url, data) => { downloadResult(url, data); }'
+		@image-requested='(url, data) => { download(url, data); }'
 		style='position:absolute;inset:0px;z-index:100'>
 	</plots-div>
 </div>
