@@ -97,7 +97,7 @@ class PredictionsVisualizeForm(PredictionsForm):
 
             # imts is a dict[str, IMT] of sorted SA(p) (see super.clean_imt and
             # self.clean) rename it as `sas` just for clarity:
-            sas = imts.keys()
+            sas = imts
 
             x_values = [float(sa_period(_)) for _ in sas]
 
