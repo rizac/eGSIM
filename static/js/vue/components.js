@@ -190,12 +190,12 @@ EGSIM.component('gsim-select', {
 			class='form-control'
 			:class="selectedModels.length ? 'border-top-0' : ''"
 			style='min-width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
-			title="Select a model by name (*=match any number of characters, ?=match any 1-length character): matching models will be displayed on a list and can be selected via double click or typing Enter/Return"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
 		<div
 			class='position-relative'
 			style='overflow:visible'>
 			<select
+				title="Highlight models: Click or [&uarr;][&darr;] (with [Shift] or [Ctrl]: multi highlight)\nSelect highlighted models: Double click, [Return] or [Enter]\nHide popup: [ESC]"
 				multiple
 				ref="selectElement"
 				v-show='!!selectableModels.length'
