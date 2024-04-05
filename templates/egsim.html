@@ -175,57 +175,14 @@ const EGSIM = Vue.createApp({
 			}
 			return false; // in case accessed from within anchors
 		},
-		postData(url, data){
-			/*
-			post data in JSON or multipart format depending on `data`, return fetch Promise
-			(the response data format depends on the url, see server side code)
-			*/
-			// infer request data content type:
-			var contentType = "application/json";
-			var hasFiles = Object.keys(data).some(elm => data[elm] instanceof File);
-			if (hasFiles){
-				var contentType = 'multipart/form-data';
-				requestBody = new FormData();
-				for (var name of Object.keys(data)){
-					// https://stackoverflow.com/a/63340869:
-					// in form-data content, null will be converted to "null". Either replace
-					// (but how to get a default?) or simply remove:
-					var val = data[name];
-					if ((val !== null) && (val !== undefined)){
-						requestBody.append(name, val);
-					}
-				}
-			}else{
-				var contentType = "application/json";
-				requestBody = JSON.stringify(data);
-			}
-
-			// Default options are marked with *
-			return fetch(url, {
-				method: "POST", // *GET, POST, PUT, DELETE, etc.
-				mode: "cors", // no-cors, *cors, same-origin
-				cache: "no-cache", // *default, no-cache, reload, force-cache, only-if-cached
-				credentials: "same-origin", // include, *same-origin, omit
-				headers: {
-					"Content-Type": contentType,
-					// 'Content-Type': 'application/x-www-form-urlencoded',
-				},
-				redirect: "follow", // manual, *follow, error
-				referrerPolicy: "no-referrer", // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-				body: requestBody, // body data type must match "Content-Type" header
-			})
-		},
-		downloadResult(url, data){
-			// download the response using the last portion of url as filename
+		download(url, data){
+			// download the response using the last portion of url as downloaded file name
 			var fileName = url.substring(url.lastIndexOf('/') + 1, url.length);
-			this.postData(url, data).then( resp => {
-				// in case you want to get headers:
-				// var contentDisp = resp.headers.get('content-disposition');
+			this.post(url, data).then( resp => {
+				// in case you want to get headers: resp.headers.get('content-disposition');
 				resp.blob().then(blob => {
+					// Download file (https://stackoverflow.com/a/42274086):
 					var url = window.URL.createObjectURL(blob);
-					// this might work but it sets a cryptic download filename:
-					// window.location.assign(file);
-					// So, incredibly, there is no cleaner solution than (https://stackoverflow.com/a/42274086):
 					var a = document.createElement('a');
 					a.href = url;
 					a.download = fileName;
@@ -234,6 +191,37 @@ const EGSIM = Vue.createApp({
 					a.remove();
 				});
 			});
+		},
+		post(url, data){
+			// send POST request to `url` with the given data as request body (encoded as JSON  string
+			// or FormData depending on `data` content), return fetch Promise
+			return fetch(url, this.createFetchOptions(data));
+		},
+		createFetchOptions(data, method='POST'){
+			// create the `options` Object to be passed as 2nd argument to `fetch`.
+			// `data` is the request data that will be sent as `options.body` converted to
+			// either JSON string or FormData depending on its content,
+			// method (default 'POST') is the http request method
+			var options = {
+				method: method || 'POST',
+				headers: {}
+			};
+			if (Object.keys(data).some(elm => data[elm] instanceof File)){
+				// has files, send a FormData as options.body. Note that contentType has NOT
+				// to be specified, so e.g. NO contentType = 'multipart/form-data';
+				options.body = new FormData();
+				for (var name of Object.keys(data)){
+					// Ignore nulls otherwise they will be sent as "null" (https://stackoverflow.com/a/63340869):
+					var val = data[name];
+					if ((val !== null) && (val !== undefined)){
+						options.body.append(name, val);
+					}
+				}
+			}else{
+				options.headers["Content-Type"] = "application/json";  // needed? seems so (see MDN doc)
+				options.body = JSON.stringify(data);
+			}
+			return options;
 		}
 	}
 });

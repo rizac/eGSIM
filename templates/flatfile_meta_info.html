@@ -32,7 +32,7 @@
 
 		<div class="p-3 text-center">
 			<button class='btn btn-primary me-2' type='button'
-					@click='postData(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info.show_dialog=false'>
+					@click='post(urls.flatfile_meta_info, forms.flatfile_meta_info).then(r => r.json()).then(data => { responses.flatfile_meta_info = data; }); forms.misc.flatfile_meta_info.show_dialog=false'>
 				Fetch required flatfile fields
 			</button>
 			<button class='btn btn-primary' type='button'
