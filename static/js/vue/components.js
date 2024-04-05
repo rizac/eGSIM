@@ -189,7 +189,6 @@ EGSIM.component('gsim-select', {
 			@keydown.down.prevent="focusHTMLSelectElement()"
 			@keydown.esc.prevent="inputElementText=''"
 			class='form-control'
-			:title="inputElementText ? 'ESC: clear text and hide popup' : ''"
 			:class="selectedModels.length ? 'border-top-0' : ''"
 			style='min-width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
@@ -247,6 +246,7 @@ EGSIM.component('gsim-select', {
 			}
 			this.selectedModels.push(...modelNames);
 			this.$nextTick(() => {
+				this.inputElementText = "";
 				this.focusHTMLInputElement();
 			});
 		},
