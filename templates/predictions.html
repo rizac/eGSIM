@@ -213,7 +213,7 @@
 
 	<plots-div
 		:data="responses.predictions_plots"
-		:download-urls='urls.predictions_plot_download'
+		:download-urls='urls.predictions_plot_img'
 		@image-requested='(url, data) => { download(url, data); }'
 		style='position:absolute;inset:0px;z-index:100'>
 	</plots-div>

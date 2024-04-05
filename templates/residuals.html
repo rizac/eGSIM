@@ -113,7 +113,7 @@
 
 	<plots-div
 		:data="responses.residuals_plots"
-		:download-urls='urls.residuals_plot_download'
+		:download-urls='urls.residuals_plot_img'
 		@image-requested='(url, data) => { download(url, data); }'
 		style='position:absolute;inset:0px;z-index:100'>
 	</plots-div>
