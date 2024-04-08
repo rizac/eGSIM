@@ -156,7 +156,7 @@ def _get_init_data_json(debug=False) -> dict:
             'predictions': URLS.PREDICTIONS_PAGE,
             'residuals': URLS.RESIDUALS_PAGE,
             'flatfile_meta_info': URLS.FLATFILE_META_INFO_PAGE,
-            'flatfile_inspection_plot': URLS.FLATFILE_INSPECTION_PLOT_PAGE,
+            'flatfile_visualize': URLS.FLATFILE_INSPECTION_PLOT_PAGE,
             'ref_and_license': URLS.REF_AND_LICENSE_PAGE,
             'imprint': URLS.IMPRINT_PAGE,
             'home': URLS.HOME_PAGE,
@@ -196,7 +196,7 @@ def _get_init_data_json(debug=False) -> dict:
                 'gsim': [],
                 'imt': []
             }).asdict(),
-            'flatfile_inspection_plot': FlatfileVisualizeForm({}).asdict(),
+            'flatfile_visualize': FlatfileVisualizeForm({}).asdict(),
             'misc': {
                 'predictions': {
                     'msr': predictions_form.fields['msr'].choices,
@@ -211,8 +211,13 @@ def _get_init_data_json(debug=False) -> dict:
                     'plot_types': PredictionsVisualizeForm.
                     declared_fields['plot_type'].choices
                 },
-                'flatfile_inspection_plot': {
-                    'selected_flatfile_fields': []
+                'flatfile_visualize': {
+                    'selected_flatfile_fields': [],
+                    'help': {
+                        FlatfileVisualizeForm.param_names_of(n)[0]: f.help_text
+                        for n, f in FlatfileVisualizeForm.declared_fields.items()
+                        if getattr(f, 'help_text', n).lower() != n.lower()
+                    }
                 },
                 'residuals': {
                     'selected_flatfile_fields': [],
@@ -232,7 +237,7 @@ def _get_init_data_json(debug=False) -> dict:
             'predictions_plots': [],
             'residuals_plots': [],
             'flatfile_meta_info': None,
-            'flatfile_inspection_plot': [],
+            'flatfile_visualize': [],
         },
         'gsims': gsims,
         # return the list of imts (imt_groups keys) in the right order:
@@ -273,7 +278,7 @@ def _get_references():
                     url = f'https://doi.org/{url}'
             if not url:
                 continue
-            name = item.get('display_name', item['name'])
+            name = item.get('display_name', None) or item['name']
             refs[name] = url
     return refs
 

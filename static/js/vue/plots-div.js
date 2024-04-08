@@ -3,7 +3,8 @@ of a response Object sent from the server */
 EGSIM.component('plots-div', {
 	props: {
 		data: {type: [Array], default: () => { return [] }},
-		downloadUrls: {type: Array, default: []} // base url for download actions
+		downloadUrls: {type: Array, default: []}, // base url for download actions
+		closeButton: {default: true}
 	},
 	emits: ['image-requested'],
 	data(){
@@ -153,7 +154,7 @@ EGSIM.component('plots-div', {
 			deep: true,
 			handler(newVal, oldVal){
 				if(this.drawingPlots){ return; }
-				this.relayout({ dragmode: newval }, false);
+				this.relayout(newVal, false);
 			}
 		},
 	},
@@ -189,13 +190,23 @@ EGSIM.component('plots-div', {
 		</div>
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
 		<div class='d-flex flex-column ps-4' style='overflow-y: auto'>
-			<slot></slot> <!-- slot for custom buttons -->
-			<div class='d-flex flex-row'>
-				<button type='button' class='btn btn-secondary text-nowrap'
-						style='flex: 1 1 auto'
-						@click="show = !show">
-					close <i class='fa fa-times-circle ms-2'></i>
+			<div class="btn-group">
+				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap'
+						@click="show = !show" title='close plots panel'>
+					<i class='fa fa-times-circle ms-2'></i>
 				</button>
+				<div class="btn-group" title="Download visible plots in different image formats" style='flex: 1 1 auto'>
+					<button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+						<i class='fa fa-download'></i>
+					</button>
+					<ul class="dropdown-menu">
+						<li v-for="url in downloadUrls">
+							<a class="dropdown-item" href="#" @click='downloadImage(url)'>
+								{{ url.substring(url.lastIndexOf('.') + 1, url.length).toUpperCase() }} format
+							</a>
+						</li>
+					</ul>
+				</div>
 			</div>
 			<div v-show='legend.size' class='mt-3'>
 				<div v-for="[legendgroup, jsonStyle] in legend" class='d-flex flex-column form-control mt-2'>
@@ -225,15 +236,6 @@ EGSIM.component('plots-div', {
 			</div>
 			<div style='flex: 1 1 auto'></div>
 			<div>
-				<div class='mt-3 border p-2 bg-white'>
-					<select @change="downloadImage" class='form-control'
-							title="Download visible plots in different formats">
-						<option :value="''">Download plots as:</option>
-						<option v-for="url in downloadUrls" :value='url'>
-							{{ url.substring(url.lastIndexOf('.') + 1, url.length).toUpperCase() }} format
-						</option>
-					</select>
-				</div>
 				<div v-show="Object.keys(grid.layouts).length > 1" class='mt-3 border p-2 bg-white'>
 					<div>Subplots layout</div>
 					<select v-model='grid.selectedLayout' class='form-control mt-1'>
@@ -253,36 +255,51 @@ EGSIM.component('plots-div', {
 					</div>
 				</div>
 				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
-					<div>Plot axis</div>
-					<div v-for="ax in ['x', 'y']" class='d-flex flex-row mt-1 text-nowrap align-items-baseline'>
-						<span class='text-nowrap'>{{ ax }}</span>
-						<label v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap m-0 ms-2'>
-							<input type='checkbox' v-model='plotoptions.axis[ax][key].value'
-								   :disabled="plotoptions.axis[ax][key].disabled"  class="me-1">
-							<span :class="{'text-muted': plotoptions.axis[ax][key].disabled}">{{ key }}</span>
-						</label>
+					<div class="d-flex align-items-baseline gap-2">
+						<span style='flex: 1 1 auto'>Plots configuration</span>
+						<ul class="nav nav-pills">
+							<button type='button' class="nav-link active rounded-bottom-0"
+									onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
+								axis
+							</button>
+							<button type='button' class="nav-link rounded-bottom-0"
+									onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
+								mouse
+							</button>
+						</ul>
 					</div>
-				</div>
-				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
-					<div> Plot mouse interactions</div>
-					<div class='d-flex flex-row mt-1 align-items-baseline'>
-						<span class='text-nowrap me-1'> on hover</span>
-						<select v-model="plotoptions.mouse.hovermode"
-								class='form-control form-control-sm'>
-							<option v-for='name in mouseMode.hovermodes' :value='name'>
-								{{ mouseMode.hovermodeLabels[name] }}
-							</option>
-						</select>
-					</div>
-					<div class='d-flex flex-row mt-1 align-items-baseline'>
-						<span class='text-nowrap me-1'> on drag</span>
-						<select v-model="plotoptions.mouse.dragmode"
-								class='form-control form-control-sm'>
-							<option v-for='name in mouseMode.dragmodes' :value='name'>
-								{{ mouseMode.dragmodeLabels[name] }}
-							</option>
-						</select>
-					</div>
+					<table class='_panel axis table table-sm mb-0 border-top' style='border-top-color:var(--bs-primary) !important'>
+						<thead><tr>
+							<td v-for="key in ['', 'sameRange', 'log', 'grid', 'title']">{{ key }}</td>
+						</tr></thead>
+						<tbody><tr v-for="ax in ['x', 'y']">
+							<td class='text-nowrap'>{{ ax }}</td>
+							<td v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap m-0 ms-2'>
+								<input type='checkbox' v-model='plotoptions.axis[ax][key].value'
+									   :disabled="plotoptions.axis[ax][key].disabled">
+							</td>
+						</tr></tbody>
+					</table>
+					<table class='_panel d-none table border-top mb-0' style='border-top-color:var(--bs-primary) !important'>
+						<tbody><tr>
+							<td>on hover</td>
+							<td><select v-model="plotoptions.mouse.hovermode"
+									class='form-control form-control-sm'>
+								<option v-for='name in mouseMode.hovermodes' :value='name'>
+									{{ mouseMode.hovermodeLabels[name] }}
+								</option>
+							</select></td>
+						</tr>
+						<tr>
+							<td> on drag</td>
+							<td><select v-model="plotoptions.mouse.dragmode"
+									class='form-control form-control-sm'>
+								<option v-for='name in mouseMode.dragmodes' :value='name'>
+									{{ mouseMode.dragmodeLabels[name] }}
+								</option>
+							</select></td>
+						</tr></tbody>
+					</table>
 				</div>
 			</div>
 		</div>
@@ -1104,19 +1121,13 @@ EGSIM.component('plots-div', {
 			var elm = this.$refs.rootDiv;
 			return elm ? [elm.data || [], elm.layout || {}] : [[], {}];
 		},
-		downloadImage(event){
-			var selectElement = event.target;
-			if (selectElement.selectedIndex <= 0){
-				return;
-			}
-			var url = selectElement.value;
+		downloadImage(url){
 			var [data, layout] = this.getPlotlyDataAndLayout();
 			var parent = this.$refs.rootDiv; //.parentNode.parentNode.parentNode;
 			var [width, height] = this.getElmSize(parent);
 			data = data.filter(elm => elm.visible || !('visible' in elm));
 			var postData = {data:data, layout:layout, width:width, height:height};
 			this.$emit('image-requested', url, postData);
-			selectElement.selectedIndex = 0;
 		}
 	}
 });

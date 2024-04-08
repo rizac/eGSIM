@@ -8,7 +8,7 @@
 	</gsim-map>
 
 	<form novalidate @submit.prevent=""
-		  class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
+		  class='d-flex flex-column p-3 gap-4' style='position:absolute;top:0px;max-height:100%;z-index:1'>
 
 		<gsim-select
 			v-model="forms.residuals.gsim"
@@ -17,69 +17,66 @@
 			style="flex: 0 1 auto; min-height:0px">
 		</gsim-select>
 
-		<imt-select v-model="forms.residuals.imt" :imts='imts' class='mt-4'></imt-select>
+		<imt-select v-model="forms.residuals.imt" :imts='imts'></imt-select>
 
-		<flatfile-select
-			class= 'mt-4'
-			:flatfiles='flatfiles'
-			v-model="forms.residuals.flatfile"
-			:upload-url='urls.flatfile_validate'
-			:title='forms.misc.residuals.help.flatfile'
-			@update:model-value="(value) => { forms.misc.residuals.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }">
-		</flatfile-select>
+		<div class='d-flex flex-column form-control gap-2'>
+			<span class='text-capitalize'>data</span>
+			<flatfile-select
+				:flatfiles='flatfiles'
+				v-model="forms.residuals.flatfile"
+				:upload-url='urls.flatfile_validate'
+				:title='forms.misc.residuals.help.flatfile'
+				@update:model-value="(value) => { forms.misc.residuals.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }">
+			</flatfile-select>
 
-		<div class='input-group mt-1' :title='forms.misc.residuals.help["flatfile-query"]'>
-			<label class='input-group-text'>flatfile-query</label>
-			<input type='text' v-model="forms.residuals['data-query']" class='form-control'/>
+			<div class='d-flex align-items-baseline gap-1' :title='forms.misc.residuals.help["flatfile-query"]'>
+				<span class='text-nowrap'>flatfile-query</span>
+				<input type='text' v-model="forms.residuals['data-query']" class='form-control'/>
+			</div>
 		</div>
 
-		<div class='d-flex flex-column mt-4 align-items-stretch'>
+		<div class='d-flex flex-column form-control gap-2'>
 
-			<div class="input-group-text d-flex flex-row align-items-center"
-				 style="border-bottom: 0px !important; border-bottom-left-radius: 0px !important; border-bottom-right-radius: 0px !important;">
-				<span class='text-start' style='flex: 1 1 auto'>Residuals</span>
-				<button type='button'
-						onclick='var elm=document.getElementById("residuals_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'
-						class='btn btn-light btn-sm'>
+			<div class="d-flex align-items-baseline gap-1">
+				<span style='flex: 1 1 auto'>Residuals</span>
+				<button type='button' class='btn btn-outline-primary btn-sm border-0'
+						onclick='var elm=document.getElementById("residuals_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'>
 					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
 				</button>
 			</div>
 
-			<div class='d-flex flex-column form-control'
-				 style="border-top-left-radius: 0px !important; border-top-right-radius: 0px !important;">
-				<table class='table-sm'>
-				<tr>
-					<td>Download</td>
-					<td class='w-100'>
+			<div class='d-flex flex-column gap-2'>
+
+				<div class='d-flex align-items-baseline gap-1'>
+					<span class='text-capitalize'>download</span>
+
 					<select v-model='forms.residuals.format' class='form-control'>
 						<option v-for='format in forms.misc.download_formats' :value='format'>
 							{% verbatim %}{{ format }}{% endverbatim %}
 						</option>
 					</select>
-					</td>
-					<td class='text-nowrap'>
-					<label>
+
+					<label class='text-nowrap'>
 						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood
 					</label>
 					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1'>
 						<i class='fa fa-external-link'></i>
 					</a>
-					</td>
-					<td>
+
 					<button
-						type='button' style='width:100%'
+						type='button'
 						@click="download(`${urls.residuals}.${forms.residuals.format}`, forms.residuals)"
 						class='btn btn-primary'
 						title='Download residuals'>
 							<i class='fa fa-download'></i>
 					</button>
-					</td>
-				</tr>
 
-				<tr>
-					<td>Visualize</td>
-					<td colspan="2">
-					<select v-model='forms.residuals_plot.x' class='border rounded p-2 bg-white'
+				</div>
+
+				<div class='d-flex align-items-baseline gap-1'>
+					<span class='text-capitalize'>visualize</span>
+
+					<select v-model='forms.residuals_plot.x' class='form-control'
 						@change="evt => { forms.residuals_plot.likelihood = evt.target.selectedIndex == 1; }">
 						<option :value='null'>Residuals histogram (density distribution)</option>
 						<option :value='null'>Likelihood histogram (density distribution)</option>
@@ -87,17 +84,16 @@
 							{% verbatim %} Residuals vs. {{ f.name + " (" + f.dtype + ")" }} {% endverbatim %}
 						</option>
 					</select>
-					</td>
-					<td>
-					<button type='button' style='width:100%'
+
+					<button type='button'
 							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); post(urls.residuals_visualize, data).then(r => r.json()).then(data => { responses.residuals_plots=data.plots; })"
 							class='btn btn-primary'
 							title='Visualize residuals via interactive plots'>
 						<i class='fa fa-bar-chart'></i>
 					</button>
-					</td>
-				</tr>
-				</table>
+
+				</div>
+
 			</div>
 
 		</div>

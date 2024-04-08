@@ -28,7 +28,13 @@
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 	<!-- library-related css here: -->
-	<style>/* use our font, not leaflet's: */ .leaflet-container { font-family: inherit !important; }</style>
+	<style>
+		/* use our font, not leaflet's: */ .leaflet-container { font-family: inherit !important; }
+		/* overwrite borders */ .leaflet-touch .leaflet-control-layers, .leaflet-touch .leaflet-bar {
+			border: 1px solid var(--bs-border-color) !important;
+		}
+		.leaflet-control-layers { border-radius: var(--bs-border-radius) !important; }
+	</style>
 	{% endif %}
 
 	{% if fontawesome %}
@@ -58,7 +64,7 @@
 		body{
 			font-family: 'Encode Sans Semi Condensed', Helvetica, sans-serif;
 		}
-		h1, h2, h3, h4, h5, h6, nav, label{
+		h1, h2, h3, h4, h5, h6, nav{
 			font-family: 'Encode Sans Condensed', Helvetica, sans-serif;
 		}
 	</style>
