@@ -57,6 +57,7 @@ DATA = {
         "doi": "10.12686/SED-00000001-SHARE"
     },
     'eshm20': {
+        'display_name': 'The 2020 European Seismic Hazard Model',
         'sources': [join(datadir, 'eshm20.geo.json'),
                     join(datadir, 'eshm20.json')],
         'url': 'http://www.hazard.efehr.org/en/Documentation/'

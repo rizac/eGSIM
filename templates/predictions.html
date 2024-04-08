@@ -8,197 +8,201 @@
 		style='position:absolute;inset:0px;z-index:0'>
 	</gsim-map>
 
-	<form novalidate @submit.prevent="" class='d-flex flex-column p-3' style='position:absolute;top:0px;max-height:100%;z-index:1'>
+	<form novalidate @submit.prevent="" class='d-flex flex-column p-3'
+		  style='position:absolute;top:0px;min-width:min(50vw,33rem);max-width:50vw;max-height:100%;z-index:1'>
 
 		<gsim-select
 			v-model="forms.predictions.gsim"
 			:models="models"
 			:selected-imts="forms.predictions.imt"
-			style="flex: 0 1 auto; min-height:0px">
+			style="flex: 0 1 auto; min-height:5rem">
 		</gsim-select>
 
-		<imt-select v-model="forms.predictions.imt" :imts='imts' class='mt-4'></imt-select>
+		<imt-select
+			style='flex: 0 1 auto; min-height: 9rem'
+			v-model="forms.predictions.imt" :imts='imts' class='mt-4'></imt-select>
 
-		<div class='d-flex flex-column mt-4'>
-			<div class='input-group' :title="forms.misc.predictions.help['magnitude'] + ' (comma- or space-separated)' ">
-				<label class="input-group-text">magnitude</label>
-				<array-input v-model="forms.predictions.magnitude"></array-input>
-				<button
-					class="btn border bg-white" type="button" style='border-left-width:0 !important'
-					data-bs-toggle="collapse" data-bs-target="#rupture-controls"></button>
+		<div class='d-flex flex-column mt-4 form-control gap-2'>
+			<div class='d-flex'>
+				<span class='text-capitalize' style='flex: 1 1 auto'>rupture(s)</span>
+				<button class="btn btn-outline-primary btn-sm border-0" type="button"
+						title="advanced ruptures settings (applied to every magnitude-related Rupture)"
+						onclick="document.getElementById('rupture-controls').classList.toggle('d-none')">
+					<i class="fa fa-plus"></i>
+				</button>
+			</div>
+
+			<div :title="forms.misc.predictions.help['magnitude'] + ' (comma- or space-separated)' "
+				 class='d-flex align-items-baseline gap-1'>
+				<span>magnitude</span>
+				<array-input v-model="forms.predictions.magnitude" class='form-control'></array-input>
+			</div>
+
+			<div id='rupture-controls' class="d-flex d-none gap-3 text-nowrap pb-1 small" style='overflow-x: scroll;'>
+
+				<div :title="forms.misc.predictions.help['aspect']">
+					aspect
+					<input type='number' v-model="forms.predictions['aspect']"
+						   required min="0.0" max="1.0" step="any" class='form-control mt-1' style='width:4.2em !important; font-size:inherit' />
+				</div>
+
+				<div :title="forms.misc.predictions.help['dip']">
+					dip
+					<input type="number" v-model="forms.predictions['dip']"
+						   min="0.0" max="90.0" step="any" class='form-control mt-1' style='width:4.5em !important; font-size:inherit' />
+				</div>
+
+				<div :title="forms.misc.predictions.help['hypocenter-location']">
+					hypocenter-location
+					<array-input v-model="forms.predictions['hypocenter-location']"
+								 class='form-control mt-1' style='width:7.0em !important; font-size:inherit'></array-input>
+				</div>
+
+				<div :title="forms.misc.predictions.help['initial-point']">
+					initial-point
+					<array-input v-model="forms.predictions['initial-point']"
+								 class='form-control mt-1' style='width:5.2em !important; font-size:inherit'></array-input>
+				</div>
+
+				<div :title="forms.misc.predictions.help['msr']">
+					msr
+					<select v-model="forms.predictions['msr']" class='form-control mt-1' style='width:8.0em !important; font-size:inherit'>
+						<option v-for="m in forms.misc.predictions.msr" :value="m[0]">
+							{% verbatim %}{{ m[1] }}{% endverbatim %}
+						</option>
+					</select>
+				</div>
+
+				<div :title="forms.misc.predictions.help['rake']">
+					rake
+					<input type='number' v-model="forms.predictions['rake']"
+						   min="-180.0" max="180.0" step="any" class='form-control mt-1' style='width:5.0em !important; font-size:inherit'/>
+				</div>
+
+				<div :title="forms.misc.predictions.help['strike']">
+					strike
+					<input type="number" v-model="forms.predictions['strike']"
+						   min="0.0" max="360.0" step="any" class='form-control mt-1' style='width:5.0em !important; font-size:inherit' />
+				</div>
+
+				<div :title="forms.misc.predictions.help['ztor']">
+					ztor
+					<input type="number" v-model="forms.predictions['ztor']"
+						   min="0.0" step="any" class='form-control mt-1' style='width:5.2em !important; font-size:inherit'/>
+				</div>
+
 			</div>
 		</div>
 
-		<div id='rupture-controls' class="collapse" style='max-height:8rem;overflow:scroll'>
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['aspect']">
-				<div class='input-group-text'>aspect</div>
-				<input type='number' v-model="forms.predictions['aspect']"
-					   required min="0.0" step="any" class='form-control' />
+		<div class='d-flex flex-column mt-4 form-control gap-2'>
+			<div class='d-flex'>
+				<span class='text-capitalize' style='flex: 1 1 auto'>site(s)</span>
+				<button class="btn btn-outline-primary btn-sm border-0" type='button'
+						title="advanced sites settings (applied to every distance-related Site)"
+						onclick="document.getElementById('site-controls').classList.toggle('d-none')">
+					<i class="fa fa-plus"></i>
+				</button>
 			</div>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['dip']">
-				<div class='input-group-text'>dip</div>
-				<input type="number" v-model="forms.predictions['dip']"
-					   min="0.0" max="90.0" step="any" class='form-control' />
+			<div :title="forms.misc.predictions.help['distance'] + ' (comma- or space-separated)'"
+				 class="d-flex align-items-baseline gap-1">
+				<span>distance</span>
+				<array-input v-model="forms.predictions.distance" class='form-control'></array-input>
 			</div>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['hypocenter-location']">
-				<div class='input-group-text'>hypocenter-location</div>
-				<array-input v-model="forms.predictions['hypocenter-location']"></array-input>
-			</div>
+			<div id='site-controls' class="d-flex d-none gap-3 text-nowrap pb-1 small" style='overflow-x: scroll;'>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['initial-point']">
-				<div class='input-group-text'>initial-point</div>
-				<array-input v-model="forms.predictions['initial-point']"></array-input>
-			</div>
-
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['msr']">
-				<div class='input-group-text'>msr</div>
-				<select v-model="forms.predictions['msr']" class='form-control'>
-					<option v-for="m in forms.misc.predictions.msr" :value="m[0]">
-						{% verbatim %}{{ m[1] }}{% endverbatim %}
-					</option>
-				</select>
-			</div>
-
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['rake']">
-				<div class='input-group-text'>rake</div>
-				<input type='number' v-model="forms.predictions['rake']"
-					   min="-180.0" max="180.0" step="any" class='form-control' />
-			</div>
-
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['strike']">
-				<div class='input-group-text'>strike</div>
-				<input type="number" v-model="forms.predictions['strike']"
-					   min="0.0" max="360.0" step="any" class='form-control' />
-			</div>
-
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['ztor']">
-				<div class='input-group-text'>ztor</div>
-				<input type="number" v-model="forms.predictions['ztor']"
-					   min="0.0" step="any" class='form-control' />
-			</div>
-		</div>
-
-		<div class='d-flex flex-column mt-4'>
-			<div class='input-group' :title="forms.misc.predictions.help['distance'] + ' (comma- or space-separated)' ">
-				<label class="input-group-text">distance</label>
-				<array-input v-model="forms.predictions.distance"></array-input>
-				<button class="btn border bg-white" type="button" style='border-left-width:0 !important'
-						data-bs-toggle="collapse" data-bs-target="#site-controls"></button>
-			</div>
-		</div>
-
-		<div id='site-controls' class="collapse" style='max-height:8rem;overflow:scroll'>
-
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['backarc']">
-				<label class='input-group-text' style='width:100%'>
-					<input type='checkbox' v-model="forms.predictions.backarc" class='me-1' />
-					backarc
+				<label :title="forms.misc.predictions.help['backarc']">
+					<span class='d-block mb-1'>backarc</span>
+					<input type='checkbox' v-model="forms.predictions.backarc"/>
 				</label>
-			</div>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['line-azimuth']">
-				<div class='input-group-text'>line-azimuth</div>
-				<input type='number' v-model="forms.predictions['line-azimuth']"
-					   min="0" max="360.0" step="any" class='form-control' />
-			</div>
+				<div :title="forms.misc.predictions.help['line-azimuth']">
+					line-azimuth
+					<input type='number' v-model="forms.predictions['line-azimuth']"
+						   min="0" max="360.0" step="any" class='form-control mt-1' style='width: 5.2em !important; font-size:inherit' />
+				</div>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['region']">
-				<div class='input-group-text'>region</div>
-				<select v-model="forms.predictions.region" class='form-control'>
-					<option v-for="m in forms.misc.predictions.region" :value="m[0]">
-						{% verbatim %}{{ m[1] }}{% endverbatim %}
-					</option>
-				</select>
-			</div>
+				<div :title="forms.misc.predictions.help['region']">
+					region
+					<select v-model="forms.predictions.region" class='form-control mt-1' style='width: 7em !important; font-size:inherit'>
+						<option v-for="m in forms.misc.predictions.region" :value="m[0]">
+							{% verbatim %}{{ m[1] }}{% endverbatim %}
+						</option>
+					</select>
+				</div>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['vs30']">
-				<div class='input-group-text'>vs30</div>
-				<input type='number' v-model="forms.predictions.vs30"
-					   step="any" class='form-control' />
-			</div>
+				<div :title="forms.misc.predictions.help['vs30']">
+					vs30
+					<input type='number' v-model="forms.predictions.vs30"
+						   step="any" class='form-control mt-1' style='width: 6em !important; font-size:inherit' />
+				</div>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['vs30measured']">
-				<label class='input-group-text' style='width:100%'>
-					<input type='checkbox' v-model="forms.predictions.vs30measured" class='me-1' />
-					vs30measured
+				<label :title="forms.misc.predictions.help['vs30measured']">
+					<span class='d-block mb-1'>vs30measured</span>
+					<input type='checkbox' v-model="forms.predictions.vs30measured" />
 				</label>
-			</div>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['z1pt0']">
-				<div class='input-group-text'>z1</div>
-				<!-- implement v-model "natively" because we need to convert empty inputs to null: -->
-				<input type='number'
-					   :value="forms.predictions.z1pt0"
-					   @input="forms.predictions.z1pt0 = $event.target.value.trim() ? $event.target.value : null"
-					   class='form-control' />
-			</div>
+				<div :title="forms.misc.predictions.help['z1pt0']">
+					z1pt0
+					<!-- implement v-model "natively" because we need to convert empty inputs to null: -->
+					<input type='number'
+						   :value="forms.predictions.z1pt0"
+						   @input="forms.predictions.z1pt0 = $event.target.value.trim() ? $event.target.value : null"
+						   class='form-control mt-1' style='width: 6em !important; font-size:inherit' />
+				</div>
 
-			<div class="input-group mt-1" :title="forms.misc.predictions.help['z2pt5']">
-				<div class='input-group-text'>z2pt5</div>
-				 <!-- implement v-model "natively" because we need to convert empty inputs to null: -->
-				<input type='number'
-					   :value="forms.predictions.z2pt5"
-					   @input="forms.predictions.z2pt5 = $event.target.value.trim() ? $event.target.value : null"
-					   step="any" class='form-control' />
-			</div>
+				<div :title="forms.misc.predictions.help['z2pt5']">
+					z2pt5
+					 <!-- implement v-model "natively" because we need to convert empty inputs to null: -->
+					<input type='number'
+						   :value="forms.predictions.z2pt5"
+						   @input="forms.predictions.z2pt5 = $event.target.value.trim() ? $event.target.value : null"
+						   step="any" class='form-control mt-1' style='width: 6em !important; font-size:inherit' />
+				</div>
 
+			</div>
 		</div>
 
 
-		<div class='d-flex flex-column mt-4 align-items-stretch'>
+		<div class='d-flex flex-column mt-4 align-items-stretch form-control'>
 
-			<div class="input-group-text d-flex flex-row align-items-center"
-				 style="border-bottom: 0px !important; border-bottom-left-radius: 0px !important; border-bottom-right-radius: 0px !important;">
+			<div class="d-flex flex-row align-items-center">
 				<span class='text-start' style='flex: 1 1 auto'>Predictions</span>
 				<button type='button'
 						onclick='var elm=document.getElementById("predictions_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'
-						class='btn btn-light btn-sm'>
+						class='btn btn-outline-primary btn-sm border-0'>
 					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
 				</button>
 			</div>
 
-			<div class='d-flex flex-column form-control'
-				 style="border-top-left-radius: 0px !important; border-top-right-radius: 0px !important;">
-				<table class='table-sm'>
-				<tr>
-					<td>Download</td>
-					<td>
-					<select v-model='forms.predictions.format' class='form-control'>
-						<option v-for='format in forms.misc.download_formats' :value='format'>
-							{% verbatim %}{{ format }}{% endverbatim %}
-						</option>
-					</select>
-					</td>
-					<td>
-					<button
-						type='button' style='width:100%'
-						@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
-						class='btn btn-primary'
-						title='Download predictions'>
-							<i class='fa fa-download'></i>
-					</button>
-					</td>
-				</tr>
+			<div class='d-flex flex-row mt-2 align-items-baseline'>
+				<div>Download</div>
+				<select v-model='forms.predictions.format' class='form-control mx-1' style='flex: 1 1 auto'>
+					<option v-for='format in forms.misc.download_formats' :value='format'>
+						{% verbatim %}{{ format }}{% endverbatim %}
+					</option>
+				</select>
+				<button
+					type='button'
+					@click="download(`${urls.predictions}.${forms.predictions.format}`, forms.predictions)"
+					class='btn btn-primary'
+					title='Download predictions'>
+						<i class='fa fa-download'></i>
+				</button>
+			</div>
 
-				<tr>
-					<td>Visualize</td>
-					<td>
-					<select v-model='forms.predictions_plot.plot_type' class='form-control'>
-						<option v-for="v in forms.misc.predictions_plot.plot_types" :value='v[0]' v-html='v[1]'></option>
-					</select>
-					</td>
-					<td>
-					<button type='button' style='width:100%'
-							@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); post(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
-							class='btn btn-primary'
-							title='Visualize predictions via interactive plots'>
-						<i class='fa fa-bar-chart'></i>
-					</button>
-					</td>
-				</tr>
-				</table>
+			<div class='d-flex flex-row mt-2 align-items-baseline'>
+				<div>Visualize</div>
+				<select v-model='forms.predictions_plot.plot_type' class='form-control mx-1' style='flex: 1 1 auto'>
+					<option v-for="v in forms.misc.predictions_plot.plot_types" :value='v[0]' v-html='v[1]'></option>
+				</select>
+				<button type='button'
+						@click="var data = Object.assign({}, forms.predictions, forms.predictions_plot, {format: 'json'}); post(urls.predictions_visualize, data).then(r => r.json()).then(data => { responses.predictions_plots=data.plots; })"
+						class='btn btn-primary'
+						title='Visualize predictions via interactive plots'>
+					<i class='fa fa-bar-chart'></i>
+				</button>
 			</div>
 		</div>
 

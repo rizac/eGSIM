@@ -27,7 +27,7 @@ EGSIM.component('array-input', {
 			this.$emit('update:modelValue', this.string2Array(newVal));
 		}
 	},
-	template: `<input type='text' v-model="modelValue2str" class='form-control' :placeholder='placeholder' />`,
+	template: `<input type='text' v-model="modelValue2str" :placeholder='placeholder' />`,
 	methods: {
 		string2Array(stringValue){
 			return stringValue.trim() ? stringValue.trim().split(/\s*,\s*|\s+/) : [];  // https://stackoverflow.com/a/5164901
@@ -116,11 +116,11 @@ EGSIM.component('gsim-select', {
 			return warnings;
 		}
 	},
-	template: `<div class='d-flex flex-column' title="Ground motion model(s)">
+	template: `<div class='d-flex flex-column form-control' title="Ground motion model(s)">
 		<div
-			class='d-flex flex-row align-items-baseline input-group-text'
+			class='d-flex flex-row align-items-baseline mb-2'
 			style='border-bottom:0 !important;border-bottom-left-radius:0 !important; border-bottom-right-radius:0 !important'>
-			<label style="flex: 1 1 auto;" class='text-start'>model ({{ selectedModels.length }} selected)</label>
+			<span style="flex: 1 1 auto;" class='text-start text-capitalize'>model ({{ selectedModels.length }} selected)</span>
 			<span v-show='inputElementText' class='text-muted small'> [ESC]: clear text and hide popup</span>
 			<i
 				v-show="Object.keys(warnings).length && !inputElementText"
@@ -144,8 +144,8 @@ EGSIM.component('gsim-select', {
 				@click="removeSelectedModels()">
 			</i>
 		</div>
-		<div style='overflow: auto; flex: 0 1 auto; min-height:0px'
-			class='rounded-0 flex-column form-control'
+		<div style='overflow: auto; flex: 1 1 auto'
+			class='rounded-bottom-0 flex-column form-control'
 			:class="selectedModels.length ? 'd-flex': 'd-none'">
 			<div class='d-flex flex-row'>
 				<!-- div with cancel icons stacked vertically -->
@@ -189,8 +189,7 @@ EGSIM.component('gsim-select', {
 			@keydown.down.prevent="focusHTMLSelectElement()"
 			@keydown.esc.prevent="inputElementText=''"
 			class='form-control'
-			:class="selectedModels.length ? 'border-top-0' : ''"
-			style='min-width:30rem;border-top-left-radius:0 !important; border-top-right-radius:0 !important'
+			:class="selectedModels.length ? 'rounded-top-0 border-top-0' : ''"
 			:placeholder="'Type name (' + models.length + ' models available) or select by region (click on map)'" />
 		<div
 			class='position-relative'
@@ -303,35 +302,30 @@ EGSIM.component('imt-select', {
 			}
 		}
 	},
-	template: `<div class='d-flex flex-column ' style='min-height: 10rem; max-height: 10rem' title="Intensity measure type(s)">
-		<div
-			class='input-group-text'
-			style="border-bottom:0!important;border-bottom-left-radius:0!important;border-bottom-right-radius:0!important"
-		>
-			imt ({{ selectedImts.length }} selected)
-		</div>
+	template: `<div class='d-flex flex-column form-control'
+		title="Intensity measure type(s)">
+		<span class='mb-2 text-capitalize'>imt ({{ selectedImts.length }} selected)</span>
 		<select
 			v-model="selectedImtClassNames"
 			multiple
-			class='form-control rounded-0'
+			class='form-control rounded-bottom-0'
 			:class="selectedImtClassNames.includes('SA') ? '' : 'rounded-bottom'"
 			style="flex: 1 1 auto;">
 			<option	v-for='imt in imts' :value="imt">
 				{{ imt }}
 			</option>
 		</select>
-		<div class='input-group' v-show="selectedImtClassNames.includes('SA')">
+		<div v-show="selectedImtClassNames.includes('SA')" class='d-flex flex-row'>
 			<array-input
 				v-model="SAPeriods"
-				class='form-control'
+				class='form-control border-top-0 rounded-top-0 rounded-end-0 border-end-0'
 				placeholder="SA periods (space- or comma-separated)"
-				style="border-top: 0 !important;border-top-left-radius: 0 !important;border-top-right-radius: 0 !important;" />
+			 />
 			<button
 				@click="SAPeriods = Array.from(SAPeriods.length ? [] : defaultSAPeriods)"
 				type='button'
 				:title='SAPeriods.length ? "clear text" : "input a predefined list of SA periods"'
-				class='btn border bg-white'
-				style='border-left:0 !important;border-top-right-radius:0 !important; border-top: 0 !important'>
+				class='btn border-0 bg-white rounded-top-0 rounded-start-0 border-bottom border-end'>
 				<i class="fa fa-times-circle"
 					:class='SAPeriods.length ? "fa-times-circle" : "fa-arrow-circle-o-left"'></i>
 			</button>
@@ -398,20 +392,16 @@ EGSIM.component('gsim-map', {
 				var rowDivPrefix = "<div class='d-flex flex-row align-items-center text-nowrap'>";
 				// prevent click on anything on the div to propagate on the map:
 				L.DomEvent.disableClickPropagation(div);
-				var id = String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
-					Math.random().toString().split('.')[1] +
-					Math.random().toString().split('.')[1];
-				var html = `<button class="border-0" type="button" data-bs-toggle="collapse"
-								onclick=''
-								style='width:100%; background-color:transparent'
-								data-bs-target="#${id}">
+				var html = `<button class="border-0" type="button"
+								onclick='this.parentNode.querySelector("._panel").classList.toggle("d-none")'
+								style='width:100%; background-color:transparent'>
 								<i class="fa fa-sort"></i>
 							</button>
-							<div id="${id}" class='collapse'>`;
+							<div class='_panel d-none'>`;
 				// Add title:
 				html += `<h6 class="mt-1">Map options</h6>
-					<div style='max-width:12rem' class='mb-2'>On click, search models
-					selected for the clicked location in the following seismic hazard
+					<div style='max-width:12rem' class='mb-2'>Return the models selected for a
+					geographic position (map mouse click) by querying the following seismic hazard
 					source regionalizations:
 					</div>`;
 				for (var regx of regionalizations){
@@ -613,24 +603,21 @@ EGSIM.component('flatfile-select', {
 			}).then(resp => resp.json());
 		}
 	},
-	template:`<div class='input-group align-items-baseline'>
-		<label class='input-group-text'> flatfile </label>
-		<select v-model="selectedIndex" class='form-control border-end-0'>
+	template:`<div class='d-flex align-items-baseline gap-1'>
+		<span>flatfile</span>
+		<select v-model="selectedIndex" class='form-control'>
 			<option v-for="(v, idx) in flatfiles" :value='idx'>
 				{{ v.innerHTML }}
 			</option>
 		</select>
 		<a title="data reference" target="_blank"
-			style='padding: .375rem .75rem;'
-			class='border-top border-bottom bg-white'
 			v-if="selectedIndex >=0 && flatfiles[selectedIndex].url"
 			:href="flatfiles[selectedIndex].url">
 			<i class="fa fa-external-link"></i>
 		</a>
 		<input type="file" style='display:none' @change="uploadFlatfiles($event.target.files)"/>
 		<button
-			type="button"
-			class="btn btn-secondary"
+			class="btn btn-outline-primary border-0" type="button"
 			onclick="this.parentNode.querySelector('input[type=file]').click()"
 			title="upload user-defined flatfile in CSV or HDF format">
 			<i class='fa fa-upload'></i>

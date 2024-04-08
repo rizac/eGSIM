@@ -386,7 +386,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                     scatter_trace(
                         color=c_transparent,
                         x=dataframe[xlabel],
-                        y=dataframe[ylabel]
+                        y=dataframe[ylabel],
+                        legendgroup=f'{y} vs. {x}',
+                        name=f'{y} vs. {x}'
                     )
                 ],
                 'params': {},
@@ -408,7 +410,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                     histogram_trace(
                         color=c_transparent,
                         line_color=c,
-                        x=dataframe[xlabel]
+                        x=dataframe[xlabel],
+                        legendgroup=f'{x}',
+                        name=f'{x}'
                     )
                 ],
                 'params': {},
@@ -430,7 +434,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                     histogram_trace(
                         color=c_transparent,
                         line_color=c,
-                        y=dataframe[ylabel]
+                        y=dataframe[ylabel],
+                        legendgroup=f'{y}',
+                        name=f'{y}'
                     )
                 ],
                 'params': {},

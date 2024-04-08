@@ -1,0 +1,68 @@
+<div class='position-relative d-flex flex-column' style="flex: 1 1 auto;">
+	<form novalidate @submit.prevent="" class='d-flex gap-3 align-items-center p-3'>
+
+		<div class='d-flex gap-2 form-control'>
+			<flatfile-select
+				style='flex: 1 1 auto'
+				:flatfiles='flatfiles'
+				v-model="forms.flatfile_visualize.flatfile"
+				:upload-url='urls.flatfile_validate'
+				:title='forms.misc.residuals.help.flatfile'
+				@update:model-value="(value) => { forms.flatfile_visualize.x=null; forms.flatfile_visualize.y=null; forms.misc.flatfile_visualize.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }"
+			>
+			</flatfile-select>
+
+			<div class='d-flex gap-1 align-items-baseline' :title='forms.misc.residuals.help["flatfile-query"]'>
+				<span class='text-nowrap'>flatfile-query</span>
+				<input type='text' v-model="forms.flatfile_visualize['data-query']" class='form-control'/>
+			</div>
+		</div>
+
+		<div class='d-flex gap-2 form-control'
+			 v-if="forms.misc.flatfile_visualize.selected_flatfile_fields.length">
+
+			<div class='d-flex gap-1 align-items-baseline' :title='forms.misc.flatfile_visualize.help.y'>
+				<span>x</span>
+				<select v-model='forms.flatfile_visualize.x' class='form-control'>
+					<option :value="null">None (histogram on the Y axis)</option>
+					<option v-for="f in forms.misc.flatfile_visualize.selected_flatfile_fields" :value="f.name">
+						{% verbatim %} {{ f.name + ' (' + f.dtype + ")" }} {% endverbatim %}
+					</option>
+				</select>
+			</div>
+
+			<button type='button'
+					v-if="forms.misc.flatfile_visualize.selected_flatfile_fields.length"
+					@click="var x = forms.flatfile_visualize.x; forms.flatfile_visualize.x =forms.flatfile_visualize.y; forms.flatfile_visualize.y = x"
+					class='btn btn-outline-primary border-0'>
+				<i class="fa fa-exchange"></i>
+			</button>
+
+			<div class='d-flex gap-1 align-items-baseline' :title='forms.misc.flatfile_visualize.help.x'>
+				<span>y</span>
+				<select v-model='forms.flatfile_visualize.y' class='form-control'>
+					<option :value="null">None (histogram on the X axis)</option>
+					<option v-for="f in forms.misc.flatfile_visualize.selected_flatfile_fields" :value="f.name">
+						{% verbatim %} {{ f.name + ' (' + f.dtype + ")" }} {% endverbatim %}
+					</option>
+				</select>
+			</div>
+		</div>
+
+		<button type='button'
+				@click="var data = Object.assign({}, forms.flatfile_visualize, {format: 'json'}); post(urls.flatfile_visualize, data).then(r => r.json()).then(data => { responses.flatfile_visualize=data.plots; })"
+				:disabled='forms.flatfile_visualize.x == forms.flatfile_visualize.y'
+				class='btn btn-primary'
+				title='Display flatfile data in an interactive plot'>
+			<i class='fa fa-bar-chart'></i>
+		</button>
+
+	</form>
+
+	<plots-div
+		:data="responses.flatfile_visualize"
+		:download-urls='urls.flatfile_plot_img'
+		@image-requested='(url, data) => { download(url, data); }'
+		style='flex: 1 1 auto;z-index:100'>
+	</plots-div>
+</div>
