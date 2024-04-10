@@ -373,52 +373,50 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
         """
         cleaned_data = self.cleaned_data
         dataframe = cleaned_data['flatfile']
-        x, y = cleaned_data.get('x', None), cleaned_data.get('y', None)
+        x_label, y_label = cleaned_data.get('x', None), cleaned_data.get('y', None)
         c = next(colors_cycle())
         c_transparent = c.replace(', 1)', ', 0.5)')
-        if x and y:  # scatter plot
-            xlabel, ylabel = cleaned_data['x'], cleaned_data['y']
-            x, y = dataframe[xlabel], dataframe[ylabel]
-            # x_na = na_values(x).sum()
-            # y_na = na_values(y).sum()
+        if x_label and y_label:  # scatter plot
+            x = dataframe[x_label]
+            y = dataframe[y_label]
             plot = {
                 'data': [
                     scatter_trace(
                         color=c_transparent,
-                        x=dataframe[xlabel],
-                        y=dataframe[ylabel],
-                        legendgroup=f'{y} vs. {x}',
-                        name=f'{y} vs. {x}'
+                        x=x,
+                        y=y,
+                        legendgroup=f'{y_label} vs. {x_label}',
+                        name=f'{y_label} vs. {x_label}'
                     )
                 ],
                 'params': {},
                 'layout': {
                     'xaxis': {
-                        'title': xlabel,
+                        'title': x_label,
                         'type': axis_type(x)
                     },
                     'yaxis': {
-                        'title': ylabel,
+                        'title': y_label,
                         'type': axis_type(y)
                     }
                 }
             }
-        elif x:
-            xlabel = cleaned_data['x']
+        elif x_label:
+            x = dataframe[x_label]
             plot = {
                 'data': [
                     histogram_trace(
                         color=c_transparent,
                         line_color=c,
-                        x=dataframe[xlabel],
-                        legendgroup=f'{x}',
-                        name=f'{x}'
+                        x=x,
+                        legendgroup=x_label,
+                        name=x_label
                     )
                 ],
                 'params': {},
                 'layout': {
                     'xaxis': {
-                        'title': xlabel,
+                        'title': x_label,
                         'type': axis_type(x)
                     },
                     'yaxis': {
@@ -428,15 +426,15 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                 }
             }
         else:  # y only provided
-            ylabel = cleaned_data['y']
+            y = dataframe[y_label]
             plot = {
                 'data': [
                     histogram_trace(
                         color=c_transparent,
                         line_color=c,
-                        y=dataframe[ylabel],
-                        legendgroup=f'{y}',
-                        name=f'{y}'
+                        y=y,
+                        legendgroup=y_label,
+                        name=y_label
                     )
                 ],
                 'params': {},
@@ -446,7 +444,7 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                         'type': AxisType.linear
                     },
                     'yaxis': {
-                        'title': ylabel,
+                        'title': y_label,
                         'type': axis_type(y)
                     }
                 }
