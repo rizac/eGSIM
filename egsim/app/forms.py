@@ -417,7 +417,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                 'layout': {
                     'xaxis': {
                         'title': x_label,
-                        'type': axis_type(x)
+                        # 'type': axis_type(x)  # let plotly infer the axis type.
+                        # Also, no explicit type disables the log scale checkbox in the
+                        # frontend, which does not work as expected with histograms
                     },
                     'yaxis': {
                         'title': 'Frequency',
@@ -445,7 +447,9 @@ class FlatfileVisualizeForm(APIForm, FlatfileForm):
                     },
                     'yaxis': {
                         'title': y_label,
-                        'type': axis_type(y)
+                        # 'type': axis_type(x)  # let plotly infer the axis type.
+                        # Also, no explicit type disables the log scale checkbox in the
+                        # frontend, which does not work as expected with histograms
                     }
                 }
             }
