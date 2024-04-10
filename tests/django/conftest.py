@@ -5,19 +5,28 @@ Created on 3 May 2018
 
 @author: riccardo
 """
+import shutil
+
 import os
 
 import pytest
 
 from django.core.management import call_command
 from django.test.client import Client
-from django.conf import settings
 
 
 @pytest.fixture(scope="session", autouse=True)
-def auto_create_media_root():
-    if not os.path.isdir(settings.MEDIA_ROOT):
-        os.makedirs(settings.MEDIA_ROOT)
+def create_and_set_tmp_media_root():
+    from django.conf import settings
+    media_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data',
+                              'tmp_media_root')
+    assert os.path.isdir(os.path.dirname(media_root))
+    if not os.path.isdir(media_root):
+        os.makedirs(media_root)
+    settings.MEDIA_ROOT = media_root
+    yield
+    shutil.rmtree(media_root)
+
 
 @pytest.fixture()
 def client() -> Client:
