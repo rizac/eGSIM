@@ -400,8 +400,8 @@ EGSIM.component('gsim-map', {
 							<div class='_panel d-none'>`;
 				// Add title:
 				html += `<h6 class="mt-1">Map options</h6>
-					<div style='max-width:12rem' class='mb-2'>Return the models selected for a
-					geographic position (map mouse click) by querying the following seismic hazard
+					<div style='max-width:12rem' class='mb-2'>On mouse click, return the models selected for the
+					geographic position by querying the following seismic hazard
 					source regionalizations:
 					</div>`;
 				for (var regx of regionalizations){
