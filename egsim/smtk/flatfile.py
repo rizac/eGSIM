@@ -200,7 +200,7 @@ def validate_flatfile_dataframe(
             is_na = pd.isna(dfr[col])
             dfr.loc[is_na, col] = default
 
-        # handle mismatching dtypes (bool and int):
+        # handle mismatching dtypes:
         actual_dtype = get_dtype_of(dfr[col])
         if actual_dtype != xp_dtype or actual_dtype is None:
             try:
@@ -308,24 +308,23 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
         return ColumnDtype.datetime
     if isinstance(obj, pd.CategoricalDtype):
         return ColumnDtype.category
-    if pd.api.types.is_string_dtype(obj):
-        # as mixed arrays are also considered strings (e.g. s=pd.Series([True, 2]),
-        # is_string_dtype(s) = True) we need further checks.
-        # 1. np.dtype, no check, return:
-        if isinstance(obj, np.dtype):
-            return ColumnDtype.str
-        # python scalar (e.g., np.str_('a')) are also str, so return also:
-        if isinstance(obj, str):
-            return ColumnDtype.str
-        # python arrays, check element-wise, very inefficient but unavoidable...
-        if pd.api.types.is_list_like(obj):
-            if all(isinstance(_, str) or pd.api.types.is_string_dtype(_) for _ in obj):
-                return ColumnDtype.str
-        # non-dimensional np.arrays (e.g. np.array('a')), check its `item()`:
-        elif isinstance(obj, np.ndarray) and not obj.shape:
-            if isinstance(obj.item(), str):
-                return ColumnDtype.str
-    return None
+    if pd.api.types.is_string_dtype(obj) or isinstance(obj, str):
+        return ColumnDtype.str
+
+    # Now curiously, if pd.Series(['a']) and pd.Series(['a', None]) have both the
+    # same dtype (np.dtype('O')) but pd.api.types.is_string_dtype of the
+    # the latter returns False, so check element-wise, very inefficient but unavoidable:
+    obj_dtype = None
+    if getattr(obj, 'dtype', None) == np.dtype('O') and pd.api.types.is_list_like(obj):
+        # return ColumnDtype.str if at least 1 element is str and all other are None:
+        for item in obj:
+            if item is None:
+                continue
+            if not pd.api.types.is_string_dtype(item):
+                return None
+            obj_dtype = ColumnDtype.str
+
+    return obj_dtype
 
 
 def cast_to_dtype(

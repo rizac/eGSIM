@@ -5,8 +5,15 @@ Created on 6 Apr 2019
 
 @author: riccardo
 """
+import os
+from django.conf import settings
+
 import pytest
 from django.core.management import call_command
+
+import pandas as pd
+
+from egsim.smtk.flatfile import get_dtype_of
 
 
 @pytest.mark.django_db
@@ -20,3 +27,7 @@ def test_initdb(capsys):
     captured = capsys.readouterr()
     capout = captured.out
     assert capout and "Unused Flatfile column(s)" not in capout
+    flatfiles_dir = os.path.join(settings.MEDIA_ROOT, 'flatfiles')
+    for ff in os.listdir(flatfiles_dir):
+        dfr: pd.DataFrame = pd.read_hdf(os.path.join(flatfiles_dir, ff))  # noqa
+        assert all(get_dtype_of(dfr[c]) is not None for c in dfr.columns)

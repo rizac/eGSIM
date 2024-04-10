@@ -3,6 +3,8 @@ Created on 16 Feb 2018
 
 @author: riccardo
 """
+from itertools import combinations
+
 import pytest
 from datetime import datetime
 
@@ -257,16 +259,86 @@ def test_get_dtype():
     assert get_dtype_of(pd.CategoricalDtype(['x', 2, datetime.utcnow()]).categories) \
            is None
 
-    # test series with N/A:
+    # test series with N/A (more complete tests in the next function):
     vals = [
         [[datetime.utcnow(), pd.NaT], ColumnDtype.datetime],
         [[2, None], ColumnDtype.float],
         [[1.2, None], ColumnDtype.float],
         [[True, None], None],
-        [['a', None], None]
+        [['a', None], ColumnDtype.str]
     ]
     for val, ctype in vals:
         assert get_dtype_of(pd.Series(val)) == ctype
+
+
+def test_mixed_arrays_are_mostly_null_dtype():
+    """test that arrays with mixed dtypes have None dtype (with some known exceptions)"""
+    for val in combinations(['a', 2, 2.2, True, datetime.utcnow()], 2):
+        # check that the two values have a dtype set:
+        assert get_dtype_of(val[0]) is not None
+        assert get_dtype_of(val[1]) is not None
+
+        val = list(val)
+
+        # test pandas Series:
+        cdtype = None
+        try:
+            cdtype = get_dtype_of(pd.Series(val))
+            assert cdtype is None
+        except AssertionError:
+            if set(val) == {2, 2.2} and cdtype == ColumnDtype.float:
+                pass
+
+        # test n umpy arrays
+        cdtype = None
+        try:
+            cdtype = get_dtype_of(np.array(val))
+            assert cdtype is None
+        except AssertionError:
+            # numpy behaves differently than pandas:
+            # everything with 'a' is converted to str:
+            if 'a' in val:
+                assert cdtype == ColumnDtype.str
+                continue
+            # if we have 2 and True, then the dtype is converted to int:
+            if set(val) == {2, True}:
+                assert cdtype == ColumnDtype.int
+                continue
+            # for any combination of 2.2 with 2 or True, dtype is converted to float:
+            if all(_ in {2.2, 2, True} for _ in val):
+                assert cdtype == ColumnDtype.float
+
+
+def test_dtypes_with_null():
+    """test that arrays with known dtype + 1 null preserve their dtype"""
+    for val in ['a', 2, 2.2, True, datetime.utcnow()]:
+        # check that the two values have a dtype set:
+        cdtype = get_dtype_of(val)
+        assert cdtype is not None
+
+        vals = [val, None]
+        # test pandas Series:
+        try:
+            assert cdtype == get_dtype_of(pd.Series(vals))
+        except AssertionError:
+            assert cdtype in (ColumnDtype.int, ColumnDtype.bool)
+
+        # test numpy array:
+        # assert cdtype == get_dtype_of(np.array(vals))
+        try:
+            assert cdtype != get_dtype_of(np.array(vals))
+        except AssertionError:
+            assert cdtype == ColumnDtype.str
+
+
+def test_str_and_o_dtypes_are_the_same():
+    """test that a Series of strings and a Series of strings and Nones have the
+    same dtype"""
+    s1 = pd.Series(['s'])
+    s2 = pd.Series(['s', None])
+    assert s1.dtype == np.dtype('O')
+    assert s2.dtype == np.dtype('O')
+    assert pd.api.types.is_string_dtype(s1) != pd.api.types.is_string_dtype(s2)
 
 
 def test_cast_to_dtype():
