@@ -17,7 +17,8 @@ from egsim.smtk import gsim, registered_imts, registered_gsims
 from egsim.smtk.flatfile import (ColumnType, ColumnDtype,
                                  _flatfile_metadata_path, cast_to_dtype,
                                  FlatfileMetadata,
-                                 _load_flatfile_metadata, get_dtype_of)
+                                 _load_flatfile_metadata, get_dtype_of,
+                                 validate_flatfile_dataframe, InvalidDataError)
 
 
 def test_flatfile_extract_from_yaml():
@@ -269,6 +270,37 @@ def test_get_dtype():
     ]
     for val, ctype in vals:
         assert get_dtype_of(pd.Series(val)) == ctype
+
+
+def test_flatfile_invalid_categories():
+    d = pd.DataFrame({'geology': ['UNKNOWN'], 'PGA': [1.2]})
+    validate_flatfile_dataframe(d)
+
+    d = pd.DataFrame({'geology': ['?'], 'PGA': [1.2]})
+    with pytest.raises(InvalidDataError) as err:
+        validate_flatfile_dataframe(d)
+
+
+def test_get_dtype_mixed_categories():
+    """test that get_dtypoe_of mixed categorical returns None and not
+    ColumnDtype.category"""
+    assert get_dtype_of(pd.Series([2, True]).astype('category')) is None
+    assert get_dtype_of(pd.Series([False, True]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([False, None]).astype('category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([datetime.utcnow(), pd.NaT]).astype(
+        'category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, 3]).astype(
+        'category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, None]).astype(
+        'category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, np.nan]).astype(
+        'category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series([2, 2.2]).astype(
+        'category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series(['2', 'None']).astype(
+        'category')) is ColumnDtype.category
+    assert get_dtype_of(pd.Series(['2', None]).astype(
+        'category')) is ColumnDtype.category
 
 
 def test_mixed_arrays_are_mostly_null_dtype():

@@ -157,6 +157,19 @@ def validate_flatfile_dataframe(
     """Validate the flatfile dataframe checking data types, conflicting column names,
     or missing mandatory columns (e.g. IMT related columns). This method raises
     or returns None on success
+
+    :param dfr: the flatfile, as pandas DataFrame
+    :param extra_dtypes: dict of column names mapped to the desired data type.
+        Standard flatfile columns should not to be present (unless for some reason
+        their dtype must be overwritten)
+    :param extra_dtypes: dict of column names mapped to the desired default value
+        to replace missing data. Standard flatfile columns do not need to be present
+        (unless for some reason their dtype must be overwritten)
+    :param mixed_dtype_categorical: what to when `dtype=ColumnDtype.category` with
+        no explicit category given (`categories` is None): in this case, the casted
+        value (if array-like) might contain mixed dtypes (e.g. float and strings).
+        If this happens, then pass None to ignore an return the data as it is, 'raise'
+        (the default) to raise ValueError, and 'coerce' to cast all items to string
     """
     # post-process:
     invalid_columns = []
@@ -200,19 +213,17 @@ def validate_flatfile_dataframe(
             is_na = pd.isna(dfr[col])
             dfr.loc[is_na, col] = default
 
-        # handle mismatching dtypes:
-        actual_dtype = get_dtype_of(dfr[col])
-        if actual_dtype != xp_dtype or actual_dtype is None:
-            try:
-                dfr[col] = cast_to_dtype(
-                    dfr[col],
-                    xp_dtype,
-                    xp_categories,
-                    mixed_dtype_categorical
-                )
-            except (ParserError, ValueError):
-                invalid_columns.append(col)
-                continue
+        # cast to expected dtype (no op if dtype is already ok):
+        try:
+            dfr[col] = cast_to_dtype(
+                dfr[col],
+                xp_dtype,
+                xp_categories,
+                mixed_dtype_categorical
+            )
+        except (ParserError, ValueError):
+            invalid_columns.append(col)
+            continue
 
     if invalid_columns:
         raise InvalidDataError(*invalid_columns)
@@ -285,9 +296,12 @@ class ColumnDtype(Enum):
 
 def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any]):
     """
-    Get the dtype of the given pandas / numpy array, dtype or Python scalar. Examples:
+    Get the dtype of the given pandas / numpy array, dtype or Python scalar
+
+    Examples:
     ```
     get_dtype_of(pd.Series(...))
+    get_dtype_of(pd.CategoricalDtype())
     get_dtype_of(pd.CategoricalDtype().categories)
     get_dtype_of(dataframe.index)
     get_dtype_of(np.array(...))
@@ -299,6 +313,10 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
     """
     # check bool / int / float in this order to avoid potential subclass issues:
     if pd.api.types.is_bool_dtype(obj) or isinstance(obj, bool):
+        # pd.Series([True, False]).astype('category') ends being here, but
+        # we should return cateogrical dtype (this happens only with booleans):
+        if isinstance(getattr(obj, 'dtype', None), pd.CategoricalDtype):
+            return ColumnDtype.category
         return ColumnDtype.bool
     if pd.api.types.is_integer_dtype(obj) or isinstance(obj, int):
         return ColumnDtype.int
@@ -308,6 +326,10 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
         return ColumnDtype.datetime
     if isinstance(obj, pd.CategoricalDtype):
         return ColumnDtype.category
+    if isinstance(getattr(obj, 'dtype', None), pd.CategoricalDtype):
+        if get_dtype_of(obj.dtype.categories) is None:  # noqa
+            return None  # mixed categories , return no dtype
+        return ColumnDtype.category
     if pd.api.types.is_string_dtype(obj) or isinstance(obj, str):
         return ColumnDtype.str
 
@@ -316,7 +338,7 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
     # the latter returns False, so check element-wise, very inefficient but unavoidable:
     obj_dtype = None
     if getattr(obj, 'dtype', None) == np.dtype('O') and pd.api.types.is_list_like(obj):
-        # return ColumnDtype.str if at least 1 element is str and all other are None:
+        # return ColumnDtype.str if at least 1 element is str and all others are None:
         for item in obj:
             if item is None:
                 continue
@@ -330,18 +352,25 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
 def cast_to_dtype(
         value: Any,
         dtype: ColumnDtype,
-        categories: Optional[Union[Container, pd.CategoricalDtype]]=None,
+        categories: Optional[Union[Container, pd.CategoricalDtype]] = None,
         mixed_dtype_categorical='raise') -> Any:
     """Cast the given value to the given dtype, raise ValueError if unsuccessful
 
     :param value: pandas Series/Index, numpy array or scalar, Python scalar
     :param dtype: the base `ColumnDtype`
     :param categories: a list of pandas Categorical of possible choices. Must be
-        all the same type of `dtype`
-    :param mixed_dtype_categorical: what to if dtype is 'category' with no explicit
-        categories given: None ignore, 'raise' raise ValueError, 'coerce' cast data
-        to string
+        all the same type of `dtype`. When not None, the returned value will
+        be of type categorical (`pd.CategoricalDtype`, represented here by
+        `ColumnDtype.category`)
+    :param mixed_dtype_categorical: what to when `dtype=ColumnDtype.category` with
+        no explicit category given (`categories` is None): in this case, the casted
+        value (if array-like) might contain mixed dtypes (e.g. float and strings).
+        If this happens, then pass None to ignore an return the data as it is, 'raise'
+        (the default) to raise ValueError, and 'coerce' to cast all items to string
     """
+    if get_dtype_of(value) == dtype:
+        if categories is None:
+            return value
 
     is_pd = isinstance(value, IndexOpsMixin)  # common interface for Series / Index
     is_np = not is_pd and isinstance(value, (np.ndarray, np.generic))
