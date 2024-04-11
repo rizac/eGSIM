@@ -102,13 +102,13 @@ evt_depth:
   help: event depth (hypocentral depth, in km)
   alias: [hypo_depth, event_depth]
   type: rupture
-rupture_top_depth:
+rup_top_depth:
   dtype: float
   ">=": 0
   help: Top of Rupture Depth (km)
   alias: [ztor, depth_top_of_rupture]
   type: rupture
-rupture_width:
+rup_width:
   dtype: float
   ">=": 0
   help: >-
