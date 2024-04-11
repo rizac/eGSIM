@@ -11,25 +11,64 @@ iframe{ border:0; margin:0; }
 /* redefine bootstrap (bs) global colors */
 :root {
 	--bs-primary-rgb: 7,104,159;  /* overrides .text-primary */
+	--bs-link-color-rgb: var(--bs-primary-rgb);
 	--bs-link-color: rgba(var(--bs-primary-rgb), 1);  /* overrides <a> text color */
 	--bs-body-bg-rgb: 248,249,250;  /* overrides color of class .bg_body */
 	--bs-light-rgb: 202,214,222;  /* overrides color of class .bg-light */
 	--bs-primary: rgba(var(--bs-primary-rgb), 1); /* primary buttons bg, see below */
 	--bs-primary-active-hover: rgba(32, 77, 116, 1); /* primary buttons hover bg */
-	--bs-border-color: rgb(179, 186, 193);  /* color of .border* classes and (see below) form-control border */
-	--bs-border-width: 1px; /* same as above but controls the width */
+	--bs-border-color: rgb(179, 186, 193);  /* color of .border* classes in bootstrap5 */
+	--bs-border-style: solid;  /* style of .border* classes in bootstrap5 */
+	--bs-border-width: 1px; /* width of .border* classes in bootstrap5 */
+	--bs-border-radius: 0.375rem; /* radius of the .rounded class in bootstrap5 */
 }
 
-/* redefine bootstrap .btn-primary colors */
+
+/* navbar */
+nav .nav-link, nav .dropdown-item{
+	color: lightgray !important;
+	background-color: transparent;
+}
+nav .nav-link:hover, nav .dropdown-item:hover{
+	color: white;
+	background-color: rgba(var(--bs-primary-rgb), .66);
+}
+
+/* restyle bootstrap .btn-primary colors */
 .btn-primary {
-	--bs-btn-bg: var(--bs-primary);
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--bs-primary-active-hover);
+  --bs-btn-hover-border-color: var(--bs-primary-active-hover);
+  --bs-btn-focus-shadow-rgb: 49,132,253;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--bs-primary-active-hover);
+  --bs-btn-active-border-color: var(--bs-primary-active-hover);
+  --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+}
+.btn-outline-primary{
+	--bs-btn-color: var(--bs-primary);
 	--bs-btn-border-color: var(--bs-primary);
-	--bs-btn-hover-bg: var(--bs-primary-active-hover);
-	--bs-btn-hover-border-color: var(--bs-primary-active-hover);
-	--bs-btn-active-bg: var(--bs-primary-active-hover);
-	--bs-btn-active-border-color: var(--bs-primary-active-hover);
-	--bs-btn-disabled-bg: var(--bs-primary);
+	--bs-btn-hover-color: #fff;
+	--bs-btn-hover-bg: var(--bs-primary);
+	--bs-btn-hover-border-color: var(--bs-primary);
+	--bs-btn-focus-shadow-rgb: 13,110,253;
+	--bs-btn-active-color: #fff;
+	--bs-btn-active-bg: var(--bs-primary);
+	--bs-btn-active-border-color: var(--bs-primary);
+	--bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+	--bs-btn-disabled-color: var(--bs-primary);
+	--bs-btn-disabled-bg: transparent;
 	--bs-btn-disabled-border-color: var(--bs-primary);
+	--bs-gradient: none;
+}
+.nav-pills {
+	--bs-nav-pills-link-active-bg: var(--bs-primary);
 }
 
 /* make option padding as firefox (chrome <option>s are very narrow) */
@@ -45,17 +84,25 @@ input[type=checkbox]:hover, input[type=radio]:hover{
 	accent-color: var(--bs-primary-active-hover) !important;
 }
 
-/* change focus border. set outline none and make a shadow instead but not too spread out */
-select:focus, a:focus, button:focus, input:focus, *[tabindex]:not([tabindex^="-"]):focus {
-	box-shadow: 0px 0px 2px 2px rgba(128,198,237,1) !important;
-	outline: none;
+
+/* bring focus border to front, avoiding clipping (bootstrap does this only within an
+.input-group, so we copied the css by removing each ".input-group > " prefix  */
+.form-control:focus, .form-floating:focus-within, .form-select:focus{
+	z-index: 5;
 }
 
-/* harmonize borders color and width */
-*.form-control:not([style*="border-color"]):not(.border-danger), .leaflet-control-layers {
-	border-color: var(--bs-border-color) !important; /*#bec4ca !important;*/
-	border-width: var(--bs-border-width) !important;
+/* harmonize border colors (.border is already set by bootstrap, here for clarity) */
+.form-control:not([style*="-color"]):not([class*="border-"]),
+.input-group-text:not([style*="-color"]):not([class*="border-"]),
+.border {
+	border-color: var(--bs-border-color) !important;
 }
+
+/* harmonize borders edges (.rounded is already set by bootstrap, here for clarity */
+*:not(.input-group) > *.form-control:not([style*="-radius"]):not([class*="rounded-"]), .rounded{
+	border-radius: var(--bs-border-radius) !important;
+}
+
 
 /* remove background and foregrounds added by Chrome when autocompleting <input> values  */
 input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active  {
@@ -68,15 +115,10 @@ select:not([multiple]):not([size]).form-control{
 	-webkit-appearance: none;
 	appearance: none;
 	/* config <select> arrow via inline coded image (svg) */
-	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2020%3Bstroke%3A%20black%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
+	background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20style%3D%22background-color%3Atransparent%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22160%22%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2015%3Bstroke%3A%20DimGray%3B%22%20d%3D%22M%2010%2C60%2050%2C20%2090%2C60%22%2F%3E%3Cpath%20stroke-linejoin%3D%22round%22%20style%3D%22fill%3A%20none%3Bstroke-width%3A%2015%3Bstroke%3A%20DimGray%3B%22%20d%3D%22M%2010%2C100%2050%2C140%2090%2C100%22%2F%3E%3C%2Fsvg%3E');
 	background-repeat: no-repeat;
 	background-position: right .3em top 50%;
 	background-size: .65em auto;
 	padding-right: 1.2rem;
 	padding-left: 0.3rem;
 }
-
-/* style disabled */
-*[disabled:not([disabled="false"])], .disabled{ opacity: 0.65 !important;}
-/* style disabled for <option>s (in safari, `disabled` above does not work) */
-option[disabled:not([disabled="false"])], option.disabled{ color: #bbb !important; }

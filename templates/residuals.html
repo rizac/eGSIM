@@ -1,0 +1,121 @@
+<div class='position-relative' style="flex: 1 1 auto;">
+	<gsim-map
+		@gsim-selected="(gs) => { forms.residuals.gsim = Array.from(new Set(forms.residuals.gsim.concat(gs))) }"
+		@gsim-unselected="(gs) => { forms.residuals.gsim = forms.residuals.gsim.filter(g => !gs.includes(g)); }"
+		:regionalizations="regionalizations"
+		:region-selected-url="urls.get_gsim_from_region"
+		style='position:absolute;inset:0px;z-index:0'>
+	</gsim-map>
+
+	<form novalidate @submit.prevent=""
+		  class='d-flex flex-column p-3 gap-3'
+		  style='position:absolute;top:0px;min-width:min(50vw,33rem);max-width:50vw;max-height:100%;z-index:1'>
+
+		<gsim-select
+			v-model="forms.residuals.gsim"
+			:models="models"
+			:selected-imts="forms.residuals.imt"
+			style="flex: 0 1 auto; min-height:5rem">
+		</gsim-select>
+
+		<imt-select
+			style='flex: 0 1 auto; min-height: 8rem'
+			v-model="forms.residuals.imt" :imts='imts'>
+		</imt-select>
+
+		<div class='d-flex flex-column form-control gap-2'>
+			<span class='text-capitalize'>data</span>
+			<flatfile-select
+				:flatfiles='flatfiles'
+				v-model="forms.residuals.flatfile"
+				:upload-url='urls.flatfile_validate'
+				:title='forms.misc.residuals.help.flatfile'
+				@update:model-value="(value) => { forms.misc.residuals.selected_flatfile_fields=flatfiles[flatfiles.map(f => f.name).indexOf(value.name || value)].columns; }">
+			</flatfile-select>
+
+			<div class='d-flex align-items-baseline gap-1' :title='forms.misc.residuals.help["flatfile-query"]'>
+				<span class='text-nowrap'>flatfile-query</span>
+				<input type='text' v-model="forms.residuals['data-query']" class='form-control'/>
+			</div>
+		</div>
+
+		<div class='d-flex flex-column form-control gap-2'>
+
+			<div class="d-flex align-items-baseline gap-1">
+				<span style='flex: 1 1 auto'>Residuals</span>
+				<button type='button' class='btn btn-outline-primary btn-sm border-0'
+						onclick='var elm=document.getElementById("residuals_tutorial"); elm.src=elm.getAttribute("data-src");elm.classList.toggle("d-none")'>
+					<img style="height:1.5rem" src="{% static 'img/logos/jupyter.svg' %}" />
+				</button>
+			</div>
+
+			<div class='d-flex flex-column gap-2'>
+
+				<div class='d-flex align-items-baseline gap-1'>
+					<div style='flex: 0 0 4.5rem'>Download</div>
+
+					<select v-model='forms.residuals.format' class='form-control'>
+						<option v-for='format in forms.misc.download_formats' :value='format'>
+							{% verbatim %}{{ format }}{% endverbatim %}
+						</option>
+					</select>
+
+					<label class='text-nowrap'>
+						<input type='checkbox' v-model="forms.residuals.likelihood" class='me-1' />include likelihood
+					</label>
+					<a href="https://doi.org/10.1785/0120030147" target='_blank' class='ms-1'>
+						<i class='fa fa-external-link'></i>
+					</a>
+
+					<button type='button'
+							@click="download(`${urls.residuals}.${forms.residuals.format}`, forms.residuals)"
+							class='btn btn-primary'
+							style='flex: 0 0 3.5rem'
+							title='Download residuals'>
+							<i class='fa fa-download'></i>
+					</button>
+
+				</div>
+
+				<div class='d-flex align-items-baseline gap-1'>
+					<span style='flex: 0 0 4.5rem'>Visualize</span>
+
+					<select v-model='forms.residuals_plot.x' class='form-control'
+						@change="evt => { forms.residuals_plot.likelihood = evt.target.selectedIndex == 1; }">
+						<option :value='null'>Residuals histogram (density distribution)</option>
+						<option :value='null'>Likelihood histogram (density distribution)</option>
+						<option v-for='f in forms.misc.residuals.selected_flatfile_fields.filter(f => !f.type.toLowerCase().includes("intensity"))' :value='f.name'>
+							{% verbatim %} Residuals vs. {{ f.name + " (" + f.dtype + ")" }} {% endverbatim %}
+						</option>
+					</select>
+
+					<button type='button'
+							@click="var data = Object.assign({}, forms.residuals, forms.residuals_plot, {format: 'json'}); post(urls.residuals_visualize, data).then(r => r.json()).then(data => { responses.residuals_plots=data.plots; })"
+							class='btn btn-primary'
+							style='flex: 0 0 3.5rem'
+							title='Visualize residuals via interactive plots'>
+						<i class='fa fa-bar-chart'></i>
+					</button>
+
+				</div>
+
+			</div>
+
+		</div>
+
+	</form>
+
+	<iframe
+		id='residuals_tutorial'
+		:data-src=urls.residuals_response_tutorial
+		class='p-3 bg-white d-none position-absolute border-0 shadow'
+		style='width:50vw; height: 100%; right:0'>
+	</iframe>
+
+	<plots-div
+		:data="responses.residuals_plots"
+		:download-urls='urls.residuals_plot_img'
+		@image-requested='(url, data) => { download(url, data); }'
+		style='position:absolute;inset:0px;z-index:100'>
+	</plots-div>
+</div>

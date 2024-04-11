@@ -1,0 +1,63 @@
+<div class='d-flex flex-column' style='padding: 3rem calc(0.5*(100vw - 40rem))'>
+
+	<h3>Citation</h3>
+
+	<p>
+	If you use the data produced by the underlying API (including data downloadable
+	through this web portal), please cite eGSIM as:
+	</p>
+
+	<p class='form-control'>
+	Zaccarelli, Riccardo; Weatherill, Graeme (2020): eGSIM - a Python library and web application to select and test Ground Motion models. GFZ Data Services.
+	<a class='text-nowrap' href="https://doi.org/10.5880/GFZ.2.6.2023.007" target="_blank">https://doi.org/10.5880/GFZ.2.6.2023.007</a>
+	</p>
+
+
+	<h3 id='license'>License</h3>
+
+	<p class="license-text">The content of this site, as well as all output data produced by
+	the underlying API (including data downloadable through this web portal) is licensed under
+	<a rel="license" href="https://creativecommons.org/licenses/by/4.0" target="_blank">CC BY 4.0
+		<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;"
+			 src="{% static 'img/logos/cc.svg' %}"/>
+		<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;"
+			 src="{% static 'img/logos/by.svg' %}" />
+	</a>
+	</p>
+
+	<p>
+	This page code samples, as well as eGSIM source code is licensed under the
+	<a href="https://www.gnu.org/licenses/agpl-3.0.en.html" target="_blank">
+		GNU Affero General Public License v.3.0
+		<img style='height:1.5rem' src="{% static 'img/logos/AGPLv3_Logo.svg' %}">
+	</a>
+
+
+	<h3 id='references'>References</h3>
+	<p>
+	The references of the Ground-shaking intensity models (Gsim) available in eGSIM
+	can be found <a href="https://docs.openquake.org/oq-engine/3.9/openquake.hazardlib.gsim.html" target="_blank">
+	in the Python documentation of the OpenQuake
+	</a> (Disclaimer: the OpenQuake version at the link might not match exactly the version used in
+	eGSIM, and hence the list of available models might slightly differ)
+	</p>
+
+	<p>
+	eGSIM uses the following input data
+	(click on the links below for details such as e.g., how to cite their data
+	alongside eGSIM in your work):
+	</p>
+
+	<ul>
+	{% for name, url in references.items %}
+		<li>
+			<a href="{{ url }}" target="_blank">{{ name }}</a><br>
+		</li>
+	{% endfor %}
+	</ul>
+
+	<p class='small text-muted'>
+	(All links provided in this page open in a new tab/window when clicked)
+	</p>
+
+</div>

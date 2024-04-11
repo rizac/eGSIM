@@ -1,168 +1,147 @@
 """
-Core test suite for the database and residuals construction
+test residuals computations (standard and likelihood)
 """
+import json
+import numpy as np
 import os
 
-import pandas as pd
-from django.test import SimpleTestCase  # https://stackoverflow.com/a/59764739
+from egsim.smtk import residuals
+from egsim.smtk.flatfile import read_flatfile, ColumnType
+from scipy.constants import g
+from egsim.smtk.registry import Clabel
 
 
-import egsim.smtk.residuals.gmpe_residuals as res
-from egsim.smtk.flatfile import ContextDB, read_flatfile
-from egsim.smtk.residuals import convert_accel_units
-
+# load flatfile once:
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
+ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.csv" )
+_flatfile = read_flatfile(ifile)
 
 
-EXPECTED_IDS = [
-    "EMSC_20040918_0000026_RA_PYAS_0", "EMSC_20040918_0000026_RA_PYAT_0",
-    "EMSC_20040918_0000026_RA_PYLI_0", "EMSC_20040918_0000026_RA_PYLL_0",
-    "EMSC_20041205_0000033_CH_BNALP_0", "EMSC_20041205_0000033_CH_BOURR_0",
-    "EMSC_20041205_0000033_CH_DIX_0", "EMSC_20041205_0000033_CH_EMV_0",
-    "EMSC_20041205_0000033_CH_LIENZ_0", "EMSC_20041205_0000033_CH_LLS_0",
-    "EMSC_20041205_0000033_CH_MMK_0", "EMSC_20041205_0000033_CH_SENIN_0",
-    "EMSC_20041205_0000033_CH_SULZ_0", "EMSC_20041205_0000033_CH_VDL_0",
-    "EMSC_20041205_0000033_CH_ZUR_0", "EMSC_20041205_0000033_RA_STBO_0",
-    "EMSC_20130103_0000020_HL_SIVA_0", "EMSC_20130103_0000020_HL_ZKR_0",
-    "EMSC_20130108_0000044_HL_ALNA_0", "EMSC_20130108_0000044_HL_AMGA_0",
-    "EMSC_20130108_0000044_HL_DLFA_0", "EMSC_20130108_0000044_HL_EFSA_0",
-    "EMSC_20130108_0000044_HL_KVLA_0", "EMSC_20130108_0000044_HL_LIA_0",
-    "EMSC_20130108_0000044_HL_NOAC_0", "EMSC_20130108_0000044_HL_PLG_0",
-    "EMSC_20130108_0000044_HL_PRK_0", "EMSC_20130108_0000044_HL_PSRA_0",
-    "EMSC_20130108_0000044_HL_SMTH_0", "EMSC_20130108_0000044_HL_TNSA_0",
-    "EMSC_20130108_0000044_HL_YDRA_0", "EMSC_20130108_0000044_KO_ENZZ_0",
-    "EMSC_20130108_0000044_KO_FOCM_0", "EMSC_20130108_0000044_KO_GMLD_0",
-    "EMSC_20130108_0000044_KO_GOKC_0", "EMSC_20130108_0000044_KO_GOMA_0",
-    "EMSC_20130108_0000044_KO_GPNR_0", "EMSC_20130108_0000044_KO_KIYI_0",
-    "EMSC_20130108_0000044_KO_KRBN_0", "EMSC_20130108_0000044_KO_ORLT_0",
-    "EMSC_20130108_0000044_KO_SHAP_0"]
+def get_gsims_imts_flatfile():
+    """input data used in this module"""
+    gsims = ["AkkarEtAlRjb2014", "ChiouYoungs2014"]
+    imts = ["PGA", "SA(1.0)"]
+    flatfile = _flatfile.copy()
+    for i in imts:
+        # convert cm/sec^2 to g:
+        flatfile[i] = flatfile[i] / (100 *g)  # convert_accel_units(flatfile[i], 'cm/s/s', 'g')
+    return gsims, imts, flatfile
 
 
-class ResidualsTestCase(SimpleTestCase):
+label_mapping_res = {
+    'Total': Clabel.total_res,
+    'Inter-event': Clabel.inter_ev_res,
+    'Intra-event': Clabel.intra_ev_res
+}
+
+
+def test_residuals_execution():
     """
-    Core test case for the residuals objects
+    Tests basic execution of residuals - not correctness of values
     """
+    # when comparing new and old data, try numpy `allclose` and if it fails, retry
+    # with relaxed conditions:
+    RTOL = 0.016  # relative tolerance defining "closeness": abs diff element-wise
+    QTL = 0.95  # quantile defining how much data must be "close enough" (<RTOL)
 
-    @classmethod
-    def setUpClass(cls):
-        """
-        Setup constructs the database from the ESM test data
-        """
-        ifile = os.path.join(BASE_DATA_PATH, "residual_tests_esm_data.hdf.csv")
-        cls.database = ContextDB(read_flatfile(ifile))
-        # fix distances required for these tests (rjb and rrup are all NaNs):
-        cls.database._data['rjb'] = cls.database._data['repi'].copy()
-        cls.database._data['rrup'] = cls.database._data['rhypo'].copy()
+    # compute data
+    gsims, imts, flatfile = get_gsims_imts_flatfile()
+    res_df = residuals.get_residuals(gsims, imts, flatfile.copy())
+    # old data:
+    file = "residual_tests_esm_data_old_smtk.json"
+    with open(os.path.join(BASE_DATA_PATH, file)) as _:
+        exp_dict = json.load(_)
+    # check results:
 
-        cls.num_events = len(pd.unique(cls.database._data['event_id']))
-        cls.num_records = len(cls.database._data)
-
-        cls.gsims = ["AkkarEtAlRjb2014",  "ChiouYoungs2014"]
-        cls.imts = ["PGA", "SA(1.0)"]
-
-    # def test_correct_build_load(self):
-    #     """
-    #     Verifies that the database has been built and loaded correctly
-    #     """
-    #     self.assertEqual(len(self.database), 41)
-    #     self.assertListEqual([rec.id for rec in self.database],
-    #                          EXPECTED_IDS)
-
-    def _check_residual_dictionary_correctness(self, res_dict):
-        """
-        Basic check for correctness of the residual dictionary
-        """
-        for i, gsim in enumerate(res_dict):
-            self.assertEqual(gsim, self.gsims[i])
-            for j, imt in enumerate(res_dict[gsim]):
-                self.assertEqual(imt, self.imts[j])
-                if gsim == "AkkarEtAlRjb2014":
-                    # For Akkar et al - inter-event residuals should have
-                    # 4 elements and the intra-event residuals 41
-                    self.assertEqual(
-                        len(res_dict[gsim][imt]["Inter event"]), self.num_events)
-                elif gsim == "ChiouYoungs2014":
-                    # For Chiou & Youngs - inter-event residuals should have
-                    # 41 elements and the intra-event residuals 41 too
-                    self.assertEqual(
-                        len(res_dict[gsim][imt]["Inter event"]), self.num_records)
+    for lbl in exp_dict:
+        # check values
+        is_inter_ev = 'Inter-event' in lbl
+        expected = np.array(exp_dict[lbl], dtype=float)
+        # computed dataframes have different labelling:
+        _model, _imt, _lbl = lbl.split(" ")
+        lbl = (_imt, label_mapping_res[_lbl], _model)
+        computed = res_df[lbl].values
+        if is_inter_ev:
+            # Are all inter events (per event) are close enough?
+            # (otherwise its an Inter event residuals per-site e.g. Chiou
+            # & Youngs (2008; 2014) case)
+            _computed = []
+            key = (Clabel.input_data, ColumnType.rupture.value, 'event_id')
+            for ev_id, dfr in res_df.groupby([key]):
+                vals = dfr[lbl].values
+                if ((vals - vals[0]) < 1.0E-12).all():
+                    _computed.append(vals[0])
                 else:
-                    pass
-                self.assertEqual(
-                        len(res_dict[gsim][imt]["Intra event"]), self.num_records)
-                self.assertEqual(
-                        len(res_dict[gsim][imt]["Total"]), self.num_records)
+                    _computed = None
+                    break
+            if _computed is not None:
+                computed = np.array(_computed, dtype=float)
 
-    def test_residuals_execution(self):
-        """
-        Tests basic execution of residuals - not correctness of values
-        """
-        residuals = res.Residuals(self.gsims, self.imts)
-        residuals.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(residuals.residuals)
-        residuals.get_residual_statistics()
+        vals_ok = np.allclose(expected, computed)
+        if not vals_ok:
+            # relax conditions and retry:
+            rel_diff = (expected - computed) / computed
+            max_diff = np.nanquantile(np.abs(rel_diff), QTL)
+            vals_ok = max_diff < RTOL
 
-    def test_likelihood_execution(self):
-        """
-        Tests basic execution of residuals - not correctness of values
-        """
-        lkh = res.Residuals(self.gsims, self.imts)
-        lkh.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(lkh.residuals)
-        lkh.get_likelihood_values()
+        if not vals_ok:
+            asd = 9
+        assert vals_ok
 
-    def test_llh_execution(self):
-        """
-        Tests execution of LLH - not correctness of values
-        """
-        llh = res.Residuals(self.gsims, self.imts)
-        llh.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(llh.residuals)
-        llh.get_loglikelihood_values(self.imts)
 
-    def test_multivariate_llh_execution(self):
-        """
-        Tests execution of multivariate llh - not correctness of values
-        """
-        multi_llh = res.Residuals(self.gsims, self.imts)
-        multi_llh.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(multi_llh.residuals)
-        multi_llh.get_multivariate_loglikelihood_values()
+label_mapping_res_lh = {
+    'Total': Clabel.total_lh,
+    'Inter-event': Clabel.inter_ev_lh,
+    'Intra-event': Clabel.intra_ev_lh
+}
 
-    def test_edr_execution(self):
-        """
-        Tests execution of EDR - not correctness of values
-        """
-        edr = res.Residuals(self.gsims, self.imts)
-        edr.get_residuals(self.database, component="Geometric")
-        self._check_residual_dictionary_correctness(edr.residuals)
-        edr.get_edr_values()
 
-    def test_multiple_metrics(self):
-        """
-        Tests the execution running multiple metrics in one call
-        """
-        residuals = res.Residuals(self.gsims, self.imts)
-        residuals.get_residuals(self.database, component="Geometric")
-        config = {}
-        for key in ["Residuals", "Likelihood", "LLH",
-                    "MultivariateLLH", "EDR"]:
-            _ = res.GSIM_MODEL_DATA_TESTS[key](residuals, config)
+def test_residuals_execution_lh():
+    """
+    Tests basic execution of residuals - not correctness of values
+    """
+    # when comparing new and old data, try numpy `allclose` and if it fails, retry
+    # with relaxed conditions:
+    RTOL = 0.012  # relative tolerance defining "closeness": abs. diff element-wise
+    QTL = 0.95  # quantile defining how much data must be "close enough" (<RTOL)
 
-    def test_convert_accel_units(self):
-        """test convert accel units"""
-        from scipy.constants import g
-        for m_sec in ["m/s/s", "m/s**2", "m/s^2"]:
-            for cm_sec in ["cm/s/s", "cm/s**2", "cm/s^2"]:
-                self.assertEqual(convert_accel_units(1, m_sec, cm_sec), 100)
-                self.assertEqual(convert_accel_units(1, cm_sec, m_sec), .01)
-                self.assertEqual(convert_accel_units(g, m_sec, "g"), 1)
-                self.assertEqual(convert_accel_units(g, cm_sec, "g"), .01)
-                self.assertEqual(convert_accel_units(1, "g", m_sec), g)
-                self.assertEqual(convert_accel_units(1, "g", cm_sec), g*100)
-                self.assertEqual(convert_accel_units(1, cm_sec, cm_sec), 1)
-                self.assertEqual(convert_accel_units(1, m_sec, m_sec),1)
+    # compute data
+    gsims, imts, flatfile = get_gsims_imts_flatfile()
+    res_df = residuals.get_residuals(gsims, imts, flatfile, likelihood=True)
+    # load old data:
+    file = "residual_tests_esm_data_old_smtk_lh.json"
+    with open(os.path.join(BASE_DATA_PATH, file)) as _:
+        exp_dict = json.load(_)
+    # check results:
+    # self.assertEqual(len(exp_dict), len(res_dict))
+    for lbl in exp_dict:
+        is_inter_ev = 'Inter-event' in lbl
+        expected = np.array(exp_dict[lbl], dtype=float)
+        # computed dataframes have different labelling:
+        _model, _imt, _lbl = lbl.split(" ")
+        lbl = (_imt, label_mapping_res_lh[_lbl], _model)
+        computed = res_df[lbl].values
+        if is_inter_ev:
+            # Are all inter events (per event) are close enough?
+            # (otherwise its an Inter event residuals per-site e.g. Chiou
+            # & Youngs (2008; 2014) case)
+            _computed = []
+            key = (Clabel.input_data, ColumnType.rupture.value, 'event_id')
+            for ev_id, dfr in res_df.groupby([key]):
+                vals = dfr[lbl].values
+                if ((vals - vals[0]) < 1.0E-12).all():
+                    _computed.append(vals[0])
+                else:
+                    _computed = None
+                    break
+            if _computed is not None:
+                computed = np.array(_computed, dtype=float)
 
-        self.assertEqual(convert_accel_units(1, "g", "g"), 1)
-        with self.assertRaises(ValueError):
-            self.assertEqual(convert_accel_units(1, "gf", "gf"), 1)
+        vals_ok = np.allclose(expected, computed)
+        if not vals_ok:
+            # relax the conditions and retry:
+            rel_diff = (expected - computed) / computed
+            max_diff = np.nanquantile(np.abs(rel_diff), QTL)
+            vals_ok = max_diff < RTOL
+
+        assert vals_ok

@@ -1,27 +1,9 @@
 """
-Populate the eGSIM database. Example:
-```
-export DJANGO_SETTINGS_MODULE="..."; python manage.py egsim_init
-```
-This is the Django admin command handling eGSIM database maintenance
-and should be executed after:
-1. Initializing the database (first migration)
-2. OpenQuake upgrade
-3. New data files added (regionalizations, flatfiles).
-
-For developers:
- - See README file of the project and also in "egsim/management/commands"
- - Django management commands explained:
-   https://django.readthedocs.io/en/stable/howto/custom-management-commands.html
-
-Created on 6 Apr 2019
-
-@author: rizac <at> gfz-potsdam.de
+eGSIM management command. See `Command.help` for details
 """
-from django.core.management import call_command, load_command_class, CommandError
-from django.db import DatabaseError
 
-from . import EgsimBaseCommand
+from django.core.management import (call_command, load_command_class,
+                                    BaseCommand)
 
 # check JSON1 extension (it should be enabled in all newest OSs and Python versions):
 from django.conf import settings
@@ -42,25 +24,9 @@ if any(_['ENGINE'] == 'django.db.backends.sqlite3'
                          'https://code.djangoproject.com/wiki/JSON1Extension')
 
 
-# Define sub commands to be executed typing their module name:
-APPNAME = 'egsim.api'
-SUBCOMMANDS = [load_command_class(APPNAME, _) for _ in
-               # ====================================================
-               # IMPORTANT: TO AD NEW COMMANDS UPDATE THE LIST BELOW:
-               # ====================================================
-               ['_egsim_oq', '_egsim_reg', '_egsim_flatfiles']]
+class Command(BaseCommand):
 
-
-class Command(EgsimBaseCommand):
-    """Class implementing the command functionality"""
-
-    # As help, use the module docstring (until the first empty line),
-    # then add the subcommands help:
-    help = globals()['__doc__'].split("\n\n")[0]
-    help += "\n".join([
-        '\nThis command performs in series the following operations:',
-        "\n\n".join(cmd.help for cmd in SUBCOMMANDS)
-    ])
+    help = """Empty and repopulates the eGSIM database"""
 
     def add_arguments(self, parser):
         """Implement here specific command options (this method is called
@@ -81,20 +47,28 @@ class Command(EgsimBaseCommand):
 
     def handle(self, *args, **options):
         """Execute the command"""
-        self.printinfo('')
-        self.printinfo('Empty and populate the eGSIM database')
-        self.printinfo('Remember that you can always inspect the database on the '
-                       'browser via the Django admin panel (see README file for info)')
-        try:
-            call_command('flush', *args, **options)
-        except DatabaseError as db_err:
-            # This might be due to the fact that the migration workflow has
-            # not been performed. Append a hint to the error message:
-            url = "https://docs.djangoproject.com/en/stable/topics/migrations/"
-            raise CommandError(f'{str(db_err)}.\nDid you create the db first?'
-                               f'\n(for info see: {url})')
 
-        options.pop('interactive', None)
-        for cmd in SUBCOMMANDS:
-            self.printinfo('')
-            call_command(cmd, *args, **options)
+        self.stdout.write('')
+        self.stdout.write('Empty and populating the eGSIM database')
+        self.stdout.write('Remember that you can always inspect the database on '
+                          'the browser via the Django admin panel (see README '
+                          'file for info)')
+        # remove interactive
+        if options.pop('interactive', False) and \
+                input('Do you want to continue (y/n)?') != 'y':
+            return
+        self.stdout.write('')
+
+        # We cannot call `call_command` with the simple command name (str) because
+        # they might be hidden (starting with underscore), we have to pass the command
+        # class, which can be retrieved via `load_command_class`:
+        app_name = 'egsim.api'
+        call_command(load_command_class(app_name, '_egsim_openquake'),
+                     *args, **options)
+        self.stdout.write('')
+        call_command(load_command_class(app_name, '_egsim_regionalizations'),
+                     *args, **options)
+        self.stdout.write('')
+        call_command(load_command_class(app_name, '_egsim_flatfiles'),
+                     *args, **options)
+        self.stdout.write('')

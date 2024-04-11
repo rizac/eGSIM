@@ -1,0 +1,86 @@
+alpha-shapes @ https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl#sha256=a1cf7bdb631a834ed12460da9002b6ab6a462b2e2c0bf1d540437b2ecc1b8764
+asgiref @ https://wheelhouse.openquake.org/v3/py/asgiref-3.7.2-py3-none-any.whl#sha256=89b2ef2247e3b562a16eef663bc0e2e703ec6468e2fa8a5cd61cd449786d4f6e
+astroid==3.1.0
+attrs @ https://wheelhouse.openquake.org/v3/py/attrs-23.1.0-py3-none-any.whl#sha256=1f28b4522cdc2fb4256ac1a020c78acf9cba2c6b461ccd2c126f3aa8e8335d04
+blosc2==2.5.1
+certifi @ https://wheelhouse.openquake.org/v3/py/certifi-2023.11.17-py3-none-any.whl#sha256=e036ab49d5b79556f99cfc2d9320b34cfbe5be05c5871b51de9329f0603b0474
+chardet @ https://wheelhouse.openquake.org/v3/py/chardet-5.2.0-py3-none-any.whl#sha256=e1cf59446890a00105fe7b7912492ea04b6e6f06d4b742b2c788469e34c82970
+charset-normalizer==3.3.2
+click @ https://wheelhouse.openquake.org/v3/py/click-8.1.7-py3-none-any.whl#sha256=ae74fb96c20a0277a1d615f1e4d73c8414f5a98db8b799a7931d1582f3390c28
+click-plugins @ https://wheelhouse.openquake.org/v3/py/click_plugins-1.1.1-py2.py3-none-any.whl#sha256=5d262006d3222f5057fd81e1623d4443e41dcda5dc815c06b442aa3c02889fc8
+cligj @ https://wheelhouse.openquake.org/v3/py/cligj-0.7.2-py3-none-any.whl#sha256=c1ca117dbce1fe20a5809dc96f01e1c2840f6dcc939b3ddbb1111bf330ba82df
+coloredlogs @ https://wheelhouse.openquake.org/v3/py/coloredlogs-15.0.1-py2.py3-none-any.whl#sha256=612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934
+contourpy @ https://wheelhouse.openquake.org/v3/macos/py311/contourpy-1.2.0-cp311-cp311-macosx_10_9_x86_64.whl#sha256=dd10c26b4eadae44783c45ad6655220426f971c61d9b239e6f7b16d5cdaaa727
+coverage==7.4.4
+cycler @ https://wheelhouse.openquake.org/v3/py/cycler-0.12.1-py3-none-any.whl#sha256=85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30
+decorator @ https://wheelhouse.openquake.org/v3/py/decorator-5.1.1-py3-none-any.whl#sha256=b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186
+dill==0.3.8
+Django @ https://wheelhouse.openquake.org/v3/py/Django-4.2.10-py3-none-any.whl#sha256=a2d4c4d4ea0b6f0895acde632071aff6400bfc331228fc978b05452a0ff3e9f1
+django-pam @ https://wheelhouse.openquake.org/v3/py/django_pam-2.1.2-py2.py3-none-any.whl#sha256=b7884f8210df49c5f48e4372c50db3fd91b16768aa77535201e1a7578240ba80
+docutils @ https://wheelhouse.openquake.org/v3/py/docutils-0.20.1-py3-none-any.whl#sha256=96f387a2c5562db4476f09f13bbab2192e764cac08ebbf3a34a95d9b1e4a59d6
+egsim @ file:///Users/rizac/work/gfz/projects/sources/python/egsim
+fiona @ https://wheelhouse.openquake.org/v3/macos/py311/fiona-1.9.5-cp311-cp311-macosx_10_15_x86_64.whl#sha256=3cdabb5909591820835b97be419b17a4fdf7d1e5ccd22d764f011ed23e71a982
+flake8 @ https://wheelhouse.openquake.org/v3/py/flake8-6.1.0-py2.py3-none-any.whl#sha256=ffdfce58ea94c6580c77888a86506937f9a1a227dfcd15f245d694ae20a6b6e5
+flatbuffers @ https://wheelhouse.openquake.org/v3/py/flatbuffers-23.5.26-py2.py3-none-any.whl#sha256=c0ff356da363087b915fde4b8b45bdda73432fc17cddb3c8157472eab1422ad1
+fonttools @ https://wheelhouse.openquake.org/v3/py/fonttools-4.39.0-py3-none-any.whl#sha256=f5e764e1fd6ad54dfc201ff32af0ba111bcfbe0d05b24540af74c63db4ed6390
+GDAL @ https://wheelhouse.openquake.org/v3/macos/py311/GDAL-3.7.3-cp311-cp311-macosx_10_15_x86_64.whl#sha256=e5601ea2b07490fbdb64928fb4f554fa077b56a8a69bd9aa1ce914a4828d0634
+h5py @ https://wheelhouse.openquake.org/v3/macos/py311/h5py-3.10.0-cp311-cp311-macosx_10_9_x86_64.whl#sha256=2381e98af081b6df7f6db300cd88f88e740649d77736e4b53db522d8874bf2dc
+humanfriendly @ https://wheelhouse.openquake.org/v3/py/humanfriendly-10.0-py2.py3-none-any.whl#sha256=1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477
+idna @ https://wheelhouse.openquake.org/v3/py/idna-3.6-py3-none-any.whl#sha256=c05567e9c24a6b9faaa835c4821bad0590fbb9d5779e7caa6e1cc4978e7eb24f
+importlib-metadata @ https://wheelhouse.openquake.org/v3/py/importlib_metadata-7.0.0-py3-none-any.whl#sha256=d97503976bb81f40a193d41ee6570868479c69d5068651eb039c40d850c59d67
+iniconfig @ https://wheelhouse.openquake.org/v3/py/iniconfig-2.0.0-py3-none-any.whl#sha256=b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374
+isort==5.13.2
+kaleido==0.2.1
+kiwisolver @ https://wheelhouse.openquake.org/v3/macos/py311/kiwisolver-1.4.5-cp311-cp311-macosx_10_9_x86_64.whl#sha256=8ab3919a9997ab7ef2fbbed0cc99bb28d3c13e6d4b1ad36e97e482558a91be90
+llvmlite @ https://wheelhouse.openquake.org/v3/macos/py311/llvmlite-0.41.1-cp311-cp311-macosx_10_9_x86_64.whl#sha256=210e458723436b2469d61b54b453474e09e12a94453c97ea3fbb0742ba5a83d8
+matplotlib @ https://wheelhouse.openquake.org/v3/macos/py311/matplotlib-3.8.2-cp311-cp311-macosx_10_12_x86_64.whl#sha256=d86593ccf546223eb75a39b44c32788e6f6440d13cfc4750c1c15d0fcb850b63
+mccabe @ https://wheelhouse.openquake.org/v3/py/mccabe-0.7.0-py2.py3-none-any.whl#sha256=6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e
+mpmath @ https://wheelhouse.openquake.org/v3/py/mpmath-1.3.0-py3-none-any.whl#sha256=a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c
+msgpack==1.0.8
+munch @ https://wheelhouse.openquake.org/v3/py/munch-4.0.0-py2.py3-none-any.whl#sha256=71033c45db9fb677a0b7eb517a4ce70ae09258490e419b0e7f00d1e386ecb1b4
+ndindex==1.8
+networkx @ https://wheelhouse.openquake.org/v3/py/networkx-3.2.1-py3-none-any.whl#sha256=f18c69adc97877c42332c170849c96cefa91881c99a7cb3e95b7c659ebdc1ec2
+numba @ https://wheelhouse.openquake.org/v3/macos/py311/numba-0.58.1-cp311-cp311-macosx_10_9_x86_64.whl#sha256=bcecd3fb9df36554b342140a4d77d938a549be635d64caf8bd9ef6c47a47f8aa
+numexpr==2.9.0
+numpy @ https://wheelhouse.openquake.org/v3/macos/py311/numpy-1.26.2-cp311-cp311-macosx_10_9_x86_64.whl#sha256=b96e7b9c624ef3ae2ae0e04fa9b460f6b9f17ad8b4bec6d7756510f1f6c0c841
+onnxruntime @ https://wheelhouse.openquake.org/v3/macos/py311/onnxruntime-1.16.3-cp311-cp311-macosx_10_15_x86_64.whl#sha256=a225bb683991001d111f75323d355b3590e75e16b5e0f07a0401e741a0143ea1
+openquake.engine==3.19.0
+packaging @ https://wheelhouse.openquake.org/v3/py/packaging-23.2-py3-none-any.whl#sha256=8c491190033a9af7e1d931d0b5dacc2ef47509b34dd0de67ed209b5203fc88c7
+pandas @ https://wheelhouse.openquake.org/v3/macos/py311/pandas-2.0.3-cp311-cp311-macosx_10_9_x86_64.whl#sha256=b084b91d8d66ab19f5bb3256cbd5ea661848338301940e17f4492b2ce0801fe8
+pbr @ https://wheelhouse.openquake.org/v3/py/pbr-6.0.0-py2.py3-none-any.whl#sha256=4a7317d5e3b17a3dccb6a8cfe67dab65b20551404c52c8ed41279fa4f0cb4cda
+Pillow @ https://wheelhouse.openquake.org/v3/macos/py311/Pillow-10.1.0-cp311-cp311-macosx_10_10_x86_64.whl#sha256=1fb29c07478e6c06a46b867e43b0bcdb241b44cc52be9bc25ce5944eed4648e7
+platformdirs==4.2.0
+plotly==5.20.0
+pluggy==1.4.0
+protobuf @ https://wheelhouse.openquake.org/v3/py/protobuf-4.25.1-py3-none-any.whl#sha256=a19731d5e83ae4737bb2a089605e636077ac001d18781b3cf489b9546c7c80d6
+psutil @ https://wheelhouse.openquake.org/v3/macos/py311/psutil-5.9.6-cp311-abi3-macosx_10_12_x86_64.whl#sha256=978dfbd7ec42de4519b5d1500c2eaf247c7d40f27d769a3ae193e43f82ee0207
+py-cpuinfo==9.0.0
+pycodestyle @ https://wheelhouse.openquake.org/v3/py/pycodestyle-2.11.1-py2.py3-none-any.whl#sha256=44fe31000b2d866f2e41841b18528a505fbd7fef9017b04eff4e2648a0fadc67
+pyflakes @ https://wheelhouse.openquake.org/v3/py/pyflakes-3.1.0-py2.py3-none-any.whl#sha256=4132f6d49cb4dae6819e5379898f2b8cce3c5f23994194c24b77d5da2e36f774
+pylint==3.1.0
+pyparsing @ https://wheelhouse.openquake.org/v3/py/pyparsing-3.1.1-py3-none-any.whl#sha256=32c7c0b711493c72ff18a981d24f28aaf9c1fb7ed5e9667c9e84e3db623bdbfb
+pyproj @ https://wheelhouse.openquake.org/v3/macos/py311/pyproj-3.6.1-cp311-cp311-macosx_10_15_x86_64.whl#sha256=f72b935931dd8a1c770067cff4e738b513509b758d9931a11be5a0062d56e30d
+pyreadline3 @ https://wheelhouse.openquake.org/v3/py/pyreadline3-3.4.1-py3-none-any.whl#sha256=b0efb6516fd4fb07b45949053826a62fa4cb353db5be2bbb4a7aa1fdd1e345fb
+pyshp @ https://wheelhouse.openquake.org/v3/py/pyshp-2.3.1-py2.py3-none-any.whl#sha256=67024c0ccdc352ba5db777c4e968483782dfa78f8e200672a90d2d30fd8b7b49
+pytest==8.1.1
+pytest-cov==5.0.0
+pytest-django==4.8.0
+python-dateutil @ https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl#sha256=961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9
+python-pam @ https://wheelhouse.openquake.org/v3/py/python_pam-2.0.2-py3-none-any.whl#sha256=4ac51dd8953ac59aa45505882b565eef6a22e0423dcf25d63369902080416c20
+pytz @ https://wheelhouse.openquake.org/v3/py/pytz-2023.3-py2.py3-none-any.whl#sha256=a151b3abb88eda1d4e34a9814df37de2a80e301e68ba0fd856fb9b46bfbbbffb
+PyYAML==6.0.1
+pyzmq @ https://wheelhouse.openquake.org/v3/macos/py311/pyzmq-25.1.1-cp311-cp311-macosx_10_9_x86_64.whl#sha256=e1c1be77bc5fb77d923850f82e55a928f8638f64a61f00ff18a67c7404faf008
+requests @ https://wheelhouse.openquake.org/v3/py/requests-2.31.0-py3-none-any.whl#sha256=58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f
+scipy @ https://wheelhouse.openquake.org/v3/macos/py311/scipy-1.11.4-cp311-cp311-macosx_10_9_x86_64.whl#sha256=f313b39a7e94f296025e3cffc2c567618174c0b1dde173960cf23808f9fae4be
+setproctitle @ https://wheelhouse.openquake.org/v3/macos/py311/setproctitle-1.3.3-cp311-cp311-macosx_10_9_x86_64.whl#sha256=950f6476d56ff7817a8fed4ab207727fc5260af83481b2a4b125f32844df513a
+shapely @ https://wheelhouse.openquake.org/v3/macos/py311/shapely-2.0.2-cp311-cp311-macosx_10_9_x86_64.whl#sha256=2d217e56ae067e87b4e1731d0dc62eebe887ced729ba5c2d4590e9e3e9fdbd88
+six @ https://wheelhouse.openquake.org/v3/py/six-1.16.0-py2.py3-none-any.whl#sha256=8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254
+sqlparse @ https://wheelhouse.openquake.org/v3/py/sqlparse-0.4.4-py3-none-any.whl#sha256=5430a4fe2ac7d0f93e66f1efc6e1338a41884b7ddf2a350cedd20ccc4d9d28f3
+sympy @ https://wheelhouse.openquake.org/v3/py/sympy-1.12-py3-none-any.whl#sha256=c3588cd4295d0c0f603d0f2ae780587e64e2efeedb3521e46b9bb1d08d184fa5
+tables==3.9.2
+tenacity==8.2.3
+toml @ https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl#sha256=806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b
+tomlkit==0.12.4
+tzdata @ https://wheelhouse.openquake.org/v3/py/tzdata-2023.3-py2.py3-none-any.whl#sha256=7e65763eef3120314099b6939b5546db7adce1e7d6f2e179e3df563c70511eda
+urllib3 @ https://wheelhouse.openquake.org/v3/py/urllib3-2.1.0-py3-none-any.whl#sha256=55901e917a5896a349ff771be919f8bd99aff50b79fe58fec595eb37bbc56bb3
+zipp @ https://wheelhouse.openquake.org/v3/py/zipp-3.17.0-py3-none-any.whl#sha256=0e923e726174922dce09c53c59ad483ff7bbb8e572e00c7f7c46b88556409f31

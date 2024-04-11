@@ -3,15 +3,15 @@ Base Django settings for eGSIM project.
 
 This file is supposed to be **overwritten** in production settings, so take care to
 overwrite relevant variable in the latter (replace SECRET_KEY, DEBUG=False and so on)
+
+Info here:
+https://docs.djangoproject.com/en/stable/ref/settings
 """
 
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = ')d#k&x(n_t_*3sgpe^e%ftw%2+xb8l3f%i^j77=ga-!9f)n$5m'
@@ -31,7 +31,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'egsim.api',  # https://docs.djangoproject.com/en/stable/topics/db/models/#using-models
+    # https://docs.djangoproject.com/en/stable/topics/db/models/#using-models
+    'egsim.api',
 ]
 
 MIDDLEWARE = [
@@ -41,8 +42,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'egsim.middlewares.ExceptionHandlerMiddleware'
+    'django.middleware.clickjacking.XFrameOptionsMiddleware'
 ]
 
 ROOT_URLCONF = 'egsim.urls'
@@ -63,8 +63,7 @@ TEMPLATES = [
             'string_if_invalid': '"%s" NOT FOUND',
             # https://stackoverflow.com/a/35837135:
             'builtins': [
-                'django.templatetags.static',  # FIXME: change this in production
-                # 'django.contrib.staticfiles.templatetags.staticfiles',
+                'django.templatetags.static',
             ],
         },
     },
@@ -74,7 +73,7 @@ WSGI_APPLICATION = 'egsim.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/1.11/ref/settings/#databases
+# https://docs.djangoproject.com/en/stable/ref/settings/#databases
 
 DATABASES = {
     'default': {
@@ -88,12 +87,11 @@ DATABASES = {
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
+# Password validation, not used keep defaults here (see settings link above for help):
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',  # noqa
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
@@ -107,8 +105,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/1.11/topics/i18n/
+# Internationalization (not used keep defaults here, see settings link above for help)
 
 LANGUAGE_CODE = 'en-us'
 
@@ -118,17 +115,6 @@ USE_I18N = True
 
 USE_TZ = False
 
-
-# static files (CSS JavaScript, Images). The managing of static files
-# is very badly documented in Django. If comments below do not satisfy you,
-# please check:
-# WHAT THESE VARIABLES DO (most of the comments here below come from that url):
-#   https://stackoverflow.com/a/40330875
-# Another explanation about static files:
-#   https://scotch.io/tutorials/working-with-django-templates-static-files#toc-settings-for-managing-static-files
-# How to structure a static directory *within an app*:
-#   https://stackoverflow.com/a/34636847 and
-#   point 6 in https://www.toptal.com/django/django-top-10-mistakes for details
 
 # static files root (path on the server) I GUESS it is not used at all in development
 # mode. In production, it is used as URL to retreive static files, if they
@@ -154,7 +140,7 @@ STATIC_ROOT = ''
 # STATICFILES_DIRS is used to include additional directories for collectstatic
 # to look for, and in development (debug=True) to search for static files
 # in *addition* to the default djangoproject/appname/static.
-# To keep things simple because we have just onedjango  project and one app
+# To keep things simple because we have just one django  project and one app
 # (both named 'egsim') we do not want to tie any static file to a particular app,
 # thus we adopt a very common approach: store static files under
 # 'djangoproject/static' folder, which has the only drawback that we have to
@@ -169,7 +155,7 @@ MEDIA_URL = '/media/'
 # media dir:
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# https://docs.djangoproject.com/en/2.0/ref/settings/#std:setting-SESSION_EXPIRE_AT_BROWSER_CLOSE
+# If we have logins better to set this to True (in the meantime, set to False):
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 CSRF_USE_SESSIONS = True
@@ -181,3 +167,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Use a singleton, custom no-op renderer to speed up Forms and Errors initialization
 FORM_RENDERER = 'egsim.api.forms.get_base_singleton_renderer'
+
+# # Since Django 3.0. The default value of the X_FRAME_OPTIONS setting was changed
+# # from SAMEORIGIN to DENY. If you want to restore it back uncomment:
+# X_FRAME_OPTIONS = 'SAMEORIGIN'

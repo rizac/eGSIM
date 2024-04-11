@@ -5,52 +5,94 @@ Created on 5 Apr 2019
 
 @author: riccardo
 """
-import json
-from datetime import datetime, date
-from typing import Any
+from __future__ import annotations
+from os.path import abspath, join, isdir, dirname
+from os import makedirs
+from typing import Any, Union, Iterable, Self
 
-from django.db.models import (Model as DjangoModel, Q, TextField, BooleanField,
-                              ForeignKey, ManyToManyField, JSONField, UniqueConstraint,
-                              CASCADE, SET_NULL, Index, SmallIntegerField,
-                              DateTimeField, URLField, Manager)
+from django.db.models import (Model as DjangoDbModel, TextField, BooleanField,
+                              Index, URLField, Manager, QuerySet, FloatField)
 from django.db.models.options import Options
 
-from egsim.smtk import flatfile
 
 # Notes: primary keys are auto added if not present ('id' of type BigInt or so).
 # All models here that are not abstract will be available prefixed with 'api_'
 # in the admin panel (https://<site_url>/admin)
 
 
-class Model(DjangoModel):
-    """Abstract base class of all Django Models of this module"""
+class EgsimDbModel(DjangoDbModel):
+    """Abstract base class of Egsim Db models"""
 
-    # these two attributes are set by Django (see metaclass for details) and are here
-    # only to silent pylint or editor inspectors
-    objects: Manager
-    _meta: Options
-
-    class Meta:  # make this class abstract
-        abstract = True
-
-
-class _UniqueName(Model):
-    """Abstract class for Table entries identified by a single unique name"""
+    # attrs dynamically set by Django. declared here just to silent lint warnings:
+    # (NOTE: `objects` SHOULD BE USED INTERNALLY, see `queryset` docstring for details)
+    objects: Manager  # https://docs.djangoproject.com/en/stable/topics/db/managers
+    _meta: Options  # https://docs.djangoproject.com/en/stable/ref/models/options/
 
     name = TextField(null=False, unique=True, help_text="Unique name")
+    hidden = BooleanField(default=False, null=False,
+                          help_text="Hide this item, i.e. make it publicly "
+                                    "unavailable to the whole API. This field "
+                                    "is intended to hide/show items quickly from "
+                                    "the admin panel without executing management "
+                                    "scrips")
 
     class Meta:
-        # In subclasses, `abstract` is (re)set to False. Everything else is copied
-        # (https://docs.djangoproject.com/en/3.2/topics/db/models/#meta-inheritance)
         abstract = True
+        # does this speed up searches?:
+        indexes = [Index(fields=['name']), Index(fields=['hidden'])]
 
     def __str__(self):
         return self.name
 
+    @classmethod
+    def queryset(cls, *only) -> QuerySet[Self]:
+        """Return a QuerySet of all visible model instances. This method calls
+        `cls.objects.filter(hidden=False)` and should be used to serve model data
+        in the API instead of `cls.objects`. The latter should be used for internal
+        operations only, e.g., in a management command where we want to empty a table
+        (including hidden elements): `cls.objects.all().delete()`
 
-class _Citable(Model):
-    """Abstract class for Table rows which can be cited, e.g. with any info
-    such as URL, license, bib. citation"""
+        :param only: the fields to load from the DB for each instance, e.g. 'name'
+            (the `str` uniquely denoting the instance). Empty (the default) will
+            load all instance fields
+        """
+        queryset = cls.objects if not only else cls.objects.only(*only)
+        return queryset.filter(hidden=False)
+
+    @classmethod
+    def names(cls) -> QuerySet[str]:
+        """Return a QuerySet yielding all instance unique names (`str`)"""
+        return cls.queryset('name').values_list('name', flat=True)
+
+
+class Gsim(EgsimDbModel):
+    """The Ground Shaking Intensity Models (GSIMs) available in eGSIM. This table
+    is populated with valid OpenQuake models only (`passing valid.gsim` or not
+    deprecated)
+    """
+    imts = TextField(null=False,
+                     help_text='The intensity measure types '
+                               'defined for the model, space separated '
+                               '(e.g.: "PGA SA")')
+    min_sa_period = FloatField(null=True,
+                               help_text='The minimum SA period supported '
+                                         'by the model, or None (no lower limit)')
+    max_sa_period = FloatField(null=True,
+                               help_text='The maximum SA period supported '
+                                         'by the model, or None (no upper limit)')
+
+    unverified = BooleanField(default=False, help_text="not independently verified")
+    experimental = BooleanField(default=False, help_text="experimental: may "
+                                                         "change in future versions")
+    adapted = BooleanField(default=False, help_text="not intended for general use: "
+                                                    "the behaviour may not be "
+                                                    "as expected")
+    # Note: `superseded_by` is not used (we do not save deprecated Gsims)
+
+
+class Reference(DjangoDbModel):
+    """Abstract class for Table rows representing a reference to some work
+    (e.g. data, file, article)"""
 
     display_name = TextField(default=None, null=True)
     url = URLField(default=None, null=True)
@@ -60,238 +102,136 @@ class _Citable(Model):
     doi = TextField(default=None, null=True)
 
     class Meta:
-        # In subclasses, `abstract` is (re)set to False. Everything else is copied
-        # (https://docs.djangoproject.com/en/3.2/topics/db/models/#meta-inheritance)
         abstract = True
 
 
-class Flatfile(_UniqueName, _Citable):
-    """Class handling flatfiles stored in the file system
-    (predefined flatfiles)
-    """
-    filepath = TextField(unique=True, null=False)
-    hidden = BooleanField(null=False, default=False,
-                          help_text="if true, the flatfile is hidden in browsers "
-                                    "(users can still access it via API requests, "
-                                    "if not expired)")
-    expiration = DateTimeField(null=True, default=None,
-                               help_text="expiration date(time). If null, the "
-                                         "flatfile has no expiration date")
+class MediaFile(EgsimDbModel):
+    """Abstract class handling any data file in the MEDIA directory of eGSIM"""
+    # for safety, do not store full file paths in the db (see `filepath` for details):
+    media_root_path = TextField(unique=True, null=False,
+                                help_text="the file path, relative to the media "
+                                          "root directory defined in "
+                                          "the settings file (MEDIA_ROOT)")
 
-    @classmethod
-    def get_flatfiles(cls, hidden=False, expired=False):
-        qry = cls.objects  # noqa
-        if not expired:
-            qry = qry.filter(Q(expiration__isnull=True) |
-                                     Q(expiration__lt=datetime.utcnow()))
-        if not hidden:
-            qry = qry.filter(hidden=False)
-        return qry
+    @property
+    def filepath(self):
+        """Return the absolute file path of this data file"""
+        from django.conf import settings
+        return abspath(join(settings.MEDIA_ROOT, self.media_root_path))  # noqa
+
+    def write_to_filepath(self, media_content: Any, mkdirs=True, **kwargs):
+        raise NotImplementedError()
+
+    def read_from_filepath(self, **kwargs) -> Any:
+        raise NotImplementedError()
+
+    class Meta:
+        abstract = True
 
     def __str__(self):
         """string representation of this object"""
         return f'{self.name} ({self.filepath})'
 
-class CompactEncoder(json.JSONEncoder):
-    """Compact JSON encoder used in JSONFields of this module"""
-    def __init__(self, **kwargs):
-        kwargs['separators'] = (',', ':')
-        super().__init__(**kwargs)
 
+class Flatfile(MediaFile, Reference):
+    """Class handling flatfiles stored in the file system. The associated media
+    file is an HDF file representing a valid flatfile (pandas DataFrame)
+    """
 
-class DateTimeEncoder(CompactEncoder):
-    """Encode date times as ISO formatted strings"""
+    def write_to_filepath(self, flatfile: Any, mkdirs=True, **kwargs):
+        """Write this instance media file as HDF file on disk
 
-    _KEY = '__iso8601datetime__'  # DO NOT CHANGE, or otherwise repopulate the db
-
-    def default(self, obj):
-        if isinstance(obj, (datetime, date)):
-            obj = {self._KEY: obj.isoformat()}
-        return super(DateTimeEncoder, self).default(obj)  # (raise TypeError)
-
-
-class DateTimeDecoder(json.JSONDecoder):
-    """Encode date times encoded with the previous class instance"""
-
-    def __init__(self, **kwargs):
-        super(DateTimeDecoder, self).__init__(object_hook=DateTimeDecoder.object_hook,
-                                              **kwargs)
-
-    @staticmethod
-    def object_hook(dct):
-        key = DateTimeEncoder._KEY  # noqa
-        if key in dct:
-            return datetime.fromisoformat(dct[key])
-        # return dict "normally":
-        return dct
-
-
-class FlatfileColumn(_UniqueName):
-    """Flat file column"""
-
-    oq_name = TextField(null=True, help_text='The OpenQuake name of the GSIM '
-                                             'property associated to this '
-                                             'column (e.g., as used in '
-                                             'Contexts during residuals '
-                                             'computation)')
-    type = SmallIntegerField(null=False,
-                             default=flatfile.ColumnType.unknown,
-                             choices=[(c.value, c.name.replace('_', ' '))
-                                      for c in flatfile.ColumnType],
-                             help_text='The type of Column of this column (e.g., '
-                                       'IMT, OpenQuake parameter, distance measure)')
-    help = TextField(null=False, default='', help_text="Field help text")
-    data_properties = JSONField(null=True, encoder=DateTimeEncoder,
-                                decoder=DateTimeDecoder,
-                                help_text=('The properties of the this column data, '
-                                           'as JSON (null: no properties). Optional '
-                                           'keys: "dtype" ("int", "bool", "datetime", '
-                                           '"str" or "float", or list of possible '
-                                           'values the column data can have), "bounds": '
-                                           '[min or null, max or null] (null means: '
-                                           'unbounded), "default" (the default when '
-                                           'missing), "required" (bool)'))
-
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        """Call `super.save` after checking and harmonizing the values of
-        `self.properties` to be usable with flatfiles
+        @param flatfile: a pandas DataFrame denoting a **valid** flatfile (no check
+            or validation will be performed)
+        @param mkdirs: recursively create the parent directory of `self.filepath` if
+            non-existing
+        @param kwargs: additional arguments to pandas `to_hdf` ('format', 'mode'
+            and 'key' will be set in this function if not given)
         """
-        # perform some check on the data type consistencies:
-        try:
-            _ = flatfile._check_column_metadata(**(self.data_properties or {}),
-                                                oq_name=self.oq_name, help=self.help,
-                                                ctype=self.type)
-        except Exception as exc:
-            raise ValueError(f'Flatfile column "{self.name}" error: {exc}')
+        if mkdirs and not isdir(dirname(self.filepath)):
+            makedirs(dirname(self.filepath))
+        kwargs.setdefault('format', 'table')
+        kwargs.setdefault('mode', 'w')
+        kwargs.setdefault('key', self.name)
+        flatfile.to_hdf(self.filepath, **kwargs)
 
-        super().save(force_insert=force_insert, force_update=force_update,
-                     using=using, update_fields=update_fields)
+    def read_from_filepath(self, **kwargs) -> Any:
+        """Return this instance media file as flatfile (pandas DataFrame)
 
-    @classmethod
-    def get_data_properties(cls) -> \
-            tuple[dict[str, str], dict[str, Any], dict[str, list[Any, Any]], list[str]]:
+        @param kwargs: additional arguments to pandas `read_hdf` ('key' will
+            be set in this function if not given)
         """
-        Return the `data_properties` Field as tuples:
-        `dtype` `default` `bounds` `required`
+        from pandas import read_hdf
+        kwargs.setdefault('key', self.name)
+        return read_hdf(self.filepath, **kwargs)
+
+
+class Regionalization(MediaFile, Reference):
+    """Class handling regionalizations stored in the file system. A regionalization
+    is basically a collection of regions, and each region is an object denoted
+    by a geometry on earth (e.g. a Polygon), a unique name and a list of
+    (ground shaking) models selected for the region.
+    The associated media file is a (geo)JSON file where a regionalization is a
+    geoJSON FeatureCollection object, and a region is a geoJSON Feature object.
+    E.g.:
+    ```
+    {
+        "type": 'FeatureCollection',
+        "features" : [
+            {
+                "type": "Feature",
+                "geometry": list,
+                "properties": {
+                    "region": str,
+                    "models": list[str],
+                    ...
+                }
+            },
+            ...
+        ]
+    }
+    ```
+    Note for developers:. See `read_from_filepath` to convert a Feature
+    geometry to a shapely `shape` object
+    """  # noqa
+
+    def write_to_filepath(
+            self, geojson_features: Union[Iterable[dict], dict], mkdirs=True, **kwargs):
+        """Write this instance media file as (geo)JSON FeatureCollection object on disk.
+        See this class docstring for info on the geoJSON format
+
+        @param geojson_features: dict (geoJSON FeatureCollection) or iterable of
+            dicts (geoJSON Feature's). See this class docstring for info on the format
+        @param mkdirs: recursively create the parent directory of `self.filepath` if
+            non-existing
+        @param kwargs: additional arguments to `json.dump` ('separators'
+            will be set in this function is not given)
         """
-        dtype, defaults, bounds, required = {}, {}, {}, []
-        cols = 'name', 'data_properties'
-        for name, props in cls.objects.filter().only(*cols).values_list(*cols):
-            if not props:
-                continue
-            if props.get("dtype", None):
-                dtype[name] = props["dtype"]
-            if "default" in props:
-                defaults[name] = props["default"]
-            if "bounds" in props:
-                bounds[name] = props["bounds"]
-            if props.get("required", False):
-                required.append(name)
+        if mkdirs and not isdir(dirname(self.filepath)):
+            makedirs(dirname(self.filepath))
+        if not isinstance(geojson_features, dict):
+            # convert list of geoJSON features into a geojson feature collection:
+            geojson_features = {
+                "type": "FeatureCollection",
+                "features": list(geojson_features),
+            }
+        import json
+        kwargs.setdefault('separators', (',', ':'))
+        with open(self.filepath, 'w') as _:
+            json.dump(geojson_features, _, **kwargs)
 
-        return dtype, defaults, bounds, required
+    def read_from_filepath(self, **kwargs) -> dict:
+        """Return this instance media file as geoJSON FeatureCollection object (dict).
+        To convert each Feature geometry to a shapely `shape` object:
+        ```python
+        from shapely.geometry import shape
+        feature_collection = self.read_from_filepath()
+        for feat in feature_collection['features']:
+            feat['geometry'] = shape(feat['geometry'])
+        ```
 
-    class Meta(_UniqueName.Meta):
-        indexes = [Index(fields=['name']), ]
-
-    def __str__(self):
-        col_type = 'unknown' if self.type is None else self.get_type_display()  # noqa
-        # `get_[field]_display` is added by Django for those fields with choices
-        return f'Column {self.name}, type: {col_type}, OpenQuake name: {self.oq_name})'
-
-
-class Imt(_UniqueName):
-    """The :mod:`intensity measure types <openquake.hazardlib.imt>` that
-    OpenQuake's GSIMs can calculate and that are supported in eGSIM
-    """
-    needs_args = BooleanField(default=False, null=False)
-
-    # OpenQuake's Gsim attribute used to populate this table during db init:
-    OQ_ATTNAME = 'DEFINED_FOR_INTENSITY_MEASURE_TYPES'
-
-    class Meta(_UniqueName.Meta):
-        indexes = [Index(fields=['name']), ]
-
-
-class GsimWithError(_UniqueName):
-    """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake
-    that could not be available in eGSIM due errors
-    """
-
-    error_type = TextField(help_text="Error type, usually the class name of "
-                                     "the Exception raised")
-    error_message = TextField(help_text="Error message")
-
-    def __str__(self):
-        return '%s. %s: %s' % (self.name, self.error_type, self.error_message)
-
-
-class Gsim(_UniqueName):
-    """The Ground Shaking Intensity Models (GSIMs) implemented in OpenQuake and
-    available in eGSIM
-    """
-    imts = ManyToManyField(Imt, related_name='gsims',
-                           help_text='Intensity Measure Type(s)')
-    required_flatfile_columns = ManyToManyField(FlatfileColumn,
-                                                related_name='gsims',
-                                                help_text='Required flatfile '
-                                                          'column(s)')
-    init_parameters = JSONField(null=True, encoder=CompactEncoder,
-                                help_text="The parameters used to "
-                                          "initialize this GSIM in "
-                                          "Python, as JSON object of "
-                                          "names mapped to their "
-                                          "default value. Included "
-                                          "here are only parameters "
-                                          "whose default value type "
-                                          "is a Python int, float, "
-                                          "bool or str")
-    warning = TextField(default=None, null=True,
-                        help_text='Optional usage warning(s) to be reported '
-                                  'before usage (e.g., in GUIs)')
-
-    class Meta(_UniqueName.Meta):
-        indexes = [Index(fields=['name']), ]
-
-
-class _GeoJsonRegion(Model):
-    """Abstract class representing a db model with an associated Region
-    in GeoJSON coordinates"""
-
-    geometry = JSONField(null=False, encoder=CompactEncoder,
-                         help_text="The region area as geoJSON Geometry object, "
-                                   "with at least the keys \"coordinates\""
-                                   f"and \"type'\" (usually 'Polygon', 'MultiPolygon')."
-                                   f" For details see: "
-                                   "https://en.wikipedia.org/wiki/GeoJSON#Geometries)")
-
-    class Meta:  # make this class abstract
-        abstract = True
-
-class GsimRegion(_GeoJsonRegion):
-    """Model representing a GSIM Region"""
-
-    gsim = ForeignKey(Gsim, on_delete=CASCADE, null=False, related_name='regions')
-    regionalization = ForeignKey("Regionalization", to_field='name',
-                                 on_delete=SET_NULL, null=True,
-                                 help_text="The name of the seismic hazard source "
-                                           "regionalization that defines and includes "
-                                           "this region")
-    class Meta:
-        constraints = [UniqueConstraint(fields=['gsim', 'regionalization'],
-                                        name='%(app_label)s_%(class)s_unique_'
-                                             'gsim_and_regionalization')]
-
-    def __str__(self):
-        typ = self.geometry.get('type', "unknown")  # noqa
-        return f'Region (type {typ}), model: {str(self.gsim)}, ' \
-               f'regionalization: {self.regionalization}'
-
-
-class Regionalization(_UniqueName, _Citable, _GeoJsonRegion):
-    """Model representing a Regionalization, which is basically a collection
-    of `GsimRegion`s. As such, each regionalization `geometry`
-    attribute should be the union of all `geometry`s of its `GsimRegion`s (to
-    be computed beforehand for performance reasons)
-    """
-    pass
+        @param kwargs: additional arguments to `json.load`
+        """  # noqa
+        import json
+        with open(self.filepath, 'r') as _:
+            return json.load(_, **kwargs)

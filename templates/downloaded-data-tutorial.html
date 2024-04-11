@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block head %}
+{% with vue=False plotly=False leaflet=False fontawesome=True %}
+{{ block.super }}
+{% endwith %}
+{% endblock %}
+
+
+{% block end-of-head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/rainbow.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<!-- and it's easy to individually load additional languages -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+{% endblock %}
+
+
+{% block body %}
+<div style='max-width:60rem;line-height:2'>
+
+<div>eGSIM computed {{ key }} are arranged in a tabular structure {{ docstring_intro | safe }}
+A typical representation might be:</div>
+
+<div style='overflow:auto'>{{ dataframe_html | safe }}</div>
+
+
+<div class='mt-4'>
+In Python code (e.g. standard module, Jupyter notebook) you can easily read
+the data with the pandas library (see snippets below) into a
+<a href="https://pandas.pydata.org/docs/user_guide/dsintro.html#dataframe" target="_blank">DataFrame</a>,
+a 2-dimensional labeled data structure with columns of different types
+(e.g., float, str, int).
+</div>
+
+<div style='overflow:auto'>{{ docstring_headers_intro | safe }}</div>
+
+
+<div class='mt-4 d-flex flex-row align-items-baseline'>
+	<b>Read/Write a downloaded HDF file</b>
+	<div style='flex:1 1 auto'></div>
+	<div>Pandas doc:</div>
+	<a class='mx-2'
+	   href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_hdf.html"
+	   target="_blank"><i class='fa fa-external-link'></i>Read HDF</a>
+	<a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_hdf.html"
+	   target="_blank"><i class='fa fa-external-link'></i>Write HDF</a>
+</div>
+
+<i>Note: also requires pytables (pip install tables)</i>
+
+<pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas tables
+
+# To read data, provide a string path to an existing file (file_path):
+dataframe = pd.read_hdf(file_path)
+
+# To write data, provide a string path to a destination file (file_path)
+# and a string identifier for the table, required in HDF (table_key)
+dataframe.to_hdf(file_path, key=table_key, format="table")
+</code></pre>
+
+
+<div class='mt-4 d-flex flex-row align-items-baseline'>
+	<b>Read/Write a downloaded CSV file</b>
+	<div style='flex:1 1 auto'></div>
+	<div>Pandas doc:</div>
+	<a class='mx-2'
+	   href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html"
+	   target="_blank"><i class='fa fa-external-link'></i>Read CSV</i></a>
+	<a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_csv.html"
+	   target="_blank"><i class='fa fa-external-link'></i>Read CSV</a>
+</div>
+
+<i>
+	Disclaimer: We discourage the use of CSV files. The format is much less performant than
+	HDF, resulting in bigger files size and slower download, and does not store all required
+	information: as such, you might need to fix potential issues with additional code
+	(see the pandas doc at the link above in case), especially when reading or writing
+	DataFrames with missing data or non-standard column types (e.g. categorical).
+</i>
+
+<pre><code class="language-python">import pandas as pd  # if not installed: pip/conda install pandas
+
+# To read data, provide a string path to an existing file (file_path)
+dataframe = pd.read_csv(file_path, header=[0, 1, 2], index_col=0)
+
+# To write data, provide a string path to a destination file (file_path):
+dataframe.to_csv(file_path)
+</code></pre>
+
+
+<div class='mt-4'>
+From here on, you can easily and
+efficiently manipulate the data in your DataFrame. For further reading, see this
+<a href="https://pandas.pydata.org/docs/user_guide/10min.html">
+	<i class='fa fa-external-link'></i>short intro
+</a>, or how to
+<a href="https://pandas.pydata.org/docs/user_guide/indexing.html">
+	<i class='fa fa-external-link'></i>index and select data
+</a> (also with a
+<a href="https://pandas.pydata.org/docs/user_guide/advanced.html">
+	<i class='fa fa-external-link'></i>multi-index row or column, the case at hand</a>
+), or
+<a href="https://pandas.pydata.org/docs/user_guide/visualization.html#visualization">
+	<i class='fa fa-external-link'></i>plot the data
+</a>.
+</div>
+
+</div>
+{% endblock %}
+
+
+{% block end-of-body %}
+
+{% with bootstrap_js=False %}
+{{ block.super }}
+{% endwith %}
+
+<script>hljs.highlightAll();</script>
+{% endblock %}

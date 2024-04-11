@@ -1,0 +1,267 @@
+# Flatfile metadata registry. Syntax (in YAML format):
+#
+# <column_name>:
+#   dtype:    The data type (default when missing: null). Supported values are: null,
+#             int, float, str, bool, datetime (ISO formatted) or, if the column can
+#             take only a fixed number of possible values (aka "categories"), the list
+#             of values, which must be all the same supported data type. If non-null,
+#             the data type will be used for data validation
+#   default:  The default value used to fill missing data (e.g. empty cell, null, NaN).
+#             Note that in Python pandas, missing data in integers and booleans (dtype
+#             int or bool) is invalid, so the presence or not of a default (usually 0
+#             for int and false for bool) will also affect data validation
+#   type:     The column type (optional). Supported values are: rupture, site, distance,
+#             intensity. If a column's type and name match an OpenQuake ground motion
+#             property (rupture parameter, site parameter, distance measure) required to
+#             compute the model predictions or an observed intensity measure required to
+#             compute residuals, its values will be used in computation. Otherwise, the
+#             column is intended to be used for other purposes (e.g. IDs assignment)
+#   alias:    The column alias(es), as string or list of strings, indicating valid
+#             alternative names for the column. If a type is provided, the OpenQuake
+#             name, if any, can also be provided here, but intensity measure columns
+#             cannot have aliases and must be spelled capitalized as in OpenQuake (e.g.
+#             PGA SA PGV)
+#   help:     The field help (optional), used to provide documentation
+#   ">"       (with quotation marks because > and < are special characters in YAML)
+#             The minimum value (endpoint excluded) of the column data. Currently used
+#             for info and not to validate data (it might be in the future)
+#   ">="      The min. value (endpoint included) of the column data (see ">" for details)
+#   "<"       The max. value (endpoint excluded) of the column data (see ">" for details)
+#   "<="      The max. value (endpoint included) of the column data (see ">" for details)
+
+# YAML notes:
+# Unless required, strings (text sequences) don't need quotes ("'). Date-times must be
+# given as ISO-formatted strings (e.g.: 2006-01-01T12:31:21). YAML is a superset of JSON,
+# so you can type sequences and mappings as JSON Arrays and Objects, respectively. If
+# you want to type over multiple lines for readability, prefix the text with >-
+# (see examples here below or at https://stackoverflow.com/a/3790497)
+
+azimuth:
+  dtype: float
+  type: distance
+repi:
+  dtype: float
+  help: epicentral distance (in km)
+  type: distance
+rrup:
+  dtype: float
+  help: >-
+    rupture_distance (in km). Missing data (e.g., empty cell, NaN, column not provided) 
+    will be replaced with the hypocentral distance, if present
+  type: distance
+rjb:
+  dtype: float
+  help: >-
+    Joyner-Boore distance (in km). Missing data (e.g., empty cell, NaN, column not 
+    provided) will be replaced with the epicentral distance, if present
+  type: distance
+rhypo:
+  dtype: float
+  help: hypocentral distance (in km)
+  type: distance
+rx:
+  dtype: float
+  help: >-
+    Horizontal distance (in km) from the top of the rupture measured perpendicular to 
+    strike. Missing data (e.g., empty cell, NaN, column not provided) will be replaced 
+    with the epicentral distance, if present
+  type: distance
+ry0:
+  dtype: float
+  help: >-
+    Horizontal distance (in km) from the top of the rupture measured parallel to strike. 
+    Missing data (e.g., empty cell, NaN, column not provided) will be replaced with the 
+    epicentral distance, if present
+  type: distance
+rvolc:
+  dtype: float
+  default: 0
+  help: Distance through volcanic zone (km). When missing, it defaults to 0
+  type: distance
+evt_lat:
+  dtype: float
+  ">=": -90
+  "<=": 90
+  help: Event latitude (hypocenter latitude, in deg)
+  alias: [hypo_lat, event_latitude]
+  type: rupture
+evt_lon:
+  dtype: float
+  ">=": -180
+  "<=": 180
+  help: Event longitude (hypocenter longitude, in deg)
+  alias: [hypo_lon, event_longitude]
+  type: rupture
+mag:
+  dtype: float
+  alias: magnitude
+  help: event magnitude
+  type: rupture
+evt_depth:
+  dtype: float
+  help: event depth (hypocentral depth, in km)
+  alias: [hypo_depth, event_depth]
+  type: rupture
+rup_top_depth:
+  dtype: float
+  ">=": 0
+  help: Top of Rupture Depth (km)
+  alias: [ztor, depth_top_of_rupture]
+  type: rupture
+rup_width:
+  dtype: float
+  ">=": 0
+  help: >-
+    Down-dip width of the rupture (km). Missing data (e.g., empty cell, NaN, column not 
+    provided) will be derived from the record magnitude using a Magnitude-Scaling 
+    Relationship defined for PEER PSHA test cases, and assuming an aspect ratio of 1
+  alias: width
+  type: rupture
+dip:
+  dtype: float
+  ">=": 0
+  "<=": 90
+  help: >-
+    the angle of the fault relative to the horizontal (deg).
+    Hint: in case of more components available (e.g. from web services), the
+    correct one should be inferred by the user from the rupture, or can be chosen
+    randomly if no information is available
+  type: rupture
+rake:
+  dtype: float
+  ">=": -180
+  "<=": 180
+  help: >-
+    the direction the hanging wall moves, relative to the fault strike (deg).
+    Hint: in case of more components available (e.g. from
+    web services), the correct one should be inferred by the user from the rupture,
+    or can be chosen randomly if no information is available
+  type: rupture
+z1pt0:
+  dtype: float
+  help: >-
+    depth of the layer where seismic waves start to propagate with a speed above 1.0 
+    km/sec, in meters. Missing data (e.g., empty cell, NaN, column not provided) will be 
+    derived from the vs30 (if present) using the Chiou & Youngs (2014) California 
+    model
+  alias: z1
+  type: site
+z2pt5:
+  dtype: float
+  help: >-
+    depth of the layer where seismic waves start to propagate with a speed above 
+    2.5 km/sec, in km. Missing data (e.g., empty cell, NaN, column not provided) will 
+    be derived from the vs30 (if present) using the Campbell & Bozorgnia (2014) model
+  type: site
+vs30:
+  dtype: float
+  ">=": 0
+  help: Average shear wave velocity in the top 30 m, in m/s
+  type: site
+backarc:
+  dtype: bool
+  default: false
+  type: site
+  help: >-
+    whether or not the site is in the subduction backarc. When missing or false, 
+    the site is assumed to be unknown or in the subduction forearc
+sta_lat:
+  dtype: float
+  ">=": -90
+  "<=": 90
+  help: station latitude (deg)
+  alias: [station_latitude, lat]  # lat is for compatibility with OpenQuake
+  type: site
+sta_lon:
+  dtype: float
+  ">=": -180
+  "<=": 180
+  help: station longitude (deg)
+  alias: [station_longitude, lon]  # lon is for compatibility with OpenQuake
+  type: site
+vs30measured:
+  dtype: bool
+  default: true
+  help: whether or not the Vs30 is measured (default true)
+  type: site
+xvf:
+  dtype: float
+  help: distance to the volcanic front (km)
+  type: site
+fpeak:
+  dtype: float
+  ">=": 0
+  help: >-
+    Frequency that corresponds to the peak of the horizontal to vertical
+    spectral ratio (Hz)
+  type: site
+region:
+  dtype: [0, 1, 2, 3, 4, 5]
+  default: 0
+  help: >-
+    The ESHM2020 attenuation cluster region to which the site belongs 
+    (https://doi.org/10.1007/s10518-020-00899-9). 0 (default): unknown, 1: average / slower,
+    2: average / faster, 3: fast, 4: average, 5: very slow
+  type: site
+geology:
+  dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC",
+          "PLEISTOCENE", "PRECAMBRIAN", "UNKNOWN"]
+  default: UNKNOWN
+  help: geological classification of the site
+  type: site
+slope:
+  dtype: float
+  ">": 0
+  help: The local slope of the station
+  type: site
+PGA:
+  dtype: float
+  help: Peak ground acceleration, in g
+  type: intensity
+PGV:
+  dtype: float
+  help: Peak ground velocity, in cm/s
+  type: intensity
+SA:
+  dtype: float
+  help: >-
+    Spectral Acceleration, in g. SA columns are in the form "SA(P)",
+    where P denotes the period at which it has been computed, in s
+  type: intensity
+PGD:
+  dtype: float
+  help: Peak ground displacement during an earthquake measured, in cm
+  type: intensity
+CAV:
+  dtype: float
+  help: Cumulative Absolute Velocity, in g-sec
+  type: intensity
+IA:
+  dtype: float
+  help: Arias intensity, in m/s
+  type: intensity
+# ID columns:
+evt_id:
+  alias: event_id
+  help: >-
+    The unique ID of the recorded seismic event. If missing, an id is inferred
+    from the event coordinates (latitude, longitude, depth and time) 
+    which must all be present.
+    In general, you can use the id provided by the event catalog or web service,
+    or create your own, as long as it holds: same id <=> same event. IDs should
+    be preferably of type integer for performance reasons
+  type: rupture
+sta_id:
+  alias: station_id
+  help: >-
+    The unique ID of the seismic station. If missing, an id is inferred from
+    the station spatial coordinates (latitude, longitude), which must all be present.
+    In general, you can infer the id from the tuple (network_code, station_code)
+    or create your own, as long as it holds: same id <=> same station. IDs should
+    be preferably of type integer for performance reasons
+  type: site
+evt_time:
+  alias: event_time
+  dtype: datetime
+  help: the event time (as ISO formatted string, e.g. 2006-03-31T00:12:24)
+  type: rupture

@@ -1,0 +1,125 @@
+<div class='d-flex flex-column' style="flex: 1 1 auto">
+
+	<div class='border-bottom py-4 d-flex flex-column bg-white text-center'>
+		<h1 style='font-size: 500%; text-shadow: 2px 8px 6px rgba(0,0,0,0.2), 0px -5px 35px rgba(255,255,255,0.3);'>eGSIM</h1>
+		<h5 class='p-0 mt-3'>
+			a web service to explore, select and test Ground-Shaking Intensity Models
+		</h5>
+	</div>
+
+	<div style='flex: 1 1 auto; overflow:auto; padding: 3rem calc(0.5*(100vw - 40rem))'
+		 class='text-center'>
+
+		<p>
+			eGSIM is a web application programming interface (API)
+			implemented along the lines of popular seismological web services (e.g., FDSN), where
+			users can perform queries in their code via configurable
+			URLs in order to retrieve model predictions of ground motions from either observed
+			or hypothetical earthquake scenarios.
+		</p>
+
+		<p>
+			<b>Welcome to eGSIM web portal</b>, a graphical user-friendly interface to interact with the API:
+		</p>
+
+		<div class='d-flex flex-row align-items-baseline justify-content-center'>
+
+			<div class='form-control shadow'>
+				<p>
+				Get model predictions of ground motions
+				from hypothetical earthquake scenarios
+				</p>
+				<p>
+				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.predictions">
+					<i class="fa fa-area-chart me-1"></i> Model-to-Model comparison
+				</button>
+				</p>
+			</div>
+
+			<div class='form-control shadow mx-4'>
+				<p>
+				Utilities to compile, inspect or upload user-defined data of
+				observed earthquake scenarios
+				</p>
+				<p>
+				<button class='btn btn-primary text-nowrap' @click="currentPage = pages. currentPage = pages.flatfile_meta_info">
+					<i class="fa fa-database me-1"></i> Data intro
+				</button>
+				</p>
+				<p>
+				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.flatfile_visualize">
+					<i class="fa fa-database me-1"></i> Data visual inspection
+				</button>
+				</p>
+			</div>
+
+			<div class='form-control shadow'>
+				<p>
+				Get residuals between
+				model predictions of ground motions
+				and observed earthquake scenarios
+				</p>
+				<p>
+				<button class='btn btn-primary text-nowrap' @click="currentPage = pages.residuals">
+					<i class="fa fa-bar-chart me-1"></i> Model-to-Data Comparison
+				</button>
+				</p>
+			</div>
+
+		</div>
+	</div>
+
+	<div>
+		<div class="d-flex flex-row justify-content-evenly align-items-baseline p-4">
+
+			<a target="_blank" class='me-2' href='https://www.epos-ip.org/'>
+				<img src="{% static 'img/logos/EPOS_logo_small_591_0.png' %}" style="height:3rem"/>
+			</a>
+
+			<a target="_blank" class='me-2' href='http://www.efehr.org/'>
+				<img src="{% static 'img/logos/efehr_fin@3x.png' %}" style="height:3rem"/>
+			</a>
+
+			<a target="_blank" class='me-2' href='https://www.gfz-potsdam.de/'>
+				<img src="{% static 'img/logos/GFZ-CD_LogoCMYK_EN.png' %}" style="height:3.8rem"/>
+			</a>
+
+			<a target="_blank" class='me-2' href='https://www.globalquakemodel.org/'>
+				<img src="{% static 'img/logos/OQ-Logo-Standard-CS3-01_trans_scaled.png' %}" style="height:3.8rem"/>
+			</a>
+
+			<a target="_blank" class='me-2' href='http://www.sera-eu.org/'>
+				<img src="{% static 'img/logos/SERA_logo_scaled.png' %}" style="height:3rem"/>
+			</a>
+
+			<a href='#' @click="currentPage = pages.ref_and_license">
+				<img class='me-1' style='height:2.8rem' src="{% static 'img/logos/AGPLv3_Logo.svg' %}">
+				<img style="height:2.8rem" src="{% static 'img/logos/cc.svg' %}" />
+				<img style="height:2.8rem" src="{% static 'img/logos/by.svg' %}" />
+			</a>
+
+		</div>
+
+		<div style='font-size:80%' class='text-muted text-center p-2'>
+			<div>
+				This service (version number: 3, online since 2019)
+				is part of the
+				<a target='_blank' href='http://www.efehr.org/'>European Facilities for Earthquake Hazard and Risk</a>
+				(EFEHR), a non-profit network of organisations and
+				community resources aimed at advancing earthquake hazard and
+				risk assessment in the European-Mediterranean area.
+			</div>
+			<div>
+				<b>We welcome feedbacks</b>: please open an Issue in the
+				<a target="_blank" href="https://github.com/rizac/eGSIM/issues">
+				GitHub Repository</a> with the desired label (e.g. bug, enhancement, question, help)
+			</div>
+			<div>
+				<a class='me-3' @click="currentPage = pages.ref_and_license" href="#">Citation</a>
+				<a class='me-3' @click="currentPage = pages.imprint" href="#">Imprint</a>
+				<a :href='pages.data_protection' target="_blank">Data Protection</a>
+			</div>
+		</div>
+	</div>
+
+</div>

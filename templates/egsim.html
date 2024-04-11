@@ -1,45 +1,238 @@
 {% extends 'base.html' %}
 
 {% block head %}
-
-{% with vue=True plotly=True leaflet=True axios=True fontawesome=True %}
+{% with vue=True plotly=True leaflet=True fontawesome=True %}
 {{ block.super }}
 {% endwith %}
+{% endblock %}
 
+{% block end-of-head %}
+<style>
+	@media (max-width: 975px){  /* narrow  screen (< 975px) */
+		nav > .menu-item span { display: none !important; } /* hide menu texts */
+	}
+	/* waitbar. For info see: https://www.pexels.com/blog/css-only-loaders/ */
+	.loader, .loader:before { height: 10px; }
+	.loader {
+		width: 100%;
+		position: relative;
+		overflow: hidden;
+		background-color: #999;
+	}
+	.loader:before{
+		display: block;
+		position: absolute;
+		content: "";
+		left: -200px;
+		width: 200px;
+		background-color: #ffc107; /*#a2cd7e;*/
+		animation: loading 2s linear infinite;
+	}
+	@keyframes loading {
+		from {left: -200px; width: 30%;}
+		50% {width: 30%;}
+		70% {width: 70%;}
+		80% { left: 50%;}
+		95% {left: 120%;}
+		to {left: 100%;}
+	}
+</style>
 {% endblock %}
 
 
 {% block body %}
-<div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;"></div>
+<div class="d-flex flex-column bg-body" id='egsim-vue' style="height: 100vh;">
+	<template v-if="showNavBar">
+	{% include "navbar.html" %}
+	</template>
+	<template v-if="currentPage==pages.predictions">
+	{% include "predictions.html" %}
+	</template>
+	<template v-else-if="currentPage==pages.flatfile_meta_info">
+	{% include "flatfile_meta_info.html" %}
+	</template>
+	<template v-else-if="currentPage==pages.flatfile_visualize">
+	{% include "flatfile_visualize.html" %}
+	</template>
+	<template v-else-if="currentPage==pages.residuals">
+	{% include "residuals.html" %}
+	</template>
+	<template v-else-if="currentPage==pages.ref_and_license">
+	{% include "ref_and_license.html" %}
+	</template>
+	<template v-else-if="currentPage==pages.imprint">
+	{% include "imprint.html" %}
+	</template>
+	<template v-else>
+	{% include "home.html" %}
+	</template>
+</div>
 {% endblock %}
 
-{% block after-body %}
 
+{% block end-of-body %}
+
+{% with bootstrap_js=True %}
 {{ block.super }}
+{% endwith %}
 
-<script>
-axios.interceptors.request.use(config => {
-	if (!('headers' in config)){
-		config.headers = {};
+<script type='text/javascript'>
+const origFetch = window.fetch;
+window.fetch = function() {
+	var args = Array.from(arguments);
+	if (args.length == 1){
+		args.push({});
 	}
-	config.headers["X-CSRFToken"] = "{{ csrf_token }}";
-	return config;
-});
+	var options = args[1];
+	if (!options.headers){
+		options.headers = {};
+	}
+	options.headers["X-CSRFToken"] = "{{ csrf_token }}";
+
+	// set up the load bar <div>
+	var bar = document.getElementById('loadbar');
+	bar.style.display = '';
+
+	return new Promise((resolve, reject) => {  // https://stackoverflow.com/a/53448336
+		origFetch.apply(this, args).then((response) => {
+			if (!response.ok){
+				// status code 4xx or 5xx: show msg and then treat it like an error (fetch doesn't by default)
+				response.clone().json().then(data => showFetchError(data.message));
+				reject(response);
+			}else{
+				resolve(response);
+			}
+		}).catch((error) => {
+			// some network error (Note: NOT 4xx or 5xx responses!)
+			showFetchError("" + error);
+			reject(error);
+		}).finally(() => {
+			bar.style.display = 'none';
+		});
+	});
+}
+
+function showFetchError(msg){
+	let div = document.body;
+	let alert = document.createElement('div');
+	alert.innerHTML = `{% include "alert-dialog.html" with content="${msg}" %}`;
+	div.appendChild(alert);
+}
 </script>
 
 <!-- VUE.JS: -->
-<script type='text/javascript' src = "{% static 'js/egsim.js' %}"></script>
+<!--<script type='text/javascript' src = "{% static 'js/egsim.js' %}"></script>-->
+
+{{ init_data | json_script:"init-data" }}
+
+<script type="text/javascript">
+const EGSIM = Vue.createApp({
+	watch:{
+		currentPage:{
+			immediate: true,
+			handler(newVal, oldVal){
+				this.showNavBar = newVal != this.pages.home;
+				this.setUrlInBrowser(newVal)
+			}
+		}
+	},
+	data(){
+		const data = JSON.parse(document.getElementById('init-data').textContent);
+		// converts the gsims received from server from an Array of Arrays to an
+		// Array of Objects:
+		var imts = new Set();
+		data.imt_groups.forEach(imtz => imtz.forEach(i => imts.add(i)));
+		var defaultSALimits = [-Math.Infinity, Math.Infinity];
+		var models = data.gsims.map(elm => {  // elm: Array of 2 or 3 elements: name, imt_group, warning
+			return {
+				name: elm[0],
+				imts: new Set(data.imt_groups[elm[1]]),
+				saLimits: elm[2].length ? elm[2] : Array.from(defaultSALimits),
+				warning: elm[3] ? data.warning_groups[elm[3]]: "",
+			}
+		});
+		var currentPage = data.currentPage || 'home';  // one of the key of the Objet 'tab' below
+		return {
+			models: Object.freeze(models),
+			imts: Array.from(imts),
+			forms: data.forms,
+			urls: data.urls,
+			regionalizations: data.regionalizations,
+			flatfiles: data.flatfiles,
+			showNavBar: true,
+			pages: data.pages,  // dict of key -> page URL (relative to the base URL of the site)
+			currentPage: currentPage,
+			responses: data.responses
+		}
+	},
+	methods: {
+		setUrlInBrowser(menu){
+			var location = window.location;
+			if (!location.pathname.startsWith(`/${menu}`)){
+				var newHref = `${location.origin}/${menu}`
+				// https://developer.mozilla.org/en-US/docs/Web/API/History_API
+				window.history.replaceState({}, document.title, newHref);
+			}
+			return false; // in case accessed from within anchors
+		},
+		download(url, data){
+			// download the response using the last portion of url as downloaded file name
+			var fileName = url.substring(url.lastIndexOf('/') + 1, url.length);
+			this.post(url, data).then( resp => {
+				// in case you want to get headers: resp.headers.get('content-disposition');
+				resp.blob().then(blob => {
+					// Download file (https://stackoverflow.com/a/42274086):
+					var url = window.URL.createObjectURL(blob);
+					var a = document.createElement('a');
+					a.href = url;
+					a.download = fileName;
+					document.body.appendChild(a); // needed in firefox
+					a.click();
+					a.remove();
+				});
+			});
+		},
+		post(url, data){
+			// send POST request to `url` with the given data as request body (encoded as JSON  string
+			// or FormData depending on `data` content), return fetch Promise
+			return fetch(url, this.createFetchOptions(data));
+		},
+		createFetchOptions(data, method='POST'){
+			// create the `options` Object to be passed as 2nd argument to `fetch`.
+			// `data` is the request data that will be sent as `options.body` converted to
+			// either JSON string or FormData depending on its content,
+			// method (default 'POST') is the http request method
+			var options = {
+				method: method || 'POST',
+				headers: {}
+			};
+			if (Object.keys(data).some(elm => data[elm] instanceof File)){
+				// has files, send a FormData as options.body. Note that contentType has NOT
+				// to be specified, so e.g. NO contentType = 'multipart/form-data';
+				options.body = new FormData();
+				for (var name of Object.keys(data)){
+					// Ignore nulls otherwise they will be sent as "null" (https://stackoverflow.com/a/63340869):
+					var val = data[name];
+					if ((val !== null) && (val !== undefined)){
+						options.body.append(name, val);
+					}
+				}
+			}else{
+				options.headers["Content-Type"] = "application/json";  // needed? seems so (see MDN doc)
+				options.body = JSON.stringify(data);
+			}
+			return options;
+		}
+	}
+});
+
+</script>
 <!-- Components and dependencies of the EGISM app: -->
-<script type='text/javascript' src="{% static 'js/v-components/base/field-input.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/gsim-select.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/egsim-form.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/base/plots-div.js' %}"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}flatfile.js"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}trellis.js"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}residuals.js"></script>
-<script type='text/javascript' src="{% static 'js/v-components/' %}testing.js"></script>
+<script type='text/javascript' src="{% static 'js/vue/components.js' %}"></script>
+<script type='text/javascript' src="{% static 'js/vue/plots-div.js' %}"></script>
 <script>
 /* mount the Vue App EGSIM. The function below returns an App instance (not used for the moment): */
 EGSIM.mount('#egsim-vue');
 </script>
-{% endblock %}
+
+{% endblock end-of-body %}
