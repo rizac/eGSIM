@@ -216,11 +216,12 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
         that name or alias, then return a dict with empty values)
     """
     if values is not None:
-        c_dtype = get_dtype_of(values)
         try:
             c_categories = values.cat.categories
+            c_dtype = get_dtype_of(c_categories)
         except AttributeError:
             c_categories = []
+            c_dtype = get_dtype_of(values)
         c_type = ""
         c_help = ""
     else:
