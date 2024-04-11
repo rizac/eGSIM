@@ -276,16 +276,19 @@ class ColumnDtype(Enum):
     float = "numeric float"
     int = "numeric integer"
     bool = "boolean"
-    datetime = "ISO formatted date and time"
+    datetime = "ISO formatted date-time"
     str = "string of text"
     category = "categorical"
 
 
 def get_dtype_of(
-        obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any]
+        obj: Union[IndexOpsMixin, np.dtype, str, float, int, datetime, bool]
 ) -> Union[ColumnDtype, None]:
     """
-    Get the dtype of the given pandas array, dtype or Python scalar
+    Get the dtype of the given pandas array, dtype or Python scalar. If
+    `ColumnDtype.category` is returned, then `obj.dtype` is assured to be
+    a pandas `CategoricalDtype` object with all categories the same dtype,
+    which can be retrieved by calling again: `get_dtype_of(obj.dtype.categories)`
 
     Examples:
     ```
@@ -298,7 +301,7 @@ def get_dtype_of(
     ```
 
     :param obj: any pandas numpy collection e.g. Series / Index, or a
-        recognized Python scalar (flaot, int, bool, str)
+        recognized Python scalar (float, int, bool, str)
     """
     # check bool / int / float in this order to avoid potential subclass issues:
     if pd.api.types.is_bool_dtype(obj) or isinstance(obj, bool):
@@ -322,12 +325,12 @@ def get_dtype_of(
     if pd.api.types.is_string_dtype(obj) or isinstance(obj, str):
         return ColumnDtype.str
 
-    # Now curiously, if pd.Series(['a']) and pd.Series(['a', None]) have both the
-    # same dtype (np.dtype('O')) but pd.api.types.is_string_dtype of the
-    # latter returns False, so check element-wise, very inefficient but unavoidable:
+    # Final check for data with str and Nones, whose dtype (np.dtype('O')) equals the
+    # dtype of only-string Series, but for which `pd.api.types.is_string_dtype` is False:
     obj_dtype = None
     if getattr(obj, 'dtype', None) == np.dtype('O') and pd.api.types.is_list_like(obj):
-        # return ColumnDtype.str if at least 1 element is str and all others are None:
+        # check element-wise (very inefficient but unavoidable). Return ColumnDtype.str
+        # if at least 1 element is str and all others are None:
         for item in obj:
             if item is None:
                 continue
@@ -359,10 +362,11 @@ def cast_to_dtype(
         categories = dtype
         dtype = get_dtype_of(dtype.categories.dtype)
 
-    actual_base_dtype = get_dtype_of(value)  # expected dtype
+    actual_base_dtype = get_dtype_of(value)
     actual_categories: Union[pd.CategoricalDtype, None] = None
     if isinstance(getattr(value, 'dtype', None), pd.CategoricalDtype):
         actual_categories = value.dtype
+        actual_base_dtype = get_dtype_of(value.dtype.categories)
 
     if dtype is None:
         raise ValueError('cannot cast column to dtype None. If you passed '
@@ -419,8 +423,8 @@ def cast_to_dtype(
     if is_pd:
         return values
     if pd.api.types.is_list_like(value):
-        # for ref, although passing numpy arrays is not explicitly supported,
-        # note that pd.api.types.is_list_like(np.array(5)) is False
+        # for ref, although passing numpy arrays is not explicitly supported, numpy
+        # arrays with no shape (e.g.np.array(5)) are *not* falling in this if
         return values.to_list()
     return values.item()
 
