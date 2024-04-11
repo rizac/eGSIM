@@ -119,19 +119,17 @@ def check_column_metadata(*, name: str, props: dict):
         return
 
     # handle categorical data:
-    categories = props.pop('categories', None)
-    if categories:  # categorical data type
-        if get_dtype_of(pd.Series(categories)) is None:
+    if isinstance(dtype, pd.CategoricalDtype):  # categorical data type
+        if get_dtype_of(dtype.categories) is None:  # noqa
             raise ValueError(f"{prefix} invalid data type(s) in categorical data")
         if bounds_are_given:
             raise ValueError(f"{prefix} bounds cannot be provided with "
                              f"categorical data type")
         if default_is_given:
-            assert default is cast_to_dtype(default, dtype, categories)  # raise if not in categories
+            assert default is cast_to_dtype(default, dtype)  # noqa
         return
 
-    dtype = ColumnDtype(dtype)  # raise ValueError
-    # assert isinstance(dtype, ColumnDtype)
+    dtype = ColumnDtype(dtype)
 
     if dtype in (ColumnDtype.int, ColumnDtype.bool) and not default_is_given:
         raise ValueError(f'{prefix} int or bool with no default')
@@ -401,56 +399,39 @@ def test_cast_to_dtype():
                 return a.item() == b.item()
 
     for ctype, val in vals:
-        for categories in [True, False]:
-            c = None  # possible categories
-            if categories is not None:
-                c = pd.Series([val])
+        for as_categories in [True, False]:
+            if as_categories:
+                try:
+                    ctype = pd.CategoricalDtype([val])
+                except ValueError:
+                    if val != val:
+                        continue
+                    raise
 
             # scalar (Python numpy whatever):
-            if val != val:
-                if c is not None:
-                    with pytest.raises(ValueError) as verr:
-                        # raising because we provide a categorical with 1 NaN:
-                        cast_to_dtype(val, ctype, c)
-                    # all other tests below will raise the same, skip:
-                    continue
-                else:
-                    assert np.isnan(cast_to_dtype(val, ctype, c))
-            else:
-                assert eq(cast_to_dtype(val, ctype, c), val)
+            assert eq(cast_to_dtype(val, ctype), val)
 
             # pd.Series:
             v = pd.Series(val)
-            assert eq(cast_to_dtype(v, ctype, c), v)
+            assert eq(cast_to_dtype(v, ctype), v)
             v = pd.Series(val)
-            assert eq(cast_to_dtype(v, ctype, c) , v)
+            assert eq(cast_to_dtype(v, ctype) , v)
             # pd.Index:
             v = pd.Index([val])
-            assert eq(cast_to_dtype(v, ctype, c), v)
-            # np.array:
-            # v = pd.Series(val).values[0]
-            # assert eq(cast_to_dtype(v, ctype, c), v)
-            v = pd.Series([val]).values
-            assert eq(cast_to_dtype(v, ctype, c), v)
-            if ctype != ColumnDtype.datetime:
-                # skip np.array(datetime) and use to_datetime (see below):
-                v = np.array(val)
-                assert eq(cast_to_dtype(v, ctype, c), v)
-                np.array([val])
-                assert eq(cast_to_dtype(v, ctype, c), v)
+            assert eq(cast_to_dtype(v, ctype), v)
+
             # pd.numeric and pd.to_datetime
             if ctype in (ColumnDtype.float, ColumnDtype.bool, ColumnDtype.int):
-                assert eq(cast_to_dtype(pd.to_numeric(val), ctype, c), val)
-                assert eq(cast_to_dtype(pd.to_numeric([val]), ctype, c), [val])  # noqa
+                assert eq(cast_to_dtype(pd.to_numeric(val), ctype), val)
+                assert eq(cast_to_dtype(pd.to_numeric([val]), ctype), [val])  # noqa
             elif ctype == ColumnDtype.datetime:
                 # to_datetime returns a Timestamp so it is not datetime dtype:
-                assert eq(cast_to_dtype(pd.to_datetime(val), ctype, c), val)
-                assert eq(cast_to_dtype(pd.to_datetime([val]), ctype, c), [val])  # noqa
-
+                assert eq(cast_to_dtype(pd.to_datetime(val), ctype), val)
+                assert eq(cast_to_dtype(pd.to_datetime([val]), ctype), [val])  # noqa
 
     # mixed types categories in categorical data raises:
     with pytest.raises(ValueError) as verr:
-        cast_to_dtype('r', ColumnDtype.str, [1, 'd'])
+        cast_to_dtype('r', pd.CategoricalDtype([1, 'd']))
 
     # mixed types values in series with dtype.category raises:
     with pytest.raises(ValueError) as verr:
