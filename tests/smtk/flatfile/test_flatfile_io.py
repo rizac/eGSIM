@@ -24,7 +24,7 @@ def test_read_flatifle_yaml():
 
     dic = _load_flatfile_metadata(False)
     params = FlatfileMetadata.get_rupture_params()
-    assert len({'rupture_width', 'mag', 'magnitude', 'width'} & params) == 4
+    assert len({'rup_width', 'mag', 'magnitude', 'width'} & params) == 4
     params = {c for c in dic if FlatfileMetadata.get_type(c) == ColumnType.distance}
     assert len({'rrup', 'rhypo'} & params) == 2
     params = {c for c in dic if FlatfileMetadata.get_type(c) == ColumnType.site}

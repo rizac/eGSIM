@@ -227,8 +227,13 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
     else:
         c_dtype = FlatfileMetadata.get_dtype(name)
         c_categories = FlatfileMetadata.get_categories(name)
-        c_help = FlatfileMetadata.get_help(name) or ""
         c_type = getattr(FlatfileMetadata.get_type(name), 'value', "")
+        c_help = FlatfileMetadata.get_help(name) or ""
+        c_aliases = set(FlatfileMetadata.get_aliases(name)) - {name}
+        if len(c_aliases):
+            if c_help:
+                c_help += '. '
+            c_help += f'Alternative names: {", ".join(c_aliases)})'
 
     if c_dtype is not None:
         c_dtype = c_dtype.value

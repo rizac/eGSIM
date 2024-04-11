@@ -27,11 +27,13 @@ def get_gsims_imts_flatfile():
         flatfile[i] = flatfile[i] / (100 *g)  # convert_accel_units(flatfile[i], 'cm/s/s', 'g')
     return gsims, imts, flatfile
 
+
 label_mapping_res = {
     'Total': Clabel.total_res,
     'Inter-event': Clabel.inter_ev_res,
     'Intra-event': Clabel.intra_ev_res
 }
+
 
 def test_residuals_execution():
     """
@@ -51,10 +53,8 @@ def test_residuals_execution():
         exp_dict = json.load(_)
     # check results:
 
-    # self.assertEqual(len(exp_dict), len(res_dict))
     for lbl in exp_dict:
-        # self.assertEqual(len(exp_dict[gsim]), len(res_dict[gsim]))
-            # check values
+        # check values
         is_inter_ev = 'Inter-event' in lbl
         expected = np.array(exp_dict[lbl], dtype=float)
         # computed dataframes have different labelling:
@@ -84,6 +84,8 @@ def test_residuals_execution():
             max_diff = np.nanquantile(np.abs(rel_diff), QTL)
             vals_ok = max_diff < RTOL
 
+        if not vals_ok:
+            asd = 9
         assert vals_ok
 
 

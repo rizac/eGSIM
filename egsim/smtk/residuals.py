@@ -316,7 +316,7 @@ def get_likelihood(values: Union[np.ndarray, pd.Series]) -> Union[np.ndarray, pd
 
 # utilities:
 
-def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:
+def get_column_name(flatfile: pd.DataFrame, column: str) -> Union[str, None]:
     """Return the flatfile column matching `column`. This could be `column`
      itself, or any of its aliases (see `columns` module and YAML file)
      Returns None if no column is found, raise `ConflictingColumns` if more than
@@ -331,7 +331,7 @@ def get_column_name(flatfile:pd.DataFrame, column:str) -> Union[str, None]:
         return next(iter(cols))
 
 
-def get_event_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
+def get_event_id_column_names(flatfile: pd.DataFrame) -> list[str]:
     default_col_name = 'event_id'
     col_name = get_column_name(flatfile, default_col_name)
     if col_name is not None:
@@ -343,7 +343,7 @@ def get_event_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
     return col_names
 
 
-def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str, ...]:
+def get_station_id_column_names(flatfile: pd.DataFrame) -> list[str]:
     default_col_name = 'station_id'
     col_name = get_column_name(flatfile, default_col_name)
     if col_name is not None:
