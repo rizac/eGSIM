@@ -7,8 +7,7 @@ import re
 from pandas.core.base import IndexOpsMixin
 from pandas.errors import ParserError
 from tables import HDF5ExtError
-from typing import Union, Any, Optional
-from collections.abc import Collection, Container
+from typing import Union, Any
 from enum import Enum
 
 import numpy as np
@@ -153,7 +152,7 @@ def validate_flatfile_dataframe(
         dfr: pd.DataFrame,
         extra_dtypes: dict[str, Union[str, ColumnDtype, pd.CategoricalDtype, list]] = None,  # noqa
         extra_defaults: dict[str, Any] = None,
-        mixed_dtype_categorical='raise'):
+        mixed_dtype_categorical = 'raise'):
     """Validate the flatfile dataframe checking data types, conflicting column names,
     or missing mandatory columns (e.g. IMT related columns). This method raises
     or returns None on success
@@ -165,10 +164,10 @@ def validate_flatfile_dataframe(
     :param extra_dtypes: dict of column names mapped to the desired default value
         to replace missing data. Standard flatfile columns do not need to be present
         (unless for some reason their dtype must be overwritten)
-    :param mixed_dtype_categorical: what to when `dtype=ColumnDtype.category` with
-        no explicit category given (`categories` is None): in this case, the casted
-        value (if array-like) might contain mixed dtypes (e.g. float and strings).
-        If this happens, then pass None to ignore an return the data as it is, 'raise'
+    :param mixed_dtype_categorical: what to do when `dtype=ColumnDtype.category`, i.e.,
+        with the categories to be inferred and not explicitly given, and `value`
+        (if array-like) contains mixed dtypes (e.g. float and strings).
+        Then pass None to ignore and return `value` as it is, 'raise'
         (the default) to raise ValueError, and 'coerce' to cast all items to string
     """
     # post-process:
@@ -179,7 +178,6 @@ def validate_flatfile_dataframe(
         extra_dtypes = {}
     # check dtypes correctness (actual vs expected) and try to fix mismatching ones:
     for col in dfr.columns:
-        xp_categories = None
         if col in extra_dtypes:
             xp_dtype = extra_dtypes[col]
             if not isinstance(xp_dtype, ColumnDtype):
@@ -187,13 +185,12 @@ def validate_flatfile_dataframe(
                     xp_dtype = ColumnDtype[extra_dtypes[col]]
                 except KeyError:
                     try:
-                        xp_categories, xp_dtype = _parse_categories(xp_dtype)
-                    except ValueError:
+                        xp_dtype = pd.CategoricalDtype(xp_dtype)
+                    except (TypeError, ValueError):
                         invalid_columns.append(col)
                         continue
         else:
-            xp_dtype = FlatfileMetadata.get_dtype(col)
-            xp_categories = FlatfileMetadata.get_categories(col) or None
+            xp_dtype = FlatfileMetadata._get_dtype(col)  # noqa
 
         if xp_dtype is None:
             continue
@@ -201,12 +198,7 @@ def validate_flatfile_dataframe(
         if col in extra_dtypes:
             default = extra_defaults.get(col)
             if default is not None:
-                default = cast_to_dtype(
-                    default,
-                    xp_dtype,
-                    xp_categories,
-                    mixed_dtype_categorical
-                )
+                default = cast_to_dtype(default, xp_dtype, mixed_dtype_categorical)
         else:
             default = FlatfileMetadata.get_default(col)
         if default is not None:
@@ -215,12 +207,7 @@ def validate_flatfile_dataframe(
 
         # cast to expected dtype (no op if dtype is already ok):
         try:
-            dfr[col] = cast_to_dtype(
-                dfr[col],
-                xp_dtype,
-                xp_categories,
-                mixed_dtype_categorical
-            )
+            dfr[col] = cast_to_dtype(dfr[col], xp_dtype, mixed_dtype_categorical)
         except (ParserError, ValueError):
             invalid_columns.append(col)
             continue
@@ -294,9 +281,11 @@ class ColumnDtype(Enum):
     category = "categorical"
 
 
-def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any]):
+def get_dtype_of(
+        obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any]
+) -> Union[ColumnDtype, None]:
     """
-    Get the dtype of the given pandas / numpy array, dtype or Python scalar
+    Get the dtype of the given pandas array, dtype or Python scalar
 
     Examples:
     ```
@@ -304,17 +293,17 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
     get_dtype_of(pd.CategoricalDtype())
     get_dtype_of(pd.CategoricalDtype().categories)
     get_dtype_of(dataframe.index)
-    get_dtype_of(np.array(...))
+    get_dtype_of(datetime.utcnow())
+    get_dtype_of(5.5)
     ```
 
-    :param obj: any pandas numpy collection e.g. Series / Index, a
-        numpy array or scalar, or a recognized Python object (flaot, int, bool,
-        str)
+    :param obj: any pandas numpy collection e.g. Series / Index, or a
+        recognized Python scalar (flaot, int, bool, str)
     """
     # check bool / int / float in this order to avoid potential subclass issues:
     if pd.api.types.is_bool_dtype(obj) or isinstance(obj, bool):
         # pd.Series([True, False]).astype('category') ends being here, but
-        # we should return cateogrical dtype (this happens only with booleans):
+        # we should return categorical dtype (this happens only with booleans):
         if isinstance(getattr(obj, 'dtype', None), pd.CategoricalDtype):
             return ColumnDtype.category
         return ColumnDtype.bool
@@ -335,7 +324,7 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
 
     # Now curiously, if pd.Series(['a']) and pd.Series(['a', None]) have both the
     # same dtype (np.dtype('O')) but pd.api.types.is_string_dtype of the
-    # the latter returns False, so check element-wise, very inefficient but unavoidable:
+    # latter returns False, so check element-wise, very inefficient but unavoidable:
     obj_dtype = None
     if getattr(obj, 'dtype', None) == np.dtype('O') and pd.api.types.is_list_like(obj):
         # return ColumnDtype.str if at least 1 element is str and all others are None:
@@ -351,64 +340,64 @@ def get_dtype_of(obj: Union[IndexOpsMixin, np.ndarray, np.dtype, np.generic, Any
 
 def cast_to_dtype(
         value: Any,
-        dtype: ColumnDtype,
-        categories: Optional[Union[Container, pd.CategoricalDtype]] = None,
-        mixed_dtype_categorical='raise') -> Any:
+        dtype: Union[ColumnDtype, pd.CategoricalDtype],
+        mixed_dtype_categorical='raise'
+) -> Any:
     """Cast the given value to the given dtype, raise ValueError if unsuccessful
 
-    :param value: pandas Series/Index, numpy array or scalar, Python scalar
-    :param dtype: the base `ColumnDtype`
-    :param categories: a list of pandas Categorical of possible choices. Must be
-        all the same type of `dtype`. When not None, the returned value will
-        be of type categorical (`pd.CategoricalDtype`, represented here by
-        `ColumnDtype.category`)
-    :param mixed_dtype_categorical: what to when `dtype=ColumnDtype.category` with
-        no explicit category given (`categories` is None): in this case, the casted
-        value (if array-like) might contain mixed dtypes (e.g. float and strings).
-        If this happens, then pass None to ignore an return the data as it is, 'raise'
+    :param value: pandas Series/Index or Python scalar
+    :param dtype: the base `ColumnDtype`, or a pandas CategoricalDtype. In the latter
+        case, if categories are not of the same dtype, a `ValueError` is raised
+    :param mixed_dtype_categorical: what to do when `dtype=ColumnDtype.category`, i.e.,
+        with the categories to be inferred and not explicitly given, and `value`
+        (if array-like) contains mixed dtypes (e.g. float and strings).
+        Then pass None to ignore and return `value` as it is, 'raise'
         (the default) to raise ValueError, and 'coerce' to cast all items to string
     """
-    if get_dtype_of(value) == dtype:
-        if categories is None:
-            return value
+    categories: Union[pd.CategoricalDtype, None] = None
+    if isinstance(dtype, pd.CategoricalDtype):
+        categories = dtype
+        dtype = get_dtype_of(dtype.categories.dtype)
+
+    actual_base_dtype = get_dtype_of(value)  # expected dtype
+    actual_categories: Union[pd.CategoricalDtype, None] = None
+    if isinstance(getattr(value, 'dtype', None), pd.CategoricalDtype):
+        actual_categories = value.dtype
+
+    if dtype is None:
+        raise ValueError('cannot cast column to dtype None. If you passed '
+                         'categorical dtype, check that all categories '
+                         'dtypes are equal')
+
+    if categories and actual_categories:
+        if set(categories.categories) != set(actual_categories.categories):
+            raise ValueError('Value mismatch with provided categorical values')
 
     is_pd = isinstance(value, IndexOpsMixin)  # common interface for Series / Index
-    is_np = not is_pd and isinstance(value, (np.ndarray, np.generic))
-    if not is_pd and not is_np:
+    if not is_pd:
         values = pd.Series(value)
     else:
         values = value
 
-    categorical_dtype = None
-    if isinstance(categories, pd.CategoricalDtype):
-        categorical_dtype = categories
-    elif categories is not None:
-        categorical_dtype = pd.CategoricalDtype(categories)
-
-    if dtype == ColumnDtype.float:
-        values = values.astype(float)
-    elif dtype == ColumnDtype.int:
-        values = values.astype(int)
-    elif dtype == ColumnDtype.bool:
-        # bool is too relaxed, e.g. [3, 'x'].astype(bool) works but it shouldn't
-        if pd.api.types.is_list_like(values):
-            # try to cast to int (only if array as pd.unique does not work otherwise):
+    if dtype != actual_base_dtype:
+        if dtype == ColumnDtype.float:
+            values = values.astype(float)
+        elif dtype == ColumnDtype.int:
+            values = values.astype(int)
+        elif dtype == ColumnDtype.bool:
+            # bool is too relaxed, e.g. [3, 'x'].astype(bool) works but it shouldn't
             values = values.astype(int)
             if set(pd.unique(values)) - {0, 1}:
                 raise ValueError('not a boolean')
-        values = values.astype(bool)
-    elif dtype == ColumnDtype.datetime:
-        try:
-            values = pd.to_datetime(values)
-        except (ParserError, ValueError) as exc:
-            raise ValueError(str(exc))  # dtype_ok = False, so go to end (see below)
-    elif dtype  == ColumnDtype.str:
-        values = values.astype(str)
-    elif dtype == ColumnDtype.category:
-        if categorical_dtype:
-            values = values.astype(categorical_dtype)
-            categorical_dtype = None  # do not fall back in the if below
-        else:
+            values = values.astype(bool)
+        elif dtype == ColumnDtype.datetime:
+            try:
+                values = pd.to_datetime(values)
+            except (ParserError, ValueError) as exc:
+                raise ValueError(str(exc))
+        elif dtype == ColumnDtype.str:
+            values = values.astype(str)
+        elif dtype == ColumnDtype.category:
             values_ = values.astype('category')
             mixed_dtype = get_dtype_of(values_.cat.categories) is None
             if mixed_dtype and mixed_dtype_categorical == 'raise':
@@ -418,46 +407,22 @@ def cast_to_dtype(
             else:
                 values = values_
 
-    if categorical_dtype:
-        if is_pd:
-            # check that we still have the same N/A. Pandas convert invalid values to NA
-            # we want to raise:
-            is_na = pd.isna(values)
-            values = values.astype(categorical_dtype)
-            is_na_after = pd.isna(values)
-            ok = len(is_na) == len(is_na_after) and (is_na == is_na_after).all()  # noqa
-        elif dtype == ColumnDtype.datetime:
-            # np.isin does not work for datetime / timestamps/. Verbose check:
-            if pd.api.types.is_scalar(values) or (is_np and not values.shape):
-                # scalar or no-size numpy array:
-                ok = values in categorical_dtype.categories
-            else:
-                ok = all(v in categorical_dtype.categories for v in values)
-        else:
-            ok = np.isin(values, categorical_dtype.categories.tolist()).all()
+    if categories is not None:
+        # pandas converts invalid values (not in categories) to NA, we want to raise:
+        is_na = pd.isna(values)
+        values = values.astype(categories)
+        is_na_after = pd.isna(values)
+        ok = len(is_na) == len(is_na_after) and (is_na == is_na_after).all()  # noqa
         if not ok:
             raise ValueError('Value mismatch with provided categorical values')
 
-    if is_pd or is_np:
+    if is_pd:
         return values
-
-    # we gave a Python object, return it from the Series:
-    return values.tolist() if pd.api.types.is_list_like(value) else values.item()
-
-
-def _parse_categories(values: Union[pd.CategoricalDtype, Collection]) \
-        -> tuple[list, ColumnDtype]:
-    if not isinstance(values, pd.CategoricalDtype):
-        try:
-            values = pd.CategoricalDtype(values)
-        except (TypeError, ValueError):
-            raise ValueError(f'Not categorical: {str(values)}')
-    categories_dtype = get_dtype_of(values.categories)
-    if categories_dtype is None:
-        get_dtype_of(values.categories)
-        raise ValueError(f'Invalid categorical data type, categories '
-                         f'data types unrecognized or not homogeneous')
-    return values.categories.tolist(), categories_dtype
+    if pd.api.types.is_list_like(value):
+        # for ref, although passing numpy arrays is not explicitly supported,
+        # note that pd.api.types.is_list_like(np.array(5)) is False
+        return values.to_list()
+    return values.item()
 
 
 # Exceptions:
@@ -517,12 +482,6 @@ class FlatfileMetadata:
         return FlatfileMetadata._props_of(column).get('type', None)
 
     @staticmethod
-    def get_dtype(column: str) -> Union[ColumnDtype, None]:
-        """Return the Column data type of the given column name, as ColumnDtype value
-        (str), pandas CategoricalDtype, or None"""
-        return FlatfileMetadata._props_of(column).get('dtype', None)
-
-    @staticmethod
     def get_default(column: str) -> Union[None, Any]:
         """Return the Column data type of the given column name, or None"""
         return FlatfileMetadata._props_of(column).get('default', None)
@@ -538,12 +497,36 @@ class FlatfileMetadata:
 
     @staticmethod
     def get_help(column: str) -> str:
-        """Return the help (description) ofthe given column name, or ''"""
+        """Return the help (description) of the given column name, or ''"""
         return FlatfileMetadata._props_of(column).get('help', "")
 
     @staticmethod
+    def get_dtype(column: str) -> Union[ColumnDtype, None]:
+        """Return the Column data type of the given column name, as ColumnDtype
+        enum, or None (=no data type set for the column). Note that
+        `ColumnDtype.category` is never returned: if the column dtype is categorical
+        (a finite limited set of possible values) this method returns the (unique)
+        dtype of all categories. To check if the data is categorical,
+        check that `get_categories(column)` returns a non-empty list
+        """
+        dtype = FlatfileMetadata._get_dtype(column)
+        if isinstance(dtype, pd.CategoricalDtype):
+            return get_dtype_of(dtype.categories)
+        return dtype
+
+    @staticmethod
     def get_categories(column: str) -> list:
-        return FlatfileMetadata._props_of(column).get('categories', [])
+        """Return the list of possible values that the column can have
+        (aka categories, all the same dtype) or an empty list otherwise
+        """
+        dtype = FlatfileMetadata._get_dtype(column)
+        if isinstance(dtype, pd.CategoricalDtype):
+            return dtype.categories.tolist()
+        return []
+
+    @staticmethod
+    def _get_dtype(column: str) -> Union[pd.CategoricalDtype, ColumnDtype, None]:
+        return FlatfileMetadata._props_of(column).get('dtype', None)
 
     @staticmethod
     def _props_of(column: str) -> dict:
@@ -592,22 +575,15 @@ def _harmonize_col_props(name:str, props:dict):
     props['alias'] = (name,) + tuple(aliases)
     if 'type' in props:
         props['type'] = ColumnType[props['type']]
+    dtype: Union[None, ColumnDtype, pd.CategoricalDtype] = None
     if 'dtype' in props:
         if isinstance(props['dtype'], str):
-            props['dtype'] = ColumnDtype[props['dtype']]
+            props['dtype'] = dtype = ColumnDtype[props['dtype']]
         else:
-            categories, dtype = _parse_categories(props['dtype'])
-            props['dtype'] = dtype
-            props['categories'] = categories
+            props['dtype'] = dtype = pd.CategoricalDtype(props['dtype'])
     if 'default' in props:
-        props['default'] = cast_to_dtype(
-            props['default'],
-            props['dtype'],
-            props.get('categories', None))
+        props['default'] = cast_to_dtype(props['default'], dtype)
     for k in ("<", "<=", ">", ">="):
         if k in props:
-            props[k] = cast_to_dtype(
-                props[k],
-                props['dtype'],
-                props.get('categories', None))
+            props[k] = cast_to_dtype(props[k], dtype)
     return props
