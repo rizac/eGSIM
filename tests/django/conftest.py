@@ -18,14 +18,16 @@ from django.test.client import Client
 @pytest.fixture(scope="session", autouse=True)
 def create_and_set_tmp_media_root():
     from django.conf import settings
-    media_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data',
-                              'tmp_media_root')
-    assert os.path.isdir(os.path.dirname(media_root))
+    data_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    assert os.path.isdir(os.path.dirname(data_root))
+    media_root = os.path.join(data_root, 'tmp')
+    # Note: for safety, "tmp/" should be git-ignored (even though we remove it at
+    # the end of the tests, see below)
     if not os.path.isdir(media_root):
         os.makedirs(media_root)
     settings.MEDIA_ROOT = media_root
-    yield
-    shutil.rmtree(media_root)
+    yield  # makes all test work with the created media folder
+    shutil.rmtree(media_root)  # remove the folder at the end of all tests
 
 
 @pytest.fixture()
