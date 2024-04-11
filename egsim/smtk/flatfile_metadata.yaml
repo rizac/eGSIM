@@ -163,7 +163,7 @@ backarc:
   default: false
   type: site
   help: >-
-    boolean indicating if the site is in the subduction backarc. When missing or false, 
+    whether or not the site is in the subduction backarc. When missing or false, 
     the site is assumed to be unknown or in the subduction forearc
 sta_lat:
   dtype: float
