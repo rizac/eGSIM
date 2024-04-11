@@ -231,7 +231,8 @@ def get_hr_flatfile_column_meta(name: str, values: Optional[pd.Series] = None) -
         c_help = FlatfileMetadata.get_help(name) or ""
         c_aliases = [n for n in FlatfileMetadata.get_aliases(name) if n != name]
         if c_aliases:
-            c_aliases = f"Alternative names: {', '.join(c_aliases)}"
+            c_aliases = (f"Alternative name{'s' if len(c_aliases) != 1 else ''}: "
+                         f"{', '.join(c_aliases)}")
             if c_help:
                 c_help += f". {c_aliases}"
             else:
