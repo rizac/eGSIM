@@ -196,11 +196,12 @@ fpeak:
     spectral ratio (Hz)
   type: site
 region:
-  dtype: int
-  ">=": 0
-  "<=": 5
+  dtype: [0, 1, 2, 3, 4, 5]
   default: 0
-  help: The ESHM2020 cluster region to which the site belongs
+  help: >-
+    The ESHM2020 attenuation cluster region to which the site belongs 
+    (https://doi.org/10.1007/s10518-020-00899-9). 0 (default): unknown, 1: average / slower,
+    2: average / faster, 3: fast, 4: average, 5: very slow
   type: site
 geology:
   dtype: ["CENOZOIC", "HOLOCENE", "JURASSIC-TRIASSIC", "CRETACEOUS", "PALEOZOIC",
