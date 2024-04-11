@@ -1,13 +1,14 @@
 eGSIM is a web service for selecting and testing  ground shaking models (GSIM) 
-in Europe, developed a the [GFZ](https://www.gfz-potsdam.de/) in the framework of the Thematic Core Services for 
-Seismology of [EPOS](https://www.epos-eu.org/) under the umbrella of 
+in Europe, developed by the [GFZ](https://www.gfz-potsdam.de/) 
+in the framework of the Thematic Core Services for Seismology of 
+[EPOS](https://www.epos-eu.org/) under the umbrella of 
 [EFEHR](http://www.efehr.org/en/home/)
 
 <p align="middle">
     <a title='EFEHR' href='www.efehr.org'><img height='50' src='http://www.efehr.org/export/system/modules/ch.ethz.sed.bootstrap.efehr2021/resources/img/logos/efehr.png'></a>
-    &nbsp;&nbsp;
+    &nbsp;
     <a title='GFZ' href='https://www.gfz-potsdam.de/'><img height='50' src='https://www.gfz-potsdam.de/fileadmin/gfz/GFZ.svg'></a>
-    &nbsp;&nbsp;
+    &nbsp;
     <a title='EPOS' href='https://www.epos-eu.org/'><img height='50' src='https://www.epos-eu.org/themes/epos/logo.svg'></a>
     <br>
 </p>
@@ -27,7 +28,7 @@ The web portal (and API documentation) is available at:
    * [Maintenance](#maintenance)
      * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
      * [Complete DB reset](#Complete-DB-reset)
-     * [Repopulating the DB](#Repopulating-the-DB)
+     * [Repopulating the DB](#Re-populating-the-DB)
      * [Admin panel](#admin-panel)
      * [Create a custom management command](#Create-a-custom-management-command)  
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
@@ -41,7 +42,9 @@ DISCLAIMER: **This document covers installation in development (or debug)
 mode, i.e. when the program is deployed locally, usually for testing, 
 fixing bug or adding features.**
 
-For installation in **production** mode (for maintainers only), see `deploy.html`
+For installation in **production** mode (for maintainers only), please contact
+the maintainer(s)
+
 
 ## Requirements
 
@@ -88,12 +91,7 @@ Assuming you are in the egsim directory with a virtualenv <VENVNAME>:
 
 ```console
 source .env/<ENVNAME>/bin/activate
-pip install --upgrade pip setuptools 
-pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
-# pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
-pip install .
-pip freeze > ./requirements.txt
-pip install ".[test]"
+pip install -r ./requirements.txt
 ```
 
 ## Run Test
@@ -127,7 +125,8 @@ using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
 
 # Usage
 
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below must be changed in production
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
 If you didn't do already, perform 
 a [Complete DB reset](#Complete-DB-reset)
@@ -186,13 +185,14 @@ Brief Introduction to some important concepts and key terms (click to show)
    of all applications that are enabled in the eGSIM project. This includes not 
    only our "api" app, that tells Django to create the eGISM tables when
    initializing the database, but also several builtin Django apps, e.g. the 
-   Django `admin` app, visible through the [Admin panel](#admin-panel)).
+   Django `admin` app, visible through the [Admin panel](#admin-panel).
 
 </details>
 
 ## Starting a Python terminal shell
 
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below must be changed in production
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
 Typing `python` on the terminal does not work as one needs to
 initialize Django settings. The Django `shell` command does this:
@@ -203,7 +203,8 @@ export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py shell
 
 ## Complete DB reset
 
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below must be changed in production
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
 We perform a complete DB reset every time we change something 
 in the Database schema (see `egsim.api.models.py`), e.g. a table, 
@@ -213,7 +214,8 @@ a column, a constraint.
 <summary>(if you wonder why we do not use DB migrations, click here)</summary>
 
 The usual way to change a DB in a web app is to create and run
-migrations ([Django full details here](https://docs.djangoproject.com/en/stable/topics/migrations/)),
+migrations 
+([full details here](https://docs.djangoproject.com/en/stable/topics/migrations/)),
 which allow to keep track of all changes (moving back and forth if necessary) 
 whilst preserving the data stored in the DB. 
 However, none of those features is required in eGSIM: DB data is predefined
@@ -273,7 +275,7 @@ Notes:
    - `egsim_init` repopulates the db with eGSIM data
 
 
-## Repopulating the DB
+## Re-populating the DB
  
 We repopulate the DB when  **its schema has not changed** but its data 
 needs to, e.g., OpenQuake is upgraded, or new data is implemented 
@@ -286,12 +288,14 @@ fixed. The operations are similar but simpler than a complete Db Rest:
   ```bash
   export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py migrate && python manage.py egsim_init
   ```
-- [**Optional**] most likely (not tested, please check) you need to re-add the Django admin superuser(s) as explained in the
-   [admin panel](#admin-panel)
+- [**Optional**] most likely (not tested, please check) you need to re-add 
+  the Django admin superuser(s) as explained in the [admin panel](#admin-panel)
    
+
 ## Admin panel
 
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below must be changed in production
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
 This command allows the user to check database data from the 
 web browser. For further details, check the 
@@ -299,13 +303,13 @@ web browser. For further details, check the
 
 The database must have been created and populated (see [Usage](#usage)). 
 
-Create a super user (to be done **once only** ):
+Create a superuser (to be done **once only** ):
 ```bash
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py createsuperuser
 ```
 and follow the instructions.
 
-Start the program (see [Usage](Usage)) and then navigate in the browser to 
+Start the program (see [Usage](#Usage)) and then navigate in the browser to 
 `[SITE_URL]/admin` (in development mode, `http://127.0.0.1:8000/admin/`)
 
 *Note: Theoretically, you can modify db data from the browser, e.g., hide some 
@@ -390,39 +394,23 @@ Implemented flatfiles sources (click on the items below to expand)
 
 ## Dependencies upgrade
 
-Please note that it is safer (even 
-[mandatory](https://stackoverflow.com/questions/63277123/what-is-use-feature-2020-resolver-error-message-with-jupyter-installation-on)
-with `pip`) to upgrade all dependencies
-instead of single packages in order to avoid conflicts.
+Note below: change OpenQuake url according
+to the OS and OpenQuake version
 
-Consequently, **we recommend to follow this procedure also
-in case of a GitHub security issue (or dependency alert) on a single package**.
-
-First create a new virtual env (in the example below,
-in the git-ignored `.env` inside
-the eGSIM root directory, 
-but you can also create it wherever you want)
-
-```bash
-python3 -m venv .env/<ENVNAME>  # create python virtual environment (venv)
-source .env/<ENVNAME>/bin/activate  # activate venv
-pip install --upgrade pip setuptools
+```console
+source .env/<ENVNAME>/bin/activate
+pip install --upgrade pip setuptools 
+pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
+# pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
+pip install ".[test]"
+pip freeze > ./requirements.txt
 ```
 
-Then `cd` into eGSIM if you are not there already 
-(basically, the directory where `setup.py` is located), 
-install and freeze 
-the installed packages into a `requirements.txt` file:
-```bash
-pip install -e .
-pip freeze > requirements.txt
-```
+(As of 2024, we merged requirements.dev and requirements into a single .txt file
+containing both required packages and test packages)
 
-Do the same for testing:
-```bash
-pip install -e ".[test]"
-pip freeze > requirements.dev.txt
-```
+Optionally, open `requirements.txt` and comment egsim (it should be harmless but
+for safety maybe it interferes with Django stuff?)
 
-Run tests (see above) to check that everything wortks as expected, and then
+Run tests (see above) to check that everything works as expected, and then
 commit and push.

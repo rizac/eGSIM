@@ -11,7 +11,7 @@ setup(
     description=_README,
     url='https://github.com/rizac/eGSIM',
     packages=find_packages(exclude=['tests', 'tests.*']),
-    python_requires='>=3.9.7',  # as of Jan 2023 is 3.11.0
+    python_requires='>=3.11',
     # Minimal requirements, for a complete list see requirements-*.txt
     install_requires=[
         'openquake.engine>3.5.0',
