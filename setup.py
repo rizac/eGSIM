@@ -12,26 +12,28 @@ setup(
     url='https://github.com/rizac/eGSIM',
     packages=find_packages(exclude=['tests', 'tests.*']),
     python_requires='>=3.11',
-    # Minimal requirements, for a complete list see requirements-*.txt
+    # Minimal requirements for the library (egsim.smtk package).
+    # FOR DEV/TESTS, add: `pip install pytest`
     install_requires=[
-        'openquake.engine>3.5.0',
-        'Django>=4.1.2',
+        'openquake.engine>3.5.0,<=3.15.0',
         'pyyaml>=6.0',
         'tables>=3.8.0',
-        'plotly>=5.10.0',
-        'kaleido>=0.2.1',  # required by plotly to save images
     ],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
-    # $ pip install -e .[test]
+    # $ pip install -e ".[web]"
     extras_require={
-        'test': [
+        'web': [
+            'Django>=4.1.2',
+            'plotly>=5.10.0',
+            'kaleido>=0.2.1',  # required by plotly to save images
+            # test packages:
             'pytest',
             'pylint>=2.3.1',
             'pytest-django>=3.4.8',
             'pytest-cov>=2.6.1'
-        ],
+        ]
     },
     author='r. zaccarelli',
     author_email='',

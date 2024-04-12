@@ -25,7 +25,8 @@ The web portal (and API documentation) is available at:
 
    * [Installation](#installation)
    * [Usage](#usage)
-   * [Maintenance](#maintenance)
+   * [Packages upgrade](#packages-upgrade)
+   * [Django](#django)
      * [Starting a Python terminal shell](#starting-a-python-terminal-shell)
      * [Complete DB reset](#Complete-DB-reset)
      * [Repopulating the DB](#Re-populating-the-DB)
@@ -33,17 +34,19 @@ The web portal (and API documentation) is available at:
      * [Create a custom management command](#Create-a-custom-management-command)  
      * [Add new predefined flatfiles](#Add-new-predefined-flatfiles)
      * [Add new regionalization](#Add-new-regionalization)
-     * [Dependencies upgrade](#Dependencies-upgrade)
-
      
+
+DISCLAIMER: **This document does not cover the server installation of 
+the web app**, which is publicly available at the URL above. 
+**Here you can find instructions on**:
+
+ - How to install  eGSIM as local Python library 
+   (`import egsim.smtk` in your code)
+ - (For developers and contributors) How to install the Django app locally for testing,
+   features addition, maintenance
+
+
 # Installation
-
-DISCLAIMER: **This document covers installation in development (or debug) 
-mode, i.e. when the program is deployed locally, usually for testing, 
-fixing bug or adding features.**
-
-For installation in **production** mode (for maintainers only), please contact
-the maintainer(s)
 
 
 ## Requirements
@@ -59,8 +62,8 @@ sudo apt-get install git python3-venv python3-pip python3-dev
 exist on macOS*).
 
 This web service uses a *specific* version of Python (Open `setup.py` and 
-check `python_requires=`. As of January 2022, it's 3.9.7) which you must 
-install in addition to the Python version required by your system, and use
+check `python_requires=`. As of January 2022, it's `>=3.11`) *which you must 
+install* in addition to the Python version required by your system, and use
 it. Any command `python3` hereafter will refer to the required Python version.
 
 
@@ -94,33 +97,60 @@ source .env/<ENVNAME>/bin/activate
 pip install -r ./requirements.txt
 ```
 
+### eGSIM as local library
+
+If you want to use eGSIM locally using the 
+strong motion toolkit package only (`from egsim.smtk import ...`
+in your code):
+
+```console
+source .env/<ENVNAME>/bin/activate
+pip install -r ./requirements.lib.txt
+```
+
+#### Run tests 
+
+(remember to `pip install pytest` first)
+```bash
+pytest -vvv ./tests/smtk
+```
+
 ## Run Test
 
-> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below must be changed in production
+(web app tests. For testing the library only, see above)
+
+> Note: the value of `DJANGO_SETTINGS_MODULE` in the examples below 
+> must be changed in production
 
 Move in the `egsim directory` and type:
 
 ```bash
-export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv --ds=egsim.settings_debug ./tests/
+export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv ./tests/
 ```
 (x=stop at first error, v*=increase verbosity). 
 
-For **PyCharm users**, you need to configure the environment variable
-for all tests. Go to:
-  Run -> Edit Configurations -> Edit Configurations templates -> 
-  Python tests -> pytests -> ENVIRONMENT VARIABLES
-
-and add there the environment variable DJANGO_SETTINGS_MODULE
-
-Other test options from the command line: with coverage (
-showing the amount of code hit by tests):
+with coverage report:
 
 ```bash
-export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest --ignore=./tests/tmp/ -xvvv --cov=./egsim/ --cov-report=html ./tests/
+export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest --cov=egsim --cov-report=html -xvvv ./tests/
 ```
 
-(you can also invoke the commands without `export ...` but 
-using the `--ds` option: `pytest -xvvv --ds=egsim.settings_debug ./tests/`)
+<details>
+<summary>Configure PyCharm</summary>
+For **PyCharm users**, you need to configure the environment variable
+for all tests. Go to:
+
+- Run
+  - Edit Configurations
+    - Python tests
+    
+And then under **Environment variables:** add:
+
+`DJANGO_SETTINGS_MODULE=egsim.settings_debug`
+
+(type several env vars separated by ;)
+
+</details>
 
 
 # Usage
@@ -140,12 +170,78 @@ If you want to access the admin panel, see [the admin panel](#admin-panel).
 export DJANGO_SETTINGS_MODULE="egsim.settings_debug";python manage.py runserver 
 ```
 
-(you can also invoke the commands without `export ...` but using the 
-`--settings` option: 
-`python manage.py --settings=egsim.settings_debug [command]`)
+<details>
+<summary>Configure PyCharm</summary>
+For **PyCharm users**, you can implement a service, which can be run as any
+PyCharm configuration in debug mode, allowing to open the browser 
+and stop at specific point in the code (the PyCharm window will popup 
+automatically in case). 
+To implement a service, go to:
+
+- Run
+  - Edit Configurations
+    - Add new configuration
+
+then under **Run**:
+ - between `script` and `module` (should be a combo box) choose `script`,
+   and in the next text field put `manage.py`
+ - script parameters: `runserver`
+ - And then under **Environment variables:** add:
+   `DJANGO_SETTINGS_MODULE=egsim.settings_debug`
+   (type several env vars separated by ;)
+
+You should see in the `Services` tab appearing the script name, so you can
+run / debug it normally
+
+</details>
 
 
-# Maintenance
+## Packages upgrade
+
+
+```console
+source .env/<ENVNAME>/bin/activate
+pip install --upgrade pip setuptools
+```
+
+Install OpenQuake (recommended way. If this does not work, you can skip this
+and go to the next step, which installs the last supported OpenQuake version,
+see `setup.py`):
+
+```console
+pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
+# pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
+```
+
+Install eGSIM library
+
+```console
+pip install -e . && pip freeze >./requirements.lib.txt && pip install pytest
+```
+
+Check that tests are running:
+```console
+pytest -vvv ./tests/smtk
+```
+
+install eGSIM web app:
+```console
+pip install ".[web]"
+pip freeze > ./requirements.txt
+```
+
+Run tests:
+```console
+export DJANGO_SETTINGS_MODULE=egsim.settings_debug; pytest -xvvv ./tests/
+```
+
+
+Change `setup.py` and set the current OpenQuake version (*optional:
+remove egsim from requirements.txt (it might interfere with Django web?*),
+eventually **commit and push**
+
+
+# Django
 
 <details>
 <summary>
@@ -391,26 +487,3 @@ Implemented flatfiles sources (click on the items below to expand)
 
 - Repopulate all eGSIM tables (command `egsim_init`)
 
-
-## Dependencies upgrade
-
-Note below: change OpenQuake url according
-to the OS and OpenQuake version
-
-```console
-source .env/<ENVNAME>/bin/activate
-pip install --upgrade pip setuptools 
-pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-macos_x86_64.txt"
-# pip install -r "https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py311-linux64.txt"
-pip install ".[test]"
-pip freeze > ./requirements.txt
-```
-
-(As of 2024, we merged requirements.dev and requirements into a single .txt file
-containing both required packages and test packages)
-
-Optionally, open `requirements.txt` and comment egsim (it should be harmless but
-for safety maybe it interferes with Django stuff?)
-
-Run tests (see above) to check that everything works as expected, and then
-commit and push.
