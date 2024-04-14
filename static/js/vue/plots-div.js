@@ -189,7 +189,7 @@ EGSIM.component('plots-div', {
 			</div>
 		</div>
 		<!-- RIGHT TOOLBAR (legend, buttons, controls) -->
-		<div class='d-flex flex-column ps-4' style='overflow-y: auto'>
+		<div class='d-flex flex-column ps-4 gap-3' style='max-height: 100%; overflow: hidden'>
 			<div class="btn-group">
 				<button v-if="closeButton" type='button' class='btn btn-primary border-0 text-nowrap'
 						@click="show = !show" title='close plots panel'>
@@ -208,99 +208,103 @@ EGSIM.component('plots-div', {
 					</ul>
 				</div>
 			</div>
-			<div v-show='legend.size' class='mt-3'>
-				<div v-for="[legendgroup, jsonStyle] in legend" class='d-flex flex-column form-control mt-2'>
-					<div class='d-flex flex-row align-items-baseline' :style="{color: getLegendColor(jsonStyle)}">
-						<label class='my-0 text-nowrap' style='flex: 1 1 auto'>
-							<input type='checkbox'
-								   v-if="plots.some(p => p.data.length > 1)"
-								   :checked="true"
-								   @change="$evt => { setTraceStyle(legendgroup, JSON.stringify({ visible: !!$evt.target.checked })) }"
-								   :style="{'accent-color': getLegendColor(jsonStyle) + ' !important'}"
-								   > {{ legendgroup }}
-						</label>
-						<div class='ms-1' title="Style the plot traces (lines, bars, markers) of this legend group">
-							<i class="fa fa-chevron-down" style="cursor:pointer"
-							   onclick='this.parentNode.parentNode.parentNode.querySelector("div._pso").style.maxHeight=this.parentNode.parentNode.parentNode.querySelector("div._pso").offsetHeight ? "0px" : "15rem"; this.classList.toggle("fa-chevron-up"); this.classList.toggle("fa-chevron-down")'></i>
-						</div>
+			<div v-show='legend.size' class='d-flex flex-column gap-2' style='flex:1 1 auto; overflow:auto'>
+				<div v-for="[legendgroup, jsonStyle] in legend"
+					 class='d-flex flex-column p-2 border bg-white gap-2'
+					 style='flex: 0 1 0px;'>
+					<div class='d-flex align-items-baseline gap-2 text-nowrap' :style="{color: getLegendColor(jsonStyle)}">
+						<input type='checkbox' title="Toggle plot trace(s) visibility"
+							   v-if="plots.some(p => p.data.length > 1)"
+							   :checked="true"
+							   @change="$evt => { setTraceStyle(legendgroup, JSON.stringify({ visible: !!$evt.target.checked })) }"
+							   :style="{'accent-color': getLegendColor(jsonStyle) + ' !important'}"
+							   >
+						<span style='flex: 1 1 auto'>{{ legendgroup }}</span>
+						<button type='button' title="Style plot trace(s)" class='btn btn-sm border-0'
+							:style="{'color': getLegendColor(jsonStyle) + ' !important'}"
+							onclick='var root = this.parentNode.parentNode; root.style.flexGrow=parseInt(1-this.parentNode.parentNode.style.flexGrow); root.querySelector("._json_config").classList.toggle("d-none"); root.querySelectorAll("._arrow").forEach(s => s.classList.toggle("d-none"))'>
+							<span class='_arrow'>&#9207;</span> <!--arrow down -->
+							<span class='_arrow d-none'>&#9206;</span> <!-arrow up>
+						</button>
 					</div>
-					<div class='_pso d-flex flex-column' style='max-height:0px; transition:max-height 0.25s ease-out;overflow:hidden'>
-						<textarea class='form-control mt-1' spellcheck="false"
-								  style='flex: 1 1 auto; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; z-index:100; background-color: #f5f2f0;'
+					<div class='_json_config d-none d-flex flex-column' style='flex:1 1 auto;'
+						:style="{color: getLegendColor(jsonStyle)}">
+						<textarea rows="2" class='form-control rounded-bottom-0 border-bottom-0 p-1' spellcheck="false"
+								  style='color: inherit !important; flex:1 1 auto; min-height:0px; resize: none; font-family:monospace; white-space: pre; overflow-wrap: normal; overflow: auto;'
 								  v-model="jsonStyle"/>
-						<button type="button" class='mt-1 btn btn-sm' :disabled="!jsonStyle"
+						<button type="button" class='btn btn-sm rounded-top-0 border' :disabled="!jsonStyle"
 								@click="setTraceStyle(legendgroup, jsonStyle)"
-								:style="{color: getLegendColor(jsonStyle), 'border-color': getLegendColor(jsonStyle)}">Apply</button>
+								style="color: inherit; !important">
+								Apply
+						</button>
 					</div>
 				</div>
 			</div>
-			<div style='flex: 1 1 auto'></div>
-			<div>
-				<div v-show="Object.keys(grid.layouts).length > 1" class='mt-3 border p-2 bg-white'>
-					<div>Subplots layout</div>
-					<select v-model='grid.selectedLayout' class='form-control mt-1'>
-						<option v-for='key in Object.keys(grid.layouts)' :value="key" v-html="key">
-						</option>
-					</select>
-					<div class='mt-1 d-flex flex-row'>
-						<div>Show label</div>
-						 <div v-for="ax in [0, 1]" class='ms-1 d-flex flex-row'>
-							<label class='text-nowrap m-0 ms-2 align-items-baseline' v-show="!!grid.params[ax].label">
-								<input type='checkbox' v-model="grid.visibility[ax]">
-								<span class='ms-1 text-nowrap'>
-									{{ grid.params[ax].label }}
-								</span>
-							</label>
-						</div>
+			<div v-show="Object.keys(grid.layouts).length > 1" class='border p-2 bg-white d-flex flex-column gap-2'>
+				<div>Subplots layout</div>
+				<select v-model='grid.selectedLayout' class='form-control'>
+					<option v-for='key in Object.keys(grid.layouts)' :value="key" v-html="key">
+					</option>
+				</select>
+				<div class='d-flex flex-row'>
+					<div>Show label</div>
+					 <div v-for="ax in [0, 1]" class='ms-1 d-flex flex-row'>
+						<label class='text-nowrap m-0 ms-2 align-items-baseline' v-show="!!grid.params[ax].label">
+							<input type='checkbox' v-model="grid.visibility[ax]">
+							<span class='ms-1 text-nowrap'>
+								{{ grid.params[ax].label }}
+							</span>
+						</label>
 					</div>
 				</div>
-				<div class='mt-3 d-flex flex-column border p-2 bg-white'>
-					<div class="d-flex align-items-baseline gap-2">
-						<span style='flex: 1 1 auto'>Plots configuration</span>
-						<ul class="nav nav-pills">
-							<button type='button' class="nav-link active rounded-bottom-0"
-									onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
-								axis
-							</button>
-							<button type='button' class="nav-link rounded-bottom-0"
-									onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
-								mouse
-							</button>
-						</ul>
-					</div>
-					<table class='_panel axis table table-sm mb-0 border-top' style='border-top-color:var(--bs-primary) !important'>
-						<thead><tr>
-							<td v-for="key in ['', 'sameRange', 'log', 'grid', 'title']">{{ key }}</td>
-						</tr></thead>
-						<tbody><tr v-for="ax in ['x', 'y']">
-							<td class='text-nowrap'>{{ ax }}</td>
-							<td v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap m-0 ms-2'>
-								<input type='checkbox' v-model='plotoptions.axis[ax][key].value'
-									   :disabled="plotoptions.axis[ax][key].disabled">
-							</td>
-						</tr></tbody>
-					</table>
-					<table class='_panel d-none table border-top mb-0' style='border-top-color:var(--bs-primary) !important'>
-						<tbody><tr>
-							<td>on hover</td>
-							<td><select v-model="plotoptions.mouse.hovermode"
-									class='form-control form-control-sm'>
-								<option v-for='name in mouseMode.hovermodes' :value='name'>
-									{{ mouseMode.hovermodeLabels[name] }}
-								</option>
-							</select></td>
-						</tr>
-						<tr>
-							<td> on drag</td>
-							<td><select v-model="plotoptions.mouse.dragmode"
-									class='form-control form-control-sm'>
-								<option v-for='name in mouseMode.dragmodes' :value='name'>
-									{{ mouseMode.dragmodeLabels[name] }}
-								</option>
-							</select></td>
-						</tr></tbody>
-					</table>
+			</div>
+			<div class='d-flex flex-column border p-2 bg-white'>
+				<div class="d-flex align-items-baseline gap-2">
+					<span style='flex: 1 1 auto'>Plots options</span>
+					<ul class="nav nav-pills">
+						<button type='button' class="nav-link active rounded-bottom-0"
+								onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
+							axis
+						</button>
+						<button type='button' class="nav-link rounded-bottom-0"
+								onclick='this.parentNode.querySelectorAll("button").forEach(e => e.classList.toggle("active")); this.parentNode.parentNode.parentNode.querySelectorAll("._panel").forEach(e => e.classList.toggle("d-none"))'>
+							mouse
+						</button>
+					</ul>
 				</div>
+				<table class='_panel axis table table-sm mb-0 border-top' style='border-top-color:var(--bs-primary) !important'>
+					<thead><tr>
+						<td v-for="key in ['', 'sameRange', 'log', 'grid', 'title']">{{ key }}</td>
+					</tr></thead>
+					<tbody><tr v-for="ax in ['x', 'y']">
+						<td class='text-nowrap'>{{ ax }}</td>
+						<td v-for="key in ['sameRange', 'log', 'grid', 'title']" class='text-nowrap m-0 ms-2'>
+							<input type='checkbox' v-model='plotoptions.axis[ax][key].value'
+								   :disabled="plotoptions.axis[ax][key].disabled">
+						</td>
+					</tr></tbody>
+				</table>
+				<table class='_panel d-none table border-top mb-0' style='border-top-color:var(--bs-primary) !important'>
+					<tbody><tr>
+						<td>on hover</td>
+						<td><select v-model="plotoptions.mouse.hovermode"
+								class='form-control form-control-sm'>
+							<option v-for='name in mouseMode.hovermodes' :value='name'>
+								{{ mouseMode.hovermodeLabels[name] }}
+							</option>
+						</select></td>
+					</tr>
+					<tr>
+						<td> on drag</td>
+						<td><select v-model="plotoptions.mouse.dragmode"
+								class='form-control form-control-sm'>
+							<option v-for='name in mouseMode.dragmodes' :value='name'>
+								{{ mouseMode.dragmodeLabels[name] }}
+							</option>
+						</select></td>
+					</tr></tbody>
+				</table>
+
 			</div>
 		</div>
 	</div>`,
