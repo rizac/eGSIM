@@ -148,7 +148,7 @@ class InvalidInput(ValueError):
         """Reformat ``str(self)``"""
         # Basically remove the brackets if `self.arg` is a tuple i.e. if  `__init__`
         # was called with multiple arguments:
-        return ", ".join(repr(a) for a in self.args)
+        return ", ".join(str(a) for a in self.args)
 
 
 class ModelUndefinedForImtError(InvalidInput):

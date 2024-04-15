@@ -24,7 +24,7 @@ from egsim.api.forms.scenarios import PredictionsForm
 from egsim.app.forms import (FlatfileVisualizeForm, PredictionsVisualizeForm,
                              ResidualsVisualizeForm)
 
-from egsim.app.views import URLS, img_ext
+from egsim.app.views import URLS, img_ext, form2dict
 from django.test.client import Client
 
 GSIM, IMT = 'gsim', 'imt'
@@ -71,8 +71,8 @@ class Test:
             FlatfileValidationForm(dict(f_)),
             FlatfileVisualizeForm(f_ | {'x': 'mag'})
         ]:
-            val = form.asdict(compact=False)
-            val_c = form.asdict(compact=True)
+            val = form2dict(form, compact=False)
+            val_c = form2dict(form, compact=True)
             # test everything is json serializable:
             _ = json.dumps(val)
             _ = json.dumps(val_c)

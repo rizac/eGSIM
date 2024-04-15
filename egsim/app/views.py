@@ -17,7 +17,7 @@ from django.conf import settings
 from ..api import models
 from ..api.forms.flatfile import (FlatfileMetadataInfoForm,
                                   FlatfileValidationForm)
-from ..api.forms import GsimFromRegionForm, APIForm
+from ..api.forms import GsimFromRegionForm, APIForm, EgsimBaseForm
 from ..api.forms.residuals import ResidualsForm
 from ..api.forms.scenarios import PredictionsForm
 from ..api.views import RESTAPIView, MimeType, error_response
@@ -147,7 +147,7 @@ def _get_init_data_json(debug=False) -> dict:
             'gsim': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
             'imt': ['PGA', 'SA(0.1)'],
             'flatfile': 'esm2018',
-            'data-query': 'mag > 7',
+            'flatfile-query': 'mag > 7',
             'format': 'hdf'
         })
 
@@ -184,19 +184,18 @@ def _get_init_data_json(debug=False) -> dict:
             'flatfile_validate': URLS.FLATFILE_VALIDATE,
         },
         'forms': {
-            'predictions': predictions_form.asdict(),
+            'predictions': form2dict(predictions_form),
             # in frontend, the form data below will be merged into forms.residuals above
             # (keys below will take priority):
             'predictions_plot': {'plot_type': 'm', 'format': 'json'},
-            'residuals': residuals_form.asdict(),
+            'residuals': form2dict(residuals_form),
             # in frontend, the form data below will be merged with forms.residuals above
             # (keys below will take priority):
             'residuals_plot': {'x': None, 'likelihood': False, 'format': 'json'},
-            'flatfile_meta_info': FlatfileMetadataInfoForm({
-                'gsim': [],
-                'imt': []
-            }).asdict(),
-            'flatfile_visualize': FlatfileVisualizeForm({}).asdict(),
+            'flatfile_meta_info': form2dict(
+                FlatfileMetadataInfoForm({'gsim': [], 'imt': []})
+            ),
+            'flatfile_visualize': form2dict(FlatfileVisualizeForm({})),
             'misc': {
                 'predictions': {
                     'msr': predictions_form.fields['msr'].choices,
@@ -281,6 +280,26 @@ def _get_references():
             name = item.get('display_name', None) or item['name']
             refs[name] = url
     return refs
+
+
+def form2dict(form: EgsimBaseForm, compact=False) -> dict:
+    """Return the `data` argument passed in the form
+    constructor in a JSON serializable dict
+
+    @param form: the EgsimBaseForm (Django Form subclass)
+    @param compact: skip optional parameters, i.e. those whose value equals
+        the default when missing
+    """
+    ret = {}
+    for field_name, value in form.data.items():
+        if compact:
+            field = form.declared_fields.get(field_name, None)
+            is_field_optional = not field.required or field.initial is not None
+            if field is not None and is_field_optional:
+                if field.initial == value:
+                    continue
+        ret[form.param_name_of(field_name)] = value
+    return ret
 
 
 def get_gsims_from_region(request) -> JsonResponse:

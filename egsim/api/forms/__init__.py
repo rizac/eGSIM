@@ -192,27 +192,6 @@ class EgsimBaseForm(Form):
                 return params[field]
         return field,  # <- tuple!
 
-    def asdict(self, compact=False) -> dict:
-        """Return the `data` argument passed in the constructor in a JSON serializable
-        dict
-
-        @param compact: skip optional parameters, i.e. those whose value equals
-            the default when missing
-        """
-        ret = {}  # FIXME remove compact? Move to app?
-        for field_name, value in self.data.items():
-            if compact:
-                field = self.declared_fields.get(field_name, None)
-                if field is not None and self.is_field_optional(field):
-                    if field.initial == value:
-                        continue
-            ret[self.param_name_of(field_name)] = value
-        return ret
-
-    @classmethod
-    def is_field_optional(cls, field: Field):
-        return not field.required or field.initial is not None
-
 
 class SHSRForm(EgsimBaseForm):
     """Base class for all Form accepting a list of models in form of location

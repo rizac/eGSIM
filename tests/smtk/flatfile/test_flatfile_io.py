@@ -151,4 +151,4 @@ def test_flatfile_exceptions():
                 traceback.print_exc(file=s)
                 strr = s.getvalue()
                 assert f'{exc_cls.__name__}:' in strr
-                assert ", ".join(repr(_) for _ in cols) in strr
+                assert ", ".join(str(_) for _ in cols) in strr
