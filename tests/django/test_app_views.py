@@ -262,9 +262,33 @@ class Test:
             assert response.status_code == 400
             assert len(response.json())
 
+        # test a case where the flatfile has only one row, it should not raise:
+        client = Client()
+        data = {
+            'model': ['CauzziEtAl2014', 'BindiEtAl2014Rjb'],
+            'imt': ['PGA'],
+            'flatfile': 'esm2018',
+            'flatfile-query': 'mag > 7.5'
+        }
+        response = client.post(f"/{URLS.RESIDUALS_VISUALIZE}",
+                               json.dumps(data),
+                               content_type="application/json")
+        assert response.status_code == 200
+        resp = response.json()
+        for plot in resp['plots']:
+            for trace in plot['data']:
+                assert len(trace['y']) == len(trace['x']) == 0
+
+        # now check with no data:
+        data['flatfile-query'] = 'mag > 100'
+        response = client.post(f"/{URLS.RESIDUALS_VISUALIZE}",
+                               json.dumps(data),
+                               content_type="application/json")
+        assert response.status_code == 400
+
     def test_download_response_img_formats(self):
         for url, ext in product((URLS.PREDICTIONS_PLOT_IMG, URLS.RESIDUALS_PLOT_IMG),
-                                (img_ext)):
+                                img_ext):
             # for the moment, just provide a global data object regardless of the
             # service:
             data = [

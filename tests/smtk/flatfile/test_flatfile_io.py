@@ -3,10 +3,11 @@ Created on 16 Feb 2018
 
 @author: riccardo
 """
+from typing import re
 
 import os
 from os.path import dirname, join, abspath
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import pandas as pd
@@ -66,6 +67,20 @@ def test_query():
     assert 'object' in str(d.s.dtype)
     assert 'float' in str(d.f.dtype)
 
+    # test errors in no rows. Remove last row and test with values not in d:
+    d2 = d[:1].copy()
+    for c in d2.columns:
+        val = {
+            'i': 1,
+            'f': 5.,
+            's': '"x"',
+            'd': 'datetime("' + (now + timedelta(seconds=1)).isoformat('T') + '")',
+            'b': 'false'
+        }[c]
+        with pytest.raises(FlatfileError) as ferr:
+            query(d2, f'{c} == {val}')
+        assert 'no rows ' in str(ferr)
+
     prev_expr = ''
     for col in d.columns:
         new_d = query(d, f'{col}.notna()')
@@ -80,8 +95,8 @@ def test_query():
         # just test some series method works (no assert):
         if col in ('b', 'i', 'f', 'd'):
             for method in ('median', 'mean', 'max', 'min'):
-                query(d, f'{col} == {col}.{method}')
-                query(d, f'{col} == {col}.{method}()')
+                query(d, f'{col} == {col}.{method}', raise_no_rows=False)
+                query(d, f'{col} == {col}.{method}()', raise_no_rows=False)
         else:
             with pytest.raises(TypeError) as terr:  # unsupported for string:
                 for method in ('median', 'mean', 'max', 'min'):
@@ -101,11 +116,7 @@ def test_query():
         # test equality with first line
         new_d = query(d, query_expr)
         assert len(new_d) == 1
-        # if col not in ('b', 'i'):
-        #     pd.testing.assert_frame_equal(new_d, query(d, query_expr.replace('==', '>=')))
-        #     pd.testing.assert_frame_equal(new_d, query(d, query_expr.replace('==', '<=')))
-        #     assert len(query(d, query_expr.replace('==', '>'))) == \
-        #         len(query(d, query_expr.replace('==', '<'))) == 0
+
         # test lower than 1st line
         if not prev_expr:
             prev_expr = query_expr

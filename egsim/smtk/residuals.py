@@ -100,6 +100,8 @@ def prepare_flatfile(flatfile: pd.DataFrame,
         flatfile_r[st_cols] = flatfile[st_cols]
     except FlatfileError:
         pass
+    if flatfile_r.empty:
+        raise FlatfileError('empty flatfile')
     return flatfile_r
 
 

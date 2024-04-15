@@ -231,7 +231,8 @@ def validate_flatfile_dataframe(
     return dfr
 
 
-def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
+def query(flatfile: pd.DataFrame, query_expression: str,
+          raise_no_rows=True) -> pd.DataFrame:
     """Call `flatfile.query` with some utilities:
      - datetime can be input in the string, e.g. "datetime(2016, 12, 31)"
      - boolean can be also lower case ("true" or "false")
@@ -257,7 +258,10 @@ def query(flatfile: pd.DataFrame, query_expression: str) -> pd.DataFrame:
     query_expression = re.sub(f"\\b{__ff_cols}\\.{__meths}(?![\\w\\(])", r"\1.\2()",
                               query_expression)
     # evaluate expression:
-    return flatfile.query(query_expression, **__kwargs)
+    ret = flatfile.query(query_expression, **__kwargs)
+    if raise_no_rows and ret.empty:
+        raise FlatfileError('no rows matching query')
+    return ret
 
 
 # Flatfile columns utilities:

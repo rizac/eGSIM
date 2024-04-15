@@ -282,7 +282,7 @@ class ResidualsVisualizeForm(ResidualsForm):
                 data = [trace]
 
                 if not likelihood:
-                    mean, std = x.mean(), x.std()
+                    mean, std = x.mean(), x.std(ddof=0)
                     x_ = np.arange(mean - 3 * std, mean + 3 * std, step / 10)
                     data.append(
                         line_trace(
